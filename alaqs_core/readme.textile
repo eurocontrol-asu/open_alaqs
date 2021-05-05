@@ -1,0 +1,13 @@
+h1. OpenALAQS.readme
+
+This directory should contain the core functionality of the Open ALAQS application without any direct reference to a specific GIS or UI.
+
+Functions in this directory should take platform independant inputs and provide platform independant outputs. All functionality which takes this data from or puts data back into GIS should be located elsewhere.
+
+For more information, see "https://www.assembla.com/spaces/alaqs/tickets":https://www.assembla.com/spaces/alaqs/tickets
+
+
+To use the iypthon notebook:
+Get ipython from http://ipython.org/notebook.html
+Start the server with "ipython notebook"
+Notebook is available at: http://127.0.0.1:8888/

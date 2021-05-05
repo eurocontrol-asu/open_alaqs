@@ -1,0 +1,39 @@
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.css" />
+  <style>
+    #map40dfa9d050bb4ce4b12cda865fc5cc93 {
+      height:100%;
+    }
+  </style> 
+</head>
+<body>
+  <div id="map40dfa9d050bb4ce4b12cda865fc5cc93"></div>
+<script text="text/javascript">
+var map = L.map('map40dfa9d050bb4ce4b12cda865fc5cc93');
+L.tileLayer(
+  "http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+  {maxZoom:19, attribution: '<a href="https://github.com/jwass/mplleaflet">mplleaflet</a> | &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>'}).addTo(map);
+var gjData = {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-6.300713363058082, 49.92257903229428], [-6.295933349197004, 49.93089516900391]]}, "properties": {"color": "#1F77B4", "weight": 1.5, "opacity": null, "dashArray": "10,0"}}, {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-6.295933349197004, 49.93089516900391], [-6.289756902151654, 49.94164021314254]]}, "properties": {"color": "#1F77B4", "weight": 1.5, "opacity": null, "dashArray": "10,0"}}, {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-6.289756902151654, 49.94164021314254], [-6.288383931525299, 49.944028656264834]]}, "properties": {"color": "#1F77B4", "weight": 1.5, "opacity": null, "dashArray": "10,0"}}, {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-6.288383931525299, 49.944028656264834], [-6.282216686615107, 49.954756910583235]]}, "properties": {"color": "#1F77B4", "weight": 1.5, "opacity": null, "dashArray": "10,0"}}, {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-6.282216686615107, 49.954756910583235], [-6.267382703821684, 49.98055881162944]]}, "properties": {"color": "#1F77B4", "weight": 1.5, "opacity": null, "dashArray": "10,0"}}, {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-6.267382703821684, 49.98055881162944], [-6.254714025228652, 50.00259151721557]]}, "properties": {"color": "#1F77B4", "weight": 1.5, "opacity": null, "dashArray": "10,0"}}, {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-6.318676360326131, 49.913998008165414], [-6.319104165220498, 49.914456568259446]]}, "properties": {"color": "#1F77B4", "weight": 1.5, "opacity": null, "dashArray": "10,0"}}, {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-6.317118553685404, 49.91456466972153], [-6.315262963046892, 49.912550366832384]]}, "properties": {"color": "#1F77B4", "weight": 1.5, "opacity": null, "dashArray": "10,0"}}, {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-6.3324693850791025, 49.91079437973718], [-6.3326677607349975, 49.910466753082716], [-6.332405145403292, 49.91013477556679], [-6.332092991028956, 49.90982546990476], [-6.331782858645543, 49.90977879421037], [-6.323836104427607, 49.912718502541225]]}, "properties": {"color": "#1F77B4", "weight": 1.5, "opacity": null, "dashArray": "10,0"}}, {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-6.323836104427607, 49.912718502541225], [-6.319104165220498, 49.914456568259446], [-6.319104165220498, 49.914456568259446]]}, "properties": {"color": "#1F77B4", "weight": 1.5, "opacity": null, "dashArray": "10,0"}}, {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-6.315262963046892, 49.912550366832384], [-6.315074965196283, 49.91251963877286], [-6.314668508054972, 49.912498653020556], [-6.314379520890453, 49.91250711189786], [-6.313956418416085, 49.91259479997765]]}, "properties": {"color": "#1F77B4", "weight": 1.5, "opacity": null, "dashArray": "10,0"}}, {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-6.318676360326131, 49.913998008165414], [-6.317118553685404, 49.91456466972153]]}, "properties": {"color": "#1F77B4", "weight": 1.5, "opacity": null, "dashArray": "10,0"}}]};
+
+if (gjData.features.length != 0) {
+  var gj = L.geoJson(gjData, {
+    style: function (feature) {
+      return feature.properties;
+    },
+    pointToLayer: function (feature, latlng) {
+      var icon = L.divIcon({'html': feature.properties.html, 
+        iconAnchor: [feature.properties.anchor_x, 
+                     feature.properties.anchor_y], 
+          className: 'empty'});  // What can I do about empty?
+      return L.marker(latlng, {icon: icon});
+    }
+  });
+  gj.addTo(map);
+  
+  map.fitBounds(gj.getBounds());
+} else {
+  map.setView([0, 0], 1);
+}
+</script>
+</body>

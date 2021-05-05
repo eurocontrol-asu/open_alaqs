@@ -1,0 +1,1 @@
+"C:\Program Files\7-Zip\7z.exe" a -r -tzip -y -xr!?svn -xr!doxygen open_alaqs.zip C:\Users\CompAdmin\.qgis2\python\plugins\open_alaqs

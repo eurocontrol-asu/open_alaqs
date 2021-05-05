@@ -1,0 +1,17 @@
+<?xml version = '1.0' encoding = 'ISO-8859-1'?>
+<!--<?xml-stylesheet type='text/xsl' href='plugins.xsl' ?>-->
+<!--https://subversion.assembla.com/svn/alaqs/trunk/plugins.xml-->
+<plugins>
+   <pyqgis_plugin name='Open Alaqs' version='0.4'>
+    <description>An open source version of the ALAQS project</description>
+    <version>0.4</version>
+    <qgis_minimum_version>2.2.0</qgis_minimum_version>
+    <homepage>http://www.eurocontrol.int/eec/public/standard_page/SEE_alaqs.html</homepage>
+    <file_name>open_alaqs.zip</file_name>
+    <author_name>EUROCONTROL [by ENVISA]</author_name>
+    <download_url>https://subversion.assembla.com/svn/alaqs/trunk/open_alaqs.zip</download_url>
+    <uploaded_by>Dennis Klingebiel</uploaded_by>
+    <create_date>2014-06-10</create_date>
+    <update_date>2014-06-10</update_date>
+  </pyqgis_plugin> 
+</plugins>

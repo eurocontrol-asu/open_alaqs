@@ -1,0 +1,154 @@
+from __future__ import absolute_import
+from builtins import str
+# from . import __init__ #setup the paths for direct calls of the module
+
+import os
+import alaqsutils           # For logging and conversion of data types
+import alaqsdblite          # Functions for working with ALAQS database
+# import logging              # For unit testing. Can be commented out for distribution
+import os
+import sys
+
+#from PyQt4 import QtCore
+# from qgis.PyQt import QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
+#from PyQt4.QtCore import *
+
+from interfaces.OutputModule import OutputModule
+from modules.ui.TableViewDialog import Ui_TableViewDialog
+from tools import Conversions
+
+import alaqslogging
+# logger = logging.getLogger(__name__)
+logger = alaqslogging.logging.getLogger(__name__)
+# To override the default severity of logging
+logger.setLevel('DEBUG')
+# Use FileHandler() to log to a file
+file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
+log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+formatter = alaqslogging.logging.Formatter(log_format)
+file_handler.setFormatter(formatter)
+# Don't forget to add the file handler
+logger.addHandler(file_handler)
+
+class TableViewWidgetOutputModule(OutputModule):
+    """
+    Module to plot results of emission calculation in a table
+    """
+
+    @staticmethod
+    def getModuleName():
+        return "TableViewWidgetOutputModule"
+
+    def __init__(self, values_dict = {}):
+        OutputModule.__init__(self, values_dict)
+
+        #Widget configuration
+        self._parent = values_dict["parent"] if "parent" in values_dict else None
+
+        #Results analysis
+        self._time_start = Conversions.convertStringToDateTime(values_dict["Start (incl.)"]) if "Start (incl.)" in values_dict else ""
+        self._time_end = Conversions.convertStringToDateTime(values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
+        self._pollutant = values_dict["pollutant"] if "pollutant" in values_dict else None
+
+        self._widget = TableViewWidget(self._parent)
+
+    def getWidget(self):
+        return self._widget
+
+    def beginJob(self):
+        self._widget.setDataTableHeaders([
+            "Time",
+            "CO [kg]",
+            "CO2 [kg]",
+            "HC [kg]",
+            "NOx [kg]",
+            "SOx [kg]",
+            "PM10 [kg]",
+            "P1 [kg]",
+            "P2 [kg]",
+            "PM10Prefoa3 [kg]",
+            "PM10Nonvol [kg]",
+            "PM10Sul [kg]",
+            "PM10Organic [kg]"
+        ])
+
+    def process(self, timeval, result, **kwargs):
+        #result is of format [(Source, Emission)]
+
+        #filter by configured time
+        if self._time_start and self._time_end:
+            if not (timeval >= self._time_start and timeval<self._time_end):
+                return True
+        # $$
+        total_emissions_ =  sum([sum(emissions_) for (source, emissions_) in result if emissions_])
+
+        #write results to table
+
+        #increment rows in table by one
+        self._widget.getTable().setRowCount(int(self._widget.getTable().rowCount()+1))
+
+        #write cells
+        for index_col_, val_ in enumerate([
+            (timeval, ""),
+            total_emissions_.getCO(unit="kg"),
+            total_emissions_.getCO2(unit="kg"),
+            total_emissions_.getHC(unit="kg"),
+            total_emissions_.getNOx(unit="kg"),
+            total_emissions_.getSOx(unit="kg"),
+            total_emissions_.getPM10(unit="kg"),
+            total_emissions_.getPM1(unit="kg"),
+            total_emissions_.getPM2(unit="kg"),
+            total_emissions_.getPM10Prefoa3(unit="kg"),
+            total_emissions_.getPM10Nonvol(unit="kg"),
+            total_emissions_.getPM10Sul(unit="kg"),
+            total_emissions_.getPM10Organic(unit="kg")]
+        ):
+            if isinstance(val_[0], float):
+                rval_ = str(round(val_[0],5)) if not val_[0] is None else ""
+            else:
+                rval_ = str(val_[0]) if not val_[0] is None else ""
+            # self._widget.getTable().setItem(self._widget.getTable().rowCount()-1, index_col_,
+            #                                 QtWidgets.QTableWidgetItem(str(val_[0]) if not val_[0] is None else ""))
+            self._widget.getTable().setItem(self._widget.getTable().rowCount()-1, index_col_,
+                                            QtWidgets.QTableWidgetItem(rval_))
+    def endJob(self):
+        self._widget.resizeToContent()
+        return self._widget
+
+class TableViewWidget(QtWidgets.QDialog):
+    """
+    This class provides a dialog for visualizing ALAQS results.
+    """
+    def __init__(self, parent=None):
+        super(TableViewWidget, self).__init__(parent)
+
+        self._parent = parent
+
+        self.ui = Ui_TableViewDialog()
+        self.ui.setupUi(self)
+
+        self._data_table_headers = []
+
+        self.initTable()
+
+    def initTable(self):
+        self.getTable().setColumnCount(len(self._data_table_headers))
+        self.getTable().setHorizontalHeaderLabels(self._data_table_headers)
+        self.getTable().verticalHeader().setVisible(False)
+
+    def resizeToContent(self):
+        self.getTable().resizeColumnsToContents()
+        self.getTable().resizeRowsToContents()
+
+    def getTable(self):
+        return self.ui.data_table
+
+    def resetTable(self):
+        self.getTable().clear()
+        self.getTable().setHorizontalHeaderLabels(self._data_table_headers)
+        self.getTable().setRowCount(0)
+
+    def setDataTableHeaders(self, headers):
+        self._data_table_headers = headers
+        self.initTable()

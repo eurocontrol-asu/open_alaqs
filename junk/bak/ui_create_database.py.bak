@@ -1,0 +1,97 @@
+# -*- coding: utf-8 -*-
+
+# Form implementation generated from reading ui file 'C:\_Klingebiel\Documents\Projects\alaqs\repository\trunk\ui\ui_create_database.ui'
+#
+# Created: Fri Apr 25 15:34:33 2014
+#      by: PyQt4 UI code generator 4.9.6
+#
+# WARNING! All changes made in this file will be lost!
+
+from PyQt4 import QtCore, QtGui
+
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
+
+class Ui_DialogCreateDatabase(object):
+    def setupUi(self, DialogCreateDatabase):
+        DialogCreateDatabase.setObjectName(_fromUtf8("DialogCreateDatabase"))
+        DialogCreateDatabase.resize(400, 112)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(DialogCreateDatabase.sizePolicy().hasHeightForWidth())
+        DialogCreateDatabase.setSizePolicy(sizePolicy)
+        DialogCreateDatabase.setModal(True)
+        self.verticalLayout = QtGui.QVBoxLayout(DialogCreateDatabase)
+        self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
+        self.formLayout = QtGui.QFormLayout()
+        self.formLayout.setFieldGrowthPolicy(QtGui.QFormLayout.AllNonFixedFieldsGrow)
+        self.formLayout.setContentsMargins(-1, 0, -1, -1)
+        self.formLayout.setObjectName(_fromUtf8("formLayout"))
+        self.label_5 = QtGui.QLabel(DialogCreateDatabase)
+        self.label_5.setObjectName(_fromUtf8("label_5"))
+        self.formLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.label_5)
+        self.horizontalLayout_3 = QtGui.QHBoxLayout()
+        self.horizontalLayout_3.setContentsMargins(-1, 0, -1, -1)
+        self.horizontalLayout_3.setObjectName(_fromUtf8("horizontalLayout_3"))
+        self.lineEditDatabaseName = QtGui.QLineEdit(DialogCreateDatabase)
+        self.lineEditDatabaseName.setObjectName(_fromUtf8("lineEditDatabaseName"))
+        self.horizontalLayout_3.addWidget(self.lineEditDatabaseName)
+        self.label = QtGui.QLabel(DialogCreateDatabase)
+        self.label.setObjectName(_fromUtf8("label"))
+        self.horizontalLayout_3.addWidget(self.label)
+        self.formLayout.setLayout(0, QtGui.QFormLayout.FieldRole, self.horizontalLayout_3)
+        self.label_6 = QtGui.QLabel(DialogCreateDatabase)
+        self.label_6.setObjectName(_fromUtf8("label_6"))
+        self.formLayout.setWidget(1, QtGui.QFormLayout.LabelRole, self.label_6)
+        self.horizontalLayout_4 = QtGui.QHBoxLayout()
+        self.horizontalLayout_4.setContentsMargins(-1, 0, -1, -1)
+        self.horizontalLayout_4.setObjectName(_fromUtf8("horizontalLayout_4"))
+        self.lineEditDatabaseDirectory = QtGui.QLineEdit(DialogCreateDatabase)
+        self.lineEditDatabaseDirectory.setObjectName(_fromUtf8("lineEditDatabaseDirectory"))
+        self.horizontalLayout_4.addWidget(self.lineEditDatabaseDirectory)
+        self.pushButtonBrowse = QtGui.QPushButton(DialogCreateDatabase)
+        self.pushButtonBrowse.setObjectName(_fromUtf8("pushButtonBrowse"))
+        self.horizontalLayout_4.addWidget(self.pushButtonBrowse)
+        self.formLayout.setLayout(1, QtGui.QFormLayout.FieldRole, self.horizontalLayout_4)
+        self.horizontalLayout = QtGui.QHBoxLayout()
+        self.horizontalLayout.setContentsMargins(-1, 0, 0, -1)
+        self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
+        self.formLayout.setLayout(2, QtGui.QFormLayout.FieldRole, self.horizontalLayout)
+        self.horizontalLayout_2 = QtGui.QHBoxLayout()
+        self.horizontalLayout_2.setContentsMargins(-1, 0, -1, -1)
+        self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
+        spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem)
+        self.pushButtonCreateDatabase = QtGui.QPushButton(DialogCreateDatabase)
+        self.pushButtonCreateDatabase.setObjectName(_fromUtf8("pushButtonCreateDatabase"))
+        self.horizontalLayout_2.addWidget(self.pushButtonCreateDatabase)
+        self.pushButtonCancel = QtGui.QPushButton(DialogCreateDatabase)
+        self.pushButtonCancel.setObjectName(_fromUtf8("pushButtonCancel"))
+        self.horizontalLayout_2.addWidget(self.pushButtonCancel)
+        self.formLayout.setLayout(3, QtGui.QFormLayout.FieldRole, self.horizontalLayout_2)
+        self.verticalLayout.addLayout(self.formLayout)
+
+        self.retranslateUi(DialogCreateDatabase)
+        QtCore.QMetaObject.connectSlotsByName(DialogCreateDatabase)
+
+    def retranslateUi(self, DialogCreateDatabase):
+        DialogCreateDatabase.setWindowTitle(_translate("DialogCreateDatabase", "Create new ALAQS database", None))
+        self.label_5.setText(_translate("DialogCreateDatabase", "File Name", None))
+        self.label.setText(_translate("DialogCreateDatabase", ".alaqs", None))
+        self.label_6.setText(_translate("DialogCreateDatabase", "File Directory", None))
+        self.pushButtonBrowse.setText(_translate("DialogCreateDatabase", "Browse...", None))
+        self.pushButtonCreateDatabase.setText(_translate("DialogCreateDatabase", "Create Project Database", None))
+        self.pushButtonCancel.setText(_translate("DialogCreateDatabase", "Cancel", None))
+

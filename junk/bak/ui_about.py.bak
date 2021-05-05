@@ -1,0 +1,86 @@
+# -*- coding: utf-8 -*-
+
+# Form implementation generated from reading ui file 'C:\_Klingebiel\Documents\Projects\alaqs\repository\trunk\ui\ui_about.ui'
+#
+# Created: Fri Apr 25 16:17:28 2014
+#      by: PyQt4 UI code generator 4.9.6
+#
+# WARNING! All changes made in this file will be lost!
+
+from __future__ import absolute_import
+from builtins import object
+from qgis.PyQt import QtCore, QtGui
+
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
+
+class Ui_DialogAbout(object):
+    def setupUi(self, DialogAbout):
+        DialogAbout.setObjectName(_fromUtf8("DialogAbout"))
+        DialogAbout.setEnabled(True)
+        DialogAbout.resize(593, 156)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(DialogAbout.sizePolicy().hasHeightForWidth())
+        DialogAbout.setSizePolicy(sizePolicy)
+        DialogAbout.setSizeGripEnabled(False)
+        self.formLayout = QtGui.QFormLayout(DialogAbout)
+        self.formLayout.setSizeConstraint(QtGui.QLayout.SetFixedSize)
+        self.formLayout.setObjectName(_fromUtf8("formLayout"))
+        self.label = QtGui.QLabel(DialogAbout)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy)
+        self.label.setObjectName(_fromUtf8("label"))
+        self.formLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.label)
+        self.label_2 = QtGui.QLabel(DialogAbout)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label_2.sizePolicy().hasHeightForWidth())
+        self.label_2.setSizePolicy(sizePolicy)
+        self.label_2.setMaximumSize(QtCore.QSize(101, 61))
+        self.label_2.setText(_fromUtf8(""))
+        self.label_2.setPixmap(QtGui.QPixmap(_fromUtf8(":/logo/eurocontrol_logo.png")))
+        self.label_2.setScaledContents(True)
+        self.label_2.setObjectName(_fromUtf8("label_2"))
+        self.formLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.label_2)
+        self.horizontalLayout = QtGui.QHBoxLayout()
+        self.horizontalLayout.setContentsMargins(-1, 0, -1, -1)
+        self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
+        spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem)
+        self.AddWatermarkButton = QtGui.QPushButton(DialogAbout)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.AddWatermarkButton.sizePolicy().hasHeightForWidth())
+        self.AddWatermarkButton.setSizePolicy(sizePolicy)
+        self.AddWatermarkButton.setMaximumSize(QtCore.QSize(121, 23))
+        self.AddWatermarkButton.setObjectName(_fromUtf8("AddWatermarkButton"))
+        self.horizontalLayout.addWidget(self.AddWatermarkButton)
+        self.formLayout.setLayout(3, QtGui.QFormLayout.FieldRole, self.horizontalLayout)
+
+        self.retranslateUi(DialogAbout)
+        QtCore.QMetaObject.connectSlotsByName(DialogAbout)
+
+    def retranslateUi(self, DialogAbout):
+        DialogAbout.setWindowTitle(_translate("DialogAbout", "About", None))
+        self.label.setText(_translate("DialogAbout", "<html><head/><body><p align=\"center\"><span style=\" font-size:12pt; font-weight:600;\">Open ALAQS: Airport Local Air Quality Studies</span><br/>Version 0.3 (April 2014)</p><p align=\"center\">This is a beta version of the ALAQS local air quality software released for review and testing only.<br/>It should therefore not be used for commerical studies and is released without guarantee.</p><p align=\"center\">Released under Apache License 2.0. For more information, contact it@env-isa.com</p></body></html>", None))
+        self.AddWatermarkButton.setText(_translate("DialogAbout", "Add watermark to layer", None))
+
+from . import alaqs_resources_rc
