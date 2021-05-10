@@ -2,7 +2,7 @@
 """
 /***************************************************************************
                         OpenALAQS -  A QGIS plugin
- An open source version of the ALAQS project - Airport Local Air Quality 
+ An open source version of the ALAQS project - Airport Local Air Quality
  Studies. Ported from ArcGIS and significantly modified to make use of new
  best practices and data sources.
         begin                : 2013-02-05
@@ -23,7 +23,9 @@ from __future__ import absolute_import
 from builtins import str
 from builtins import object
 # Import OS for finding files
-import os, sys
+import os
+import sys
+from pathlib import Path
 # sys.path.append("..") # Adds higher directory to python modules path.
 
 # Import the PyQt and QGIS libraries
@@ -31,7 +33,7 @@ from qgis.core import *
 from qgis.gui import *
 from qgis.PyQt import QtCore, QtGui, QtWidgets
 
-from . openalaqsdialog import *
+from .openalaqsdialog import *
 from . import openalaqsuitoolkit
 
 logger = alaqslogging.logging.getLogger(__name__)
@@ -68,7 +70,8 @@ logger.addHandler(file_handler)
 # if ui_dir not in sys.path:
 #     sys.path.append(ui_dir)
 
-class Open_Alaqs(object):
+
+class Open_Alaqs:
     """
     This is the main entry point for QGIS into Open ALAQS and initializes the tool bar and directs all interactions
     from there on in to the appropriate functions.
@@ -100,155 +103,153 @@ class Open_Alaqs(object):
             if QtCore.qVersion() > '4.3.3':
                 QtCore.QCoreApplication.installTranslator(self.translator)
 
-        # QGIS3: setMapUnits() was removed. The map units are dictated by the units for the destination CRS.
+        # QGIS3: setMapUnits() was removed.
+        # The map units are dictated by the units for the destination CRS.
         # We set the maps units to meters (0:meters, 1:feet, 2:degrees)
         # This is needed, especially if we're using network maps
         # self.iface.mapCanvas().setMapUnits(0)
 
         # Create some of the variables that we will use throughout the class
-        self.action_about = None
-        self.action_project_create = None
-        self.action_project_load = None
-        self.action_project_save = None
-        self.action_project_close = None
-        self.action_study_setup = None
-        self.action_build_inventory = None
-        self.action_calculate_dispersion = None
-        self.action_profiles_edit = None
-        self.action_upload_movements = None
-        self.action_view_results_analysis = None
-        self.action_taxi_routes = None
-        self.action_logfile = None
         self.open_alaqs_toolbar = None
-        self.dlg_about = None
-        self.dlg_create_project = None
-        self.dlg_open_project = None
-        self.dlg_study_setup = None
-        self.dlg_profiles = None
-        self.dlg_movements = None
-        self.dlg_taxi_routes = None
-        self.dlg_inventory = None
-        self.dlg_results = None
-        self.dlg_logfile = None
+        self.actions = {}
+        self.dialogs = {}
+
+    @staticmethod
+    def create_connected_action(icon, description, location, run_action):
+        """
+        Helper function to create connected actions.
+        """
+
+        # Create the action
+        action = QtWidgets.QAction(icon, description, location)
+
+        # Connect the action to the run method
+        action.triggered.connect(run_action)
+
+        return action
 
     def initGui(self):
         """
-        Plugin initialisation function. Builds toolbar and binds to calls for various UI classes.
+        Plugin initialisation function. Builds toolbar and binds to calls for
+        various UI classes.
+
         """
 
+        # Set the path to the icons
+        icons_path = Path(__file__).parent / 'alaqs_core/icons'
+
         # Create action that will show the About dialog
-        self.action_about = QtWidgets.QAction(
-            QtGui.QIcon(os.path.dirname(__file__) + "/alaqs_core/icons/about.png"),
-            u"About Open ALAQS", self.iface.mainWindow())
-        # connect the action to the run method
-        self.action_about.triggered.connect(self.run_about)
+        self.actions['about'] = self.create_connected_action(
+            QtGui.QIcon(icons_path / "about.png"),
+            u"About Open ALAQS",
+            self.iface.mainWindow(),
+            self.run_about)
 
-        # Create action that will show the Create dialog
-        self.action_project_create = QtWidgets.QAction(
-            QtGui.QIcon(os.path.dirname(__file__) + "/alaqs_core/icons/project-create.png"),
-            u"Create an Open ALAQS project", self.iface.mainWindow())
-        # connect the action to the run method
-        self.action_project_create.triggered.connect(self.run_project_create)
+        # Create action that will show the Create Project dialog
+        self.actions['project_create'] = self.create_connected_action(
+            QtGui.QIcon(icons_path / "project-create.png"),
+            u"Create an Open ALAQS project",
+            self.iface.mainWindow(),
+            self.run_project_create)
 
-        # Create action that will show the Load dialog
-        self.action_project_load = QtWidgets.QAction(
-            QtGui.QIcon(os.path.dirname(__file__) + "/alaqs_core/icons/project-load.png"),
-            u"Load an Open ALAQS project", self.iface.mainWindow())
-        # connect the action to the run method
-        self.action_project_load.triggered.connect(self.run_project_load)
+        # Create action that will show the Load Project dialog
+        self.actions['project_load'] = self.create_connected_action(
+            QtGui.QIcon(icons_path / "project-load.png"),
+            u"Load an Open ALAQS project",
+            self.iface.mainWindow(),
+            self.run_project_load)
 
-        # Create action that will show the Close dialog
-        self.action_project_close = QtWidgets.QAction(
-            QtGui.QIcon(os.path.dirname(__file__) + "/alaqs_core/icons/project-close.png"),
-            u"Close all Open ALAQS projects", self.iface.mainWindow())
-        # connect the action to the run method
-        self.action_project_close.triggered.connect(self.run_project_close)
+        # Create action that will show the Close Project dialog
+        self.actions['project_close'] = self.create_connected_action(
+            QtGui.QIcon(icons_path / "project-close.png"),
+            u"Close all Open ALAQS projects",
+            self.iface.mainWindow(),
+            self.run_project_close)
 
         # Create action that will show the Study Setup dialog
-        self.action_study_setup = QtWidgets.QAction(
-            QtGui.QIcon(os.path.dirname(__file__) + "/alaqs_core/icons/study-setup.png"),
-            u"Airport Study Setup", self.iface.mainWindow())
-        # connect the action to the run method
-        self.action_study_setup.triggered.connect(self.run_study_setup)
+        self.actions['study_setup'] = self.create_connected_action(
+            QtGui.QIcon(icons_path / "study-setup.png"),
+            u"Airport Study Setup",
+            self.iface.mainWindow(),
+            self.run_study_setup)
 
         # Create action that will show the Profile Edit dialog
-        self.action_profiles_edit = QtWidgets.QAction(
-            QtGui.QIcon(os.path.dirname(__file__) + "/alaqs_core/icons/profiles.png"),
-            u"Edit profiles", self.iface.mainWindow())
-        # connect the action to the run method
-        self.action_profiles_edit.triggered.connect(self.run_profiles_edit)
+        self.actions['profiles_edit'] = self.create_connected_action(
+            QtGui.QIcon(icons_path / "profiles.png"),
+            u"Edit profiles",
+            self.iface.mainWindow(),
+            self.run_profiles_edit)
 
-        # Create action that will show the Profile Edit dialog
-        self.action_taxi_routes = QtWidgets.QAction(
-            QtGui.QIcon(os.path.dirname(__file__) + "/alaqs_core/icons/taxi-routes.png"),
-            u"Define taxi routes", self.iface.mainWindow())
-        # connect the action to the run method
-        self.action_taxi_routes.triggered.connect(self.run_taxi_routes)
+        # Create action that will show the Define Taxi Routes dialog
+        self.actions['taxi_routes'] = self.create_connected_action(
+            QtGui.QIcon(icons_path / "taxi-routes.png"),
+            u"Define taxi routes",
+            self.iface.mainWindow(),
+            self.run_taxi_routes)
 
-        # Create action that will show the calculate emissions inventory dialog
-        self.action_build_inventory = QtWidgets.QAction(
-            QtGui.QIcon(os.path.dirname(__file__) + "/alaqs_core/icons/calculate.png"),
-            u"Calculate Emissions Inventory", self.iface.mainWindow())
-        # connect the action to the run method
-        self.action_build_inventory.triggered.connect(self.run_build_inventory)
+        # Create action that will show the Calculate Emissions Inventory dialog
+        self.actions['build_inventory'] = self.create_connected_action(
+            QtGui.QIcon(icons_path / "calculate.png"),
+            u"Calculate Emissions Inventory",
+            self.iface.mainWindow(),
+            self.run_build_inventory)
 
-        self.action_view_results_analysis = QtWidgets.QAction(
-            QtGui.QIcon(os.path.dirname(__file__) + "/alaqs_core/icons/grids.png"),
-            u"Visualize Emission Calculation", self.iface.mainWindow())
-        # connect the action to the run method
-        self.action_view_results_analysis.triggered.connect(self.run_results_analysis)
+        # Create action that will show the Visualize Emission Calculation dialog
+        self.actions['view_results_analysis'] = self.create_connected_action(
+            QtGui.QIcon(icons_path / "grids.png"),
+            u"Visualize Emission Calculation",
+            self.iface.mainWindow(),
+            self.run_results_analysis)
 
         # Create action that will show the calculate emissions dispersion dialog
-        self.action_calculate_dispersion = QtWidgets.QAction(
-            QtGui.QIcon(os.path.dirname(__file__) + "/alaqs_core/icons/dispersion_model.png"),
-            u"Calculate Dispersion", self.iface.mainWindow())
-        # ToDo:
-        # connect the action to the run method
-        self.action_calculate_dispersion.triggered.connect(self.run_dispersion_analysis)
+        self.actions['calculate_dispersion'] = self.create_connected_action(
+            QtGui.QIcon(icons_path / "dispersion_model.png"),
+            u"Calculate Dispersion",
+            self.iface.mainWindow(),
+            self.run_dispersion_analysis)
 
         # Create action that will show the Settings dialog
-        self.action_logfile = QtWidgets.QAction(
-            QtGui.QIcon(os.path.dirname(__file__) + "/alaqs_core/icons/text-log.png"),
-            u"Review Open ALAQS logs", self.iface.mainWindow())
-        # connect the action to the run method
-        self.action_logfile.triggered.connect(self.run_view_logfile)
+        self.actions['logfile'] = self.create_connected_action(
+            QtGui.QIcon(icons_path / "text-log.png"),
+            u"Review Open ALAQS logs",
+            self.iface.mainWindow(),
+            self.run_view_logfile)
 
         # Add buttons to toolbar
         self.open_alaqs_toolbar = self.iface.addToolBar("OpenALAQS ToolBar")
-        self.open_alaqs_toolbar.addAction(self.action_about)
+        self.open_alaqs_toolbar.addAction(self.actions['about'])
         self.open_alaqs_toolbar.addSeparator()
-        self.open_alaqs_toolbar.addAction(self.action_project_create)
-        self.open_alaqs_toolbar.addAction(self.action_project_load)
-        self.open_alaqs_toolbar.addAction(self.action_project_close)
+        self.open_alaqs_toolbar.addAction(self.actions['project_create'])
+        self.open_alaqs_toolbar.addAction(self.actions['project_load'])
+        self.open_alaqs_toolbar.addAction(self.actions['project_close'])
 
         # Create new airport
         self.open_alaqs_toolbar.addSeparator()
-        self.open_alaqs_toolbar.addAction(self.action_study_setup)
-        self.open_alaqs_toolbar.addAction(self.action_profiles_edit)
-        self.open_alaqs_toolbar.addAction(self.action_taxi_routes)
-        self.open_alaqs_toolbar.addAction(self.action_build_inventory)
+        self.open_alaqs_toolbar.addAction(self.actions['study_setup'])
+        self.open_alaqs_toolbar.addAction(self.actions['profiles_edit'])
+        self.open_alaqs_toolbar.addAction(self.actions['taxi_routes'])
+        self.open_alaqs_toolbar.addAction(self.actions['build_inventory'])
 
         self.open_alaqs_toolbar.addSeparator()
-        self.open_alaqs_toolbar.addAction(self.action_view_results_analysis)
-        self.open_alaqs_toolbar.addAction(self.action_calculate_dispersion)
+        self.open_alaqs_toolbar.addAction(self.actions['view_results_analysis'])
+        self.open_alaqs_toolbar.addAction(self.actions['calculate_dispersion'])
 
         self.open_alaqs_toolbar.addSeparator()
-        self.open_alaqs_toolbar.addAction(self.action_logfile)
+        self.open_alaqs_toolbar.addAction(self.actions['logfile'])
 
         # Set some initially unavailable
-        self.action_project_close.setEnabled(False)
-        self.action_study_setup.setEnabled(False)
-        self.action_profiles_edit.setEnabled(False)
-        self.action_taxi_routes.setEnabled(False)
-        self.action_build_inventory.setEnabled(False)
-        # self.action_calculate_dispersion.setEnabled(False)
+        self.actions['project_close'].setEnabled(False)
+        self.actions['study_setup'].setEnabled(False)
+        self.actions['profiles_edit'].setEnabled(False)
+        self.actions['taxi_routes'].setEnabled(False)
+        self.actions['build_inventory'].setEnabled(False)
 
     def unload(self):
         """
         Unloads the Open ALAQS plugin from the QGIS canvas, removing the toolbar
         and any menu items from the UI.
         """
-        #Close the current project
+        # Close the current project
         self.run_project_close()
 
         # Delete the Open ALAQS toolbar
@@ -258,166 +259,153 @@ class Open_Alaqs(object):
         """
         Calls a class that displays the About OpenALAQS UI
         """
-        self.dlg_about = OpenAlaqsAbout(self.iface)
-        self.dlg_about.show()
-        result = self.dlg_about.exec_()
-        if result == 1:
-            pass
+        self.dialogs['about'] = OpenAlaqsAbout(self.iface)
+        self.dialogs['about'].show()
 
     def run_project_create(self):
         """
         Opens a dialog to allow the user to create a new study database. This is
-        a blank database and blank shape files with no shapes currently included.
-        When completed, it opens the study setup window.
+        a blank database and blank shape files with no shapes currently
+        included. When completed, it opens the study setup window.
         """
-        self.dlg_create_project = OpenAlaqsCreateDatabase(self.iface)
-        result_code = self.dlg_create_project.exec_()
+        self.dialogs['create_project'] = OpenAlaqsCreateDatabase(self.iface)
+        result_code = self.dialogs['create_project'].exec_()
         if result_code == 0:
-            database_path = self.dlg_create_project.get_values()
+            database_path = self.dialogs['create_project'].get_values()
             if database_path is not None:
                 openalaqsuitoolkit.load_layers(self.iface, database_path)
-                openalaqsuitoolkit.set_default_zoom(self.canvas, 51.4775, -0.4614)
-                self.dlg_create_project.close()
-                self.action_study_setup.setEnabled(True)
-                self.action_profiles_edit.setEnabled(True)
-                self.action_taxi_routes.setEnabled(True)
-                self.action_build_inventory.setEnabled(True)
-                self.action_view_results_analysis.setEnabled(True)
-                self.action_calculate_dispersion.setEnabled(True)
-                self.action_project_load.setEnabled(False)
-                self.action_project_create.setEnabled(False)
-                self.action_project_close.setEnabled(True)
+                openalaqsuitoolkit.set_default_zoom(self.canvas, 51.4775,
+                                                    -0.4614)
+                self.dialogs['create_project'].close()
+                self.actions['study_setup'].setEnabled(True)
+                self.actions['profiles_edit'].setEnabled(True)
+                self.actions['taxi_routes'].setEnabled(True)
+                self.actions['build_inventory'].setEnabled(True)
+                self.actions['view_results_analysis'].setEnabled(True)
+                self.actions['calculate_dispersion'].setEnabled(True)
+                self.actions['project_load'].setEnabled(False)
+                self.actions['project_create'].setEnabled(False)
+                self.actions['project_close'].setEnabled(True)
                 self.run_study_setup()
         else:
-            self.dlg_create_project.close()
+            self.dialogs['create_project'].close()
 
     def run_project_load(self):
         """
-        Opens a dialog to allow the user to open an existing study database. This
-        tries to query some information from the database if possible to populate
-        the study setup window, which it opens if successful.
+        Opens a dialog to allow the user to open an existing study database.
+        This tries to query some information from the database if possible to
+        populate the study setup window, which it opens if successful.
         """
-        self.dlg_open_project = OpenAlaqsOpenDatabase(self.iface)
-        return_code = self.dlg_open_project.exec_()
+        self.dialogs['open_project'] = OpenAlaqsOpenDatabase(self.iface)
+        return_code = self.dialogs['open_project'].exec_()
         if return_code == 0:
-            database_path = self.dlg_open_project.get_values()
+            database_path = self.dialogs['open_project'].get_values()
             if (database_path is not None) and (database_path != ""):
                 openalaqsuitoolkit.load_layers(self.iface, database_path)
-                self.dlg_open_project.close()
-                self.action_study_setup.setEnabled(True)
-                self.action_profiles_edit.setEnabled(True)
-                self.action_taxi_routes.setEnabled(True)
-                self.action_build_inventory.setEnabled(True)
-                self.action_view_results_analysis.setEnabled(True)
-                self.action_calculate_dispersion.setEnabled(True)
-                self.action_project_load.setEnabled(False)
-                self.action_project_create.setEnabled(False)
-                self.action_project_close.setEnabled(True)
+                self.dialogs['open_project'].close()
+                self.actions['study_setup'].setEnabled(True)
+                self.actions['profiles_edit'].setEnabled(True)
+                self.actions['taxi_routes'].setEnabled(True)
+                self.actions['build_inventory'].setEnabled(True)
+                self.actions['view_results_analysis'].setEnabled(True)
+                self.actions['calculate_dispersion'].setEnabled(True)
+                self.actions['project_load'].setEnabled(False)
+                self.actions['project_create'].setEnabled(False)
+                self.actions['project_close'].setEnabled(True)
                 self.run_study_setup()
         else:
-            self.dlg_open_project.close()
+            self.dialogs['open_project'].close()
 
     def run_project_close(self):
         """
         This function ensures a smooth closing of an OpenALAQS project, removing
-        associated layers from the UI, cleaning up the tool bar and disabling some
-        features until a new project is created or loaded.
+        associated layers from the UI, cleaning up the tool bar and disabling
+        some features until a new project is created or loaded.
         """
-        self.action_profiles_edit.setEnabled(False)
+        self.actions['profiles_edit'].setEnabled(False)
         openalaqsuitoolkit.delete_alaqs_layers(self.iface)
 
-        self.action_project_close.setEnabled(False)
-        self.action_study_setup.setEnabled(False)
-        self.action_profiles_edit.setEnabled(False)
-        self.action_taxi_routes.setEnabled(False)
-        self.action_build_inventory.setEnabled(False)
-        #self.action_view_results_analysis.setEnabled(False)
-        self.action_calculate_dispersion.setEnabled(False)
+        self.actions['project_close'].setEnabled(False)
+        self.actions['study_setup'].setEnabled(False)
+        self.actions['profiles_edit'].setEnabled(False)
+        self.actions['taxi_routes'].setEnabled(False)
+        self.actions['build_inventory'].setEnabled(False)
+        self.actions['calculate_dispersion'].setEnabled(False)
 
-        self.action_project_create.setEnabled(True)
-        self.action_project_load.setEnabled(True)
+        self.actions['project_create'].setEnabled(True)
+        self.actions['project_load'].setEnabled(True)
 
     def run_study_setup(self):
         """
-        Looks to see if there is an open database (the first combo box will be populated
-        if it is) and presents details of the current study for review/update. If a database
-        is not available, a warning message is shown.
+        Looks to see if there is an open database (the first combo box will be
+        populated if it is) and presents details of the current study for
+        review/update. If a database is not available, a warning message is
+        shown.
         """
         try:
-            self.dlg_study_setup = OpenAlaqsStudySetup(self.iface)
-            self.dlg_study_setup.show()
-            return_code = self.dlg_study_setup.exec_()
+            self.dialogs['study_setup'] = OpenAlaqsStudySetup(self.iface)
+            self.dialogs['study_setup'].show()
+            return_code = self.dialogs['study_setup'].exec_()
             if return_code == 0:
                 try:
-                    self.dlg_study_setup.get_values()
-                    self.dlg_study_setup.close()
-                    self.action_profiles_edit.setEnabled(True)
+                    self.dialogs['study_setup'].get_values()
+                    self.dialogs['study_setup'].close()
+                    self.actions['profiles_edit'].setEnabled(True)
                 except:
                     pass
             else:
-                self.dlg_study_setup.close()
+                self.dialogs['study_setup'].close()
         except:
-            QtWidgets.QMessageBox.warning(None, "Error", "No database loaded.\nEither create a new database or open an "
-                                                     "existing study")
+            QtWidgets.QMessageBox.warning(
+                None,
+                "Error",
+                "No database loaded.\n"
+                "Either create a new database or open an existing study")
 
     def run_profiles_edit(self):
         """
         Opens the widget dialog for administering aircraft profiles.
         """
-        self.dlg_profiles = OpenAlaqsProfiles(self.iface)
-        self.dlg_profiles.show()
-        result = self.dlg_profiles.exec_()
-        if result == 1:
-            pass
+        self.dialogs['profiles'] = OpenAlaqsProfiles(self.iface)
+        self.dialogs['profiles'].show()
+        self.dialogs['profiles'].exec_()
 
     def run_taxi_routes(self):
         """
         Opens the widget dialog for administering aircraft taxi routes.
         """
-        self.dlg_taxi_routes = OpenAlaqsTaxiRoutes(self.iface)
-        self.dlg_taxi_routes.show()
-        result = self.dlg_taxi_routes.exec_()
-        if result == 1:
-            pass
+        self.dialogs['taxi_routes'] = OpenAlaqsTaxiRoutes(self.iface)
+        self.dialogs['taxi_routes'].show()
+        self.dialogs['taxi_routes'].exec_()
 
     def run_build_inventory(self):
         """
-        Opens the widget dialog for administering the generation of an OpenALAQS emission inventory based on the
-        current sources.
+        Opens the widget dialog for administering the generation of an OpenALAQS
+        emission inventory based on the current sources.
         """
-        self.dlg_inventory = OpenAlaqsInventory()
-        self.dlg_inventory.show()
-        result = self.dlg_inventory.exec_()
-        if result == 1:
-            pass
+        self.dialogs['inventory'] = OpenAlaqsInventory()
+        self.dialogs['inventory'].show()
+        self.dialogs['inventory'].exec_()
 
     def run_results_analysis(self):
         """
-        Opens the widget dialog for analysing and visualising the results of an OpenALAQS emission inventory.
+        Opens the widget dialog for analysing and visualising the results of an
+        OpenALAQS emission inventory.
         """
-        self.dlg_results = OpenAlaqsResultsAnalysis(self.iface)
-        result = self.dlg_results.exec_()
-
-        if not result:
-            # return_values = self.dlg_results.get_values()
-            # logger.info("Result '%s'."%(str(return_values)),"ContourPlot", 0)
-            pass
+        self.dialogs['results'] = OpenAlaqsResultsAnalysis(self.iface)
+        self.dialogs['results'].exec_()
 
     def run_dispersion_analysis(self):
         """
-        Opens the widget dialog for calculating dispersion of the results of an OpenALAQS emission inventory.
+        Opens the widget dialog for calculating dispersion of the results of an
+        OpenALAQS emission inventory.
         """
-        self.dlg_results = OpenAlaqsDispersionAnalysis(self.iface)
-        result = self.dlg_results.exec_()
-
-        if not result:
-            pass
+        self.dialogs['results'] = OpenAlaqsDispersionAnalysis(self.iface)
+        self.dialogs['results'].exec_()
 
     def run_view_logfile(self):
         """
         Opens the widget dialog for review of the Open ALAQSlog file.
         """
-        self.dlg_logfile = OpenAlaqsLogfile()
-        result = self.dlg_logfile.exec_()
-        if result == 1:
-            pass
+        self.dialogs['logfile'] = OpenAlaqsLogfile()
+        self.dialogs['logfile'].exec_()
