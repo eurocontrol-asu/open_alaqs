@@ -73,13 +73,15 @@ logger.addHandler(file_handler)
 
 class Open_Alaqs:
     """
-    This is the main entry point for QGIS into Open ALAQS and initializes the tool bar and directs all interactions
-    from there on in to the appropriate functions.
+    This is the main entry point for QGIS into Open ALAQS and initializes the
+    tool bar and directs all interactions from there on in to the appropriate
+    functions.
     """
 
     def __init__(self, iface):
         """
-        Generic QGIS initialisation functions that initialise OpenALAQS as a plugin.
+        Generic QGIS initialisation functions that initialise OpenALAQS as a
+        plugin.
         """
 
         # Save reference to the QGIS interface
@@ -140,77 +142,77 @@ class Open_Alaqs:
 
         # Create action that will show the About dialog
         self.actions['about'] = self.create_connected_action(
-            QtGui.QIcon(icons_path / "about.png"),
+            QtGui.QIcon(str(icons_path / "about.png")),
             u"About Open ALAQS",
             self.iface.mainWindow(),
             self.run_about)
 
         # Create action that will show the Create Project dialog
         self.actions['project_create'] = self.create_connected_action(
-            QtGui.QIcon(icons_path / "project-create.png"),
+            QtGui.QIcon(str(icons_path / "project-create.png")),
             u"Create an Open ALAQS project",
             self.iface.mainWindow(),
             self.run_project_create)
 
         # Create action that will show the Load Project dialog
         self.actions['project_load'] = self.create_connected_action(
-            QtGui.QIcon(icons_path / "project-load.png"),
+            QtGui.QIcon(str(icons_path / "project-load.png")),
             u"Load an Open ALAQS project",
             self.iface.mainWindow(),
             self.run_project_load)
 
         # Create action that will show the Close Project dialog
         self.actions['project_close'] = self.create_connected_action(
-            QtGui.QIcon(icons_path / "project-close.png"),
+            QtGui.QIcon(str(icons_path / "project-close.png")),
             u"Close all Open ALAQS projects",
             self.iface.mainWindow(),
             self.run_project_close)
 
         # Create action that will show the Study Setup dialog
         self.actions['study_setup'] = self.create_connected_action(
-            QtGui.QIcon(icons_path / "study-setup.png"),
+            QtGui.QIcon(str(icons_path / "study-setup.png")),
             u"Airport Study Setup",
             self.iface.mainWindow(),
             self.run_study_setup)
 
         # Create action that will show the Profile Edit dialog
         self.actions['profiles_edit'] = self.create_connected_action(
-            QtGui.QIcon(icons_path / "profiles.png"),
+            QtGui.QIcon(str(icons_path / "profiles.png")),
             u"Edit profiles",
             self.iface.mainWindow(),
             self.run_profiles_edit)
 
         # Create action that will show the Define Taxi Routes dialog
         self.actions['taxi_routes'] = self.create_connected_action(
-            QtGui.QIcon(icons_path / "taxi-routes.png"),
+            QtGui.QIcon(str(icons_path / "taxi-routes.png")),
             u"Define taxi routes",
             self.iface.mainWindow(),
             self.run_taxi_routes)
 
         # Create action that will show the Calculate Emissions Inventory dialog
         self.actions['build_inventory'] = self.create_connected_action(
-            QtGui.QIcon(icons_path / "calculate.png"),
+            QtGui.QIcon(str(icons_path / "calculate.png")),
             u"Calculate Emissions Inventory",
             self.iface.mainWindow(),
             self.run_build_inventory)
 
         # Create action that will show the Visualize Emission Calculation dialog
         self.actions['view_results_analysis'] = self.create_connected_action(
-            QtGui.QIcon(icons_path / "grids.png"),
+            QtGui.QIcon(str(icons_path / "grids.png")),
             u"Visualize Emission Calculation",
             self.iface.mainWindow(),
             self.run_results_analysis)
 
         # Create action that will show the calculate emissions dispersion dialog
         self.actions['calculate_dispersion'] = self.create_connected_action(
-            QtGui.QIcon(icons_path / "dispersion_model.png"),
+            QtGui.QIcon(str(icons_path / "dispersion_model.png")),
             u"Calculate Dispersion",
             self.iface.mainWindow(),
             self.run_dispersion_analysis)
 
         # Create action that will show the Settings dialog
         self.actions['logfile'] = self.create_connected_action(
-            QtGui.QIcon(icons_path / "text-log.png"),
+            QtGui.QIcon(str(icons_path / "text-log.png")),
             u"Review Open ALAQS logs",
             self.iface.mainWindow(),
             self.run_view_logfile)
