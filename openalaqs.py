@@ -19,16 +19,8 @@
  *                                                                         *
  ***************************************************************************/
 """
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-# Import OS for finding files
-import os
-import sys
 from pathlib import Path
-# sys.path.append("..") # Adds higher directory to python modules path.
 
-# Import the PyQt and QGIS libraries
 from qgis.core import *
 from qgis.gui import *
 from qgis.PyQt import QtCore, QtGui, QtWidgets
@@ -44,34 +36,8 @@ formatter = alaqslogging.logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-# Import the code for the dialog
-# from .openalaqsdialog import *
-# A single dot means that the module or package referenced is in the same directory as the current location.
-# from . import openalaqsuitoolkit
-#
-# # Import ALAQS
-# alaqs_core_dir = os.path.dirname(os.path.abspath(__file__)) + "\\alaqs_core"
-# if alaqs_core_dir not in sys.path:
-#     sys.path.append(alaqs_core_dir)
-#
-# toos_dir = os.path.dirname(os.path.abspath(__file__)) + "\\alaqs_core\\tools"
-# if toos_dir not in sys.path:
-#     sys.path.append(toos_dir)
-#
-# interfaces_dir = os.path.dirname(os.path.abspath(__file__)) + "\\alaqs_core\\interfaces"
-# if interfaces_dir not in sys.path:
-#     sys.path.append(interfaces_dir)
-#
-# modules_dir = os.path.dirname(os.path.abspath(__file__)) + "\\alaqs_core\\modules"
-# if modules_dir not in sys.path:
-#     sys.path.append(modules_dir)
-#
-# ui_dir = os.path.dirname(os.path.abspath(__file__)) + "\\ui"
-# if ui_dir not in sys.path:
-#     sys.path.append(ui_dir)
 
-
-class Open_Alaqs:
+class OpenALAQS:
     """
     This is the main entry point for QGIS into Open ALAQS and initializes the
     tool bar and directs all interactions from there on in to the appropriate
