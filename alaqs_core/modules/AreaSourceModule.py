@@ -60,7 +60,6 @@ class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
             if source_names and \
                     ("all" not in source_names) and \
                     (source_id not in source_names):
-                # logger.error("Cannot process source with id '%s':" % source_id)
                 continue
 
             activity_multiplier = self.getRelativeActivityPerHour(
