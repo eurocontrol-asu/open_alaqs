@@ -1,4 +1,7 @@
-from __future__ import absolute_import
+"""
+This class provides all of the calculation methods required to perform
+emissions calculations for area sources.
+"""
 
 import logging
 
@@ -46,8 +49,8 @@ class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
             self.setStore(AreaSourcesStore(self.getDatabasePath()))
 
     def beginJob(self):
-        SourceWithTimeProfileModule.beginJob(
-            self)  # super(AreaSourceWithTimeProfileModule, self).beginJob()
+        # super(AreaSourceWithTimeProfileModule, self).beginJob()
+        SourceWithTimeProfileModule.beginJob(self)
 
     def process(self, startTimeSeries, endTimeSeries, source_names=None,
                 **kwargs):
