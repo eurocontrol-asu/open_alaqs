@@ -32,6 +32,5 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :param iface: A QGIS interface instance.
     :type iface: QgsInterface
     """
-    #
-    from open_alaqs.openalaqs import Open_Alaqs
-    return Open_Alaqs(iface)
+    from open_alaqs.openalaqs import OpenALAQS
+    return OpenALAQS(iface)
