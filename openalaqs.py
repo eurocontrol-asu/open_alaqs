@@ -33,8 +33,8 @@ from qgis.core import *
 from qgis.gui import *
 from qgis.PyQt import QtCore, QtGui, QtWidgets
 
-from .openalaqsdialog import *
-from . import openalaqsuitoolkit
+from open_alaqs.openalaqsdialog import *
+from open_alaqs import openalaqsuitoolkit
 
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('DEBUG')

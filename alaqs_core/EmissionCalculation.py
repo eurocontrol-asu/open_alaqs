@@ -26,33 +26,23 @@ logger.addHandler(file_handler)
 from PyQt5 import QtCore, QtGui, QtWidgets
 from collections import OrderedDict
 import inspect
-try:
-    from .tools import Iterator
-    from .tools.Grid3D import Grid3D
-    from .tools import Conversions
 
-    from .interfaces.InventoryTimeSeries import InventoryTimeSeriesStore
-    from .interfaces.SourceModule import SourceModule
-    from .interfaces.DispersionModule import DispersionModule
-    from .interfaces.Emissions import Emission
-    from .interfaces.AmbientCondition import AmbientConditionStore, AmbientCondition
+from open_alaqs.alaqs_core.tools import Iterator
+from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
+from open_alaqs.alaqs_core.tools import Conversions
 
-    from .modules.ModuleManager import SourceModuleManager, OutputModuleManager, DispersionModuleManager
-    from .modules.ui.ModuleConfigurationWidget import ModuleConfigurationWidget
-except:
-    # import tools
-    from tools import Iterator
-    from tools.Grid3D import Grid3D
-    from tools import Conversions
+from open_alaqs.alaqs_core.interfaces.InventoryTimeSeries import \
+    InventoryTimeSeriesStore
+from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
+from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
+from open_alaqs.alaqs_core.interfaces.Emissions import Emission
+from open_alaqs.alaqs_core.interfaces.AmbientCondition import \
+    AmbientConditionStore, AmbientCondition
 
-    from interfaces.InventoryTimeSeries import InventoryTimeSeriesStore
-    from interfaces.SourceModule import SourceModule
-    from interfaces.DispersionModule import DispersionModule
-    from interfaces.Emissions import Emission
-    from interfaces.AmbientCondition import AmbientConditionStore, AmbientCondition
-
-    from modules.ModuleManager import SourceModuleManager, OutputModuleManager, DispersionModuleManager
-    from modules.ui.ModuleConfigurationWidget import ModuleConfigurationWidget
+from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
+    OutputModuleManager, DispersionModuleManager
+from open_alaqs.alaqs_core.modules.ui.ModuleConfigurationWidget import \
+    ModuleConfigurationWidget
 
 class EmissionCalculation(object):
     def __init__(self, values_dict = {}):

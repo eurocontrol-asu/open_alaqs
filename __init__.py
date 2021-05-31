@@ -33,5 +33,5 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :type iface: QgsInterface
     """
     #
-    from .openalaqs import Open_Alaqs
+    from open_alaqs.openalaqs import Open_Alaqs
     return Open_Alaqs(iface)
