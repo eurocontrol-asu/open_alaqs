@@ -1,23 +1,27 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-try:
-    from . import __init__
-    from . import Constant
-except:
-    import __init__
-    import Constant
-
 import logging
-logger = logging.getLogger("alaqs.%s" % (__name__))
-
-import sys
-import numpy as np
-from numpy import empty_like, dot
 import copy
 from collections import OrderedDict
+from dataclasses import dataclass
 
-def perp( a ) :
+import numpy as np
+from numpy import empty_like, dot
+
+logger = logging.getLogger("alaqs.%s" % __name__)
+
+
+@dataclass(init=False, frozen=True)
+class _Constants:
+    """
+    An immutable dataclass for constants
+
+    """
+    epsilon: float = 1e-4
+
+
+constants = _Constants()
+
+
+def perp(a):
     b = empty_like(a)
     b[0] = -a[1]
     b[1] = a[0]
@@ -291,27 +295,27 @@ def calculateEmissionIndex(pollutant, fuel_flow, icao_eedb, ambient_conditions={
     for ik, ival in list(icao_eedb[pollutant]['Idle'].items()):
         if icao_eedb[pollutant]['Idle'][ik] == 0:
             idle_check = 0
-            # logger.debug("7%% EI is zero, setting to %f" % (Constant.CONST.EPSILON))
-            icao_eedb[pollutant]['Idle'][ik] = Constant.CONST.EPSILON*10
+            # logger.debug("7%% EI is zero, setting to %f" % (constants.epsilon))
+            icao_eedb[pollutant]['Idle'][ik] = constants.epsilon * 10
 
     # elif ikey == 'Approach':
     for ik, ival in list(icao_eedb[pollutant]['Approach'].items()):
         if icao_eedb[pollutant]['Approach'][ik] == 0 and idle_check > 0:
-            # logger.debug("30%% EI is zero, but 7%% EI is not zero, setting 30%% EI to %f" % (Constant.CONST.EPSILON))
-            icao_eedb[pollutant]['Approach'][ik] = Constant.CONST.EPSILON*10
+            # logger.debug("30%% EI is zero, but 7%% EI is not zero, setting 30%% EI to %f" % (constants.epsilon))
+            icao_eedb[pollutant]['Approach'][ik] = constants.epsilon*10
         elif icao_eedb[pollutant]['Approach'][ik] == 0 and idle_check == 0:
-            # logger.debug("30%% EI is zero, but 7%% EI was zero, setting 30%% EI to %f" % (Constant.CONST.EPSILON))
-            icao_eedb[pollutant]['Approach'][ik] = Constant.CONST.EPSILON
+            # logger.debug("30%% EI is zero, but 7%% EI was zero, setting 30%% EI to %f" % (constants.epsilon))
+            icao_eedb[pollutant]['Approach'][ik] = constants.epsilon
 
     # For the 85 and 100 power points or if all power point EIs are zero, any value <= 10-4 should suffice.
     # elif ikey == 'Climbout':
         for ik, ival in list(icao_eedb[pollutant]['Climbout'].items()):
             if icao_eedb[pollutant]['Climbout'][ik] == 0:
-                icao_eedb[pollutant]['Climbout'][ik] = Constant.CONST.EPSILON
+                icao_eedb[pollutant]['Climbout'][ik] = constants.epsilon
     # elif ikey == 'Takeoff':
         for ik, ival in list(icao_eedb[pollutant]['Takeoff'].items()):
             if icao_eedb[pollutant]['Takeoff'][ik] == 0:
-                icao_eedb[pollutant]['Takeoff'][ik] = Constant.CONST.EPSILON
+                icao_eedb[pollutant]['Takeoff'][ik] = constants.epsilon
 
     # These solutions are reasonable since the zero values in the ICAO data likely represents small
     # values that were rounded to zero as opposed to actually implying zero emissions.
@@ -330,7 +334,7 @@ def calculateEmissionIndex(pollutant, fuel_flow, icao_eedb, ambient_conditions={
         logger.error(icao_eedb[pollutant])
         return 0.
 
-    x_ff_log = np.log10(FF_ref if FF_ref else Constant.CONST.EPSILON)
+    x_ff_log = np.log10(FF_ref if FF_ref else constants.epsilon)
 
     # logger.debug('Log Fuel Flow: ' + "%.2f" % x_ff_log)
 
@@ -435,7 +439,7 @@ def calculateEmissionIndex(pollutant, fuel_flow, icao_eedb, ambient_conditions={
         # logger.debug('\t EI corresponding to this reference Fuel Flow: ' + "%.4f" % 10**(y_ff_log))
 
     if y_ff_log is None or np.isnan(y_ff_log):
-        y_ff_log = np.log10(Constant.CONST.EPSILON)
+        y_ff_log = np.log10(constants.epsilon)
         # print "\t log(EI<>_ref): %s"%y_ff_log
 
     #####################################################################################################################
@@ -445,18 +449,18 @@ def calculateEmissionIndex(pollutant, fuel_flow, icao_eedb, ambient_conditions={
     if pollutant.lower() == "nox":
     # EI = NOx EI at non-reference conditions (g/kg)
     # EINOx_ref = NOx EI at reference conditions (g/kg)
-        EINOx_ref = 10**(y_ff_log) if 10**(y_ff_log)>Constant.CONST.EPSILON else 0.
+        EINOx_ref = 10**(y_ff_log) if 10**(y_ff_log)>constants.epsilon else 0.
         EI = EINOx_ref * np.exp(H) * ( delta**1.02 / theta**3.3 )**y
         # print "EINOx_ref %s"%EINOx_ref
     elif pollutant.lower() == "co":
         # EI = CO EI at non-reference conditions (g/kg)
-        EICO_ref = 10**(y_ff_log) if 10**(y_ff_log)>Constant.CONST.EPSILON else 0. # CO EI at reference conditions (g/kg)
+        EICO_ref = 10**(y_ff_log) if 10**(y_ff_log)>constants.epsilon else 0. # CO EI at reference conditions (g/kg)
         EI = EICO_ref * (theta**3.3/delta**1.02)**x
         # print "EICO_ref %s"%EICO_ref
 
     elif pollutant.lower()=="hc":
         # EI = THC EI at non-reference conditions (g/kg)
-        EITHC_ref = 10**(y_ff_log) if 10**(y_ff_log)>Constant.CONST.EPSILON else 0. # HC EI at reference conditions (g/kg)
+        EITHC_ref = 10**(y_ff_log) if 10**(y_ff_log)>constants.epsilon else 0. # HC EI at reference conditions (g/kg)
         EI = float(EITHC_ref) * (theta**3.3/delta**1.02)**x
 
     emission_index = EI[0] if (type(EI) is np.ndarray and EI.size == 1) else EI # in kg/s
