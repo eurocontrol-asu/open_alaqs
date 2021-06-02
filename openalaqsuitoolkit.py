@@ -127,8 +127,7 @@ def add_spatialite_layer(iface, database_path, table_name, display_name,
     lconfig.setInitFilePath(os.path.join(plugin_dir, edit_py))
     lconfig.setInitFunction(edit_init)
     layer.setEditFormConfig(lconfig)
-    layer.setCrs(QgsCoordinateReferenceSystem(
-        3857, QgsCoordinateReferenceSystem.EpsgCrsId))
+    layer.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
 
     # By default the source is accounted for in the study - comment this part
     # or set to 0 to ignore
@@ -393,8 +392,8 @@ def delete_alaqs_layers(iface):
 def set_default_zoom(canvas, lat, lon):
     try:
         scale = 5000
-        crs_src = QgsCoordinateReferenceSystem(4326)
-        crs_dest = QgsCoordinateReferenceSystem(3857)
+        crs_src = QgsCoordinateReferenceSystem("EPSG:4326")
+        crs_dest = QgsCoordinateReferenceSystem("EPSG:3857")
         xform = QgsCoordinateTransform(crs_src, crs_dest)
 
         arp = xform.transform(QgsPoint(float(lon), float(lat)))
