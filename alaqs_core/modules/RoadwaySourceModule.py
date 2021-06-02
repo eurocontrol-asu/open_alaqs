@@ -2,12 +2,12 @@
 This class provides all of the calculation methods required to perform emissions
  calculations for roadways.
 """
+import logging
 
 from open_alaqs.alaqs_core.interfaces.Emissions import Emission
 from open_alaqs.alaqs_core.interfaces.RoadwaySources import RoadwaySourcesStore
 from open_alaqs.alaqs_core.interfaces.SourceModule import \
     SourceWithTimeProfileModule
-from open_alaqs.alaqs_core.tools.libALAQSMethod import *
 
 logger = logging.getLogger("alaqs.%s" % __name__)
 

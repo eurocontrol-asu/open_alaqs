@@ -1,7 +1,8 @@
 from PyQt5 import QtWidgets
 
 from open_alaqs.alaqs_core import alaqslogging
-
+from open_alaqs.alaqs_core.modules.ui.ModuleConfigurationWidget import \
+    ModuleConfigurationWidget
 
 logger = alaqslogging.logging.getLogger(__name__)
 # To override the default severity of logging
