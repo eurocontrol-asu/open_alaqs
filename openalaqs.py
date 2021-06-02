@@ -21,12 +21,12 @@
 """
 from pathlib import Path
 
+from qgis.PyQt import QtCore, QtGui, QtWidgets
 from qgis.core import *
 from qgis.gui import *
-from qgis.PyQt import QtCore, QtGui, QtWidgets
 
-from open_alaqs.openalaqsdialog import *
 from open_alaqs import openalaqsuitoolkit
+from open_alaqs.openalaqsdialog import *
 
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('DEBUG')

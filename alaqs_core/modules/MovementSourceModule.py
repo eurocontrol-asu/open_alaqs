@@ -1,14 +1,16 @@
 """
 This class provides the module to calculate emissions of movements.
 """
-from __future__ import absolute_import
-# from . import __init__
 
-# import logging
-# logger = logging.getLogger("alaqs.%s" % (__name__))
-import os, sys
-# import logging
-import alaqslogging
+import pandas as pd
+
+from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.interfaces.AmbientCondition import AmbientCondition
+from open_alaqs.alaqs_core.interfaces.Emissions import Emission
+from open_alaqs.alaqs_core.interfaces.Movement import MovementStore
+from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
+from open_alaqs.alaqs_core.tools import conversion
+
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('DEBUG')
 file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
@@ -17,17 +19,6 @@ formatter = alaqslogging.logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-import pandas as pd
-
-import alaqsutils           # For logging and conversion of data types
-import alaqsdblite          # Functions for working with ALAQS database
-
-from interfaces.SourceModule import SourceModule
-from interfaces.Movement import MovementStore, Movement
-from interfaces.Emissions import Emission
-from interfaces.AmbientCondition import AmbientCondition
-from tools import Conversions
-import time
 
 class MovementSourceModule(SourceModule):
     """
@@ -38,7 +29,9 @@ class MovementSourceModule(SourceModule):
     def getModuleName():
         return "MovementSource"
 
-    def __init__(self, values_dict = {}):
+    def __init__(self, values_dict=None):
+        if values_dict is None:
+            values_dict = {}
         SourceModule.__init__(self, values_dict)
 
         if not self.getDatabasePath() is None:
@@ -161,7 +154,7 @@ class MovementSourceModule(SourceModule):
             self.getCalculationLimit()['max_height'] = ambient_conditions.getMixingHeight()
         except:
             # limit set by default to 3000 ft
-            self.getCalculationLimit()['max_height'] = Conversions.convertFeetToMeters(3000.)
+            self.getCalculationLimit()['max_height'] = conversion.convertFeetToMeters(3000.)
             logger.info("Taking default mixing height (3000ft) on %s"%startTimeSeries.getTimeAsDateTime())
 
         limit_ = self.getCalculationLimit()

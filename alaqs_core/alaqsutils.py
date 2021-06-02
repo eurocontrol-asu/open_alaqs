@@ -6,12 +6,13 @@ and error processing functions ...
 Created on 21 Mar 2013
 @author: Dan Pearce
 """
-from __future__ import print_function
-from __future__ import absolute_import
+import os
+import sys
+import sqlite3 as sqlite
 
-from builtins import str
-import os, sys
-import alaqslogging
+from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.tools import conversion
+
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('DEBUG')
 file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
@@ -20,26 +21,15 @@ formatter = alaqslogging.logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-alaqs_main_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+alaqs_main_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                    "..")
 if alaqs_main_directory not in sys.path:
     sys.path.append(alaqs_main_directory)
-tools_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools")
+tools_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               "tools")
 if tools_directory not in sys.path:
     sys.path.append(tools_directory)
-import Conversions
-# from .tools import Conversions
 
-# sys.path.append("..") # Adds higher directory to python modules path.
-import sqlite3 as sqlite
-
-
-
-from datetime import datetime, timedelta
-
-import alaqsutils # For logging and conversion of data types
-import alaqsdblite # Functions for working with ALAQS database
-# from . import alaqsdblite
-from alaqs_config import SPATIALTE_EXTENSION_FOLDER, SPATIALTE_EXTENSION_LIB
 
 def print_error(function_name, exception_object, e_object):
     """
@@ -51,12 +41,14 @@ def print_error(function_name, exception_object, e_object):
     except:
         pass
     exc_type, exc_obj, exc_tb = sys.exc_info()
-    error = "[-] Error in %s() [line %d]: %s" % (function_name, exc_tb.tb_lineno, exc_obj)
+    error = "[-] Error in %s() [line %d]: %s" % (
+        function_name, exc_tb.tb_lineno, exc_obj)
     if "object has been deleted" in str(exc_obj):
         return None
     else:
         logger.error(error)
     return error
+
 
 # ===========================================================
 #           FUNCTIONS TO TURN LISTS INTO DICT
@@ -65,7 +57,7 @@ def print_error(function_name, exception_object, e_object):
 
 def dict_study_setup(study_setup_data):
     study_setup_dict = dict()
-    study_setup_dict['oid'] = Conversions.convertToInt(study_setup_data[0])
+    study_setup_dict['oid'] = conversion.convertToInt(study_setup_data[0])
     study_setup_dict['airport_id'] = study_setup_data[1]
     study_setup_dict['alaqs_version'] = study_setup_data[2]
     study_setup_dict['project_name'] = study_setup_data[3]
@@ -76,7 +68,7 @@ def dict_study_setup(study_setup_data):
     study_setup_dict['airport_longitude'] = study_setup_data[8]
     study_setup_dict['airport_elevation'] = study_setup_data[9]#*0.3048 # from ft to m
     study_setup_dict['airport_temperature'] = study_setup_data[10]
-    study_setup_dict['vertical_limit'] = Conversions.convertToFloat(study_setup_data[11], 0.)
+    study_setup_dict['vertical_limit'] = conversion.convertToFloat(study_setup_data[11], 0.)
     study_setup_dict['roadway_method'] = study_setup_data[12]
     study_setup_dict['roadway_fleet_year'] = study_setup_data[13]
     study_setup_dict['roadway_country'] = study_setup_data[14]
@@ -94,35 +86,35 @@ def dict_airport_data(airport_data):
     airport_data_dict['airport_country'] = airport_data[3]
     airport_data_dict['airport_latitude'] = airport_data[4]
     airport_data_dict['airport_longitude'] = airport_data[5]
-    airport_data_dict['airport_elevation'] = Conversions.convertToFloat(airport_data[6], 0.)
+    airport_data_dict['airport_elevation'] = conversion.convertToFloat(airport_data[6], 0.)
     return airport_data_dict
 
 
 def dict_roadway_data(roadway_data):
     try:
         dict_data = dict()
-        dict_data['oid'] = Conversions.convertToInt(roadway_data[0])
+        dict_data['oid'] = conversion.convertToInt(roadway_data[0])
         dict_data['roadway_id'] = str(roadway_data[1])
-        dict_data['vehicle_year'] = Conversions.convertToFloat(roadway_data[2])
-        dict_data['height'] = Conversions.convertToFloat(roadway_data[3], 0.)
-        dict_data['distance'] = Conversions.convertToFloat(roadway_data[4], 0.)
-        dict_data['speed'] = Conversions.convertToFloat(roadway_data[5], 0.)
-        dict_data['vehicle_light'] = Conversions.convertToFloat(roadway_data[6], 0.)
-        dict_data['vehicle_medium'] = Conversions.convertToFloat(roadway_data[7], 0.)
-        dict_data['vehicle_heavy'] = Conversions.convertToFloat(roadway_data[8], 0.)
+        dict_data['vehicle_year'] = conversion.convertToFloat(roadway_data[2])
+        dict_data['height'] = conversion.convertToFloat(roadway_data[3], 0.)
+        dict_data['distance'] = conversion.convertToFloat(roadway_data[4], 0.)
+        dict_data['speed'] = conversion.convertToFloat(roadway_data[5], 0.)
+        dict_data['vehicle_light'] = conversion.convertToFloat(roadway_data[6], 0.)
+        dict_data['vehicle_medium'] = conversion.convertToFloat(roadway_data[7], 0.)
+        dict_data['vehicle_heavy'] = conversion.convertToFloat(roadway_data[8], 0.)
         dict_data['hour_profile'] = str(roadway_data[9])
         dict_data['daily_profile'] = str(roadway_data[10])
         dict_data['month_profile'] = str(roadway_data[11])
-        dict_data['co_gm_km'] = Conversions.convertToFloat(roadway_data[12], 0.)
-        dict_data['hc_gm_km'] = Conversions.convertToFloat(roadway_data[13], 0.)
-        dict_data['nox_gm_km'] = Conversions.convertToFloat(roadway_data[14], 0.)
-        dict_data['sox_gm_km'] = Conversions.convertToFloat(roadway_data[15], 0.)
-        dict_data['pm10_gm_km'] = Conversions.convertToFloat(roadway_data[16], 0.)
-        dict_data['p1_gm_km'] = Conversions.convertToFloat(roadway_data[17], 0.)
-        dict_data['p2_gm_km'] = Conversions.convertToFloat(roadway_data[18], 0.)
+        dict_data['co_gm_km'] = conversion.convertToFloat(roadway_data[12], 0.)
+        dict_data['hc_gm_km'] = conversion.convertToFloat(roadway_data[13], 0.)
+        dict_data['nox_gm_km'] = conversion.convertToFloat(roadway_data[14], 0.)
+        dict_data['sox_gm_km'] = conversion.convertToFloat(roadway_data[15], 0.)
+        dict_data['pm10_gm_km'] = conversion.convertToFloat(roadway_data[16], 0.)
+        dict_data['p1_gm_km'] = conversion.convertToFloat(roadway_data[17], 0.)
+        dict_data['p2_gm_km'] = conversion.convertToFloat(roadway_data[18], 0.)
         dict_data['method'] = str(roadway_data[19])
         dict_data['scenario'] = str(roadway_data[20])
-        dict_data['instudy'] = Conversions.convertToInt(roadway_data[21], 1)
+        dict_data['instudy'] = conversion.convertToInt(roadway_data[21], 1)
         return dict_data
     except Exception as e:
         print_error(dict_roadway_data.__name__, Exception, e)
@@ -132,29 +124,29 @@ def dict_roadway_data(roadway_data):
 def dict_parking_data(parking_data):
     try:
         dict_data = dict()
-        dict_data['oid'] = Conversions.convertToInt(parking_data[0])
+        dict_data['oid'] = conversion.convertToInt(parking_data[0])
         dict_data['parking_id'] = parking_data[1]
-        dict_data['height'] = Conversions.convertToFloat(parking_data[2], 0.)
-        dict_data['distance'] = Conversions.convertToFloat(parking_data[3], 0.)
-        dict_data['idle_time'] = Conversions.convertToFloat(parking_data[4], 0.)
-        dict_data['park_time'] = Conversions.convertToFloat(parking_data[5], 0.)
-        dict_data['vehicle_light'] = Conversions.convertToFloat(parking_data[6], 0.)
-        dict_data['vehicle_medium'] = Conversions.convertToFloat(parking_data[7], 0.)
-        dict_data['vehicle_heavy'] = Conversions.convertToFloat(parking_data[8], 0.)
-        dict_data['vehicle_year'] = Conversions.convertToFloat(parking_data[9], 0.)
-        dict_data['speed'] = Conversions.convertToFloat(parking_data[10], 0.)
+        dict_data['height'] = conversion.convertToFloat(parking_data[2], 0.)
+        dict_data['distance'] = conversion.convertToFloat(parking_data[3], 0.)
+        dict_data['idle_time'] = conversion.convertToFloat(parking_data[4], 0.)
+        dict_data['park_time'] = conversion.convertToFloat(parking_data[5], 0.)
+        dict_data['vehicle_light'] = conversion.convertToFloat(parking_data[6], 0.)
+        dict_data['vehicle_medium'] = conversion.convertToFloat(parking_data[7], 0.)
+        dict_data['vehicle_heavy'] = conversion.convertToFloat(parking_data[8], 0.)
+        dict_data['vehicle_year'] = conversion.convertToFloat(parking_data[9], 0.)
+        dict_data['speed'] = conversion.convertToFloat(parking_data[10], 0.)
         dict_data['hour_profile'] = parking_data[11]
         dict_data['daily_profile'] = parking_data[12]
         dict_data['month_profile'] = parking_data[13]
-        dict_data['co_gm_vh'] = Conversions.convertToFloat(parking_data[14], 0.)
-        dict_data['hc_gm_vh'] = Conversions.convertToFloat(parking_data[15], 0.)
-        dict_data['nox_gm_vh'] = Conversions.convertToFloat(parking_data[16], 0.)
-        dict_data['sox_gm_vh'] = Conversions.convertToFloat(parking_data[17], 0.)
-        dict_data['pm10_gm_vh'] = Conversions.convertToFloat(parking_data[18], 0.)
-        dict_data['p1_gm_vh'] = Conversions.convertToFloat(parking_data[19], 0.)
-        dict_data['p2_gm_vh'] = Conversions.convertToFloat(parking_data[20], 0.)
+        dict_data['co_gm_vh'] = conversion.convertToFloat(parking_data[14], 0.)
+        dict_data['hc_gm_vh'] = conversion.convertToFloat(parking_data[15], 0.)
+        dict_data['nox_gm_vh'] = conversion.convertToFloat(parking_data[16], 0.)
+        dict_data['sox_gm_vh'] = conversion.convertToFloat(parking_data[17], 0.)
+        dict_data['pm10_gm_vh'] = conversion.convertToFloat(parking_data[18], 0.)
+        dict_data['p1_gm_vh'] = conversion.convertToFloat(parking_data[19], 0.)
+        dict_data['p2_gm_vh'] = conversion.convertToFloat(parking_data[20], 0.)
         dict_data['method'] = parking_data[21]
-        dict_data['instudy'] = Conversions.convertToInt(parking_data[22],1)
+        dict_data['instudy'] = conversion.convertToInt(parking_data[22],1)
         dict_data['geometry'] = parking_data[23]
         return dict_data
     except:
@@ -164,26 +156,26 @@ def dict_parking_data(parking_data):
 def dict_stationary_source(source_data):
     try:
         dict_source_data = dict()
-        dict_source_data['oid'] = Conversions.convertToInt(source_data[0])
+        dict_source_data['oid'] = conversion.convertToInt(source_data[0])
         dict_source_data['source_id'] = source_data[1]
-        dict_source_data['height'] = Conversions.convertToFloat(source_data[2],0.)
+        dict_source_data['height'] = conversion.convertToFloat(source_data[2],0.)
         dict_source_data['category'] = source_data[3]
         dict_source_data['type'] = source_data[4]
         dict_source_data['substance'] = source_data[5]
-        dict_source_data['temperature'] = Conversions.convertToFloat(source_data[6],0.)
-        dict_source_data['diameter'] = Conversions.convertToFloat(source_data[7],0.)
-        dict_source_data['velocity'] = Conversions.convertToFloat(source_data[8],0.)
-        dict_source_data['ops_year'] = Conversions.convertToFloat(source_data[9],0.)
+        dict_source_data['temperature'] = conversion.convertToFloat(source_data[6],0.)
+        dict_source_data['diameter'] = conversion.convertToFloat(source_data[7],0.)
+        dict_source_data['velocity'] = conversion.convertToFloat(source_data[8],0.)
+        dict_source_data['ops_year'] = conversion.convertToFloat(source_data[9],0.)
         dict_source_data['hour_profile'] = source_data[10]
         dict_source_data['daily_profile'] = source_data[11]
         dict_source_data['month_profile'] = source_data[12]
-        dict_source_data['co_kg_k'] = Conversions.convertToFloat(source_data[13],0.)
-        dict_source_data['hc_kg_k'] = Conversions.convertToFloat(source_data[14],0.)
-        dict_source_data['nox_kg_k'] = Conversions.convertToFloat(source_data[15],0.)
-        dict_source_data['sox_kg_k'] = Conversions.convertToFloat(source_data[16],0.)
-        dict_source_data['pm10_kg_k'] = Conversions.convertToFloat(source_data[17],0.)
-        dict_source_data['p1_kg_k'] = Conversions.convertToFloat(source_data[18],0.)
-        dict_source_data['p2_kg_k'] = Conversions.convertToFloat(source_data[19],0.)
+        dict_source_data['co_kg_k'] = conversion.convertToFloat(source_data[13],0.)
+        dict_source_data['hc_kg_k'] = conversion.convertToFloat(source_data[14],0.)
+        dict_source_data['nox_kg_k'] = conversion.convertToFloat(source_data[15],0.)
+        dict_source_data['sox_kg_k'] = conversion.convertToFloat(source_data[16],0.)
+        dict_source_data['pm10_kg_k'] = conversion.convertToFloat(source_data[17],0.)
+        dict_source_data['p1_kg_k'] = conversion.convertToFloat(source_data[18],0.)
+        dict_source_data['p2_kg_k'] = conversion.convertToFloat(source_data[19],0.)
         return dict_source_data
     except:
         return None
@@ -192,22 +184,22 @@ def dict_stationary_source(source_data):
 def dict_area_source(source_data):
     try:
         dict_source_data = dict()
-        dict_source_data['oid'] = Conversions.convertToInt(source_data[0])
+        dict_source_data['oid'] = conversion.convertToInt(source_data[0])
         dict_source_data['source_id'] = source_data[1]
-        dict_source_data['unit_year'] = Conversions.convertToFloat(source_data[2], 0.)
-        dict_source_data['height'] = Conversions.convertToFloat(source_data[3],0.)
-        dict_source_data['heat_flux'] =  Conversions.convertToFloat(source_data[4],0.)
+        dict_source_data['unit_year'] = conversion.convertToFloat(source_data[2], 0.)
+        dict_source_data['height'] = conversion.convertToFloat(source_data[3],0.)
+        dict_source_data['heat_flux'] =  conversion.convertToFloat(source_data[4],0.)
         dict_source_data['hour_profile'] = source_data[5]
         dict_source_data['daily_profile'] = source_data[6]
         dict_source_data['month_profile'] = source_data[7]
-        dict_source_data['co_kg_unit'] = Conversions.convertToFloat(source_data[8],0.)
-        dict_source_data['hc_kg_unit'] = Conversions.convertToFloat(source_data[9],0.)
-        dict_source_data['nox_kg_unit'] = Conversions.convertToFloat(source_data[10],0.)
-        dict_source_data['sox_kg_unit'] = Conversions.convertToFloat(source_data[11],0.)
-        dict_source_data['pm10_kg_unit'] = Conversions.convertToFloat(source_data[12],0.)
-        dict_source_data['p1_kg_unit'] = Conversions.convertToFloat(source_data[13],0.)
-        dict_source_data['p2_kg_unit'] = Conversions.convertToFloat(source_data[14],0.)
-        dict_source_data['instudy'] = Conversions.convertToInt(source_data[15], 1)
+        dict_source_data['co_kg_unit'] = conversion.convertToFloat(source_data[8],0.)
+        dict_source_data['hc_kg_unit'] = conversion.convertToFloat(source_data[9],0.)
+        dict_source_data['nox_kg_unit'] = conversion.convertToFloat(source_data[10],0.)
+        dict_source_data['sox_kg_unit'] = conversion.convertToFloat(source_data[11],0.)
+        dict_source_data['pm10_kg_unit'] = conversion.convertToFloat(source_data[12],0.)
+        dict_source_data['p1_kg_unit'] = conversion.convertToFloat(source_data[13],0.)
+        dict_source_data['p2_kg_unit'] = conversion.convertToFloat(source_data[14],0.)
+        dict_source_data['instudy'] = conversion.convertToInt(source_data[15], 1)
         dict_source_data['geometry'] = source_data[16]
         return dict_source_data
     except:
@@ -216,7 +208,7 @@ def dict_area_source(source_data):
 
 def dict_taxiroute_data(taxiroute_data):
     taxiroute_dict = dict()
-    taxiroute_dict['oid'] = Conversions.convertToInt(taxiroute_data[0])
+    taxiroute_dict['oid'] = conversion.convertToInt(taxiroute_data[0])
     taxiroute_dict['gate'] = taxiroute_data[1]
     taxiroute_dict['route_name'] = taxiroute_data[2]
     taxiroute_dict['runway'] = taxiroute_data[3]
@@ -228,19 +220,19 @@ def dict_taxiroute_data(taxiroute_data):
 
 def dict_runway_data(runway_data):
     runway_dict = dict()
-    runway_dict['oid'] = Conversions.convertToInt(runway_data[0])
+    runway_dict['oid'] = conversion.convertToInt(runway_data[0])
     runway_dict['runway_id'] = runway_data[1]
-    runway_dict['capacity'] = Conversions.convertToFloat(runway_data[2], 0.)
-    runway_dict['touchdown'] = Conversions.convertToFloat(runway_data[3], 0.)
-    runway_dict['max_queue_speed'] = Conversions.convertToFloat(runway_data[4],0.)
-    runway_dict['peak_queue_time'] = Conversions.convertToFloat(runway_data[5], 0.)
-    runway_dict['instudy'] = Conversions.convertToInt(runway_data[6],1)
+    runway_dict['capacity'] = conversion.convertToFloat(runway_data[2], 0.)
+    runway_dict['touchdown'] = conversion.convertToFloat(runway_data[3], 0.)
+    runway_dict['max_queue_speed'] = conversion.convertToFloat(runway_data[4],0.)
+    runway_dict['peak_queue_time'] = conversion.convertToFloat(runway_data[5], 0.)
+    runway_dict['instudy'] = conversion.convertToInt(runway_data[6],1)
     return runway_dict
 
 def dict_movement(movement_data):
     movement_dict = dict()
-    movement_dict['runway_time'] = Conversions.convertStringToTime(movement_data[0])
-    movement_dict['block_time'] = Conversions.convertStringToTime(movement_data[1])
+    movement_dict['runway_time'] = conversion.convertStringToTime(movement_data[0])
+    movement_dict['block_time'] = conversion.convertStringToTime(movement_data[1])
     movement_dict['aircraft_registration'] = str(movement_data[2])
     movement_dict['aircraft'] = str(movement_data[3])
     movement_dict['gate'] = str(movement_data[4])
@@ -270,62 +262,62 @@ def dict_movement(movement_data):
 
 def dict_mode_data(mode_data):
     mode_dict = dict()
-    mode_dict['oid'] = Conversions.convertToInt(mode_data[0])
+    mode_dict['oid'] = conversion.convertToInt(mode_data[0])
     mode_dict['mode'] = mode_data[1]
-    mode_dict['thrust'] = Conversions.convertToFloat(mode_data[2], 0.)
+    mode_dict['thrust'] = conversion.convertToFloat(mode_data[2], 0.)
     mode_dict['description'] = mode_data[3]
     return mode_dict
 
 
 def dict_gate(gate_data):
     gate_dict = dict()
-    gate_dict['oid'] = Conversions.convertToInt(gate_data[0])
+    gate_dict['oid'] = conversion.convertToInt(gate_data[0])
     gate_dict['gate_id'] = gate_data[1]
     gate_dict['gate_type'] = gate_data[2]
-    gate_dict['gate_height'] = Conversions.convertToFloat(gate_data[3], 0.)
-    gate_dict['instudy'] = Conversions.convertToInt(gate_data[4],1)
+    gate_dict['gate_height'] = conversion.convertToFloat(gate_data[3], 0.)
+    gate_dict['instudy'] = conversion.convertToInt(gate_data[4],1)
     gate_dict['geometry'] = gate_data[5]
     return gate_dict
 
 
 def dict_taxiway_data(taxiway_data):
     taxiway_dict = dict()
-    taxiway_dict['oid'] = Conversions.convertToInt(taxiway_data[0])
+    taxiway_dict['oid'] = conversion.convertToInt(taxiway_data[0])
     taxiway_dict['taxiway_id'] = taxiway_data[1]
-    taxiway_dict['speed'] = Conversions.convertToFloat(taxiway_data[2], 0.)
-    taxiway_dict['time'] = Conversions.convertToFloat(taxiway_data[3], 0.)
-    taxiway_dict['instudy'] = Conversions.convertToInt(taxiway_data[4],1)
+    taxiway_dict['speed'] = conversion.convertToFloat(taxiway_data[2], 0.)
+    taxiway_dict['time'] = conversion.convertToFloat(taxiway_data[3], 0.)
+    taxiway_dict['instudy'] = conversion.convertToInt(taxiway_data[4],1)
     taxiway_dict['geometry'] = taxiway_data[5]
     return taxiway_dict
 
 
 def dict_start_profile_data(start_profile_data):
     dict_start_profile = dict()
-    dict_start_profile['oid'] = Conversions.convertToInt(start_profile_data[0])
+    dict_start_profile['oid'] = conversion.convertToInt(start_profile_data[0])
     dict_start_profile['aircraft_group'] = start_profile_data[1]
     dict_start_profile['aircraft_code'] = start_profile_data[2]
     dict_start_profile['emission_unit'] = start_profile_data[3]
-    dict_start_profile['co'] = Conversions.convertToFloat(start_profile_data[4], 0.)
-    dict_start_profile['hc'] = Conversions.convertToFloat(start_profile_data[5], 0.)
-    dict_start_profile['nox'] = Conversions.convertToFloat(start_profile_data[6], 0.)
-    dict_start_profile['sox'] = Conversions.convertToFloat(start_profile_data[7], 0.)
-    dict_start_profile['pm10'] = Conversions.convertToFloat(start_profile_data[8], 0.)
-    dict_start_profile['p1'] = Conversions.convertToFloat(start_profile_data[9], 0.)
-    dict_start_profile['p2'] = Conversions.convertToFloat(start_profile_data[10], 0.)
+    dict_start_profile['co'] = conversion.convertToFloat(start_profile_data[4], 0.)
+    dict_start_profile['hc'] = conversion.convertToFloat(start_profile_data[5], 0.)
+    dict_start_profile['nox'] = conversion.convertToFloat(start_profile_data[6], 0.)
+    dict_start_profile['sox'] = conversion.convertToFloat(start_profile_data[7], 0.)
+    dict_start_profile['pm10'] = conversion.convertToFloat(start_profile_data[8], 0.)
+    dict_start_profile['p1'] = conversion.convertToFloat(start_profile_data[9], 0.)
+    dict_start_profile['p2'] = conversion.convertToFloat(start_profile_data[10], 0.)
     return dict_start_profile
 
 
 def dict_aircraft(aircraft_data):
     aircraft_dict = dict()
-    aircraft_dict['oid'] = Conversions.convertToInt(aircraft_data[0])
+    aircraft_dict['oid'] = conversion.convertToInt(aircraft_data[0])
     aircraft_dict['icao'] = aircraft_data[1]
     aircraft_dict['ac_group_code'] = aircraft_data[2]
     aircraft_dict['ac_group'] = aircraft_data[3]
     aircraft_dict['manufacturer'] = aircraft_data[4]
     aircraft_dict['name'] = aircraft_data[5]
     aircraft_dict['class'] = aircraft_data[6]
-    aircraft_dict['mtow'] = Conversions.convertToFloat(aircraft_data[7], 0.)
-    aircraft_dict['engine_count'] = Conversions.convertToFloat(aircraft_data[8], 0.)
+    aircraft_dict['mtow'] = conversion.convertToFloat(aircraft_data[7], 0.)
+    aircraft_dict['engine_count'] = conversion.convertToFloat(aircraft_data[8], 0.)
     aircraft_dict['engine_name'] = aircraft_data[9]
     aircraft_dict['engine'] = aircraft_data[10]
     aircraft_dict['departure_profile'] = aircraft_data[11]
@@ -338,62 +330,62 @@ def dict_aircraft(aircraft_data):
 
 def dict_apu(apu_data):
     apu_dict = dict()
-    apu_dict['oid'] = Conversions.convertToInt(apu_data[0])
+    apu_dict['oid'] = conversion.convertToInt(apu_data[0])
     apu_dict['apu_id'] = apu_data[1]
     apu_dict['mode'] = apu_data[2]
     apu_dict['time_a'] = apu_data[3]
     apu_dict['time_b'] = apu_data[4]
-    apu_dict['fuel'] = Conversions.convertToFloat(apu_data[5], 0.)
-    apu_dict['co'] = Conversions.convertToFloat(apu_data[6], 0.)
-    apu_dict['hc'] = Conversions.convertToFloat(apu_data[7], 0.)
-    apu_dict['nox'] = Conversions.convertToFloat(apu_data[8], 0.)
-    apu_dict['sox'] = Conversions.convertToFloat(apu_data[9], 0.)
-    apu_dict['pm10'] = Conversions.convertToFloat(apu_data[10], 0.)
-    apu_dict['pm10_a'] = Conversions.convertToFloat(apu_data[11], 0.)
-    apu_dict['pm10_b'] = Conversions.convertToFloat(apu_data[12], 0.)
+    apu_dict['fuel'] = conversion.convertToFloat(apu_data[5], 0.)
+    apu_dict['co'] = conversion.convertToFloat(apu_data[6], 0.)
+    apu_dict['hc'] = conversion.convertToFloat(apu_data[7], 0.)
+    apu_dict['nox'] = conversion.convertToFloat(apu_data[8], 0.)
+    apu_dict['sox'] = conversion.convertToFloat(apu_data[9], 0.)
+    apu_dict['pm10'] = conversion.convertToFloat(apu_data[10], 0.)
+    apu_dict['pm10_a'] = conversion.convertToFloat(apu_data[11], 0.)
+    apu_dict['pm10_b'] = conversion.convertToFloat(apu_data[12], 0.)
     return apu_dict
 
 
 def dict_engine(engine_data):
     engine_dict = dict()
-    engine_dict['oid'] = Conversions.convertToInt(engine_data[0])
+    engine_dict['oid'] = conversion.convertToInt(engine_data[0])
     engine_dict['engine_type'] = engine_data[1]
     engine_dict['engine_full_name'] = engine_data[2]
     engine_dict['engine_name'] = engine_data[3]
-    engine_dict['thrust'] = Conversions.convertToFloat(engine_data[4],0.)
+    engine_dict['thrust'] = conversion.convertToFloat(engine_data[4],0.)
     engine_dict['mode'] = engine_data[5]
-    engine_dict['fuel_kg_sec'] = Conversions.convertToFloat(engine_data[6],0.)
+    engine_dict['fuel_kg_sec'] = conversion.convertToFloat(engine_data[6],0.)
 
     if engine_data[7] == "" or engine_data[7] is None:
         engine_dict['co_ei'] = 0.
     else:
-        engine_dict['co_ei'] = Conversions.convertToFloat(engine_data[7],0.)
+        engine_dict['co_ei'] = conversion.convertToFloat(engine_data[7],0.)
 
     if engine_data[8] == "" or engine_data[8] is None:
         engine_dict['hc_ei'] = 0.
     else:
-        engine_dict['hc_ei'] = Conversions.convertToFloat(engine_data[8],0.)
+        engine_dict['hc_ei'] = conversion.convertToFloat(engine_data[8],0.)
 
     if engine_data[9] == "" or engine_data[9] is None:
         engine_dict['nox_ei'] = 0.
     else:
-        engine_dict['nox_ei'] = Conversions.convertToFloat(engine_data[9],0.)
+        engine_dict['nox_ei'] = conversion.convertToFloat(engine_data[9],0.)
 
     if engine_data[10] == "" or engine_data[9] is None:
         engine_dict['sox_ei'] = 0.
     else:
-        engine_dict['sox_ei'] = Conversions.convertToFloat(engine_data[10],0.)
+        engine_dict['sox_ei'] = conversion.convertToFloat(engine_data[10],0.)
 
     if engine_data[11] == "" or engine_data[10] is None:
         engine_dict['pm10_ei'] = 0.
     else:
-        engine_dict['pm10_ei'] = Conversions.convertToFloat(engine_data[11],0.)
+        engine_dict['pm10_ei'] = conversion.convertToFloat(engine_data[11],0.)
 
-    engine_dict['p1_ei'] = Conversions.convertToFloat(engine_data[12],0.)
-    engine_dict['p2_ei'] = Conversions.convertToFloat(engine_data[13],0.)
+    engine_dict['p1_ei'] = conversion.convertToFloat(engine_data[12],0.)
+    engine_dict['p2_ei'] = conversion.convertToFloat(engine_data[13],0.)
 
-    engine_dict['smoke_number'] = Conversions.convertToFloat(engine_data[14],0.)
-    engine_dict['smoke_number_maximum'] = Conversions.convertToFloat(engine_data[15],0.)
+    engine_dict['smoke_number'] = conversion.convertToFloat(engine_data[14],0.)
+    engine_dict['smoke_number_maximum'] = conversion.convertToFloat(engine_data[15],0.)
     engine_dict['fuel_type'] = engine_data[16]
     engine_dict['manufacturer'] = engine_data[17]
     engine_dict['source'] = engine_data[18]
@@ -403,17 +395,17 @@ def dict_engine(engine_data):
     engine_dict['coolant'] = engine_data[22]
     engine_dict['combustion_tech'] = engine_data[23]
     engine_dict['technology_age'] = engine_data[24]
-    engine_dict['pm10_prefoa3'] = Conversions.convertToFloat(engine_data[25],0.)
-    engine_dict['pm10_nonvol'] = Conversions.convertToFloat(engine_data[26],0.)
-    engine_dict['pm10_sul'] = Conversions.convertToFloat(engine_data[27],0.)
-    engine_dict['pm10_organic'] = Conversions.convertToFloat(engine_data[28],0.)
+    engine_dict['pm10_prefoa3'] = conversion.convertToFloat(engine_data[25],0.)
+    engine_dict['pm10_nonvol'] = conversion.convertToFloat(engine_data[26],0.)
+    engine_dict['pm10_sul'] = conversion.convertToFloat(engine_data[27],0.)
+    engine_dict['pm10_organic'] = conversion.convertToFloat(engine_data[28],0.)
     return engine_dict
 
 
 def dict_gate_profile(gate_data):
     try:
         gate_dict = dict()
-        gate_dict['oid'] = Conversions.convertToInt(gate_data[0])
+        gate_dict['oid'] = conversion.convertToInt(gate_data[0])
         gate_dict['gate_type'] = gate_data[1]
         gate_dict['ac_group'] = gate_data[2]
         gate_dict['emission_type'] = gate_data[3]
@@ -421,11 +413,11 @@ def dict_gate_profile(gate_data):
         gate_dict['departure'] = gate_data[5]
         gate_dict['arrival'] = gate_data[6]
         gate_dict['emission_unit'] = gate_data[7]
-        gate_dict['co'] = Conversions.convertToFloat(gate_data[8], 0.)
-        gate_dict['hc'] = Conversions.convertToFloat(gate_data[9], 0.)
-        gate_dict['nox'] = Conversions.convertToFloat(gate_data[10], 0.)
-        gate_dict['sox'] = Conversions.convertToFloat(gate_data[11], 0.)
-        gate_dict['pm10'] = Conversions.convertToFloat(gate_data[12], 0.)
+        gate_dict['co'] = conversion.convertToFloat(gate_data[8], 0.)
+        gate_dict['hc'] = conversion.convertToFloat(gate_data[9], 0.)
+        gate_dict['nox'] = conversion.convertToFloat(gate_data[10], 0.)
+        gate_dict['sox'] = conversion.convertToFloat(gate_data[11], 0.)
+        gate_dict['pm10'] = conversion.convertToFloat(gate_data[12], 0.)
         gate_dict['source'] = gate_data[13]
         return gate_dict
     except Exception as e:
@@ -466,6 +458,3 @@ def get_linestring_length(database_path, table_name, feature_id, feature_name):
 
 def inventory_time_series(inventory_path):
     return alaqsdblite.inventory_time_series(inventory_path)
-
-if __name__ == '__main__':
-    pass

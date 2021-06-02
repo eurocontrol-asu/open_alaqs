@@ -1,10 +1,8 @@
-from __future__ import absolute_import
-
 import os
 from collections import OrderedDict
 
-from PyQt5 import QtCore, QtWidgets
 import geopandas as gpd
+from PyQt5 import QtCore, QtWidgets
 
 from open_alaqs.alaqs_core.modules.ui.ModuleConfigurationWidget import \
     ModuleConfigurationWidget

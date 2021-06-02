@@ -1,8 +1,12 @@
-from __future__ import absolute_import
-# from . import __init__ #setup the paths for direct calls of the module
+from collections import OrderedDict
 
-import sys, os
-import alaqslogging
+from PyQt5 import QtWidgets
+
+from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('DEBUG')
 file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
@@ -11,28 +15,22 @@ formatter = alaqslogging.logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-import alaqsutils           # For logging and conversion of data types
-import alaqsdblite          # Functions for working with ALAQS database
-from future.utils import with_metaclass
-from collections import OrderedDict
-from interfaces.SQLSerializable import SQLSerializable
-from interfaces.OutputModule import OutputModule
-from interfaces.Singleton import Singleton
 
-# from qgis.PyQt import QtGui, QtWidgets
-from PyQt5 import QtCore, QtGui, QtWidgets
 class SQLiteOutputModule(OutputModule):
     """
-    Module to handle sql writeout of emission-calculation results (timestamp, source, total_emissions_)
+    Module to handle sql writeout of emission-calculation results (timestamp,
+     source, total_emissions_)
     """
 
     @staticmethod
     def getModuleName():
         return "SQLiteOutputModule"
 
-    def __init__(self, values_dict = {}):
+    def __init__(self, values_dict = None):
+        if values_dict is None:
+            values_dict = {}
         OutputModule.__init__(self, values_dict)
-        self._isDetailedOutput = values_dict["detailed_output"] if "detailed_output" in values_dict else False
+        self._isDetailedOutput = values_dict.get("detailed_output", False)
 
         self.setConfigurationWidget(OrderedDict([
             ("detailed output" , QtWidgets.QCheckBox)
@@ -98,31 +96,41 @@ class SQLiteOutputModule(OutputModule):
     def endJob(self):
         pass
 
-class EmissionCalculationResultDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class EmissionCalculationResultDatabase(SQLSerializable, metaclass=Singleton):
     """
-    Class that grants access to table in the spatialite database where results can be stored in
+    Class that grants access to table in the spatialite database where results
+     can be stored in
     """
 
     def __init__(self,
                  db_path_string,
                  table_name_string="emission_calculation_result",
-                 table_columns_type_dict=OrderedDict([
-                    ("time" , "DATETIME"),
-                    ("source_id" , "TEXT"),
-                    ("co_kg", "DECIMAL"),
-                    ("co2_kg", "DECIMAL"),
-                    ("hc_kg", "DECIMAL"),
-                    ("nox_kg", "DECIMAL"),
-                    ("sox_kg", "DECIMAL"),
-                    ("pm10_kg", "DECIMAL"),
-                    ("pm1_kg", "DECIMAL"),
-                    ("pm2_kg", "DECIMAL"),
-                    ("pm10prefoa3_kg", "DECIMAL"),
-                    ("pm10nonvol_kg", "DECIMAL"),
-                    ("pm10sul_kg", "DECIMAL"),
-                    ("pm10organic_kg", "DECIMAL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="time",
-                 geometry_columns=[]
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 geometry_columns=None
+                 ):
+
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("time", "DATETIME"),
+                ("source_id", "TEXT"),
+                ("co_kg", "DECIMAL"),
+                ("co2_kg", "DECIMAL"),
+                ("hc_kg", "DECIMAL"),
+                ("nox_kg", "DECIMAL"),
+                ("sox_kg", "DECIMAL"),
+                ("pm10_kg", "DECIMAL"),
+                ("pm1_kg", "DECIMAL"),
+                ("pm2_kg", "DECIMAL"),
+                ("pm10prefoa3_kg", "DECIMAL"),
+                ("pm10nonvol_kg", "DECIMAL"),
+                ("pm10sul_kg", "DECIMAL"),
+                ("pm10organic_kg", "DECIMAL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = []
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)

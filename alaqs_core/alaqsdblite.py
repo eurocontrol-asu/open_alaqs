@@ -1,21 +1,18 @@
 """
 @author: Dan Pearce
 """
-from __future__ import print_function
-from __future__ import absolute_import
-
-# library imports
-from builtins import str
-
 import csv
 import datetime
 import os
 import pickle
 import shutil
 import sqlite3 as sqlite
+import struct
 import sys
-sys.path.append("..") # Adds higher directory to python modules path.
-import alaqslogging
+
+from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core import alaqsutils
+
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('DEBUG')
 file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
@@ -23,19 +20,6 @@ log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 formatter = alaqslogging.logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
-
-import struct
-
-# logger = logging.getLogger(__name__)
-# ch = logging.StreamHandler()
-# ch.setLevel(logging.DEBUG)
-# # create formatter
-# formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-# ch.setFormatter(formatter)# add formatter to ch
-# logger.addHandler(ch)# add ch to logger
-
-# from . import alaqsutils
-import alaqsutils
 
 def connectToDatabase(database_path):
     """

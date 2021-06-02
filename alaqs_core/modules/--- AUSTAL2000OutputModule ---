@@ -840,7 +840,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                     if not (self.total_emissions_per_cell_dict[hash].getValue(_pollutant)[0] > 0):
                         continue
 
-                    i_, j_, k_ = self._grid.convert_CellHash_To_XYZIndices(hash)
+                    i_, j_, k_ = self._grid.convertCellHashToXYZIndices(hash)
 
                     if i_ >= self._x_meshes or j_ >= self._y_meshes or k_ >= self._z_meshes:
                         # logger.debug("AUSTAL2000 Error: Grid needs to be enlarged. Hash '%s' out of grid. Source:'%s'"%(hash, source_.getName()))

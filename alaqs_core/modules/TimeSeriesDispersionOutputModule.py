@@ -1,13 +1,17 @@
-from __future__ import absolute_import
-from builtins import str
-from builtins import range
-# from . import __init__ #setup the paths for direct calls of the module
+import os
+from collections import OrderedDict
+from datetime import datetime, timedelta
 
-import sys,os, glob
-import alaqsutils           # For logging and conversion of data types
-import alaqsdblite          # Functions for working with ALAQS database
+import numpy as np
+from PyQt5 import QtWidgets
+from dateutil import rrule
+from matplotlib.dates import DateFormatter
 
-import alaqslogging
+from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
+from open_alaqs.alaqs_core.plotting.MatplotlibQtDialog import MatplotlibQtDialog
+from open_alaqs.alaqs_core.tools import conversion
+
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('INFO')
 file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
@@ -16,22 +20,6 @@ formatter = alaqslogging.logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-from tools import CSVInterface
-
-from interfaces.OutputModule import OutputModule
-
-from collections import OrderedDict
-# from qgis.PyQt import QtGui, QtWidgets
-from PyQt5 import QtCore, QtGui, QtWidgets
-import plotting
-from plotting.MatplotlibQtDialog import MatplotlibQtDialog
-from matplotlib.dates import DateFormatter
-
-from datetime import datetime, timedelta
-from dateutil import rrule
-from tools import Conversions
-import numpy as np
-import itertools
 
 class TimeSeriesDispersionModule(OutputModule):
     """
@@ -42,31 +30,34 @@ class TimeSeriesDispersionModule(OutputModule):
     def getModuleName():
         return "TimeSeriesDispersionModule"
 
-    def __init__(self, values_dict = {}):
+    def __init__(self, values_dict=None):
+        if values_dict is None:
+            values_dict = {}
         OutputModule.__init__(self, values_dict)
 
-        #Widget configuration
-        self._parent = values_dict["parent"] if "parent" in values_dict else None
+        # Widget configuration
+        self._parent = values_dict.get("parent")
         self._widget = None
 
-        #Plot configuration
-        self._title = values_dict["title"] if "title" in values_dict else ""
-        self._xtitle = values_dict["xtitle"] if "xtitle" in values_dict else ""
-        self._ytitle = values_dict["ytitle"] if "ytitle" in values_dict else ""
-        self._options = values_dict["options"] if "options" in values_dict else ""
+        # Plot configuration
+        self._title = values_dict.get("title", "")
+        self._xtitle = values_dict.get("xtitle", "")
+        self._ytitle = values_dict.get("ytitle", "")
+        self._options = values_dict.get("options", "")
 
-        self._max_values = values_dict["max. values"] if "max. values" in values_dict else False
-        # self._moving_average = values_dict["moving average"] if "moving average" in values_dict else False
+        self._max_values = values_dict.get("max. values", False)
 
         #Results analysis
-        self._time_start = Conversions.convertStringToDateTime(values_dict["Start (incl.)"]) if "Start (incl.)" in values_dict else ""
-        self._time_end = Conversions.convertStringToDateTime(values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
+        self._time_start = conversion.convertStringToDateTime(values_dict["Start (incl.)"]) if "Start (incl.)" in values_dict else ""
+        self._time_end = conversion.convertStringToDateTime(values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
 
-        self._averaging_period = values_dict["averaging_period"] if "averaging_period" in values_dict else "annual mean"
-        self._pollutant = values_dict["pollutant"] if "pollutant" in values_dict else None
-        self._check_uncertainty = values_dict["check_uncertainty"] if "check_uncertainty" in values_dict else False
-        self._timeseries = values_dict["timeseries"] if "timeseries" in values_dict else None
-        self._concentration_database = values_dict["concentration_path"] if "concentration_path" in values_dict else None
+        self._averaging_period = values_dict.get("averaging_period",
+                                                 "annual mean")
+        self._pollutant = values_dict.get("pollutant")
+        self._check_uncertainty = values_dict.get("check_uncertainty", False)
+        self._timeseries = values_dict.get("timeseries")
+        self._concentration_database = values_dict.get("concentration_path",
+                                                       None)
         # self._total_concentration = 0.
 
         WidgetParameters = OrderedDict({
@@ -96,10 +87,10 @@ class TimeSeriesDispersionModule(OutputModule):
             start_date = datetime.strptime(t0,'%Y-%m-%d.%H:%M:%S')
 
             start_time = datetime.strptime(t1,'%d.%H:%M:%S').replace(year=start_date.year) if ("." in t1) else datetime.strptime(t1,'%H:%M:%S').replace(year=start_date.year)
-            start_time = start_time+timedelta(days=0) if ("." not in t1) else start_time.replace(day=Conversions.convertToInt(t1.split(".")[0])+1)
+            start_time = start_time+timedelta(days=0) if ("." not in t1) else start_time.replace(day=conversion.convertToInt(t1.split(".")[0])+1)
 
             end_time = datetime.strptime(t2,'%d.%H:%M:%S').replace(year=start_date.year) if ("." in t2) else datetime.strptime(t2,'%H:%M:%S').replace(year=start_date.year)
-            end_time = end_time+timedelta(days=0) if ("." not in t2) else end_time.replace(day=Conversions.convertToInt(t2.split(".")[0])+1)
+            end_time = end_time+timedelta(days=0) if ("." not in t2) else end_time.replace(day=conversion.convertToInt(t2.split(".")[0])+1)
 
             # timedelta
             tdelta = end_time - start_time
@@ -153,7 +144,6 @@ class TimeSeriesDispersionModule(OutputModule):
         ret[n:] = ret[n:] - ret[:-n]
         return ret[n - 1:] / n
 
-
     def beginJob(self):
 
         if self._pollutant.startswith("PM"):
@@ -195,9 +185,9 @@ class TimeSeriesDispersionModule(OutputModule):
                         # self._units = output_data['unit'][0].decode('latin-1') if ('unit' in output_data and len(output_data['unit']) > 0) else None
                         self._units = output_data['unit'][0] if ('unit' in output_data and len(output_data['unit']) > 0) else None
 
-                        index_i = Conversions.convertToInt(output_data['hghb'][0]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # columns
-                        index_j = Conversions.convertToInt(output_data['hghb'][1]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # rows
-                        index_k = Conversions.convertToInt(output_data['hghb'][2]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # z
+                        index_i = conversion.convertToInt(output_data['hghb'][0]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # columns
+                        index_j = conversion.convertToInt(output_data['hghb'][1]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # rows
+                        index_k = conversion.convertToInt(output_data['hghb'][2]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # z
 
                         if not (index_k and index_i and index_j):
                             logger.error("Error in reshaping concentration matrix: (%s, %s, %s)"%(index_k,index_i,index_j))
@@ -211,8 +201,8 @@ class TimeSeriesDispersionModule(OutputModule):
                             # take the concentration up tp Kmax: <c> = c1*H1/(H1+H2+H3+...) + c2*H2/(H1+H2+H3+...) + c3*H3/(H1+H2+H3+...) + ...
                             total_column_concentration = np.zeros(shape=(index_j, index_i))
                             for z_ in range(1, index_k+1):
-                                total_column_concentration += (Conversions.convertToFloat(output_data['sk'][z_])*concentration_matrix_reshaped[z_-1,:,:].squeeze())/\
-                                    Conversions.convertToFloat(output_data['sk'][index_k])
+                                total_column_concentration += (conversion.convertToFloat(output_data['sk'][z_])*concentration_matrix_reshaped[z_-1,:,:].squeeze())/\
+                                    conversion.convertToFloat(output_data['sk'][index_k])
                             self._data_y.append(np.mean(total_column_concentration))
                             self._data_y_max.append(np.max(total_column_concentration))
                             self._data_y_std.append(np.std(total_column_concentration))
@@ -240,9 +230,9 @@ class TimeSeriesDispersionModule(OutputModule):
                             # self._units = output_data['unit'][0].decode('latin-1') if ('unit' in output_data and len(output_data['unit']) > 0) else None
                             self._units = output_data['unit'][0] if ('unit' in output_data and len(output_data['unit']) > 0) else None
 
-                            index_i = Conversions.convertToInt(output_data['hghb'][0]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # columns
-                            index_j = Conversions.convertToInt(output_data['hghb'][1]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # rows
-                            index_k = Conversions.convertToInt(output_data['hghb'][2]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # z
+                            index_i = conversion.convertToInt(output_data['hghb'][0]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # columns
+                            index_j = conversion.convertToInt(output_data['hghb'][1]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # rows
+                            index_k = conversion.convertToInt(output_data['hghb'][2]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # z
 
                             concentration_matrix_reshaped = np.reshape(concentration_matrix, (index_k, index_j, index_i))
 
@@ -253,8 +243,8 @@ class TimeSeriesDispersionModule(OutputModule):
                                 # take the concentration up tp Kmax: <c> = c1*H1/(H1+H2+H3+...) + c2*H2/(H1+H2+H3+...) + c3*H3/(H1+H2+H3+...) + ...
                                 total_column_concentration = np.zeros(shape=(index_j, index_i))
                                 for z_ in range(1, index_k+1):
-                                    total_column_concentration += (Conversions.convertToFloat(output_data['sk'][z_])*concentration_matrix_reshaped[z_-1,:,:].squeeze())/\
-                                        Conversions.convertToFloat(output_data['sk'][index_k])
+                                    total_column_concentration += (conversion.convertToFloat(output_data['sk'][z_])*concentration_matrix_reshaped[z_-1,:,:].squeeze())/\
+                                        conversion.convertToFloat(output_data['sk'][index_k])
 
                                 self._data_y.append(np.mean(total_column_concentration))
                                 self._data_y_max.append(np.max(total_column_concentration))
@@ -278,9 +268,6 @@ class TimeSeriesDispersionModule(OutputModule):
         self.assert_validity(avg_period=self._averaging_period)
 
         return True
-
-
-
 
     def endJob(self):
         #show widget

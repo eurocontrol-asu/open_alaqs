@@ -1,12 +1,9 @@
-from __future__ import absolute_import
-
 import logging
-from builtins import str, range
 from collections import OrderedDict
 
 from PyQt5 import QtCore, QtWidgets
 
-from open_alaqs.alaqs_core.tools import Conversions
+from open_alaqs.alaqs_core.tools import conversion
 
 logger = logging.getLogger("alaqs.%s" % __name__)
 
@@ -56,8 +53,8 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
             elif isinstance(widget, QtWidgets.QAbstractButton):
                 val_ = widget.isChecked()
             elif isinstance(widget, QtWidgets.QDateTimeEdit):
-                val_ = Conversions.convertSecondsToTimeString(
-                    Conversions.convertTimeToSeconds(
+                val_ = conversion.convertSecondsToTimeString(
+                    conversion.convertTimeToSeconds(
                         widget.dateTime().toPyDateTime(),
                         self._pydateformat
                     ), self._pydateformat)
@@ -136,8 +133,8 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                     else:
                         widget.setDateTime(
                             QtCore.QDateTime.fromString(
-                                Conversions.convertSecondsToTimeString(
-                                    Conversions.convertTimeToSeconds(value)
+                                conversion.convertSecondsToTimeString(
+                                    conversion.convertTimeToSeconds(value)
                                 ), self._qtdateformat))
                 else:
                     logger.error("Did not find method to set values to widget "

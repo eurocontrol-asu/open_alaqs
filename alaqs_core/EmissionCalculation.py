@@ -1,14 +1,21 @@
-# -*- coding: utf-8 -*-
+import inspect
+import os
+import sys
+from collections import OrderedDict
 
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-__author__ = 'ENVISA'
+from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.interfaces.AmbientCondition import \
+    AmbientConditionStore, AmbientCondition
+from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
+from open_alaqs.alaqs_core.interfaces.Emissions import Emission
+from open_alaqs.alaqs_core.interfaces.InventoryTimeSeries import \
+    InventoryTimeSeriesStore
+from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
+from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
+    DispersionModuleManager
+from open_alaqs.alaqs_core.tools import Iterator, conversion
+from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 
-import os, sys
-# import logging
-import alaqslogging
 # logger = logging.getLogger(__name__)
 logger = alaqslogging.logging.getLogger(__name__)
 # To override the default severity of logging
@@ -20,33 +27,13 @@ formatter = alaqslogging.logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 # Don't forget to add the file handler
 logger.addHandler(file_handler)
-# logger.debug("Logging from EmissionCalculation.py")
 
-# from qgis.PyQt import QtGui, QtCore
-from PyQt5 import QtCore, QtGui, QtWidgets
-from collections import OrderedDict
-import inspect
 
-from open_alaqs.alaqs_core.tools import Iterator
-from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
-from open_alaqs.alaqs_core.tools import Conversions
-
-from open_alaqs.alaqs_core.interfaces.InventoryTimeSeries import \
-    InventoryTimeSeriesStore
-from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
-from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
-from open_alaqs.alaqs_core.interfaces.Emissions import Emission
-from open_alaqs.alaqs_core.interfaces.AmbientCondition import \
-    AmbientConditionStore, AmbientCondition
-
-from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
-    OutputModuleManager, DispersionModuleManager
-from open_alaqs.alaqs_core.modules.ui.ModuleConfigurationWidget import \
-    ModuleConfigurationWidget
-
-class EmissionCalculation(object):
-    def __init__(self, values_dict = {}):
-        self._database_path = values_dict["database_path"] if "database_path" in values_dict else None
+class EmissionCalculation:
+    def __init__(self, values_dict=None):
+        if values_dict is None:
+            values_dict = {}
+        self._database_path = values_dict.get("database_path")
         # Get the time series for this inventory
         if self._database_path is None:
             raise Exception("Value '%s' not defined for class '%s'" % ("database_path", "EmissionCalculation"))
@@ -59,18 +46,19 @@ class EmissionCalculation(object):
         self._dispersion_module_manager = DispersionModuleManager()
         self._ambient_conditions_store = AmbientConditionStore(self.getDatabasePath())
 
-        self._3DGrid = Grid3D(self.getDatabasePath(), values_dict["grid_configuration"] if "grid_configuration" in values_dict else
+        self._3DGrid = Grid3D(self.getDatabasePath(), values_dict.get(
+            "grid_configuration",
             {
-            'x_cells' : 10,
-            'y_cells' : 10,
-            'z_cells' : 1,
-            'x_resolution': 100,
-            'y_resolution': 100,
-            'z_resolution' :100,
-            'reference_latitude': '0.0', # airport_latitude
-            'reference_longitude':'0.0', # airport_longitude
-            'reference_altitude':'0.0' # airport_altitude
-            }
+                'x_cells': 10,
+                'y_cells': 10,
+                'z_cells': 1,
+                'x_resolution': 100,
+                'y_resolution': 100,
+                'z_resolution': 100,
+                'reference_latitude': '0.0',  # airport_latitude
+                'reference_longitude': '0.0',  # airport_longitude
+                'reference_altitude': '0.0'  # airport_altitude
+            })
         )
 
         self._debug = values_dict["debug"] if "debug" in values_dict else False
@@ -91,7 +79,7 @@ class EmissionCalculation(object):
         return progressbar
 
     def getAmbientCondition(self, timestamp_datetime):
-        t_ = Conversions.convertTimeToSeconds(timestamp_datetime)
+        t_ = conversion.convertTimeToSeconds(timestamp_datetime)
         ac_ =  self._ambient_conditions_store.getAmbientConditions(scenario="")
         if ac_:
             # print "AC_ %s"%min(ac_, key=lambda x: abs(t_ - x.getDate()))
@@ -206,8 +194,8 @@ class EmissionCalculation(object):
             # loop on complete period
             for (start_, end_) in self.getTimeSeries():
                 count_ += +1
-                progressbar.setValue(Conversions.convertToInt(
-                    100 * Conversions.convertToFloat(count_) / len(self.getTimeSeriesStore().getObjects())))
+                progressbar.setValue(conversion.convertToInt(
+                    100 * conversion.convertToFloat(count_) / len(self.getTimeSeriesStore().getObjects())))
                 QtCore.QCoreApplication.instance().processEvents()
                 if progressbar.wasCanceled():
                     break
@@ -340,7 +328,7 @@ if __name__ == "__main__":
     import time
     st_ = time.time()
     # from qgis.PyQt import QtGui
-    from PyQt5 import QtCore, QtGui, QtWidgets
+    from PyQt5 import QtCore, QtWidgets
     # from python_qt_binding import QtGui, QtCore  # new imports
     # app = QtWidgets.QApplication(sys.argv)
 
@@ -442,7 +430,8 @@ if __name__ == "__main__":
     # # import mplleaflet
     # # from descartes import PolygonPatch
     # # from tools.Spatial import getRelativeHeightInCell
-    from shapely.ops import unary_union, cascaded_union
+    from shapely.ops import unary_union
+
 
     def calculate_emissions_per_grid_cell(edf_row):
         geom = edf_row.geometry

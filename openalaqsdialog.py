@@ -25,34 +25,28 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from qgis.core import *
 from qgis.gui import *
 
-from open_alaqs.alaqs_core import alaqsutils
+from open_alaqs import openalaqsuitoolkit as oautk
 from open_alaqs.alaqs_core import alaqs
 from open_alaqs.alaqs_core import alaqslogging
-
-from open_alaqs.alaqs_core.tools import SQLInterface
-from open_alaqs.alaqs_core.tools import Conversions
-from open_alaqs.alaqs_core.tools import CSVInterface
-
-import openalaqsuitoolkit as oautk
-
-from open_alaqs.ui.ui_about import Ui_DialogAbout
-from open_alaqs.ui.ui_create_database import Ui_DialogCreateDatabase
-from open_alaqs.ui.ui_open_database import Ui_DialogOpenDatabase
-from open_alaqs.ui.ui_study_setup import Ui_DialogStudySetup
-from open_alaqs.ui.ui_taxiway_routes import Ui_TaxiRoutesDialog
-from open_alaqs.ui.ui_profiles_widget import Ui_FormProfiles
-from open_alaqs.ui.ui_inventory import Ui_DialogInventory
-from open_alaqs.ui.ui_results_analysis import Ui_ResultsAnalysisDialog
-from open_alaqs.ui.ui_run_austal2000 import Ui_DialogRunAUSTAL2000
-from open_alaqs.ui.ui_logfile import Ui_DialogLogfile
-
+from open_alaqs.alaqs_core import alaqsutils
 from open_alaqs.alaqs_core.EmissionCalculation import EmissionCalculation
-from open_alaqs.alaqs_core.modules.ui.EmissionCalculationConfigurationWidget \
-    import EmissionCalculationConfigurationWidget
-from open_alaqs.alaqs_core.modules.ui.ConcentrationVisualizationWidget import \
-    ConcentrationVisualizationWidget
 from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
     OutputModuleManager, DispersionModuleManager
+from open_alaqs.alaqs_core.modules.ui.ConcentrationVisualizationWidget import \
+    ConcentrationVisualizationWidget
+from open_alaqs.alaqs_core.modules.ui.EmissionCalculationConfigurationWidget \
+    import EmissionCalculationConfigurationWidget
+from open_alaqs.alaqs_core.tools import SQLInterface, conversion, CSVInterface
+from open_alaqs.ui.ui_about import Ui_DialogAbout
+from open_alaqs.ui.ui_create_database import Ui_DialogCreateDatabase
+from open_alaqs.ui.ui_inventory import Ui_DialogInventory
+from open_alaqs.ui.ui_logfile import Ui_DialogLogfile
+from open_alaqs.ui.ui_open_database import Ui_DialogOpenDatabase
+from open_alaqs.ui.ui_profiles_widget import Ui_FormProfiles
+from open_alaqs.ui.ui_results_analysis import Ui_ResultsAnalysisDialog
+from open_alaqs.ui.ui_run_austal2000 import Ui_DialogRunAUSTAL2000
+from open_alaqs.ui.ui_study_setup import Ui_DialogStudySetup
+from open_alaqs.ui.ui_taxiway_routes import Ui_TaxiRoutesDialog
 
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('DEBUG')
@@ -423,8 +417,8 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
                 created_date = study_data['date_created']
                 modified_date = study_data['date_modified']
                 latest_date = created_date
-                if Conversions.convertTimeToSeconds(modified_date) > \
-                        Conversions.convertTimeToSeconds(created_date):
+                if conversion.convertTimeToSeconds(modified_date) > \
+                        conversion.convertTimeToSeconds(created_date):
                     latest_date = modified_date
 
                 self.ui.labelDateCreated.setText(str(created_date))
@@ -2119,27 +2113,27 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             logger.info("Processing time interval: %s" % (
                 csv['DateTime(YYYY-mm-dd hh:mm:ss)'][row_]))
             if CheckAmbientConditions(
-                    Conversions.convertToFloat(csv['Temperature(K)'][row_]),
+                    conversion.convertToFloat(csv['Temperature(K)'][row_]),
                     288.15, 50):
                 logger.warning("Check temperature units/value.")
-            if CheckAmbientConditions(Conversions.convertToFloat(
+            if CheckAmbientConditions(conversion.convertToFloat(
                     csv['Humidity(kg_water/kg_dry_air)'][row_]), 0.00634, 100):
                 logger.warning("Check Humidity units/value.")
-            if CheckAmbientConditions(Conversions.convertToFloat(
+            if CheckAmbientConditions(conversion.convertToFloat(
                     csv['RelativeHumidity(%)'][row_]), 0.6, 90):
                 logger.warning("Check Relative Humidity units/value.")
-            if CheckAmbientConditions(Conversions.convertToFloat(
+            if CheckAmbientConditions(conversion.convertToFloat(
                     csv['SeaLevelPressure(mb)'][row_]), 101325.0, 70):
                 logger.warning("Check Sea Level Pressure units/value.")
             if CheckAmbientConditions(
-                    Conversions.convertToFloat(csv['WindSpeed(m/s)'][row_]),
+                    conversion.convertToFloat(csv['WindSpeed(m/s)'][row_]),
                     15.0, 100):
                 logger.warning("Check Wind Speed units/value.")
-            if CheckAmbientConditions(Conversions.convertToFloat(
+            if CheckAmbientConditions(conversion.convertToFloat(
                     csv['WindDirection(degrees)'][row_]), 360.0, 100):
                 logger.warning("Check Wind Direction units/value.")
             if CheckAmbientConditions(
-                    Conversions.convertToFloat(csv['MixingHeight(m)'][row_]),
+                    conversion.convertToFloat(csv['MixingHeight(m)'][row_]),
                     914.4, 100):
                 logger.warning("Check Mixing Height units/value.")
 
@@ -2868,9 +2862,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 datetime.strptime("2000-01-02 00:00:00", "%Y-%m-%d %H:%M:%S"))
 
     def getTimeSeries(self, db_path=""):
-        from datetime import timedelta, date
+        from datetime import timedelta
         from dateutil import rrule
-        from dateutil.relativedelta import relativedelta
 
         if db_path:
             try:
@@ -2982,7 +2975,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
     def run_austal(self):
         # from subprocess import Popen, PIPE, STDOUT
-        from subprocess import call, check_output
+        from subprocess import call
         try:
             austal_ = str(self.ui.lineEditFilename_a2k.text())
             logger.info("AUSTAL directory:%s" % austal_)
@@ -3040,7 +3033,6 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         QtWidgets.QMessageBox.information(self, "Notice", "Feature not ready")
 
     def runOutputModule(self, name):
-        import time
 
         try:
             # select output file to load

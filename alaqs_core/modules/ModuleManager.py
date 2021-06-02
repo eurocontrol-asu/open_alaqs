@@ -1,19 +1,13 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-from future.utils import with_metaclass
-__author__ = 'ENVISA'
-
-#for direct calls of this module
-# from .__init__ import *
-import os, sys
-import pkgutil
 import inspect
+import pkgutil
 from collections import OrderedDict
-from interfaces.Singleton import Singleton
 
-import alaqslogging
+from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
+from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
+
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('DEBUG')
 file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
@@ -22,12 +16,8 @@ formatter = alaqslogging.logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-from interfaces.SourceModule import SourceModule
-from interfaces.DispersionModule import DispersionModule
-from interfaces.OutputModule import OutputModule
 
-
-class ModuleManager(with_metaclass(Singleton, object)):
+class ModuleManager(metaclass=Singleton):
 
     def __init__(self, moduletype):
         self._modules = OrderedDict()
@@ -93,15 +83,18 @@ class ModuleManager(with_metaclass(Singleton, object)):
             instances_[module_name_] = obj_()
         return instances_
 
-class SourceModuleManager(with_metaclass(Singleton, ModuleManager)):
+
+class SourceModuleManager(ModuleManager, metaclass=Singleton):
     def __init__(self):
         ModuleManager.__init__(self, SourceModule)
 
-class OutputModuleManager(with_metaclass(Singleton, ModuleManager)):
+
+class OutputModuleManager(ModuleManager, metaclass=Singleton):
     def __init__(self):
         ModuleManager.__init__(self, OutputModule)
 
-class DispersionModuleManager(with_metaclass(Singleton, ModuleManager)):
+
+class DispersionModuleManager(ModuleManager, metaclass=Singleton):
     def __init__(self):
         ModuleManager.__init__(self, DispersionModule)
 
