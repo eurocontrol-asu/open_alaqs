@@ -1,52 +1,32 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import range
-from builtins import object
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-except:
-    import __init__  # setup the paths for direct calls of the module
-from future.utils import with_metaclass
-
-__author__ = 'ENVISA'
-
-import os, sys
 import logging
-logger = logging.getLogger("alaqs.%s" % (__name__))
-
+import os
 from collections import OrderedDict
 
-try:
-    from .SQLSerializable import SQLSerializable
-    from .Singleton import Singleton
-    from .Store import Store
-    from .Emissions import EmissionIndex
-except:
-    from SQLSerializable import SQLSerializable
-    from Singleton import Singleton
-    from Store import Store
-    from Emissions import EmissionIndex
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.tools import conversion, CSVInterface
 
-from tools import Spatial
-from tools import Conversions
-from tools import CSVInterface
+logger = logging.getLogger("alaqs.%s" % __name__)
 
-class AmbientCondition(object):
-    def __init__(self, val={}):
+
+class AmbientCondition:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         self._id = str(val["id"]) if "id" in val else None
         self._scenario = str(val["Scenario"]) if "Scenario" in val else "default"
-        self._date = Conversions.convertTimeToSeconds(val["DateTime"], format_ = "%Y-%m-%d %H:%M:%S") if "DateTime" in val else ""
+        self._date = conversion.convertTimeToSeconds(val["DateTime"], format_ = "%Y-%m-%d %H:%M:%S") if "DateTime" in val else ""
         #defaults are ISA conditions
-        self._temperature_in_K = Conversions.convertToFloat(val["Temperature"]) if "Temperature" in val else 288.15
-        self._relative_humidity = Conversions.convertToFloat(val["RelativeHumidity"]) if "RelativeHumidity" in val else 0.6
-        self._humidity = Conversions.convertToFloat(val["Humidity"]) if "Humidity" in val else 0.00634
-        self._sealevel_pressure_Pa = Conversions.convertToFloat(val["SeaLevelPressure"]) if "SeaLevelPressure" in val else 1013.25*100.
-        self._wind_speed_in_m_s = Conversions.convertToFloat(val["WindSpeed"]) if "WindSpeed" in val else 0.
-        self._wind_direction_degrees = Conversions.convertToFloat(val["WindDirection"]) if "WindDirection" in val else 0.
-        self._mixing_height_m = Conversions.convertToFloat(val["MixingHeight"]) if "MixingHeight" in val else Conversions.convertFeetToMeters(3000.)
-        self._speed_of_sound_in_m_s = Conversions.convertToFloat(val["SpeedOfSound"]) if "SpeedOfSound" in val else 340.29
-        self._obukhov_length = Conversions.convertToFloat(val["ObukhovLength"]) if "ObukhovLength" in val else 99999.0
+        self._temperature_in_K = conversion.convertToFloat(val["Temperature"]) if "Temperature" in val else 288.15
+        self._relative_humidity = conversion.convertToFloat(val["RelativeHumidity"]) if "RelativeHumidity" in val else 0.6
+        self._humidity = conversion.convertToFloat(val["Humidity"]) if "Humidity" in val else 0.00634
+        self._sealevel_pressure_Pa = conversion.convertToFloat(val["SeaLevelPressure"]) if "SeaLevelPressure" in val else 1013.25*100.
+        self._wind_speed_in_m_s = conversion.convertToFloat(val["WindSpeed"]) if "WindSpeed" in val else 0.
+        self._wind_direction_degrees = conversion.convertToFloat(val["WindDirection"]) if "WindDirection" in val else 0.
+        self._mixing_height_m = conversion.convertToFloat(val["MixingHeight"]) if "MixingHeight" in val else conversion.convertFeetToMeters(3000.)
+        self._speed_of_sound_in_m_s = conversion.convertToFloat(val["SpeedOfSound"]) if "SpeedOfSound" in val else 340.29
+        self._obukhov_length = conversion.convertToFloat(val["ObukhovLength"]) if "ObukhovLength" in val else 99999.0
 
     def getId(self):
         return self._id
@@ -64,7 +44,7 @@ class AmbientCondition(object):
         self._date = var
 
     def getDateAsString(self):
-        return Conversions.convertSecondsToTimeString(self.getDate(), format_ = "%Y-%m-%d %H:%M:%S")
+        return conversion.convertSecondsToTimeString(self.getDate(), format_ = "%Y-%m-%d %H:%M:%S")
 
     def getTemperature(self):
         return self._temperature_in_K
@@ -125,7 +105,8 @@ class AmbientCondition(object):
 
         return val
 
-class AmbientConditionStore(with_metaclass(Singleton, Store)):
+
+class AmbientConditionStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'AmbientCondition' objects
     """
@@ -206,7 +187,7 @@ class AmbientConditionStore(with_metaclass(Singleton, Store)):
             logger.error("Could not write ambient conditions to database at path '%s'!" % (self.getAmbientConditionDatabase().getDatabasePath()))
 
 
-class AmbientConditionDatabaseSQL(with_metaclass(Singleton, SQLSerializable)):
+class AmbientConditionDatabaseSQL(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to ambient conditions table in the spatialite database
     """
@@ -214,23 +195,28 @@ class AmbientConditionDatabaseSQL(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="tbl_InvMeteo",
-                 table_columns_type_dict=OrderedDict([
-                    ("id" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("Scenario" , "TEXT"),
-                    ("DateTime" , "DATETIME"),
-                    ("Temperature" , "DECIMAL"),
-                    ("Humidity" , "DECIMAL"),
-                    ("RelativeHumidity" , "DECIMAL"),
-                    ("SeaLevelPressure" , "DECIMAL"),
-                    ("WindSpeed" , "DECIMAL"),
-                    ("WindDirection" , "DECIMAL"),
-                    ("ObukhovLength" , "DECIMAL"),
-                    ("MixingHeight" , "DECIMAL"),
-                    ("SpeedOfSound" , "DECIMAL"),
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="", deserialize=True
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, None)
+                 ):
+
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("id", "INTEGER PRIMARY KEY NOT NULL"),
+                ("Scenario", "TEXT"),
+                ("DateTime", "DATETIME"),
+                ("Temperature", "DECIMAL"),
+                ("Humidity", "DECIMAL"),
+                ("RelativeHumidity", "DECIMAL"),
+                ("SeaLevelPressure", "DECIMAL"),
+                ("WindSpeed", "DECIMAL"),
+                ("WindDirection", "DECIMAL"),
+                ("ObukhovLength", "DECIMAL"),
+                ("MixingHeight", "DECIMAL"),
+                ("SpeedOfSound", "DECIMAL"),
+            ])
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key, None)
 
         if self._db_path and deserialize:
             self.deserialize()

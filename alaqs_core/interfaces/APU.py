@@ -1,32 +1,12 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-from future.utils import with_metaclass
-
-__author__ = 'ENVISA'
 import logging
-logger = logging.getLogger("alaqs.%s" % (__name__))
-
-import sys, os
+import os
 from collections import OrderedDict
 
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-    from .SQLSerializable import SQLSerializable
-    from .Singleton import Singleton
-    from .Store import Store
-    from .Emissions import Emission
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
 
-except:
-    import __init__ #setup the paths for direct calls of the module
-    from SQLSerializable import SQLSerializable
-    from Singleton import Singleton
-    from Store import Store
-    from Emissions import Emission
-
-from tools import Spatial
-
+logger = logging.getLogger("alaqs.%s" % __name__)
 # defaultEI={
 #             "fuel_kg_sec" : 0.,
 #             "co_g_kg" : 0.,
@@ -46,20 +26,29 @@ from tools import Spatial
 #             "pm10_organic_g_kg" : 0.
 # }
 
-class APU(object):
-    def __init__(self, val={}):
+class APU:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
 
         self._apu_id = str(val["apu_id"]) if "apu_id" in val else ""
         self._emissions = {}
 
         # [Number of Operations TimeMode [sec] * Emission IndexMode [kg/h] * 1000.0/3600.0] (in g/s)
-        self._emissions["fuel_kg_sec"] = val["fuel_kg_h"]*1.0/3600 if "fuel_kg_h" in val else 0.
-        self._emissions["co_g_s"] = val["co_kg_h"]*1/3.6 if "co_kg_h" in val else 0.
-        self._emissions["hc_g_s"] = val["hc_kg_h"]*1/3.6 if "hc_kg_h" in val else 0.
-        self._emissions["nox_g_s"] = val["nox_kg_h"]*1/3.6 if "nox_kg_h" in val else 0.
-        self._emissions["sox_g_s"] = val["sox_kg_h"]*1/3.6 if "sox_kg_h" in val else 0.
-        self._emissions["pm10_g_s"] = val["pm10_kg_h"]*1/3.6 if "pm10_kg_h" in val else 0.
-        self._emissions["co2_g_s"] = val["fuel_kg_h"]*3.16*1000./3600 if "fuel_kg_h" in val else 0.
+        self._emissions["fuel_kg_sec"] = val[
+                                             "fuel_kg_h"] * 1.0 / 3600 if "fuel_kg_h" in val else 0.
+        self._emissions["co_g_s"] = val[
+                                        "co_kg_h"] * 1 / 3.6 if "co_kg_h" in val else 0.
+        self._emissions["hc_g_s"] = val[
+                                        "hc_kg_h"] * 1 / 3.6 if "hc_kg_h" in val else 0.
+        self._emissions["nox_g_s"] = val[
+                                         "nox_kg_h"] * 1 / 3.6 if "nox_kg_h" in val else 0.
+        self._emissions["sox_g_s"] = val[
+                                         "sox_kg_h"] * 1 / 3.6 if "sox_kg_h" in val else 0.
+        self._emissions["pm10_g_s"] = val[
+                                          "pm10_kg_h"] * 1 / 3.6 if "pm10_kg_h" in val else 0.
+        self._emissions["co2_g_s"] = val[
+                                         "fuel_kg_h"] * 3.16 * 1000. / 3600 if "fuel_kg_h" in val else 0.
 
         # self._emissions["NL"] = {
         #     "fuel_kg_sec" : val["FF_NL_in_kg_s"] if "FF_NL_in_kg_s" in val else 0.,
@@ -121,20 +110,23 @@ class APU(object):
     #             val += "\n\t\t %s: %f" % (key, value)
     #     return val
 
-class APUStore(with_metaclass(Singleton, Store)):
+
+class APUStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'APU' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
         self._db = APUDatabase(db_path, deserialize=True)
         self._apu_times = APUtimes(db_path, deserialize=True)
-        self._times = {"REMOTE":{}, "PIER":{}, "CARGO":{}}
+        self._times = {"REMOTE": {}, "PIER": {}, "CARGO": {}}
 
-        #instantiate all objects
+        # instantiate all objects
         self.initAPUs()
 
     def initAPUs(self):
@@ -176,7 +168,8 @@ class APUStore(with_metaclass(Singleton, Store)):
         else:
             return None
 
-class APUDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class APUDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to apu emissions as stored in the database
     """
@@ -184,26 +177,35 @@ class APUDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="default_aircraft_apu_ef",
-                 table_columns_type_dict=OrderedDict([
-                     ("oid", "INTEGER PRIMARY KEY NOT NULL"),
-                     ("apu_id", "TEXT"),
-                     ("fuel_kg_h", "DECIMAL"),
-                     ("co_kg_h", "DECIMAL"),
-                     ("hc_kg_h", "DECIMAL"),
-                     ("nox_kg_h", "DECIMAL"),
-                     ("sox_kg_h", "DECIMAL"),
-                     ("pm10_kg_h", "DECIMAL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="",
-                 geometry_columns=[],
+                 geometry_columns=None,
                  deserialize=True
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 ):
+
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("apu_id", "TEXT"),
+                ("fuel_kg_h", "DECIMAL"),
+                ("co_kg_h", "DECIMAL"),
+                ("hc_kg_h", "DECIMAL"),
+                ("nox_kg_h", "DECIMAL"),
+                ("sox_kg_h", "DECIMAL"),
+                ("pm10_kg_h", "DECIMAL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = []
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path and deserialize:
             self.deserialize()
 
-class APUtimes(with_metaclass(Singleton, SQLSerializable)):
+
+class APUtimes(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to apu emissions as stored in the database
     """
@@ -211,24 +213,31 @@ class APUtimes(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="default_apu_times",
-                 table_columns_type_dict=OrderedDict([
-                     ("oid", "INTEGER PRIMARY KEY NOT NULL"),
-                     ("ac_category", "TEXT"),
-                     ("stand_type", "TEXT"),
-                     ("time_arr_min", "DECIMAL"),
-                     ("time_dep_min", "DECIMAL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="",
-                 geometry_columns=[],
+                 geometry_columns=None,
                  deserialize=True
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 ):
+
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("ac_category", "TEXT"),
+                ("stand_type", "TEXT"),
+                ("time_arr_min", "DECIMAL"),
+                ("time_dep_min", "DECIMAL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = []
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path and deserialize:
             self.deserialize()
 
 if __name__ == "__main__":
-    import alaqslogging
     # import sys
     # print sys.path
 

@@ -1,48 +1,22 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-except:
-    import __init__  # setup the paths for direct calls of the module
-from future.utils import with_metaclass
-
-__author__ = 'ENVISA'
 import logging
-
-loaded_color_logger = False
-try:
-    from rainbow_logging_handler import RainbowLoggingHandler
-    loaded_color_logger = True
-except ImportError:
-    loaded_color_logger = False
-#logger = logging.getLogger("__alaqs__.%s" % (__name__))
-logger = logging.getLogger(__name__)
-
-import os
-import sys
-import re
 import math
-import numpy as np
+import os
 from collections import OrderedDict
 
-from tools import Conversions
-from tools import Spatial
+import numpy as np
 
-try:
-    from .SQLSerializable import SQLSerializable
-    from .Singleton import Singleton
-    from .Store import Store
-    from .EmissionDynamics import EmissionDynamicsStore
-except:
-    from SQLSerializable import SQLSerializable
-    from Singleton import Singleton
-    from Store import Store
-    from EmissionDynamics import EmissionDynamicsStore
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.tools import conversion, Spatial
 
-class AircraftTrajectory(object):
-    def __init__(self, val={}, skipPointInitialization=False):
+logger = logging.getLogger(__name__)
+
+
+class AircraftTrajectory:
+    def __init__(self, val=None, skipPointInitialization=False):
+        if val is None:
+            val = {}
         if isinstance(val, AircraftTrajectory):
             self.setIdentifier(val.getIdentifier())
             self.setStage(val.getStage())
@@ -62,7 +36,7 @@ class AircraftTrajectory(object):
             self._source = str(val["source"]) if "source" in val else ""
             self._departure_arrival = str(val["arrival_departure"]) if "arrival_departure" in val else None
             self._points = []
-            self._weight = Conversions.convertToFloat(val["weight_kgs"]) if "weight_kgs" in val else None
+            self._weight = conversion.convertToFloat(val["weight_kgs"]) if "weight_kgs" in val else None
             self._touchdown = ""
             self._geometry_text = ""
 
@@ -189,7 +163,6 @@ class AircraftTrajectory(object):
         return matched_
 
     def get_angle_wrt_x(self):
-        import numpy as np
         """Return the angle between B-A and the positive x-axis.
         Values go from 0 to pi in the upper half-plane, and from
         0 to -pi in the lower half-plane.
@@ -259,9 +232,9 @@ class TrajectoryPoint(object):
 
         self._id = int(val["id"]) if "id" in val else None
         self._geometry_text = str(val["geometry_text"]) if "geometry_text" in val and val["geometry_text"] else ""
-        self._x = Conversions.convertToFloat(val["x"]) if "x" in val else None
-        self._y = Conversions.convertToFloat(val["y"]) if "y" in val else None
-        self._z = Conversions.convertToFloat(val["z"]) if "z" in val else None
+        self._x = conversion.convertToFloat(val["x"]) if "x" in val else None
+        self._y = conversion.convertToFloat(val["y"]) if "y" in val else None
+        self._z = conversion.convertToFloat(val["z"]) if "z" in val else None
 
     def getIdentifier(self):
         return self._id
@@ -286,17 +259,17 @@ class TrajectoryPoint(object):
         if not unit_in_feet:
             return self._x
         else:
-            return Conversions.convertMetersToFeet(self._x)
+            return conversion.convertMetersToFeet(self._x)
     def getY(self, unit_in_feet=False):
         if not unit_in_feet:
             return self._y
         else:
-            return Conversions.convertMetersToFeet(self._y)
+            return conversion.convertMetersToFeet(self._y)
     def getZ(self, unit_in_feet=False):
         if not unit_in_feet:
             return self._z
         else:
-            return Conversions.convertMetersToFeet(self._z)
+            return conversion.convertMetersToFeet(self._z)
     def getCoordinatesString(self, unit_in_feet=False):
         return "%f %f %f" % (self.getCoordinates(unit_in_feet))
 
@@ -304,23 +277,23 @@ class TrajectoryPoint(object):
         return (self.getX(unit_in_feet), self.getY(unit_in_feet), self.getZ(unit_in_feet))
 
     def setCoordinates(self, x, y, z, unit_in_feet=False):
-        self._x = x if not unit_in_feet else Conversions.convertFeetToMeters(x)
-        self._y = y if not unit_in_feet else Conversions.convertFeetToMeters(y)
-        self._z = z if not unit_in_feet else Conversions.convertFeetToMeters(z)
+        self._x = x if not unit_in_feet else conversion.convertFeetToMeters(x)
+        self._y = y if not unit_in_feet else conversion.convertFeetToMeters(y)
+        self._z = z if not unit_in_feet else conversion.convertFeetToMeters(z)
 
     def setX(self, x, unit_in_feet=False):
-        self._x = x if not unit_in_feet else Conversions.convertFeetToMeters(x)
+        self._x = x if not unit_in_feet else conversion.convertFeetToMeters(x)
 
     def setY(self, y, unit_in_feet=False):
-        self._y = y if not unit_in_feet else Conversions.convertFeetToMeters(y)
+        self._y = y if not unit_in_feet else conversion.convertFeetToMeters(y)
 
     def setZ(self, z, unit_in_feet=False):
-        self._z = z if not unit_in_feet else Conversions.convertFeetToMeters(z)
+        self._z = z if not unit_in_feet else conversion.convertFeetToMeters(z)
 
     def addCoordinates(self, x, y, z, unit_in_feet=False):
-        self._x += (x if not unit_in_feet else Conversions.convertFeetToMeters(x))
-        self._y += (y if not unit_in_feet else Conversions.convertFeetToMeters(y))
-        self._z += (z if not unit_in_feet else Conversions.convertFeetToMeters(z))
+        self._x += (x if not unit_in_feet else conversion.convertFeetToMeters(x))
+        self._y += (y if not unit_in_feet else conversion.convertFeetToMeters(y))
+        self._z += (z if not unit_in_feet else conversion.convertFeetToMeters(z))
 
     def __str__(self):
         val = "\n Trajectory point with id '%s':" % (str(self.getIdentifier()))
@@ -348,10 +321,10 @@ class AircraftTrajectoryPoint(TrajectoryPoint):
         else:
             TrajectoryPoint.__init__(self, val)
             #properties
-            self._true_airspeed = Conversions.convertToFloat(val["tas_metres"]) if "tas_metres" in val else None
-            self._engine_thrust = Conversions.convertToFloat(val["power"]) if "power" in val else None
+            self._true_airspeed = conversion.convertToFloat(val["tas_metres"]) if "tas_metres" in val else None
+            self._engine_thrust = conversion.convertToFloat(val["power"]) if "power" in val else None
             self._mode = str(val["mode"]) if "mode" in val else ""
-            self._weight = Conversions.convertToFloat(val["weight"]) if "weight" in val else ""
+            self._weight = conversion.convertToFloat(val["weight"]) if "weight" in val else ""
 
     def getIdentifier(self):
         return self._id
@@ -385,12 +358,12 @@ class AircraftTrajectoryPoint(TrajectoryPoint):
 
     def getTrueAirspeed(self, unit_in_feet=False):
         if unit_in_feet:
-            return Conversions.convertMetersToFeet(self._true_airspeed)
+            return conversion.convertMetersToFeet(self._true_airspeed)
         else:
             return self._true_airspeed
 
     def setTrueAirspeed(self, var, unit_in_feet=False):
-        self._true_airspeed = var if not unit_in_feet else Conversions.convertFeetToMeters(var)
+        self._true_airspeed = var if not unit_in_feet else conversion.convertFeetToMeters(var)
 
     def __str__(self):
         val = "\n Aircraft trajectory point with id '%s':" % (str(self.getIdentifier()))
@@ -401,12 +374,14 @@ class AircraftTrajectoryPoint(TrajectoryPoint):
         return val
 
 
-class AircraftTrajectoryStore(with_metaclass(Singleton, Store)):
+class AircraftTrajectoryStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'Runway' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
@@ -433,11 +408,11 @@ class AircraftTrajectoryStore(with_metaclass(Singleton, Store)):
 
             #create a new aircraft-trajectory point
             trajectory_point_ = AircraftTrajectoryPoint({
-                "x": Conversions.convertToFloat(trajectory_dict["horizontal_metres"]) if "horizontal_metres" in trajectory_dict else 0.,
+                "x": conversion.convertToFloat(trajectory_dict["horizontal_metres"]) if "horizontal_metres" in trajectory_dict else 0.,
                 "y": 0.,
-                "z": Conversions.convertToFloat(trajectory_dict["vertical_metres"]) if "vertical_metres" in trajectory_dict else 0.,
-                "tas_metres": Conversions.convertToFloat(trajectory_dict["tas_metres"]) if "tas_metres" in trajectory_dict else None,
-                "power": Conversions.convertToFloat(trajectory_dict["power"]) if "power" in trajectory_dict else None,
+                "z": conversion.convertToFloat(trajectory_dict["vertical_metres"]) if "vertical_metres" in trajectory_dict else 0.,
+                "tas_metres": conversion.convertToFloat(trajectory_dict["tas_metres"]) if "tas_metres" in trajectory_dict else None,
+                "power": conversion.convertToFloat(trajectory_dict["power"]) if "power" in trajectory_dict else None,
                 "mode": str(trajectory_dict["mode"]) if "mode" in trajectory_dict else None
             })
 
@@ -461,7 +436,8 @@ class AircraftTrajectoryStore(with_metaclass(Singleton, Store)):
     #     #import pandas as pd
     #     return pd.DataFrame.from_dict(store.getAircraftTrajectoryDatabase().getEntries(), orient='index')
 
-class AircraftTrajectoryDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class AircraftTrajectoryDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to runway shape file in the spatialite database
     """
@@ -469,27 +445,31 @@ class AircraftTrajectoryDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="default_aircraft_profiles",
-                 table_columns_type_dict=OrderedDict([
-                     ("oid", "INTEGER PRIMARY KEY"),
-                     ("profile_id", "VARCHAR(20)"),
-                     ("arrival_departure", "VARCHAR(1)"),
-                     ("stage", "INTEGER"),
-                     ("point", "INTEGER"),
-                     ("weight_lbs", "DECIMAL NULL"),
-                     ("horizontal_feet", "DECIMAL NULL"),
-                     ("vertical_feet", "DECIMAL NULL"),
-                     ("tas_knots", "DECIMAL NULL"),
-                     ("weight_kgs", "DECIMAL NULL"),
-                     ("horizontal_metres", "DECIMAL NULL DEFAULT 0"),
-                     ("vertical_metres", "DECIMAL NULL DEFAULT 0"),
-                     ("tas_metres", "DECIMAL NULL"),
-                     ("power", "DECIMAL NULL"),
-                     ("mode", "VARCHAR(5)"),
-                     ("course", "VARCHAR(15)")
-                 ]),
+                 table_columns_type_dict=None,
                  primary_key=""
-    ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key)
+                 ):
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY"),
+                ("profile_id", "VARCHAR(20)"),
+                ("arrival_departure", "VARCHAR(1)"),
+                ("stage", "INTEGER"),
+                ("point", "INTEGER"),
+                ("weight_lbs", "DECIMAL NULL"),
+                ("horizontal_feet", "DECIMAL NULL"),
+                ("vertical_feet", "DECIMAL NULL"),
+                ("tas_knots", "DECIMAL NULL"),
+                ("weight_kgs", "DECIMAL NULL"),
+                ("horizontal_metres", "DECIMAL NULL DEFAULT 0"),
+                ("vertical_metres", "DECIMAL NULL DEFAULT 0"),
+                ("tas_metres", "DECIMAL NULL"),
+                ("power", "DECIMAL NULL"),
+                ("mode", "VARCHAR(5)"),
+                ("course", "VARCHAR(15)")
+            ])
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key)
 
         if self._db_path:
             self.deserialize()
@@ -503,7 +483,7 @@ if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
 
     import pandas as pd
-    import time
+
     # st_ = time.time()
 
     path_to_database = os.path.join("..","..", "example", "CAEPport", "31032020_out.alaqs")

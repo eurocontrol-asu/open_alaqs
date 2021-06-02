@@ -1,35 +1,31 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-from . import __init__ #setup the paths for direct calls of the module
-from future.utils import with_metaclass
-
-__author__ = 'ENVISA'
 import logging
-loaded_color_logger= False
-try:
-    from rainbow_logging_handler import RainbowLoggingHandler
-    loaded_color_logger = True
-except ImportError:
-    loaded_color_logger= False
-#logger = logging.getLogger("__alaqs__.%s" % (__name__))
-logger = logging.getLogger(__name__)
-
 import os
 import sys
 from collections import OrderedDict
 
-from .SQLSerializable import SQLSerializable
-from .Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 
-from .Store import Store
-from .Emissions import EmissionIndex
+from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 
-from tools import Spatial
+from open_alaqs.alaqs_core.tools import Spatial
 
-class AreaSources(object):
-    def __init__(self, val={}):
+loaded_color_logger = False
+try:
+    from rainbow_logging_handler import RainbowLoggingHandler
+
+    loaded_color_logger = True
+except ImportError:
+    loaded_color_logger = False
+
+logger = logging.getLogger(__name__)
+
+
+class AreaSources:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         self._id = str(val["source_id"]) if "source_id" in val else None
         self._unit_year = float(val["unit_year"]) if "unit_year" in val else 0.
         self._height = float(val["height"]) if "height" in val else 0.
@@ -116,28 +112,32 @@ class AreaSources(object):
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 
-class AreaSourcesStore(with_metaclass(Singleton, Store)):
+
+class AreaSourcesStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'AreaSources' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
 
-        #Engine Modes
+        # Engine Modes
         self._area_db = None
-        if  "area_db" in db:
+        if "area_db" in db:
             if isinstance(db["area_db"], AreaSourcesDatabase):
                 self._area_db = db["area_db"]
-            elif isinstance(db["area_db"], str) and os.path.isfile(db["area_db"]):
+            elif isinstance(db["area_db"], str) and os.path.isfile(
+                    db["area_db"]):
                 self._area_db = AreaSourcesDatabase(db["area_db"])
 
         if self._area_db is None:
             self._area_db = AreaSourcesDatabase(db_path)
 
-        #instantiate all area objects
+        # instantiate all area objects
         self.initAreaSourcess()
 
     def initAreaSourcess(self):
@@ -148,7 +148,8 @@ class AreaSourcesStore(with_metaclass(Singleton, Store)):
     def getAreaSourcesDatabase(self):
         return self._area_db
 
-class AreaSourcesDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class AreaSourcesDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to area shape file in the spatialite database
     """
@@ -156,32 +157,38 @@ class AreaSourcesDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="shapes_area_sources",
-                 table_columns_type_dict=OrderedDict([
-                    ("oid" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("source_id" , "TEXT"),
-                    ("unit_year" , "DECIMAL"),
-                    ("height" , "DECIMAL"),
-                    ("heat_flux" , "DECIMAL"),
-                    ("hourly_profile" , "TEXT"),
-                    ("daily_profile" , "TEXT"),
-                    ("monthly_profile" , "TEXT"),
-                    ("co_kg_unit" , "DECIMAL"),
-                    ("hc_kg_unit" , "DECIMAL"),
-                    ("nox_kg_unit" , "DECIMAL"),
-                    ("sox_kg_unit" , "DECIMAL"),
-                    ("pm10_kg_unit" , "DECIMAL"),
-                    ("p1_kg_unit" , "DECIMAL"),
-                    ("p2_kg_unit" , "DECIMAL"),
-                    ("instudy" , "DECIMAL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="",
-                 geometry_columns=[{
-                    "column_name":"geometry",
-                    "SRID":3857,
-                    "geometry_type":"POLYGON",
-                    "geometry_type_dimension":2
-                 }]
-        ):
+                 geometry_columns=None
+                 ):
+
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("source_id", "TEXT"),
+                ("unit_year", "DECIMAL"),
+                ("height", "DECIMAL"),
+                ("heat_flux", "DECIMAL"),
+                ("hourly_profile", "TEXT"),
+                ("daily_profile", "TEXT"),
+                ("monthly_profile", "TEXT"),
+                ("co_kg_unit", "DECIMAL"),
+                ("hc_kg_unit", "DECIMAL"),
+                ("nox_kg_unit", "DECIMAL"),
+                ("sox_kg_unit", "DECIMAL"),
+                ("pm10_kg_unit", "DECIMAL"),
+                ("p1_kg_unit", "DECIMAL"),
+                ("p2_kg_unit", "DECIMAL"),
+                ("instudy", "DECIMAL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = [{
+                "column_name": "geometry",
+                "SRID": 3857,
+                "geometry_type": "POLYGON",
+                "geometry_type_dimension": 2
+            }]
+
         SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
 
         if self._db_path:

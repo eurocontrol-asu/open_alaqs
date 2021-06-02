@@ -1,25 +1,22 @@
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-except:
-    import __init__
-__author__ = 'ENVISA'
-
-import os,sys
 import logging
-logger = logging.getLogger("__alaqs__.%s" % (__name__))
 
 from collections import OrderedDict
-from tools import Conversions
+from open_alaqs.alaqs_core.tools import conversion
 
-class Store(object):
+logger = logging.getLogger("__alaqs__.%s" % __name__)
+
+
+class Store:
     """
         Abstract container for objects of any type
     """
-    def __init__(self, initValues={}, defaultValues={}, ordered=False):
-        self._objects = {} if not ordered else OrderedDict()
+    def __init__(self, initValues=None, defaultValues=None, ordered=False):
+        if initValues is None:
+            initValues = {}
+        if defaultValues is None:
+            defaultValues = {}
+
+        self._objects = OrderedDict() if ordered else {}
         self._default = defaultValues if defaultValues else {}
 
         self.initDefaultValues()
@@ -69,7 +66,7 @@ class Store(object):
         for key_ in list(self.getObjects().keys()):
             values[key_] = self.getObject(key_)
             if other.hasKey(key_):
-                if Conversions.convertToFloat(values[key_]) is None or Conversions.convertToFloat(other.getObject(key_)) is None:
+                if conversion.convertToFloat(values[key_]) is None or conversion.convertToFloat(other.getObject(key_)) is None:
                     values[key_] = None
                 else:
                     values[key_] += other.getObject(key_)
@@ -84,7 +81,7 @@ class Store(object):
             raise TypeError("cannot add '%s' to '%s' objects" % (type(other), type(self)))
         for key_ in list(self.getObjects().keys()):
             if other.hasKey(key_):
-                if Conversions.convertToFloat(self.getObject(key_)) is None or Conversions.convertToFloat(other.getObject(key_)) is None:
+                if conversion.convertToFloat(self.getObject(key_)) is None or conversion.convertToFloat(other.getObject(key_)) is None:
                     self.setObject(key_, None)
                 else:
                     self.setObject(key_, self.getObject(key_)+other.getObject(key_))
@@ -112,10 +109,10 @@ class Store(object):
 
     def __mul__(self, other):
         ''' multiply self with other, e.g. Store() * 2. '''
-        if not Conversions.convertToFloat(other) is None:#check if 'other' is numerical value, i.e. can be converted to a float
+        if not conversion.convertToFloat(other) is None:#check if 'other' is numerical value, i.e. can be converted to a float
             values = {}
             for key in list(self.getObjects().keys()):
-                if Conversions.convertToFloat(self.getObject(key)) is None:
+                if conversion.convertToFloat(self.getObject(key)) is None:
                     values[key] = None
                 else:
                     values[key] = self.getObject(key)*other
@@ -126,7 +123,7 @@ class Store(object):
             for key_ in list(self.getObjects().keys()):
                 values[key_] = self.getObject(key_)
                 if other.hasKey(key_):
-                    if Conversions.convertToFloat(self.getObject(key_)) is None or Conversions.convertToFloat(other.getObject(key_)) is None:
+                    if conversion.convertToFloat(self.getObject(key_)) is None or conversion.convertToFloat(other.getObject(key_)) is None:
                         values[key_] = None
                     else:
                         values[key_] *= other.getObject(key_)
@@ -140,9 +137,9 @@ class Store(object):
 
     def __imul__(self, other):
         ''' inplace multiply self with other, e.g. Store() * 2. '''
-        if not Conversions.convertToFloat(other) is None:#check if 'other' is numerical value, i.e. can be converted to a float
+        if not conversion.convertToFloat(other) is None:#check if 'other' is numerical value, i.e. can be converted to a float
             for key_ in list(self.getObjects().keys()):
-                if Conversions.convertToFloat(self.getObject(key_)) is None:
+                if conversion.convertToFloat(self.getObject(key_)) is None:
                     self.setObject(key_, None)
                 else:
                     self.setObject(key_, self.getObject(key_)*other)
@@ -150,7 +147,7 @@ class Store(object):
         elif isinstance(other, type(self)): #multiply 'Store' objects with 'Store' objects
             for key_ in list(self.getObjects().keys()):
                 if other.hasKey(key_):
-                    if Conversions.convertToFloat(self.getObject(key_)) is None or Conversions.convertToFloat(other.getObject(key_)) is None:
+                    if conversion.convertToFloat(self.getObject(key_)) is None or conversion.convertToFloat(other.getObject(key_)) is None:
                         self.setObject(key_, None)
                     else:
                         self.setObject(key_, self.getObject(key_)*other.getObject(key_))
@@ -160,10 +157,10 @@ class Store(object):
 
     def __div__(self, other):
         ''' divide self with other, e.g. Store()/2. '''
-        if not Conversions.convertToFloat(other) is None:#check if 'other' is numerical value, i.e. can be converted to a float
+        if not conversion.convertToFloat(other) is None:#check if 'other' is numerical value, i.e. can be converted to a float
             values = {}
             for key in list(self.getObjects().keys()):
-                if Conversions.convertToFloat(self.getObject(key)) is None:
+                if conversion.convertToFloat(self.getObject(key)) is None:
                     values[key]=None
                 else:
                     values[key] = self.getObject(key)/other
@@ -175,7 +172,7 @@ class Store(object):
                 values[key_] = self.getObject(key_)
                 if other.hasKey(key_):
                      #exclude division by 0.
-                    if other.getObject(key_) and not (Conversions.convertToFloat(self.getObject(key_)) is None or Conversions.convertToFloat(other.getObject(key_)) is None):
+                    if other.getObject(key_) and not (conversion.convertToFloat(self.getObject(key_)) is None or conversion.convertToFloat(other.getObject(key_)) is None):
                         values[key_] /= other.getObject(key_)
                     else:
                         values[key_] = None
@@ -188,9 +185,9 @@ class Store(object):
 
     def __idiv__(self, other):
         ''' inplace divide self with other, e.g. Store() / 2. '''
-        if not Conversions.convertToFloat(other) is None:#check if 'other' is numerical value, i.e. can be converted to a float
+        if not conversion.convertToFloat(other) is None:#check if 'other' is numerical value, i.e. can be converted to a float
             for key_ in list(self.getObjects().keys()):
-                if other and not (Conversions.convertToFloat(key_) is None):
+                if other and not (conversion.convertToFloat(key_) is None):
                     self.setObject(key_, self.getObject(key_)/other)
                 else:
                     self.setObject(key_, None)
@@ -199,7 +196,7 @@ class Store(object):
             for key_ in list(self.getObjects().keys()):
                 if other.hasKey(key_):
                     #exclude zeros and non digits
-                    if other.getObject(key_) and not (Conversions.convertToFloat(self.getObject(key_)) is None or Conversions.convertToFloat(other.getObject(key_)) is None):
+                    if other.getObject(key_) and not (conversion.convertToFloat(self.getObject(key_)) is None or conversion.convertToFloat(other.getObject(key_)) is None):
                         self.setObject(key_, self.getObject(key_)/other.getObject(key_))
                     else:
                         self.setObject(key_, None)
@@ -210,7 +207,7 @@ class Store(object):
     def __abs__(self):
         values = {}
         for key_ in list(self.getObjects().keys()):
-            if not Conversions.convertToFloat(self.getObject(key_)) is None:
+            if not conversion.convertToFloat(self.getObject(key_)) is None:
                 values[key_] = abs(self.getObject(key_))
             else:
                 values[key_] = self.getObject(key_)

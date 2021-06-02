@@ -1,27 +1,16 @@
-from __future__ import absolute_import
-from future.utils import with_metaclass
-
-__author__ = 'ENVISA'
 import logging
-logger = logging.getLogger("__alaqs__.%s" % (__name__))
-
 import os
-import sys
 from collections import OrderedDict
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-    from .SQLSerializable import SQLSerializable
-    from .Singleton import Singleton
-    from .Engine import EngineEmissionIndex, HelicopterEngineEmissionIndex
-    from .Emissions import EmissionIndex
-except:
-    import __init__  # setup the paths for direct calls of the module
-    from SQLSerializable import SQLSerializable
-    from Singleton import Singleton
-    from Engine import EngineEmissionIndex, HelicopterEngineEmissionIndex
-    from Emissions import EmissionIndex
 
-class EngineEmissionFactorsStartDatabase(with_metaclass(Singleton, SQLSerializable)):
+from open_alaqs.alaqs_core.interfaces.Engine import EngineEmissionIndex, \
+    HelicopterEngineEmissionIndex
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+
+logger = logging.getLogger("__alaqs__.%s" % __name__)
+
+
+class EngineEmissionFactorsStartDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to emission factors that are related to an engine start
     """
@@ -48,7 +37,8 @@ class EngineEmissionFactorsStartDatabase(with_metaclass(Singleton, SQLSerializab
         if self._db_path:
             self.deserialize()
 
-class EngineModeDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class EngineModeDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to aircraft-engine-emission indices
     """
@@ -68,7 +58,9 @@ class EngineModeDatabase(with_metaclass(Singleton, SQLSerializable)):
         if self._db_path:
             self.deserialize()
 
-class HelicopterEngineEmissionIndicesDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class HelicopterEngineEmissionIndicesDatabase(SQLSerializable,
+                                              metaclass=Singleton):
 
     """
     Class that grants access to aircraft-engine-emission indices
@@ -178,7 +170,8 @@ class HelicopterEngineEmissionIndicesDatabase(with_metaclass(Singleton, SQLSeria
             #ToDo: default
             return None
 
-class EngineEmissionIndicesDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to aircraft-engine-emission indices
     """
@@ -263,6 +256,7 @@ class EngineEmissionIndicesDatabase(with_metaclass(Singleton, SQLSerializable)):
         else:
             #ToDo: default
             return None
+
 
 if __name__ == "__main__":
     # create a logger for this module

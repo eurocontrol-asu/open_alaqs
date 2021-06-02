@@ -1,13 +1,35 @@
-# -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import absolute_import
-import sys, os
+import copy
+import difflib
+import sys
+from builtins import str
+from collections import OrderedDict
+
+import matplotlib
+import numpy as np
+import pandas as pd
+from shapely.geometry import MultiLineString
+from shapely.wkt import loads
+
+from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.tools import conversion, Spatial
+from open_alaqs.alaqs_core.tools.NOx_correction_ambient import \
+    NOx_correction_for_ambient_conditions
+from .Aircraft import AircraftStore
+from .AircraftTrajectory import AircraftTrajectoryStore, \
+    AircraftTrajectoryPoint, AircraftTrajectory
+from .AmbientCondition import AmbientCondition
+from .Emissions import Emission
+from .EngineStore import EngineStore, HeliEngineStore
+from .Gate import GateStore
+from .Runway import RunwayStore
+from .SQLSerializable import SQLSerializable
+from .Singleton import Singleton
+from .Store import Store
+from .Taxiway import TaxiwayRoutesStore
+
 sys.path.append("..")
-__author__ = 'ENVISA'
 
-
-# import logging
-import alaqslogging
+matplotlib.use('Qt5Agg')
 
 # logger = logging.getLogger(__name__)
 logger = alaqslogging.logging.getLogger(__name__)
@@ -21,114 +43,60 @@ file_handler.setFormatter(formatter)
 # Don't forget to add the file handler
 logger.addHandler(file_handler)
 
-from builtins import str
-from builtins import object
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-except:
-    import __init__
-from future.utils import with_metaclass
-
-import pandas as pd
-import geopandas as gpd
-import numpy as np
-from shapely.ops import nearest_points
-from shapely.wkt import loads
-from shapely.geometry import MultiPoint, Point, LineString, MultiLineString
-import datetime
-from os.path import expanduser
-# from qgis.PyQt import QtGui, QtCore, QtWidgets
-from PyQt5 import QtCore, QtGui, QtWidgets
-from collections import OrderedDict
-import difflib
-import copy
-import math
-from tools import Conversions
-from tools import Spatial
-from tools.NOx_correction_ambient import NOx_correction_for_ambient_conditions
-
-try:
-    from .SQLSerializable import SQLSerializable
-    from .Singleton import Singleton
-    from .Store import Store
-    from .EngineStore import EngineStore, HeliEngineStore
-    from .Aircraft import AircraftStore
-    from .AircraftTrajectory import AircraftTrajectoryStore, AircraftTrajectoryPoint, TrajectoryPoint, AircraftTrajectory
-    from .Emissions import Emission, EmissionIndex
-    from .Runway import RunwayDatabase
-    from .Runway import RunwayStore
-    from .Gate import GateStore
-    from .Taxiway import TaxiwayRoutesStore
-    from .AmbientCondition import AmbientCondition, AmbientConditionStore
-except:
-    from SQLSerializable import SQLSerializable
-    from Singleton import Singleton
-    from Store import Store
-    from EngineStore import EngineStore, HeliEngineStore
-    from Aircraft import AircraftStore
-    from AircraftTrajectory import AircraftTrajectoryStore, AircraftTrajectoryPoint, TrajectoryPoint, AircraftTrajectory
-    from Emissions import Emission, EmissionIndex
-    from Runway import RunwayDatabase, RunwayStore
-    from Gate import GateStore
-    from Taxiway import TaxiwayRoutesStore
-    from AmbientCondition import AmbientCondition, AmbientConditionStore
-
-import matplotlib
-matplotlib.use('Qt5Agg')
-import matplotlib.pyplot as plt
-# plt.ion()
-
-defaultEmissions={
-                "fuel_kg" : 0.,
-                "co_g" : 0.,
-                "co2_g" : 0.,
-                "hc_g" : 0.,
-                "nox_g" : 0.,
-                "sox_g" : 0.,
-                "pm10_g" : 0.,
-                "p1_g" : 0.,
-                "p2_g": 0.,
-                "pm10_prefoa3_g" : 0.,
-                "pm10_nonvol_g" : 0.,
-                "pm10_sul_g" : 0.,
-                "pm10_organic_g" : 0.
-            }
-defaultEI={
-            "fuel_kg_sec" : 0.,
-            "co_g_kg" : 0.,
-            "co2_g_kg" : 3.16*1000.,
-            "hc_g_kg" : 0.,
-            "nox_g_kg" : 0.,
-            "sox_g_kg" : 0.,
-            "pm10_g_kg" : 0.,
-            "p1_g_kg" : 0.,
-            "p2_g_kg": 0.,
-            "smoke_number" : 0.,
-            "smoke_number_maximum" : 0.,
-            "fuel_type"  : "",
-            "pm10_prefoa3_g_kg" : 0.,
-            "pm10_nonvol_g_kg" : 0.,
-            "pm10_sul_g_kg" : 0.,
-            "pm10_organic_g_kg" : 0.
+defaultEmissions = {
+    "fuel_kg": 0.,
+    "co_g": 0.,
+    "co2_g": 0.,
+    "hc_g": 0.,
+    "nox_g": 0.,
+    "sox_g": 0.,
+    "pm10_g": 0.,
+    "p1_g": 0.,
+    "p2_g": 0.,
+    "pm10_prefoa3_g": 0.,
+    "pm10_nonvol_g": 0.,
+    "pm10_sul_g": 0.,
+    "pm10_organic_g": 0.
+}
+defaultEI = {
+    "fuel_kg_sec": 0.,
+    "co_g_kg": 0.,
+    "co2_g_kg": 3.16 * 1000.,
+    "hc_g_kg": 0.,
+    "nox_g_kg": 0.,
+    "sox_g_kg": 0.,
+    "pm10_g_kg": 0.,
+    "p1_g_kg": 0.,
+    "p2_g_kg": 0.,
+    "smoke_number": 0.,
+    "smoke_number_maximum": 0.,
+    "fuel_type": "",
+    "pm10_prefoa3_g_kg": 0.,
+    "pm10_nonvol_g_kg": 0.,
+    "pm10_sul_g_kg": 0.,
+    "pm10_organic_g_kg": 0.
 }
 
-class Movement(object):
-    def __init__(self, val={}):
+
+class Movement:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
 
         self._time = None
         _col = "runway_time"
-        if not _col in val:
+        if _col not in val:
             logger.error("'%s' not set, but necessary input" % (_col))
         else:
-            self._time = Conversions.convertTimeToSeconds(val[_col])
+            self._time = conversion.convertTimeToSeconds(val[_col])
             if self._time is None:
                 logger.error("Could not convert '%s', which is of type '%s', to a valid time format." % (str(val[_col]), str(type(val[_col]))))
         self._block_time = None
         _col = "block_time"
-        if not _col in val:
+        if _col not in val:
             logger.error("'%s' not set, but necessary input" % (_col))
         else:
-            self._block_time = Conversions.convertTimeToSeconds(val[_col])
+            self._block_time = conversion.convertTimeToSeconds(val[_col])
             if self._block_time is None:
                 logger.error("Could not convert '%s', which is of type '%s', to a valid time format." % (str(val[_col]), str(type(val[_col]))))
 
@@ -150,20 +118,23 @@ class Movement(object):
         self._taxi_fuel_ratio = float(val["taxi_fuel_ratio"]) if "taxi_fuel_ratio" in val else 1.
         self._engine_thrust_level_taxiing = float(val["engine_thrust_level_taxiing"]) if "engine_thrust_level_taxiing" in val else 0.07
 
-        self._set_time_of_main_engine_start_after_block_off_in_s = Conversions.convertToFloat(val["set_time_of_main_engine_start_after_block_off_in_s"]) if "set_time_of_main_engine_start_after_block_off_in_s" in val else None
-        self._set_time_of_main_engine_start_before_takeoff_in_s  = Conversions.convertToFloat(val["set_time_of_main_engine_start_before_takeoff_in_s"]) if "set_time_of_main_engine_start_before_takeoff_in_s" in val else None
-        self._set_time_of_main_engine_off_after_runway_exit_in_s = Conversions.convertToFloat(val["set_time_of_main_engine_off_after_runway_exit_in_s"]) if "set_time_of_main_engine_off_after_runway_exit_in_s" in val else None
+        self._set_time_of_main_engine_start_after_block_off_in_s = conversion.convertToFloat(val["set_time_of_main_engine_start_after_block_off_in_s"]) if "set_time_of_main_engine_start_after_block_off_in_s" in val else None
+        self._set_time_of_main_engine_start_before_takeoff_in_s  = conversion.convertToFloat(val["set_time_of_main_engine_start_before_takeoff_in_s"]) if "set_time_of_main_engine_start_before_takeoff_in_s" in val else None
+        self._set_time_of_main_engine_off_after_runway_exit_in_s = conversion.convertToFloat(val["set_time_of_main_engine_off_after_runway_exit_in_s"]) if "set_time_of_main_engine_off_after_runway_exit_in_s" in val else None
 
-        if not self._set_time_of_main_engine_start_after_block_off_in_s is None:
-            self._set_time_of_main_engine_start_after_block_off_in_s = abs(self._set_time_of_main_engine_start_after_block_off_in_s)
+        if self._set_time_of_main_engine_start_after_block_off_in_s is not None:
+            self._set_time_of_main_engine_start_after_block_off_in_s = \
+                abs(self._set_time_of_main_engine_start_after_block_off_in_s)
 
-        if not self._set_time_of_main_engine_start_before_takeoff_in_s is None:
-            self._set_time_of_main_engine_start_before_takeoff_in_s = abs(self._set_time_of_main_engine_start_before_takeoff_in_s)
+        if self._set_time_of_main_engine_start_before_takeoff_in_s is not None:
+            self._set_time_of_main_engine_start_before_takeoff_in_s = \
+                abs(self._set_time_of_main_engine_start_before_takeoff_in_s)
 
-        if not self._set_time_of_main_engine_off_after_runway_exit_in_s is None:
-            self._set_time_of_main_engine_off_after_runway_exit_in_s = abs(self._set_time_of_main_engine_off_after_runway_exit_in_s)
+        if self._set_time_of_main_engine_off_after_runway_exit_in_s is not None:
+            self._set_time_of_main_engine_off_after_runway_exit_in_s = \
+                abs(self._set_time_of_main_engine_off_after_runway_exit_in_s)
 
-        self._number_of_stop_and_gos = Conversions.convertToFloat(val["number_of_stop_and_gos"]) if "number_of_stop_and_gos" in val else 0.
+        self._number_of_stop_and_gos = conversion.convertToFloat(val["number_of_stop_and_gos"]) if "number_of_stop_and_gos" in val else 0.
 
         self._aircraft = None
         self._aircraftengine = None
@@ -308,15 +279,15 @@ class Movement(object):
         azi1, azi2 = inverseDistance_dict["azi1"], inverseDistance_dict["azi2"]
 
         # left
-        direct_dic1l = Spatial.getDistance(lat1, lon1, 90 + azi1, Conversions.convertToFloat(width) / 2, EPSG_id=EPSG_target)
-        direct_dic2l = Spatial.getDistance(lat2, lon2, 90 + azi2, Conversions.convertToFloat(width) / 2, EPSG_id=EPSG_target)
+        direct_dic1l = Spatial.getDistance(lat1, lon1, 90 + azi1, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
+        direct_dic2l = Spatial.getDistance(lat2, lon2, 90 + azi2, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
 
         newline_left = 'LINESTRING Z(%s %s %s, %s %s %s)' % (
         direct_dic1l['lon2'], direct_dic1l['lat2'], alt1 + height, direct_dic2l['lon2'], direct_dic2l['lat2'], alt2 + height)
 
         # right
-        direct_dic1r = Spatial.getDistance(lat1, lon1, 270 + azi1, Conversions.convertToFloat(width) / 2, EPSG_id=EPSG_target)
-        direct_dic2r = Spatial.getDistance(lat2, lon2, 270 + azi2, Conversions.convertToFloat(width) / 2, EPSG_id=EPSG_target)
+        direct_dic1r = Spatial.getDistance(lat1, lon1, 270 + azi1, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
+        direct_dic2r = Spatial.getDistance(lat2, lon2, 270 + azi2, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
 
         newline_right = 'LINESTRING Z(%s %s %s, %s %s %s)' % (
         direct_dic1r['lon2'], direct_dic1r['lat2'], alt1 + height, direct_dic2r['lon2'], direct_dic2r['lat2'], alt2 + height)
@@ -326,7 +297,7 @@ class Movement(object):
 
     def calculateTaxiingEmissions(self, method={"name":"bymode", "config":{}}, mode="TX", sas='none'):
         try:
-            total_taxiing_time = Conversions.convertTimeToSeconds(abs(self.getBlockTime() - self.getRunwayTime()))
+            total_taxiing_time = conversion.convertTimeToSeconds(abs(self.getBlockTime() - self.getRunwayTime()))
         except:
             total_taxiing_time = None
         # print("total_taxiing_time %s"%total_taxiing_time)
@@ -350,10 +321,10 @@ class Movement(object):
                     total_taxiing_time = init_taxiing_time_from_segments
                     # in m/s
                     taxiing_average_speed = \
-                        Conversions.convertToFloat(taxiing_length)/Conversions.convertToFloat(init_taxiing_time_from_segments)
+                        conversion.convertToFloat(taxiing_length)/conversion.convertToFloat(init_taxiing_time_from_segments)
                 else:
                     taxiing_average_speed = \
-                        Conversions.convertToFloat(taxiing_length)/Conversions.convertToFloat(total_taxiing_time)
+                        conversion.convertToFloat(taxiing_length)/conversion.convertToFloat(total_taxiing_time)
                 # print("taxiing_average_speed %s"%taxiing_average_speed)
 
                 # Total taxiing time for calculating taxiing emissions is taken from the Movements Table
@@ -1126,21 +1097,21 @@ class Movement(object):
         self._runway_direction = var
         #if isinstance(var, str):
         #    var = ''.join(c for c in var if c.isdigit())
-        #    var = Conversions.convertToFloat(var)
+        #    var = conversion.convertToFloat(var)
         #self._runway_direction = var
 
     def getRunwayTime(self, as_str=False):
         if as_str:
-            if not (Conversions.convertToFloat(self._time) is None):
-                return Conversions.convertSecondsToTimeString(self._time)
+            if not (conversion.convertToFloat(self._time) is None):
+                return conversion.convertSecondsToTimeString(self._time)
         return self._time
     def setRunwayTime(self, val):
         self._time = val
 
     def getBlockTime(self, as_str=False):
         if as_str:
-            if not (Conversions.convertToFloat(self._block_time) is None):
-                return Conversions.convertSecondsToTimeString(self._block_time)
+            if not (conversion.convertToFloat(self._block_time) is None):
+                return conversion.convertSecondsToTimeString(self._block_time)
 
         return self._block_time
     def setBlockTime(self, val):
@@ -1211,12 +1182,14 @@ class Movement(object):
         val += "\n\t Runway: %s" % ("\n\t".join(str(self.getRunway()).split("\n")))
         return val
 
-class MovementStore(with_metaclass(Singleton, Store)):
+class MovementStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'Movement' objects
     """
 
-    def __init__(self, db_path="", db={}, debug=False):
+    def __init__(self, db_path="", db=None, debug=False):
+        if db is None:
+            db = {}
         Store.__init__(self, ordered=True)
 
         self._db_path = db_path
@@ -1504,7 +1477,7 @@ class MovementStore(with_metaclass(Singleton, Store)):
             self.setObject(movement_dict["oid"] if "oid" in movement_dict else "unknown", mov)
 
 
-class MovementDatabase(with_metaclass(Singleton, SQLSerializable)):
+class MovementDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to user-defined movements stored in the database
     """
@@ -1512,35 +1485,42 @@ class MovementDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="user_aircraft_movements",
-                 table_columns_type_dict=OrderedDict([
-                     ("oid", "INTEGER PRIMARY KEY"),
-                     ("runway_time", "TIMESTAMP"),
-                     ("block_time", "TIMESTAMP"),
-                     ("aircraft_registration", "TEXT"),
-                     ("aircraft", "TEXT"),
-                     ("gate", "TEXT"),
-                     ("departure_arrival", "TEXT"),
-                     ("runway", "TEXT"),
-                     ("engine_name", "TEXT"),
-                     ("profile_id", "TEXT"),
-                     ("track_id", "TEXT"),
-                     ("taxi_route", "TEXT"),
-                     ("tow_ratio", "DECIMAL NULL"),
-                     ("apu_code", "INTEGER"),
-                     ("taxi_engine_count", "INTEGER"),
-                     ("set_time_of_main_engine_start_after_block_off_in_s", "DECIMAL NULL"),
-                     ("set_time_of_main_engine_start_before_takeoff_in_s", "DECIMAL NULL"),
-                     ("set_time_of_main_engine_off_after_runway_exit_in_s", "DECIMAL NULL"),
-                     ("engine_thrust_level_for_taxiing", "DECIMAL NULL"),
-                     ("taxi_fuel_ratio", "DECIMAL NULL"),
-                     ("number_of_stop_and_gos", "DECIMAL NULL"),
-                     ("domestic", "TEXT"),
-                     ("annual_operations", "DECIMAL NULL"),
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="oid",
                  deserialize=True
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key)
+                 ):
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY"),
+                ("runway_time", "TIMESTAMP"),
+                ("block_time", "TIMESTAMP"),
+                ("aircraft_registration", "TEXT"),
+                ("aircraft", "TEXT"),
+                ("gate", "TEXT"),
+                ("departure_arrival", "TEXT"),
+                ("runway", "TEXT"),
+                ("engine_name", "TEXT"),
+                ("profile_id", "TEXT"),
+                ("track_id", "TEXT"),
+                ("taxi_route", "TEXT"),
+                ("tow_ratio", "DECIMAL NULL"),
+                ("apu_code", "INTEGER"),
+                ("taxi_engine_count", "INTEGER"),
+                ("set_time_of_main_engine_start_after_block_off_in_s",
+                 "DECIMAL NULL"),
+                ("set_time_of_main_engine_start_before_takeoff_in_s",
+                 "DECIMAL NULL"),
+                ("set_time_of_main_engine_off_after_runway_exit_in_s",
+                 "DECIMAL NULL"),
+                ("engine_thrust_level_for_taxiing", "DECIMAL NULL"),
+                ("taxi_fuel_ratio", "DECIMAL NULL"),
+                ("number_of_stop_and_gos", "DECIMAL NULL"),
+                ("domestic", "TEXT"),
+                ("annual_operations", "DECIMAL NULL"),
+            ])
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key)
 
         if self._db_path and deserialize:
             self.deserialize()
@@ -1551,7 +1531,7 @@ if __name__ == "__main__":
     # print("--- %s seconds ---" % (time.time() - start_time))
 
     # from qgis.PyQt import QtGui
-    from PyQt5 import QtCore, QtGui, QtWidgets
+    from PyQt5 import QtCore, QtWidgets
     # from python_qt_binding import QtGui, QtCore  # new imports
     # app = QtWidgets.QApplication(sys.argv)
     app = QtWidgets.QApplication.instance()
@@ -1569,9 +1549,6 @@ if __name__ == "__main__":
     matplotlib.use('Qt5Agg')
     import matplotlib.pyplot as plt
     plt.ion()    # logging.getLogger('matplotlib.font_manager').disabled = True
-    import mplleaflet
-    import geopandas as gpd
-    import datetime
     # from shapely.wkt import loads
 
 
@@ -1609,7 +1586,7 @@ if __name__ == "__main__":
         "max_height": 914.4,
         "height_unit_in_feet":False
     }
-    # max_limit = limit["max_height"] if limit['height_unit_in_feet'] is False else Conversions.convertMetersToFeet(limit["max_height"])
+    # max_limit = limit["max_height"] if limit['height_unit_in_feet'] is False else conversion.convertMetersToFeet(limit["max_height"])
 
     installation_corrections = {
                         "Takeoff":1.010,    # 100%
@@ -1653,7 +1630,7 @@ if __name__ == "__main__":
             print("Fuel:",emissions.getFuel()[0],"\t CO2(kg):",emissions.getCO2()[0]/1000.,
                   "\t CO(g):",emissions.getValue("CO", "g")[0], "\t NOx(g):",emissions.getValue("NOx", "g")[0])
             # print mov.getAircraft().getType(), mov.getAircraftEngine().getName(), \
-            #     Conversions.convertTimeToSeconds(abs(mov.getBlockTime() - mov.getRunwayTime())), \
+            #     conversion.convertTimeToSeconds(abs(mov.getBlockTime() - mov.getRunwayTime())), \
             #     mov.getDepartureArrivalFlag(), prof_id, mov.getGate().getName(), mov.getGate().getType(), \
             #     emissions.getFuel()[0], emissions.getValue("CO2", "g")[0], emissions.getValue("CO", "g")[0], \
             #     emissions.getValue("NOx", "g")[0], emissions.getValue("SOx", "g")[0], emissions.getValue("HC", "g")[0], \

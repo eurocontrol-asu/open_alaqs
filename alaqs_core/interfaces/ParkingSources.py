@@ -1,35 +1,29 @@
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-from . import __init__ #setup the paths for direct calls of the module
-from future.utils import with_metaclass
-
-
-__author__ = 'ENVISA'
 import logging
-loaded_color_logger= False
-try:
-    from rainbow_logging_handler import RainbowLoggingHandler
-    loaded_color_logger = True
-except ImportError:
-    loaded_color_logger= False
-#logger = logging.getLogger("__alaqs__.%s" % (__name__))
-logger = logging.getLogger(__name__)
-
 import os
 import sys
 from collections import OrderedDict
 
-from .SQLSerializable import SQLSerializable
-from .Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.tools import Spatial
 
-from .Store import Store
-from .Emissions import EmissionIndex
+loaded_color_logger = False
+try:
+    from rainbow_logging_handler import RainbowLoggingHandler
+    loaded_color_logger = True
+except ImportError:
+    loaded_color_logger = False
 
-from tools import Spatial
+# logger = logging.getLogger("__alaqs__.%s" % (__name__))
+logger = logging.getLogger(__name__)
 
-class ParkingSources(object):
-    def __init__(self, val={}):
+
+class ParkingSources:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         self._id = str(val["parking_id"]) if "parking_id" in val else None
         self._vehicle_year = float(val["vehicle_year"]) if "vehicle_year" in val else 0.
 

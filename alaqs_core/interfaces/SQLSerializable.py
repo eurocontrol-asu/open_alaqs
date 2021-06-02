@@ -1,30 +1,23 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-except:
-    import __init__
-
-__author__ = 'ENVISA'
-import os, sys
-import re
-
 import logging
-logger = logging.getLogger("alaqs.%s" % (__name__))
-
-from tools import SQLInterface
-from tools import Conversions
+import os
+import re
 from collections import OrderedDict
 
-class SQLSerializable(object):
+from open_alaqs.alaqs_core.tools import SQLInterface, conversion
+
+logger = logging.getLogger("alaqs.%s" % __name__)
+
+
+class SQLSerializable:
     """
     Class that serves as a container for data stored in a database.
     The class provides methods to serialize and deserialize objects to the database
     """
 
-    def __init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key="", geometry_columns=[]):
+    def __init__(self, db_path_string, table_name_string,
+                 table_columns_type_dict, primary_key="",
+                 geometry_columns: list = None):
+
         self._db_path = str(db_path_string)
         self._table_name = str(table_name_string)
         self._table_columns = OrderedDict()
@@ -43,16 +36,12 @@ class SQLSerializable(object):
                     # print("Identified '%s' as primary key from column types." % (key))
         if not self._primary_key:
             raise Exception("Primary key is empty or not valid.")
-        if not self._primary_key in self._table_columns:
+        if self._primary_key not in self._table_columns:
             raise Exception("Did not find primary key '%s' in dict for columns-type mapping." % (str(self._primary_key)))
 
-        self._geometry_columns = geometry_columns if not geometry_columns is None else []
-        #{
-        #    "column_name":"geometry",
-        #    "SRID":3857,
-        #    "geometry_type":"LINESTRING",
-        #    "geometry_type_dimension":2
-        # }
+        self._geometry_columns = geometry_columns
+        if self._geometry_columns is None:
+            self._geometry_columns = []
 
         self._entries = OrderedDict()
 
@@ -156,7 +145,7 @@ class SQLSerializable(object):
                                     continue
                                 else:
                                     if (key in self._table_columns and self._table_columns[key].lower() in ["decimal"]):
-                                        values_dict[key] = Conversions.convertToFloat(values_dict[key])
+                                        values_dict[key] = conversion.convertToFloat(values_dict[key])
                             self.setEntry(values_dict[self.getPrimaryKey()], self.getObject(values_dict))
 
                         except Exception as exc_:
@@ -174,7 +163,7 @@ class SQLSerializable(object):
                 #convert AsText(bla) to bla
                 geometry_type_ = re.search("AsText\((.+?)\)", col_name )
                 if geometry_type_:
-                   data_dict[geometry_type_.group(1)] = data[col_index]
+                    data_dict[geometry_type_.group(1)] = data[col_index]
                 else:
                     data_dict[col_name] = data[col_index]
             return data_dict
@@ -182,40 +171,40 @@ class SQLSerializable(object):
         return None
 
     def insert_rows(self, path_, list_of_key_values_dicts):
-            """
-            This function inserts cell hashes into the table.
-            :param path_: database path
-            :param list_of_key_values_dicts: list of dictionaries with key:value association that are inserted to the table
-            :return: bool if operation was successful
-            :raise ValueError: if the database returns an error
-            """
-            try:
-                values_str = "?" +", ?" * (len(list(self._table_columns.keys()))-1)
-                sql_text = "INSERT INTO %s VALUES (%s);" % (self._table_name, values_str)
+        """
+        This function inserts cell hashes into the table.
+        :param path_: database path
+        :param list_of_key_values_dicts: list of dictionaries with key:value association that are inserted to the table
+        :return: bool if operation was successful
+        :raise ValueError: if the database returns an error
+        """
+        try:
+            values_str = "?" +", ?" * (len(list(self._table_columns.keys()))-1)
+            sql_text = "INSERT INTO %s VALUES (%s);" % (self._table_name, values_str)
 
-                #check compatibility
-                entries = []
-                for entry in list_of_key_values_dicts:
-                    skip=False
-                    for k in list(self._table_columns.keys()):
-                        if not (k in entry):
-                            logger.error("Could not insert entry '%s'. Did not find necessary key '%s' for this entry." %(str(k), str(k)))
-                            skip=True
-                    if not skip:
-                       entries.append(entry)
+            #check compatibility
+            entries = []
+            for entry in list_of_key_values_dicts:
+                skip=False
+                for k in list(self._table_columns.keys()):
+                    if not (k in entry):
+                        logger.error("Could not insert entry '%s'. Did not find necessary key '%s' for this entry." %(str(k), str(k)))
+                        skip=True
+                if not skip:
+                    entries.append(entry)
 
-                result = SQLInterface.query_insert_many(path_, sql_text, [[entry[k] for k in list(self._table_columns.keys())] for entry in entries])
-                if isinstance(result, str):
-                    logger.error("Row was not inserted: %s" % result)
-                    raise ValueError(result)
-                elif result is False:
-                    logger.error("Row was not inserted: function returned False")
-                    return False
+            result = SQLInterface.query_insert_many(path_, sql_text, [[entry[k] for k in list(self._table_columns.keys())] for entry in entries])
+            if isinstance(result, str):
+                logger.error("Row was not inserted: %s" % result)
+                raise ValueError(result)
+            elif result is False:
+                logger.error("Row was not inserted: function returned False")
+                return False
 
-                logger.debug("Row was inserted in table '%s'"%(self._table_name))
-                return True
-            except Exception as e:
-                return e
+            logger.debug("Row was inserted in table '%s'"%(self._table_name))
+            return True
+        except Exception as e:
+            return e
 
     def create_table(self, path_=""):
         """
@@ -252,11 +241,11 @@ class SQLSerializable(object):
             for geom_col_dict_ in self._geometry_columns:
                 if all (k in geom_col_dict_ for k in ["column_name", "SRID", "geometry_type","geometry_type_dimension"]):
                     query_text_geom_ = "SELECT AddGeometryColumn('%s', '%s', %i, %s, %i);" % (
-                                                                        str(self._table_name),
-                                                                        str(geom_col_dict_["column_name"]),
-                                                                        int(geom_col_dict_["SRID"]),
-                                                                        str(geom_col_dict_["geometry_type"]),
-                                                                        int(geom_col_dict_["geometry_type_dimension"]))
+                        str(self._table_name),
+                        str(geom_col_dict_["column_name"]),
+                        int(geom_col_dict_["SRID"]),
+                        str(geom_col_dict_["geometry_type"]),
+                        int(geom_col_dict_["geometry_type_dimension"]))
                     result = SQLInterface.query_text(path_, query_text_geom_)
                     if isinstance(result, str):
                         logger.error("Table not created: %s" % result)
@@ -275,7 +264,6 @@ if __name__ == "__main__":
     # ======================================================
     # ==================    UNIT TESTS     =================
     # ======================================================
-    import pandas as pd
     import time
     start_time = time.time()
 
@@ -291,8 +279,6 @@ if __name__ == "__main__":
     # # add ch to logger
     # if len(logger.handlers)==0:
     #     logger.addHandler(ch)
-
-    from Movement import Movement
 
     # path_to_database = os.path.join("..", "..", "example", "exeter_out.alaqs")
     path_to_database = os.path.join("..", "..", "example", "CAEPport", "old", "06042020_out.alaqs")

@@ -1,36 +1,27 @@
-
-from __future__ import absolute_import
 import logging
-from future.utils import with_metaclass
-__author__ = 'ENVISA'
-
 import os.path
 
-try:
-    from .Store import Store
-    from .Singleton import Singleton
-    from .EngineDatabases import EngineEmissionIndicesDatabase,EngineModeDatabase,EngineEmissionFactorsStartDatabase
-    from .EngineDatabases import HelicopterEngineEmissionIndicesDatabase
-    from .Engine import Engine
-except:
-    from Store import Store
-    from Singleton import Singleton
-    from EngineDatabases import EngineEmissionIndicesDatabase,EngineModeDatabase,EngineEmissionFactorsStartDatabase
-    from EngineDatabases import HelicopterEngineEmissionIndicesDatabase
-    from Engine import Engine
+from open_alaqs.alaqs_core.interfaces.Engine import Engine
+from open_alaqs.alaqs_core.interfaces.EngineDatabases import \
+    EngineEmissionIndicesDatabase, EngineModeDatabase, \
+    HelicopterEngineEmissionIndicesDatabase
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
+
+logger = logging.getLogger("__alaqs__.%s" % __name__)
 
 
-logger = logging.getLogger("__alaqs__.%s" % (__name__))
-
-class EngineStore(with_metaclass(Singleton, Store)):
+class EngineStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'Engine' objects
     """
 
-    def __init__(self, db_path="", db={
-                "engine_emission_indices_db":None,
-                "engine_modes_db":None,
-                "engine_start_emission_factors_db":None}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {
+                "engine_emission_indices_db": None,
+                "engine_modes_db": None,
+                "engine_start_emission_factors_db": None}
         Store.__init__(self)
 
         self._db_path = db_path
@@ -100,15 +91,18 @@ class EngineStore(with_metaclass(Singleton, Store)):
         return None
 
 
-class HeliEngineStore(with_metaclass(Singleton, Store)):
+class HeliEngineStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'Engine' objects
     """
 
-    def __init__(self, db_path="", db={
-                "engine_emission_indices_db":None,
-                "engine_modes_db":None,
-                "engine_start_emission_factors_db":None}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {
+                "engine_emission_indices_db": None,
+                "engine_modes_db": None,
+                "engine_start_emission_factors_db": None}
+
         Store.__init__(self)
 
         self._db_path = db_path
@@ -170,6 +164,7 @@ class HeliEngineStore(with_metaclass(Singleton, Store)):
         #         power_setting_ = em_dict_["thrust"] if "thrust" in em_dict_ else None
         #         return power_setting_
         return None
+
 
 if __name__ == "__main__":
     # create a logger for this module
