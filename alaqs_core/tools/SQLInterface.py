@@ -1,20 +1,16 @@
-from __future__ import absolute_import
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-except:
-    import __init__ #setup the paths for direct calls of the module
 import sys
 import os
-
-import logging
-logger = logging.getLogger("alaqs.%s" % (__name__))
-
-import sqlite3 as sqlite
 import struct
+import logging
+import sqlite3 as sqlite
 
-def connect(database_path):
+logger = logging.getLogger("alaqs.%s" % __name__)
+
+
+def connect(database_path: str) -> sqlite.Connection:
     """
-    Creates a connection to a SQLite database
+    Creates a connection to a SQLite database.
+
     :param database_path:
     :type database_path: str
     :return curs: a cursor object for the database provided
@@ -22,39 +18,32 @@ def connect(database_path):
     """
     try:
         conn = sqlite.connect(database_path)
-        #always return bytestrings
+        # always return bytestrings
         conn.text_factory = str
         conn.enable_load_extension(True)
 
-        # spatial_dll_filename = "libspatialite-4.dll"
-        # if 8 * struct.calcsize("P") == 64:
-        #     spatial_dll_folder = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "spatialite-4.0.0-DLL-win-amd64"))
-        #     raise Exception("64bit installation of QGIS are not supported. Please use the 32bit installation.")
-        # else:
-        #     spatial_dll_folder = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "spatialite-4.0.0-DLL"))
-
         spatial_dll_filename = "mod_spatialite.dll"
         if 8 * struct.calcsize("P") == 64:
-            spatial_dll_folder = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "spatialite-4.0.0-DLL"))
+            spatial_dll_folder = os.path.abspath(
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                             "spatialite-4.0.0-DLL"))
         else:
-            # spatial_dll_folder = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "spatialite-4.0.0-DLL"))
-            raise Exception("64bit installation of QGIS is now supported. Please try to use the 64bit installation.")
+            raise Exception("64bit installation of QGIS is now supported. "
+                            "Please try to use the 64bit installation.")
 
-        if not spatial_dll_folder in sys.path:
-            sys.path.append(spatial_dll_folder )
-        if not spatial_dll_folder in os.environ['PATH']:
-            os.environ['PATH'] = spatial_dll_folder + os.pathsep + os.environ['PATH']
+        if spatial_dll_folder not in sys.path:
+            sys.path.append(spatial_dll_folder)
+        if spatial_dll_folder not in os.environ['PATH']:
+            os.environ['PATH'] = spatial_dll_folder + os.pathsep + os.environ[
+                'PATH']
 
         conn.execute('SELECT load_extension("%s")' % spatial_dll_filename)
-
-        # dll_filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "spatialite-4.0.0-DLL", spatial_dll_filename))
-        # conn.execute('SELECT load_extension("%s")' % dll_filename)
 
         return conn
     except Exception as e:
         msg = "Connection could not be established: %s" % e
         raise Exception(msg)
-        return None
+
 
 def query_text(database_path, sql_text):
     """
@@ -64,10 +53,6 @@ def query_text(database_path, sql_text):
     :return data: the result of the query
     :raise ValueError: if database returns a string (error) instead of list
     """
-
-    # Log the incoming database and sql text
-    # logger.debug("Database path:\t%s" % database_path)
-    # logger.debug("Query text:\t%s..." % sql_text[0:20])
 
     # Create a blank connection object
     conn = None
@@ -94,13 +79,15 @@ def query_text(database_path, sql_text):
         logger.error("Query could not be completed: %s" % e)
         return None
     finally:
-        # Commit any changes the query performed and close the connection. This is in a try-except block in case there
-        # was no connection established and no query to commit. Without this, an error will be raised
+        # Commit any changes the query performed and close the connection. This
+        # is in a try-except block in case there was no connection established
+        # and no query to commit. Without this, an error will be raised
         try:
             conn.commit()
             conn.close()
-        except:
+        except Exception as e:
             pass
+
 
 def pd_query_text(database_path, sql_text):
     """
@@ -112,8 +99,6 @@ def pd_query_text(database_path, sql_text):
     """
     import pandas as pd
 
-    # Create a blank connection object
-    conn = None
     try:
         # Create a connection
         conn = sqlite.connect(database_path)
@@ -128,19 +113,13 @@ def pd_query_text(database_path, sql_text):
     except Exception as e:
         logger.error("Query could not be completed: %s" % e)
         return None
-    # finally:
-    #     # Commit any changes the query performed and close the connection. This is in a try-except block in case there
-    #     # was no connection established and no query to commit. Without this, an error will be raised
-    #     try:
-    #         conn.commit()
-    #         conn.close()
-    #     except:
-    #         pass
+
 
 def query_insert_many(database_path, sql_text, data_list):
     """
-    This function is used to insert many records into the database concurrently. It is faster to use this function than
-    to make multiple insert queries.
+    This function is used to insert many records into the database concurrently.
+    It is faster to use this function than to make multiple insert queries.
+
     :param database_path: the path of the database to be worked with
     :param sql_text: the SQL query to be run in the correct (?,?,?,...) format
     :param data_list: a list of data lists to be inserted
@@ -163,8 +142,9 @@ def query_insert_many(database_path, sql_text, data_list):
         try:
             conn.commit()
             conn.close()
-        except:
+        except Exception as e:
             pass
+
 
 def hasTable(database_path, table_name):
     """
@@ -192,9 +172,9 @@ def hasTable(database_path, table_name):
         pass
     finally:
         try:
-            if not conn is None:
+            if conn is not None:
                 conn.close()
-        except:
+        except Exception as e:
             pass
 
     return found

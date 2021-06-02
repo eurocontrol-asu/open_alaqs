@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from . import __init__
-
-
 def calculate_particulate_matter_emissions(mode, sn_mode, eihc_mode, bpr):
     """
 
