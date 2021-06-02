@@ -1,3 +1,4 @@
+import os
 import inspect
 import pkgutil
 from collections import OrderedDict
@@ -28,48 +29,63 @@ class ModuleManager(metaclass=Singleton):
     def getModuleType(self):
         return self._module_type
 
-    #load all modules in current directory
+    # load all modules in current directory
     def loadModules(self):
-        for loader, name, is_pkg in pkgutil.walk_packages([os.path.abspath(os.path.dirname(__file__))]):
+        for loader, name, _ in pkgutil.walk_packages(
+                [os.path.abspath(os.path.dirname(__file__))]):
             module = loader.find_module(name).load_module(name)
-            for name, obj in inspect.getmembers(module):
+            for _name, obj in inspect.getmembers(module):
 
-                #include only classes
+                # include only classes
                 if not inspect.isclass(obj):
                     continue
-                #exclude classes that are not defined in the inspected module, i.e. without imported clasess
+
+                # exclude classes that are not defined in the inspected module,
+                # i.e. without imported classes
                 if not module.__name__ == obj.__module__:
                     continue
-                #exclude the plugin manager
+
+                # exclude the plugin manager
                 if module.__name__ == self.__class__.__name__:
                     continue
-                #exclude classes that are subclasses of a particular class (e.g. 'SourceModule')
+
+                # exclude classes that are subclasses of a particular class
+                # (e.g. 'SourceModule')
                 if not issubclass(obj, self.getModuleType()):
                     continue
-                #add modules to the list of existing modules
-                if not name in self._modules:
+
+                # add modules to the list of existing modules
+                if _name not in self._modules:
                     self.addModule(obj.getModuleName(), obj)
 
     def addModule(self, name, classinfo):
         if name in self._modules:
-            logger.warning("Already found a module with name '%s' and class '%s'. Overwriting existing with name '%s' and class '%s'."
-                           %(name, self._modules[name], name, str(classinfo)))
+            logger.warning("Already found a module with name '%s' and class "
+                           "'%s'. Overwriting existing with name '%s' and "
+                           "class '%s'."
+                           % (name, self._modules[name], name, str(classinfo)))
         self._modules[name] = classinfo
 
     def getModulesByType(self, typename):
-        return [x for x in iter(self._modules.items()) if x[1].__name__ == typename.__name__]
+        return [x for x in iter(self._modules.items()) if
+                x[1].__name__ == typename.__name__]
 
     def getModulesByName(self, name):
-        return [x for x in iter(self._modules.items()) if x[1].getModuleName()==name]
+        return [x for x in iter(self._modules.items()) if
+                x[1].getModuleName() == name]
 
     def getModuleByName(self, name):
-        matched_ = [x for x in iter(self._modules.items()) if x[1].getModuleName()==name]
+        matched_ = [x for x in iter(self._modules.items()) if
+                    x[1].getModuleName() == name]
         if len(matched_):
             return matched_[0][1]
         return None
 
     def hasModule(self, name):
-        return bool(len([x for x in iter(self._modules.items()) if x[1].getModuleName()==name]))
+        for x in iter(self._modules.items()):
+            if x[1].getModuleName() == name:
+                return True
+        return False
 
     def getModules(self):
         return self._modules
@@ -98,9 +114,8 @@ class DispersionModuleManager(ModuleManager, metaclass=Singleton):
     def __init__(self):
         ModuleManager.__init__(self, DispersionModule)
 
-if __name__ == "__main__":
-    import os
 
+if __name__ == "__main__":
     # logging.getLogger().setLevel(logging.INFO)
     # # create console handler and set level to debug
     # ch = logging.StreamHandler()
