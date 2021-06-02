@@ -142,28 +142,32 @@ class ParkingSources:
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 
-class ParkingSourcesStore(with_metaclass(Singleton, Store)):
+
+class ParkingSourcesStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'ParkingSources' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
 
-        #Engine Modes
+        # Engine Modes
         self._parking_db = None
-        if  "parking_db" in db:
+        if "parking_db" in db:
             if isinstance(db["parking_db"], ParkingSourcesDatabase):
                 self._parking_db = db["parking_db"]
-            elif isinstance(db["parking_db"], str) and os.path.isfile(db["parking_db"]):
+            elif isinstance(db["parking_db"], str) and os.path.isfile(
+                    db["parking_db"]):
                 self._parking_db = ParkingSourcesDatabase(db["parking_db"])
 
         if self._parking_db is None:
             self._parking_db = ParkingSourcesDatabase(db_path)
 
-        #instantiate all parking objects
+        # instantiate all parking objects
         self.initParkingSourcess()
 
     def initParkingSourcess(self):
@@ -174,7 +178,8 @@ class ParkingSourcesStore(with_metaclass(Singleton, Store)):
     def getParkingSourcesDatabase(self):
         return self._parking_db
 
-class ParkingSourcesDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class ParkingSourcesDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to parking shape file in the spatialite database
     """
@@ -182,43 +187,51 @@ class ParkingSourcesDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="shapes_parking",
-                 table_columns_type_dict=OrderedDict([
-                    ("oid" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("parking_id" , "TEXT"),
-                    ("height" , "DECIMAL"),
-                    ("distance" , "DECIMAL"),
-                    ("idle_time" , "DECIMAL"),
-                    ("park_time" , "DECIMAL"),
-                    ("vehicle_light" , "DECIMAL"),
-                    ("vehicle_medium" , "DECIMAL"),
-                    ("vehicle_heavy" , "DECIMAL"),
-                    ("vehicle_year" , "DECIMAL"),
-                    ("speed" , "DECIMAL"),
-                    ("hour_profile" , "TEXT"),
-                    ("daily_profile" , "TEXT"),
-                    ("month_profile" , "TEXT"),
-                    ("co_gm_vh" , "DECIMAL"),
-                    ("hc_gm_vh" , "DECIMAL"),
-                    ("nox_gm_vh" , "DECIMAL"),
-                    ("sox_gm_vh" , "DECIMAL"),
-                    ("pm10_gm_vh" , "DECIMAL"),
-                    ("p1_gm_vh" , "DECIMAL"),
-                    ("p2_gm_vh" , "DECIMAL"),
-                    ("method" , "TEXT"),
-                    ("instudy" , "DECIMAL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="",
-                 geometry_columns=[{
-                    "column_name":"geometry",
-                    "SRID":3857,
-                    "geometry_type":"POLYGON",
-                    "geometry_type_dimension":2
-                 }]
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 geometry_columns=None
+                 ):
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("parking_id", "TEXT"),
+                ("height", "DECIMAL"),
+                ("distance", "DECIMAL"),
+                ("idle_time", "DECIMAL"),
+                ("park_time", "DECIMAL"),
+                ("vehicle_light", "DECIMAL"),
+                ("vehicle_medium", "DECIMAL"),
+                ("vehicle_heavy", "DECIMAL"),
+                ("vehicle_year", "DECIMAL"),
+                ("speed", "DECIMAL"),
+                ("hour_profile", "TEXT"),
+                ("daily_profile", "TEXT"),
+                ("month_profile", "TEXT"),
+                ("co_gm_vh", "DECIMAL"),
+                ("hc_gm_vh", "DECIMAL"),
+                ("nox_gm_vh", "DECIMAL"),
+                ("sox_gm_vh", "DECIMAL"),
+                ("pm10_gm_vh", "DECIMAL"),
+                ("p1_gm_vh", "DECIMAL"),
+                ("p2_gm_vh", "DECIMAL"),
+                ("method", "TEXT"),
+                ("instudy", "DECIMAL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = [{
+                "column_name": "geometry",
+                "SRID": 3857,
+                "geometry_type": "POLYGON",
+                "geometry_type_dimension": 2
+            }]
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path:
             self.deserialize()
+
 
 if __name__ == "__main__":
     # create a logger for this module
