@@ -265,20 +265,21 @@ def inventory_insert_movements(inventory_name, model_parameters):
     :param model_parameters: a list of user defined model parameters used to generate the study output
     """
     try:
-        movements = open(model_parameters['movement_path'], 'rt')
         conn = sqlite.connect(inventory_name)
         cur = conn.cursor()
 
-        all_movements = []
-        movement_line = 0
-        columns_ = 0
-        for movement in movements:
-            movement_line += 1
-            if movement_line > 1:
-                movement_data = [movement_line-1] + movement.strip().split(";")
-                if not columns_:
-                    columns_ = len(movement_data)
-                all_movements.append(movement_data)
+        with open(model_parameters['movement_path'], 'rt') as movements:
+            all_movements = []
+            movement_line = 0
+            columns_ = 0
+            for movement in movements:
+                movement_line += 1
+                if movement_line > 1:
+                    movement_data = \
+                        [movement_line - 1] + movement.strip().split(";")
+                    if not columns_:
+                        columns_ = len(movement_data)
+                    all_movements.append(movement_data)
 
         values_str_ = "?,"*columns_
         values_str_ = values_str_[:-1]
