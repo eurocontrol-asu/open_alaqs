@@ -1,5 +1,4 @@
 import logging
-import os
 from collections import OrderedDict
 
 from shapely import geometry
@@ -322,22 +321,22 @@ class TaxiwayRouteDatabase(SQLSerializable, metaclass=Singleton):
         if self._db_path:
             self.deserialize()
 
-if __name__ == "__main__":
-    # import alaqslogging
-    # logger.setLevel(logging.DEBUG)
-
-    path_to_database = os.path.join("..","..", "example/", "CAEPport_training", "caepport_out.alaqs")
-    if not os.path.isfile(path_to_database):
-        raise Exception("File %s doesn't exist !")
-    print("Running Open-ALAQS for file: %s"%path_to_database)
-
-    store = TaxiwaySegmentsStore(path_to_database)
-    for taxiway_name, taxiway_segment in list(store.getObjects().items()):
-        # taxiway_segment.setSpeed(10)
-        # fix_print_with_import
-        print(taxiway_segment.getName(), taxiway_segment.getSpeed())
-        # logger.debug(taxiway_segment)
-
-    # store = TaxiwayRoutesStore(path_to_database)
-    # for taxiway_name, taxiway_route in store.getObjects().items():
-    #     logger.debug(taxiway_route)
+# if __name__ == "__main__":
+#     # import alaqslogging
+#     # logger.setLevel(logging.DEBUG)
+#
+#     path_to_database = os.path.join("..","..", "example/", "CAEPport_training", "caepport_out.alaqs")
+#     if not os.path.isfile(path_to_database):
+#         raise Exception("File %s doesn't exist !")
+#     print("Running Open-ALAQS for file: %s"%path_to_database)
+#
+#     store = TaxiwaySegmentsStore(path_to_database)
+#     for taxiway_name, taxiway_segment in list(store.getObjects().items()):
+#         # taxiway_segment.setSpeed(10)
+#         # fix_print_with_import
+#         print(taxiway_segment.getName(), taxiway_segment.getSpeed())
+#         # logger.debug(taxiway_segment)
+#
+#     # store = TaxiwayRoutesStore(path_to_database)
+#     # for taxiway_name, taxiway_route in store.getObjects().items():
+#     #     logger.debug(taxiway_route)

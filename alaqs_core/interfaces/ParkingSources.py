@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 from collections import OrderedDict
 
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
@@ -233,26 +232,26 @@ class ParkingSourcesDatabase(SQLSerializable, metaclass=Singleton):
             self.deserialize()
 
 
-if __name__ == "__main__":
-    # create a logger for this module
-    #logging.basicConfig(level=logging.DEBUG)
-
-    logger.setLevel(logging.DEBUG)
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    if loaded_color_logger:
-        ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
-
-    ch.setLevel(logging.DEBUG)
-    # create formatter
-    formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    # add ch to logger
-    logger.addHandler(ch)
-
-    path_to_database = os.path.join("..", "..", "example", "test_out.alaqs")
-
-    store = ParkingSourcesStore(path_to_database)
-    for parking_name, parking in list(store.getObjects().items()):
-        logger.debug(parking)
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     #logging.basicConfig(level=logging.DEBUG)
+#
+#     logger.setLevel(logging.DEBUG)
+#     # create console handler and set level to debug
+#     ch = logging.StreamHandler()
+#     if loaded_color_logger:
+#         ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
+#
+#     ch.setLevel(logging.DEBUG)
+#     # create formatter
+#     formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # add formatter to ch
+#     ch.setFormatter(formatter)
+#     # add ch to logger
+#     logger.addHandler(ch)
+#
+#     path_to_database = os.path.join("..", "..", "example", "test_out.alaqs")
+#
+#     store = ParkingSourcesStore(path_to_database)
+#     for parking_name, parking in list(store.getObjects().items()):
+#         logger.debug(parking)

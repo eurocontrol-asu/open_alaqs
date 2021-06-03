@@ -221,40 +221,40 @@ class AmbientConditionDatabaseSQL(SQLSerializable, metaclass=Singleton):
         if self._db_path and deserialize:
             self.deserialize()
 
-if __name__ == "__main__":
-    # import __init__
-    # import alaqslogging
-
-    for i in range(1,3):
-
-        # fix_print_with_import
-        print("-------------")
-        path_to_database = os.path.join("..", "..", "example/ATM4E/", "ATM4E_out_D%s.alaqs"%str(i).zfill(2))
-        # fix_print_with_import
-        print(path_to_database)
-
-        # path_to_csv = os.path.join("..", "..", "example/ATM4E/", "meteo.csv")
-        store = AmbientConditionStore(path_to_database, init_csv_path="")
-
-        for ac_name, ac in list(store.getObjects().items()):
-            if ac_name == 1:
-                # fix_print_with_import
-                print(ac)
-
-        # sys.modules[__name__].__dict__.clear()
-        # get_ipython().magic('reset -sf')
-        # get_ipython().magic('%reset_selective -f path_to_database')
-        # get_ipython().magic('%reset_selective -f store')
-        # get_ipython().magic('%reset_selective -f AmbientConditionDatabaseSQL')
-        get_ipython().magic('%reset_selective -f AmbientConditionStore')
-        from interfaces.AmbientCondition import AmbientConditionStore
-
-
-        # path_to_database = os.path.join("..", "..", "example/ATM4E/", "ATM4E_out_D02.alaqs")
-    # # path_to_csv = os.path.join("..", "..", "example/ATM4E/", "meteo.csv")
-    # store = AmbientConditionStore(path_to_database, init_csv_path="")
-    #
-
-    #
-    # for ac in store.getAmbientConditions(scenario="default"):
-    #     print ac
+# if __name__ == "__main__":
+#     # import __init__
+#     # import alaqslogging
+#
+#     for i in range(1,3):
+#
+#         # fix_print_with_import
+#         print("-------------")
+#         path_to_database = os.path.join("..", "..", "example/ATM4E/", "ATM4E_out_D%s.alaqs"%str(i).zfill(2))
+#         # fix_print_with_import
+#         print(path_to_database)
+#
+#         # path_to_csv = os.path.join("..", "..", "example/ATM4E/", "meteo.csv")
+#         store = AmbientConditionStore(path_to_database, init_csv_path="")
+#
+#         for ac_name, ac in list(store.getObjects().items()):
+#             if ac_name == 1:
+#                 # fix_print_with_import
+#                 print(ac)
+#
+#         # sys.modules[__name__].__dict__.clear()
+#         # get_ipython().magic('reset -sf')
+#         # get_ipython().magic('%reset_selective -f path_to_database')
+#         # get_ipython().magic('%reset_selective -f store')
+#         # get_ipython().magic('%reset_selective -f AmbientConditionDatabaseSQL')
+#         get_ipython().magic('%reset_selective -f AmbientConditionStore')
+#         from interfaces.AmbientCondition import AmbientConditionStore
+#
+#
+#         # path_to_database = os.path.join("..", "..", "example/ATM4E/", "ATM4E_out_D02.alaqs")
+#     # # path_to_csv = os.path.join("..", "..", "example/ATM4E/", "meteo.csv")
+#     # store = AmbientConditionStore(path_to_database, init_csv_path="")
+#     #
+#
+#     #
+#     # for ac in store.getAmbientConditions(scenario="default"):
+#     #     print ac

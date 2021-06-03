@@ -219,8 +219,11 @@ class AircraftTrajectory:
             val += "\n\t\t".join(str(p).split("\n"))
         return val
 
+
 class TrajectoryPoint(object):
-    def __init__(self, val={}):
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         if isinstance(val, TrajectoryPoint):
             val_ = {}
             val_["id"] = val.getIdentifier()
@@ -304,7 +307,9 @@ class TrajectoryPoint(object):
 
 
 class AircraftTrajectoryPoint(TrajectoryPoint):
-    def __init__(self, val={}):
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         if isinstance(val, AircraftTrajectoryPoint):
             TrajectoryPoint.__init__(self, {
                 "id":val.getIdentifier(),
@@ -321,10 +326,11 @@ class AircraftTrajectoryPoint(TrajectoryPoint):
         else:
             TrajectoryPoint.__init__(self, val)
             #properties
-            self._true_airspeed = conversion.convertToFloat(val["tas_metres"]) if "tas_metres" in val else None
-            self._engine_thrust = conversion.convertToFloat(val["power"]) if "power" in val else None
-            self._mode = str(val["mode"]) if "mode" in val else ""
-            self._weight = conversion.convertToFloat(val["weight"]) if "weight" in val else ""
+            self._true_airspeed = conversion.convertToFloat(val.get("tas_metres"))
+            self._engine_thrust = conversion.convertToFloat(val.get("power"))
+            self._mode = str(val.get("mode", ""))
+            self._weight = conversion.convertToFloat(
+                val["weight"]) if "weight" in val else ""
 
     def getIdentifier(self):
         return self._id
@@ -475,32 +481,32 @@ class AircraftTrajectoryDatabase(SQLSerializable, metaclass=Singleton):
             self.deserialize()
 
 
-if __name__ == "__main__":
-    # sys.path.append("..")
-
-    # create a logger for this module
-    logging.basicConfig(level=logging.DEBUG)
-    logger.setLevel(logging.DEBUG)
-
-    import pandas as pd
-
-    # st_ = time.time()
-
-    path_to_database = os.path.join("..","..", "example", "CAEPport", "31032020_out.alaqs")
-    if not os.path.isfile(path_to_database):
-        print("file %s not found" % path_to_database)
-
-    store = AircraftTrajectoryStore(path_to_database)
-    AircraftTrajectoryDataFrame = pd.DataFrame.from_dict(store.getAircraftTrajectoryDatabase().getEntries(), orient='index')
-
-    # trajectory = AircraftTrajectory(self.getTrajectory(), skipPointInitialization=True)
-
-    for name, profile in list(store.getObjects().items()):
-        if name == "737500-A-1":
-            # fix_print_with_import
-            print(name, profile)
-            break
-        # logger.debug(profile)
-
-    # et_ = time.time()
-    # print "Time elapsed: %s"%(et_-st_)
+# if __name__ == "__main__":
+#     # sys.path.append("..")
+#
+#     # create a logger for this module
+#     logging.basicConfig(level=logging.DEBUG)
+#     logger.setLevel(logging.DEBUG)
+#
+#     import pandas as pd
+#
+#     # st_ = time.time()
+#
+#     path_to_database = os.path.join("..","..", "example", "CAEPport", "31032020_out.alaqs")
+#     if not os.path.isfile(path_to_database):
+#         print("file %s not found" % path_to_database)
+#
+#     store = AircraftTrajectoryStore(path_to_database)
+#     AircraftTrajectoryDataFrame = pd.DataFrame.from_dict(store.getAircraftTrajectoryDatabase().getEntries(), orient='index')
+#
+#     # trajectory = AircraftTrajectory(self.getTrajectory(), skipPointInitialization=True)
+#
+#     for name, profile in list(store.getObjects().items()):
+#         if name == "737500-A-1":
+#             # fix_print_with_import
+#             print(name, profile)
+#             break
+#         # logger.debug(profile)
+#
+#     # et_ = time.time()
+#     # print "Time elapsed: %s"%(et_-st_)

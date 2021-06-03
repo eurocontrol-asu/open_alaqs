@@ -1,7 +1,6 @@
 import logging
 
 import os
-import sys
 from collections import OrderedDict
 
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
@@ -332,34 +331,34 @@ class UserMonthProfileDatabase(SQLSerializable, metaclass=Singleton):
             self.deserialize()
 
 
-if __name__ == "__main__":
-    # create a logger for this module
-    #logging.basicConfig(level=logging.DEBUG)
-
-    logger.setLevel(logging.DEBUG)
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    if loaded_color_logger:
-        ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
-
-    ch.setLevel(logging.DEBUG)
-    # create formatter
-    formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    # add ch to logger
-    logger.addHandler(ch)
-
-    path_to_database = os.path.join("..", "..", "example", "exeter_out.alaqs")
-
-    store = UserHourProfileStore(path_to_database)
-    for ts_id, ts in list(store.getObjects().items()):
-        logger.debug(ts)
-
-    store = UserDayProfileStore(path_to_database)
-    for ts_id, ts in list(store.getObjects().items()):
-        logger.debug(ts)
-
-    store = UserMonthProfileStore(path_to_database)
-    for ts_id, ts in list(store.getObjects().items()):
-        logger.debug(ts)
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     #logging.basicConfig(level=logging.DEBUG)
+#
+#     logger.setLevel(logging.DEBUG)
+#     # create console handler and set level to debug
+#     ch = logging.StreamHandler()
+#     if loaded_color_logger:
+#         ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
+#
+#     ch.setLevel(logging.DEBUG)
+#     # create formatter
+#     formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # add formatter to ch
+#     ch.setFormatter(formatter)
+#     # add ch to logger
+#     logger.addHandler(ch)
+#
+#     path_to_database = os.path.join("..", "..", "example", "exeter_out.alaqs")
+#
+#     store = UserHourProfileStore(path_to_database)
+#     for ts_id, ts in list(store.getObjects().items()):
+#         logger.debug(ts)
+#
+#     store = UserDayProfileStore(path_to_database)
+#     for ts_id, ts in list(store.getObjects().items()):
+#         logger.debug(ts)
+#
+#     store = UserMonthProfileStore(path_to_database)
+#     for ts_id, ts in list(store.getObjects().items()):
+#         logger.debug(ts)

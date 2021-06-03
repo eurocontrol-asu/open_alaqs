@@ -1,5 +1,4 @@
 import logging
-import os
 from collections import OrderedDict
 
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
@@ -20,7 +19,7 @@ class EmissionDynamics:
     def __init__(self, val=None):
         if val is None:
             val = {}
-        self._dynamics_name = str(val["dynamics_name"]) if "dynamics_name" in val else ""
+        self._dynamics_name = str(val.get("dynamics_name", ""))
         self._emission_dynamics = {}
 
         self._emission_dynamics["sas"] = {
@@ -136,33 +135,33 @@ class EmissionDynamicsDatabase(SQLSerializable, metaclass=Singleton):
         if self._db_path and deserialize:
             self.deserialize()
 
-if __name__ == "__main__":
-
-    #add Emission Dynamics table to databases
-    for path_to_database in [
-        os.path.join("..", "..", "example/", "test_movs.alaqs")
-        # os.path.join("..", "..", "example", "blank.alaqs")
-        # os.path.join("..", "templates", "new_blank_study.alaqs")
-        # os.path.join("..", "templates", "inventory_template.alaqs")
-    ]:
-        if not os.path.isfile(path_to_database):
-            raise Exception("File %s doesn't exist !")
-
-        db = EmissionDynamicsDatabase(path_to_database, deserialize=True)
-
-        # for index, entry in enumerate([{
-        #     "aircraft_group":"JET LARGE+APU",
-
-        # },
-        # }]):
-        #     entry["oid"] = index
-        #     db.setEntry(index, entry)
-        #
-        # db.serialize()
-
-        ed_store = EmissionDynamicsStore(path_to_database)
-
-        # for ed_name, ed_ in ed_store.getObjects().items():
-            # print ed_name,  ed_.getDynamicsGroup()
-            # print "Default: %s" % ed_.getEmissionDynamics('default')
-            # print "Smooth & Shift: %s"% ed_.getEmissionDynamics('sas')
+# if __name__ == "__main__":
+#
+#     #add Emission Dynamics table to databases
+#     for path_to_database in [
+#         os.path.join("..", "..", "example/", "test_movs.alaqs")
+#         # os.path.join("..", "..", "example", "blank.alaqs")
+#         # os.path.join("..", "templates", "new_blank_study.alaqs")
+#         # os.path.join("..", "templates", "inventory_template.alaqs")
+#     ]:
+#         if not os.path.isfile(path_to_database):
+#             raise Exception("File %s doesn't exist !")
+#
+#         db = EmissionDynamicsDatabase(path_to_database, deserialize=True)
+#
+#         # for index, entry in enumerate([{
+#         #     "aircraft_group":"JET LARGE+APU",
+#
+#         # },
+#         # }]):
+#         #     entry["oid"] = index
+#         #     db.setEntry(index, entry)
+#         #
+#         # db.serialize()
+#
+#         ed_store = EmissionDynamicsStore(path_to_database)
+#
+#         # for ed_name, ed_ in ed_store.getObjects().items():
+#             # print ed_name,  ed_.getDynamicsGroup()
+#             # print "Default: %s" % ed_.getEmissionDynamics('default')
+#             # print "Smooth & Shift: %s"% ed_.getEmissionDynamics('sas')

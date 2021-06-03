@@ -1,5 +1,4 @@
 import logging
-import os
 from collections import OrderedDict
 
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
@@ -288,11 +287,6 @@ class DefaultGateEmissionProfile:
     def setEmissionIndex(self, val):
         self._emissionIndex = val
 
-    def getGateType(self):
-        return self._gate_type
-    def setGateType(self, var):
-        self._gate_type = var
-
     def __str__(self):
         val = "\n DefaultGateEmissionProfile"
         val += "\n\t Gate-Type: %s" % (self.getGateType())
@@ -372,35 +366,35 @@ class DefaultGateEmissionProfileDatabase(SQLSerializable, metaclass=Singleton):
             self.deserialize()
 
 
-if __name__ == "__main__":
-    logger.setLevel(logging.DEBUG)
-
-    path_to_database = os.path.join("..", "..", "example/", "CAEPport", "CAEPport_out.alaqs")
-
-    if not os.path.isfile(path_to_database):
-        # fix_print_with_import
-        print("Path to database %s does not exist !"%path_to_database)
-    else:
-        # fix_print_with_import
-        print("Path to database found in: %s "%os.path.abspath(path_to_database))
-
-    store = GateStore(path_to_database)
-
-    ac_group = "TURBOPROP"
-    departure_arrival = "D"
-    source_type = "GPU"
-
-    for gate_name, gate in list(store.getObjects().items()):
-
-        # fix_print_with_import
-        print(gate_name, gate.getType())
-        # print gate.getEmissionIndexGPU("JET LARGE", "A")
-        # print gate.getEmissionIndexGSE("JET LARGE", "D")
-
-        profile_ = gate.getEmissionProfile(ac_group, departure_arrival, source_type)
-        if profile_:
-            # fix_print_with_import
-            print(profile_)
+# if __name__ == "__main__":
+#     logger.setLevel(logging.DEBUG)
+#
+#     path_to_database = os.path.join("..", "..", "example/", "CAEPport", "CAEPport_out.alaqs")
+#
+#     if not os.path.isfile(path_to_database):
+#         # fix_print_with_import
+#         print("Path to database %s does not exist !"%path_to_database)
+#     else:
+#         # fix_print_with_import
+#         print("Path to database found in: %s "%os.path.abspath(path_to_database))
+#
+#     store = GateStore(path_to_database)
+#
+#     ac_group = "TURBOPROP"
+#     departure_arrival = "D"
+#     source_type = "GPU"
+#
+#     for gate_name, gate in list(store.getObjects().items()):
+#
+#         # fix_print_with_import
+#         print(gate_name, gate.getType())
+#         # print gate.getEmissionIndexGPU("JET LARGE", "A")
+#         # print gate.getEmissionIndexGSE("JET LARGE", "D")
+#
+#         profile_ = gate.getEmissionProfile(ac_group, departure_arrival, source_type)
+#         if profile_:
+#             # fix_print_with_import
+#             print(profile_)
 
 
 

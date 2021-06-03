@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 from collections import OrderedDict
 
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
@@ -29,73 +28,91 @@ class AreaSources:
         self._id = str(val["source_id"]) if "source_id" in val else None
         self._unit_year = float(val["unit_year"]) if "unit_year" in val else 0.
         self._height = float(val["height"]) if "height" in val else 0.
-        self._heat_flux = float(val["heat_flux"]) if "heat_flux" in val else None
-        self._hour_profile = str(val["hourly_profile"]) if "hourly_profile" in val else "default"
-        self._daily_profile = str(val["daily_profile"]) if "daily_profile" in val else "default"
-        self._month_profile = str(val["monthly_profile"]) if "monthly_profile" in val else "default"
-        
+        self._heat_flux = float(
+            val["heat_flux"]) if "heat_flux" in val else None
+        self._hour_profile = str(
+            val["hourly_profile"]) if "hourly_profile" in val else "default"
+        self._daily_profile = str(
+            val["daily_profile"]) if "daily_profile" in val else "default"
+        self._month_profile = str(
+            val["monthly_profile"]) if "monthly_profile" in val else "default"
+
         self._instudy = int(val["instudy"]) if "instudy" in val else 1
         self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
 
-        if self._geometry_text and not self._height is None:
-            self.setGeometryText(Spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
+        if self._geometry_text and self._height is not None:
+            self.setGeometryText(
+                Spatial.addHeightToGeometryWkt(self.getGeometryText(),
+                                               self.getHeight()))
 
         initValues = {}
         defaultValues = {}
-        for key_ in ["co_kg_unit", "hc_kg_unit", "nox_kg_unit","sox_kg_unit", "pm10_kg_unit", "p1_kg_unit", "p2_kg_unit"]:
+        for key_ in ["co_kg_unit", "hc_kg_unit", "nox_kg_unit", "sox_kg_unit",
+                     "pm10_kg_unit", "p1_kg_unit", "p2_kg_unit"]:
             if key_ in val:
                 initValues[key_] = float(val[key_])
                 defaultValues[key_] = 0.
 
-        self._emissionIndex = EmissionIndex(initValues, defaultValues=defaultValues)
+        self._emissionIndex = EmissionIndex(initValues,
+                                            defaultValues=defaultValues)
 
     def getName(self):
         return self._id
+
     def setName(self, val):
         self._id = val
-        
+
     def getEmissionIndex(self):
         return self._emissionIndex
+
     def setEmissionIndex(self, val):
         self._emissionIndex = val
 
     def getUnitsPerYear(self):
         return self._unit_year
+
     def setUnitsPerYear(self, var):
         self._unit_year = var
 
     def getHeight(self):
         return self._height
+
     def setHeight(self, var):
         self._height = var
 
     def getHeatFlux(self):
         return self._heat_flux
-    def setHeight(self, var):
+
+    def setHeatFlux(self, var):
         self._heat_flux = var
 
     def getHourProfile(self):
         return self._hour_profile
+
     def setHourProfile(self, var):
         self._hour_profile = var
 
     def getDailyProfile(self):
         return self._daily_profile
+
     def setDailyProfile(self, var):
         self._daily_profile = var
 
     def getMonthProfile(self):
         return self._month_profile
+
     def setMonthProfile(self, var):
         self._month_profile = var
 
     def getGeometryText(self):
         return self._geometry_text
+
     def setGeometryText(self, val):
         self._geometry_text = val
 
     def getInStudy(self):
         return self._instudy
+
     def setInStudy(self, val):
         self._instudy = val
 
@@ -142,7 +159,7 @@ class AreaSourcesStore(Store, metaclass=Singleton):
 
     def initAreaSourcess(self):
         for key, area_dict in list(self.getAreaSourcesDatabase().getEntries().items()):
-            #add engine to store
+            # add engine to store
             self.setObject(area_dict["source_id"] if "source_id" in area_dict else "unknown", AreaSources(area_dict))
 
     def getAreaSourcesDatabase(self):
@@ -194,28 +211,28 @@ class AreaSourcesDatabase(SQLSerializable, metaclass=Singleton):
         if self._db_path:
             self.deserialize()
 
-if __name__ == "__main__":
-    # create a logger for this module
-    logging.basicConfig(level=logging.DEBUG)
-
-    # logger.setLevel(logging.DEBUG)
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    if loaded_color_logger:
-        ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
-
-    ch.setLevel(logging.DEBUG)
-    # create formatter
-    formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    # add ch to logger
-    logger.addHandler(ch)
-
-    # path_to_database = os.path.join("..", "..", "example", "exeter_out.alaqs")
-
-    store = AreaSourcesStore(path_to_database)
-    for area_name, area in list(store.getObjects().items()):
-        logger.debug(area)
-        # fix_print_with_import
-        print(area_name, area)
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     logging.basicConfig(level=logging.DEBUG)
+#
+#     # logger.setLevel(logging.DEBUG)
+#     # create console handler and set level to debug
+#     ch = logging.StreamHandler()
+#     if loaded_color_logger:
+#         ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
+#
+#     ch.setLevel(logging.DEBUG)
+#     # create formatter
+#     formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # add formatter to ch
+#     ch.setFormatter(formatter)
+#     # add ch to logger
+#     logger.addHandler(ch)
+#
+#     # path_to_database = os.path.join("..", "..", "example", "exeter_out.alaqs")
+#
+#     store = AreaSourcesStore(path_to_database)
+#     for area_name, area in list(store.getObjects().items()):
+#         logger.debug(area)
+#         # fix_print_with_import
+#         print(area_name, area)

@@ -1,5 +1,4 @@
 import logging
-import os
 import re
 from collections import OrderedDict
 
@@ -90,7 +89,6 @@ class SQLSerializable:
                 else:
                     logger.debug("Inserted rows to table '%s' in database '%s'. Result was '%s'." % (self._table_name, path_, str(result)))
                 return True
-            return False
         except Exception as e:
             logger.error("Failed to serialize the class '%s' with error '%s'" % (self.__class__.__name__, str(e)))
             return False
@@ -260,131 +258,131 @@ class SQLSerializable:
             logger.error(str(e))
             return False
 
-if __name__ == "__main__":
-    # ======================================================
-    # ==================    UNIT TESTS     =================
-    # ======================================================
-    import time
-    start_time = time.time()
-
-    # # create a logger for this module
-    # logger.setLevel(logging.DEBUG)
-    # # create console handler and set level to debug
-    # ch = logging.StreamHandler()
-    # ch.setLevel(logging.DEBUG)
-    # # create formatter
-    # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # # add formatter to ch
-    # ch.setFormatter(formatter)
-    # # add ch to logger
-    # if len(logger.handlers)==0:
-    #     logger.addHandler(ch)
-
-    # path_to_database = os.path.join("..", "..", "example", "exeter_out.alaqs")
-    path_to_database = os.path.join("..", "..", "example", "CAEPport", "old", "06042020_out.alaqs")
-
-    if not os.path.isfile(path_to_database):
-        print("File %s doesn't exist !")
-
-    table_name_ = "default_aircraft"
-    table_columns = [
-        ("oid", "INTEGER PRIMARY KEY"),
-        ("icao", "TEXT"),
-        ("ac_group_code", "TEXT"),
-        ("ac_group", "TEXT"),
-        ("manufacturer", "TEXT"),
-        ("name", "TEXT"),
-        ("engine_count", "INTEGER"),
-        ("engine_name", "TEXT"),
-        ("engine", "TEXT"),
-        ("departure_profile", "TEXT"),
-        ("arrival_profile", "TEXT"),
-        ("bada_id", "TEXT"),
-        ("wake_category", "TEXT"),
-        ("apu_id", "TEXT")
-    ]
-
-    columns = OrderedDict()
-    table_name_string=table_name_
-    table_columns_type_dict=OrderedDict(table_columns)
-
-    # table_columns_type_dict=OrderedDict([
-    #     ("oid", "INTEGER PRIMARY KEY"),
-    #     ("runway_time", "TIMESTAMP"),
-    #     ("block_time", "TIMESTAMP"),
-    #     ("aircraft_registration", "TEXT"),
-    #     ("aircraft", "TEXT"),
-    #     ("gate", "TEXT"),
-    #     ("departure_arrival", "TEXT"),
-    #     ("runway", "TEXT"),
-    #     ("engine_name", "TEXT"),
-    #     ("profile_id", "TEXT"),
-    #     ("track_id", "TEXT"),
-    #     ("taxi_route", "TEXT"),
-    #     ("tow_ratio", "DECIMAL NULL"),
-    #     ("apu_code", "INTEGER"),
-    #     ("taxi_engine_count", "INTEGER"),
-    #     ("set_time_of_main_engine_start_after_block_off_in_s", "DECIMAL NULL"),
-    #     ("set_time_of_main_engine_start_before_takeoff_in_s", "DECIMAL NULL"),
-    #     ("set_time_of_main_engine_off_after_runway_exit_in_s", "DECIMAL NULL"),
-    #     ("engine_thrust_level_for_taxiing", "DECIMAL NULL"),
-    #     ("taxi_fuel_ratio", "DECIMAL NULL"),
-    #     ("number_of_stop_and_gos", "DECIMAL NULL"),
-    #     ("domestic", "TEXT"),
-    #     ("annual_operation", "DECIMAL NULL")
-    # ])
-    primary_key="oid",
-    deserialize=True
-    db = SQLSerializable(path_to_database, table_name_, table_columns_type_dict)
-    db.deserialize()
-
-    print("--- %s seconds ---" % (time.time() - start_time))
-
-    # df = pd.read_sql_query("SELECT * FROM rides WHERE tripduration < 500 ", path_to_database)
-    # df = pd.DataFrame.from_dict(db.getEntries(), orient='index')
-
-    start_time = time.time()
-    for key, values_dict in list(db.getEntries().items()):
-        if "icao" in values_dict and values_dict["icao"] == "L410":
-            print(values_dict)
-        # print(key)
-        # print(dict_)
-        # print("+++++++++++")
-        # mov = Movement(movement_dict)
-    print("--- %s seconds ---" % (time.time() - start_time))
-
-    # db_path_string, table_name_string, table_columns_type_dict, primary_key)
-
-    # columns["oid"] = "INTEGER PRIMARY KEY"
-    # columns["icao"] = "TEXT"
-    # columns["ac_group_code"] ="TEXT"
-    # columns["ac_group"] ="TEXT"
-    # columns["manufacturer"] ="TEXT"
-    # columns["name"] ="TEXT"
-    # columns["mtow"] ="TEXT"
-    # columns["engine_count"] ="INTEGER"
-    # columns["engine_name"] ="TEXT"
-    # columns["engine"] ="TEXT"
-    # columns["departure_profile"] ="TEXT"
-    # columns["arrival_profile"] ="TEXT"
-    # columns["bada_id"] ="INTEGER"
-    # columns["wake_category"] ="TEXT"
-    # columns["apu_id"] ="TEXT"
-
-
-    # columns["time_id"] = "INTEGER PRIMARY KEY"
-    # columns["time"] = "TIMESTAMP"
-    # columns["year"] ="INTEGER"
-    # columns["month"] ="INTEGER"
-    # columns["day"] ="INTEGER"
-    # columns["hour"] ="TEXT"
-    # columns["weekday_id"] ="TEXT"
-    # columns["mix_height"] ="TEXT"
-    # db = SQLSerializable(path_to_database, "tbl_InvTime", columns)
-
-
-
-    # for key in db.getEntries():
-    #     if db.getEntry(key)['icao'].startswith('B735'):
-    #         print key, db.getEntry(key)['icao'], db.getEntry(key)['departure_profile']
-    # #    logger.info(key, db.getEntry(key))
+# if __name__ == "__main__":
+#     # ======================================================
+#     # ==================    UNIT TESTS     =================
+#     # ======================================================
+#     import time
+#     start_time = time.time()
+#
+#     # # create a logger for this module
+#     # logger.setLevel(logging.DEBUG)
+#     # # create console handler and set level to debug
+#     # ch = logging.StreamHandler()
+#     # ch.setLevel(logging.DEBUG)
+#     # # create formatter
+#     # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # # add formatter to ch
+#     # ch.setFormatter(formatter)
+#     # # add ch to logger
+#     # if len(logger.handlers)==0:
+#     #     logger.addHandler(ch)
+#
+#     # path_to_database = os.path.join("..", "..", "example", "exeter_out.alaqs")
+#     path_to_database = os.path.join("..", "..", "example", "CAEPport", "old", "06042020_out.alaqs")
+#
+#     if not os.path.isfile(path_to_database):
+#         print("File %s doesn't exist !")
+#
+#     table_name_ = "default_aircraft"
+#     table_columns = [
+#         ("oid", "INTEGER PRIMARY KEY"),
+#         ("icao", "TEXT"),
+#         ("ac_group_code", "TEXT"),
+#         ("ac_group", "TEXT"),
+#         ("manufacturer", "TEXT"),
+#         ("name", "TEXT"),
+#         ("engine_count", "INTEGER"),
+#         ("engine_name", "TEXT"),
+#         ("engine", "TEXT"),
+#         ("departure_profile", "TEXT"),
+#         ("arrival_profile", "TEXT"),
+#         ("bada_id", "TEXT"),
+#         ("wake_category", "TEXT"),
+#         ("apu_id", "TEXT")
+#     ]
+#
+#     columns = OrderedDict()
+#     table_name_string=table_name_
+#     table_columns_type_dict=OrderedDict(table_columns)
+#
+#     # table_columns_type_dict=OrderedDict([
+#     #     ("oid", "INTEGER PRIMARY KEY"),
+#     #     ("runway_time", "TIMESTAMP"),
+#     #     ("block_time", "TIMESTAMP"),
+#     #     ("aircraft_registration", "TEXT"),
+#     #     ("aircraft", "TEXT"),
+#     #     ("gate", "TEXT"),
+#     #     ("departure_arrival", "TEXT"),
+#     #     ("runway", "TEXT"),
+#     #     ("engine_name", "TEXT"),
+#     #     ("profile_id", "TEXT"),
+#     #     ("track_id", "TEXT"),
+#     #     ("taxi_route", "TEXT"),
+#     #     ("tow_ratio", "DECIMAL NULL"),
+#     #     ("apu_code", "INTEGER"),
+#     #     ("taxi_engine_count", "INTEGER"),
+#     #     ("set_time_of_main_engine_start_after_block_off_in_s", "DECIMAL NULL"),
+#     #     ("set_time_of_main_engine_start_before_takeoff_in_s", "DECIMAL NULL"),
+#     #     ("set_time_of_main_engine_off_after_runway_exit_in_s", "DECIMAL NULL"),
+#     #     ("engine_thrust_level_for_taxiing", "DECIMAL NULL"),
+#     #     ("taxi_fuel_ratio", "DECIMAL NULL"),
+#     #     ("number_of_stop_and_gos", "DECIMAL NULL"),
+#     #     ("domestic", "TEXT"),
+#     #     ("annual_operation", "DECIMAL NULL")
+#     # ])
+#     primary_key="oid",
+#     deserialize=True
+#     db = SQLSerializable(path_to_database, table_name_, table_columns_type_dict)
+#     db.deserialize()
+#
+#     print("--- %s seconds ---" % (time.time() - start_time))
+#
+#     # df = pd.read_sql_query("SELECT * FROM rides WHERE tripduration < 500 ", path_to_database)
+#     # df = pd.DataFrame.from_dict(db.getEntries(), orient='index')
+#
+#     start_time = time.time()
+#     for key, values_dict in list(db.getEntries().items()):
+#         if "icao" in values_dict and values_dict["icao"] == "L410":
+#             print(values_dict)
+#         # print(key)
+#         # print(dict_)
+#         # print("+++++++++++")
+#         # mov = Movement(movement_dict)
+#     print("--- %s seconds ---" % (time.time() - start_time))
+#
+#     # db_path_string, table_name_string, table_columns_type_dict, primary_key)
+#
+#     # columns["oid"] = "INTEGER PRIMARY KEY"
+#     # columns["icao"] = "TEXT"
+#     # columns["ac_group_code"] ="TEXT"
+#     # columns["ac_group"] ="TEXT"
+#     # columns["manufacturer"] ="TEXT"
+#     # columns["name"] ="TEXT"
+#     # columns["mtow"] ="TEXT"
+#     # columns["engine_count"] ="INTEGER"
+#     # columns["engine_name"] ="TEXT"
+#     # columns["engine"] ="TEXT"
+#     # columns["departure_profile"] ="TEXT"
+#     # columns["arrival_profile"] ="TEXT"
+#     # columns["bada_id"] ="INTEGER"
+#     # columns["wake_category"] ="TEXT"
+#     # columns["apu_id"] ="TEXT"
+#
+#
+#     # columns["time_id"] = "INTEGER PRIMARY KEY"
+#     # columns["time"] = "TIMESTAMP"
+#     # columns["year"] ="INTEGER"
+#     # columns["month"] ="INTEGER"
+#     # columns["day"] ="INTEGER"
+#     # columns["hour"] ="TEXT"
+#     # columns["weekday_id"] ="TEXT"
+#     # columns["mix_height"] ="TEXT"
+#     # db = SQLSerializable(path_to_database, "tbl_InvTime", columns)
+#
+#
+#
+#     # for key in db.getEntries():
+#     #     if db.getEntry(key)['icao'].startswith('B735'):
+#     #         print key, db.getEntry(key)['icao'], db.getEntry(key)['departure_profile']
+#     # #    logger.info(key, db.getEntry(key))

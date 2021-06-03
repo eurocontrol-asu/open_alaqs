@@ -226,27 +226,27 @@ class PointSourcesDatabase(SQLSerializable, metaclass=Singleton):
         if self._db_path:
             self.deserialize()
 
-if __name__ == "__main__":
-    # create a logger for this module
-    #logging.basicConfig(level=logging.DEBUG)
-
-    # logger.setLevel(logging.DEBUG)
-    # # create console handler and set level to debug
-    # ch = logging.StreamHandler()
-    # if loaded_color_logger:
-    #     ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
-    #
-    # ch.setLevel(logging.DEBUG)
-    # # create formatter
-    # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # # add formatter to ch
-    # ch.setFormatter(formatter)
-    # # add ch to logger
-    # logger.addHandler(ch)
-
-    path_to_database = os.path.join("..", "..", "example/CAEPport_training", "caepport_out.alaqs")
-
-    store = PointSourcesStore(path_to_database)
-    for point_name, point in list(store.getObjects().items()):
-        # fix_print_with_import
-        print(point)
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     #logging.basicConfig(level=logging.DEBUG)
+#
+#     # logger.setLevel(logging.DEBUG)
+#     # # create console handler and set level to debug
+#     # ch = logging.StreamHandler()
+#     # if loaded_color_logger:
+#     #     ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
+#     #
+#     # ch.setLevel(logging.DEBUG)
+#     # # create formatter
+#     # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # # add formatter to ch
+#     # ch.setFormatter(formatter)
+#     # # add ch to logger
+#     # logger.addHandler(ch)
+#
+#     path_to_database = os.path.join("..", "..", "example/CAEPport_training", "caepport_out.alaqs")
+#
+#     store = PointSourcesStore(path_to_database)
+#     for point_name, point in list(store.getObjects().items()):
+#         # fix_print_with_import
+#         print(point)

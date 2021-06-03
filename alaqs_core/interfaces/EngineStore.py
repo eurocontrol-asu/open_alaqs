@@ -107,16 +107,21 @@ class HeliEngineStore(Store, metaclass=Singleton):
 
         self._db_path = db_path
 
-        #Emission indices
+        # Emission indices
         self._emission_indices_db = None
-        if  "engine_emission_indices_db" in db:
-            if isinstance(db["engine_emission_indices_db"], HelicopterEngineEmissionIndicesDatabase):
+        if "engine_emission_indices_db" in db:
+            if isinstance(db["engine_emission_indices_db"],
+                          HelicopterEngineEmissionIndicesDatabase):
                 self._emission_indices_db = db["engine_emission_indices_db"]
-            elif isinstance(db["engine_emission_indices_db"], str) and os.path.isfile(db["engine_emission_indices_db"]):
-                self._emission_indices_db = HelicopterEngineEmissionIndicesDatabase(db["engine_emission_indices_db"])
+            elif isinstance(db["engine_emission_indices_db"],
+                            str) and os.path.isfile(
+                    db["engine_emission_indices_db"]):
+                self._emission_indices_db = HelicopterEngineEmissionIndicesDatabase(
+                    db["engine_emission_indices_db"])
 
         if self._emission_indices_db is None:
-            self._emission_indices_db = HelicopterEngineEmissionIndicesDatabase(db_path)
+            self._emission_indices_db = HelicopterEngineEmissionIndicesDatabase(
+                db_path)
 
         self._emission_indices = self._emission_indices_db.getHeliEngineEmissionIndices()
         # self._emission_indices = self._emission_indices_db._heli_emission_indices
@@ -166,28 +171,28 @@ class HeliEngineStore(Store, metaclass=Singleton):
         return None
 
 
-if __name__ == "__main__":
-    # create a logger for this module
-    logging.basicConfig(level=logging.DEBUG)
-    logger.setLevel(logging.DEBUG)
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    # create formatter
-    formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    # add ch to logger
-    logger.addHandler(ch)
-
-    path_to_database = os.path.join("..", "..", "example", "CAEPport", "old", "06042020_out.alaqs")
-
-    engine_store = EngineStore(path_to_database)
-    heli_engine_store = HeliEngineStore(path_to_database)
-
-    # #for key, ei in engine_store.getEngineEmissionIndices().items():
-    # #    logger.info("Engine '%s'" %(key))
-    # #    logger.info(ei)
-    # for engine_name, engine in engine_store.getObjects().items():
-    #     logger.info(engine_name, engine.__repr__())
-    # #print engine_store.get()EngineEmissionIndicesDatabase
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     logging.basicConfig(level=logging.DEBUG)
+#     logger.setLevel(logging.DEBUG)
+#     # create console handler and set level to debug
+#     ch = logging.StreamHandler()
+#     ch.setLevel(logging.DEBUG)
+#     # create formatter
+#     formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # add formatter to ch
+#     ch.setFormatter(formatter)
+#     # add ch to logger
+#     logger.addHandler(ch)
+#
+#     path_to_database = os.path.join("..", "..", "example", "CAEPport", "old", "06042020_out.alaqs")
+#
+#     engine_store = EngineStore(path_to_database)
+#     heli_engine_store = HeliEngineStore(path_to_database)
+#
+#     # #for key, ei in engine_store.getEngineEmissionIndices().items():
+#     # #    logger.info("Engine '%s'" %(key))
+#     # #    logger.info(ei)
+#     # for engine_name, engine in engine_store.getObjects().items():
+#     #     logger.info(engine_name, engine.__repr__())
+#     # #print engine_store.get()EngineEmissionIndicesDatabase
