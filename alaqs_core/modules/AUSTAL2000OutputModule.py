@@ -73,13 +73,14 @@ class AUSTAL2000DispersionModule(DispersionModule):
         # ToDo: Modify AmbientCondition.py or derive z0, d0, and ha from main
         #  dialog (airport info)
         # "z\t0.2\t' roughness length (m)",
-        self._roughness_level = values_dict.get("roughness length (in m)", 0.2)
+        self._roughness_level = float(values_dict.get(
+            "roughness length (in m)", 0.2))
         # d0: default 6z0    # "d0\t1.2\t' displacement height (m)",
-        self._displacement_height = values_dict.get(
-            "displacement height (in m)", 6 * self._roughness_level)
+        self._displacement_height = float(values_dict.get(
+            "displacement height (in m)", 6 * self._roughness_level))
         # 10 m + d0 (6z0)  # "ha\t11.2\t' anemometer height (m)",
-        self._anemometer_height = values_dict.get(
-            "anemometer height (in m)", 10.0 + 6 * self._roughness_level)
+        self._anemometer_height = float(values_dict.get(
+            "anemometer height (in m)", 10.0 + 6 * self._roughness_level))
 
         self._reference_x = None
         self._reference_y = None
