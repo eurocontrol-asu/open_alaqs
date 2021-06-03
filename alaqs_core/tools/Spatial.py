@@ -1,11 +1,11 @@
-import math
 import logging
+import math
 
-import ogr
-import osr
-import shapely.wkt
-import shapely.ops
+import osgeo.ogr as ogr
+import osgeo.osr as osr
 import shapely.geometry
+import shapely.ops
+import shapely.wkt
 from geographiclib.geodesic import Geodesic
 
 from open_alaqs.alaqs_core.tools import conversion, Iterator
