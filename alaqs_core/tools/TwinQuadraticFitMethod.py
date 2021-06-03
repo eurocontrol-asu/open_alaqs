@@ -69,56 +69,56 @@ def calculateFuelFlowFromPowerSetting(power_setting, icao_eedb):
     return max(0., fuel_flow_in_kg_s)
 
 
-if __name__ == "__main__":
-    # create a logger for this module
-    logger.setLevel(logging.DEBUG)
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    # create formatter
-    formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    # add ch to logger
-    logger.addHandler(ch)
-
-    # Example calculation for power setting at xx % (0.xx) thrust level
-    power = 0.05
-
-    # Example calculation for UID 1CM004, CFM56-3-B1
-    icao_values = {
-        1.: 0.946,  # Takeoff
-        0.85: 0.792,  # Climbout
-        0.30: 0.29,  # Approach
-        0.07: 0.114  # Idle
-    }
-
-    # # Example calculation for UID 8RR044, Rolls-Royce Trent 553-61
-    # icao_values = {
-    #         1.:2.11, #Takeoff
-    #         0.85:1.73, #Climbout
-    #         0.30:0.6, #Approach
-    #         0.07:0.23 #Idle
-    #     }
-
-    logger.info("Calculated fuel flow for power setting '%.2f' is '%.4f'", (
-        power, calculateFuelFlowFromPowerSetting(power, icao_values)))
-
-    # Plot function
-    import numpy as np
-    import matplotlib.pyplot as plt
-
-    plt.ion()
-    plt.figure()
-    x = np.linspace(0, 1, 1000)  # 1000 linearly spaced numbers
-    for i in x:
-        y = calculateFuelFlowFromPowerSetting(i, icao_values)
-        p1, = plt.plot(100 * i, y, 'ok', ms=4)
-    p2, = plt.plot(100 * np.array([0.07, 0.3, 0.85, 1]),
-                   [icao_values[0.07], icao_values[0.3], icao_values[0.85],
-                    icao_values[1]], 'rx', ms=10, mew=5)
-    plt.legend([p1, p2], ["Twin Quadratic Curve Fit", "ICAO EEDB Data"],
-               numpoints=1, loc=2)
-    plt.xlabel('Power setting (%)')
-    plt.ylabel('Fuel flow [kg/s]')
-    plt.title('Twin Quadratic curve fit')
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     logger.setLevel(logging.DEBUG)
+#     # create console handler and set level to debug
+#     ch = logging.StreamHandler()
+#     ch.setLevel(logging.DEBUG)
+#     # create formatter
+#     formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # add formatter to ch
+#     ch.setFormatter(formatter)
+#     # add ch to logger
+#     logger.addHandler(ch)
+#
+#     # Example calculation for power setting at xx % (0.xx) thrust level
+#     power = 0.05
+#
+#     # Example calculation for UID 1CM004, CFM56-3-B1
+#     icao_values = {
+#         1.: 0.946,  # Takeoff
+#         0.85: 0.792,  # Climbout
+#         0.30: 0.29,  # Approach
+#         0.07: 0.114  # Idle
+#     }
+#
+#     # # Example calculation for UID 8RR044, Rolls-Royce Trent 553-61
+#     # icao_values = {
+#     #         1.:2.11, #Takeoff
+#     #         0.85:1.73, #Climbout
+#     #         0.30:0.6, #Approach
+#     #         0.07:0.23 #Idle
+#     #     }
+#
+#     logger.info("Calculated fuel flow for power setting '%.2f' is '%.4f'", (
+#         power, calculateFuelFlowFromPowerSetting(power, icao_values)))
+#
+#     # Plot function
+#     import numpy as np
+#     import matplotlib.pyplot as plt
+#
+#     plt.ion()
+#     plt.figure()
+#     x = np.linspace(0, 1, 1000)  # 1000 linearly spaced numbers
+#     for i in x:
+#         y = calculateFuelFlowFromPowerSetting(i, icao_values)
+#         p1, = plt.plot(100 * i, y, 'ok', ms=4)
+#     p2, = plt.plot(100 * np.array([0.07, 0.3, 0.85, 1]),
+#                    [icao_values[0.07], icao_values[0.3], icao_values[0.85],
+#                     icao_values[1]], 'rx', ms=10, mew=5)
+#     plt.legend([p1, p2], ["Twin Quadratic Curve Fit", "ICAO EEDB Data"],
+#                numpoints=1, loc=2)
+#     plt.xlabel('Power setting (%)')
+#     plt.ylabel('Fuel flow [kg/s]')
+#     plt.title('Twin Quadratic curve fit')

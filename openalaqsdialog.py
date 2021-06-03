@@ -2420,7 +2420,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             error = alaqsutils.print_error(
                 self.populate_calculation_methods.__name__, Exception, e)
 
-    def resetEmissionCalculationConfiguration(self, config={}):
+    def resetEmissionCalculationConfiguration(self, config=None):
+        if config is None:
+            config = {}
         page = None
         for i_ in range(0, self.ui.Configuration_toolBox.count()):
             if str(self.ui.Configuration_toolBox.itemText(
@@ -2728,6 +2730,8 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             # if not module_name is None :
             #     module_names_ = [module_name]
 
+            logger.info(f'Module names: {str(module_names_)}')
+
             for m_name_ in module_names_:
                 if m_name_ == "MovementSource":
                     em_config = self._emission_calculation_configuration_widget.getValues()
@@ -2743,6 +2747,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                     if BFFM2_selected and NOx_corr_selected:
                         logger.warning("Not possible to use both 'BFFM2' "
                                        "and 'Apply NOx correction'")
+
+                    logger.info(f'Configuration of {m_name_}: {str(em_config)}')
+
                     self._emission_calculation_.addModule(
                         m_name_, configuration=em_config)
                 else:
@@ -3001,7 +3008,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                                            e)
             return error
 
-    def resetConcentrationCalculationConfiguration(self, config={}):
+    def resetConcentrationCalculationConfiguration(self, config=None):
+        if config is None:
+            config = {}
         page = None
         for i_ in range(0, self.ui.Configuration_toolBox.count()):
             if str(self.ui.Configuration_toolBox.itemText(

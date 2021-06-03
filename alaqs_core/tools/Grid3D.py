@@ -209,7 +209,6 @@ class Grid3D(object):
                 raise Exception(
                     "Could not reset reference point as coordinates could not be transformed. The query was\n'%s'" % (
                         sql_text))
-                return None
 
             # reference_x = apt_ref_point_crs3857.x
             reference_x = conversion.convertToFloat(result[0][0])

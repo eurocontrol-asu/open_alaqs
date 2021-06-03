@@ -39,62 +39,70 @@ class MovementSourceModule(SourceModule):
 
         self._calculation_limit = {
             "max_height": 914.4,
-            "height_unit_in_feet":False
+            "height_unit_in_feet": False
         }
-        #self.limit = {}
 
         self._installation_corrections = {
-                        "Takeoff":1.010,    # 100%
-                        "Climbout":1.012,   # 85%
-                        "Approach":1.020,   # 30%
-                        "Idle":1.100        # 7%
+            "Takeoff": 1.010,  # 100%
+            "Climbout": 1.012,  # 85%
+            "Approach": 1.020,  # 30%
+            "Idle": 1.100  # 7%
         }
-        # self._installation_corrections = {}
 
         self._ambient_conditions = AmbientCondition()
 
-        # self._method = {"name": "BFFM2"} #method="linear_scaling", "matching", "bymode", "BFFM2"
-        if not ("Method" in values_dict):
+        if "Method" not in values_dict:
             values_dict["Method"] = {}
-        self._method = {"name": values_dict["Method"]["selected"] if ("selected" in values_dict["Method"] and "Method" in values_dict) else ""}
+        self._method = {
+            "name": values_dict["Method"].get("selected", "")
+        }
 
-        self._nox_correction = values_dict["Apply NOx corrections"] if ("Apply NOx corrections" in values_dict) else False
-        self._smooth_and_shift = values_dict["Source Dynamics"]["selected"] if "Source Dynamics" in values_dict and "selected" in values_dict["Source Dynamics"] else 'None'
-        self._reference_altitude = values_dict["reference_altitude"] if ("reference_altitude" in values_dict) else 0.0
-
+        self._nox_correction = values_dict.get("Apply NOx corrections", False)
+        self._smooth_and_shift = 'None'
+        if ("Source Dynamics" in values_dict) and (
+                "selected" in values_dict["Source Dynamics"]):
+            self._smooth_and_shift = values_dict["Source Dynamics"]["selected"]
+        self._reference_altitude = values_dict.get("reference_altitude", .0)
 
     def getMethod(self):
         return self._method
+
     def setMethod(self, var):
         self._method = var
 
     def getApplyNOxCorrection(self):
         return self._nox_correction
+
     def setApplyNOxCorrection(self, var):
         self._nox_correction = var
 
     def getApplySmoothAndShift(self):
         return self._smooth_and_shift
+
     def setApplySmoothAndShift(self, var):
         self._smooth_and_shift = var
 
     def getAirportAltitude(self):
         return self._reference_altitude
+
     def setAirportAltitude(self, var):
         self._reference_altitude = var
 
     def getCalculationLimit(self):
         return self._calculation_limit
+
     def setCalculationLimit(self, var):
         self._calculation_limit = var
 
     def getAmbientConditions(self):
         return self._ambient_conditions
+
     def setAmbientConditions(self, var):
         self._ambient_conditions = var
 
     def getInstallationCorrections(self):
         return self._installation_corrections
+
     def setInstallationCorrections(self, var):
         self._installation_corrections = var
 

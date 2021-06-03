@@ -1,22 +1,18 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-
-import os
-import math
 import copy
 import itertools
-from builtins import map, str, range
-from datetime import datetime, timedelta
+import math
+import os
 from collections import OrderedDict
+from datetime import datetime, timedelta
 
-import numpy as np
 import geopandas as gpd
-from dateutil import rrule
+import numpy as np
 from PyQt5 import QtGui, QtWidgets
+from dateutil import rrule
 
-from open_alaqs.alaqs_core.tools import SQLInterface, Spatial, conversion
-from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
 from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
+from open_alaqs.alaqs_core.tools import SQLInterface, Spatial, conversion
 
 # logger = logging.getLogger(__name__)
 logger = alaqslogging.logging.getLogger(__name__)
@@ -60,12 +56,10 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         self._sequ = values_dict.get("index sequence", "k+,j-,i+")
         self._grid = values_dict.get("grid", "")
-        # self._austal_grid = copy.deepcopy(self._grid)
 
-        # self._pollutants_list = [self._pollutant] if self._pollutant else values_dict["pollutants_list"]
-        # if "pollutants_list" in values_dict else None # ["CO2", "HC", "NOx"]
-        self._pollutants_list = values_dict["pollutants_list"] if "pollutants_list" in \
-                                                      values_dict else [self._pollutant] if self._pollutant else None
+        self._pollutants_list = values_dict.get("pollutants_list")
+        if self._pollutant:
+            self._pollutants_list = [self._pollutant]
 
         # "----------------- general parameters",
         # "ti\t'grid source'\t' title of the project",

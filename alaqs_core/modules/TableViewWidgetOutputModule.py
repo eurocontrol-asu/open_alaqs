@@ -110,6 +110,7 @@ class TableViewWidgetOutputModule(OutputModule):
         self._widget.resizeToContent()
         return self._widget
 
+
 class TableViewWidget(QtWidgets.QDialog):
     """
     This class provides a dialog for visualizing ALAQS results.

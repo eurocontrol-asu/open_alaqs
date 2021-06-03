@@ -2248,12 +2248,12 @@ def make_wkt_bounding_box(d):
     except Exception as e:
         pass
 
-if __name__ == "__main__":
-    # Use this section for unit testing
-
-    data = get_line_length("shapes_roadways", "roadway_id", "M5")
-    # fix_print_with_import
-    print(data)
-    data = get_polygon_area("shapes_gates", "gate_id", "Gate01")
-    # fix_print_with_import
-    print(data)
+# if __name__ == "__main__":
+#     # Use this section for unit testing
+#
+#     data = get_line_length("shapes_roadways", "roadway_id", "M5")
+#     # fix_print_with_import
+#     print(data)
+#     data = get_polygon_area("shapes_gates", "gate_id", "Gate01")
+#     # fix_print_with_import
+#     print(data)
