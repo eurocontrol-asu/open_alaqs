@@ -1,8 +1,6 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from qgis.gui import QgsEditorWidgetWrapper
+from PyQt5 import QtWidgets
 
-import alaqs
-import alaqsutils
+from open_alaqs.alaqs_core import alaqs, alaqsutils
 
 form = None
 name_field = None

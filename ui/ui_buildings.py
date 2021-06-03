@@ -1,6 +1,4 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from qgis.gui import QgsEditorWidgetWrapper
-
+from PyQt5 import QtWidgets
 
 form = None
 name_field = None

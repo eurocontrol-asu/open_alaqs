@@ -1,20 +1,15 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from . import __init__
-
-import os
-import logging              # For unit testing. Can be commented out for distribution
-import os
+import logging
+import math
 import sys
 
-import alaqsutils           # For logging and conversion of data types
-import alaqsdblite          # Functions for working with ALAQS database
-
-import alaqs #FIXME remove call to alaqs (implement class for study setup), fix also direct sql calls
-import math
+# FIXME remove call to alaqs (implement class for study setup), fix also direct sql calls
+from open_alaqs.alaqs_core import alaqs
+from open_alaqs.alaqs_core import alaqsdblite
+from open_alaqs.alaqs_core import alaqsutils
 
 # Create a logger for this module.
 logger = logging.getLogger(__name__)
+
 
 def roadway_emission_factors_alaqs_method(input_data):
     """

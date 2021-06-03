@@ -1,12 +1,9 @@
+from PyQt5 import QtWidgets
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
+from open_alaqs.alaqs_core import alaqs
+from open_alaqs.alaqs_core import alaqsutils
 
-from qgis.gui import QgsEditorWidgetWrapper
-#from qgis.utils import *
-
-import alaqs
-import alaqsutils
+# from qgis.utils import *
 
 form = None
 name_field = None
@@ -29,6 +26,7 @@ pm10_kg_k_field = None
 p1_kg_k_field = None
 p2_kg_k_field = None
 instudy = None
+
 
 def form_open(my_dialog, layer_id, feature_id):
 

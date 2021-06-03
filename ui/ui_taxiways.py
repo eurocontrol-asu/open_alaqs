@@ -1,12 +1,11 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
-from qgis.gui import QgsEditorWidgetWrapper
+from PyQt5 import QtWidgets
 
 form = None
 name_field = None
 time_field = None
 speed_field = None
 instudy = None
+
 
 def form_open(my_dialog, layer_id, feature_id):
     global form
