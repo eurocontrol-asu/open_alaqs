@@ -1976,7 +1976,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             QtWidgets.qApp.processEvents()
 
             # Open the movement file
-            with open(movement_file, 'rU') as movement_file:
+            with open(movement_file, 'r') as movement_file:
                 # with open(movement_file, 'rt') as movement_file:
                 movement_line = 0
 
