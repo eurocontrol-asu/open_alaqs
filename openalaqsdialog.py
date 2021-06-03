@@ -2730,8 +2730,6 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             # if not module_name is None :
             #     module_names_ = [module_name]
 
-            logger.info(f'Module names: {str(module_names_)}')
-
             for m_name_ in module_names_:
                 if m_name_ == "MovementSource":
                     em_config = self._emission_calculation_configuration_widget.getValues()
@@ -2747,8 +2745,6 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                     if BFFM2_selected and NOx_corr_selected:
                         logger.warning("Not possible to use both 'BFFM2' "
                                        "and 'Apply NOx correction'")
-
-                    logger.info(f'Configuration of {m_name_}: {str(em_config)}')
 
                     self._emission_calculation_.addModule(
                         m_name_, configuration=em_config)
