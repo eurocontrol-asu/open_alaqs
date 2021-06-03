@@ -10,7 +10,7 @@ import os
 import sys
 import sqlite3 as sqlite
 
-from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core import alaqslogging, alaqsdblite
 from open_alaqs.alaqs_core.tools import conversion
 
 logger = alaqslogging.logging.getLogger(__name__)
