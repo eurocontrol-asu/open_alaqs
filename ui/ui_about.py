@@ -67,6 +67,6 @@ class Ui_DialogAbout(object):
     def retranslateUi(self, DialogAbout):
         _translate = QtCore.QCoreApplication.translate
         DialogAbout.setWindowTitle(_translate("DialogAbout", "About"))
-        self.label.setText(_translate("DialogAbout", "<html><head/><body><p align=\"center\"><span style=\" font-size:12pt; font-weight:600;\">Open ALAQS: Airport Local Air Quality Studies</span><br/>Version 2.x (September 2019)</p><p align=\"center\">This is a beta version of the ALAQS local air quality software released for review and testing only.<br/>It should therefore not be used for commerical studies and is released without guarantee.</p><p align=\"center\">Released under xxx License. For more information, contact open-alaqs@eurocontrol.int</p></body></html>"))
+        self.label.setText(_translate("DialogAbout", "<html><head/><body><p align=\"center\"><span style=\" font-size:12pt; font-weight:600;\">Open ALAQS: Airport Local Air Quality Studies</span><br/>Version 3.0.dev (September 2019)</p><p align=\"center\">This is a beta version of the ALAQS local air quality software released for review and testing only.<br/>It should therefore not be used for commerical studies and is released without guarantee.</p><p align=\"center\">Released under xxx License. For more information, contact open-alaqs@eurocontrol.int</p></body></html>"))
         self.AddWatermarkButton.setText(_translate("DialogAbout", "Add watermark to layer"))
 from . import alaqs_resources_rc
