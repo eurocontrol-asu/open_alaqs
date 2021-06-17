@@ -1,33 +1,22 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-from . import __init__ #setup the paths for direct calls of the module
-from future.utils import with_metaclass
-
-
-__author__ = 'ENVISA'
 import logging
-logger = logging.getLogger("__alaqs__.%s" % (__name__))
 
-import sys, os
+import os
 from collections import OrderedDict
 
-try:
-    from .SQLSerializable import SQLSerializable
-    from .Singleton import Singleton
-    from .Store import Store
-    from .Emissions import EmissionIndex
-except:
-    from SQLSerializable import SQLSerializable
-    from Singleton import Singleton
-    from Store import Store
-    from Emissions import EmissionIndex
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 
-from tools import Spatial
+from open_alaqs.alaqs_core.tools import Spatial
 
-class PointSources(object):
-    def __init__(self, val={}):
+logger = logging.getLogger("__alaqs__.%s" % __name__)
+
+
+class PointSources:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         self._id = str(val["source_id"]) if "source_id" in val else None
         self._height = float(val["height"]) if "height" in val else 0.
         self._category = str(val["category"]) if "category" in val else ""
@@ -150,12 +139,15 @@ class PointSources(object):
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 
-class PointSourcesStore(with_metaclass(Singleton, Store)):
+
+class PointSourcesStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'PointSources' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
@@ -182,7 +174,8 @@ class PointSourcesStore(with_metaclass(Singleton, Store)):
     def getPointSourcesDatabase(self):
         return self._point_db
 
-class PointSourcesDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class PointSourcesDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to point/stationary shape file in the spatialite database
     """
@@ -190,63 +183,70 @@ class PointSourcesDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="shapes_point_sources",
-                 table_columns_type_dict=OrderedDict([
-                    ("oid" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("source_id" , "TEXT"),
-                    ("height" , "DECIMAL"),
-                    ("category" , "TEXT"),
-                    ("type" , "TEXT"),
-                    ("substance" , "TEXT"),
-                    ("temperature" , "DECIMAL"),
-                    ("diameter" , "DECIMAL"),
-                    ("velocity" , "DECIMAL"),
-                    ("ops_year" , "DECIMAL"),
-                    ("hour_profile" , "TEXT"),
-                    ("daily_profile" , "TEXT"),
-                    ("month_profile" , "TEXT"),
-                    ("co_kg_k" , "DECIMAL"),
-                    ("hc_kg_k" , "DECIMAL"),
-                    ("nox_kg_k" , "DECIMAL"),
-                    ("sox_kg_k" , "DECIMAL"),
-                    ("pm10_kg_k" , "DECIMAL"),
-                    ("p1_kg_k" , "DECIMAL"),
-                    ("p2_kg_k" , "DECIMAL"),
-                    ("instudy" , "DECIMAL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="",
-                 geometry_columns=[{
-                    "column_name":"geometry",
-                    "SRID":3857,
-                    "geometry_type":"POINT",
-                    "geometry_type_dimension":2
-                 }]
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 geometry_columns=None
+                 ):
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("source_id", "TEXT"),
+                ("height", "DECIMAL"),
+                ("category", "TEXT"),
+                ("type", "TEXT"),
+                ("substance", "TEXT"),
+                ("temperature", "DECIMAL"),
+                ("diameter", "DECIMAL"),
+                ("velocity", "DECIMAL"),
+                ("ops_year", "DECIMAL"),
+                ("hour_profile", "TEXT"),
+                ("daily_profile", "TEXT"),
+                ("month_profile", "TEXT"),
+                ("co_kg_k", "DECIMAL"),
+                ("hc_kg_k", "DECIMAL"),
+                ("nox_kg_k", "DECIMAL"),
+                ("sox_kg_k", "DECIMAL"),
+                ("pm10_kg_k", "DECIMAL"),
+                ("p1_kg_k", "DECIMAL"),
+                ("p2_kg_k", "DECIMAL"),
+                ("instudy", "DECIMAL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = [{
+                "column_name": "geometry",
+                "SRID": 3857,
+                "geometry_type": "POINT",
+                "geometry_type_dimension": 2
+            }]
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path:
             self.deserialize()
 
-if __name__ == "__main__":
-    # create a logger for this module
-    #logging.basicConfig(level=logging.DEBUG)
-
-    # logger.setLevel(logging.DEBUG)
-    # # create console handler and set level to debug
-    # ch = logging.StreamHandler()
-    # if loaded_color_logger:
-    #     ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
-    #
-    # ch.setLevel(logging.DEBUG)
-    # # create formatter
-    # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # # add formatter to ch
-    # ch.setFormatter(formatter)
-    # # add ch to logger
-    # logger.addHandler(ch)
-
-    path_to_database = os.path.join("..", "..", "example/CAEPport_training", "caepport_out.alaqs")
-
-    store = PointSourcesStore(path_to_database)
-    for point_name, point in list(store.getObjects().items()):
-        # fix_print_with_import
-        print(point)
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     #logging.basicConfig(level=logging.DEBUG)
+#
+#     # logger.setLevel(logging.DEBUG)
+#     # # create console handler and set level to debug
+#     # ch = logging.StreamHandler()
+#     # if loaded_color_logger:
+#     #     ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
+#     #
+#     # ch.setLevel(logging.DEBUG)
+#     # # create formatter
+#     # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # # add formatter to ch
+#     # ch.setFormatter(formatter)
+#     # # add ch to logger
+#     # logger.addHandler(ch)
+#
+#     path_to_database = os.path.join("..", "..", "example/CAEPport_training", "caepport_out.alaqs")
+#
+#     store = PointSourcesStore(path_to_database)
+#     for point_name, point in list(store.getObjects().items()):
+#         # fix_print_with_import
+#         print(point)

@@ -1,31 +1,22 @@
-from __future__ import absolute_import
-# from . import __init__ #setup the paths for direct calls of the module
-
-import sys,os, glob
-import alaqsutils           # For logging and conversion of data types
-import alaqsdblite          # Functions for working with ALAQS database
-
 import logging
+from collections import OrderedDict
+
+import matplotlib
+import pandas as pd
+from PyQt5 import QtWidgets
+from matplotlib.dates import DateFormatter
+from shapely.geometry import Point, LineString, MultiLineString, Polygon, \
+    MultiPolygon
+
+from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
+from open_alaqs.alaqs_core.plotting.MatplotlibQtDialog import MatplotlibQtDialog
+from open_alaqs.alaqs_core.tools import conversion
+
+logging.getLogger('matplotlib').setLevel(logging.ERROR)
+matplotlib.use('Qt5Agg')
+
 logger = logging.getLogger(__name__)
 
-from tools import CSVInterface
-from tools import Conversions
-
-from interfaces.OutputModule import OutputModule
-
-from collections import OrderedDict
-# from qgis.PyQt import QtGui, QtWidgets
-from PyQt5 import QtCore, QtGui, QtWidgets
-import plotting
-from plotting.MatplotlibQtDialog import MatplotlibQtDialog
-from matplotlib.dates import DateFormatter
-logging.getLogger('matplotlib').setLevel(logging.ERROR)
-
-import pandas as pd
-from shapely.geometry import Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
-import matplotlib
-matplotlib.use('Qt5Agg')
-import matplotlib.pyplot as plt
 
 class TimeSeriesWidgetOutputModule(OutputModule):
     """
@@ -36,40 +27,49 @@ class TimeSeriesWidgetOutputModule(OutputModule):
     def getModuleName():
         return "TimeSeriesWidgetOutputModule"
 
-    def __init__(self, values_dict = {}):
+    def __init__(self, values_dict=None):
+        if values_dict is None:
+            values_dict = {}
         OutputModule.__init__(self, values_dict)
 
-        #Widget configuration
-        self._parent = values_dict["parent"] if "parent" in values_dict else None
+        # Widget configuration
+        self._parent = values_dict.get("parent")
         self._widget = None
 
-        #Plot configuration
-        self._title = values_dict["title"] if "title" in values_dict else ""
-        self._xtitle = values_dict["xtitle"] if "xtitle" in values_dict else ""
-        self._ytitle = values_dict["ytitle"] if "ytitle" in values_dict else ""
-        self._marker = values_dict["marker"] if "marker" in values_dict else ""
-        self._receptor = values_dict["receptor point"] if "receptor point" in values_dict else {}
-        self._grid = values_dict["grid"] if "grid" in values_dict else None
+        # Plot configuration
+        self._title = values_dict.get("title", "")
+        self._xtitle = values_dict.get("xtitle", "")
+        self._ytitle = values_dict.get("ytitle", "")
+        self._marker = values_dict.get("marker","")
+        self._receptor = values_dict.get("receptor point", {})
+        self._grid = values_dict.get("grid")
 
         self._TableWidgetHeader = ('id', 'longitude', 'latitude', 'epsg')
-        self._TableWidgetRows = values_dict["rows"] if "rows" in values_dict else 1
-        self._TableWidgetCols = values_dict["columns"] if "columns" in values_dict else len(self._TableWidgetHeader)
-        self._TableWidgetInputs = {"rows":self._TableWidgetRows, "columns":self._TableWidgetCols, "header":self._TableWidgetHeader}
+        self._TableWidgetRows = values_dict.get("rows", 1)
+        self._TableWidgetCols = values_dict.get("columns",
+                                                len(self._TableWidgetHeader))
+        self._TableWidgetInputs = {"rows": self._TableWidgetRows,
+                                   "columns": self._TableWidgetCols,
+                                   "header": self._TableWidgetHeader}
 
-        #Results analysis
-        self._time_start = Conversions.convertStringToDateTime(values_dict["Start (incl.)"]) if "Start (incl.)" in values_dict else ""
-        self._time_end = Conversions.convertStringToDateTime(values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
-        self._pollutant = values_dict["pollutant"] if "pollutant" in values_dict else None
+        # Results analysis
+        self._time_start = ""
+        if "Start (incl.)" in values_dict:
+            self._time_start = conversion.convertStringToDateTime(
+                values_dict["Start (incl.)"])
+        self._time_end = conversion.convertStringToDateTime(
+            values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
+        self._pollutant = values_dict.get("pollutant")
 
         self.setConfigurationWidget(OrderedDict({
-            "xtitle" : QtWidgets.QLineEdit,
-            "marker" : QtWidgets.QLineEdit,
+            "xtitle": QtWidgets.QLineEdit,
+            "marker": QtWidgets.QLineEdit,
             "receptor point": QtWidgets.QTableWidget,
         }))
 
         self.getConfigurationWidget().initValues(OrderedDict({
-            "xtitle" : "Time [hh:mm:ss]",
-            "marker" : "x",
+            "xtitle": "Time [hh:mm:ss]",
+            "marker": "x",
             "receptor point": self._TableWidgetInputs,
         }))
 
@@ -178,7 +178,6 @@ class TimeSeriesWidgetOutputModule(OutputModule):
             else:
                 self._data_y.append(0)
 
-
     def endJob(self):
         #show widget
 
@@ -215,7 +214,6 @@ class TimeSeriesWidgetOutputModule(OutputModule):
             self._widget.getPlt().xticks(rotation=25)
 
         return self._widget
-
 
     #ToDo:
     # def ApplyAveraging

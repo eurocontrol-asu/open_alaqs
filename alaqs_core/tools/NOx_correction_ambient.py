@@ -1,13 +1,9 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from . import __init__
-
-
-__author__ = 'ENVISA'
 import logging
+
 logger = logging.getLogger(__name__)
 
-# A correction factor for ambient pressure is not required except that the temperature is based on the ISA standard day temperature 
+
+# A correction factor for ambient pressure is not required except that the temperature is based on the ISA standard day temperature
 # for the ambient pressure altitude for the airport. 
 # A separate correction for forward speed is not applied because the effects of the forward air speed are taken into account in the calculation of the other factors.
 
@@ -16,7 +12,8 @@ logger = logging.getLogger(__name__)
 # The NOx correction is applied after the NOx emissions for take-off and climb-out have been calculated with the simple method. 
 # The correction factor is stored in a separate field in the inventory combined emission events table (tbl_InvEmisEvent, f4 field)
 
-def NOx_correction_for_ambient_conditions(init_nox_ei, elevation, tow_ratio, ac={}):
+def NOx_correction_for_ambient_conditions(init_nox_ei, elevation, tow_ratio,
+                                          ac=None):
     """
     ICCAIA recommends that simple models for NOx produced by take-off and climb-out to 3000 ft above ground level 
     can be improved by applying a correction for: (i) aircraft weight (ii), ambient temperature & (iii) ambient humidity.
@@ -25,6 +22,8 @@ def NOx_correction_for_ambient_conditions(init_nox_ei, elevation, tow_ratio, ac=
     It is not possible to select both the "Apply Fuel Flow method" and the "Apply NOx correction" options because this would result in a double NOx correction.
     """
 
+    if ac is None:
+        ac = {}
     import numpy as np
     # INPUT PARAMETERS: TEMP_actual,RH, APT_elev, NOX_orig, TOG_ratio
 
@@ -76,82 +75,82 @@ def NOx_correction_for_ambient_conditions(init_nox_ei, elevation, tow_ratio, ac=
 
     return round(NOx_corrected, 5)
 
-if __name__ == "__main__":
-    # create a logger for this module
-    # logger.setLevel(logging.DEBUG)
-    # # create console handler and set level to debug
-    # ch = logging.StreamHandler()
-    # ch.setLevel(logging.DEBUG)
-    # # create formatter
-    # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # # add formatter to ch
-    # ch.setFormatter(formatter)
-    # # add ch to logger
-    # logger.addHandler(ch)
-
-    ambient_conditions_ = {
-        "temperature_in_Kelvin":288.15, #ISA conditions
-        "pressure_in_Pa":1013.25*100., #ISA conditions
-        "relative_humidity":0.6, #normal day at ISA conditions
-        # "mach_number":0.20, #ground or laboratory
-        # "humidity_ratio_in_kg_water_per_kg_dry_air":0.00634 #ISA default
-    }
-
-    # ambient_conditions = {
-    #         "temperature_in_Kelvin":288.65,
-    #         "pressure_in_Pa":19677,
-    #         "mach_number":0.84,
-    #         "relative_humidity":0.60,
-    #
-    #         #either relative humidity or absolute humidity ratio has to be defined
-    #         # "humidity_ratio_in_kg_water_per_kg_dry_air":0.000053
-    #     }
-    
-    airport_elevation = 10 # Airport elevation above sea level in metres
-    #Less NOx is produced during takeoffs from higher altitude airports (0.5-1.0% per 1000 feet ~ 300m)
-    
-    tow = 1
-    # NOx varies ~1.5% for every 1% of TOGW
-    
-    icao_values = {
-        "NOx":{
-            "Takeoff":{3.91:45.7},
-            "Climbout":{3.10:33.3},
-            "Approach":{1.00:11.58},
-            "Idle":{0.30:5.33},
-        },
-        "CO":{
-            "Takeoff":{3.91:0.28},
-            "Climbout":{3.10:0.2},
-            "Approach":{1.00:0.57},
-            "Idle":{0.30:13.07},
-        },
-        "HC":{
-            "Takeoff":{3.91:0.01},
-            "Climbout":{3.10:0},
-            "Approach":{1.00:0},
-            "Idle":{0.30:0.7},
-        }
-    }
-    
-    import numpy as np
-
-    NOx_init = list(icao_values['NOx']['Takeoff'].values())
-    # fix_print_with_import
-    print("NOx EI is '%.3f'"%(np.asarray(NOx_init)))
-    # fix_print_with_import
-    print("NOx correction for_ambient conditions is '%.3f'" % NOx_correction_for_ambient_conditions(NOx_init, airport_elevation, tow, ac=ambient_conditions_))
-
-    # for ik, ival in icao_values['NOx']['Takeoff'].items():
-    #     NOX_orig = icao_values['NOx']['Takeoff'][ik]
-    #     print "NOX_orig :%s"%NOX_orig
-    #     icao_values['NOx']['Takeoff'][ik] = NOx_correction_for_ambient_conditions(NOX_orig, airport_elevation, ac=ambient_conditions_, tow_ratio=tow_ratio)
-    #     print "icao_values['NOx']['Takeoff'] :%s"%icao_values['NOx']['Takeoff'][ik]
-    #
-    # for ik, ival in icao_values['NOx']['Climbout'].items():
-    #     NOX_orig = icao_values['NOx']['Climbout'][ik]
-    #     icao_values['NOx']['Climbout'][ik] = NOx_correction_for_ambient_conditions(NOX_orig, airport_elevation, ac=ambient_conditions_, tow_ratio=tow_ratio)
-    #
-
-    # logger.info("NOx correction for_ambient onditions is '%.3f'" % NOx_correction_for_ambient_conditions(NOX_orig,airport_altitude,ambient_conditions))
-    
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     # logger.setLevel(logging.DEBUG)
+#     # # create console handler and set level to debug
+#     # ch = logging.StreamHandler()
+#     # ch.setLevel(logging.DEBUG)
+#     # # create formatter
+#     # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # # add formatter to ch
+#     # ch.setFormatter(formatter)
+#     # # add ch to logger
+#     # logger.addHandler(ch)
+#
+#     ambient_conditions_ = {
+#         "temperature_in_Kelvin":288.15, #ISA conditions
+#         "pressure_in_Pa":1013.25*100., #ISA conditions
+#         "relative_humidity":0.6, #normal day at ISA conditions
+#         # "mach_number":0.20, #ground or laboratory
+#         # "humidity_ratio_in_kg_water_per_kg_dry_air":0.00634 #ISA default
+#     }
+#
+#     # ambient_conditions = {
+#     #         "temperature_in_Kelvin":288.65,
+#     #         "pressure_in_Pa":19677,
+#     #         "mach_number":0.84,
+#     #         "relative_humidity":0.60,
+#     #
+#     #         #either relative humidity or absolute humidity ratio has to be defined
+#     #         # "humidity_ratio_in_kg_water_per_kg_dry_air":0.000053
+#     #     }
+#
+#     airport_elevation = 10 # Airport elevation above sea level in metres
+#     #Less NOx is produced during takeoffs from higher altitude airports (0.5-1.0% per 1000 feet ~ 300m)
+#
+#     tow = 1
+#     # NOx varies ~1.5% for every 1% of TOGW
+#
+#     icao_values = {
+#         "NOx":{
+#             "Takeoff":{3.91:45.7},
+#             "Climbout":{3.10:33.3},
+#             "Approach":{1.00:11.58},
+#             "Idle":{0.30:5.33},
+#         },
+#         "CO":{
+#             "Takeoff":{3.91:0.28},
+#             "Climbout":{3.10:0.2},
+#             "Approach":{1.00:0.57},
+#             "Idle":{0.30:13.07},
+#         },
+#         "HC":{
+#             "Takeoff":{3.91:0.01},
+#             "Climbout":{3.10:0},
+#             "Approach":{1.00:0},
+#             "Idle":{0.30:0.7},
+#         }
+#     }
+#
+#     import numpy as np
+#
+#     NOx_init = list(icao_values['NOx']['Takeoff'].values())
+#     # fix_print_with_import
+#     print("NOx EI is '%.3f'"%(np.asarray(NOx_init)))
+#     # fix_print_with_import
+#     print("NOx correction for_ambient conditions is '%.3f'" % NOx_correction_for_ambient_conditions(NOx_init, airport_elevation, tow, ac=ambient_conditions_))
+#
+#     # for ik, ival in icao_values['NOx']['Takeoff'].items():
+#     #     NOX_orig = icao_values['NOx']['Takeoff'][ik]
+#     #     print "NOX_orig :%s"%NOX_orig
+#     #     icao_values['NOx']['Takeoff'][ik] = NOx_correction_for_ambient_conditions(NOX_orig, airport_elevation, ac=ambient_conditions_, tow_ratio=tow_ratio)
+#     #     print "icao_values['NOx']['Takeoff'] :%s"%icao_values['NOx']['Takeoff'][ik]
+#     #
+#     # for ik, ival in icao_values['NOx']['Climbout'].items():
+#     #     NOX_orig = icao_values['NOx']['Climbout'][ik]
+#     #     icao_values['NOx']['Climbout'][ik] = NOx_correction_for_ambient_conditions(NOX_orig, airport_elevation, ac=ambient_conditions_, tow_ratio=tow_ratio)
+#     #
+#
+#     # logger.info("NOx correction for_ambient onditions is '%.3f'" % NOx_correction_for_ambient_conditions(NOX_orig,airport_altitude,ambient_conditions))
+#

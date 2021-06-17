@@ -1,14 +1,7 @@
 """
-This is a file that contains some of the variables that can be changed to change the appearance of a study created
-within ALAQS.
+This is a file that contains some of the variables that can be changed to change
+the appearance of a study created within ALAQS.
 """
-from __future__ import absolute_import
-
-import os
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-except:
-    import __init__# from .alaqs_core import *
 
 # Area Sources
 AREA_FILL_COLOR = '255,51,51'
@@ -68,5 +61,4 @@ RUNWAY_LABEL_FONT_SIZE = 8
 
 # Spatialite extension
 SPATIALTE_EXTENSION_FOLDER = "spatialite-4.0.0-DLL/"
-SPATIALTE_EXTENSION_LIB = SPATIALTE_EXTENSION_FOLDER+"mod_spatialite.dll"
-# SPATIALTE_EXTENSION_LIB = SPATIALTE_EXTENSION_FOLDER+"libspatialite-4.dll"
+SPATIALTE_EXTENSION_LIB = SPATIALTE_EXTENSION_FOLDER + "mod_spatialite.dll"

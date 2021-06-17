@@ -1,28 +1,18 @@
-from __future__ import absolute_import
-from builtins import str
-from builtins import range
-# from . import __init__ #setup the paths for direct calls of the module
-
+import logging
 import os
-import alaqsutils           # For logging and conversion of data types
-import alaqsdblite          # Functions for working with ALAQS database
-import logging              # For unit testing. Can be commented out for distribution
-import os
-import sys
-
-# from qgis.PyQt import QtGui, QtCore, QtWidgets
-from PyQt5 import QtCore, QtGui, QtWidgets
-import numpy as np
-from datetime import datetime, timedelta
-from dateutil import rrule
 from collections import OrderedDict
+from datetime import datetime, timedelta
 
-from interfaces.OutputModule import OutputModule
+import numpy as np
+from PyQt5 import QtWidgets
+from dateutil import rrule
+
+from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
+from open_alaqs.alaqs_core.modules.ui.TableViewDialog import Ui_TableViewDialog
+from open_alaqs.alaqs_core.tools import conversion, CSVInterface
+
 logger = logging.getLogger(__name__)
 
-from modules.ui.TableViewDialog import Ui_TableViewDialog
-from tools import Conversions
-from tools import CSVInterface
 
 class TableViewDispersionModule(OutputModule):
     """
@@ -33,26 +23,29 @@ class TableViewDispersionModule(OutputModule):
     def getModuleName():
         return "TableViewDispersionModule"
 
-    def __init__(self, values_dict = {}):
+    def __init__(self, values_dict = None):
+        if values_dict is None:
+            values_dict = {}
         OutputModule.__init__(self, values_dict)
 
         #Widget configuration
-        self._parent = values_dict["parent"] if "parent" in values_dict else None
+        self._parent = values_dict.get("parent")
 
         #Results analysis
-        self._time_start = Conversions.convertStringToDateTime(values_dict["Start (incl.)"]) if "Start (incl.)" in values_dict else ""
-        self._time_end = Conversions.convertStringToDateTime(values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
+        self._time_start = conversion.convertStringToDateTime(values_dict["Start (incl.)"]) if "Start (incl.)" in values_dict else ""
+        self._time_end = conversion.convertStringToDateTime(values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
         self._pollutant_list = ["CO2", "CO", "HC", "NOx", "SOx", "PM"]
 
         self._widget = TableViewWidget(self._parent)
 
-        self._max_values = values_dict["max. values"] if "max. values" in values_dict else False
-        self._save_csv = values_dict["csv output"] if "csv output" in values_dict else False
+        self._max_values = values_dict.get("max. values", False)
+        self._save_csv = values_dict.get("csv output", False)
 
-        self._averaging_period = values_dict["averaging_period"] if "averaging_period" in values_dict else "annual mean"
-        self._check_uncertainty = values_dict["check_uncertainty"] if "check_uncertainty" in values_dict else False
-        self._timeseries = values_dict["timeseries"] if "timeseries" in values_dict else None
-        self._concentration_database = values_dict["concentration_path"] if "concentration_path" in values_dict else None
+        self._averaging_period = values_dict.get("averaging_period",
+                                                 "annual mean")
+        self._check_uncertainty = values_dict.get("check_uncertainty", False)
+        self._timeseries = values_dict.get("timeseries")
+        self._concentration_database = values_dict.get("concentration_path")
 
         WidgetParameters = OrderedDict({
             "max. values": QtWidgets.QCheckBox,
@@ -76,10 +69,10 @@ class TableViewDispersionModule(OutputModule):
             start_date = datetime.strptime(t0,'%Y-%m-%d.%H:%M:%S')
 
             start_time = datetime.strptime(t1,'%d.%H:%M:%S').replace(year=start_date.year) if ("." in t1) else datetime.strptime(t1,'%H:%M:%S').replace(year=start_date.year)
-            start_time = start_time+timedelta(days=0) if ("." not in t1) else start_time.replace(day=Conversions.convertToInt(t1.split(".")[0])+1)
+            start_time = start_time+timedelta(days=0) if ("." not in t1) else start_time.replace(day=conversion.convertToInt(t1.split(".")[0])+1)
 
             end_time = datetime.strptime(t2,'%d.%H:%M:%S').replace(year=start_date.year) if ("." in t2) else datetime.strptime(t2,'%H:%M:%S').replace(year=start_date.year)
-            end_time = end_time+timedelta(days=0) if ("." not in t2) else end_time.replace(day=Conversions.convertToInt(t2.split(".")[0])+1)
+            end_time = end_time+timedelta(days=0) if ("." not in t2) else end_time.replace(day=conversion.convertToInt(t2.split(".")[0])+1)
 
             # timedelta
             tdelta = end_time - start_time
@@ -175,9 +168,9 @@ class TableViewDispersionModule(OutputModule):
                             if time_counter == 1:
                                 pollutant_list.append((" ").join([pollutant_, "[",self._units, "]"]))
 
-                            index_i = Conversions.convertToInt(output_data['hghb'][0]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # columns
-                            index_j = Conversions.convertToInt(output_data['hghb'][1]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # rows
-                            index_k = Conversions.convertToInt(output_data['hghb'][2]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # z
+                            index_i = conversion.convertToInt(output_data['hghb'][0]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # columns
+                            index_j = conversion.convertToInt(output_data['hghb'][1]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # rows
+                            index_k = conversion.convertToInt(output_data['hghb'][2]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # z
 
                             if not (index_k and index_i and index_j):
                                 logger.error("Error in reshaping concentration matrix: (%s, %s, %s)"%(index_k,index_i,index_j))
@@ -191,8 +184,8 @@ class TableViewDispersionModule(OutputModule):
                                 # take the concentration up tp Kmax: <c> = c1*H1/(H1+H2+H3+...) + c2*H2/(H1+H2+H3+...) + c3*H3/(H1+H2+H3+...) + ...
                                 total_column_concentration = np.zeros(shape=(index_j, index_i))
                                 for z_ in range(1, index_k+1):
-                                    total_column_concentration += (Conversions.convertToFloat(output_data['sk'][z_])*concentration_matrix_reshaped[z_-1,:,:].squeeze())/\
-                                        Conversions.convertToFloat(output_data['sk'][index_k])
+                                    total_column_concentration += (conversion.convertToFloat(output_data['sk'][z_])*concentration_matrix_reshaped[z_-1,:,:].squeeze())/\
+                                        conversion.convertToFloat(output_data['sk'][index_k])
                                 self._data_y.append(np.mean(total_column_concentration))
                                 self._data_y_max.append(np.max(total_column_concentration))
 
@@ -229,9 +222,9 @@ class TableViewDispersionModule(OutputModule):
                                 if time_counter == 1:
                                     pollutant_list.append((" ").join([pollutant_, "[",self._units, "]"]))
 
-                                index_i = Conversions.convertToInt(output_data['hghb'][0]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # columns
-                                index_j = Conversions.convertToInt(output_data['hghb'][1]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # rows
-                                index_k = Conversions.convertToInt(output_data['hghb'][2]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # z
+                                index_i = conversion.convertToInt(output_data['hghb'][0]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # columns
+                                index_j = conversion.convertToInt(output_data['hghb'][1]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # rows
+                                index_k = conversion.convertToInt(output_data['hghb'][2]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # z
 
                                 concentration_matrix_reshaped = np.reshape(concentration_matrix, (index_k, index_j, index_i))
 
@@ -242,8 +235,8 @@ class TableViewDispersionModule(OutputModule):
                                     # take the concentration up tp Kmax: <c> = c1*H1/(H1+H2+H3+...) + c2*H2/(H1+H2+H3+...) + c3*H3/(H1+H2+H3+...) + ...
                                     total_column_concentration = np.zeros(shape=(index_j, index_i))
                                     for z_ in range(1, index_k+1):
-                                        total_column_concentration += (Conversions.convertToFloat(output_data['sk'][z_])*concentration_matrix_reshaped[z_-1,:,:].squeeze())/\
-                                            Conversions.convertToFloat(output_data['sk'][index_k])
+                                        total_column_concentration += (conversion.convertToFloat(output_data['sk'][z_])*concentration_matrix_reshaped[z_-1,:,:].squeeze())/\
+                                            conversion.convertToFloat(output_data['sk'][index_k])
                                     self._data_y.append(np.mean(total_column_concentration))
                                     self._data_y_max.append(np.max(total_column_concentration))
 
@@ -323,6 +316,7 @@ class TableViewDispersionModule(OutputModule):
             CSVInterface.writeCSV(csv_path, self._rows)
 
         return self._widget
+
 
 class TableViewWidget(QtWidgets.QDialog):
     """

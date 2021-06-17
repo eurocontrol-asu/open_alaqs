@@ -1,23 +1,26 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-try:
-    from . import __init__
-    from . import Constant
-except:
-    import __init__
-    import Constant
-
+import copy
 import logging
-logger = logging.getLogger("alaqs.%s" % (__name__))
+from dataclasses import dataclass
 
-import sys
 import numpy as np
 from numpy import empty_like, dot
-import copy
-from collections import OrderedDict
 
-def perp( a ) :
+logger = logging.getLogger("alaqs.%s" % __name__)
+
+
+@dataclass(init=False, frozen=True)
+class _Constants:
+    """
+    An immutable dataclass for constants
+
+    """
+    epsilon: float = 1e-4
+
+
+constants = _Constants()
+
+
+def perp(a):
     b = empty_like(a)
     b[0] = -a[1]
     b[1] = a[0]
@@ -150,7 +153,9 @@ def plotEmissionIndex(pollutant, icao_eedb) :
     # plt.close("all")
 
 # def calculateEmissionIndex(pollutant, fuel_flow, icao_eedb, ambient_conditions=None, installation_corrections = None):
-def calculateEmissionIndex(pollutant, fuel_flow, icao_eedb, ambient_conditions={}, installation_corrections = {}):
+def calculateEmissionIndex(pollutant, fuel_flow, icao_eedb,
+                           ambient_conditions=None,
+                           installation_corrections=None):
     """
     Calculates the emission index associated to a particular fuel flow with the BFFM2 method
     :param pollutant: str either "NOx", "CO", or "HC"
@@ -175,6 +180,10 @@ def calculateEmissionIndex(pollutant, fuel_flow, icao_eedb, ambient_conditions={
     # Climbout       85                  1.013
     # Approach       30                  1.020
     # Idle           7                   1.100
+    if installation_corrections is None:
+        installation_corrections = {}
+    if ambient_conditions is None:
+        ambient_conditions = {}
     icao_eedb = copy.deepcopy(icao_eedb)
 
     # installation_corrections_ = {
@@ -291,27 +300,27 @@ def calculateEmissionIndex(pollutant, fuel_flow, icao_eedb, ambient_conditions={
     for ik, ival in list(icao_eedb[pollutant]['Idle'].items()):
         if icao_eedb[pollutant]['Idle'][ik] == 0:
             idle_check = 0
-            # logger.debug("7%% EI is zero, setting to %f" % (Constant.CONST.EPSILON))
-            icao_eedb[pollutant]['Idle'][ik] = Constant.CONST.EPSILON*10
+            # logger.debug("7%% EI is zero, setting to %f" % (constants.epsilon))
+            icao_eedb[pollutant]['Idle'][ik] = constants.epsilon * 10
 
     # elif ikey == 'Approach':
     for ik, ival in list(icao_eedb[pollutant]['Approach'].items()):
         if icao_eedb[pollutant]['Approach'][ik] == 0 and idle_check > 0:
-            # logger.debug("30%% EI is zero, but 7%% EI is not zero, setting 30%% EI to %f" % (Constant.CONST.EPSILON))
-            icao_eedb[pollutant]['Approach'][ik] = Constant.CONST.EPSILON*10
+            # logger.debug("30%% EI is zero, but 7%% EI is not zero, setting 30%% EI to %f" % (constants.epsilon))
+            icao_eedb[pollutant]['Approach'][ik] = constants.epsilon*10
         elif icao_eedb[pollutant]['Approach'][ik] == 0 and idle_check == 0:
-            # logger.debug("30%% EI is zero, but 7%% EI was zero, setting 30%% EI to %f" % (Constant.CONST.EPSILON))
-            icao_eedb[pollutant]['Approach'][ik] = Constant.CONST.EPSILON
+            # logger.debug("30%% EI is zero, but 7%% EI was zero, setting 30%% EI to %f" % (constants.epsilon))
+            icao_eedb[pollutant]['Approach'][ik] = constants.epsilon
 
     # For the 85 and 100 power points or if all power point EIs are zero, any value <= 10-4 should suffice.
     # elif ikey == 'Climbout':
         for ik, ival in list(icao_eedb[pollutant]['Climbout'].items()):
             if icao_eedb[pollutant]['Climbout'][ik] == 0:
-                icao_eedb[pollutant]['Climbout'][ik] = Constant.CONST.EPSILON
+                icao_eedb[pollutant]['Climbout'][ik] = constants.epsilon
     # elif ikey == 'Takeoff':
         for ik, ival in list(icao_eedb[pollutant]['Takeoff'].items()):
             if icao_eedb[pollutant]['Takeoff'][ik] == 0:
-                icao_eedb[pollutant]['Takeoff'][ik] = Constant.CONST.EPSILON
+                icao_eedb[pollutant]['Takeoff'][ik] = constants.epsilon
 
     # These solutions are reasonable since the zero values in the ICAO data likely represents small
     # values that were rounded to zero as opposed to actually implying zero emissions.
@@ -330,7 +339,7 @@ def calculateEmissionIndex(pollutant, fuel_flow, icao_eedb, ambient_conditions={
         logger.error(icao_eedb[pollutant])
         return 0.
 
-    x_ff_log = np.log10(FF_ref if FF_ref else Constant.CONST.EPSILON)
+    x_ff_log = np.log10(FF_ref if FF_ref else constants.epsilon)
 
     # logger.debug('Log Fuel Flow: ' + "%.2f" % x_ff_log)
 
@@ -435,7 +444,7 @@ def calculateEmissionIndex(pollutant, fuel_flow, icao_eedb, ambient_conditions={
         # logger.debug('\t EI corresponding to this reference Fuel Flow: ' + "%.4f" % 10**(y_ff_log))
 
     if y_ff_log is None or np.isnan(y_ff_log):
-        y_ff_log = np.log10(Constant.CONST.EPSILON)
+        y_ff_log = np.log10(constants.epsilon)
         # print "\t log(EI<>_ref): %s"%y_ff_log
 
     #####################################################################################################################
@@ -445,18 +454,18 @@ def calculateEmissionIndex(pollutant, fuel_flow, icao_eedb, ambient_conditions={
     if pollutant.lower() == "nox":
     # EI = NOx EI at non-reference conditions (g/kg)
     # EINOx_ref = NOx EI at reference conditions (g/kg)
-        EINOx_ref = 10**(y_ff_log) if 10**(y_ff_log)>Constant.CONST.EPSILON else 0.
+        EINOx_ref = 10**(y_ff_log) if 10**(y_ff_log)>constants.epsilon else 0.
         EI = EINOx_ref * np.exp(H) * ( delta**1.02 / theta**3.3 )**y
         # print "EINOx_ref %s"%EINOx_ref
     elif pollutant.lower() == "co":
         # EI = CO EI at non-reference conditions (g/kg)
-        EICO_ref = 10**(y_ff_log) if 10**(y_ff_log)>Constant.CONST.EPSILON else 0. # CO EI at reference conditions (g/kg)
+        EICO_ref = 10**(y_ff_log) if 10**(y_ff_log)>constants.epsilon else 0. # CO EI at reference conditions (g/kg)
         EI = EICO_ref * (theta**3.3/delta**1.02)**x
         # print "EICO_ref %s"%EICO_ref
 
     elif pollutant.lower()=="hc":
         # EI = THC EI at non-reference conditions (g/kg)
-        EITHC_ref = 10**(y_ff_log) if 10**(y_ff_log)>Constant.CONST.EPSILON else 0. # HC EI at reference conditions (g/kg)
+        EITHC_ref = 10**(y_ff_log) if 10**(y_ff_log)>constants.epsilon else 0. # HC EI at reference conditions (g/kg)
         EI = float(EITHC_ref) * (theta**3.3/delta**1.02)**x
 
     emission_index = EI[0] if (type(EI) is np.ndarray and EI.size == 1) else EI # in kg/s
@@ -467,7 +476,15 @@ def calculateEmissionIndex(pollutant, fuel_flow, icao_eedb, ambient_conditions={
     return emission_index
 
 
-def plotEmissionIndexNominal(pollutant, icao_eedb, ambient_conditions={}, installation_corrections={}, range_relative_fuelflow=(0.50, 1.5), steps=101, suffix="", multipage={}, title=""):
+def plotEmissionIndexNominal(pollutant, icao_eedb, ambient_conditions=None,
+                             installation_corrections=None, range_relative_fuelflow=(0.50, 1.5), steps=101, suffix="",
+                             multipage=None, title=""):
+    if multipage is None:
+        multipage = {}
+    if installation_corrections is None:
+        installation_corrections = {}
+    if ambient_conditions is None:
+        ambient_conditions = {}
     import matplotlib
     matplotlib.use('Qt5Agg')
     import matplotlib.pyplot as plt
@@ -534,75 +551,75 @@ def plotEmissionIndexNominal(pollutant, icao_eedb, ambient_conditions={}, instal
 
     # plt.close("all")
 
-if __name__ == "__main__":
-    # create a logger for this module
-    # logger.setLevel(logging.DEBUG)
-    # # create console handler and set level to debug
-    # ch = logging.StreamHandler()
-    # ch.setLevel(logging.DEBUG)
-    # # create formatter
-    # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # # add formatter to ch
-    # ch.setFormatter(formatter)
-    # # add ch to logger
-    # logger.addHandler(ch)
-
-    # Input conditions for this example are:
-    pollutant = "NOx"
-
-    # # Example: These values correspond to a cruise point or segment of a flight trajectory using the Trent 892 engine with an ICAO UID of 2RR027
-    # # For each pollutant, the reference FF (non-adjusted) and EI are given
-
-    # Engine	1CM008 (CFM56-5-A1)
-    # Engine fuel flow rate (in kg/s at reference conditions)
-    # fuel_flow = 0.882 # Engine fuel flow rate = 0.882 # in kg/s (or 7000 lb/hr/engine)
-    fuel_flow = 0.319894549
-    ff_to = 1.051
-    ff_co = 0.862
-    ff_app = 0.291
-    ff_idle = 0.1011
-
-    icao_values = {
-        'CO': OrderedDict({'Idle': {ff_idle: 17.6}, 'Approach': {ff_app: 2.5}, 'Climbout': {ff_co: 0.9}, 'Takeoff': {ff_to: 0.9}}),
-        'NOx': OrderedDict({'Idle': {ff_idle: 4.0}, 'Approach': {ff_app: 8.0}, 'Climbout': {ff_co: 19.6}, 'Takeoff': {ff_to: 24.6}}),
-        'HC': OrderedDict({'Idle': {ff_idle: 1.4}, 'Approach': {ff_app: 0.4}, 'Climbout': {ff_co: 0.23}, 'Takeoff': {ff_to: 0.23}})
-    }
-
-    # Altitude = 39000 # in ft
-    # Standard day (ISA conditions)
-    ambient_conditions = {
-    "temperature_in_Kelvin":288.15, #ISA conditions
-    "pressure_in_Pa":1013.25*100., #ISA conditions
-    "relative_humidity":0.6, #normal day at ISA conditions
-    "mach_number":0.779999728 #ground or laboratory
-    # "humidity_ratio_in_kg_water_per_kg_dry_air":0.00634 #ISA default
-    }
-
-    # ambient_conditions = {
-    #         "temperature_in_Kelvin":216.65,
-    #         "pressure_in_Pa":19677,
-    #         "mach_number":0.84,
-    #         "relative_humidity":0.60,
-    #         #either relative humidity or absolute humidity ratio has to be defined
-    #         # "humidity_ratio_in_kg_water_per_kg_dry_air":0.000053
-    #     }
-
-    # ambient_conditions = {}
-
-    installation_corrections = {
-            "Takeoff":1.010,    # 100%
-            "Climbout":1.013,   # 85%
-            "Approach":1.020,   # 30%
-            "Idle":1.100        # 7%
-        }
-
-    #Don't correct for installation
-    # installation_corrections = {}
-
-    #logger.info("Calculated emission index '%s' for fuel flow '%.2f' is '%.2f'" % (pollutant, fuel_flow, calculateEmissionIndex(pollutant, fuel_flow, icao_values, ambient_conditions=ambient_conditions, installation_corrections=installation_corrections)))
-
-    # fix_print_with_import
-    print(calculateEmissionIndex(pollutant, fuel_flow, icao_values, ambient_conditions=ambient_conditions, installation_corrections=installation_corrections))
-
-    plotEmissionIndex(pollutant, icao_values)
-    plotEmissionIndexNominal(pollutant, icao_values, ambient_conditions=ambient_conditions, installation_corrections=installation_corrections, range_relative_fuelflow=[1.00, 1.0], steps=51, suffix="")
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     # logger.setLevel(logging.DEBUG)
+#     # # create console handler and set level to debug
+#     # ch = logging.StreamHandler()
+#     # ch.setLevel(logging.DEBUG)
+#     # # create formatter
+#     # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # # add formatter to ch
+#     # ch.setFormatter(formatter)
+#     # # add ch to logger
+#     # logger.addHandler(ch)
+#
+#     # Input conditions for this example are:
+#     pollutant = "NOx"
+#
+#     # # Example: These values correspond to a cruise point or segment of a flight trajectory using the Trent 892 engine with an ICAO UID of 2RR027
+#     # # For each pollutant, the reference FF (non-adjusted) and EI are given
+#
+#     # Engine	1CM008 (CFM56-5-A1)
+#     # Engine fuel flow rate (in kg/s at reference conditions)
+#     # fuel_flow = 0.882 # Engine fuel flow rate = 0.882 # in kg/s (or 7000 lb/hr/engine)
+#     fuel_flow = 0.319894549
+#     ff_to = 1.051
+#     ff_co = 0.862
+#     ff_app = 0.291
+#     ff_idle = 0.1011
+#
+#     icao_values = {
+#         'CO': OrderedDict({'Idle': {ff_idle: 17.6}, 'Approach': {ff_app: 2.5}, 'Climbout': {ff_co: 0.9}, 'Takeoff': {ff_to: 0.9}}),
+#         'NOx': OrderedDict({'Idle': {ff_idle: 4.0}, 'Approach': {ff_app: 8.0}, 'Climbout': {ff_co: 19.6}, 'Takeoff': {ff_to: 24.6}}),
+#         'HC': OrderedDict({'Idle': {ff_idle: 1.4}, 'Approach': {ff_app: 0.4}, 'Climbout': {ff_co: 0.23}, 'Takeoff': {ff_to: 0.23}})
+#     }
+#
+#     # Altitude = 39000 # in ft
+#     # Standard day (ISA conditions)
+#     ambient_conditions = {
+#     "temperature_in_Kelvin":288.15, #ISA conditions
+#     "pressure_in_Pa":1013.25*100., #ISA conditions
+#     "relative_humidity":0.6, #normal day at ISA conditions
+#     "mach_number":0.779999728 #ground or laboratory
+#     # "humidity_ratio_in_kg_water_per_kg_dry_air":0.00634 #ISA default
+#     }
+#
+#     # ambient_conditions = {
+#     #         "temperature_in_Kelvin":216.65,
+#     #         "pressure_in_Pa":19677,
+#     #         "mach_number":0.84,
+#     #         "relative_humidity":0.60,
+#     #         #either relative humidity or absolute humidity ratio has to be defined
+#     #         # "humidity_ratio_in_kg_water_per_kg_dry_air":0.000053
+#     #     }
+#
+#     # ambient_conditions = {}
+#
+#     installation_corrections = {
+#             "Takeoff":1.010,    # 100%
+#             "Climbout":1.013,   # 85%
+#             "Approach":1.020,   # 30%
+#             "Idle":1.100        # 7%
+#         }
+#
+#     #Don't correct for installation
+#     # installation_corrections = {}
+#
+#     #logger.info("Calculated emission index '%s' for fuel flow '%.2f' is '%.2f'" % (pollutant, fuel_flow, calculateEmissionIndex(pollutant, fuel_flow, icao_values, ambient_conditions=ambient_conditions, installation_corrections=installation_corrections)))
+#
+#     # fix_print_with_import
+#     print(calculateEmissionIndex(pollutant, fuel_flow, icao_values, ambient_conditions=ambient_conditions, installation_corrections=installation_corrections))
+#
+#     plotEmissionIndex(pollutant, icao_values)
+#     plotEmissionIndexNominal(pollutant, icao_values, ambient_conditions=ambient_conditions, installation_corrections=installation_corrections, range_relative_fuelflow=[1.00, 1.0], steps=51, suffix="")

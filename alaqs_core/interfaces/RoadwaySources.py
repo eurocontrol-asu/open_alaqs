@@ -1,28 +1,20 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-from . import __init__ #setup the paths for direct calls of the module
-from future.utils import with_metaclass
-
-__author__ = 'ENVISA'
-
 import logging
-logger = logging.getLogger("__alaqs__.%s" % (__name__))
-
-import sys, os
+import os
 from collections import OrderedDict
 
-from .SQLSerializable import SQLSerializable
-from .Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.tools import Spatial
 
-from .Store import Store
-from .Emissions import EmissionIndex
+logger = logging.getLogger("__alaqs__.%s" % __name__)
 
-from tools import Spatial
 
-class RoadwaySources(object):
-    def __init__(self, val={}):
+class RoadwaySources:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         self._id = str(val["roadway_id"]) if "roadway_id" in val else None
         self._vehicle_year = float(val["vehicle_year"]) if "vehicle_year" in val else 0.
 
@@ -151,12 +143,15 @@ class RoadwaySources(object):
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 
-class RoadwaySourcesStore(with_metaclass(Singleton, Store)):
+
+class RoadwaySourcesStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'RoadwaySources' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
@@ -187,7 +182,8 @@ class RoadwaySourcesStore(with_metaclass(Singleton, Store)):
     def getRoadwaySourcesDatabase(self):
         return self._roadway_db
 
-class RoadwaySourcesDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class RoadwaySourcesDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to roadway shape file in the spatialite database
     """
@@ -195,65 +191,72 @@ class RoadwaySourcesDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="shapes_roadways",
-                 table_columns_type_dict=OrderedDict([
-                    ("oid" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("roadway_id" , "TEXT"),
-                    ("vehicle_year" , "DECIMAL"),
-                    ("height" , "DECIMAL"),
-                    ("distance" , "DECIMAL"),
-                    ("speed" , "DECIMAL"),
-                    ("vehicle_light" , "DECIMAL"),
-                    ("vehicle_medium" , "DECIMAL"),
-                    ("vehicle_heavy" , "DECIMAL"),
-                    ("hour_profile" , "TEXT"),
-                    ("daily_profile" , "TEXT"),
-                    ("month_profile" , "TEXT"),
-                    ("co_gm_km" , "DECIMAL"),
-                    ("hc_gm_km" , "DECIMAL"),
-                    ("nox_gm_km" , "DECIMAL"),
-                    ("sox_gm_km" , "DECIMAL"),
-                    ("pm10_gm_km" , "DECIMAL"),
-                    ("p1_gm_km" , "DECIMAL"),
-                    ("p2_gm_km" , "DECIMAL"),
-                    ("method" , "TEXT"),
-                    ("scenario" , "TEXT"),
-                    ("instudy" , "DECIMAL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="",
-                 geometry_columns=[{
-                    "column_name":"geometry",
-                    "SRID":3857,
-                    "geometry_type":"LINESTRING",
-                    "geometry_type_dimension":2
-                 }]
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 geometry_columns=None
+                 ):
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("roadway_id", "TEXT"),
+                ("vehicle_year", "DECIMAL"),
+                ("height", "DECIMAL"),
+                ("distance", "DECIMAL"),
+                ("speed", "DECIMAL"),
+                ("vehicle_light", "DECIMAL"),
+                ("vehicle_medium", "DECIMAL"),
+                ("vehicle_heavy", "DECIMAL"),
+                ("hour_profile", "TEXT"),
+                ("daily_profile", "TEXT"),
+                ("month_profile", "TEXT"),
+                ("co_gm_km", "DECIMAL"),
+                ("hc_gm_km", "DECIMAL"),
+                ("nox_gm_km", "DECIMAL"),
+                ("sox_gm_km", "DECIMAL"),
+                ("pm10_gm_km", "DECIMAL"),
+                ("p1_gm_km", "DECIMAL"),
+                ("p2_gm_km", "DECIMAL"),
+                ("method", "TEXT"),
+                ("scenario", "TEXT"),
+                ("instudy", "DECIMAL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = [{
+                "column_name": "geometry",
+                "SRID": 3857,
+                "geometry_type": "LINESTRING",
+                "geometry_type_dimension": 2
+            }]
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path:
             self.deserialize()
 
-if __name__ == "__main__":
-    # create a logger for this module
-    #logging.basicConfig(level=logging.DEBUG)
-
-    # logger.setLevel(logging.DEBUG)
-    # # create console handler and set level to debug
-    # ch = logging.StreamHandler()
-    # if loaded_color_logger:
-    #     ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
-    #
-    # ch.setLevel(logging.DEBUG)
-    # # create formatter
-    # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # # add formatter to ch
-    # ch.setFormatter(formatter)
-    # # add ch to logger
-    # logger.addHandler(ch)
-
-    path_to_database = os.path.join("..", "..", "example", "ex_out.alaqs")
-
-    store = RoadwaySourcesStore(path_to_database)
-    for roadway_name, roadway in list(store.getObjects().items()):
-        # fix_print_with_import
-        print(roadway_name, roadway)
-        # logger.debug(roadway)
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     #logging.basicConfig(level=logging.DEBUG)
+#
+#     # logger.setLevel(logging.DEBUG)
+#     # # create console handler and set level to debug
+#     # ch = logging.StreamHandler()
+#     # if loaded_color_logger:
+#     #     ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
+#     #
+#     # ch.setLevel(logging.DEBUG)
+#     # # create formatter
+#     # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # # add formatter to ch
+#     # ch.setFormatter(formatter)
+#     # # add ch to logger
+#     # logger.addHandler(ch)
+#
+#     path_to_database = os.path.join("..", "..", "example", "ex_out.alaqs")
+#
+#     store = RoadwaySourcesStore(path_to_database)
+#     for roadway_name, roadway in list(store.getObjects().items()):
+#         # fix_print_with_import
+#         print(roadway_name, roadway)
+#         # logger.debug(roadway)

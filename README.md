@@ -93,6 +93,10 @@ To use this project, first clone the repo on your device using the command below
 
 <!-- This is optional and it is used to give the user info on how to use the project after installation. This could be added in the Installation section also. -->
 
+Find a case in the `example\CAEPport` folder.
+
+Load an OpenALAQS project using `example\CAEPport\CAEPport.alaqs`.
+
 # Development
 [(Back to top)](#table-of-contents)
 
@@ -103,6 +107,18 @@ You could give **instructions in depth** of **how the code works** and how every
 You could also give specific instructions to how they can setup their development environment.
 
 Ideally, you should keep the README simple. If you need to add more complex explanations, use a wiki. Check out [this wiki](https://github.com/navendu-pottekkat/nsfw-filter/wiki) for inspiration. -->
+
+## Updating the UI
+
+If you want to edit the UI, install [pyqt-tools](https://github.com/altendky/pyqt-tools) using `pip install pyqt5-tools~=5.15` and start the designer using `pyqt5-tools designer`.
+After making changes to any `ui/ui_*.ui` files, you should update the matching `ui/ui_*.py` file by executing the pyuic5 command.
+For example, the following command should be used to update the about widget:
+
+```shell
+pyuic5 -o ui/ui_about.py --from-imports ui/ui_about.ui
+```
+
+> Pro tip: if you want to view the interface without running QGIS, you can use the following command: `pyuic5 --preview ui/ui_about.ui`
 
 # Contribute
 [(Back to top)](#table-of-contents)

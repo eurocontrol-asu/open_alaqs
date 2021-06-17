@@ -1,11 +1,12 @@
-from __future__ import absolute_import
-from . import __init__
-from PyQt5 import QtWidgets
-
 import csv
-import sys, os
+import os
 
-import alaqslogging
+import pandas as pd
+import geopandas as gpd
+from shapely.wkt import loads
+
+from open_alaqs.alaqs_core import alaqslogging
+
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('DEBUG')
 file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
@@ -14,10 +15,6 @@ formatter = alaqslogging.logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-import pandas as pd
-import geopandas as gpd
-from shapely.wkt import loads
-import time
 
 def writeCSV(path, rows):
     path_to_file = path#[0]

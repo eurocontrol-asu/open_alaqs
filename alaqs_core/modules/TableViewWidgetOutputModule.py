@@ -1,24 +1,10 @@
-from __future__ import absolute_import
-from builtins import str
-# from . import __init__ #setup the paths for direct calls of the module
+from PyQt5 import QtWidgets
 
-import os
-import alaqsutils           # For logging and conversion of data types
-import alaqsdblite          # Functions for working with ALAQS database
-# import logging              # For unit testing. Can be commented out for distribution
-import os
-import sys
+from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
+from open_alaqs.alaqs_core.modules.ui.TableViewDialog import Ui_TableViewDialog
+from open_alaqs.alaqs_core.tools import conversion
 
-#from PyQt4 import QtCore
-# from qgis.PyQt import QtGui, QtWidgets
-from PyQt5 import QtCore, QtGui, QtWidgets
-#from PyQt4.QtCore import *
-
-from interfaces.OutputModule import OutputModule
-from modules.ui.TableViewDialog import Ui_TableViewDialog
-from tools import Conversions
-
-import alaqslogging
 # logger = logging.getLogger(__name__)
 logger = alaqslogging.logging.getLogger(__name__)
 # To override the default severity of logging
@@ -31,6 +17,7 @@ file_handler.setFormatter(formatter)
 # Don't forget to add the file handler
 logger.addHandler(file_handler)
 
+
 class TableViewWidgetOutputModule(OutputModule):
     """
     Module to plot results of emission calculation in a table
@@ -40,16 +27,23 @@ class TableViewWidgetOutputModule(OutputModule):
     def getModuleName():
         return "TableViewWidgetOutputModule"
 
-    def __init__(self, values_dict = {}):
+    def __init__(self, values_dict = None):
+        if values_dict is None:
+            values_dict = {}
         OutputModule.__init__(self, values_dict)
 
-        #Widget configuration
-        self._parent = values_dict["parent"] if "parent" in values_dict else None
+        # Widget configuration
+        self._parent = values_dict[
+            "parent"] if "parent" in values_dict else None
 
-        #Results analysis
-        self._time_start = Conversions.convertStringToDateTime(values_dict["Start (incl.)"]) if "Start (incl.)" in values_dict else ""
-        self._time_end = Conversions.convertStringToDateTime(values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
-        self._pollutant = values_dict["pollutant"] if "pollutant" in values_dict else None
+        # Results analysis
+        self._time_start = ""
+        if "Start (incl.)" in values_dict:
+            self._time_start = \
+                conversion.convertStringToDateTime(values_dict["Start (incl.)"])
+        self._time_end = conversion.convertStringToDateTime(
+            values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
+        self._pollutant = values_dict.get("pollutant")
 
         self._widget = TableViewWidget(self._parent)
 
@@ -115,6 +109,7 @@ class TableViewWidgetOutputModule(OutputModule):
     def endJob(self):
         self._widget.resizeToContent()
         return self._widget
+
 
 class TableViewWidget(QtWidgets.QDialog):
     """

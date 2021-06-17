@@ -1,14 +1,9 @@
+from PyQt5 import QtCore, QtWidgets
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-# from PyQt5.QtCore import Qt
-
-from qgis.gui import QgsEditorWidgetWrapper
-
-import alaqs
-import alaqsutils
-
-# from libALAQSMethod import roadway_emission_factors_alaqs_method
-from tools.libALAQSMethod import roadway_emission_factors_alaqs_method
+from open_alaqs.alaqs_core import alaqs
+from open_alaqs.alaqs_core import alaqsutils
+from open_alaqs.alaqs_core.tools.libALAQSMethod import \
+    roadway_emission_factors_alaqs_method
 
 form = None
 name_field = None

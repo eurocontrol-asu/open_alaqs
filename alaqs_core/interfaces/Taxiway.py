@@ -1,11 +1,14 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-from future.utils import with_metaclass
-__author__ = 'ENVISA'
-import alaqslogging
 import logging
+from collections import OrderedDict
+
+from shapely import geometry
+from shapely.wkt import loads
+
+from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.tools import Spatial
 
 # logger = logging.getLogger(__name__)
 logger = alaqslogging.logging.getLogger(__name__)
@@ -19,30 +22,11 @@ file_handler.setFormatter(formatter)
 # Don't forget to add the file handler
 logger.addHandler(file_handler)
 
-import os
-import sys
-from collections import OrderedDict
 
-try:
-    from .SQLSerializable import SQLSerializable
-    from .Singleton import Singleton
-    from .Store import Store
-    from .Emissions import EmissionIndex
-except:
-    from SQLSerializable import SQLSerializable
-    from Singleton import Singleton
-    from Store import Store
-    from Emissions import EmissionIndex
-
-from tools import Spatial
-from tools import Conversions
-
-# ToDo: add this properly to avoid repetition
-from shapely.wkt import loads
-from shapely import geometry
-
-class TaxiwayRoute(object):
-    def __init__(self, val={}):
+class TaxiwayRoute:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         self._id = str(val["route_name"]) if "route_name" in val else None
         self._gate = str(val["gate"]) if "gate" in val else None
         self._runway = str(val["runway"]) if "runway" in val else None
@@ -115,8 +99,11 @@ class TaxiwayRoute(object):
 
         return val
 
-class TaxiwaySegment(object):
-    def __init__(self, val={}):
+
+class TaxiwaySegment:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         self._id = str(val["taxiway_id"]) if "taxiway_id" in val else None
         self._height = float(val["height"]) if "height" in val and not val["height"] is None else 0.
 
@@ -130,7 +117,7 @@ class TaxiwaySegment(object):
 
         if self._geometry_text and not self._height is None:
             self.setGeometryText(Spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
-            self._length = Spatial.getDistanceOfLineStringXY(self.getGeometryText(), EPSG_id_source=3857, EPSG_id_target=4326)
+            self._length = Spatial.getDistanceOfLineStringXY(self.getGeometryText(), epsg_id_source=3857, epsg_id_target=4326)
 
         self._time_in_s = 0.
         if not self._length is None:
@@ -185,12 +172,15 @@ class TaxiwaySegment(object):
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 
-class TaxiwayRoutesStore(with_metaclass(Singleton, Store)):
+
+class TaxiwayRoutesStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'TaxiwayRoute' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
@@ -230,12 +220,15 @@ class TaxiwayRoutesStore(with_metaclass(Singleton, Store)):
 
             self.setObject(_dict["route_name"] if "route_name" in _dict else "unknown", taxiway_route)
 
-class TaxiwaySegmentsStore(with_metaclass(Singleton, Store)):
+
+class TaxiwaySegmentsStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'Taxiway' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
@@ -257,7 +250,8 @@ class TaxiwaySegmentsStore(with_metaclass(Singleton, Store)):
                 taxiway = TaxiwaySegment(taxiway_dict)
                 self.setObject(taxiway_dict["taxiway_id"] if "taxiway_id" in taxiway_dict else "unknown", taxiway)
 
-class TaxiwaySegmentsDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class TaxiwaySegmentsDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to taxiway shape file in the spatialite database
     """
@@ -265,27 +259,34 @@ class TaxiwaySegmentsDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="shapes_taxiways",
-                 table_columns_type_dict=OrderedDict([
-                    ("oid" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("taxiway_id" , "TEXT"),
-                    ("speed" , "DECIMAL"),
-                    ("time" , "DECIMAL"),
-                    ("instudy" , "DECIMAL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="",
-                 geometry_columns=[{
-                    "column_name":"geometry",
-                    "SRID":3857,
-                    "geometry_type":"POLYGON",
-                    "geometry_type_dimension":2
-                 }]
-        ):
+                 geometry_columns=None
+                 ):
+
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("taxiway_id", "TEXT"),
+                ("speed", "DECIMAL"),
+                ("time", "DECIMAL"),
+                ("instudy", "DECIMAL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = [{
+                "column_name": "geometry",
+                "SRID": 3857,
+                "geometry_type": "POLYGON",
+                "geometry_type_dimension": 2
+            }]
+
         SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
 
         if self._db_path:
             self.deserialize()
 
-class TaxiwayRouteDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class TaxiwayRouteDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to taxiway shape file in the spatialite database
     """
@@ -293,40 +294,49 @@ class TaxiwayRouteDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="user_taxiroute_taxiways",
-                 table_columns_type_dict=OrderedDict([
-                    ("oid" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("gate" , "TEXT"),
-                    ("route_name" , "TEXT"),
-                    ("runway" , "TEXT"),
-                    ("departure_arrival" , "VARCHAR(1)"),
-                    ("instance_id" , "INTEGER"),
-                    ("sequence" , "TEXT"),
-                    ("groups" , "TEXT")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="",
-                 geometry_columns=[]
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 geometry_columns=None
+                 ):
+
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("gate", "TEXT"),
+                ("route_name", "TEXT"),
+                ("runway", "TEXT"),
+                ("departure_arrival", "VARCHAR(1)"),
+                ("instance_id", "INTEGER"),
+                ("sequence", "TEXT"),
+                ("groups", "TEXT")
+            ])
+
+        if geometry_columns is None:
+            geometry_columns = []
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path:
             self.deserialize()
 
-if __name__ == "__main__":
-    # import alaqslogging
-    # logger.setLevel(logging.DEBUG)
-
-    path_to_database = os.path.join("..","..", "example/", "CAEPport_training", "caepport_out.alaqs")
-    if not os.path.isfile(path_to_database):
-        raise Exception("File %s doesn't exist !")
-    print("Running Open-ALAQS for file: %s"%path_to_database)
-
-    store = TaxiwaySegmentsStore(path_to_database)
-    for taxiway_name, taxiway_segment in list(store.getObjects().items()):
-        # taxiway_segment.setSpeed(10)
-        # fix_print_with_import
-        print(taxiway_segment.getName(), taxiway_segment.getSpeed())
-        # logger.debug(taxiway_segment)
-
-    # store = TaxiwayRoutesStore(path_to_database)
-    # for taxiway_name, taxiway_route in store.getObjects().items():
-    #     logger.debug(taxiway_route)
+# if __name__ == "__main__":
+#     # import alaqslogging
+#     # logger.setLevel(logging.DEBUG)
+#
+#     path_to_database = os.path.join("..","..", "example/", "CAEPport_training", "caepport_out.alaqs")
+#     if not os.path.isfile(path_to_database):
+#         raise Exception("File %s doesn't exist !")
+#     print("Running Open-ALAQS for file: %s"%path_to_database)
+#
+#     store = TaxiwaySegmentsStore(path_to_database)
+#     for taxiway_name, taxiway_segment in list(store.getObjects().items()):
+#         # taxiway_segment.setSpeed(10)
+#         # fix_print_with_import
+#         print(taxiway_segment.getName(), taxiway_segment.getSpeed())
+#         # logger.debug(taxiway_segment)
+#
+#     # store = TaxiwayRoutesStore(path_to_database)
+#     # for taxiway_name, taxiway_route in store.getObjects().items():
+#     #     logger.debug(taxiway_route)

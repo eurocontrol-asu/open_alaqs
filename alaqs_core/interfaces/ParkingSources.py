@@ -1,35 +1,28 @@
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-from . import __init__ #setup the paths for direct calls of the module
-from future.utils import with_metaclass
-
-
-__author__ = 'ENVISA'
 import logging
-loaded_color_logger= False
+import os
+from collections import OrderedDict
+
+from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.tools import Spatial
+
+loaded_color_logger = False
 try:
     from rainbow_logging_handler import RainbowLoggingHandler
     loaded_color_logger = True
 except ImportError:
-    loaded_color_logger= False
-#logger = logging.getLogger("__alaqs__.%s" % (__name__))
+    loaded_color_logger = False
+
+# logger = logging.getLogger("__alaqs__.%s" % (__name__))
 logger = logging.getLogger(__name__)
 
-import os
-import sys
-from collections import OrderedDict
 
-from .SQLSerializable import SQLSerializable
-from .Singleton import Singleton
-
-from .Store import Store
-from .Emissions import EmissionIndex
-
-from tools import Spatial
-
-class ParkingSources(object):
-    def __init__(self, val={}):
+class ParkingSources:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         self._id = str(val["parking_id"]) if "parking_id" in val else None
         self._vehicle_year = float(val["vehicle_year"]) if "vehicle_year" in val else 0.
 
@@ -148,28 +141,32 @@ class ParkingSources(object):
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 
-class ParkingSourcesStore(with_metaclass(Singleton, Store)):
+
+class ParkingSourcesStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'ParkingSources' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
 
-        #Engine Modes
+        # Engine Modes
         self._parking_db = None
-        if  "parking_db" in db:
+        if "parking_db" in db:
             if isinstance(db["parking_db"], ParkingSourcesDatabase):
                 self._parking_db = db["parking_db"]
-            elif isinstance(db["parking_db"], str) and os.path.isfile(db["parking_db"]):
+            elif isinstance(db["parking_db"], str) and os.path.isfile(
+                    db["parking_db"]):
                 self._parking_db = ParkingSourcesDatabase(db["parking_db"])
 
         if self._parking_db is None:
             self._parking_db = ParkingSourcesDatabase(db_path)
 
-        #instantiate all parking objects
+        # instantiate all parking objects
         self.initParkingSourcess()
 
     def initParkingSourcess(self):
@@ -180,7 +177,8 @@ class ParkingSourcesStore(with_metaclass(Singleton, Store)):
     def getParkingSourcesDatabase(self):
         return self._parking_db
 
-class ParkingSourcesDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class ParkingSourcesDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to parking shape file in the spatialite database
     """
@@ -188,64 +186,72 @@ class ParkingSourcesDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="shapes_parking",
-                 table_columns_type_dict=OrderedDict([
-                    ("oid" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("parking_id" , "TEXT"),
-                    ("height" , "DECIMAL"),
-                    ("distance" , "DECIMAL"),
-                    ("idle_time" , "DECIMAL"),
-                    ("park_time" , "DECIMAL"),
-                    ("vehicle_light" , "DECIMAL"),
-                    ("vehicle_medium" , "DECIMAL"),
-                    ("vehicle_heavy" , "DECIMAL"),
-                    ("vehicle_year" , "DECIMAL"),
-                    ("speed" , "DECIMAL"),
-                    ("hour_profile" , "TEXT"),
-                    ("daily_profile" , "TEXT"),
-                    ("month_profile" , "TEXT"),
-                    ("co_gm_vh" , "DECIMAL"),
-                    ("hc_gm_vh" , "DECIMAL"),
-                    ("nox_gm_vh" , "DECIMAL"),
-                    ("sox_gm_vh" , "DECIMAL"),
-                    ("pm10_gm_vh" , "DECIMAL"),
-                    ("p1_gm_vh" , "DECIMAL"),
-                    ("p2_gm_vh" , "DECIMAL"),
-                    ("method" , "TEXT"),
-                    ("instudy" , "DECIMAL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="",
-                 geometry_columns=[{
-                    "column_name":"geometry",
-                    "SRID":3857,
-                    "geometry_type":"POLYGON",
-                    "geometry_type_dimension":2
-                 }]
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 geometry_columns=None
+                 ):
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("parking_id", "TEXT"),
+                ("height", "DECIMAL"),
+                ("distance", "DECIMAL"),
+                ("idle_time", "DECIMAL"),
+                ("park_time", "DECIMAL"),
+                ("vehicle_light", "DECIMAL"),
+                ("vehicle_medium", "DECIMAL"),
+                ("vehicle_heavy", "DECIMAL"),
+                ("vehicle_year", "DECIMAL"),
+                ("speed", "DECIMAL"),
+                ("hour_profile", "TEXT"),
+                ("daily_profile", "TEXT"),
+                ("month_profile", "TEXT"),
+                ("co_gm_vh", "DECIMAL"),
+                ("hc_gm_vh", "DECIMAL"),
+                ("nox_gm_vh", "DECIMAL"),
+                ("sox_gm_vh", "DECIMAL"),
+                ("pm10_gm_vh", "DECIMAL"),
+                ("p1_gm_vh", "DECIMAL"),
+                ("p2_gm_vh", "DECIMAL"),
+                ("method", "TEXT"),
+                ("instudy", "DECIMAL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = [{
+                "column_name": "geometry",
+                "SRID": 3857,
+                "geometry_type": "POLYGON",
+                "geometry_type_dimension": 2
+            }]
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path:
             self.deserialize()
 
-if __name__ == "__main__":
-    # create a logger for this module
-    #logging.basicConfig(level=logging.DEBUG)
 
-    logger.setLevel(logging.DEBUG)
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    if loaded_color_logger:
-        ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
-
-    ch.setLevel(logging.DEBUG)
-    # create formatter
-    formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    # add ch to logger
-    logger.addHandler(ch)
-
-    path_to_database = os.path.join("..", "..", "example", "test_out.alaqs")
-
-    store = ParkingSourcesStore(path_to_database)
-    for parking_name, parking in list(store.getObjects().items()):
-        logger.debug(parking)
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     #logging.basicConfig(level=logging.DEBUG)
+#
+#     logger.setLevel(logging.DEBUG)
+#     # create console handler and set level to debug
+#     ch = logging.StreamHandler()
+#     if loaded_color_logger:
+#         ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
+#
+#     ch.setLevel(logging.DEBUG)
+#     # create formatter
+#     formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # add formatter to ch
+#     ch.setFormatter(formatter)
+#     # add ch to logger
+#     logger.addHandler(ch)
+#
+#     path_to_database = os.path.join("..", "..", "example", "test_out.alaqs")
+#
+#     store = ParkingSourcesStore(path_to_database)
+#     for parking_name, parking in list(store.getObjects().items()):
+#         logger.debug(parking)

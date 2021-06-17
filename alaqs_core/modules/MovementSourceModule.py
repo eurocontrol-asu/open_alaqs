@@ -1,14 +1,16 @@
 """
 This class provides the module to calculate emissions of movements.
 """
-from __future__ import absolute_import
-# from . import __init__
 
-# import logging
-# logger = logging.getLogger("alaqs.%s" % (__name__))
-import os, sys
-# import logging
-import alaqslogging
+import pandas as pd
+
+from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.interfaces.AmbientCondition import AmbientCondition
+from open_alaqs.alaqs_core.interfaces.Emissions import Emission
+from open_alaqs.alaqs_core.interfaces.Movement import MovementStore
+from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
+from open_alaqs.alaqs_core.tools import conversion
+
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('DEBUG')
 file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
@@ -17,17 +19,6 @@ formatter = alaqslogging.logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-import pandas as pd
-
-import alaqsutils           # For logging and conversion of data types
-import alaqsdblite          # Functions for working with ALAQS database
-
-from interfaces.SourceModule import SourceModule
-from interfaces.Movement import MovementStore, Movement
-from interfaces.Emissions import Emission
-from interfaces.AmbientCondition import AmbientCondition
-from tools import Conversions
-import time
 
 class MovementSourceModule(SourceModule):
     """
@@ -38,7 +29,9 @@ class MovementSourceModule(SourceModule):
     def getModuleName():
         return "MovementSource"
 
-    def __init__(self, values_dict = {}):
+    def __init__(self, values_dict=None):
+        if values_dict is None:
+            values_dict = {}
         SourceModule.__init__(self, values_dict)
 
         if not self.getDatabasePath() is None:
@@ -46,62 +39,70 @@ class MovementSourceModule(SourceModule):
 
         self._calculation_limit = {
             "max_height": 914.4,
-            "height_unit_in_feet":False
+            "height_unit_in_feet": False
         }
-        #self.limit = {}
 
         self._installation_corrections = {
-                        "Takeoff":1.010,    # 100%
-                        "Climbout":1.012,   # 85%
-                        "Approach":1.020,   # 30%
-                        "Idle":1.100        # 7%
+            "Takeoff": 1.010,  # 100%
+            "Climbout": 1.012,  # 85%
+            "Approach": 1.020,  # 30%
+            "Idle": 1.100  # 7%
         }
-        # self._installation_corrections = {}
 
         self._ambient_conditions = AmbientCondition()
 
-        # self._method = {"name": "BFFM2"} #method="linear_scaling", "matching", "bymode", "BFFM2"
-        if not ("Method" in values_dict):
+        if "Method" not in values_dict:
             values_dict["Method"] = {}
-        self._method = {"name": values_dict["Method"]["selected"] if ("selected" in values_dict["Method"] and "Method" in values_dict) else ""}
+        self._method = {
+            "name": values_dict["Method"].get("selected", "")
+        }
 
-        self._nox_correction = values_dict["Apply NOx corrections"] if ("Apply NOx corrections" in values_dict) else False
-        self._smooth_and_shift = values_dict["Source Dynamics"]["selected"] if "Source Dynamics" in values_dict and "selected" in values_dict["Source Dynamics"] else 'None'
-        self._reference_altitude = values_dict["reference_altitude"] if ("reference_altitude" in values_dict) else 0.0
-
+        self._nox_correction = values_dict.get("Apply NOx corrections", False)
+        self._smooth_and_shift = 'None'
+        if ("Source Dynamics" in values_dict) and (
+                "selected" in values_dict["Source Dynamics"]):
+            self._smooth_and_shift = values_dict["Source Dynamics"]["selected"]
+        self._reference_altitude = values_dict.get("reference_altitude", .0)
 
     def getMethod(self):
         return self._method
+
     def setMethod(self, var):
         self._method = var
 
     def getApplyNOxCorrection(self):
         return self._nox_correction
+
     def setApplyNOxCorrection(self, var):
         self._nox_correction = var
 
     def getApplySmoothAndShift(self):
         return self._smooth_and_shift
+
     def setApplySmoothAndShift(self, var):
         self._smooth_and_shift = var
 
     def getAirportAltitude(self):
         return self._reference_altitude
+
     def setAirportAltitude(self, var):
         self._reference_altitude = var
 
     def getCalculationLimit(self):
         return self._calculation_limit
+
     def setCalculationLimit(self, var):
         self._calculation_limit = var
 
     def getAmbientConditions(self):
         return self._ambient_conditions
+
     def setAmbientConditions(self, var):
         self._ambient_conditions = var
 
     def getInstallationCorrections(self):
         return self._installation_corrections
+
     def setInstallationCorrections(self, var):
         self._installation_corrections = var
 
@@ -161,7 +162,7 @@ class MovementSourceModule(SourceModule):
             self.getCalculationLimit()['max_height'] = ambient_conditions.getMixingHeight()
         except:
             # limit set by default to 3000 ft
-            self.getCalculationLimit()['max_height'] = Conversions.convertFeetToMeters(3000.)
+            self.getCalculationLimit()['max_height'] = conversion.convertFeetToMeters(3000.)
             logger.info("Taking default mixing height (3000ft) on %s"%startTimeSeries.getTimeAsDateTime())
 
         limit_ = self.getCalculationLimit()

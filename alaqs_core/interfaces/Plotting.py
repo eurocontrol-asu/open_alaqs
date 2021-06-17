@@ -1,15 +1,12 @@
-from __future__ import absolute_import
-from builtins import str
-from . import __init__ #setup the paths for direct calls of the module
-
-# import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 
-__author__ = 'ENVISA'
+matplotlib.use('Qt5Agg')
 
-def plotTrajectoryXZ(movements_list=[], isCartesian=True):
+
+def plotTrajectoryXZ(movements_list=None, isCartesian=True):
+    if movements_list is None:
+        movements_list = []
     withDashText = False
     if movements_list:
         import matplotlib as mpl

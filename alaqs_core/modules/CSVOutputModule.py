@@ -1,11 +1,12 @@
-from __future__ import absolute_import
-# from . import __init__ #setup the paths for direct calls of the module
-import __init__
-import sys, os
-import alaqsutils           # For logging and conversion of data types
-import alaqsdblite          # Functions for working with ALAQS database
+import os
 
-import alaqslogging
+from collections import OrderedDict
+from PyQt5 import QtWidgets
+
+from open_alaqs.alaqs_core.tools import CSVInterface
+from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
+from open_alaqs.alaqs_core import alaqslogging
+
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('DEBUG')
 file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
@@ -14,38 +15,39 @@ formatter = alaqslogging.logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-from collections import OrderedDict
-
-from tools import CSVInterface
-
-from interfaces.OutputModule import OutputModule
-
-# from qgis.PyQt import QtGui, QtWidgets
-from PyQt5 import QtCore, QtGui, QtWidgets
 
 class CSVOutputModule(OutputModule):
     """
-    Module to handle csv writeout of emission-calculation results (timestamp, source, total_emissions_)
+    Module to handle csv writes of emission-calculation results
+    (timestamp, source, total_emissions_)
     """
 
     @staticmethod
     def getModuleName():
         return "CSVOutputModule"
 
-    def __init__(self, values_dict = {}):
+    def __init__(self, values_dict=None):
+        if values_dict is None:
+            values_dict = {}
         OutputModule.__init__(self, values_dict)
-        self._isDetailedOutput = values_dict["detailed output"] if "detailed output" in values_dict else False
+        self._isDetailedOutput = values_dict.get("detailed output", False)
 
         self.setConfigurationWidget(OrderedDict([
-            ("detailed output" , QtWidgets.QCheckBox)
+            ("detailed output", QtWidgets.QCheckBox)
         ]))
 
         self.getConfigurationWidget().initValues({"detailed output": False})
 
-    def beginJob(self):
-        #initialize rows object
         self._rows = []
-        self._headers = [
+        self._headers = []
+
+    def beginJob(self):
+        """
+        Initialize the
+        """
+
+        # Initialize rows attribute with the header
+        self._rows = [
             "Time",
             "Source name",
             "CO [kg]",
@@ -62,15 +64,26 @@ class CSVOutputModule(OutputModule):
             "PM10Organic [kg]"
         ]
 
-        self._rows.append(self._headers)
-        file_, handler_ = QtWidgets.QFileDialog.getSaveFileName(None, 'Save results as csv file', '.', 'CSV (*.csv)')
+        file_, handler_ = QtWidgets.QFileDialog.getSaveFileName(
+            None, 'Save results as csv file', '.', 'CSV (*.csv)')
+
         self.setOutputPath(file_)
 
-    def process(self, timeval, result, **kwargs):
-        #result is of format [(Source, Emission)]
+    def process(self, timeval, result: list, **kwargs):
+        """
+        Process the results and create the records of the csv
+
+        :param timeval:
+        :param result:
+        :param kwargs:
+        """
+        # result is of format [(Source, Emission)]
 
         if not self._isDetailedOutput:
-            total_emissions_ = sum([sum(emissions_) for (source, emissions_) in result if emissions_])
+            # Sum all emissions
+            total_emissions_ = sum(
+                [sum(emissions_) for (_, emissions_) in result if emissions_])
+
             self._rows.append([
                 timeval,
                 "total",
@@ -106,8 +119,13 @@ class CSVOutputModule(OutputModule):
                     sum(emissions_).getPM10Organic(unit="kg")[0]])
 
     def endJob(self):
-        #write output to csv file
-        if not self.getOutputPath() is None:
+        """
+        Write output to csv file
+        """
+
+        if self.getOutputPath() is not None:
             CSVInterface.writeCSV(self.getOutputPath(), self._rows)
+
         if os.path.isfile(self.getOutputPath()):
-            QtWidgets.QMessageBox.information(None, "CSVInterface Module", "Results saved as csv file")
+            QtWidgets.QMessageBox.information(
+                None, "CSVInterface Module", "Results saved as csv file")

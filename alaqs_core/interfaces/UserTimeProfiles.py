@@ -1,35 +1,32 @@
-from __future__ import absolute_import
-from builtins import str
-from builtins import range
-from builtins import object
-from . import __init__ #setup the paths for direct calls of the module
-from future.utils import with_metaclass
-
-__author__ = 'ENVISA'
 import logging
-logger = logging.getLogger("__alaqs__.%s" % (__name__))
 
 import os
-import sys
 from collections import OrderedDict
 
-from .SQLSerializable import SQLSerializable
-from .Singleton import Singleton
-from tools import Conversions
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
 
-from .Store import Store
+logger = logging.getLogger("__alaqs__.%s" % __name__)
 
-class UserProfile(object):
-    def __init__(self, val={}):
+
+class UserProfile:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         self._name = str(val["profile_name"]) if "profile_name" in val else ""
 
     def getName(self):
         return self._name
+
     def setName(self, val):
         self._name = str(val)
 
+
 class UserHourProfile(UserProfile):
-    def __init__(self, val={}):
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         UserProfile.__init__(self, val)
 
         self._hours = OrderedDict()
@@ -39,7 +36,9 @@ class UserHourProfile(UserProfile):
     def getHours(self):
         return self._hours
 
-    def setHours(self, val={}):
+    def setHours(self, val=None):
+        if val is None:
+            val = {}
         for key in val:
             self._hours[key] = float(val[key])
 
@@ -49,8 +48,11 @@ class UserHourProfile(UserProfile):
 
         return val
 
+
 class UserDayProfile(UserProfile):
-    def __init__(self, val={}):
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         UserProfile.__init__(self, val)
 
         self._days = OrderedDict()
@@ -60,7 +62,9 @@ class UserDayProfile(UserProfile):
     def getDays(self):
         return self._days
 
-    def setDays(self, val={}):
+    def setDays(self, val=None):
+        if val is None:
+            val = {}
         for key in val:
             self._days[key] = float(val[key])
 
@@ -69,8 +73,11 @@ class UserDayProfile(UserProfile):
         val += "\n\t Days: %s" % (str(self.getDays()))
         return val
 
+
 class UserMonthProfile(UserProfile):
-    def __init__(self, val={}):
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         UserProfile.__init__(self, val)
 
         self._months = OrderedDict()
@@ -80,7 +87,9 @@ class UserMonthProfile(UserProfile):
     def getMonths(self):
         return self._months
 
-    def setMonths(self, val={}):
+    def setMonths(self, val=None):
+        if val is None:
+            val = {}
         for key in val:
             self._months[key] = float(val[key])
 
@@ -89,12 +98,15 @@ class UserMonthProfile(UserProfile):
         val += "\n\t Months: %s" % (str(self.getMonths()))
         return val
 
-class UserHourProfileStore(with_metaclass(Singleton, Store)):
+
+class UserHourProfileStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'UserHourProfile' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
@@ -120,12 +132,14 @@ class UserHourProfileStore(with_metaclass(Singleton, Store)):
     def getUserHourProfileDatabase(self):
         return self._user_hour_profile_db
 
-class UserDayProfileStore(with_metaclass(Singleton, Store)):
+class UserDayProfileStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'UserDayProfile' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
@@ -151,12 +165,15 @@ class UserDayProfileStore(with_metaclass(Singleton, Store)):
     def getUserDayProfileDatabase(self):
         return self._user_day_profile_db
 
-class UserMonthProfileStore(with_metaclass(Singleton, Store)):
+
+class UserMonthProfileStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'UserMonthProfile' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
@@ -182,7 +199,8 @@ class UserMonthProfileStore(with_metaclass(Singleton, Store)):
     def getUserMonthProfileDatabase(self):
         return self._user_month_profile_db
 
-class UserHourProfileDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class UserHourProfileDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to user hour profiles in the spatialite database
     """
@@ -190,43 +208,53 @@ class UserHourProfileDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="user_hour_profile",
-                 table_columns_type_dict=OrderedDict([
-                    ("oid" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("profile_name" , "TEXT"),
-                    ("h01" , "DECIMAL NULL"),
-                    ("h02" , "DECIMAL NULL"),
-                    ("h03" , "DECIMAL NULL"),
-                    ("h04" , "DECIMAL NULL"),
-                    ("h05" , "DECIMAL NULL"),
-                    ("h06" , "DECIMAL NULL"),
-                    ("h07" , "DECIMAL NULL"),
-                    ("h08" , "DECIMAL NULL"),
-                    ("h09" , "DECIMAL NULL"),
-                    ("h10" , "DECIMAL NULL"),
-                    ("h11" , "DECIMAL NULL"),
-                    ("h12" , "DECIMAL NULL"),
-                    ("h13" , "DECIMAL NULL"),
-                    ("h14" , "DECIMAL NULL"),
-                    ("h15" , "DECIMAL NULL"),
-                    ("h16" , "DECIMAL NULL"),
-                    ("h17" , "DECIMAL NULL"),
-                    ("h18" , "DECIMAL NULL"),
-                    ("h19" , "DECIMAL NULL"),
-                    ("h20" , "DECIMAL NULL"),
-                    ("h21" , "DECIMAL NULL"),
-                    ("h22" , "DECIMAL NULL"),
-                    ("h23" , "DECIMAL NULL"),
-                    ("h24" , "DECIMAL NULL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="oid",
-                 geometry_columns=[]
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 geometry_columns=None
+                 ):
+
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                     ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                     ("profile_name", "TEXT"),
+                     ("h01", "DECIMAL NULL"),
+                     ("h02", "DECIMAL NULL"),
+                     ("h03", "DECIMAL NULL"),
+                     ("h04", "DECIMAL NULL"),
+                     ("h05", "DECIMAL NULL"),
+                     ("h06", "DECIMAL NULL"),
+                     ("h07", "DECIMAL NULL"),
+                     ("h08", "DECIMAL NULL"),
+                     ("h09", "DECIMAL NULL"),
+                     ("h10", "DECIMAL NULL"),
+                     ("h11", "DECIMAL NULL"),
+                     ("h12", "DECIMAL NULL"),
+                     ("h13", "DECIMAL NULL"),
+                     ("h14", "DECIMAL NULL"),
+                     ("h15", "DECIMAL NULL"),
+                     ("h16", "DECIMAL NULL"),
+                     ("h17", "DECIMAL NULL"),
+                     ("h18", "DECIMAL NULL"),
+                     ("h19", "DECIMAL NULL"),
+                     ("h20", "DECIMAL NULL"),
+                     ("h21", "DECIMAL NULL"),
+                     ("h22", "DECIMAL NULL"),
+                     ("h23", "DECIMAL NULL"),
+                     ("h24", "DECIMAL NULL")
+                 ])
+
+        if geometry_columns is None:
+            geometry_columns = []
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path:
             self.deserialize()
 
-class UserDayProfileDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class UserDayProfileDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to user day profiles in the spatialite database
     """
@@ -234,26 +262,35 @@ class UserDayProfileDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="user_day_profile",
-                 table_columns_type_dict=OrderedDict([
-                    ("oid" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("profile_name" , "TEXT"),
-                    ("mon" , "DECIMAL NULL"),
-                    ("tue" , "DECIMAL NULL"),
-                    ("wed" , "DECIMAL NULL"),
-                    ("thu" , "DECIMAL NULL"),
-                    ("fri" , "DECIMAL NULL"),
-                    ("sat" , "DECIMAL NULL"),
-                    ("sun" , "DECIMAL NULL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="oid",
-                 geometry_columns=[]
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 geometry_columns=None
+                 ):
+
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("profile_name", "TEXT"),
+                ("mon", "DECIMAL NULL"),
+                ("tue", "DECIMAL NULL"),
+                ("wed", "DECIMAL NULL"),
+                ("thu", "DECIMAL NULL"),
+                ("fri", "DECIMAL NULL"),
+                ("sat", "DECIMAL NULL"),
+                ("sun", "DECIMAL NULL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = []
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path:
             self.deserialize()
 
-class UserMonthProfileDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class UserMonthProfileDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to user month profiles in the spatialite database
     """
@@ -261,59 +298,67 @@ class UserMonthProfileDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="user_month_profile",
-                 table_columns_type_dict=OrderedDict([
-                    ("oid" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("profile_name" , "TEXT"),
-                    ("jan" , "DECIMAL NULL"),
-                    ("feb" , "DECIMAL NULL"),
-                    ("mar" , "DECIMAL NULL"),
-                    ("apr" , "DECIMAL NULL"),
-                    ("may" , "DECIMAL NULL"),
-                    ("jun" , "DECIMAL NULL"),
-                    ("jul" , "DECIMAL NULL"),
-                    ("aug" , "DECIMAL NULL"),
-                    ("sep" , "DECIMAL NULL"),
-                    ("oct" , "DECIMAL NULL"),
-                    ("nov" , "DECIMAL NULL"),
-                    ("dec" , "DECIMAL NULL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="oid",
-                 geometry_columns=[]
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 geometry_columns=None
+                 ):
+
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("profile_name", "TEXT"),
+                ("jan", "DECIMAL NULL"),
+                ("feb", "DECIMAL NULL"),
+                ("mar", "DECIMAL NULL"),
+                ("apr", "DECIMAL NULL"),
+                ("may", "DECIMAL NULL"),
+                ("jun", "DECIMAL NULL"),
+                ("jul", "DECIMAL NULL"),
+                ("aug", "DECIMAL NULL"),
+                ("sep", "DECIMAL NULL"),
+                ("oct", "DECIMAL NULL"),
+                ("nov", "DECIMAL NULL"),
+                ("dec", "DECIMAL NULL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = []
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path:
             self.deserialize()
 
 
-if __name__ == "__main__":
-    # create a logger for this module
-    #logging.basicConfig(level=logging.DEBUG)
-
-    logger.setLevel(logging.DEBUG)
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    if loaded_color_logger:
-        ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
-
-    ch.setLevel(logging.DEBUG)
-    # create formatter
-    formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    # add ch to logger
-    logger.addHandler(ch)
-
-    path_to_database = os.path.join("..", "..", "example", "exeter_out.alaqs")
-
-    store = UserHourProfileStore(path_to_database)
-    for ts_id, ts in list(store.getObjects().items()):
-        logger.debug(ts)
-
-    store = UserDayProfileStore(path_to_database)
-    for ts_id, ts in list(store.getObjects().items()):
-        logger.debug(ts)
-
-    store = UserMonthProfileStore(path_to_database)
-    for ts_id, ts in list(store.getObjects().items()):
-        logger.debug(ts)
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     #logging.basicConfig(level=logging.DEBUG)
+#
+#     logger.setLevel(logging.DEBUG)
+#     # create console handler and set level to debug
+#     ch = logging.StreamHandler()
+#     if loaded_color_logger:
+#         ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
+#
+#     ch.setLevel(logging.DEBUG)
+#     # create formatter
+#     formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # add formatter to ch
+#     ch.setFormatter(formatter)
+#     # add ch to logger
+#     logger.addHandler(ch)
+#
+#     path_to_database = os.path.join("..", "..", "example", "exeter_out.alaqs")
+#
+#     store = UserHourProfileStore(path_to_database)
+#     for ts_id, ts in list(store.getObjects().items()):
+#         logger.debug(ts)
+#
+#     store = UserDayProfileStore(path_to_database)
+#     for ts_id, ts in list(store.getObjects().items()):
+#         logger.debug(ts)
+#
+#     store = UserMonthProfileStore(path_to_database)
+#     for ts_id, ts in list(store.getObjects().items()):
+#         logger.debug(ts)

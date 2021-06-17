@@ -1,16 +1,19 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-from builtins import map
-from builtins import str
-from builtins import range
-# from . import __init__
-import __init__
+import copy
+import itertools
+import math
 import os
-import sys
-import time
+from collections import OrderedDict
+from datetime import datetime, timedelta
 
-import alaqslogging
+import geopandas as gpd
+import numpy as np
+from PyQt5 import QtGui, QtWidgets
+from dateutil import rrule
+
+from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
+from open_alaqs.alaqs_core.tools import SQLInterface, Spatial, conversion
+
 # logger = logging.getLogger(__name__)
 logger = alaqslogging.logging.getLogger(__name__)
 # To override the default severity of logging
@@ -23,78 +26,61 @@ file_handler.setFormatter(formatter)
 # Don't forget to add the file handler
 logger.addHandler(file_handler)
 
-import alaqsutils           # For logging and conversion of data types
-import alaqsdblite          # Functions for working with ALAQS database
-
-# from qgis.PyQt import QtGui, QtCore, QtWidgets
-from PyQt5 import QtCore, QtGui, QtWidgets
-from collections import OrderedDict
-from modules.ui.ModuleConfigurationWidget import ModuleConfigurationWidget
-
-from tools import CSVInterface
-from tools import SQLInterface, Spatial, Conversions
-
-from datetime import datetime, timedelta, date
-from dateutil import rrule
-from dateutil.relativedelta import relativedelta
-
-import numpy as np
-import math, copy, operator, itertools
-
-from interfaces.DispersionModule import DispersionModule
-from interfaces.Emissions import Emission
-
-import geopandas as gpd
-from shapely.geometry import MultiPolygon, Polygon
-# from shapely.ops import cascaded_union
-from shapely.ops import unary_union, cascaded_union
 
 class AUSTAL2000DispersionModule(DispersionModule):
     """
-    Module for the preparation of the input files needed for AUSTAL2000 dispersion calculations.
+    Module for the preparation of the input files needed for AUSTAL2000
+    dispersion calculations.
     """
 
     @staticmethod
     def getModuleName():
         return "AUSTAL2000"
 
-    def __init__(self, values_dict = {}):
+    def __init__(self, values_dict=None):
+        if values_dict is None:
+            values_dict = {}
         DispersionModule.__init__(self, values_dict)
 
-        self._name = values_dict["name"] if "name" in values_dict else ""
-        self._model = "AUSTAL2000" #None
-        self._pollutant = values_dict["pollutant"] if "pollutant" in values_dict else "NOx"
+        self._name = values_dict.get("name", "")
+        self._model = "AUSTAL2000"
+        self._pollutant = values_dict.get("pollutant", "NOx")
+        self._receptors = values_dict.get("receptors", gpd.GeoDataFrame())
+        self._output_path = values_dict.get("output_path")
 
-        self._receptors = values_dict["receptors"] if "receptors" in values_dict else gpd.GeoDataFrame()
-
-        self._output_path = values_dict["output_path"] if "output_path" in values_dict else None
-        if (not self._output_path is None) :
+        # Create the output directory if it does not exist
+        if self._output_path is not None:
             # self._def_output_path = copy.deepcopy(self._output_path)
             if not os.path.isdir(self._output_path):
                 os.mkdir(self._output_path)
 
-        self._sequ = values_dict["index sequence"] if "index sequence" in values_dict else "k+,j-,i+"
-        self._grid = values_dict["grid"] if "grid" in values_dict else ""
-        # self._austal_grid = copy.deepcopy(self._grid)
+        self._sequ = values_dict.get("index sequence", "k+,j-,i+")
+        self._grid = values_dict.get("grid", "")
 
-        # self._pollutants_list = [self._pollutant] if self._pollutant else values_dict["pollutants_list"]
-        # if "pollutants_list" in values_dict else None # ["CO2", "HC", "NOx"]
-        self._pollutants_list = values_dict["pollutants_list"] if "pollutants_list" in \
-                                                      values_dict else [self._pollutant] if self._pollutant else None
+        self._pollutants_list = values_dict.get("pollutants_list")
+        if self._pollutant:
+            self._pollutants_list = [self._pollutant]
 
         # "----------------- general parameters",
-        self._title = values_dict["add title"] if "add title" in values_dict else "no title"    # "ti\t'grid source'\t' title of the project",
-        self._quality_level = values_dict["quality level"] if "quality level" in values_dict else 1 # "qs\t1\t' quality level",
-        self._options = values_dict["options string"] if "options string" in values_dict else "SCINOTAT" # for non-standard calculations
+        # "ti\t'grid source'\t' title of the project",
+        self._title = values_dict.get("add title", "no title")
+        # "qs\t1\t' quality level",
+        self._quality_level = values_dict.get("quality level", 1)
+        # for non-standard calculations
+        self._options = values_dict.get("options string", "SCINOTAT")
 
         # "----------------- meteorology",
-        # ToDo: Modify AmbientCondition.py or derive z0, d0, and ha from main dialog (airport info)
-        self._roughness_level = values_dict["roughness length (in m)"] if "roughness length (in m)" \
-          in values_dict else 0.2  # "z\t0.2\t' roughness length (m)",
-        self._displacement_height = values_dict["displacement height (in m)"] if "displacement height (in m)" \
-             in values_dict else 6*self._roughness_level # d0: default 6z0    # "d0\t1.2\t' displacement height (m)",
-        self._anemometer_height = values_dict["anemometer height (in m)"] if "anemometer height (in m)" \
-             in values_dict else 10.0 + 6*self._roughness_level # 10 m + d0 (6z0)  # "ha\t11.2\t' anemometer height (m)",
+        # ToDo: Modify AmbientCondition.py or derive z0, d0, and ha from main
+        #  dialog (airport info)
+        # "z\t0.2\t' roughness length (m)",
+        self._roughness_level = float(values_dict.get(
+            "roughness length (in m)", 0.2))
+        # d0: default 6z0    # "d0\t1.2\t' displacement height (m)",
+        self._displacement_height = float(values_dict.get(
+            "displacement height (in m)", 6 * self._roughness_level))
+        # 10 m + d0 (6z0)  # "ha\t11.2\t' anemometer height (m)",
+        self._anemometer_height = float(values_dict.get(
+            "anemometer height (in m)", 10.0 + 6 * self._roughness_level))
 
         self._reference_x = None
         self._reference_y = None
@@ -103,31 +89,32 @@ class AUSTAL2000DispersionModule(DispersionModule):
         self.xp_, self.yp_, self.zp_ = [], [], []
 
         # "----------------- concentration grid -----------------"
-        self._x_left_border_calc_grid = None # "x0\t-200\t' left border (m)",
-        self._y_left_border_calc_grid = None # "y0\t-200\t' lower border (m)",
+        self._x_left_border_calc_grid = None  # "x0\t-200\t' left border (m)",
+        self._y_left_border_calc_grid = None  # "y0\t-200\t' lower border (m)",
 
         # general parameters set from Widget
-        WidgetParameters = OrderedDict({
-            ("enable" , QtWidgets.QCheckBox,),
-            ("add title" , QtWidgets.QLineEdit,),
-            ("roughness length (in m)" , QtWidgets.QLineEdit,),
-            ("anemometer height (in m)" , QtWidgets.QLineEdit,),
-            ("displacement height (in m)" , QtWidgets.QLineEdit,),
-            ("options string" , QtWidgets.QLineEdit,),
-            ("quality level" , QtWidgets.QLineEdit,),
-            ("index sequence" , QtWidgets.QLineEdit,),
+        widget_parameters = OrderedDict({
+            ("enable", QtWidgets.QCheckBox,),
+            ("add title", QtWidgets.QLineEdit,),
+            ("roughness length (in m)", QtWidgets.QLineEdit,),
+            ("anemometer height (in m)", QtWidgets.QLineEdit,),
+            ("displacement height (in m)", QtWidgets.QLineEdit,),
+            ("options string", QtWidgets.QLineEdit,),
+            ("quality level", QtWidgets.QLineEdit,),
+            ("index sequence", QtWidgets.QLineEdit,),
         })
-        self.setConfigurationWidget(OrderedDict(sorted(list(WidgetParameters.items()), key=lambda t: len(t[0]))))
+        self.setConfigurationWidget(OrderedDict(
+            sorted(list(widget_parameters.items()), key=lambda t: len(t[0]))))
 
         self.getConfigurationWidget().initValues({
-            "roughness length (in m)":0.2,
-            "displacement height (in m)":1.2,
-            "anemometer height (in m)":11.2,
+            "roughness length (in m)": 0.2,
+            "displacement height (in m)": 1.2,
+            "anemometer height (in m)": 11.2,
             "add title": "",
             "quality level": 1,
-            "index sequence":"k+,j-,i+",
+            "index sequence": "k+,j-,i+",
             "enable": False,
-            "options string":"NOSTANDARD;SCINOTAT;Kmax=1"
+            "options string": "NOSTANDARD;SCINOTAT;Kmax=1"
         })
 
         self._configuration_widget.getSettings()["enable"].setToolTip('Enable to create AUSTAL2000 input files')
@@ -148,27 +135,30 @@ class AUSTAL2000DispersionModule(DispersionModule):
         # self.setValidator(QtGui.QIntValidator()) # now edit will only accept integers
         # self._configuration_widget.getSettings()["title"].setStyleSheet("QWidget {background-color:rgba(255, 107, 107, 150);}")
 
-
     # ToDo: Define the get set functions for all parameters
     def getTitle(self):
         return self._title
+
     def setTitle(self, var):
         self._title = var
 
     # Quality Level
     def getQualityLevel(self):
         return self._quality_level
+
     def setQualityLevel(self, var):
         self._quality_level = var
 
     # Roughness Length
     def getRoughnessLength(self):
         return self._roughness_level
+
     def setRoughnessLength(self, var):
         self._roughness_level = var
 
     def getGrid(self):
         return self._grid
+
     def setGrid(self, var):
         self._grid = var
 
@@ -177,49 +167,83 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
     def getModel(self):
         return self._model
+
     def setModel(self, val):
         self._model = val
 
-    def getSequ(self):
+    def getSequ(self) -> str:
+        """
+        Index sequence in which the data values are listed (comma separated)
+        (from AUSTAL2000 grid source example)
+
+        todo: Simplify this method. Update description to explain that it's
+         doing input validation here.
+
+        :return:
+        """
         new_sequence = []
         try:
             sequence = self._sequ.split(",")
             for index_ in sequence:
-                if index_ and (len(index_)==2) and (index_[1]=="+" or index_[1]=="-"):
-                    if index_[0] == "i" :
-                        new_sequence.append("%s"%(index_))
-                    elif index_[0] == "j" and (index_[1]=="+" or index_[1]=="-"):
-                        new_sequence.append("%s"%(index_))
-                    elif index_[0] == "k" and (index_[1]=="+" or index_[1]=="-"):
-                        new_sequence.append("%s"%(index_))
+                if index_ and (len(index_) == 2) and (
+                        index_[1] == "+" or index_[1] == "-"):
+                    if index_[0] == "i":
+                        new_sequence.append("%s" % (index_))
+                    elif index_[0] == "j" and (
+                            index_[1] == "+" or index_[1] == "-"):
+                        new_sequence.append("%s" % (index_))
+                    elif index_[0] == "k" and (
+                            index_[1] == "+" or index_[1] == "-"):
+                        new_sequence.append("%s" % (index_))
             self._sequ = ",".join(new_sequence)
-            # final check - might be removed later
-            assert len(self._sequ)==8 and (self._sequ.count("k")==1 and self._sequ.count("j")==1 and self._sequ.count("i")==1) and (self._sequ.count("+")+self._sequ.count("-")==3)
+
+            # todo: final check - might be removed later
+            assert (len(self._sequ) == 8) and \
+                   (self._sequ.count("k") == 1) and \
+                   (self._sequ.count("j") == 1) and \
+                   (self._sequ.count("i") == 1) and \
+                   (self._sequ.count("+") + self._sequ.count("-") == 3)
 
         except Exception as e:
             self._sequ = "k+,j-,i+"
             logger.error("AUSTAL2000: User-defined index sequence error: %s (Setting to default 'k+,j-,i+')" % e)
         return self._sequ
 
-    def getDistanceXY(self, x_1,y_1,x_2,y_2):
-        p1 = Spatial.getPoint("", x_1,y_1,0.)
-        p2 = Spatial.getPoint("", x_2,y_2,0.)
+    def getDistanceXY(self, x_1, y_1, x_2, y_2) -> float:
+        """
+        Get the distance between two coordinates.
 
-        x_y_distance = Spatial.getDistanceOfLineStringXY(Spatial.getLine(p1,p2), EPSG_id_source=3857, EPSG_id_target=4326)
+        todo: Fix
+
+        :param x_1:
+        :param y_1:
+        :param x_2:
+        :param y_2:
+        :return:
+        """
+        p1 = Spatial.getPoint("", x_1, y_1, 0.)
+        p2 = Spatial.getPoint("", x_2, y_2, 0.)
+
+        x_y_distance = Spatial.getDistanceOfLineStringXY(
+            Spatial.getLine(p1, p2), epsg_id_source=3857, epsg_id_target=4326)
         if x_y_distance is None:
             x_y_distance = 0.
-        #logger.debug("Distance xy: %f" % (x_y_distance))
-        return math.sqrt(x_y_distance**2.)
+        # logger.debug("Distance xy: %f" % (x_y_distance))
+        return math.sqrt(x_y_distance ** 2.)
 
     def setOutputPath(self, val):
         self._output_path = val
+
     def getOutputPath(self):
         return self._output_path
 
     def getSortedResults(self):
-        return OrderedDict(sorted(list(self._results.items()), key=lambda t: t[0]))
+        return OrderedDict(
+            sorted(list(self._results.items()), key=lambda t: t[0]))
+
     def getSortedSeries(self):
-        return OrderedDict(sorted(list(self._series.items()), key=lambda t: t[0]))
+        return OrderedDict(
+            sorted(list(self._series.items()), key=lambda t: t[0]))
 
     def getDataPoint(self, x_, y_, z_, isPolygon, grid_):
         data_point_ = {
@@ -291,8 +315,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 raise Exception("AUSTAL2000: Could not reset reference point as coordinates could not be transformed. The query was\n'%s'" % (sql_text))
                 return None
 
-            self._reference_x = Conversions.convertToFloat(result[0][0])
-            self._reference_y = Conversions.convertToFloat(result[0][1])
+            self._reference_x = conversion.convertToFloat(result[0][0])
+            self._reference_y = conversion.convertToFloat(result[0][1])
             self._reference_z = self._grid._reference_altitude
             # logger.info("self._reference_x: %s, self._reference_y: %s, self._reference_z: %s"%(self._reference_x, self._reference_y, self._reference_z))
 

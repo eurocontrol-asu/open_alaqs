@@ -1,53 +1,41 @@
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-
-__author__ = 'ENVISA'
-
 import logging
-#logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("__alaqs__.%s" % (__name__))
 
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-    from .Store import Store
-    from .Emissions import EmissionIndex
-except:
-    import __init__ #setup the paths for direct calls of the module
-    from Store import Store
-    from Emissions import EmissionIndex
+from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 
-from tools import TwinQuadraticFitMethod
-from tools import BFFM2
+from open_alaqs.alaqs_core.tools import TwinQuadraticFitMethod, BFFM2
 
-defaultEI={
-            "fuel_kg_sec" : 0.,
-            "co_g_kg" : 0.,
-            "co2_g_kg" : 3.16*1000.,
-            "hc_g_kg" : 0.,
-            "nox_g_kg" : 0.,
-            "sox_g_kg" : 0.,
-            "pm10_g_kg" : 0.,
-            "p1_g_kg" : 0.,
-            "p2_g_kg": 0.,
-            "smoke_number" : 0.,
-            "smoke_number_maximum" : 0.,
-            "fuel_type"  : "",
-            "pm10_prefoa3_g_kg" : 0.,
-            "pm10_nonvol_g_kg" : 0.,
-            "pm10_sul_g_kg" : 0.,
-            "pm10_organic_g_kg" : 0.
+logger = logging.getLogger("__alaqs__.%s" % __name__)
+
+defaultEI = {
+    "fuel_kg_sec": 0.,
+    "co_g_kg": 0.,
+    "co2_g_kg": 3.16 * 1000.,
+    "hc_g_kg": 0.,
+    "nox_g_kg": 0.,
+    "sox_g_kg": 0.,
+    "pm10_g_kg": 0.,
+    "p1_g_kg": 0.,
+    "p2_g_kg": 0.,
+    "smoke_number": 0.,
+    "smoke_number_maximum": 0.,
+    "fuel_type": "",
+    "pm10_prefoa3_g_kg": 0.,
+    "pm10_nonvol_g_kg": 0.,
+    "pm10_sul_g_kg": 0.,
+    "pm10_organic_g_kg": 0.
 }
+
 
 class HelicopterEngineEmissionIndex(Store):
     def __init__(self):
         Store.__init__(self)
 
         self._modes_powersetting_map = {
-            "GI1":0., # Idle Eng#1
-            "GI2":0., # Idle Eng#2
-            "AP":0., # Approach
-            "TO":0. # Hover and Climb
+            "GI1": 0.,  # Idle Eng#1
+            "GI2": 0.,  # Idle Eng#2
+            "AP": 0.,  # Approach
+            "TO": 0.  # Hover and Climb
         }
 
     def setModePowerSetting(self, mode, power_setting):
@@ -135,17 +123,15 @@ class HelicopterEngineEmissionIndex(Store):
         return val
 
 
-
-
 class EngineEmissionIndex(Store):
     def __init__(self):
         Store.__init__(self)
 
         self._modes_powersetting_map = {
-            "T/O":1., # Takeoff
-            "C/O":0.85, # Climbout
-            "App":0.30, # Approach
-            "Idle":0.07 # Idle
+            "T/O": 1.,  # Takeoff
+            "C/O": 0.85,  # Climbout
+            "App": 0.30,  # Approach
+            "Idle": 0.07  # Idle
         }
 
     def setModePowerSetting(self, mode, power_setting):
@@ -422,13 +408,16 @@ class EngineEmissionIndex(Store):
             val += "\t %s" % ("\n\t".join(str(self.getEmissionIndexByMode(mode)).split("\n")))
         return val
 
-class Engine(object):
-    def __init__(self,
-                 values_dict = {
-                    "name": "unknown",
-                    "emission_index":None,
-                    "start_emission_factors":None
-            }):
+
+class Engine:
+    def __init__(self, values_dict=None):
+        if values_dict is None:
+            values_dict = {
+                "name": "unknown",
+                "emission_index": None,
+                "start_emission_factors": None
+            }
+
         self._name = values_dict["name"] if "name" in values_dict else "unknown"
         # self._full_name = values_dict["full_name"] if "full_name" in values_dict else None
         self._emission_index = values_dict["emission_index"] if "emission_index" in values_dict else None

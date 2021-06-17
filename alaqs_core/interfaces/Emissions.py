@@ -1,40 +1,35 @@
-from __future__ import absolute_import
-from builtins import str
-
-__author__ = 'ENVISA'
-
 import logging
-logger = logging.getLogger("alaqs.%s" % (__name__))
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-    from .Store import Store
-except:
-    import __init__
-    from Store import Store
 
-# from tools import Spatial
-from shapely.wkt import loads
 from shapely.geometry import GeometryCollection
+from shapely.wkt import loads
 
-defValues={
-        "fuel_kg" : 0.,
-        "co_g" : 0.,
-        "co2_g" : 0.,
-        "hc_g" : 0.,
-        "nox_g" : 0.,
-        "sox_g" : 0.,
-        "pm10_g" : 0.,
-        "p1_g" : 0.,
-        "p2_g": 0.,
-        "pm10_prefoa3_g" : 0.,
-        "pm10_nonvol_g" : 0.,
-        "pm10_sul_g" : 0.,
-        "pm10_organic_g" : 0.
-            }
+from open_alaqs.alaqs_core.interfaces.Store import Store
+
+logger = logging.getLogger("alaqs.%s" % __name__)
+
+defValues = {
+    "fuel_kg": 0.,
+    "co_g": 0.,
+    "co2_g": 0.,
+    "hc_g": 0.,
+    "nox_g": 0.,
+    "sox_g": 0.,
+    "pm10_g": 0.,
+    "p1_g": 0.,
+    "p2_g": 0.,
+    "pm10_prefoa3_g": 0.,
+    "pm10_nonvol_g": 0.,
+    "pm10_sul_g": 0.,
+    "pm10_organic_g": 0.
+}
+
 
 class EmissionIndex(Store):
-    # def __init__(self, initValues=defValues, defaultValues=defValues):
-    def __init__(self, initValues={}, defaultValues={}):
+    def __init__(self, initValues=None, defaultValues=None):
+        if initValues is None:
+            initValues = {}
+        if defaultValues is None:
+            defaultValues = {}
         Store.__init__(self, initValues, defaultValues)
 
     def getValue(self, name):
@@ -117,9 +112,14 @@ class EmissionIndex(Store):
     def __imul__(self, other):
         return self.__mul__(other)
 
+
 class Emission(Store):
     # def __init__(self, initValues=defValues, defaultValues=defValues):
-    def __init__(self, initValues={}, defaultValues={}):
+    def __init__(self, initValues=None, defaultValues=None):
+        if initValues is None:
+            initValues = {}
+        if defaultValues is None:
+            defaultValues = {}
         Store.__init__(self, initValues, defaultValues)
 
         self._geometry_wkt = None

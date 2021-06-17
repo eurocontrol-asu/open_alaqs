@@ -1,22 +1,11 @@
-import os
-import sys
-
-from PyQt5 import QtCore, QtGui, QtWidgets
-# from PyQt5.QtCore import Qt
-# from qgis.PyQt import QtCore
-# from qgis.PyQt import QtGui
-# from qgis.PyQt import QtWidgets
+from PyQt5 import QtCore, QtWidgets
 from qgis.core import *
 from qgis.gui import *
 
-import alaqs
-import alaqsutils
-# Add the tools directory to path
-# alaqs_interfaces_files = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools")
-# if alaqs_interfaces_files not in sys.path:
-#     sys.path.append(alaqs_interfaces_files)
+from open_alaqs.alaqs_core import alaqs, alaqslogging, alaqsutils
+from open_alaqs.alaqs_core.tools.libALAQSMethod import \
+    roadway_emission_factors_alaqs_method
 
-import alaqslogging
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('DEBUG')
 file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
@@ -24,8 +13,6 @@ log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 formatter = alaqslogging.logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
-
-from tools.libALAQSMethod import roadway_emission_factors_alaqs_method
 
 form = None
 name_field = None
@@ -48,6 +35,7 @@ p2_gm_km_field = None
 method_field = None
 scenario_field = None
 instudy = None
+
 
 def form_open(my_dialog, layer_id, feature_id):
     global form

@@ -13,16 +13,12 @@ the database layer.
 
 @author: Dan Pearce (it@env-isa.com)
 """
-from __future__ import absolute_import
-
-# from . import alaqsdblite              # the database layer of the ALAQS project
-import alaqsdblite           # the database layer of the ALAQS project
-import alaqsutils               # general utility functions
-import create_output            # Functions for creating a new ALAQS output file
-# import calculate_stationary     # Functions for calculating emissions from stationary sources
-# import calculate_area           # Functions for calculating emissions from area sources
-# import calculate_roadways       # Functions for calculating emissions from roadways
-# import calculate_parkings       # Functions for calculating emissions from parkings
+# the database layer of the ALAQS project
+from open_alaqs.alaqs_core import alaqsdblite
+# general utility functions
+from open_alaqs.alaqs_core import alaqsutils
+# Functions for creating a new ALAQS output file
+from open_alaqs.alaqs_core import create_output
 
 
 def create_project(database_name):

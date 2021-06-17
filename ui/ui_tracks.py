@@ -1,13 +1,13 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from qgis.gui import QgsEditorWidgetWrapper
+from PyQt5 import QtWidgets
 
-import alaqs
+from open_alaqs.alaqs_core import alaqs
 
 form = None
 name_field = None
 runway_field = None
 arrdep_field = None
 instudy = None
+
 
 def form_open(my_dialog, layer_id, feature_id):
     global form
@@ -33,7 +33,7 @@ def form_open(my_dialog, layer_id, feature_id):
     #disconnect new-style signals
     try:
         button_box.accepted.disconnect(form.accept)
-    except Exception, e:
+    except Exception as e:
         pass
 
     button_box.accepted.connect(validate)
