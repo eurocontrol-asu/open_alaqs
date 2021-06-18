@@ -176,37 +176,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
         Index sequence in which the data values are listed (comma separated)
         (from AUSTAL2000 grid source example)
 
-        todo: Simplify this method. Update description to explain that it's
-         doing input validation here.
-
         :return:
         """
-        new_sequence = []
-        try:
-            sequence = self._sequ.split(",")
-            for index_ in sequence:
-                if index_ and (len(index_) == 2) and (
-                        index_[1] == "+" or index_[1] == "-"):
-                    if index_[0] == "i":
-                        new_sequence.append("%s" % (index_))
-                    elif index_[0] == "j" and (
-                            index_[1] == "+" or index_[1] == "-"):
-                        new_sequence.append("%s" % (index_))
-                    elif index_[0] == "k" and (
-                            index_[1] == "+" or index_[1] == "-"):
-                        new_sequence.append("%s" % (index_))
-            self._sequ = ",".join(new_sequence)
-
-            # todo: final check - might be removed later
-            assert (len(self._sequ) == 8) and \
-                   (self._sequ.count("k") == 1) and \
-                   (self._sequ.count("j") == 1) and \
-                   (self._sequ.count("i") == 1) and \
-                   (self._sequ.count("+") + self._sequ.count("-") == 3)
-
-        except Exception as e:
-            self._sequ = "k+,j-,i+"
-            logger.error("AUSTAL2000: User-defined index sequence error: %s (Setting to default 'k+,j-,i+')" % e)
         return self._sequ
 
     def getDistanceXY(self, x_1, y_1, x_2, y_2) -> float:
