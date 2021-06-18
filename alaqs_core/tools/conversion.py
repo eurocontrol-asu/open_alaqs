@@ -121,24 +121,6 @@ def convertTimeToSeconds(
     return None
 
 
-def convertSecondsToTime(
-        value: float,
-        format_: str = "%Y-%m-%d %H:%M:%S") -> Union[tuple, None]:
-    """
-    Converts a timestamp in seconds to a time tuple.
-
-    :param value:
-    :param format_:
-    :return:
-    """
-    if not value:
-        return None
-
-    if isinstance(value, (int, float)):
-        return time.gmtime(value)
-    return None
-
-
 def convertSecondsToDateTime(
         value: Union[str, float],
         format_: str = "%Y-%m-%d %H:%M:%S") -> Union[datetime, None]:
