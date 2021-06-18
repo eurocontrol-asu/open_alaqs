@@ -7,19 +7,14 @@ Created on 21 Mar 2013
 @author: Dan Pearce
 """
 import os
-import sys
 import sqlite3 as sqlite
+import sys
 
-from open_alaqs.alaqs_core import alaqslogging, alaqsdblite
+from open_alaqs.alaqs_core import alaqsdblite
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools import conversion
 
-logger = alaqslogging.logging.getLogger(__name__)
-logger.setLevel('DEBUG')
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+logger = get_logger(__name__)
 
 alaqs_main_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                     "..")

@@ -1,7 +1,7 @@
-import logging
 import os
 from collections import OrderedDict
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
@@ -15,8 +15,7 @@ try:
 except ImportError:
     loaded_color_logger = False
 
-# logger = logging.getLogger("__alaqs__.%s" % (__name__))
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ParkingSources:

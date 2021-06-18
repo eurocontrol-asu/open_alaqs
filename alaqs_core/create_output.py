@@ -1,8 +1,6 @@
 """
 This class is used to create an ALAQS output file from an existing ALAQS study.
 """
-
-import logging
 import os
 import shutil
 import sqlite3 as sqlite
@@ -10,12 +8,14 @@ from datetime import datetime, timedelta
 
 from open_alaqs.alaqs_core import alaqsdblite
 from open_alaqs.alaqs_core import alaqsutils
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.AmbientCondition import \
     AmbientConditionStore
 from open_alaqs.alaqs_core.tools import SQLInterface
 from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 
-logger = logging.getLogger("alaqs.%s" % __name__)
+logger = get_logger(__name__)
+
 
 def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_path=""):
     """

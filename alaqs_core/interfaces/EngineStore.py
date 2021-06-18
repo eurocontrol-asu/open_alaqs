@@ -1,6 +1,6 @@
-import logging
 import os.path
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Engine import Engine
 from open_alaqs.alaqs_core.interfaces.EngineDatabases import \
     EngineEmissionIndicesDatabase, EngineModeDatabase, \
@@ -8,7 +8,7 @@ from open_alaqs.alaqs_core.interfaces.EngineDatabases import \
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 
-logger = logging.getLogger("__alaqs__.%s" % __name__)
+logger = get_logger(__name__)
 
 
 class EngineStore(Store, metaclass=Singleton):

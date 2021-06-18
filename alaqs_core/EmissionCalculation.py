@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 from PyQt5 import QtCore, QtWidgets
 
-from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.AmbientCondition import \
     AmbientConditionStore, AmbientCondition
 from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
@@ -16,17 +16,7 @@ from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
 from open_alaqs.alaqs_core.tools import Iterator, conversion
 from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 
-# logger = logging.getLogger(__name__)
-logger = alaqslogging.logging.getLogger(__name__)
-# To override the default severity of logging
-logger.setLevel('DEBUG')
-# Use FileHandler() to log to a file
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-# Don't forget to add the file handler
-logger.addHandler(file_handler)
+logger = get_logger(__name__)
 
 
 class EmissionCalculation:

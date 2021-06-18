@@ -33,4 +33,8 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :type iface: QgsInterface
     """
     from open_alaqs.openalaqs import OpenALAQS
+    from open_alaqs.alaqs_core.alaqslogging import log_init
+
+    log_init()
+
     return OpenALAQS(iface)

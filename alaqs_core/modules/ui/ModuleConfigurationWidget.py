@@ -1,11 +1,11 @@
-import logging
 from collections import OrderedDict
 
 from PyQt5 import QtCore, QtWidgets
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools import conversion
 
-logger = logging.getLogger("alaqs.%s" % __name__)
+logger = get_logger(__name__)
 
 
 class ModuleConfigurationWidget(QtWidgets.QWidget):

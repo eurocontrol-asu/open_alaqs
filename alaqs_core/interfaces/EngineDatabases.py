@@ -1,12 +1,12 @@
-import logging
 from collections import OrderedDict
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Engine import EngineEmissionIndex, \
     HelicopterEngineEmissionIndex
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 
-logger = logging.getLogger("__alaqs__.%s" % __name__)
+logger = get_logger(__name__)
 
 
 class EngineEmissionFactorsStartDatabase(SQLSerializable, metaclass=Singleton):

@@ -30,6 +30,7 @@ from open_alaqs.alaqs_core import alaqs
 from open_alaqs.alaqs_core import alaqslogging
 from open_alaqs.alaqs_core import alaqsutils
 from open_alaqs.alaqs_core.EmissionCalculation import EmissionCalculation
+from open_alaqs.alaqs_core.alaqslogging import get_logger, log_path
 from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
     OutputModuleManager, DispersionModuleManager
 from open_alaqs.alaqs_core.modules.ui.ConcentrationVisualizationWidget import \
@@ -48,13 +49,7 @@ from open_alaqs.ui.ui_run_austal2000 import Ui_DialogRunAUSTAL2000
 from open_alaqs.ui.ui_study_setup import Ui_DialogStudySetup
 from open_alaqs.ui.ui_taxiway_routes import Ui_TaxiRoutesDialog
 
-logger = alaqslogging.logging.getLogger(__name__)
-logger.setLevel('DEBUG')
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+logger = get_logger(__name__)
 
 
 class OpenAlaqsAbout(QtWidgets.QDialog):
@@ -1803,7 +1798,7 @@ class OpenAlaqsLogfile(QtWidgets.QDialog):
         """
         try:
             self.ui.logfile_text_area.clear()
-            with open(alaqslogging.LOG_FILE_PATH, 'rt') as log_file:
+            with log_path.open('rt') as log_file:
                 data = "".join(log_file.readlines())
                 self.ui.logfile_text_area.setText(data)
         except Exception as e:
@@ -1833,8 +1828,7 @@ class OpenAlaqsLogfile(QtWidgets.QDialog):
         :return:
         """
         try:
-            # with open(alaqs_config.LOG_FILE_PATH, 'w'):
-            with open(alaqslogging.LOG_FILE_PATH, 'w'):
+            with log_path.open('w'):
                 pass
 
             self.load_log_file()
@@ -1851,8 +1845,7 @@ class OpenAlaqsLogfile(QtWidgets.QDialog):
         """
         try:
             # Get the current log file path
-            # with open(alaqs_config.LOG_FILE_PATH, 'r') as current_log_file:
-            with open(alaqslogging.LOG_FILE_PATH, 'r') as current_log_file:
+            with log_path.open('r') as current_log_file:
                 current_log_file_text = current_log_file.read()
 
                 new_path = QtWidgets.QFileDialog.getSaveFileName(

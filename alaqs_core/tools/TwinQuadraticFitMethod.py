@@ -1,6 +1,6 @@
-import logging
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-logger = logging.getLogger("__alaqs__.%s" % __name__)
+logger = get_logger(__name__)
 
 
 def calculateFuelFlowFromPowerSetting(power_setting, icao_eedb):

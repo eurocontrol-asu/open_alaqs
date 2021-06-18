@@ -1,12 +1,11 @@
 """
 This class is used to create a 3D grid of emissions ...
 """
-import logging
-
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools import SQLInterface
 from open_alaqs.alaqs_core.tools.Grid3D import Grid3DElement
 
-logger = logging.getLogger("__alaqs__.%s" % __name__)
+logger = get_logger(__name__)
 
 
 class Grid3DEntries(object):

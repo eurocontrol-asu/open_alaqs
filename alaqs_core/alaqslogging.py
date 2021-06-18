@@ -1,26 +1,37 @@
-import logging.handlers
-import os
+import logging
+from pathlib import Path
 
-LOG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
-                             "alaqs-log.log")
-for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler)
+# Set the path to the log file
+log_path = Path(__file__).parents[1] / 'alaqs.log'
 
-# adds the root logger
-logger_format = '%(asctime)s - %(levelname)s - %(name)-12s : %(message)s'
-logger_date_format = '%d-%m-%Y %H:%M:%S'
+# Set the message format
+log_format = '%(asctime)s - %(levelname)s - %(name)-12s : %(message)s'
+log_date_format = '%d-%m-%Y %H:%M:%S'
 
-logging.basicConfig(level=logging.INFO,
-                    format=logger_format,
-                    datefmt=logger_date_format,
-                    filename=LOG_FILE_PATH,
-                    filemode='w')
+# Set the (default) log level
+log_level = 'DEBUG'
 
-# logger = logging.getLogger(__name__)
-# logger.setLevel('DEBUG')
 
-# Use FileHandler() to log to a file
-# file_handler = logging.FileHandler(LOG_FILE_PATH, mode='w')
-# formatter = logging.Formatter(logger_format)
-# file_handler.setFormatter(formatter)
-# logger.addHandler(file_handler)
+def log_init():
+    """
+    Configure the logging module for the OpenALAQS plugin.
+    """
+    # Remove the log handlers
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
+    # Configure the logger
+    logging.basicConfig(level=logging.INFO,
+                        format=log_format,
+                        datefmt=log_date_format,
+                        filename=log_path,
+                        filemode='w')
+
+
+def get_logger(name: str) -> logging.Logger:
+    """
+    Configure the logger for the indicated module by name.
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(log_level)
+    return logger

@@ -1,8 +1,8 @@
 import difflib
-import logging
 import os
 from collections import OrderedDict
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.APU import APUStore
 from open_alaqs.alaqs_core.interfaces.EmissionDynamics import \
     EmissionDynamicsStore
@@ -15,7 +15,7 @@ from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 
-logger = logging.getLogger("__alaqs__.%s" % __name__)
+logger = get_logger(__name__)
 
 
 class Aircraft:

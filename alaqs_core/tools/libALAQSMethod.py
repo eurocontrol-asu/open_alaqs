@@ -1,4 +1,3 @@
-import logging
 import math
 import sys
 
@@ -6,9 +5,9 @@ import sys
 from open_alaqs.alaqs_core import alaqs
 from open_alaqs.alaqs_core import alaqsdblite
 from open_alaqs.alaqs_core import alaqsutils
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-# Create a logger for this module.
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def roadway_emission_factors_alaqs_method(input_data):

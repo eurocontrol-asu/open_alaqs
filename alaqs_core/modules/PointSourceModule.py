@@ -2,15 +2,13 @@
 This class provides all of the calculation methods required to perform emissions
  calculations for stationary sources.
 """
-
-import logging
-
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import Emission
 from open_alaqs.alaqs_core.interfaces.PointSources import PointSourcesStore
 from open_alaqs.alaqs_core.interfaces.SourceModule import \
     SourceWithTimeProfileModule
 
-logger = logging.getLogger("alaqs.%s" % __name__)
+logger = get_logger(__name__)
 
 
 class PointSourceWithTimeProfileModule(SourceWithTimeProfileModule):

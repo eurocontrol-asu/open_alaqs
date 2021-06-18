@@ -1,4 +1,3 @@
-import logging
 import math
 
 import osgeo.ogr as ogr
@@ -8,9 +7,10 @@ import shapely.ops
 import shapely.wkt
 from geographiclib.geodesic import Geodesic
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools import conversion, Iterator
 
-logger = logging.getLogger("__alaqs__.%s" % __name__)
+logger = get_logger(__name__)
 
 
 def getDistanceXY(x, y, z=0., origin_x=0., origin_y=0., origin_z=0.) -> float:
