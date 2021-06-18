@@ -13,26 +13,6 @@ from open_alaqs.alaqs_core.tools import conversion, Iterator
 logger = logging.getLogger("__alaqs__.%s" % __name__)
 
 
-def getAngleXY(x, y, z=0., origin_x=0., origin_y=0., origin_z=0.,
-               indegrees=False):
-    '''returns the angle (in radians) between x and y relative to origin (origin_x,origin_y)'''
-    res = 0.
-    x = conversion.convertToFloat(x)
-    y = conversion.convertToFloat(y)
-    z = conversion.convertToFloat(z)
-    origin_x = conversion.convertToFloat(origin_x)
-    origin_y = conversion.convertToFloat(origin_y)
-    origin_z = conversion.convertToFloat(origin_z)
-
-    if not (x - origin_x):
-        res = math.pi / 2.
-    else:
-        res = math.atan((y - origin_y) / (x - origin_x))
-    if indegrees:
-        res = rad2deg(res)
-    return res
-
-
 def getDistanceXY(x, y, z=0., origin_x=0., origin_y=0., origin_z=0.) -> float:
     """
     Determine the radius for the circle by x and y relative to origin
@@ -41,14 +21,6 @@ def getDistanceXY(x, y, z=0., origin_x=0., origin_y=0., origin_z=0.) -> float:
     x = conversion.convertToFloat(x)
     y = conversion.convertToFloat(y)
     return math.sqrt(x ** 2 + y ** 2)
-
-
-def rad2deg(val: float) -> float:
-    return math.degrees(val)
-
-
-def deg2rad(val: float) -> float:
-    return math.radians(val)
 
 
 def getDistance(
@@ -67,27 +39,6 @@ def getDistance(
 def getGeodesic(epsg_id=4326):
     return Geodesic(getSpatialReference(epsg_id).GetSemiMajor(),
                     1. / getSpatialReference(epsg_id).GetInvFlattening())
-
-
-def getGeodesicLine(inverseDistance_dic, EPSG_id=4326):
-    geod = getGeodesic(EPSG_id)
-    line = geod.Line(inverseDistance_dic['lat1'], inverseDistance_dic['lon1'],
-                     inverseDistance_dic['azi1'])
-    return line
-
-
-def getInverseDistanceLine(
-        inv_distance_dict: dict,
-        number_points: int,
-        epsg_id: int = 4326) -> list:
-    geod = getGeodesic(epsg_id)
-    line = geod.Line(inv_distance_dict['lat1'], inv_distance_dict['lon1'],
-                     inv_distance_dict['azi1'])
-    val = []
-    for i in range(number_points + 1):
-        point = line.Position(inv_distance_dict['s12'] / number_points * i)
-        val.append((point['lat2'], point['lon2']))
-    return val
 
 
 def getInverseDistance(
@@ -214,11 +165,6 @@ def getLine(p1_wkt, p2_wkt, swap_xy=False):
     return geom
 
 
-def getLineFromWkt(wkt):
-    geom = ogr.CreateGeometryFromWkt(wkt)
-    return geom
-
-
 def getRectangleXYFromBoundingBox(bbox):
     # Create ring
     ringLower = ogr.Geometry(ogr.wkbLinearRing)
@@ -335,7 +281,7 @@ def getRelativeAreaInBoundingBox(geometry_wkt, cell_bbox):
 def getRelativeLengthXYInBoundingBox(
         geometry_wkt,
         cell_bbox,
-                                     EPSG_id_source=3857,
+        EPSG_id_source=3857,
         EPSG_id_target=4326):
     bbox_polygon_ = getRectangleXYFromBoundingBox(cell_bbox)
 
@@ -356,15 +302,6 @@ def getRelativeLengthXYInBoundingBox(
         return abs(dist_xy) / abs(total_length)
     else:
         return 0.
-
-
-def getRelativeHeightInCell(matched_cell, z_min, z_max):
-    # ToDo: add exceptions
-    if z_min == z_max:
-        return 1
-    else:
-        return abs(max(z_min, matched_cell["zmin"]) - min(z_max, matched_cell[
-            "zmax"])) / (z_max - z_min)
 
 
 def getRelativeHeightInBoundingBox(line_z_min, line_z_max, cell_bbox):
@@ -424,19 +361,6 @@ def getSpatialReference(epsg_id):
 
 # cache coordinate transformations
 transformations_cache = {}
-
-
-def getCoordinateTransformation(epsg_id_source, epsg_id_target):
-    cache_id = "%s:%s" % (epsg_id_source, epsg_id_target)
-    try:
-        if cache_id not in transformations_cache:
-            source = getSpatialReference(epsg_id_source)
-            target = getSpatialReference(epsg_id_target)
-            transformations_cache[cache_id] = \
-                osr.CoordinateTransformation(source, target)
-        return transformations_cache[cache_id]
-    except Exception as xc:
-        logger.error("getCoordinateTransformation: %s" % xc)
 
 
 def reproject_Point(
