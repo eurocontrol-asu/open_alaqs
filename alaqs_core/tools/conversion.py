@@ -1,9 +1,7 @@
-import time
 import calendar
-from typing import Union, Any
-
-import unicodedata
+import time
 from datetime import datetime
+from typing import Union, Any
 
 
 # For time conversions: Use UTC time only
@@ -108,15 +106,11 @@ def convertTimeToSeconds(
 
     if isinstance(value, str):
         return calendar.timegm(convertStringToTime(value, format_))
-    elif isinstance(value, str):
-        return convertTimeToSeconds(
-            unicodedata.normalize('NFKD', value).encode('ascii', 'ignore'),
-            format_)
-    elif isinstance(value, datetime):
+    if isinstance(value, datetime):
         return calendar.timegm(value.timetuple())
-    elif isinstance(value, time.struct_time):
+    if isinstance(value, time.struct_time):
         return calendar.timegm(value)
-    elif isinstance(value, (int, float)):
+    if isinstance(value, (int, float)):
         return value
     return None
 
@@ -134,9 +128,9 @@ def convertSecondsToDateTime(
     if not value:
         return None
 
-    if isinstance(value, int) or isinstance(value, float):
+    if isinstance(value, (int, float)):
         return datetime.utcfromtimestamp(value)
-    elif isinstance(value, str):
+    if isinstance(value, str):
         return datetime.utcfromtimestamp(convertTimeToSeconds(value, format_))
     return None
 
@@ -156,7 +150,7 @@ def convertSecondsToTimeString(
 
     if isinstance(value, time.struct_time):
         return time.strftime(format_, value)
-    elif isinstance(value, (int, float)):
+    if isinstance(value, (int, float)):
         return time.strftime(format_, convertSecondsToTime(value, format_))
     return None
 
