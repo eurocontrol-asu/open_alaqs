@@ -167,16 +167,16 @@ def getLine(p1_wkt, p2_wkt, swap_xy=False):
 
 def getRectangleXYFromBoundingBox(bbox):
     # Create ring
-    ringLower = ogr.Geometry(ogr.wkbLinearRing)
-    ringLower.AddPoint(bbox["x_min"], bbox["y_min"])
-    ringLower.AddPoint(bbox["x_max"], bbox["y_min"])
-    ringLower.AddPoint(bbox["x_max"], bbox["y_max"])
-    ringLower.AddPoint(bbox["x_min"], bbox["y_max"])
-    ringLower.AddPoint(bbox["x_min"], bbox["y_min"])
+    ring_lower = ogr.Geometry(ogr.wkbLinearRing)
+    ring_lower.AddPoint(bbox["x_min"], bbox["y_min"])
+    ring_lower.AddPoint(bbox["x_max"], bbox["y_min"])
+    ring_lower.AddPoint(bbox["x_max"], bbox["y_max"])
+    ring_lower.AddPoint(bbox["x_min"], bbox["y_max"])
+    ring_lower.AddPoint(bbox["x_min"], bbox["y_min"])
 
     # Create polygon
     poly = ogr.Geometry(ogr.wkbPolygon)
-    poly.AddGeometry(ringLower)
+    poly.AddGeometry(ring_lower)
 
     return poly
 
@@ -199,16 +199,16 @@ def getRectangleXYZFromBoundingBox(
     lon_r2, lat_r2, alt22 = new_points[1][0], new_points[1][1], new_points[1][2]
 
     # Create ring
-    ringLower = ogr.Geometry(ogr.wkbLinearRing)
-    ringLower.AddPoint(lon_l2, lat_l2, alt12)
-    ringLower.AddPoint(lon_r2, lat_r2, alt22)
-    ringLower.AddPoint(lon_r1, lat_r1, alt21)
-    ringLower.AddPoint(lon_l1, lat_l1, alt11)
-    ringLower.AddPoint(lon_l2, lat_l2, alt12)
+    ring_lower = ogr.Geometry(ogr.wkbLinearRing)
+    ring_lower.AddPoint(lon_l2, lat_l2, alt12)
+    ring_lower.AddPoint(lon_r2, lat_r2, alt22)
+    ring_lower.AddPoint(lon_r1, lat_r1, alt21)
+    ring_lower.AddPoint(lon_l1, lat_l1, alt11)
+    ring_lower.AddPoint(lon_l2, lat_l2, alt12)
 
     # Create polygon
     poly = ogr.Geometry(ogr.wkbPolygon)
-    poly.AddGeometry(ringLower)
+    poly.AddGeometry(ring_lower)
     return poly
 
 
@@ -268,7 +268,8 @@ def getRelativeAreaInBoundingBox(geometry_wkt, cell_bbox):
                                                      ogr.wkbMultiPolygon,
                                                      ogr.wkbPolygon25D,
                                                      ogr.wkbMultiPolygon25D]:
-            relative_area_in_cell_ = matched_area_geom.GetArea() / total_area_of_geometry
+            relative_area_in_cell_ = \
+                matched_area_geom.GetArea() / total_area_of_geometry
         else:
             logger.error(
                 "Matched area '%s' with type id '%i' is neither polygon nor "
@@ -281,21 +282,21 @@ def getRelativeAreaInBoundingBox(geometry_wkt, cell_bbox):
 def getRelativeLengthXYInBoundingBox(
         geometry_wkt,
         cell_bbox,
-        EPSG_id_source=3857,
-        EPSG_id_target=4326):
+        epsg_id_source=3857,
+        epsg_id_target=4326):
     bbox_polygon_ = getRectangleXYFromBoundingBox(cell_bbox)
 
     total_length = getDistanceOfLineStringXY(geometry_wkt,
-                                             epsg_id_source=EPSG_id_source,
-                                             epsg_id_target=EPSG_id_target)
+                                             epsg_id_source=epsg_id_source,
+                                             epsg_id_target=epsg_id_target)
 
     dist_xy = 0.
     intersection_wkt = getIntersectionXY(geometry_wkt, bbox_polygon_)
     # logger.debug("Intersection: %s" % (intersection_wkt))
 
     if intersection_wkt:
-        dist_xy = getDistanceOfLineStringXY(intersection_wkt, EPSG_id_source,
-                                            EPSG_id_target)
+        dist_xy = getDistanceOfLineStringXY(intersection_wkt, epsg_id_source,
+                                            epsg_id_target)
         # logger.debug("Distance (x,y): %s" % (dist_xy))
 
     if dist_xy and total_length:
@@ -383,12 +384,12 @@ def reproject_Point(
         logger.error("reproject_Point: %s" % xc)
 
 
-def reproject_geometry(geometry_wkt, EPSG_id_source=3857, EPSG_id_target=4326):
+def reproject_geometry(geometry_wkt, epsg_id_source=3857, epsg_id_target=4326):
     source = osr.SpatialReference()
-    source.ImportFromEPSG(EPSG_id_source)
+    source.ImportFromEPSG(epsg_id_source)
 
     target = osr.SpatialReference()
-    target.ImportFromEPSG(EPSG_id_target)
+    target.ImportFromEPSG(epsg_id_target)
 
     transform = osr.CoordinateTransformation(source, target)
 
