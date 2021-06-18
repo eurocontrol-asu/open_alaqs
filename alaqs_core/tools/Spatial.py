@@ -93,10 +93,8 @@ def getArea(val):
         p = ogr.CreateGeometryFromWkt(val)
         area = p.GetArea()
         return area
-    else:
-        raise Exception(
-            "val with value '%s' is of type '%s', but only '%s' "
-            "implemented." % (val, type(val), type("")))
+    raise Exception("val with value '%s' is of type '%s', but only '%s' "
+                    "implemented.".format(val, type(val), type("")))
 
 
 def getIntersectionXY(p1, p2):
@@ -109,9 +107,9 @@ def getIntersectionXY(p1, p2):
 
     intersection = None
     if poly1 is None:
-        logger.error("getIntersectionXY: Poly 1 '%s' is None." % (str(p1)))
+        logger.error("getIntersectionXY: Poly 1 '%s' is None.", p1)
     elif poly2 is None:
-        logger.error("getIntersectionXY: Poly 2 '%s' is None." % (str(p2)))
+        logger.error("getIntersectionXY: Poly 2 '%s' is None.", p2)
     else:
         intersection = poly1.Intersection(poly2)
 
@@ -127,7 +125,7 @@ def getPoint(wkt, x=0., y=0., z=0., swap_xy=False):
     if wkt:
         point2 = ogr.CreateGeometryFromWkt(wkt)
         if point2 is None:
-            logger.error("Could not create ogr.wkbPoint from wkt='%s'" % wkt)
+            logger.error("Could not create ogr.wkbPoint from wkt='%s'", wkt)
         else:
             p1 = point2.GetX()
             p2 = point2.GetY()
@@ -227,10 +225,9 @@ def getBoundingBox(val):
             "z_min": bbox[4],
             "z_max": bbox[5]
         }
-    elif isinstance(val, str):
+    if isinstance(val, str):
         return getBoundingBox(ogr.CreateGeometryFromWkt(val))
-    else:
-        return None
+    return None
 
 
 def addHeightToGeometryWkt(geometry_wkt, height):
@@ -273,8 +270,8 @@ def getRelativeAreaInBoundingBox(geometry_wkt, cell_bbox):
         else:
             logger.error(
                 "Matched area '%s' with type id '%i' is neither polygon nor "
-                "point! Setting matching area to zero ... "
-                % (matched_area_, matched_area_geom.GetGeometryType()))
+                "point! Setting matching area to zero ... ", matched_area_,
+                matched_area_geom.GetGeometryType())
 
     return relative_area_in_cell_
 
@@ -301,8 +298,7 @@ def getRelativeLengthXYInBoundingBox(
 
     if dist_xy and total_length:
         return abs(dist_xy) / abs(total_length)
-    else:
-        return 0.
+    return 0.
 
 
 def getRelativeHeightInBoundingBox(line_z_min, line_z_max, cell_bbox):
@@ -381,7 +377,7 @@ def reproject_Point(
         point.Transform(transform)
         return point, point.ExportToWkt()
     except Exception as xc:
-        logger.error("reproject_Point: %s" % xc)
+        logger.error("reproject_Point: %s", xc)
 
 
 def reproject_geometry(geometry_wkt, epsg_id_source=3857, epsg_id_target=4326):
