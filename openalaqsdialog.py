@@ -2335,10 +2335,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         :return: boolean - True for checked, False for unchecked
         """
         try:
-            if ui_element.checkState() == QtCore.Qt.Checked:
-                return True
-            else:
-                return False
+            return ui_element.checkState() == QtCore.Qt.Checked
         except:
             return None
 
