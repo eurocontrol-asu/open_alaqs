@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 from PyQt5 import QtCore, QtWidgets
 
-from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.AmbientCondition import \
     AmbientConditionStore, AmbientCondition
 from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
@@ -16,17 +16,7 @@ from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
 from open_alaqs.alaqs_core.tools import Iterator, conversion
 from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 
-# logger = logging.getLogger(__name__)
-logger = alaqslogging.logging.getLogger(__name__)
-# To override the default severity of logging
-logger.setLevel('DEBUG')
-# Use FileHandler() to log to a file
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-# Don't forget to add the file handler
-logger.addHandler(file_handler)
+logger = get_logger(__name__)
 
 
 class EmissionCalculation:
@@ -171,7 +161,8 @@ class EmissionCalculation:
                         values_dict=configuration)
                     return True
                 except Exception as e:
-                    logger.error("issubclass(obj, SourceModule) failed for DispersionModule")
+                    logger.error("issubclass(obj, SourceModule) failed for "
+                                 "DispersionModule")
                     return False
         return False
 
@@ -218,6 +209,8 @@ class EmissionCalculation:
             count_ = 0
             # loop on complete period
             for (start_, end_) in self.getTimeSeries():
+                start_time = start_.getTimeAsDateTime()
+                end_time = end_.getTimeAsDateTime()
                 count_ += +1
                 progressbar.setValue(conversion.convertToInt(
                     100 * conversion.convertToFloat(count_) / len(
@@ -255,8 +248,6 @@ class EmissionCalculation:
                         self.getDispersionModules().items():
                     # row_cnt = 0
                     for timeval, rows in self.getEmissions().items():
-                        start_time = start_.getTimeAsDateTime()
-                        end_time = end_.getTimeAsDateTime()
                         if start_time <= timeval < end_time:
                             dispersion_mod_obj.process(
                                 start_, end_, timeval, rows,

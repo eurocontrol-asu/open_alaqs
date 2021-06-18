@@ -1,10 +1,11 @@
 import sys
 import os
 import struct
-import logging
 import sqlite3 as sqlite
 
-logger = logging.getLogger("alaqs.%s" % __name__)
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+
+logger = get_logger(__name__)
 
 
 def connect(database_path: str) -> sqlite.Connection:

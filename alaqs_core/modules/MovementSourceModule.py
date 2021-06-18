@@ -4,20 +4,14 @@ This class provides the module to calculate emissions of movements.
 
 import pandas as pd
 
-from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.AmbientCondition import AmbientCondition
 from open_alaqs.alaqs_core.interfaces.Emissions import Emission
 from open_alaqs.alaqs_core.interfaces.Movement import MovementStore
 from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
 from open_alaqs.alaqs_core.tools import conversion
 
-logger = alaqslogging.logging.getLogger(__name__)
-logger.setLevel('DEBUG')
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+logger = get_logger(__name__)
 
 
 class MovementSourceModule(SourceModule):

@@ -1,4 +1,3 @@
-import logging
 import os
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -7,11 +6,12 @@ import numpy as np
 from PyQt5 import QtWidgets
 from dateutil import rrule
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
 from open_alaqs.alaqs_core.modules.ui.TableViewDialog import Ui_TableViewDialog
 from open_alaqs.alaqs_core.tools import conversion, CSVInterface
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class TableViewDispersionModule(OutputModule):

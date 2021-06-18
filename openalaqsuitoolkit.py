@@ -1,25 +1,11 @@
 import os
-import sys
-import logging
 
 from qgis.PyQt import QtGui, QtWidgets
 from qgis.core import *
-from qgis.PyQt.QtWidgets import QTableWidgetItem
-from qgis.gui import QgsEditorWidgetWrapper
 
-from open_alaqs import alaqs_config
-from open_alaqs.alaqs_core import alaqslogging
-from open_alaqs.alaqs_core import alaqsutils
-from open_alaqs.alaqs_core import alaqs
-from open_alaqs.alaqs_core import alaqsdblite
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-logger = alaqslogging.logging.getLogger(__name__)
-logger.setLevel('DEBUG')
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+logger = get_logger(__name__)
 
 
 def validate_field(ui_element, var_type):

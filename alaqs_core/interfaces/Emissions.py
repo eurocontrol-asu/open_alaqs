@@ -1,11 +1,10 @@
-import logging
-
 from shapely.geometry import GeometryCollection
 from shapely.wkt import loads
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Store import Store
 
-logger = logging.getLogger("alaqs.%s" % __name__)
+logger = get_logger(__name__)
 
 defValues = {
     "fuel_kg": 0.,

@@ -1,10 +1,10 @@
-import logging
 import re
 from collections import OrderedDict
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools import SQLInterface, conversion
 
-logger = logging.getLogger("alaqs.%s" % __name__)
+logger = get_logger(__name__)
 
 
 class SQLSerializable:

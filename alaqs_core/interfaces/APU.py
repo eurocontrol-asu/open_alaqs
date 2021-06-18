@@ -1,11 +1,11 @@
-import logging
 from collections import OrderedDict
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 
-logger = logging.getLogger("alaqs.%s" % __name__)
+logger = get_logger(__name__)
 # defaultEI={
 #             "fuel_kg_sec" : 0.,
 #             "co_g_kg" : 0.,

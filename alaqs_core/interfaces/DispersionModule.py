@@ -1,14 +1,14 @@
 import sys
-import logging
 from collections import OrderedDict
 
 from PyQt5 import QtWidgets
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.modules.ui.ModuleConfigurationWidget import \
     ModuleConfigurationWidget
 
 sys.path.append("..")  # Adds higher directory to python modules path.
-logger = logging.getLogger("alaqs.%s" % __name__)
+logger = get_logger(__name__)
 
 
 class DispersionModule:

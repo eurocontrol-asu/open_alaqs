@@ -1,15 +1,15 @@
-import logging
 from collections import OrderedDict
 
-import pandas as pd
 import geopandas as gpd
+import pandas as pd
 from shapely.geometry import Polygon
 
-from open_alaqs.alaqs_core.tools import conversion
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools import SQLInterface
+from open_alaqs.alaqs_core.tools import conversion
 from open_alaqs.alaqs_core.tools.PythonClasses import SizeLimitedDict
 
-logger = logging.getLogger("alaqs.%s" % __name__)
+logger = get_logger(__name__)
 
 
 class Grid3D(object):

@@ -1,15 +1,15 @@
 import calendar
-import logging
 import os
 from collections import OrderedDict
 from datetime import datetime, timedelta
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import conversion
 
-logger = logging.getLogger("__alaqs__.%s" % __name__)
+logger = get_logger(__name__)
 
 MONTH_MAP = {
     1: "jan",

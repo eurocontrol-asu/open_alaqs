@@ -1,23 +1,12 @@
 """
 This class is used to create a 3D grid of emissions ...
 """
-from __future__ import absolute_import
-from builtins import str
-from builtins import range
-from builtins import object
-import os
-import logging
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.tools import SQLInterface
+from open_alaqs.alaqs_core.tools.Grid3D import Grid3DElement
 
-from alaqs_core.tools import Grid3D
+logger = get_logger(__name__)
 
-logger = logging.getLogger("__alaqs__.%s" % (__name__))
-
-#import alaqs
-
-from alaqs_core.tools.Grid3D import Grid3DElement
-
-from .tools import SQLInterface
-# Create a logger for this module. Can be commented out for distribution
 
 class Grid3DEntries(object):
     def __init__(self, db_path):
@@ -74,10 +63,12 @@ class Grid3DEntries(object):
     def resetEntries(self, entry):
         self._entries = {}
 
-    def getAllElements(self, sourceList=[]):
+    def getAllElements(self, sourceList=None):
         """
         :param grid_meta_data: a dictionary that contains the grid definition (number of cells in x,y,z dimensions, the resolution, and the reference (middle) x, y coordinates)
         """
+        if sourceList is None:
+            sourceList = []
         map_table_columns = {
             "shapes_parking":"parking_id",
             "shapes_tracks":"track_id",
@@ -264,66 +255,66 @@ class Grid3DEntries(object):
 #        return None
 
 
-if __name__ == "__main__":
-    # create a logger for this module
-    logger.setLevel(logging.DEBUG)
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    # create formatter
-    formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    # add ch to logger
-    logger.addHandler(ch)
-
-    # ======================================================
-    # ==================    UNIT TESTS     =================
-    # ======================================================
-
-    # Note: you might get errors with SRID 3857 missing. If this is the case, use the following query:
-    # INSERT INTO "spatial_ref_sys" VALUES ("3857", "epsg" , "3857", "WGS 84 / Pseudo-Mercator",
-    # "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs")
-    #
-
-
-    # ==========================================================
-    # Testing the total emissions for a single runway
-    # ==========================================================
-    test_db = "C:/tmp/working.alaqs"
-
-    grid_configuration = {
-        'x_cells' : 10,
-        'y_cells' : 10,
-        'z_cells' : 1,
-        'x_resolution': 100,
-        'y_resolution': 100,
-        'z_resolution' :100,
-        'reference_latitude' : '50.734444', #airport_latitude
-        'reference_longitude' :'-3.413889' #airport_longitude
-    }
-
-    #Create a new grid instance
-    grid = Grid3D(test_db, grid_configuration)
-    #grid = Grid3D(test_db)
-    #Save the instance to the database
-    grid.serialize()
-
-    #get all sources, i.e. runways, roadways, areas etc. from the database
-    #available_tables = ["shapes_area_sources","shapes_buildings","shapes_gates","shapes_parking", "shapes_roadways", "shapes_point_sources", "shapes_runways", "shapes_taxiways"]
-    available_tables = ["shapes_point_sources"]
-    available_tables = ["shapes_area_sources"]
-    available_tables = []
-
-    path_to_database = os.path.join("..", "example", "exeter_out.alaqs")
-    grid_entries = Grid3DEntries(path_to_database)
-    grid_entries.deserialize()
-
-    #elements = grid_entries.getAllElements(available_tables)
-    #for ele in elements:
-    #    #match the sources to the grid
-    #    ele.setCellHashList(grid.matchBoundingBoxToCellHashList(ele.getBoundingBox()))
-    #    logger.debug(ele)
-
-    hash_coordinates_map = grid.convertCellHashListToCenterGridCellCoordinates(grid_entries.getUniqueCellHashes())
-    #test_result = create_3d_grid_data(test_db, "grid_3d_cell_data", grid_meta_data)
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     logger.setLevel(logging.DEBUG)
+#     # create console handler and set level to debug
+#     ch = logging.StreamHandler()
+#     ch.setLevel(logging.DEBUG)
+#     # create formatter
+#     formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
+#     # add formatter to ch
+#     ch.setFormatter(formatter)
+#     # add ch to logger
+#     logger.addHandler(ch)
+#
+#     # ======================================================
+#     # ==================    UNIT TESTS     =================
+#     # ======================================================
+#
+#     # Note: you might get errors with SRID 3857 missing. If this is the case, use the following query:
+#     # INSERT INTO "spatial_ref_sys" VALUES ("3857", "epsg" , "3857", "WGS 84 / Pseudo-Mercator",
+#     # "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs")
+#     #
+#
+#
+#     # ==========================================================
+#     # Testing the total emissions for a single runway
+#     # ==========================================================
+#     test_db = "C:/tmp/working.alaqs"
+#
+#     grid_configuration = {
+#         'x_cells' : 10,
+#         'y_cells' : 10,
+#         'z_cells' : 1,
+#         'x_resolution': 100,
+#         'y_resolution': 100,
+#         'z_resolution' :100,
+#         'reference_latitude' : '50.734444', #airport_latitude
+#         'reference_longitude' :'-3.413889' #airport_longitude
+#     }
+#
+#     #Create a new grid instance
+#     grid = Grid3D(test_db, grid_configuration)
+#     #grid = Grid3D(test_db)
+#     #Save the instance to the database
+#     grid.serialize()
+#
+#     #get all sources, i.e. runways, roadways, areas etc. from the database
+#     #available_tables = ["shapes_area_sources","shapes_buildings","shapes_gates","shapes_parking", "shapes_roadways", "shapes_point_sources", "shapes_runways", "shapes_taxiways"]
+#     available_tables = ["shapes_point_sources"]
+#     available_tables = ["shapes_area_sources"]
+#     available_tables = []
+#
+#     path_to_database = os.path.join("..", "example", "exeter_out.alaqs")
+#     grid_entries = Grid3DEntries(path_to_database)
+#     grid_entries.deserialize()
+#
+#     #elements = grid_entries.getAllElements(available_tables)
+#     #for ele in elements:
+#     #    #match the sources to the grid
+#     #    ele.setCellHashList(grid.matchBoundingBoxToCellHashList(ele.getBoundingBox()))
+#     #    logger.debug(ele)
+#
+#     hash_coordinates_map = grid.convertCellHashListToCenterGridCellCoordinates(grid_entries.getUniqueCellHashes())
+#     #test_result = create_3d_grid_data(test_db, "grid_3d_cell_data", grid_meta_data)

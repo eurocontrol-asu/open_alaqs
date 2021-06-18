@@ -10,16 +10,11 @@ import sqlite3 as sqlite
 import struct
 import sys
 
-from open_alaqs.alaqs_core import alaqslogging
 from open_alaqs.alaqs_core import alaqsutils
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-logger = alaqslogging.logging.getLogger(__name__)
-logger.setLevel('DEBUG')
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+logger = get_logger(__name__)
+
 
 def connectToDatabase(database_path):
     """

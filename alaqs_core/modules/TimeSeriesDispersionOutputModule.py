@@ -7,18 +7,12 @@ from PyQt5 import QtWidgets
 from dateutil import rrule
 from matplotlib.dates import DateFormatter
 
-from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
 from open_alaqs.alaqs_core.plotting.MatplotlibQtDialog import MatplotlibQtDialog
 from open_alaqs.alaqs_core.tools import conversion
 
-logger = alaqslogging.logging.getLogger(__name__)
-logger.setLevel('INFO')
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+logger = get_logger(__name__)
 
 
 class TimeSeriesDispersionModule(OutputModule):

@@ -1,7 +1,6 @@
-import logging
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-logger = logging.getLogger(__name__)
-
+logger = get_logger(__name__)
 
 # A correction factor for ambient pressure is not required except that the temperature is based on the ISA standard day temperature
 # for the ambient pressure altitude for the airport. 

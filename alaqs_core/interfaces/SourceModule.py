@@ -1,15 +1,15 @@
-import logging
 import os
 import sys
 
 import pandas as pd
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.UserTimeProfiles import \
     UserHourProfileStore, UserDayProfileStore, UserMonthProfileStore
 
 sys.path.append("..")  # Adds higher directory to python modules path.
 
-logger = logging.getLogger("__alaqs__.%s" % __name__)
+logger = get_logger(__name__)
 
 
 class SourceModule:

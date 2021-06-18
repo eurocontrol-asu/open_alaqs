@@ -4,27 +4,28 @@ import math
 import os
 from collections import OrderedDict
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
 from PyQt5 import QtGui, QtWidgets
 from dateutil import rrule
 
-from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
 from open_alaqs.alaqs_core.tools import SQLInterface, Spatial, conversion
 
-# logger = logging.getLogger(__name__)
-logger = alaqslogging.logging.getLogger(__name__)
-# To override the default severity of logging
-logger.setLevel('DEBUG')
-# Use FileHandler() to log to a file
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-# Don't forget to add the file handler
-logger.addHandler(file_handler)
+logger = get_logger(__name__)
+
+
+def log_time(func):
+    def inner(*args, **kwargs):
+        start = datetime.now()
+        result = func(*args, **kwargs)
+        finish = datetime.now()
+        logger.info(f"Time elapsed {func.__name__}: {finish - start}")
+        return result
+    return inner
 
 
 class AUSTAL2000DispersionModule(DispersionModule):
@@ -208,6 +209,9 @@ class AUSTAL2000DispersionModule(DispersionModule):
     def getOutputPath(self):
         return self._output_path
 
+    def getOutputPathAsPath(self):
+        return Path(self._output_path)
+
     def getSortedResults(self):
         return OrderedDict(
             sorted(list(self._results.items()), key=lambda t: t[0]))
@@ -250,23 +254,27 @@ class AUSTAL2000DispersionModule(DispersionModule):
         }
         return cell_bbox
 
-    def getEfficiencyXY(self, emissions_geometry_wkt, cell_bbox, isPoint, isLine, isPolygon, isMultiPolygon):
-        #efficiency = relative area of geometry in the cell box
+    def getEfficiencyXY(self, emissions_geometry_wkt, cell_bbox, isPoint,
+                        isLine, isPolygon, isMultiPolygon):
+        # efficiency = relative area of geometry in the cell box
         efficiency_ = 0.
         if isPoint or isPolygon or isMultiPolygon:
-            efficiency_ = Spatial.getRelativeAreaInBoundingBox(emissions_geometry_wkt, cell_bbox)
+            efficiency_ = Spatial.getRelativeAreaInBoundingBox(
+                emissions_geometry_wkt, cell_bbox)
         elif isLine:
             #get relative length (X,Y) in bounding box (assumes constant speed)
             efficiency_ = Spatial.getRelativeLengthXYInBoundingBox(emissions_geometry_wkt, cell_bbox)
         return efficiency_
 
-    def getEfficiencyZ(self, geometry_wkt, z_min, z_max, cell_box, isPoint, isLine, isPolygon, isMultiPolygon):
+    def getEfficiencyZ(self, geometry_wkt, z_min, z_max, cell_box, isPoint,
+                       isLine, isPolygon, isMultiPolygon):
         efficiency_ = 0.
         if isPoint:
             #points match each cell exactly once
             efficiency_ = Spatial.getRelativeHeightInBoundingBox(z_min, z_max, cell_box)
         elif isPolygon or isLine or isMultiPolygon:
-            efficiency_ = Spatial.getRelativeHeightInBoundingBox(z_min, z_max, cell_box)
+            efficiency_ = Spatial.getRelativeHeightInBoundingBox(z_min, z_max,
+                                                                 cell_box)
         return efficiency_
 
     def getGridXYFromReferencePoint(self):
@@ -284,7 +292,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
             result = SQLInterface.query_text(self._grid._db_path, sql_text)
             if result is None:
                 raise Exception("AUSTAL2000: Could not reset reference point as coordinates could not be transformed. The query was\n'%s'" % (sql_text))
-                return None
 
             self._reference_x = conversion.convertToFloat(result[0][0])
             self._reference_y = conversion.convertToFloat(result[0][1])
@@ -327,18 +334,23 @@ class AUSTAL2000DispersionModule(DispersionModule):
         if (self._grid is None) or (self._sequ is None):
             raise Exception("No 3DGrid or Sequence found. Cannot initialize the emissions grid")
 
-        index_i = self._z_meshes if self.getSequ().split(",")[0].startswith("k") else self._y_meshes if \
-            self.getSequ().split(",")[0].startswith("j") else self._x_meshes
-        index_j = self._z_meshes if self.getSequ().split(",")[1].startswith("k") else self._y_meshes if \
-            self.getSequ().split(",")[1].startswith("j") else self._x_meshes
-        index_k = self._z_meshes if self.getSequ().split(",")[2].startswith("k") else self._y_meshes if \
-            self.getSequ().split(",")[2].startswith("j") else self._x_meshes
+        # Split the sequ once
+        sequ_split = self.getSequ().split(",")
+
+        # Check for each index which mesh to link
+        indices = [None, None, None]
+        for p, q in enumerate(sequ_split):
+            if q.startswith('k'):
+                indices[p] = self._z_meshes
+            elif q.startswith('j'):
+                indices[p] = self._y_meshes
+            else:
+                indices[p] = self._x_meshes
+        index_i, index_j, index_k = indices
 
         self._emission_grid_matrix = np.zeros(shape=(index_i, index_j, index_k))
-        # self._coordinates_grid_matrix = np.zeros(shape=(index_i, index_j, index_k),dtype='i,i,i')
-        # self._coordinates_grid_matrix = np.zeros(shape=(index_i, index_j, index_k),dtype='i,i,i').tolist()
 
-        return (index_i, index_j, index_k)
+        return index_i, index_j, index_k
 
     def emptyOutputPath(self):
         import shutil, stat, errno
@@ -375,31 +387,11 @@ class AUSTAL2000DispersionModule(DispersionModule):
             else:
                 logger.warning("Previous A2K files were not deleted, verify output in %s" %str(self.getOutputPath()))
 
-
-
-
-    # def getTimeSeries(self, db_path=""):
-    #     from datetime import timedelta, date
-    #     from dateutil import rrule
-    #     from dateutil.relativedelta import relativedelta
-    #
-    #     if db_path:
-    #         try:
-    #             time_series_ = [datetime.strptime(t_[1], "%Y-%m-%d %H:%M:%S") for t_ in alaqsutils.inventory_time_series(db_path)]
-    #             time_series_.sort()
-    #             return time_series_
-    #         except Exception, e:
-    #             logger.error("Database error: '%s'" % (e))
-    #             (time_start_calc_,time_end_calc_) = self.getMinMaxTime(db_path)
-    #             time_series_ = []
-    #             for _day_ in rrule.rrule(rrule.DAILY, dtstart=time_start_calc_, until=time_end_calc_):
-    #                 for hour_ in rrule.rrule(rrule.HOURLY, dtstart=_day_, until=_day_ + timedelta(days=+1, hours=-1)):
-    #                     time_series_.append(hour_.strftime('%Y-%m-%d.%H:%M:%S'))
-    #             return time_series_
-
     def checkTimeIntervalinResults(self):
-        if not (list(self.getSortedResults().keys()) == list(self.getSortedSeries().keys())):
-            logger.debug("AUSTAL2000 Error: Contradictory data for series.dmna and austal.txt files")
+        if not (list(self.getSortedResults().keys()) == list(
+                self.getSortedSeries().keys())):
+            logger.debug(
+                "AUSTAL2000 Error: Contradictory data for series.dmna and austal.txt files")
             return False
         else:
             return True
@@ -460,8 +452,10 @@ class AUSTAL2000DispersionModule(DispersionModule):
             self._startTimeSeries = self._startTimeSeries + timedelta(hours=+1)
             self._endTimeSeries = self._endTimeSeries + timedelta(hours=+1)
 
-    def CalculateCellHashEfficiency(self, EmissionsValue, SourceGeometryText, Bbox, cells_matched, isPoint_element_,
-                                        isLine_element_, isPolygon_element_, isMultiPolygon_element_):
+    def CalculateCellHashEfficiency(self, EmissionsValue, SourceGeometryText,
+                                    Bbox, cells_matched, isPoint_element_,
+                                    isLine_element_, isPolygon_element_,
+                                    isMultiPolygon_element_):
 
         debug_efficiency_ = 0.
         debug_efficiency_xy = 0.
@@ -515,43 +509,19 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 #     self.total_emissions_per_cell_dict[cell_hash] = emission_value_
         return cell_efficiency
 
-    def calculate_emissions_per_grid_cell(self, edf_row):
-        geom = edf_row.geometry
-        EmissionValue = edf_row.emissions
-        cells = matched_cells_2D[matched_cells_2D.intersection(geom).is_empty == False]
-
-        if geom.type == 'LineString':
-            cells.loc[cells.index, 'Emission'] = EmissionValue * cells.intersection(geom).length / geom.length
-        elif geom.type == 'Point':
-            cells.loc[cells.index, 'Emission'] = EmissionValue / cells.shape[0]
-        elif geom.type == 'Polygon':
-            cells.loc[cells.index, 'Emission'] = EmissionValue * cells.intersection(geom).area / geom.area
-
-        self._grid.loc[cells.index, 'Emission'] += cells["Emission"]
-
-
+    @log_time
     def beginJob(self):
         if self.isEnabled():
-
             if self._grid is None:
-                raise Exception("No 3DGrid found. Use parameter 'grid' to configure one on AUSTAL2000OutputModule "
-                                "initialization (e.g. from instantiated EmissionCalculation.")
+                raise Exception("No 3DGrid found. Use parameter 'grid' to "
+                                "configure one on AUSTAL2000OutputModule "
+                                "initialization (e.g. from instantiated "
+                                "EmissionCalculation.")
             else:
-                # self._data = self._grid.get_df_from_2d_grid_cells()
-                # # self._data = self._grid.get_df_from_3d_grid_cells()
-                # # self._grid3D = self._grid3D.assign(Emission=pd.Series(0, index=self._grid3D.index))
-                # # self._grid3D = self._grid3D.assign(EmissionSource=pd.Series("", index=self._grid3D.index))
-                # # self._grid2D = self._grid3D[self._grid3D.zmin == 0]
-                # # self._grid2D = self._grid2D.assign(Emission=pd.Series(0, index=self._grid2D.index))
-                #
-                # # self._data = self._data[self._data.zmin == 0]
-                # self._data = self._data.assign(Emission=pd.Series(0, index=self._data.index))
 
                 self.getGridXYFromReferencePoint()
-                # logger.info("Reference  grid origin: x_ref=%.0f, y_ref=%.0f" % (self._reference_x, self._reference_y))
 
                 self._emission_grid_matrix = None
-                # self._coordinates_grid_matrix = None
 
                 self._x_meshes = self._grid._x_cells
                 self._y_meshes = self._grid._y_cells
@@ -563,10 +533,12 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 self._grid._y_resolution = self._mesh_width
 
                 if not self._output_path:
-                    OutputPath = QtWidgets.QFileDialog.getExistingDirectory(None, "AUSTAL2000: Select Output directory")
-                    self.setOutputPath(OutputPath)
-                    if (not os.path.isdir(self.getOutputPath())):
-                        raise Exception("AUSTAL2000: Not a valid path for grid source file %s'" % (self.getOutputPath()))
+                    output_path = QtWidgets.QFileDialog.getExistingDirectory(
+                        None, "AUSTAL2000: Select Output directory")
+                    self.setOutputPath(output_path)
+                    if not os.path.isdir(self.getOutputPath()):
+                        raise Exception("AUSTAL2000: Not a valid path for grid "
+                                        "source file %s'" % self.getOutputPath())
                     else:
                         self.emptyOutputPath()
                         self._grid_db_path = self.getOutputPath()
@@ -585,8 +557,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 self._startTimeSeries, self._endTimeSeries = None, None
 
                 self._source_geometries = OrderedDict()
-        # logger.debug("Begin Job / Time elapsed: %s"%(time2-time1))
 
+    @log_time
     def process(self, startTimeSeries, endTimeSeries, timeval, result, ambient_conditions=None, **kwargs):
         """
         Here we define the rest of the parameters for the austal2000.txt file (iq, xq, yq, hq, emission_rate).
@@ -629,31 +601,28 @@ class AUSTAL2000DispersionModule(DispersionModule):
         vldf_ = '"V"'
         artp_ = '"M"'
         dims_ = 3
-        sequ_ = self.getSequ()
         axes_ = '"xyz"'
 
-        # Loop over all emissions and append one data point for every cell to total_emissions_per_cell_dict
+        # Loop over all emissions and append one data point for every cell to
+        # total_emissions_per_cell_dict
         source_counter = 0
 
-        self.total_emissions_per_cell_dict = {} # for the specific result
+        self.total_emissions_per_cell_dict = {}  # for the specific result
 
         for (source_, emissions__) in result:
-            # fig, ax = plt.subplots()
-
             fill_results = OrderedDict()
 
-            self._source_height = source_.getHeight() if (hasattr(source_, 'getHeight') and source_.getHeight()>0) else 0
+            self._source_height = 0
+            if hasattr(source_, 'getHeight') and source_.getHeight() > 0:
+                self._source_height = source_.getHeight()
 
             for emissions_ in emissions__:
                 if emissions_.getGeometryText() is None:
-                    # if not emissions_.isZero():
-                    logger.warning("AUSTAL2000: Did not find geometry for source: %s"%(str(source_.getName())))
+                    logger.warning(f"AUSTAL2000: Did not find geometry for "
+                                   f"source: {source_.getName()}")
                     continue
 
-                # # geom__ = Spatial.ogr.CreateGeometryFromWkt(str(emissions_.getGeometryText()))
                 geom = emissions_.getGeometry()
-                # ax.set_title(source_.getName())
-                # gpd.GeoSeries(geom).plot(ax=ax, color='r', alpha=0.25)
 
                 # Some convenience variables
                 isPoint_element_ = bool("POINT" in emissions_.getGeometryText())
@@ -662,17 +631,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 isPolygon_element_ = bool(("POLYGON" in emissions_.getGeometryText())&(not "MULTI" in emissions_.getGeometryText()))
                 isMultiPolygon_element_ = bool("MULTIPOLYGON" in emissions_.getGeometryText())
 
-                # if isMultiPolygon_element_ and len(list(geom))==1:
-                #     eps = 0.01
-                #     geom = cascaded_union([
-                #         Polygon(component.exterior).buffer(eps).buffer(-eps) for component in geom])
-                #     print("Simplify geom to %s"%geom.wkt)
-                #     isMultiPolygon_element_ = False
-                #     isPolygon_element_ = True
-
                 if isMultiPolygon_element_ or isMultiLine_element_:
-                    MultiPolygonEmissions = 1/len(list(geom)) * emissions_
-                    # MultiPolygonEmissions = 1/geom.GetGeometryCount() * emissions_
+                    MultiPolygonEmissions = 1 / len(list(geom)) * emissions_
                     for i in range(0, len(list(geom))):
                         g = geom[i]
                         g_wkt = g.wkt
@@ -755,25 +715,26 @@ class AUSTAL2000DispersionModule(DispersionModule):
                     # self.CalculateCellHashEfficiency(emissions_,emissions_.getGeometryText(), bbox, matched_cells,
                     #                     isPoint_element_, isLine_element_, isPolygon_element_, isMultiPolygon_element_)
 
-        # import pickle
-        # pickle.dump([timeval, self.total_emissions_per_cell_dict], open("total_emissions_per_cell_dict.p", "wb"))
+        # Get the output path (as Path)
+        output_path = self.getOutputPathAsPath()
 
         # Fill Emissions Matrix with emission rate (normalised to 1)
-        poll_cnt = 0
-        # matrix_done = False
         for _pollutant in self._pollutants_list:
-            # t_1 = time.time()
-
-            hashed_emissions = 0.
             source_counter += +1
-            if not os.path.isdir(os.path.join(str(self.getOutputPath()),str(source_counter).zfill(2))):
-                os.mkdir(os.path.join(str(self.getOutputPath()),str(source_counter).zfill(2)))
+
+            # Create the source id
+            source_id = str(source_counter).zfill(2)
+
+            # Create the source directory if it doesn't exist
+            source_dir = output_path / source_id
+            if not source_dir.is_dir():
+                source_dir.mkdir()
 
             # initialize emission matrix for each pollutant
             # (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
 
             hashed_emissions = sum([self.total_emissions_per_cell_dict[hash_].transposeToKilograms().getValue(_pollutant, "kg")[0]
-                                    for hash_ in list(self.total_emissions_per_cell_dict.keys())])
+                                    for hash_ in self.total_emissions_per_cell_dict])
 
             # if total_emissions_per_mov.transposeToKilograms().getValue(_pollutant, "kg")[0] and \
             #         abs(hashed_emissions - total_emissions_per_mov.transposeToKilograms().getValue(_pollutant, "kg")[0])>0.1 :
@@ -787,66 +748,73 @@ class AUSTAL2000DispersionModule(DispersionModule):
             if hashed_emissions > 0:
                 # initialize emission matrix for each pollutant
                 # (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
-                for hash in list(self.total_emissions_per_cell_dict.keys()):
-                    i_, j_, k_ = None, None, None
-                    ii, jj, kk = None, None, None
-
-                    if not (self.total_emissions_per_cell_dict[hash].getValue(_pollutant)[0] > 0):
+                for hash in self.total_emissions_per_cell_dict:
+                    if self.total_emissions_per_cell_dict[hash].getValue(_pollutant)[0] <= 0:
                         continue
 
-                    i_, j_, k_ = self._grid.convert_CellHash_To_XYZIndices(hash)
+                    i_, j_, k_ = self._grid.convertCellHashToXYZIndices(hash)
 
                     if i_ >= self._x_meshes or j_ >= self._y_meshes or k_ >= self._z_meshes:
                         # logger.debug("AUSTAL2000 Error: Grid needs to be enlarged. Hash '%s' out of grid. Source:'%s'"%(hash, source_.getName()))
                         continue
 
-                    ii = k_ if self.getSequ().split(",")[0].startswith("k") else j_ if \
-                        self.getSequ().split(",")[0].startswith("j") else i_
-                    jj = k_ if self.getSequ().split(",")[1].startswith("k") else j_ if \
-                        self.getSequ().split(",")[1].startswith("j") else i_
-                    kk = k_ if self.getSequ().split(",")[2].startswith("k") else j_ if \
-                        self.getSequ().split(",")[2].startswith("j") else i_
+                    # Split the sequ once
+                    sequ_split = self.getSequ().split(",")
+
+                    indices = [None, None, None]
+                    for p, q in enumerate(sequ_split):
+                        if q.startswith('k'):
+                            indices[p] = k_
+                        elif q.startswith('j'):
+                            indices[p] = j_
+                        else:
+                            indices[p] = i_
+                    ii, jj, kk = indices
 
                     # Reverse order if '-'
                     # A sequence 'k +, j -, i +' means north-oriented
-                    if (self.getSequ().split(",")[0][1]== "-"):
+                    if sequ_split[0][1] == "-":
                         ii = x_dim - (ii + 1)
-                    if (self.getSequ().split(",")[1][1] == "-"):
+                    if sequ_split[1][1] == "-":
                         jj = y_dim - (jj + 1)
-                    if (self.getSequ().split(",")[2][1] == "-"):
+                    if sequ_split[2][1] == "-":
                         kk = z_dim - (kk + 1)
 
                     try:
                         self._emission_grid_matrix[ii, jj, kk] += \
-                            self.total_emissions_per_cell_dict[hash].getValue(_pollutant)[0]/hashed_emissions
+                            self.total_emissions_per_cell_dict[hash].getValue(
+                                _pollutant)[0] / hashed_emissions
                     except Exception as e:
                         pass
 
-            self._total_sources.setdefault(str(source_counter).zfill(2), [])
+            self._total_sources.setdefault(source_id, [])
             if _pollutant.startswith("PM"):
                 _pollutant = "PM-2" if _pollutant == "PM10" else "PM-1"
-            if _pollutant not in self._total_sources[str(source_counter).zfill(2)]:
-                self._total_sources.setdefault(str(source_counter).zfill(2), []).append(_pollutant)
+            if _pollutant not in self._total_sources[source_id]:
+                self._total_sources.setdefault(source_id, []).append(_pollutant)
 
-            if str(source_counter).zfill(2) in self._timeID_per_source:
-                time_id = self._timeID_per_source[str(source_counter).zfill(2)]
-                self._timeID_per_source.update({str(source_counter).zfill(2): time_id + 1})
+            if source_id in self._timeID_per_source:
+                time_id = self._timeID_per_source[source_id]
+                self._timeID_per_source.update({source_id: time_id + 1})
             else:
-                self._timeID_per_source.update({str(source_counter).zfill(2): 1})
+                self._timeID_per_source.update({source_id: 1})
 
-            # Emission rate in AUSTAL2000 is in g/s (kg x 1000/3600), hashed_emissions are given in kg/h
-            fill_results.setdefault(str(source_counter).zfill(2), {})
+            # Emission rate in AUSTAL2000 is in g/s (kg x 1000/3600),
+            # hashed_emissions are given in kg/h
+            fill_results.setdefault(source_id, {})
 
-            pollutant_dic = {"source": source_.getName(), _pollutant: hashed_emissions * (10.0 / 36.0),
-                             "timeID": self._timeID_per_source[str(source_counter).zfill(2)]}
-            fill_results.setdefault(str(source_counter).zfill(2), []).update(pollutant_dic)
+            pollutant_dic = {
+                "source": source_.getName(),
+                _pollutant: hashed_emissions * (10.0 / 36.0),
+                "timeID": self._timeID_per_source[source_id]}
+            fill_results.setdefault(source_id, []).update(pollutant_dic)
 
             self._results[self._endTimeSeries.strftime('%Y-%m-%d.%H:%M:%S')].update(fill_results)
 
             # Start writing to file
             try:
-                time_interval = "e"+str(self._timeID_per_source[str(source_counter).zfill(2)]).zfill(4)
-                text_file = open(os.path.join(str(self.getOutputPath()),str(source_counter).zfill(2),"%s.dmna"%time_interval), "w")
+                time_interval = "e"+str(self._timeID_per_source[source_id]).zfill(4)
+                text_file = open(os.path.join(str(self.getOutputPath()), source_id, "%s.dmna" % time_interval), "w")
 
                 start_ = "%s.%s"%((self._startTimeSeries-fdate).days, self._startTimeSeries.strftime("%H:%M:%S"))
                 text_file.write("t1\t%s\n" % start_)
@@ -878,26 +846,12 @@ class AUSTAL2000DispersionModule(DispersionModule):
             except Exception as exc_:
                 logger.error(exc_)
 
-        # # provide file with more information
-        # text_file = open(os.path.join(str(self.getOutputPath()),str(source_counter).zfill(2),"%s_%s.info"%(time_interval, _pollutant)), "w")
-        # text_file.write("***\n")
-        # text_file.write("t1\t%s\n" % startTimeSeries.getTimeAsDateTime().strftime('%Y-%m-%d.%H:%M:%S'))
-        # text_file.write("t2\t%s\n" % endTimeSeries.getTimeAsDateTime().strftime('%Y-%m-%d.%H:%M:%S'))
-        # text_file.write("----\n")
-        # text_file.write("source name\t%s\n" % source_.getName())
-        # text_file.write("----\n")
-        # text_file.write("bbox\t%s\n" % bbox)
-        # text_file.write("***\n")
-        # text_file.close()
-
-
+    @log_time
     def endJob(self):
-        # logger.debug("End Job")
         if self.isEnabled():
             try:
                 if not self.checkTimeIntervalinResults():
                     raise Exception("AUSTAL2000: Time Interval Error")
-                    return None
 
                 try:
                 # --------------------- austal2000.txt ------------------------------------------------------
@@ -997,11 +951,9 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 except Exception as e:
                     logger.error("AUSTAL2000: Cannot write 'Series.dmna' %s" % e)
                     return False
-
             except Exception as e:
                 logger.error("AUSTAL2000: Cannot endJob: %s" % e)
                 return False
-
 
     # Available Substances in AUSTAL2000
     # so2: Sulphur dioxide, SO2

@@ -1,9 +1,9 @@
-import logging
-
 from collections import OrderedDict
+
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools import conversion
 
-logger = logging.getLogger("__alaqs__.%s" % __name__)
+logger = get_logger(__name__)
 
 
 class Store:

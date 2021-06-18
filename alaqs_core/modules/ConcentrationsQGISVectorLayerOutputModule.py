@@ -8,19 +8,13 @@ import pandas as pd
 from PyQt5 import QtWidgets
 from shapely.geometry import Polygon, Point
 
-from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
 from open_alaqs.alaqs_core.plotting.ContourPlotVectorLayer import \
     ContourPlotVectorLayer
 from open_alaqs.alaqs_core.tools import conversion, SQLInterface
 
-logger = alaqslogging.logging.getLogger(__name__)
-logger.setLevel('DEBUG')
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+logger = get_logger(__name__)
 
 
 class QGISVectorLayerDispersionModule(OutputModule):

@@ -1,26 +1,15 @@
-import logging
 from collections import OrderedDict
 
 from shapely import geometry
 from shapely.wkt import loads
 
-from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import Spatial
 
-# logger = logging.getLogger(__name__)
-logger = alaqslogging.logging.getLogger(__name__)
-# To override the default severity of logging
-logger.setLevel('DEBUG')
-# Use FileHandler() to log to a file
-file_handler = logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-# Don't forget to add the file handler
-logger.addHandler(file_handler)
+logger = get_logger(__name__)
 
 
 class TaxiwayRoute:

@@ -1,21 +1,11 @@
 from PyQt5 import QtWidgets
 
-from open_alaqs.alaqs_core import alaqslogging
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
 from open_alaqs.alaqs_core.modules.ui.TableViewDialog import Ui_TableViewDialog
 from open_alaqs.alaqs_core.tools import conversion
 
-# logger = logging.getLogger(__name__)
-logger = alaqslogging.logging.getLogger(__name__)
-# To override the default severity of logging
-logger.setLevel('DEBUG')
-# Use FileHandler() to log to a file
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-# Don't forget to add the file handler
-logger.addHandler(file_handler)
+logger = get_logger(__name__)
 
 
 class TableViewWidgetOutputModule(OutputModule):

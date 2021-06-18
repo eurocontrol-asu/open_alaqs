@@ -1,16 +1,16 @@
-import logging
 import os
 from collections import OrderedDict
 
 from shapely import geometry, ops
 from shapely.wkt import loads
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import Spatial
 
-logger = logging.getLogger("__alaqs__.%s" % __name__)
+logger = get_logger(__name__)
 
 
 class Runway:

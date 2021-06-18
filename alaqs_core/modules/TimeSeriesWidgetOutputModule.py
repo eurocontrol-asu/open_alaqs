@@ -8,6 +8,7 @@ from matplotlib.dates import DateFormatter
 from shapely.geometry import Point, LineString, MultiLineString, Polygon, \
     MultiPolygon
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
 from open_alaqs.alaqs_core.plotting.MatplotlibQtDialog import MatplotlibQtDialog
 from open_alaqs.alaqs_core.tools import conversion
@@ -15,7 +16,7 @@ from open_alaqs.alaqs_core.tools import conversion
 logging.getLogger('matplotlib').setLevel(logging.ERROR)
 matplotlib.use('Qt5Agg')
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class TimeSeriesWidgetOutputModule(OutputModule):

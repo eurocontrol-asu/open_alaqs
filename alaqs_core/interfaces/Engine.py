@@ -1,11 +1,9 @@
-import logging
-
-from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
-
+from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import TwinQuadraticFitMethod, BFFM2
 
-logger = logging.getLogger("__alaqs__.%s" % __name__)
+logger = get_logger(__name__)
 
 defaultEI = {
     "fuel_kg_sec": 0.,

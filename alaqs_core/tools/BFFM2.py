@@ -1,11 +1,12 @@
 import copy
-import logging
 from dataclasses import dataclass
 
 import numpy as np
 from numpy import empty_like, dot
 
-logger = logging.getLogger("alaqs.%s" % __name__)
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass(init=False, frozen=True)
