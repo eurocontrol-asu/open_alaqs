@@ -100,7 +100,7 @@ class OpenALAQS:
         """
 
         # Set the path to the icons
-        icons_path = Path(__file__).parent / 'alaqs_core/icons'
+        icons_path = Path(__file__).parent / 'icons'
 
         # Create action that will show the About dialog
         self.actions['about'] = self.create_connected_action(
