@@ -171,7 +171,8 @@ class EmissionCalculation:
                         values_dict=configuration)
                     return True
                 except Exception as e:
-                    logger.error("issubclass(obj, SourceModule) failed for DispersionModule")
+                    logger.error("issubclass(obj, SourceModule) failed for "
+                                 "DispersionModule")
                     return False
         return False
 
@@ -218,6 +219,8 @@ class EmissionCalculation:
             count_ = 0
             # loop on complete period
             for (start_, end_) in self.getTimeSeries():
+                start_time = start_.getTimeAsDateTime()
+                end_time = end_.getTimeAsDateTime()
                 count_ += +1
                 progressbar.setValue(conversion.convertToInt(
                     100 * conversion.convertToFloat(count_) / len(
@@ -255,8 +258,6 @@ class EmissionCalculation:
                         self.getDispersionModules().items():
                     # row_cnt = 0
                     for timeval, rows in self.getEmissions().items():
-                        start_time = start_.getTimeAsDateTime()
-                        end_time = end_.getTimeAsDateTime()
                         if start_time <= timeval < end_time:
                             dispersion_mod_obj.process(
                                 start_, end_, timeval, rows,
