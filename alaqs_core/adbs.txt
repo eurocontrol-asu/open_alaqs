@@ -1,0 +1,7 @@
+NA
+NA
+C:\Users\stav\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\open_alaqs\example\CAEPport_training\CAEPport.alaqs
+NA
+NA
+SQLite
+NA
