@@ -19,7 +19,6 @@
  *                                                                         *
  ***************************************************************************/
 """
-import os
 from pathlib import Path
 
 from qgis.PyQt import QtCore, QtGui, QtWidgets
@@ -53,23 +52,6 @@ class OpenALAQS:
         # Save reference to the QGIS interface
         self.iface = iface
         self.canvas = self.iface.mapCanvas()
-
-        # initialize plugin directory
-        self.plugin_dir = os.path.dirname(__file__)
-
-        # initialize locale
-        locale_path = ""
-        locale = str(QtCore.QSettings().value("locale/userLocale"))[0:2]
-
-        if QtCore.QFileInfo(self.plugin_dir).exists():
-            locale_path = self.plugin_dir + "/i18n/openalaqs_" + locale + ".qm"
-
-        if QtCore.QFileInfo(locale_path).exists():
-            self.translator = QtCore.QTranslator()
-            self.translator.load(locale_path)
-
-            if QtCore.qVersion() > '4.3.3':
-                QtCore.QCoreApplication.installTranslator(self.translator)
 
         # QGIS3: setMapUnits() was removed.
         # The map units are dictated by the units for the destination CRS.
