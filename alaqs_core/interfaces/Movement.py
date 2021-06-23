@@ -24,8 +24,8 @@ from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.interfaces.Taxiway import TaxiwayRoutesStore
 from open_alaqs.alaqs_core.tools import conversion, Spatial
-from open_alaqs.alaqs_core.tools.NOx_correction_ambient import \
-    NOx_correction_for_ambient_conditions
+from open_alaqs.alaqs_core.tools.nox_correction_ambient import \
+    nox_correction_for_ambient_conditions
 
 sys.path.append("..")
 
@@ -808,9 +808,9 @@ class Movement:
                 copy_emission_index_ = copy.deepcopy(emission_index_)
                 if method["config"]["apply_nox_corrections"]:
                     logger.info("Applying NOx Correction for Ambient Conditions")
-                    corr_nox_ei = NOx_correction_for_ambient_conditions(emission_index_.getNOx(),
-                        method["config"]["airport_altitude"],self.getTakeoffWeightRatio(),
-                        ac=method["config"]["ambient_conditions"])
+                    corr_nox_ei = nox_correction_for_ambient_conditions(emission_index_.getNOx(),
+                                                                        method["config"]["airport_altitude"], self.getTakeoffWeightRatio(),
+                                                                        ac=method["config"]["ambient_conditions"])
                     copy_emission_index_.setObject("nox_g_kg", corr_nox_ei)
 
             else:
@@ -845,8 +845,8 @@ class Movement:
                         logger.info("Applying NOx Correction for Ambient Conditions. NOx EI will be calculated using 'By mode' method.")
                         nox_g_kg = self.getAircraftEngine().getEmissionIndex().getEmissionIndexByMode(
                             startPoint_.getMode()).getNOx()
-                        corr_nox_ei = NOx_correction_for_ambient_conditions(nox_g_kg,
-                                method["config"]["airport_altitude"],self.getTakeoffWeightRatio(),ac=method["config"]["ambient_conditions"])
+                        corr_nox_ei = nox_correction_for_ambient_conditions(nox_g_kg,
+                                                                            method["config"]["airport_altitude"], self.getTakeoffWeightRatio(), ac=method["config"]["ambient_conditions"])
                         copy_emission_index_.setObject("nox_g_kg", corr_nox_ei)
 
 
