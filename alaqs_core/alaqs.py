@@ -15,7 +15,7 @@ the database layer.
 
 from open_alaqs.alaqs_core import alaqsdblite
 from open_alaqs.alaqs_core import alaqsutils
-from open_alaqs.alaqs_core import create_output
+from open_alaqs.alaqs_core.tools.create_output import create_alaqs_output
 
 
 def create_project(database_name):
@@ -925,10 +925,8 @@ def get_lasport_scenarios():
 def inventory_creation_new(inventory_path, model_parameters, study_setup,
                            met_csv_path=""):
     try:
-        result = create_output.create_alaqs_output(inventory_path,
-                                                   model_parameters,
-                                                   study_setup,
-                                                   met_csv_path=met_csv_path)
+        result = create_alaqs_output(inventory_path, model_parameters,
+                                     study_setup, met_csv_path=met_csv_path)
         return result
     except Exception as e:
         error = alaqsutils.print_error(inventory_creation_new.__name__,

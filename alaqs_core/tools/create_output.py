@@ -138,6 +138,7 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_p
     logger.info("New output file with path '%s' has been created" % (str(inventory_path)))
     return None
 
+
 def inventory_create_blank(inventory_name):
     """
     Copy a blank version of the ALAQS inventory to the desired location
@@ -145,7 +146,8 @@ def inventory_create_blank(inventory_name):
     :return: None if successful, error otherwise
     """
     try:
-        shutil.copy2(os.path.join(os.path.dirname(__file__), 'templates/inventory_template.alaqs'), inventory_name)
+        shutil.copy2(os.path.join(os.path.dirname(__file__),
+                                  '../templates/inventory_template.alaqs'), inventory_name)
         msg = "[+] Created a blank ALAQS output file"
         logger.info(msg)
         return None
@@ -381,6 +383,7 @@ def inventory_copy_gate_profiles(inventory_path):
         logger.error(error_msg)
         return error_msg
 
+
 def inventory_copy_emission_dynamics(inventory_path):
     """
     Copy all emission_dynamics from the currently active alaqs project database to the output file
@@ -401,6 +404,7 @@ def inventory_copy_emission_dynamics(inventory_path):
         error_msg = alaqsutils.print_error(inventory_copy_emission_dynamics.__name__, Exception, e)
         logger.error(error_msg)
         return error_msg
+
 
 def inventory_copy_taxiway_routes(inventory_path):
     """
