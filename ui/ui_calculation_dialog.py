@@ -47,7 +47,7 @@ class Ui_Dialog(object):
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
+        Dialog.setWindowTitle(_translate("Dialog", "OpenALAQS - Dialog"))
         self.pushButton.setText(_translate("Dialog", "Run calculation"))
         self.label.setText(_translate("Dialog", "<html><head/><body><p>Calculate emissions of stationary sources</p><p>Calculate roadway emissions</p><p>Calculate aircraft emissions</p><p>Save results to SQL database</p><p><br/></p></body></html>"))
         self.label_3.setText(_translate("Dialog", "Available modules"))

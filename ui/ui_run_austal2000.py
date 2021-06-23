@@ -23,6 +23,7 @@ class Ui_DialogRunAUSTAL2000(object):
         self.line_2 = QtWidgets.QFrame(DialogRunAUSTAL2000)
         self.line_2.setGeometry(QtCore.QRect(20, 130, 591, 16))
         self.line_2.setFrameShape(QtWidgets.QFrame.HLine)
+        self.line_2.setFrameShape(QtWidgets.QFrame.HLine)
         self.line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line_2.setObjectName("line_2")
         self.RunA2K = QtWidgets.QPushButton(DialogRunAUSTAL2000)
@@ -187,7 +188,7 @@ class Ui_DialogRunAUSTAL2000(object):
 
     def retranslateUi(self, DialogRunAUSTAL2000):
         _translate = QtCore.QCoreApplication.translate
-        DialogRunAUSTAL2000.setWindowTitle(_translate("DialogRunAUSTAL2000", "Run AUSTAL2000"))
+        DialogRunAUSTAL2000.setWindowTitle(_translate("DialogRunAUSTAL2000", "OpenALAQS - Run AUSTAL2000"))
         self.RunA2K.setText(_translate("DialogRunAUSTAL2000", "Run AUSTAL2000"))
         self.label.setText(_translate("DialogRunAUSTAL2000", "Select AUSTAL2000 file:"))
         self.pushButtonBrowse_a2k.setText(_translate("DialogRunAUSTAL2000", "Browse"))

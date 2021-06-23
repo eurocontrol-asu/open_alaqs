@@ -227,7 +227,7 @@ class Ui_TaxiRoutesDialog(object):
 
     def retranslateUi(self, TaxiRoutesDialog):
         _translate = QtCore.QCoreApplication.translate
-        TaxiRoutesDialog.setWindowTitle(_translate("TaxiRoutesDialog", "Taxiway Routes Editor"))
+        TaxiRoutesDialog.setWindowTitle(_translate("TaxiRoutesDialog", "OpenALAQS - Taxiway Routes Editor"))
         self.label_5.setText(_translate("TaxiRoutesDialog", "Route ID:"))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_3), _translate("TaxiRoutesDialog", "Import existing route"))
         self.label.setText(_translate("TaxiRoutesDialog", "Gate"))

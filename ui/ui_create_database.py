@@ -75,7 +75,7 @@ class Ui_DialogCreateDatabase(object):
 
     def retranslateUi(self, DialogCreateDatabase):
         _translate = QtCore.QCoreApplication.translate
-        DialogCreateDatabase.setWindowTitle(_translate("DialogCreateDatabase", "Create new ALAQS database"))
+        DialogCreateDatabase.setWindowTitle(_translate("DialogCreateDatabase", "OpenALAQS - Create new ALAQS database"))
         self.label_5.setText(_translate("DialogCreateDatabase", "File Name"))
         self.label.setText(_translate("DialogCreateDatabase", ".alaqs"))
         self.label_6.setText(_translate("DialogCreateDatabase", "File Directory"))
