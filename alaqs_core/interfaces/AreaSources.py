@@ -8,7 +8,7 @@ from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 
-from open_alaqs.alaqs_core.tools import Spatial
+from open_alaqs.alaqs_core.tools import spatial
 
 loaded_color_logger = False
 try:
@@ -42,7 +42,7 @@ class AreaSources:
 
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
-                Spatial.addHeightToGeometryWkt(self.getGeometryText(),
+                spatial.addHeightToGeometryWkt(self.getGeometryText(),
                                                self.getHeight()))
 
         initValues = {}

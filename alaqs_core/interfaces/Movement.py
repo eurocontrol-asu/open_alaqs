@@ -23,7 +23,7 @@ from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.interfaces.Taxiway import TaxiwayRoutesStore
-from open_alaqs.alaqs_core.tools import conversion, Spatial
+from open_alaqs.alaqs_core.tools import conversion, spatial
 from open_alaqs.alaqs_core.tools.nox_correction_ambient import \
     nox_correction_for_ambient_conditions
 
@@ -259,25 +259,25 @@ class Movement:
 
     def CalculateParallels(self, geometry_wkt_init, width, height, shift, EPSG_source, EPSG_target):
 
-        (geo_wkt, swap) = Spatial.reproject_geometry(geometry_wkt_init, EPSG_source, EPSG_target)
+        (geo_wkt, swap) = spatial.reproject_geometry(geometry_wkt_init, EPSG_source, EPSG_target)
 
-        points = Spatial.getAllPoints(geo_wkt, swap)
+        points = spatial.getAllPoints(geo_wkt, swap)
         lon1, lat1, alt1 = points[0][1], points[0][0], points[0][2]
         lon2, lat2, alt2 = points[1][1], points[1][0], points[1][2]
 
-        inverseDistance_dict = Spatial.getInverseDistance(lat1, lon1, lat2, lon2)
+        inverseDistance_dict = spatial.getInverseDistance(lat1, lon1, lat2, lon2)
         azi1, azi2 = inverseDistance_dict["azi1"], inverseDistance_dict["azi2"]
 
         # left
-        direct_dic1l = Spatial.getDistance(lat1, lon1, 90 + azi1, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
-        direct_dic2l = Spatial.getDistance(lat2, lon2, 90 + azi2, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
+        direct_dic1l = spatial.getDistance(lat1, lon1, 90 + azi1, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
+        direct_dic2l = spatial.getDistance(lat2, lon2, 90 + azi2, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
 
         newline_left = 'LINESTRING Z(%s %s %s, %s %s %s)' % (
         direct_dic1l['lon2'], direct_dic1l['lat2'], alt1 + height, direct_dic2l['lon2'], direct_dic2l['lat2'], alt2 + height)
 
         # right
-        direct_dic1r = Spatial.getDistance(lat1, lon1, 270 + azi1, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
-        direct_dic2r = Spatial.getDistance(lat2, lon2, 270 + azi2, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
+        direct_dic1r = spatial.getDistance(lat1, lon1, 270 + azi1, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
+        direct_dic2r = spatial.getDistance(lat2, lon2, 270 + azi2, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
 
         newline_right = 'LINESTRING Z(%s %s %s, %s %s %s)' % (
         direct_dic1r['lon2'], direct_dic1r['lat2'], alt1 + height, direct_dic2r['lon2'], direct_dic2r['lat2'], alt2 + height)
@@ -355,8 +355,8 @@ class Movement:
                             em_.setVerticalExtent({'z_min': 0.0+ver_shift, 'z_max': ver_ext+ver_shift})
 
                             # ToDo: add height
-                            multipolygon = Spatial.ogr.Geometry(Spatial.ogr.wkbMultiPolygon)
-                            all_points = Spatial.getAllPoints(taxiway_segment_.getGeometryText())
+                            multipolygon = spatial.ogr.Geometry(spatial.ogr.wkbMultiPolygon)
+                            all_points = spatial.getAllPoints(taxiway_segment_.getGeometryText())
                             for p_, point_ in enumerate(all_points):
                                 # point_ example (802522.928722, 5412293.034699, 0.0)
                                 if p_+1 < len(all_points):
@@ -365,7 +365,7 @@ class Movement:
                                         all_points[p_][0], all_points[p_][1], all_points[p_][2], all_points[p_+1][0], all_points[p_+1][1], all_points[p_+1][2]
                                     )
                                     leftline, rightline = self.CalculateParallels(geometry_wkt_i, hor_ext, 0, 0, 3857, 4326) #in lon / lat !
-                                    poly_geo = Spatial.getRectangleXYZFromBoundingBox(leftline, rightline, 3857, 4326)
+                                    poly_geo = spatial.getRectangleXYZFromBoundingBox(leftline, rightline, 3857, 4326)
                                     multipolygon.AddGeometry(poly_geo)
                                     em_.setGeometryText(multipolygon.ExportToWkt())
                             # except:
@@ -585,7 +585,7 @@ class Movement:
                 emissions_geo = []
                 for (startPoint_, endPoint_) in traj.getPointPairs(mode):
                     emissions_geo.append(
-                        loads(Spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText())))
+                        loads(spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText())))
                 entire_heli_geometry = MultiLineString(emissions_geo)
                 heli_emissions.setGeometryText(entire_heli_geometry)
                 space_in_segment_ = entire_heli_geometry.length
@@ -654,7 +654,7 @@ class Movement:
                 endPoint_.setZ(limit["max_height"], unit_in_feet)
 
         emissions.setGeometryText(
-            Spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()))
+            spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()))
 
         startPoint_copy, endPoint_copy = copy.deepcopy(startPoint_), copy.deepcopy(endPoint_)
         # Smooth & Shift Approach
@@ -695,44 +695,44 @@ class Movement:
                 elif abs(z1_) - abs(ver_shift) > abs(ver_shift) and abs(z2_) - abs(ver_shift) <= abs(ver_shift):
 
                     (segment_geometry_wkt, swap) = \
-                        Spatial.reproject_geometry(Spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()), EPSG_id_source, EPSG_id_target)
+                        spatial.reproject_geometry(spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()), EPSG_id_source, EPSG_id_target)
 
-                    start_point = Spatial.getAllPoints(segment_geometry_wkt, swap)[0]
-                    end_point = Spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
-                    inverse_distance_segment = Spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])
+                    start_point = spatial.getAllPoints(segment_geometry_wkt, swap)[0]
+                    end_point = spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
+                    inverse_distance_segment = spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])
 
                     start_point_azimuth = inverse_distance_segment["azi1"]
                     target_point_distance = abs(abs(self.getTrajectory().getPoints()[startPoint_.getIdentifier()-1].getX()) - abs(x_shift))
-                    target_projected = Spatial.getDistance(start_point[0], start_point[1], start_point_azimuth, target_point_distance)
-                    target_projected_wkt = Spatial.getPointGeometryText(target_projected["lat2"], target_projected["lon2"], 0., swap)
-                    (target_projected_wkt, swap_) = Spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
+                    target_projected = spatial.getDistance(start_point[0], start_point[1], start_point_azimuth, target_point_distance)
+                    target_projected_wkt = spatial.getPointGeometryText(target_projected["lat2"], target_projected["lon2"], 0., swap)
+                    (target_projected_wkt, swap_) = spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
 
-                    self.getTrajectory().setTouchdownPoint(Spatial.CreateGeometryFromWkt(target_projected_wkt))
+                    self.getTrajectory().setTouchdownPoint(spatial.CreateGeometryFromWkt(target_projected_wkt))
 
                     # geometry_text_list = []
                     startPoint_copy.setZ(max(0, startPoint_.getZ() + ver_shift))
                     startPoint_copy.updateGeometryText()
-                    endPoint_copy.setX(Spatial.getAllPoints(target_projected_wkt)[0][0])
-                    endPoint_copy.setY(Spatial.getAllPoints(target_projected_wkt)[0][1])
+                    endPoint_copy.setX(spatial.getAllPoints(target_projected_wkt)[0][0])
+                    endPoint_copy.setY(spatial.getAllPoints(target_projected_wkt)[0][1])
                     endPoint_copy.setZ(0)
                     endPoint_copy.updateGeometryText()
 
                 else:
-                    (segment_geometry_wkt, swap) = Spatial.reproject_geometry(
-                        Spatial.getLineGeometryText(startPoint_.getGeometryText(), self.getTrajectory().getTouchdownPoint()),
+                    (segment_geometry_wkt, swap) = spatial.reproject_geometry(
+                        spatial.getLineGeometryText(startPoint_.getGeometryText(), self.getTrajectory().getTouchdownPoint()),
                         EPSG_id_source, EPSG_id_target)
-                    start_point, end_point = Spatial.getAllPoints(segment_geometry_wkt, swap)[0], Spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
-                    dist_startPoint_sasPoint = Spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])['s12']
+                    start_point, end_point = spatial.getAllPoints(segment_geometry_wkt, swap)[0], spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
+                    dist_startPoint_sasPoint = spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])['s12']
 
-                    (segment_geometry_wkt, swap) = Spatial.reproject_geometry(
-                        Spatial.getLineGeometryText(self.getTrajectory().getTouchdownPoint(), endPoint_.getGeometryText()),
+                    (segment_geometry_wkt, swap) = spatial.reproject_geometry(
+                        spatial.getLineGeometryText(self.getTrajectory().getTouchdownPoint(), endPoint_.getGeometryText()),
                         EPSG_id_source, EPSG_id_target)
-                    start_point, end_point = Spatial.getAllPoints(segment_geometry_wkt, swap)[0], Spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
-                    dist_sasPoint_endPoint = Spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])['s12']
+                    start_point, end_point = spatial.getAllPoints(segment_geometry_wkt, swap)[0], spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
+                    dist_sasPoint_endPoint = spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])['s12']
 
                     if dist_startPoint_sasPoint > dist_sasPoint_endPoint:
-                        startPoint_copy.setX(Spatial.getAllPoints(self.getTrajectory().getTouchdownPoint())[0][0])
-                        startPoint_copy.setY(Spatial.getAllPoints(self.getTrajectory().getTouchdownPoint())[0][1])
+                        startPoint_copy.setX(spatial.getAllPoints(self.getTrajectory().getTouchdownPoint())[0][0])
+                        startPoint_copy.setY(spatial.getAllPoints(self.getTrajectory().getTouchdownPoint())[0][1])
                     startPoint_copy.setZ(0)
                     startPoint_copy.updateGeometryText()
                     endPoint_copy.setZ(0)
@@ -745,35 +745,35 @@ class Movement:
                     ver_shift = self.getAircraft().getEmissionDynamicsByMode()["CL"].getEmissionDynamics(sas_method)['vertical_shift']
                     hor_shift = self.getAircraft().getEmissionDynamicsByMode()["CL"].getEmissionDynamics("default")['horizontal_shift']
 
-                (segment_geometry_wkt, swap) = Spatial.reproject_geometry(
-                        Spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()),
+                (segment_geometry_wkt, swap) = spatial.reproject_geometry(
+                        spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()),
                         EPSG_id_source, EPSG_id_target)
 
-                start_point = Spatial.getAllPoints(segment_geometry_wkt, swap)[0]
-                end_point = Spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
-                inverse_distance_segment = Spatial.getInverseDistance(start_point[0], start_point[1], end_point[0],end_point[1])
+                start_point = spatial.getAllPoints(segment_geometry_wkt, swap)[0]
+                end_point = spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
+                inverse_distance_segment = spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])
                 start_point_azimuth, end_point_azimuth = inverse_distance_segment["azi1"], inverse_distance_segment["azi2"]
 
-                target_projected = Spatial.getDistance(start_point[0], start_point[1], start_point_azimuth, -hor_shift)
-                target_projected_wkt = Spatial.getPointGeometryText(target_projected["lat2"], target_projected["lon2"], 0., swap)
-                (target_projected_wkt, swap_) = Spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
-                startPoint_copy.setX(Spatial.getAllPoints(target_projected_wkt)[0][0])
-                startPoint_copy.setY(Spatial.getAllPoints(target_projected_wkt)[0][1])
+                target_projected = spatial.getDistance(start_point[0], start_point[1], start_point_azimuth, -hor_shift)
+                target_projected_wkt = spatial.getPointGeometryText(target_projected["lat2"], target_projected["lon2"], 0., swap)
+                (target_projected_wkt, swap_) = spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
+                startPoint_copy.setX(spatial.getAllPoints(target_projected_wkt)[0][0])
+                startPoint_copy.setY(spatial.getAllPoints(target_projected_wkt)[0][1])
                 startPoint_copy.setZ(max(0, startPoint_.getZ() + ver_shift))
                 startPoint_copy.updateGeometryText()
 
-                target_projected = Spatial.getDistance(end_point[0], end_point[1], end_point_azimuth, -hor_shift)
-                target_projected_wkt = Spatial.getPointGeometryText(target_projected["lat2"], target_projected["lon2"], 0., swap)
-                (target_projected_wkt, swap_) = Spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
-                endPoint_copy.setX(Spatial.getAllPoints(target_projected_wkt)[0][0])
-                endPoint_copy.setY(Spatial.getAllPoints(target_projected_wkt)[0][1])
+                target_projected = spatial.getDistance(end_point[0], end_point[1], end_point_azimuth, -hor_shift)
+                target_projected_wkt = spatial.getPointGeometryText(target_projected["lat2"], target_projected["lon2"], 0., swap)
+                (target_projected_wkt, swap_) = spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
+                endPoint_copy.setX(spatial.getAllPoints(target_projected_wkt)[0][0])
+                endPoint_copy.setY(spatial.getAllPoints(target_projected_wkt)[0][1])
                 endPoint_copy.setZ(max(0, endPoint_.getZ() + ver_shift))
                 endPoint_copy.updateGeometryText()
 
                 emissions.setVerticalExtent({'z_min': startPoint_copy.getZ(), 'z_max': ver_ext + startPoint_copy.getZ()})
 
-            multipolygon = Spatial.ogr.Geometry(Spatial.ogr.wkbMultiPolygon)
-            all_points = Spatial.getAllPoints(Spatial.getLineGeometryText(startPoint_copy.getGeometryText(), endPoint_copy.getGeometryText()))
+            multipolygon = spatial.ogr.Geometry(spatial.ogr.wkbMultiPolygon)
+            all_points = spatial.getAllPoints(spatial.getLineGeometryText(startPoint_copy.getGeometryText(), endPoint_copy.getGeometryText()))
             for p_, point_ in enumerate(all_points):
                 # point_ example (802522.928722, 5412293.034699, 0.0)
                 if p_ + 1 == len(all_points):
@@ -783,14 +783,14 @@ class Movement:
                     all_points[p_ + 1][1], all_points[p_ + 1][2]
                 )
                 leftline, rightline = self.CalculateParallels(geometry_wkt_i, hor_ext, 0, 0, 3857, 4326)  # in lon / lat !
-                poly_geo = Spatial.getRectangleXYZFromBoundingBox(leftline, rightline, 3857, 4326)
+                poly_geo = spatial.getRectangleXYZFromBoundingBox(leftline, rightline, 3857, 4326)
                 multipolygon.AddGeometry(poly_geo)
                 emissions.setGeometryText(multipolygon.ExportToWkt())
 
         else:
             # logger.debug("Calculate RWY emissions WITHOUT Smooth & Shift Approach.")
             emissions.setVerticalExtent({'z_min': 0, 'z_max': 0})
-            emissions.setGeometryText(Spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()))
+            emissions.setGeometryText(spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()))
 
         # emissions calculation
         traj = self.getTrajectory() if not atRunway else self.getTrajectoryAtRunway()
@@ -973,10 +973,10 @@ class Movement:
             EPSG_id_source=3857
             EPSG_id_target=4326
             # Project geometry from 3857 to 4326
-            (runway_geometry_wkt, swap) = Spatial.reproject_geometry(self.getRunway().getGeometryText(), EPSG_id_source, EPSG_id_target)
+            (runway_geometry_wkt, swap) = spatial.reproject_geometry(self.getRunway().getGeometryText(), EPSG_id_source, EPSG_id_target)
 
             # Return tuple of points - runway ends
-            runway_points_tuple_list = Spatial.getAllPoints(runway_geometry_wkt, swap)
+            runway_points_tuple_list = spatial.getAllPoints(runway_geometry_wkt, swap)
             if len(runway_points_tuple_list)>=2:
                 # assumes that runway is a straight line (i.e. earth is flat!)
                 start_point = runway_points_tuple_list[0] # e.g. (lon, lat, alt)
@@ -985,7 +985,7 @@ class Movement:
                 #get the azimuth for the runway
                 # getInverseDistance(lat1, lon1, lat2, lon2, EPSG_id=4326)
                 # inverseDistance_dict = Spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])
-                inverseDistance_dict = Spatial.getInverseDistance(start_point[1], start_point[0], end_point[1], end_point[0])
+                inverseDistance_dict = spatial.getInverseDistance(start_point[1], start_point[0], end_point[1], end_point[0])
                 start_point_azimuth = inverseDistance_dict["azi1"]
                 end_point_azimuth = inverseDistance_dict["azi2"]
 
@@ -1019,7 +1019,7 @@ class Movement:
                     runway_point, runway_azimuth = start_point, start_point_azimuth
 
                 try:
-                    (rwy_point, rwy_point_wkt) = Spatial.reproject_Point(intersection.centroid.x, intersection.centroid.y,
+                    (rwy_point, rwy_point_wkt) = spatial.reproject_Point(intersection.centroid.x, intersection.centroid.y,
                                                                          EPSG_id_source, EPSG_id_target)
                     runway_point = (rwy_point.GetY(), rwy_point.GetX())
                 except:
@@ -1053,7 +1053,7 @@ class Movement:
                     origin = (0.,0.,0.)
                     #target point with cartesian coordinates
                     target_point = point.getCoordinates()
-                    target_point_distance = Spatial.getDistanceXY(target_point[0], target_point[1], target_point[2],
+                    target_point_distance = spatial.getDistanceXY(target_point[0], target_point[1], target_point[2],
                                                                   origin[0], origin[1], origin[2])
                     # if self.getDepartureArrivalFlag() == "A":
                     #     target_point_distance = target_point_distance + self.getTrajectory().getPoints()[-1].getX()
@@ -1071,14 +1071,14 @@ class Movement:
 
 
                     #get target point (calculation in 4326 projection)
-                    target_projected = Spatial.getDistance(runway_point[1], runway_point[0], runway_azimuth, target_point_distance)
+                    target_projected = spatial.getDistance(runway_point[1], runway_point[0], runway_azimuth, target_point_distance)
                     #target point (wkt) with coordinates in 4326
-                    target_projected_wkt = Spatial.getPointGeometryText(target_projected["lon2"], target_projected["lat2"], 0., swap)
+                    target_projected_wkt = spatial.getPointGeometryText(target_projected["lon2"], target_projected["lat2"], 0., swap)
                     #reproject target from 4326 to 3857
-                    (target_projected_wkt, swap_) = Spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
+                    (target_projected_wkt, swap_) = spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
 
                     #add target to list of points of the (shifted) trajectory
-                    for p in Spatial.getAllPoints(target_projected_wkt):
+                    for p in spatial.getAllPoints(target_projected_wkt):
                         p_ = AircraftTrajectoryPoint(point)
                         # Update x and y coordinates (z coordinate is not updated by distance calculation)
                         p_.setCoordinates(p[0],p[1],target_point[2])

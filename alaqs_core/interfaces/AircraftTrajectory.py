@@ -8,7 +8,7 @@ from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
-from open_alaqs.alaqs_core.tools import conversion, Spatial
+from open_alaqs.alaqs_core.tools import conversion, spatial
 
 logger = get_logger(__name__)
 
@@ -78,7 +78,7 @@ class AircraftTrajectory:
         if self.isCartesian():
             return ((x2 - x1) ** 2. + (y2 - y1) ** 2. + (z2 - z1) ** 2.)** 0.5
         else:
-            return Spatial.getDistanceOfLineStringXYZ(Spatial.getLine(Spatial.getPoint("", x1,y1,z1), Spatial.getPoint("", x2,y2,z2)), abs(z2-z1))
+            return spatial.getDistanceOfLineStringXYZ(spatial.getLine(spatial.getPoint("", x1, y1, z1), spatial.getPoint("", x2, y2, z2)), abs(z2 - z1))
 
     def getTimeInMode(self, mode):
         return self.getDistance(mode, "time")

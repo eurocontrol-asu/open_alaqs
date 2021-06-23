@@ -13,7 +13,7 @@ from dateutil import rrule
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
-from open_alaqs.alaqs_core.tools import SQLInterface, Spatial, conversion
+from open_alaqs.alaqs_core.tools import SQLInterface, spatial, conversion
 
 logger = get_logger(__name__)
 
@@ -193,11 +193,11 @@ class AUSTAL2000DispersionModule(DispersionModule):
         :param y_2:
         :return:
         """
-        p1 = Spatial.getPoint("", x_1, y_1, 0.)
-        p2 = Spatial.getPoint("", x_2, y_2, 0.)
+        p1 = spatial.getPoint("", x_1, y_1, 0.)
+        p2 = spatial.getPoint("", x_2, y_2, 0.)
 
-        x_y_distance = Spatial.getDistanceOfLineStringXY(
-            Spatial.getLine(p1, p2), epsg_id_source=3857, epsg_id_target=4326)
+        x_y_distance = spatial.getDistanceOfLineStringXY(
+            spatial.getLine(p1, p2), epsg_id_source=3857, epsg_id_target=4326)
         if x_y_distance is None:
             x_y_distance = 0.
         # logger.debug("Distance xy: %f" % (x_y_distance))
@@ -240,7 +240,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         return data_point_
 
     def getBoundingBox(self, geometry_wkt):
-        bbox = Spatial.getBoundingBox(geometry_wkt)
+        bbox = spatial.getBoundingBox(geometry_wkt)
         return bbox
 
     def getCellBox(self, x_,y_,z_, grid_):
@@ -259,11 +259,11 @@ class AUSTAL2000DispersionModule(DispersionModule):
         # efficiency = relative area of geometry in the cell box
         efficiency_ = 0.
         if isPoint or isPolygon or isMultiPolygon:
-            efficiency_ = Spatial.getRelativeAreaInBoundingBox(
+            efficiency_ = spatial.getRelativeAreaInBoundingBox(
                 emissions_geometry_wkt, cell_bbox)
         elif isLine:
             #get relative length (X,Y) in bounding box (assumes constant speed)
-            efficiency_ = Spatial.getRelativeLengthXYInBoundingBox(emissions_geometry_wkt, cell_bbox)
+            efficiency_ = spatial.getRelativeLengthXYInBoundingBox(emissions_geometry_wkt, cell_bbox)
         return efficiency_
 
     def getEfficiencyZ(self, geometry_wkt, z_min, z_max, cell_box, isPoint,
@@ -271,9 +271,9 @@ class AUSTAL2000DispersionModule(DispersionModule):
         efficiency_ = 0.
         if isPoint:
             #points match each cell exactly once
-            efficiency_ = Spatial.getRelativeHeightInBoundingBox(z_min, z_max, cell_box)
+            efficiency_ = spatial.getRelativeHeightInBoundingBox(z_min, z_max, cell_box)
         elif isPolygon or isLine or isMultiPolygon:
-            efficiency_ = Spatial.getRelativeHeightInBoundingBox(z_min, z_max,
+            efficiency_ = spatial.getRelativeHeightInBoundingBox(z_min, z_max,
                                                                  cell_box)
         return efficiency_
 

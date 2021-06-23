@@ -5,7 +5,7 @@ from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
-from open_alaqs.alaqs_core.tools import Spatial
+from open_alaqs.alaqs_core.tools import spatial
 
 logger = get_logger(__name__)
 
@@ -22,7 +22,7 @@ class Gate:
         self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
 
         if self._geometry_text and not self._height is None:
-            self.setGeometryText(Spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
+            self.setGeometryText(spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
 
         self._emission_profiles = []
 

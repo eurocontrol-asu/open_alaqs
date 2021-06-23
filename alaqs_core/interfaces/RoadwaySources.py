@@ -6,7 +6,7 @@ from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
-from open_alaqs.alaqs_core.tools import Spatial
+from open_alaqs.alaqs_core.tools import spatial
 
 logger = get_logger(__name__)
 
@@ -37,7 +37,7 @@ class RoadwaySources:
         self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
 
         if self._geometry_text and not self._height is None:
-            self.setGeometryText(Spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
+            self.setGeometryText(spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
 
         initValues = {}
         defaultValues = {}
@@ -110,7 +110,7 @@ class RoadwaySources:
     def getLength(self, unitInKM=False):
         # Get the length of the road in meters (internally, length is stored in meters)
         if self.__length is None:
-            self.setLength(Spatial.getDistanceOfLineStringXY(self.getGeometryText())/(1000. if unitInKM else 1.))
+            self.setLength(spatial.getDistanceOfLineStringXY(self.getGeometryText()) / (1000. if unitInKM else 1.))
         return self.__length
 
     def setLength(self, val):
