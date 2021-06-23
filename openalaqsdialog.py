@@ -37,7 +37,7 @@ from open_alaqs.alaqs_core.modules.EmissionCalculationConfigurationWidget \
     import EmissionCalculationConfigurationWidget
 from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
     OutputModuleManager, DispersionModuleManager
-from open_alaqs.alaqs_core.tools import SQLInterface, conversion
+from open_alaqs.alaqs_core.tools import sql_interface, conversion
 from open_alaqs.alaqs_core.tools.csv_interface import read_csv_to_dict
 from open_alaqs.ui.ui_about import Ui_DialogAbout
 from open_alaqs.ui.ui_create_database import Ui_DialogCreateDatabase
@@ -2684,7 +2684,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             return error
 
     def isOutputFile(self, path):
-        return SQLInterface.hasTable(path, "grid_3d_definition")
+        return sql_interface.hasTable(path, "grid_3d_definition")
 
     def update_emissions(self):
         try:

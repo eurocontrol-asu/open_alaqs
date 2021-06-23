@@ -12,7 +12,7 @@ from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
 from open_alaqs.alaqs_core.plotting.ContourPlotVectorLayer import \
     ContourPlotVectorLayer
-from open_alaqs.alaqs_core.tools import conversion, SQLInterface
+from open_alaqs.alaqs_core.tools import conversion, sql_interface
 
 logger = get_logger(__name__)
 
@@ -184,7 +184,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
             # Convert the ARP into EPSG 3857
             sql_text = "SELECT X(ST_Transform(ST_PointFromText('%s', 4326), 3857)), Y(ST_Transform(ST_PointFromText('%s', 4326), 3857));" % \
                        (reference_point_wkt, reference_point_wkt)
-            result = SQLInterface.query_text(self._grid._db_path, sql_text)
+            result = sql_interface.query_text(self._grid._db_path, sql_text)
             if result is None:
                 raise Exception("AUSTAL2000: Could not reset reference point as coordinates could not be transformed. The query was\n'%s'" % (sql_text))
                 return None

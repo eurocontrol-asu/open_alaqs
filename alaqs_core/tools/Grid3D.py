@@ -5,7 +5,7 @@ import pandas as pd
 from shapely.geometry import Polygon
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.alaqs_core.tools import SQLInterface
+from open_alaqs.alaqs_core.tools import sql_interface
 from open_alaqs.alaqs_core.tools import conversion
 from open_alaqs.alaqs_core.tools.SizeLimitedDict import SizeLimitedDict
 
@@ -157,7 +157,7 @@ class Grid3D(object):
                    "z_cells, x_resolution, y_resolution, z_resolution, " \
                    "reference_latitude, reference_longitude FROM %s;" % (
                        self._table_name_definition)
-        result = SQLInterface.query_text(self._db_path, sql_text)
+        result = sql_interface.query_text(self._db_path, sql_text)
         # result contains: [('grid_3d_cell_coordinates', 50, 50, 10, 250, 250,
         # 100, 49.916667, -6.316667)]
 
@@ -201,7 +201,7 @@ class Grid3D(object):
 
             sql_text = "SELECT X(ST_Transform(ST_PointFromText('%s', 4326), 3857)), Y(ST_Transform(ST_PointFromText('%s', 4326), 3857));" % \
                        (reference_point_wkt, reference_point_wkt)
-            result = SQLInterface.query_text(self._db_path, sql_text)
+            result = sql_interface.query_text(self._db_path, sql_text)
             # #Grid reference point: POINT (-6.316667 49.916667) > [(-703168.1539506749, 6431856.52141244)]
             # result = [(apt_ref_point_crs3857.x, apt_ref_point_crs3857.y)]
             if result is None:
@@ -299,8 +299,8 @@ class Grid3D(object):
                 values_str = "?" + ", ?" * (len(row_list[0]) - 1)
                 sql_text = "INSERT INTO %s VALUES (%s);" % (
                     table_name, values_str)
-                result = SQLInterface.query_insert_many(database_path, sql_text,
-                                                        row_list)
+                result = sql_interface.query_insert_many(database_path, sql_text,
+                                                         row_list)
                 if isinstance(result, str):
                     logger.error("Row was not inserted: %s" % result)
                     raise ValueError(result)
@@ -326,7 +326,7 @@ class Grid3D(object):
         try:
             # Create the table and drop existing tables
             sql_query = "DROP TABLE IF EXISTS \"%s\";" % table_name
-            SQLInterface.query_text(database_path, sql_query)
+            sql_interface.query_text(database_path, sql_query)
 
             sql_query = "CREATE TABLE %s \
                 (\"table_name_cell_coordinates\" VARCHAR,\
@@ -339,7 +339,7 @@ class Grid3D(object):
                 \"reference_latitude\" DECIMAL,\
                 \"reference_longitude\" DECIMAL\
                 );" % table_name
-            result = SQLInterface.query_text(database_path, sql_query)
+            result = sql_interface.query_text(database_path, sql_query)
 
             if isinstance(result, str):
                 logger.error(
@@ -359,8 +359,8 @@ class Grid3D(object):
                       self._y_cells, self._z_cells, self._x_resolution,
                       self._y_resolution, self._z_resolution,
                       self._reference_latitude, self._reference_longitude]
-            result = SQLInterface.query_insert_many(database_path, sql_query,
-                                                    [values])
+            result = sql_interface.query_insert_many(database_path, sql_query,
+                                                     [values])
 
             if isinstance(result, str):
                 logger.error("Grid definition not added to table '%s': %s" % (
@@ -388,11 +388,11 @@ class Grid3D(object):
         """
         try:
             sql_query = "DROP TABLE IF EXISTS \"%s\";" % table_name
-            SQLInterface.query_text(database_path, sql_query)
+            sql_interface.query_text(database_path, sql_query)
 
             sql_query = "CREATE TABLE %s (\"cell_hash\" VARCHAR(15),\"x_min\" DECIMAL,\"x_max\" DECIMAL, \"y_min\" DECIMAL," \
                         "\"y_max\" DECIMAL, \"z_min\" DECIMAL, \"z_max\" DECIMAL);" % table_name
-            result = SQLInterface.query_text(database_path, sql_query)
+            result = sql_interface.query_text(database_path, sql_query)
             if isinstance(result, str):
                 logger.error(
                     "Table for 3D cell hashes not created: %s" % result)
@@ -566,7 +566,7 @@ class Grid3D(object):
                 else "ST_Area"
 
             sql_text = "SELECT %s(%s);" % (match_expression, element_geometry_)
-            result = SQLInterface.query_text(self._db_path, sql_text)
+            result = sql_interface.query_text(self._db_path, sql_text)
 
             if result and isinstance(result[0], tuple) and \
                     result[0][0] is not None:
@@ -598,7 +598,7 @@ class Grid3D(object):
                 element_geometry_, cell_geometry_)
             sql_text += ";"
 
-            result = SQLInterface.query_text(self._db_path, sql_text)
+            result = sql_interface.query_text(self._db_path, sql_text)
 
             if result:
                 if type(result[0]) == type(()):

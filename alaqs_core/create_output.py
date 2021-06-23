@@ -11,7 +11,7 @@ from open_alaqs.alaqs_core import alaqsutils
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.AmbientCondition import \
     AmbientConditionStore
-from open_alaqs.alaqs_core.tools import SQLInterface
+from open_alaqs.alaqs_core.tools import sql_interface
 from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 
 logger = get_logger(__name__)
@@ -192,7 +192,7 @@ def inventory_update_tbl_inv_period(database_path, model_parameters, study_setup
         if model_parameters['use_variable_mixing_height'] is True:
             mix_height = 1
 
-        SQLInterface.query_text(database_path, "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, vert_limit=%d, apt_elev=%d, "
+        sql_interface.query_text(database_path, "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, vert_limit=%d, apt_elev=%d, "
                                   "copert=%d, nox_corr=%d, ffm=%d, smsh=%d, mix_height=%d, min_time=\"%s\", "
                                   "max_time=\"%s\";" % (interval, temp_isa, model_parameters['vertical_limit'],
                                                         study_setup['airport_elevation'], copert, nox_corr, ffm,
@@ -431,7 +431,7 @@ def inventory_copy_vector_layers(inventory_path):
     """
 
     try:
-        conn = SQLInterface.connect(inventory_path)
+        conn = sql_interface.connect(inventory_path)
         curs = conn.cursor()
 
         try:

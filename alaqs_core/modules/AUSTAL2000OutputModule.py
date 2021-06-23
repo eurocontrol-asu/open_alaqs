@@ -13,7 +13,7 @@ from dateutil import rrule
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
-from open_alaqs.alaqs_core.tools import SQLInterface, spatial, conversion
+from open_alaqs.alaqs_core.tools import sql_interface, spatial, conversion
 
 logger = get_logger(__name__)
 
@@ -289,7 +289,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             # Convert the ARP into EPSG 3857
             sql_text = "SELECT X(ST_Transform(ST_PointFromText('%s', 4326), 3857)), Y(ST_Transform(ST_PointFromText('%s', 4326), 3857));" % \
                        (reference_point_wkt, reference_point_wkt)
-            result = SQLInterface.query_text(self._grid._db_path, sql_text)
+            result = sql_interface.query_text(self._grid._db_path, sql_text)
             if result is None:
                 raise Exception("AUSTAL2000: Could not reset reference point as coordinates could not be transformed. The query was\n'%s'" % (sql_text))
 
