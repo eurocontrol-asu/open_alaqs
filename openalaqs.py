@@ -249,8 +249,12 @@ class OpenALAQS:
         self.dialogs['open_project'] = OpenAlaqsOpenDatabase(self.iface)
         return_code = self.dialogs['open_project'].exec_()
         if return_code == 0:
+
+            # Get the database path
             database_path = self.dialogs['open_project'].get_values()
-            if (database_path is not None) and (database_path != ""):
+
+            # Continue if the path is valid
+            if isinstance(database_path, str) and Path(database_path).exists():
                 openalaqsuitoolkit.load_layers(self.iface, database_path)
                 self.dialogs['open_project'].close()
                 self.actions['study_setup'].setEnabled(True)
