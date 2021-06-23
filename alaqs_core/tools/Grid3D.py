@@ -83,23 +83,23 @@ class Grid3D(object):
             else:
                 self._elements[element.getName()] = [element]
 
-    def hasElement(self, id):
-        if id in self._elements:
+    def hasElement(self, _id):
+        if _id in self._elements:
             return True
         else:
             return False
 
-    def getElements(self, id=""):
-        if not id:
+    def getElements(self, _id=""):
+        if not _id:
             return self._elements
         else:
-            if id in self._elements:
+            if _id in self._elements:
                 return self._elements
             else:
                 return []
 
     def getResolution(self):
-        return (self._x_resolution, self._y_resolution, self._z_resolution)
+        return self._x_resolution, self._y_resolution, self._z_resolution
 
     def getResolutionX(self):
         return self._x_resolution
@@ -164,10 +164,9 @@ class Grid3D(object):
         if isinstance(result, str):
             raise Exception(result)
         elif not result:
-            logger.error(
-                "Deserialization failed. No data returned from database "
-                "'%s' with table '%s'" % (
-                self._db_path, self._table_name_definition))
+            logger.error("Deserialization failed. No data returned from "
+                         "database '%s' with table '%s'", self._db_path,
+                         self._table_name_definition)
         else:
             # if multiple entries found, take only the first
             table_id = 0
@@ -228,7 +227,8 @@ class Grid3D(object):
                 "Could not reset 3D grid origin from reference point: %s" % e)
             return False
 
-    def polygonise_2Dcells(self, df_row):
+    @staticmethod
+    def polygonise_2Dcells(df_row):
         return Polygon([(df_row.xmin, df_row.ymin), (df_row.xmax, df_row.ymin),
                         (df_row.xmax, df_row.ymax), (df_row.xmin, df_row.ymax)])
 
@@ -236,10 +236,10 @@ class Grid3D(object):
         grid_cells_df = pd.DataFrame(list(self.get_3d_grid_cells()),
                                      columns=['hash', "xmin", "xmax", "ymin",
                                               "ymax", "zmin", "zmax"])
-        grid_cells_2D = grid_cells_df[grid_cells_df.zmin == 0].reset_index(
+        grid_cells_2d = grid_cells_df[grid_cells_df.zmin == 0].reset_index(
             drop=True)
-        polys = grid_cells_2D.apply(self.polygonise_2Dcells, axis=1)
-        gdf = gpd.GeoDataFrame(grid_cells_2D, columns=["hash", "geometry"])
+        polys = grid_cells_2d.apply(self.polygonise_2Dcells, axis=1)
+        gdf = gpd.GeoDataFrame(grid_cells_2d, columns=["hash", "geometry"])
         gdf.loc[:, "geometry"] = polys
         return gdf
 
@@ -247,10 +247,10 @@ class Grid3D(object):
         grid_cells_df = pd.DataFrame(list(self.get_3d_grid_cells()),
                                      columns=['hash', "xmin", "xmax", "ymin",
                                               "ymax", "zmin", "zmax"])
-        grid_cells_2D = grid_cells_df[grid_cells_df.zmin == zmn].reset_index(
+        grid_cells_2d = grid_cells_df[grid_cells_df.zmin == zmn].reset_index(
             drop=True)
-        polys = grid_cells_2D.apply(self.polygonise_2Dcells, axis=1)
-        gdf = gpd.GeoDataFrame(grid_cells_2D, columns=["hash", "geometry"])
+        polys = grid_cells_2d.apply(self.polygonise_2Dcells, axis=1)
+        gdf = gpd.GeoDataFrame(grid_cells_2d, columns=["hash", "geometry"])
         gdf.loc[:, "geometry"] = polys
         return gdf
 
@@ -285,17 +285,16 @@ class Grid3D(object):
                         cell["z_min"], cell["z_max"]])
         return cell_coordinates
 
-    def insert_rows(self, database_path, table_name, row_list):
+    @staticmethod
+    def insert_rows(database_path, table_name, row_list):
         """
         This function inserts cell hashes into a 3D grid table.
         :param database_path: the path of the database to be written to
         :param table_name: the name of the 3D table to put data into
-        :param cell_coordinates: the list of hashes to be inserted
         :return: bool of success
         :raise ValueError: if the database returns an error
         """
         try:
-            values_str = ""
             if len(row_list) and len(row_list[0]):
                 values_str = "?" + ", ?" * (len(row_list[0]) - 1)
                 sql_text = "INSERT INTO %s VALUES (%s);" % (
@@ -326,7 +325,7 @@ class Grid3D(object):
         """
         try:
             # Create the table and drop existing tables
-            sql_query = "DROP TABLE IF EXISTS \"%s\";" % (table_name)
+            sql_query = "DROP TABLE IF EXISTS \"%s\";" % table_name
             SQLInterface.query_text(database_path, sql_query)
 
             sql_query = "CREATE TABLE %s \
@@ -339,7 +338,7 @@ class Grid3D(object):
                 \"z_resolution\" DECIMAL,\
                 \"reference_latitude\" DECIMAL,\
                 \"reference_longitude\" DECIMAL\
-                );" % (table_name)
+                );" % table_name
             result = SQLInterface.query_text(database_path, sql_query)
 
             if isinstance(result, str):
@@ -424,11 +423,11 @@ class Grid3D(object):
     def convertCellHashListToCenterGridCellCoordinates(self, cellhash_list):
         val = {}
 
-        for hash in cellhash_list:
-            if not hash in val:
-                if not (hash in self._hash_coordinates_map):
+        for _hash in cellhash_list:
+            if _hash not in val:
+                if _hash not in self._hash_coordinates_map:
                     (x_idx, y_idx, z_idx) = self.convertCellHashToXYZIndices(
-                        hash)
+                        _hash)
                     cell = self.convertXYZIndicesToGridCellMinMax(x_idx, y_idx,
                                                                   z_idx)
 
@@ -436,20 +435,21 @@ class Grid3D(object):
                             "x_min" in cell and "x_max" in cell and "y_min" in cell and "y_max" in cell and "z_min" in cell and "z_max" in cell):
                         logger.error(
                             "Could not convert cell hash '%s' because either x_min, x_max, y_min, y_max, z_min, or z_max was not found." % (
-                                str(hash)))
+                                str(_hash)))
                         logger.error("\t Output of '%s' was '%s'." % (
                             "self.convertXYZIndicesToGridCellMinMax(x_idx,y_idx,z_idx)",
                             str(cell)))
                     else:
-                        self._hash_coordinates_map[hash] = (
+                        self._hash_coordinates_map[_hash] = (
                             (cell["x_min"] + cell["x_max"]) / 2.,
                             (cell["y_min"] + cell["y_max"]) / 2.,
                             (cell["z_min"] + cell["z_max"]) / 2.)
 
-                val[hash] = self._hash_coordinates_map[hash]
+                val[_hash] = self._hash_coordinates_map[_hash]
         return val
 
-    def convertIndexToCellHash(self, idx):
+    @staticmethod
+    def convertIndexToCellHash(idx):
         return "%05.0f" % idx
 
     def convertXYZIndicesToCellHash(self, x_idx, y_idx, z_idx):
@@ -468,14 +468,14 @@ class Grid3D(object):
                            self.convertIndexToCellHash(y_idx),
                            self.convertIndexToCellHash(z_idx))
 
-    def convertCellHashToXYZIndices(self, cell_hash):
+    @staticmethod
+    def convertCellHashToXYZIndices(cell_hash):
         """
         This function generates a unique cell hash based on an XYZ position
          within a grid.
         :param cell_hash: the unique hash of the cell
         :rtype: tuple with (x_idx, y_idx, z_idx)
         """
-        x_idx, y_idx, z_idx = 0, 0, 0
         if len(cell_hash) == 15:
             x_idx = int(conversion.convertToFloat(cell_hash[0:5]))
             y_idx = int(conversion.convertToFloat(cell_hash[5:10]))
@@ -484,8 +484,9 @@ class Grid3D(object):
             raise Exception("Cell hash '%s' has wrong format" % cell_hash)
         return x_idx, y_idx, z_idx
 
-    def stripZCoordinateFromCellHash(self, val):
-        if type(val) == type(""):
+    @staticmethod
+    def stripZCoordinateFromCellHash(val):
+        if isinstance(val, str):
             return val[:-5]
         return ""
 
@@ -504,15 +505,14 @@ class Grid3D(object):
         if z_idx < 0:
             # logger.error("'%s'=%i out of defined grid ... You should enlarge the grid! Coordinate is %s= %f" % ("z_idx", z_idx, "z", z))
             z_idx = 0
-        return (x_idx, y_idx, z_idx)
+        return x_idx, y_idx, z_idx
 
     def matchBoundingBoxToXYZindices(self, bbox, z_as_list=False):
         keys_ = ["x_min", "y_min", "z_min", "x_max", "y_max", "z_max"]
         for e in keys_:
-            if not e in bbox:
-                logger.error(
-                    "Expected bounding box as dictionary with keys '%s' but got '%s'" % (
-                        ",".join(keys_), str(bbox)))
+            if e not in bbox:
+                logger.error("Expected bounding box as dictionary with keys "
+                             "'%s' but got '%s'", ",".join(keys_), str(bbox))
                 logger.error("\t Return empty matches")
                 return []
 
@@ -562,13 +562,14 @@ class Grid3D(object):
         else:
             element_geometry_ = "ST_GeomFromText('%s', 3857)" % (
                 str(geometry_text))
-            match_expression = "ST_Area" if not "LINESTRING" in element_geometry_ else "ST_Length"
+            match_expression = "ST_Length" if "LINESTRING" in element_geometry_ \
+                else "ST_Area"
 
             sql_text = "SELECT %s(%s);" % (match_expression, element_geometry_)
             result = SQLInterface.query_text(self._db_path, sql_text)
 
-            if result and type(result[0]) == type(()) and not result[0][
-                                                                  0] is None:
+            if result and isinstance(result[0], tuple) and \
+                    result[0][0] is not None:
                 val = conversion.convertToFloat(result[0][0])
         return val
 
@@ -581,7 +582,7 @@ class Grid3D(object):
         for i_, cell_hash in enumerate(cell_list):
             values[cell_hash] = 0.
 
-            sql_text = "SELECT %s" % (match_expression)
+            sql_text = "SELECT %s" % match_expression
             (x_idx, y_idx, z_idx) = self.convertCellHashToXYZIndices(
                 cell_hash)
             cell_ = self.convertXYZIndicesToGridCellMinMax(x_idx, y_idx, z_idx)
@@ -654,9 +655,9 @@ class Grid3DElement(object):
         self._bboxCellHashList = hashlist
 
     def removeFromCellHashList(self, hashlist):
-        for hash in hashlist:
-            if hash in self._bboxCellHashList:
-                self._bboxCellHashList.pop(self._bboxCellHashList.index(hash))
+        for _hash in hashlist:
+            if _hash in self._bboxCellHashList:
+                self._bboxCellHashList.pop(self._bboxCellHashList.index(_hash))
 
     def getName(self):
         return self._name
@@ -667,7 +668,7 @@ class Grid3DElement(object):
     def getGeometryText(self):
         return self._geometry_text
 
-    def setBoundingBox(self, wkt, is2D=True):
+    def setBoundingBox(self, wkt, is_2d=True):
         """
         Set minima and maxima in x and y directions for a generic object
         (POINT, LINESTRING, or POLYGON)
@@ -709,7 +710,7 @@ class Grid3DElement(object):
         }
 
         # ToDo: Ignoring height for all sources
-        if is2D:
+        if is_2d:
             bbox.update({
                 'z_min': 0,
                 'z_max': 1

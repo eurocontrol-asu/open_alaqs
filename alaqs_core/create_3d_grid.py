@@ -103,7 +103,7 @@ class Grid3DEntries(object):
             for point_feature in point_features:
                 ele = Grid3DElement(point_feature[0])
                 ele.setGeometryText(point_feature[1])
-                ele.setBoundingBox(point_feature[2], is2D=True)
+                ele.setBoundingBox(point_feature[2], is_2d=True)
                 elements.append(ele)
         except Exception as e:
             logger.error(e)
