@@ -1,13 +1,9 @@
 import math
 import sys
 
-# FIXME remove call to alaqs (implement class for study setup), fix also direct sql calls
 from open_alaqs.alaqs_core import alaqs
 from open_alaqs.alaqs_core import alaqsdblite
 from open_alaqs.alaqs_core import alaqsutils
-from open_alaqs.alaqs_core.alaqslogging import get_logger
-
-logger = get_logger(__name__)
 
 
 def roadway_emission_factors_alaqs_method(input_data):
@@ -747,41 +743,6 @@ def get_emissions_factor_ldv_diesel(velocity, pollutant):
     return emission_factor
 
 
-def get_emission_factor_bus_coach_diesel(velocity, pollutant, vehicle_type):
-    """
-    Conventional Emission factor for Gasoline LDV < 3.5 t in g/km
-    :param velocity: vehicle velocity in km
-    :param pollutant: the pollutant being considered
-    :param vehicle_type: the COPERT vehicle type being considered
-    :return emission_factor: the calculated emission factor
-    """
-    emission_factor = None
-    if pollutant == "NO":
-        if vehicle_type == "Buses":
-            emission_factor = 89.174 * math.pow(velocity, -0.5185)
-        elif vehicle_type == "Coaches":
-            if velocity < 58.8:
-                emission_factor = 125.87 * math.pow(velocity, -0.6562)
-            else:
-                emission_factor = 0.001 * math.pow(velocity, 2) - 0.1608 * velocity + 14.308
-    elif pollutant == "CO":
-        if vehicle_type == "Buses":
-            emission_factor = 59.003 * math.pow(velocity, -0.7447)
-        elif vehicle_type == "Coaches":
-            emission_factor = 63.791 * math.pow(velocity, -0.8393)
-    elif pollutant == "VOC":
-        if vehicle_type == "Buses":
-            emission_factor = 43.647 * math.pow(velocity, -1.0301)
-        elif vehicle_type == "Coaches":
-            emission_factor = 44.217 * math.pow(velocity, -0.887)
-    elif pollutant == "PM":
-        if vehicle_type == "Buses":
-            emission_factor = 7.8609 * math.pow(velocity, -0.736)
-        elif vehicle_type == "Coaches":
-            emission_factor = 9.2934 * math.pow(velocity, -0.7373)
-    return emission_factor
-
-
 def aggregated_pre_euro_ef(aggregated_input):
     """
     Replicates functionality that was originally in modAggrPcPreEuroIEf.PCAggregatedPreEUROI_EF
@@ -892,6 +853,7 @@ def aggregated_pre_euro_ef(aggregated_input):
         # fix_print_with_import
         # print(sys.exc_traceback.tb_lineno, ": ", e)
         print(sys.exc_info(), ": ", e)
+
 
 def aggregated_euro_ef(aggregated_input):
     """
@@ -1238,57 +1200,6 @@ def aggregated_ldv_ef(aggregated_input):
         #debug_file("", True)
         return aggregated_input
 
-    except Exception as e:
-        # fix_print_with_import
-        # print(sys.exc_traceback.tb_lineno, ": ", e)
-        print(sys.exc_info(), ": ", e)
-
-
-def aggregated_hdv_ef(aggregated_input):
-    """
-    Function that recreates method originally in modAggrPcEuroEf.PCAggregatedHDV
-    """
-    try:
-        # Unpack our necessary data
-        year = aggregated_input['roadway_year']
-        country = aggregated_input['roadway_country']
-        vehicle_class = aggregated_input['vehicle_class']
-        vehicle_fuel = aggregated_input['vehicle_fuel']
-        vehicle_size = aggregated_input['vehicle_size']
-        vehicle_type = aggregated_input['vehicle_type']
-        velocity = aggregated_input['velocity']
-
-        # Get the base year total cars and average mileage for the baseline year
-        sql = "SELECT base_year_%s, average_mileage FROM default_cost319_vehicle_fleet " \
-              "WHERE country=\"%s\" AND category_abbreviation=\"%s\" AND fuel_engine=\"%s\" " \
-              "AND size=\"%s\" AND emission_class=\"%s\";" \
-              % (year, country, vehicle_type, vehicle_fuel, vehicle_size, vehicle_class)
-        sql_result = alaqsdblite.query_string(sql)
-
-        if sql_result is not []:
-            base_year_total_cars = float(sql_result[0][0])
-            average_mileage = float(sql_result[0][1])
-            product = base_year_total_cars * average_mileage
-            aggregated_input['weighted_sum_hdv'] += product
-
-            ef_nox = get_emission_factor_bus_coach_diesel(velocity, "NO", vehicle_type)
-            ef_co = get_emission_factor_bus_coach_diesel(velocity, "CO", vehicle_type)
-            ef_voc = get_emission_factor_bus_coach_diesel(velocity, "VOC", vehicle_type)
-            ef_pm = get_emission_factor_bus_coach_diesel(velocity, "PM", vehicle_type)
-
-            # Emission rate
-            total_em_nox = ef_nox * product
-            total_em_co = ef_co * product
-            total_em_voc = ef_voc * product
-            total_em_pm = ef_pm * product
-
-            aggregated_input['total_em_nox_hdv'] += total_em_nox
-            aggregated_input['total_em_voc_hdv'] += total_em_voc
-            aggregated_input['total_em_co_hdv'] += total_em_co
-            aggregated_input['total_em_pm_hdv'] += total_em_pm
-
-        #debug_file("", True)
-        return aggregated_input
     except Exception as e:
         # fix_print_with_import
         # print(sys.exc_traceback.tb_lineno, ": ", e)
