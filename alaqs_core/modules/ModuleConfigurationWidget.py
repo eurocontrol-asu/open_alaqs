@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from datetime import datetime
 
 from PyQt5 import QtCore, QtWidgets
 
@@ -124,7 +125,7 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                     continue
 
                 elif isinstance(widget, QtWidgets.QDateTimeEdit):
-                    if isinstance(value, QtCore.QDateTime):
+                    if isinstance(value, (datetime, QtCore.QDateTime)):
                         widget.setDateTime(value)
                     elif isinstance(value, str):
                         widget.setDateTime(

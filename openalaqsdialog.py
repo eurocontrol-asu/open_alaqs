@@ -27,15 +27,15 @@ from qgis.gui import *
 
 from open_alaqs import openalaqsuitoolkit as oautk
 from open_alaqs.alaqs_core import alaqs
-from open_alaqs.alaqs_core import alaqslogging
 from open_alaqs.alaqs_core import alaqsutils
 from open_alaqs.alaqs_core.EmissionCalculation import EmissionCalculation
+from open_alaqs.alaqs_core.alaqsdblite import ProjectDatabase
 from open_alaqs.alaqs_core.alaqslogging import get_logger, log_path
 from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
     OutputModuleManager, DispersionModuleManager
-from open_alaqs.alaqs_core.modules.ui.ConcentrationVisualizationWidget import \
+from open_alaqs.alaqs_core.modules.ConcentrationVisualizationWidget import \
     ConcentrationVisualizationWidget
-from open_alaqs.alaqs_core.modules.ui.EmissionCalculationConfigurationWidget \
+from open_alaqs.alaqs_core.modules.EmissionCalculationConfigurationWidget \
     import EmissionCalculationConfigurationWidget
 from open_alaqs.alaqs_core.tools import SQLInterface, conversion, CSVInterface
 from open_alaqs.ui.ui_about import Ui_DialogAbout
@@ -246,9 +246,9 @@ class OpenAlaqsOpenDatabase(QtWidgets.QDialog):
                         "The chosen file could not be found.")
                     return
 
-                result = alaqs.save_database_credentials(filepath)
-                if result is not None:
-                    raise Exception("problem updating database credentials")
+                # Store the filepath in-memory for future use
+                project_database = ProjectDatabase()
+                project_database.path = filepath
 
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                 result = alaqs.load_study_setup()

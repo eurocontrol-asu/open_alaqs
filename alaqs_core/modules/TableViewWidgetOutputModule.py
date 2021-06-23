@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
-from open_alaqs.alaqs_core.modules.ui.TableViewDialog import Ui_TableViewDialog
+from open_alaqs.ui.TableViewDialog import Ui_TableViewDialog
 from open_alaqs.alaqs_core.tools import conversion
 
 logger = get_logger(__name__)

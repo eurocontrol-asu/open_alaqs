@@ -1,19 +1,29 @@
-"""
-@author: Dan Pearce
-"""
-import csv
 import datetime
 import os
-import pickle
 import shutil
 import sqlite3 as sqlite
 import struct
 import sys
+from pathlib import Path
 
 from open_alaqs.alaqs_core import alaqsutils
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 
 logger = get_logger(__name__)
+
+
+class Singleton(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args,
+                                                                 **kwargs)
+        return cls._instances[cls]
+
+
+class ProjectDatabase(metaclass=Singleton):
+    path: str
 
 
 def connectToDatabase(database_path):
@@ -26,12 +36,13 @@ def connectToDatabase(database_path):
     """
     try:
         conn = sqlite.connect(database_path)
-        #logger.info("Connection to database '%s' created" %(database_path))
+        # logger.info("Connection to database '%s' created" %(database_path))
         return conn
     except Exception as e:
         msg = "Connection could not be established: %s" % e
         logger.error(msg)
         return msg
+
 
 def query_text(database_path, sql_text):
     """
@@ -41,10 +52,6 @@ def query_text(database_path, sql_text):
     :return data: the result of the query
     :raise ValueError: if database returns a string (error) instead of list
     """
-
-    # Log the incoming database and sql text
-    #logger.debug("Query to database '%s'" % (database_path))
-    #logger.debug(sql_text)
 
     # Create a blank connection object
     conn = None
@@ -68,106 +75,21 @@ def query_text(database_path, sql_text):
         logger.error("Query could not be completed: %s" % (str(e)))
         return "Query could not be completed: %s" % (str(e))
     finally:
-        # Commit any changes the query  performed and close the connection. This is in a try-except block in case there
-        # was no connection established and no query to commit. Without this, an error will be raised
+        # Commit any changes the query performed and close the connection. This
+        #  is in a try-except block in case there was no connection established
+        #  and no query to commit. Without this, an error will be raised
         try:
             conn.commit()
             conn.close()
-        except:
-            pass
-
-def save_database_credentials(dbhost="NA", dbport="NA", db_name="NA", dbuser="NA", dbpass="NA"):
-    """
-    This function actually loads the credentials of the active database into
-    a file that can then be easily retrieved as the application runs.
-    Consequently, a connection can be easily opened and closed.
-
-    Database credentials are added to a list and pickled for simple recovery
-    as and when a new database connection is required or a new database is
-    accessed.
-
-    :param: dbhost :  the database host (localhost or ip address) - not relevant for SQLite but retained so that the
-    syntax is the same across all database access modules
-    :param: dbport :  the port number the database is listening to - not relevant for SQLite but retained so that the
-    syntax is the same across all database access modules
-    :param: db_name : a valid alaqs database
-    :param: dbuser :  a valid database username - not relevant for SQLite but retained so that the syntax is the same
-    across all database access modules
-    :param: dbpass :  a valid database password - not relevant for SQLite but retained so that the syntax is the same
-    across all database access modules
-    :returns: error : None if successful. Exception message if not successful
-    :raises: None
-    """
-
-    try:
-        db_name = os.path.abspath(db_name)
-        active_database = [dbhost, dbport, db_name, dbuser, dbpass, "SQLite"]
-        with open(os.path.join(os.path.dirname(__file__), 'adbs.pckl'), 'wb') as pkl:
-            pickle.dump(active_database, pkl)
-        pkl.close()
-        # p = os.path.join(os.path.dirname(__file__), 'adbs.pckl')
-        # # f = open(p, 'w')
-        # f = open(p, 'ab') # QGIS3?
-        # pickle.dump(active_database, f)
-        # f.close()
-        logger.info("INFO: New database credentials pickled: %s" % active_database)
-        # with open('adbs.txt', 'a+') as filehandle:
-        #     for listitem in active_database:
-        #         filehandle.write('%s\n' % listitem)
-        # logger.info("INFO: New database credentials written to adbs.txt: %s" % active_database)
-        return None
-    except Exception as e:
-        error = alaqsutils.print_error(save_database_credentials.__name__, Exception, e)
-        return error
-
-
-def get_database_credentials():
-    """
-    This function serialises pickled database credentials back into a Python
-    list. This is used either by the _connect() function to return a connection
-    object or by functions that need to modify the database credentials, for
-    example create_new_project()
-
-    ARGS
-        - None
-    RETURNS
-        - Database credentials as a list or an error string
-    RAISES:
-        - None
-    """
-    f = None
-    try:
-        credentials = []
-        # # open file and read the content in a list
-        # with open('adbs.txt', 'a+') as filehandle:
-        #     for line_ in filehandle:
-        #         # remove linebreak which is the last character of the string, add item to the list
-        #         current_ = line_[:-1]
-        #         credentials.append(current_)
-        with open(os.path.join(os.path.dirname(__file__), 'adbs.pckl'), 'rb') as f:
-            credentials = pickle.load(f)
-        # p = os.path.join(os.path.dirname(__file__), 'adbs.pckl')
-        # f = open(p)
-        # credentials = pickle.load(f)
-        if len(credentials) is not 6:
-            raise Exception("ERROR: problem loading database credentials")
-        else:
-            return credentials
-    except Exception as e:
-        error = alaqsutils.print_error(get_database_credentials.__name__, Exception, e)
-        return error
-    finally:
-        try:
-            f.close()
-        except:
+        except Exception:
             pass
 
 
 def connect():
     """
-    Establish a database connection to a supplied database. Requires a
-    minimum of database name, username and password if host and port are
-    PostgreSQL defaultSs.
+    Establish a database connection to a supplied database. Requires a minimum
+     of database name, username and password if host and port are PostgreSQL
+     defaults.
 
     ARGS:
         -
@@ -178,8 +100,8 @@ def connect():
         - None
     """
 
-    db = get_database_credentials()
-    db_name = db[2]
+    # Get the path to the project database
+    db_name = ProjectDatabase().path
 
     try:
         conn = sqlite.connect(db_name)
@@ -190,42 +112,29 @@ def connect():
         # Execute a basic query to be sure we're all good
         # cur = conn.cursor()
         # Load the spatialite dll. It is really important to make sure that the
-        # folder containing the DLLs is on PATH and not simply to use sys.path.append
-        # as this is temporary and will not allow the dependent (linked) DLLs to be
-        # found.
+        # folder containing the DLLs is on PATH and not simply to use
+        # sys.path.append as this is temporary and will not allow the dependent
+        # (linked) DLLs to be found.
         conn.enable_load_extension(True)
-
-        # spatial_dll_filename = "libspatialite-4.dll"
-        # if 8 * struct.calcsize("P") == 64:
-        #     spatial_dll_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "spatialite-4.0.0-DLL-win-amd64")
-        #     raise Exception("64bit installation of QGIS are not supported. Please use the 32bit installation.")
-        # else:
-        #     spatial_dll_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "spatialite-4.0.0-DLL")
 
         spatial_dll_filename = "mod_spatialite.dll"
         if 8 * struct.calcsize("P") == 64:
-            spatial_dll_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "spatialite-4.0.0-DLL")
+
+            # Get the path to the Spatial DLL folder
+            spatial_dll_folder = str(Path(__file__).absolute().parent / \
+                                 "spatialite-4.0.0-DLL")
         else:
-            spatial_dll_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "spatialite-4.0.0-DLL")
-            raise Exception("64bit installation of QGIS is now supported. Please try to use the 64bit installation.")
+            raise Exception("64bit installation of QGIS is now supported. "
+                            "Please try to use the 64bit installation.")
 
-
-        if not spatial_dll_folder in sys.path:
+        if spatial_dll_folder not in sys.path:
             sys.path.append(spatial_dll_folder)
 
-        if not spatial_dll_folder in os.environ['PATH']:
-            #os.environ['PATH'] += os.pathsep + spatial_dll_folder
-            #os.environ['PATH'] = spatial_dll_folder + ';' + os.environ['PATH']
-            os.environ['PATH'] = spatial_dll_folder + os.pathsep + os.environ['PATH']
+        if spatial_dll_folder not in os.environ['PATH']:
+            os.environ['PATH'] = spatial_dll_folder + os.pathsep + \
+                                 os.environ['PATH']
 
-        # logger.debug("Searching library '%s' at '%s'" % (spatial_dll_filename, spatial_dll_folder))
-
-        conn.execute('SELECT load_extension("%s")' % (spatial_dll_filename))
-
-        #try:
-        #    conn.execute("SELECT InitSpatialMetaData()")
-        #except:
-        #    pass
+        conn.execute('SELECT load_extension("%s")' % spatial_dll_filename)
 
         return conn, None
     except Exception as e:
@@ -243,16 +152,21 @@ def create_project_database(db_name):
     db_name : the name of the database to be created
     """
     try:
-        # Modifying this routine to instead copy a blank database
-        result = save_database_credentials(db_name=db_name)
-        if result is not None:
-            raise Exception("Problem with save_database_credentials(): %s" % result)
-        shutil.copy2(os.path.join(os.path.dirname(__file__), 'templates/new_blank_study.alaqs'), db_name)
+        # Store the filepath in-memory for future use
+        project_database = ProjectDatabase()
+        project_database.path = db_name
+
+        # Get the filepath of the blank study
+        blank_study_path = \
+            Path(__file__).absolute().parent / 'templates/new_blank_study.alaqs'
+
+        shutil.copy2(str(blank_study_path), db_name)
         msg = "[+] Created a blank ALAQS study file in %s" % db_name
         logger.info(msg)
 
         # Update the study created date to now
-        query_string("UPDATE user_study_setup SET date_created = DATETIME('now');")
+        query_string(
+            "UPDATE user_study_setup SET date_created = DATETIME('now');")
 
         return None
 
@@ -296,119 +210,6 @@ def query_string(sql_text):
         return None
 
 
-def query_file(sql_file_name):
-    """
-    This internal function runs through all of the queries in a SQL text file
-    and executes them against a supplied database connection.
-
-    :param sql_file_name : the sql file to be executed
-    :return result : None if query is successful. None if error
-    """
-    try:
-        sql_file = open(sql_file_name, 'rt')
-        sql_text = sql_file.read()
-        sql_queries = sql_text.split(';')
-        conn, error = connect()
-        cur = conn.cursor()
-        for query in sql_queries:
-            if query.strip() is not "":
-                cur.execute(query)
-        sql_file.close()
-        logger.debug("INFO: Queries from \"%s\" executed successfully" % sql_file_name)
-
-        conn.commit()
-        conn.close()
-        return None
-    except Exception as e:
-        error = alaqsutils.print_error(query_file.__name__, Exception, e)
-        return error
-
-
-def load_csv_data(table_name, csv_file):
-    """
-    This function loads the CSV data from a plain text file into a SQLite
-    table. The number of columns in the CSV file must match the number of
-    columns in the named table, otherwise the insert will fail.
-
-    :param table_name: the name of the table data is to be added to (string)
-    :param csv_file: path to the CSV file to be added (string)
-    :return error: None if successful, error message if failure
-    """
-    try:
-        f = open(csv_file, 'rb')
-        csv_data = csv.reader(f)
-        result = query_string("PRAGMA table_info(%s);" % table_name)
-        column_names = []
-        question_marks = []
-        for row in result:
-            column_names.append(row[1])
-            question_marks.append("?")
-        column_names = ",".join(column_names)
-        question_marks = ",".join(question_marks)
-        sql_query = "INSERT INTO %s (%s) VALUES (%s);" % (table_name, column_names, question_marks)
-        # Create connection and commit
-        conn, error = connect()
-        conn.text_factory = str     # Very important, especially if Excel is used for CSV
-        cur = conn.cursor()
-        cur.executemany(sql_query, csv_data)
-        conn.commit()
-        conn.close()
-        return None
-    except Exception as e:
-        error = alaqsutils.print_error(load_csv_data.__name__, Exception, e)
-        return error
-
-
-def create_airport(properties):
-    """
-    This creates a blank airport record in the user_study_setup table.
-    The only valid entries in the new airport entry are the unique airport id
-    and the alaqs version. All other values will need to be modified using
-    appropriate functions.
-
-    :param properties:
-    """
-    try:
-        airport_id = properties[0]
-        alaqs_version = properties[1]
-        project_name = properties[2]
-        airport_name = properties[3]
-        airport_code = properties[4]
-        airport_country = properties[5]
-        airport_latitude = properties[6]
-        airport_longitude = properties[7]
-        airport_elevation = properties[8]
-        airport_temperature = properties[9]
-        vertical_limit = properties[10]
-        roadway_method = properties[11]
-        roadway_fleet_year = properties[12]
-        roadway_country = properties[13]
-        parking_method = properties[14]
-        study_info = properties[15]
-
-        sql_text = "INSERT INTO user_study_setup ('airport_id','alaqs_version','project_name','airport_name'," \
-                   "'airport_code','airport_country','airport_latitude','airport_longitude','airport_elevation'," \
-                   "'airport_temperature','vertical_limit','roadway_method','roadway_fleet_year','roadway_country'," \
-                   "'parking_method','study_info','date_created','date_modified') VALUES (\"%s\",\"%s\",\"%s\"," \
-                   "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"," \
-                   "DATETIME('NOW'),DATETIME('NOW'))" % (airport_id, alaqs_version, project_name, airport_name,
-                                                         airport_code, airport_country, airport_latitude,
-                                                         airport_longitude, airport_elevation, airport_temperature,
-                                                         vertical_limit, roadway_method, roadway_fleet_year,
-                                                         roadway_country, parking_method, study_info)
-        result = query_string(sql_text)
-        if result is None:
-            return None
-        else:
-            if result is []:
-                return None
-            else:
-                raise Exception(result)
-    except Exception as e:
-        error = alaqsutils.print_error(create_project_database.__name__, Exception, e)
-        return error
-
-
 def airport_lookup(airport_code):
     """
     Lookup an airport in the current database using the ICAO code
@@ -424,9 +225,9 @@ def airport_lookup(airport_code):
         return None
 
 
-##################################################
-##########        STUDY SETUP         ############
-##################################################
+# #################################################
+# #########        STUDY SETUP         ############
+# #################################################
 
 
 def get_study_setup():
@@ -572,9 +373,9 @@ def save_study_setup_dict(study_setup_dict):
         return error
 
 
-##################################################
-##########           GATES            ############
-##################################################
+# #################################################
+# #########           GATES            ############
+# #################################################
 
 
 def add_gate_dict(gate_dict):
@@ -651,9 +452,9 @@ def get_gates():
         return error
 
 
-##################################################
-##########         ROADWAYS           ############
-##################################################
+# #################################################
+# #########         ROADWAYS           ############
+# #################################################
 
 
 def add_roadway_dict(roadway_dict):
@@ -756,9 +557,9 @@ def get_roadways():
         return error
 
 
-##################################################
-##########         RUNWAYS            ############
-##################################################
+# #################################################
+# #########         RUNWAYS            ############
+# #################################################
 
 
 def add_runway_dict(runway_dict):
@@ -834,9 +635,9 @@ def get_runways():
         return error
 
 
-##################################################
-##########           TAXIWAYS         ############
-##################################################
+# #################################################
+# #########           TAXIWAYS         ############
+# #################################################
 
 
 def add_taxiway_dict(taxiway_dict):
@@ -871,9 +672,9 @@ def add_taxiway_dict(taxiway_dict):
         return error
 
 
-##################################################
-##########       TAXIWAY ROUTES       ############
-##################################################
+# #################################################
+# #########       TAXIWAY ROUTES       ############
+# #################################################
 
 
 def delete_taxiway_route(taxi_route_name):
@@ -982,9 +783,9 @@ def get_taxiways():
         return error
 
 
-##################################################
-##########          TRACKS           #############
-##################################################
+# #################################################
+# #########          TRACKS           #############
+# #################################################
 
 
 def get_track(track_id):
@@ -1022,9 +823,9 @@ def get_tracks():
         return error
 
 
-##################################################
-##########        POINT SOURCES      #############
-##################################################
+# #################################################
+# #########        POINT SOURCES      #############
+# #################################################
 
 
 def add_point_source(point_source_dict):
@@ -1186,9 +987,9 @@ def get_point_types(category_number):
         return error
 
 
-##################################################
-##########         BUILDINGS         #############
-##################################################
+# #################################################
+# #########         BUILDINGS         #############
+# #################################################
 
 
 def add_building(building_dict):
@@ -1269,9 +1070,9 @@ def get_buildings():
         return error
 
 
-##################################################
-##########          PARKINGS         #############
-##################################################
+# #################################################
+# #########          PARKINGS         #############
+# #################################################
 
 
 def add_parking(properties):
@@ -1391,9 +1192,9 @@ def get_parkings():
         return error
 
 
-##################################################
-##########          PROFILES         #############
-##################################################
+# #################################################
+# #########          PROFILES         #############
+# #################################################
 
 
 def add_hourly_profile_dict(hourly_profile_dict):
@@ -1865,9 +1666,9 @@ def delete_monthly_profile(profile_name):
         return error
 
 
-##################################################
-##########       CALCULATIONS        #############
-##################################################
+# #################################################
+# #########       CALCULATIONS        #############
+# #################################################
 
 
 def get_lasport_scenarios():
@@ -1936,8 +1737,10 @@ def inventory_source_list(inventory_path, source_type):
         error = alaqsutils.print_error(inventory_source_list.__name__, Exception, e)
         return error
 
+
 def inventory_time_series(inventory_path):
     return query_text(inventory_path, "SELECT * FROM tbl_InvTime;")
+
 
 def inventory_calc_taxiway_emissions(inventory_path, taxiway_name):
     """
@@ -1964,8 +1767,11 @@ def inventory_calc_taxiway_emissions(inventory_path, taxiway_name):
         else:
             taxiway_dict = alaqsutils.dict_taxiway_data(taxiway_data[0])
 
-            taxiway_length_km = get_linestring_length(curs, "shapes_taxiways", "taxiway_id", taxiway_name)
-            taxiway_time = taxiway_length_km / taxiway_dict['speed'] * 3600       # *3600 to go from hours to seconds
+            taxiway_length_km = get_linestring_length(curs, "shapes_taxiways",
+                                                      "taxiway_id",
+                                                      taxiway_name)
+            taxiway_time = taxiway_length_km / taxiway_dict[
+                'speed'] * 3600  # *3600 to go from hours to seconds
 
             # Get the time series for this inventory
             curs.execute("SELECT * FROM tbl_InvTime;")
@@ -2066,36 +1872,6 @@ def get_arr_dep_from_movement(movement_dict):
         return error
 
 
-def get_movements_for_gate(inventory_path, gate_name, start_time, end_time):
-    """
-    Return movements for a specific gate for a given time period
-    :param inventory_path: path to the alaqs output file being reviewed
-    :param gate_name: name of the gate being investigated
-    :param start_time: the start time of the interval
-    :param end_time: the end time of the interval
-    """
-    try:
-        sql_query = "SELECT * FROM user_aircraft_movements WHERE gate=\"%s\" AND " \
-                    "datetime(\"runway_time\") > datetime(\"%s\") " \
-                    "AND datetime(\"runway_time\") < datetime(\"%s\");" % (gate_name, start_time, end_time)
-        conn = sqlite.connect(inventory_path)
-        curs = conn.cursor()
-
-        curs.execute(sql_query)
-        movement_data = curs.fetchall()
-
-        if isinstance(movement_data, str):
-            raise Exception("Problem querying movements: %s" % movement_data)
-        elif movement_data is None or movement_data == []:
-            return None
-        else:
-            # We have movement data!
-            return movement_data
-    except Exception as e:
-        error = alaqsutils.print_error(get_movements_datetime_between.__name__, Exception, e)
-        return error
-
-
 def get_movements_datetime_between(inventory_path, start_time, end_time):
     """
     Return movements that have a datetime between two values
@@ -2158,97 +1934,3 @@ def get_linestring_length(geometry, epsg_id):
     except Exception as e:
         alaqsutils.print_error(get_linestring_length.__name__, Exception, e)
         return None
-
-
-def get_polygon_area(geometry):
-    """
-    Calculates the area of a polygon feature in meters
-
-    :param table_name: the name of the table containing the shape's geometry
-    :param feature_name: the name of the feature whose length is required
-    :return: area: in meters
-    :rtype: float
-    """
-    try:
-        result = []
-        area = result[0][0]
-        return area
-    except Exception as e:
-        alaqsutils.print_error(get_polygon_area.__name__, Exception, e)
-        return None
-
-
-def get_intersection_length(geometry_one, geometry_two):
-    """
-    This function returns the length of the intersection of two geometry polygons. For example, consider the below two
-    overlapping polygons (A) and (B):
-
-            ---------
-            |   B   |
-        ---------   |
-        |   | C |   |
-        |   |---|---|
-        |   A   |
-        ---------
-        geometry_one (A): 'POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))'
-        geometry_two (B): 'POLYGON ((1 1, 3 1, 3 3, 1 3, 1 1))'
-        Intersection (C): 'POLYGON((1 2, 2 2, 2 1, 1 1, 1 2))'
-
-    The function would return the area of the intersection, shape C. Note that this function returns the PLANAR area of
-    the intersection, not the ellipsoidal (e.g. use_spheroid) area. At time of writing, the use_spheroid option is not
-    available in spatialite.
-    :param geometry_one: the first geometry as a BLOB
-    :param geometry_two: the second geometry as a BLOB
-    :return: the area of the intersection
-    """
-    query_string = "SELECT ST_Length(ST_Intersection(ST_PolygonFromText('%s', 4326), ST_LineFromText('%s', 4326)), 1);"
-
-
-def get_intersection_area(geometry_one, geometry_two):
-    """
-    This function returns the area of the intersection of two geometry polygons. For example, consider the below two
-    overlapping polygons (A) and (B):
-            ---------
-            |   B   |
-        ---------   |
-        |   | C |   |
-        |   |---|---|
-        |   A   |
-        ---------
-        geometry_one (A): 'POLYGON ((0 0, 2 0, 2 2, 0 2, 0 0))'
-        geometry_two (B): 'POLYGON ((1 1, 3 1, 3 3, 1 3, 1 1))'
-        Intersection (C): 'POLYGON((1 2, 2 2, 2 1, 1 1, 1 2))'
-    The function would return the area of the intersection, shape C. Note that this function returns the PLANAR area of
-    the intersection, not the ellipsoidal (e.g. use_spheroid) area. At time of writing, the use_spheroid option is not
-    available in spatialite.
-    :param geometry_one: the first geometry as a BLOB
-    :param geometry_two: the second geometry as a BLOB
-    :return: the area of the intersection
-    """
-    pass
-
-
-def make_wkt_bounding_box(d):
-    """
-    This function takes a dict that defines two opposite corners of a bounding box (south-west and north-east corners)
-    and uses these to generate a bounding box in Well-known Text. This is returned as a string
-    :param d: dict of dimensions x_min, y_min, x_max,  y_max.
-    :return: the percentage of th shape that sits within the bounding box.
-    """
-    try:
-        bbox = "POLYGON ((%s %s, %s %s, %s %s, %s %s, %s %s))" % (d['x_min'], d['y_min'], d['x_min'], d['y_max'],
-                                                                  d['x_max'], d['y_max'], d['x_max'], d['y_min'],
-                                                                  d['x_min'], d['y_min'])
-        return bbox
-    except Exception as e:
-        pass
-
-# if __name__ == "__main__":
-#     # Use this section for unit testing
-#
-#     data = get_line_length("shapes_roadways", "roadway_id", "M5")
-#     # fix_print_with_import
-#     print(data)
-#     data = get_polygon_area("shapes_gates", "gate_id", "Gate01")
-#     # fix_print_with_import
-#     print(data)

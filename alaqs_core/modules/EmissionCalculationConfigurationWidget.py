@@ -4,7 +4,7 @@ from collections import OrderedDict
 import geopandas as gpd
 from PyQt5 import QtCore, QtWidgets
 
-from open_alaqs.alaqs_core.modules.ui.ModuleConfigurationWidget import \
+from open_alaqs.alaqs_core.modules.ModuleConfigurationWidget import \
     ModuleConfigurationWidget
 from open_alaqs.alaqs_core.tools import CSVInterface
 

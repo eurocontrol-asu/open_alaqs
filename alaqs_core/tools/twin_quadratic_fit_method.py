@@ -3,7 +3,7 @@ from open_alaqs.alaqs_core.alaqslogging import get_logger
 logger = get_logger(__name__)
 
 
-def calculateFuelFlowFromPowerSetting(power_setting, icao_eedb):
+def calculate_fuel_flow_from_power_setting(power_setting, icao_eedb):
     """
     Calculates the fuel flow associated to a particular power setting with the
      twin-quadratic fit method
@@ -20,13 +20,20 @@ def calculateFuelFlowFromPowerSetting(power_setting, icao_eedb):
                 "settings [%%] from ICAO EEDB!", key)
             return None
 
-    based_on = 0
-    if (power_setting >= 60) or (power_setting <= 85):
+    if .60 <= power_setting <= .85:
         # based on the 7 per cent, 30 per cent and 85 per cent thrust
-        based_on = 1
-    elif (power_setting > 85) or (power_setting <= 100):
+        x1 = 0.07
+        x2 = 0.30
+        x3 = 0.85
+
+    elif .85 < power_setting <= 1.00:
         # based on the 30 per cent, 85 per cent and 100 per cent thrust
-        based_on = 2
+        x1 = 0.30
+        x2 = 0.85
+        x3 = 1.0
+    else:
+        raise ValueError('The power setting should be between 0.6 and 1.0 '
+                         '(inclusive).')
 
     # Y = AX**2 + BX + C
     # with three known points:
@@ -37,17 +44,6 @@ def calculateFuelFlowFromPowerSetting(power_setting, icao_eedb):
     # values Y1, Y2, Y3, Y4.
 
     _x = power_setting
-
-    if based_on == 1:
-        x1 = 0.07
-        x2 = 0.30
-        x3 = 0.85
-    elif based_on == 2:
-        x1 = 0.30
-        x2 = 0.85
-        x3 = 0.10
-    else:
-        raise ValueError('')
 
     y1 = icao_eedb[x1] / icao_eedb[1]
     y2 = icao_eedb[x2] / icao_eedb[1]
@@ -102,7 +98,7 @@ def calculateFuelFlowFromPowerSetting(power_setting, icao_eedb):
 #     #     }
 #
 #     logger.info("Calculated fuel flow for power setting '%.2f' is '%.4f'", (
-#         power, calculateFuelFlowFromPowerSetting(power, icao_values)))
+#         power, calculate_fuel_flow_from_power_setting(power, icao_values)))
 #
 #     # Plot function
 #     import numpy as np
@@ -112,7 +108,7 @@ def calculateFuelFlowFromPowerSetting(power_setting, icao_eedb):
 #     plt.figure()
 #     x = np.linspace(0, 1, 1000)  # 1000 linearly spaced numbers
 #     for i in x:
-#         y = calculateFuelFlowFromPowerSetting(i, icao_values)
+#         y = calculate_fuel_flow_from_power_setting(i, icao_values)
 #         p1, = plt.plot(100 * i, y, 'ok', ms=4)
 #     p2, = plt.plot(100 * np.array([0.07, 0.3, 0.85, 1]),
 #                    [icao_values[0.07], icao_values[0.3], icao_values[0.85],

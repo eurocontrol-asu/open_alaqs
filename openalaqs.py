@@ -27,7 +27,10 @@ from qgis.gui import *
 
 from open_alaqs import openalaqsuitoolkit
 from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.openalaqsdialog import *
+from open_alaqs.openalaqsdialog import OpenAlaqsAbout, \
+    OpenAlaqsCreateDatabase, OpenAlaqsOpenDatabase, OpenAlaqsStudySetup, \
+    OpenAlaqsProfiles, OpenAlaqsTaxiRoutes, OpenAlaqsInventory, \
+    OpenAlaqsResultsAnalysis, OpenAlaqsDispersionAnalysis, OpenAlaqsLogfile
 
 # Configure the logger
 logger = get_logger(__name__)
@@ -49,23 +52,6 @@ class OpenALAQS:
         # Save reference to the QGIS interface
         self.iface = iface
         self.canvas = self.iface.mapCanvas()
-
-        # initialize plugin directory
-        self.plugin_dir = os.path.dirname(__file__)
-
-        # initialize locale
-        locale_path = ""
-        locale = str(QtCore.QSettings().value("locale/userLocale"))[0:2]
-
-        if QtCore.QFileInfo(self.plugin_dir).exists():
-            locale_path = self.plugin_dir + "/i18n/openalaqs_" + locale + ".qm"
-
-        if QtCore.QFileInfo(locale_path).exists():
-            self.translator = QtCore.QTranslator()
-            self.translator.load(locale_path)
-
-            if QtCore.qVersion() > '4.3.3':
-                QtCore.QCoreApplication.installTranslator(self.translator)
 
         # QGIS3: setMapUnits() was removed.
         # The map units are dictated by the units for the destination CRS.
@@ -263,8 +249,12 @@ class OpenALAQS:
         self.dialogs['open_project'] = OpenAlaqsOpenDatabase(self.iface)
         return_code = self.dialogs['open_project'].exec_()
         if return_code == 0:
+
+            # Get the database path
             database_path = self.dialogs['open_project'].get_values()
-            if (database_path is not None) and (database_path != ""):
+
+            # Continue if the path is valid
+            if isinstance(database_path, str) and Path(database_path).exists():
                 openalaqsuitoolkit.load_layers(self.iface, database_path)
                 self.dialogs['open_project'].close()
                 self.actions['study_setup'].setEnabled(True)
@@ -315,11 +305,11 @@ class OpenALAQS:
                     self.dialogs['study_setup'].get_values()
                     self.dialogs['study_setup'].close()
                     self.actions['profiles_edit'].setEnabled(True)
-                except:
+                except Exception:
                     pass
             else:
                 self.dialogs['study_setup'].close()
-        except:
+        except Exception:
             QtWidgets.QMessageBox.warning(
                 None,
                 "Error",
