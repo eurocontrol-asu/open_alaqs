@@ -7,7 +7,7 @@ from shapely.geometry import Polygon
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools import SQLInterface
 from open_alaqs.alaqs_core.tools import conversion
-from open_alaqs.alaqs_core.tools.PythonClasses import SizeLimitedDict
+from open_alaqs.alaqs_core.tools.SizeLimitedDict import SizeLimitedDict
 
 logger = get_logger(__name__)
 
