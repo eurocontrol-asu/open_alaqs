@@ -271,7 +271,7 @@ class Ui_DialogStudySetup(object):
 
     def retranslateUi(self, DialogStudySetup):
         _translate = QtCore.QCoreApplication.translate
-        DialogStudySetup.setWindowTitle(_translate("DialogStudySetup", "ALAQS Project Setup"))
+        DialogStudySetup.setWindowTitle(_translate("DialogStudySetup", "OpenALAQS - Project Setup"))
         self.label_4.setText(_translate("DialogStudySetup", "Project Name"))
         self.label_5.setText(_translate("DialogStudySetup", "Project Settings"))
         self.label_22.setText(_translate("DialogStudySetup", "Name"))

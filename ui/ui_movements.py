@@ -45,7 +45,7 @@ class Ui_FormMovements(object):
 
     def retranslateUi(self, FormMovements):
         _translate = QtCore.QCoreApplication.translate
-        FormMovements.setWindowTitle(_translate("FormMovements", "Open an existing ALAQS database"))
+        FormMovements.setWindowTitle(_translate("FormMovements", "OpenALAQS - Open an existing ALAQS database"))
         self.load.setText(_translate("FormMovements", "Load Movement File"))
         self.cancel.setText(_translate("FormMovements", "Cancel"))
         self.label_7.setText(_translate("FormMovements", "<html><head/><body><p><span style=\" font-size:10pt;\">Select a movement journal to open:</span></p></body></html>"))

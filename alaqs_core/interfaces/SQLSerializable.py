@@ -150,16 +150,17 @@ class SQLSerializable:
                             logger.error(exc_)
             # logger.info("Deserialized %i rows from table '%s' in database '%s' " % (len(result), self._table_name, self._db_path))
 
-    #Can be overwritten by subclass to store user-defined objects
+    # Can be overwritten by subclass to store user-defined objects
     def getObject(self, values_dict):
         return values_dict
 
-    def result_to_dict(self, columns, data):
+    @staticmethod
+    def result_to_dict(columns, data):
         if len(data) == len(columns):
             data_dict = OrderedDict()
             for col_index, col_name in enumerate(columns):
-                #convert AsText(bla) to bla
-                geometry_type_ = re.search("AsText\((.+?)\)", col_name )
+                # convert AsText(bla) to bla
+                geometry_type_ = re.search(r"AsText\((.+?)\)", col_name)
                 if geometry_type_:
                     data_dict[geometry_type_.group(1)] = data[col_index]
                 else:
