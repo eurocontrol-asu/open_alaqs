@@ -19,6 +19,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+import os
 from pathlib import Path
 
 from qgis.PyQt import QtCore, QtGui, QtWidgets
@@ -27,7 +28,10 @@ from qgis.gui import *
 
 from open_alaqs import openalaqsuitoolkit
 from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.openalaqsdialog import *
+from open_alaqs.openalaqsdialog import OpenAlaqsAbout, \
+    OpenAlaqsCreateDatabase, OpenAlaqsOpenDatabase, OpenAlaqsStudySetup, \
+    OpenAlaqsProfiles, OpenAlaqsTaxiRoutes, OpenAlaqsInventory, \
+    OpenAlaqsResultsAnalysis, OpenAlaqsDispersionAnalysis, OpenAlaqsLogfile
 
 # Configure the logger
 logger = get_logger(__name__)
@@ -315,11 +319,11 @@ class OpenALAQS:
                     self.dialogs['study_setup'].get_values()
                     self.dialogs['study_setup'].close()
                     self.actions['profiles_edit'].setEnabled(True)
-                except:
+                except Exception:
                     pass
             else:
                 self.dialogs['study_setup'].close()
-        except:
+        except Exception:
             QtWidgets.QMessageBox.warning(
                 None,
                 "Error",
