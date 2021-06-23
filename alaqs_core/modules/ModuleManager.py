@@ -6,7 +6,7 @@ from collections import OrderedDict
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
-from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
 
 logger = get_logger(__name__)

@@ -20,7 +20,7 @@ from open_alaqs.alaqs_core.interfaces.EngineStore import EngineStore, \
 from open_alaqs.alaqs_core.interfaces.Gate import GateStore
 from open_alaqs.alaqs_core.interfaces.Runway import RunwayStore
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
-from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.interfaces.Taxiway import TaxiwayRoutesStore
 from open_alaqs.alaqs_core.tools import conversion, spatial

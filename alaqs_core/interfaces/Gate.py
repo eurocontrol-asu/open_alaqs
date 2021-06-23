@@ -3,7 +3,7 @@ from collections import OrderedDict
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
-from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import spatial
 

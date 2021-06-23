@@ -5,7 +5,7 @@ from open_alaqs.alaqs_core.interfaces.Engine import Engine
 from open_alaqs.alaqs_core.interfaces.EngineDatabases import \
     EngineEmissionIndicesDatabase, EngineModeDatabase, \
     HelicopterEngineEmissionIndicesDatabase
-from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 
 logger = get_logger(__name__)

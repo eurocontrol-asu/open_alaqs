@@ -12,7 +12,7 @@ from open_alaqs.alaqs_core.interfaces.EngineDatabases import \
 from open_alaqs.alaqs_core.interfaces.EngineStore import EngineStore, \
     HeliEngineStore
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
-from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 
 logger = get_logger(__name__)
