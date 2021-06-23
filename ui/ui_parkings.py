@@ -2,7 +2,7 @@ from PyQt5 import QtCore, QtWidgets
 
 from open_alaqs.alaqs_core import alaqs
 from open_alaqs.alaqs_core import alaqsutils
-from open_alaqs.alaqs_core.tools.libALAQSMethod import \
+from open_alaqs.alaqs_core.tools.lib_alaqs_method import \
     roadway_emission_factors_alaqs_method
 
 form = None

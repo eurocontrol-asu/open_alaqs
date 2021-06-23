@@ -8,8 +8,9 @@ from dateutil import rrule
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
+from open_alaqs.alaqs_core.tools.csv_interface import write_csv
 from open_alaqs.ui.TableViewDialog import Ui_TableViewDialog
-from open_alaqs.alaqs_core.tools import conversion, CSVInterface
+from open_alaqs.alaqs_core.tools import conversion
 
 logger = get_logger(__name__)
 
@@ -301,6 +302,7 @@ class TableViewDispersionModule(OutputModule):
 
 
 
+    @property
     def endJob(self):
         self._widget.resizeToContent()
         if self._max_values:
@@ -313,7 +315,7 @@ class TableViewDispersionModule(OutputModule):
             filename = "max_conc_%s.csv"%self._averaging_period.replace(" ","_") if self._max_values else \
                 "conc_%s.csv"%self._averaging_period.replace(" ","_")
             csv_path = os.path.join(self._concentration_database, filename)
-            CSVInterface.writeCSV(csv_path, self._rows)
+            write_csv(csv_path, self._rows)
 
         return self._widget
 

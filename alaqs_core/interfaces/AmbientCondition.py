@@ -5,7 +5,8 @@ from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
-from open_alaqs.alaqs_core.tools import conversion, CSVInterface
+from open_alaqs.alaqs_core.tools import conversion
+from open_alaqs.alaqs_core.tools.csv_interface import read_csv_to_dict
 
 logger = get_logger(__name__)
 
@@ -129,7 +130,7 @@ class AmbientConditionStore(Store, metaclass=Singleton):
 
         #deserialize objects from csv file
         if init_csv_path:
-            csv = CSVInterface.readCSVtoDict(init_csv_path)
+            csv = read_csv_to_dict(init_csv_path)
 
             headers_ = {"Scenario":"Scenario",
                         "DateTime(YYYY-mm-dd hh:mm:ss)":"DateTime",

@@ -5,7 +5,7 @@ from PyQt5 import QtWidgets
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
-from open_alaqs.alaqs_core.tools import CSVInterface
+from open_alaqs.alaqs_core.tools.csv_interface import write_csv
 
 logger = get_logger(__name__)
 
@@ -118,7 +118,7 @@ class CSVOutputModule(OutputModule):
         """
 
         if self.getOutputPath() is not None:
-            CSVInterface.writeCSV(self.getOutputPath(), self._rows)
+            write_csv(self.getOutputPath(), self._rows)
 
         if os.path.isfile(self.getOutputPath()):
             QtWidgets.QMessageBox.information(

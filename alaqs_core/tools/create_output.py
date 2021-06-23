@@ -11,7 +11,7 @@ from open_alaqs.alaqs_core import alaqsutils
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.AmbientCondition import \
     AmbientConditionStore
-from open_alaqs.alaqs_core.tools import SQLInterface
+from open_alaqs.alaqs_core.tools import sql_interface
 from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 
 logger = get_logger(__name__)
@@ -138,6 +138,7 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_p
     logger.info("New output file with path '%s' has been created" % (str(inventory_path)))
     return None
 
+
 def inventory_create_blank(inventory_name):
     """
     Copy a blank version of the ALAQS inventory to the desired location
@@ -145,7 +146,8 @@ def inventory_create_blank(inventory_name):
     :return: None if successful, error otherwise
     """
     try:
-        shutil.copy2(os.path.join(os.path.dirname(__file__), 'templates/inventory_template.alaqs'), inventory_name)
+        shutil.copy2(os.path.join(os.path.dirname(__file__),
+                                  '../templates/inventory_template.alaqs'), inventory_name)
         msg = "[+] Created a blank ALAQS output file"
         logger.info(msg)
         return None
@@ -192,7 +194,7 @@ def inventory_update_tbl_inv_period(database_path, model_parameters, study_setup
         if model_parameters['use_variable_mixing_height'] is True:
             mix_height = 1
 
-        SQLInterface.query_text(database_path, "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, vert_limit=%d, apt_elev=%d, "
+        sql_interface.query_text(database_path, "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, vert_limit=%d, apt_elev=%d, "
                                   "copert=%d, nox_corr=%d, ffm=%d, smsh=%d, mix_height=%d, min_time=\"%s\", "
                                   "max_time=\"%s\";" % (interval, temp_isa, model_parameters['vertical_limit'],
                                                         study_setup['airport_elevation'], copert, nox_corr, ffm,
@@ -381,6 +383,7 @@ def inventory_copy_gate_profiles(inventory_path):
         logger.error(error_msg)
         return error_msg
 
+
 def inventory_copy_emission_dynamics(inventory_path):
     """
     Copy all emission_dynamics from the currently active alaqs project database to the output file
@@ -401,6 +404,7 @@ def inventory_copy_emission_dynamics(inventory_path):
         error_msg = alaqsutils.print_error(inventory_copy_emission_dynamics.__name__, Exception, e)
         logger.error(error_msg)
         return error_msg
+
 
 def inventory_copy_taxiway_routes(inventory_path):
     """
@@ -431,7 +435,7 @@ def inventory_copy_vector_layers(inventory_path):
     """
 
     try:
-        conn = SQLInterface.connect(inventory_path)
+        conn = sql_interface.connect(inventory_path)
         curs = conn.cursor()
 
         try:

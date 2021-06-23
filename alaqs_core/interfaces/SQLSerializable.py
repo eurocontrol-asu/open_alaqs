@@ -2,7 +2,7 @@ import re
 from collections import OrderedDict
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.alaqs_core.tools import SQLInterface, conversion
+from open_alaqs.alaqs_core.tools import sql_interface, conversion
 
 logger = get_logger(__name__)
 
@@ -113,7 +113,7 @@ class SQLSerializable:
 
         sql_text = "SELECT %s FROM %s;" % (",".join(columns_), self._table_name)
         # result = SQLInterface.pd_query_text(self._db_path, sql_text)
-        result = SQLInterface.query_text(self._db_path, sql_text)
+        result = sql_interface.query_text(self._db_path, sql_text)
 
         if isinstance(result, str):
             raise Exception(result)
@@ -191,7 +191,7 @@ class SQLSerializable:
                 if not skip:
                     entries.append(entry)
 
-            result = SQLInterface.query_insert_many(path_, sql_text, [[entry[k] for k in list(self._table_columns.keys())] for entry in entries])
+            result = sql_interface.query_insert_many(path_, sql_text, [[entry[k] for k in list(self._table_columns.keys())] for entry in entries])
             if isinstance(result, str):
                 logger.error("Row was not inserted: %s" % result)
                 raise ValueError(result)
@@ -223,10 +223,10 @@ class SQLSerializable:
                 types_string += "\"%s\" %s" % (key_, self._table_columns[key_])
 
             sql_query = "DROP TABLE IF EXISTS \"%s\";" % self._table_name
-            SQLInterface.query_text(path_, sql_query)
+            sql_interface.query_text(path_, sql_query)
 
             sql_query = "CREATE TABLE %s (%s);" % (self._table_name, types_string)
-            result = SQLInterface.query_text(path_, sql_query)
+            result = sql_interface.query_text(path_, sql_query)
 
             if isinstance(result, str):
                 logger.error("Table not created: %s" % result)
@@ -244,7 +244,7 @@ class SQLSerializable:
                         int(geom_col_dict_["SRID"]),
                         str(geom_col_dict_["geometry_type"]),
                         int(geom_col_dict_["geometry_type_dimension"]))
-                    result = SQLInterface.query_text(path_, query_text_geom_)
+                    result = sql_interface.query_text(path_, query_text_geom_)
                     if isinstance(result, str):
                         logger.error("Table not created: %s" % result)
                         raise ValueError(result)

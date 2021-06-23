@@ -13,8 +13,9 @@ from open_alaqs.alaqs_core.interfaces.InventoryTimeSeries import \
 from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
 from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
     DispersionModuleManager
-from open_alaqs.alaqs_core.tools import Iterator, conversion
+from open_alaqs.alaqs_core.tools import conversion
 from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
+from open_alaqs.alaqs_core.tools.iterator import pairwise
 
 logger = get_logger(__name__)
 
@@ -259,12 +260,12 @@ class EmissionCalculation:
 
         # execute endJob(..)
         for mod_name, mod_obj in self.getModules().items():
-            mod_obj.endJob()
+            mod_obj.endJob
 
         # execute endJob(..) of dispersion modules
         for dispersion_mod_name, dispersion_mod_obj in \
                 self.getDispersionModules().items():
-            dispersion_mod_obj.endJob()
+            dispersion_mod_obj.endJob
 
     def getModules(self):
         return self._modules
@@ -314,7 +315,7 @@ class EmissionCalculation:
 
     # returns a generator of TimeSeries objects
     def getTimeSeries(self):
-        return Iterator.pairwise(self.getTimeSeriesStore().getTimeSeries())
+        return pairwise(self.getTimeSeriesStore().getTimeSeries())
 
     # returns a tuple of TimeSeries objects with (start, end)
     def getTimeSeriesTuple(self):
@@ -389,12 +390,12 @@ class EmissionCalculation:
 #     #         ec.addModule(s_)
 #
 #     # load receptors
-#     from tools.CSVInterface import readCSVtoGeoDataFrame
+#     from tools.CSVInterface import read_csv_to_geodataframe
 #     filename_ = os.path.join("..", "example/", "CAEPport", "receptors_coords.csv")
 #     if not os.path.isfile(filename_):
 #         raise Exception("File %s doesn't exist !"%filename_)
 #     else:
-#         csv_gdf = readCSVtoGeoDataFrame(filename_)
+#         csv_gdf = read_csv_to_geodataframe(filename_)
 #
 #     # print("Adding Dispesion Module")
 #     # work_dir = os.path.join("..", "example/", "CAEPport", "A2K")

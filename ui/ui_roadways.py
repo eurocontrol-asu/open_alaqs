@@ -3,7 +3,7 @@ from qgis.core import *
 from qgis.gui import *
 
 from open_alaqs.alaqs_core import alaqs, alaqslogging, alaqsutils
-from open_alaqs.alaqs_core.tools.libALAQSMethod import \
+from open_alaqs.alaqs_core.tools.lib_alaqs_method import \
     roadway_emission_factors_alaqs_method
 
 logger = alaqslogging.logging.getLogger(__name__)

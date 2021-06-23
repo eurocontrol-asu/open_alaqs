@@ -10,7 +10,7 @@ from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
 from open_alaqs.alaqs_core.plotting.ContourPlotVectorLayer import \
     ContourPlotVectorLayer
-from open_alaqs.alaqs_core.tools import conversion, Spatial
+from open_alaqs.alaqs_core.tools import conversion, spatial
 
 pd.set_option('chained_assignment', None)
 
@@ -212,7 +212,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
 
 
     def getBoundingBox(self, geometry_wkt):
-        bbox = Spatial.getBoundingBox(geometry_wkt)
+        bbox = spatial.getBoundingBox(geometry_wkt)
         return bbox
 
     def getCellBox(self, x_,y_,z_, grid_):

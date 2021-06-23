@@ -7,7 +7,7 @@ from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
-from open_alaqs.alaqs_core.tools import Spatial
+from open_alaqs.alaqs_core.tools import spatial
 
 logger = get_logger(__name__)
 
@@ -105,8 +105,8 @@ class TaxiwaySegment:
         self._length = None
 
         if self._geometry_text and not self._height is None:
-            self.setGeometryText(Spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
-            self._length = Spatial.getDistanceOfLineStringXY(self.getGeometryText(), epsg_id_source=3857, epsg_id_target=4326)
+            self.setGeometryText(spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
+            self._length = spatial.getDistanceOfLineStringXY(self.getGeometryText(), epsg_id_source=3857, epsg_id_target=4326)
 
         self._time_in_s = 0.
         if not self._length is None:

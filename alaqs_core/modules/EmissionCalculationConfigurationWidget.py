@@ -6,7 +6,7 @@ from PyQt5 import QtCore, QtWidgets
 
 from open_alaqs.alaqs_core.modules.ModuleConfigurationWidget import \
     ModuleConfigurationWidget
-from open_alaqs.alaqs_core.tools import CSVInterface
+from open_alaqs.alaqs_core.tools.csv_interface import read_csv_to_geodataframe
 
 
 # Configuration (widget) of emissions calculation
@@ -80,5 +80,5 @@ class EmissionCalculationConfigurationWidget(ModuleConfigurationWidget):
             return e
 
     def get_receptors_from_csv(self, filename_):
-        csv_gdf = CSVInterface.readCSVtoGeoDataFrame(filename_)
+        csv_gdf = read_csv_to_geodataframe(filename_)
         self._receptor_points = csv_gdf

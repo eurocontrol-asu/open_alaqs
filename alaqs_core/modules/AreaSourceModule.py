@@ -16,23 +16,6 @@ class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
     """
     This class provides all of the calculation methods required to perform
     emissions calculations for area sources.
-
-    todo: Check if these comments can be removed, as they do not belong to the
-     init function of this module
-    Calculate area emissions for a specific source based on the source name and
-     time period.
-
-    The emission for any source for each time period is equal to the total
-    emission for the entire time period multiplied by the activity factor for
-    the specific hour. For example:
-    \f$E_{co} =
-    CO_{total} \times  AF_{hour} \times AF_{week} \times AF_{month}\f$
-
-    :param database_path: path to the alaqs output file being displayed/examined
-    :param source_name: the name of the source to be reviewed
-    :return emission_profile: a dict containing the total emissions for each
-     pollutant
-    :rtype: dict
     """
 
     @staticmethod

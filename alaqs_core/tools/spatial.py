@@ -8,7 +8,8 @@ import shapely.wkt
 from geographiclib.geodesic import Geodesic
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.alaqs_core.tools import conversion, Iterator
+from open_alaqs.alaqs_core.tools import conversion
+from open_alaqs.alaqs_core.tools.iterator import pairwise
 
 logger = get_logger(__name__)
 
@@ -77,7 +78,7 @@ def getDistanceOfLineStringXY(
     res = 0.
 
     # calculate length pairwise and sum the result
-    for (start_point_, end_point_) in Iterator.pairwise(points_tuple_list):
+    for (start_point_, end_point_) in pairwise(points_tuple_list):
         res_ = getInverseDistance(start_point_[0], start_point_[1],
                                   end_point_[0], end_point_[1])
         if "s12" in res_:
