@@ -1,7 +1,9 @@
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 from open_alaqs.alaqs_core.interfaces.Store import Store
-from open_alaqs.alaqs_core.tools import twin_quadratic_fit_method, BFFM2
+from open_alaqs.alaqs_core.tools.bffm2 import calculate_emission_index
+from open_alaqs.alaqs_core.tools.twin_quadratic_fit_method import \
+    calculate_fuel_flow_from_power_setting
 
 logger = get_logger(__name__)
 
@@ -262,7 +264,7 @@ class EngineEmissionIndex(Store):
         elif method["name"] == "BFFM2":
 
             #get map power-setting [%]:fuel flow [kg/s]
-            fuel_flow = twin_quadratic_fit_method.calculate_fuel_flow_from_power_setting(power_setting, self.getICAOEngineEmissionsDB(True, "fuel_kg_sec"))
+            fuel_flow = calculate_fuel_flow_from_power_setting(power_setting, self.getICAOEngineEmissionsDB(True, "fuel_kg_sec"))
             if fuel_flow is None:
                 return None
 
@@ -345,7 +347,7 @@ class EngineEmissionIndex(Store):
             # Do the calculation
             emission_index.setObject("fuel_kg_sec", fuel_flow)
             for pollutant in bffm2_keys:
-                val = BFFM2.calculateEmissionIndex(pollutant, fuel_flow, icao_eedb_bffm2, ambient_conditions=ambient_conditions, installation_corrections=installation_corrections)
+                val = calculate_emission_index(pollutant, fuel_flow, icao_eedb_bffm2, ambient_conditions=ambient_conditions, installation_corrections=installation_corrections)
                 if "co" in pollutant.lower() and not "co2" in pollutant.lower():
                     emission_index.setObject("co_g_kg", val)
                 if "nox" in pollutant.lower():

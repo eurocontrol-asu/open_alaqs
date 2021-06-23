@@ -2,7 +2,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from open_alaqs.alaqs_core.tools.BFFM2 import constants
+from open_alaqs.alaqs_core.tools.bffm2 import constants
 
 
 def test_epsilon():
