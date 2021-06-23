@@ -259,12 +259,12 @@ class EmissionCalculation:
 
         # execute endJob(..)
         for mod_name, mod_obj in self.getModules().items():
-            mod_obj.endJob()
+            mod_obj.endJob
 
         # execute endJob(..) of dispersion modules
         for dispersion_mod_name, dispersion_mod_obj in \
                 self.getDispersionModules().items():
-            dispersion_mod_obj.endJob()
+            dispersion_mod_obj.endJob
 
     def getModules(self):
         return self._modules
@@ -389,12 +389,12 @@ class EmissionCalculation:
 #     #         ec.addModule(s_)
 #
 #     # load receptors
-#     from tools.CSVInterface import readCSVtoGeoDataFrame
+#     from tools.CSVInterface import read_csv_to_geodataframe
 #     filename_ = os.path.join("..", "example/", "CAEPport", "receptors_coords.csv")
 #     if not os.path.isfile(filename_):
 #         raise Exception("File %s doesn't exist !"%filename_)
 #     else:
-#         csv_gdf = readCSVtoGeoDataFrame(filename_)
+#         csv_gdf = read_csv_to_geodataframe(filename_)
 #
 #     # print("Adding Dispesion Module")
 #     # work_dir = os.path.join("..", "example/", "CAEPport", "A2K")

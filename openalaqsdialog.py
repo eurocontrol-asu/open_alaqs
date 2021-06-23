@@ -31,13 +31,14 @@ from open_alaqs.alaqs_core import alaqsutils
 from open_alaqs.alaqs_core.EmissionCalculation import EmissionCalculation
 from open_alaqs.alaqs_core.alaqsdblite import ProjectDatabase
 from open_alaqs.alaqs_core.alaqslogging import get_logger, log_path
-from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
-    OutputModuleManager, DispersionModuleManager
 from open_alaqs.alaqs_core.modules.ConcentrationVisualizationWidget import \
     ConcentrationVisualizationWidget
 from open_alaqs.alaqs_core.modules.EmissionCalculationConfigurationWidget \
     import EmissionCalculationConfigurationWidget
-from open_alaqs.alaqs_core.tools import SQLInterface, conversion, CSVInterface
+from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
+    OutputModuleManager, DispersionModuleManager
+from open_alaqs.alaqs_core.tools import SQLInterface, conversion
+from open_alaqs.alaqs_core.tools.csv_interface import read_csv_to_dict
 from open_alaqs.ui.ui_about import Ui_DialogAbout
 from open_alaqs.ui.ui_create_database import Ui_DialogCreateDatabase
 from open_alaqs.ui.ui_inventory import Ui_DialogInventory
@@ -2072,7 +2073,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             return True if 100 * float(
                 abs(parameter - isa_value)) / isa_value > tolerance else False
 
-        csv = CSVInterface.readCSVtoDict(met_file)
+        csv = read_csv_to_dict(met_file)
 
         headers_ = {"Scenario": "Scenario",
                     "DateTime(YYYY-mm-dd hh:mm:ss)": "DateTime",
@@ -2506,7 +2507,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             for timeval, rows in list(
                     self._emission_calculation_.getEmissions().items()):
                 output_module_.process(timeval, rows, **kwargs)
-            res = output_module_.endJob()
+            res = output_module_.endJob
 
             if isinstance(res, QtWidgets.QDialog):
                 # res.setParent(self)
@@ -3088,7 +3089,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
                     output_module_.beginJob()
                     output_module_.process()
-                    res = output_module_.endJob()
+                    res = output_module_.endJob
 
                     if isinstance(res, QtWidgets.QDialog):
                         res.show()
