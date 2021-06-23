@@ -20,13 +20,20 @@ def calculateFuelFlowFromPowerSetting(power_setting, icao_eedb):
                 "settings [%%] from ICAO EEDB!", key)
             return None
 
-    based_on = 0
-    if (power_setting >= 60) or (power_setting <= 85):
+    if .60 <= power_setting <= .85:
         # based on the 7 per cent, 30 per cent and 85 per cent thrust
-        based_on = 1
-    elif (power_setting > 85) or (power_setting <= 100):
+        x1 = 0.07
+        x2 = 0.30
+        x3 = 0.85
+
+    elif .85 < power_setting <= 1.00:
         # based on the 30 per cent, 85 per cent and 100 per cent thrust
-        based_on = 2
+        x1 = 0.30
+        x2 = 0.85
+        x3 = 1.0
+    else:
+        raise ValueError('The power setting should be between 0.6 and 1.0 '
+                         '(inclusive).')
 
     # Y = AX**2 + BX + C
     # with three known points:
@@ -37,17 +44,6 @@ def calculateFuelFlowFromPowerSetting(power_setting, icao_eedb):
     # values Y1, Y2, Y3, Y4.
 
     _x = power_setting
-
-    if based_on == 1:
-        x1 = 0.07
-        x2 = 0.30
-        x3 = 0.85
-    elif based_on == 2:
-        x1 = 0.30
-        x2 = 0.85
-        x3 = 0.10
-    else:
-        raise ValueError('')
 
     y1 = icao_eedb[x1] / icao_eedb[1]
     y2 = icao_eedb[x2] / icao_eedb[1]
