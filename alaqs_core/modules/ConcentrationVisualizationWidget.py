@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets
 from collections import OrderedDict
 
-from open_alaqs.alaqs_core.modules.ui.ModuleConfigurationWidget import \
+from open_alaqs.alaqs_core.modules.ModuleConfigurationWidget import \
     ModuleConfigurationWidget
 
 

@@ -4,7 +4,7 @@ from collections import OrderedDict
 from PyQt5 import QtWidgets
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.alaqs_core.modules.ui.ModuleConfigurationWidget import \
+from open_alaqs.alaqs_core.modules.ModuleConfigurationWidget import \
     ModuleConfigurationWidget
 
 sys.path.append("..")  # Adds higher directory to python modules path.
