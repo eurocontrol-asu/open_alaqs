@@ -1,7 +1,7 @@
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 from open_alaqs.alaqs_core.interfaces.Store import Store
-from open_alaqs.alaqs_core.tools import TwinQuadraticFitMethod, BFFM2
+from open_alaqs.alaqs_core.tools import twin_quadratic_fit_method, BFFM2
 
 logger = get_logger(__name__)
 
@@ -262,7 +262,7 @@ class EngineEmissionIndex(Store):
         elif method["name"] == "BFFM2":
 
             #get map power-setting [%]:fuel flow [kg/s]
-            fuel_flow = TwinQuadraticFitMethod.calculateFuelFlowFromPowerSetting(power_setting, self.getICAOEngineEmissionsDB(True, "fuel_kg_sec"))
+            fuel_flow = twin_quadratic_fit_method.calculate_fuel_flow_from_power_setting(power_setting, self.getICAOEngineEmissionsDB(True, "fuel_kg_sec"))
             if fuel_flow is None:
                 return None
 
