@@ -807,7 +807,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 "source": source_.getName(),
                 _pollutant: hashed_emissions * (10.0 / 36.0),
                 "timeID": self._timeID_per_source[source_id]}
-            fill_results.setdefault(source_id, []).update(pollutant_dic)
+
+            fill_results[source_id].update(pollutant_dic)
 
             self._results[self._endTimeSeries.strftime('%Y-%m-%d.%H:%M:%S')].update(fill_results)
 
