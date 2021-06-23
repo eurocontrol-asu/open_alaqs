@@ -29,6 +29,7 @@ from open_alaqs import openalaqsuitoolkit as oautk
 from open_alaqs.alaqs_core import alaqs
 from open_alaqs.alaqs_core import alaqsutils
 from open_alaqs.alaqs_core.EmissionCalculation import EmissionCalculation
+from open_alaqs.alaqs_core.alaqsdblite import ProjectDatabase
 from open_alaqs.alaqs_core.alaqslogging import get_logger, log_path
 from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
     OutputModuleManager, DispersionModuleManager
@@ -245,9 +246,9 @@ class OpenAlaqsOpenDatabase(QtWidgets.QDialog):
                         "The chosen file could not be found.")
                     return
 
-                result = alaqs.save_database_credentials(filepath)
-                if result is not None:
-                    raise Exception("problem updating database credentials")
+                # Store the filepath in-memory for future use
+                project_database = ProjectDatabase()
+                project_database.path = filepath
 
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                 result = alaqs.load_study_setup()

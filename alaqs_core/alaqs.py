@@ -45,28 +45,6 @@ def create_project(database_name):
         return error
 
 
-def save_database_credentials(filepath):
-    """
-    This function is used to store the database credentials so that OpenALAQS
-     can create ad hoc connections to the database.
-
-    :param: filepath : string that details the path to the OpenALAQS database
-    :return: error : None if successful. Error message if not successful
-    :raise: None
-    """
-    try:
-        result = alaqsdblite.save_database_credentials(db_name=filepath)
-        if result is not None:
-            error = "Problem saving database credentials: %s" % result
-            raise Exception(error)
-
-        return None
-    except Exception as e:
-        error = alaqsutils.print_error(save_database_credentials.__name__,
-                                       Exception, e)
-        return error
-
-
 # ##########################
 # ###### STUDY SETUP #######
 # ##########################
@@ -715,19 +693,6 @@ def get_parkings():
 # ######################
 # ###### PROFILES ######
 # ######################
-
-
-def new_daily_profile_dict():
-    daily_profile_dict = dict()
-    daily_profile_dict['name'] = "Not set"
-    daily_profile_dict['mon'] = 1
-    daily_profile_dict['tue'] = 1
-    daily_profile_dict['wed'] = 1
-    daily_profile_dict['thu'] = 1
-    daily_profile_dict['fri'] = 1
-    daily_profile_dict['sat'] = 1
-    daily_profile_dict['sun'] = 1
-    return daily_profile_dict
 
 
 def add_hourly_profile_dict(hourly_profile_dict):
