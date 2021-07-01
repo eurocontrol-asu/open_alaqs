@@ -3,13 +3,10 @@ This class provides all of the calculation methods required to perform
 emissions calculations for area sources.
 """
 
-from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.AreaSources import AreaSourcesStore
 from open_alaqs.alaqs_core.interfaces.Emissions import Emission
 from open_alaqs.alaqs_core.interfaces.SourceModule import \
     SourceWithTimeProfileModule
-
-logger = get_logger(__name__)
 
 
 class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
