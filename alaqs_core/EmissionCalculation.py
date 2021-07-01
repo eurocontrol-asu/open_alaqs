@@ -3,6 +3,7 @@ from collections import OrderedDict
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import pandas as pd
 from PyQt5 import QtCore, QtWidgets
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
@@ -268,6 +269,8 @@ class EmissionCalculation:
                 except Exception:
                     ambient_condition = AmbientCondition()
 
+                period_emissions = []
+
                 # calculate emissions per source
                 for mod_name, mod_obj in self.getModules().items():
                     logger.debug(mod_name)
@@ -277,30 +280,53 @@ class EmissionCalculation:
                     for (timestamp_, source_, emission_) in mod_obj.process(
                             start_, end_, source_names=source_names,
                             ambient_conditions=ambient_condition):
+
+                        logger.debug(f'{mod_name}: {timestamp_}')
+
                         if emission_ is not None:
-                            self.addEmission(timestamp_, source_, emission_)
+                            period_emissions.append((source_, emission_))
+                            # self.addEmission(timestamp_, source_, emission_)
                         else:
+                            period_emissions.append((source_, [
+                                Emission(initValues=default_emissions,
+                                         defaultValues=default_emissions)
+                            ]))
                             # logger.info("Adding default (empty) Emissions
                             # for '%s'"%(source_.getName()))
-                            emission_ = [
-                                Emission(initValues=default_emissions,
-                                         defaultValues=default_emissions)]
-                            self.addEmission(timestamp_, source_, emission_)
+                            # emission_ = [
+                            #     Emission(initValues=default_emissions,
+                            #              defaultValues=default_emissions)]
+                            # self.addEmission(timestamp_, source_, emission_)
 
                 # calculate dispersion per model
                 for dispersion_mod_name, dispersion_mod_obj in \
                         self.getDispersionModules().items():
-                    # row_cnt = 0
-                    for timeval, rows in self.getEmissions().items():
-                        if start_time <= timeval < end_time:
-                            dispersion_mod_obj.process(
-                                start_, end_, timeval, rows,
-                                ambient_conditions=ambient_condition)
+                    logger.debug(f'{dispersion_mod_name}: {start_time}')
+                    dispersion_mod_obj.process(
+                        start_,
+                        end_,
+                        start_time,
+                        period_emissions,
+                        ambient_conditions=ambient_condition)
+
+                    # # row_cnt = 0
+                    # for timeval, rows in self.getEmissions().items():
+                    #     if start_time <= timeval < end_time:
+                    #         logger.debug(f'{dispersion_mod_name}: {timeval}')
+                    #         dispersion_mod_obj.process(
+                    #             start_, end_, timeval, rows,q
+                    #             ambient_conditions=ambient_condition)
+
+                # Add the emissions to the dict
+                self._emissions[start_time] = period_emissions
 
                 # todo: REMOVE AFTER CODE IMPROVEMENTS
                 profiler.append({
                     'stage': 'process()',
                     'count': count_,
+                    'source_modules': ', '.join(self.getModules().keys()),
+                    'dispersion modules': ', '.join(
+                        self.getDispersionModules().keys()),
                     'timestamp': (datetime.now() - p_start) / timedelta(
                         seconds=1)
                 })
