@@ -3,6 +3,7 @@ from collections import OrderedDict
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import pandas as pd
 from PyQt5 import QtCore, QtWidgets
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
@@ -46,7 +47,7 @@ class EmissionCalculation:
         # Get the time series for this inventory
         self._inventoryTimeSeriesStore = InventoryTimeSeriesStore(
             self.getDatabasePath())
-        self._emissions = OrderedDict()
+        self._emissions = pd.DataFrame(columns=('timestamp', 'source', 'emission'))
         self._module_manager = SourceModuleManager()
         self._modules = OrderedDict()
         self._dispersion_modules = OrderedDict()
@@ -277,6 +278,9 @@ class EmissionCalculation:
                     for (timestamp_, source_, emission_) in mod_obj.process(
                             start_, end_, source_names=source_names,
                             ambient_conditions=ambient_condition):
+
+                        logger.debug(f'{timestamp_}, {source_}')
+
                         if emission_ is not None:
                             self.addEmission(timestamp_, source_, emission_)
                         else:
@@ -290,12 +294,23 @@ class EmissionCalculation:
                 # calculate dispersion per model
                 for dispersion_mod_name, dispersion_mod_obj in \
                         self.getDispersionModules().items():
-                    # row_cnt = 0
-                    for timeval, rows in self.getEmissions().items():
-                        if start_time <= timeval < end_time:
-                            dispersion_mod_obj.process(
-                                start_, end_, timeval, rows,
-                                ambient_conditions=ambient_condition)
+
+                    # get the relevant emissions
+                    em = self._emissions[
+                        (start_time <= self._emissions['timestamp']) &
+                        (self._emissions['timestamp'] < end_time)
+                        ]
+
+                    logger.debug(f'{dispersion_mod_name}: {em.shape[0]} relevant emissions')
+
+                    for _, _em in em.iterrows():
+                        dispersion_mod_obj.process(
+                            start_,
+                            end_,
+                            _em['timestamp'],
+                            tuple(_em[['source', 'emission']]),
+                            ambient_conditions=ambient_condition
+                        )
 
                 # todo: REMOVE AFTER CODE IMPROVEMENTS
                 profiler.append({
@@ -335,27 +350,18 @@ class EmissionCalculation:
     def availableDispersionModules(self):
         return self.getDispersionModuleManager().getModules()
 
-    def addEmission(self, timeval, source, emission, to=None):
-        sort_ = False
-        if to is None:
-            to = self._emissions
-            sort_ = True
+    def addEmission(self, timeval, source, emission):
+        self._emissions = self._emissions.append(pd.Series({
+            'timestamp': timeval,
+            'source': source,
+            'emission': emission
+        }), ignore_index=True)
 
-        if timeval in to:
-            to[timeval].append((source, emission))
-        else:
-            to[timeval] = [(source, emission)]
-
-        if sort_:
-            self.sortEmissionsByTime()
-
-    def getEmissions(self):
+    def getEmissions(self) -> pd.DataFrame:
         return self._emissions
 
     def sortEmissionsByTime(self):
-        # sort emissions by index (which is a timestamp)
-        self._emissions = OrderedDict(
-            sorted(iter(self.getEmissions().items()), key=lambda x: x[0]))
+        self._emissions = self._emissions.sort_index(ascending=True)
 
     def setDatabasePath(self, val):
         self._database_path = val
