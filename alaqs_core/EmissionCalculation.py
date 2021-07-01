@@ -47,7 +47,7 @@ class EmissionCalculation:
         # Get the time series for this inventory
         self._inventoryTimeSeriesStore = InventoryTimeSeriesStore(
             self.getDatabasePath())
-        self._emissions = pd.DataFrame(columns=('timestamp', 'source', 'emission'))
+        self._emissions = OrderedDict()
         self._module_manager = SourceModuleManager()
         self._modules = OrderedDict()
         self._dispersion_modules = OrderedDict()
@@ -361,18 +361,27 @@ class EmissionCalculation:
     def availableDispersionModules(self):
         return self.getDispersionModuleManager().getModules()
 
-    def addEmission(self, timeval, source, emission):
-        self._emissions = self._emissions.append(pd.Series({
-            'timestamp': timeval,
-            'source': source,
-            'emission': emission
-        }), ignore_index=True)
+    def addEmission(self, timeval, source, emission, to=None):
+        sort_ = False
+        if to is None:
+            to = self._emissions
+            sort_ = True
 
-    def getEmissions(self) -> pd.DataFrame:
+        if timeval in to:
+            to[timeval].append((source, emission))
+        else:
+            to[timeval] = [(source, emission)]
+
+        if sort_:
+            self.sortEmissionsByTime()
+
+    def getEmissions(self):
         return self._emissions
 
     def sortEmissionsByTime(self):
-        self._emissions = self._emissions.sort_index(ascending=True)
+        # sort emissions by index (which is a timestamp)
+        self._emissions = OrderedDict(
+            sorted(iter(self.getEmissions().items()), key=lambda x: x[0]))
 
     def setDatabasePath(self, val):
         self._database_path = val
