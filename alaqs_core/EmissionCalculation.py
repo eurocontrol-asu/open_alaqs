@@ -1,5 +1,7 @@
 import inspect
 from collections import OrderedDict
+from datetime import datetime, timedelta
+from pathlib import Path
 
 from PyQt5 import QtCore, QtWidgets
 
@@ -18,6 +20,17 @@ from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 from open_alaqs.alaqs_core.tools.iterator import pairwise
 
 logger = get_logger(__name__)
+
+
+def log_time(func):
+    def inner(*args, **kwargs):
+        start = datetime.now()
+        result = func(*args, **kwargs)
+        finish = datetime.now()
+        logger.debug(f"Time elapsed {func.__name__}: {finish - start}")
+        return result
+
+    return inner
 
 
 class EmissionCalculation:
@@ -172,9 +185,17 @@ class EmissionCalculation:
     def CheckAmbientConditions(parameter, isa_value, tolerance):
         return 100 * float(abs(parameter - isa_value)) / isa_value > tolerance
 
+    @log_time
     def run(self, source_names=None):
         if source_names is None:
             source_names = []
+
+        # initialise the profiler
+        # todo: REMOVE AFTER CODE IMPROVEMENTS
+        profiler_path = \
+            Path(__file__).parents[1] / 'data' / \
+            f'{datetime.now().strftime("%Y%m%d-%H%M%S")}_profiled.csv'
+        profiler = []
 
         default_emissions = {
             "fuel_kg": 0.,
@@ -192,34 +213,54 @@ class EmissionCalculation:
             "pm10_organic_g": 0.
         }
 
+        # check if a dispersion module is enable
+        dispersion_enabled = len(self.getDispersionModules()) > 0
+
+        # list the selected modules
+        logger.debug("Selected source modules: %s",
+                     ', '.join(self.getModules().keys()))
+        logger.debug("Selected dispersion modules: %s", ', '.join(
+            self.getDispersionModules().keys()) if dispersion_enabled else None)
+
         # execute beginJob(..) of SourceModules
+        logger.debug("Execute beginJob(..) of source modules")
         for mod_name, mod_obj in self.getModules().items():
             mod_obj.beginJob()
 
-        dispersion_enabled = False
         # execute beginJob(..) of dispersion modules
+        logger.debug("Execute beginJob(..) of dispersion modules")
         for dispersion_mod_name, dispersion_mod_obj in \
                 self.getDispersionModules().items():
-            dispersion_enabled = True
             dispersion_mod_obj.beginJob()
 
         # execute process(..)
+        logger.debug("Execute process(..)")
         try:
+            # configure the progress bar
             progressbar = self.ProgressBarWidget(
                 dispersion_enabled=dispersion_enabled)
             count_ = 0
+            total_count_ = len(self.getTimeSeriesStore().getObjects())
+
             # loop on complete period
             for (start_, end_) in self.getTimeSeries():
+
+                # todo: REMOVE AFTER CODE IMPROVEMENTS
+                p_start = datetime.now()
+
                 start_time = start_.getTimeAsDateTime()
                 end_time = end_.getTimeAsDateTime()
+
+                logger.debug(f'start {start_time}, end {end_time}')
+
+                # update the progress bar
                 count_ += +1
-                progressbar.setValue(conversion.convertToInt(
-                    100 * conversion.convertToFloat(count_) / len(
-                        self.getTimeSeriesStore().getObjects())))
+                progressbar.setValue(int(100 * count_ / total_count_))
                 QtCore.QCoreApplication.instance().processEvents()
                 if progressbar.wasCanceled():
-                    break
+                    raise StopIteration("Operation canceled by user")
 
+                # get the ambient condition
                 # ToDo: only run on (start_, end_) with emission sources?
                 try:
                     ambient_condition = self.getAmbientCondition(
@@ -227,8 +268,10 @@ class EmissionCalculation:
                 except Exception:
                     ambient_condition = AmbientCondition()
 
-                # ordinary sources
+                # calculate emissions per source
                 for mod_name, mod_obj in self.getModules().items():
+                    logger.debug(mod_name)
+
                     # process() returns a list of tuples for each specific
                     # time interval (start_, end_)
                     for (timestamp_, source_, emission_) in mod_obj.process(
@@ -244,7 +287,7 @@ class EmissionCalculation:
                                          defaultValues=default_emissions)]
                             self.addEmission(timestamp_, source_, emission_)
 
-                # Dispersion Model
+                # calculate dispersion per model
                 for dispersion_mod_name, dispersion_mod_obj in \
                         self.getDispersionModules().items():
                     # row_cnt = 0
@@ -254,18 +297,31 @@ class EmissionCalculation:
                                 start_, end_, timeval, rows,
                                 ambient_conditions=ambient_condition)
 
-        except StopIteration:
-            logger.info("Iteration stopped")
-            pass
+                # todo: REMOVE AFTER CODE IMPROVEMENTS
+                profiler.append({
+                    'stage': 'process()',
+                    'count': count_,
+                    'timestamp': (datetime.now() - p_start) / timedelta(
+                        seconds=1)
+                })
+
+        except StopIteration as e:
+            logger.info("Iteration stopped. %s", e)
 
         # execute endJob(..)
+        logger.debug("Execute endJob(..)")
         for mod_name, mod_obj in self.getModules().items():
             mod_obj.endJob
 
         # execute endJob(..) of dispersion modules
+        logger.debug("Execute endJob(..) of dispersion modules")
         for dispersion_mod_name, dispersion_mod_obj in \
                 self.getDispersionModules().items():
             dispersion_mod_obj.endJob
+
+        # store the profiler information
+        # todo: REMOVE AFTER CODE IMPROVEMENTS
+        pd.DataFrame(profiler).to_csv(profiler_path, index=False)
 
     def getModules(self):
         return self._modules
