@@ -41,19 +41,16 @@ def convertToInt(value: Any, default: Any = None) -> Union[int, None]:
     return None
 
 
-def convertSecondsToTime(
-        value: float,
-        format_="%Y-%m-%d %H:%M:%S") -> Union[str, None]:
+def convertSecondsToTime(value: float) -> Union[time.struct_time, None]:
     """
     Convert a timestamp in seconds to a timestamp as string.
 
     :param value:
-    :param format_:
     :return:
     """
     if value is None:
         return None
-    return datetime.utcfromtimestamp(int(value)).strftime(format_)
+    return datetime.utcfromtimestamp(int(value)).utctimetuple()
 
 
 def convertStringToTime(
@@ -151,7 +148,7 @@ def convertSecondsToTimeString(
     if isinstance(value, time.struct_time):
         return time.strftime(format_, value)
     if isinstance(value, (int, float)):
-        return time.strftime(format_, convertSecondsToTime(value, format_))
+        return time.strftime(format_, convertSecondsToTime(value))
     return None
 
 
