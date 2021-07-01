@@ -2470,9 +2470,11 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
     def runOutputModule(self, name):
 
         # calculate all emissions
+        logger.info("calculate all emissions...")
         self._emission_calculation_ = None
         if self._emission_calculation_ is None:
             self.update_emissions()
+        logger.info("emissions calculated!")
 
         module_name = str(self.ui.source_types.currentText())
         source_name = str(self.ui.source_names.currentText())
@@ -2488,8 +2490,10 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             "grid": self._emission_calculation_.get3DGrid(),
             "database_path": self._emission_calculation_.getDatabasePath(),
         }
+
         # Configuration of the emissions calculation
-        em_configuration = self._emission_calculation_configuration_widget.getValues()
+        em_configuration = \
+            self._emission_calculation_configuration_widget.getValues()
         em_configuration["receptors"] = \
             self._emission_calculation_configuration_widget._receptor_points
         config.update(em_configuration)
@@ -2497,21 +2501,24 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         kwargs = {}
         if OutputModuleManager().hasModule(name):
 
+            # Get the configuration for the OutputModule
             gui_modules_config_ = self.getOutputModulesConfiguration()
             if name in gui_modules_config_:
                 config.update(gui_modules_config_[name])
 
-            output_module_ = OutputModuleManager().getModuleByName(name)(
-                values_dict=config)
+            # Get the OutputModule class
+            output_module_class = OutputModuleManager().getModuleByName(name)
+
+            # Configure and run the OutputModule
+            output_module_ = output_module_class(values_dict=config)
             output_module_.beginJob()
             for timeval, rows in list(
                     self._emission_calculation_.getEmissions().items()):
                 output_module_.process(timeval, rows, **kwargs)
-            res = output_module_.endJob
+            res = output_module_.endJob()
 
             if isinstance(res, QtWidgets.QDialog):
-                # res.setParent(self)
-                # res.show()
+
                 res.show()
             elif isinstance(res, QgsMapLayer):
                 # Replace existing layers with same name...
@@ -2526,7 +2533,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 self._iface.mapCanvas().setExtent(res.extent())
 
                 # add coordinate-references system
-                if not res.crs() is None:
+                if res.crs() is not None:
                     # self._iface.mapCanvas().mapRenderer().setDestinationCrs(res.crs())
                     self._iface.mapCanvas().mapSettings().setDestinationCrs(
                         res.crs())
@@ -2556,7 +2563,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                         self._iface.mapCanvas().scene().addItem(textItem)
 
         else:
-            logger.error("Did not find module '%s'" % (name))
+            logger.error("Did not find module '%s'", name)
 
     def updateMinMaxGUI(self, db_path_=""):
         (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path_)
