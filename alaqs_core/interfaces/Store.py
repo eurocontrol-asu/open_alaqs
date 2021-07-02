@@ -57,7 +57,6 @@ class Store:
     def removeObject(self, key):
         return self._objects.pop(key)
 
-
     def __add__(self, other):
         ''' add self to  other, e.g. Store() + Store() '''
         if not isinstance(other, type(self)):
