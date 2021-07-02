@@ -4,6 +4,7 @@ from collections import OrderedDict
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import spatial
@@ -18,8 +19,9 @@ except ImportError:
 logger = get_logger(__name__)
 
 
-class ParkingSources:
+class ParkingSources(Source):
     def __init__(self, val=None):
+        super().__init__(val)
         if val is None:
             val = {}
         self._id = str(val["parking_id"]) if "parking_id" in val else None
@@ -57,71 +59,41 @@ class ParkingSources:
 
         self._emissionIndex = EmissionIndex(initValues=initValues, defaultValues=defaultValues)
 
-    def getName(self):
-        return self._id
-    def setName(self, val):
-        self._id = val
-
-    def getEmissionIndex(self):
-        return self._emissionIndex
-    def setEmissionIndex(self, val):
-        self._emissionIndex = val
-
     def getUnitsPerYear(self):
         return self._vehicle_year
+
     def setUnitsPerYear(self, var):
         self._vehicle_year = var
 
-    def getHeight(self):
-        return self._height
-    def setHeight(self, var):
-        self._height = var
-
     def getDistance(self):
         return self._distance
+
     def setDistance(self, var):
         self._distance = var
 
     def getIdleTime(self):
         return self._idle_time
+
     def setIdleTime(self, var):
         self._idle_time = var
+
     def getParkTime(self):
         return self._park_time
+
     def setParkTime(self, var):
         self._park_time = var
+
     def getSpeed(self):
         return self._speed
+
     def setSpeed(self, var):
         self._speed = var
+
     def getFleetMix(self):
         return self._fleet_mix
+
     def setFleetMix(self, var):
         self._fleet_mix = var
-    def getHourProfile(self):
-        return self._hour_profile
-    def setHourProfile(self, var):
-        self._hour_profile = var
-
-    def getDailyProfile(self):
-        return self._daily_profile
-    def setDailyProfile(self, var):
-        self._daily_profile = var
-
-    def getMonthProfile(self):
-        return self._month_profile
-    def setMonthProfile(self, var):
-        self._month_profile = var
-
-    def getGeometryText(self):
-        return self._geometry_text
-    def setGeometryText(self, val):
-        self._geometry_text = val
-
-    def getInStudy(self):
-        return self._instudy
-    def setInStudy(self, val):
-        self._instudy = val
 
     def __str__(self):
         val = "\n ParkingSources with id '%s'" % (self.getName())

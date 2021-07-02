@@ -4,6 +4,7 @@ from collections import OrderedDict
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import spatial
@@ -11,8 +12,9 @@ from open_alaqs.alaqs_core.tools import spatial
 logger = get_logger(__name__)
 
 
-class RoadwaySources:
-    def __init__(self, val=None):
+class RoadwaySources(Source):
+    def __init__(self, val=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         if val is None:
             val = {}
         self._id = str(val["roadway_id"]) if "roadway_id" in val else None
@@ -54,56 +56,33 @@ class RoadwaySources:
     def resetLengthCache(self):
         self.__length = None
 
-    def getName(self):
-        return self._id
-    def setName(self, val):
-        self._id = val
-
-    def getEmissionIndex(self):
-        return self._emissionIndex
-    def setEmissionIndex(self, val):
-        self._emissionIndex = val
-
     def getUnitsPerYear(self):
         return self._vehicle_year
+
     def setUnitsPerYear(self, var):
         self._vehicle_year = var
 
-    def getHeight(self):
-        return self._height
-    def setHeight(self, var):
-        self._height = var
-
     def getDistance(self):
         return self._distance
+
     def setDistance(self, var):
         self._distance = var
 
     def getSpeed(self):
         return self._speed
+
     def setSpeed(self, var):
         self._speed = var
+
     def getFleetMix(self):
         return self._fleet_mix
+
     def setFleetMix(self, var):
         self._fleet_mix = var
-    def getHourProfile(self):
-        return self._hour_profile
-    def setHourProfile(self, var):
-        self._hour_profile = var
-
-    def getDailyProfile(self):
-        return self._daily_profile
-    def setDailyProfile(self, var):
-        self._daily_profile = var
-
-    def getMonthProfile(self):
-        return self._month_profile
-    def setMonthProfile(self, var):
-        self._month_profile = var
 
     def getScenario(self):
         return self._scenario
+
     def setScenario(self, var):
         self._scenario = var
 
@@ -116,16 +95,9 @@ class RoadwaySources:
     def setLength(self, val):
         self.__length = val
 
-    def getGeometryText(self):
-        return self._geometry_text
     def setGeometryText(self, val):
         self._geometry_text = val
         self.resetLengthCache()
-
-    def getInStudy(self):
-        return self._instudy
-    def setInStudy(self, val):
-        self._instudy = val
 
     def __str__(self):
         val = "\n RoadwaySources with id '%s'" % (self.getName())

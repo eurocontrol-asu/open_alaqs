@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
@@ -12,8 +13,9 @@ from open_alaqs.alaqs_core.tools import spatial
 logger = get_logger(__name__)
 
 
-class PointSources:
+class PointSources(Source):
     def __init__(self, val=None):
+        super().__init__(val)
         if val is None:
             val = {}
         self._id = str(val["source_id"]) if "source_id" in val else None
@@ -45,80 +47,47 @@ class PointSources:
 
         self._emissionIndex = EmissionIndex(initValues, defaultValues=defaultValues)
 
-    def getName(self):
-        return self._id
-    def setName(self, val):
-        self._id = val
-
-    def getEmissionIndex(self):
-        return self._emissionIndex
-    def setEmissionIndex(self, val):
-        self._emissionIndex = val
-
     def getType(self):
         return self._type
+
     def setType(self, var):
         self._type = var
-        
+
     def getSubstance(self):
         return self._substance
+
     def setSubstance(self, var):
         self._substance = var
-        
-    def getHeight(self):
-        return self._height
-    def setHeight(self, var):
-        self._height = var    
 
     def getCategory(self):
         return self._category
+
     def setCategory(self, var):
         self._category = var
 
     def getTemperature(self):
         return self._temperature
+
     def setTemperature(self, var):
         self._temperature = var
 
     def getDiameter(self):
         return self._diameter
+
     def setDiameter(self, var):
         self._diameter = var
 
     def getVelocity(self):
         return self._velocity
+
     def setVelocity(self, var):
         self._velocity = var
 
     def getOpsYear(self):
         return self._ops_year
+
     def setOpsYear(self, var):
         self._ops_year = var
-
-    def getHourProfile(self):
-        return self._hour_profile
-    def setHourProfile(self, var):
-        self._hour_profile = var
-
-    def getDailyProfile(self):
-        return self._daily_profile
-    def setDailyProfile(self, var):
-        self._daily_profile = var
-
-    def getMonthProfile(self):
-        return self._month_profile
-    def setMonthProfile(self, var):
-        self._month_profile = var
-
-    def getGeometryText(self):
-        return self._geometry_text
-    def setGeometryText(self, val):
-        self._geometry_text = val
-
-    def getInStudy(self):
-        return self._instudy
-    def setInStudy(self, val):
-        self._instudy = val
 
     def __str__(self):
         val = "\n PointSources with id '%s'" % (self.getName())

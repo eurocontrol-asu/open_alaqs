@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools.Singleton import Singleton
 
 from open_alaqs.alaqs_core.interfaces.Store import Store
@@ -21,100 +22,43 @@ except ImportError:
 logger = get_logger(__name__)
 
 
-class AreaSources:
+class AreaSources(Source):
     def __init__(self, val=None):
+        super().__init__(val)
         if val is None:
             val = {}
         self._id = str(val["source_id"]) if "source_id" in val else None
-        self._unit_year = float(val["unit_year"]) if "unit_year" in val else 0.
-        self._height = float(val["height"]) if "height" in val else 0.
+        self._unit_year = float(val.get("unit_year", 0))
+        self._height = float(val.get("height", 0))
         self._heat_flux = float(
             val["heat_flux"]) if "heat_flux" in val else None
-        self._hour_profile = str(
-            val["hourly_profile"]) if "hourly_profile" in val else "default"
-        self._daily_profile = str(
-            val["daily_profile"]) if "daily_profile" in val else "default"
-        self._month_profile = str(
-            val["monthly_profile"]) if "monthly_profile" in val else "default"
+        self._hour_profile = str(val.get("hourly_profile", "default"))
+        self._daily_profile = str(val.get("daily_profile", "default"))
+        self._month_profile = str(val.get("monthly_profile", "default"))
 
-        self._instudy = int(val["instudy"]) if "instudy" in val else 1
-        self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
+        self._instudy = int(val.get("instudy", 1))
+        self._geometry_text = str(val.get("geometry", ""))
 
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
                 spatial.addHeightToGeometryWkt(self.getGeometryText(),
                                                self.getHeight()))
 
-        initValues = {}
-        defaultValues = {}
+        init_values = {}
+        default_values = {}
         for key_ in ["co_kg_unit", "hc_kg_unit", "nox_kg_unit", "sox_kg_unit",
                      "pm10_kg_unit", "p1_kg_unit", "p2_kg_unit"]:
             if key_ in val:
-                initValues[key_] = float(val[key_])
-                defaultValues[key_] = 0.
+                init_values[key_] = float(val[key_])
+                default_values[key_] = 0.
 
-        self._emissionIndex = EmissionIndex(initValues,
-                                            defaultValues=defaultValues)
-
-    def getName(self):
-        return self._id
-
-    def setName(self, val):
-        self._id = val
-
-    def getEmissionIndex(self):
-        return self._emissionIndex
-
-    def setEmissionIndex(self, val):
-        self._emissionIndex = val
-
-    def getUnitsPerYear(self):
-        return self._unit_year
-
-    def setUnitsPerYear(self, var):
-        self._unit_year = var
-
-    def getHeight(self):
-        return self._height
-
-    def setHeight(self, var):
-        self._height = var
+        self._emissionIndex = EmissionIndex(init_values, default_values)
 
     def getHeatFlux(self):
         return self._heat_flux
 
     def setHeatFlux(self, var):
         self._heat_flux = var
-
-    def getHourProfile(self):
-        return self._hour_profile
-
-    def setHourProfile(self, var):
-        self._hour_profile = var
-
-    def getDailyProfile(self):
-        return self._daily_profile
-
-    def setDailyProfile(self, var):
-        self._daily_profile = var
-
-    def getMonthProfile(self):
-        return self._month_profile
-
-    def setMonthProfile(self, var):
-        self._month_profile = var
-
-    def getGeometryText(self):
-        return self._geometry_text
-
-    def setGeometryText(self, val):
-        self._geometry_text = val
-
-    def getInStudy(self):
-        return self._instudy
-
-    def setInStudy(self, val):
-        self._instudy = val
 
     def __str__(self):
         val = "\n AreaSources with id '%s'" % (self.getName())
