@@ -20,44 +20,37 @@ logger = get_logger(__name__)
 
 
 class ParkingSources(Source):
-    def __init__(self, val=None):
-        super().__init__(val)
+    def __init__(self, val=None, *args, **kwargs):
+        super().__init__(val, *args, **kwargs)
         if val is None:
             val = {}
+
         self._id = str(val["parking_id"]) if "parking_id" in val else None
-        self._vehicle_year = float(val["vehicle_year"]) if "vehicle_year" in val else 0.
-
-        self._height = float(val["height"]) if "height" in val else 0.
-        self._distance = float(val["distance"]) if "distance" in val else 0.
-        self._park_time = float(val["park_time"]) if "park_time" in val else 0.
-        self._idle_time= float(val["idle_time"]) if "idle_time" in val else 0.
-        self._speed= float(val["speed"]) if "speed" in val else 0.
-
-        self._hour_profile = str(val["hour_profile"]) if "hour_profile" in val else "default"
-        self._daily_profile = str(val["daily_profile"]) if "daily_profile" in val else "default"
-        self._month_profile = str(val["month_profile"]) if "month_profile" in val else "default"
-
+        self._vehicle_year = float(val.get("vehicle_year", 0))
+        self._distance = float(val.get("distance", 0))
+        self._park_time = float(val.get("park_time", 0))
+        self._idle_time = float(val.get("idle_time", 0))
+        self._speed = float(val.get("speed", 0))
         self._fleet_mix = {
-            "vehicle_light" : float(val["vehicle_light"]) if "vehicle_light" in val else 0.,
-            "vehicle_medium":float(val["vehicle_medium"]) if "vehicle_medium" in val else 0.,
-            "vehicle_heavy": float(val["vehicle_heavy"]) if "vehicle_heavy" in val else 0.
+            "vehicle_light": float(val.get("vehicle_light", 0)),
+            "vehicle_medium": float(val.get("vehicle_medium", 0)),
+            "vehicle_heavy": float(val.get("vehicle_heavy", 0))
         }
 
-        self._instudy = int(val["instudy"]) if "instudy" in val else 1
-        self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
+        if self._geometry_text and self._height is not None:
+            self.setGeometryText(
+                spatial.addHeightToGeometryWkt(
+                    self.getGeometryText(), self.getHeight()))
 
-        if self._geometry_text and not self._height is None:
-            self.setGeometryText(spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
-
-        initValues = {}
-        defaultValues = {}
-        for key_ in ["co_gm_vh", "hc_gm_vh", "nox_gm_vh","sox_gm_vh", "pm10_gm_vh", "p1_gm_vh", "p2_gm_vh"]:
+        init_values = {}
+        default_values = {}
+        for key_ in ["co_gm_vh", "hc_gm_vh", "nox_gm_vh", "sox_gm_vh",
+                     "pm10_gm_vh", "p1_gm_vh", "p2_gm_vh"]:
             if key_ in val:
-                initValues[key_] = float(val[key_])
-                defaultValues[key_] = 0.
+                init_values[key_] = float(val[key_])
+                default_values[key_] = 0.
 
-
-        self._emissionIndex = EmissionIndex(initValues=initValues, defaultValues=defaultValues)
+        self._emissionIndex = EmissionIndex(init_values, default_values)
 
     def getUnitsPerYear(self):
         return self._vehicle_year

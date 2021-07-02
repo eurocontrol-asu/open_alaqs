@@ -14,43 +14,37 @@ logger = get_logger(__name__)
 
 class RoadwaySources(Source):
     def __init__(self, val=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(val, *args, **kwargs)
         if val is None:
             val = {}
+
         self._id = str(val["roadway_id"]) if "roadway_id" in val else None
-        self._vehicle_year = float(val["vehicle_year"]) if "vehicle_year" in val else 0.
-
-        self._height = float(val["height"]) if "height" in val else 0.
-        self._distance = float(val["distance"]) if "distance" in val and val["distance"] else 0.
-        self._speed= float(val["speed"]) if "speed" in val else 0.
-
-        self._hour_profile = str(val["hour_profile"]) if "hour_profile" in val else "default"
-        self._daily_profile = str(val["daily_profile"]) if "daily_profile" in val else "default"
-        self._month_profile = str(val["month_profile"]) if "month_profile" in val else "default"
-
+        self._scenario = str(val.get("scenario", ""))
+        self._vehicle_year = float(val.get("vehicle_year", 0))
+        self._distance = float(val.get("distance", 0))
+        self._speed = float(val.get("speed", 0))
         self._fleet_mix = {
-            "vehicle_light" : float(val["vehicle_light"]) if "vehicle_light" in val else 0.,
-            "vehicle_medium":float(val["vehicle_medium"]) if "vehicle_medium" in val else 0.,
-            "vehicle_heavy": float(val["vehicle_heavy"]) if "vehicle_heavy" in val else 0.
+            "vehicle_light": float(val.get("vehicle_light", 0)),
+            "vehicle_medium": float(val.get("vehicle_medium", 0)),
+            "vehicle_heavy": float(val.get("vehicle_heavy", 0))
         }
 
-        self._scenario = str(val["scenario"]) if "scenario" in val else ""
-        self._instudy = int(val["instudy"]) if "instudy" in val else 1
-        self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
+        if self._geometry_text and self._height is not None:
+            self.setGeometryText(
+                spatial.addHeightToGeometryWkt(
+                    self.getGeometryText(), self.getHeight()))
 
-        if self._geometry_text and not self._height is None:
-            self.setGeometryText(spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
-
-        initValues = {}
-        defaultValues = {}
-        for key_ in ["co_gm_km", "hc_gm_km", "nox_gm_km", "sox_gm_km", "pm10_gm_km", "p1_gm_km", "p2_gm_km"]:
+        init_values = {}
+        default_values = {}
+        for key_ in ["co_gm_km", "hc_gm_km", "nox_gm_km", "sox_gm_km",
+                     "pm10_gm_km", "p1_gm_km", "p2_gm_km"]:
             if key_ in val:
-                initValues[key_] = float(val[key_])
-                defaultValues[key_] = 0.
+                init_values[key_] = float(val[key_])
+                default_values[key_] = 0.
 
-        self._emissionIndex = EmissionIndex(initValues=initValues, defaultValues=defaultValues)
+        self._emissionIndex = EmissionIndex(init_values, default_values)
 
-        #internal cacheing
+        # internal cacheing
         self.__length = None
 
     def resetLengthCache(self):

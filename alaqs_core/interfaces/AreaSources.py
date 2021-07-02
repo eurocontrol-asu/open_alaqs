@@ -23,26 +23,20 @@ logger = get_logger(__name__)
 
 
 class AreaSources(Source):
-    def __init__(self, val=None):
-        super().__init__(val)
+    def __init__(self, val=None, *args, **kwargs):
+        super().__init__(val, *args, **kwargs)
         if val is None:
             val = {}
+
         self._id = str(val["source_id"]) if "source_id" in val else None
         self._unit_year = float(val.get("unit_year", 0))
-        self._height = float(val.get("height", 0))
-        self._heat_flux = float(
-            val["heat_flux"]) if "heat_flux" in val else None
-        self._hour_profile = str(val.get("hourly_profile", "default"))
-        self._daily_profile = str(val.get("daily_profile", "default"))
-        self._month_profile = str(val.get("monthly_profile", "default"))
-
-        self._instudy = int(val.get("instudy", 1))
-        self._geometry_text = str(val.get("geometry", ""))
+        self._heat_flux = \
+            float(val["heat_flux"]) if "heat_flux" in val else None
 
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
-                spatial.addHeightToGeometryWkt(self.getGeometryText(),
-                                               self.getHeight()))
+                spatial.addHeightToGeometryWkt(
+                    self.getGeometryText(), self.getHeight()))
 
         init_values = {}
         default_values = {}

@@ -1,12 +1,15 @@
 class Source:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, val=None, *args, **kwargs):
+        if val is None:
+            val = {}
+
+        self._height = float(val.get("height", 0))
+        self._hour_profile = str(val.get("hourly_profile", "default"))
+        self._daily_profile = str(val.get("daily_profile", "default"))
+        self._month_profile = str(val.get("monthly_profile", "default"))
+        self._geometry_text = str(val.get("geometry", ""))
+        self._instudy = int(val.get("instudy", 1))
         self._unit_year = None
-        self._height = None
-        self._hour_profile = None
-        self._daily_profile = None
-        self._month_profile = None
-        self._geometry_text = None
-        self._instudy = None
         self._emissionIndex = None
         self._id = None
 

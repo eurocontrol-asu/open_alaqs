@@ -14,38 +14,35 @@ logger = get_logger(__name__)
 
 
 class PointSources(Source):
-    def __init__(self, val=None):
-        super().__init__(val)
+    def __init__(self, val=None, *args, **kwargs):
+        super().__init__(val, *args, **kwargs)
         if val is None:
             val = {}
+
         self._id = str(val["source_id"]) if "source_id" in val else None
-        self._height = float(val["height"]) if "height" in val else 0.
-        self._category = str(val["category"]) if "category" in val else ""
-        self._type = str(val["type"]) if "type" in val else ""
-        self._substance = str(val["substance"]) if "substance" in val else ""
-        self._temperature = float(val["temperature"]) if "temperature" in val else None
+        self._category = str(val.get("category", ""))
+        self._type = str(val.get("type", ""))
+        self._substance = str(val.get("substance", ""))
+        self._temperature = \
+            float(val["temperature"]) if "temperature" in val else None
         self._diameter = float(val["diameter"]) if "diameter" in val else None
         self._velocity = float(val["velocity"]) if "velocity" in val else None
-        self._ops_year = float(val["ops_year"]) if "ops_year" in val else 0.
-        self._hour_profile = str(val["hour_profile"]) if "hour_profile" in val else "default"
-        self._daily_profile = str(val["daily_profile"]) if "daily_profile" in val else "default"
-        self._month_profile = str(val["month_profile"]) if "month_profile" in val else "default"
-        
-        self._instudy = int(val["instudy"]) if "instudy" in val else 1
-        self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
+        self._ops_year = float(val.get("ops_year", 0))
 
-        if self._geometry_text and not self._height is None:
-            self.setGeometryText(spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
+        if self._geometry_text and self._height is not None:
+            self.setGeometryText(
+                spatial.addHeightToGeometryWkt(
+                    self.getGeometryText(), self.getHeight()))
 
-        initValues = {}
-        defaultValues = {}
-        for key_ in ["co_kg_k", "hc_kg_k", "nox_kg_k","sox_kg_k", "pm10_kg_k", "p1_kg_k", "p2_kg_k"]:
+        init_values = {}
+        default_values = {}
+        for key_ in ["co_kg_k", "hc_kg_k", "nox_kg_k", "sox_kg_k", "pm10_kg_k",
+                     "p1_kg_k", "p2_kg_k"]:
             if key_ in val:
-                initValues[key_] = float(val[key_])
-                defaultValues[key_] = 0.
+                init_values[key_] = float(val[key_])
+                default_values[key_] = 0.
 
-
-        self._emissionIndex = EmissionIndex(initValues, defaultValues=defaultValues)
+        self._emissionIndex = EmissionIndex(init_values, default_values)
 
     def getType(self):
         return self._type
