@@ -2714,9 +2714,14 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 'reference_altitude': study_data.get('airport_elevation', 0.)
             }
 
+            em_config = self._emission_calculation_configuration_widget.getValues()
+
             self._emission_calculation_ = EmissionCalculation({
                 "database_path": inventory_path,
-                "grid_configuration": grid_configuration})
+                "grid_configuration": grid_configuration,
+                "Start (incl.)": em_config["Start (incl.)"],
+                "End (incl.)": em_config["End (incl.)"]
+            })
 
             # Modules
             # module_name = str(self.ui.source_types.currentText())

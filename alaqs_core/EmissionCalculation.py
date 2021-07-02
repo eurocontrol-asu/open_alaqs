@@ -18,6 +18,7 @@ from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
     DispersionModuleManager
 from open_alaqs.alaqs_core.tools import conversion
 from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
+from open_alaqs.alaqs_core.tools.conversion import convertTimeToSeconds
 from open_alaqs.alaqs_core.tools.iterator import pairwise
 
 logger = get_logger(__name__)
@@ -45,6 +46,8 @@ class EmissionCalculation:
                             ("database_path", "EmissionCalculation"))
 
         # Get the time series for this inventory
+        self._start_incl = convertTimeToSeconds(values_dict.get("Start (incl.)"))
+        self._end_incl = convertTimeToSeconds(values_dict.get('End (incl.)'))
         self._inventoryTimeSeriesStore = InventoryTimeSeriesStore(
             self.getDatabasePath())
         self._emissions = OrderedDict()
@@ -241,10 +244,10 @@ class EmissionCalculation:
             progressbar = self.ProgressBarWidget(
                 dispersion_enabled=dispersion_enabled)
             count_ = 0
-            total_count_ = len(self.getTimeSeriesStore().getObjects())
+            total_count_ = len(list(self.getTimeSeries()))
 
             # loop on complete period
-            for (start_, end_) in self.getTimeSeries():
+            for (start_, end_) in self.getPeriods():
 
                 # todo: REMOVE AFTER CODE IMPROVEMENTS
                 p_start = datetime.now()
@@ -337,13 +340,13 @@ class EmissionCalculation:
         # execute endJob(..)
         logger.debug("Execute endJob(..)")
         for mod_name, mod_obj in self.getModules().items():
-            mod_obj.endJob
+            mod_obj.endJob()
 
         # execute endJob(..) of dispersion modules
         logger.debug("Execute endJob(..) of dispersion modules")
         for dispersion_mod_name, dispersion_mod_obj in \
                 self.getDispersionModules().items():
-            dispersion_mod_obj.endJob
+            dispersion_mod_obj.endJob()
 
         # store the profiler information
         # todo: REMOVE AFTER CODE IMPROVEMENTS
@@ -395,13 +398,22 @@ class EmissionCalculation:
     def setTimeSeriesStore(self, var):
         self._inventoryTimeSeriesStore = var
 
+    @staticmethod
+    def filter_by_time(ts, start_inc, end_inc):
+        for t in ts:
+            if start_inc <= t.getTime() <= end_inc:
+                yield t
+
     # returns a generator of TimeSeries objects
     def getTimeSeries(self):
-        return pairwise(self.getTimeSeriesStore().getTimeSeries())
+        return self.filter_by_time(
+            self.getTimeSeriesStore().getTimeSeries(),
+            self._start_incl,
+            self._end_incl
+        )
 
-    # returns a tuple of TimeSeries objects with (start, end)
-    def getTimeSeriesTuple(self):
-        return self.getTimeSeriesStore().getTimeSeries()
+    def getPeriods(self):
+        return pairwise(self.getTimeSeries())
 
     def get3DGrid(self):
         return self._3DGrid
@@ -443,7 +455,7 @@ class EmissionCalculation:
 #     # start a new emission calculation
 #     ec = EmissionCalculation({"database_path": path_to_database, "debug": True})
 #
-#     # for (start_, end_) in ec.getTimeSeries():
+#     # for (start_, end_) in ec.getPeriods():
 #         # print ec.getAmbientCondition(start_.getTime())
 #         # break
 #
@@ -795,7 +807,7 @@ class EmissionCalculation:
 #     # #     print("output_module_aus.beginJob - Time elapsed: %s" % (et_ - st_))
 #     # #
 #     # #     st_ = time.time()
-#     # #     for (start_, end_) in ec.getTimeSeries():
+#     # #     for (start_, end_) in ec.getPeriods():
 #     # #         for timeval, rows in ec.getEmissions().items():
 #     # #             # print(timeval," / ",len(rows))
 #     # #             ambient_condition = ec.getAmbientCondition(start_.getTime())
