@@ -257,17 +257,17 @@ class MovementSourceModule(SourceModule):
         Calculate Gate Emissions
         """
 
-        # Fetch movements that use this runway for this time period
+        # Perform the gate calculation once for each group
         gate_columns = ["gate", "ac_group", "departure_arrival"]
-        grouped_by_gate_ac = df[relevant_movements].groupby(gate_columns)
-        # TODO[RPFK]: reformat this for-loop to follow Pandas conventions
-        for name, group in grouped_by_gate_ac:
-            gemissions = self.FetchGateEmissions(group, calc_method,
-                                                 source_names, runway_names)
+        for name, group in df[relevant_movements].groupby(gate_columns):
 
-            if not grouped_by_gate_ac.groups[name].empty:
-                for ix in grouped_by_gate_ac.groups[name]:
-                    df.loc[ix, "GateEmissions"] = gemissions
+            # Calculate the gate emissions
+            gemissions = self.FetchGateEmissions(
+                group, calc_method, source_names, runway_names)
+
+            # Update the gate emissions
+            for ix in group.index:
+                df.loc[ix, "GateEmissions"] = gemissions
 
         """
         Calculate Flight Emissions
@@ -276,19 +276,17 @@ class MovementSourceModule(SourceModule):
         # Configure the flight emissions calculation
         mode_ = ""
 
-        # Fetch movements that use this runway for this time period
         # flight_columns=["aircraft","engine","profile_id", "departure_arrival"]
         flight_columns = ["engine", "profile_id"]
-        grouped_by_ac_type = df[relevant_movements].groupby(flight_columns)
-        # TODO[RPFK]: reformat this for-loop to follow Pandas conventions
-        for name, group in grouped_by_ac_type:
-            flight_emissions = self.FetchFlightEmissions(group, calc_method,
-                                                         mode_, limit_,
-                                                         source_names,
-                                                         runway_names)
-            if not grouped_by_ac_type.groups[name].empty:
-                for ix in grouped_by_ac_type.groups[name]:
-                    df.loc[ix, "FlightEmissions"] = flight_emissions
+        for name, group in df[relevant_movements].groupby(flight_columns):
+
+            # Determine the flight emissions
+            flight_emissions = self.FetchFlightEmissions(
+                group, calc_method, mode_, limit_, source_names, runway_names)
+
+            # Update the flight emissions
+            for ix in group.index:
+                df.loc[ix, "FlightEmissions"] = flight_emissions
 
         """
         Calculate Taxiing Emissions
