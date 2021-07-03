@@ -1,6 +1,8 @@
 """
 This class provides the module to calculate emissions of movements.
 """
+from datetime import datetime
+from typing import List, Tuple
 
 import pandas as pd
 
@@ -8,8 +10,8 @@ from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.AmbientCondition import AmbientCondition
 from open_alaqs.alaqs_core.interfaces.Emissions import Emission
 from open_alaqs.alaqs_core.interfaces.Movement import MovementStore
+from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
-from open_alaqs.alaqs_core.tools import conversion
 
 logger = get_logger(__name__)
 
@@ -130,7 +132,8 @@ class MovementSourceModule(SourceModule):
         return flight_emissions
 
     def process(self, start_time, end_time, source_names=None,
-                runway_names=None, ambient_conditions=None, **kwargs):
+                runway_names=None, ambient_conditions=None, **kwargs) \
+            -> List[Tuple[datetime, Source, Emission]]:
         if runway_names is None:
             runway_names = []
         if source_names is None:
@@ -179,55 +182,54 @@ class MovementSourceModule(SourceModule):
         # Load movements from DataFrame
         df = self.getDataframe()
 
+        # Get the runway times
         df.loc[:, "RunwayTime"] = [mov.getRunwayTime() for mov in df["Sources"]]
-        if df[(df["RunwayTime"] >= start_time.getTime()) &
-              (df["RunwayTime"] < end_time.getTime())].empty:
-            return result_
 
+        # Get the movements between start and end time of this period
+        relevant_movements = \
+            (df["RunwayTime"] >= start_time.getTime()) & \
+            (df["RunwayTime"] < end_time.getTime())
+
+        # Return an empty list if there are no movements in this period
+        if df[relevant_movements].empty:
+            return []
+
+        # Add additional movement information to the dataframe
+        # TODO[RPFK]: this code is performed on the whole dataframe every time
+        #  process() is being called (which is the case for every timeperiod).
+        #  Add this info to the original dataframe directly or perform lookups
+        #  on relevant movements only.
         df.loc[:, "gate"] = [mov.getGate().getName() for mov in df["Sources"]]
-
-        df.loc[:, "ac_group"] = [mov.getAircraft().getGroup() for mov in
-                                 df["Sources"]]
-
-        df.loc[:, "aircraft"] = [mov.getAircraft().getName() for mov in
-                                 df["Sources"]]
-
-        df.loc[:, "engine"] = [mov.getAircraftEngine().getName() for mov in
-                               df["Sources"]]
-
-        df.loc[:, "departure_arrival"] = [mov.getDepartureArrivalFlag() for mov
-                                          in df["Sources"]]
-
+        df.loc[:, "ac_group"] = \
+            [mov.getAircraft().getGroup() for mov in df["Sources"]]
+        df.loc[:, "aircraft"] = \
+            [mov.getAircraft().getName() for mov in df["Sources"]]
+        df.loc[:, "engine"] = \
+            [mov.getAircraftEngine().getName() for mov in df["Sources"]]
+        df.loc[:, "departure_arrival"] = \
+            [mov.getDepartureArrivalFlag() for mov in df["Sources"]]
         df.loc[:, "profile_id"] = [
             mov.getAircraft().getDefaultDepartureProfileName() if mov.isDeparture() else
             mov.getAircraft().getDefaultArrivalProfileName() for mov in
             df["Sources"]]
 
         # df.loc[:, "GateEmissions"] = [Emission(defaultValues=defaultEmissions)]
-        df.loc[:, "GateEmissions"] = pd.Series(
-            [Emission(defaultValues=default_emissions)])
+        df.loc[:, "GateEmissions"] = \
+            pd.Series([Emission(defaultValues=default_emissions)])
         # df.loc[:, "FlightEmissions"] = [Emission(defaultValues=defaultEmissions)]
-        df.loc[:, "FlightEmissions"] = pd.Series(
-            [Emission(defaultValues=default_emissions)])
+        df.loc[:, "FlightEmissions"] = \
+            pd.Series([Emission(defaultValues=default_emissions)])
 
         df = df.astype('object')
-
-        # time_interval_df = df[(df["RunwayTime"] >= startTimeSeries.getTime()) &
-        #         (df["RunwayTime"] < endTimeSeries.getTime())]
-        # if not time_interval_df.empty:
-
-        # if not df[(df["RunwayTime"] >= startTimeSeries.getTime()) &
-        #         (df["RunwayTime"] < endTimeSeries.getTime())].empty:
 
         """
         Calculate Gate Emissions
         """
-        # Fetch movements that use this runway for this time period
-        grouped_by_gate_ac = df[(df["RunwayTime"] >= start_time.getTime()) &
-                                (df[
-                                     "RunwayTime"] < end_time.getTime())].groupby(
-            ["gate", "ac_group", "departure_arrival"])
 
+        # Fetch movements that use this runway for this time period
+        gate_columns = ["gate", "ac_group", "departure_arrival"]
+        grouped_by_gate_ac = df[relevant_movements].groupby(gate_columns)
+        # TODO[RPFK]: reformat this for-loop to follow Pandas conventions
         for name, group in grouped_by_gate_ac:
             gemissions = self.FetchGateEmissions(group, calc_method,
                                                  source_names, runway_names)
@@ -239,15 +241,14 @@ class MovementSourceModule(SourceModule):
         """
         Calculate Flight Emissions
         """
-        mode_ = ""
-        # atRunway = True
-        # Fetch movements that use this runway for this time period
-        # grouped_by_ac_type = time_interval_df.groupby(["aircraft","engine","profile_id", "departure_arrival"])
-        grouped_by_ac_type = df[(df["RunwayTime"] >= start_time.getTime()) &
-                                (df[
-                                     "RunwayTime"] < end_time.getTime())].groupby(
-            ["engine", "profile_id"])
 
+        mode_ = ""
+
+        # Fetch movements that use this runway for this time period
+        # flight_columns=["aircraft","engine","profile_id", "departure_arrival"]
+        flight_columns = ["engine", "profile_id"]
+        grouped_by_ac_type = df[relevant_movements].groupby(flight_columns)
+        # TODO[RPFK]: reformat this for-loop to follow Pandas conventions
         for name, group in grouped_by_ac_type:
             flight_emissions = self.FetchFlightEmissions(group, calc_method,
                                                          mode_, limit_,
@@ -272,20 +273,20 @@ class MovementSourceModule(SourceModule):
                 continue
             # Fetch movements that use this runway for this time period
             if not (
-                    movement.getRunwayTime() >= start_time.getTime() and movement.getRunwayTime() < end_time.getTime()):
+                    start_time.getTime() <= movement.getRunwayTime() < end_time.getTime()):
                 continue
 
             # add Taxiing Emissions
-            TE = movement.calculateTaxiingEmissions(
+            te = movement.calculateTaxiingEmissions(
                 sas=calc_method["config"]["apply_smooth_and_shift"])
 
             # add Gate Emissions
-            GE = df[df["Sources"] == movement]["GateEmissions"].iloc[0]
+            ge = df[df["Sources"] == movement]["GateEmissions"].iloc[0]
 
             # add Flight Emissions
-            FE = df[df["Sources"] == movement]["FlightEmissions"].iloc[0]
+            fe = df[df["Sources"] == movement]["FlightEmissions"].iloc[0]
 
-            emissions_extended = TE + GE + FE
+            emissions_extended = te + ge + fe
 
             # import geopandas as gpd
             # import matplotlib.pyplot as plt
