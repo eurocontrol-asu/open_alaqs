@@ -56,26 +56,25 @@ class SourceModule:
     def getDatabasePath(self):
         return self._database_path
 
-    def Sources2DataFrame(self):
+    def convertSourcesToDataFrame(self):
         df = pd.DataFrame(list(self.getSources().items()),
                           columns=['oid', "Sources"])
         if not df.empty:
             self._dataframe = df
 
-    def LoadMovementsDataFrame(self):
-        df_ = self._dataframe
-        return df_
+    def getDataframe(self):
+        return self._dataframe
 
     def beginJob(self):
         self.loadSources()
-        self.Sources2DataFrame()
+        self.convertSourcesToDataFrame()
 
     def loadSources(self):
-        if not self.getStore() is None:
+        if self.getStore() is not None:
             for source_name, source in self.getStore().getObjects().items():
                 self.setSource(source_name, source)
 
-    def process(self, startTimeSeries, endTimeSeries, source_names=None,
+    def process(self, start_time, end_time, source_names=None,
                 ambient_conditions=None, **kwargs):
         return NotImplemented
 

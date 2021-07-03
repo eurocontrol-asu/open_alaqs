@@ -47,7 +47,7 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
         SourceWithTimeProfileModule.beginJob(
             self)  # super(RoadwaySourceWithTimeProfileModule, self).beginJob()
 
-    def process(self, startTimeSeries, endTimeSeries, source_names=None,
+    def process(self, start_time, end_time, source_names=None,
                 **kwargs):
         if source_names is None:
             source_names = []
@@ -60,7 +60,7 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
                 continue
 
             activity_multiplier = self.getRelativeActivityPerHour(
-                startTimeSeries, source.getUnitsPerYear(),
+                start_time, source.getUnitsPerYear(),
                 source.getHourProfile(), source.getDailyProfile(),
                 source.getMonthProfile())
 
@@ -90,7 +90,7 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
             emissions.setGeometryText(source.getGeometryText())
 
             result_.append(
-                (startTimeSeries.getTimeAsDateTime(), source, [emissions]))
+                (start_time.getTimeAsDateTime(), source, [emissions]))
 
         return result_
 

@@ -1,6 +1,9 @@
 import inspect
 from collections import OrderedDict
+from datetime import datetime, timedelta
+from pathlib import Path
 
+import pandas as pd
 from PyQt5 import QtCore, QtWidgets
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
@@ -10,14 +13,27 @@ from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
 from open_alaqs.alaqs_core.interfaces.Emissions import Emission
 from open_alaqs.alaqs_core.interfaces.InventoryTimeSeries import \
     InventoryTimeSeriesStore
+from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
 from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
     DispersionModuleManager
 from open_alaqs.alaqs_core.tools import conversion
 from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
+from open_alaqs.alaqs_core.tools.conversion import convertTimeToSeconds
 from open_alaqs.alaqs_core.tools.iterator import pairwise
 
 logger = get_logger(__name__)
+
+
+def log_time(func):
+    def inner(*args, **kwargs):
+        start = datetime.now()
+        result = func(*args, **kwargs)
+        finish = datetime.now()
+        logger.debug(f"Time elapsed {func.__name__}: {finish - start}")
+        return result
+
+    return inner
 
 
 class EmissionCalculation:
@@ -31,6 +47,8 @@ class EmissionCalculation:
                             ("database_path", "EmissionCalculation"))
 
         # Get the time series for this inventory
+        self._start_incl = convertTimeToSeconds(values_dict.get("Start (incl.)"))
+        self._end_incl = convertTimeToSeconds(values_dict.get('End (incl.)'))
         self._inventoryTimeSeriesStore = InventoryTimeSeriesStore(
             self.getDatabasePath())
         self._emissions = OrderedDict()
@@ -172,9 +190,17 @@ class EmissionCalculation:
     def CheckAmbientConditions(parameter, isa_value, tolerance):
         return 100 * float(abs(parameter - isa_value)) / isa_value > tolerance
 
+    @log_time
     def run(self, source_names=None):
         if source_names is None:
             source_names = []
+
+        # initialise the profiler
+        # todo: REMOVE AFTER CODE IMPROVEMENTS
+        profiler_path = \
+            Path(__file__).parents[1] / 'data' / \
+            f'{datetime.now().strftime("%Y%m%d-%H%M%S")}_profiled.csv'
+        profiler = []
 
         default_emissions = {
             "fuel_kg": 0.,
@@ -192,34 +218,54 @@ class EmissionCalculation:
             "pm10_organic_g": 0.
         }
 
+        # check if a dispersion module is enable
+        dispersion_enabled = len(self.getDispersionModules()) > 0
+
+        # list the selected modules
+        logger.debug("Selected source modules: %s",
+                     ', '.join(self.getModules().keys()))
+        logger.debug("Selected dispersion modules: %s", ', '.join(
+            self.getDispersionModules().keys()) if dispersion_enabled else None)
+
         # execute beginJob(..) of SourceModules
+        logger.debug("Execute beginJob(..) of source modules")
         for mod_name, mod_obj in self.getModules().items():
             mod_obj.beginJob()
 
-        dispersion_enabled = False
         # execute beginJob(..) of dispersion modules
+        logger.debug("Execute beginJob(..) of dispersion modules")
         for dispersion_mod_name, dispersion_mod_obj in \
                 self.getDispersionModules().items():
-            dispersion_enabled = True
             dispersion_mod_obj.beginJob()
 
         # execute process(..)
+        logger.debug("Execute process(..)")
         try:
+            # configure the progress bar
             progressbar = self.ProgressBarWidget(
                 dispersion_enabled=dispersion_enabled)
             count_ = 0
+            total_count_ = len(list(self.getTimeSeries()))
+
             # loop on complete period
-            for (start_, end_) in self.getTimeSeries():
+            for (start_, end_) in self.getPeriods():
+
+                # todo: REMOVE AFTER CODE IMPROVEMENTS
+                p_start = datetime.now()
+
                 start_time = start_.getTimeAsDateTime()
                 end_time = end_.getTimeAsDateTime()
+
+                logger.debug(f'start {start_time}, end {end_time}')
+
+                # update the progress bar
                 count_ += +1
-                progressbar.setValue(conversion.convertToInt(
-                    100 * conversion.convertToFloat(count_) / len(
-                        self.getTimeSeriesStore().getObjects())))
+                progressbar.setValue(int(100 * count_ / total_count_))
                 QtCore.QCoreApplication.instance().processEvents()
                 if progressbar.wasCanceled():
-                    break
+                    raise StopIteration("Operation canceled by user")
 
+                # get the ambient condition
                 # ToDo: only run on (start_, end_) with emission sources?
                 try:
                     ambient_condition = self.getAmbientCondition(
@@ -227,45 +273,75 @@ class EmissionCalculation:
                 except Exception:
                     ambient_condition = AmbientCondition()
 
-                # ordinary sources
+                period_emissions = []
+
+                # calculate emissions per source
                 for mod_name, mod_obj in self.getModules().items():
+                    logger.debug(mod_name)
+
                     # process() returns a list of tuples for each specific
                     # time interval (start_, end_)
                     for (timestamp_, source_, emission_) in mod_obj.process(
                             start_, end_, source_names=source_names,
                             ambient_conditions=ambient_condition):
-                        if emission_ is not None:
-                            self.addEmission(timestamp_, source_, emission_)
-                        else:
-                            # logger.info("Adding default (empty) Emissions
-                            # for '%s'"%(source_.getName()))
-                            emission_ = [
-                                Emission(initValues=default_emissions,
-                                         defaultValues=default_emissions)]
-                            self.addEmission(timestamp_, source_, emission_)
 
-                # Dispersion Model
+                        logger.debug(f'{mod_name}: {timestamp_}')
+                        logger.debug(f'source_: {type(source_)}')
+
+                        if emission_ is not None:
+                            period_emissions.append((source_, emission_))
+                        else:
+                            period_emissions.append((source_, [
+                                Emission(default_emissions, default_emissions)
+                            ]))
+
+                # calculate dispersion per model
                 for dispersion_mod_name, dispersion_mod_obj in \
                         self.getDispersionModules().items():
-                    # row_cnt = 0
-                    for timeval, rows in self.getEmissions().items():
-                        if start_time <= timeval < end_time:
-                            dispersion_mod_obj.process(
-                                start_, end_, timeval, rows,
-                                ambient_conditions=ambient_condition)
+                    logger.debug(f'{dispersion_mod_name}: {start_time}')
+                    dispersion_mod_obj.process(
+                        start_,
+                        end_,
+                        period_emissions,
+                        ambient_condition)
 
-        except StopIteration:
-            logger.info("Iteration stopped")
-            pass
+                # add a generic (zero) emission if the list is empty
+                if len(period_emissions) == 0:
+                    period_emissions.append((Source(), [
+                        Emission(default_emissions, default_emissions)
+                    ]))
+
+                # add the emissions to the dict
+                self._emissions[start_time] = period_emissions
+
+                # todo: REMOVE AFTER CODE IMPROVEMENTS
+                profiler.append({
+                    'stage': 'process()',
+                    'count': count_,
+                    'source_modules': ', '.join(self.getModules().keys()),
+                    'dispersion modules': ', '.join(
+                        self.getDispersionModules().keys()),
+                    'timestamp': (datetime.now() - p_start) / timedelta(
+                        seconds=1)
+                })
+
+        except StopIteration as e:
+            logger.info("Iteration stopped. %s", e)
 
         # execute endJob(..)
+        logger.debug("Execute endJob(..)")
         for mod_name, mod_obj in self.getModules().items():
-            mod_obj.endJob
+            mod_obj.endJob()
 
         # execute endJob(..) of dispersion modules
+        logger.debug("Execute endJob(..) of dispersion modules")
         for dispersion_mod_name, dispersion_mod_obj in \
                 self.getDispersionModules().items():
-            dispersion_mod_obj.endJob
+            dispersion_mod_obj.endJob()
+
+        # store the profiler information
+        # todo: REMOVE AFTER CODE IMPROVEMENTS
+        pd.DataFrame(profiler).to_csv(profiler_path, index=False)
 
     def getModules(self):
         return self._modules
@@ -313,13 +389,22 @@ class EmissionCalculation:
     def setTimeSeriesStore(self, var):
         self._inventoryTimeSeriesStore = var
 
+    @staticmethod
+    def filter_by_time(ts, start_inc, end_inc):
+        for t in ts:
+            if start_inc <= t.getTime() <= end_inc:
+                yield t
+
     # returns a generator of TimeSeries objects
     def getTimeSeries(self):
-        return pairwise(self.getTimeSeriesStore().getTimeSeries())
+        return self.filter_by_time(
+            self.getTimeSeriesStore().getTimeSeries(),
+            self._start_incl,
+            self._end_incl
+        )
 
-    # returns a tuple of TimeSeries objects with (start, end)
-    def getTimeSeriesTuple(self):
-        return self.getTimeSeriesStore().getTimeSeries()
+    def getPeriods(self):
+        return pairwise(self.getTimeSeries())
 
     def get3DGrid(self):
         return self._3DGrid
@@ -361,7 +446,7 @@ class EmissionCalculation:
 #     # start a new emission calculation
 #     ec = EmissionCalculation({"database_path": path_to_database, "debug": True})
 #
-#     # for (start_, end_) in ec.getTimeSeries():
+#     # for (start_, end_) in ec.getPeriods():
 #         # print ec.getAmbientCondition(start_.getTime())
 #         # break
 #
@@ -713,7 +798,7 @@ class EmissionCalculation:
 #     # #     print("output_module_aus.beginJob - Time elapsed: %s" % (et_ - st_))
 #     # #
 #     # #     st_ = time.time()
-#     # #     for (start_, end_) in ec.getTimeSeries():
+#     # #     for (start_, end_) in ec.getPeriods():
 #     # #         for timeval, rows in ec.getEmissions().items():
 #     # #             # print(timeval," / ",len(rows))
 #     # #             ambient_condition = ec.getAmbientCondition(start_.getTime())

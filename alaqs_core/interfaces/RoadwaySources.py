@@ -4,6 +4,7 @@ from collections import OrderedDict
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import spatial
@@ -11,99 +12,71 @@ from open_alaqs.alaqs_core.tools import spatial
 logger = get_logger(__name__)
 
 
-class RoadwaySources:
-    def __init__(self, val=None):
+class RoadwaySources(Source):
+    def __init__(self, val=None, *args, **kwargs):
+        super().__init__(val, *args, **kwargs)
         if val is None:
             val = {}
+
         self._id = str(val["roadway_id"]) if "roadway_id" in val else None
-        self._vehicle_year = float(val["vehicle_year"]) if "vehicle_year" in val else 0.
-
-        self._height = float(val["height"]) if "height" in val else 0.
-        self._distance = float(val["distance"]) if "distance" in val and val["distance"] else 0.
-        self._speed= float(val["speed"]) if "speed" in val else 0.
-
-        self._hour_profile = str(val["hour_profile"]) if "hour_profile" in val else "default"
-        self._daily_profile = str(val["daily_profile"]) if "daily_profile" in val else "default"
-        self._month_profile = str(val["month_profile"]) if "month_profile" in val else "default"
-
+        self._scenario = str(val.get("scenario", ""))
+        self._vehicle_year = float(val.get("vehicle_year", 0))
+        self._distance = float(val.get("distance", 0))
+        self._speed = float(val.get("speed", 0))
         self._fleet_mix = {
-            "vehicle_light" : float(val["vehicle_light"]) if "vehicle_light" in val else 0.,
-            "vehicle_medium":float(val["vehicle_medium"]) if "vehicle_medium" in val else 0.,
-            "vehicle_heavy": float(val["vehicle_heavy"]) if "vehicle_heavy" in val else 0.
+            "vehicle_light": float(val.get("vehicle_light", 0)),
+            "vehicle_medium": float(val.get("vehicle_medium", 0)),
+            "vehicle_heavy": float(val.get("vehicle_heavy", 0))
         }
 
-        self._scenario = str(val["scenario"]) if "scenario" in val else ""
-        self._instudy = int(val["instudy"]) if "instudy" in val else 1
-        self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
+        if self._geometry_text and self._height is not None:
+            self.setGeometryText(
+                spatial.addHeightToGeometryWkt(
+                    self.getGeometryText(), self.getHeight()))
 
-        if self._geometry_text and not self._height is None:
-            self.setGeometryText(spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
-
-        initValues = {}
-        defaultValues = {}
-        for key_ in ["co_gm_km", "hc_gm_km", "nox_gm_km", "sox_gm_km", "pm10_gm_km", "p1_gm_km", "p2_gm_km"]:
+        init_values = {}
+        default_values = {}
+        for key_ in ["co_gm_km", "hc_gm_km", "nox_gm_km", "sox_gm_km",
+                     "pm10_gm_km", "p1_gm_km", "p2_gm_km"]:
             if key_ in val:
-                initValues[key_] = float(val[key_])
-                defaultValues[key_] = 0.
+                init_values[key_] = float(val[key_])
+                default_values[key_] = 0.
 
-        self._emissionIndex = EmissionIndex(initValues=initValues, defaultValues=defaultValues)
+        self._emissionIndex = EmissionIndex(init_values, default_values)
 
-        #internal cacheing
+        # internal cacheing
         self.__length = None
 
     def resetLengthCache(self):
         self.__length = None
 
-    def getName(self):
-        return self._id
-    def setName(self, val):
-        self._id = val
-
-    def getEmissionIndex(self):
-        return self._emissionIndex
-    def setEmissionIndex(self, val):
-        self._emissionIndex = val
-
     def getUnitsPerYear(self):
         return self._vehicle_year
+
     def setUnitsPerYear(self, var):
         self._vehicle_year = var
 
-    def getHeight(self):
-        return self._height
-    def setHeight(self, var):
-        self._height = var
-
     def getDistance(self):
         return self._distance
+
     def setDistance(self, var):
         self._distance = var
 
     def getSpeed(self):
         return self._speed
+
     def setSpeed(self, var):
         self._speed = var
+
     def getFleetMix(self):
         return self._fleet_mix
+
     def setFleetMix(self, var):
         self._fleet_mix = var
-    def getHourProfile(self):
-        return self._hour_profile
-    def setHourProfile(self, var):
-        self._hour_profile = var
-
-    def getDailyProfile(self):
-        return self._daily_profile
-    def setDailyProfile(self, var):
-        self._daily_profile = var
-
-    def getMonthProfile(self):
-        return self._month_profile
-    def setMonthProfile(self, var):
-        self._month_profile = var
 
     def getScenario(self):
         return self._scenario
+
     def setScenario(self, var):
         self._scenario = var
 
@@ -116,16 +89,9 @@ class RoadwaySources:
     def setLength(self, val):
         self.__length = val
 
-    def getGeometryText(self):
-        return self._geometry_text
     def setGeometryText(self, val):
         self._geometry_text = val
         self.resetLengthCache()
-
-    def getInStudy(self):
-        return self._instudy
-    def setInStudy(self, val):
-        self._instudy = val
 
     def __str__(self):
         val = "\n RoadwaySources with id '%s'" % (self.getName())

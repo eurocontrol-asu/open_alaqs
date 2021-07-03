@@ -11,7 +11,8 @@ from open_alaqs.alaqs_core.tools import conversion
 
 logger = get_logger(__name__)
 
-MONTH_MAP = {
+# Set the names of the month and days of the week to prevent locale issue
+month_abbreviations = {
     1: "jan",
     2: "feb",
     3: "mar",
@@ -25,8 +26,7 @@ MONTH_MAP = {
     11: "nov",
     12: "dec"
 }
-
-WEEKDAY_MAP = {
+weekday_abbreviations = {
     1: "mon",
     2: "tue",
     3: "wed",
@@ -36,26 +36,32 @@ WEEKDAY_MAP = {
     7: "sun"
 }
 
+abbreviation_weekdays = {v: k for k, v in weekday_abbreviations.items()}
+abbreviation_months = {v: k for k, v in month_abbreviations.items()}
 
-class InventoryTimeSeries:
+
+class InventoryTime:
     def __init__(self, val=None):
         if val is None:
             val = {}
         self._format = '%Y-%m-%d %H:%M:%S'
 
-        self._timeid = int(val["time_id"]) if "time_id" in val else -1
-        self._time = conversion.convertTimeToSeconds(str(val["time"]) if "time" in val else "2000-01-01 00:00:00", self._format)
-        self._year = int(val["year"]) if "year" in val else 2015
-        self._month = int(val["month"]) if "month" in val else 1
-        self._day = int(val["day"]) if "day" in val else 1
-        self._hour = int(val["hour"]) if "hour" in val else 1
-        self._weekday_id = int(val["weekday_id"]) if "weekday_id" in val else 1
-        self._mix_height = float(val["mix_height"]) if "mix_height" in val else 914.4
+        self._time_id = int(val.get("time_id", -1))
+        self._time = conversion.convertTimeToSeconds(str(
+            val.get("time", "2000-01-01 00:00:00")
+        ), self._format)
+        self._year = int(val.get("year", 2015))
+        self._month = int(val.get("month", 1))
+        self._day = int(val.get("day", 1))
+        self._hour = int(val.get("hour", 1))
+        self._weekday_id = int(val.get("weekday_id", 1))
+        self._mix_height = float(val.get("mix_height", 914.4))
 
     def getTimeID(self):
-        return self._timeid
+        return self._time_id
+
     def setTimeID(self, val):
-        self._timeid = int(val)
+        self._time_id = int(val)
 
     def getTime(self):
         return self._time
@@ -64,7 +70,7 @@ class InventoryTimeSeries:
         return conversion.convertSecondsToTimeString(self._time, self._format)
 
     def getTimeAsTimeTuple(self):
-        return conversion.convertSecondsToTime(self._time, self._format)
+        return conversion.convertSecondsToTime(self._time)
 
     def getTimeAsDateTime(self):
         return conversion.convertSecondsToDateTime(self._time, self._format)
@@ -74,12 +80,13 @@ class InventoryTimeSeries:
 
     def getYear(self):
         return self._year
+
     def setYear(self, val):
-        self._year= int(val)
+        self._year = int(val)
 
     def getMonth(self):
-        if self._month in MONTH_MAP:
-            return MONTH_MAP[self._month]
+        if self._month in month_abbreviations:
+            return month_abbreviations[self._month]
         return None
 
     def getMonthID(self):
@@ -87,18 +94,24 @@ class InventoryTimeSeries:
 
     def setMonth(self, val):
         if isinstance(val, str):
-            if val.lower() in [value_ for key_, value_ in list(MONTH_MAP.items())]:
-                self._month = MONTH_MAP[val.lower()]
+            if val.lower() in abbreviation_months:
+                self._month = abbreviation_months[val.lower()]
             else:
-                raise Exception("Did not find index for month with name '%s'. Valid names are '%s'." % (val, ",".join([value_ for key_, value_ in list(MONTH_MAP.items())])))
+                raise Exception("Did not find index for month with name '%s'. "
+                                "Valid names are '%s'." % (
+                                    val,
+                                    ",".join(abbreviation_months.keys())))
         elif isinstance(val, int) or isinstance(val, float):
-            self._month= int(val)
+            self._month = int(val)
         else:
-            raise Exception("'%s' is of type '%s', but 'str' or int' expected.'" % (val, str(type(val))))
+            raise Exception(f"'{val}' is of type '{str(type(val))}', "
+                            f"but 'str' or int' expected.'")
 
     def getDay(self):
-        if (datetime(self._year, self._month, self._day).weekday() + 1) in WEEKDAY_MAP:
-            return WEEKDAY_MAP[1 + datetime(self._year, self._month, self._day).weekday()]
+        # Get the weekday (1-indexed)
+        weekday = datetime(self._year, self._month, self._day).weekday() + 1
+        if weekday in weekday_abbreviations:
+            return weekday_abbreviations[weekday]
         return None
 
     def getDayID(self):
@@ -106,30 +119,40 @@ class InventoryTimeSeries:
 
     def setDay(self, val):
         if isinstance(val, str):
-            if val.lower() in [value_ for key_, value_ in list(WEEKDAY_MAP.items())]:
-                self._day = WEEKDAY_MAP[val.lower()]
+            if val.lower() in abbreviation_weekdays:
+                self._day = abbreviation_weekdays[val.lower()]
             else:
-                raise Exception("Did not find index for month with name '%s'. Valid names are '%s'." % (val, ",".join([value_ for key_, value_ in list(WEEKDAY_MAP.items())])))
-        elif isinstance(val, int) or isinstance(val, float):
-            self._day= int(val)
+                raise Exception("Did not find index for month with name '%s'. "
+                                "Valid names are '%s'." % (
+                                    val,
+                                    ",".join(abbreviation_weekdays.keys())))
+        elif isinstance(val, (int, float)):
+            self._day = int(val)
         else:
-            raise Exception("'%s' is of type '%s', but 'str' or int' expected.'" % (val, str(type(val))))
+            raise Exception(f"'{val}' is of type '{str(type(val))}', "
+                            f"but 'str' or int' expected.'")
 
     def getHour(self):
         return self._hour
+
     def setHour(self, val):
-        self._hour= int(val)
+        self._hour = int(val)
+
     def getWeekdayID(self):
         return self._weekday_id
+
     def setWeekdayID(self, val):
-        self._weekday_id= int(val)
+        self._weekday_id = int(val)
+
     def getMixingHeight(self):
         return self._mix_height
+
     def setMixingHeight(self, val):
-        self._mix_height= float(val)
+        self._mix_height = float(val)
 
     def getFormat(self):
         return self._format
+
     def setFormat(self, val):
         self._format = val
 
@@ -144,7 +167,8 @@ class InventoryTimeSeries:
         return self.getTimeAsDateTime() + timedelta(**kwargs)
 
     def offsetAsString(self, **kwargs):
-        return datetime.strftime(self.offsetAsDateTime(**kwargs),  self.getFormat())
+        return datetime.strftime(self.offsetAsDateTime(**kwargs),
+                                 self.getFormat())
 
     def __str__(self):
         val = "\n Time id: %i" % (self.getTimeID())
@@ -173,28 +197,30 @@ class InventoryTimeSeriesStore(Store, metaclass=Singleton):
 
         # Engine Modes
         self._inventory_timeseries_db = None
-        if  "inventory_timeseries_db" in db:
-            if isinstance(db["inventory_timeseries_db"], InventoryTimeSeriesDatabase):
-                self._inventory_timeseries_db = db["inventory_timeseries_db"]
-            elif isinstance(db["inventory_timeseries_db"], str) and os.path.isfile(db["inventory_timeseries_db"]):
-                self._inventory_timeseries_db = InventoryTimeSeriesDatabase(db["inventory_timeseries_db"])
-
-        if self._inventory_timeseries_db is None:
+        inventory_timeseries_db_ = db.get("inventory_timeseries_db")
+        if isinstance(inventory_timeseries_db_, InventoryTimeSeriesDatabase):
+            self._inventory_timeseries_db = inventory_timeseries_db_
+        elif isinstance(inventory_timeseries_db_, str) \
+                and os.path.isfile(inventory_timeseries_db_):
+            self._inventory_timeseries_db = InventoryTimeSeriesDatabase(
+                inventory_timeseries_db_)
+        else:
             self._inventory_timeseries_db = InventoryTimeSeriesDatabase(db_path)
 
-        # instantiate all InventoryTimeSeries objects
-        self.initInventoryTimeSeries()
+        # instantiate all InventoryTime objects
+        self.initInventoryTimes()
 
-    def initInventoryTimeSeries(self):
-        for key, timeseries_dict in list(self.getInventoryTimeSeriesDatabase().getEntries().items()):
-            #add engine to store
-            self.setObject(timeseries_dict["time_id"] if "time_id" in timeseries_dict else -1, InventoryTimeSeries(timeseries_dict))
+    def initInventoryTimes(self):
+        entries = self.getInventoryTimeSeriesDatabase().getEntries()
+        for key, timeseries_dict in entries.items():
+            self.setObject(
+                timeseries_dict.get("time_id", -1),
+                InventoryTime(timeseries_dict))
 
     def getInventoryTimeSeriesDatabase(self):
         return self._inventory_timeseries_db
 
     def getTimeSeries(self):
-        # for index_, ts_ in self.getObjects().items():
         for index_, ts_ in sorted(self.getObjects().items()):
             yield ts_
 

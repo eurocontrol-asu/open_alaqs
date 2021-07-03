@@ -44,7 +44,7 @@ class PointSourceWithTimeProfileModule(SourceWithTimeProfileModule):
         SourceWithTimeProfileModule.beginJob(
             self)  # super(PointSourceWithTimeProfileModule, self).beginJob()
 
-    def process(self, startTimeSeries, endTimeSeries, source_names=None,
+    def process(self, start_time, end_time, source_names=None,
                 **kwargs):
         if source_names is None:
             source_names = []
@@ -59,9 +59,10 @@ class PointSourceWithTimeProfileModule(SourceWithTimeProfileModule):
             # logger.debug("Processing source with id '%s':" % source_id)
 
             activity_multiplier = self.getRelativeActivityPerHour(
-                startTimeSeries, source.getOpsYear(),
+                start_time, source.getOpsYear(),
                 source.getHourProfile(), source.getDailyProfile(),
                 source.getMonthProfile())
+
             # Calculate the emissions for this time interval
             emissions = Emission(initValues={
                 "fuel_kg": 0.,
@@ -88,7 +89,7 @@ class PointSourceWithTimeProfileModule(SourceWithTimeProfileModule):
             emissions.setGeometryText(source.getGeometryText())
 
             result_.append(
-                (startTimeSeries.getTimeAsDateTime(), source, [emissions]))
+                (start_time.getTimeAsDateTime(), source, [emissions]))
         return result_
 
     def endJob(self):

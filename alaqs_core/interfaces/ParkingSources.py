@@ -4,6 +4,7 @@ from collections import OrderedDict
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import spatial
@@ -18,110 +19,74 @@ except ImportError:
 logger = get_logger(__name__)
 
 
-class ParkingSources:
-    def __init__(self, val=None):
+class ParkingSources(Source):
+    def __init__(self, val=None, *args, **kwargs):
+        super().__init__(val, *args, **kwargs)
         if val is None:
             val = {}
+
         self._id = str(val["parking_id"]) if "parking_id" in val else None
-        self._vehicle_year = float(val["vehicle_year"]) if "vehicle_year" in val else 0.
-
-        self._height = float(val["height"]) if "height" in val else 0.
-        self._distance = float(val["distance"]) if "distance" in val else 0.
-        self._park_time = float(val["park_time"]) if "park_time" in val else 0.
-        self._idle_time= float(val["idle_time"]) if "idle_time" in val else 0.
-        self._speed= float(val["speed"]) if "speed" in val else 0.
-
-        self._hour_profile = str(val["hour_profile"]) if "hour_profile" in val else "default"
-        self._daily_profile = str(val["daily_profile"]) if "daily_profile" in val else "default"
-        self._month_profile = str(val["month_profile"]) if "month_profile" in val else "default"
-
+        self._vehicle_year = float(val.get("vehicle_year", 0))
+        self._distance = float(val.get("distance", 0))
+        self._park_time = float(val.get("park_time", 0))
+        self._idle_time = float(val.get("idle_time", 0))
+        self._speed = float(val.get("speed", 0))
         self._fleet_mix = {
-            "vehicle_light" : float(val["vehicle_light"]) if "vehicle_light" in val else 0.,
-            "vehicle_medium":float(val["vehicle_medium"]) if "vehicle_medium" in val else 0.,
-            "vehicle_heavy": float(val["vehicle_heavy"]) if "vehicle_heavy" in val else 0.
+            "vehicle_light": float(val.get("vehicle_light", 0)),
+            "vehicle_medium": float(val.get("vehicle_medium", 0)),
+            "vehicle_heavy": float(val.get("vehicle_heavy", 0))
         }
 
-        self._instudy = int(val["instudy"]) if "instudy" in val else 1
-        self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
+        if self._geometry_text and self._height is not None:
+            self.setGeometryText(
+                spatial.addHeightToGeometryWkt(
+                    self.getGeometryText(), self.getHeight()))
 
-        if self._geometry_text and not self._height is None:
-            self.setGeometryText(spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
-
-        initValues = {}
-        defaultValues = {}
-        for key_ in ["co_gm_vh", "hc_gm_vh", "nox_gm_vh","sox_gm_vh", "pm10_gm_vh", "p1_gm_vh", "p2_gm_vh"]:
+        init_values = {}
+        default_values = {}
+        for key_ in ["co_gm_vh", "hc_gm_vh", "nox_gm_vh", "sox_gm_vh",
+                     "pm10_gm_vh", "p1_gm_vh", "p2_gm_vh"]:
             if key_ in val:
-                initValues[key_] = float(val[key_])
-                defaultValues[key_] = 0.
+                init_values[key_] = float(val[key_])
+                default_values[key_] = 0.
 
-
-        self._emissionIndex = EmissionIndex(initValues=initValues, defaultValues=defaultValues)
-
-    def getName(self):
-        return self._id
-    def setName(self, val):
-        self._id = val
-
-    def getEmissionIndex(self):
-        return self._emissionIndex
-    def setEmissionIndex(self, val):
-        self._emissionIndex = val
+        self._emissionIndex = EmissionIndex(init_values, default_values)
 
     def getUnitsPerYear(self):
         return self._vehicle_year
+
     def setUnitsPerYear(self, var):
         self._vehicle_year = var
 
-    def getHeight(self):
-        return self._height
-    def setHeight(self, var):
-        self._height = var
-
     def getDistance(self):
         return self._distance
+
     def setDistance(self, var):
         self._distance = var
 
     def getIdleTime(self):
         return self._idle_time
+
     def setIdleTime(self, var):
         self._idle_time = var
+
     def getParkTime(self):
         return self._park_time
+
     def setParkTime(self, var):
         self._park_time = var
+
     def getSpeed(self):
         return self._speed
+
     def setSpeed(self, var):
         self._speed = var
+
     def getFleetMix(self):
         return self._fleet_mix
+
     def setFleetMix(self, var):
         self._fleet_mix = var
-    def getHourProfile(self):
-        return self._hour_profile
-    def setHourProfile(self, var):
-        self._hour_profile = var
-
-    def getDailyProfile(self):
-        return self._daily_profile
-    def setDailyProfile(self, var):
-        self._daily_profile = var
-
-    def getMonthProfile(self):
-        return self._month_profile
-    def setMonthProfile(self, var):
-        self._month_profile = var
-
-    def getGeometryText(self):
-        return self._geometry_text
-    def setGeometryText(self, val):
-        self._geometry_text = val
-
-    def getInStudy(self):
-        return self._instudy
-    def setInStudy(self, val):
-        self._instudy = val
 
     def __str__(self):
         val = "\n ParkingSources with id '%s'" % (self.getName())

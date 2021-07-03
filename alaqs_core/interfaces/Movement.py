@@ -2,6 +2,7 @@ import copy
 import difflib
 import sys
 from collections import OrderedDict
+from datetime import datetime
 
 import matplotlib
 import numpy as np
@@ -20,10 +21,11 @@ from open_alaqs.alaqs_core.interfaces.EngineStore import EngineStore, \
 from open_alaqs.alaqs_core.interfaces.Gate import GateStore
 from open_alaqs.alaqs_core.interfaces.Runway import RunwayStore
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
-from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.interfaces.Taxiway import TaxiwayRoutesStore
 from open_alaqs.alaqs_core.tools import conversion, spatial
+from open_alaqs.alaqs_core.tools.ProgressBarStage import ProgressBarStage
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.tools.nox_correction_ambient import \
     nox_correction_for_ambient_conditions
 
@@ -1211,7 +1213,7 @@ class MovementStore(Store, metaclass=Singleton):
         if self._movement_db is None:
             self._movement_db = MovementDatabase(db_path)
 
-        #instantiate all movement objects
+        # instantiate all movement objects
         self.initMovements(debug)
 
     def getMovementDatabase(self):
@@ -1255,119 +1257,154 @@ class MovementStore(Store, metaclass=Singleton):
 
     def initMovements(self, debug=False):
 
+        # Start a progressbar, since this might take a while to process
         progressbar = self.ProgressBarWidget()
-        progressbar.setValue(0)
 
-        MovementDataFrame = pd.DataFrame.from_dict(self.getMovementDatabase().getEntries(), orient='index')
-        if MovementDataFrame.empty:
+        # Use stages to update the progress bar
+        stage_1 = ProgressBarStage.firstStage(progressbar, 7, maximum=7)
+
+        # Get the movements from the database as a dataframe
+        mdf = pd.DataFrame.from_dict(self.getMovementDatabase().getEntries(), orient='index')
+        logger.info("Number of movements in the DB: %s", mdf.shape[0])
+        if mdf.empty:
             return
-        logger.info("Number of movements in the DB: %s"%len(self.getMovementDatabase().getEntries()))
 
         df_cols = ["aircraft", "engine_name", "runway", "runway_direction", "gate", "taxi_route", "profile_id",
                    "trajectory", "runway_trajectory"]
-        Eq_MovementDataFrame = pd.DataFrame(index=MovementDataFrame.index, columns=df_cols)
-        Eq_MovementDataFrame = Eq_MovementDataFrame.fillna(np.nan)  # fill with None rather than NaNs
+        eq_mdf = pd.DataFrame(index=mdf.index, columns=df_cols)
+        eq_mdf = eq_mdf.fillna(np.nan)  # fill with None rather than NaNs
 
-        aircraft_unique = MovementDataFrame["aircraft"].unique()
-        for acf in aircraft_unique:
-            indices = MovementDataFrame[MovementDataFrame.aircraft == acf].index
-            Eq_MovementDataFrame.loc[indices, "aircraft"] = np.nan if not self.getAircraftStore().hasKey(acf) else acf
-            if not self.getAircraftStore().hasKey(acf):
-                logger.error("Aircraft %s wasn't found in the DB"%acf)
+        # Check if aircraft exist in the database
+        stage_1.nextValue()
 
-        engine_unique = MovementDataFrame["engine_name"].unique()
-        for eng in engine_unique:
-            indices = MovementDataFrame[MovementDataFrame["engine_name"] == eng].index
-            Eq_MovementDataFrame.loc[indices, "engine_name"] = None
+        aircraft_store = self.getAircraftStore()
+        for acf in mdf["aircraft"].unique():
+            store_has_key = aircraft_store.hasKey(acf)
+            eq_mdf.loc[mdf.aircraft == acf, "aircraft"] = \
+                acf if store_has_key else np.nan
+            if not store_has_key:
+                logger.error("Aircraft %s wasn't found in the DB" % acf)
 
-            if self.getEngineStore().hasKey(eng):
-                Eq_MovementDataFrame.loc[indices, "engine_name"] = eng
+        # Check if engines exist in the database
+        stage_1.nextValue()
 
-            #     # if any(item == "HELICOPTER" for item in ac_types)
-            #     if not "HELICOPTER" in ac_types:
-            #         Eq_MovementDataFrame.loc[indices, "engine_name"] = eng
+        engine_store = self.getEngineStore()
+        heli_engine_store = self.getHeliEngineStore()
+        for eng in mdf["engine_name"].unique():
 
-            elif self.getHeliEngineStore().hasKey(eng):
-                Eq_MovementDataFrame.loc[indices, "engine_name"] = eng
+            indices = mdf["engine_name"] == eng
+
+            if engine_store.hasKey(eng):
+                eq_mdf.loc[indices, "engine_name"] = eng
+
+            elif heli_engine_store.hasKey(eng):
+                eq_mdf.loc[indices, "engine_name"] = eng
 
             else:
-                logger.debug("Engine %s not in ALAQS DB" % eng)
-                if not MovementDataFrame[MovementDataFrame["engine_name"]==eng].empty:
-                    def_ac = MovementDataFrame[MovementDataFrame["engine_name"]==eng]["aircraft"].iloc[0]
-                    if self.getAircraftStore().hasKey(def_ac):
-                        eng = self.getAircraftStore().getObject(acf).getDefaultEngine().getName()
-                        logger.debug("\t +++ taking default engine %s for aircraft %s" %(eng, def_ac))
-                        Eq_MovementDataFrame.loc[indices, "engine_name"] = eng \
-                            if self.getEngineStore().hasKey(eng) or self.getEngineStore().hasKey(eng) else None
+                logger.debug("Engine %s not in ALAQS DB", eng)
 
-            #     if "HELICOPTER" in ac_types:
-            #         Eq_MovementDataFrame.loc[indices, "engine_name"] = eng
-            # else:
-            #     print("Engine (%s) wasn't found in the DB"%eng)
-            #     # Add default engine for acft if engine is missing or is unknown
-            #     for ij_ in indices:
-            #         if self.getAircraftStore().hasKey(MovementDataFrame.loc[ij_, "aircraft"]):
-            #             Eq_MovementDataFrame.loc[ij_, "engine_name"] = self.getAircraftStore().getObject(
-            #                         MovementDataFrame.loc[ij_, "aircraft"]).getDefaultEngine().getName()
-            #
-            #             logger.warning("Engine (%s) wasn't found in the DB, taking default engine (%s)"%(eng,
-            #                 self.getAircraftStore().getObject(MovementDataFrame.loc[ij_, "aircraft"]).getDefaultEngine().getName()))
+                # Get the aircraft
+                def_ac = mdf[mdf["engine_name"] == eng]["aircraft"].iloc[0]
 
-        runway_unique = MovementDataFrame["runway"].unique()
-        for rwy in runway_unique:
-            indices = MovementDataFrame[MovementDataFrame["runway"] == rwy].index
-            if not self.getRunwayStore().isinKey(rwy):
-                Eq_MovementDataFrame.loc[indices, "runway"] = np.nan
-                logger.warning("Runway %s wasn't found in the DB"%rwy)
+                # Check if the aircraft exists in the database
+                if aircraft_store.hasKey(def_ac):
+
+                    # Get the default engine for this aircraft
+                    eng = aircraft_store.getObject(
+                        def_ac).getDefaultEngine().getName()
+
+                    logger.debug(
+                        "\t +++ taking default engine %s for aircraft %s", (
+                            eng, def_ac))
+
+                    if engine_store.hasKey(eng):
+                        eq_mdf.loc[indices, "engine_name"] = eng
+                    else:
+                        eq_mdf.loc[indices, "engine_name"] = None
+
+        # Check if runways exist in the database
+        stage_1.nextValue()
+
+        runway_store = self.getRunwayStore()
+        for rwy in mdf["runway"].unique():
+
+            indices = mdf["runway"] == rwy
+
+            if runway_store.isinKey(rwy):
+                eq_mdf.loc[indices, "runway_direction"] = rwy
+                rwy_used = [key for key in
+                            list(runway_store.getObjects().keys()) if
+                            rwy in key]
+                eq_mdf.loc[indices, "runway"] = rwy_used[0]
+
             else:
-                Eq_MovementDataFrame.loc[indices, "runway_direction"] = rwy
-                rwy_used = [key for key in list(self.getRunwayStore().getObjects().keys()) if rwy in key]
-                Eq_MovementDataFrame.loc[indices, "runway"] = rwy_used[0]
+                eq_mdf.loc[indices, "runway"] = np.nan
+                logger.warning("Runway %s wasn't found in the DB" % rwy)
 
-        gate_unique = MovementDataFrame["gate"].unique()
-        for gte in gate_unique:
-            indices = MovementDataFrame[MovementDataFrame["gate"] == gte].index
-            Eq_MovementDataFrame.loc[indices, "gate"] = np.nan if not self.getGateStore().hasKey(gte) else gte
-            if not self.getGateStore().hasKey(gte):
-                logger.warning("Gate %s wasn't found in the DB"%gte)
+        # Check if gates exist in the database
+        stage_1.nextValue()
 
-        empty_tx_ind = MovementDataFrame[(MovementDataFrame["taxi_route"] == "")|(MovementDataFrame["taxi_route"] == np.NaN)].index
-        MovementDataFrame.loc[empty_tx_ind, "taxi_route"] = \
-        (MovementDataFrame[['gate', 'runway', 'departure_arrival']].apply('/'.join, axis=1).astype(str) + "/1").loc[empty_tx_ind]
+        gate_store = self.getGateStore()
+        for gte in mdf["gate"].unique():
+            store_has_key = gate_store.hasKey(gte)
+            eq_mdf.loc[mdf["gate"] == gte, "gate"] = \
+                gte if store_has_key else np.nan
+            if not store_has_key:
+                logger.warning("Gate %s wasn't found in the DB" % gte)
 
-        taxiroute_unique = MovementDataFrame["taxi_route"].unique()
-        all_taxi_routes = list(self.getTaxiRouteStore().getObjects().keys())
+        # Check if taxi routes exist in the database
+        stage_1.nextValue()
 
-        for txr in taxiroute_unique:
-            indices = MovementDataFrame[MovementDataFrame["taxi_route"] == txr].index
-            if not self.getTaxiRouteStore().hasKey(txr):
+        # Fill empty taxi routes
+        empty_tr = (mdf["taxi_route"] == "") | (mdf["taxi_route"].isna())
+        default_tr_columns = ['gate', 'runway', 'departure_arrival']
+        mdf.loc[empty_tr, "taxi_route"] = \
+            mdf.loc[empty_tr, default_tr_columns].apply('/'.join, axis=1) + "/1"
+
+        taxi_route_store = self.getTaxiRouteStore()
+        all_taxi_routes = taxi_route_store.getObjects().keys()
+        arrival_taxi_routes = [tr for tr in all_taxi_routes if "/A/" in tr]
+        departure_taxi_routes = [tr for tr in all_taxi_routes if "/D/" in tr]
+        for txr in mdf["taxi_route"].unique():
+            indices = mdf[mdf["taxi_route"] == txr].index
+            if taxi_route_store.hasKey(txr):
+                eq_mdf.loc[indices, "taxi_route"] = txr
+            else:
+                alt_routes = []
                 if "/D/" in txr:
-                    alt_routes = difflib.get_close_matches(txr, [_tx_ for _tx_ in all_taxi_routes if "/D/" in _tx_])
+                    alt_routes = \
+                        difflib.get_close_matches(txr, departure_taxi_routes)
                 elif "/A/" in txr:
-                    alt_routes = difflib.get_close_matches(txr, [_tx_ for _tx_ in all_taxi_routes if "/A/" in _tx_])
-                if alt_routes:
-                    Eq_MovementDataFrame.loc[indices, "taxi_route"] = alt_routes[0]
-                    logger.warning("Taxiroute '%s' was replaced with '%s'"%(txr, alt_routes[0]))
-                else:
-                    logger.error("No taxiroute found to replace '%s' which is not in the database"%(txr))
-                    Eq_MovementDataFrame.loc[indices, "taxi_route"] = np.NaN
-            else:
-                Eq_MovementDataFrame.loc[indices, "taxi_route"] = txr
+                    alt_routes = \
+                        difflib.get_close_matches(txr, arrival_taxi_routes)
 
-        profile_unique = MovementDataFrame["profile_id"].astype(str).unique()
+                if len(alt_routes) > 0:
+                    eq_mdf.loc[indices, "taxi_route"] = alt_routes[0]
+                    logger.warning("Taxiroute '%s' was replaced with '%s'",
+                                   (txr, alt_routes[0]))
+                else:
+                    logger.error("No taxiroute found to replace '%s' "
+                                 "which is not in the database", txr)
+                    eq_mdf.loc[indices, "taxi_route"] = np.NaN
+
+        # Check if profiles exist in the database
+        stage_1.nextValue()
+
+        # TODO[RPFK]: REWRITE if agreed upon in #95
+        profile_unique = mdf["profile_id"].astype(str).unique()
         for prf in profile_unique:
-            indices = MovementDataFrame[MovementDataFrame["profile_id"] == prf].index
+            indices = mdf[mdf["profile_id"] == prf].index
             # Add a default profile even when the profile_id is missing
             if len(indices)==0 or not prf or pd.isna(prf) or not self.getAircraftTrajectoryStore().hasKey(prf):
-                for ag, airgroup in MovementDataFrame.groupby(["aircraft", "departure_arrival"]):
+                for ag, airgroup in mdf.groupby(["aircraft", "departure_arrival"]):
                     ij_ = airgroup.index
-                    if self.getAircraftStore().hasKey(airgroup["aircraft"].iloc[0]):
+                    if aircraft_store.hasKey(airgroup["aircraft"].iloc[0]):
                         if airgroup["departure_arrival"].iloc[0] == "A":
-                            Eq_MovementDataFrame.loc[ij_, "profile_id"] = \
-                                self.getAircraftStore().getObject(airgroup["aircraft"].iloc[0]).getDefaultArrivalProfileName()
+                            eq_mdf.loc[ij_, "profile_id"] = \
+                                aircraft_store.getObject(airgroup["aircraft"].iloc[0]).getDefaultArrivalProfileName()
                         elif airgroup["departure_arrival"].iloc[0] == "D":
-                            Eq_MovementDataFrame.loc[ij_, "profile_id"] = \
-                                self.getAircraftStore().getObject(airgroup["aircraft"].iloc[0]).getDefaultDepartureProfileName()
+                            eq_mdf.loc[ij_, "profile_id"] = \
+                                aircraft_store.getObject(airgroup["aircraft"].iloc[0]).getDefaultDepartureProfileName()
                     else:
                         logger.debug("AC %s not in AircraftStore" % (airgroup["aircraft"].iloc[0]))
                         continue
@@ -1386,103 +1423,139 @@ class MovementStore(Store, metaclass=Singleton):
             #             # print("AC %s not in AircraftStore"%(MovementDataFrame.loc[ij_, "aircraft"]))
             #             logger.debug("AC %s not in AircraftStore"%(MovementDataFrame.loc[ij_, "aircraft"]))
             else:
-                Eq_MovementDataFrame.loc[indices, "profile_id"] = None
+                eq_mdf.loc[indices, "profile_id"] = None
 
-        # select unique combinations of Eq_MovementDataFrame where runway and profile_id
-        unique_rwy_trajectories = \
-            Eq_MovementDataFrame[
-                ["runway", "runway_direction", "taxi_route", "profile_id"]].drop_duplicates().reset_index(drop=True)
-        for trj_ind in unique_rwy_trajectories.index:
-            # Should always have values for rwy, rwy_dir, tx_route, prf_id
-            rwy = unique_rwy_trajectories.loc[trj_ind]["runway"]
-            rwy_dir = unique_rwy_trajectories.loc[trj_ind]["runway_direction"]
-            tx_route = unique_rwy_trajectories.loc[trj_ind]["taxi_route"]
-            prf_id = unique_rwy_trajectories.loc[trj_ind]["profile_id"]
+        # Get unique combinations of eq_mdf
+        u_columns = ["runway", "runway_direction", "taxi_route", "profile_id"]
+        heli_engine_store = self.getHeliEngineStore()
+        engine_store = self.getEngineStore()
+        trajectory_store = self.getAircraftTrajectoryStore()
 
-            # ToDo: Handle exceptions
-            mov_df = Eq_MovementDataFrame[
-                (Eq_MovementDataFrame.runway == rwy) & (Eq_MovementDataFrame.runway_direction == rwy_dir)
-                & (Eq_MovementDataFrame.taxi_route == tx_route) & (Eq_MovementDataFrame.profile_id == prf_id)
-            ]
-            if mov_df.empty:
-                logger.warning("No match found for RWY: %s, Direction: %s, Route: %s, Profile: %s"%(rwy, rwy_dir, tx_route, prf_id))
-                continue
-            else:
-                inds = mov_df.index
+        # Start the next stage
+        stage_2 = stage_1.nextStage(duration=10,
+                                    maximum=len(eq_mdf.groupby(u_columns)))
+        logger.debug(f'finished stage 1 '
+                     f'(n={stage_1._max - stage_1._min}) '
+                     f'in {stage_1._end_time - stage_1._start_time}')
 
-                proxy_dict = {"runway_time":MovementDataFrame["runway_time"].iloc[0],
-                              "block_time":MovementDataFrame["block_time"].iloc[0],
-                              }
-                proxy_mov = Movement(proxy_dict)
-                if "/D/" in tx_route:
-                    proxy_mov.setDepartureArrivalFlag("D")
-                else:
-                    proxy_mov.setDepartureArrivalFlag("A")
-                proxy_mov.setGate(self.getGateStore().getObject(mov_df.iloc[0]["gate"]))
-                proxy_mov.setAircraft(self.getAircraftStore().getObject(mov_df.iloc[0]["aircraft"]))
+        for (rwy, rwy_dir, tx_route, prf_id), mov_df in eq_mdf.groupby(u_columns):
 
-                if self.getEngineStore().hasKey(mov_df.iloc[0]["engine_name"]):
-                    proxy_mov.setAircraftEngine(self.getEngineStore().getObject(mov_df.iloc[0]["engine_name"]))
-                elif self.getHeliEngineStore().hasKey(mov_df.iloc[0]["engine_name"]):
-                    proxy_mov.setAircraftEngine(self.getHeliEngineStore().getObject(mov_df.iloc[0]["engine_name"]))
+            # Get the indices
+            inds = mov_df.index
 
-                proxy_mov.setRunway(self.getRunwayStore().getObject(mov_df.iloc[0]["runway"]))
-                proxy_mov.setRunwayDirection(mov_df.iloc[0]["runway_direction"])
-                proxy_mov.setTaxiRoute(self.getTaxiRouteStore().getObject(mov_df.iloc[0]["taxi_route"]))
-                proxy_mov.setTrajectory(self.getAircraftTrajectoryStore().getObject(mov_df.iloc[0]["profile_id"]))
-                proxy_mov.updateTrajectoryAtRunway()
+            # Create a proxy movement
+            proxy_mov = Movement({
+                "runway_time": mdf["runway_time"].iloc[0],
+                "block_time": mdf["block_time"].iloc[0],
+            })
 
-                Eq_MovementDataFrame.loc[inds, "runway"] = proxy_mov.getRunway()
-                Eq_MovementDataFrame.loc[inds, "taxi_route"] = proxy_mov.getTaxiRoute()
-                Eq_MovementDataFrame.loc[inds, "trajectory"] = proxy_mov.getTrajectory()
-                Eq_MovementDataFrame.loc[inds, "runway_trajectory"] = proxy_mov.getTrajectoryAtRunway()
+            # Set the departure/arrival flag
+            proxy_mov.setDepartureArrivalFlag("D" if "/D/" in tx_route else "A")
 
-        Movements_df = Eq_MovementDataFrame.dropna()
-        logger.info("Number of movements retained: %s"%Movements_df.shape[0])
-        # progressbar = self.ProgressBarWidget()
-        count_ = 0
-        for key, movement_dict in self.getMovementDatabase().getEntries().items():
+            # Get the first movement from the group's dataframe
+            fm = mov_df.iloc[0]
+            fm_gate = gate_store.getObject(fm["gate"])
+            fm_aircraft = aircraft_store.getObject(fm["aircraft"])
+            fm_runway = runway_store.getObject(fm["runway"])
+            fm_taxi_route = taxi_route_store.getObject(fm["taxi_route"])
+            fm_trajectory = trajectory_store.getObject(fm["profile_id"])
+            fm_engine = None
+            if engine_store.hasKey(fm["engine_name"]):
+                fm_engine = engine_store.getObject(fm["engine_name"])
+            elif heli_engine_store.hasKey(fm["engine_name"]):
+                fm_engine = heli_engine_store.getObject(fm["engine_name"])
+
+            # Set the parameters of the proxy movement
+            proxy_mov.setGate(fm_gate)
+            proxy_mov.setAircraft(fm_aircraft)
+            proxy_mov.setAircraftEngine(fm_engine)
+            proxy_mov.setRunway(fm_runway)
+            proxy_mov.setRunwayDirection(fm["runway_direction"])
+            proxy_mov.setTaxiRoute(fm_taxi_route)
+            proxy_mov.setTrajectory(fm_trajectory)
+            proxy_mov.updateTrajectoryAtRunway()
+
+            # Update the dataframe
+            eq_mdf.loc[inds, "runway"] = proxy_mov.getRunway()
+            eq_mdf.loc[inds, "taxi_route"] = proxy_mov.getTaxiRoute()
+            eq_mdf.loc[inds, "trajectory"] = proxy_mov.getTrajectory()
+            eq_mdf.loc[inds, "runway_trajectory"] = \
+                proxy_mov.getTrajectoryAtRunway()
+
+            eq_mdf.loc[inds, "gate_obj"] = proxy_mov.getGate()
+            eq_mdf.loc[inds, "aircraft_obj"] = proxy_mov.getAircraft()
+            eq_mdf.loc[inds, "engine_obj"] = proxy_mov.getAircraftEngine()
+
+            stage_2.nextValue()
+
+        # Get the movements to retain
+        mdf_retained = eq_mdf[~eq_mdf[df_cols].isna().any(axis=1)]
+        logger.info("Number of movements retained: %s" % mdf_retained.shape[0])
+
+        # Start the final stage
+        stage_3 = stage_2.finalStage(maximum=mdf.shape[0])
+        logger.debug(f'finished stage 2 '
+                     f'(n={stage_2._max - stage_2._min}) '
+                     f'in {stage_2._end_time - stage_2._start_time}')
+
+        # Create a movement for every entry in the database
+        movement_db_entries = self.getMovementDatabase().getEntries()
+        for key, movement_dict in movement_db_entries.items():
+
+            # Create a movement
             mov = Movement(movement_dict)
-            count_ += +1
-            if (count_%10.0) == 0:
-                progressbar.setValue(int(100 * float(count_) / len(
-                    self.getMovementDatabase().getEntries())))
-                QtCore.QCoreApplication.instance().processEvents()
+
+            # Get the relevant entry from mdf_retained
+            try:
+                mov_df_entry = mdf_retained.loc[key]
+            except KeyError:
+                logger.warning("Operation with 'oid' = %s will not be "
+                               "accounted for due to missing data", key)
+                continue
+
+            # Get the relevant objects
+            mov_aircraft = mov_df_entry["aircraft_obj"]
+
+            if mov_aircraft.getGroup() == "HELICOPTER":
+
+                # Get the helicopter engine
+                mov_engine = \
+                    heli_engine_store.getObject(mov_df_entry["engine_name"])
+            else:
+
+                # Get the aircraft engine
+                mov_engine = engine_store.getObject(mov_df_entry["engine_name"])
+
+            # Replace with Default Engine if it can't be found
+            if mov_engine is None:
+                mov_engine = mov_aircraft.getDefaultEngine()
+                logger.info("Engine wasn't found for movement %s. "
+                            "Will use default engine (%s).",
+                            (mov.getName(), mov_engine.getName()))
+
+            # Add the relevant objects to the movement
+            mov.setGate(mov_df_entry["gate_obj"])
+            mov.setAircraft(mov_aircraft)
+            mov.setAircraftEngine(mov_engine)
+            mov.setRunway(mov_df_entry["runway"])
+            mov.setRunwayDirection(mov_df_entry["runway_direction"])
+            mov.setTaxiRoute(mov_df_entry["taxi_route"])
+            mov.setTrajectory(mov_df_entry["trajectory"])
+            mov.setTrajectoryAtRunway(mov_df_entry["runway_trajectory"])
+
+            self.setObject(movement_dict.get("oid", "unknown"), mov)
+
+            # Update the progress bar
+            stage_3.nextValue()
             if progressbar.wasCanceled():
+                logger.warning('user canceled initMovements, '
+                               'so it might be incomplete')
                 break
 
-            if not key in Movements_df.index:
-                logger.warning("Operation with 'oid' = %s will not be accounted for due to missing data"%key)
-                # self.getMovementDatabase().removeEntry(key)
-                continue
-
-            mov.setGate(self.getGateStore().getObject(Movements_df.loc[key]["gate"]))
-            mov.setAircraft(self.getAircraftStore().getObject(Movements_df.loc[key]["aircraft"]))
-
-            if self.getAircraftStore().getObject(Movements_df.loc[key]["aircraft"]).getGroup() == "HELICOPTER":
-                if self.getHeliEngineStore().hasKey(Movements_df.loc[key]["engine_name"]):
-                    mov.setAircraftEngine(self.getHeliEngineStore().getObject(Movements_df.loc[key]["engine_name"]))
-                else:
-                    # replace with Default Engine
-                    default_eng=self.getAircraftStore().getObject(Movements_df.loc[key]["aircraft"]).getDefaultEngine()
-                    logger.info("Engine wasn't found for movement %s. Will use default engine (%s)."%(mov.getName(), default_eng.getName()))
-                    mov.setAircraftEngine(default_eng)
-            else:
-                if self.getEngineStore().hasKey(Movements_df.loc[key]["engine_name"]):
-                    mov.setAircraftEngine(self.getEngineStore().getObject(Movements_df.loc[key]["engine_name"]))
-                else:
-                    # replace with Default Engine
-                    default_eng=self.getAircraftStore().getObject(Movements_df.loc[key]["aircraft"]).getDefaultEngine()
-                    logger.info("Engine wasn't found for movement %s. Will use default engine (%s)."%(mov.getName(), default_eng.getName()))
-                    mov.setAircraftEngine(default_eng)
-
-            mov.setRunway(Movements_df.loc[key]["runway"])
-            mov.setRunwayDirection(Movements_df.loc[key]["runway_direction"])
-            mov.setTaxiRoute(Movements_df.loc[key]["taxi_route"])
-            mov.setTrajectory(Movements_df.loc[key]["trajectory"])
-            mov.setTrajectoryAtRunway(Movements_df.loc[key]["runway_trajectory"])
-
-            self.setObject(movement_dict["oid"] if "oid" in movement_dict else "unknown", mov)
+        stage_3.finish()
+        logger.debug(f'finished stage 3 '
+                     f'(n={stage_3._max - stage_3._min}) '
+                     f'in {stage_3._end_time - stage_3._start_time}')
 
 
 class MovementDatabase(SQLSerializable, metaclass=Singleton):

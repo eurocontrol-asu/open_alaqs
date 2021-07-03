@@ -46,7 +46,7 @@ class Store:
             self.setObject(key, self.getObject(key) + val)
 
     def getObject(self, key):
-        return (self._objects[key] if self.hasKey(key) else None)
+        return self._objects[key] if self.hasKey(key) else None
 
     def getObjects(self):
         return self._objects
@@ -57,21 +57,22 @@ class Store:
     def removeObject(self, key):
         return self._objects.pop(key)
 
-
     def __add__(self, other):
-        ''' add self to  other, e.g. Store() + Store() '''
+        """ add self to  other, e.g. Store() + Store() """
         if not isinstance(other, type(self)):
-            raise TypeError("cannot add '%s' to '%s' objects" % (str(type(other)), str(type(self))))
+            raise TypeError(f"cannot add '{str(type(other))}'"
+                            f" to '{str(type(self))}' objects")
         values = {}
         for key_ in list(self.getObjects().keys()):
             values[key_] = self.getObject(key_)
             if other.hasKey(key_):
-                if conversion.convertToFloat(values[key_]) is None or conversion.convertToFloat(other.getObject(key_)) is None:
+                if conversion.convertToFloat(values[key_]) is None or\
+                        conversion.convertToFloat(other.getObject(key_)) is None:
                     values[key_] = None
                 else:
                     values[key_] += other.getObject(key_)
         for key__ in list(other.getObjects().keys()):
-            if not key__ in values:
+            if key__ not in values:
                 values[key__] = other.getObject(key__)
         return type(self)(values)
 
