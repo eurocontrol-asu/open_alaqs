@@ -131,16 +131,27 @@ class MovementSourceModule(SourceModule):
         flight_emissions = movement.calculateFlightEmissions(atRunway, method, mode, limit)
         return flight_emissions
 
-    def process(self, start_time, end_time, source_names=None,
-                runway_names=None, ambient_conditions=None, **kwargs) \
-            -> List[Tuple[datetime, Source, Emission]]:
-        if runway_names is None:
-            runway_names = []
-        if source_names is None:
-            source_names = []
-        result_ = []
+    @staticmethod
+    def getAircraftGroup(movement):
+        aircraft = movement.getAircraft()
+        return aircraft.getName(), aircraft.getGroup()
 
-        default_emissions = {
+    @staticmethod
+    def getDefaultProfileName(movement):
+        if movement.isDeparture():
+            return movement.getAircraft().getDefaultDepartureProfileName()
+        return movement.getAircraft().getDefaultArrivalProfileName()
+
+    def addAdditionalColumnsToDataFrame(self):
+        """
+        Add additional movement information to the dataframe
+
+        """
+
+        logger.debug('addAdditionalColumnsToDataFrame()')
+
+        # Set default emissions
+        default_emission = Emission(defaultValues={
             "fuel_kg": 0.,
             "co_g": 0.,
             "co2_g": 0.,
@@ -154,7 +165,58 @@ class MovementSourceModule(SourceModule):
             "pm10_nonvol_g": 0.,
             "pm10_sul_g": 0.,
             "pm10_organic_g": 0.
-        }
+        })
+
+        # Create a function that returns a list of default emissions
+        def _default_emissions(*args):
+            return [default_emission]
+
+        # Load movements from DataFrame
+        df = self.getDataframe()
+
+        # Add the runway times
+        df.loc[:, "RunwayTime"] = [mov.getRunwayTime() for mov in df["Sources"]]
+
+        # Add the gate
+        df.loc[:, "gate"] = [mov.getGate().getName() for mov in df["Sources"]]
+
+        # Add the aircraft and aircraft group
+        df[["aircraft", "ac_group"]] = pd.DataFrame(
+            [self.getAircraftGroup(m) for m in df["Sources"]], index=df.index)
+
+        # Add the engine
+        df.loc[:, "engine"] = \
+            [mov.getAircraftEngine().getName() for mov in df["Sources"]]
+
+        # Add the departure/arrival
+        df.loc[:, "departure_arrival"] = \
+            [mov.getDepartureArrivalFlag() for mov in df["Sources"]]
+
+        # Add the profile id
+        df.loc[:, "profile_id"] = \
+            df["Sources"].apply(self.getDefaultProfileName)
+
+        # Add default gate and flight emissions
+        empty_series = pd.Series(index=df.index, dtype=object)
+        df.loc[:, "GateEmissions"] = empty_series.apply(_default_emissions)
+        df.loc[:, "FlightEmissions"] = empty_series.apply(_default_emissions)
+
+        # Update the DataFrame
+        self._dataframe = df.astype('object')
+
+    def beginJob(self):
+        self.loadSources()
+        self.convertSourcesToDataFrame()
+        self.addAdditionalColumnsToDataFrame()
+
+    def process(self, start_time, end_time, source_names=None,
+                runway_names=None, ambient_conditions=None, **kwargs) \
+            -> List[Tuple[datetime, Source, Emission]]:
+        if runway_names is None:
+            runway_names = []
+        if source_names is None:
+            source_names = []
+        result_ = []
 
         try:
             self.getCalculationLimit()['max_height'] = \
@@ -182,9 +244,6 @@ class MovementSourceModule(SourceModule):
         # Load movements from DataFrame
         df = self.getDataframe()
 
-        # Get the runway times
-        df.loc[:, "RunwayTime"] = [mov.getRunwayTime() for mov in df["Sources"]]
-
         # Get the movements between start and end time of this period
         relevant_movements = \
             (df["RunwayTime"] >= start_time.getTime()) & \
@@ -193,34 +252,6 @@ class MovementSourceModule(SourceModule):
         # Return an empty list if there are no movements in this period
         if df[relevant_movements].empty:
             return []
-
-        # Add additional movement information to the dataframe
-        # TODO[RPFK]: this code is performed on the whole dataframe every time
-        #  process() is being called (which is the case for every timeperiod).
-        #  Add this info to the original dataframe directly or perform lookups
-        #  on relevant movements only.
-        df.loc[:, "gate"] = [mov.getGate().getName() for mov in df["Sources"]]
-        df.loc[:, "ac_group"] = \
-            [mov.getAircraft().getGroup() for mov in df["Sources"]]
-        df.loc[:, "aircraft"] = \
-            [mov.getAircraft().getName() for mov in df["Sources"]]
-        df.loc[:, "engine"] = \
-            [mov.getAircraftEngine().getName() for mov in df["Sources"]]
-        df.loc[:, "departure_arrival"] = \
-            [mov.getDepartureArrivalFlag() for mov in df["Sources"]]
-        df.loc[:, "profile_id"] = [
-            mov.getAircraft().getDefaultDepartureProfileName() if mov.isDeparture() else
-            mov.getAircraft().getDefaultArrivalProfileName() for mov in
-            df["Sources"]]
-
-        # df.loc[:, "GateEmissions"] = [Emission(defaultValues=defaultEmissions)]
-        df.loc[:, "GateEmissions"] = \
-            pd.Series([Emission(defaultValues=default_emissions)])
-        # df.loc[:, "FlightEmissions"] = [Emission(defaultValues=defaultEmissions)]
-        df.loc[:, "FlightEmissions"] = \
-            pd.Series([Emission(defaultValues=default_emissions)])
-
-        df = df.astype('object')
 
         """
         Calculate Gate Emissions
@@ -242,6 +273,7 @@ class MovementSourceModule(SourceModule):
         Calculate Flight Emissions
         """
 
+        # Configure the flight emissions calculation
         mode_ = ""
 
         # Fetch movements that use this runway for this time period
