@@ -1,8 +1,16 @@
+from datetime import datetime
+from typing import List, Tuple
+
 from PyQt5 import QtWidgets
 
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.interfaces.Emissions import Emission
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
+from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools import conversion
 from open_alaqs.ui.TableViewDialog import Ui_TableViewDialog
+
+logger = get_logger(__name__)
 
 
 class TableViewWidgetOutputModule(OutputModule):
@@ -54,22 +62,27 @@ class TableViewWidgetOutputModule(OutputModule):
             "PM10Organic [kg]"
         ])
 
-    def process(self, timeval, result, **kwargs):
-        #result is of format [(Source, Emission)]
+    def process(self, timeval: datetime, result: List[Tuple[Source, Emission]],
+                **kwargs):
 
-        #filter by configured time
+        # filter by configured time
         if self._time_start and self._time_end:
-            if not (timeval >= self._time_start and timeval<self._time_end):
+            if not (self._time_start <= timeval < self._time_end):
                 return True
-        # $$
-        total_emissions_ =  sum([sum(emissions_) for (source, emissions_) in result if emissions_])
 
-        #write results to table
+        # Calculate the total emissions
+        total_emissions_ = sum(sum(emissions_) for (_, emissions_) in result)
 
-        #increment rows in table by one
-        self._widget.getTable().setRowCount(int(self._widget.getTable().rowCount()+1))
+        # Get the current row count
+        current_row_count = self._widget.getTable().rowCount()
 
-        #write cells
+        # Add a new row to the table
+        self._widget.getTable().setRowCount(current_row_count + 1)
+
+        # Get the new row index
+        new_row_index = current_row_count - 1
+
+        # Write cells
         for index_col_, val_ in enumerate([
             (timeval, ""),
             total_emissions_.getCO(unit="kg"),
@@ -83,16 +96,21 @@ class TableViewWidgetOutputModule(OutputModule):
             total_emissions_.getPM10Prefoa3(unit="kg"),
             total_emissions_.getPM10Nonvol(unit="kg"),
             total_emissions_.getPM10Sul(unit="kg"),
-            total_emissions_.getPM10Organic(unit="kg")]
-        ):
-            if isinstance(val_[0], float):
-                rval_ = str(round(val_[0],5)) if not val_[0] is None else ""
+            total_emissions_.getPM10Organic(unit="kg")
+        ]):
+
+            # Format the cell values
+            if val_[0] is None:
+                rval_ = ""
+            elif isinstance(val_[0], float):
+                rval_ = str(round(val_[0], 5))
             else:
-                rval_ = str(val_[0]) if not val_[0] is None else ""
-            # self._widget.getTable().setItem(self._widget.getTable().rowCount()-1, index_col_,
-            #                                 QtWidgets.QTableWidgetItem(str(val_[0]) if not val_[0] is None else ""))
-            self._widget.getTable().setItem(self._widget.getTable().rowCount()-1, index_col_,
-                                            QtWidgets.QTableWidgetItem(rval_))
+                rval_ = str(val_[0])
+
+            # Update the cells
+            self._widget.getTable().setItem(
+                new_row_index, index_col_, QtWidgets.QTableWidgetItem(rval_))
+
     def endJob(self):
         self._widget.resizeToContent()
         return self._widget

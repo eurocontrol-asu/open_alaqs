@@ -13,6 +13,7 @@ from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
 from open_alaqs.alaqs_core.interfaces.Emissions import Emission
 from open_alaqs.alaqs_core.interfaces.InventoryTimeSeries import \
     InventoryTimeSeriesStore
+from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
 from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
     DispersionModuleManager
@@ -285,21 +286,14 @@ class EmissionCalculation:
                             ambient_conditions=ambient_condition):
 
                         logger.debug(f'{mod_name}: {timestamp_}')
+                        logger.debug(f'source_: {type(source_)}')
 
                         if emission_ is not None:
                             period_emissions.append((source_, emission_))
-                            # self.addEmission(timestamp_, source_, emission_)
                         else:
                             period_emissions.append((source_, [
-                                Emission(initValues=default_emissions,
-                                         defaultValues=default_emissions)
+                                Emission(default_emissions, default_emissions)
                             ]))
-                            # logger.info("Adding default (empty) Emissions
-                            # for '%s'"%(source_.getName()))
-                            # emission_ = [
-                            #     Emission(initValues=default_emissions,
-                            #              defaultValues=default_emissions)]
-                            # self.addEmission(timestamp_, source_, emission_)
 
                 # calculate dispersion per model
                 for dispersion_mod_name, dispersion_mod_obj in \
@@ -308,19 +302,16 @@ class EmissionCalculation:
                     dispersion_mod_obj.process(
                         start_,
                         end_,
-                        start_time,
                         period_emissions,
-                        ambient_conditions=ambient_condition)
+                        ambient_condition)
 
-                    # # row_cnt = 0
-                    # for timeval, rows in self.getEmissions().items():
-                    #     if start_time <= timeval < end_time:
-                    #         logger.debug(f'{dispersion_mod_name}: {timeval}')
-                    #         dispersion_mod_obj.process(
-                    #             start_, end_, timeval, rows,q
-                    #             ambient_conditions=ambient_condition)
+                # add a generic (zero) emission if the list is empty
+                if len(period_emissions) == 0:
+                    period_emissions.append((Source(), [
+                        Emission(default_emissions, default_emissions)
+                    ]))
 
-                # Add the emissions to the dict
+                # add the emissions to the dict
                 self._emissions[start_time] = period_emissions
 
                 # todo: REMOVE AFTER CODE IMPROVEMENTS
