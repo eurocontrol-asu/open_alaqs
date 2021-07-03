@@ -46,7 +46,7 @@ class Store:
             self.setObject(key, self.getObject(key) + val)
 
     def getObject(self, key):
-        return (self._objects[key] if self.hasKey(key) else None)
+        return self._objects[key] if self.hasKey(key) else None
 
     def getObjects(self):
         return self._objects
