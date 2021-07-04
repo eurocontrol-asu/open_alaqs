@@ -1,6 +1,5 @@
 import copy
 import itertools
-import math
 import os
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -383,41 +382,72 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
     @log_time
     def checkHoursinResults(self):
+        # Set the date format
+        date_fmt = '%Y-%m-%d.%H:%M:%S'
 
-        if datetime.strptime(list(self.getSortedResults().keys())[0], '%Y-%m-%d.%H:%M:%S').hour != 1 or \
-            datetime.strptime(list(self.getSortedSeries().keys())[0], '%Y-%m-%d.%H:%M:%S').hour != 1:
-            logger.warning("AUSTAL2000 Warning: The time series must start at time 01 (found %s)"%list(self.getSortedResults().keys())[0])
+        # Get the sorted results and sorted series
+        sorted_results = self.getSortedResults()
+        sorted_series = self.getSortedSeries()
 
-        start_date = datetime.strptime(list(self.getSortedResults().keys())[0], '%Y-%m-%d.%H:%M:%S')#.replace(hour=1, minute=0)
-        end_date = datetime.strptime(list(self.getSortedResults().keys())[-1], '%Y-%m-%d.%H:%M:%S')
+        # Get the keys of the sorted results
+        sorted_results_keys = list(sorted_results.keys())
 
-        timedelta_ = end_date - start_date
-        if timedelta_.total_seconds() < 86400:
-            logger.warning("A2K warning: The time series must cover at least one day. End date will be changed from %s to %s"%(end_date, start_date+timedelta(hours=24)))
+        # Get the first and last key of the sorted results and series
+        first_key, last_key = sorted_results_keys[::len(sorted_results_keys)-1]
+        first_key_series = next(iter(sorted_series))
+
+        # Get the associated dates
+        start_date = datetime.strptime(first_key, date_fmt)
+        end_date = datetime.strptime(last_key, date_fmt)
+        start_date_series = datetime.strptime(first_key_series, date_fmt)
+
+        # Check if the study starts at time 01
+        if start_date.hour != 1 or start_date_series.hour != 1:
+            logger.warning("AUSTAL2000 Warning: The time series must start at "
+                           "time 01 (found %s)" % first_key)
+
+        # Make sure that the study spans at least one full day
+        if (end_date - start_date).total_seconds() < 86400:
+            logger.warning("A2K warning: The time series must cover at least "
+                           "one day. End date will be changed from %s to %s",
+                           (end_date, start_date + timedelta(hours=24)))
             end_date = start_date + timedelta(hours=23)
 
+        # Create a new list to store the hours that were added by this method
         missed_hours = []
+
+        # Go over all hours in the relevant timerange
         for _day_ in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):
             for hour_ in rrule.rrule(rrule.HOURLY, dtstart=_day_, until=_day_ + timedelta(days=+1, hours=-1)):
-                if hour_.strftime('%Y-%m-%d.%H:%M:%S') not in list(self.getSortedResults().keys()) and hour_ <= end_date:
-                    missed_hours.append(hour_.strftime('%Y-%m-%d.%H:%M:%S'))
-                    self._results.setdefault(hour_.strftime('%Y-%m-%d.%H:%M:%S'),OrderedDict())
-                    self._series.setdefault(hour_.strftime('%Y-%m-%d.%H:%M:%S'),OrderedDict())
 
-                    series_fill = {
-                           "WindDirection": 999,
-                           "WindSpeed": 0.7,
-                           "ObukhovLength": 99999.0 # ambient_conditions.getObukhovLength()
-                           }
-                    self._series[hour_.strftime('%Y-%m-%d.%H:%M:%S')].update(series_fill)
+                # Get the timestamp as string
+                hour_str = hour_.strftime(date_fmt)
 
-                    results_fill = {'01':
-                                    {'timeID': 1,
-                                    "source":"",
-                                     "pollutant":"",
-                                     "emission_rate":0.0}
-                                    }
-                    self._results[hour_.strftime('%Y-%m-%d.%H:%M:%S')].update(results_fill)
+                # If the hour is relevant and not present in the results yet,
+                # add default results
+                if hour_str not in sorted_results and hour_ <= end_date:
+
+                    # Log the hour that is added by this method
+                    missed_hours.append(hour_str)
+
+                    # Set empty OrderedDicts as default values
+                    self._results.setdefault(hour_str, OrderedDict())
+                    self._series.setdefault(hour_str, OrderedDict())
+
+                    # Update the values
+                    self._series[hour_str].update({
+                        "WindDirection": 999,
+                        "WindSpeed": 0.7,
+                        # ambient_conditions.getObukhovLength()
+                        "ObukhovLength": 99999.0
+                    })
+                    self._results[hour_str].update({'01': {
+                        'timeID': 1,
+                        "source": "",
+                        "pollutant": "",
+                        "emission_rate": 0.0
+                    }})
+
         return missed_hours
 
     def set_normalized_date(self, start_time: InventoryTime,
