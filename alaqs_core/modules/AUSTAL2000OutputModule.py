@@ -1119,7 +1119,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
             fill_results.setdefault(source_id, {})
 
             pollutant_dic = {
-                "source": source_.getName(),
                 _pollutant: hashed_emissions * (10.0 / 36.0),
                 "timeID": self._timeID_per_source[source_id]}
 
