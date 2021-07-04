@@ -1,6 +1,9 @@
 import copy
+import errno
 import itertools
 import os
+import shutil
+import stat
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -260,6 +263,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                                                                  cell_box)
         return efficiency_
 
+    @log_time
     def getGridXYFromReferencePoint(self):
         """
         This method gets the origin of the grid to the bottom-left corner.
@@ -335,40 +339,54 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         return index_i, index_j, index_k
 
+    @log_time
     def emptyOutputPath(self):
-        import shutil, stat, errno
-
         def handleRemoveReadonly(func, path, exc):
-            excvalue = exc[1]
-            if func in (os.rmdir, os.remove) and excvalue.errno == errno.EACCES:
-                os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
+            # If os.rmdir or os.remove fails due to permissions, change
+            # permissions
+            if func in (os.rmdir, os.remove) and exc[1].errno == errno.EACCES:
+
+                # Change permissions of the file to 0777
+                os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+
+                # Execute the original function
                 func(path)
             else:
                 raise Exception("handleRemoveReadonly error")
 
-        if os.listdir(self.getOutputPath()):
-            # QtWidgets.QMessageBox.warning(self, "Folder contents", os.listdir(self.getOutputPath()))
-            answer = QtWidgets.QMessageBox.question(None, "Warning", "A2K Destination folder is not empty!\nDelete existing files?",
-                                                    QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        # Get the output path
+        output_path = self.getOutputPathAsPath()
+
+        # Get files in the output path
+        output_path_children = list(output_path.iterdir())
+
+        if len(output_path_children) > 0:
+
+            # Ask for permission to delete the files
+            answer = QtWidgets.QMessageBox.question(
+                None,
+                "Warning",
+                "AUSTAL destionation folder is not empty!\nDelete existing files?",
+                QtWidgets.QMessageBox.Yes,
+                QtWidgets.QMessageBox.No
+            )
+
             if answer == QtWidgets.QMessageBox.Yes:
-                try:
-                    for dir_content in os.listdir(self.getOutputPath()):
-                        delete_content = os.path.join(str(self.getOutputPath()), dir_content)
-                        # if "QGIS" not in delete_content:
-                        try:
-                            if os.path.isdir(delete_content):
-                                shutil.rmtree(delete_content, ignore_errors=False, onerror=handleRemoveReadonly)
-                            elif os.path.isfile(delete_content):
-                                os.remove(delete_content)
-                        except:
-                            logger.warning("Could not delete %s" % os.path.join(str(self.getOutputPath()), dir_content))
-                            pass
-                        # else:
-                        #     logger.error("A2K files were not deleted, folder is output in %s" % str(self.getOutputPath()))
-                except Exception as exc_:
-                    logger.error(exc_)
+                for child in output_path_children:
+                    try:
+                        if child.is_dir():
+                            shutil.rmtree(
+                                child,
+                                ignore_errors=False,
+                                onerror=handleRemoveReadonly)
+                        elif child.is_file():
+                            child.unlink()
+                    except:
+                        logger.error("Could not delete %s", child)
             else:
-                logger.warning("Previous A2K files were not deleted, verify output in %s" %str(self.getOutputPath()))
+                logger.warning(
+                    "Previous AUSTAL files were not deleted, verify output in %s",
+                    output_path)
 
     @log_time
     def checkTimeIntervalinResults(self):
@@ -549,16 +567,250 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 #     self.total_emissions_per_cell_dict[cell_hash] = emission_value_
         return cell_efficiency
 
+    def getGridFilePath(self, source: Union[int, str], index: int) -> Path:
+        # Get the output path (as Path)
+        output_path = self.getOutputPathAsPath()
+
+        # Get the source name
+        if isinstance(source, int):
+            source = str(source).zfill(2)
+
+        # Get the file stem
+        file_stem = "e" + str(index).zfill(4)
+
+        # Get the file path
+        return (output_path / source / file_stem).with_suffix(".dmna")
+
+    def writeGridFile(self, source: Union[int, str], index: int,
+                      dd_, sk_, mode_, form_, vldf_, artp_, dims_, axes_):
+        """
+        Create an AUSTAL grid file conform specifications.
+
+        Source path, timestamps and data are taken from the attributes of the
+         main class, other values may be specified as input parameters to this
+         method.
+
+        :param source: the identifier of the source
+        :param index: the identifier of the grid file
+        :param dd_: vertical grid (h0 h1 h2 ...), heights above ground in m
+        :param sk_: vertical grid, heights above ground in m
+        :param mode_: mode of the data part (text or binary)
+        :param form_: format of a data element (e.g. Eq%5.1f or Eq%12.5e)
+        :param vldf_: type of value (for post-processing, here V for volume
+         value)
+        :param artp_: array type description (should be set to M)
+        :param dims_: dimension of the data part (for post-processing, must be
+         set to 3)
+        :param axes_: type of indices (for post-processing, must be set to xyz)
+        """
+
+        # Get the file path
+        file_path = self.getGridFilePath(source, index)
+
+        if file_path.exists():
+            raise FileExistsError(file_path)
+
+        # Get the (normalized) first time, current start time and end time
+        _first = self._first_start_time
+        _start = self._start_time
+        _end = self._end_time
+
+        # Get the number of days to the start/end since the start
+        delta_f_start_days = (_start - _first).days
+        delta_f_end_days = (_end - _first).days
+
+        # Format the timestamps
+        start_ = f"{delta_f_start_days}.{_start.strftime('%H:%M:%S')}"
+        end_ = f"{delta_f_end_days}.{_end.strftime('%H:%M:%S')}"
+
+        # Get the emissions grid dimensions
+        x_dim, y_dim, z_dim = self._emission_grid_matrix.shape
+
+        # Start writing to file
+        with file_path.open('w') as text_file:
+
+            # Write header: grid information
+            text_file.write("t1\t%s\n" % start_)
+            text_file.write("t2\t%s\n" % end_)
+            text_file.write("dd\t%s\n" % dd_)
+            text_file.write("sk\t%s\n" % sk_)
+
+            # Add separator
+            text_file.write("-\n")
+
+            # Write header: data information
+            text_file.write("mode\t%s\n" % mode_)
+            text_file.write("form\t%s\n" % form_)
+            text_file.write("vldf\t%s\n" % vldf_)
+            text_file.write("artp\t%s\n" % artp_)
+            text_file.write("dims\t%s\n" % dims_)
+            text_file.write("axes\t%s\n" % axes_)
+            text_file.write("sequ\t%s\n" % self.getSequ())
+
+            # Add separator
+            text_file.write("-\n")
+
+            # Write header: data information
+            text_file.write("lowb\t%s\n" % self._lowb)
+            text_file.write("hghb\t%s\n" % self._hghb)
+
+            # Add separator
+            text_file.write("*\n")
+
+            # Write data
+            for x, y in itertools.product(*list(map(range, (x_dim, y_dim)))):
+                text_file.write("%s\n" % ("\t").join([str(elem) for elem in
+                                                      self._emission_grid_matrix[
+                                                          x, y].tolist()]))
+                if y + 1 == y_dim:
+                    text_file.write("\n")
+
+            # Add terminator
+            text_file.write("***\n")
+
+    @log_time
+    def writeInputFile(self):
+        """
+        Create an AUSTAL input file conform specifications.
+
+        Parameters are taken from the attributes of the main class.
+        """
+
+        # Get the file path
+        file_path = self.getOutputPathAsPath() / "austal.txt"
+
+        if file_path.exists():
+            raise FileExistsError(file_path)
+
+        with file_path.open('w') as text_file:
+
+            text_file.write("----------------- general parameters\n")
+            text_file.write("ti\t%s\t' title\n" % self._title)
+            text_file.write("qs\t%s\t' quality level\n" % self._quality_level)
+            text_file.write("----------------- meteorology\n")
+            text_file.write(
+                "z0\t%s\t' roughness length (m)\n" % self._roughness_level)
+            text_file.write(
+                "d0\t%s\t' displacement height (m)\n" % self._displacement_height)
+            text_file.write(
+                "ha\t%s\t' anemometer height (m)\n" % self._anemometer_height)
+            text_file.write("----------------- calculation grid\n")
+            text_file.write("dd\t%s\t' mesh width\n" % self._mesh_width)
+            text_file.write("x0\t%s\t' left border (m)\n" % (
+                        self._x_left_border_calc_grid - self._reference_x))
+            text_file.write("y0\t%s\t' lower border (m)\n" % (
+                        self._y_left_border_calc_grid - self._reference_y))
+
+            # Add receptor points
+            if (len(self.xp_) == len(self.yp_)) and (
+                    len(self.xp_) == len(self.zp_)) and (len(self.xp_) > 0):
+                text_file.write("xp\t%s\t' x-receptor\n" % ("\t").join(
+                    [str(rx) for rx in self.xp_]))
+                text_file.write("yp\t%s\t' y-receptor\n" % ("\t").join(
+                    [str(ry) for ry in self.yp_]))
+                text_file.write("hp\t%s\t' z-receptor\n" % ("\t").join(
+                    [str(rz) for rz in self.zp_]))
+
+            text_file.write("nx\t%s\t' number of meshes\n" % self._x_meshes)
+            text_file.write("ny\t%s\t' number of meshes\n" % self._y_meshes)
+            text_file.write("----------------- source definitions\n")
+
+            if self._options:
+                text_file.write('os\t"%s"\n' % self._options)
+            text_file.write(
+                "iq\t%s\t' file index (set in series.dmna)\n" % ("\t").join(
+                    ["?" for _iq_ in list(self._total_sources.keys())]))
+            text_file.write("hq\t%s\t' source height (ignored)\n" % ("\t").join(
+                [str(self._source_height) for _iq_ in
+                 list(self._total_sources.keys())]))
+            text_file.write(
+                "xq\t%s\t' x-lower left (south-west) corner of the source\n" % (
+                    "\t").join(
+                    [str(self._x_left_border_em_grid - self._reference_x) for _iq_
+                     in list(self._total_sources.keys())]))
+            text_file.write(
+                "yq\t%s\t' y-lower left (south-west) corner of the source\n" % (
+                    "\t").join(
+                    [str(self._y_left_border_em_grid - self._reference_y) for _iq_
+                     in list(self._total_sources.keys())]))
+
+            for poll in self._pollutants_list:
+                if poll.startswith('PM'):
+                    poll = "PM-2" if poll == "PM10" else "PM-1"
+                text_file.write("%s\t%s\t' total %s (in g/s) (set in series.dmna)\n" \
+                                % (poll.lower(), ("\t").join(
+                    ["?" if poll in self._total_sources[src] else "0" for iq, src in
+                     enumerate(self._total_sources.keys())]), poll))
+
+    @log_time
+    def writeTimeSeriesFile(self):
+        """
+        Create an AUSTAL time series file conform specifications.
+
+        Parameters are taken from the attributes of the main class.
+        """
+
+        # Get the file path
+        file_path = self.getOutputPathAsPath() / "series.dmna"
+
+        if file_path.exists():
+            raise FileExistsError(file_path)
+
+        # Get the sorted results
+        sorted_results = self.getSortedResults()
+
+        form_line = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"']
+        with file_path.open('w') as text_file:
+
+            for iq_ in list(self._total_sources.keys()):
+                form_line.append('"%s.iq%%3.0f"' % str(iq_))
+            for iq_ in list(self._total_sources.keys()):
+                for poll in self._total_sources[iq_]:
+                    form_line.append('"%s.%s%%10.3e"' % (str(iq_), poll.lower()))
+
+            text_file.write('form\t%s\n' % ('\t').join(form_line))
+            text_file.write('mode\t"text"\n')
+            text_file.write('sequ\t"i"\n')
+            text_file.write('dims\t%s\n' % 1)
+            text_file.write('lowb\t%s\n' % 1)
+            text_file.write('hghb\t%s\n' % (len(list(sorted_results.keys()))))
+            text_file.write('*\n')
+
+            for dt in sorted_results:
+                iqs = [sorted_results[dt][iq]['timeID'] if iq in list(
+                    sorted_results[dt].keys()) else 1 for iq in
+                       list(self._total_sources.keys())]
+                emission_rates = []
+                for iq_ in list(self._total_sources.keys()):
+                    for poll in self._total_sources[iq_]:
+                        if (iq_ in sorted_results[dt] and poll in
+                                sorted_results[dt][iq_]):
+                            emission_rates.append("{:10.3e}".format(
+                                sorted_results[dt][iq_][poll]))
+                        else:
+                            emission_rates.append("{:10.3e}".format(0))
+
+                text_file.write("%s\t%5.0f\t%5.1f\t%7.1f\t%s\t%s\n" % (
+                    dt, self._series[dt]['WindDirection'],
+                    self._series[dt]['WindSpeed'],
+                    self._series[dt]['ObukhovLength'],
+                    ('\t').join(["%3.0f" % (iq) for iq in iqs]),
+                    ('\t').join([er for er in emission_rates]))
+                                )
+            text_file.write('\n')
+            text_file.write('***\n')
+
     @log_time
     def beginJob(self):
         if self.isEnabled():
             if self._grid is None:
-                raise Exception("No 3DGrid found. Use parameter 'grid' to "
-                                "configure one on AUSTAL2000OutputModule "
-                                "initialization (e.g. from instantiated "
-                                "EmissionCalculation.")
+                raise Exception(
+                    "No 3DGrid found. Use parameter 'grid' to configure one on "
+                    "AUSTAL2000OutputModule initialization (e.g. from "
+                    "instantiated EmissionCalculation.")
             else:
 
+                # Initialize the grid
                 self.getGridXYFromReferencePoint()
 
                 self._emission_grid_matrix = None
@@ -567,36 +819,41 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 self._y_meshes = self._grid._y_cells
                 self._z_meshes = self._grid._z_cells
 
-                # AUSTAL2000 cannot take non square grid cells, choose finer resolution
-                self._mesh_width = min(self._grid.getResolutionX(), self._grid.getResolutionY()) # dd for austal2000.txt
+                # AUSTAL2000 cannot take non square grid cells, choose finer
+                # resolution (dd) for austal2000.txt
+                self._mesh_width = min(
+                    self._grid.getResolutionX(), self._grid.getResolutionY())
                 self._grid._x_resolution = self._mesh_width
                 self._grid._y_resolution = self._mesh_width
 
+                # Initialize the output path
                 if not self._output_path:
+
+                    # Ask for an output path
                     output_path = QtWidgets.QFileDialog.getExistingDirectory(
                         None, "AUSTAL2000: Select Output directory")
+
+                    # Set the output path
                     self.setOutputPath(output_path)
-                    if not os.path.isdir(self.getOutputPath()):
+
+                    if not self.getOutputPathAsPath().is_dir():
                         raise Exception("AUSTAL2000: Not a valid path for grid "
-                                        "source file %s'" % self.getOutputPath())
+                                        "source file %s'" % output_path)
                     else:
                         self.emptyOutputPath()
-                        self._grid_db_path = self.getOutputPath()
+                        self._grid_db_path = output_path
 
-                # Store results
-                # self._matched_cells = None
-                # self._geometries = OrderedDict()
+                # Initialize the results
                 self._results = OrderedDict()
                 self._series = OrderedDict()
                 self._total_sources = OrderedDict()
                 self._timeID_per_source = OrderedDict()
                 self._dates = OrderedDict()
+                self._source_geometries = OrderedDict()
 
-                # Variables for the date normalization
+                # Initialize the variables for the date normalization
                 self._first_start_time = None
                 self._start_time, self._end_time = None, None
-
-                self._source_geometries = OrderedDict()
 
     @log_time
     def process(self,
@@ -893,237 +1150,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
             except Exception as exc_:
                 logger.error(exc_)
-
-    def getGridFilePath(self, source: Union[int, str], index: int) -> Path:
-        # Get the output path (as Path)
-        output_path = self.getOutputPathAsPath()
-
-        # Get the source name
-        if isinstance(source, int):
-            source = str(source).zfill(2)
-
-        # Get the file stem
-        file_stem = "e" + str(index).zfill(4)
-
-        # Get the file path
-        return (output_path / source / file_stem).with_suffix(".dmna")
-
-    def writeGridFile(self, source: Union[int, str], index: int,
-                      dd_, sk_, mode_, form_, vldf_, artp_, dims_, axes_):
-        """
-        Create an AUSTAL grid file conform specifications.
-
-        Source path, timestamps and data are taken from the attributes of the
-         main class, other values may be specified as input parameters to this
-         method.
-
-        :param source: the identifier of the source
-        :param index: the identifier of the grid file
-        :param dd_: vertical grid (h0 h1 h2 ...), heights above ground in m
-        :param sk_: vertical grid, heights above ground in m
-        :param mode_: mode of the data part (text or binary)
-        :param form_: format of a data element (e.g. Eq%5.1f or Eq%12.5e)
-        :param vldf_: type of value (for post-processing, here V for volume
-         value)
-        :param artp_: array type description (should be set to M)
-        :param dims_: dimension of the data part (for post-processing, must be
-         set to 3)
-        :param axes_: type of indices (for post-processing, must be set to xyz)
-        """
-
-        # Get the file path
-        file_path = self.getGridFilePath(source, index)
-
-        if file_path.exists():
-            raise FileExistsError(file_path)
-
-        # Get the (normalized) first time, current start time and end time
-        _first = self._first_start_time
-        _start = self._start_time
-        _end = self._end_time
-
-        # Get the number of days to the start/end since the start
-        delta_f_start_days = (_start - _first).days
-        delta_f_end_days = (_end - _first).days
-
-        # Format the timestamps
-        start_ = f"{delta_f_start_days}.{_start.strftime('%H:%M:%S')}"
-        end_ = f"{delta_f_end_days}.{_end.strftime('%H:%M:%S')}"
-
-        # Get the emissions grid dimensions
-        x_dim, y_dim, z_dim = self._emission_grid_matrix.shape
-
-        # Start writing to file
-        with file_path.open('w') as text_file:
-
-            # Write header: grid information
-            text_file.write("t1\t%s\n" % start_)
-            text_file.write("t2\t%s\n" % end_)
-            text_file.write("dd\t%s\n" % dd_)
-            text_file.write("sk\t%s\n" % sk_)
-
-            # Add separator
-            text_file.write("-\n")
-
-            # Write header: data information
-            text_file.write("mode\t%s\n" % mode_)
-            text_file.write("form\t%s\n" % form_)
-            text_file.write("vldf\t%s\n" % vldf_)
-            text_file.write("artp\t%s\n" % artp_)
-            text_file.write("dims\t%s\n" % dims_)
-            text_file.write("axes\t%s\n" % axes_)
-            text_file.write("sequ\t%s\n" % self.getSequ())
-
-            # Add separator
-            text_file.write("-\n")
-
-            # Write header: data information
-            text_file.write("lowb\t%s\n" % self._lowb)
-            text_file.write("hghb\t%s\n" % self._hghb)
-
-            # Add separator
-            text_file.write("*\n")
-
-            # Write data
-            for x, y in itertools.product(*list(map(range, (x_dim, y_dim)))):
-                text_file.write("%s\n" % ("\t").join([str(elem) for elem in
-                                                      self._emission_grid_matrix[
-                                                          x, y].tolist()]))
-                if y + 1 == y_dim:
-                    text_file.write("\n")
-
-            # Add terminator
-            text_file.write("***\n")
-
-    @log_time
-    def writeInputFile(self):
-        """
-        Create an AUSTAL input file conform specifications.
-
-        """
-
-        # Get the file path
-        file_path = self.getOutputPathAsPath() / "austal.txt"
-
-        if file_path.exists():
-            raise FileExistsError(file_path)
-
-        with file_path.open('w') as text_file:
-
-            text_file.write("----------------- general parameters\n")
-            text_file.write("ti\t%s\t' title\n" % self._title)
-            text_file.write("qs\t%s\t' quality level\n" % self._quality_level)
-            text_file.write("----------------- meteorology\n")
-            text_file.write(
-                "z0\t%s\t' roughness length (m)\n" % self._roughness_level)
-            text_file.write(
-                "d0\t%s\t' displacement height (m)\n" % self._displacement_height)
-            text_file.write(
-                "ha\t%s\t' anemometer height (m)\n" % self._anemometer_height)
-            text_file.write("----------------- calculation grid\n")
-            text_file.write("dd\t%s\t' mesh width\n" % self._mesh_width)
-            text_file.write("x0\t%s\t' left border (m)\n" % (
-                        self._x_left_border_calc_grid - self._reference_x))
-            text_file.write("y0\t%s\t' lower border (m)\n" % (
-                        self._y_left_border_calc_grid - self._reference_y))
-
-            # Add receptor points
-            if (len(self.xp_) == len(self.yp_)) and (
-                    len(self.xp_) == len(self.zp_)) and (len(self.xp_) > 0):
-                text_file.write("xp\t%s\t' x-receptor\n" % ("\t").join(
-                    [str(rx) for rx in self.xp_]))
-                text_file.write("yp\t%s\t' y-receptor\n" % ("\t").join(
-                    [str(ry) for ry in self.yp_]))
-                text_file.write("hp\t%s\t' z-receptor\n" % ("\t").join(
-                    [str(rz) for rz in self.zp_]))
-
-            text_file.write("nx\t%s\t' number of meshes\n" % self._x_meshes)
-            text_file.write("ny\t%s\t' number of meshes\n" % self._y_meshes)
-            text_file.write("----------------- source definitions\n")
-
-            if self._options:
-                text_file.write('os\t"%s"\n' % self._options)
-            text_file.write(
-                "iq\t%s\t' file index (set in series.dmna)\n" % ("\t").join(
-                    ["?" for _iq_ in list(self._total_sources.keys())]))
-            text_file.write("hq\t%s\t' source height (ignored)\n" % ("\t").join(
-                [str(self._source_height) for _iq_ in
-                 list(self._total_sources.keys())]))
-            text_file.write(
-                "xq\t%s\t' x-lower left (south-west) corner of the source\n" % (
-                    "\t").join(
-                    [str(self._x_left_border_em_grid - self._reference_x) for _iq_
-                     in list(self._total_sources.keys())]))
-            text_file.write(
-                "yq\t%s\t' y-lower left (south-west) corner of the source\n" % (
-                    "\t").join(
-                    [str(self._y_left_border_em_grid - self._reference_y) for _iq_
-                     in list(self._total_sources.keys())]))
-
-            for poll in self._pollutants_list:
-                if poll.startswith('PM'):
-                    poll = "PM-2" if poll == "PM10" else "PM-1"
-                text_file.write("%s\t%s\t' total %s (in g/s) (set in series.dmna)\n" \
-                                % (poll.lower(), ("\t").join(
-                    ["?" if poll in self._total_sources[src] else "0" for iq, src in
-                     enumerate(self._total_sources.keys())]), poll))
-
-    @log_time
-    def writeTimeSeriesFile(self):
-        """
-        Create an AUSTAL time series file conform specifications.
-
-        """
-
-        # Get the file path
-        file_path = self.getOutputPathAsPath() / "series.dmna"
-
-        if file_path.exists():
-            raise FileExistsError(file_path)
-
-        # Get the sorted results
-        sorted_results = self.getSortedResults()
-
-        form_line = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"']
-        with file_path.open('w') as text_file:
-
-            for iq_ in list(self._total_sources.keys()):
-                form_line.append('"%s.iq%%3.0f"' % str(iq_))
-            for iq_ in list(self._total_sources.keys()):
-                for poll in self._total_sources[iq_]:
-                    form_line.append('"%s.%s%%10.3e"' % (str(iq_), poll.lower()))
-
-            text_file.write('form\t%s\n' % ('\t').join(form_line))
-            text_file.write('mode\t"text"\n')
-            text_file.write('sequ\t"i"\n')
-            text_file.write('dims\t%s\n' % 1)
-            text_file.write('lowb\t%s\n' % 1)
-            text_file.write('hghb\t%s\n' % (len(list(sorted_results.keys()))))
-            text_file.write('*\n')
-
-            for dt in sorted_results:
-                iqs = [sorted_results[dt][iq]['timeID'] if iq in list(
-                    sorted_results[dt].keys()) else 1 for iq in
-                       list(self._total_sources.keys())]
-                emission_rates = []
-                for iq_ in list(self._total_sources.keys()):
-                    for poll in self._total_sources[iq_]:
-                        if (iq_ in sorted_results[dt] and poll in
-                                sorted_results[dt][iq_]):
-                            emission_rates.append("{:10.3e}".format(
-                                sorted_results[dt][iq_][poll]))
-                        else:
-                            emission_rates.append("{:10.3e}".format(0))
-
-                text_file.write("%s\t%5.0f\t%5.1f\t%7.1f\t%s\t%s\n" % (
-                    dt, self._series[dt]['WindDirection'],
-                    self._series[dt]['WindSpeed'],
-                    self._series[dt]['ObukhovLength'],
-                    ('\t').join(["%3.0f" % (iq) for iq in iqs]),
-                    ('\t').join([er for er in emission_rates]))
-                                )
-            text_file.write('\n')
-            text_file.write('***\n')
 
     @log_time
     def endJob(self):
