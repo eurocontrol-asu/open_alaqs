@@ -1,10 +1,10 @@
 import copy
 import itertools
-import math
 import os
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import List, Tuple, Union
 
 import geopandas as gpd
 import numpy as np
@@ -12,7 +12,12 @@ from PyQt5 import QtGui, QtWidgets
 from dateutil import rrule
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.interfaces.AmbientCondition import AmbientCondition
 from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
+from open_alaqs.alaqs_core.interfaces.Emissions import Emission
+from open_alaqs.alaqs_core.interfaces.InventoryTimeSeries import InventoryTime
+from open_alaqs.alaqs_core.interfaces.Movement import Movement
+from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools import sql_interface, spatial, conversion
 
 logger = get_logger(__name__)
@@ -23,7 +28,7 @@ def log_time(func):
         start = datetime.now()
         result = func(*args, **kwargs)
         finish = datetime.now()
-        logger.info(f"Time elapsed {func.__name__}: {finish - start}")
+        logger.debug(f"Time elapsed {func.__name__}: {finish - start}")
         return result
     return inner
 
@@ -181,28 +186,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
         """
         return self._sequ
 
-    def getDistanceXY(self, x_1, y_1, x_2, y_2) -> float:
-        """
-        Get the distance between two coordinates.
-
-        todo: Fix
-
-        :param x_1:
-        :param y_1:
-        :param x_2:
-        :param y_2:
-        :return:
-        """
-        p1 = spatial.getPoint("", x_1, y_1, 0.)
-        p2 = spatial.getPoint("", x_2, y_2, 0.)
-
-        x_y_distance = spatial.getDistanceOfLineStringXY(
-            spatial.getLine(p1, p2), epsg_id_source=3857, epsg_id_target=4326)
-        if x_y_distance is None:
-            x_y_distance = 0.
-        # logger.debug("Distance xy: %f" % (x_y_distance))
-        return math.sqrt(x_y_distance ** 2.)
-
     def setOutputPath(self, val):
         self._output_path = val
 
@@ -220,37 +203,37 @@ class AUSTAL2000DispersionModule(DispersionModule):
         return OrderedDict(
             sorted(list(self._series.items()), key=lambda t: t[0]))
 
-    def getDataPoint(self, x_, y_, z_, isPolygon, grid_):
+    def getDataPoint(self, x_, y_, z_, is_polygon, grid_):
         data_point_ = {
             "coordinates":{
                 "x":x_,
                 "y":y_,
                 "z":z_}
         }
-        if isPolygon:
+        if is_polygon:
             data_point_.update({
-                "coordinates":{
-                    "x_min":x_-grid_.getResolutionX()/2.,
-                    "x_max":x_+grid_.getResolutionX()/2.,
-                    "y_min":y_-grid_.getResolutionY()/2.,
-                    "y_max":y_+grid_.getResolutionY()/2.,
-                    "z_min":z_-grid_.getResolutionZ()/2.,
-                    "z_max":z_+grid_.getResolutionZ()/2.
-            }})
+                "coordinates": {
+                    "x_min": x_ - grid_.getResolutionX() / 2.,
+                    "x_max": x_ + grid_.getResolutionX() / 2.,
+                    "y_min": y_ - grid_.getResolutionY() / 2.,
+                    "y_max": y_ + grid_.getResolutionY() / 2.,
+                    "z_min": z_ - grid_.getResolutionZ() / 2.,
+                    "z_max": z_ + grid_.getResolutionZ() / 2.
+                }})
         return data_point_
 
     def getBoundingBox(self, geometry_wkt):
         bbox = spatial.getBoundingBox(geometry_wkt)
         return bbox
 
-    def getCellBox(self, x_,y_,z_, grid_):
+    def getCellBox(self, x_, y_, z_, grid_):
         cell_bbox = {
-                    "x_min":x_-grid_.getResolutionX()/2.,
-                    "x_max":x_+grid_.getResolutionX()/2.,
-                    "y_min":y_-grid_.getResolutionY()/2.,
-                    "y_max":y_+grid_.getResolutionY()/2.,
-                    "z_min":z_-grid_.getResolutionZ()/2.,
-                    "z_max":z_+grid_.getResolutionZ()/2.
+            "x_min": x_ - grid_.getResolutionX() / 2.,
+            "x_max": x_ + grid_.getResolutionX() / 2.,
+            "y_min": y_ - grid_.getResolutionY() / 2.,
+            "y_max": y_ + grid_.getResolutionY() / 2.,
+            "z_min": z_ - grid_.getResolutionZ() / 2.,
+            "z_max": z_ + grid_.getResolutionZ() / 2.
         }
         return cell_bbox
 
@@ -387,6 +370,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             else:
                 logger.warning("Previous A2K files were not deleted, verify output in %s" %str(self.getOutputPath()))
 
+    @log_time
     def checkTimeIntervalinResults(self):
         if not (list(self.getSortedResults().keys()) == list(
                 self.getSortedSeries().keys())):
@@ -396,61 +380,117 @@ class AUSTAL2000DispersionModule(DispersionModule):
         else:
             return True
 
+    @log_time
     def checkHoursinResults(self):
+        # Set the date format
+        date_fmt = '%Y-%m-%d.%H:%M:%S'
 
-        if datetime.strptime(list(self.getSortedResults().keys())[0], '%Y-%m-%d.%H:%M:%S').hour != 1 or \
-            datetime.strptime(list(self.getSortedSeries().keys())[0], '%Y-%m-%d.%H:%M:%S').hour != 1:
-            logger.warning("AUSTAL2000 Warning: The time series must start at time 01 (found %s)"%list(self.getSortedResults().keys())[0])
+        # Get the sorted results and sorted series
+        sorted_results = self.getSortedResults()
+        sorted_series = self.getSortedSeries()
 
-        start_date = datetime.strptime(list(self.getSortedResults().keys())[0], '%Y-%m-%d.%H:%M:%S')#.replace(hour=1, minute=0)
-        end_date = datetime.strptime(list(self.getSortedResults().keys())[-1], '%Y-%m-%d.%H:%M:%S')
+        # Get the keys of the sorted results
+        sorted_results_keys = list(sorted_results.keys())
 
-        timedelta_ = end_date - start_date
-        if timedelta_.total_seconds() < 86400:
-            logger.warning("A2K warning: The time series must cover at least one day. End date will be changed from %s to %s"%(end_date, start_date+timedelta(hours=24)))
+        # Get the first and last key of the sorted results and series
+        first_key, last_key = sorted_results_keys[::len(sorted_results_keys)-1]
+        first_key_series = next(iter(sorted_series))
+
+        # Get the associated dates
+        start_date = datetime.strptime(first_key, date_fmt)
+        end_date = datetime.strptime(last_key, date_fmt)
+        start_date_series = datetime.strptime(first_key_series, date_fmt)
+
+        # Check if the study starts at time 01
+        if start_date.hour != 1 or start_date_series.hour != 1:
+            logger.warning("AUSTAL2000 Warning: The time series must start at "
+                           "time 01 (found %s)" % first_key)
+
+        # Make sure that the study spans at least one full day
+        if (end_date - start_date).total_seconds() < 86400:
+            logger.warning("A2K warning: The time series must cover at least "
+                           "one day. End date will be changed from %s to %s",
+                           (end_date, start_date + timedelta(hours=24)))
             end_date = start_date + timedelta(hours=23)
 
+        # Create a new list to store the hours that were added by this method
         missed_hours = []
+
+        # Go over all hours in the relevant timerange
         for _day_ in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):
             for hour_ in rrule.rrule(rrule.HOURLY, dtstart=_day_, until=_day_ + timedelta(days=+1, hours=-1)):
-                if hour_.strftime('%Y-%m-%d.%H:%M:%S') not in list(self.getSortedResults().keys()) and hour_ <= end_date:
-                    missed_hours.append(hour_.strftime('%Y-%m-%d.%H:%M:%S'))
-                    self._results.setdefault(hour_.strftime('%Y-%m-%d.%H:%M:%S'),OrderedDict())
-                    self._series.setdefault(hour_.strftime('%Y-%m-%d.%H:%M:%S'),OrderedDict())
 
-                    series_fill = {
-                           "WindDirection": 999,
-                           "WindSpeed": 0.7,
-                           "ObukhovLength": 99999.0 # ambient_conditions.getObukhovLength()
-                           }
-                    self._series[hour_.strftime('%Y-%m-%d.%H:%M:%S')].update(series_fill)
+                # Get the timestamp as string
+                hour_str = hour_.strftime(date_fmt)
 
-                    results_fill = {'01':
-                                    {'timeID': 1,
-                                    "source":"",
-                                     "pollutant":"",
-                                     "emission_rate":0.0}
-                                    }
-                    self._results[hour_.strftime('%Y-%m-%d.%H:%M:%S')].update(results_fill)
+                # If the hour is relevant and not present in the results yet,
+                # add default results
+                if hour_str not in sorted_results and hour_ <= end_date:
+
+                    # Log the hour that is added by this method
+                    missed_hours.append(hour_str)
+
+                    # Set empty OrderedDicts as default values
+                    self._results.setdefault(hour_str, OrderedDict())
+                    self._series.setdefault(hour_str, OrderedDict())
+
+                    # Update the values
+                    self._series[hour_str].update({
+                        "WindDirection": 999,
+                        "WindSpeed": 0.7,
+                        # ambient_conditions.getObukhovLength()
+                        "ObukhovLength": 99999.0
+                    })
+                    self._results[hour_str].update({'01': {
+                        'timeID': 1,
+                        "source": "",
+                        "pollutant": "",
+                        "emission_rate": 0.0
+                    }})
+
         return missed_hours
 
-    def resetDate(self, startTime, endTime, timeval):
+    def set_normalized_date(self, start_time: InventoryTime,
+                            end_time: InventoryTime):
+        """
+        AUSTAL requires the calculation to start from yyyy-01-01.01.00.00.
+         Therefore the dates should be normalized.
+        
+        :param start_time: 
+        :param end_time: 
+        """
 
-        # A2K always should start from yyyy-01-01.01.00.00
-        if (self._dayID == 0 and not self._dateID):
-            self._dateID = timeval
-            self._timedelta_from_start = (timeval - timeval.replace(month=1, day=1, hour=0, minute=0,second=0))
-            # self._timedelta_from_start = relativedelta(timeval, timeval.replace(month=1, day=1, hour=0, minute=0,second=0))
-            logger.info("AUSTAL2000 Begin Job: Timedelta from start: %s"%(self._timedelta_from_start))
+        # Convert to a datetime
+        t_start = start_time.getTimeAsDateTime()
 
-            self._startTimeSeries = startTime.getTimeAsDateTime() - self._timedelta_from_start
-            self._endTimeSeries = endTime.getTimeAsDateTime() - self._timedelta_from_start
+        # Check if the date has already been set
+        if self._first_start_time is None:
 
-            # logger.info("\t %s - %s"%(self._startTimeSeries, self._endTimeSeries))
+            # Determine the timedelta
+            t_delta = t_start - t_start.replace(month=1, day=1, hour=0,
+                                                minute=0, second=0)
 
-        else:
-            self._startTimeSeries = self._startTimeSeries + timedelta(hours=+1)
-            self._endTimeSeries = self._endTimeSeries + timedelta(hours=+1)
+            logger.info(f"Normalize start date to ensure that AUSTAL starts "
+                        f"from yyyy-01-01.01.00.00 with the following time "
+                        f"delta: {t_delta}")
+
+            # Set the timestamps for the current period
+            self._start_time = t_start - t_delta
+            self._end_time = end_time.getTimeAsDateTime() - t_delta
+
+            # Set the first start time
+            self._first_start_time = self._start_time
+
+        else:            
+            # Increment the timestamps to get the current period
+            self._start_time += timedelta(hours=+1)
+            self._end_time += timedelta(hours=+1)
+
+        # Add the timestamps to the dates
+        if t_start not in self._dates:
+            self._dates[t_start] = [self._start_time, self._end_time]
+
+        return self._start_time, self._end_time
 
     def CalculateCellHashEfficiency(self, EmissionsValue, SourceGeometryText,
                                     Bbox, cells_matched, isPoint_element_,
@@ -545,57 +585,74 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
                 # Store results
                 # self._matched_cells = None
-                self.source_counter = 0
                 # self._geometries = OrderedDict()
                 self._results = OrderedDict()
                 self._series = OrderedDict()
                 self._total_sources = OrderedDict()
                 self._timeID_per_source = OrderedDict()
-                self._dayID = 0
-                self._dateID = None
                 self._dates = OrderedDict()
-                self._startTimeSeries, self._endTimeSeries = None, None
+
+                # Variables for the date normalization
+                self._first_start_time = None
+                self._start_time, self._end_time = None, None
 
                 self._source_geometries = OrderedDict()
 
     @log_time
-    def process(self, startTimeSeries, endTimeSeries, timeval, result, ambient_conditions=None, **kwargs):
+    def process(self,
+                start_time: InventoryTime, end_time: InventoryTime,
+                result: List[Tuple[Union[Source, Movement], Emission]],
+                ambient_conditions: AmbientCondition, **kwargs):
         """
-        Here we define the rest of the parameters for the austal2000.txt file (iq, xq, yq, hq, emission_rate).
-        Moreover, we define the parameters for the grid source file (e????.dmna). The index can be specified as time dependent,
-        hence an index running from 1 to 8760 for example (grid files e0001.dmna to e8760.dmna).
-        This allows to specifiy a different relative spatial distribution of emissions for every hour of the year.
-        Likewise, the overall emission rate of the grid can be specified as time-dependent with hourly means
-        for every hour of the year. This combination provides a high flexibility.
+        todo: rename result
+        todo: add Source type
+
+        Here we define the rest of the parameters for the austal2000.txt file
+        (iq, xq, yq, hq, emission_rate). Moreover, we define the parameters for
+        the grid source file (e????.dmna).
+
+        The index can be specified as time dependent, hence an index running
+         from 1 to 8760 for example (grid files e0001.dmna to e8760.dmna). This
+         allows to specify a different relative spatial distribution of
+         emissions for every hour of the year.
+
+        Likewise, the overall emission rate of the grid can be specified as
+         time-dependent with hourly means for every hour of the year. This
+         combination provides a high flexibility.
+
         timeval: the actual date
         """
-        if not (timeval>=startTimeSeries.getTimeAsDateTime() and timeval<endTimeSeries.getTimeAsDateTime()):
-            return [(timeval, self, None)]
 
-        self._lowb = "1 1 1" # (i1 j1 k1, in this order)
-        self._hghb = " ".join([str(self._x_meshes), str(self._y_meshes), str(self._z_meshes)]) #(i2 j2 k2, in this order)
+        # (i1 j1 k1, in this order)
+        self._lowb = "1 1 1"
 
-        self.resetDate(startTimeSeries, endTimeSeries, timeval)
+        # (i2 j2 k2, in this order)
+        self._hghb = f"{self._x_meshes} {self._y_meshes} {self._z_meshes}"
 
-        if timeval not in self._dates:
-            self._dates[timeval] = [self._startTimeSeries, self._endTimeSeries]
-        fdate = self._dates[list(self._dates.keys())[0]][0]
+        # Make sure that the calculation starts from yyyy-01-01.01.00.00
+        _start_time, _end_time = self.set_normalized_date(start_time, end_time)
+        _end_time_string = _end_time.strftime('%Y-%m-%d.%H:%M:%S')
 
-        self.source_counter += +1
-        self._results.setdefault(self._endTimeSeries.strftime('%Y-%m-%d.%H:%M:%S'),OrderedDict())
+        # Get the first starting date
+        fdate = self._first_start_time
 
-        self._series.setdefault(self._endTimeSeries.strftime('%Y-%m-%d.%H:%M:%S'),OrderedDict())
-        # ToDo: Add Obukhov length to ambient conditions
-        ac_ = {
-               "WindDirection": ambient_conditions.getWindDirection(),
-               "WindSpeed": ambient_conditions.getWindSpeed(),
-               "ObukhovLength": ambient_conditions.getObukhovLength()
-               }
-        self._series[self._endTimeSeries.strftime('%Y-%m-%d.%H:%M:%S')].update(ac_)
+        # Set results and series for this period if it has not been set
+        self._results.setdefault(_end_time_string, OrderedDict())
+        self._series.setdefault(_end_time_string, OrderedDict())
+
+        # Add ambient conditions to the series
+        self._series[_end_time_string].update({
+            "WindDirection": ambient_conditions.getWindDirection(),
+            "WindSpeed": ambient_conditions.getWindSpeed(),
+            "ObukhovLength": ambient_conditions.getObukhovLength()
+        })
 
         # ToDo: how much finer/coarser is the emission dd ?
-        dd_ = self._mesh_width#/float(3) #horizontal mesh width in m
-        sk_ = " ".join([str(self._grid.getResolutionZ()*z) for z in range(0, self._z_meshes+1)]) #vertical grid (h0 h1 h2 ...), heights above ground in m
+        # horizontal mesh width in m
+        dd_ = self._mesh_width
+        # vertical grid (h0 h1 h2 ...), heights above ground in m
+        sk_ = " ".join(str(self._grid.getResolutionZ() * z) for z in
+                       range(self._z_meshes + 1))
         mode_ = '"text"'
         form_ = '"Eq%5.1f"'
         vldf_ = '"V"'
@@ -605,10 +662,14 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         # Loop over all emissions and append one data point for every cell to
         # total_emissions_per_cell_dict
-        source_counter = 0
 
-        self.total_emissions_per_cell_dict = {}  # for the specific result
+        # for the specific result
+        total_emissions_per_cell_dict = {}
 
+        # TODO[RPFK]: ERROR - open_alaqs.alaqs_core.alaqsutils : [-] Error in
+        #  update_emissions() [line 2789]: local variable 'fill_results'
+        #  referenced before assignment
+        #  Error when running calculation that has empty results.
         for (source_, emissions__) in result:
             fill_results = OrderedDict()
 
@@ -666,12 +727,12 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
                         for cell_hash in matched_cells_coeff:
                             emission_value_ *= matched_cells_coeff[cell_hash]
-                            if cell_hash in self.total_emissions_per_cell_dict:
-                                self.total_emissions_per_cell_dict[cell_hash] += emission_value_
-                                # self.total_emissions_per_cell_dict[cell_hash] += matched_cells_coeff[cell_hash]
+                            if cell_hash in total_emissions_per_cell_dict:
+                                total_emissions_per_cell_dict[cell_hash] += emission_value_
+                                # total_emissions_per_cell_dict[cell_hash] += matched_cells_coeff[cell_hash]
                             else:
-                                self.total_emissions_per_cell_dict[cell_hash] = emission_value_
-                                # self.total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
+                                total_emissions_per_cell_dict[cell_hash] = emission_value_
+                                # total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
                         # self.CalculateCellHashEfficiency(MultiPolygonEmissions,
                         #                                  g_wkt, bbox, matched_cells, isPoint_element_,
                         #                                  isLine_element_, isPolygon_element_, isMultiPolygon_element_)
@@ -699,19 +760,19 @@ class AUSTAL2000DispersionModule(DispersionModule):
                     emission_value_ = copy.deepcopy(emissions_)
                     for cell_hash in matched_cells_coeff:
                         emission_value_ *= matched_cells_coeff[cell_hash]
-                        if cell_hash in self.total_emissions_per_cell_dict:
-                            self.total_emissions_per_cell_dict[cell_hash] += emission_value_
-                            # self.total_emissions_per_cell_dict[cell_hash] += matched_cells_coeff[cell_hash]
+                        if cell_hash in total_emissions_per_cell_dict:
+                            total_emissions_per_cell_dict[cell_hash] += emission_value_
+                            # total_emissions_per_cell_dict[cell_hash] += matched_cells_coeff[cell_hash]
                         else:
-                            self.total_emissions_per_cell_dict[cell_hash] = emission_value_
-                            # self.total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
+                            total_emissions_per_cell_dict[cell_hash] = emission_value_
+                            # total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
 
 
                     # for cell_hash in matched_cells_coeff:
-                    #     if cell_hash in self.total_emissions_per_cell_dict:
-                    #         self.total_emissions_per_cell_dict[cell_hash] += matched_cells_coeff[cell_hash]
+                    #     if cell_hash in total_emissions_per_cell_dict:
+                    #         total_emissions_per_cell_dict[cell_hash] += matched_cells_coeff[cell_hash]
                     #     else:
-                    #         self.total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
+                    #         total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
                     # self.CalculateCellHashEfficiency(emissions_,emissions_.getGeometryText(), bbox, matched_cells,
                     #                     isPoint_element_, isLine_element_, isPolygon_element_, isMultiPolygon_element_)
 
@@ -719,7 +780,9 @@ class AUSTAL2000DispersionModule(DispersionModule):
         output_path = self.getOutputPathAsPath()
 
         # Fill Emissions Matrix with emission rate (normalised to 1)
-        for _pollutant in self._pollutants_list:
+        for source_counter, _pollutant in enumerate(self._pollutants_list):
+
+            # Start the counter at 1
             source_counter += +1
 
             # Create the source id
@@ -733,8 +796,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
             # initialize emission matrix for each pollutant
             # (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
 
-            hashed_emissions = sum([self.total_emissions_per_cell_dict[hash_].transposeToKilograms().getValue(_pollutant, "kg")[0]
-                                    for hash_ in self.total_emissions_per_cell_dict])
+            hashed_emissions = sum([total_emissions_per_cell_dict[hash_].transposeToKilograms().getValue(_pollutant, "kg")[0]
+                                    for hash_ in total_emissions_per_cell_dict])
 
             # if total_emissions_per_mov.transposeToKilograms().getValue(_pollutant, "kg")[0] and \
             #         abs(hashed_emissions - total_emissions_per_mov.transposeToKilograms().getValue(_pollutant, "kg")[0])>0.1 :
@@ -748,8 +811,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
             if hashed_emissions > 0:
                 # initialize emission matrix for each pollutant
                 # (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
-                for hash in self.total_emissions_per_cell_dict:
-                    if self.total_emissions_per_cell_dict[hash].getValue(_pollutant)[0] <= 0:
+                for hash in total_emissions_per_cell_dict:
+                    if total_emissions_per_cell_dict[hash].getValue(_pollutant)[0] <= 0:
                         continue
 
                     i_, j_, k_ = self._grid.convertCellHashToXYZIndices(hash)
@@ -782,7 +845,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
                     try:
                         self._emission_grid_matrix[ii, jj, kk] += \
-                            self.total_emissions_per_cell_dict[hash].getValue(
+                            total_emissions_per_cell_dict[hash].getValue(
                                 _pollutant)[0] / hashed_emissions
                     except Exception as e:
                         pass
@@ -793,6 +856,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             if _pollutant not in self._total_sources[source_id]:
                 self._total_sources.setdefault(source_id, []).append(_pollutant)
 
+            # Update the source id
             if source_id in self._timeID_per_source:
                 time_id = self._timeID_per_source[source_id]
                 self._timeID_per_source.update({source_id: time_id + 1})
@@ -810,42 +874,256 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
             fill_results[source_id].update(pollutant_dic)
 
-            self._results[self._endTimeSeries.strftime('%Y-%m-%d.%H:%M:%S')].update(fill_results)
+            self._results[_end_time_string].update(fill_results)
 
             # Start writing to file
             try:
-                time_interval = "e"+str(self._timeID_per_source[source_id]).zfill(4)
-                text_file = open(os.path.join(str(self.getOutputPath()), source_id, "%s.dmna" % time_interval), "w")
-
-                start_ = "%s.%s"%((self._startTimeSeries-fdate).days, self._startTimeSeries.strftime("%H:%M:%S"))
-                text_file.write("t1\t%s\n" % start_)
-                end_ = "%s.%s"%((self._endTimeSeries-fdate).days, self._endTimeSeries.strftime("%H:%M:%S"))
-                text_file.write("t2\t%s\n" % end_)
-
-                text_file.write("dd\t%s\n" % dd_)
-                text_file.write("sk\t%s\n" % sk_)
-                text_file.write("-\n")
-                text_file.write("mode\t%s\n" % mode_)
-                text_file.write("form\t%s\n" % form_)
-                text_file.write("vldf\t%s\n" % vldf_)
-                text_file.write("artp\t%s\n" % artp_)
-                text_file.write("dims\t%s\n" % dims_)
-                text_file.write("axes\t%s\n" % axes_)
-                text_file.write("sequ\t%s\n" % self.getSequ())
-                text_file.write("-\n")
-                text_file.write("lowb\t%s\n" %self._lowb)
-                text_file.write("hghb\t%s\n" %self._hghb)
-                text_file.write("*\n")
-
-                for x, y in itertools.product(*list(map(range, (x_dim, y_dim)))):
-                    text_file.write("%s\n"%("\t").join([str(elem) for elem in self._emission_grid_matrix[x,y].tolist()]))
-                    if y+1 == y_dim:
-                       text_file.write("\n")
-                text_file.write("***\n")
-                text_file.close()
+                self.writeGridFile(
+                    source_id,
+                    self._timeID_per_source[source_id],
+                    dd_,
+                    sk_,
+                    mode_,
+                    form_,
+                    vldf_,
+                    artp_,
+                    dims_,
+                    axes_
+                )
 
             except Exception as exc_:
                 logger.error(exc_)
+
+    def getGridFilePath(self, source: Union[int, str], index: int) -> Path:
+        # Get the output path (as Path)
+        output_path = self.getOutputPathAsPath()
+
+        # Get the source name
+        if isinstance(source, int):
+            source = str(source).zfill(2)
+
+        # Get the file stem
+        file_stem = "e" + str(index).zfill(4)
+
+        # Get the file path
+        return (output_path / source / file_stem).with_suffix(".dmna")
+
+    def writeGridFile(self, source: Union[int, str], index: int,
+                      dd_, sk_, mode_, form_, vldf_, artp_, dims_, axes_):
+        """
+        Create an AUSTAL grid file conform specifications.
+
+        Source path, timestamps and data are taken from the attributes of the
+         main class, other values may be specified as input parameters to this
+         method.
+
+        :param source: the identifier of the source
+        :param index: the identifier of the grid file
+        :param dd_: vertical grid (h0 h1 h2 ...), heights above ground in m
+        :param sk_: vertical grid, heights above ground in m
+        :param mode_: mode of the data part (text or binary)
+        :param form_: format of a data element (e.g. Eq%5.1f or Eq%12.5e)
+        :param vldf_: type of value (for post-processing, here V for volume
+         value)
+        :param artp_: array type description (should be set to M)
+        :param dims_: dimension of the data part (for post-processing, must be
+         set to 3)
+        :param axes_: type of indices (for post-processing, must be set to xyz)
+        """
+
+        # Get the file path
+        file_path = self.getGridFilePath(source, index)
+
+        if file_path.exists():
+            raise FileExistsError(file_path)
+
+        # Get the (normalized) first time, current start time and end time
+        _first = self._first_start_time
+        _start = self._start_time
+        _end = self._end_time
+
+        # Get the number of days to the start/end since the start
+        delta_f_start_days = (_start - _first).days
+        delta_f_end_days = (_end - _first).days
+
+        # Format the timestamps
+        start_ = f"{delta_f_start_days}.{_start.strftime('%H:%M:%S')}"
+        end_ = f"{delta_f_end_days}.{_end.strftime('%H:%M:%S')}"
+
+        # Get the emissions grid dimensions
+        x_dim, y_dim, z_dim = self._emission_grid_matrix.shape
+
+        # Start writing to file
+        with file_path.open('w') as text_file:
+
+            # Write header: grid information
+            text_file.write("t1\t%s\n" % start_)
+            text_file.write("t2\t%s\n" % end_)
+            text_file.write("dd\t%s\n" % dd_)
+            text_file.write("sk\t%s\n" % sk_)
+
+            # Add separator
+            text_file.write("-\n")
+
+            # Write header: data information
+            text_file.write("mode\t%s\n" % mode_)
+            text_file.write("form\t%s\n" % form_)
+            text_file.write("vldf\t%s\n" % vldf_)
+            text_file.write("artp\t%s\n" % artp_)
+            text_file.write("dims\t%s\n" % dims_)
+            text_file.write("axes\t%s\n" % axes_)
+            text_file.write("sequ\t%s\n" % self.getSequ())
+
+            # Add separator
+            text_file.write("-\n")
+
+            # Write header: data information
+            text_file.write("lowb\t%s\n" % self._lowb)
+            text_file.write("hghb\t%s\n" % self._hghb)
+
+            # Add separator
+            text_file.write("*\n")
+
+            # Write data
+            for x, y in itertools.product(*list(map(range, (x_dim, y_dim)))):
+                text_file.write("%s\n" % ("\t").join([str(elem) for elem in
+                                                      self._emission_grid_matrix[
+                                                          x, y].tolist()]))
+                if y + 1 == y_dim:
+                    text_file.write("\n")
+
+            # Add terminator
+            text_file.write("***\n")
+
+    @log_time
+    def writeInputFile(self):
+        """
+        Create an AUSTAL input file conform specifications.
+
+        """
+
+        # Get the file path
+        file_path = self.getOutputPathAsPath() / "austal.txt"
+
+        if file_path.exists():
+            raise FileExistsError(file_path)
+
+        with file_path.open('w') as text_file:
+
+            text_file.write("----------------- general parameters\n")
+            text_file.write("ti\t%s\t' title\n" % self._title)
+            text_file.write("qs\t%s\t' quality level\n" % self._quality_level)
+            text_file.write("----------------- meteorology\n")
+            text_file.write(
+                "z0\t%s\t' roughness length (m)\n" % self._roughness_level)
+            text_file.write(
+                "d0\t%s\t' displacement height (m)\n" % self._displacement_height)
+            text_file.write(
+                "ha\t%s\t' anemometer height (m)\n" % self._anemometer_height)
+            text_file.write("----------------- calculation grid\n")
+            text_file.write("dd\t%s\t' mesh width\n" % self._mesh_width)
+            text_file.write("x0\t%s\t' left border (m)\n" % (
+                        self._x_left_border_calc_grid - self._reference_x))
+            text_file.write("y0\t%s\t' lower border (m)\n" % (
+                        self._y_left_border_calc_grid - self._reference_y))
+
+            # Add receptor points
+            if (len(self.xp_) == len(self.yp_)) and (
+                    len(self.xp_) == len(self.zp_)) and (len(self.xp_) > 0):
+                text_file.write("xp\t%s\t' x-receptor\n" % ("\t").join(
+                    [str(rx) for rx in self.xp_]))
+                text_file.write("yp\t%s\t' y-receptor\n" % ("\t").join(
+                    [str(ry) for ry in self.yp_]))
+                text_file.write("hp\t%s\t' z-receptor\n" % ("\t").join(
+                    [str(rz) for rz in self.zp_]))
+
+            text_file.write("nx\t%s\t' number of meshes\n" % self._x_meshes)
+            text_file.write("ny\t%s\t' number of meshes\n" % self._y_meshes)
+            text_file.write("----------------- source definitions\n")
+
+            if self._options:
+                text_file.write('os\t"%s"\n' % self._options)
+            text_file.write(
+                "iq\t%s\t' file index (set in series.dmna)\n" % ("\t").join(
+                    ["?" for _iq_ in list(self._total_sources.keys())]))
+            text_file.write("hq\t%s\t' source height (ignored)\n" % ("\t").join(
+                [str(self._source_height) for _iq_ in
+                 list(self._total_sources.keys())]))
+            text_file.write(
+                "xq\t%s\t' x-lower left (south-west) corner of the source\n" % (
+                    "\t").join(
+                    [str(self._x_left_border_em_grid - self._reference_x) for _iq_
+                     in list(self._total_sources.keys())]))
+            text_file.write(
+                "yq\t%s\t' y-lower left (south-west) corner of the source\n" % (
+                    "\t").join(
+                    [str(self._y_left_border_em_grid - self._reference_y) for _iq_
+                     in list(self._total_sources.keys())]))
+
+            for poll in self._pollutants_list:
+                if poll.startswith('PM'):
+                    poll = "PM-2" if poll == "PM10" else "PM-1"
+                text_file.write("%s\t%s\t' total %s (in g/s) (set in series.dmna)\n" \
+                                % (poll.lower(), ("\t").join(
+                    ["?" if poll in self._total_sources[src] else "0" for iq, src in
+                     enumerate(self._total_sources.keys())]), poll))
+
+    @log_time
+    def writeTimeSeriesFile(self):
+        """
+        Create an AUSTAL time series file conform specifications.
+
+        """
+
+        # Get the file path
+        file_path = self.getOutputPathAsPath() / "series.dmna"
+
+        if file_path.exists():
+            raise FileExistsError(file_path)
+
+        # Get the sorted results
+        sorted_results = self.getSortedResults()
+
+        form_line = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"']
+        with file_path.open('w') as text_file:
+
+            for iq_ in list(self._total_sources.keys()):
+                form_line.append('"%s.iq%%3.0f"' % str(iq_))
+            for iq_ in list(self._total_sources.keys()):
+                for poll in self._total_sources[iq_]:
+                    form_line.append('"%s.%s%%10.3e"' % (str(iq_), poll.lower()))
+
+            text_file.write('form\t%s\n' % ('\t').join(form_line))
+            text_file.write('mode\t"text"\n')
+            text_file.write('sequ\t"i"\n')
+            text_file.write('dims\t%s\n' % 1)
+            text_file.write('lowb\t%s\n' % 1)
+            text_file.write('hghb\t%s\n' % (len(list(sorted_results.keys()))))
+            text_file.write('*\n')
+
+            for dt in sorted_results:
+                iqs = [sorted_results[dt][iq]['timeID'] if iq in list(
+                    sorted_results[dt].keys()) else 1 for iq in
+                       list(self._total_sources.keys())]
+                emission_rates = []
+                for iq_ in list(self._total_sources.keys()):
+                    for poll in self._total_sources[iq_]:
+                        if (iq_ in sorted_results[dt] and poll in
+                                sorted_results[dt][iq_]):
+                            emission_rates.append("{:10.3e}".format(
+                                sorted_results[dt][iq_][poll]))
+                        else:
+                            emission_rates.append("{:10.3e}".format(0))
+
+                text_file.write("%s\t%5.0f\t%5.1f\t%7.1f\t%s\t%s\n" % (
+                    dt, self._series[dt]['WindDirection'],
+                    self._series[dt]['WindSpeed'],
+                    self._series[dt]['ObukhovLength'],
+                    ('\t').join(["%3.0f" % (iq) for iq in iqs]),
+                    ('\t').join([er for er in emission_rates]))
+                                )
+            text_file.write('\n')
+            text_file.write('***\n')
 
     @log_time
     def endJob(self):
@@ -855,103 +1133,21 @@ class AUSTAL2000DispersionModule(DispersionModule):
                     raise Exception("AUSTAL2000: Time Interval Error")
 
                 try:
-                # --------------------- austal2000.txt ------------------------------------------------------
-                    text_file = open(os.path.join(str(self.getOutputPath()),"austal.txt"), "w")
-                    self._austal2000_txt = os.path.join(str(self.getOutputPath()),"austal.txt")
-                    # text_file = open(os.path.join(str(self.getOutputPath()), "austal2000.txt"), "w")
-                    # self._austal2000_txt = os.path.join(str(self.getOutputPath()), "austal2000.txt")
-                    text_file.write("----------------- general parameters\n")
-                    text_file.write("ti\t%s\t' title\n" % self._title)
-                    text_file.write("qs\t%s\t' quality level\n" % self._quality_level)
-                    text_file.write("----------------- meteorology\n")
-                    text_file.write("z0\t%s\t' roughness length (m)\n" % self._roughness_level)
-                    text_file.write("d0\t%s\t' displacement height (m)\n" % self._displacement_height)
-                    text_file.write("ha\t%s\t' anemometer height (m)\n" % self._anemometer_height)
-                    text_file.write("----------------- calculation grid\n")
-                    text_file.write("dd\t%s\t' mesh width\n" % self._mesh_width)
-                    text_file.write("x0\t%s\t' left border (m)\n" % (self._x_left_border_calc_grid - self._reference_x))
-                    text_file.write("y0\t%s\t' lower border (m)\n" % (self._y_left_border_calc_grid - self._reference_y))
-
-                    # Add receptor points
-                    if (len(self.xp_) == len(self.yp_)) and (len(self.xp_) == len(self.zp_)) and (len(self.xp_)>0) :
-                        text_file.write("xp\t%s\t' x-receptor\n" % ("\t").join([str(rx) for rx in self.xp_]))
-                        text_file.write("yp\t%s\t' y-receptor\n" % ("\t").join([str(ry) for ry in self.yp_]))
-                        text_file.write("hp\t%s\t' z-receptor\n" % ("\t").join([str(rz) for rz in self.zp_]))
-                        # text_file.write("xp\t%s\t' x-receptor\n" % ("\t").join([str(rx) for rx in xp_ for ry in yp_]))
-                        # text_file.write("yp\t%s\t' y-receptor\n" % ("\t").join([str(ry) for rx in xp_ for ry in yp_]))
-                        # text_file.write("hp\t%s\t' z-receptor\n" % ("\t").join([str(0) for rx in xp_ for yr in yp_]))
-
-                    text_file.write("nx\t%s\t' number of meshes\n" % self._x_meshes)
-                    text_file.write("ny\t%s\t' number of meshes\n" % self._y_meshes)
-                    text_file.write("----------------- source definitions\n")
-
-                    if self._options:
-                        text_file.write('os\t"%s"\n'%self._options)
-                    text_file.write("iq\t%s\t' file index (set in series.dmna)\n" % ("\t").join(["?" for _iq_ in list(self._total_sources.keys())]))
-                    text_file.write("hq\t%s\t' source height (ignored)\n" % ("\t").join([str(self._source_height) for _iq_ in list(self._total_sources.keys())]))
-                    text_file.write("xq\t%s\t' x-lower left (south-west) corner of the source\n" % ("\t").join([str(self._x_left_border_em_grid - self._reference_x) for _iq_ in list(self._total_sources.keys())]))
-                    text_file.write("yq\t%s\t' y-lower left (south-west) corner of the source\n" % ("\t").join([str(self._y_left_border_em_grid - self._reference_y) for _iq_ in list(self._total_sources.keys())]))
-
-                    for poll in self._pollutants_list:
-                        if poll.startswith('PM'):
-                            poll = "PM-2" if poll == "PM10" else "PM-1"
-                        text_file.write("%s\t%s\t' total %s (in g/s) (set in series.dmna)\n" \
-                            %(poll.lower(), ("\t").join(["?" if poll in self._total_sources[src] else "0" for iq, src in enumerate(self._total_sources.keys())]), poll))
-
-                    text_file.close()
-
+                    self.writeInputFile()
                 except Exception as e:
-                    logger.error("AUSTAL2000: Cannot write 'austal.txt' : %s" % e)
+                    logger.error(
+                        "AUSTAL2000: Cannot write 'austal.txt' : %s" % e)
                     return False
 
-                # ----------------------------------------------------------------------------------------
                 self.checkHoursinResults()
 
                 try:
-                    # ------------------------Series.dmna (for time-dependent parameters)---------------------
-                    text_file = open(os.path.join(str(self.getOutputPath()),"series.dmna"), "w")
-                    self._series_dmna = os.path.join(str(self.getOutputPath()),"series.dmna")
-                    # ----------------------------------------------------------------------------------------
-                    form_line = ['"te%20lt"','"ra%5.0f"','"ua%5.1f"','"lm%7.1f"']
-
-                    for iq_ in list(self._total_sources.keys()):
-                        form_line.append('"%s.iq%%3.0f"'%str(iq_))
-                    for iq_ in list(self._total_sources.keys()):
-                        for poll in self._total_sources[iq_]:
-                            form_line.append('"%s.%s%%10.3e"'%(str(iq_), poll.lower()))
-                    # ----------------------------------------------------------------------------------------
-                    text_file.write('form\t%s\n'%('\t').join(form_line))
-                    text_file.write('mode\t"text"\n')
-                    text_file.write('sequ\t"i"\n')
-                    text_file.write('dims\t%s\n'%1)
-                    text_file.write('lowb\t%s\n'%1)
-                    text_file.write('hghb\t%s\n'%(len(list(self.getSortedResults().keys()))))
-                    text_file.write('*\n')
-                    # ----------------------------------------------------------------------------------------
-                    for dt in self.getSortedResults():
-                        iqs = [self.getSortedResults()[dt][iq]['timeID'] if iq in list(self.getSortedResults()[dt].keys()) else 1 \
-                               for iq in list(self._total_sources.keys())]
-                        emission_rates = []
-                        for iq_ in list(self._total_sources.keys()):
-                            for poll in self._total_sources[iq_]:
-                                if (iq_ in self.getSortedResults()[dt] and poll in self.getSortedResults()[dt][iq_]):
-                                    emission_rates.append("{:10.3e}".format(self.getSortedResults()[dt][iq_][poll]))
-                                else:
-                                    emission_rates.append("{:10.3e}".format(0))
-                    # ----------------------------------------------------------------------------------------
-                        text_file.write("%s\t%5.0f\t%5.1f\t%7.1f\t%s\t%s\n"%(dt, self._series[dt]['WindDirection'],self._series[dt]['WindSpeed'], self._series[dt]['ObukhovLength'], \
-                            ('\t').join([ "%3.0f"%(iq) for iq in iqs]),\
-                            ('\t').join([er for er in emission_rates]))
-                            )
-                    text_file.write('\n')
-                    text_file.write('***\n')
-                    text_file.close()
-                    # logger.debug("Finished <series.dmna>")
-                    # ----------------------------------------------------------------------------------------
+                    self.writeTimeSeriesFile()
                     return True
                 except Exception as e:
-                    logger.error("AUSTAL2000: Cannot write 'Series.dmna' %s" % e)
+                    logger.error("AUSTAL2000: Cannot write 'Series.dmna' %s", e)
                     return False
+
             except Exception as e:
                 logger.error("AUSTAL2000: Cannot endJob: %s" % e)
                 return False
