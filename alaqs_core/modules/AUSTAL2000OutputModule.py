@@ -1051,41 +1051,40 @@ class AUSTAL2000DispersionModule(DispersionModule):
         if file_path.exists():
             raise FileExistsError(file_path)
 
+        # Get the sorted results
+        sorted_results = self.getSortedResults()
+
+        form_line = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"']
         with file_path.open('w') as text_file:
-
-            # TODO[RPFK]: Reformat self.getSortedResults() to prevent slow functions from being called many times.
-
-            # ----------------------------------------------------------------------------------------
-            form_line = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"']
 
             for iq_ in list(self._total_sources.keys()):
                 form_line.append('"%s.iq%%3.0f"' % str(iq_))
             for iq_ in list(self._total_sources.keys()):
                 for poll in self._total_sources[iq_]:
                     form_line.append('"%s.%s%%10.3e"' % (str(iq_), poll.lower()))
-            # ----------------------------------------------------------------------------------------
+
             text_file.write('form\t%s\n' % ('\t').join(form_line))
             text_file.write('mode\t"text"\n')
             text_file.write('sequ\t"i"\n')
             text_file.write('dims\t%s\n' % 1)
             text_file.write('lowb\t%s\n' % 1)
-            text_file.write('hghb\t%s\n' % (len(list(self.getSortedResults().keys()))))
+            text_file.write('hghb\t%s\n' % (len(list(sorted_results.keys()))))
             text_file.write('*\n')
-            # ----------------------------------------------------------------------------------------
-            for dt in self.getSortedResults():
-                iqs = [self.getSortedResults()[dt][iq]['timeID'] if iq in list(
-                    self.getSortedResults()[dt].keys()) else 1 \
-                       for iq in list(self._total_sources.keys())]
+
+            for dt in sorted_results:
+                iqs = [sorted_results[dt][iq]['timeID'] if iq in list(
+                    sorted_results[dt].keys()) else 1 for iq in
+                       list(self._total_sources.keys())]
                 emission_rates = []
                 for iq_ in list(self._total_sources.keys()):
                     for poll in self._total_sources[iq_]:
-                        if (iq_ in self.getSortedResults()[dt] and poll in
-                                self.getSortedResults()[dt][iq_]):
+                        if (iq_ in sorted_results[dt] and poll in
+                                sorted_results[dt][iq_]):
                             emission_rates.append("{:10.3e}".format(
-                                self.getSortedResults()[dt][iq_][poll]))
+                                sorted_results[dt][iq_][poll]))
                         else:
                             emission_rates.append("{:10.3e}".format(0))
-                # ----------------------------------------------------------------------------------------
+
                 text_file.write("%s\t%5.0f\t%5.1f\t%7.1f\t%s\t%s\n" % (
                     dt, self._series[dt]['WindDirection'],
                     self._series[dt]['WindSpeed'],
@@ -1095,9 +1094,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
                                 )
             text_file.write('\n')
             text_file.write('***\n')
-
-            # logger.debug("Finished <series.dmna>")
-            # ----------------------------------------------------------------------------------------
 
     @log_time
     def endJob(self):
