@@ -1,9 +1,6 @@
 import copy
-import errno
 import itertools
 import os
-import shutil
-import stat
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -341,6 +338,10 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
     @log_time
     def emptyOutputPath(self):
+        import errno
+        import shutil
+        import stat
+
         def handleRemoveReadonly(func, path, exc):
             # If os.rmdir or os.remove fails due to permissions, change
             # permissions
@@ -581,6 +582,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         # Get the file path
         return (output_path / source / file_stem).with_suffix(".dmna")
 
+    @log_time
     def writeGridFile(self, source: Union[int, str], index: int,
                       dd_, sk_, mode_, form_, vldf_, artp_, dims_, axes_):
         """
@@ -890,9 +892,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
         _start_time, _end_time = self.set_normalized_date(start_time, end_time)
         _end_time_string = _end_time.strftime('%Y-%m-%d.%H:%M:%S')
 
-        # Get the first starting date
-        fdate = self._first_start_time
-
         # Set results and series for this period if it has not been set
         self._results.setdefault(_end_time_string, OrderedDict())
         self._series.setdefault(_end_time_string, OrderedDict())
@@ -918,17 +917,12 @@ class AUSTAL2000DispersionModule(DispersionModule):
         axes_ = '"xyz"'
 
         # Loop over all emissions and append one data point for every cell to
-        # total_emissions_per_cell_dict
-
-        # for the specific result
+        # total_emissions_per_cell_dict for the specific result
         total_emissions_per_cell_dict = {}
 
-        # TODO[RPFK]: ERROR - open_alaqs.alaqs_core.alaqsutils : [-] Error in
-        #  update_emissions() [line 2789]: local variable 'fill_results'
-        #  referenced before assignment
-        #  Error when running calculation that has empty results.
+        fill_results = OrderedDict()
+
         for (source_, emissions__) in result:
-            fill_results = OrderedDict()
 
             self._source_height = 0
             if hasattr(source_, 'getHeight') and source_.getHeight() > 0:
@@ -1040,7 +1034,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         for source_counter, _pollutant in enumerate(self._pollutants_list):
 
             # Start the counter at 1
-            source_counter += +1
+            source_counter += 1
 
             # Create the source id
             source_id = str(source_counter).zfill(2)
