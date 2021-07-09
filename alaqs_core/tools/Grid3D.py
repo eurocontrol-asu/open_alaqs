@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from typing import Tuple
 
 import geopandas as gpd
 import pandas as pd
@@ -98,16 +99,16 @@ class Grid3D(object):
             else:
                 return []
 
-    def getResolution(self):
+    def getResolution(self) -> Tuple[float, float, float]:
         return self._x_resolution, self._y_resolution, self._z_resolution
 
-    def getResolutionX(self):
+    def getResolutionX(self) -> float:
         return self._x_resolution
 
-    def getResolutionY(self):
+    def getResolutionY(self) -> float:
         return self._y_resolution
 
-    def getResolutionZ(self):
+    def getResolutionZ(self) -> float:
         return self._z_resolution
 
     def getAirportAltitude(self):
@@ -299,7 +300,8 @@ class Grid3D(object):
                 values_str = "?" + ", ?" * (len(row_list[0]) - 1)
                 sql_text = "INSERT INTO %s VALUES (%s);" % (
                     table_name, values_str)
-                result = sql_interface.query_insert_many(database_path, sql_text,
+                result = sql_interface.query_insert_many(database_path,
+                                                         sql_text,
                                                          row_list)
                 if isinstance(result, str):
                     logger.error("Row was not inserted: %s" % result)
@@ -537,8 +539,8 @@ class Grid3D(object):
 
         return matched_cells
 
-    def matchBoundingBoxToCellHashList(self, bbox, max_height=None,
-                                       z_as_list=False):
+    def matchBoundingBoxToCellHashList(self, bbox: dict,
+                                       z_as_list: bool = False) -> list:
         matched_cells = []
         for (x, y, z) in self.matchBoundingBoxToXYZindices(bbox, z_as_list):
             if not z_as_list:

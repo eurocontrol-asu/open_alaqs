@@ -19,6 +19,7 @@ from open_alaqs.alaqs_core.interfaces.InventoryTimeSeries import InventoryTime
 from open_alaqs.alaqs_core.interfaces.Movement import Movement
 from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools import sql_interface, spatial, conversion
+from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 
 logger = get_logger(__name__)
 
@@ -162,7 +163,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
     def setRoughnessLength(self, var):
         self._roughness_level = var
 
-    def getGrid(self):
+    def getGrid(self) -> Grid3D:
         return self._grid
 
     def setGrid(self, var):
@@ -203,12 +204,14 @@ class AUSTAL2000DispersionModule(DispersionModule):
         return OrderedDict(
             sorted(list(self._series.items()), key=lambda t: t[0]))
 
-    def getDataPoint(self, x_, y_, z_, is_polygon, grid_):
+    def getDataPoint(self, x_: float, y_: float, z_: float, is_polygon: bool,
+                     grid_: Grid3D) -> dict:
         data_point_ = {
-            "coordinates":{
-                "x":x_,
-                "y":y_,
-                "z":z_}
+            "coordinates": {
+                "x": x_,
+                "y": y_,
+                "z": z_
+            }
         }
         if is_polygon:
             data_point_.update({
@@ -222,12 +225,12 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 }})
         return data_point_
 
-    def getBoundingBox(self, geometry_wkt):
-        bbox = spatial.getBoundingBox(geometry_wkt)
-        return bbox
+    def getBoundingBox(self, geometry_wkt: str) -> Union[dict, None]:
+        return spatial.getBoundingBox(geometry_wkt)
 
-    def getCellBox(self, x_, y_, z_, grid_):
-        cell_bbox = {
+    def getCellBox(self, x_: float, y_: float, z_: float,
+                   grid_: Grid3D) -> dict:
+        return {
             "x_min": x_ - grid_.getResolutionX() / 2.,
             "x_max": x_ + grid_.getResolutionX() / 2.,
             "y_min": y_ - grid_.getResolutionY() / 2.,
@@ -235,30 +238,40 @@ class AUSTAL2000DispersionModule(DispersionModule):
             "z_min": z_ - grid_.getResolutionZ() / 2.,
             "z_max": z_ + grid_.getResolutionZ() / 2.
         }
-        return cell_bbox
 
-    def getEfficiencyXY(self, emissions_geometry_wkt, cell_bbox, isPoint,
-                        isLine, isPolygon, isMultiPolygon):
-        # efficiency = relative area of geometry in the cell box
-        efficiency_ = 0.
-        if isPoint or isPolygon or isMultiPolygon:
-            efficiency_ = spatial.getRelativeAreaInBoundingBox(
-                emissions_geometry_wkt, cell_bbox)
-        elif isLine:
-            #get relative length (X,Y) in bounding box (assumes constant speed)
-            efficiency_ = spatial.getRelativeLengthXYInBoundingBox(emissions_geometry_wkt, cell_bbox)
-        return efficiency_
+    def getEfficiencyXY(self, emissions_wkt: str, cell_bbox: dict,
+                        _is_point: bool, _is_line: bool, _is_polygon: bool,
+                        _is_multi_polygon: bool) -> float:
+        """
+        Get the efficiency of XY, with the efficiency being the relative area of
+         geometry in the cell box
 
-    def getEfficiencyZ(self, geometry_wkt, z_min, z_max, cell_box, isPoint,
-                       isLine, isPolygon, isMultiPolygon):
-        efficiency_ = 0.
-        if isPoint:
-            #points match each cell exactly once
-            efficiency_ = spatial.getRelativeHeightInBoundingBox(z_min, z_max, cell_box)
-        elif isPolygon or isLine or isMultiPolygon:
-            efficiency_ = spatial.getRelativeHeightInBoundingBox(z_min, z_max,
-                                                                 cell_box)
-        return efficiency_
+        """
+        if _is_point or _is_polygon or _is_multi_polygon:
+            return spatial.getRelativeAreaInBoundingBox(
+                emissions_wkt, cell_bbox)
+        elif _is_line:
+            # get relative length (X,Y) in bounding box (assumes constant speed)
+            return spatial.getRelativeLengthXYInBoundingBox(
+                emissions_wkt, cell_bbox)
+        return 0
+
+    def getEfficiencyZ(self, z_min: float, z_max: float, cell_box: dict,
+                       _is_point: bool, _is_line: bool, _is_polygon: bool,
+                       _is_multi_polygon: bool) -> float:
+        """
+        Get the efficiency of Z, with the efficiency being the relative height
+         of the geometry in the cell box
+
+        """
+        if _is_point:
+            # points match each cell exactly once
+            return spatial.getRelativeHeightInBoundingBox(
+                z_min, z_max, cell_box)
+        elif _is_polygon or _is_line or _is_multi_polygon:
+            return spatial.getRelativeHeightInBoundingBox(
+                z_min, z_max, cell_box)
+        return 0
 
     @log_time
     def getGridXYFromReferencePoint(self):
@@ -512,61 +525,71 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         return self._start_time, self._end_time
 
-    def CalculateCellHashEfficiency(self, EmissionsValue, SourceGeometryText,
-                                    Bbox, cells_matched, isPoint_element_,
-                                    isLine_element_, isPolygon_element_,
-                                    isMultiPolygon_element_):
+    def CalculateCellHashEfficiency(
+            self,
+            source_wkt: str,
+            bbox: dict,
+            cells_matched: list,
+            _is_point_element: bool,
+            _is_line_element: bool,
+            _is_polygon_element: bool,
+            _is_multipolygon_element: bool
+    ):
+        """
+        Get the efficiency for each cell hash
 
-        debug_efficiency_ = 0.
-        debug_efficiency_xy = 0.
+        """
 
-        z_min = Bbox["z_min"]
-        z_max = Bbox["z_max"]
+        # Get the grid
+        grid = self.getGrid()
 
+        # Get z_min and z_max
+        z_min = bbox["z_min"]
+        z_max = bbox["z_max"]
+
+        # Create an empty dict for the cell efficiency
         cell_efficiency = OrderedDict()
+
+        # Process all matched cells
         for xy_rect in cells_matched:
-            debug_efficiency_z = 0.
             if not xy_rect:
-                logger.info("No matched_cells (%s) for Bbox: %s (Geo: %s) ? " % (xy_rect, Bbox, SourceGeometryText))
+                logger.info("No matched_cells (%s) for Bbox: %s (Geo: %s) ? ",
+                            (xy_rect, bbox, source_wkt))
                 continue
 
+            # Set the x,y-efficiency to zero
             efficiency_xy_ = 0.
             for index_height_level, cell_hash in enumerate(xy_rect):
 
-                x_, y_, z_ = 0., 0., 0.
-                (x_, y_, z_) = self.getGrid().convertCellHashListToCenterGridCellCoordinates([cell_hash])[cell_hash]
+                # Get the x, y, z coordinates
+                x_, y_, z_ = \
+                    grid.convertCellHashListToCenterGridCellCoordinates(
+                        [cell_hash])[cell_hash]
 
-                cell_bbox = self.getCellBox(x_, y_, z_, self.getGrid())
+                # Get the cell box
+                cell_bbox = self.getCellBox(x_, y_, z_, grid)
 
-                # calculate once for each x,y pair (and all z levels):
-                if not index_height_level:
-                    efficiency_xy_ = self.getEfficiencyXY(SourceGeometryText, cell_bbox, isPoint=isPoint_element_,
-                                                          isLine=isLine_element_, isPolygon=isPolygon_element_, isMultiPolygon=isMultiPolygon_element_)
-                    debug_efficiency_xy += efficiency_xy_
+                # calculate the efficiency once for each x,y pair and reuse it
+                #  for all z levels
+                if index_height_level == 0:
+                    efficiency_xy_ = self.getEfficiencyXY(
+                        source_wkt, cell_bbox,
+                        _is_point=_is_point_element,
+                        _is_line=_is_line_element,
+                        _is_polygon=_is_polygon_element,
+                        _is_multi_polygon=_is_multipolygon_element)
 
                 # get relative height (Z) in bbox
-                efficiency_z_ = self.getEfficiencyZ(SourceGeometryText, z_min, z_max, cell_bbox,
-                                                    isPoint=isPoint_element_, isLine=isLine_element_,isPolygon=isPolygon_element_, isMultiPolygon=isMultiPolygon_element_)
-                efficiency_ = 1. * float(efficiency_xy_) * float(efficiency_z_)
+                efficiency_z_ = self.getEfficiencyZ(
+                    z_min, z_max, cell_bbox,
+                    _is_point=_is_point_element,
+                    _is_line=_is_line_element,
+                    _is_polygon=_is_polygon_element,
+                    _is_multi_polygon=_is_multipolygon_element)
 
-                debug_efficiency_z += efficiency_z_
-                debug_efficiency_ += efficiency_
+                # combine the (x,y) and (z) efficiency
+                cell_efficiency[cell_hash] = efficiency_xy_ * efficiency_z_
 
-                cell_efficiency[cell_hash] = float(efficiency_)
-
-                # emission_value_ = copy.deepcopy(EmissionsValue)
-                # if emission_value_ is None:
-                #     emission_value_ = 0.
-                # else:
-                #     emission_value_ *= float(efficiency_)
-                #     cell_efficiency[cell_hash] = emission_value_
-
-                # cell_efficiency[cell_hash] = emission_value_
-
-                # if cell_hash in self.total_emissions_per_cell_dict:
-                #     self.total_emissions_per_cell_dict[cell_hash] += emission_value_
-                # else:
-                #     self.total_emissions_per_cell_dict[cell_hash] = emission_value_
         return cell_efficiency
 
     def getGridFilePath(self, source: Union[int, str], index: int) -> Path:
@@ -923,20 +946,14 @@ class AUSTAL2000DispersionModule(DispersionModule):
                      f" {datetime.now() - start}")
 
         for (source_, emissions__) in result:
-            logger.debug(f"source_: {type(source_)}")
-            # logger.debug(f"source_ {type(source_)}:\n{source_}")
 
             self._source_height = 0
             if hasattr(source_, 'getHeight') and source_.getHeight() > 0:
                 self._source_height = source_.getHeight()
 
             for emissions_ in emissions__:
-                logger.debug(f"emissions_: {type(emissions_)}")
-                # logger.debug(f"emissions_ {type(emissions_)}:\n{emissions_}")
 
-                # TODO[RPFK]: REMOVE BEFORE COMMIT
-                cycle_start = datetime.now()
-
+                # Get the geometry text
                 e_wkt = emissions_.getGeometryText()
                 if e_wkt is None:
                     logger.warning(f"AUSTAL2000: Did not find geometry for "
@@ -946,9 +963,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 # Get the geometry
                 geom = emissions_.getGeometry()
 
-                # TODO[RPFK]: REMOVE BEFORE COMMIT
-                logger.debug(f"C945: {datetime.now() - cycle_start}")
-
                 # Some convenience variables
                 is_point_element_ = "POINT" in e_wkt
                 is_line_element_ = ("LINE" in e_wkt) & ("MULTI" not in e_wkt)
@@ -957,152 +971,47 @@ class AUSTAL2000DispersionModule(DispersionModule):
                     ("POLYGON" in e_wkt) & ("MULTI" not in e_wkt)
                 is_multi_polygon_element_ = "MULTIPOLYGON" in e_wkt
 
-                if is_multi_polygon_element_ or is_multi_line_element_:
-                    # TODO[RPFK]: REMOVE BEFORE COMMIT
-                    logger.debug(f"C962: {datetime.now() - cycle_start}")
+                # Get the grid
+                grid = self.getGrid()
 
-                    MultiPolygonEmissions = 1 / len(list(geom)) * emissions_
+                if is_multi_polygon_element_ or is_multi_line_element_:
+
+                    # Divide the emissions over the geometries
+                    multi_polygon_emissions = 1 / len(list(geom)) * emissions_
+
+                    # Add the emissions for each geometry
                     for i, g in enumerate(geom):
 
                         # Get the WKT representation of the geometry
                         g_wkt = g.wkt
 
-                        # Check if the matched cells are know for this geometry
-                        if g_wkt in self._source_geometries.keys():
+                        # Get matched cell coefficients for this geometry
+                        matched_cells_coeff = self.getMatchedCellCoeffsG(
+                            g_wkt, emissions_, grid, is_point_element_,
+                            is_line_element_, is_polygon_element_,
+                            is_multi_polygon_element_)
 
-                            # Get the matched cells for this geometry
-                            matched_cells_coeff = \
-                                self._source_geometries[g_wkt]['efficiency']
-                        else:
-                            # TODO[RPFK]: REMOVE BEFORE COMMIT
-                            logger.debug(
-                                f"C974: {datetime.now() - cycle_start}")
-
-                            # Determine the bounding box
-                            bbox = self.getBoundingBox(g_wkt)
-
-                            # Take into account the effective vertical source
-                            #  extent and shift
-                            if "delta_z" in emissions_.getVerticalExtent():
-                                bbox["z_max"] = \
-                                    bbox["z_max"] + \
-                                    emissions_.getVerticalExtent()['delta_z']
-
-                            # Get the matched cells for this geometry
-                            matched_cells = \
-                                self.getGrid().matchBoundingBoxToCellHashList(
-                                    bbox, z_as_list=True)
-                            matched_cells_coeff = \
-                                self.CalculateCellHashEfficiency(
-                                    MultiPolygonEmissions, g_wkt, bbox,
-                                    matched_cells, is_point_element_,
-                                    is_line_element_, is_polygon_element_,
-                                    is_multi_polygon_element_)
-
-                            # Store the matched cells for this WKT
-                            self._source_geometries[g_wkt] = {
-                                'bbox': bbox,
-                                'matched_cells': matched_cells,
-                                "efficiency": matched_cells_coeff
-                            }
-
-                        # TODO[RPFK]: REMOVE BEFORE COMMIT
-                        logger.debug(f"C999: {datetime.now() - cycle_start}")
-
-                        emission_value_ = copy.deepcopy(MultiPolygonEmissions)
-
-                        # TODO[RPFK]: improve the following method, as it is
-                        #  very slow when there are a lot of matched cells.
-                        for cell_hash in matched_cells_coeff:
-                            emission_value_ *= matched_cells_coeff[cell_hash]
-                            if cell_hash in total_emissions_per_cell_dict:
-                                total_emissions_per_cell_dict[cell_hash] += \
-                                    emission_value_
-                            else:
-                                total_emissions_per_cell_dict[cell_hash] = \
-                                    emission_value_
-
-                        # TODO[RPFK]: REMOVE BEFORE COMMIT
-                        logger.debug(f"C1017: {datetime.now() - cycle_start}")
+                        # Update the total emissions per cell
+                        total_emissions_per_cell_dict = \
+                            self.updateEmissions(
+                                total_emissions_per_cell_dict,
+                                multi_polygon_emissions,
+                                matched_cells_coeff)
 
                 else:
-                    # TODO[RPFK]: REMOVE BEFORE COMMIT
-                    logger.debug(f"C1018: {datetime.now() - cycle_start}")
 
-                    # Check if the matched cells are know for this geometry
-                    if e_wkt in self._source_geometries.keys():
+                    # Get matched cell coefficients for this geometry
+                    matched_cells_coeff = self.getMatchedCellCoeffsE(
+                        e_wkt, emissions_, grid, is_point_element_,
+                        is_line_element_, is_polygon_element_,
+                        is_multi_polygon_element_)
 
-                        # Get the matched cells for this geometry
-                        matched_cells_coeff = \
-                            self._source_geometries[e_wkt]['efficiency']
-                    else:
-                        # TODO[RPFK]: REMOVE BEFORE COMMIT
-                        logger.debug(f"C1022: {datetime.now() - cycle_start}")
-
-                        # Determine the bounding box
-                        bbox = self.getBoundingBox(e_wkt)
-
-                        # Take into account the effective vertical source
-                        #  extent and shift
-                        if "delta_z" in emissions_.getVerticalExtent() and \
-                                emissions_.getVerticalExtent()['delta_z'] > 0:
-                            bbox["z_max"] = \
-                                bbox["z_max"] + \
-                                emissions_.getVerticalExtent()['delta_z']
-
-                        # Get the matched cells for this geometry
-                        matched_cells = \
-                            self.getGrid().matchBoundingBoxToCellHashList(
-                                bbox, z_as_list=True)
-                        matched_cells_coeff = \
-                            self.CalculateCellHashEfficiency(
-                                emissions_, e_wkt, bbox, matched_cells,
-                                is_point_element_, is_line_element_,
-                                is_polygon_element_, is_multi_polygon_element_)
-
-                        # Store the matched cells for this WKT
-                        self._source_geometries[e_wkt] = {
-                            'bbox': bbox,
-                            'matched_cells': matched_cells,
-                            "efficiency": matched_cells_coeff
-                        }
-
-                    # TODO[RPFK]: REMOVE BEFORE COMMIT
-                    logger.debug(f"matched_cells_coeff"
-                                 f"(n={len(matched_cells_coeff)}):"
-                                 f" {type(matched_cells_coeff)}")
-                                 # f"\n{matched_cells_coeff}")
-
-                    # TODO[RPFK]: REMOVE BEFORE COMMIT
-                    logger.debug(f"C1046: {datetime.now() - cycle_start}")
-
-                    emission_value_ = copy.deepcopy(emissions_)
-
-                    # TODO[RPFK]: REMOVE BEFORE COMMIT
-                    logger.debug(f"C1046+: {datetime.now() - cycle_start}")
-
-                    for cell_hash in matched_cells_coeff:
-                        emission_value_ *= matched_cells_coeff[cell_hash]
-                        if cell_hash in total_emissions_per_cell_dict:
-                            total_emissions_per_cell_dict[cell_hash] += emission_value_
-                            # total_emissions_per_cell_dict[cell_hash] += matched_cells_coeff[cell_hash]
-                        else:
-                            total_emissions_per_cell_dict[cell_hash] = emission_value_
-                            # total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
-
-                    # TODO[RPFK]: REMOVE BEFORE COMMIT
-                    logger.debug(f"C1059: {datetime.now() - cycle_start}")
-
-                    # for cell_hash in matched_cells_coeff:
-                    #     if cell_hash in total_emissions_per_cell_dict:
-                    #         total_emissions_per_cell_dict[cell_hash] += matched_cells_coeff[cell_hash]
-                    #     else:
-                    #         total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
-                    # self.CalculateCellHashEfficiency(emissions_,emissions_.getGeometryText(), bbox, matched_cells,
-                    #                     isPoint_element_, is_line_element_, is_polygon_element_, is_multi_polygon_element_)
-
-                logger.debug(f"Cycle time elapsed at cycle end:"
-                             f" {datetime.now() - cycle_start}")
+                    # Update the total emissions per cell
+                    total_emissions_per_cell_dict = \
+                        self.updateEmissions(
+                            total_emissions_per_cell_dict,
+                            emissions_,
+                            matched_cells_coeff)
 
         # Get the output path (as Path)
         output_path = self.getOutputPathAsPath()
@@ -1273,3 +1182,114 @@ class AUSTAL2000DispersionModule(DispersionModule):
     # odor:_nnn Rated odorant with a rate factor resulting from the identifier nnn,
     # see Section 3.10. Possible values for nnn are: 050 (in the fed- eral state Baden-Württemberg: 040),
     # 075 (in the federal state Baden- Württemberg: 060), 100, 150
+
+    @log_time
+    def getMatchedCellCoeffsG(self, g_wkt, emissions_, grid, is_point_element_,
+                              is_line_element_, is_polygon_element_,
+                              is_multi_polygon_element_):
+        """
+        Get matched cells for this coefficients
+
+        """
+
+        # Check if the matched cells are known for this geometry
+        if g_wkt in self._source_geometries.keys():
+            # Get the matched cells for this geometry
+            return self._source_geometries[g_wkt]['efficiency']
+
+        # Determine the bounding box
+        bbox = self.getBoundingBox(g_wkt)
+
+        # Get the vertical extent
+        vertical_extent = emissions_.getVerticalExtent()
+
+        # Take into account the effective vertical source extent and shift
+        if "delta_z" in vertical_extent:
+            bbox["z_max"] = bbox["z_max"] + vertical_extent['delta_z']
+
+        # Get the matched cells for this geometry
+        matched_cells = grid.matchBoundingBoxToCellHashList(
+            bbox, z_as_list=True)
+        matched_cells_coeff = \
+            self.CalculateCellHashEfficiency(
+                g_wkt, bbox, matched_cells,
+                is_point_element_, is_line_element_,
+                is_polygon_element_,
+                is_multi_polygon_element_)
+
+        # Store the matched cells for this WKT
+        self._source_geometries[g_wkt] = {
+            'bbox': bbox,
+            'matched_cells': matched_cells,
+            "efficiency": matched_cells_coeff
+        }
+
+        return matched_cells_coeff
+
+    @log_time
+    def getMatchedCellCoeffsE(self, e_wkt, emissions_, grid, is_point_element_,
+                              is_line_element_, is_polygon_element_,
+                              is_multi_polygon_element_):
+        """
+        Get matched cells for this coefficients
+        # TODO[RPFK]: Might be merged with getMatchedCellCoeffsG! See issue #102
+
+        """
+
+        # Check if the matched cells are know for this geometry
+        if e_wkt in self._source_geometries.keys():
+            # Get the matched cells for this geometry
+            return self._source_geometries[e_wkt]['efficiency']
+
+        # Determine the bounding box
+        bbox = self.getBoundingBox(e_wkt)
+
+        # Get the vertical extent
+        vertical_extent = emissions_.getVerticalExtent()
+
+        # Take into account the effective vertical source extent and shift
+        if "delta_z" in vertical_extent and vertical_extent['delta_z'] > 0:
+            bbox["z_max"] = bbox["z_max"] + vertical_extent['delta_z']
+
+        # Get the matched cells for this geometry
+        matched_cells = grid.matchBoundingBoxToCellHashList(
+            bbox, z_as_list=True)
+        matched_cells_coeff = \
+            self.CalculateCellHashEfficiency(
+                e_wkt, bbox, matched_cells,
+                is_point_element_, is_line_element_,
+                is_polygon_element_, is_multi_polygon_element_)
+
+        # Store the matched cells for this WKT
+        self._source_geometries[e_wkt] = {
+            'bbox': bbox,
+            'matched_cells': matched_cells,
+            "efficiency": matched_cells_coeff
+        }
+
+        return matched_cells_coeff
+
+    @log_time
+    def updateEmissions(self, cumulative_cell_emissions: dict,
+                        emissions: Emission, cell_coefficients: dict):
+
+        logger.debug(f'emissions {type(emissions)} objects: {emissions.getObjects()}')
+
+        # Create a copy of the emissions
+        # TODO[RPFK]: Might be wrong! See issue #103
+        emission_value_ = copy.deepcopy(emissions)
+
+        # Update the emissions for each cell
+        for cell_hash in cell_coefficients:
+
+            # Get the emission for this cell
+            emission_value_ *= cell_coefficients[cell_hash]
+
+            if cell_hash in cumulative_cell_emissions:
+                # Add the emissions if there are values present
+                cumulative_cell_emissions[cell_hash] += emission_value_
+            else:
+                # Set the emissions if there are no values present
+                cumulative_cell_emissions[cell_hash] = emission_value_
+
+        return cumulative_cell_emissions
