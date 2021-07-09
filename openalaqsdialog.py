@@ -2700,7 +2700,18 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 raise Exception("Error: Inventory path '%s' doesn't exist!" % (
                     inventory_path))
 
+            # Temporarily set the project database to extract the airport data
+            project_database = ProjectDatabase()
+            project_database_path = getattr(project_database, "path", None)
+            project_database.path = inventory_path
             study_data = alaqs.load_study_setup_dict()
+            ref_latitude = study_data.get('airport_latitude', 0.)
+            ref_longitude = study_data.get('airport_longitude', 0.)
+            ref_altitude = study_data.get('airport_elevation', 0.)
+            if project_database_path is None:
+                del project_database.path
+            else:
+                project_database.path = project_database_path
 
             grid_configuration = {
                 'x_cells': 100,
@@ -2709,9 +2720,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 'x_resolution': 100,
                 'y_resolution': 100,
                 'z_resolution': 100,
-                'reference_latitude': study_data.get('airport_latitude', 0.),
-                'reference_longitude': study_data.get('airport_longitude', 0.),
-                'reference_altitude': study_data.get('airport_elevation', 0.)
+                'reference_latitude': ref_latitude,
+                'reference_longitude': ref_longitude,
+                'reference_altitude': ref_altitude
             }
 
             em_config = self._emission_calculation_configuration_widget.getValues()
@@ -2736,8 +2747,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             for m_name_ in module_names_:
                 if m_name_ == "MovementSource":
                     em_config = self._emission_calculation_configuration_widget.getValues()
-                    em_config["reference_altitude"] = \
-                        study_data.get('airport_elevation', 0.)
+                    em_config["reference_altitude"] = ref_altitude
                     em_config["receptors"] = \
                         self._emission_calculation_configuration_widget._receptor_points
 
