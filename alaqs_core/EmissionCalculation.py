@@ -243,7 +243,6 @@ class EmissionCalculation:
                 'timestamp': (datetime.now() - p_start) / second
             })
 
-
         # execute beginJob(..) of dispersion modules
         logger.debug("Execute beginJob(..) of dispersion modules")
         for dispersion_mod_name, dispersion_mod_obj in \
@@ -260,7 +259,6 @@ class EmissionCalculation:
                 'timestamp': (datetime.now() - p_start) / second
             })
 
-
         # execute process(..)
         logger.debug("Execute process(..)")
         try:
@@ -268,7 +266,7 @@ class EmissionCalculation:
             progressbar = self.ProgressBarWidget(
                 dispersion_enabled=dispersion_enabled)
             count_ = 0
-            total_count_ = len(list(self.getTimeSeries()))
+            total_count_ = len(list(self.getTimeSeries())) - 1
 
             # loop on complete period
             for (start_, end_) in self.getPeriods():
@@ -282,8 +280,8 @@ class EmissionCalculation:
                 logger.debug(f'start {start_time}, end {end_time}')
 
                 # update the progress bar
-                count_ += +1
                 progressbar.setValue(int(100 * count_ / total_count_))
+                count_ += +1
                 QtCore.QCoreApplication.instance().processEvents()
                 if progressbar.wasCanceled():
                     raise StopIteration("Operation canceled by user")
