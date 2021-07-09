@@ -469,6 +469,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         return missed_hours
 
+    @log_time
     def set_normalized_date(self, start_time: InventoryTime,
                             end_time: InventoryTime):
         """
@@ -882,6 +883,9 @@ class AUSTAL2000DispersionModule(DispersionModule):
         timeval: the actual date
         """
 
+        # TODO[RPFK]: REMOVE BEFORE COMMIT
+        start = datetime.now()
+
         # (i1 j1 k1, in this order)
         self._lowb = "1 1 1"
 
@@ -909,106 +913,174 @@ class AUSTAL2000DispersionModule(DispersionModule):
         # vertical grid (h0 h1 h2 ...), heights above ground in m
         sk_ = " ".join(str(self._grid.getResolutionZ() * z) for z in
                        range(self._z_meshes + 1))
-        mode_ = '"text"'
-        form_ = '"Eq%5.1f"'
-        vldf_ = '"V"'
-        artp_ = '"M"'
-        dims_ = 3
-        axes_ = '"xyz"'
 
         # Loop over all emissions and append one data point for every cell to
         # total_emissions_per_cell_dict for the specific result
         total_emissions_per_cell_dict = {}
 
-        fill_results = OrderedDict()
+        # TODO[RPFK]: REMOVE BEFORE COMMIT
+        logger.debug(f"Time elapsed before 'result'-loop (n={len(result)}):"
+                     f" {datetime.now() - start}")
 
         for (source_, emissions__) in result:
+            logger.debug(f"source_: {type(source_)}")
+            # logger.debug(f"source_ {type(source_)}:\n{source_}")
 
             self._source_height = 0
             if hasattr(source_, 'getHeight') and source_.getHeight() > 0:
                 self._source_height = source_.getHeight()
 
             for emissions_ in emissions__:
-                if emissions_.getGeometryText() is None:
+                logger.debug(f"emissions_: {type(emissions_)}")
+                # logger.debug(f"emissions_ {type(emissions_)}:\n{emissions_}")
+
+                # TODO[RPFK]: REMOVE BEFORE COMMIT
+                cycle_start = datetime.now()
+
+                e_wkt = emissions_.getGeometryText()
+                if e_wkt is None:
                     logger.warning(f"AUSTAL2000: Did not find geometry for "
                                    f"source: {source_.getName()}")
                     continue
 
+                # Get the geometry
                 geom = emissions_.getGeometry()
 
+                # TODO[RPFK]: REMOVE BEFORE COMMIT
+                logger.debug(f"C945: {datetime.now() - cycle_start}")
+
                 # Some convenience variables
-                isPoint_element_ = bool("POINT" in emissions_.getGeometryText())
-                isLine_element_ = bool(("LINE" in emissions_.getGeometryText())&(not "MULTI" in emissions_.getGeometryText()))
-                isMultiLine_element_ = bool("MULTILINE" in str(emissions_.getGeometryText()))
-                isPolygon_element_ = bool(("POLYGON" in emissions_.getGeometryText())&(not "MULTI" in emissions_.getGeometryText()))
-                isMultiPolygon_element_ = bool("MULTIPOLYGON" in emissions_.getGeometryText())
+                is_point_element_ = "POINT" in e_wkt
+                is_line_element_ = ("LINE" in e_wkt) & ("MULTI" not in e_wkt)
+                is_multi_line_element_ = "MULTILINE" in e_wkt
+                is_polygon_element_ = \
+                    ("POLYGON" in e_wkt) & ("MULTI" not in e_wkt)
+                is_multi_polygon_element_ = "MULTIPOLYGON" in e_wkt
 
-                if isMultiPolygon_element_ or isMultiLine_element_:
+                if is_multi_polygon_element_ or is_multi_line_element_:
+                    # TODO[RPFK]: REMOVE BEFORE COMMIT
+                    logger.debug(f"C962: {datetime.now() - cycle_start}")
+
                     MultiPolygonEmissions = 1 / len(list(geom)) * emissions_
-                    for i in range(0, len(list(geom))):
-                        g = geom[i]
-                        g_wkt = g.wkt
-                        # for i in range(0, geom.GetGeometryCount()):
-                        #     g = geom.GetGeometryRef(i)
-                        #     bbox = self.getBoundingBox(g.ExportToWkt())
-                        if g_wkt not in self._source_geometries.keys():
-                            bbox = self.getBoundingBox(g_wkt)
-                            # Take into account the effective vertical source extent and shift
-                            bbox["z_max"] = bbox["z_max"]+emissions_.getVerticalExtent()['delta_z'] if \
-                                "delta_z" in emissions_.getVerticalExtent() else bbox["z_max"]
-                            matched_cells = self.getGrid().matchBoundingBoxToCellHashList(bbox, z_as_list=True)
-                            matched_cells_coeff = self.CalculateCellHashEfficiency(MultiPolygonEmissions,
-                                                             g_wkt, bbox, matched_cells, isPoint_element_,
-                                                             isLine_element_, isPolygon_element_,
-                                                             isMultiPolygon_element_)
+                    for i, g in enumerate(geom):
 
-                            self._source_geometries[g_wkt] = {'bbox': bbox,
-                                                              'matched_cells': matched_cells,
-                                                              "efficiency": matched_cells_coeff}
+                        # Get the WKT representation of the geometry
+                        g_wkt = g.wkt
+
+                        # Check if the matched cells are know for this geometry
+                        if g_wkt in self._source_geometries.keys():
+
+                            # Get the matched cells for this geometry
+                            matched_cells_coeff = \
+                                self._source_geometries[g_wkt]['efficiency']
                         else:
-                            # bbox = self._source_geometries[g_wkt]['bbox']
-                            # matched_cells = self._source_geometries[g_wkt]['matched_cells']
-                            matched_cells_coeff = self._source_geometries[g_wkt]['efficiency']
+                            # TODO[RPFK]: REMOVE BEFORE COMMIT
+                            logger.debug(
+                                f"C974: {datetime.now() - cycle_start}")
+
+                            # Determine the bounding box
+                            bbox = self.getBoundingBox(g_wkt)
+
+                            # Take into account the effective vertical source
+                            #  extent and shift
+                            if "delta_z" in emissions_.getVerticalExtent():
+                                bbox["z_max"] = \
+                                    bbox["z_max"] + \
+                                    emissions_.getVerticalExtent()['delta_z']
+
+                            # Get the matched cells for this geometry
+                            matched_cells = \
+                                self.getGrid().matchBoundingBoxToCellHashList(
+                                    bbox, z_as_list=True)
+                            matched_cells_coeff = \
+                                self.CalculateCellHashEfficiency(
+                                    MultiPolygonEmissions, g_wkt, bbox,
+                                    matched_cells, is_point_element_,
+                                    is_line_element_, is_polygon_element_,
+                                    is_multi_polygon_element_)
+
+                            # Store the matched cells for this WKT
+                            self._source_geometries[g_wkt] = {
+                                'bbox': bbox,
+                                'matched_cells': matched_cells,
+                                "efficiency": matched_cells_coeff
+                            }
+
+                        # TODO[RPFK]: REMOVE BEFORE COMMIT
+                        logger.debug(f"C999: {datetime.now() - cycle_start}")
 
                         emission_value_ = copy.deepcopy(MultiPolygonEmissions)
-                        # if emission_value_ is None:
-                        #     emission_value_ = 0.
-                        # else:
-                        #     emission_value_ *= float(efficiency_)
 
+                        # TODO[RPFK]: improve the following method, as it is
+                        #  very slow when there are a lot of matched cells.
                         for cell_hash in matched_cells_coeff:
                             emission_value_ *= matched_cells_coeff[cell_hash]
                             if cell_hash in total_emissions_per_cell_dict:
-                                total_emissions_per_cell_dict[cell_hash] += emission_value_
-                                # total_emissions_per_cell_dict[cell_hash] += matched_cells_coeff[cell_hash]
+                                total_emissions_per_cell_dict[cell_hash] += \
+                                    emission_value_
                             else:
-                                total_emissions_per_cell_dict[cell_hash] = emission_value_
-                                # total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
-                        # self.CalculateCellHashEfficiency(MultiPolygonEmissions,
-                        #                                  g_wkt, bbox, matched_cells, isPoint_element_,
-                        #                                  isLine_element_, isPolygon_element_, isMultiPolygon_element_)
+                                total_emissions_per_cell_dict[cell_hash] = \
+                                    emission_value_
+
+                        # TODO[RPFK]: REMOVE BEFORE COMMIT
+                        logger.debug(f"C1017: {datetime.now() - cycle_start}")
 
                 else:
-                    if emissions_.getGeometryText() not in self._source_geometries.keys():
-                        bbox = self.getBoundingBox(emissions_.getGeometryText())
-                        if "delta_z" in emissions_.getVerticalExtent() and emissions_.getVerticalExtent()['delta_z'] > 0:
-                            bbox["z_max"] = bbox["z_max"] + emissions_.getVerticalExtent()['delta_z']
-                        matched_cells = self.getGrid().matchBoundingBoxToCellHashList(bbox, z_as_list=True)
-                        matched_cells_coeff = self.CalculateCellHashEfficiency(emissions_,
-                                                                               emissions_.getGeometryText(), bbox, matched_cells,
-                                                                               isPoint_element_,
-                                                                               isLine_element_, isPolygon_element_,
-                                                                               isMultiPolygon_element_)
+                    # TODO[RPFK]: REMOVE BEFORE COMMIT
+                    logger.debug(f"C1018: {datetime.now() - cycle_start}")
 
-                        self._source_geometries[emissions_.getGeometryText()] = {'bbox': bbox,
-                                                          'matched_cells': matched_cells,
-                                                          "efficiency": matched_cells_coeff}
+                    # Check if the matched cells are know for this geometry
+                    if e_wkt in self._source_geometries.keys():
+
+                        # Get the matched cells for this geometry
+                        matched_cells_coeff = \
+                            self._source_geometries[e_wkt]['efficiency']
                     else:
-                        # bbox = self._source_geometries[emissions_.getGeometryText()]['bbox']
-                        # matched_cells = self._source_geometries[emissions_.getGeometryText()]['matched_cells']
-                        matched_cells_coeff = self._source_geometries[emissions_.getGeometryText()]['efficiency']
+                        # TODO[RPFK]: REMOVE BEFORE COMMIT
+                        logger.debug(f"C1022: {datetime.now() - cycle_start}")
+
+                        # Determine the bounding box
+                        bbox = self.getBoundingBox(e_wkt)
+
+                        # Take into account the effective vertical source
+                        #  extent and shift
+                        if "delta_z" in emissions_.getVerticalExtent() and \
+                                emissions_.getVerticalExtent()['delta_z'] > 0:
+                            bbox["z_max"] = \
+                                bbox["z_max"] + \
+                                emissions_.getVerticalExtent()['delta_z']
+
+                        # Get the matched cells for this geometry
+                        matched_cells = \
+                            self.getGrid().matchBoundingBoxToCellHashList(
+                                bbox, z_as_list=True)
+                        matched_cells_coeff = \
+                            self.CalculateCellHashEfficiency(
+                                emissions_, e_wkt, bbox, matched_cells,
+                                is_point_element_, is_line_element_,
+                                is_polygon_element_, is_multi_polygon_element_)
+
+                        # Store the matched cells for this WKT
+                        self._source_geometries[e_wkt] = {
+                            'bbox': bbox,
+                            'matched_cells': matched_cells,
+                            "efficiency": matched_cells_coeff
+                        }
+
+                    # TODO[RPFK]: REMOVE BEFORE COMMIT
+                    logger.debug(f"matched_cells_coeff"
+                                 f"(n={len(matched_cells_coeff)}):"
+                                 f" {type(matched_cells_coeff)}")
+                                 # f"\n{matched_cells_coeff}")
+
+                    # TODO[RPFK]: REMOVE BEFORE COMMIT
+                    logger.debug(f"C1046: {datetime.now() - cycle_start}")
 
                     emission_value_ = copy.deepcopy(emissions_)
+
+                    # TODO[RPFK]: REMOVE BEFORE COMMIT
+                    logger.debug(f"C1046+: {datetime.now() - cycle_start}")
+
                     for cell_hash in matched_cells_coeff:
                         emission_value_ *= matched_cells_coeff[cell_hash]
                         if cell_hash in total_emissions_per_cell_dict:
@@ -1018,6 +1090,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
                             total_emissions_per_cell_dict[cell_hash] = emission_value_
                             # total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
 
+                    # TODO[RPFK]: REMOVE BEFORE COMMIT
+                    logger.debug(f"C1059: {datetime.now() - cycle_start}")
 
                     # for cell_hash in matched_cells_coeff:
                     #     if cell_hash in total_emissions_per_cell_dict:
@@ -1025,10 +1099,19 @@ class AUSTAL2000DispersionModule(DispersionModule):
                     #     else:
                     #         total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
                     # self.CalculateCellHashEfficiency(emissions_,emissions_.getGeometryText(), bbox, matched_cells,
-                    #                     isPoint_element_, isLine_element_, isPolygon_element_, isMultiPolygon_element_)
+                    #                     isPoint_element_, is_line_element_, is_polygon_element_, is_multi_polygon_element_)
+
+                logger.debug(f"Cycle time elapsed at cycle end:"
+                             f" {datetime.now() - cycle_start}")
 
         # Get the output path (as Path)
         output_path = self.getOutputPathAsPath()
+        fill_results = OrderedDict()
+
+        # TODO[RPFK]: REMOVE BEFORE COMMIT
+        logger.debug(f"Time elapsed before 'pollutants_list'-loop "
+                     f"(n={len(self._pollutants_list)}): "
+                     f"{datetime.now() - start}")
 
         # Fill Emissions Matrix with emission rate (normalised to 1)
         for source_counter, _pollutant in enumerate(self._pollutants_list):
@@ -1133,16 +1216,20 @@ class AUSTAL2000DispersionModule(DispersionModule):
                     self._timeID_per_source[source_id],
                     dd_,
                     sk_,
-                    mode_,
-                    form_,
-                    vldf_,
-                    artp_,
-                    dims_,
-                    axes_
+                    '"text"',
+                    '"Eq%5.1f"',
+                    '"V"',
+                    '"M"',
+                    3,
+                    '"xyz"'
                 )
 
             except Exception as exc_:
                 logger.error(exc_)
+
+        # TODO[RPFK]: REMOVE BEFORE COMMIT
+        logger.debug(f"Time elapsed after 'pollutants_list'-loop:"
+                     f" {datetime.now() - start}")
 
     @log_time
     def endJob(self):
