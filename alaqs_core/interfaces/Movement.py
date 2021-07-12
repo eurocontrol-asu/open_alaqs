@@ -1269,8 +1269,9 @@ class MovementStore(Store, metaclass=Singleton):
         if mdf.empty:
             return
 
-        df_cols = ["aircraft", "engine_name", "runway", "runway_direction", "gate", "taxi_route", "profile_id",
-                   "trajectory", "runway_trajectory"]
+        df_cols = ["aircraft", "engine_name", "runway", "runway_direction",
+                   "gate", "taxi_route", "profile_id", "trajectory",
+                   "runway_trajectory"]
         eq_mdf = pd.DataFrame(index=mdf.index, columns=df_cols)
         eq_mdf = eq_mdf.fillna(np.nan)  # fill with None rather than NaNs
 
@@ -1391,37 +1392,30 @@ class MovementStore(Store, metaclass=Singleton):
         stage_1.nextValue()
 
         # TODO[RPFK]: REWRITE if agreed upon in #95
-        profile_unique = mdf["profile_id"].astype(str).unique()
-        for prf in profile_unique:
-            indices = mdf[mdf["profile_id"] == prf].index
+        mdf["profile_id"] = mdf["profile_id"].astype(str)
+        for prf, prf_mdf in mdf.groupby("profile_id"):
+            indices = prf_mdf.index
             # Add a default profile even when the profile_id is missing
-            if len(indices)==0 or not prf or pd.isna(prf) or not self.getAircraftTrajectoryStore().hasKey(prf):
-                for ag, airgroup in mdf.groupby(["aircraft", "departure_arrival"]):
+            if len(indices) == 0 or not prf or pd.isna(prf) or \
+                    not self.getAircraftTrajectoryStore().hasKey(prf):
+                for ag, airgroup in mdf.groupby(
+                        ["aircraft", "departure_arrival"]):
                     ij_ = airgroup.index
                     if aircraft_store.hasKey(airgroup["aircraft"].iloc[0]):
                         if airgroup["departure_arrival"].iloc[0] == "A":
                             eq_mdf.loc[ij_, "profile_id"] = \
-                                aircraft_store.getObject(airgroup["aircraft"].iloc[0]).getDefaultArrivalProfileName()
+                                aircraft_store.getObject(
+                                    airgroup["aircraft"].iloc[
+                                        0]).getDefaultArrivalProfileName()
                         elif airgroup["departure_arrival"].iloc[0] == "D":
                             eq_mdf.loc[ij_, "profile_id"] = \
-                                aircraft_store.getObject(airgroup["aircraft"].iloc[0]).getDefaultDepartureProfileName()
+                                aircraft_store.getObject(
+                                    airgroup["aircraft"].iloc[
+                                        0]).getDefaultDepartureProfileName()
                     else:
-                        logger.debug("AC %s not in AircraftStore" % (airgroup["aircraft"].iloc[0]))
+                        logger.debug("AC %s not in AircraftStore" % (
+                        airgroup["aircraft"].iloc[0]))
                         continue
-
-            # elif not prf or pd.isna(prf) or not self.getAircraftTrajectoryStore().hasKey(prf) :
-            #     for ij_ in indices:
-            #         if self.getAircraftStore().hasKey(MovementDataFrame.loc[ij_, "aircraft"]):
-            #             if MovementDataFrame.loc[ij_, "departure_arrival"] == "A":
-            #                 Eq_MovementDataFrame.loc[ij_, "profile_id"] =\
-            #                     self.getAircraftStore().getObject(MovementDataFrame.loc[ij_, "aircraft"]).getDefaultArrivalProfileName()
-            #             elif MovementDataFrame.loc[ij_, "departure_arrival"] == "D":
-            #                 Eq_MovementDataFrame.loc[ij_, "profile_id"] =\
-            #                     self.getAircraftStore().getObject(MovementDataFrame.loc[ij_, "aircraft"]).getDefaultDepartureProfileName()
-            #             # print(Eq_MovementDataFrame.loc[ij_, "profile_id"])
-            #         else:
-            #             # print("AC %s not in AircraftStore"%(MovementDataFrame.loc[ij_, "aircraft"]))
-            #             logger.debug("AC %s not in AircraftStore"%(MovementDataFrame.loc[ij_, "aircraft"]))
             else:
                 eq_mdf.loc[indices, "profile_id"] = None
 
