@@ -332,7 +332,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
     def InitializeEmissionGridMatrix(self):
         if (self._grid is None) or (self._sequ is None):
-            raise Exception("No 3DGrid or Sequence found. Cannot initialize the emissions grid")
+            raise Exception("Cannot initialize the emissions grid. No 3DGrid or"
+                            " Sequence found.")
 
         # Split the sequ once
         sequ_split = self.getSequ().split(",")
@@ -1026,11 +1027,11 @@ class AUSTAL2000DispersionModule(DispersionModule):
                         matched_cells_coeff)
 
         # Create cumulative emissions per cell
-        total_emissions_per_cell_list = \
+        total_emissions_per_cell_df = \
             pd.concat(total_emissions_per_cell_list).groupby(level=0).sum()
 
         # Convert cumulative emissions to Emissions
-        total_emissions_per_cell_dict = total_emissions_per_cell_list.apply(
+        total_emissions_per_cell_dict = total_emissions_per_cell_df.apply(
             lambda x: Emission(x.to_dict()), axis=1
         ).to_dict()
 
@@ -1060,8 +1061,36 @@ class AUSTAL2000DispersionModule(DispersionModule):
             # initialize emission matrix for each pollutant
             # (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
 
-            hashed_emissions = sum([total_emissions_per_cell_dict[hash_].transposeToKilograms().getValue(_pollutant, "kg")[0]
-                                    for hash_ in total_emissions_per_cell_dict])
+            # Get the emissions for this pollutant
+            _pollutant_emissions = total_emissions_per_cell_df.filter(
+                regex=f'^{_pollutant.lower()}_k?g$')
+
+            # Convert to kg (if only g is present)
+            _columns = _pollutant_emissions.columns
+            if _columns.str.endswith('_g').any():
+                for _column in _columns[_columns.str.endswith('_g')]:
+                    _pollutant_emissions[_column[:-1] + 'kg'] = \
+                        _pollutant_emissions[_column] / 1000
+
+            # Get the total emissions in kg
+            if len(_columns) != 1:
+                raise ValueError(f'The number of matching columns should be 1, '
+                                 f'got {_columns}')
+
+            # Get the column name
+            _column_name = _columns[0]
+
+            # Get the emissions for this pollutant in kg
+            _pollutant_emissions_kg = _pollutant_emissions[
+                _column_name[:-1] + 'kg' if _column_name.endswith('_g')
+                else _column_name]
+
+            # Get the total emissions in kg
+            hashed_emissions = _pollutant_emissions_kg.sum()
+
+            # # TODO[RPFK]: USE DATAFRAME INSTEAD OF LOOP!
+            # hashed_emissions = sum([total_emissions_per_cell_dict[hash_].transposeToKilograms().getValue(_pollutant, "kg")[0]
+            #                         for hash_ in total_emissions_per_cell_dict])
 
             # if total_emissions_per_mov.transposeToKilograms().getValue(_pollutant, "kg")[0] and \
             #         abs(hashed_emissions - total_emissions_per_mov.transposeToKilograms().getValue(_pollutant, "kg")[0])>0.1 :
@@ -1072,17 +1101,26 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
             (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
 
+            # Only perform these steps if there are emissions for this pollutant
             if hashed_emissions > 0:
+
+                logger.debug(_pollutant_emissions_kg)
+
                 # initialize emission matrix for each pollutant
                 # (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
                 for hash in total_emissions_per_cell_dict:
+
+                    # Skip if the cell doesn't have non-zero emissions
                     if total_emissions_per_cell_dict[hash].getValue(_pollutant)[0] <= 0:
                         continue
 
                     i_, j_, k_ = self._grid.convertCellHashToXYZIndices(hash)
 
-                    if i_ >= self._x_meshes or j_ >= self._y_meshes or k_ >= self._z_meshes:
-                        # logger.debug("AUSTAL2000 Error: Grid needs to be enlarged. Hash '%s' out of grid. Source:'%s'"%(hash, source_.getName()))
+                    if (i_ >= self._x_meshes) or (j_ >= self._y_meshes) \
+                            or k_ >= self._z_meshes:
+                        # logger.debug("AUSTAL2000 Error: Grid needs to be
+                        # enlarged. Hash '%s' out of grid. Source:'%s'"%(hash,
+                        # source_.getName()))
                         continue
 
                     # Split the sequ once
@@ -1215,7 +1253,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         """
 
         # Check if the matched cells are know for this geometry
-        if wkt in self._source_geometries.keys():
+        if wkt in self._source_geometries:
 
             # Get the matched cells for this geometry
             return self._source_geometries[wkt]['efficiency']
@@ -1233,11 +1271,9 @@ class AUSTAL2000DispersionModule(DispersionModule):
         # Get the matched cells for this geometry
         matched_cells = grid.matchBoundingBoxToCellHashList(
             bbox, z_as_list=True)
-        matched_cells_coeff = \
-            self.CalculateCellHashEfficiency(
-                wkt, bbox, matched_cells,
-                is_point_element_, is_line_element_,
-                is_polygon_element_, is_multi_polygon_element_)
+        matched_cells_coeff = self.CalculateCellHashEfficiency(
+            wkt, bbox, matched_cells, is_point_element_, is_line_element_,
+            is_polygon_element_, is_multi_polygon_element_)
 
         # Store the matched cells for this geometry
         self._source_geometries[wkt] = {
