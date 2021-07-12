@@ -20,7 +20,7 @@ def calculate_fuel_flow_from_power_setting(power_setting, icao_eedb):
                 "settings [%%] from ICAO EEDB!", key)
             return None
 
-    if .60 <= power_setting <= .85:
+    if .0 <= power_setting <= .85:
         # based on the 7 per cent, 30 per cent and 85 per cent thrust
         x1 = 0.07
         x2 = 0.30

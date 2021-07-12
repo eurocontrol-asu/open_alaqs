@@ -133,8 +133,9 @@ class Emission(Store):
                 return False
         return True
 
-    def getGeometryText(self):
+    def getGeometryText(self) -> str:
         return self._geometry_wkt
+
     def getGeometry(self):
         if self._geometry_wkt:
             return loads(str(self._geometry_wkt))
@@ -142,7 +143,7 @@ class Emission(Store):
             return loads(GeometryCollection().to_wkt())
         # return Spatial.ogr.CreateGeometryFromWkt(self._geometry_wkt)
 
-    def setGeometryText(self, var):
+    def setGeometryText(self, var: str):
         self._geometry_wkt = var
 
     # Added for Smooth & Shift

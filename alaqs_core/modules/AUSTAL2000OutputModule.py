@@ -19,6 +19,7 @@ from open_alaqs.alaqs_core.interfaces.InventoryTimeSeries import InventoryTime
 from open_alaqs.alaqs_core.interfaces.Movement import Movement
 from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools import sql_interface, spatial, conversion
+from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 
 logger = get_logger(__name__)
 
@@ -162,7 +163,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
     def setRoughnessLength(self, var):
         self._roughness_level = var
 
-    def getGrid(self):
+    def getGrid(self) -> Grid3D:
         return self._grid
 
     def setGrid(self, var):
@@ -203,12 +204,14 @@ class AUSTAL2000DispersionModule(DispersionModule):
         return OrderedDict(
             sorted(list(self._series.items()), key=lambda t: t[0]))
 
-    def getDataPoint(self, x_, y_, z_, is_polygon, grid_):
+    def getDataPoint(self, x_: float, y_: float, z_: float, is_polygon: bool,
+                     grid_: Grid3D) -> dict:
         data_point_ = {
-            "coordinates":{
-                "x":x_,
-                "y":y_,
-                "z":z_}
+            "coordinates": {
+                "x": x_,
+                "y": y_,
+                "z": z_
+            }
         }
         if is_polygon:
             data_point_.update({
@@ -222,12 +225,12 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 }})
         return data_point_
 
-    def getBoundingBox(self, geometry_wkt):
-        bbox = spatial.getBoundingBox(geometry_wkt)
-        return bbox
+    def getBoundingBox(self, geometry_wkt: str) -> Union[dict, None]:
+        return spatial.getBoundingBox(geometry_wkt)
 
-    def getCellBox(self, x_, y_, z_, grid_):
-        cell_bbox = {
+    def getCellBox(self, x_: float, y_: float, z_: float,
+                   grid_: Grid3D) -> dict:
+        return {
             "x_min": x_ - grid_.getResolutionX() / 2.,
             "x_max": x_ + grid_.getResolutionX() / 2.,
             "y_min": y_ - grid_.getResolutionY() / 2.,
@@ -235,31 +238,42 @@ class AUSTAL2000DispersionModule(DispersionModule):
             "z_min": z_ - grid_.getResolutionZ() / 2.,
             "z_max": z_ + grid_.getResolutionZ() / 2.
         }
-        return cell_bbox
 
-    def getEfficiencyXY(self, emissions_geometry_wkt, cell_bbox, isPoint,
-                        isLine, isPolygon, isMultiPolygon):
-        # efficiency = relative area of geometry in the cell box
-        efficiency_ = 0.
-        if isPoint or isPolygon or isMultiPolygon:
-            efficiency_ = spatial.getRelativeAreaInBoundingBox(
-                emissions_geometry_wkt, cell_bbox)
-        elif isLine:
-            #get relative length (X,Y) in bounding box (assumes constant speed)
-            efficiency_ = spatial.getRelativeLengthXYInBoundingBox(emissions_geometry_wkt, cell_bbox)
-        return efficiency_
+    def getEfficiencyXY(self, emissions_wkt: str, cell_bbox: dict,
+                        _is_point: bool, _is_line: bool, _is_polygon: bool,
+                        _is_multi_polygon: bool) -> float:
+        """
+        Get the efficiency of XY, with the efficiency being the relative area of
+         geometry in the cell box
 
-    def getEfficiencyZ(self, geometry_wkt, z_min, z_max, cell_box, isPoint,
-                       isLine, isPolygon, isMultiPolygon):
-        efficiency_ = 0.
-        if isPoint:
-            #points match each cell exactly once
-            efficiency_ = spatial.getRelativeHeightInBoundingBox(z_min, z_max, cell_box)
-        elif isPolygon or isLine or isMultiPolygon:
-            efficiency_ = spatial.getRelativeHeightInBoundingBox(z_min, z_max,
-                                                                 cell_box)
-        return efficiency_
+        """
+        if _is_point or _is_polygon or _is_multi_polygon:
+            return spatial.getRelativeAreaInBoundingBox(
+                emissions_wkt, cell_bbox)
+        elif _is_line:
+            # get relative length (X,Y) in bounding box (assumes constant speed)
+            return spatial.getRelativeLengthXYInBoundingBox(
+                emissions_wkt, cell_bbox)
+        return 0
 
+    def getEfficiencyZ(self, z_min: float, z_max: float, cell_box: dict,
+                       _is_point: bool, _is_line: bool, _is_polygon: bool,
+                       _is_multi_polygon: bool) -> float:
+        """
+        Get the efficiency of Z, with the efficiency being the relative height
+         of the geometry in the cell box
+
+        """
+        if _is_point:
+            # points match each cell exactly once
+            return spatial.getRelativeHeightInBoundingBox(
+                z_min, z_max, cell_box)
+        elif _is_polygon or _is_line or _is_multi_polygon:
+            return spatial.getRelativeHeightInBoundingBox(
+                z_min, z_max, cell_box)
+        return 0
+
+    @log_time
     def getGridXYFromReferencePoint(self):
         """
         This method gets the origin of the grid to the bottom-left corner.
@@ -335,40 +349,58 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         return index_i, index_j, index_k
 
+    @log_time
     def emptyOutputPath(self):
-        import shutil, stat, errno
+        import errno
+        import shutil
+        import stat
 
         def handleRemoveReadonly(func, path, exc):
-            excvalue = exc[1]
-            if func in (os.rmdir, os.remove) and excvalue.errno == errno.EACCES:
-                os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
+            # If os.rmdir or os.remove fails due to permissions, change
+            # permissions
+            if func in (os.rmdir, os.remove) and exc[1].errno == errno.EACCES:
+
+                # Change permissions of the file to 0777
+                os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+
+                # Execute the original function
                 func(path)
             else:
                 raise Exception("handleRemoveReadonly error")
 
-        if os.listdir(self.getOutputPath()):
-            # QtWidgets.QMessageBox.warning(self, "Folder contents", os.listdir(self.getOutputPath()))
-            answer = QtWidgets.QMessageBox.question(None, "Warning", "A2K Destination folder is not empty!\nDelete existing files?",
-                                                    QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        # Get the output path
+        output_path = self.getOutputPathAsPath()
+
+        # Get files in the output path
+        output_path_children = list(output_path.iterdir())
+
+        if len(output_path_children) > 0:
+
+            # Ask for permission to delete the files
+            answer = QtWidgets.QMessageBox.question(
+                None,
+                "Warning",
+                "AUSTAL destionation folder is not empty!\nDelete existing files?",
+                QtWidgets.QMessageBox.Yes,
+                QtWidgets.QMessageBox.No
+            )
+
             if answer == QtWidgets.QMessageBox.Yes:
-                try:
-                    for dir_content in os.listdir(self.getOutputPath()):
-                        delete_content = os.path.join(str(self.getOutputPath()), dir_content)
-                        # if "QGIS" not in delete_content:
-                        try:
-                            if os.path.isdir(delete_content):
-                                shutil.rmtree(delete_content, ignore_errors=False, onerror=handleRemoveReadonly)
-                            elif os.path.isfile(delete_content):
-                                os.remove(delete_content)
-                        except:
-                            logger.warning("Could not delete %s" % os.path.join(str(self.getOutputPath()), dir_content))
-                            pass
-                        # else:
-                        #     logger.error("A2K files were not deleted, folder is output in %s" % str(self.getOutputPath()))
-                except Exception as exc_:
-                    logger.error(exc_)
+                for child in output_path_children:
+                    try:
+                        if child.is_dir():
+                            shutil.rmtree(
+                                child,
+                                ignore_errors=False,
+                                onerror=handleRemoveReadonly)
+                        elif child.is_file():
+                            child.unlink()
+                    except:
+                        logger.error("Could not delete %s", child)
             else:
-                logger.warning("Previous A2K files were not deleted, verify output in %s" %str(self.getOutputPath()))
+                logger.warning(
+                    "Previous AUSTAL files were not deleted, verify output in %s",
+                    output_path)
 
     @log_time
     def checkTimeIntervalinResults(self):
@@ -450,6 +482,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         return missed_hours
 
+    @log_time
     def set_normalized_date(self, start_time: InventoryTime,
                             end_time: InventoryTime):
         """
@@ -492,407 +525,72 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         return self._start_time, self._end_time
 
-    def CalculateCellHashEfficiency(self, EmissionsValue, SourceGeometryText,
-                                    Bbox, cells_matched, isPoint_element_,
-                                    isLine_element_, isPolygon_element_,
-                                    isMultiPolygon_element_):
+    def CalculateCellHashEfficiency(
+            self,
+            source_wkt: str,
+            bbox: dict,
+            cells_matched: list,
+            _is_point_element: bool,
+            _is_line_element: bool,
+            _is_polygon_element: bool,
+            _is_multipolygon_element: bool
+    ):
+        """
+        Get the efficiency for each cell hash
 
-        debug_efficiency_ = 0.
-        debug_efficiency_xy = 0.
+        """
 
-        z_min = Bbox["z_min"]
-        z_max = Bbox["z_max"]
+        # Get the grid
+        grid = self.getGrid()
 
+        # Get z_min and z_max
+        z_min = bbox["z_min"]
+        z_max = bbox["z_max"]
+
+        # Create an empty dict for the cell efficiency
         cell_efficiency = OrderedDict()
+
+        # Process all matched cells
         for xy_rect in cells_matched:
-            debug_efficiency_z = 0.
             if not xy_rect:
-                logger.info("No matched_cells (%s) for Bbox: %s (Geo: %s) ? " % (xy_rect, Bbox, SourceGeometryText))
+                logger.info("No matched_cells (%s) for Bbox: %s (Geo: %s) ? ",
+                            (xy_rect, bbox, source_wkt))
                 continue
 
+            # Set the x,y-efficiency to zero
             efficiency_xy_ = 0.
             for index_height_level, cell_hash in enumerate(xy_rect):
 
-                x_, y_, z_ = 0., 0., 0.
-                (x_, y_, z_) = self.getGrid().convertCellHashListToCenterGridCellCoordinates([cell_hash])[cell_hash]
+                # Get the x, y, z coordinates
+                x_, y_, z_ = \
+                    grid.convertCellHashListToCenterGridCellCoordinates(
+                        [cell_hash])[cell_hash]
 
-                cell_bbox = self.getCellBox(x_, y_, z_, self.getGrid())
+                # Get the cell box
+                cell_bbox = self.getCellBox(x_, y_, z_, grid)
 
-                # calculate once for each x,y pair (and all z levels):
-                if not index_height_level:
-                    efficiency_xy_ = self.getEfficiencyXY(SourceGeometryText, cell_bbox, isPoint=isPoint_element_,
-                                                          isLine=isLine_element_, isPolygon=isPolygon_element_, isMultiPolygon=isMultiPolygon_element_)
-                    debug_efficiency_xy += efficiency_xy_
+                # calculate the efficiency once for each x,y pair and reuse it
+                #  for all z levels
+                if index_height_level == 0:
+                    efficiency_xy_ = self.getEfficiencyXY(
+                        source_wkt, cell_bbox,
+                        _is_point=_is_point_element,
+                        _is_line=_is_line_element,
+                        _is_polygon=_is_polygon_element,
+                        _is_multi_polygon=_is_multipolygon_element)
 
                 # get relative height (Z) in bbox
-                efficiency_z_ = self.getEfficiencyZ(SourceGeometryText, z_min, z_max, cell_bbox,
-                                                    isPoint=isPoint_element_, isLine=isLine_element_,isPolygon=isPolygon_element_, isMultiPolygon=isMultiPolygon_element_)
-                efficiency_ = 1. * float(efficiency_xy_) * float(efficiency_z_)
+                efficiency_z_ = self.getEfficiencyZ(
+                    z_min, z_max, cell_bbox,
+                    _is_point=_is_point_element,
+                    _is_line=_is_line_element,
+                    _is_polygon=_is_polygon_element,
+                    _is_multi_polygon=_is_multipolygon_element)
 
-                debug_efficiency_z += efficiency_z_
-                debug_efficiency_ += efficiency_
+                # combine the (x,y) and (z) efficiency
+                cell_efficiency[cell_hash] = efficiency_xy_ * efficiency_z_
 
-                cell_efficiency[cell_hash] = float(efficiency_)
-
-                # emission_value_ = copy.deepcopy(EmissionsValue)
-                # if emission_value_ is None:
-                #     emission_value_ = 0.
-                # else:
-                #     emission_value_ *= float(efficiency_)
-                #     cell_efficiency[cell_hash] = emission_value_
-
-                # cell_efficiency[cell_hash] = emission_value_
-
-                # if cell_hash in self.total_emissions_per_cell_dict:
-                #     self.total_emissions_per_cell_dict[cell_hash] += emission_value_
-                # else:
-                #     self.total_emissions_per_cell_dict[cell_hash] = emission_value_
         return cell_efficiency
-
-    @log_time
-    def beginJob(self):
-        if self.isEnabled():
-            if self._grid is None:
-                raise Exception("No 3DGrid found. Use parameter 'grid' to "
-                                "configure one on AUSTAL2000OutputModule "
-                                "initialization (e.g. from instantiated "
-                                "EmissionCalculation.")
-            else:
-
-                self.getGridXYFromReferencePoint()
-
-                self._emission_grid_matrix = None
-
-                self._x_meshes = self._grid._x_cells
-                self._y_meshes = self._grid._y_cells
-                self._z_meshes = self._grid._z_cells
-
-                # AUSTAL2000 cannot take non square grid cells, choose finer resolution
-                self._mesh_width = min(self._grid.getResolutionX(), self._grid.getResolutionY()) # dd for austal2000.txt
-                self._grid._x_resolution = self._mesh_width
-                self._grid._y_resolution = self._mesh_width
-
-                if not self._output_path:
-                    output_path = QtWidgets.QFileDialog.getExistingDirectory(
-                        None, "AUSTAL2000: Select Output directory")
-                    self.setOutputPath(output_path)
-                    if not os.path.isdir(self.getOutputPath()):
-                        raise Exception("AUSTAL2000: Not a valid path for grid "
-                                        "source file %s'" % self.getOutputPath())
-                    else:
-                        self.emptyOutputPath()
-                        self._grid_db_path = self.getOutputPath()
-
-                # Store results
-                # self._matched_cells = None
-                # self._geometries = OrderedDict()
-                self._results = OrderedDict()
-                self._series = OrderedDict()
-                self._total_sources = OrderedDict()
-                self._timeID_per_source = OrderedDict()
-                self._dates = OrderedDict()
-
-                # Variables for the date normalization
-                self._first_start_time = None
-                self._start_time, self._end_time = None, None
-
-                self._source_geometries = OrderedDict()
-
-    @log_time
-    def process(self,
-                start_time: InventoryTime, end_time: InventoryTime,
-                result: List[Tuple[Union[Source, Movement], Emission]],
-                ambient_conditions: AmbientCondition, **kwargs):
-        """
-        todo: rename result
-        todo: add Source type
-
-        Here we define the rest of the parameters for the austal2000.txt file
-        (iq, xq, yq, hq, emission_rate). Moreover, we define the parameters for
-        the grid source file (e????.dmna).
-
-        The index can be specified as time dependent, hence an index running
-         from 1 to 8760 for example (grid files e0001.dmna to e8760.dmna). This
-         allows to specify a different relative spatial distribution of
-         emissions for every hour of the year.
-
-        Likewise, the overall emission rate of the grid can be specified as
-         time-dependent with hourly means for every hour of the year. This
-         combination provides a high flexibility.
-
-        timeval: the actual date
-        """
-
-        # (i1 j1 k1, in this order)
-        self._lowb = "1 1 1"
-
-        # (i2 j2 k2, in this order)
-        self._hghb = f"{self._x_meshes} {self._y_meshes} {self._z_meshes}"
-
-        # Make sure that the calculation starts from yyyy-01-01.01.00.00
-        _start_time, _end_time = self.set_normalized_date(start_time, end_time)
-        _end_time_string = _end_time.strftime('%Y-%m-%d.%H:%M:%S')
-
-        # Get the first starting date
-        fdate = self._first_start_time
-
-        # Set results and series for this period if it has not been set
-        self._results.setdefault(_end_time_string, OrderedDict())
-        self._series.setdefault(_end_time_string, OrderedDict())
-
-        # Add ambient conditions to the series
-        self._series[_end_time_string].update({
-            "WindDirection": ambient_conditions.getWindDirection(),
-            "WindSpeed": ambient_conditions.getWindSpeed(),
-            "ObukhovLength": ambient_conditions.getObukhovLength()
-        })
-
-        # ToDo: how much finer/coarser is the emission dd ?
-        # horizontal mesh width in m
-        dd_ = self._mesh_width
-        # vertical grid (h0 h1 h2 ...), heights above ground in m
-        sk_ = " ".join(str(self._grid.getResolutionZ() * z) for z in
-                       range(self._z_meshes + 1))
-        mode_ = '"text"'
-        form_ = '"Eq%5.1f"'
-        vldf_ = '"V"'
-        artp_ = '"M"'
-        dims_ = 3
-        axes_ = '"xyz"'
-
-        # Loop over all emissions and append one data point for every cell to
-        # total_emissions_per_cell_dict
-
-        # for the specific result
-        total_emissions_per_cell_dict = {}
-
-        # TODO[RPFK]: ERROR - open_alaqs.alaqs_core.alaqsutils : [-] Error in
-        #  update_emissions() [line 2789]: local variable 'fill_results'
-        #  referenced before assignment
-        #  Error when running calculation that has empty results.
-        for (source_, emissions__) in result:
-            fill_results = OrderedDict()
-
-            self._source_height = 0
-            if hasattr(source_, 'getHeight') and source_.getHeight() > 0:
-                self._source_height = source_.getHeight()
-
-            for emissions_ in emissions__:
-                if emissions_.getGeometryText() is None:
-                    logger.warning(f"AUSTAL2000: Did not find geometry for "
-                                   f"source: {source_.getName()}")
-                    continue
-
-                geom = emissions_.getGeometry()
-
-                # Some convenience variables
-                isPoint_element_ = bool("POINT" in emissions_.getGeometryText())
-                isLine_element_ = bool(("LINE" in emissions_.getGeometryText())&(not "MULTI" in emissions_.getGeometryText()))
-                isMultiLine_element_ = bool("MULTILINE" in str(emissions_.getGeometryText()))
-                isPolygon_element_ = bool(("POLYGON" in emissions_.getGeometryText())&(not "MULTI" in emissions_.getGeometryText()))
-                isMultiPolygon_element_ = bool("MULTIPOLYGON" in emissions_.getGeometryText())
-
-                if isMultiPolygon_element_ or isMultiLine_element_:
-                    MultiPolygonEmissions = 1 / len(list(geom)) * emissions_
-                    for i in range(0, len(list(geom))):
-                        g = geom[i]
-                        g_wkt = g.wkt
-                        # for i in range(0, geom.GetGeometryCount()):
-                        #     g = geom.GetGeometryRef(i)
-                        #     bbox = self.getBoundingBox(g.ExportToWkt())
-                        if g_wkt not in self._source_geometries.keys():
-                            bbox = self.getBoundingBox(g_wkt)
-                            # Take into account the effective vertical source extent and shift
-                            bbox["z_max"] = bbox["z_max"]+emissions_.getVerticalExtent()['delta_z'] if \
-                                "delta_z" in emissions_.getVerticalExtent() else bbox["z_max"]
-                            matched_cells = self.getGrid().matchBoundingBoxToCellHashList(bbox, z_as_list=True)
-                            matched_cells_coeff = self.CalculateCellHashEfficiency(MultiPolygonEmissions,
-                                                             g_wkt, bbox, matched_cells, isPoint_element_,
-                                                             isLine_element_, isPolygon_element_,
-                                                             isMultiPolygon_element_)
-
-                            self._source_geometries[g_wkt] = {'bbox': bbox,
-                                                              'matched_cells': matched_cells,
-                                                              "efficiency": matched_cells_coeff}
-                        else:
-                            # bbox = self._source_geometries[g_wkt]['bbox']
-                            # matched_cells = self._source_geometries[g_wkt]['matched_cells']
-                            matched_cells_coeff = self._source_geometries[g_wkt]['efficiency']
-
-                        emission_value_ = copy.deepcopy(MultiPolygonEmissions)
-                        # if emission_value_ is None:
-                        #     emission_value_ = 0.
-                        # else:
-                        #     emission_value_ *= float(efficiency_)
-
-                        for cell_hash in matched_cells_coeff:
-                            emission_value_ *= matched_cells_coeff[cell_hash]
-                            if cell_hash in total_emissions_per_cell_dict:
-                                total_emissions_per_cell_dict[cell_hash] += emission_value_
-                                # total_emissions_per_cell_dict[cell_hash] += matched_cells_coeff[cell_hash]
-                            else:
-                                total_emissions_per_cell_dict[cell_hash] = emission_value_
-                                # total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
-                        # self.CalculateCellHashEfficiency(MultiPolygonEmissions,
-                        #                                  g_wkt, bbox, matched_cells, isPoint_element_,
-                        #                                  isLine_element_, isPolygon_element_, isMultiPolygon_element_)
-
-                else:
-                    if emissions_.getGeometryText() not in self._source_geometries.keys():
-                        bbox = self.getBoundingBox(emissions_.getGeometryText())
-                        if "delta_z" in emissions_.getVerticalExtent() and emissions_.getVerticalExtent()['delta_z'] > 0:
-                            bbox["z_max"] = bbox["z_max"] + emissions_.getVerticalExtent()['delta_z']
-                        matched_cells = self.getGrid().matchBoundingBoxToCellHashList(bbox, z_as_list=True)
-                        matched_cells_coeff = self.CalculateCellHashEfficiency(emissions_,
-                                                                               emissions_.getGeometryText(), bbox, matched_cells,
-                                                                               isPoint_element_,
-                                                                               isLine_element_, isPolygon_element_,
-                                                                               isMultiPolygon_element_)
-
-                        self._source_geometries[emissions_.getGeometryText()] = {'bbox': bbox,
-                                                          'matched_cells': matched_cells,
-                                                          "efficiency": matched_cells_coeff}
-                    else:
-                        # bbox = self._source_geometries[emissions_.getGeometryText()]['bbox']
-                        # matched_cells = self._source_geometries[emissions_.getGeometryText()]['matched_cells']
-                        matched_cells_coeff = self._source_geometries[emissions_.getGeometryText()]['efficiency']
-
-                    emission_value_ = copy.deepcopy(emissions_)
-                    for cell_hash in matched_cells_coeff:
-                        emission_value_ *= matched_cells_coeff[cell_hash]
-                        if cell_hash in total_emissions_per_cell_dict:
-                            total_emissions_per_cell_dict[cell_hash] += emission_value_
-                            # total_emissions_per_cell_dict[cell_hash] += matched_cells_coeff[cell_hash]
-                        else:
-                            total_emissions_per_cell_dict[cell_hash] = emission_value_
-                            # total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
-
-
-                    # for cell_hash in matched_cells_coeff:
-                    #     if cell_hash in total_emissions_per_cell_dict:
-                    #         total_emissions_per_cell_dict[cell_hash] += matched_cells_coeff[cell_hash]
-                    #     else:
-                    #         total_emissions_per_cell_dict[cell_hash] = matched_cells_coeff[cell_hash]
-                    # self.CalculateCellHashEfficiency(emissions_,emissions_.getGeometryText(), bbox, matched_cells,
-                    #                     isPoint_element_, isLine_element_, isPolygon_element_, isMultiPolygon_element_)
-
-        # Get the output path (as Path)
-        output_path = self.getOutputPathAsPath()
-
-        # Fill Emissions Matrix with emission rate (normalised to 1)
-        for source_counter, _pollutant in enumerate(self._pollutants_list):
-
-            # Start the counter at 1
-            source_counter += +1
-
-            # Create the source id
-            source_id = str(source_counter).zfill(2)
-
-            # Create the source directory if it doesn't exist
-            source_dir = output_path / source_id
-            if not source_dir.is_dir():
-                source_dir.mkdir()
-
-            # initialize emission matrix for each pollutant
-            # (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
-
-            hashed_emissions = sum([total_emissions_per_cell_dict[hash_].transposeToKilograms().getValue(_pollutant, "kg")[0]
-                                    for hash_ in total_emissions_per_cell_dict])
-
-            # if total_emissions_per_mov.transposeToKilograms().getValue(_pollutant, "kg")[0] and \
-            #         abs(hashed_emissions - total_emissions_per_mov.transposeToKilograms().getValue(_pollutant, "kg")[0])>0.1 :
-            #     if source_counter == 2:
-            #         logger.warning("AUSTAL2000: Grid may have to be enlarged for source:'%s'"%(source_.getName()))
-            #         logger.warning("\t Hashed emissions are <%s> instead of <%s>" %
-            #                    (hashed_emissions, total_emissions_per_mov.transposeToKilograms().getValue(_pollutant)[0]))
-
-            (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
-
-            if hashed_emissions > 0:
-                # initialize emission matrix for each pollutant
-                # (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
-                for hash in total_emissions_per_cell_dict:
-                    if total_emissions_per_cell_dict[hash].getValue(_pollutant)[0] <= 0:
-                        continue
-
-                    i_, j_, k_ = self._grid.convertCellHashToXYZIndices(hash)
-
-                    if i_ >= self._x_meshes or j_ >= self._y_meshes or k_ >= self._z_meshes:
-                        # logger.debug("AUSTAL2000 Error: Grid needs to be enlarged. Hash '%s' out of grid. Source:'%s'"%(hash, source_.getName()))
-                        continue
-
-                    # Split the sequ once
-                    sequ_split = self.getSequ().split(",")
-
-                    indices = [None, None, None]
-                    for p, q in enumerate(sequ_split):
-                        if q.startswith('k'):
-                            indices[p] = k_
-                        elif q.startswith('j'):
-                            indices[p] = j_
-                        else:
-                            indices[p] = i_
-                    ii, jj, kk = indices
-
-                    # Reverse order if '-'
-                    # A sequence 'k +, j -, i +' means north-oriented
-                    if sequ_split[0][1] == "-":
-                        ii = x_dim - (ii + 1)
-                    if sequ_split[1][1] == "-":
-                        jj = y_dim - (jj + 1)
-                    if sequ_split[2][1] == "-":
-                        kk = z_dim - (kk + 1)
-
-                    try:
-                        self._emission_grid_matrix[ii, jj, kk] += \
-                            total_emissions_per_cell_dict[hash].getValue(
-                                _pollutant)[0] / hashed_emissions
-                    except Exception as e:
-                        pass
-
-            self._total_sources.setdefault(source_id, [])
-            if _pollutant.startswith("PM"):
-                _pollutant = "PM-2" if _pollutant == "PM10" else "PM-1"
-            if _pollutant not in self._total_sources[source_id]:
-                self._total_sources.setdefault(source_id, []).append(_pollutant)
-
-            # Update the source id
-            if source_id in self._timeID_per_source:
-                time_id = self._timeID_per_source[source_id]
-                self._timeID_per_source.update({source_id: time_id + 1})
-            else:
-                self._timeID_per_source.update({source_id: 1})
-
-            # Emission rate in AUSTAL2000 is in g/s (kg x 1000/3600),
-            # hashed_emissions are given in kg/h
-            fill_results.setdefault(source_id, {})
-
-            pollutant_dic = {
-                "source": source_.getName(),
-                _pollutant: hashed_emissions * (10.0 / 36.0),
-                "timeID": self._timeID_per_source[source_id]}
-
-            fill_results[source_id].update(pollutant_dic)
-
-            self._results[_end_time_string].update(fill_results)
-
-            # Start writing to file
-            try:
-                self.writeGridFile(
-                    source_id,
-                    self._timeID_per_source[source_id],
-                    dd_,
-                    sk_,
-                    mode_,
-                    form_,
-                    vldf_,
-                    artp_,
-                    dims_,
-                    axes_
-                )
-
-            except Exception as exc_:
-                logger.error(exc_)
 
     def getGridFilePath(self, source: Union[int, str], index: int) -> Path:
         # Get the output path (as Path)
@@ -908,6 +606,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         # Get the file path
         return (output_path / source / file_stem).with_suffix(".dmna")
 
+    @log_time
     def writeGridFile(self, source: Union[int, str], index: int,
                       dd_, sk_, mode_, form_, vldf_, artp_, dims_, axes_):
         """
@@ -1000,6 +699,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         """
         Create an AUSTAL input file conform specifications.
 
+        Parameters are taken from the attributes of the main class.
         """
 
         # Get the file path
@@ -1073,6 +773,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         """
         Create an AUSTAL time series file conform specifications.
 
+        Parameters are taken from the attributes of the main class.
         """
 
         # Get the file path
@@ -1126,6 +827,320 @@ class AUSTAL2000DispersionModule(DispersionModule):
             text_file.write('***\n')
 
     @log_time
+    def beginJob(self):
+        if self.isEnabled():
+            if self._grid is None:
+                raise Exception(
+                    "No 3DGrid found. Use parameter 'grid' to configure one on "
+                    "AUSTAL2000OutputModule initialization (e.g. from "
+                    "instantiated EmissionCalculation.")
+            else:
+
+                # Initialize the grid
+                self.getGridXYFromReferencePoint()
+
+                self._emission_grid_matrix = None
+
+                self._x_meshes = self._grid._x_cells
+                self._y_meshes = self._grid._y_cells
+                self._z_meshes = self._grid._z_cells
+
+                # AUSTAL2000 cannot take non square grid cells, choose finer
+                # resolution (dd) for austal2000.txt
+                self._mesh_width = min(
+                    self._grid.getResolutionX(), self._grid.getResolutionY())
+                self._grid._x_resolution = self._mesh_width
+                self._grid._y_resolution = self._mesh_width
+
+                # Initialize the output path
+                if not self._output_path:
+
+                    # Ask for an output path
+                    output_path = QtWidgets.QFileDialog.getExistingDirectory(
+                        None, "AUSTAL2000: Select Output directory")
+
+                    # Set the output path
+                    self.setOutputPath(output_path)
+
+                    if not self.getOutputPathAsPath().is_dir():
+                        raise Exception("AUSTAL2000: Not a valid path for grid "
+                                        "source file %s'" % output_path)
+                    else:
+                        self.emptyOutputPath()
+                        self._grid_db_path = output_path
+
+                # Initialize the results
+                self._results = OrderedDict()
+                self._series = OrderedDict()
+                self._total_sources = OrderedDict()
+                self._timeID_per_source = OrderedDict()
+                self._dates = OrderedDict()
+                self._source_geometries = OrderedDict()
+
+                # Initialize the variables for the date normalization
+                self._first_start_time = None
+                self._start_time, self._end_time = None, None
+
+    @log_time
+    def process(self,
+                start_time: InventoryTime, end_time: InventoryTime,
+                result: List[Tuple[Union[Source, Movement], Emission]],
+                ambient_conditions: AmbientCondition, **kwargs):
+        """
+        todo: rename result
+        todo: add Source type
+
+        Here we define the rest of the parameters for the austal2000.txt file
+        (iq, xq, yq, hq, emission_rate). Moreover, we define the parameters for
+        the grid source file (e????.dmna).
+
+        The index can be specified as time dependent, hence an index running
+         from 1 to 8760 for example (grid files e0001.dmna to e8760.dmna). This
+         allows to specify a different relative spatial distribution of
+         emissions for every hour of the year.
+
+        Likewise, the overall emission rate of the grid can be specified as
+         time-dependent with hourly means for every hour of the year. This
+         combination provides a high flexibility.
+
+        timeval: the actual date
+        """
+
+        # TODO[RPFK]: REMOVE BEFORE COMMIT
+        start = datetime.now()
+
+        # (i1 j1 k1, in this order)
+        self._lowb = "1 1 1"
+
+        # (i2 j2 k2, in this order)
+        self._hghb = f"{self._x_meshes} {self._y_meshes} {self._z_meshes}"
+
+        # Make sure that the calculation starts from yyyy-01-01.01.00.00
+        _start_time, _end_time = self.set_normalized_date(start_time, end_time)
+        _end_time_string = _end_time.strftime('%Y-%m-%d.%H:%M:%S')
+
+        # Set results and series for this period if it has not been set
+        self._results.setdefault(_end_time_string, OrderedDict())
+        self._series.setdefault(_end_time_string, OrderedDict())
+
+        # Add ambient conditions to the series
+        self._series[_end_time_string].update({
+            "WindDirection": ambient_conditions.getWindDirection(),
+            "WindSpeed": ambient_conditions.getWindSpeed(),
+            "ObukhovLength": ambient_conditions.getObukhovLength()
+        })
+
+        # ToDo: how much finer/coarser is the emission dd ?
+        # horizontal mesh width in m
+        dd_ = self._mesh_width
+        # vertical grid (h0 h1 h2 ...), heights above ground in m
+        sk_ = " ".join(str(self._grid.getResolutionZ() * z) for z in
+                       range(self._z_meshes + 1))
+
+        # Loop over all emissions and append one data point for every cell to
+        # total_emissions_per_cell_dict for the specific result
+        total_emissions_per_cell_dict = {}
+
+        # TODO[RPFK]: REMOVE BEFORE COMMIT
+        logger.debug(f"Time elapsed before 'result'-loop (n={len(result)}):"
+                     f" {datetime.now() - start}")
+
+        for (source_, emissions__) in result:
+
+            self._source_height = 0
+            if hasattr(source_, 'getHeight') and source_.getHeight() > 0:
+                self._source_height = source_.getHeight()
+
+            for emissions_ in emissions__:
+
+                # Get the geometry text
+                e_wkt = emissions_.getGeometryText()
+                if e_wkt is None:
+                    logger.warning(f"AUSTAL2000: Did not find geometry for "
+                                   f"source: {source_.getName()}")
+                    continue
+
+                # Get the geometry
+                geom = emissions_.getGeometry()
+
+                # Some convenience variables
+                is_point_element_ = "POINT" in e_wkt
+                is_line_element_ = ("LINE" in e_wkt) & ("MULTI" not in e_wkt)
+                is_multi_line_element_ = "MULTILINE" in e_wkt
+                is_polygon_element_ = \
+                    ("POLYGON" in e_wkt) & ("MULTI" not in e_wkt)
+                is_multi_polygon_element_ = "MULTIPOLYGON" in e_wkt
+
+                # Get the grid
+                grid = self.getGrid()
+
+                if is_multi_polygon_element_ or is_multi_line_element_:
+
+                    # Divide the emissions over the geometries
+                    multi_polygon_emissions = 1 / len(list(geom)) * emissions_
+
+                    # Add the emissions for each geometry
+                    for i, g in enumerate(geom):
+
+                        # Get the WKT representation of the geometry
+                        g_wkt = g.wkt
+
+                        # Get matched cell coefficients for this geometry
+                        matched_cells_coeff = self.getMatchedCellCoeffsG(
+                            g_wkt, emissions_, grid, is_point_element_,
+                            is_line_element_, is_polygon_element_,
+                            is_multi_polygon_element_)
+
+                        # Update the total emissions per cell
+                        total_emissions_per_cell_dict = \
+                            self.updateEmissions(
+                                total_emissions_per_cell_dict,
+                                multi_polygon_emissions,
+                                matched_cells_coeff)
+
+                else:
+
+                    # Get matched cell coefficients for this geometry
+                    matched_cells_coeff = self.getMatchedCellCoeffsE(
+                        e_wkt, emissions_, grid, is_point_element_,
+                        is_line_element_, is_polygon_element_,
+                        is_multi_polygon_element_)
+
+                    # Update the total emissions per cell
+                    total_emissions_per_cell_dict = \
+                        self.updateEmissions(
+                            total_emissions_per_cell_dict,
+                            emissions_,
+                            matched_cells_coeff)
+
+        # Get the output path (as Path)
+        output_path = self.getOutputPathAsPath()
+        fill_results = OrderedDict()
+
+        # TODO[RPFK]: REMOVE BEFORE COMMIT
+        logger.debug(f"Time elapsed before 'pollutants_list'-loop "
+                     f"(n={len(self._pollutants_list)}): "
+                     f"{datetime.now() - start}")
+
+        # Fill Emissions Matrix with emission rate (normalised to 1)
+        for source_counter, _pollutant in enumerate(self._pollutants_list):
+
+            # Start the counter at 1
+            source_counter += 1
+
+            # Create the source id
+            source_id = str(source_counter).zfill(2)
+
+            # Create the source directory if it doesn't exist
+            source_dir = output_path / source_id
+            if not source_dir.is_dir():
+                source_dir.mkdir()
+
+            # initialize emission matrix for each pollutant
+            # (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
+
+            hashed_emissions = sum([total_emissions_per_cell_dict[hash_].transposeToKilograms().getValue(_pollutant, "kg")[0]
+                                    for hash_ in total_emissions_per_cell_dict])
+
+            # if total_emissions_per_mov.transposeToKilograms().getValue(_pollutant, "kg")[0] and \
+            #         abs(hashed_emissions - total_emissions_per_mov.transposeToKilograms().getValue(_pollutant, "kg")[0])>0.1 :
+            #     if source_counter == 2:
+            #         logger.warning("AUSTAL2000: Grid may have to be enlarged for source:'%s'"%(source_.getName()))
+            #         logger.warning("\t Hashed emissions are <%s> instead of <%s>" %
+            #                    (hashed_emissions, total_emissions_per_mov.transposeToKilograms().getValue(_pollutant)[0]))
+
+            (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
+
+            if hashed_emissions > 0:
+                # initialize emission matrix for each pollutant
+                # (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
+                for hash in total_emissions_per_cell_dict:
+                    if total_emissions_per_cell_dict[hash].getValue(_pollutant)[0] <= 0:
+                        continue
+
+                    i_, j_, k_ = self._grid.convertCellHashToXYZIndices(hash)
+
+                    if i_ >= self._x_meshes or j_ >= self._y_meshes or k_ >= self._z_meshes:
+                        # logger.debug("AUSTAL2000 Error: Grid needs to be enlarged. Hash '%s' out of grid. Source:'%s'"%(hash, source_.getName()))
+                        continue
+
+                    # Split the sequ once
+                    sequ_split = self.getSequ().split(",")
+
+                    indices = [None, None, None]
+                    for p, q in enumerate(sequ_split):
+                        if q.startswith('k'):
+                            indices[p] = k_
+                        elif q.startswith('j'):
+                            indices[p] = j_
+                        else:
+                            indices[p] = i_
+                    ii, jj, kk = indices
+
+                    # Reverse order if '-'
+                    # A sequence 'k +, j -, i +' means north-oriented
+                    if sequ_split[0][1] == "-":
+                        ii = x_dim - (ii + 1)
+                    if sequ_split[1][1] == "-":
+                        jj = y_dim - (jj + 1)
+                    if sequ_split[2][1] == "-":
+                        kk = z_dim - (kk + 1)
+
+                    try:
+                        self._emission_grid_matrix[ii, jj, kk] += \
+                            total_emissions_per_cell_dict[hash].getValue(
+                                _pollutant)[0] / hashed_emissions
+                    except Exception as e:
+                        pass
+
+            self._total_sources.setdefault(source_id, [])
+            if _pollutant.startswith("PM"):
+                _pollutant = "PM-2" if _pollutant == "PM10" else "PM-1"
+            if _pollutant not in self._total_sources[source_id]:
+                self._total_sources.setdefault(source_id, []).append(_pollutant)
+
+            # Update the source id
+            if source_id in self._timeID_per_source:
+                time_id = self._timeID_per_source[source_id]
+                self._timeID_per_source.update({source_id: time_id + 1})
+            else:
+                self._timeID_per_source.update({source_id: 1})
+
+            # Emission rate in AUSTAL2000 is in g/s (kg x 1000/3600),
+            # hashed_emissions are given in kg/h
+            fill_results.setdefault(source_id, {})
+
+            pollutant_dic = {
+                _pollutant: hashed_emissions * (10.0 / 36.0),
+                "timeID": self._timeID_per_source[source_id]}
+
+            fill_results[source_id].update(pollutant_dic)
+
+            self._results[_end_time_string].update(fill_results)
+
+            # Start writing to file
+            try:
+                self.writeGridFile(
+                    source_id,
+                    self._timeID_per_source[source_id],
+                    dd_,
+                    sk_,
+                    '"text"',
+                    '"Eq%5.1f"',
+                    '"V"',
+                    '"M"',
+                    3,
+                    '"xyz"'
+                )
+
+            except Exception as exc_:
+                logger.error(exc_)
+
+        # TODO[RPFK]: REMOVE BEFORE COMMIT
+        logger.debug(f"Time elapsed after 'pollutants_list'-loop:"
+                     f" {datetime.now() - start}")
+
+    @log_time
     def endJob(self):
         if self.isEnabled():
             try:
@@ -1167,3 +1182,114 @@ class AUSTAL2000DispersionModule(DispersionModule):
     # odor:_nnn Rated odorant with a rate factor resulting from the identifier nnn,
     # see Section 3.10. Possible values for nnn are: 050 (in the fed- eral state Baden-Württemberg: 040),
     # 075 (in the federal state Baden- Württemberg: 060), 100, 150
+
+    @log_time
+    def getMatchedCellCoeffsG(self, g_wkt, emissions_, grid, is_point_element_,
+                              is_line_element_, is_polygon_element_,
+                              is_multi_polygon_element_):
+        """
+        Get matched cells for this coefficients
+
+        """
+
+        # Check if the matched cells are known for this geometry
+        if g_wkt in self._source_geometries.keys():
+            # Get the matched cells for this geometry
+            return self._source_geometries[g_wkt]['efficiency']
+
+        # Determine the bounding box
+        bbox = self.getBoundingBox(g_wkt)
+
+        # Get the vertical extent
+        vertical_extent = emissions_.getVerticalExtent()
+
+        # Take into account the effective vertical source extent and shift
+        if "delta_z" in vertical_extent:
+            bbox["z_max"] = bbox["z_max"] + vertical_extent['delta_z']
+
+        # Get the matched cells for this geometry
+        matched_cells = grid.matchBoundingBoxToCellHashList(
+            bbox, z_as_list=True)
+        matched_cells_coeff = \
+            self.CalculateCellHashEfficiency(
+                g_wkt, bbox, matched_cells,
+                is_point_element_, is_line_element_,
+                is_polygon_element_,
+                is_multi_polygon_element_)
+
+        # Store the matched cells for this WKT
+        self._source_geometries[g_wkt] = {
+            'bbox': bbox,
+            'matched_cells': matched_cells,
+            "efficiency": matched_cells_coeff
+        }
+
+        return matched_cells_coeff
+
+    @log_time
+    def getMatchedCellCoeffsE(self, e_wkt, emissions_, grid, is_point_element_,
+                              is_line_element_, is_polygon_element_,
+                              is_multi_polygon_element_):
+        """
+        Get matched cells for this coefficients
+        # TODO[RPFK]: Might be merged with getMatchedCellCoeffsG! See issue #102
+
+        """
+
+        # Check if the matched cells are know for this geometry
+        if e_wkt in self._source_geometries.keys():
+            # Get the matched cells for this geometry
+            return self._source_geometries[e_wkt]['efficiency']
+
+        # Determine the bounding box
+        bbox = self.getBoundingBox(e_wkt)
+
+        # Get the vertical extent
+        vertical_extent = emissions_.getVerticalExtent()
+
+        # Take into account the effective vertical source extent and shift
+        if "delta_z" in vertical_extent and vertical_extent['delta_z'] > 0:
+            bbox["z_max"] = bbox["z_max"] + vertical_extent['delta_z']
+
+        # Get the matched cells for this geometry
+        matched_cells = grid.matchBoundingBoxToCellHashList(
+            bbox, z_as_list=True)
+        matched_cells_coeff = \
+            self.CalculateCellHashEfficiency(
+                e_wkt, bbox, matched_cells,
+                is_point_element_, is_line_element_,
+                is_polygon_element_, is_multi_polygon_element_)
+
+        # Store the matched cells for this WKT
+        self._source_geometries[e_wkt] = {
+            'bbox': bbox,
+            'matched_cells': matched_cells,
+            "efficiency": matched_cells_coeff
+        }
+
+        return matched_cells_coeff
+
+    @log_time
+    def updateEmissions(self, cumulative_cell_emissions: dict,
+                        emissions: Emission, cell_coefficients: dict):
+
+        logger.debug(f'emissions {type(emissions)} objects: {emissions.getObjects()}')
+
+        # Create a copy of the emissions
+        # TODO[RPFK]: Might be wrong! See issue #103
+        emission_value_ = copy.deepcopy(emissions)
+
+        # Update the emissions for each cell
+        for cell_hash in cell_coefficients:
+
+            # Get the emission for this cell
+            emission_value_ *= cell_coefficients[cell_hash]
+
+            if cell_hash in cumulative_cell_emissions:
+                # Add the emissions if there are values present
+                cumulative_cell_emissions[cell_hash] += emission_value_
+            else:
+                # Set the emissions if there are no values present
+                cumulative_cell_emissions[cell_hash] = emission_value_
+
+        return cumulative_cell_emissions

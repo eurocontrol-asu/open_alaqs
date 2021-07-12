@@ -1,4 +1,5 @@
 import math
+from typing import Union
 
 import osgeo.ogr as ogr
 import osgeo.osr as osr
@@ -215,7 +216,7 @@ def getLineGeometryText(p1, p2):
     return getLine(p1, p2).ExportToWkt()
 
 
-def getBoundingBox(val):
+def getBoundingBox(val: Union[ogr.Geometry, str]) -> Union[dict, None]:
     if isinstance(val, ogr.Geometry):
         bbox = val.GetEnvelope3D()
         return {
@@ -228,7 +229,6 @@ def getBoundingBox(val):
         }
     if isinstance(val, str):
         return getBoundingBox(ogr.CreateGeometryFromWkt(val))
-    return None
 
 
 def addHeightToGeometryWkt(geometry_wkt, height):
@@ -302,7 +302,8 @@ def getRelativeLengthXYInBoundingBox(
     return 0.
 
 
-def getRelativeHeightInBoundingBox(line_z_min, line_z_max, cell_bbox):
+def getRelativeHeightInBoundingBox(line_z_min: float, line_z_max: float,
+                                   cell_bbox: dict) -> float:
     total_height = float(abs(line_z_max - line_z_min))
 
     # if line.GetPointCount()==2:
