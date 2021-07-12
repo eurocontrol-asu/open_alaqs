@@ -8,8 +8,10 @@ from typing import List, Tuple, Union
 
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 from PyQt5 import QtGui, QtWidgets
 from dateutil import rrule
+from shapely.geometry import Polygon, MultiPolygon
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.AmbientCondition import AmbientCondition
@@ -938,8 +940,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
                        range(self._z_meshes + 1))
 
         # Loop over all emissions and append one data point for every cell to
-        # total_emissions_per_cell_dict for the specific result
-        total_emissions_per_cell_dict = {}
+        # total_emissions_per_cell_list for the specific result
+        total_emissions_per_cell_list = []
 
         # TODO[RPFK]: REMOVE BEFORE COMMIT
         logger.debug(f"Time elapsed before 'result'-loop (n={len(result)}):"
@@ -974,10 +976,24 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 # Get the grid
                 grid = self.getGrid()
 
+                # Convert the emissions to a series object
+                e_series = pd.Series(emissions_.getObjects())
+
                 if is_multi_polygon_element_ or is_multi_line_element_:
 
+                    # TODO[RPFK]: REMOVE BEFORE COMMIT
+                    logger.debug(f"e_wkt ({type(geom)})")
+
+                    if isinstance(geom, MultiPolygon):
+                        logger.debug(f"e_wkt ({type(geom)}): {geom.area} (area)")
+                    else:
+                        raise ValueError(e_wkt)
+
                     # Divide the emissions over the geometries
-                    multi_polygon_emissions = 1 / len(list(geom)) * emissions_
+                    # multi_polygon_emissions = 1 / len(list(geom)) * emissions_
+                    # TODO[RPFK]: Might be wrong, must be depending on line
+                    #  length or polygon area of each geometry
+                    mpe_series = e_series / len(geom)
 
                     # Add the emissions for each geometry
                     for i, g in enumerate(geom):
@@ -985,33 +1001,47 @@ class AUSTAL2000DispersionModule(DispersionModule):
                         # Get the WKT representation of the geometry
                         g_wkt = g.wkt
 
+                        # TODO[RPFK]: REMOVE BEFORE COMMIT
+
+                        if isinstance(g, Polygon):
+                            logger.debug(f"g_wkt ({type(g)}): {g.area} (area)")
+                        else:
+                            raise ValueError(g_wkt)
+
                         # Get matched cell coefficients for this geometry
-                        matched_cells_coeff = self.getMatchedCellCoeffsG(
+                        matched_cells_coeff = self.getMatchedCellCoeffs(
                             g_wkt, emissions_, grid, is_point_element_,
                             is_line_element_, is_polygon_element_,
                             is_multi_polygon_element_)
 
                         # Update the total emissions per cell
-                        total_emissions_per_cell_dict = \
-                            self.updateEmissions(
-                                total_emissions_per_cell_dict,
-                                multi_polygon_emissions,
-                                matched_cells_coeff)
+                        total_emissions_per_cell_list = self.updateEmissions(
+                            total_emissions_per_cell_list,
+                            mpe_series,
+                            matched_cells_coeff)
 
                 else:
 
                     # Get matched cell coefficients for this geometry
-                    matched_cells_coeff = self.getMatchedCellCoeffsE(
+                    matched_cells_coeff = self.getMatchedCellCoeffs(
                         e_wkt, emissions_, grid, is_point_element_,
                         is_line_element_, is_polygon_element_,
                         is_multi_polygon_element_)
 
                     # Update the total emissions per cell
-                    total_emissions_per_cell_dict = \
-                        self.updateEmissions(
-                            total_emissions_per_cell_dict,
-                            emissions_,
-                            matched_cells_coeff)
+                    total_emissions_per_cell_list = self.updateEmissions(
+                        total_emissions_per_cell_list,
+                        e_series,
+                        matched_cells_coeff)
+
+        # Create cumulative emissions per cell
+        total_emissions_per_cell_list = \
+            pd.concat(total_emissions_per_cell_list).groupby(level=0).sum()
+
+        # Convert cumulative emissions to Emissions
+        total_emissions_per_cell_dict = total_emissions_per_cell_list.apply(
+            lambda x: Emission(x.to_dict()), axis=1
+        ).to_dict()
 
         # Get the output path (as Path)
         output_path = self.getOutputPathAsPath()
@@ -1184,65 +1214,23 @@ class AUSTAL2000DispersionModule(DispersionModule):
     # 075 (in the federal state Baden- Württemberg: 060), 100, 150
 
     @log_time
-    def getMatchedCellCoeffsG(self, g_wkt, emissions_, grid, is_point_element_,
-                              is_line_element_, is_polygon_element_,
-                              is_multi_polygon_element_):
+    def getMatchedCellCoeffs(self, wkt: str, emissions_: Emission, grid: Grid3D,
+                             is_point_element_: bool, is_line_element_: bool,
+                             is_polygon_element_: bool,
+                             is_multi_polygon_element_: bool):
         """
         Get matched cells for this coefficients
-
-        """
-
-        # Check if the matched cells are known for this geometry
-        if g_wkt in self._source_geometries.keys():
-            # Get the matched cells for this geometry
-            return self._source_geometries[g_wkt]['efficiency']
-
-        # Determine the bounding box
-        bbox = self.getBoundingBox(g_wkt)
-
-        # Get the vertical extent
-        vertical_extent = emissions_.getVerticalExtent()
-
-        # Take into account the effective vertical source extent and shift
-        if "delta_z" in vertical_extent:
-            bbox["z_max"] = bbox["z_max"] + vertical_extent['delta_z']
-
-        # Get the matched cells for this geometry
-        matched_cells = grid.matchBoundingBoxToCellHashList(
-            bbox, z_as_list=True)
-        matched_cells_coeff = \
-            self.CalculateCellHashEfficiency(
-                g_wkt, bbox, matched_cells,
-                is_point_element_, is_line_element_,
-                is_polygon_element_,
-                is_multi_polygon_element_)
-
-        # Store the matched cells for this WKT
-        self._source_geometries[g_wkt] = {
-            'bbox': bbox,
-            'matched_cells': matched_cells,
-            "efficiency": matched_cells_coeff
-        }
-
-        return matched_cells_coeff
-
-    @log_time
-    def getMatchedCellCoeffsE(self, e_wkt, emissions_, grid, is_point_element_,
-                              is_line_element_, is_polygon_element_,
-                              is_multi_polygon_element_):
-        """
-        Get matched cells for this coefficients
-        # TODO[RPFK]: Might be merged with getMatchedCellCoeffsG! See issue #102
 
         """
 
         # Check if the matched cells are know for this geometry
-        if e_wkt in self._source_geometries.keys():
+        if wkt in self._source_geometries.keys():
+
             # Get the matched cells for this geometry
-            return self._source_geometries[e_wkt]['efficiency']
+            return self._source_geometries[wkt]['efficiency']
 
         # Determine the bounding box
-        bbox = self.getBoundingBox(e_wkt)
+        bbox = self.getBoundingBox(wkt)
 
         # Get the vertical extent
         vertical_extent = emissions_.getVerticalExtent()
@@ -1256,12 +1244,12 @@ class AUSTAL2000DispersionModule(DispersionModule):
             bbox, z_as_list=True)
         matched_cells_coeff = \
             self.CalculateCellHashEfficiency(
-                e_wkt, bbox, matched_cells,
+                wkt, bbox, matched_cells,
                 is_point_element_, is_line_element_,
                 is_polygon_element_, is_multi_polygon_element_)
 
-        # Store the matched cells for this WKT
-        self._source_geometries[e_wkt] = {
+        # Store the matched cells for this geometry
+        self._source_geometries[wkt] = {
             'bbox': bbox,
             'matched_cells': matched_cells,
             "efficiency": matched_cells_coeff
@@ -1270,26 +1258,20 @@ class AUSTAL2000DispersionModule(DispersionModule):
         return matched_cells_coeff
 
     @log_time
-    def updateEmissions(self, cumulative_cell_emissions: dict,
-                        emissions: Emission, cell_coefficients: dict):
+    def updateEmissions(self, cumulative_cell_emissions: list,
+                        emissions: pd.Series, cell_coefficients: dict):
 
-        logger.debug(f'emissions {type(emissions)} objects: {emissions.getObjects()}')
+        # Create a series from the cell-coefficients
+        cell_coefficients_series = pd.Series(cell_coefficients)
 
-        # Create a copy of the emissions
-        # TODO[RPFK]: Might be wrong! See issue #103
-        emission_value_ = copy.deepcopy(emissions)
+        # Create a dataframe with all emissions for each cell
+        cell_emissions = pd.DataFrame(
+            emissions.values * cell_coefficients_series.values[:, np.newaxis],
+            columns=emissions.index,
+            index=cell_coefficients_series.index)
 
-        # Update the emissions for each cell
-        for cell_hash in cell_coefficients:
+        # Append the emissions to the list
+        cumulative_cell_emissions.append(cell_emissions)
 
-            # Get the emission for this cell
-            emission_value_ *= cell_coefficients[cell_hash]
-
-            if cell_hash in cumulative_cell_emissions:
-                # Add the emissions if there are values present
-                cumulative_cell_emissions[cell_hash] += emission_value_
-            else:
-                # Set the emissions if there are no values present
-                cumulative_cell_emissions[cell_hash] = emission_value_
-
+        # Return the list
         return cumulative_cell_emissions
