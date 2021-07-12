@@ -948,6 +948,9 @@ class AUSTAL2000DispersionModule(DispersionModule):
         logger.debug(f"Time elapsed before 'result'-loop (n={len(result)}):"
                      f" {datetime.now() - start}")
 
+        # Get the grid
+        grid = self.getGrid()
+
         for (source_, emissions__) in result:
 
             self._source_height = 0
@@ -973,27 +976,10 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 is_polygon_element_ = isinstance(geom, Polygon)
                 is_multi_polygon_element_ = isinstance(geom, MultiPolygon)
 
-                # Get the grid
-                grid = self.getGrid()
-
                 # Convert the emissions to a series object
                 e_series = pd.Series(emissions_.getObjects())
 
                 if is_multi_polygon_element_ or is_multi_line_element_:
-
-                    # TODO[RPFK]: REMOVE BEFORE COMMIT
-                    logger.debug(f"e_wkt ({type(geom)})")
-
-                    if isinstance(geom, MultiPolygon):
-                        logger.debug(f"e_wkt ({type(geom)}): {geom.area} (area)")
-                    else:
-                        raise ValueError(e_wkt)
-
-                    # Divide the emissions over the geometries
-                    # multi_polygon_emissions = 1 / len(list(geom)) * emissions_
-                    # TODO[RPFK]: Might be wrong, must be depending on line
-                    #  length or polygon area of each geometry
-                    mpe_series = e_series / len(geom)
 
                     # Add the emissions for each geometry
                     for i, g in enumerate(geom):
@@ -1001,12 +987,17 @@ class AUSTAL2000DispersionModule(DispersionModule):
                         # Get the WKT representation of the geometry
                         g_wkt = g.wkt
 
-                        # TODO[RPFK]: REMOVE BEFORE COMMIT
-
+                        # Determine the emissions for this geometry based on
+                        # area/length (depending on geometry type)
                         if isinstance(g, Polygon):
-                            logger.debug(f"g_wkt ({type(g)}): {g.area} (area)")
+                            mpe_series = e_series * g.area / geom.area
+                        elif isinstance(g, LineString):
+                            mpe_series = e_series * g.length / geom.length
                         else:
-                            raise ValueError(g_wkt)
+                            raise TypeError(
+                                f'Geometry of type {type(geom)} is not '
+                                f'supported. It should be either a Polygon or '
+                                f'a LineString')
 
                         # Get matched cell coefficients for this geometry
                         matched_cells_coeff = self.getMatchedCellCoeffs(
