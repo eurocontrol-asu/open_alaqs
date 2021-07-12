@@ -11,7 +11,8 @@ import numpy as np
 import pandas as pd
 from PyQt5 import QtGui, QtWidgets
 from dateutil import rrule
-from shapely.geometry import Polygon, MultiPolygon
+from shapely.geometry import Polygon, MultiPolygon, Point, MultiLineString, \
+    LineString
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.AmbientCondition import AmbientCondition
@@ -966,12 +967,11 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 geom = emissions_.getGeometry()
 
                 # Some convenience variables
-                is_point_element_ = "POINT" in e_wkt
-                is_line_element_ = ("LINE" in e_wkt) & ("MULTI" not in e_wkt)
-                is_multi_line_element_ = "MULTILINE" in e_wkt
-                is_polygon_element_ = \
-                    ("POLYGON" in e_wkt) & ("MULTI" not in e_wkt)
-                is_multi_polygon_element_ = "MULTIPOLYGON" in e_wkt
+                is_point_element_ = isinstance(geom, Point)
+                is_line_element_ = isinstance(geom, LineString)
+                is_multi_line_element_ = isinstance(geom, MultiLineString)
+                is_polygon_element_ = isinstance(geom, Polygon)
+                is_multi_polygon_element_ = isinstance(geom, MultiPolygon)
 
                 # Get the grid
                 grid = self.getGrid()
