@@ -1030,10 +1030,10 @@ class AUSTAL2000DispersionModule(DispersionModule):
         total_emissions_per_cell_df = \
             pd.concat(total_emissions_per_cell_list).groupby(level=0).sum()
 
-        # Convert cumulative emissions to Emissions
-        total_emissions_per_cell_dict = total_emissions_per_cell_df.apply(
-            lambda x: Emission(x.to_dict()), axis=1
-        ).to_dict()
+        # # Convert cumulative emissions to Emissions
+        # total_emissions_per_cell_dict = total_emissions_per_cell_df.apply(
+        #     lambda x: Emission(x.to_dict()), axis=1
+        # ).to_dict()
 
         # Get the output path (as Path)
         output_path = self.getOutputPathAsPath()
@@ -1043,6 +1043,9 @@ class AUSTAL2000DispersionModule(DispersionModule):
         logger.debug(f"Time elapsed before 'pollutants_list'-loop "
                      f"(n={len(self._pollutants_list)}): "
                      f"{datetime.now() - start}")
+
+        logger.debug(f"Pollutions list: {self._pollutants_list}")
+        logger.debug(f"Emissions list: {total_emissions_per_cell_df.columns}")
 
         # Fill Emissions Matrix with emission rate (normalised to 1)
         for source_counter, _pollutant in enumerate(self._pollutants_list):
@@ -1104,15 +1107,21 @@ class AUSTAL2000DispersionModule(DispersionModule):
             # Only perform these steps if there are emissions for this pollutant
             if hashed_emissions > 0:
 
-                logger.debug(_pollutant_emissions_kg)
+                # logger.debug(_pollutant_emissions_kg)
 
-                # initialize emission matrix for each pollutant
-                # (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
-                for hash in total_emissions_per_cell_dict:
+                # # initialize emission matrix for each pollutant
+                # # (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
+                # for hash in total_emissions_per_cell_dict:
 
-                    # Skip if the cell doesn't have non-zero emissions
-                    if total_emissions_per_cell_dict[hash].getValue(_pollutant)[0] <= 0:
-                        continue
+                # Get the non-zero emissions
+                nz_emissions_kg = \
+                    _pollutant_emissions_kg[_pollutant_emissions_kg > 0]
+
+                for hash, hash_value in nz_emissions_kg.iteritems():
+
+                    # # Skip if the cell doesn't have non-zero emissions
+                    # if total_emissions_per_cell_dict[hash].getValue(_pollutant)[0] <= 0:
+                    #     continue
 
                     i_, j_, k_ = self._grid.convertCellHashToXYZIndices(hash)
 
@@ -1145,12 +1154,14 @@ class AUSTAL2000DispersionModule(DispersionModule):
                     if sequ_split[2][1] == "-":
                         kk = z_dim - (kk + 1)
 
-                    try:
-                        self._emission_grid_matrix[ii, jj, kk] += \
-                            total_emissions_per_cell_dict[hash].getValue(
-                                _pollutant)[0] / hashed_emissions
-                    except Exception as e:
-                        pass
+                    self._emission_grid_matrix[ii, jj, kk] += \
+                        hash_value / hashed_emissions
+                    # try:
+                    #     # self._emission_grid_matrix[ii, jj, kk] += \
+                    #     #     total_emissions_per_cell_dict[hash].getValue(
+                    #     #         _pollutant)[0] / hashed_emissions
+                    # except Exception as e:
+                    #     pass
 
             self._total_sources.setdefault(source_id, [])
             if _pollutant.startswith("PM"):
