@@ -1391,39 +1391,49 @@ class MovementStore(Store, metaclass=Singleton):
         # Check if profiles exist in the database
         stage_1.nextValue()
 
-        # TODO[RPFK]: REWRITE if agreed upon in #95
-        mdf["profile_id"] = mdf["profile_id"].astype(str)
-        for prf, prf_mdf in mdf.groupby("profile_id"):
-            indices = prf_mdf.index
-            # Add a default profile even when the profile_id is missing
-            if len(indices) == 0 or not prf or pd.isna(prf) or \
-                    not self.getAircraftTrajectoryStore().hasKey(prf):
-                for ag, airgroup in mdf.groupby(
-                        ["aircraft", "departure_arrival"]):
-                    ij_ = airgroup.index
-                    if aircraft_store.hasKey(airgroup["aircraft"].iloc[0]):
-                        if airgroup["departure_arrival"].iloc[0] == "A":
-                            eq_mdf.loc[ij_, "profile_id"] = \
-                                aircraft_store.getObject(
-                                    airgroup["aircraft"].iloc[
-                                        0]).getDefaultArrivalProfileName()
-                        elif airgroup["departure_arrival"].iloc[0] == "D":
-                            eq_mdf.loc[ij_, "profile_id"] = \
-                                aircraft_store.getObject(
-                                    airgroup["aircraft"].iloc[
-                                        0]).getDefaultDepartureProfileName()
+        # Check if there are any profiles unspecified
+        profile_isna_any = mdf["profile_id"].isna().any()
+
+        # Get the unique profiles
+        profile_unique = mdf["profile_id"].astype(str).unique()
+
+        # Check if the profiles exist in the store
+        trajectory_store = self.getAircraftTrajectoryStore()
+        profile_haskey_all = np.all(
+            list(trajectory_store.hasKey(prf) for prf in profile_unique))
+
+        # Add a default profile
+        if profile_isna_any and not profile_haskey_all:
+            for ag, airgroup in mdf.groupby(["aircraft", "departure_arrival"]):
+                ij_ = airgroup.index
+                _ac = airgroup["aircraft"].iloc[0]
+                _aircraft = aircraft_store.getObject(_ac)
+                if _aircraft is not None:
+                    _ad = airgroup["departure_arrival"].iloc[0]
+                    if _ad == "A":
+                        profile_id = _aircraft.getDefaultArrivalProfileName()
+                    elif _ad == "D":
+                        profile_id = _aircraft.getDefaultDepartureProfileName()
                     else:
-                        logger.debug("AC %s not in AircraftStore" % (
-                        airgroup["aircraft"].iloc[0]))
+                        logger.debug("%s for AC %s is not recognised as either "
+                                     "and arrival or departure", (_ad, _ac))
                         continue
-            else:
+                    eq_mdf.loc[ij_, "profile_id"] = profile_id
+                else:
+                    logger.debug("AC %s not in AircraftStore", _ac)
+                    continue
+
+        # Add nones if it matches the conditions
+        for prf in profile_unique:
+            indices = mdf[mdf["profile_id"] == prf].index
+            if len(indices) != 0 and prf and not pd.isna(prf) and \
+                    trajectory_store.hasKey(prf):
                 eq_mdf.loc[indices, "profile_id"] = None
 
         # Get unique combinations of eq_mdf
         u_columns = ["runway", "runway_direction", "taxi_route", "profile_id"]
         heli_engine_store = self.getHeliEngineStore()
         engine_store = self.getEngineStore()
-        trajectory_store = self.getAircraftTrajectoryStore()
 
         # Start the next stage
         stage_2 = stage_1.nextStage(duration=10,
