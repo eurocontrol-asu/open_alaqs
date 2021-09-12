@@ -26,10 +26,11 @@ if tools_directory not in sys.path:
     sys.path.append(tools_directory)
 
 
-def print_error(function_name, exception_object, e_object):
+def print_error(function_name, exception_object, e_object, log=logger):
     """
     Add entry to the ALAQS error-log file
     """
+
     try:
         # fix_print_with_import
         print(exception_object, e_object)
@@ -41,7 +42,7 @@ def print_error(function_name, exception_object, e_object):
     if "object has been deleted" in str(exc_obj):
         return None
     else:
-        logger.error(error)
+        log.error(error)
     return error
 
 

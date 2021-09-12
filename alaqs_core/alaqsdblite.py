@@ -106,7 +106,7 @@ def connect():
     try:
         conn = sqlite.connect(db_name)
     except Exception as e:
-        error = alaqsutils.print_error(connect.__name__, Exception, e)
+        error = alaqsutils.print_error(connect.__name__, Exception, e, log=logger)
         return None, error
     try:
         # Execute a basic query to be sure we're all good
@@ -138,7 +138,7 @@ def connect():
 
         return conn, None
     except Exception as e:
-        error = alaqsutils.print_error(connect.__name__, Exception, e)
+        error = alaqsutils.print_error(connect.__name__, Exception, e, log=logger)
         return None, error
 
 
@@ -171,7 +171,7 @@ def create_project_database(db_name):
         return None
 
     except Exception as e:
-        error = alaqsutils.print_error(create_project_database.__name__, Exception, e)
+        error = alaqsutils.print_error(create_project_database.__name__, Exception, e, log=logger)
         return error
 
 
@@ -206,7 +206,7 @@ def query_string(sql_text):
         if "no results to fetch" in e:
             logger.debug("INFO: Query \"%s\" executed successfully" % sql_text)
         else:
-            alaqsutils.print_error(query_string.__name__, Exception, e)
+            alaqsutils.print_error(query_string.__name__, Exception, e, log=logger)
         return None
 
 
@@ -221,7 +221,7 @@ def airport_lookup(airport_code):
         airport_data = query_string(airport_query)
         return airport_data
     except Exception as e:
-        alaqsutils.print_error(airport_lookup.__name__, Exception, e)
+        alaqsutils.print_error(airport_lookup.__name__, Exception, e, log=logger)
         return None
 
 
@@ -240,7 +240,7 @@ def get_study_setup():
         sql_text = "SELECT * FROM user_study_setup"
         result = query_string(sql_text)
 
-        if not result is None:
+        if result is not None:
             if len(result) > 0:
                 return result
             elif result is []:
@@ -249,8 +249,9 @@ def get_study_setup():
         raise Exception("Could not retrieve study setup from database. Query result is '%s'." % (str(result)))
 
     except Exception as e:
-        error = alaqsutils.print_error(get_study_setup.__name__, Exception, e)
-        return error
+        raise e
+        # error = alaqsutils.print_error(get_study_setup.__name__, Exception, e, log=logger)
+        # return error
 
 
 def get_roadway_methods():
@@ -261,7 +262,7 @@ def get_roadway_methods():
         methods = ["ALAQS Method"]
         return methods
     except Exception as e:
-        alaqsutils.print_error(get_roadway_methods.__name__, Exception, e)
+        alaqsutils.print_error(get_roadway_methods.__name__, Exception, e, log=logger)
         return None
 
 
@@ -275,7 +276,7 @@ def get_roadway_countries():
 
         return countries
     except Exception as e:
-        alaqsutils.print_error(get_roadway_countries.__name__, Exception, e)
+        alaqsutils.print_error(get_roadway_countries.__name__, Exception, e, log=logger)
         return None
 
 
@@ -287,7 +288,7 @@ def get_roadway_years():
         years = ["1990", "1995", "2000", "2005", "2010", "2015", "2020"]
         return years
     except Exception as e:
-        alaqsutils.print_error(get_roadway_years.__name__, Exception, e)
+        alaqsutils.print_error(get_roadway_years.__name__, Exception, e, log=logger)
         return None
 
 
@@ -328,7 +329,7 @@ def save_study_setup(study_setup):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(save_study_setup.__name__, Exception, e)
+        error = alaqsutils.print_error(save_study_setup.__name__, Exception, e, log=logger)
         return error
 
 
@@ -369,7 +370,7 @@ def save_study_setup_dict(study_setup_dict):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(save_study_setup.__name__, Exception, e)
+        error = alaqsutils.print_error(save_study_setup.__name__, Exception, e, log=logger)
         return error
 
 
@@ -410,7 +411,7 @@ def add_gate_dict(gate_dict):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(add_gate_dict.__name__, Exception, e)
+        error = alaqsutils.print_error(add_gate_dict.__name__, Exception, e, log=logger)
         return error
 
 
@@ -430,7 +431,7 @@ def get_gate(gate_name):
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_gates.__name__, Exception, e)
+        error = alaqsutils.print_error(get_gates.__name__, Exception, e, log=logger)
         return error
 
 
@@ -448,7 +449,7 @@ def get_gates():
         else:
             return result
     except Exception as e:
-        error = alaqsutils.print_error(get_gates.__name__, Exception, e)
+        error = alaqsutils.print_error(get_gates.__name__, Exception, e, log=logger)
         return error
 
 
@@ -518,7 +519,7 @@ def add_roadway_dict(roadway_dict):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(add_roadway_dict.__name__, Exception, e)
+        error = alaqsutils.print_error(add_roadway_dict.__name__, Exception, e, log=logger)
         return error
 
 
@@ -534,7 +535,7 @@ def get_roadway(roadway_id):
         result = query_string(sql_text)
         return result
     except Exception as e:
-        error = alaqsutils.print_error(get_roadway.__name__, Exception, e)
+        error = alaqsutils.print_error(get_roadway.__name__, Exception, e, log=logger)
         return error
 
 
@@ -553,7 +554,7 @@ def get_roadways():
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_roadways.__name__, Exception, e)
+        error = alaqsutils.print_error(get_roadways.__name__, Exception, e, log=logger)
         return error
 
 
@@ -597,7 +598,7 @@ def add_runway_dict(runway_dict):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(add_runway_dict.__name__, Exception, e)
+        error = alaqsutils.print_error(add_runway_dict.__name__, Exception, e, log=logger)
         return error
 
 
@@ -611,7 +612,7 @@ def get_runway(runway_id):
         result = query_string(sql_text)
         return result
     except Exception as e:
-        error = alaqsutils.print_error(get_roadway.__name__, Exception, e)
+        error = alaqsutils.print_error(get_roadway.__name__, Exception, e, log=logger)
         return error
 
 
@@ -631,7 +632,7 @@ def get_runways():
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_runways.__name__, Exception, e)
+        error = alaqsutils.print_error(get_runways.__name__, Exception, e, log=logger)
         return error
 
 
@@ -668,7 +669,7 @@ def add_taxiway_dict(taxiway_dict):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(add_taxiway_dict.__name__, Exception, e)
+        error = alaqsutils.print_error(add_taxiway_dict.__name__, Exception, e, log=logger)
         return error
 
 
@@ -690,7 +691,7 @@ def delete_taxiway_route(taxi_route_name):
         else:
             return None
     except Exception as e:
-        error = alaqsutils.print_error(delete_taxiway_route.__name__, Exception, e)
+        error = alaqsutils.print_error(delete_taxiway_route.__name__, Exception, e, log=logger)
         return error
 
 
@@ -707,7 +708,7 @@ def get_taxiway_route(taxiway_route_name):
         else:
             return result
     except Exception as e:
-        error = alaqsutils.print_error(get_taxiway_routes.__name__, Exception, e)
+        error = alaqsutils.print_error(get_taxiway_routes.__name__, Exception, e, log=logger)
         return error
 
 
@@ -723,7 +724,7 @@ def get_taxiway_routes():
         else:
             return result
     except Exception as e:
-        error = alaqsutils.print_error(get_taxiway_routes.__name__, Exception, e)
+        error = alaqsutils.print_error(get_taxiway_routes.__name__, Exception, e, log=logger)
         return error
 
 
@@ -745,7 +746,7 @@ def add_taxiway_route(taxiway_route):
         else:
             return None
     except Exception as e:
-        error = alaqsutils.print_error(add_taxiway_route.__name__, Exception, e)
+        error = alaqsutils.print_error(add_taxiway_route.__name__, Exception, e, log=logger)
         return error
 
 
@@ -760,7 +761,7 @@ def get_taxiway(taxiway_id):
         result = query_string(sql_text)
         return result
     except Exception as e:
-        error = alaqsutils.print_error(get_taxiway.__name__, Exception, e)
+        error = alaqsutils.print_error(get_taxiway.__name__, Exception, e, log=logger)
         return error
 
 
@@ -779,7 +780,7 @@ def get_taxiways():
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_runways.__name__, Exception, e)
+        error = alaqsutils.print_error(get_runways.__name__, Exception, e, log=logger)
         return error
 
 
@@ -799,7 +800,7 @@ def get_track(track_id):
         result = query_string(sql_text)
         return result
     except Exception as e:
-        error = alaqsutils.print_error(get_track.__name__, Exception, e)
+        error = alaqsutils.print_error(get_track.__name__, Exception, e, log=logger)
         return error
 
 
@@ -819,7 +820,7 @@ def get_tracks():
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_tracks.__name__, Exception, e)
+        error = alaqsutils.print_error(get_tracks.__name__, Exception, e, log=logger)
         return error
 
 
@@ -887,7 +888,7 @@ def add_point_source(point_source_dict):
         else:
             raise Exception(result)
     except Exception as e:
-        alaqsutils.print_error(add_point_source.__name__, Exception, e)
+        alaqsutils.print_error(add_point_source.__name__, Exception, e, log=logger)
         return False
 
 
@@ -904,7 +905,7 @@ def get_point_source(source_id):
         result = query_string(sql_text)
         return result
     except Exception as e:
-        error = alaqsutils.print_error(get_point_source.__name__, Exception, e)
+        error = alaqsutils.print_error(get_point_source.__name__, Exception, e, log=logger)
         return error
 
 
@@ -924,7 +925,7 @@ def get_point_sources():
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_point_sources.__name__, Exception, e)
+        error = alaqsutils.print_error(get_point_sources.__name__, Exception, e, log=logger)
         return error
 
 
@@ -938,7 +939,7 @@ def get_point_category(category_name):
         result = query_string(sql_text)
         return result
     except Exception as e:
-        error = alaqsutils.print_error(get_point_category.__name__, Exception, e)
+        error = alaqsutils.print_error(get_point_category.__name__, Exception, e, log=logger)
         return error
 
 
@@ -957,7 +958,7 @@ def get_point_categories():
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_point_categories.__name__, Exception, e)
+        error = alaqsutils.print_error(get_point_categories.__name__, Exception, e, log=logger)
         return error
 
 
@@ -970,7 +971,7 @@ def get_point_type(type_name):
         result = query_string(sql_text)
         return result
     except Exception as e:
-        error = alaqsutils.print_error(get_point_type.__name__, Exception, e)
+        error = alaqsutils.print_error(get_point_type.__name__, Exception, e, log=logger)
         return error
 
 
@@ -983,7 +984,7 @@ def get_point_types(category_number):
         result = query_string(sql_text)
         return result
     except Exception as e:
-        error = alaqsutils.print_error(get_point_category.__name__, Exception, e)
+        error = alaqsutils.print_error(get_point_category.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1026,7 +1027,7 @@ def add_building(building_dict):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(add_building.__name__, Exception, e)
+        error = alaqsutils.print_error(add_building.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1046,7 +1047,7 @@ def get_building(building_id):
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_building.__name__, Exception, e)
+        error = alaqsutils.print_error(get_building.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1066,7 +1067,7 @@ def get_buildings():
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_buildings.__name__, Exception, e)
+        error = alaqsutils.print_error(get_buildings.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1143,7 +1144,7 @@ def add_parking(properties):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(add_parking.__name__, Exception, e)
+        error = alaqsutils.print_error(add_parking.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1166,7 +1167,7 @@ def get_parking(parking_id):
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_parking.__name__, Exception, e)
+        error = alaqsutils.print_error(get_parking.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1188,7 +1189,7 @@ def get_parkings():
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_parkings.__name__, Exception, e)
+        error = alaqsutils.print_error(get_parkings.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1252,7 +1253,7 @@ def add_hourly_profile_dict(hourly_profile_dict):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(add_hourly_profile.__name__, Exception, e)
+        error = alaqsutils.print_error(add_hourly_profile.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1288,7 +1289,7 @@ def add_daily_profile_dict(daily_profile_dict):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(add_daily_profile.__name__, Exception, e)
+        error = alaqsutils.print_error(add_daily_profile.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1331,7 +1332,7 @@ def add_monthly_profile_dict(monthly_profile_dict):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(add_monthly_profile.__name__, Exception, e)
+        error = alaqsutils.print_error(add_monthly_profile.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1350,7 +1351,7 @@ def get_hourly_profiles():
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_hourly_profiles.__name__, Exception, e)
+        error = alaqsutils.print_error(get_hourly_profiles.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1369,7 +1370,7 @@ def get_daily_profiles():
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_daily_profiles.__name__, Exception, e)
+        error = alaqsutils.print_error(get_daily_profiles.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1388,7 +1389,7 @@ def get_monthly_profiles():
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_monthly_profiles.__name__, Exception, e)
+        error = alaqsutils.print_error(get_monthly_profiles.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1408,7 +1409,7 @@ def get_hourly_profile(profile_name):
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_hourly_profile.__name__, Exception, e)
+        error = alaqsutils.print_error(get_hourly_profile.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1428,7 +1429,7 @@ def get_daily_profile(profile_name):
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_daily_profile.__name__, Exception, e)
+        error = alaqsutils.print_error(get_daily_profile.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1448,7 +1449,7 @@ def get_monthly_profile(profile_name):
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_monthly_profile.__name__, Exception, e)
+        error = alaqsutils.print_error(get_monthly_profile.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1514,7 +1515,7 @@ def add_hourly_profile(properties):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(add_hourly_profile.__name__, Exception, e)
+        error = alaqsutils.print_error(add_hourly_profile.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1556,7 +1557,7 @@ def add_daily_profile(properties):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(add_daily_profile.__name__, Exception, e)
+        error = alaqsutils.print_error(add_daily_profile.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1602,7 +1603,7 @@ def add_monthly_profile(properties):
         else:
             raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(add_monthly_profile.__name__, Exception, e)
+        error = alaqsutils.print_error(add_monthly_profile.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1622,7 +1623,7 @@ def delete_hourly_profile(profile_name):
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(delete_hourly_profile.__name__, Exception, e)
+        error = alaqsutils.print_error(delete_hourly_profile.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1642,7 +1643,7 @@ def delete_daily_profile(profile_name):
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(delete_daily_profile.__name__, Exception, e)
+        error = alaqsutils.print_error(delete_daily_profile.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1662,7 +1663,7 @@ def delete_monthly_profile(profile_name):
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(delete_monthly_profile.__name__, Exception, e)
+        error = alaqsutils.print_error(delete_monthly_profile.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1686,7 +1687,7 @@ def get_lasport_scenarios():
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_lasport_scenarios.__name__, Exception, e)
+        error = alaqsutils.print_error(get_lasport_scenarios.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1734,7 +1735,7 @@ def inventory_source_list(inventory_path, source_type):
             return source_list_
 
     except Exception as e:
-        error = alaqsutils.print_error(inventory_source_list.__name__, Exception, e)
+        error = alaqsutils.print_error(inventory_source_list.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1850,7 +1851,7 @@ def inventory_calc_taxiway_emissions(inventory_path, taxiway_name):
 
         return emission_profile
     except Exception as e:
-        error = alaqsutils.print_error(inventory_calc_taxiway_emissions.__name__, Exception, e)
+        error = alaqsutils.print_error(inventory_calc_taxiway_emissions.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1868,7 +1869,7 @@ def get_arr_dep_from_movement(movement_dict):
             arr_dep = "D"
         return arr_dep
     except Exception as e:
-        error = alaqsutils.print_error(get_arr_dep_from_movement.__name__, Exception, e)
+        error = alaqsutils.print_error(get_arr_dep_from_movement.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1897,7 +1898,7 @@ def get_movements_datetime_between(inventory_path, start_time, end_time):
         else:
             return movement_data
     except Exception as e:
-        error = alaqsutils.print_error(get_movements_datetime_between.__name__, Exception, e)
+        error = alaqsutils.print_error(get_movements_datetime_between.__name__, Exception, e, log=logger)
         return error
 
 
@@ -1914,7 +1915,7 @@ def get_geometry_as_text(table_name, feature_id, feature_name, epsg_id):
                               (epsg_id, table_name, feature_id, feature_name))
         return result[0][0]
     except Exception as e:
-        alaqsutils.print_error(get_geometry_as_text.__name__, Exception, e)
+        alaqsutils.print_error(get_geometry_as_text.__name__, Exception, e, log=logger)
         return None
 
 
@@ -1932,5 +1933,5 @@ def get_linestring_length(geometry, epsg_id):
         length = float(result[0][0]) / 1000
         return length
     except Exception as e:
-        alaqsutils.print_error(get_linestring_length.__name__, Exception, e)
+        alaqsutils.print_error(get_linestring_length.__name__, Exception, e, log=logger)
         return None
