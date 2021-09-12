@@ -15,7 +15,10 @@ the database layer.
 
 from open_alaqs.alaqs_core import alaqsdblite
 from open_alaqs.alaqs_core import alaqsutils
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools.create_output import create_alaqs_output
+
+logger = get_logger(__name__)
 
 
 def create_project(database_name):
@@ -83,7 +86,7 @@ def load_study_setup_dict():
         study_data_dict = alaqsutils.dict_study_setup(study_data[0])
         return study_data_dict
     except Exception as e:
-        error = alaqsutils.print_error(load_study_setup.__name__, Exception, e)
+        error = alaqsutils.print_error(load_study_setup.__name__, Exception, e, log=logger)
         return error
 
 
