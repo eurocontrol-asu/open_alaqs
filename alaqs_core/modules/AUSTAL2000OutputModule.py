@@ -349,6 +349,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 indices[p] = self._x_meshes
         index_i, index_j, index_k = indices
 
+        # Set the emission grid matrix to zero
         self._emission_grid_matrix = np.zeros(shape=(index_i, index_j, index_k))
 
         return index_i, index_j, index_k
@@ -1102,7 +1103,33 @@ class AUSTAL2000DispersionModule(DispersionModule):
             #         logger.warning("\t Hashed emissions are <%s> instead of <%s>" %
             #                    (hashed_emissions, total_emissions_per_mov.transposeToKilograms().getValue(_pollutant)[0]))
 
-            (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
+            # Initialize the emissions grid and get the dimensions
+            dims = self.InitializeEmissionGridMatrix()
+            x_dim, y_dim, z_dim = dims
+
+            # Split the sequ once
+            sequ_split = self.getSequ().split(",")
+
+            # Get the indices
+            sequ_indices = [i[0] for i in sequ_split]
+
+            # Get the signs
+            sequ_signs = [i[1] for i in sequ_split]
+
+            # Determine the transformation matrix
+            _o = np.array(list('ijk'))
+            _p = np.array(sequ_indices)
+            _a = (_o == _p[:, np.newaxis]).astype(int)
+
+            # Determine the constants
+            _b = np.zeros((3, 1))
+
+            # Modify the values based on the signs
+            _sequ_signs = np.array(sequ_signs) == '-'
+            _dims = np.array(dims)
+
+            _b[_sequ_signs] = _dims[_sequ_signs] - 1
+            _a[_sequ_signs] *= -1
 
             # Only perform these steps if there are emissions for this pollutant
             if hashed_emissions > 0:
@@ -1119,49 +1146,25 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
                 for hash, hash_value in nz_emissions_kg.iteritems():
 
-                    # # Skip if the cell doesn't have non-zero emissions
-                    # if total_emissions_per_cell_dict[hash].getValue(_pollutant)[0] <= 0:
-                    #     continue
+                    # Get the XYZ indices
+                    vvv = self._grid.convertCellHashToXYZIndices(hash)
 
-                    i_, j_, k_ = self._grid.convertCellHashToXYZIndices(hash)
-
-                    if (i_ >= self._x_meshes) or (j_ >= self._y_meshes) \
-                            or k_ >= self._z_meshes:
+                    # Check if the indices are within the bounds
+                    if (vvv[0] >= self._x_meshes) or \
+                            (vvv[1] >= self._y_meshes) or \
+                            (vvv[2] >= self._z_meshes):
                         # logger.debug("AUSTAL2000 Error: Grid needs to be
                         # enlarged. Hash '%s' out of grid. Source:'%s'"%(hash,
                         # source_.getName()))
                         continue
 
-                    # Split the sequ once
-                    sequ_split = self.getSequ().split(",")
+                    # Convert the indices of the cell hash to the emission grid
+                    ii, jj, kk = (_a @ np.array(vvv)[:, np.newaxis] +
+                                  _b).T[0].astype(int).tolist()
 
-                    indices = [None, None, None]
-                    for p, q in enumerate(sequ_split):
-                        if q.startswith('k'):
-                            indices[p] = k_
-                        elif q.startswith('j'):
-                            indices[p] = j_
-                        else:
-                            indices[p] = i_
-                    ii, jj, kk = indices
-
-                    # Reverse order if '-'
-                    # A sequence 'k +, j -, i +' means north-oriented
-                    if sequ_split[0][1] == "-":
-                        ii = x_dim - (ii + 1)
-                    if sequ_split[1][1] == "-":
-                        jj = y_dim - (jj + 1)
-                    if sequ_split[2][1] == "-":
-                        kk = z_dim - (kk + 1)
-
+                    # Update the values in the emissions grid
                     self._emission_grid_matrix[ii, jj, kk] += \
                         hash_value / hashed_emissions
-                    # try:
-                    #     # self._emission_grid_matrix[ii, jj, kk] += \
-                    #     #     total_emissions_per_cell_dict[hash].getValue(
-                    #     #         _pollutant)[0] / hashed_emissions
-                    # except Exception as e:
-                    #     pass
 
             self._total_sources.setdefault(source_id, [])
             if _pollutant.startswith("PM"):
