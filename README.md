@@ -88,8 +88,7 @@ To use this project, first clone the repo on your device using the command below
 
 ```git clone https://github.com/navendu-pottekkat/nsfw-filter.git``` -->
 
-To facilitate Open-ALAQS, QGIS needs to be installed. The simplest way to do this \
-is via OSGeo4W Network Installer:
+To facilitate Open-ALAQS, QGIS needs to be installed. The simplest way to do this is via OSGeo4W Network Installer:
 
 https://qgis.org/en/site/forusers/download.html
 
@@ -103,17 +102,13 @@ In the 'select packages' screen there are eight packages that need installing:
 - pandas
 - matplotlib
 
-The next three can be selected as default, but should be checked that they are selected\
-regardless:
+The next three can be selected as default, but should be checked that they are selected regardless:
 
 - QGIS
 - GRASS
 - SAGA
 
-To find these packages, search for them in the search bar, and find them under the 'Libs' sub-menu\
-and select them such that they are not to be skipped in the installation (previously installed\
-packages are shown as 'Keep' in the 'New' column). For QGIS you should select the latest version\
-in the Desktop and Libs sub-menus.
+To find these packages, search for them in the search bar, and find them under the 'Libs' sub-menu and select them such that they are not to be skipped in the installation (previously installed packages are shown as 'Keep' in the 'New' column). For QGIS you should select the latest version in the Desktop and Libs sub-menus.
 
 Now to install Open-ALAQS, clone the repository into the following directory if installed for all users:
 
@@ -127,11 +122,9 @@ If filepaths specified above don't exist, the repository can also be placed in:
 
 **{YOUR_QGIS_PATH}\apps\qgis\python\plugins**
 
-Then start QGIS desktop and find the 'Plugins' button and select 'Manage and\
-Install Plugins', here the Open-ALAQS plugin should be visible and can be activated.
+Then start QGIS desktop and find the 'Plugins' button and select 'Manage and Install Plugins', here the Open-ALAQS plugin should be visible and can be activated.
 
-At this point the Open-ALAQS toolbar is visible below the default QGIS toolbars.\
-If this is the case then the installation has been successful.
+At this point the Open-ALAQS toolbar is visible below the default QGIS toolbars. If this is the case then the installation has been successful.
 
 # Usage
 [(Back to top)](#table-of-contents)
