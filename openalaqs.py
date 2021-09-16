@@ -30,7 +30,8 @@ from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.openalaqsdialog import OpenAlaqsAbout, \
     OpenAlaqsCreateDatabase, OpenAlaqsOpenDatabase, OpenAlaqsStudySetup, \
     OpenAlaqsProfiles, OpenAlaqsTaxiRoutes, OpenAlaqsInventory, \
-    OpenAlaqsResultsAnalysis, OpenAlaqsDispersionAnalysis, OpenAlaqsLogfile
+    OpenAlaqsResultsAnalysis, OpenAlaqsDispersionAnalysis, OpenAlaqsLogfile, \
+    OpenAlaqsEnabledMacros
 
 # Configure the logger
 logger = get_logger(__name__)
@@ -241,6 +242,7 @@ class OpenALAQS:
             self.dialogs['create_project'].close()
 
         QgsSettings().setValue("/qgis/enableMacros", 'Always')
+        self.run_macro_setting_warning()
 
     def run_project_load(self):
         """
@@ -273,6 +275,7 @@ class OpenALAQS:
             self.dialogs['open_project'].close()
 
         QgsSettings().setValue("/qgis/enableMacros", 'Always')
+        self.run_macro_setting_warning()
 
     def run_project_close(self):
         """
@@ -367,3 +370,11 @@ class OpenALAQS:
         """
         self.dialogs['logfile'] = OpenAlaqsLogfile()
         self.dialogs['logfile'].exec_()
+
+    def run_macro_setting_warning(self):
+        """
+        Opens the widget dialog informing the user of the change to the macro
+        setting.
+        """
+        self.dialogs['enabled_macros'] = OpenAlaqsEnabledMacros(self.iface)
+        self.dialogs['enabled_macros'].show()
