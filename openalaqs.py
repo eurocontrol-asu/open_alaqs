@@ -195,6 +195,8 @@ class OpenALAQS:
         self.actions['taxi_routes'].setEnabled(False)
         self.actions['build_inventory'].setEnabled(False)
 
+        self.macro_check()
+
     def unload(self):
         """
         Unloads the Open ALAQS plugin from the QGIS canvas, removing the toolbar
@@ -205,6 +207,15 @@ class OpenALAQS:
 
         # Delete the Open ALAQS toolbar
         del self.open_alaqs_toolbar
+
+    def macro_check(self):
+        """
+        Checks on startup if the 'Enable macro' setting is enabled, functionality
+        is limited if disabled.
+        """
+        if QgsSettings().value("/qgis/enableMacros") != 'Always':
+            QgsSettings().setValue("/qgis/enableMacros", 'Always')
+            self.run_macro_setting_warning()
 
     def run_about(self):
         """
@@ -241,8 +252,7 @@ class OpenALAQS:
         else:
             self.dialogs['create_project'].close()
 
-        QgsSettings().setValue("/qgis/enableMacros", 'Always')
-        self.run_macro_setting_warning()
+        #self.macro_check()
 
     def run_project_load(self):
         """
@@ -274,8 +284,7 @@ class OpenALAQS:
         else:
             self.dialogs['open_project'].close()
 
-        QgsSettings().setValue("/qgis/enableMacros", 'Always')
-        self.run_macro_setting_warning()
+        #self.macro_check()
 
     def run_project_close(self):
         """
