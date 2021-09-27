@@ -87,6 +87,8 @@ def form_open(my_dialog, layer_id, feature_id):
     button_box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
     instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
 
+    button_box.button(button_box.Ok).blockSignals(True)
+
     # populate_combo_boxes()
     populate_hourly_profiles()
     populate_daily_profiles()
@@ -99,12 +101,12 @@ def form_open(my_dialog, layer_id, feature_id):
     # except Exception as e:
     #     pass
     #disconnect new-style signals
-    try:
-        button_box.accepted.disconnect(form.accept)
-    except Exception as e:
-        pass
+    # try:
+    #     button_box.accepted.disconnect(form.accept)
+    # except Exception as e:
+    #     pass
 
-    button_box.accepted.connect(validate)
+    # button_box.accepted.connect(validate)
     # button_box.rejected.connect(form.reject)
 
     # Disable the travel distance field - this can come directly from the geometry
@@ -118,6 +120,24 @@ def form_open(my_dialog, layer_id, feature_id):
     scenario_field.setEnabled(False)
     height_field.setText("0")
     height_field.setEnabled(False)
+
+    name_field.textChanged.connect(lambda: validate(button_box))
+    vehicle_year_field.textChanged.connect(lambda: validate(button_box))
+    height_field.textChanged.connect(lambda: validate(button_box))
+    speed_field.textChanged.connect(lambda: validate(button_box))
+    vehicle_light_field.textChanged.connect(lambda: validate(button_box))
+    vehicle_medium_field.textChanged.connect(lambda: validate(button_box))
+    vehicle_heavy_field.textChanged.connect(lambda: validate(button_box))
+    hour_profile_field.currentTextChanged.connect(lambda: validate(button_box))
+    daily_profile_field.currentTextChanged.connect(lambda: validate(button_box))
+    month_profile_field.currentTextChanged.connect(lambda: validate(button_box))
+    co_gm_km_field.textChanged.connect(lambda: validate(button_box))
+    hc_gm_km_field.textChanged.connect(lambda: validate(button_box))
+    nox_gm_km_field.textChanged.connect(lambda: validate(button_box))
+    sox_gm_km_field.textChanged.connect(lambda: validate(button_box))
+    pm10_gm_km_field.textChanged.connect(lambda: validate(button_box))
+    p1_gm_km_field.textChanged.connect(lambda: validate(button_box))
+    p2_gm_km_field.textChanged.connect(lambda: validate(button_box))
 
 def recalculate_emissions():
     try:
@@ -281,7 +301,7 @@ def populate_monthly_profiles():
 #     #    scenario_field.setEditable(False)
 #     # scenario_field.addItem("Not Applicable")
 
-def validate():
+def validate(button_box):
     """
     This function validates that all of the required fields have been completed
     correctly. If they have, the attributes are committed to the feature. 
@@ -315,12 +335,16 @@ def validate():
     #         return False
     #
     # form.accept()
-    if False in results:
-        QtWidgets.QMessageBox.warning(None, "Validation error", "Please fill in all the required fields")
-        return False
+    # if False in results:
+    #     QtWidgets.QMessageBox.warning(None, "Validation error", "Please fill in all the required fields")
+    #     return False
 
-    else:
-        form.save()
+    # else:
+    #     form.save()
+
+    if not ('False' in str(results)):
+        button_box.button(button_box.Ok).blockSignals(False)
+        button_box.accepted.connect(form.save)
 
 def validate_field(ui_element, var_type):
     try:
