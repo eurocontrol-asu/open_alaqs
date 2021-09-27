@@ -8,7 +8,7 @@ from open_alaqs.alaqs_core.tools.lib_alaqs_method import \
 
 logger = alaqslogging.logging.getLogger(__name__)
 logger.setLevel('DEBUG')
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
+file_handler = alaqslogging.logging.FileHandler(alaqslogging.log_path)
 log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 formatter = alaqslogging.logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
