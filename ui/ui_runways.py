@@ -46,6 +46,8 @@ def form_open(my_dialog, layer_id, feature_id):
     button_box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
     instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
 
+    button_box.button(button_box.Ok).blockSignals(True)
+
     first_runway_number.currentIndexChanged['QString'].connect(first_runway_number_changed)
     first_runway_letter.currentIndexChanged['QString'].connect(first_runway_letter_changed)
     name_field.setReadOnly(True)
@@ -67,15 +69,21 @@ def form_open(my_dialog, layer_id, feature_id):
     # except Exception, e:
     #     pass
     # #disconnect new-style signals
-    try:
-        button_box.accepted.disconnect(form.accept)
-    except Exception as e:
-        pass
+    # try:
+    #     button_box.accepted.disconnect(form.accept)
+    # except Exception as e:
+    #     pass
 
-    button_box.accepted.connect(validate)
+    # button_box.accepted.connect(validate)
     #button_box.rejected.connect(form.reject)
 
     #QgsEditorWidgetWrapper.fromWidget( instudy ).setValue(1)
+
+    name_field.textChanged.connect(lambda: validate(button_box))
+    capacity_field.textChanged.connect(lambda: validate(button_box))
+    offset_field.textChanged.connect(lambda: validate(button_box))
+    speed_field.textChanged.connect(lambda: validate(button_box))
+    time_field.textChanged.connect(lambda: validate(button_box))
 
 
 def populate_runway_numbers(combobox_object):
@@ -130,7 +138,7 @@ def create_runway_id():
     name_field.setText(runway_string)
 
 
-def validate():
+def validate(button_box):
     """
     This function validates that all of the required fields have been completed
     correctly. If they have, the attributes are committed to the feature. 
@@ -144,19 +152,23 @@ def validate():
     results.append(validate_field(speed_field, "float"))
     results.append(validate_field(time_field, "float"))
 
-    for value in results:
-        if value is False:
-            msg = QtWidgets.QMessageBox()
-            msg.setIcon(QtWidgets.QMessageBox.Critical)
-            msg.setWindowTitle('Validation error')
-            msg.setText("Please complete all fields.")
-            # msg.setInformativeText(
-            #     "It seems that some fields are empty. You need to provide values for all fields in red.")
-            msg.exec_()
-            # QtWidgets.QMessageBox().warning(form, "Error", "Please complete all fields", QtWidgets.QMessageBox.Cancel)
-            return
+    # for value in results:
+    #     if value is False:
+    #         msg = QtWidgets.QMessageBox()
+    #         msg.setIcon(QtWidgets.QMessageBox.Critical)
+    #         msg.setWindowTitle('Validation error')
+    #         msg.setText("Please complete all fields.")
+    #         # msg.setInformativeText(
+    #         #     "It seems that some fields are empty. You need to provide values for all fields in red.")
+    #         msg.exec_()
+    #         # QtWidgets.QMessageBox().warning(form, "Error", "Please complete all fields", QtWidgets.QMessageBox.Cancel)
+    #         return
 
-    form.save()
+    # form.save()
+
+    if not ('False' in str(results)):
+        button_box.button(button_box.Ok).blockSignals(False)
+        button_box.accepted.connect(form.save)
 
 
 def validate_field(ui_element, var_type):
