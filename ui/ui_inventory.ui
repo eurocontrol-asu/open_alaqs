@@ -141,6 +141,12 @@
         <property name="text">
          <string>Smooth and Shift</string>
         </property>
+        <property name="enabled">
+         <bool>False</bool>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item>
