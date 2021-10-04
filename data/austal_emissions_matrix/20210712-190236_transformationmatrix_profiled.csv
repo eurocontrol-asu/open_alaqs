@@ -1,0 +1,31 @@
+stage,source_module,timestamp,dispersion_module,count,source_modules,dispersion modules
+beginJob(),AreaSource,0.012,,,,
+beginJob(),MovementSource,0.789001,,,,
+beginJob(),ParkingSource,0.001002,,,,
+beginJob(),PointSource,0.0,,,,
+beginJob(),,5.366777,AUSTAL2000,,,
+process(),,4.584604,,1.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,4.538002,,2.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,2.338001,,3.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,0.922979,,4.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,0.031998,,5.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,2.599023,,6.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,2.664997,,7.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,4.612619,,8.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,2.732002,,9.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,5.261998,,10.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,2.189981,,11.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,2.921015,,12.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,1.788984,,13.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,2.036017,,14.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,0.215947,,15.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,3.126057,,16.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,2.304993,,17.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,1.189006,,18.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,3.631942,,19.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,0.036035,,20.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+endJob(),AreaSource,0.0,,,,
+endJob(),MovementSource,0.0,,,,
+endJob(),ParkingSource,0.0,,,,
+endJob(),PointSource,0.0,,,,
+endJob(),,0.003002,AUSTAL2000,,,

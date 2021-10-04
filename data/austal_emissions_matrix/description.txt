@@ -1,0 +1,6 @@
+file: CAEPport_out.alaqs
+type: All
+start: 2004-01-01 04:00:00
+end: 2004-01-02 00:00:00
+method: bymode
+source dynamics: smooth & shift

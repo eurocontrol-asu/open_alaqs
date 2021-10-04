@@ -1,0 +1,2 @@
+file: CAEPport_out.alaqs
+type: PointSource

@@ -1,0 +1,13 @@
+stage,source_module,timestamp,dispersion_module,count,source_modules,dispersion modules
+beginJob(),AreaSource,0.016174,,,,
+beginJob(),MovementSource,0.803175,,,,
+beginJob(),ParkingSource,0.0,,,,
+beginJob(),PointSource,0.0,,,,
+beginJob(),,35.820361,AUSTAL2000,,,
+process(),,6.0514,,1.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+process(),,6.127328,,2.0,"AreaSource, MovementSource, ParkingSource, PointSource",AUSTAL2000
+endJob(),AreaSource,0.0,,,,
+endJob(),MovementSource,0.0,,,,
+endJob(),ParkingSource,0.0,,,,
+endJob(),PointSource,0.0,,,,
+endJob(),,0.00207,AUSTAL2000,,,
