@@ -43,7 +43,7 @@ def read_csv_to_dict(path):
     if os.path.isfile(path_to_file):
         input_ = read_csv(path_to_file)
         # first row is header
-        if not input_:
+        if input_:
             for index_column, head_column in enumerate(input_[0]):
                 if head_column not in input_dict:
                     input_dict[head_column] = []
