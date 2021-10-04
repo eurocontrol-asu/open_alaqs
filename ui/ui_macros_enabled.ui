@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>277</width>
-    <height>116</height>
+    <height>120</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -22,13 +22,13 @@
   <property name="minimumSize">
    <size>
     <width>277</width>
-    <height>116</height>
+    <height>120</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>277</width>
-    <height>116</height>
+    <height>120</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -41,7 +41,7 @@
    <property name="geometry">
     <rect>
      <x>190</x>
-     <y>80</y>
+     <y>90</y>
      <width>75</width>
      <height>24</height>
     </rect>
@@ -65,7 +65,7 @@
      <x>10</x>
      <y>10</y>
      <width>251</width>
-     <height>71</height>
+     <height>80</height>
     </rect>
    </property>
    <property name="sizePolicy">
@@ -75,7 +75,7 @@
     </sizepolicy>
    </property>
    <property name="text">
-    <string>For use of the Open-ALAQS plugin, macros have been enabled. To change this go to 'Settings &gt; Options &gt; General &gt; Enable macros'</string>
+    <string>To use the Open-ALAQS plugin, Python macros need to be enabled. We have enabled them for you. To change this setting, you can go to 'Settings &gt; Options &gt; General &gt; Enable macros'.</string>
    </property>
    <property name="textFormat">
     <enum>Qt::AutoText</enum>
