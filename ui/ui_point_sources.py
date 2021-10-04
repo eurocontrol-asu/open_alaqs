@@ -79,7 +79,11 @@ def form_open(my_dialog, layer_id, feature_id):
     instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
     button_box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
 
-    button_box.button(button_box.Ok).blockSignals(True)
+    group_change = True
+
+    if category_field is not None:
+        button_box.button(button_box.Ok).blockSignals(True)
+        group_change = False
 
     #self.action.triggered.connect(self.run)
 
@@ -95,32 +99,33 @@ def form_open(my_dialog, layer_id, feature_id):
     #     pass
 
     # QgsEditorWidgetWrapper.fromWidget(instudy).setValue('T')
-    category_field.addItem("")
-    category_field.setCurrentIndex(0)
-    type_field.addItem("")
+    if not group_change:
+        category_field.addItem("")
+        category_field.setCurrentIndex(0)
+        type_field.addItem("")
 
-    populate_categories()
-    populate_hourly_profiles()
-    populate_daily_profiles()
-    populate_monthly_profiles()
+        populate_categories()
+        populate_hourly_profiles()
+        populate_daily_profiles()
+        populate_monthly_profiles()
 
-    category_field.currentIndexChanged["QString"].connect(change_point_category)
-    type_field.currentIndexChanged["QString"].connect(change_category_type)
+        category_field.currentIndexChanged["QString"].connect(change_point_category)
+        type_field.currentIndexChanged["QString"].connect(change_category_type)
 
-    name_field.textChanged.connect(lambda: validate(button_box))
-    height_field.textChanged.connect(lambda: validate(button_box))
-    co_kg_k_field.textChanged.connect(lambda: validate(button_box)) 
-    hc_kg_k_field.textChanged.connect(lambda: validate(button_box))
-    nox_kg_k_field.textChanged.connect(lambda: validate(button_box))
-    sox_kg_k_field.textChanged.connect(lambda: validate(button_box))
-    pm10_kg_k_field.textChanged.connect(lambda: validate(button_box)) 
-    p1_kg_k_field.textChanged.connect(lambda: validate(button_box))
-    p2_kg_k_field.textChanged.connect(lambda: validate(button_box))
-    substance_field.textChanged.connect(lambda: validate(button_box))
-    temperature_field.textChanged.connect(lambda: validate(button_box))
-    diameter_field.textChanged.connect(lambda: validate(button_box))
-    velocity_field.textChanged.connect(lambda: validate(button_box))
-    ops_year_field.textChanged.connect(lambda: validate(button_box))
+        name_field.textChanged.connect(lambda: validate(button_box))
+        height_field.textChanged.connect(lambda: validate(button_box))
+        co_kg_k_field.textChanged.connect(lambda: validate(button_box)) 
+        hc_kg_k_field.textChanged.connect(lambda: validate(button_box))
+        nox_kg_k_field.textChanged.connect(lambda: validate(button_box))
+        sox_kg_k_field.textChanged.connect(lambda: validate(button_box))
+        pm10_kg_k_field.textChanged.connect(lambda: validate(button_box)) 
+        p1_kg_k_field.textChanged.connect(lambda: validate(button_box))
+        p2_kg_k_field.textChanged.connect(lambda: validate(button_box))
+        substance_field.textChanged.connect(lambda: validate(button_box))
+        temperature_field.textChanged.connect(lambda: validate(button_box))
+        diameter_field.textChanged.connect(lambda: validate(button_box))
+        velocity_field.textChanged.connect(lambda: validate(button_box))
+        ops_year_field.textChanged.connect(lambda: validate(button_box))
 
     # button_box.accepted.connect(validate)
     #button_box.rejected.connect(form.resetValues)
