@@ -911,9 +911,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
         timeval: the actual date
         """
 
-        # TODO[RPFK]: REMOVE BEFORE COMMIT
-        start = datetime.now()
-
         # (i1 j1 k1, in this order)
         self._lowb = "1 1 1"
 
@@ -945,10 +942,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
         # Loop over all emissions and append one data point for every cell to
         # total_emissions_per_cell_list for the specific result
         total_emissions_per_cell_list = []
-
-        # TODO[RPFK]: REMOVE BEFORE COMMIT
-        logger.debug(f"Time elapsed before 'result'-loop (n={len(result)}):"
-                     f" {datetime.now() - start}")
 
         # Get the grid
         grid = self.getGrid()
@@ -1040,11 +1033,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
         output_path = self.getOutputPathAsPath()
         fill_results = OrderedDict()
 
-        # TODO[RPFK]: REMOVE BEFORE COMMIT
-        logger.debug(f"Time elapsed before 'pollutants_list'-loop "
-                     f"(n={len(self._pollutants_list)}): "
-                     f"{datetime.now() - start}")
-
         logger.debug(f"Pollutions list: {self._pollutants_list}")
         logger.debug(f"Emissions list: {total_emissions_per_cell_df.columns}")
 
@@ -1091,17 +1079,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
             # Get the total emissions in kg
             hashed_emissions = _pollutant_emissions_kg.sum()
-
-            # # TODO[RPFK]: USE DATAFRAME INSTEAD OF LOOP!
-            # hashed_emissions = sum([total_emissions_per_cell_dict[hash_].transposeToKilograms().getValue(_pollutant, "kg")[0]
-            #                         for hash_ in total_emissions_per_cell_dict])
-
-            # if total_emissions_per_mov.transposeToKilograms().getValue(_pollutant, "kg")[0] and \
-            #         abs(hashed_emissions - total_emissions_per_mov.transposeToKilograms().getValue(_pollutant, "kg")[0])>0.1 :
-            #     if source_counter == 2:
-            #         logger.warning("AUSTAL2000: Grid may have to be enlarged for source:'%s'"%(source_.getName()))
-            #         logger.warning("\t Hashed emissions are <%s> instead of <%s>" %
-            #                    (hashed_emissions, total_emissions_per_mov.transposeToKilograms().getValue(_pollutant)[0]))
 
             # Initialize the emissions grid and get the dimensions
             dims = self.InitializeEmissionGridMatrix()
@@ -1208,10 +1185,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
             except Exception as exc_:
                 logger.error(exc_)
-
-        # TODO[RPFK]: REMOVE BEFORE COMMIT
-        logger.debug(f"Time elapsed after 'pollutants_list'-loop:"
-                     f" {datetime.now() - start}")
 
     @log_time
     def endJob(self):

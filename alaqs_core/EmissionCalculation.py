@@ -195,14 +195,6 @@ class EmissionCalculation:
         if source_names is None:
             source_names = []
 
-        # initialise the profiler
-        # TODO[RPFK]: REMOVE AFTER CODE IMPROVEMENTS
-        profiler_path = \
-            Path(__file__).parents[1] / 'data' / \
-            f'{datetime.now().strftime("%Y%m%d-%H%M%S")}_profiled.csv'
-        profiler = []
-        second = timedelta(seconds=1)
-
         default_emissions = {
             "fuel_kg": 0.,
             "co_g": 0.,
@@ -231,33 +223,13 @@ class EmissionCalculation:
         # execute beginJob(..) of SourceModules
         logger.debug("Execute beginJob(..) of source modules")
         for mod_name, mod_obj in self.getModules().items():
-            # TODO[RPFK]: REMOVE AFTER CODE IMPROVEMENTS
-            p_start = datetime.now()
-
             mod_obj.beginJob()
-
-            # TODO[RPFK]: REMOVE AFTER CODE IMPROVEMENTS
-            profiler.append({
-                'stage': 'beginJob()',
-                'source_module': mod_name,
-                'timestamp': (datetime.now() - p_start) / second
-            })
 
         # execute beginJob(..) of dispersion modules
         logger.debug("Execute beginJob(..) of dispersion modules")
         for dispersion_mod_name, dispersion_mod_obj in \
                 self.getDispersionModules().items():
-            # TODO[RPFK]: REMOVE AFTER CODE IMPROVEMENTS
-            p_start = datetime.now()
-
             dispersion_mod_obj.beginJob()
-
-            # TODO[RPFK]: REMOVE AFTER CODE IMPROVEMENTS
-            profiler.append({
-                'stage': 'beginJob()',
-                'dispersion_module': dispersion_mod_name,
-                'timestamp': (datetime.now() - p_start) / second
-            })
 
         # execute process(..)
         logger.debug("Execute process(..)")
@@ -270,9 +242,6 @@ class EmissionCalculation:
 
             # loop on complete period
             for (start_, end_) in self.getPeriods():
-
-                # TODO[RPFK]: REMOVE AFTER CODE IMPROVEMENTS
-                p_start = datetime.now()
 
                 start_time = start_.getTimeAsDateTime()
                 end_time = end_.getTimeAsDateTime()
@@ -335,53 +304,19 @@ class EmissionCalculation:
                 # add the emissions to the dict
                 self._emissions[start_time] = period_emissions
 
-                # TODO[RPFK]: REMOVE AFTER CODE IMPROVEMENTS
-                profiler.append({
-                    'stage': 'process()',
-                    'count': count_,
-                    'source_modules': ', '.join(self.getModules().keys()),
-                    'dispersion modules': ', '.join(
-                        self.getDispersionModules().keys()),
-                    'timestamp': (datetime.now() - p_start) / second
-                })
-
         except StopIteration as e:
             logger.info("Iteration stopped. %s", e)
 
         # execute endJob(..)
         logger.debug("Execute endJob(..)")
         for mod_name, mod_obj in self.getModules().items():
-            # TODO[RPFK]: REMOVE AFTER CODE IMPROVEMENTS
-            p_start = datetime.now()
-
             mod_obj.endJob()
-
-            # TODO[RPFK]: REMOVE AFTER CODE IMPROVEMENTS
-            profiler.append({
-                'stage': 'endJob()',
-                'source_module': mod_name,
-                'timestamp': (datetime.now() - p_start) / second
-            })
 
         # execute endJob(..) of dispersion modules
         logger.debug("Execute endJob(..) of dispersion modules")
         for dispersion_mod_name, dispersion_mod_obj in \
                 self.getDispersionModules().items():
-            # TODO[RPFK]: REMOVE AFTER CODE IMPROVEMENTS
-            p_start = datetime.now()
-
             dispersion_mod_obj.endJob()
-
-            # TODO[RPFK]: REMOVE AFTER CODE IMPROVEMENTS
-            profiler.append({
-                'stage': 'endJob()',
-                'dispersion_module': dispersion_mod_name,
-                'timestamp': (datetime.now() - p_start) / second
-            })
-
-        # store the profiler information
-        # TODO[RPFK]: REMOVE AFTER CODE IMPROVEMENTS
-        pd.DataFrame(profiler).to_csv(profiler_path, index=False)
 
     def getModules(self):
         return self._modules
