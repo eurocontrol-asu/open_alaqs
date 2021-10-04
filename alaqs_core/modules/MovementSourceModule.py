@@ -16,6 +16,17 @@ from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
 logger = get_logger(__name__)
 
 
+def log_time(func):
+    def inner(*args, **kwargs):
+        start = datetime.now()
+        result = func(*args, **kwargs)
+        finish = datetime.now()
+        logger.debug(f"Time elapsed {func.__name__}: {finish - start}")
+        return result
+
+    return inner
+
+
 class MovementSourceModule(SourceModule):
     """
     Calculate emissions due to movements
@@ -204,11 +215,13 @@ class MovementSourceModule(SourceModule):
         # Update the DataFrame
         self._dataframe = df.astype('object')
 
+    @log_time
     def beginJob(self):
         self.loadSources()
         self.convertSourcesToDataFrame()
         self.addAdditionalColumnsToDataFrame()
 
+    @log_time
     def process(self, start_time, end_time, source_names=None,
                 runway_names=None, ambient_conditions=None, **kwargs) \
             -> List[Tuple[datetime, Source, Emission]]:
@@ -347,5 +360,6 @@ class MovementSourceModule(SourceModule):
 
         return result_
 
+    @log_time
     def endJob(self):
         SourceModule.endJob(self)

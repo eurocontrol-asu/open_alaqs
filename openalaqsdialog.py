@@ -2351,7 +2351,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.ui.setupUi(self)
 
         # initialize calculation
-        self._emission_calculation_ = None
+        self._emission_calculation_: EmissionCalculation = None
         self._emission_calculation_configuration_widget = None
 
         self.resetModuleConfiguration(module_names=[])
@@ -2498,7 +2498,10 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             self._emission_calculation_configuration_widget._receptor_points
         config.update(em_configuration)
 
+        logger.debug(f"Configuration of the emissions calculation: {em_configuration}")
+
         kwargs = {}
+        logger.debug("Selected OutputModule: %s", name)
         if OutputModuleManager().hasModule(name):
 
             # Get the configuration for the OutputModule
@@ -2509,16 +2512,17 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             # Get the OutputModule class
             output_module_class = OutputModuleManager().getModuleByName(name)
 
+            logger.debug("%s configuration: %s", (name, config))
+
             # Configure and run the OutputModule
             output_module_ = output_module_class(values_dict=config)
             output_module_.beginJob()
-            for timeval, rows in list(
-                    self._emission_calculation_.getEmissions().items()):
+            for timeval, rows in \
+                    self._emission_calculation_.getEmissions().items():
                 output_module_.process(timeval, rows, **kwargs)
             res = output_module_.endJob()
 
             if isinstance(res, QtWidgets.QDialog):
-
                 res.show()
             elif isinstance(res, QgsMapLayer):
                 # Replace existing layers with same name...
@@ -2759,9 +2763,12 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                         logger.warning("Not possible to use both 'BFFM2' "
                                        "and 'Apply NOx correction'")
 
+                    logger.debug('add %s with configuration %s',
+                                 (m_name_, em_config))
                     self._emission_calculation_.addModule(
                         m_name_, configuration=em_config)
                 else:
+                    logger.debug('add %s without configuration', m_name_)
                     self._emission_calculation_.addModule(m_name_)
 
             # dispersion modules
