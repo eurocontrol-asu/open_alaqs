@@ -112,6 +112,10 @@ def validate(button_box):
         if results[1] in ['PIER', 'REMOTE', 'CARGO']:
             button_box.button(button_box.Ok).blockSignals(False)
             button_box.accepted.connect(form.save)
+        else:
+            button_box.button(button_box.Ok).blockSignals(True)
+    else:
+        button_box.button(button_box.Ok).blockSignals(True)
 
 def validate_field(ui_element, var_type):
     try:

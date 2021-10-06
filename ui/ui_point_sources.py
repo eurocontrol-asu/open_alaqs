@@ -361,6 +361,8 @@ def validate(button_box):
     if not ('False' in str(results)):
         button_box.button(button_box.Ok).blockSignals(False)
         button_box.accepted.connect(form.save)
+    else:
+        button_box.button(button_box.Ok).blockSignals(True)
 
 def validate_field(ui_element, var_type):
     try:
