@@ -389,7 +389,7 @@ class Ui_DialogInventory(object):
 
     def retranslateUi(self, DialogInventory):
         _translate = QtCore.QCoreApplication.translate
-        DialogInventory.setWindowTitle(_translate("DialogInventory", "Generate Emission Inventory"))
+        DialogInventory.setWindowTitle(_translate("DialogInventory", "OpenALAQS - Generate Emission Inventory"))
         self.label_9.setText(_translate("DialogInventory", "Status:"))
         self.status_update.setText(_translate("DialogInventory", "Click to run"))
         self.create_inventory.setText(_translate("DialogInventory", "Create Inventory"))
