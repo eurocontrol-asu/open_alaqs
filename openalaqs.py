@@ -252,8 +252,6 @@ class OpenALAQS:
         else:
             self.dialogs['create_project'].close()
 
-        #self.macro_check()
-
     def run_project_load(self):
         """
         Opens a dialog to allow the user to open an existing study database.
@@ -283,8 +281,6 @@ class OpenALAQS:
                 self.run_study_setup()
         else:
             self.dialogs['open_project'].close()
-
-        #self.macro_check()
 
     def run_project_close(self):
         """
