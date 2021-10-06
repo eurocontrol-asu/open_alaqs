@@ -21,25 +21,30 @@ def form_open(my_dialog, layer_id, feature_id):
     button_box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
     instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
 
+    button_box.button(button_box.Ok).blockSignals(True)
+
     # #disconnect old-style signals, which are created e.g. by QGIS from the ui file
     # try:
     #     QObject.disconnect(button_box, SIGNAL("accepted()"), form.accept)
     # except Exception as e:
     #     pass
     #disconnect new-style signals
-    try:
-        #button_box.blockSignals(True)
-        button_box.accepted.disconnect(form.accept)
-    except Exception as e:
-        pass
-    button_box.accepted.connect(validate)
+    # try:
+    #     #button_box.blockSignals(True)
+    #     button_box.accepted.disconnect(form.accept)
+    # except Exception as e:
+    #     pass
+    # button_box.accepted.connect(validate)
     #button_box.rejected.connect(form.resetValues)
 
     time_field.setText("Calculated")
     time_field.setEnabled(False)
 
+    name_field.textChanged.connect(lambda: validate(button_box))
+    speed_field.textChanged.connect(lambda: validate(button_box))
 
-def validate():
+
+def validate(button_box):
     """
     This function validates that all of the required fields have been completed
     correctly. If they have, the attributes are committed to the feature. 
@@ -49,15 +54,21 @@ def validate():
     results = list()
     results.append(validate_field(name_field, "str"))
     results.append(validate_field(speed_field, "float"))
-    if False in results:
-        QtWidgets.QMessageBox.warning(None, "Validation error", "Please fill in all the required fields")
-        return False
-    # for value in results:
-    #     if value is False:
-    #         QtWidgets.QMessageBox.warning(None, "Validation error", "Please fill in all the required fields")
-    #         return False
+    # if False in results:
+    #     QtWidgets.QMessageBox.warning(None, "Validation error", "Please fill in all the required fields")
+    #     return False
+    # # for value in results:
+    # #     if value is False:
+    # #         QtWidgets.QMessageBox.warning(None, "Validation error", "Please fill in all the required fields")
+    # #         return False
 
-    form.save()
+    # form.save()
+
+    if not ('False' in str(results)):
+        button_box.button(button_box.Ok).blockSignals(False)
+        button_box.accepted.connect(form.save)
+    else:
+        button_box.button(button_box.Ok).blockSignals(True)
 
 def validate_field(ui_element, var_type):
     try:

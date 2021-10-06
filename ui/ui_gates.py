@@ -30,6 +30,8 @@ def form_open(my_dialog, layer_id, feature_id):
     instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
     instudy.setToolTip('Enable to include source in the study')
 
+    button_box.button(button_box.Ok).blockSignals(True)
+
     populate_combo_boxes()
 
     # # disconnect old-style signals, which are created e.g. by QGIS from the ui file
@@ -38,14 +40,14 @@ def form_open(my_dialog, layer_id, feature_id):
     # except Exception, e:
     #     pass
     #disconnect new-style signals
-    try:
-        button_box.accepted.disconnect(form.accept)
-        # button_box.rejected.disconnect(form.reject)
-    except Exception as e:
-        pass
+    # try:
+    #     button_box.accepted.disconnect(form.accept)
+    #     # button_box.rejected.disconnect(form.reject)
+    # except Exception as e:
+    #     pass
 
     # form.setStyleSheet( "QLineEdit { background: yellow }" )
-    button_box.accepted.connect(validate)
+    # button_box.accepted.connect(validate)
     # button_box.rejected.connect(form.reject)
 
     # layer.startEditing()
@@ -60,6 +62,10 @@ def form_open(my_dialog, layer_id, feature_id):
     # name_field.setStyleSheet("background-color: rgba(255, 107, 107, 150);")
     # name_field.textChanged.connect(NameFieldChanged)
 
+    name_field.textChanged.connect(lambda: validate(button_box))
+    height_field.textChanged.connect(lambda: validate(button_box)) 
+    type_field.currentTextChanged.connect(lambda: validate(button_box)) 
+
 def NameFieldChanged():
     try:
         value = str(name_field.currentText()).strip()
@@ -70,7 +76,7 @@ def NameFieldChanged():
     else:
         name_field.setStyleSheet("")
 
-def validate():
+def validate(button_box):
     """
     This function validates that all of the required fields have been completed correctly. If they have, the attributes
     are committed to the feature. Otherwise an error message is displayed and the incorrect field is highlighted in red.
@@ -89,18 +95,27 @@ def validate():
     #     if not results[key_]:
     #         QMessageBox.warning(form, "Error", "Please complete %s"%key_)
 
-    if False in results:
-        msg = QtWidgets.QMessageBox()
-        msg.setIcon(QtWidgets.QMessageBox.Critical)
-        msg.setWindowTitle('Validation error')
-        msg.setText("Please complete all fields.")
-        # msg.setInformativeText(
-        #     "It seems that some fields are empty. You need to provide values for all fields in red.")
-        msg.exec_()
-        return
+    # if False in results:
+    #     msg = QtWidgets.QMessageBox()
+    #     msg.setIcon(QtWidgets.QMessageBox.Critical)
+    #     msg.setWindowTitle('Validation error')
+    #     msg.setText("Please complete all fields.")
+    #     # msg.setInformativeText(
+    #     #     "It seems that some fields are empty. You need to provide values for all fields in red.")
+    #     msg.exec_()
+    #     return
 
+    # else:
+    #     form.save()
+
+    if not ('False' in str(results)):
+        if results[1] in ['PIER', 'REMOTE', 'CARGO']:
+            button_box.button(button_box.Ok).blockSignals(False)
+            button_box.accepted.connect(form.save)
+        else:
+            button_box.button(button_box.Ok).blockSignals(True)
     else:
-        form.save()
+        button_box.button(button_box.Ok).blockSignals(True)
 
 def validate_field(ui_element, var_type):
     try:

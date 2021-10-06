@@ -81,6 +81,8 @@ def form_open(my_dialog, layer_id, feature_id):
     button_box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
     instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
 
+    button_box.button(button_box.Ok).blockSignals(True)
+
     recalculate.clicked.connect(recalculate_emissions)
 
     #disconnect old-style signals, which are created e.g. by QGIS from the ui file
@@ -89,12 +91,12 @@ def form_open(my_dialog, layer_id, feature_id):
     # except Exception, e:
     #     pass
     #disconnect new-style signals
-    try:
-        button_box.accepted.disconnect(form.accept)
-    except Exception as e:
-        pass
+    # try:
+    #     button_box.accepted.disconnect(form.accept)
+    # except Exception as e:
+    #     pass
 
-    button_box.accepted.connect(validate)
+    # button_box.accepted.connect(validate)
     # button_box.rejected.connect(form.reject)
 
     populate_hourly_profiles()
@@ -107,6 +109,24 @@ def form_open(my_dialog, layer_id, feature_id):
     height_field.setEnabled(False)
     park_time_field.setText("0")
     park_time_field.setEnabled(False)
+
+    name_field.textChanged.connect(lambda: validate(button_box))
+    vehicle_year_field.textChanged.connect(lambda: validate(button_box))
+    height_field.textChanged.connect(lambda: validate(button_box))
+    speed_field.textChanged.connect(lambda: validate(button_box))
+    distance_field.textChanged.connect(lambda: validate(button_box))
+    idle_time_field.textChanged.connect(lambda: validate(button_box))
+    park_time_field.textChanged.connect(lambda: validate(button_box))
+    vehicle_light_field.textChanged.connect(lambda: validate(button_box))
+    vehicle_medium_field.textChanged.connect(lambda: validate(button_box))
+    vehicle_heavy_field.textChanged.connect(lambda: validate(button_box))
+    co_gm_vh_field.textChanged.connect(lambda: validate(button_box))
+    hc_gm_vh_field.textChanged.connect(lambda: validate(button_box))
+    nox_gm_vh_field.textChanged.connect(lambda: validate(button_box))
+    sox_gm_vh_field.textChanged.connect(lambda: validate(button_box))
+    pm10_gm_vh_field.textChanged.connect(lambda: validate(button_box))
+    p1_gm_vh_field.textChanged.connect(lambda: validate(button_box))
+    p2_gm_vh_field.textChanged.connect(lambda: validate(button_box))
 
 
 def populate_hourly_profiles():
@@ -225,7 +245,7 @@ def recalculate_emissions():
         return error
 
 
-def validate():
+def validate(button_box):
     """
     This function validates that all of the required fields have been completed
     correctly. If they have, the attributes are committed to the feature. 
@@ -251,17 +271,17 @@ def validate():
     results.append(validate_field(p1_gm_vh_field, "float"))
     results.append(validate_field(p2_gm_vh_field, "float"))
 
-    for value in results:
-        if value is False:
-            msg = QtWidgets.QMessageBox()
-            msg.setIcon(QtWidgets.QMessageBox.Critical)
-            msg.setWindowTitle('Validation error')
-            msg.setText("Please complete all fields.")
-            # msg.setInformativeText(
-            #     "It seems that some fields are empty. You need to provide values for all fields in red.")
-            msg.exec_()
-            # QtWidgets.QMessageBox().warning(form, "Error", "Please complete all fields", QtWidgets.QMessageBox.Cancel)
-            return
+    # for value in results:
+    #     if value is False:
+    #         msg = QtWidgets.QMessageBox()
+    #         msg.setIcon(QtWidgets.QMessageBox.Critical)
+    #         msg.setWindowTitle('Validation error')
+    #         msg.setText("Please complete all fields.")
+    #         # msg.setInformativeText(
+    #         #     "It seems that some fields are empty. You need to provide values for all fields in red.")
+    #         msg.exec_()
+    #         # QtWidgets.QMessageBox().warning(form, "Error", "Please complete all fields", QtWidgets.QMessageBox.Cancel)
+    #         return
 
     # vl = float(vehicle_light_field.text())
     # vm = float(vehicle_medium_field.text())
@@ -273,8 +293,13 @@ def validate():
     #     QtWidgets.QMessageBox().warning(self, "Error", "Fleet mix must be decimal values that total 100%", QtWidgets.QMessageBox.Ok)
     #     return
 
-    form.save()
+    # form.save()
 
+    if not ('False' in str(results)):
+        button_box.button(button_box.Ok).blockSignals(False)
+        button_box.accepted.connect(form.save)
+    else:
+        button_box.button(button_box.Ok).blockSignals(True)
 
 def validate_field(ui_element, var_type):
     try:

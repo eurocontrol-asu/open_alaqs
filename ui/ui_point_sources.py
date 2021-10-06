@@ -79,6 +79,11 @@ def form_open(my_dialog, layer_id, feature_id):
     instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
     button_box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
 
+    group_change = True
+
+    if category_field is not None:
+        button_box.button(button_box.Ok).blockSignals(True)
+        group_change = False
 
     #self.action.triggered.connect(self.run)
 
@@ -88,25 +93,41 @@ def form_open(my_dialog, layer_id, feature_id):
     # except Exception as e:
     #     pass
     #disconnect new-style signals
-    try:
-        button_box.accepted.disconnect(form.accept)
-    except Exception as e:
-        pass
+    # try:
+    #     button_box.accepted.disconnect(form.accept)
+    # except Exception as e:
+    #     pass
 
     # QgsEditorWidgetWrapper.fromWidget(instudy).setValue('T')
-    category_field.addItem("")
-    category_field.setCurrentIndex(0)
-    type_field.addItem("")
+    if not group_change:
+        category_field.addItem("")
+        category_field.setCurrentIndex(0)
+        type_field.addItem("")
 
-    populate_categories()
-    populate_hourly_profiles()
-    populate_daily_profiles()
-    populate_monthly_profiles()
+        populate_categories()
+        populate_hourly_profiles()
+        populate_daily_profiles()
+        populate_monthly_profiles()
 
-    category_field.currentIndexChanged["QString"].connect(change_point_category)
-    type_field.currentIndexChanged["QString"].connect(change_category_type)
+        category_field.currentIndexChanged["QString"].connect(change_point_category)
+        type_field.currentIndexChanged["QString"].connect(change_category_type)
 
-    button_box.accepted.connect(validate)
+        name_field.textChanged.connect(lambda: validate(button_box))
+        height_field.textChanged.connect(lambda: validate(button_box))
+        co_kg_k_field.textChanged.connect(lambda: validate(button_box)) 
+        hc_kg_k_field.textChanged.connect(lambda: validate(button_box))
+        nox_kg_k_field.textChanged.connect(lambda: validate(button_box))
+        sox_kg_k_field.textChanged.connect(lambda: validate(button_box))
+        pm10_kg_k_field.textChanged.connect(lambda: validate(button_box)) 
+        p1_kg_k_field.textChanged.connect(lambda: validate(button_box))
+        p2_kg_k_field.textChanged.connect(lambda: validate(button_box))
+        substance_field.textChanged.connect(lambda: validate(button_box))
+        temperature_field.textChanged.connect(lambda: validate(button_box))
+        diameter_field.textChanged.connect(lambda: validate(button_box))
+        velocity_field.textChanged.connect(lambda: validate(button_box))
+        ops_year_field.textChanged.connect(lambda: validate(button_box))
+
+    # button_box.accepted.connect(validate)
     #button_box.rejected.connect(form.resetValues)
 
     #type_field.clear()
@@ -315,7 +336,7 @@ def populate_monthly_profiles():
         return error
 
 
-def validate():
+def validate(button_box):
     """
     This function validates that all of the required fields have been completed
     correctly. If they have, the attributes are committed to the feature. 
@@ -337,12 +358,11 @@ def validate():
     results.append(validate_field(p1_kg_k_field, "float"))
     results.append(validate_field(p2_kg_k_field, "float"))
 
-    if False in results:
-        QtWidgets.QMessageBox.warning(None, "Validation error", "Please fill in all the required fields")
-        return False
-
+    if not ('False' in str(results)):
+        button_box.button(button_box.Ok).blockSignals(False)
+        button_box.accepted.connect(form.save)
     else:
-        form.save()
+        button_box.button(button_box.Ok).blockSignals(True)
 
 def validate_field(ui_element, var_type):
     try:
