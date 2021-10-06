@@ -67,6 +67,8 @@ class Ui_DialogInventory(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.smooth_and_shift.sizePolicy().hasHeightForWidth())
         self.smooth_and_shift.setSizePolicy(sizePolicy)
+        self.smooth_and_shift.setEnabled(False)
+        self.smooth_and_shift.setChecked(True)
         self.smooth_and_shift.setObjectName("smooth_and_shift")
         self._2.addWidget(self.smooth_and_shift)
         spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
