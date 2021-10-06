@@ -30,7 +30,8 @@ from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.openalaqsdialog import OpenAlaqsAbout, \
     OpenAlaqsCreateDatabase, OpenAlaqsOpenDatabase, OpenAlaqsStudySetup, \
     OpenAlaqsProfiles, OpenAlaqsTaxiRoutes, OpenAlaqsInventory, \
-    OpenAlaqsResultsAnalysis, OpenAlaqsDispersionAnalysis, OpenAlaqsLogfile
+    OpenAlaqsResultsAnalysis, OpenAlaqsDispersionAnalysis, OpenAlaqsLogfile, \
+    OpenAlaqsEnabledMacros
 
 # Configure the logger
 logger = get_logger(__name__)
@@ -194,6 +195,8 @@ class OpenALAQS:
         self.actions['taxi_routes'].setEnabled(False)
         self.actions['build_inventory'].setEnabled(False)
 
+        self.macro_check()
+
     def unload(self):
         """
         Unloads the Open ALAQS plugin from the QGIS canvas, removing the toolbar
@@ -204,6 +207,15 @@ class OpenALAQS:
 
         # Delete the Open ALAQS toolbar
         del self.open_alaqs_toolbar
+
+    def macro_check(self):
+        """
+        Checks on startup if the 'Enable macro' setting is enabled, functionality
+        is limited if disabled.
+        """
+        if QgsSettings().value("/qgis/enableMacros") != 'Always':
+            QgsSettings().setValue("/qgis/enableMacros", 'Always')
+            self.run_macro_setting_warning()
 
     def run_about(self):
         """
@@ -363,3 +375,11 @@ class OpenALAQS:
         """
         self.dialogs['logfile'] = OpenAlaqsLogfile()
         self.dialogs['logfile'].exec_()
+
+    def run_macro_setting_warning(self):
+        """
+        Opens the widget dialog informing the user of the change to the macro
+        setting.
+        """
+        self.dialogs['enabled_macros'] = OpenAlaqsEnabledMacros(self.iface)
+        self.dialogs['enabled_macros'].show()

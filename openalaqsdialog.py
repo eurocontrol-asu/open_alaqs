@@ -49,6 +49,7 @@ from open_alaqs.ui.ui_results_analysis import Ui_ResultsAnalysisDialog
 from open_alaqs.ui.ui_run_austal2000 import Ui_DialogRunAUSTAL2000
 from open_alaqs.ui.ui_study_setup import Ui_DialogStudySetup
 from open_alaqs.ui.ui_taxiway_routes import Ui_TaxiRoutesDialog
+from open_alaqs.ui.ui_macros_enabled import Ui_DialogEnabledMacros
 
 logger = get_logger(__name__)
 
@@ -3194,3 +3195,21 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         except Exception as e:
             error = alaqsutils.print_error(self.choose_pollutant.__name__,
                                            Exception, e)
+
+class OpenAlaqsEnabledMacros(QtWidgets.QDialog):
+    """
+    This class provides a dialogue that informs the user that macros have been 
+    enabled.
+    """
+
+    def __init__(self, iface):
+        """
+        Initialises QDialog that informs the user of the change to the enable
+        macros setting
+        """
+        main_window = iface.mainWindow() if iface is not None else None
+        QtWidgets.QDialog.__init__(self, main_window)
+        self.ui = Ui_DialogEnabledMacros()
+        self.ui.setupUi(self)
+        self.iface = iface
+        self.ui.pushButton.clicked.connect(self.close)
