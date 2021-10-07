@@ -41,7 +41,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
         self._title = values_dict.get("title", "")
         self._xtitle = values_dict.get("xtitle", "")
         self._ytitle = values_dict.get("ytitle", "")
-        self._marker = values_dict.get("marker","")
+        self._marker = values_dict.get("marker", "")
         self._receptor = values_dict.get("receptor point", {})
         self._grid = values_dict.get("grid")
 
@@ -105,7 +105,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
 
         self._griddata = self._grid.get_df_from_2d_grid_cells()
         self._griddata = self._griddata.assign(Emission=pd.Series(0, index=self._griddata.index))
-        self._griddata.crs = {'init':'epsg:3857'}
+        self._griddata.crs = 'epsg:3857'
 
         if self._receptor_df.dropna(how="any").empty:
             logger.info("No receptor point found. Timeseries will be generated for the entire domain.")
