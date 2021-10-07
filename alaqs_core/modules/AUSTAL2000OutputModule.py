@@ -716,7 +716,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         with file_path.open('w') as text_file:
 
             text_file.write("----------------- general parameters\n")
-            text_file.write("ti\t%s\t' title\n" % self._title)
+            text_file.write("ti\t\"%s\"\t' title\n" % self._title)
             text_file.write("qs\t%s\t' quality level\n" % self._quality_level)
             text_file.write("----------------- meteorology\n")
             text_file.write(

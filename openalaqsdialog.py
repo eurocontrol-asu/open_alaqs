@@ -2451,7 +2451,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             if "Dispersion" not in module_name_:
                 if not module_names or module_name_ in module_names:
                     widget_ = module_instance_.getConfigurationWidget()
-                    if not widget_ is None:
+                    if  widget_ is not None:
                         scroll_widget = QtWidgets.QScrollArea(self)
                         scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
                         scroll_widget.setWidget(widget_)
@@ -2775,8 +2775,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                     {"pollutants_list": self._pollutants_list})
                 dm_conf_[dm_name_].update({"pollutant": pollutant})
 
-                if "enable" in dm_conf_[dm_name_] and dm_conf_[dm_name_][
-                    "enable"]:
+                if dm_conf_[dm_name_].get("enable", False):
                     dm_config = dm_conf_[dm_name_]
                     dm_config["receptors"] = \
                         self._emission_calculation_configuration_widget._receptor_points
@@ -2789,7 +2788,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
             # Sources
             source_name = self.ui.source_names.currentText()
-            source_names = [source_name] if source_name is not None else ["all"]
+            source_names = [source_name if source_name is not None else "all"]
             self._emission_calculation_.run(source_names=source_names)
             self._emission_calculation_.sortEmissionsByTime()
 
