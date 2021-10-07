@@ -47,10 +47,13 @@ class ContourPlotVectorLayer:
         if config is None:
             config = {}
 
+        # Get the minimum value
         min_ = config.get("minValue", 0.)
 
+        # Get the number of classes
         numberOfClasses_ = config.get("numberOfClasses", 7)
 
+        # Create the color gradient
         color1_ = QtGui.QColor(config.get("color1", "white"))
         color2_ = QtGui.QColor(config.get("color2", "red"))
         green = QtGui.QColor(0, 255, 0)
@@ -72,15 +75,19 @@ class ContourPlotVectorLayer:
         symbol_.setOpacity(self._style["transparency"])
         symbol_.symbolLayer(0).setStrokeColor(QtCore.Qt.transparent)
 
-        mode_ = QgsGraduatedSymbolRenderer.Pretty
-        renderer_ = QgsGraduatedSymbolRenderer.createRenderer(self._vectorlayer,
-                                                              columnName_,
-                                                              numberOfClasses_,
-                                                              mode_, symbol_,
-                                                              colorRamp_)
+        # Set the classification method
+        method_ = QgsClassificationPrettyBreaks()
+
+        # Create and configure the renderer
+        renderer_ = QgsGraduatedSymbolRenderer(columnName_)
+        renderer_.setClassificationMethod(method_)
+        renderer_.updateClasses(self._vectorlayer, numberOfClasses_)
+        renderer_.updateSymbols(symbol_)
+        # todo: Add the custom color ramp
 
         if min_ > 0.0:
             renderer_.updateRangeLowerValue(min(0, min_), min_)
+
         self._vectorlayer.setRenderer(renderer_)
 
     def setSymbolRenderer(self):
