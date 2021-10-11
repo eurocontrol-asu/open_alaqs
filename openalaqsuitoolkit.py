@@ -1,8 +1,23 @@
 import os
 
-from qgis.PyQt import QtGui, QtWidgets
+from qgis.PyQt import QtWidgets
 from qgis.core import *
 
+from open_alaqs.alaqs_config import PARKING_LABEL_ENABLED, AREA_LABEL_ENABLED, \
+    AREA_LABEL_FONT, AREA_LABEL_FONT_SIZE, AREA_LABEL_POSITION, \
+    AREA_FILL_COLOR, AREA_BORDER_COLOR, BUILDING_LABEL_ENABLED, \
+    BUILDING_LABEL_FONT, BUILDING_LABEL_FONT_SIZE, BUILDING_LABEL_POSITION, \
+    BUILDING_FILL_COLOR, BUILDING_BORDER_COLOR, GATE_LABEL_ENABLED, \
+    GATE_LABEL_FONT, GATE_LABEL_FONT_SIZE, GATE_LABEL_POSITION, \
+    GATE_FILL_COLOR, GATE_BORDER_COLOR, PARKING_LABEL_FONT, \
+    PARKING_LABEL_FONT_SIZE, PARKING_LABEL_POSITION, PARKING_FILL_COLOR, \
+    PARKING_BORDER_COLOR, ROADWAY_LABEL_ENABLED, ROADWAY_LABEL_FONT, \
+    ROADWAY_LABEL_FONT_SIZE, ROADWAY_LABEL_POSITION, ROADWAY_LINE_WIDTH, \
+    ROADWAY_LINE_COLOR, TAXIWAY_LABEL_ENABLED, TAXIWAY_LABEL_FONT, \
+    TAXIWAY_LABEL_FONT_SIZE, TAXIWAY_LABEL_POSITION, TAXIWAY_LINE_WIDTH, \
+    TAXIWAY_LINE_COLOR, RUNWAY_LABEL_ENABLED, RUNWAY_LABEL_FONT, \
+    RUNWAY_LABEL_FONT_SIZE, RUNWAY_LABEL_POSITION, RUNWAY_LINE_COLOR, \
+    RUNWAY_LINE_WIDTH
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 
 logger = get_logger(__name__)
@@ -164,8 +179,12 @@ def style_area_sources(layer):
         layer.setCustomProperty("labeling/placement", AREA_LABEL_POSITION)
         layer.setCustomProperty("labeling/fieldName", "source_id")
 
-        props = {'color': AREA_FILL_COLOR, 'style': 'solid',
-                 'color_border': AREA_BORDER_COLOR, 'style_border': 'solid'}
+        props = {
+            'color': AREA_FILL_COLOR,
+            'style': 'solid',
+            'color_border': AREA_BORDER_COLOR,
+            'style_border': 'solid'
+        }
         s = QgsFillSymbolV2.createSimple(props)
         layer.setRendererV2(QgsSingleSymbolRendererV2(s))
 
@@ -188,8 +207,12 @@ def style_buildings(layer):
         layer.setCustomProperty("labeling/placement", BUILDING_LABEL_POSITION)
         layer.setCustomProperty("labeling/fieldName", "building_id")
 
-        props = {'color': BUILDING_FILL_COLOR, 'style': 'solid',
-                 'color_border': BUILDING_BORDER_COLOR, 'style_border': 'solid'}
+        props = {
+            'color': BUILDING_FILL_COLOR,
+            'style': 'solid',
+            'color_border': BUILDING_BORDER_COLOR,
+            'style_border': 'solid'
+        }
         s = QgsFillSymbolV2.createSimple(props)
         layer.setRendererV2(QgsSingleSymbolRendererV2(s))
 
@@ -212,8 +235,12 @@ def style_gates(layer):
         layer.setCustomProperty("labeling/placement", GATE_LABEL_POSITION)
         layer.setCustomProperty("labeling/fieldName", "gate_id")
 
-        props = {'color': GATE_FILL_COLOR, 'style': 'solid',
-                 'color_border': GATE_BORDER_COLOR, 'style_border': 'solid'}
+        props = {
+            'color': GATE_FILL_COLOR,
+            'style': 'solid',
+            'color_border': GATE_BORDER_COLOR,
+            'style_border': 'solid'
+        }
         s = QgsFillSymbolV2.createSimple(props)
         layer.setRendererV2(QgsSingleSymbolRendererV2(s))
 
@@ -236,8 +263,12 @@ def style_parkings(layer):
         layer.setCustomProperty("labeling/placement", PARKING_LABEL_POSITION)
         layer.setCustomProperty("labeling/fieldName", "parking_id")
 
-        props = {'color': PARKING_FILL_COLOR, 'style': 'solid',
-                 'color_border': PARKING_BORDER_COLOR, 'style_border': 'solid'}
+        props = {
+            'color': PARKING_FILL_COLOR,
+            'style': 'solid',
+            'color_border': PARKING_BORDER_COLOR,
+            'style_border': 'solid'
+        }
         s = QgsFillSymbolV2.createSimple(props)
         layer.setRendererV2(QgsSingleSymbolRendererV2(s))
 
@@ -277,7 +308,10 @@ def style_roadways(layer):
         layer.setCustomProperty("labeling/placement", ROADWAY_LABEL_POSITION)
         layer.setCustomProperty("labeling/fieldName", "roadway_id")
 
-        props = {'width': ROADWAY_LINE_WIDTH, 'color': ROADWAY_LINE_COLOR}
+        props = {
+            'width': ROADWAY_LINE_WIDTH,
+            'color': ROADWAY_LINE_COLOR
+        }
         s = QgsLineSymbolV2.createSimple(props)
         layer.setRendererV2(QgsSingleSymbolRendererV2(s))
 
