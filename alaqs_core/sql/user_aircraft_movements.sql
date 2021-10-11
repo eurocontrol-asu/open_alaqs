@@ -22,6 +22,5 @@ CREATE TABLE "user_aircraft_movements" (
   "engine_thrust_level_for_taxiing" DECIMAL NULL,
   "taxi_fuel_ratio" DECIMAL NULL,
   "number_of_stop_and_gos" DECIMAL NULL,
-  "domestic" TEXT,
-  "annual_operations" DECIMAL NULL
+  "domestic" TEXT
 );
