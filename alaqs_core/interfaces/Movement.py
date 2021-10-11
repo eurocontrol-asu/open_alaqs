@@ -1601,7 +1601,6 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
                 ("taxi_fuel_ratio", "DECIMAL NULL"),
                 ("number_of_stop_and_gos", "DECIMAL NULL"),
                 ("domestic", "TEXT"),
-                ("annual_operations", "DECIMAL NULL"),
             ])
 
         SQLSerializable.__init__(self, db_path_string, table_name_string,
