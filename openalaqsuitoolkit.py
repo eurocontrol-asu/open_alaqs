@@ -185,8 +185,8 @@ def style_area_sources(layer):
             'color_border': AREA_BORDER_COLOR,
             'style_border': 'solid'
         }
-        s = QgsFillSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        s = QgsFillSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Area layer")
     except Exception as e:
@@ -213,8 +213,8 @@ def style_buildings(layer):
             'color_border': BUILDING_BORDER_COLOR,
             'style_border': 'solid'
         }
-        s = QgsFillSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        s = QgsFillSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Buildings layer")
     except Exception as e:
@@ -241,8 +241,8 @@ def style_gates(layer):
             'color_border': GATE_BORDER_COLOR,
             'style_border': 'solid'
         }
-        s = QgsFillSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        s = QgsFillSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Buildings layer")
     except Exception as e:
@@ -269,8 +269,8 @@ def style_parkings(layer):
             'color_border': PARKING_BORDER_COLOR,
             'style_border': 'solid'
         }
-        s = QgsFillSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        s = QgsFillSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Parkings layer")
     except Exception as e:
@@ -312,8 +312,8 @@ def style_roadways(layer):
             'width': ROADWAY_LINE_WIDTH,
             'color': ROADWAY_LINE_COLOR
         }
-        s = QgsLineSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        s = QgsLineSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Roadways layer")
     except Exception as e:
@@ -335,8 +335,8 @@ def style_taxiways(layer):
         layer.setCustomProperty("labeling/fieldName", "taxiway_id")
 
         props = {'width': TAXIWAY_LINE_WIDTH, 'color': TAXIWAY_LINE_COLOR}
-        s = QgsLineSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        s = QgsLineSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Taxiways layer")
     except Exception as e:
@@ -358,8 +358,8 @@ def style_runways(layer):
         layer.setCustomProperty("labeling/fieldName", "runway_id")
 
         props = {'width': RUNWAY_LINE_WIDTH, 'color': RUNWAY_LINE_COLOR}
-        s = QgsLineSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        s = QgsLineSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Runways layer")
     except Exception as e:
