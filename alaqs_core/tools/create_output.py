@@ -587,7 +587,8 @@ def inventory_copy_vector_layers(inventory_path):
 
 def inventory_copy_aircraft(inventory_path):
     """
-    We only need to take forward data on the aircraft that are in the movement table.
+    We only need to take forward data on the aircraft that are in the movement
+     table.
     :param inventory_path: the path of the inventory file being written to
     """
     try:
@@ -597,9 +598,11 @@ def inventory_copy_aircraft(inventory_path):
         cur = conn.cursor()
 
         data = alaqsdblite.query_string("SELECT * FROM default_aircraft;")
-        cur.executemany('INSERT INTO default_aircraft VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', data)
+        cur.executemany(
+            'INSERT INTO default_aircraft VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            data)
 
-        #movement_aircraft = alaqsdblite.query_string("SELECT DISTINCT aircraft FROM user_aircraft_movements;")
+        # movement_aircraft = alaqsdblite.query_string("SELECT DISTINCT aircraft FROM user_aircraft_movements;")
         ##for aircraft_name in movement_aircraft:
         #
         #    # Get details of this aircraft from the main project database
@@ -616,7 +619,8 @@ def inventory_copy_aircraft(inventory_path):
 
 
     except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_aircraft.__name__, Exception, e)
+        error_msg = alaqsutils.print_error(inventory_copy_aircraft.__name__,
+                                           Exception, e)
         logger.error(error_msg)
         return error_msg
 

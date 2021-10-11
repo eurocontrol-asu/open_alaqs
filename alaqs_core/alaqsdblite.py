@@ -17,8 +17,8 @@ class Singleton(type):
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args,
-                                                                 **kwargs)
+            cls._instances[cls] = \
+                super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
 
 
@@ -191,10 +191,10 @@ def query_string(sql_text):
         # Tidy up the string a bit. Mainly cosmetic for log file
         sql_text = sql_text.replace("", "")
         sql_text = sql_text.replace("  ", "")
+
         conn, result = connect()
         if conn is None:
             raise Exception("Could not connect to database.")
-
         conn.text_factory = str
         cur = conn.cursor()
         cur.execute(sql_text)
