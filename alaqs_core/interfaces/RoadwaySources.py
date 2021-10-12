@@ -21,7 +21,8 @@ class RoadwaySources(Source):
         self._id = str(val["roadway_id"]) if "roadway_id" in val else None
         self._scenario = str(val.get("scenario", ""))
         self._vehicle_year = float(val.get("vehicle_year", 0))
-        self._distance = float(val.get("distance", 0))
+        _distance = val.get("distance", 0)
+        self._distance = .0 if _distance is None else float(_distance)
         self._speed = float(val.get("speed", 0))
         self._fleet_mix = {
             "vehicle_light": float(val.get("vehicle_light", 0)),
@@ -140,10 +141,12 @@ class RoadwaySourcesStore(Store, metaclass=Singleton):
         for key, roadway_dict in list(self.getRoadwaySourcesDatabase().getEntries().items()):
             #add engine to store
             if not roadway_dict['geometry'].replace("LINESTRING", "").replace("(", "").replace(")", ""):
-                # print "Empty segement: %s"%(roadway_dict['roadway_id'])
-                logger.debug("Empty segment: %s"%(roadway_dict['roadway_id']))
+                logger.debug("Empty segment: %s" % (roadway_dict['roadway_id']))
             else:
-                self.setObject(roadway_dict["roadway_id"] if "roadway_id" in roadway_dict else "unknown", RoadwaySources(roadway_dict))
+                self.setObject(
+                    roadway_dict.get("roadway_id", "unknown"),
+                    RoadwaySources(roadway_dict)
+                )
 
     def getRoadwaySourcesDatabase(self):
         return self._roadway_db
