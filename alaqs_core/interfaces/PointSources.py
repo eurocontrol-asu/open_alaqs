@@ -117,24 +117,28 @@ class PointSourcesStore(Store, metaclass=Singleton):
 
         self._db_path = db_path
 
-        #Engine Modes
+        # Engine Modes
         self._point_db = None
-        if  "point_db" in db:
+        if "point_db" in db:
             if isinstance(db["point_db"], PointSourcesDatabase):
                 self._point_db = db["point_db"]
-            elif isinstance(db["point_db"], str) and os.path.isfile(db["point_db"]):
+            elif isinstance(db["point_db"], str) and \
+                    os.path.isfile(db["point_db"]):
                 self._point_db = PointSourcesDatabase(db["point_db"])
 
         if self._point_db is None:
             self._point_db = PointSourcesDatabase(db_path)
 
-        #instantiate all point objects
+        # instantiate all point objects
         self.initPointSources()
 
     def initPointSources(self):
-        for key, point_dict in list(self.getPointSourcesDatabase().getEntries().items()):
-            #add engine to store
-            self.setObject(point_dict["source_id"] if "source_id" in point_dict else "unknown", PointSources(point_dict))
+        for key, point_dict in list(
+                self.getPointSourcesDatabase().getEntries().items()):
+            # add engine to store
+            self.setObject(
+                point_dict.get("source_id", "unknown"),
+                PointSources(point_dict))
 
     def getPointSourcesDatabase(self):
         return self._point_db
@@ -142,7 +146,8 @@ class PointSourcesStore(Store, metaclass=Singleton):
 
 class PointSourcesDatabase(SQLSerializable, metaclass=Singleton):
     """
-    Class that grants access to point/stationary shape file in the spatialite database
+    Class that grants access to point/stationary shape file in the spatialite
+     database
     """
 
     def __init__(self,
