@@ -111,7 +111,7 @@ To find these packages, search for them in the search bar, and find them under t
 
 Now to install Open-ALAQS, clone the repository into the following directory if installed for all users:
 
-**C:\users\YOUR_USER_NAME\.qgis\python\plugins**
+**C:\users\YOUR_USER_NAME\\.qgis\python\plugins**
 
 If installed for only yourself the plugins directory can be found here:
 
