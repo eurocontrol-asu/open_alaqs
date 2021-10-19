@@ -447,7 +447,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         if (end_date - start_date).total_seconds() < 86400:
             logger.warning("A2K warning: The time series must cover at least "
                            "one day. End date will be changed from %s to %s",
-                           (end_date, start_date + timedelta(hours=24)))
+                           end_date, start_date + timedelta(hours=24))
             end_date = start_date + timedelta(hours=23)
 
         # Create a new list to store the hours that were added by this method
