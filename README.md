@@ -88,31 +88,30 @@ To use this project, first clone the repo on your device using the command below
 
 ```git clone https://github.com/navendu-pottekkat/nsfw-filter.git``` -->
 
-To facilitate Open-ALAQS, QGIS needs to be installed. The simplest way to do this is via OSGeo4W Network Installer:
+To facilitate Open-ALAQS, QGIS needs to be installed. The simplest way to do this is via the OSGeo4W Network Installer. Make sure to install the old OSGeo4W installer (currently listed as 'Long-term release in old OSGeo4W (continued with previous dependencies)'), as this will provide access to the correct versions of both QGIS and supporting packages:
 
 https://qgis.org/en/site/forusers/download.html
 
 Once installed, run setup through the 'Advanced Install' route.
 
-In the 'select packages' screen there are eight packages that need installing:
+In the 'select packages' screen there are seven packages that need installing:
 
-- geopandas
-- shapely
-- geographiclib
-- pandas
-- matplotlib
+- python3-geopandas==0.7
+- python3-shapely==1.70-1
+- python3-geographiclib==1.50-1
+- python3-pandas==1.0.1
+- python3-matplotlib==3.1.3-1
+- spatialite==4.3.0a-6
 
-The next three can be selected as default, but should be checked that they are selected regardless:
+Then of course QGIS, select:
 
-- QGIS
-- GRASS
-- SAGA
+- qgis-ltr (3.16.11-1)
 
 To find these packages, search for them in the search bar, and find them under the 'Libs' sub-menu and select them such that they are not to be skipped in the installation (previously installed packages are shown as 'Keep' in the 'New' column). For QGIS you should select the latest version in the Desktop and Libs sub-menus.
 
 Now to install Open-ALAQS, clone the repository into the following directory if installed for all users:
 
-**C:\users\YOUR_USER_NAME\.qgis\python\plugins**
+**C:\users\YOUR_USER_NAME\\.qgis\python\plugins**
 
 If installed for only yourself the plugins directory can be found here:
 
