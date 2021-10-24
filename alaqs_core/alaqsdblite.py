@@ -120,9 +120,11 @@ def connect():
         spatial_dll_filename = "mod_spatialite.dll"
         if 8 * struct.calcsize("P") == 64:
 
+            # Get the filepath of this file
+            file_path = Path(__file__).absolute()
+
             # Get the path to the Spatial DLL folder
-            spatial_dll_folder = str(Path(__file__).absolute().parent / \
-                                 "spatialite-4.0.0-DLL")
+            spatial_dll_folder = str(file_path.parent / "spatialite-4.0.0-DLL")
         else:
             raise Exception("64bit installation of QGIS is now supported. "
                             "Please try to use the 64bit installation.")
@@ -156,11 +158,19 @@ def create_project_database(db_name):
         project_database = ProjectDatabase()
         project_database.path = db_name
 
-        # Get the filepath of the blank study
-        blank_study_path = \
-            Path(__file__).absolute().parent / 'templates/new_blank_study.alaqs'
+        # Get the filepath of this file
+        file_path = Path(__file__).absolute()
 
-        shutil.copy2(str(blank_study_path), db_name)
+        # Get the filepath of the new study
+        new_study_path = Path(db_name).absolute()
+
+        # Create if it doesn't exist
+        new_study_path.touch()
+
+        # Get the filepath of the blank study
+        blank_study_path = file_path.parent / 'templates/new_blank_study.alaqs'
+
+        shutil.copy2(blank_study_path, new_study_path)
         msg = "[+] Created a blank ALAQS study file in %s" % db_name
         logger.info(msg)
 
