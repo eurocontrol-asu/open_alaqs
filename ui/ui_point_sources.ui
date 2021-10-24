@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>267</width>
-    <height>380</height>
+    <height>402</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -34,6 +34,9 @@
      </item>
      <item>
       <widget class="QCheckBox" name="instudy">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="layoutDirection">
         <enum>Qt::RightToLeft</enum>
        </property>
@@ -311,6 +314,14 @@
  <tabstops>
   <tabstop>source_id</tabstop>
   <tabstop>tabWidget</tabstop>
+  <tabstop>category</tabstop>
+  <tabstop>type</tabstop>
+  <tabstop>substance</tabstop>
+  <tabstop>ops_year</tabstop>
+  <tabstop>height</tabstop>
+  <tabstop>temperature</tabstop>
+  <tabstop>diameter</tabstop>
+  <tabstop>velocity</tabstop>
   <tabstop>hour_profile</tabstop>
   <tabstop>daily_profile</tabstop>
   <tabstop>month_profile</tabstop>
@@ -321,6 +332,7 @@
   <tabstop>pm10_kg_k</tabstop>
   <tabstop>p1_kg_k</tabstop>
   <tabstop>p2_kg_k</tabstop>
+  <tabstop>instudy</tabstop>
  </tabstops>
  <resources/>
  <connections/>

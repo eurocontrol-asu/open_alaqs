@@ -138,16 +138,19 @@ class EmissionCalculation:
                 # if issubclass(obj, (list, SourceModule)):
                 # logger.debug(issubclass(obj, (list, SourceModule)))
                 try:
+
                     config_ = {
                         "database_path":
                             self.getDatabasePath() if not db_path else db_path
                     }
+
                     config_.update(configuration)
+
                     self._modules[name] = obj(values_dict=config_)
+
                     return True
-                except Exception:
-                    logger.error("issubclass(obj, SourceModule) failed for "
-                                 "SourceModule")
+                except Exception as e:
+                    logger.error(f"Could not add {name} as a SourceModule. {e}")
                     return False
 
         return False
