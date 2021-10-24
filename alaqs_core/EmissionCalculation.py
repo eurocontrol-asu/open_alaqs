@@ -1,9 +1,6 @@
 import inspect
 from collections import OrderedDict
-from datetime import datetime, timedelta
-from pathlib import Path
 
-import pandas as pd
 from PyQt5 import QtCore, QtWidgets
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
@@ -23,17 +20,6 @@ from open_alaqs.alaqs_core.tools.conversion import convertTimeToSeconds
 from open_alaqs.alaqs_core.tools.iterator import pairwise
 
 logger = get_logger(__name__)
-
-
-def log_time(func):
-    def inner(*args, **kwargs):
-        start = datetime.now()
-        result = func(*args, **kwargs)
-        finish = datetime.now()
-        logger.debug(f"Time elapsed {func.__name__}: {finish - start}")
-        return result
-
-    return inner
 
 
 class EmissionCalculation:
@@ -193,7 +179,6 @@ class EmissionCalculation:
     def CheckAmbientConditions(parameter, isa_value, tolerance):
         return 100 * float(abs(parameter - isa_value)) / isa_value > tolerance
 
-    @log_time
     def run(self, source_names=None):
         if source_names is None:
             source_names = []
