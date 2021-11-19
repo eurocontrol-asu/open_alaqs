@@ -2054,7 +2054,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                 QtWidgets.QApplication.restoreOverrideCursor()
                 if isinstance(result, str):
                     raise Exception()
-                return None
+                return
             else:
                 raise Exception("File does not exists.")
         except Exception as e:
@@ -2069,24 +2069,27 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         :return:
         """
 
+        logger.info("Processing meteorological file.")
+
         # ToDo: More general configuration
         def CheckAmbientConditions(parameter, isa_value, tolerance):
-            return True if 100 * float(
-                abs(parameter - isa_value)) / isa_value > tolerance else False
+            return 100 * float(
+                abs(parameter - isa_value)) / isa_value > tolerance
 
         csv = read_csv_to_dict(met_file)
 
-        headers_ = {"Scenario": "Scenario",
-                    "DateTime(YYYY-mm-dd hh:mm:ss)": "DateTime",
-                    "Temperature(K)": "Temperature",
-                    "Humidity(kg_water/kg_dry_air)": "Humidity",
-                    "RelativeHumidity(%)": "RelativeHumidity",
-                    "SeaLevelPressure(mb)": "SeaLevelPressure",
-                    "WindSpeed(m/s)": "WindSpeed",
-                    "WindDirection(degrees)": "WindDirection",
-                    "ObukhovLength(m)": "ObukhovLength",
-                    "MixingHeight(m)": "MixingHeight"
-                    }
+        headers_ = {
+            "Scenario": "Scenario",
+            "DateTime(YYYY-mm-dd hh:mm:ss)": "DateTime",
+            "Temperature(K)": "Temperature",
+            "Humidity(kg_water/kg_dry_air)": "Humidity",
+            "RelativeHumidity(%)": "RelativeHumidity",
+            "SeaLevelPressure(mb)": "SeaLevelPressure",
+            "WindSpeed(m/s)": "WindSpeed",
+            "WindDirection(degrees)": "WindDirection",
+            "ObukhovLength(m)": "ObukhovLength",
+            "MixingHeight(m)": "MixingHeight"
+        }
 
         # check if all headers are found
         if not sorted(csv.keys()) == sorted(headers_.keys()):

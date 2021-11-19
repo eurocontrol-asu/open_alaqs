@@ -17,20 +17,23 @@ from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 logger = get_logger(__name__)
 
 
-def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_path=""):
+def create_alaqs_output(inventory_path, model_parameters, study_setup,
+                        met_csv_path=""):
     """
-    This is the only function in this class that should be called by an external function. This function creates a new
-    ALAQS output file based on the current study setup, vector layers, and aircraft movements.
+    This is the only function in this class that should be called by an external
+     function. This function creates a new ALAQS output file based on the
+     current study setup, vector layers, and aircraft movements.
 
     :param inventory_path: the path to the new inventory profile to be created
     :param model_parameters: a dictionary with parameters related to the calculation
     :param study_setup: a dictionary with parameters related to the airport model
+    :param met_csv_path: the path to the meteorological data
     :type inventory_path: str
     :return: bool
     """
 
-    #model_parameters
-    #{'use_fuel_flow': False,
+    # model_parameters
+    # {'use_fuel_flow': False,
     # 'include_parkings': True,
     # 'include_area_sources': True,
     # 'include_taxiway_queues': True,
@@ -55,8 +58,8 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_p
     # 'y_cells': 40,
     # 'use_nox_correction': False}
 
-    #study_setup
-    #{'airport_latitude': 50.734444,
+    # study_setup
+    # {'airport_latitude': 50.734444,
     # 'airport_country': 'UK',
     # 'project_name': 'Exeter Airport',
     # 'alaqs_version': '0.0.1',
@@ -98,39 +101,38 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_p
     inventory_copy_emission_dynamics(inventory_path)
     inventory_copy_study_setup(inventory_path)
 
-
-   #3D Grid configuration
+    # 3D Grid configuration
     grid_configuration_ = {
-        'x_cells' : 10,
-        'y_cells' : 10,
+        'x_cells': 10,
+        'y_cells': 10,
         'z_cells' : 1,
         'x_resolution': 100,
         'y_resolution': 100,
-        'z_resolution' :100,
-        'reference_latitude' : '0.0', #airport_latitude
-        'reference_longitude' :'0.0' #airport_longitude
+        'z_resolution': 100,
+        'reference_latitude': '0.0',  # airport_latitude
+        'reference_longitude': '0.0'  # airport_longitude
     }
 
     grid_cells_header = ['x_resolution', 'y_resolution', 'z_resolution', 'x_cells', 'y_cells', 'z_cells']
     for head in grid_cells_header:
-        if not head in model_parameters:
+        if head not in model_parameters:
             raise Exception("Did not find '%s' in '%s'." % (head, "model_parameters"))
         else:
             grid_configuration_[head] = model_parameters[head]
 
     grid_cells_header = ['airport_latitude', 'airport_longitude']
     for head in grid_cells_header:
-        if not head in study_setup:
+        if head not in study_setup:
             raise Exception("Did not find '%s' in '%s'." % (head, "study_setup"))
         else:
             grid_configuration_[head.replace("airport", "reference")] = study_setup[head]
 
-    #add grid configuration to sqlite database
+    # add grid configuration to sqlite database
     grid = Grid3D(inventory_path, grid_configuration_, deserialize=False)
-    #add grid to the database
+    # add grid to the database
     grid.serializeConfiguration()
 
-    #save ambient conditions to database
+    # save ambient conditions to database
     if met_csv_path:
         store = AmbientConditionStore(inventory_path, init_csv_path=met_csv_path)
         store.serialize()

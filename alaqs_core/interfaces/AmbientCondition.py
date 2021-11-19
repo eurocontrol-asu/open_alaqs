@@ -120,30 +120,33 @@ class AmbientConditionStore(Store, metaclass=Singleton):
         if os.path.isfile(db_path):
             self._db_path = db_path
 
-        if not self._db_path is None:
-            self._db = AmbientConditionDatabaseSQL(self._db_path, deserialize= bool(init_csv_path)==False)
+        if self._db_path is not None:
+            self._db = AmbientConditionDatabaseSQL(
+                self._db_path, deserialize=not bool(init_csv_path))
 
-        #instantiate all AmbientCondition objects
+        # instantiate all AmbientCondition objects
         self.initAmbientCondition(init_csv_path)
 
     def initAmbientCondition(self, init_csv_path=""):
 
-        #deserialize objects from csv file
+        # deserialize objects from csv file
         if init_csv_path:
             csv = read_csv_to_dict(init_csv_path)
 
-            headers_ = {"Scenario":"Scenario",
-                        "DateTime(YYYY-mm-dd hh:mm:ss)":"DateTime",
-                        "Temperature(K)":"Temperature",
-                        "Humidity(kg_water/kg_dry_air)":"Humidity",
-                        "RelativeHumidity(%)":"RelativeHumidity",
-                        "SeaLevelPressure(mb)":"SeaLevelPressure",
-                        "WindSpeed(m/s)":"WindSpeed",
-                        "WindDirection(degrees)":"WindDirection",
-                        "ObukhovLength(m)":"ObukhovLength",
-                        "MixingHeight(m)":"MixingHeight"
+            headers_ = {
+                "Scenario": "Scenario",
+                "DateTime(YYYY-mm-dd hh:mm:ss)": "DateTime",
+                "Temperature(K)": "Temperature",
+                "Humidity(kg_water/kg_dry_air)": "Humidity",
+                "RelativeHumidity(%)": "RelativeHumidity",
+                "SeaLevelPressure(mb)": "SeaLevelPressure",
+                "WindSpeed(m/s)": "WindSpeed",
+                "WindDirection(degrees)": "WindDirection",
+                "ObukhovLength(m)": "ObukhovLength",
+                "MixingHeight(m)": "MixingHeight"
             }
-            #check if all headers are found
+
+            # check if all headers are found
             if not sorted(csv.keys()) == sorted(headers_.keys()):
                 logger.error("Headers of meteo csv file do not match..")
 
@@ -152,27 +155,35 @@ class AmbientConditionStore(Store, metaclass=Singleton):
                         logger.error("Did not find header '%s' in csv file." % (key))
 
             head_ = "Scenario"
-            if not "Scenario" in csv:
+            if "Scenario" not in csv:
                 logger.error("Did not find mandatory key '%s' in meteo csv file ... Cannot read the file" % (head_))
                 raise Exception("Did not find mandatory key '%s' in meteo csv file ... Cannot read the file" % (head_))
 
             for i in range(0, len(csv[head_])):
                 ambientcondition_dict = {
-                    "id":i,
-                    "SpeedOfSound":340.29
+                    "id": i,
+                    "SpeedOfSound": 340.29
                 }
 
                 for csv_head_ in list(csv.keys()):
                     if csv_head_ in headers_:
-                        ambientcondition_dict[headers_[csv_head_]] = csv[csv_head_][i]
+                        ambientcondition_dict[headers_[csv_head_]] = \
+                            csv[csv_head_][i]
 
-                #add value to SQL database interface
-                self.getAmbientConditionDatabase().setEntry(ambientcondition_dict["id"] if "id" in ambientcondition_dict else "unknown", ambientcondition_dict)
+                # add value to SQL database interface
+                self.getAmbientConditionDatabase().setEntry(
+                    ambientcondition_dict.get("id", "unknown"),
+                    ambientcondition_dict
+                )
 
-        #deserialize objects from sql db
-        for key, ambientcondition_dict in list(self.getAmbientConditionDatabase().getEntries().items()):
-            #add object to store
-            self.setObject(ambientcondition_dict["id"] if "id" in ambientcondition_dict else "unknown", AmbientCondition(ambientcondition_dict))
+        # deserialize objects from sql db
+        for key, ambientcondition_dict in list(
+                self.getAmbientConditionDatabase().getEntries().items()):
+            # add object to store
+            self.setObject(
+                ambientcondition_dict.get("id", "unknown"),
+                AmbientCondition(ambientcondition_dict)
+            )
 
     def getAmbientConditionDatabase(self):
         return self._db
