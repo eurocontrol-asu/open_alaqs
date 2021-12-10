@@ -1428,7 +1428,7 @@ class MovementStore(Store, metaclass=Singleton):
             indices = mdf[mdf["profile_id"] == prf].index
             if len(indices) != 0 and prf and not pd.isna(prf) and \
                     trajectory_store.hasKey(prf):
-                eq_mdf.loc[indices, "profile_id"] = None
+                eq_mdf.loc[indices, "profile_id"] = prf
 
         # Get unique combinations of eq_mdf
         u_columns = ["runway", "runway_direction", "taxi_route", "profile_id"]
