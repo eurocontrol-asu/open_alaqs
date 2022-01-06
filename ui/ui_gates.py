@@ -40,15 +40,12 @@ def form_open(form, layer, feature):
     # Set the tooltips for each field
     fields['name_field'].setToolTip('Gate ID')
     fields['type_field'].setToolTip('Gate type')
-    fields['height_field'].setToolTip('Not implemented')
     fields['instudy'].setToolTip('Enable to include source in the study')
+    fields['height_field'].setToolTip('Not implemented')
 
-    # QgsEditorWidgetWrapper.fromWidget( height_field ).setValue(0)
+    # Disable the height field
     fields['height_field'].setText("0")
     fields['height_field'].setEnabled(False)
-    # name_field.setText("")
-    # name_field.setStyleSheet("background-color: rgba(255, 107, 107, 150);")
-    # name_field.textChanged.connect(NameFieldChanged)
 
     # Seed the combo boxes only once
     populate_combo_boxes(fields)
@@ -64,7 +61,7 @@ def form_open(form, layer, feature):
 
     # Connect the instudy checkbox on save
     def on_save():
-        form.changeAttribute("type_field", fields['type_field'].currentText())
+        form.changeAttribute("gate_type", fields['type_field'].currentText())
         feature["instudy"] = str(int(fields['instudy'].isChecked()))
     fields['button_box'].accepted.connect(on_save)
 
