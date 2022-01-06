@@ -93,16 +93,6 @@ def form_open(form, layer, feature):
     fields['second_runway_number'].setEnabled(False)
     fields['second_runway_letter'].setEnabled(False)
 
-    # # create_runway_id(fields)
-    # # logger.debug(fields['name_field'].currentText())
-    # logger.debug(fields['name_field'])
-    # logger.debug(fields['name_field'].text())
-
-    # Update the second runway number and letter by calling the first runway
-    # change function
-    # first_runway_number_changed(fields)
-    # first_runway_letter_changed(fields)
-
     # Add input validation to text fields in the form
     for key, value in fields.items():
         if isinstance(value, QtWidgets.QLineEdit):
