@@ -1,121 +1,89 @@
 from PyQt5 import QtWidgets
 
-form = None
-name_field = None
-type_field = None
-height_field = None
-instudy = None
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-def form_open(my_dialog, layer_id, feature_id):
-    global form
-    global name_field
-    global type_field
-    global height_field
-    global instudy
-    global layer
-    layer = layer_id
+logger = get_logger(__name__)
 
-    # QgsAttributeForm contains QgsFeature with attributes gate_id, gate_type etc ..
-    form = my_dialog
-    name_field = form.findChild(QtWidgets.QLineEdit, "gate_id")
-    name_field.setToolTip('Gate ID')
 
-    type_field = form.findChild(QtWidgets.QComboBox, "gate_type")
-    type_field.setToolTip('Gate type')
-
-    height_field = form.findChild(QtWidgets.QLineEdit, "gate_height")
-    height_field.setToolTip('Not implemented')
-
-    button_box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
-    instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
-    instudy.setToolTip('Enable to include source in the study')
-
-    button_box.button(button_box.Ok).blockSignals(True)
-
-    populate_combo_boxes()
-
-    # # disconnect old-style signals, which are created e.g. by QGIS from the ui file
-    # try:
-    #     QObject.disconnect(button_box, SIGNAL("accepted()"), form.accept)
-    # except Exception, e:
-    #     pass
-    #disconnect new-style signals
-    # try:
-    #     button_box.accepted.disconnect(form.accept)
-    #     # button_box.rejected.disconnect(form.reject)
-    # except Exception as e:
-    #     pass
-
-    # form.setStyleSheet( "QLineEdit { background: yellow }" )
-    # button_box.accepted.connect(validate)
-    # button_box.rejected.connect(form.reject)
-
-    # layer.startEditing()
-
-    # instudy_NameIndex = layer.fieldNameIndex("instudy")
-    # QgsEditorWidgetWrapper.fromWidget( instudy ).setValue(1)
-
-    # QgsEditorWidgetWrapper.fromWidget( height_field ).setValue(0)
-    height_field.setText("0")
-    height_field.setEnabled(False)
-    # name_field.setText("")
-    # name_field.setStyleSheet("background-color: rgba(255, 107, 107, 150);")
-    # name_field.textChanged.connect(NameFieldChanged)
-
-    name_field.textChanged.connect(lambda: validate(button_box))
-    height_field.textChanged.connect(lambda: validate(button_box)) 
-    type_field.currentTextChanged.connect(lambda: validate(button_box)) 
-
-def NameFieldChanged():
-    try:
-        value = str(name_field.currentText()).strip()
-    except:
-        value = str(name_field.text()).strip()
-    if not value:
-        name_field.setStyleSheet("background-color: rgba(255, 107, 107, 150);")
-    else:
-        name_field.setStyleSheet("")
-
-def validate(button_box):
+def run_once(f):
     """
-    This function validates that all of the required fields have been completed correctly. If they have, the attributes
-    are committed to the feature. Otherwise an error message is displayed and the incorrect field is highlighted in red.
+    Decorator to make sure the function is executed only once.
+
+    :param f: function to execute
+    :return:
     """
-    results = list()
 
-    results.append(validate_field(name_field, "str"))
-    results.append(validate_field(type_field, "str"))
-    results.append(validate_field(height_field, "float"))
+    def wrapper(*args, **kwargs):
+        if not wrapper.has_run:
+            wrapper.has_run = True
+            return f(*args, **kwargs)
 
-    # results = {"name field":validate_field(name_field, "str"),
-    #            "type field":validate_field(type_field, "str"),
-    #            "height field":validate_field(height_field, "str")
-    #            }
-    # for key_ in results.keys():
-    #     if not results[key_]:
-    #         QMessageBox.warning(form, "Error", "Please complete %s"%key_)
+    wrapper.has_run = False
+    return wrapper
 
-    # if False in results:
-    #     msg = QtWidgets.QMessageBox()
-    #     msg.setIcon(QtWidgets.QMessageBox.Critical)
-    #     msg.setWindowTitle('Validation error')
-    #     msg.setText("Please complete all fields.")
-    #     # msg.setInformativeText(
-    #     #     "It seems that some fields are empty. You need to provide values for all fields in red.")
-    #     msg.exec_()
-    #     return
 
-    # else:
-    #     form.save()
+def form_open(form, layer, feature):
+    logger.debug(f"This is the modified simple form")
+    logger.debug(f"Layer {layer} and feature {feature}")
+    logger.debug(f"Attributes of fields: {feature.fields().names()}")
+    logger.debug(f"Attributes of feature: {feature.attributes()}")
 
-    if not ('False' in str(results)):
-        if results[1] in ['PIER', 'REMOTE', 'CARGO']:
-            button_box.button(button_box.Ok).blockSignals(False)
-            button_box.accepted.connect(form.save)
-        else:
-            button_box.button(button_box.Ok).blockSignals(True)
-    else:
-        button_box.button(button_box.Ok).blockSignals(True)
+    # Get all the fields from the form
+    fields = dict(
+        name_field=form.findChild(QtWidgets.QLineEdit, "gate_id"),
+        type_field=form.findChild(QtWidgets.QComboBox, "gate_type"),
+        height_field=form.findChild(QtWidgets.QLineEdit, "gate_height"),
+        button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
+        instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
+    )
+
+    # Disable the height field
+    fields['height_field'].setToolTip('Not implemented')
+    fields['height_field'].setText("0")
+    fields['height_field'].setEnabled(False)
+
+    # Seed the combo boxes only once
+    populate_combo_boxes(fields)
+
+    # Add input validation to text fields in the form
+    for key, value in fields.items():
+        if isinstance(value, QtWidgets.QLineEdit):
+            fields[key].textChanged.connect(lambda: validate(fields))
+    fields['type_field'].currentTextChanged.connect(lambda: validate(fields))
+
+    # Block the ok button (will be overwritten after validation)
+    fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
+
+    # Connect the instudy checkbox on save
+    def on_save():
+        form.changeAttribute("gate_type", fields['type_field'].currentText())
+        feature["instudy"] = str(int(fields['instudy'].isChecked()))
+    fields['button_box'].accepted.connect(on_save)
+
+
+def validate(fields: dict):
+    """
+    This function validates that all of the required fields have been completed
+    correctly. If they have, the attributes are committed to the feature.
+    Otherwise an error message is displayed and the incorrect field is
+    highlighted in red.
+    """
+    # Get the button box
+    button_box = fields['button_box']
+
+    # Validate all fields
+    results = [
+        validate_field(fields['name_field'], "str"),
+        validate_field(fields['type_field'], "str"),
+        validate_field(fields['height_field'], "float")
+    ]
+
+    # Block signals if any of the fields is invalid
+    button_box.button(button_box.Ok).blockSignals(
+        ("False" in str(results)) or
+        (results[1] not in ('PIER', 'REMOTE', 'CARGO'))
+    )
+
 
 def validate_field(ui_element, var_type):
     try:
@@ -166,6 +134,7 @@ def validate_field(ui_element, var_type):
     except:
         return False
 
+
 def color_ui_background(ui_element, color):
     if color is "red":
         ui_element.setStyleSheet("background-color: rgba(255, 107, 107, 150);")
@@ -175,21 +144,8 @@ def color_ui_background(ui_element, color):
         pass
 
 
-def populate_combo_boxes():
-    type_field.addItem("PIER")
-    type_field.addItem("REMOTE")
-    type_field.addItem("CARGO")
-
-
-    # # Feature we will modify
-    # feat = QgsFeature(layer.pendingFields())
-    # feat_id = feat.id()
-    # # # gate_height QgsField
-    # height_idx = layer.pendingFields().fieldNameIndex("gate_height")
-    # layer.dataProvider().changeAttributeValues({ feat.id() : { height_idx : 999 } })
-    # layer.updateFeature(feat)
-    # layer.changeAttributeValue(feat_id, height_idx, -999)
-    # layer.updateFields()
-
-    # layer.setFieldEditable( height_idx, False )
-    # height_field.setEnabled(False)
+@run_once
+def populate_combo_boxes(fields: dict):
+    fields['type_field'].addItem("PIER")
+    fields['type_field'].addItem("REMOTE")
+    fields['type_field'].addItem("CARGO")
