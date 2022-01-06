@@ -162,6 +162,7 @@ def color_ui_background(ui_element, color):
         pass
 
 
+@run_once
 def populate_combo_boxes(fields: dict):
     fields['type_field'].addItem("PIER")
     fields['type_field'].addItem("REMOTE")
