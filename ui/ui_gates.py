@@ -57,6 +57,7 @@ def form_open(form, layer, feature):
     for key, value in fields.items():
         if isinstance(value, QtWidgets.QLineEdit):
             fields[key].textChanged.connect(lambda: validate(fields))
+    fields['type_field'].currentTextChanged.connect(lambda: validate(fields))
 
     # Block the ok button (will be overwritten after validation)
     fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
