@@ -54,6 +54,24 @@ from open_alaqs.ui.ui_macros_enabled import Ui_DialogEnabledMacros
 logger = get_logger(__name__)
 
 
+def catch_errors(f):
+    """
+    Decorator to catch all errors when executing the function.
+    This decorator catches errors and writes them to the log.
+
+    :param f: function to execute
+    :return:
+    """
+
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            alaqsutils.print_error(f.__name__, Exception, e)
+
+    return wrapper
+
+
 class OpenAlaqsAbout(QtWidgets.QDialog):
     """
     This class provides a dialog that presents a summary of the Open ALAQS
@@ -97,22 +115,18 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
         # Define some of the variables to be used throughout the class
         self.db_path = None
 
-    def browse_directory(self):
+    @catch_errors
+    def browse_directory(self, *args, **kwargs):
         """
         This function opens a directory browsing dialog to collect the save path
         for the new study from the user.
         :return: None if successful, otherwise the trackback error
         """
-        try:
-            directory = str(QtWidgets.QFileDialog.getExistingDirectory(
-                parent=None))
-            if directory.strip() is not "":
-                self.ui.lineEditDatabaseDirectory.setText(directory)
-            return None
-        except Exception as e:
-            error = alaqsutils.print_error(self.browse_directory.__name__,
-                                           Exception, e)
-            return error
+        directory = str(QtWidgets.QFileDialog.getExistingDirectory(
+            parent=None))
+        if directory.strip() is not "":
+            self.ui.lineEditDatabaseDirectory.setText(directory)
+        return None
 
     def create_database(self):
         """
@@ -332,102 +346,98 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.ui.pushButtonSave.clicked.connect(self.save_study_setup)
         self.ui.pushButtonCancel.clicked.connect(self.close)
 
+    @catch_errors
     def load_study_data(self):
         """
         This function loads an existing study from a Spatialite database into
         the QGIS environment.
         """
-        try:
-            result = alaqs.load_study_setup()
-            if (result is not None) and (result is not []):
-                # try and load stuff into the UI
-                study_data = alaqs.load_study_setup_dict()
+        result = alaqs.load_study_setup()
+        if (result is not None) and (result is not []):
+            # try and load stuff into the UI
+            study_data = alaqs.load_study_setup_dict()
 
-                self.ui.lineEditProjectName.setText(study_data['project_name'])
-                self.ui.lineEditAirportName.setText(study_data['airport_name'])
-                self.ui.lineEditAirportID.setText(str(study_data['oid']))
-                self.ui.lineEditAirportID.setEnabled(False)
-                self.ui.lineEditAirportCode.setText(study_data['airport_code'])
-                self.ui.lineEditAirportCountry.setText(
-                    study_data['airport_country'])
-                self.ui.lineEditAirportLatitude.setText(
-                    str(study_data['airport_latitude']))
-                self.ui.lineEditAirportLongitude.setText(
-                    str(study_data['airport_longitude']))
-                self.ui.lineEditAirportElevation.setText(
-                    str(study_data['airport_elevation']))
-                self.ui.lineEditAirportTemperature.setText(
-                    str(study_data['airport_temperature']))
-                self.ui.lineEditVerticalLimit.setText(
-                    str(study_data['vertical_limit']))
-                self.ui.lineEditParkingMethod.setText(
-                    study_data['parking_method'])
+            self.ui.lineEditProjectName.setText(study_data['project_name'])
+            self.ui.lineEditAirportName.setText(study_data['airport_name'])
+            self.ui.lineEditAirportID.setText(str(study_data['oid']))
+            self.ui.lineEditAirportID.setEnabled(False)
+            self.ui.lineEditAirportCode.setText(study_data['airport_code'])
+            self.ui.lineEditAirportCountry.setText(
+                study_data['airport_country'])
+            self.ui.lineEditAirportLatitude.setText(
+                str(study_data['airport_latitude']))
+            self.ui.lineEditAirportLongitude.setText(
+                str(study_data['airport_longitude']))
+            self.ui.lineEditAirportElevation.setText(
+                str(study_data['airport_elevation']))
+            self.ui.lineEditAirportTemperature.setText(
+                str(study_data['airport_temperature']))
+            self.ui.lineEditVerticalLimit.setText(
+                str(study_data['vertical_limit']))
+            self.ui.lineEditParkingMethod.setText(
+                study_data['parking_method'])
 
-                roadway_methods = alaqs.get_roadway_methods()
-                if roadway_methods is not None:
-                    self.ui.comboBoxRoadwayMethod.clear()
-                    for method in roadway_methods:
-                        self.ui.comboBoxRoadwayMethod.addItem(method)
-                    index = self.ui.comboBoxRoadwayMethod.findText(
-                        study_data['roadway_method'])
-                    if index == -1:
-                        if self.ui.comboBoxRoadwayMethod.count():
-                            self.ui.comboBoxRoadwayMethod.setCurrentIndex(0)
-                    if index != -1:
-                        self.ui.comboBoxRoadwayMethod.setCurrentIndex(index)
+            roadway_methods = alaqs.get_roadway_methods()
+            if roadway_methods is not None:
+                self.ui.comboBoxRoadwayMethod.clear()
+                for method in roadway_methods:
+                    self.ui.comboBoxRoadwayMethod.addItem(method)
+                index = self.ui.comboBoxRoadwayMethod.findText(
+                    study_data['roadway_method'])
+                if index == -1:
+                    if self.ui.comboBoxRoadwayMethod.count():
+                        self.ui.comboBoxRoadwayMethod.setCurrentIndex(0)
+                if index != -1:
+                    self.ui.comboBoxRoadwayMethod.setCurrentIndex(index)
 
-                roadway_fleet_years = alaqs.get_roadway_fleet_years()
-                if roadway_fleet_years is not None:
-                    self.ui.comboBoxRoadwayFleetYear.clear()
-                    for year in roadway_fleet_years:
-                        self.ui.comboBoxRoadwayFleetYear.addItem(year)
+            roadway_fleet_years = alaqs.get_roadway_fleet_years()
+            if roadway_fleet_years is not None:
+                self.ui.comboBoxRoadwayFleetYear.clear()
+                for year in roadway_fleet_years:
+                    self.ui.comboBoxRoadwayFleetYear.addItem(year)
+                fleet_year_index = \
+                    self.ui.comboBoxRoadwayFleetYear.findText(
+                        str(study_data['roadway_fleet_year']))
+                if fleet_year_index == -1:
                     fleet_year_index = \
-                        self.ui.comboBoxRoadwayFleetYear.findText(
-                            str(study_data['roadway_fleet_year']))
-                    if fleet_year_index == -1:
-                        fleet_year_index = \
-                            self.ui.comboBoxRoadwayFleetYear.findText("2010")
+                        self.ui.comboBoxRoadwayFleetYear.findText("2010")
 
-                    if fleet_year_index != -1:
-                        self.ui.comboBoxRoadwayFleetYear.setCurrentIndex(
-                            fleet_year_index)
+                if fleet_year_index != -1:
+                    self.ui.comboBoxRoadwayFleetYear.setCurrentIndex(
+                        fleet_year_index)
 
-                roadway_countries = alaqs.get_roadway_countries()
-                if not (roadway_countries is None):
-                    self.ui.comboBoxRoadwayCountry.clear()
-                    for country in roadway_countries:
-                        self.ui.comboBoxRoadwayCountry.addItem(country[0])
+            roadway_countries = alaqs.get_roadway_countries()
+            if not (roadway_countries is None):
+                self.ui.comboBoxRoadwayCountry.clear()
+                for country in roadway_countries:
+                    self.ui.comboBoxRoadwayCountry.addItem(country[0])
+                roadway_country_index = \
+                    self.ui.comboBoxRoadwayCountry.findText(
+                        study_data['roadway_country'])
+                if roadway_country_index == -1:
                     roadway_country_index = \
-                        self.ui.comboBoxRoadwayCountry.findText(
-                            study_data['roadway_country'])
-                    if roadway_country_index == -1:
-                        roadway_country_index = \
-                            self.ui.comboBoxRoadwayCountry.findText("EU")
+                        self.ui.comboBoxRoadwayCountry.findText("EU")
 
-                    if roadway_country_index != -1:
-                        self.ui.comboBoxRoadwayCountry.setCurrentIndex(
-                            roadway_country_index)
+                if roadway_country_index != -1:
+                    self.ui.comboBoxRoadwayCountry.setCurrentIndex(
+                        roadway_country_index)
 
-                self.ui.textEditStudyInformation.setPlainText(
-                    study_data['study_info'])
+            self.ui.textEditStudyInformation.setPlainText(
+                study_data['study_info'])
 
-                created_date = study_data['date_created']
-                modified_date = study_data['date_modified']
-                latest_date = created_date
-                if conversion.convertTimeToSeconds(modified_date) > \
-                        conversion.convertTimeToSeconds(created_date):
-                    latest_date = modified_date
+            created_date = study_data['date_created']
+            modified_date = study_data['date_modified']
+            latest_date = created_date
+            if conversion.convertTimeToSeconds(modified_date) > \
+                    conversion.convertTimeToSeconds(created_date):
+                latest_date = modified_date
 
-                self.ui.labelDateCreated.setText(str(created_date))
-                self.ui.labelDateModified.setText(str(latest_date))
-            else:
-                # load some defaults
-                raise Exception("Could not load study setup.")
+            self.ui.labelDateCreated.setText(str(created_date))
+            self.ui.labelDateModified.setText(str(latest_date))
+        else:
+            # load some defaults
+            raise Exception("Could not load study setup.")
 
-        except Exception as e:
-            error = alaqsutils.print_error(self.load_study_data.__name__,
-                                           Exception, e)
-            return error
 
     def airport_lookup(self):
         """
@@ -587,64 +597,53 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         self.populate_daily_profiles()
         self.populate_monthly_profiles()
 
+    @catch_errors
     def populate_hourly_profiles(self):
         """
         Gets a list of hourly profiles from current database and populate
         """
-        try:
-            profiles = alaqs.get_hourly_profiles()
-            self.ui.comboBoxHourlyName.clear()
-            if (profiles is None) or (profiles is []):
-                return None
-            else:
-                for profile in profiles:
-                    self.ui.comboBoxHourlyName.addItem(profile[1])
-                self.ui.comboBoxHourlyName.setCurrentIndex(0)
-                self.ui.comboBoxHourlyName.setEditable(False)
-                return None
-        except Exception as e:
-            error = alaqsutils.print_error(
-                self.populate_hourly_profiles.__name__, Exception, e)
-            return error
+        profiles = alaqs.get_hourly_profiles()
+        self.ui.comboBoxHourlyName.clear()
+        if (profiles is None) or (profiles is []):
+            return None
+        else:
+            for profile in profiles:
+                self.ui.comboBoxHourlyName.addItem(profile[1])
+            self.ui.comboBoxHourlyName.setCurrentIndex(0)
+            self.ui.comboBoxHourlyName.setEditable(False)
+            return None
 
+    @catch_errors
     def populate_daily_profiles(self):
         """
         Gets a list of daily profiles from current database and populate
         """
-        try:
-            profiles = alaqs.get_daily_profiles()
-            self.ui.comboBoxDailyName.clear()
-            if (profiles is None) or (profiles is []):
-                return None
-            else:
-                for profile in profiles:
-                    self.ui.comboBoxDailyName.addItem(profile[1])
-                self.ui.comboBoxDailyName.setCurrentIndex(0)
-                self.ui.comboBoxDailyName.setEditable(False)
-        except Exception as e:
-            error = alaqsutils.print_error(
-                self.populate_daily_profiles.__name__, Exception, e)
-            return error
+        profiles = alaqs.get_daily_profiles()
+        self.ui.comboBoxDailyName.clear()
+        if (profiles is None) or (profiles is []):
+            return None
+        else:
+            for profile in profiles:
+                self.ui.comboBoxDailyName.addItem(profile[1])
+            self.ui.comboBoxDailyName.setCurrentIndex(0)
+            self.ui.comboBoxDailyName.setEditable(False)
 
+    @catch_errors
     def populate_monthly_profiles(self):
         """
         Gets a list of daily profiles from current database and populate
         """
-        try:
-            profiles = alaqs.get_monthly_profiles()
-            self.ui.comboBoxMonthlyName.clear()
-            if (profiles is None) or (profiles is []):
-                return None
-            else:
-                for profile in profiles:
-                    self.ui.comboBoxMonthlyName.addItem(profile[1])
-                self.ui.comboBoxMonthlyName.setCurrentIndex(0)
-                self.ui.comboBoxMonthlyName.setEditable(False)
-        except Exception as e:
-            error = alaqsutils.print_error(
-                self.populate_monthly_profiles.__name__, Exception, e)
-            return error
+        profiles = alaqs.get_monthly_profiles()
+        self.ui.comboBoxMonthlyName.clear()
+        if (profiles is None) or (profiles is []):
+            return None
+        else:
+            for profile in profiles:
+                self.ui.comboBoxMonthlyName.addItem(profile[1])
+            self.ui.comboBoxMonthlyName.setCurrentIndex(0)
+            self.ui.comboBoxMonthlyName.setEditable(False)
 
+    @catch_errors
     def change_hourly_profile(self, profile_id):
         """
         This reloads the profile UI to show the currently selected hourly
@@ -653,47 +652,43 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         :param profile_id: the unique ID of the hourly profile to be displayed
         :return: :raise Exception:
         """
-        try:
-            if str(profile_id).strip() is "":
-                self.clear_hourly_profile()
-                return None
+        if str(profile_id).strip() is "":
+            self.clear_hourly_profile()
+            return None
 
-            profile_data = alaqs.get_hourly_profile(profile_id)
-            if isinstance(profile_data, str):
-                raise Exception(profile_data)
-            elif profile_data is None:
-                return None
-            else:
-                self.ui.lineEditHourly00.setText(str(profile_data[0][2]))
-                self.ui.lineEditHourly01.setText(str(profile_data[0][3]))
-                self.ui.lineEditHourly02.setText(str(profile_data[0][4]))
-                self.ui.lineEditHourly03.setText(str(profile_data[0][5]))
-                self.ui.lineEditHourly04.setText(str(profile_data[0][6]))
-                self.ui.lineEditHourly05.setText(str(profile_data[0][7]))
-                self.ui.lineEditHourly06.setText(str(profile_data[0][8]))
-                self.ui.lineEditHourly07.setText(str(profile_data[0][9]))
-                self.ui.lineEditHourly08.setText(str(profile_data[0][10]))
-                self.ui.lineEditHourly09.setText(str(profile_data[0][11]))
-                self.ui.lineEditHourly10.setText(str(profile_data[0][12]))
-                self.ui.lineEditHourly11.setText(str(profile_data[0][13]))
-                self.ui.lineEditHourly12.setText(str(profile_data[0][14]))
-                self.ui.lineEditHourly13.setText(str(profile_data[0][15]))
-                self.ui.lineEditHourly14.setText(str(profile_data[0][16]))
-                self.ui.lineEditHourly15.setText(str(profile_data[0][17]))
-                self.ui.lineEditHourly16.setText(str(profile_data[0][18]))
-                self.ui.lineEditHourly17.setText(str(profile_data[0][19]))
-                self.ui.lineEditHourly18.setText(str(profile_data[0][20]))
-                self.ui.lineEditHourly19.setText(str(profile_data[0][21]))
-                self.ui.lineEditHourly20.setText(str(profile_data[0][22]))
-                self.ui.lineEditHourly21.setText(str(profile_data[0][23]))
-                self.ui.lineEditHourly22.setText(str(profile_data[0][24]))
-                self.ui.lineEditHourly23.setText(str(profile_data[0][25]))
-                return None
-        except Exception as e:
-            error = alaqsutils.print_error(self.change_hourly_profile.__name__,
-                                           Exception, e)
-            return error
+        profile_data = alaqs.get_hourly_profile(profile_id)
+        if isinstance(profile_data, str):
+            raise Exception(profile_data)
+        elif profile_data is None:
+            return None
+        else:
+            self.ui.lineEditHourly00.setText(str(profile_data[0][2]))
+            self.ui.lineEditHourly01.setText(str(profile_data[0][3]))
+            self.ui.lineEditHourly02.setText(str(profile_data[0][4]))
+            self.ui.lineEditHourly03.setText(str(profile_data[0][5]))
+            self.ui.lineEditHourly04.setText(str(profile_data[0][6]))
+            self.ui.lineEditHourly05.setText(str(profile_data[0][7]))
+            self.ui.lineEditHourly06.setText(str(profile_data[0][8]))
+            self.ui.lineEditHourly07.setText(str(profile_data[0][9]))
+            self.ui.lineEditHourly08.setText(str(profile_data[0][10]))
+            self.ui.lineEditHourly09.setText(str(profile_data[0][11]))
+            self.ui.lineEditHourly10.setText(str(profile_data[0][12]))
+            self.ui.lineEditHourly11.setText(str(profile_data[0][13]))
+            self.ui.lineEditHourly12.setText(str(profile_data[0][14]))
+            self.ui.lineEditHourly13.setText(str(profile_data[0][15]))
+            self.ui.lineEditHourly14.setText(str(profile_data[0][16]))
+            self.ui.lineEditHourly15.setText(str(profile_data[0][17]))
+            self.ui.lineEditHourly16.setText(str(profile_data[0][18]))
+            self.ui.lineEditHourly17.setText(str(profile_data[0][19]))
+            self.ui.lineEditHourly18.setText(str(profile_data[0][20]))
+            self.ui.lineEditHourly19.setText(str(profile_data[0][21]))
+            self.ui.lineEditHourly20.setText(str(profile_data[0][22]))
+            self.ui.lineEditHourly21.setText(str(profile_data[0][23]))
+            self.ui.lineEditHourly22.setText(str(profile_data[0][24]))
+            self.ui.lineEditHourly23.setText(str(profile_data[0][25]))
+            return None
 
+    @catch_errors
     def change_daily_profile(self, profile_id):
         """
         This reloads the profile UI to show the currently selected daily profile
@@ -701,29 +696,25 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
 
         :param profile_id: the unique ID of the daily profile to be displayed
         """
-        try:
-            if str(profile_id).strip() is "":
-                self.clear_daily_profile()
-                return None
-            profile_data = alaqs.get_daily_profile(profile_id)
-            if isinstance(profile_data, str):
-                raise Exception(profile_data)
-            elif profile_data is None:
-                return None
-            else:
-                self.ui.lineEditDailyMon.setText(str(profile_data[0][2]))
-                self.ui.lineEditDailyTues.setText(str(profile_data[0][3]))
-                self.ui.lineEditDailyWed.setText(str(profile_data[0][4]))
-                self.ui.lineEditDailyThurs.setText(str(profile_data[0][5]))
-                self.ui.lineEditDailyFri.setText(str(profile_data[0][6]))
-                self.ui.lineEditDailySat.setText(str(profile_data[0][7]))
-                self.ui.lineEditDailySun.setText(str(profile_data[0][8]))
-                return None
-        except Exception as e:
-            error = alaqsutils.print_error(self.change_daily_profile.__name__,
-                                           Exception, e)
-            return error
+        if str(profile_id).strip() is "":
+            self.clear_daily_profile()
+            return None
+        profile_data = alaqs.get_daily_profile(profile_id)
+        if isinstance(profile_data, str):
+            raise Exception(profile_data)
+        elif profile_data is None:
+            return None
+        else:
+            self.ui.lineEditDailyMon.setText(str(profile_data[0][2]))
+            self.ui.lineEditDailyTues.setText(str(profile_data[0][3]))
+            self.ui.lineEditDailyWed.setText(str(profile_data[0][4]))
+            self.ui.lineEditDailyThurs.setText(str(profile_data[0][5]))
+            self.ui.lineEditDailyFri.setText(str(profile_data[0][6]))
+            self.ui.lineEditDailySat.setText(str(profile_data[0][7]))
+            self.ui.lineEditDailySun.setText(str(profile_data[0][8]))
+            return None
 
+    @catch_errors
     def change_monthly_profile(self, profile_id):
         """
         This reloads the profile UI to show the currently selected monthly
@@ -731,33 +722,28 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
 
         :param profile_id: the unique ID of the monthly profile to be displayed
         """
-        try:
-            if str(profile_id).strip() is "":
-                self.clear_monthly_profile()
-                return None
-            profile_data = alaqs.get_monthly_profile(profile_id)
-            if isinstance(profile_data, str):
-                raise Exception(profile_data)
-            elif profile_data is None:
-                return None
-            else:
-                self.ui.lineEditMonthlyJan.setText(str(profile_data[0][2]))
-                self.ui.lineEditMonthlyFeb.setText(str(profile_data[0][3]))
-                self.ui.lineEditMonthlyMar.setText(str(profile_data[0][4]))
-                self.ui.lineEditMonthlyApr.setText(str(profile_data[0][5]))
-                self.ui.lineEditMonthlyMay.setText(str(profile_data[0][6]))
-                self.ui.lineEditMonthlyJun.setText(str(profile_data[0][7]))
-                self.ui.lineEditMonthlyJul.setText(str(profile_data[0][8]))
-                self.ui.lineEditMonthlyAug.setText(str(profile_data[0][9]))
-                self.ui.lineEditMonthlySep.setText(str(profile_data[0][10]))
-                self.ui.lineEditMonthlyOct.setText(str(profile_data[0][11]))
-                self.ui.lineEditMonthlyNov.setText(str(profile_data[0][12]))
-                self.ui.lineEditMonthlyDec.setText(str(profile_data[0][13]))
-                return None
-        except Exception as e:
-            error = alaqsutils.print_error(self.change_monthly_profile.__name__,
-                                           Exception, e)
-            return error
+        if str(profile_id).strip() is "":
+            self.clear_monthly_profile()
+            return None
+        profile_data = alaqs.get_monthly_profile(profile_id)
+        if isinstance(profile_data, str):
+            raise Exception(profile_data)
+        elif profile_data is None:
+            return None
+        else:
+            self.ui.lineEditMonthlyJan.setText(str(profile_data[0][2]))
+            self.ui.lineEditMonthlyFeb.setText(str(profile_data[0][3]))
+            self.ui.lineEditMonthlyMar.setText(str(profile_data[0][4]))
+            self.ui.lineEditMonthlyApr.setText(str(profile_data[0][5]))
+            self.ui.lineEditMonthlyMay.setText(str(profile_data[0][6]))
+            self.ui.lineEditMonthlyJun.setText(str(profile_data[0][7]))
+            self.ui.lineEditMonthlyJul.setText(str(profile_data[0][8]))
+            self.ui.lineEditMonthlyAug.setText(str(profile_data[0][9]))
+            self.ui.lineEditMonthlySep.setText(str(profile_data[0][10]))
+            self.ui.lineEditMonthlyOct.setText(str(profile_data[0][11]))
+            self.ui.lineEditMonthlyNov.setText(str(profile_data[0][12]))
+            self.ui.lineEditMonthlyDec.setText(str(profile_data[0][13]))
+            return None
 
     def delete_hourly_profile(self):
         """
@@ -845,154 +831,138 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                         profile_name, result))
                 return "The selected monthly profile could not be deleted"
 
+    @catch_errors
     def new_hourly_profile(self):
         """
         This adds a new blank hourly profile to the UI
         :return: None if successful; error message as a string if its
          unsuccessful
         """
-        try:
-            self.clear_hourly_profile()
-            self.ui.comboBoxHourlyName.addItem("New Profile")
-            index = self.ui.comboBoxHourlyName.count()
-            self.ui.comboBoxHourlyName.setCurrentIndex(index - 1)
-            self.ui.comboBoxHourlyName.setEditable(True)
-            return None
-        except Exception as e:
-            error = alaqsutils.print_error(self.new_hourly_profile.__name__,
-                                           Exception, e)
-            return error
+        self.clear_hourly_profile()
+        self.ui.comboBoxHourlyName.addItem("New Profile")
+        index = self.ui.comboBoxHourlyName.count()
+        self.ui.comboBoxHourlyName.setCurrentIndex(index - 1)
+        self.ui.comboBoxHourlyName.setEditable(True)
+        return None
 
+    @catch_errors
     def new_daily_profile(self):
         """
         This adds a new blank daily profile to the UI
         :return: None if successful; error message as a string if its
          unsuccessful
         """
-        try:
-            self.clear_daily_profile()
-            self.ui.comboBoxDailyName.addItem("New Profile")
-            index = self.ui.comboBoxDailyName.count()
-            self.ui.comboBoxDailyName.setCurrentIndex(index - 1)
-            self.ui.comboBoxDailyName.setEditable(True)
-            return None
-        except Exception as e:
-            error = alaqsutils.print_error(self.new_daily_profile.__name__,
-                                           Exception, e)
-            return error
+        self.clear_daily_profile()
+        self.ui.comboBoxDailyName.addItem("New Profile")
+        index = self.ui.comboBoxDailyName.count()
+        self.ui.comboBoxDailyName.setCurrentIndex(index - 1)
+        self.ui.comboBoxDailyName.setEditable(True)
+        return None
 
+    @catch_errors
     def new_monthly_profile(self):
         """
         Adds a new blank monthly profile to the UI
         :return: None if successful; error message as a string if its
          unsuccessful
         """
-        try:
-            self.clear_monthly_profile()
-            self.ui.comboBoxMonthlyName.addItem("New Profile")
-            index = self.ui.comboBoxMonthlyName.count()
-            self.ui.comboBoxMonthlyName.setCurrentIndex(index - 1)
-            self.ui.comboBoxMonthlyName.setEditable(True)
-            return None
-        except Exception as e:
-            error = alaqsutils.print_error(self.new_monthly_profile.__name__,
-                                           Exception, e)
-            return error
+        self.clear_monthly_profile()
+        self.ui.comboBoxMonthlyName.addItem("New Profile")
+        index = self.ui.comboBoxMonthlyName.count()
+        self.ui.comboBoxMonthlyName.setCurrentIndex(index - 1)
+        self.ui.comboBoxMonthlyName.setEditable(True)
+        return None
 
+    @catch_errors
     def save_hourly_profile(self):
         """
         Takes data from the UI and saves a new hourly profile to the currently
          active ALAQS database
         :return:
         """
-        try:
-            profile_name = oautk.validate_field(self.ui.comboBoxHourlyName,
-                                                "str")
-            h00 = oautk.validate_field(self.ui.lineEditHourly00, "float")
-            h01 = oautk.validate_field(self.ui.lineEditHourly01, "float")
-            h02 = oautk.validate_field(self.ui.lineEditHourly02, "float")
-            h03 = oautk.validate_field(self.ui.lineEditHourly03, "float")
-            h04 = oautk.validate_field(self.ui.lineEditHourly04, "float")
-            h05 = oautk.validate_field(self.ui.lineEditHourly05, "float")
-            h06 = oautk.validate_field(self.ui.lineEditHourly06, "float")
-            h07 = oautk.validate_field(self.ui.lineEditHourly07, "float")
-            h08 = oautk.validate_field(self.ui.lineEditHourly08, "float")
-            h09 = oautk.validate_field(self.ui.lineEditHourly09, "float")
-            h10 = oautk.validate_field(self.ui.lineEditHourly10, "float")
-            h11 = oautk.validate_field(self.ui.lineEditHourly11, "float")
-            h12 = oautk.validate_field(self.ui.lineEditHourly12, "float")
-            h13 = oautk.validate_field(self.ui.lineEditHourly13, "float")
-            h14 = oautk.validate_field(self.ui.lineEditHourly14, "float")
-            h15 = oautk.validate_field(self.ui.lineEditHourly15, "float")
-            h16 = oautk.validate_field(self.ui.lineEditHourly16, "float")
-            h17 = oautk.validate_field(self.ui.lineEditHourly17, "float")
-            h18 = oautk.validate_field(self.ui.lineEditHourly18, "float")
-            h19 = oautk.validate_field(self.ui.lineEditHourly19, "float")
-            h20 = oautk.validate_field(self.ui.lineEditHourly20, "float")
-            h21 = oautk.validate_field(self.ui.lineEditHourly21, "float")
-            h22 = oautk.validate_field(self.ui.lineEditHourly22, "float")
-            h23 = oautk.validate_field(self.ui.lineEditHourly23, "float")
+        profile_name = oautk.validate_field(self.ui.comboBoxHourlyName,
+                                            "str")
+        h00 = oautk.validate_field(self.ui.lineEditHourly00, "float")
+        h01 = oautk.validate_field(self.ui.lineEditHourly01, "float")
+        h02 = oautk.validate_field(self.ui.lineEditHourly02, "float")
+        h03 = oautk.validate_field(self.ui.lineEditHourly03, "float")
+        h04 = oautk.validate_field(self.ui.lineEditHourly04, "float")
+        h05 = oautk.validate_field(self.ui.lineEditHourly05, "float")
+        h06 = oautk.validate_field(self.ui.lineEditHourly06, "float")
+        h07 = oautk.validate_field(self.ui.lineEditHourly07, "float")
+        h08 = oautk.validate_field(self.ui.lineEditHourly08, "float")
+        h09 = oautk.validate_field(self.ui.lineEditHourly09, "float")
+        h10 = oautk.validate_field(self.ui.lineEditHourly10, "float")
+        h11 = oautk.validate_field(self.ui.lineEditHourly11, "float")
+        h12 = oautk.validate_field(self.ui.lineEditHourly12, "float")
+        h13 = oautk.validate_field(self.ui.lineEditHourly13, "float")
+        h14 = oautk.validate_field(self.ui.lineEditHourly14, "float")
+        h15 = oautk.validate_field(self.ui.lineEditHourly15, "float")
+        h16 = oautk.validate_field(self.ui.lineEditHourly16, "float")
+        h17 = oautk.validate_field(self.ui.lineEditHourly17, "float")
+        h18 = oautk.validate_field(self.ui.lineEditHourly18, "float")
+        h19 = oautk.validate_field(self.ui.lineEditHourly19, "float")
+        h20 = oautk.validate_field(self.ui.lineEditHourly20, "float")
+        h21 = oautk.validate_field(self.ui.lineEditHourly21, "float")
+        h22 = oautk.validate_field(self.ui.lineEditHourly22, "float")
+        h23 = oautk.validate_field(self.ui.lineEditHourly23, "float")
 
-            properties = [profile_name, h00, h01, h02, h03, h04, h05, h06, h07,
-                          h08, h09, h10, h11, h12, h13, h14,
-                          h15, h16, h17, h18, h19, h20, h21, h22, h23]
+        properties = [profile_name, h00, h01, h02, h03, h04, h05, h06, h07,
+                      h08, h09, h10, h11, h12, h13, h14,
+                      h15, h16, h17, h18, h19, h20, h21, h22, h23]
 
-            for value in properties:
-                if value is False:
-                    QtWidgets.QMessageBox.warning(
-                        self,
-                        "Error",
-                        "Please correct all input fields")
-                    return
-
-            for value in properties[1:]:
-                if value > 1:
-                    QtWidgets.QMessageBox.warning(
-                        self,
-                        "Error",
-                        "Profile values cannot be greater than 1")
-                    return
-
-            pass_check = False
-            for value in properties[1:]:
-                if value == 1:
-                    pass_check = True
-            if pass_check is False:
+        for value in properties:
+            if value is False:
                 QtWidgets.QMessageBox.warning(
                     self,
                     "Error",
-                    "At least one profile value must be equal to 1")
+                    "Please correct all input fields")
                 return
 
-            if profile_name == "New Profile":
+        for value in properties[1:]:
+            if value > 1:
                 QtWidgets.QMessageBox.warning(
                     self,
                     "Error",
-                    "Profile name cannot be 'New Profile'")
+                    "Profile values cannot be greater than 1")
                 return
 
-            answer = QtWidgets.QMessageBox.information(
+        pass_check = False
+        for value in properties[1:]:
+            if value == 1:
+                pass_check = True
+        if pass_check is False:
+            QtWidgets.QMessageBox.warning(
                 self,
-                "New Profile",
-                "Are you sure you want to save changes to this profile?",
-                QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No)
-            if answer == QtWidgets.QMessageBox.Yes:
-                # Commit to database
-                result = alaqs.add_hourly_profile(properties)
-                if result is None:
-                    self.populate_hourly_profiles()
-                    return None
-                else:
-                    QtWidgets.QMessageBox.warning(
-                        self,
-                        "New profile",
-                        "Profile could not be saved: %s" % result)
-                    return None
-        except Exception as e:
-            error = alaqsutils.print_error(self.save_hourly_profile.__name__,
-                                           Exception, e)
-            return error
+                "Error",
+                "At least one profile value must be equal to 1")
+            return
+
+        if profile_name == "New Profile":
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Error",
+                "Profile name cannot be 'New Profile'")
+            return
+
+        answer = QtWidgets.QMessageBox.information(
+            self,
+            "New Profile",
+            "Are you sure you want to save changes to this profile?",
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No)
+        if answer == QtWidgets.QMessageBox.Yes:
+            # Commit to database
+            result = alaqs.add_hourly_profile(properties)
+            if result is None:
+                self.populate_hourly_profiles()
+                return None
+            else:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "New profile",
+                    "Profile could not be saved: %s" % result)
+                return None
 
     def save_daily_profile(self):
         """
@@ -1147,38 +1117,35 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                     "Profile could not be saved: %s" % result)
                 return None
 
+    @catch_errors
     def clear_hourly_profile(self):
-        try:
-            self.ui.lineEditHourly00.setText("")
-            self.ui.lineEditHourly01.setText("")
-            self.ui.lineEditHourly02.setText("")
-            self.ui.lineEditHourly03.setText("")
-            self.ui.lineEditHourly04.setText("")
-            self.ui.lineEditHourly05.setText("")
-            self.ui.lineEditHourly06.setText("")
-            self.ui.lineEditHourly07.setText("")
-            self.ui.lineEditHourly08.setText("")
-            self.ui.lineEditHourly09.setText("")
-            self.ui.lineEditHourly10.setText("")
-            self.ui.lineEditHourly11.setText("")
-            self.ui.lineEditHourly12.setText("")
-            self.ui.lineEditHourly13.setText("")
-            self.ui.lineEditHourly14.setText("")
-            self.ui.lineEditHourly15.setText("")
-            self.ui.lineEditHourly16.setText("")
-            self.ui.lineEditHourly17.setText("")
-            self.ui.lineEditHourly18.setText("")
-            self.ui.lineEditHourly19.setText("")
-            self.ui.lineEditHourly20.setText("")
-            self.ui.lineEditHourly21.setText("")
-            self.ui.lineEditHourly22.setText("")
-            self.ui.lineEditHourly23.setText("")
-            return None
-        except Exception as e:
-            error = alaqsutils.print_error(
-                self.clear_hourly_profile.__name__, Exception, e)
-            return error
+        self.ui.lineEditHourly00.setText("")
+        self.ui.lineEditHourly01.setText("")
+        self.ui.lineEditHourly02.setText("")
+        self.ui.lineEditHourly03.setText("")
+        self.ui.lineEditHourly04.setText("")
+        self.ui.lineEditHourly05.setText("")
+        self.ui.lineEditHourly06.setText("")
+        self.ui.lineEditHourly07.setText("")
+        self.ui.lineEditHourly08.setText("")
+        self.ui.lineEditHourly09.setText("")
+        self.ui.lineEditHourly10.setText("")
+        self.ui.lineEditHourly11.setText("")
+        self.ui.lineEditHourly12.setText("")
+        self.ui.lineEditHourly13.setText("")
+        self.ui.lineEditHourly14.setText("")
+        self.ui.lineEditHourly15.setText("")
+        self.ui.lineEditHourly16.setText("")
+        self.ui.lineEditHourly17.setText("")
+        self.ui.lineEditHourly18.setText("")
+        self.ui.lineEditHourly19.setText("")
+        self.ui.lineEditHourly20.setText("")
+        self.ui.lineEditHourly21.setText("")
+        self.ui.lineEditHourly22.setText("")
+        self.ui.lineEditHourly23.setText("")
+        return None
 
+    @catch_errors
     def clear_daily_profile(self):
         """
         Clears the currently displayed data for hourly profiles ready to receive
@@ -1187,20 +1154,16 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         :return: None if successful; error message as a string if its
          unsuccessful
         """
-        try:
-            self.ui.lineEditDailyMon.setText("")
-            self.ui.lineEditDailyTues.setText("")
-            self.ui.lineEditDailyWed.setText("")
-            self.ui.lineEditDailyThurs.setText("")
-            self.ui.lineEditDailyFri.setText("")
-            self.ui.lineEditDailySat.setText("")
-            self.ui.lineEditDailySun.setText("")
-            return None
-        except Exception as e:
-            error = alaqsutils.print_error(
-                self.clear_daily_profile.__name__, Exception, e)
-            return error
+        self.ui.lineEditDailyMon.setText("")
+        self.ui.lineEditDailyTues.setText("")
+        self.ui.lineEditDailyWed.setText("")
+        self.ui.lineEditDailyThurs.setText("")
+        self.ui.lineEditDailyFri.setText("")
+        self.ui.lineEditDailySat.setText("")
+        self.ui.lineEditDailySun.setText("")
+        return None
 
+    @catch_errors
     def clear_monthly_profile(self):
         """
         Clears the currently displayed data for hourly profiles ready to receive
@@ -1209,35 +1172,27 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         :return: None if successful; error message as a string if its
          unsuccessful
         """
-        try:
-            self.ui.lineEditMonthlyJan.setText("")
-            self.ui.lineEditMonthlyFeb.setText("")
-            self.ui.lineEditMonthlyMar.setText("")
-            self.ui.lineEditMonthlyApr.setText("")
-            self.ui.lineEditMonthlyMay.setText("")
-            self.ui.lineEditMonthlyJun.setText("")
-            self.ui.lineEditMonthlyJul.setText("")
-            self.ui.lineEditMonthlyAug.setText("")
-            self.ui.lineEditMonthlySep.setText("")
-            self.ui.lineEditMonthlyOct.setText("")
-            self.ui.lineEditMonthlyNov.setText("")
-            self.ui.lineEditMonthlyDec.setText("")
-            return None
-        except Exception as e:
-            error = alaqsutils.print_error(
-                self.clear_monthly_profile.__name__, Exception, e)
-            return error
+        self.ui.lineEditMonthlyJan.setText("")
+        self.ui.lineEditMonthlyFeb.setText("")
+        self.ui.lineEditMonthlyMar.setText("")
+        self.ui.lineEditMonthlyApr.setText("")
+        self.ui.lineEditMonthlyMay.setText("")
+        self.ui.lineEditMonthlyJun.setText("")
+        self.ui.lineEditMonthlyJul.setText("")
+        self.ui.lineEditMonthlyAug.setText("")
+        self.ui.lineEditMonthlySep.setText("")
+        self.ui.lineEditMonthlyOct.setText("")
+        self.ui.lineEditMonthlyNov.setText("")
+        self.ui.lineEditMonthlyDec.setText("")
+        return None
 
+    @catch_errors
     def close_ui(self):
         """
         Exit function used to close the UI and tidy up QGIS of any temporary
          files and/or refreshes that might be needed.
         """
-        try:
-            self.close()
-            return None
-        except Exception as e:
-            alaqsutils.print_error(self.close_ui.__name__, Exception, e)
+        self.close()
 
 
 class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
@@ -1318,6 +1273,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
                         all_taxiway_segments_.index(name_))
             self.update_taxiway_segments_table(all_taxiway_segments_)
 
+    @catch_errors
     def populate_gates(self):
         """
         Completes the UI dropdown box with the names of all gates in the current
@@ -1325,21 +1281,17 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         :return: None if successful; error message as a string if its
          unsuccessful
         """
-        try:
-            gates = alaqs.get_gates()
-            self.ui.gate.clear()
-            if (gates is None) or (gates is []):
-                return None
-            else:
-                for gt in gates:
-                    # QtGui.QMessageBox.warning(self, "Gates", gate[1])
-                    self.ui.gate.addItem(gt[1])
-                self.ui.gate.setEditable(False)
-        except Exception as e:
-            error = alaqsutils.print_error(self.populate_gates.__name__,
-                                           Exception, e)
-            return error
+        gates = alaqs.get_gates()
+        self.ui.gate.clear()
+        if (gates is None) or (gates is []):
+            return None
+        else:
+            for gt in gates:
+                # QtGui.QMessageBox.warning(self, "Gates", gate[1])
+                self.ui.gate.addItem(gt[1])
+            self.ui.gate.setEditable(False)
 
+    @catch_errors
     def populate_runways(self):
         """
         Completes the UI dropdown box with the names of all runways in the
@@ -1347,22 +1299,17 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         :return: None if successful; error message as a string if its
          unsuccessful
         """
-        try:
-            runways = alaqs.get_runways()
-            self.ui.runway.clear()
-            if (runways is None) or (runways is []):
-                logger.warning("Taxiway Routes Tool: No runways found")
-            else:
-                for rws in runways:
-                    data = rws[0].split("/")
-                    for rw in data:
-                        self.ui.runway.addItem(rw)
-                self.ui.runway.setEditable(False)
-                # logger.debug("Taxiway Routes Tool: Runways populated")
-        except Exception as e:
-            error = alaqsutils.print_error(self.populate_runways.__name__,
-                                           Exception, e)
-            return error
+        runways = alaqs.get_runways()
+        self.ui.runway.clear()
+        if (runways is None) or (runways is []):
+            logger.warning("Taxiway Routes Tool: No runways found")
+        else:
+            for rws in runways:
+                data = rws[0].split("/")
+                for rw in data:
+                    self.ui.runway.addItem(rw)
+            self.ui.runway.setEditable(False)
+            # logger.debug("Taxiway Routes Tool: Runways populated")
 
     def populate_instance(self):
         """
@@ -1387,6 +1334,8 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         self.ui.arrdep.addItem("A")
         self.ui.arrdep.addItem("D")
 
+    @catch_errors
+    # @log_activity
     def populate_routes(self, select_name=""):
         """
         Completes the UI dropdown box with the names of all routes in the
@@ -1394,28 +1343,31 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         :return: None if successful; error message as a string if its
          unsuccessful
         """
-        try:
-            self.ui.routes.clear()
-            taxiway_routes = alaqs.get_taxiway_routes()
-            if taxiway_routes is not None:
-                for taxiway_route in taxiway_routes:
-                    self.ui.routes.addItem(taxiway_route[2])
-                logger.debug("Taxiway Routes Tool: routes populated")
 
-            # Add the signal to pick up new selected taxiways
-            self.canvas.selectionChanged.connect(
-                self.add_taxiways_from_canvas_to_table)
+        # Remove any existing elements
+        self.ui.routes.clear()
 
-            if select_name:
-                index_select_name_ = self.ui.routes.findText(select_name)
-                if not index_select_name_ == -1:
-                    self.ui.routes.setCurrentIndex(index_select_name_)
-            else:
-                logger.warning("Taxiway Routes Tool: No routes defined")
-        except Exception as e:
-            error = alaqsutils.print_error(self.populate_routes.__name__,
-                                           Exception, e)
-            return error
+        # Get taxiway routes
+        taxiway_routes = alaqs.get_taxiway_routes()
+
+        # todo[RPFK]: REMOVE
+        # logger.debug(f"taxiway_routes={taxiway_routes} ({type(taxiway_routes)})")
+
+        if taxiway_routes is not None:
+            for taxiway_route in taxiway_routes:
+                self.ui.routes.addItem(taxiway_route[2])
+            logger.debug("Taxiway Routes Tool: routes populated")
+
+        # Add the signal to pick up new selected taxiways
+        self.canvas.selectionChanged.connect(
+            self.add_taxiways_from_canvas_to_table)
+
+        if select_name:
+            index_select_name_ = self.ui.routes.findText(select_name)
+            if index_select_name_ != -1:
+                self.ui.routes.setCurrentIndex(index_select_name_)
+        else:
+            logger.warning("Taxiway Routes Tool: No routes defined")
 
     def populate_aircraft_groups(self):
         """
@@ -1434,7 +1386,8 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
             table_item = QtWidgets.QTableWidgetItem(str(aircraft_group))
             self.ui.available_ac_groups.setItem(row, 0, table_item)
 
-    def add_aircraft_group(self):
+    # @log_activity
+    def add_aircraft_group(self, *args, **kwargs):
         """
         Adds the selected aircraft group from the available aircraft group list
          to the selected aircraft group list
@@ -1524,28 +1477,36 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         route_name = "%s/%s/%s/%s" % (gate_name, runway_name, arrdep, instance)
         return route_name
 
-    def create_new_taxi_route(self):
+    @catch_errors
+    # @log_activity
+    def create_new_taxi_route(self, *args, **kwargs):
         """
         This function clears the UI ready to accept a new taxiway route
          definition.
         """
-        try:
-            # Get proposed taxi route name
-            new_taxi_route_name = str(self.ui.taxiway_route_name.text())
 
-            # Get existing taxi routes
-            existing_taxi_routes = [self.ui.routes.itemText(i) for i in
-                                    range(self.ui.routes.count())]
+        # Get proposed taxi route name
+        new_taxi_route_name = str(self.ui.taxiway_route_name.text())
 
-            if new_taxi_route_name in existing_taxi_routes:
-                QtWidgets.QMessageBox.information(self, "Notice",
-                                                  "Taxi route already exists")
-                return
+        # Get existing taxi routes
+        existing_taxi_routes = [
+            self.ui.routes.itemText(i) for i in range(self.ui.routes.count())
+        ]
 
-            # Add the new route name to the list
-            self.ui.routes.addItem(new_taxi_route_name)
-            index = self.ui.routes.findText(new_taxi_route_name)
-            self.ui.routes.setCurrentIndex(index)
+        # TODO[RPFK]: REMOVE
+        # logger.debug(f"new_taxi_route_name = {new_taxi_route_name} ({type(new_taxi_route_name)})")
+        # logger.debug(f"existing_taxi_routes = {existing_taxi_routes} ({type(existing_taxi_routes)})")
+
+        if new_taxi_route_name in existing_taxi_routes:
+            QtWidgets.QMessageBox.information(
+                self, "Notice", "Taxi route already exists")
+            return
+
+        # Add the new route name to the list
+        # TODO[RPFK]: check if it goes wrong here
+        self.ui.routes.addItem(new_taxi_route_name)
+        index = self.ui.routes.findText(new_taxi_route_name)
+        self.ui.routes.setCurrentIndex(index)
 
             # Clear the taxiways table
             self.clear_taxiway_segments_table()
@@ -1622,17 +1583,14 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
 
         # Loop over the selected features and check them against the features
         # already listed
-        # If the feature is not in the list, then it must be the one just selected
+        # If the feature is not in list, then it must be the one just selected
         for feature in selected_features:
             try:
-                selected_taxiway_id = str(
-                    feature.attribute("taxiway_id"))  # generic index for name
-                if not selected_taxiway_id in taxiway_segments:
-                    taxiway_segments.append(selected_taxiway_id)
-                else:
-                    pass
-                    # raise Exception(str(feature.attributes()))
+                # generic index for name
+                selected_taxiway_id = str(feature.attribute("taxiway_id"))
 
+                if selected_taxiway_id not in taxiway_segments:
+                    taxiway_segments.append(selected_taxiway_id)
             except Exception as e:
                 pass
 
@@ -1657,28 +1615,25 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
 
         self.select_taxiways_on_canvas(taxiway_segments_list)
 
-    def route_changed(self):
+    @catch_errors
+    # @log_activity
+    def route_changed(self, *args, **kwargs):
         """
         Automatically updates the UI when the selected route is changed so that
          the appropriate data is displayed in
         the UI.
         """
-        try:
-            new_route_name = self.ui.routes.currentText()
-            if new_route_name != "":
-                route_data = alaqs.get_taxiway_route(new_route_name)
-                if route_data is not None:
-                    taxiway_segments_ = route_data[0][6].split(',') if \
-                        route_data[0][6] else []
-                    self.update_taxiway_segments_table(taxiway_segments_)
+        new_route_name = self.ui.routes.currentText()
+        if new_route_name != "":
+            route_data = alaqs.get_taxiway_route(new_route_name)
+            if route_data is not None:
+                taxiway_segments_ = route_data[0][6].split(',') if \
+                    route_data[0][6] else []
+                self.update_taxiway_segments_table(taxiway_segments_)
 
-                    selected_ac_groups_ = route_data[0][7].split(',') if \
-                        route_data[0][7] else []
-                    self.update_selected_ac_groups(selected_ac_groups_)
-        except Exception as e:
-            error = alaqsutils.print_error(self.route_changed.__name__,
-                                           Exception, e)
-            return error
+                selected_ac_groups_ = route_data[0][7].split(',') if \
+                    route_data[0][7] else []
+                self.update_selected_ac_groups(selected_ac_groups_)
 
     def delete_taxiway_route(self, name=""):
         """
@@ -1696,6 +1651,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         """
         Saves a new taxiroute to the current study
         """
+
         # See if the route already exists in the database
         already_exists = False
         delete_taxiroute = False
@@ -1939,22 +1895,18 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             QtWidgets.QMessageBox.warning(self, "Error", "%s" % e)
             return e
 
-    def browse_save_path(self):
+    @catch_errors
+    def browse_save_path(self, *args, **kwargs):
         """
         This function opens a directory browsing dialog to collect the save
          path for the new study from the user.
         :return: None if successful, otherwise the trackback error
         """
-        try:
-            directory = str(
-                QtWidgets.QFileDialog.getExistingDirectory(parent=None))
-            if directory.strip() is not "":
-                self.ui.output_save_path.setText(directory)
-            return None
-        except Exception as e:
-            error = alaqsutils.print_error(self.browse_save_path.__name__,
-                                           Exception, e)
-            return error
+        directory = str(
+            QtWidgets.QFileDialog.getExistingDirectory(parent=None))
+        if directory.strip() is not "":
+            self.ui.output_save_path.setText(directory)
+        return None
 
     def examine_movements(self, movement_file):
         """
@@ -2395,25 +2347,21 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.populate_calculation_methods(
             pollutant=self.ui.pollutants_names.currentText())
 
+    @catch_errors
     def populate_calculation_methods(self, pollutant=None):
         """
         Populate the UI with a list of method names that can be examined
         """
         if pollutant is None:
             pollutant = self.ui.pollutants_names.currentText()
-        try:
-            available_methods = []
-            if pollutant in ["CO", "NOx", "HC"]:
-                available_methods = ["BFFM2", "bymode"]
-            else:
-                available_methods = ["bymode"]
+        available_methods = []
+        if pollutant in ["CO", "NOx", "HC"]:
+            available_methods = ["BFFM2", "bymode"]
+        else:
+            available_methods = ["bymode"]
 
-            self.resetEmissionCalculationConfiguration(config={
-                "Method": {"available": available_methods, "selected": None}})
-
-        except Exception as e:
-            error = alaqsutils.print_error(
-                self.populate_calculation_methods.__name__, Exception, e)
+        self.resetEmissionCalculationConfiguration(config={
+            "Method": {"available": available_methods, "selected": None}})
 
     def resetEmissionCalculationConfiguration(self, config=None):
         if config is None:
@@ -2592,38 +2540,30 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         return (datetime.strptime("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
                 datetime.strptime("2000-01-02 00:00:00", "%Y-%m-%d %H:%M:%S"))
 
+    @catch_errors
     def populate_source_types(self):
         """
         Populate the UI with a list of source types that can be examined
         """
-        try:
-            self.ui.source_types.clear()
-            self.ui.source_types.addItem("all")
-            self.ui.source_names.clear()
-            self.ui.source_names.addItem("all")
-            for source_type in SourceModuleManager().getModuleNames():
-                self.ui.source_types.addItem(source_type)
+        self.ui.source_types.clear()
+        self.ui.source_types.addItem("all")
+        self.ui.source_names.clear()
+        self.ui.source_names.addItem("all")
+        for source_type in SourceModuleManager().getModuleNames():
+            self.ui.source_types.addItem(source_type)
 
-        except Exception as e:
-            error = alaqsutils.print_error(self.populate_source_types.__name__,
-                                           Exception, e)
-            return error
-
+    @catch_errors
     def populate_pollutants(self):
         """
         Populate the UI with a list of pollutant names that can be examined
         """
-        try:
-            self.ui.pollutants_names.clear()
-            for pollutant in sorted(self._pollutants_list):
-                self.ui.pollutants_names.addItem(pollutant)
-            if self.ui.pollutants_names.count():
-                self.ui.pollutants_names.setCurrentIndex(0)
-            self.populate_calculation_methods(
-                pollutant=self.ui.pollutants_names.currentText())
-        except Exception as e:
-            error = alaqsutils.print_error(self.populate_pollutants.__name__,
-                                           Exception, e)
+        self.ui.pollutants_names.clear()
+        for pollutant in sorted(self._pollutants_list):
+            self.ui.pollutants_names.addItem(pollutant)
+        if self.ui.pollutants_names.count():
+            self.ui.pollutants_names.setCurrentIndex(0)
+        self.populate_calculation_methods(
+            pollutant=self.ui.pollutants_names.currentText())
 
     def browse_result_file(self):
         """
@@ -2656,149 +2596,140 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self._emission_calculation_ = None
         # self._emission_calculation_configuration_widget = None
 
-    def source_type_changed(self):
+    @catch_errors
+    def source_type_changed(self, *args, **kwargs):
         """
         This function updates the UI based on the new source type chosen by the
          user (e.g. list all gates, taxiways, roadways, etc.)
         :return:
         """
-        try:
-            # reset calculation
-            self._emission_calculation_ = None
-            inventory_path = self.ui.result_file_path.text()
-            module_name = self.ui.source_types.currentText()
 
-            for module_name_, module_obj_ in \
-                    SourceModuleManager().getModulesByName(module_name):
-                mod_ = None
+        # reset calculation
+        self._emission_calculation_ = None
+        inventory_path = self.ui.result_file_path.text()
+        module_name = self.ui.source_types.currentText()
 
-                # instantiate module to get access to the sources
-                em_config = {"database_path": inventory_path}
-                if module_name == "MovementSource":
-                    widget_values = \
-                        self._emission_calculation_configuration_widget.getValues()
-                    em_config.update(widget_values)
-                    em_config["receptors"] = \
-                        self._emission_calculation_configuration_widget._receptor_points
+        for module_name_, module_obj_ in \
+                SourceModuleManager().getModulesByName(module_name):
+            mod_ = None
 
-                mod_ = module_obj_(em_config)
-                mod_.loadSources()
+            # instantiate module to get access to the sources
+            em_config = {"database_path": inventory_path}
+            if module_name == "MovementSource":
+                widget_values = \
+                    self._emission_calculation_configuration_widget.getValues()
+                em_config.update(widget_values)
+                em_config["receptors"] = \
+                    self._emission_calculation_configuration_widget._receptor_points
 
-                self.ui.source_names.clear()
-                self.ui.source_names.addItem("all")
-                for source_name_ in mod_.getSourceNames():
-                    self.ui.source_names.addItem(source_name_)
+            mod_ = module_obj_(em_config)
+            mod_.loadSources()
 
-        except Exception as e:
-            error = alaqsutils.print_error(self.source_type_changed.__name__,
-                                           Exception, e)
-            return error
+            self.ui.source_names.clear()
+            self.ui.source_names.addItem("all")
+            for source_name_ in mod_.getSourceNames():
+                self.ui.source_names.addItem(source_name_)
 
     def isOutputFile(self, path):
         return sql_interface.hasTable(path, "grid_3d_definition")
 
+    @catch_errors
     def update_emissions(self):
-        try:
-            inventory_path = str(self.ui.result_file_path.text())
-            if not os.path.exists(inventory_path):
-                raise Exception("Error: Inventory path '%s' doesn't exist!" % (
-                    inventory_path))
+        inventory_path = str(self.ui.result_file_path.text())
+        if not os.path.exists(inventory_path):
+            raise Exception("Error: Inventory path '%s' doesn't exist!" % (
+                inventory_path))
 
-            # Temporarily set the project database to extract the airport data
-            project_database = ProjectDatabase()
-            project_database_path = getattr(project_database, "path", None)
-            project_database.path = inventory_path
-            study_data = alaqs.load_study_setup_dict()
-            ref_latitude = study_data.get('airport_latitude', 0.)
-            ref_longitude = study_data.get('airport_longitude', 0.)
-            ref_altitude = study_data.get('airport_elevation', 0.)
-            if project_database_path is None:
-                del project_database.path
+        # Temporarily set the project database to extract the airport data
+        project_database = ProjectDatabase()
+        project_database_path = getattr(project_database, "path", None)
+        project_database.path = inventory_path
+        study_data = alaqs.load_study_setup_dict()
+        ref_latitude = study_data.get('airport_latitude', 0.)
+        ref_longitude = study_data.get('airport_longitude', 0.)
+        ref_altitude = study_data.get('airport_elevation', 0.)
+        if project_database_path is None:
+            del project_database.path
+        else:
+            project_database.path = project_database_path
+
+        grid_configuration = {
+            'x_cells': 100,
+            'y_cells': 100,
+            'z_cells': 1,
+            'x_resolution': 100,
+            'y_resolution': 100,
+            'z_resolution': 100,
+            'reference_latitude': ref_latitude,
+            'reference_longitude': ref_longitude,
+            'reference_altitude': ref_altitude
+        }
+
+        em_config = self._emission_calculation_configuration_widget.getValues()
+
+        self._emission_calculation_ = EmissionCalculation({
+            "database_path": inventory_path,
+            "grid_configuration": grid_configuration,
+            "Start (incl.)": em_config["Start (incl.)"],
+            "End (incl.)": em_config["End (incl.)"]
+        })
+
+        # Modules
+        # module_name = str(self.ui.source_types.currentText())
+        module_name = self.ui.source_types.currentText()
+        module_names_ = SourceModuleManager().getModuleNames() if \
+            module_name.lower() == "all" else [module_name]
+
+        # if module_name.lower()=="all" and not module_name is None:
+        # if not module_name is None :
+        #     module_names_ = [module_name]
+
+        for m_name_ in module_names_:
+            if m_name_ == "MovementSource":
+                em_config = self._emission_calculation_configuration_widget.getValues()
+                em_config["reference_altitude"] = ref_altitude
+                em_config["receptors"] = \
+                    self._emission_calculation_configuration_widget._receptor_points
+
+                # Check compatibility of methods (Not possible to have both
+                # 'BFFM2' and 'Apply NOx correction')
+                BFFM2_selected = em_config["Method"]["selected"] == "BFFM2"
+                NOx_corr_selected = em_config["Apply NOx corrections"]
+                if BFFM2_selected and NOx_corr_selected:
+                    logger.warning("Not possible to use both 'BFFM2' "
+                                   "and 'Apply NOx correction'")
+
+                self._emission_calculation_.addModule(
+                    m_name_, configuration=em_config)
             else:
-                project_database.path = project_database_path
+                self._emission_calculation_.addModule(m_name_)
 
-            grid_configuration = {
-                'x_cells': 100,
-                'y_cells': 100,
-                'z_cells': 1,
-                'x_resolution': 100,
-                'y_resolution': 100,
-                'z_resolution': 100,
-                'reference_latitude': ref_latitude,
-                'reference_longitude': ref_longitude,
-                'reference_altitude': ref_altitude
-            }
+        # dispersion modules
+        dm_conf_ = self.getDispersionModulesConfiguration()
+        pollutant = self.ui.pollutants_names.currentText()
 
-            em_config = self._emission_calculation_configuration_widget.getValues()
+        # dm_name_ should be AUSTAL2000OutputModule
+        for dm_name_ in dm_conf_:
+            dm_conf_[dm_name_].update(
+                {"pollutants_list": self._pollutants_list})
+            dm_conf_[dm_name_].update({"pollutant": pollutant})
 
-            self._emission_calculation_ = EmissionCalculation({
-                "database_path": inventory_path,
-                "grid_configuration": grid_configuration,
-                "Start (incl.)": em_config["Start (incl.)"],
-                "End (incl.)": em_config["End (incl.)"]
-            })
+            if dm_conf_[dm_name_].get("enable", False):
+                dm_config = dm_conf_[dm_name_]
+                dm_config["receptors"] = \
+                    self._emission_calculation_configuration_widget._receptor_points
 
-            # Modules
-            # module_name = str(self.ui.source_types.currentText())
-            module_name = self.ui.source_types.currentText()
-            module_names_ = SourceModuleManager().getModuleNames() if \
-                module_name.lower() == "all" else [module_name]
+                if self._emission_calculation_.get3DGrid():
+                    dm_config.update(
+                        {"grid": self._emission_calculation_.get3DGrid()})
+                    self._emission_calculation_.addDispersionModule(
+                        dm_name_, configuration=dm_config)
 
-            # if module_name.lower()=="all" and not module_name is None:
-            # if not module_name is None :
-            #     module_names_ = [module_name]
-
-            for m_name_ in module_names_:
-                if m_name_ == "MovementSource":
-                    em_config = self._emission_calculation_configuration_widget.getValues()
-                    em_config["reference_altitude"] = ref_altitude
-                    em_config["receptors"] = \
-                        self._emission_calculation_configuration_widget._receptor_points
-
-                    # Check compatibility of methods (Not possible to have both
-                    # 'BFFM2' and 'Apply NOx correction')
-                    BFFM2_selected = em_config["Method"]["selected"] == "BFFM2"
-                    NOx_corr_selected = em_config["Apply NOx corrections"]
-                    if BFFM2_selected and NOx_corr_selected:
-                        logger.warning("Not possible to use both 'BFFM2' "
-                                       "and 'Apply NOx correction'")
-
-                    self._emission_calculation_.addModule(
-                        m_name_, configuration=em_config)
-                else:
-                    self._emission_calculation_.addModule(m_name_)
-
-            # dispersion modules
-            dm_conf_ = self.getDispersionModulesConfiguration()
-            pollutant = self.ui.pollutants_names.currentText()
-
-            # dm_name_ should be AUSTAL2000OutputModule
-            for dm_name_ in dm_conf_:
-                dm_conf_[dm_name_].update(
-                    {"pollutants_list": self._pollutants_list})
-                dm_conf_[dm_name_].update({"pollutant": pollutant})
-
-                if dm_conf_[dm_name_].get("enable", False):
-                    dm_config = dm_conf_[dm_name_]
-                    dm_config["receptors"] = \
-                        self._emission_calculation_configuration_widget._receptor_points
-
-                    if self._emission_calculation_.get3DGrid():
-                        dm_config.update(
-                            {"grid": self._emission_calculation_.get3DGrid()})
-                        self._emission_calculation_.addDispersionModule(
-                            dm_name_, configuration=dm_config)
-
-            # Sources
-            source_name = self.ui.source_names.currentText()
-            source_names = [source_name if source_name is not None else "all"]
-            self._emission_calculation_.run(source_names=source_names)
-            self._emission_calculation_.sortEmissionsByTime()
-
-        except Exception as e:
-            error = alaqsutils.print_error(self.update_emissions.__name__,
-                                           Exception, e)
-            return error
+        # Sources
+        source_name = self.ui.source_names.currentText()
+        source_names = [source_name if source_name is not None else "all"]
+        self._emission_calculation_.run(source_names=source_names)
+        self._emission_calculation_.sortEmissionsByTime()
 
     def get_values(self):
         """
@@ -2959,66 +2890,52 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "Could not open database file:  %s." % e)
             self.close()
 
-    def get_austal_exe(self):
+    @catch_errors
+    def get_austal_exe(self, *args, **kwargs):
         """
         :return: None if successful, otherwise the trackback error
         """
-        try:
-            directory, _filter = QtWidgets.QFileDialog.getOpenFileName(
-                None,
-                "Select AUSTAL file",
-                "",
-                "austal.exe")
-            if directory.strip() is not "":
-                self.ui.lineEditFilename_a2k.setText(directory)
-            return None
-        except Exception as e:
-            error = alaqsutils.print_error(self.get_austal_exe.__name__,
-                                           Exception, e)
-            return error
+        directory, _filter = QtWidgets.QFileDialog.getOpenFileName(
+            None,
+            "Select AUSTAL file",
+            "",
+            "austal.exe")
+        if directory.strip() is not "":
+            self.ui.lineEditFilename_a2k.setText(directory)
+        return None
 
-    def browse_files_dir(self):
+    @catch_errors
+    def browse_files_dir(self, *args, **kwargs):
         """
         :return: None if successful, otherwise the trackback error
         """
-        try:
-            directory = str(
-                QtWidgets.QFileDialog.getExistingDirectory(parent=None))
-            if directory.strip() is not "":
-                self.ui.lineEditFilename_work_dir.setText(directory)
-            return None
-        except Exception as e:
-            error = alaqsutils.print_error(self.browse_files_dir.__name__,
-                                           Exception, e)
-            return error
+        directory = str(
+            QtWidgets.QFileDialog.getExistingDirectory(parent=None))
+        if directory.strip() is not "":
+            self.ui.lineEditFilename_work_dir.setText(directory)
+        return None
 
-    def run_austal(self):
-        # from subprocess import Popen, PIPE, STDOUT
+    @catch_errors
+    def run_austal(self, *args, **kwargs):
         from subprocess import call
-        try:
-            austal_ = str(self.ui.lineEditFilename_a2k.text())
-            logger.info("AUSTAL directory:%s" % austal_)
-            work_dir = str(self.ui.lineEditFilename_work_dir.text())
-            logger.info("AUSTAL input files directory:%s" % str(
-                self.ui.lineEditFilename_work_dir.text()))
+        austal_ = str(self.ui.lineEditFilename_a2k.text())
+        logger.info("AUSTAL directory:%s" % austal_)
+        work_dir = str(self.ui.lineEditFilename_work_dir.text())
+        logger.info("AUSTAL input files directory:%s" % str(
+            self.ui.lineEditFilename_work_dir.text()))
 
-            if self.ui.radioButton.isChecked():
-                opt_ = "D"
-                logger.info(
-                    "Running AUSTAL with -D option. Log file will be re-written"
-                    " at the start of the calculation.")
-                cmd = "%s -%s %s" % (austal_, opt_, work_dir)
-            else:
-                cmd = "%s %s" % (austal_, work_dir)
+        if self.ui.radioButton.isChecked():
+            opt_ = "D"
+            logger.info(
+                "Running AUSTAL with -D option. Log file will be re-written"
+                " at the start of the calculation.")
+            cmd = "%s -%s %s" % (austal_, opt_, work_dir)
+        else:
+            cmd = "%s %s" % (austal_, work_dir)
 
-            p = call(cmd)
-            if p == 0:
-                logger.info("Dispersion simulation completed successfully")
-
-        except Exception as e:
-            error = alaqsutils.print_error(self.run_austal.__name__, Exception,
-                                           e)
-            return error
+        p = call(cmd)
+        if p == 0:
+            logger.info("Dispersion simulation completed successfully")
 
     def resetConcentrationCalculationConfiguration(self, config=None):
         if config is None:
@@ -3176,27 +3093,28 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "Could not execute runOutputModule: %s (error: %s)" % (
                     name, e))
 
+    @catch_errors
     def choose_averaging_period(self):
-        try:
-            available_methods = ["hourly", "8-hours mean", "daily mean",
-                                 "annual mean"]
-            self.resetEmissionCalculationConfiguration(config={
-                "Averaging Period": {"available": available_methods,
-                                     "selected": None}})
-        except Exception as e:
-            error = alaqsutils.print_error(
-                self.choose_averaging_period.__name__, Exception, e)
+        available_methods = [
+            "hourly", "8-hours mean", "daily mean", "annual mean"
+        ]
+        self.resetEmissionCalculationConfiguration(config={
+            "Averaging Period": {
+                "available": available_methods,
+                "selected": None
+            }})
 
+    @catch_errors
     def choose_pollutant(self):
-        try:
-            available_pollutants = ["CO2", "CO", "HC", "NOx", "SOx", "PM10",
-                                    "P1", "P2"]
-            self.resetEmissionCalculationConfiguration(config={
-                "Pollutant": {"available": available_pollutants,
-                              "selected": None}})
-        except Exception as e:
-            error = alaqsutils.print_error(self.choose_pollutant.__name__,
-                                           Exception, e)
+        available_pollutants = [
+            "CO2", "CO", "HC", "NOx", "SOx", "PM10", "P1", "P2"
+        ]
+        self.resetEmissionCalculationConfiguration(config={
+            "Pollutant": {
+                "available": available_pollutants,
+                "selected": None
+            }})
+
 
 class OpenAlaqsEnabledMacros(QtWidgets.QDialog):
     """

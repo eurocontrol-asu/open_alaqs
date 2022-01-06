@@ -105,10 +105,10 @@ class Movement:
         self._gate_name = str(val["gate"]) if "gate" in val else ""
         self._gate = None
         self._taxi_route = None
-        self._taxi_engine_count = int(val["taxi_engine_count"]) if "taxi_engine_count" in val and val["taxi_engine_count"] else 2
-        self._tow_ratio = float(val["tow_ratio"]) if "tow_ratio" in val else 1.
-        self._taxi_fuel_ratio = float(val["taxi_fuel_ratio"]) if "taxi_fuel_ratio" in val else 1.
-        self._engine_thrust_level_taxiing = float(val["engine_thrust_level_taxiing"]) if "engine_thrust_level_taxiing" in val else 0.07
+        self._taxi_engine_count = conversion.convertToInt(val.get("taxi_engine_count"), 2)
+        self._tow_ratio = conversion.convertToFloat(val.get("tow_ratio"), 1)
+        self._taxi_fuel_ratio = conversion.convertToFloat(val.get("taxi_fuel_ratio"), 1)
+        self._engine_thrust_level_taxiing = conversion.convertToFloat(val.get("engine_thrust_level_taxiing"), .07)
 
         self._set_time_of_main_engine_start_after_block_off_in_s = conversion.convertToFloat(val["set_time_of_main_engine_start_after_block_off_in_s"]) if "set_time_of_main_engine_start_after_block_off_in_s" in val else None
         self._set_time_of_main_engine_start_before_takeoff_in_s  = conversion.convertToFloat(val["set_time_of_main_engine_start_before_takeoff_in_s"]) if "set_time_of_main_engine_start_before_takeoff_in_s" in val else None
@@ -1428,7 +1428,7 @@ class MovementStore(Store, metaclass=Singleton):
             indices = mdf[mdf["profile_id"] == prf].index
             if len(indices) != 0 and prf and not pd.isna(prf) and \
                     trajectory_store.hasKey(prf):
-                eq_mdf.loc[indices, "profile_id"] = None
+                eq_mdf.loc[indices, "profile_id"] = prf
 
         # Get unique combinations of eq_mdf
         u_columns = ["runway", "runway_direction", "taxi_route", "profile_id"]
