@@ -37,13 +37,8 @@ def form_open(form, layer, feature):
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
     )
 
-    # Set the tooltips for each field
-    fields['name_field'].setToolTip('Gate ID')
-    fields['type_field'].setToolTip('Gate type')
-    fields['instudy'].setToolTip('Enable to include source in the study')
-    fields['height_field'].setToolTip('Not implemented')
-
     # Disable the height field
+    fields['height_field'].setToolTip('Not implemented')
     fields['height_field'].setText("0")
     fields['height_field'].setEnabled(False)
 
@@ -64,17 +59,6 @@ def form_open(form, layer, feature):
         form.changeAttribute("gate_type", fields['type_field'].currentText())
         feature["instudy"] = str(int(fields['instudy'].isChecked()))
     fields['button_box'].accepted.connect(on_save)
-
-
-def NameFieldChanged():
-    try:
-        value = str(name_field.currentText()).strip()
-    except:
-        value = str(name_field.text()).strip()
-    if not value:
-        name_field.setStyleSheet("background-color: rgba(255, 107, 107, 150);")
-    else:
-        name_field.setStyleSheet("")
 
 
 def validate(fields: dict):
