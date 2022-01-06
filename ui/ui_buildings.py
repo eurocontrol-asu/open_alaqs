@@ -1,77 +1,65 @@
 from PyQt5 import QtWidgets
 
-form = None
-name_field = None
-height_field = None
-instudy = None
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-def form_open(my_dialog, layer_id, feature_id):
-    global form
-    global name_field
-    global height_field
-    global instudy
+logger = get_logger(__name__)
 
-    form = my_dialog
-    name_field = form.findChild(QtWidgets.QLineEdit, "building_id")
-    height_field = form.findChild(QtWidgets.QLineEdit, "height")
-    button_box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
-    instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
 
-    button_box.button(button_box.Ok).blockSignals(True)
+def form_open(form, layer, feature):
+    logger.debug(f"This is the modified simple form")
+    logger.debug(f"Layer {layer} and feature {feature}")
+    logger.debug(f"Attributes of fields: {feature.fields().names()}")
+    logger.debug(f"Attributes of feature: {feature.attributes()}")
 
-    # #disconnect old-style signals, which are created e.g. by QGIS from the ui file
-    # try:
-    #     QObject.disconnect(button_box, SIGNAL("accepted()"), form.accept)
-    # except Exception, e:
-    #     pass
-    #disconnect new-style signals
-    # try:
-    #     button_box.accepted.disconnect(form.accept)
-    # except Exception as e:
-    #     pass
-
-    # button_box.accepted.connect(validate)
-    # button_box.rejected.connect(form.reject)
-
-    # By default the source is accounted for in the study - Set to 0 to ignore
-    # QgsEditorWidgetWrapper.fromWidget( instudy ).setValue(1)
-    # QgsEditorWidgetWrapper.fromWidget( instudy ).setEnabled(False)
+    # Get all the fields from the form
+    fields = dict(
+        name_field=form.findChild(QtWidgets.QLineEdit, "building_id"),
+        height_field=form.findChild(QtWidgets.QLineEdit, "height"),
+        button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
+        instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
+    )
 
     # height not used in this ALAQS version
-    height_field.setText("0")
-    height_field.setEnabled(False)
-    # QgsEditorWidgetWrapper.fromWidget( height_field ).setValue(0)
-    # QgsEditorWidgetWrapper.fromWidget( height_field ).setEnabled(False)
+    fields['height_field'].setText("0")
+    fields['height_field'].setEnabled(False)
 
-    name_field.textChanged.connect(lambda: validate(button_box))
-    height_field.textChanged.connect(lambda: validate(button_box)) 
+    # Add input validation to text fields in the form
+    for key, value in fields.items():
+        if isinstance(value, QtWidgets.QLineEdit):
+            fields[key].textChanged.connect(lambda: validate(fields))
 
-def validate(button_box):
+    # Block the ok button (will be overwritten after validation)
+    fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
+
+    # Connect all QComboBoxes and the instudy checkbox on save
+    def on_save():
+        feature["instudy"] = str(int(fields['instudy'].isChecked()))
+
+    fields['button_box'].accepted.connect(on_save)
+
+    return form
+
+
+def validate(fields: dict):
     """
-    This function validates that all of the required fields have been completed correctly. If they have, the attributes 
-    are committed to the feature. Otherwise an error message is displayed and the incorrect field is highlighted in red.
+    This function validates that all of the required fields have been completed
+     correctly. If they have, the attributes are committed to the feature.
+     Otherwise an error message is displayed and the incorrect field is
+     highlighted in red.
     """
-    results = list()
-    results.append(validate_field(name_field, "str"))
-    results.append(validate_field(height_field, "float"))
 
-    # if False in results:
-    #     msg = QtWidgets.QMessageBox()
-    #     msg.setIcon(QtWidgets.QMessageBox.Critical)
-    #     msg.setWindowTitle('Validation error')
-    #     msg.setText("Please complete all fields.")
-    #     # msg.setInformativeText(
-    #     #     "It seems that some fields are empty. You need to provide values for all fields in red.")
-    #     msg.exec_()
-    #     return
+    # Get the button box
+    button_box = fields['button_box']
 
-    # form.save()
+    # Validate all fields
+    results = [
+        validate_field(fields['name_field'], "str"),
+        validate_field(fields['height_field'], "float")
+    ]
 
-    if not ('False' in str(results)):
-        button_box.button(button_box.Ok).blockSignals(False)
-        button_box.accepted.connect(form.save)
-    else:
-        button_box.button(button_box.Ok).blockSignals(True)
+    # Block signals if any of the fields is invalid
+    button_box.button(button_box.Ok).blockSignals("False" in str(results))
+
 
 def validate_field(ui_element, var_type):
     try:
