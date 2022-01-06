@@ -100,7 +100,7 @@ def form_open(form, layer, feature):
     # Block the ok button (will be overwritten after validation)
     fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
 
-    # Connect all QComboBoxes on save
+    # Connect all QComboBoxes and the instudy checkbox on save
     def on_save():
         form.changeAttribute("category", fields['category'].currentText())
         form.changeAttribute("type", fields['type'].currentText())
@@ -111,7 +111,6 @@ def form_open(form, layer, feature):
         form.changeAttribute("month_profile",
                              fields['daily_profile'].currentText())
         feature["instudy"] = str(int(fields['instudy'].isChecked()))
-
     fields['button_box'].accepted.connect(on_save)
 
     return form
