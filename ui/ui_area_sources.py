@@ -32,22 +32,25 @@ def form_open(form, layer, feature):
 
     # Get all the fields from the form
     fields = dict(
-        name_field = form.findChild(QtWidgets.QLineEdit, "source_id"),
-        unit_field = form.findChild(QtWidgets.QLineEdit, "unit_year"),
-        height_field = form.findChild(QtWidgets.QLineEdit, "height"),
-        heat_flux_field = form.findChild(QtWidgets.QLineEdit, "heat_flux"),
-        hour_profile_field = form.findChild(QtWidgets.QComboBox, "hourly_profile"),
-        daily_profile_field = form.findChild(QtWidgets.QComboBox, "daily_profile"),
-        month_profile_field = form.findChild(QtWidgets.QComboBox, "monthly_profile"),
-        co_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "co_kg_unit"),
-        hc_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "hc_kg_unit"),
-        nox_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "nox_kg_unit"),
-        sox_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "sox_kg_unit"),
-        pm10_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "pm10_kg_unit"),
-        p1_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "p1_kg_unit"),
-        p2_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "p2_kg_unit"),
-        button_box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
-        instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
+        name_field=form.findChild(QtWidgets.QLineEdit, "source_id"),
+        unit_field=form.findChild(QtWidgets.QLineEdit, "unit_year"),
+        height_field=form.findChild(QtWidgets.QLineEdit, "height"),
+        heat_flux_field=form.findChild(QtWidgets.QLineEdit, "heat_flux"),
+        hour_profile_field=form.findChild(QtWidgets.QComboBox,
+                                          "hourly_profile"),
+        daily_profile_field=form.findChild(QtWidgets.QComboBox,
+                                           "daily_profile"),
+        month_profile_field=form.findChild(QtWidgets.QComboBox,
+                                           "monthly_profile"),
+        co_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "co_kg_unit"),
+        hc_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "hc_kg_unit"),
+        nox_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "nox_kg_unit"),
+        sox_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "sox_kg_unit"),
+        pm10_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "pm10_kg_unit"),
+        p1_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "p1_kg_unit"),
+        p2_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "p2_kg_unit"),
+        button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
+        instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
     )
 
     # Disable the height and heat flux fields

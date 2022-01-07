@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>353</width>
-    <height>473</height>
+    <height>500</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -172,6 +172,52 @@
        </item>
        <item row="2" column="1">
         <widget class="QComboBox" name="month_profile"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_4">
+      <attribute name="title">
+       <string>Fleet Mix</string>
+      </attribute>
+      <layout class="QFormLayout" name="formLayout_5">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_22">
+         <property name="text">
+          <string>PC [%]</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="vehicle_light"/>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_23">
+         <property name="text">
+          <string>LDV [%]</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="vehicle_medium"/>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_24">
+         <property name="text">
+          <string>HDV [%]</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="vehicle_heavy"/>
        </item>
       </layout>
      </widget>
@@ -351,52 +397,6 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_4">
-      <attribute name="title">
-       <string>Fleet Mix</string>
-      </attribute>
-      <layout class="QFormLayout" name="formLayout_5">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_22">
-         <property name="text">
-          <string>PC [%]</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLineEdit" name="vehicle_light"/>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label_23">
-         <property name="text">
-          <string>LDV [%]</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLineEdit" name="vehicle_medium"/>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_24">
-         <property name="text">
-          <string>HDV [%]</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLineEdit" name="vehicle_heavy"/>
-       </item>
-      </layout>
-     </widget>
     </widget>
    </item>
    <item>
@@ -446,9 +446,28 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>buttonBox</tabstop>
+  <tabstop>roadway_id</tabstop>
+  <tabstop>vehicle_year</tabstop>
+  <tabstop>height</tabstop>
+  <tabstop>hour_profile</tabstop>
+  <tabstop>daily_profile</tabstop>
+  <tabstop>month_profile</tabstop>
+  <tabstop>vehicle_light</tabstop>
+  <tabstop>vehicle_medium</tabstop>
+  <tabstop>vehicle_heavy</tabstop>
+  <tabstop>co_gm_km</tabstop>
   <tabstop>hc_gm_km</tabstop>
+  <tabstop>nox_gm_km</tabstop>
+  <tabstop>sox_gm_km</tabstop>
+  <tabstop>pm10_gm_km</tabstop>
+  <tabstop>p1_gm_km</tabstop>
   <tabstop>p2_gm_km</tabstop>
+  <tabstop>method</tabstop>
+  <tabstop>button_recalculate</tabstop>
+  <tabstop>speed</tabstop>
+  <tabstop>scenario</tabstop>
+  <tabstop>instudy</tabstop>
+  <tabstop>tabWidget</tabstop>
  </tabstops>
  <resources/>
  <connections>
@@ -459,8 +478,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>257</x>
+     <y>490</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -475,8 +494,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
+     <x>325</x>
+     <y>490</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
