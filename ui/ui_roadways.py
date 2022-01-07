@@ -2,154 +2,126 @@ from PyQt5 import QtCore, QtWidgets
 from qgis.core import *
 from qgis.gui import *
 
-from open_alaqs.alaqs_core import alaqs, alaqslogging, alaqsutils
+from open_alaqs.alaqs_core import alaqs, alaqsutils
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools.lib_alaqs_method import \
     roadway_emission_factors_alaqs_method
 
-logger = alaqslogging.logging.getLogger(__name__)
-logger.setLevel('DEBUG')
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.log_path)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
 
-form = None
-name_field = None
-vehicle_year_field = None
-speed_field = None
-height_field = None
-vehicle_light_field = None
-vehicle_medium_field = None
-vehicle_heavy_field = None
-hour_profile_field = None
-daily_profile_field = None
-month_profile_field = None
-co_gm_km_field = None
-hc_gm_km_field = None
-nox_gm_km_field = None
-sox_gm_km_field = None
-pm10_gm_km_field = None
-p1_gm_km_field = None
-p2_gm_km_field = None
-method_field = None
-scenario_field = None
-instudy = None
+logger = get_logger(__name__)
 
 
-def form_open(my_dialog, layer_id, feature_id):
-    global form
-    global name_field
-    global vehicle_year_field
-    global speed_field
-    global height_field
-    global vehicle_light_field
-    global vehicle_medium_field
-    global vehicle_heavy_field
-    global hour_profile_field
-    global daily_profile_field
-    global month_profile_field
-    global co_gm_km_field
-    global hc_gm_km_field
-    global nox_gm_km_field
-    global sox_gm_km_field
-    global pm10_gm_km_field
-    global p1_gm_km_field
-    global p2_gm_km_field
-    global method_field
-    global scenario_field
-    global instudy
+def catch_errors(f):
+    """
+    Decorator to catch all errors when executing the function.
+    This decorator catches errors and writes them to the log.
 
-    form = my_dialog
-    name_field = form.findChild(QtWidgets.QLineEdit, "roadway_id")
-    vehicle_year_field = form.findChild(QtWidgets.QLineEdit, "vehicle_year")
-    height_field = form.findChild(QtWidgets.QLineEdit, "height")
-    speed_field = form.findChild(QtWidgets.QLineEdit, "speed")
-    vehicle_light_field = form.findChild(QtWidgets.QLineEdit, "vehicle_light")
-    vehicle_medium_field = form.findChild(QtWidgets.QLineEdit, "vehicle_medium")
-    vehicle_heavy_field = form.findChild(QtWidgets.QLineEdit, "vehicle_heavy")
-    hour_profile_field = form.findChild(QtWidgets.QComboBox, "hour_profile")
-    daily_profile_field = form.findChild(QtWidgets.QComboBox, "daily_profile")
-    month_profile_field = form.findChild(QtWidgets.QComboBox, "month_profile")
-    co_gm_km_field = form.findChild(QtWidgets.QLineEdit, "co_gm_km")
-    hc_gm_km_field = form.findChild(QtWidgets.QLineEdit, "hc_gm_km")
-    nox_gm_km_field = form.findChild(QtWidgets.QLineEdit, "nox_gm_km")
-    sox_gm_km_field = form.findChild(QtWidgets.QLineEdit, "sox_gm_km")
-    pm10_gm_km_field = form.findChild(QtWidgets.QLineEdit, "pm10_gm_km")
-    p1_gm_km_field = form.findChild(QtWidgets.QLineEdit, "p1_gm_km")
-    p2_gm_km_field = form.findChild(QtWidgets.QLineEdit, "p2_gm_km")
-    scenario_field = form.findChild(QtWidgets.QComboBox, "scenario")
-    method_field = form.findChild(QtWidgets.QLineEdit, "method")
-    # ToDo:
-    # method_field = form.findChild(QtWidgets.QComboBox, "method")
+    :param f: function to execute
+    :return:
+    """
 
-    recalculate = form.findChild(QtWidgets.QPushButton, "button_recalculate")
-    button_box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
-    instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            alaqsutils.print_error(f.__name__, Exception, e)
 
-    button_box.button(button_box.Ok).blockSignals(True)
+    return wrapper
 
-    # populate_combo_boxes()
-    populate_hourly_profiles()
-    populate_daily_profiles()
-    populate_monthly_profiles()
 
-    recalculate.clicked.connect(recalculate_emissions)
-    # #disconnect old-style signals, which are created e.g. by QGIS from the ui file
-    # try:
-    #     QObject.disconnect(button_box, SIGNAL("accepted()"), form.accept)
-    # except Exception as e:
-    #     pass
-    #disconnect new-style signals
-    # try:
-    #     button_box.accepted.disconnect(form.accept)
-    # except Exception as e:
-    #     pass
+def form_open(form, layer, feature):
+    logger.debug(f"This is the modified simple form")
+    logger.debug(f"Layer {layer} and feature {feature}")
+    logger.debug(f"Attributes of fields: {feature.fields().names()}")
+    logger.debug(f"Attributes of feature: {feature.attributes()}")
 
-    # button_box.accepted.connect(validate)
-    # button_box.rejected.connect(form.reject)
+    # Get all the fields from the form
+    fields = dict(
+        name_field=form.findChild(QtWidgets.QLineEdit, "roadway_id"),
+        vehicle_year_field=form.findChild(QtWidgets.QLineEdit, "vehicle_year"),
+        height_field=form.findChild(QtWidgets.QLineEdit, "height"),
+        speed_field=form.findChild(QtWidgets.QLineEdit, "speed"),
+        vehicle_light_field=form.findChild(QtWidgets.QLineEdit,
+                                           "vehicle_light"),
+        vehicle_medium_field=form.findChild(QtWidgets.QLineEdit,
+                                            "vehicle_medium"),
+        vehicle_heavy_field=form.findChild(QtWidgets.QLineEdit,
+                                           "vehicle_heavy"),
+        hour_profile_field=form.findChild(QtWidgets.QComboBox, "hour_profile"),
+        daily_profile_field=form.findChild(QtWidgets.QComboBox,
+                                           "daily_profile"),
+        month_profile_field=form.findChild(QtWidgets.QComboBox,
+                                           "month_profile"),
+        co_gm_km_field=form.findChild(QtWidgets.QLineEdit, "co_gm_km"),
+        hc_gm_km_field=form.findChild(QtWidgets.QLineEdit, "hc_gm_km"),
+        nox_gm_km_field=form.findChild(QtWidgets.QLineEdit, "nox_gm_km"),
+        sox_gm_km_field=form.findChild(QtWidgets.QLineEdit, "sox_gm_km"),
+        pm10_gm_km_field=form.findChild(QtWidgets.QLineEdit, "pm10_gm_km"),
+        p1_gm_km_field=form.findChild(QtWidgets.QLineEdit, "p1_gm_km"),
+        p2_gm_km_field=form.findChild(QtWidgets.QLineEdit, "p2_gm_km"),
+        scenario_field=form.findChild(QtWidgets.QComboBox, "scenario"),
+        method_field=form.findChild(QtWidgets.QLineEdit, "method"),
 
-    # Disable the travel distance field - this can come directly from the geometry
-    # QgsEditorWidgetWrapper.fromWidget( instudy ).setValue(1)
-    # QgsEditorWidgetWrapper.fromWidget( method_field ).setValue("ALAQS")
-    # QgsEditorWidgetWrapper.fromWidget( height_field ).setValue(0)
+        recalculate=form.findChild(QtWidgets.QPushButton, "button_recalculate"),
+        button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
+        instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
+    )
 
-    method_field.setText("Open-ALAQS")
-    method_field.setEnabled(False)
-    scenario_field.addItem('Not Applicable')
-    scenario_field.setEnabled(False)
-    height_field.setText("0")
-    height_field.setEnabled(False)
+    # Seed the profiles
+    populate_hourly_profiles(fields['hour_profile_field'])
+    populate_daily_profiles(fields['daily_profile_field'])
+    populate_monthly_profiles(fields['month_profile_field'])
 
-    name_field.textChanged.connect(lambda: validate(button_box))
-    vehicle_year_field.textChanged.connect(lambda: validate(button_box))
-    height_field.textChanged.connect(lambda: validate(button_box))
-    speed_field.textChanged.connect(lambda: validate(button_box))
-    vehicle_light_field.textChanged.connect(lambda: validate(button_box))
-    vehicle_medium_field.textChanged.connect(lambda: validate(button_box))
-    vehicle_heavy_field.textChanged.connect(lambda: validate(button_box))
-    hour_profile_field.currentTextChanged.connect(lambda: validate(button_box))
-    daily_profile_field.currentTextChanged.connect(lambda: validate(button_box))
-    month_profile_field.currentTextChanged.connect(lambda: validate(button_box))
-    co_gm_km_field.textChanged.connect(lambda: validate(button_box))
-    hc_gm_km_field.textChanged.connect(lambda: validate(button_box))
-    nox_gm_km_field.textChanged.connect(lambda: validate(button_box))
-    sox_gm_km_field.textChanged.connect(lambda: validate(button_box))
-    pm10_gm_km_field.textChanged.connect(lambda: validate(button_box))
-    p1_gm_km_field.textChanged.connect(lambda: validate(button_box))
-    p2_gm_km_field.textChanged.connect(lambda: validate(button_box))
+    # Connect the emissions recalculation method
+    fields['recalculate'].clicked.connect(lambda: recalculate_emissions(fields))
 
-def recalculate_emissions():
+    # Disable various fields
+    fields['method_field'].setText("Open-ALAQS")
+    fields['method_field'].setEnabled(False)
+    fields['height_field'].setText("0")
+    fields['height_field'].setEnabled(False)
+    fields['scenario_field'].setItemText(0, 'Not Applicable')
+    fields['scenario_field'].setEnabled(False)
+
+    # Connect the comboboxes to validation
+    fields['hour_profile_field'].currentTextChanged.connect(lambda: validate(fields))
+    fields['daily_profile_field'].currentTextChanged.connect(lambda: validate(fields))
+    fields['month_profile_field'].currentTextChanged.connect(lambda: validate(fields))
+
+    # Add input validation to text fields in the form
+    for key, value in fields.items():
+        if isinstance(value, QtWidgets.QLineEdit):
+            fields[key].textChanged.connect(lambda: validate(fields))
+
+    # Block the ok button (will be overwritten after validation)
+    fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
+
+    # Connect all QComboBoxes and the instudy checkbox on save
+    def on_save():
+        form.changeAttribute("hour_profile",
+                             fields['hour_profile_field'].currentText())
+        form.changeAttribute("daily_profile",
+                             fields['daily_profile_field'].currentText())
+        form.changeAttribute("month_profile",
+                             fields['month_profile_field'].currentText())
+        feature["instudy"] = str(int(fields['instudy'].isChecked()))
+
+    fields['button_box'].accepted.connect(on_save)
+
+    return form
+
+
+def recalculate_emissions(fields: dict):
     try:
         # Do some validation first
-        name = validate_field(name_field, "str")
-        vehicle_year = validate_field(vehicle_year_field, "int")
-        height = validate_field(height_field, "float")
-        speed = validate_field(speed_field, "float")
-        vehicle_light = validate_field(vehicle_light_field, "float")
-        vehicle_medium = validate_field(vehicle_medium_field, "float")
-        vehicle_heavy = validate_field(vehicle_heavy_field, "float")
-        method = str(method_field.text())
+        name = validate_field(fields['name_field'], "str")
+        vehicle_year = validate_field(fields['vehicle_year_field'], "int")
+        height = validate_field(fields['height_field'], "float")
+        speed = validate_field(fields['speed_field'], "float")
+        vehicle_light = validate_field(fields['vehicle_light_field'], "float")
+        vehicle_medium = validate_field(fields['vehicle_medium_field'], "float")
+        vehicle_heavy = validate_field(fields['vehicle_heavy_field'], "float")
+        method = str(fields['method_field'].text())
 
         if name is False or vehicle_year is False or height is False or speed is False or vehicle_light is False or \
                         vehicle_medium is False or vehicle_heavy is False or method is False:
@@ -158,9 +130,9 @@ def recalculate_emissions():
             msg_box.exec_()
             return False
         
-        vl = float(vehicle_light_field.text())
-        vm = float(vehicle_medium_field.text())
-        vh = float(vehicle_heavy_field.text())
+        vl = float(fields['vehicle_light_field'].text())
+        vm = float(fields['vehicle_medium_field'].text())
+        vh = float(fields['vehicle_heavy_field'].text())
         if (vl + vm + vh) != 100:
             msg_box = QtWidgets.QMessageBox()
             msg_box.setText("Fleet mix must be decimal values that total 100%")
@@ -184,13 +156,13 @@ def recalculate_emissions():
             emission_profile = roadway_emission_factors_alaqs_method(form_data_dict)
             QtWidgets.QApplication.restoreOverrideCursor()
 
-        co_gm_km_field.setText(str(emission_profile['co_ef']))
-        hc_gm_km_field.setText(str(emission_profile['hc_ef']))
-        nox_gm_km_field.setText(str(emission_profile['nox_ef']))
-        sox_gm_km_field.setText(str(emission_profile['sox_ef']))
-        pm10_gm_km_field.setText(str(emission_profile['pm10_ef']))
-        p1_gm_km_field.setText(str(emission_profile['p1_ef']))
-        p2_gm_km_field.setText(str(emission_profile['p2_ef']))
+        fields['co_gm_km_field'].setText(str(emission_profile['co_ef']))
+        fields['hc_gm_km_field'].setText(str(emission_profile['hc_ef']))
+        fields['nox_gm_km_field'].setText(str(emission_profile['nox_ef']))
+        fields['sox_gm_km_field'].setText(str(emission_profile['sox_ef']))
+        fields['pm10_gm_km_field'].setText(str(emission_profile['pm10_ef']))
+        fields['p1_gm_km_field'].setText(str(emission_profile['p1_ef']))
+        fields['p2_gm_km_field'].setText(str(emission_profile['p2_ef']))
 
     except Exception as e:
         msg_box = QtWidgets.QMessageBox()
@@ -199,109 +171,83 @@ def recalculate_emissions():
         error = alaqsutils.print_error(populate_hourly_profiles.__name__, Exception, e)
         return error
 
-def populate_hourly_profiles():
-    try:
-        AllItems = [hour_profile_field.itemText(i) for i in range(hour_profile_field.count())]
-        if not "default" in AllItems:
-            hour_profile_field.addItem("default")
-        hourly_profiles = alaqs.get_hourly_profiles()
 
-        if (hourly_profiles is None) or (hourly_profiles == []):
-            hour_profile_field.addItem("default")
-            # hour_profile_field.setCurrentIndex(0)
-            return None
-        else:
-            for profile in hourly_profiles:
-                if profile[1] != "default":
-                    hour_profile_field.addItem(profile[1])
-            hour_profile_field.setCurrentIndex(0)
-            hour_profile_field.setEditable(False)
+@catch_errors
+def populate_hourly_profiles(field):
+    # Make sure the field is empty
+    field.clear()
 
-    except Exception as e:
-        logger.debug(e)
-        error = alaqsutils.print_error(populate_hourly_profiles.__name__, Exception, e)
-        return error
+    # Set the default field
+    field.addItem("default")
 
+    # Get the available hourly profiles
+    hourly_profiles = alaqs.get_hourly_profiles()
 
-def populate_daily_profiles():
-    try:
-        AllItems = [daily_profile_field.itemText(i) for i in range(daily_profile_field.count())]
-        if not "default" in AllItems:
-            daily_profile_field.addItem("default")
-        daily_profiles = alaqs.get_daily_profiles()
-        if (daily_profiles is None) or (daily_profiles == []):
-            return None
-        else:
-            for profile in daily_profiles:
-                if profile[1] != "default":
-                    daily_profile_field.addItem(profile[1])
-            daily_profile_field.setCurrentIndex(0)
-            daily_profile_field.setEditable(False)
-    except Exception as e:
-        error = alaqsutils.print_error(populate_daily_profiles.__name__, Exception, e)
-        return error
+    if (hourly_profiles is None) or (hourly_profiles == []):
+        logger.debug("No hourly profiles were found.")
+        return
+
+    # Add all the hourly profiles to the list (except the default profile)
+    for profile in hourly_profiles:
+        if profile[1] != "default":
+            field.addItem(profile[1])
+
+    # Set the default category to 0 and make the list un-editable
+    field.setCurrentIndex(0)
+    field.setEditable(False)
 
 
-def populate_monthly_profiles():
-    try:
-        AllItems = [month_profile_field.itemText(i) for i in range(month_profile_field.count())]
-        if not "default" in AllItems:
-            month_profile_field.addItem("default")
-        monthly_profiles = alaqs.get_monthly_profiles()
-        if (monthly_profiles is None) or (monthly_profiles == []):
-            return None
-        else:
-            for profile in monthly_profiles:
-                if profile[1] != "default":
-                    month_profile_field.addItem(profile[1])
-            month_profile_field.setCurrentIndex(0)
-            month_profile_field.setEditable(False)
-    except Exception as e:
-        error = alaqsutils.print_error(populate_monthly_profiles.__name__, Exception, e)
-        return error
+@catch_errors
+def populate_daily_profiles(field):
+    # Make sure the field is empty
+    field.clear()
 
-# def populate_combo_boxes():
-#     """
-#     fills in the various comboboxes that are needed for the UI to be operational
-#     """
-#     hourly_profiles = alaqs.get_hourly_profiles()
-#     if (hourly_profiles is None) or (hourly_profiles == []):
-#         pass
-#     else:
-#         for profile in hourly_profiles:
-#             if profile[1] != "default":
-#                 hour_profile_field.addItem(profile[1])
-#         hour_profile_field.setEditable(False)
-#
-#     daily_profiles = alaqs.get_daily_profiles()
-#     if (daily_profiles is None) or (daily_profiles == []):
-#         pass
-#     else:
-#         for profile in daily_profiles:
-#             if profile[1] != "default":
-#                 daily_profile_field.addItem(profile[1])
-#         daily_profile_field.setEditable(False)
-#
-#     monthly_profiles = alaqs.get_daily_profiles()
-#     if (monthly_profiles is None) or (monthly_profiles == []):
-#         pass
-#     else:
-#         for profile in monthly_profiles:
-#             if profile[1] != "default":
-#                 month_profile_field.addItem(profile[1])
-#         month_profile_field.setEditable(False)
-#
-#     # lasport_scenarios = alaqs.get_lasport_scenarios()
-#     # if (lasport_scenarios is None) or (lasport_scenarios == []):
-#     #    pass
-#     # else:
-#     #    for scenario in lasport_scenarios:
-#     #        scenario = str(scenario[0]).replace("'", "")
-#     #        scenario_field.addItem(scenario)
-#     #    scenario_field.setEditable(False)
-#     # scenario_field.addItem("Not Applicable")
+    # Set the default field
+    field.addItem("default")
 
-def validate(button_box):
+    # Get the available daily profiles
+    daily_profiles = alaqs.get_daily_profiles()
+
+    if (daily_profiles is None) or (daily_profiles == []):
+        logger.debug("No daily profiles were found.")
+        return
+
+    # Add all the daily profiles to the list (except the default profile)
+    for profile in daily_profiles:
+        if profile[1] != "default":
+            field.addItem(profile[1])
+
+    # Set the default category to 0 and make the list un-editable
+    field.setCurrentIndex(0)
+    field.setEditable(False)
+
+
+@catch_errors
+def populate_monthly_profiles(field):
+    # Make sure the field is empty
+    field.clear()
+
+    # Set the default field
+    field.addItem("default")
+
+    # Get the available monthly profiles
+    monthly_profiles = alaqs.get_monthly_profiles()
+
+    if (monthly_profiles is None) or (monthly_profiles == []):
+        logger.debug("No monthly profiles were found.")
+        return
+
+    # Add all the monthly profiles to the list (except the default profile)
+    for profile in monthly_profiles:
+        if profile[1] != "default":
+            field.addItem(profile[1])
+
+    # Set the default category to 0 and make the list un-editable
+    field.setCurrentIndex(0)
+    field.setEditable(False)
+
+
+def validate(fields: dict):
     """
     This function validates that all of the required fields have been completed
     correctly. If they have, the attributes are committed to the feature. 
@@ -309,44 +255,34 @@ def validate(button_box):
     highlighted in red.
     """
 
-    results = list()
-    results.append(validate_field(name_field, "str"))
-    results.append(validate_field(vehicle_year_field, "int"))
-    results.append(validate_field(height_field, "float"))
-    #results.append(validate_field(distance_field, "float"))
-    results.append(validate_field(speed_field, "float"))
-    results.append(validate_field(vehicle_light_field, "float"))
-    results.append(validate_field(vehicle_medium_field, "float"))
-    results.append(validate_field(vehicle_heavy_field, "float"))
-    results.append(validate_field(hour_profile_field, "str"))
-    results.append(validate_field(daily_profile_field, "str"))
-    results.append(validate_field(month_profile_field, "str"))
-    results.append(validate_field(co_gm_km_field, "float"))
-    results.append(validate_field(hc_gm_km_field, "float"))
-    results.append(validate_field(nox_gm_km_field, "float"))
-    results.append(validate_field(sox_gm_km_field, "float"))
-    results.append(validate_field(pm10_gm_km_field, "float"))
-    results.append(validate_field(p1_gm_km_field, "float"))
-    results.append(validate_field(p2_gm_km_field, "float"))
+    # Get the button box
+    button_box = fields['button_box']
 
-    # for value in results:
-    #     if value is False:
-    #         QtWidgets.QMessageBox.information(form, "Validation error", "Please fill in all the required fields")
-    #         return False
-    #
-    # form.accept()
-    # if False in results:
-    #     QtWidgets.QMessageBox.warning(None, "Validation error", "Please fill in all the required fields")
-    #     return False
+    # Validate all fields
+    results = [
+        validate_field(fields['name_field'], "str"),
+        validate_field(fields['vehicle_year_field'], "int"),
+        validate_field(fields['height_field'], "float"),
+        #validate_field(fields['distance_field'], "float"),
+        validate_field(fields['speed_field'], "float"),
+        validate_field(fields['vehicle_light_field'], "float"),
+        validate_field(fields['vehicle_medium_field'], "float"),
+        validate_field(fields['vehicle_heavy_field'], "float"),
+        validate_field(fields['hour_profile_field'], "str"),
+        validate_field(fields['daily_profile_field'], "str"),
+        validate_field(fields['month_profile_field'], "str"),
+        validate_field(fields['co_gm_km_field'], "float"),
+        validate_field(fields['hc_gm_km_field'], "float"),
+        validate_field(fields['nox_gm_km_field'], "float"),
+        validate_field(fields['sox_gm_km_field'], "float"),
+        validate_field(fields['pm10_gm_km_field'], "float"),
+        validate_field(fields['p1_gm_km_field'], "float"),
+        validate_field(fields['p2_gm_km_field'], "float"),
+    ]
 
-    # else:
-    #     form.save()
+    # Block signals if any of the fields is invalid
+    button_box.button(button_box.Ok).blockSignals("False" in str(results))
 
-    if not ('False' in str(results)):
-        button_box.button(button_box.Ok).blockSignals(False)
-        button_box.accepted.connect(form.save)
-    else:
-        button_box.button(button_box.Ok).blockSignals(True)
 
 def validate_field(ui_element, var_type):
     try:
