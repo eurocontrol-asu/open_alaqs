@@ -68,6 +68,7 @@ def validate(fields: dict):
     Otherwise an error message is displayed and the incorrect field is
     highlighted in red.
     """
+
     # Get the button box
     button_box = fields['button_box']
 

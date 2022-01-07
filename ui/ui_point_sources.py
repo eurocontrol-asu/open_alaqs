@@ -109,7 +109,7 @@ def form_open(form, layer, feature):
         form.changeAttribute("daily_profile",
                              fields['daily_profile'].currentText())
         form.changeAttribute("month_profile",
-                             fields['daily_profile'].currentText())
+                             fields['month_profile'].currentText())
         feature["instudy"] = str(int(fields['instudy'].isChecked()))
     fields['button_box'].accepted.connect(on_save)
 
