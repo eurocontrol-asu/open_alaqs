@@ -960,31 +960,44 @@ class Movement:
     def calculateTrajectoryAtRunway(self, offset_by_touchdown=True):
         trajectory = None
         if self.getTrajectory() is None:
-            logger.error("Could not find trajectory for movement at runway time '%s'." % (str(self.getRunwayTime(as_str=True))))
+            logger.error("Could not find trajectory for movement at runway "
+                         f"time '{self.getRunwayTime(as_str=True)}'.")
         elif self.getRunway() is None:
-            logger.error("Could not find runway for movement at runway time '%s'." % (str(self.getRunwayTime(as_str=True))))
+            logger.error("Could not find runway for movement at runway time "
+                         f"'{self.getRunwayTime(as_str=True)}'.")
         elif not (self.getRunwayDirection() in self.getRunway().getDirections()):
-            logger.error("Could not find runway direction '%s' (movement runway time='%s'." % (str(self.getRunwayDirection()), str(self.getRunwayTime(as_str=True))))
+            logger.error(f"Could not find runway direction "
+                         f"'{self.getRunwayDirection()}' (movement runway "
+                         f"time='{self.getRunwayTime(as_str=True)}'.")
         else:
-            trajectory = AircraftTrajectory(self.getTrajectory(), skipPointInitialization=True)
+
+            trajectory = AircraftTrajectory(
+                self.getTrajectory(), skipPointInitialization=True)
             trajectory.setIsCartesian(False)
+
             # Shift coordinates by touchdown offset (only for arrivals)
             if offset_by_touchdown:
-                offset_by_touchdown = True if self.isArrival() else False
+                offset_by_touchdown = self.isArrival()
 
-            EPSG_id_source=3857
-            EPSG_id_target=4326
+            # Set the EPSG identifiers for the source and target projection
+            epsg_id_source = 3857
+            epsg_id_target = 4326
+
             # Project geometry from 3857 to 4326
-            (runway_geometry_wkt, swap) = spatial.reproject_geometry(self.getRunway().getGeometryText(), EPSG_id_source, EPSG_id_target)
+            (runway_geometry_wkt, swap) = spatial.reproject_geometry(
+                self.getRunway().getGeometryText(),
+                epsg_id_source, epsg_id_target)
 
             # Return tuple of points - runway ends
             runway_points_tuple_list = spatial.getAllPoints(runway_geometry_wkt, swap)
-            if len(runway_points_tuple_list)>=2:
-                # assumes that runway is a straight line (i.e. earth is flat!)
-                start_point = runway_points_tuple_list[0] # e.g. (lon, lat, alt)
-                end_point = runway_points_tuple_list[-1] # e.g. (43.6157352579433, 1.38014783105964, 0.0)
 
-                #get the azimuth for the runway
+            if len(runway_points_tuple_list) >= 2:
+
+                # assumes that runway is a straight line (i.e. earth is flat!)
+                start_point = runway_points_tuple_list[0]  # e.g. (lon, lat, alt)
+                end_point = runway_points_tuple_list[-1]  # e.g. (43.6157352579433, 1.38014783105964, 0.0)
+
+                # get the azimuth for the runway
                 # getInverseDistance(lat1, lon1, lat2, lon2, EPSG_id=4326)
                 # inverseDistance_dict = Spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])
                 inverseDistance_dict = spatial.getInverseDistance(start_point[1], start_point[0], end_point[1], end_point[0])
@@ -1007,32 +1020,30 @@ class Movement:
                 # osgeo.ogr.Geometry: Point(lat, lon)
                 # Direction is either first or last point (assume that runway naming list represents direction of points)
 
-                if not self.getRunway().getDirections().index(self.getRunwayDirection()):
-                    runway_point, runway_azimuth = end_point, end_point_azimuth
-                    runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
-                    # runway_point, runway_azimuth = end_point, end_point_azimuth
-                    # runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
-                    # if self.getDepartureArrivalFlag() == "A":
-                    #     (rwy_point, rwy_point_wkt) = Spatial.reproject_Point(intersection.x, intersection.y,
-                    #                                                          EPSG_id_source, EPSG_id_target)
-                    #     runway_point = (rwy_point.GetY(), rwy_point.GetX())
-
-                else:
+                # Check if the direction of the runway needs to be reversed
+                if self.getRunway().getDirections().index(
+                        self.getRunwayDirection()) == 0:
                     runway_point, runway_azimuth = start_point, start_point_azimuth
+                else:
+                    runway_point, runway_azimuth = end_point, end_point_azimuth
+                    runway_azimuth = (runway_azimuth + 180) % 360
 
                 try:
-                    (rwy_point, rwy_point_wkt) = spatial.reproject_Point(intersection.centroid.x, intersection.centroid.y,
-                                                                         EPSG_id_source, EPSG_id_target)
+                    (rwy_point, rwy_point_wkt) = spatial.reproject_Point(
+                        intersection.centroid.x, intersection.centroid.y,
+                        epsg_id_source, epsg_id_target)
                     runway_point = (rwy_point.GetY(), rwy_point.GetX())
-                except:
-                    logger.warning("No intersection point between runway '%s' and taxiroute '%s'"%(self.getRunwayDirection(),
-                                                                                                   self.getTaxiRoute().getName()))
+                except Exception:
+                    logger.warning(
+                        "No intersection point between runway '%s' and"
+                        " taxiroute '%s'" % (self.getRunwayDirection(),
+                                             self.getTaxiRoute().getName()))
 
                     # runway_point, runway_azimuth = start_point, start_point_azimuth
                     # # runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
                     # if self.getDepartureArrivalFlag() == "A":
                     #     (rwy_point, rwy_point_wkt) = Spatial.reproject_Point(intersection.x, intersection.y,
-                    #                                                          EPSG_id_source, EPSG_id_target)
+                    #                                                          epsg_id_source, epsg_id_target)
                     #     runway_point = (rwy_point.GetY(), rwy_point.GetX())
 
                     # if self.getDepartureArrivalFlag() == "D":
@@ -1040,7 +1051,7 @@ class Movement:
                     # else:
                     #     runway_point, runway_azimuth = end_point, end_point_azimuth
                     #     if not intersection.is_empty:
-                    #         (rwy_point, rwy_point_wkt) = Spatial.reproject_Point(intersection.x, intersection.y, EPSG_id_source, EPSG_id_target)
+                    #         (rwy_point, rwy_point_wkt) = Spatial.reproject_Point(intersection.x, intersection.y, epsg_id_source, epsg_id_target)
                     #         runway_point = (rwy_point.GetY(), rwy_point.GetX())
 
                 # # # For ARR (only), take back azimuth (# Less than 180 degrees (< 3.141592 rad), then add 180 degrees):
@@ -1052,11 +1063,14 @@ class Movement:
                 for point in self.getTrajectory().getPoints():
 
                     # aircraft trajectory point with from default_aircraft_profiles
-                    origin = (0.,0.,0.)
-                    #target point with cartesian coordinates
+                    origin = (0., 0., 0.)
+
+                    # target point with cartesian coordinates
                     target_point = point.getCoordinates()
-                    target_point_distance = spatial.getDistanceXY(target_point[0], target_point[1], target_point[2],
-                                                                  origin[0], origin[1], origin[2])
+                    target_point_distance = spatial.getDistanceXY(
+                        target_point[0], target_point[1], target_point[2],
+                        origin[0], origin[1], origin[2])
+
                     # if self.getDepartureArrivalFlag() == "A":
                     #     target_point_distance = target_point_distance + self.getTrajectory().getPoints()[-1].getX()
                     # if self.getDepartureArrivalFlag() == "A":
@@ -1071,24 +1085,26 @@ class Movement:
                     #             # for ARR, when landing take forward azimuth
                     #             runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
 
-
-                    #get target point (calculation in 4326 projection)
+                    # get target point (calculation in 4326 projection)
                     target_projected = spatial.getDistance(runway_point[1], runway_point[0], runway_azimuth, target_point_distance)
-                    #target point (wkt) with coordinates in 4326
-                    target_projected_wkt = spatial.getPointGeometryText(target_projected["lon2"], target_projected["lat2"], 0., swap)
-                    #reproject target from 4326 to 3857
-                    (target_projected_wkt, swap_) = spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
 
-                    #add target to list of points of the (shifted) trajectory
+                    # target point (wkt) with coordinates in 4326
+                    target_projected_wkt = spatial.getPointGeometryText(target_projected["lon2"], target_projected["lat2"], 0., swap)
+
+                    # reproject target from 4326 to 3857
+                    (target_projected_wkt, swap_) = spatial.reproject_geometry(target_projected_wkt, epsg_id_target, epsg_id_source)
+
+                    # add target to list of points of the (shifted) trajectory
                     for p in spatial.getAllPoints(target_projected_wkt):
                         p_ = AircraftTrajectoryPoint(point)
                         # Update x and y coordinates (z coordinate is not updated by distance calculation)
-                        p_.setCoordinates(p[0],p[1],target_point[2])
+                        p_.setCoordinates(p[0], p[1], target_point[2])
                         p_.updateGeometryText()
                         trajectory.addPoint(p_)
                     trajectory.updateGeometryText()
             else:
-                logger.error("Did not find enough points for geometry '%s'" % (runway_geometry_wkt))
+                logger.error("Did not find enough points for geometry '%s'" % (
+                    runway_geometry_wkt))
 
         return trajectory
 
