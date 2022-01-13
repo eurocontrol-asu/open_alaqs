@@ -31,7 +31,8 @@ class MovementSourceModule(SourceModule):
         SourceModule.__init__(self, values_dict)
 
         if self.getDatabasePath() is not None:
-            self.setStore(MovementStore(self.getDatabasePath()))
+            movement_store = MovementStore(self.getDatabasePath())
+            self.setStore(movement_store)
 
         self._calculation_limit = {
             "max_height": 914.4,
