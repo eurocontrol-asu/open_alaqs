@@ -1021,13 +1021,15 @@ class AUSTAL2000DispersionModule(DispersionModule):
                         matched_cells_coeff)
 
         # Create cumulative emissions per cell
-        total_emissions_per_cell_df = \
-            pd.concat(total_emissions_per_cell_list).groupby(level=0).sum()
+        try:
+            total_emissions_per_cell_df = \
+                pd.concat(total_emissions_per_cell_list).groupby(level=0).sum()
+        except ValueError:
 
-        # # Convert cumulative emissions to Emissions
-        # total_emissions_per_cell_dict = total_emissions_per_cell_df.apply(
-        #     lambda x: Emission(x.to_dict()), axis=1
-        # ).to_dict()
+            # Create an empty dataframe with the right columns
+            total_emissions_per_cell_df = pd.DataFrame(columns=[
+                f'{p.lower()}_kg' for p in self._pollutants_list
+            ])
 
         # Get the output path (as Path)
         output_path = self.getOutputPathAsPath()
@@ -1082,7 +1084,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
             # Initialize the emissions grid and get the dimensions
             dims = self.InitializeEmissionGridMatrix()
-            x_dim, y_dim, z_dim = dims
+            # x_dim, y_dim, z_dim = dims
 
             # Split the sequ once
             sequ_split = self.getSequ().split(",")
