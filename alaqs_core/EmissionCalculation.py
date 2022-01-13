@@ -116,28 +116,28 @@ class EmissionCalculation:
             if db_path:
                 obj.setDatabasePath(db_path)
             return True
-        else:
-            if inspect.isclass(obj):
-                # ToDo: re-implement issubclass (it looks like instances of
-                #  generic types are no longer instances of type ???)
-                # if issubclass(obj, SourceModule):
-                # if issubclass(obj, (list, SourceModule)):
-                # logger.debug(issubclass(obj, (list, SourceModule)))
-                try:
 
-                    config_ = {
-                        "database_path":
-                            self.getDatabasePath() if not db_path else db_path
-                    }
+        if inspect.isclass(obj):
+            # ToDo: re-implement issubclass (it looks like instances of
+            #  generic types are no longer instances of type ???)
+            # if issubclass(obj, SourceModule):
+            # if issubclass(obj, (list, SourceModule)):
+            # logger.debug(issubclass(obj, (list, SourceModule)))
+            try:
 
-                    config_.update(configuration)
+                config_ = {
+                    "database_path":
+                        db_path if db_path else self.getDatabasePath()
+                }
 
-                    self._modules[name] = obj(values_dict=config_)
+                config_.update(configuration)
 
-                    return True
-                except Exception as e:
-                    logger.error(f"Could not add {name} as a SourceModule. {e}")
-                    return False
+                self._modules[name] = obj(values_dict=config_)
+
+                return True
+            except Exception as e:
+                logger.error(f"Could not add {name} as a SourceModule. {e}")
+                return False
 
         return False
 
