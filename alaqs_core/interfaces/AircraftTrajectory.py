@@ -402,7 +402,7 @@ class AircraftTrajectoryStore(Store, metaclass=Singleton):
         if self._trajectory_db is None:
             self._trajectory_db = AircraftTrajectoryDatabase(db_path)
 
-        #instantiate all runway objects
+        # instantiate all runway objects
         self.initAircraftTrajectories()
 
     def initAircraftTrajectories(self):
@@ -410,26 +410,26 @@ class AircraftTrajectoryStore(Store, metaclass=Singleton):
         # double_ids = []
         for key, trajectory_dict in self.getAircraftTrajectoryDatabase().getEntries().items():
 
-            id_ = trajectory_dict["profile_id"] if "profile_id" in trajectory_dict else "unknown"
+            id_ = trajectory_dict.get("profile_id", "unknown")
 
-            #create a new aircraft-trajectory point
+            # create a new aircraft-trajectory point
             trajectory_point_ = AircraftTrajectoryPoint({
-                "x": conversion.convertToFloat(trajectory_dict["horizontal_metres"]) if "horizontal_metres" in trajectory_dict else 0.,
+                "x": conversion.convertToFloat(trajectory_dict.get("horizontal_metres", 0)),
                 "y": 0.,
-                "z": conversion.convertToFloat(trajectory_dict["vertical_metres"]) if "vertical_metres" in trajectory_dict else 0.,
-                "tas_metres": conversion.convertToFloat(trajectory_dict["tas_metres"]) if "tas_metres" in trajectory_dict else None,
-                "power": conversion.convertToFloat(trajectory_dict["power"]) if "power" in trajectory_dict else None,
+                "z": conversion.convertToFloat(trajectory_dict.get("vertical_metres", 0)),
+                "tas_metres": conversion.convertToFloat(trajectory_dict.get("tas_metres")),
+                "power": conversion.convertToFloat(trajectory_dict.get("power")),
                 "mode": str(trajectory_dict["mode"]) if "mode" in trajectory_dict else None
             })
 
             if "point" in trajectory_dict:
                 trajectory_point_.setIdentifier(trajectory_dict["point"])
 
-            #add point aircraft trajectory if existing
+            # add point aircraft trajectory if existing
             if self.hasKey(id_):
                 self.getObject(id_).addPoint(trajectory_point_)
 
-            #add aircraft trajectory with new point to store if not existing
+            # add aircraft trajectory with new point to store if not existing
             else:
                 trajectory_ = AircraftTrajectory(trajectory_dict)
                 trajectory_.addPoint(trajectory_point_)
