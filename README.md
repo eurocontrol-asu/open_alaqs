@@ -145,6 +145,51 @@ You could also give specific instructions to how they can setup their developmen
 
 Ideally, you should keep the README simple. If you need to add more complex explanations, use a wiki. Check out [this wiki](https://github.com/navendu-pottekkat/nsfw-filter/wiki) for inspiration. -->
 
+## Debugging
+
+During debugging, it's sometimes hard to understand when certain calls are made.
+The following code sample can help to better understand where and when code is executed.
+
+```python
+from inspect import getframeinfo, currentframe
+
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+
+logger = get_logger(__name__)
+
+# The line below is printed in the logs and informs you about the location of the code
+logger.debug(f"{getframeinfo(currentframe())}")
+```
+
+In addition, the following wrapper can be used to track what's going in functions.
+It can easily be extended to track the execution time of functions as well.
+
+```python
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+
+logger = get_logger(__name__)
+
+def log_activity(f):
+    """
+    Decorator to log activity
+
+    :param f: function to execute
+    :return:
+    """
+
+    def wrapper(*args, **kwargs):
+        logger.debug(f"{f.__name__}(*args, **kwargs) with")
+        logger.debug(f"\targs={args}")
+        logger.debug(f"\tkwargs={kwargs}")
+        return f(*args, **kwargs)
+
+    return wrapper
+
+@log_activity
+def log_activity_of_this_function(random, argument, with_defaults='also supported'):
+    pass
+```
+
 ## Updating the UI
 
 If you want to edit the UI, install [pyqt-tools](https://github.com/altendky/pyqt-tools) using `pip install pyqt5-tools~=5.15` and start the designer using `pyqt5-tools designer`.
