@@ -438,7 +438,6 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             # load some defaults
             raise Exception("Could not load study setup.")
 
-
     def airport_lookup(self):
         """
         This function looks up airport details (name, lat, lon, country) based
@@ -1198,7 +1197,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
 class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
 
     def __init__(self, iface):
-        main_window = iface.mainWindow() if iface is not None else None
+        main_window = None if iface is None else iface.mainWindow()
         QtWidgets.QDialog.__init__(self, main_window)
 
         self.ui = Ui_TaxiRoutesDialog()
@@ -1250,9 +1249,9 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         self.ui.available_ac_groups.verticalHeader().setVisible(False)
         self.ui.selected_ac_groups.verticalHeader().setVisible(False)
 
-    def add_taxiways_from_canvas_to_table(self):
-        self.update_taxiway_segments_table(
-            self.get_selected_taxiways_from_canvas())
+    def add_taxiways_from_canvas_to_table(self, *args, **kwargs):
+        select_taxiways = self.get_selected_taxiways_from_canvas()
+        self.update_taxiway_segments_table(select_taxiways)
 
     def remove_taxiway_from_table(self):
         names_to_remove = ""
@@ -1349,9 +1348,6 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
 
         # Get taxiway routes
         taxiway_routes = alaqs.get_taxiway_routes()
-
-        # todo[RPFK]: REMOVE
-        # logger.debug(f"taxiway_routes={taxiway_routes} ({type(taxiway_routes)})")
 
         if taxiway_routes is not None:
             for taxiway_route in taxiway_routes:
@@ -1493,31 +1489,21 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
             self.ui.routes.itemText(i) for i in range(self.ui.routes.count())
         ]
 
-        # TODO[RPFK]: REMOVE
-        # logger.debug(f"new_taxi_route_name = {new_taxi_route_name} ({type(new_taxi_route_name)})")
-        # logger.debug(f"existing_taxi_routes = {existing_taxi_routes} ({type(existing_taxi_routes)})")
-
         if new_taxi_route_name in existing_taxi_routes:
             QtWidgets.QMessageBox.information(
                 self, "Notice", "Taxi route already exists")
             return
 
         # Add the new route name to the list
-        # TODO[RPFK]: check if it goes wrong here
         self.ui.routes.addItem(new_taxi_route_name)
         index = self.ui.routes.findText(new_taxi_route_name)
         self.ui.routes.setCurrentIndex(index)
 
-            # Clear the taxiways table
-            self.clear_taxiway_segments_table()
+        # Clear the taxiways table
+        self.clear_taxiway_segments_table()
 
-            # Clear the selected aircraft groups table
-            self.update_selected_ac_groups([])
-
-        except Exception as e:
-            # fix_print_with_import
-            print(alaqsutils.print_error(self.create_new_taxi_route.__name__,
-                                         Exception, e))
+        # Clear the selected aircraft groups table
+        self.update_selected_ac_groups([])
 
     def update_selected_ac_groups(self, values_list):
         # Clear the selected aircraft groups table
@@ -1596,7 +1582,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
 
         return taxiway_segments
 
-    def clear_taxiway_segments_table(self):
+    def clear_taxiway_segments_table(self, *args, **kwargs):
         self.update_taxiway_segments_table([])
 
     def update_taxiway_segments_table(self, taxiway_segments_list):
@@ -1610,13 +1596,13 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         self.ui.taxiway_segments.setRowCount(len(taxiway_segments_list))
 
         for row, taxiway_name in enumerate(taxiway_segments_list):
-            self.ui.taxiway_segments.setItem(row, 0, QtWidgets.QTableWidgetItem(
-                str(taxiway_name)))
+            self.ui.taxiway_segments.setItem(
+                row, 0, QtWidgets.QTableWidgetItem(str(taxiway_name))
+            )
 
         self.select_taxiways_on_canvas(taxiway_segments_list)
 
     @catch_errors
-    # @log_activity
     def route_changed(self, *args, **kwargs):
         """
         Automatically updates the UI when the selected route is changed so that
@@ -1647,7 +1633,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
             return
         self.populate_routes()
 
-    def save_taxiway_route(self):
+    def save_taxiway_route(self, *args, **kwargs):
         """
         Saves a new taxiroute to the current study
         """
@@ -1657,6 +1643,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         delete_taxiroute = False
         taxi_route_name = self.ui.routes.currentText()
         existing_taxi_routes = alaqs.get_taxiway_routes()
+
         if existing_taxi_routes is not None:
             for existing_taxi_route in existing_taxi_routes:
                 if existing_taxi_route[2] == taxi_route_name:
@@ -1677,6 +1664,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         # Get the taxi route
         taxiway_segments = list()
         table_rows = self.ui.taxiway_segments.rowCount()
+
         if table_rows > 0:
             for row in range(table_rows):
                 taxiway_segments.append(
@@ -2635,6 +2623,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
     @catch_errors
     def update_emissions(self):
+
         inventory_path = str(self.ui.result_file_path.text())
         if not os.path.exists(inventory_path):
             raise Exception("Error: Inventory path '%s' doesn't exist!" % (
