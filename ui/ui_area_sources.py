@@ -53,6 +53,9 @@ def form_open(form, layer, feature):
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
     )
 
+    # Hide the instudy field
+    fields['instudy'].setHidden(True)
+
     # Disable the height and heat flux fields
     fields['height_field'].setText('0')
     fields['height_field'].setEnabled(False)

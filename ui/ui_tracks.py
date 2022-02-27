@@ -38,6 +38,9 @@ def form_open(form, layer, feature):
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
     )
 
+    # Hide the instudy field
+    fields['instudy'].setHidden(True)
+
     # Remove brackets from the departure/arrival field when it's already set
     try:
 
@@ -124,8 +127,8 @@ def populate_combo_boxes(fields: dict):
     runways = alaqs.get_runways()
     if runways is None or runways == []:
         msg_box = QtWidgets.QMessageBox()
-        msg.setIcon(QtWidgets.QMessageBox.Critical)
-        msg.setWindowTitle('Critical error')
+        msg_box.setIcon(QtWidgets.QMessageBox.Critical)
+        msg_box.setWindowTitle('Critical error')
         msg_box.setText("Please define your runways before creating tracks.")
         msg_box.exec_()
     else:

@@ -20,6 +20,9 @@ def form_open(form, layer, feature):
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
     )
 
+    # Hide the instudy field
+    fields['instudy'].setHidden(True)
+
     # Disable the time field
     fields['time_field'].setText("Calculated")
     fields['time_field'].setEnabled(False)
@@ -35,6 +38,7 @@ def form_open(form, layer, feature):
     # Connect the instudy checkbox on save
     def on_save():
         feature["instudy"] = str(int(fields['instudy'].isChecked()))
+
     fields['button_box'].accepted.connect(on_save)
 
 

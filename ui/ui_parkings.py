@@ -66,6 +66,9 @@ def form_open(form, layer, feature):
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
     )
 
+    # Hide the instudy field
+    fields['instudy'].setHidden(True)
+
     # Disable method, height and park time fields
     fields['method_field'].setText("Open-ALAQS")
     fields['method_field'].setEnabled(False)
@@ -92,9 +95,12 @@ def form_open(form, layer, feature):
 
     # Connect the instudy checkbox on save
     def on_save():
-        form.changeAttribute("hour_profile", fields['hour_profile_field'].currentText())
-        form.changeAttribute("daily_profile", fields['daily_profile_field'].currentText())
-        form.changeAttribute("month_profile", fields['month_profile_field'].currentText())
+        form.changeAttribute("hour_profile",
+                             fields['hour_profile_field'].currentText())
+        form.changeAttribute("daily_profile",
+                             fields['daily_profile_field'].currentText())
+        form.changeAttribute("month_profile",
+                             fields['month_profile_field'].currentText())
         feature["instudy"] = str(int(fields['instudy'].isChecked()))
 
     fields['button_box'].accepted.connect(on_save)

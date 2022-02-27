@@ -37,6 +37,9 @@ def form_open(form, layer, feature):
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
     )
 
+    # Hide the instudy field
+    fields['instudy'].setHidden(True)
+
     # Disable the height field
     fields['height_field'].setToolTip('Not implemented')
     fields['height_field'].setText("0")
