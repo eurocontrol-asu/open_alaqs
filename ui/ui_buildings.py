@@ -19,6 +19,9 @@ def form_open(form, layer, feature):
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
     )
 
+    # Hide the instudy field
+    fields['instudy'].setHidden(True)
+
     # height not used in this ALAQS version
     fields['height_field'].setText("0")
     fields['height_field'].setEnabled(False)

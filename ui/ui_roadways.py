@@ -67,6 +67,9 @@ def form_open(form, layer, feature):
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
     )
 
+    # Hide the instudy field
+    fields['instudy'].setHidden(True)
+
     # Seed the profiles
     populate_hourly_profiles(fields['hour_profile_field'])
     populate_daily_profiles(fields['daily_profile_field'])

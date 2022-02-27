@@ -49,6 +49,9 @@ def form_open(form, layer, feature):
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
     )
 
+    # Hide the instudy field
+    fields['instudy'].setHidden(True)
+
     # Seed the runway numbers and letters once
     populate_runway_numbers_once(fields)
     populate_runway_letters_once(fields)

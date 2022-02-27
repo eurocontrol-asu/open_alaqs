@@ -76,6 +76,9 @@ def form_open(form, layer, feature):
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
     )
 
+    # Hide the instudy field
+    fields['instudy'].setHidden(True)
+
     # Seed the category field once
     populate_categories_once(fields['category'])
 
