@@ -248,7 +248,7 @@ class OpenALAQS:
                 self.actions['project_load'].setEnabled(False)
                 self.actions['project_create'].setEnabled(False)
                 self.actions['project_close'].setEnabled(True)
-                self.run_study_setup()
+                self.run_study_setup(save_before_show=True)
         else:
             self.dialogs['create_project'].close()
 
@@ -301,7 +301,7 @@ class OpenALAQS:
         self.actions['project_create'].setEnabled(True)
         self.actions['project_load'].setEnabled(True)
 
-    def run_study_setup(self):
+    def run_study_setup(self, save_before_show=False):
         """
         Looks to see if there is an open database (the first combo box will be
         populated if it is) and presents details of the current study for
@@ -310,6 +310,8 @@ class OpenALAQS:
         """
         try:
             self.dialogs['study_setup'] = OpenAlaqsStudySetup(self.iface)
+            if save_before_show:
+                self.dialogs['study_setup'].save_study_setup()
             self.dialogs['study_setup'].show()
             return_code = self.dialogs['study_setup'].exec_()
             if return_code == 0:
