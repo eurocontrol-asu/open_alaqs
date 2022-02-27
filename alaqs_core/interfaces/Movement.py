@@ -2,7 +2,6 @@ import copy
 import difflib
 import sys
 from collections import OrderedDict
-from datetime import datetime
 
 import matplotlib
 import numpy as np
@@ -92,27 +91,37 @@ class Movement:
             if self._block_time is None:
                 logger.error("Could not convert '%s', which is of type '%s', to a valid time format." % (str(val[_col]), str(type(val[_col]))))
 
-        self._engine_name = str(val["engine_name"]) if "engine_name" in val else ""
+        self._engine_name = str(val.get("engine_name", ""))
         self._apu_code = int(val["apu_code"]) if "apu_code" in val and val["apu_code"] else 0
         # self._apu_code = 0 #(stand only), 1 (stand and taxiway) or 2 ()stand, taxiing and take - off / climb - out or approach / landing
 
-        self._domestic = str(val["domestic"]) if "domestic" in val else ""
-        self._departure_arrival = str(val["departure_arrival"]) if "departure_arrival" in val else ""
-        self._profile_id = str(val["profile_id"]) if "profile_id" in val else ""
-        self._track_id = str(val["track_id"]) if "track_id" in val else ""
-        self._runway_direction = str(val["runway"]) if "runway" in val else ""
+        self._domestic = str(val.get("domestic", ""))
+        self._departure_arrival = str(val.get("departure_arrival", ""))
+        self._profile_id = str(val.get("profile_id", ""))
+        self._track_id = str(val.get("track_id", ""))
+        self._runway_direction = str(val.get("runway", ""))
 
-        self._gate_name = str(val["gate"]) if "gate" in val else ""
+        self._gate_name = str(val.get("gate", ""))
         self._gate = None
         self._taxi_route = None
-        self._taxi_engine_count = conversion.convertToInt(val.get("taxi_engine_count"), 2)
-        self._tow_ratio = conversion.convertToFloat(val.get("tow_ratio"), 1)
-        self._taxi_fuel_ratio = conversion.convertToFloat(val.get("taxi_fuel_ratio"), 1)
-        self._engine_thrust_level_taxiing = conversion.convertToFloat(val.get("engine_thrust_level_taxiing"), .07)
+        self._taxi_engine_count = conversion.convertToInt(
+            val.get("taxi_engine_count"), 2)
+        self._tow_ratio = conversion.convertToFloat(
+            val.get("tow_ratio"), 1)
+        self._taxi_fuel_ratio = conversion.convertToFloat(
+            val.get("taxi_fuel_ratio"), 1)
+        self._engine_thrust_level_taxiing = conversion.convertToFloat(
+            val.get("engine_thrust_level_taxiing"), .07)
 
-        self._set_time_of_main_engine_start_after_block_off_in_s = conversion.convertToFloat(val["set_time_of_main_engine_start_after_block_off_in_s"]) if "set_time_of_main_engine_start_after_block_off_in_s" in val else None
-        self._set_time_of_main_engine_start_before_takeoff_in_s  = conversion.convertToFloat(val["set_time_of_main_engine_start_before_takeoff_in_s"]) if "set_time_of_main_engine_start_before_takeoff_in_s" in val else None
-        self._set_time_of_main_engine_off_after_runway_exit_in_s = conversion.convertToFloat(val["set_time_of_main_engine_off_after_runway_exit_in_s"]) if "set_time_of_main_engine_off_after_runway_exit_in_s" in val else None
+        self._set_time_of_main_engine_start_after_block_off_in_s = \
+            conversion.convertToFloat(
+                val.get("set_time_of_main_engine_start_after_block_off_in_s"))
+        self._set_time_of_main_engine_start_before_takeoff_in_s = \
+            conversion.convertToFloat(
+                val.get("set_time_of_main_engine_start_before_takeoff_in_s"))
+        self._set_time_of_main_engine_off_after_runway_exit_in_s = \
+            conversion.convertToFloat(
+                val.get("set_time_of_main_engine_off_after_runway_exit_in_s"))
 
         if self._set_time_of_main_engine_start_after_block_off_in_s is not None:
             self._set_time_of_main_engine_start_after_block_off_in_s = \
@@ -126,7 +135,8 @@ class Movement:
             self._set_time_of_main_engine_off_after_runway_exit_in_s = \
                 abs(self._set_time_of_main_engine_off_after_runway_exit_in_s)
 
-        self._number_of_stop_and_gos = conversion.convertToFloat(val["number_of_stop_and_gos"]) if "number_of_stop_and_gos" in val else 0.
+        self._number_of_stop_and_gos = conversion.convertToFloat(
+            val.get("number_of_stop_and_gos", 0))
 
         self._aircraft = None
         self._aircraftengine = None
@@ -136,6 +146,7 @@ class Movement:
 
     def getAPUCode(self):
         return self._apu_code
+
     def setAPUCode(self, var):
         self._apu_code = var
 
@@ -147,25 +158,35 @@ class Movement:
         try:
             if ac_type and gate_type:
                 apu_emis_ = self.getAircraft().getApuEmissions()
-                if ac_type in self.getAircraft().getApuTimes():
-                    if gate_type in self.getAircraft().getApuTimes()[ac_type]:
-                        apu_time_ = self.getAircraft().getApuTimes()[ac_type][gate_type]["arr_s"] if self.isArrival() else \
-                            self.getAircraft().getApuTimes()[ac_type][gate_type]["dep_s"]
-        except Exception as exp:
+                _apu_times = self.getAircraft().getApuTimes()
+                if ac_type in _apu_times:
+                    _ac_apu_times = _apu_times[ac_type]
+                    if gate_type in _ac_apu_times:
+                        _gate_apu_times = _ac_apu_times[gate_type]
+                        apu_time_ = _gate_apu_times[
+                            "arr_s" if self.isArrival() else "dep_s"]
+        except Exception as e:
             if seg == 0:
-                logger.info("No APU info for %s (AC type: %s, gate type: %s)"%(self.getName(), ac_type, gate_type))
+                logger.info(
+                    "No APU info for %s (AC type: %s, gate type: %s)" % (
+                    self.getName(), ac_type, gate_type))
         return apu_time_, apu_emis_
 
     def getSingleEngineTaxiingTimeOfMainEngineStartAfterBlockOff(self):
         return self._set_time_of_main_engine_start_after_block_off_in_s
+
     def setSingleEngineTaxiingTimeOfMainEngineStartAfterBlockOff(self, var):
         self._set_time_of_main_engine_start_after_block_off_in_s = var
+
     def getSingleEngineTaxiingTimeOfMainEngineStartBeforeTakeoff(self):
         return self._set_time_of_main_engine_start_before_takeoff_in_s
+
     def setSingleEngineTaxiingTimeOfMainEngineStartBeforeTakeoff(self, var):
         self._set_time_of_main_engine_start_before_takeoff_in_s = var
+
     def getSingleEngineTaxiingMainEngineOffAfterRunwayExit(self):
         return self._set_time_of_main_engine_off_after_runway_exit_in_s
+
     def setSingleEngineTaxiingMainEngineOffAfterRunwayExit(self, var):
         self._set_time_of_main_engine_off_after_runway_exit_in_s = var
 
@@ -179,19 +200,22 @@ class Movement:
         # if self.getAircraft() and self.getAircraft().getRegistration():
         #     return self.getAircraft().getRegistration()
         # else:
-        return "%s-%s-%s-%s" % (self.getAircraft().getICAOIdentifier(),self.getDepartureArrivalFlag(),
-                                    self.getRunwayTime(as_str=True),self.getBlockTime(as_str=True))
+        return "%s-%s-%s-%s" % (
+            self.getAircraft().getICAOIdentifier(),
+            self.getDepartureArrivalFlag(),
+            self.getRunwayTime(as_str=True),
+            self.getBlockTime(as_str=True))
 
     def getEngineThrustLevelTaxiing(self):
         return self._engine_thrust_level_taxiing
+
     def setEngineThrustLevelTaxiing(self, var):
         self._engine_thrust_level_taxiing = var
 
     def calculateGateEmissions(self, sas='none'):
-        # logger.debug("Calculate gate emissions for aircraft of type '%s'" % (self.getAircraft().getType()))
-
-        """Calculate gate emissions for a specific source based on the source name and time period. The method for calculating
-        emissions from gates requires establishing the sum of three types of emissions:
+        """Calculate gate emissions for a specific source based on the source
+         name and time period. The method for calculating emissions from gates
+         requires establishing the sum of three types of emissions:
 
         1. Emissions from GSE - Data comes from default_gate
         2. Emissions from GPU
@@ -285,7 +309,6 @@ class Movement:
         direct_dic1r['lon2'], direct_dic1r['lat2'], alt1 + height, direct_dic2r['lon2'], direct_dic2r['lat2'], alt2 + height)
 
         return newline_left, newline_right
-
 
     def calculateTaxiingEmissions(self, method=None, mode="TX", sas='none'):
         if method is None:
@@ -401,7 +424,7 @@ class Movement:
                         # load APU time and emission factors
                         apu_t, apu_em = self.loadAPUinfo(index_segment_)
                         apu_time = 0
-                        if (not apu_t is None) and (apu_t > 0) :
+                        if (apu_t is not None) and (apu_t > 0) :
                             # APU emissions will be added to the stand only
                             if self.getAPUCode() == 1 and index_segment_ == 0:
                                 apu_time = apu_t
@@ -555,8 +578,13 @@ class Movement:
 
         return emissions
 
-    def calculateFlightEmissions(self, atRunway = True, method=None, mode="",
-                                 limit=None):
+    def calculateFlightEmissions(
+            self,
+            atRunway=True,
+            method=None,
+            mode="",
+            limit=None
+    ):
         if limit is None:
             limit = {}
         if method is None:
@@ -564,49 +592,57 @@ class Movement:
         emissions = []
         distance_time_all_segments_in_mode = 0.
         distance_space_all_segments_in_mode = 0.
-        traj = self.getTrajectory() if not atRunway else self.getTrajectoryAtRunway()
+        traj = self.getTrajectoryAtRunway() if atRunway else self.getTrajectory()
 
-        if not traj is None:
-            if not self.getAircraft().getGroup() == "HELICOPTER":
-                # get all individual segments (pairs  of points) for the particular mode
-                for (startPoint_, endPoint_) in traj.getPointPairs(mode):
-                    emissions_dict_ = self.calculateEmissionsPerSegment(startPoint_, endPoint_, atRunway=atRunway,
-                                                                        method=method, limit=limit)
-                    distance_time_all_segments_in_mode += emissions_dict_["distance_time"]
-                    distance_space_all_segments_in_mode += emissions_dict_["distance_space"]
-                    emissions.append(emissions_dict_)
-            else:
-                # Based on FOCA Guidance on the Determination of Helicopter Emissions and the FOCA Engine Emissions Databank
-                heli_emissions = Emission(defaultValues=defaultEmissions)
-                emission_index_ = self.getAircraftEngine().getEmissionIndex()
+        if traj is None:
+            return emissions
 
-                number_of_engines = self.getAircraft().getEngineCount() if \
-                        (not self.getAircraft() is None and not self.getAircraft().getEngineCount() is None) else 1
-
-                # get all individual segments (pairs  of points) for the geometry
-                emissions_geo = []
-                for (startPoint_, endPoint_) in traj.getPointPairs(mode):
-                    emissions_geo.append(
-                        loads(spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText())))
-                entire_heli_geometry = MultiLineString(emissions_geo)
-                heli_emissions.setGeometryText(entire_heli_geometry)
-                space_in_segment_ = entire_heli_geometry.length
-
-                # the emissions are calculated for the whole trajectory not for each segment
-                ei_ = emission_index_.getEmissionIndexByMode("TO") if self.isDeparture() \
-                    else emission_index_.getEmissionIndexByMode("AP")
-                time_in_segment_ = ei_.getObject('time_min') * 60. if ei_.hasKey('time_min') else 0.
-
-                heli_emissions.add(ei_, time_in_segment_*number_of_engines)
-                emissions_dict_ = {"emissions": heli_emissions, "distance_time": float(time_in_segment_),
-                                   "distance_space": float(space_in_segment_)}
+        if self.getAircraft().getGroup() != "HELICOPTER":
+            # get all individual segments (pairs  of points) for the particular
+            # mode
+            for (startPoint_, endPoint_) in traj.getPointPairs(mode):
+                emissions_dict_ = self.calculateEmissionsPerSegment(
+                    startPoint_,
+                    endPoint_,
+                    atRunway=atRunway,
+                    method=method,
+                    limit=limit)
+                distance_time_all_segments_in_mode += \
+                    emissions_dict_["distance_time"]
+                distance_space_all_segments_in_mode += \
+                    emissions_dict_["distance_space"]
                 emissions.append(emissions_dict_)
+        else:
+            # Based on FOCA Guidance on the Determination of Helicopter Emissions and the FOCA Engine Emissions Databank
+            heli_emissions = Emission(defaultValues=defaultEmissions)
+            emission_index_ = self.getAircraftEngine().getEmissionIndex()
+
+            number_of_engines = self.getAircraft().getEngineCount() if \
+                (self.getAircraft() is not None and self.getAircraft().getEngineCount() is not None) else 1
+
+            # get all individual segments (pairs  of points) for the geometry
+            emissions_geo = []
+            for (startPoint_, endPoint_) in traj.getPointPairs(mode):
+                emissions_geo.append(
+                    loads(spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText())))
+            entire_heli_geometry = MultiLineString(emissions_geo)
+            heli_emissions.setGeometryText(entire_heli_geometry)
+            space_in_segment_ = entire_heli_geometry.length
+
+            # the emissions are calculated for the whole trajectory not for each segment
+            ei_ = emission_index_.getEmissionIndexByMode("TO") if self.isDeparture() \
+                else emission_index_.getEmissionIndexByMode("AP")
+            time_in_segment_ = ei_.getObject('time_min') * 60. if ei_.hasKey('time_min') else 0.
+
+            heli_emissions.add(ei_, time_in_segment_*number_of_engines)
+            emissions_dict_ = {"emissions": heli_emissions, "distance_time": float(time_in_segment_),
+                               "distance_space": float(space_in_segment_)}
+            emissions.append(emissions_dict_)
 
         return emissions
 
-
-    def calculateEmissionsPerSegment(self, startPoint_, endPoint_, atRunway=True,
-                                     method=None, limit=None):
+    def calculateEmissionsPerSegment(self, startPoint_, endPoint_,
+                                     atRunway=True, method=None, limit=None):
         if limit is None:
             limit = {}
         if method is None:
@@ -873,10 +909,10 @@ class Movement:
         # add emissions on flight trajectory (incl. runway)
         emissions.extend(self.calculateFlightEmissions(atRunway, method, mode, limit))
 
-        # # add emissions at gate (gpu, gse etc.)
+        # add emissions at gate (gpu, gse etc.)
         emissions.extend(self.calculateGateEmissions(sas=method["config"]["apply_smooth_and_shift"]))
 
-        # # add taxiing emissions
+        # add taxiing emissions
         emissions.extend(self.calculateTaxiingEmissions(sas=method["config"]["apply_smooth_and_shift"]))
 
         # print("calculateEmissions: About to do some plots ")
@@ -951,7 +987,8 @@ class Movement:
         return self._trajectory_at_runway
 
     def updateTrajectoryAtRunway(self):
-        self.setTrajectoryAtRunway(self.calculateTrajectoryAtRunway(offset_by_touchdown=True))
+        self.setTrajectoryAtRunway(
+            self.calculateTrajectoryAtRunway(offset_by_touchdown=True))
 
     def setTrajectoryAtRunway(self, var):
         self._trajectory_at_runway = var
@@ -1110,25 +1147,27 @@ class Movement:
 
     def getRunway(self):
         return self._runway
+
     def setRunway(self, var):
         self._runway = var
 
-    #["08R", "26L"]
+    # ["08R", "26L"]
     def getRunwayDirection(self):
         return self._runway_direction
 
     def setRunwayDirection(self, var):
         self._runway_direction = var
-        #if isinstance(var, str):
+        # if isinstance(var, str):
         #    var = ''.join(c for c in var if c.isdigit())
         #    var = conversion.convertToFloat(var)
-        #self._runway_direction = var
+        # self._runway_direction = var
 
     def getRunwayTime(self, as_str=False):
         if as_str:
             if not (conversion.convertToFloat(self._time) is None):
                 return conversion.convertSecondsToTimeString(self._time)
         return self._time
+
     def setRunwayTime(self, val):
         self._time = val
 
@@ -1138,20 +1177,23 @@ class Movement:
                 return conversion.convertSecondsToTimeString(self._block_time)
 
         return self._block_time
+
     def setBlockTime(self, val):
         self._block_time = val
 
     def setDomesticFlag(self, val):
-        self._domestic= val
+        self._domestic = val
+
     def getDomesticFlag(self):
         return self._domestic
 
     def setDepartureArrivalFlag(self, val):
-        self._departure_arrival= val
+        self._departure_arrival = val
+
     def getDepartureArrivalFlag(self):
         return self._departure_arrival
 
-    def isArrival(self):
+    def isArrival(self) -> bool:
         if self.getDepartureArrivalFlag().lower() in ["d", "dep", "departure"]:
             return False
         else:
@@ -1162,26 +1204,31 @@ class Movement:
 
     def getGate(self):
         return self._gate
+
     def setGate(self, var):
         self._gate = var
 
     def getGateName(self):
         return self._gate_name
+
     def setGateName(self, var):
         self._gate_name = var
 
     def getTaxiRoute(self):
         return self._taxi_route
+
     def setTaxiRoute(self, var):
         self._taxi_route = var
 
     def getTaxiEngineCount(self):
         return self._taxi_engine_count
+
     def setTaxiEngineCount(self, var):
         self._taxi_engine_count = var
 
     def getTakeoffWeightRatio(self):
         return self._tow_ratio
+
     def setTakeoffWeight(self, var):
         self._tow_ratio = var
 
@@ -1347,11 +1394,17 @@ class MovementStore(Store, metaclass=Singleton):
 
             indices = mdf["runway"] == rwy
 
+            # Make sure runways are always 2 characters or more
+            rwy = rwy.zfill(2)
+
             if runway_store.isinKey(rwy):
                 eq_mdf.loc[indices, "runway_direction"] = rwy
                 rwy_used = [key for key in
                             list(runway_store.getObjects().keys()) if
                             rwy in key]
+                if len(rwy_used) > 0:
+                    logger.warning("Runway %s was found in the DB multiple "
+                                   "times.")
                 eq_mdf.loc[indices, "runway"] = rwy_used[0]
 
             else:
