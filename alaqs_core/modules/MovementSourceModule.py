@@ -210,9 +210,15 @@ class MovementSourceModule(SourceModule):
         self.convertSourcesToDataFrame()
         self.addAdditionalColumnsToDataFrame()
 
-    def process(self, start_time, end_time, source_names=None,
-                runway_names=None, ambient_conditions=None, **kwargs) \
-            -> List[Tuple[datetime, Source, Emission]]:
+    def process(
+            self,
+            start_time,
+            end_time,
+            source_names=None,
+            runway_names=None,
+            ambient_conditions=None,
+            **kwargs
+    ) -> List[Tuple[datetime, Source, Emission]]:
         if runway_names is None:
             runway_names = []
         if source_names is None:
