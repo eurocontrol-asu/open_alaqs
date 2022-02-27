@@ -1,9 +1,11 @@
 import math
-import sys
 
 from open_alaqs.alaqs_core import alaqs
 from open_alaqs.alaqs_core import alaqsdblite
 from open_alaqs.alaqs_core import alaqsutils
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+
+logger = get_logger(__name__)
 
 
 def catch_errors(f):
@@ -19,13 +21,13 @@ def catch_errors(f):
         try:
             return f(*args, **kwargs)
         except Exception as e:
-            alaqsutils.print_error(f.__name__, Exception, e)
+            alaqsutils.print_error(f.__name__, Exception, e, log=logger)
             raise e
 
     return wrapper
 
 
-# @catch_errors
+@catch_errors
 def roadway_emission_factors_alaqs_method(input_data: dict) -> dict:
     """
     This function creates a set of averaged emission factors for a roadway (or parking) based on:
@@ -95,7 +97,7 @@ def roadway_emission_factors_alaqs_method(input_data: dict) -> dict:
     # Equivalent of modAggrPcEuroIEf.PCAggregatedPreEURO_EF
     aggregation_input['vehicle_type'] = "PC"
 
-    ## Emission_Class = 'Pre-ECE'
+    # Emission_Class = 'Pre-ECE'
     aggregation_input['vehicle_fuel'] = "Gasoline"
 
     aggregation_input['vehicle_class'] = "Pre-ECE"
@@ -753,11 +755,14 @@ def get_emissions_factor_ldv_diesel(velocity, pollutant):
 
 
 @catch_errors
-def aggregated_pre_euro_ef(aggregated_input):
+def aggregated_pre_euro_ef(aggregated_input: dict) -> dict:
     """
-    Replicates functionality that was originally in modAggrPcPreEuroIEf.PCAggregatedPreEUROI_EF
+    Replicates functionality that was originally in
+    modAggrPcPreEuroIEf.PCAggregatedPreEUROI_EF
+
     """
-    # Unpack our necessary data
+
+    # Unpack the necessary data
     year = aggregated_input['roadway_year']
     country = aggregated_input['roadway_country']
     average_trip_length = aggregated_input['average_trip_length']
@@ -862,7 +867,8 @@ def aggregated_pre_euro_ef(aggregated_input):
 @catch_errors
 def aggregated_euro_ef(aggregated_input):
     """
-    Function that recreates method originally in modAggrPcEuroEf.PCAggregatedEURO_EF
+    Function that recreates method originally in
+     modAggrPcEuroEf.PCAggregatedEURO_EF
     """
     # Unpack our necessary data
     year = aggregated_input['roadway_year']
