@@ -12,6 +12,25 @@ from open_alaqs.alaqs_core.alaqslogging import get_logger
 logger = get_logger(__name__)
 
 
+def catch_errors(f):
+    """
+    Decorator to catch all errors when executing the function.
+    This decorator catches errors and writes them to the log.
+
+    :param f: function to execute
+    :return:
+    """
+
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            alaqsutils.print_error(f.__name__, Exception, e, log=logger)
+            raise e
+
+    return wrapper
+
+
 class Singleton(type):
     _instances = {}
 
@@ -144,6 +163,7 @@ def connect():
         return None, error
 
 
+@catch_errors
 def create_project_database(db_name):
     """
     Create a new database in the PostgreSQL database that contains all of
@@ -153,36 +173,31 @@ def create_project_database(db_name):
 
     db_name : the name of the database to be created
     """
-    try:
-        # Store the filepath in-memory for future use
-        project_database = ProjectDatabase()
-        project_database.path = db_name
 
-        # Get the filepath of this file
-        file_path = Path(__file__).absolute()
+    # Store the filepath in-memory for future use
+    project_database = ProjectDatabase()
+    project_database.path = db_name
 
-        # Get the filepath of the new study
-        new_study_path = Path(db_name).absolute()
+    # Get the filepath of this file
+    file_path = Path(__file__).absolute()
 
-        # Create if it doesn't exist
-        new_study_path.touch()
+    # Get the filepath of the new study
+    new_study_path = Path(db_name).absolute()
 
-        # Get the filepath of the blank study
-        blank_study_path = file_path.parent / 'templates/new_blank_study.alaqs'
+    # Create if it doesn't exist
+    new_study_path.touch()
 
-        shutil.copy2(blank_study_path, new_study_path)
-        msg = "[+] Created a blank ALAQS study file in %s" % db_name
-        logger.info(msg)
+    # Get the filepath of the blank study
+    blank_study_path = file_path.parent / 'templates/new_blank_study.alaqs'
 
-        # Update the study created date to now
-        query_string(
-            "UPDATE user_study_setup SET date_created = DATETIME('now');")
+    shutil.copy2(blank_study_path, new_study_path)
+    msg = "[+] Created a blank ALAQS study file in %s" % db_name
+    logger.info(msg)
 
-        return None
+    # Update the study created date to now
+    query_string("UPDATE user_study_setup SET date_created = DATETIME('now');")
 
-    except Exception as e:
-        error = alaqsutils.print_error(create_project_database.__name__, Exception, e, log=logger)
-        return error
+    return None
 
 
 def query_string(sql_text):
@@ -199,9 +214,9 @@ def query_string(sql_text):
     """
     try:
         # Tidy up the string a bit. Mainly cosmetic for log file
-        sql_text = sql_text.replace("", "")
         sql_text = sql_text.replace("  ", "")
 
+        # Start a connection to the database
         conn, result = connect()
         if conn is None:
             raise Exception("Could not connect to database.")
