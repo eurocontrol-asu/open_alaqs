@@ -3018,9 +3018,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     output_module_ = OutputModuleManager().getModuleByName(
                         name)(values_dict=config)
 
+                    # Execute the output module
                     output_module_.beginJob()
                     output_module_.process()
-                    res = output_module_.endJob
+                    res = output_module_.endJob()
 
                     if isinstance(res, QtWidgets.QDialog):
                         res.show()
