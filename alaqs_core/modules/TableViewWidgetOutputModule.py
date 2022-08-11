@@ -10,6 +10,7 @@ from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools import conversion
 from open_alaqs.ui.TableViewDialog import Ui_TableViewDialog
 
+
 logger = get_logger(__name__)
 
 
@@ -59,7 +60,9 @@ class TableViewWidgetOutputModule(OutputModule):
             "PM10Prefoa3 [kg]",
             "PM10Nonvol [kg]",
             "PM10Sul [kg]",
-            "PM10Organic [kg]"
+            "PM10Organic [kg]",
+            "nvPM [kg]",
+            "nvPMnumber"
         ])
 
     def process(self, timeval: datetime, result: List[Tuple[Source, Emission]],
@@ -96,7 +99,9 @@ class TableViewWidgetOutputModule(OutputModule):
             total_emissions_.getPM10Prefoa3(unit="kg"),
             total_emissions_.getPM10Nonvol(unit="kg"),
             total_emissions_.getPM10Sul(unit="kg"),
-            total_emissions_.getPM10Organic(unit="kg")
+            total_emissions_.getPM10Organic(unit="kg"),
+            total_emissions_.getnvPM(unit="kg"),
+            total_emissions_.getnvPMnumber(unit="")
         ]):
 
             # Format the cell values
