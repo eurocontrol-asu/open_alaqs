@@ -23,6 +23,7 @@ from open_alaqs.alaqs_core.interfaces.Movement import Movement
 from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools import sql_interface, spatial, conversion
 from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
+from inspect import getframeinfo, currentframe
 
 logger = get_logger(__name__)
 
@@ -913,41 +914,41 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         # (i1 j1 k1, in this order)
         self._lowb = "1 1 1"
-
+        logger.debug(f"{getframeinfo(currentframe())}")
         # (i2 j2 k2, in this order)
         self._hghb = f"{self._x_meshes} {self._y_meshes} {self._z_meshes}"
-
+        logger.debug(f"{getframeinfo(currentframe())}")
         # Make sure that the calculation starts from yyyy-01-01.01.00.00
         _start_time, _end_time = self.set_normalized_date(start_time, end_time)
         _end_time_string = _end_time.strftime('%Y-%m-%d.%H:%M:%S')
-
+        logger.debug(f"{getframeinfo(currentframe())}")
         # Set results and series for this period if it has not been set
         self._results.setdefault(_end_time_string, OrderedDict())
         self._series.setdefault(_end_time_string, OrderedDict())
-
+        logger.debug(f"{getframeinfo(currentframe())}")
         # Add ambient conditions to the series
         self._series[_end_time_string].update({
             "WindDirection": ambient_conditions.getWindDirection(),
             "WindSpeed": ambient_conditions.getWindSpeed(),
             "ObukhovLength": ambient_conditions.getObukhovLength()
         })
-
+        logger.debug(f"{getframeinfo(currentframe())}")
         # ToDo: how much finer/coarser is the emission dd ?
         # horizontal mesh width in m
         dd_ = self._mesh_width
         # vertical grid (h0 h1 h2 ...), heights above ground in m
         sk_ = " ".join(str(self._grid.getResolutionZ() * z) for z in
                        range(self._z_meshes + 1))
-
+        logger.debug(f"{getframeinfo(currentframe())}")
         # Loop over all emissions and append one data point for every cell to
         # total_emissions_per_cell_list for the specific result
         total_emissions_per_cell_list = []
-
+        logger.debug(f"{getframeinfo(currentframe())}")
         # Get the grid
         grid = self.getGrid()
-
+        logger.debug(f"{getframeinfo(currentframe())}")
         for (source_, emissions__) in result:
-
+            logger.debug(f"{getframeinfo(currentframe())}")
             self._source_height = 0
             if hasattr(source_, 'getHeight') and source_.getHeight() > 0:
                 self._source_height = source_.getHeight()
@@ -1013,7 +1014,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                         e_wkt, emissions_, grid, is_point_element_,
                         is_line_element_, is_polygon_element_,
                         is_multi_polygon_element_)
-
+                    logger.debug(matched_cells_coeff)
                     # Update the total emissions per cell
                     total_emissions_per_cell_list = self.updateEmissions(
                         total_emissions_per_cell_list,
@@ -1252,6 +1253,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         # Get the vertical extent
         vertical_extent = emissions_.getVerticalExtent()
+        logger.debug("VERTICAL EXTENT")
+        logger.debug(vertical_extent)
 
         # Take into account the effective vertical source extent and shift
         if "delta_z" in vertical_extent and vertical_extent['delta_z'] > 0:

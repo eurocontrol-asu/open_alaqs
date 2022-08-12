@@ -1,0 +1,10 @@
+runway_time;block_time;aircraft_registration;aircraft;gate;departure_arrival;runway;engine_name;prof_id;track_id;taxi_route;tow_ratio;apu_code;taxi_engine_count;set_time_of_main_engine_start_after_block_off_in_s;set_time_of_main_engine_start_before_takeoff_in_s;set_time_of_main_engine_off_after_runway_exit_in_s;engine_thrust_level_for_taxiing;taxi_fuel_ratio;number_of_stop_and_gos;domestic
+2015-01-01 00:18:00;2015-01-01 00:23:00;;;;;;;;;;;;;;;;;;;
+2015-01-01 06:27:00;2015-01-01 06:31:30;;;;;;;;;;;;;;;;;;;
+2015-01-01 07:20:00;2015-01-01 07:25:00;;;;;;;;;;;;;;;;;;;
+2015-01-01 08:17:00;2015-01-01 08:08:30;;;;;;;;;;;;;;;;;;;
+2015-01-01 09:21:38;2015-01-01 09:25:21;;;;;;;;;;;;;;;;;;;
+2015-01-01 09:39:00;2015-01-01 09:27:00;;;;;;;;;;;;;;;;;;;
+2015-01-01 10:30:16;2015-01-01 10:34:18;;;;;;;;;;;;;;;;;;;
+2015-01-01 10:44:08;2015-01-01 10:38:40;;;;;;;;;;;;;;;;;;;
+2015-12-31 23:02:29;2015-12-31 23:07:12;;;;;;;;;;;;;;;;;;;

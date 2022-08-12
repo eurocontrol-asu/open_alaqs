@@ -192,6 +192,12 @@ def getRectangleXYZFromBoundingBox(
     lon_l1, lat_l1, alt11 = new_points[0][0], new_points[0][1], new_points[0][2]
     lon_l2, lat_l2, alt12 = new_points[1][0], new_points[1][1], new_points[1][2]
 
+    # NOTE: remove log
+    logger.debug("getRectangleXYZFromBoundingBox")
+    logger.debug(lat_l1)
+    logger.debug(lon_l1)
+    logger.debug(alt11)
+
     new_geometry_wkt_right = \
         reproject_geometry(right_line, epsg_id_target, epsg_id_source)[0]
     new_points = getAllPoints(new_geometry_wkt_right)

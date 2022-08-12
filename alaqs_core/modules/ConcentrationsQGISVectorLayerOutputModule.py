@@ -13,6 +13,7 @@ from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
 from open_alaqs.alaqs_core.plotting.ContourPlotVectorLayer import \
     ContourPlotVectorLayer
 from open_alaqs.alaqs_core.tools import conversion, sql_interface
+from inspect import getframeinfo, currentframe
 
 logger = get_logger(__name__)
 
@@ -437,9 +438,12 @@ class QGISVectorLayerDispersionModule(OutputModule):
         #     logger.info("Maximum height: %s"%Zmax)
         # except:
         #     Zmax = 0
+        logger.debug(f"{getframeinfo(currentframe())}")
 
         conc_value_counter = 0
+        logger.debug(list(map(range, (self._index_j, self._index_i))))
         for y, x in itertools.product(*list(map(range, (self._index_j, self._index_i)))):
+
             # sequence is k+,j-,i+
             conc_value = self._concentration_matrix[self._index_j-(y+1), x]
 

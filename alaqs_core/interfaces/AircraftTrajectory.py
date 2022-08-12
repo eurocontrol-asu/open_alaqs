@@ -182,6 +182,8 @@ class AircraftTrajectory:
             zp = [p.getZ() for p in self._points if (p.getZ() >= 0 and p.getZ() < 300 and p.getX() > 0)]
             xp = [p.getX() for p in self._points if (p.getZ() >= 0 and p.getZ() < 300 and p.getX() > 0)]
             zp.reverse()
+
+            # TODO: why is xp not included for departure but it is for arrival?
         else:
             # for ARR
             zp = [abs(p.getZ()) for p in self._points if (p.getZ() >= 0 and p.getZ() < 300 and p.getX() <= 0)]

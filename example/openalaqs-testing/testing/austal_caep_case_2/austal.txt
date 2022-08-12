@@ -1,0 +1,20 @@
+----------------- general parameters
+ti	"CAEP case 2"	' title
+qs	1	' quality level
+----------------- meteorology
+z0	0.008	' roughness length (m)
+d0	0.0	' displacement height (m)
+ha	2.0	' anemometer height (m)
+----------------- calculation grid
+dd	10	' mesh width
+x0	-120.0	' left border (m)
+y0	-500.0	' lower border (m)
+nx	112	' number of meshes
+ny	100	' number of meshes
+----------------- source definitions
+os	"NOSTANDARD;SCINOTAT;Kmax=1"
+iq	?	' file index (set in series.dmna)
+hq	0.4	' source height (ignored)
+xq	-100.0	' x-lower left (south-west) corner of the source
+yq	-100.0	' y-lower left (south-west) corner of the source
+sox	?	' total SOx (in g/s) (set in series.dmna)

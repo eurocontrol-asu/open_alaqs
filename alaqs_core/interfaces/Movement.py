@@ -286,28 +286,65 @@ class Movement:
 
     def CalculateParallels(self, geometry_wkt_init, width, height, shift, EPSG_source, EPSG_target):
 
+        # NOTE: working properly
         (geo_wkt, swap) = spatial.reproject_geometry(geometry_wkt_init, EPSG_source, EPSG_target)
 
+        # NOTE: working properly
         points = spatial.getAllPoints(geo_wkt, swap)
+
+        # TODO: remove
+        logger.debug("POInts calculate parallels")
+        logger.debug(points)
+        logger.debug(swap)
+
+        # Extract points coordinates
         lon1, lat1, alt1 = points[0][1], points[0][0], points[0][2]
         lon2, lat2, alt2 = points[1][1], points[1][0], points[1][2]
 
+        # Get azimuth at point 1 (azi1) and forward azimuth at point 2 (azi2). Coordinates should be in degrees
+        # NOTE: working properly
         inverseDistance_dict = spatial.getInverseDistance(lat1, lon1, lat2, lon2)
         azi1, azi2 = inverseDistance_dict["azi1"], inverseDistance_dict["azi2"]
+    
+        # TODO: why is 90 degrees added to the left side, and 270 to the right side>
+        # TODO: the values in degrees are really small. Is this because how case 3 is designed?
+        # TODO: changing the shifting angles in the left and right lines does not change anything (it's the same)
 
+        # TODO: remove line below
+        logger.debug(width)
+
+        # Create two lines, one on the left and the other on the right, starting from the original start and end points
         # left
-        direct_dic1l = spatial.getDistance(lat1, lon1, 90 + azi1, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
-        direct_dic2l = spatial.getDistance(lat2, lon2, 90 + azi2, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
+        direct_dic1l = spatial.getDistance(lat1, lon1, 90 + azi1, conversion.convertToFloat(width), epsg_id=EPSG_target)
+        direct_dic2l = spatial.getDistance(lat2, lon2, 90 + azi2, conversion.convertToFloat(width), epsg_id=EPSG_target)
 
+        # Create the new line with the computed coordinates of the shifted point (stored in lat2 and lon2)
+
+        # TODO: is lon used before lat because lon is x and lat is y?
         newline_left = 'LINESTRING Z(%s %s %s, %s %s %s)' % (
         direct_dic1l['lon2'], direct_dic1l['lat2'], alt1 + height, direct_dic2l['lon2'], direct_dic2l['lat2'], alt2 + height)
+
+        # TODO: remove log
+        logger.debug("DIRECT_DICLEFT")
+        logger.debug(direct_dic1l)
+        logger.debug(direct_dic2l)
+        logger.debug(newline_left)
+        logger.debug(azi1)
+        logger.debug(azi2)
 
         # right
         direct_dic1r = spatial.getDistance(lat1, lon1, 270 + azi1, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
         direct_dic2r = spatial.getDistance(lat2, lon2, 270 + azi2, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
 
+        # Create the new line with the computed coordinates of the shifted point (stored in lat2 and lon2)
         newline_right = 'LINESTRING Z(%s %s %s, %s %s %s)' % (
         direct_dic1r['lon2'], direct_dic1r['lat2'], alt1 + height, direct_dic2r['lon2'], direct_dic2r['lat2'], alt2 + height)
+
+        # TODO: remove
+        logger.debug("DIRECT_DIC1")
+        logger.debug(direct_dic1r)
+        logger.debug(direct_dic2r)
+        logger.debug(newline_right)
 
         return newline_left, newline_right
 
@@ -376,15 +413,11 @@ class Movement:
                             hor_ext = self.getAircraft().getEmissionDynamicsByMode()["TX"].getEmissionDynamics(sas_method)['horizontal_extension']
                             ver_ext = self.getAircraft().getEmissionDynamicsByMode()["TX"].getEmissionDynamics(sas_method)['vertical_extension']
                             ver_shift = self.getAircraft().getEmissionDynamicsByMode()["TX"].getEmissionDynamics(sas_method)['vertical_shift']
-                            logger.debug(f"{getframeinfo(currentframe())}")
-                            logger.debug("ver_shift:", ver_shift)
-                            logger.debug("ver_ext:", ver_ext)
-                            logger.debug("hor_ext:", hor_ext)
+
                             # print(hor_ext, ver_ext, ver_shift)
 
                             em_.setVerticalExtent({'z_min': 0.0+ver_shift, 'z_max': ver_ext+ver_shift})
     	                    
-                            logger.debug({'z_min': 0.0+ver_shift, 'z_max': ver_ext+ver_shift})
 
                             # ToDo: add height
                             multipolygon = spatial.ogr.Geometry(spatial.ogr.wkbMultiPolygon)
@@ -516,8 +549,7 @@ class Movement:
                                         and self.getSingleEngineTaxiingTimeOfMainEngineStartBeforeTakeoff() is None:
                                     if include_start_emissions and index_segment_ == 0:
                                         number_of_engines_to_start = self.getAircraft().getEngineCount()
-                                        # logger.debug("Main-engine start of %f engines at first taxiway segment for departures"
-                                        #              %(number_of_engines - self.getAircraft().getEngineCount()))
+
                                         em_ += start_emissions * number_of_engines_to_start
                             else:
                                 logger.info("No Taxi Engine Count for %s"%self.getName())
@@ -607,6 +639,7 @@ class Movement:
         if self.getAircraft().getGroup() != "HELICOPTER":
             # get all individual segments (pairs  of points) for the particular
             # mode
+
             for (startPoint_, endPoint_) in traj.getPointPairs(mode):
                 emissions_dict_ = self.calculateEmissionsPerSegment(
                     startPoint_,
@@ -706,24 +739,52 @@ class Movement:
         sas = method["config"]['apply_smooth_and_shift'] if "config" in method and "apply_smooth_and_shift" in method["config"] else "none"
 
         if sas == 'default' or sas == 'smooth & shift':
-            # logger.debug("Calculate RWY emissions with Smooth & Shift Approach: '%s'" % (sas))
 
             sas_method = 'default' if sas == 'default' else 'sas'
-            # try:
+
             hor_ext = self.getAircraft().getEmissionDynamicsByMode()[startPoint_.getMode()].getEmissionDynamics(sas_method)['horizontal_extension']
             ver_ext = self.getAircraft().getEmissionDynamicsByMode()[startPoint_.getMode()].getEmissionDynamics(sas_method)['vertical_extension']
             ver_shift = self.getAircraft().getEmissionDynamicsByMode()[startPoint_.getMode()].getEmissionDynamics(sas_method)['vertical_shift']
             hor_shift = self.getAircraft().getEmissionDynamicsByMode()[startPoint_.getMode()].getEmissionDynamics("default")['horizontal_shift']
 
-            x1_, y1_, z1_ = self.getTrajectory().getPoints()[startPoint_.getIdentifier() - 1].getX(), \
-                            self.getTrajectory().getPoints()[startPoint_.getIdentifier() - 1].getY(), \
-                            self.getTrajectory().getPoints()[startPoint_.getIdentifier() - 1].getZ()
+            # NOTE: hor_ext makes dispersion larger on x and y axes
+            # NOTE: ver_ext
+            # NOTE: hor_shift not used in CAEP_case_3
 
-            x2_, y2_, z2_ = self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getX(), \
-                        self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getY(), \
-                        self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getZ()
+            # TODO: remove
+            # logger.debug("-------MODE")
+            # logger.debug(startPoint_.getMode())
+            logger.debug(hor_ext)
+            logger.debug(ver_ext)
+            logger.debug(ver_shift)
+            logger.debug(hor_shift)
+
+            hor_ext = 0
+            ver_ext = 0
+            ver_shift = 0
+            hor_shift = 0
+
+            # Get the start and end points for the segment. The indexes are always consecutive
+            _points = self.getTrajectory().getPoints()
+            _startPoint = _points[startPoint_.getIdentifier() - 1]
+            _endPoint = _points[endPoint_.getIdentifier() - 1]  
+
+            # TODO: remove log
+            logger.debug("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+            logger.debug(_points)
+            logger.debug(startPoint_.getIdentifier() - 1)
+            logger.debug(endPoint_.getIdentifier() - 1)
+            
+            # Get the coordinates of the start and end points of the segment
+            x1_, y1_, z1_ = _startPoint.getX(), _startPoint.getY(), _startPoint.getZ()
+            x2_, y2_, z2_ = _endPoint.getX(), _endPoint.getY(), _endPoint.getZ()
 
             x_shift = self.getTrajectory().get_sas_point(abs(ver_shift), self.isDeparture())
+
+            # TODO: remove log
+            logger.debug("X_SHIFT")
+            logger.debug(x_shift)
+            logger.debug({'z_min': startPoint_.getZ(), 'z_max': ver_ext + startPoint_.getZ()})
 
             emissions.setVerticalExtent({'z_min': startPoint_.getZ(), 'z_max': ver_ext + startPoint_.getZ()})
 
@@ -817,20 +878,49 @@ class Movement:
 
                 emissions.setVerticalExtent({'z_min': startPoint_copy.getZ(), 'z_max': ver_ext + startPoint_copy.getZ()})
 
+                # NOTE: remove
+                logger.debug(11111111111111111111111)
+                logger.debug({'z_min': startPoint_copy.getZ(), 'z_max': ver_ext + startPoint_copy.getZ()})
+
             multipolygon = spatial.ogr.Geometry(spatial.ogr.wkbMultiPolygon)
             all_points = spatial.getAllPoints(spatial.getLineGeometryText(startPoint_copy.getGeometryText(), endPoint_copy.getGeometryText()))
             for p_, point_ in enumerate(all_points):
+
+                # TODO: remove log
+                logger.debug("POINT")
+                logger.debug(point_)
+
                 # point_ example (802522.928722, 5412293.034699, 0.0)
                 if p_ + 1 == len(all_points):
                     break
+
+                # TODO: remove log
+                logger.debug("all_points")
+                logger.debug(all_points[p_])
+                logger.debug(all_points[p_ + 1])
+
+                # Create WKT geometry with the start and end points of the segment
                 geometry_wkt_i = 'LINESTRING Z(%s %s %s, %s %s %s)' % (
                     all_points[p_][0], all_points[p_][1], all_points[p_][2], all_points[p_ + 1][0],
                     all_points[p_ + 1][1], all_points[p_ + 1][2]
                 )
+                # TODO: remove log
+                logger.debug("geometry_wkt_i")
+                logger.debug(geometry_wkt_i)
+
+                # Get parallels using WKT geometry and only horizontal extension. Vertical shift and height shift are
+                # set to 0. EPSG: 4326 (WGS 84), 3857 (Web Mercator projection)
                 leftline, rightline = self.CalculateParallels(geometry_wkt_i, hor_ext, 0, 0, 3857, 4326)  # in lon / lat !
+                # TODO: remove log
+                logger.debug("LINES")
+                logger.debug(leftline)
+                logger.debug(rightline)
                 poly_geo = spatial.getRectangleXYZFromBoundingBox(leftline, rightline, 3857, 4326)
+                logger.debug(poly_geo)
                 multipolygon.AddGeometry(poly_geo)
+                logger.debug(multipolygon)
                 emissions.setGeometryText(multipolygon.ExportToWkt())
+                logger.debug(emissions.setGeometryText(multipolygon.ExportToWkt()))
 
         else:
             # logger.debug("Calculate RWY emissions WITHOUT Smooth & Shift Approach.")
