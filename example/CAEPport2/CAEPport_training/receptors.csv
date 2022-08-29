@@ -1,0 +1,4 @@
+id,latitude,longitude,height,geometry
+0,-6.31,49.91,0,POINT Z (-6.31 49.91 0)
+1,-6.30,49.90,3,POINT Z (-6.31 49.91 3)
+2,-6.32,49.92,5,POINT Z (-6.31 49.91 5)

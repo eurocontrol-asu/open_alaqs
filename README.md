@@ -112,6 +112,8 @@ In the `Select Packages` screen there are multiple packages that need installing
 
 > python3-matplotlib (3.3.2-1) is not the latest version, but (3.5.1-1) is currently unsupported because of breaking changes
 
+QGIS version 3.22.9 has been tested and it is also supported, so any of the two can be installed. The latest version of all packages can also be installed without causing compatibility issues. The only exception is python3-matplotlib. For this package, the version mentioned above should be installed (or, at least, the closest version).
+
 To find these packages, search for them in the search bar, and find them under the 'Libs' sub-menu and select them such that they are not to be skipped in the installation (previously installed packages are shown as 'Keep' in the 'New' column). For QGIS you should select the latest version in the Desktop and Libs sub-menus.
 
 Now finish the setup by accepting the unmet dependencies and accepting the license agreements.

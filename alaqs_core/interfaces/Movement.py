@@ -9,6 +9,7 @@ import pandas as pd
 from PyQt5 import QtCore, QtWidgets
 from shapely.geometry import MultiLineString
 from shapely.wkt import loads
+from inspect import getframeinfo, currentframe
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Aircraft import AircraftStore
@@ -375,9 +376,15 @@ class Movement:
                             hor_ext = self.getAircraft().getEmissionDynamicsByMode()["TX"].getEmissionDynamics(sas_method)['horizontal_extension']
                             ver_ext = self.getAircraft().getEmissionDynamicsByMode()["TX"].getEmissionDynamics(sas_method)['vertical_extension']
                             ver_shift = self.getAircraft().getEmissionDynamicsByMode()["TX"].getEmissionDynamics(sas_method)['vertical_shift']
+                            logger.debug(f"{getframeinfo(currentframe())}")
+                            logger.debug("ver_shift:", ver_shift)
+                            logger.debug("ver_ext:", ver_ext)
+                            logger.debug("hor_ext:", hor_ext)
                             # print(hor_ext, ver_ext, ver_shift)
 
                             em_.setVerticalExtent({'z_min': 0.0+ver_shift, 'z_max': ver_ext+ver_shift})
+    	                    
+                            logger.debug({'z_min': 0.0+ver_shift, 'z_max': ver_ext+ver_shift})
 
                             # ToDo: add height
                             multipolygon = spatial.ogr.Geometry(spatial.ogr.wkbMultiPolygon)
