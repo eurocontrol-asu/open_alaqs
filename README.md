@@ -88,42 +88,71 @@ To use this project, first clone the repo on your device using the command below
 
 ```git clone https://github.com/navendu-pottekkat/nsfw-filter.git``` -->
 
-To facilitate Open-ALAQS, QGIS needs to be installed. The simplest way to do this is via the OSGeo4W Network Installer. Make sure to install the old OSGeo4W installer (currently listed as 'Long-term release in old OSGeo4W (continued with previous dependencies)'), as this will provide access to the correct versions of both QGIS and supporting packages:
+Open-ALAQS is a QGIS plugin, so to install Open-ALAQS, QGIS needs to be installed.
+After QGIS is installed, Open-ALAQS can be installed. 
+
+## Install QGIS
+
+The simplest way to do this is via the OSGeo4W Network Installer.
+You can find the OSGeo4W Network Installer on the QGIS website:
 
 https://qgis.org/en/site/forusers/download.html
 
-Once installed, run setup through the 'Advanced Install' route.
+Once downloaded, run setup through the `Advanced Install` route.
 
-In the 'select packages' screen there are seven packages that need installing:
+In the `Select Packages` screen there are multiple packages that need installing:
 
-- python3-geopandas==0.7
-- python3-shapely==1.70-1
-- python3-geographiclib==1.50-1
-- python3-pandas==1.0.1
-- python3-matplotlib==3.1.3-1
-- spatialite==4.3.0a-6
+- qgis-ltr-full (3.22.10-1)
+- python3-geopandas (0.8.1-2)
+- python3-shapely (1.8.0-1)
+- python3-geographiclib (1.50-1)
+- python3-pandas (1.1.3-1)
+- python3-matplotlib (3.3.2-1)
+- spatialite (5.0.1-7)
 
-Then of course QGIS, select:
-
-- qgis-ltr (3.16.11-1)
+> python3-matplotlib (3.3.2-1) is not the latest version, but (3.5.1-1) is currently unsupported because of breaking changes
 
 To find these packages, search for them in the search bar, and find them under the 'Libs' sub-menu and select them such that they are not to be skipped in the installation (previously installed packages are shown as 'Keep' in the 'New' column). For QGIS you should select the latest version in the Desktop and Libs sub-menus.
 
-Now to install Open-ALAQS, clone the repository into the following directory if installed for all users:
+Now finish the setup by accepting the unmet dependencies and accepting the license agreements.
 
-**C:\users\YOUR_USER_NAME\\.qgis\python\plugins**
+## Install Open-ALAQS
 
-If installed for only yourself the plugins directory can be found here:
+First, the Open-ALAQS repository needs to be installed in the plugins folder of QGIS.
 
-**C:\users\YOUR_USER_NAME\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins**
+Depending on how you installed QGIS, you might find it in one of the following locations:
 
-If filepaths specified above don't exist, the repository can also be placed in:
+```
+# If QGIS installed for all users, you can find the plugins folder here:
+YOUR_QGIS_PLUGINS_PATH = C:\users\{YOUR_USER_NAME}\.qgis\python\plugins
 
-**{YOUR_QGIS_PATH}\apps\qgis\python\plugins**
+# If installed for only yourself the plugins directory can be found here:
+YOUR_QGIS_PLUGINS_PATH = C:\users\{YOUR_USER_NAME}\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins
+
+# If filepaths specified above don't exist, the repository can also be placed in:
+YOUR_QGIS_PLUGINS_PATH = {YOUR_QGIS_PATH}\apps\qgis\python\plugins
+```
+
+Now clone the repository in the plugins folder:
+
+```
+# Go to the plugins folder
+cd {YOUR_QGIS_PLUGINS_PATH}
+
+# Clone the repository
+git clone git@gitlab.aerlabs.nl:eurocontrol/open_alaqs.git 
+```
+
+The line above uses a git command.
+However, it is also possible to get the source code as zip file and extract it in this location.
+
+> Make sure that the Open-ALAQS plugin is located in the folder `{YOUR_QGIS_PLUGINS_PATH}/open_alaqs`, otherwise QGIS might have trouble finding the plugin!
 
 Then start QGIS desktop and find the 'Plugins' button and select 'Manage and Install Plugins', here the Open-ALAQS plugin should be visible and can be activated.
 
 At this point the Open-ALAQS toolbar is visible below the default QGIS toolbars. If this is the case then the installation has been successful.
+
+![img.png](img.png)
 
 # Usage
 [(Back to top)](#table-of-contents)
