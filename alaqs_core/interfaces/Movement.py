@@ -48,7 +48,9 @@ defaultEmissions = {
     "pm10_prefoa3_g": 0.,
     "pm10_nonvol_g": 0.,
     "pm10_sul_g": 0.,
-    "pm10_organic_g": 0.
+    "pm10_organic_g": 0.,
+    "nvpm_g": 0.,
+    "nvpm_number": 0.
 }
 defaultEI = {
     "fuel_kg_sec": 0.,
@@ -897,6 +899,7 @@ class Movement:
 
             if (copy_emission_index_ is None):
                 logger.error("Did not find emission index for aircraft with type '%s'." % (self.getAircraft()))
+
             emissions.add(copy_emission_index_,
                               float(time_in_segment_) * float(self.getAircraft().getEngineCount()))
 
