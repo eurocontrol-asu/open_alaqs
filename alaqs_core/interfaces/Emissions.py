@@ -279,12 +279,12 @@ class Emission(Store):
         return (self.getObject("pm10_organic_%s" % (unit)), "g")
 
     def getnvPM(self, unit="g"):
-        return (3, "g") 
-        # return (self.getObject("nvpm_%s" % (unit)), "g")
+        # return (3, "g") 
+        return (self.getObject("nvpm_%s" % (unit)), "g")
 
     def getnvPMnumber(self, unit=""):
-        return (4, "")
-        # return (self.getObject("nvpm_number"))
+        # return (4, "")
+        return (self.getObject("nvpm_number"), "")
 
     def addValue(self, key, val):
         if self.hasKey(key):
