@@ -1,5 +1,6 @@
 from shapely.geometry import GeometryCollection
 from shapely.wkt import loads
+from typing import Tuple
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Store import Store
@@ -19,7 +20,9 @@ defValues = {
     "pm10_prefoa3_g": 0.,
     "pm10_nonvol_g": 0.,
     "pm10_sul_g": 0.,
-    "pm10_organic_g": 0.
+    "pm10_organic_g": 0.,
+    "nvpm_g": 0.,
+    "nvpm_number": 0.
 }
 
 
@@ -52,6 +55,10 @@ class EmissionIndex(Store):
             return self.getPM1()
         elif "pm2" in name or "p2" in name:
             return self.getPM2()
+        elif "nvpm_number" in name:
+            return self.getnvPMnumber()
+        elif "nvpm" in name:
+            return self.getnvPM()
         else:
             logger.error("Did not find key that matches name '%s'" % (name))
 
@@ -95,6 +102,15 @@ class EmissionIndex(Store):
 
     def getPM10Organic(self, unit="g_kg"):
         return (self.getObject("pm10_organic_%s" % (unit)), "g")
+
+    def getnvPM(self, unit="g_kg") ->Tuple[float, str]:
+        return (1, "g")
+        # return (self.getObject("nvpm_%s" % (unit)), "g")
+
+    def getnvPMnumber(self, unit="")->Tuple[float, str]:
+        return (2, "")
+        # return (self.getObject("nvpm_number_%s" % (unit)), "g")
+
 
     def __str__(self):
         val = "\n\t Emissions indices:"
@@ -213,6 +229,11 @@ class Emission(Store):
             return self.getPM1(unit=unit)
         elif "pm2" in name or "p2" in name:
             return self.getPM2(unit=unit)
+        elif "nvpm" in name:
+            if "nvpm_number" in name:
+                return self.getnvPMnumber(unit=unit)
+            else:
+                return self.getnvPM(unit=unit)
         else:
             logger.error("Did not find key that matches name '%s'" % (name))
 
@@ -256,6 +277,14 @@ class Emission(Store):
 
     def getPM10Organic(self, unit="g"):
         return (self.getObject("pm10_organic_%s" % (unit)), "g")
+
+    def getnvPM(self, unit="g"):
+        return (3, "g") 
+        # return (self.getObject("nvpm_%s" % (unit)), "g")
+
+    def getnvPMnumber(self, unit=""):
+        return (4, "")
+        # return (self.getObject("nvpm_number"))
 
     def addValue(self, key, val):
         if self.hasKey(key):
@@ -302,6 +331,13 @@ class Emission(Store):
 
     def addPM10Organic(self, val_in_grams):
         return self.addValue("pm10_organic_g", val_in_grams)
+
+    def addnvPM(self, val_in_grams):
+        return self.addValue("nvpm_g", val_in_grams)
+    
+    def addnvPMnumber(self):
+        return self.addValue("nvpm_number")
+
 
     def __str__(self):
         val = "Emissions:"
