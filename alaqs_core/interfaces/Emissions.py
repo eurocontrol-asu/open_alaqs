@@ -104,12 +104,10 @@ class EmissionIndex(Store):
         return (self.getObject("pm10_organic_%s" % (unit)), "g")
 
     def getnvPM(self, unit="g_kg") ->Tuple[float, str]:
-        return (1, "g")
-        # return (self.getObject("nvpm_%s" % (unit)), "g")
+        return (self.getObject("nvpm_%s" % (unit)), "g")
 
     def getnvPMnumber(self, unit="")->Tuple[float, str]:
-        return (2, "")
-        # return (self.getObject("nvpm_number_%s" % (unit)), "g")
+        return (self.getObject("nvpm_number"), "g")
 
 
     def __str__(self):
@@ -196,6 +194,19 @@ class Emission(Store):
                     "pm10_prefoa3_g", "pm10_nonvol_g", "pm10_sul_g", "pm10_organic_g"]:
             self.addValue("%s" % (key), emission_index_.getObject("%s_kg" % (key)) * fuel_burned)
 
+
+        # check if nvpm_g and nvpm_number are in defaultEI
+        if emission_index_.getObject("nvpm_g_kg") is None:
+            emission_index_.addObject("nvpm_g_kg", 0.0)
+
+        if emission_index_.getObject("nvpm_number") is None:
+            emission_index_.addObject("nvpm_number", 0.0)
+
+
+        self.addValue("%s" % ("nvpm_number"), emission_index_.getObject("nvpm_number") * fuel_burned)
+        self.addValue("%s" % ("nvpm_g"), emission_index_.getObject("%s_kg" % ("nvpm_g")) * fuel_burned)
+
+  
     def addGeneric(self, emission_index_, factor, unit, new_unit=""):
         for key in list(emission_index_.getObjects().keys()):
             self.addValue("%s" % (self.rreplace(key, unit, new_unit, 1)), emission_index_.getObject("%s" % (key)) * factor)
