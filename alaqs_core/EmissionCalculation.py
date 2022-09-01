@@ -196,8 +196,12 @@ class EmissionCalculation:
             "pm10_prefoa3_g": 0.,
             "pm10_nonvol_g": 0.,
             "pm10_sul_g": 0.,
-            "pm10_organic_g": 0.
+            "pm10_organic_g": 0.,
+            "nvpm_g": 0.,
+            "nvpm_number": 0.
         }
+
+
 
         # check if a dispersion module is enable
         dispersion_enabled = len(self.getDispersionModules()) > 0
@@ -262,6 +266,7 @@ class EmissionCalculation:
                     for (timestamp_, source_, emission_) in mod_obj.process(
                             start_, end_, source_names=source_names,
                             ambient_conditions=ambient_condition):
+
 
                         logger.debug(f'{mod_name}: {timestamp_}')
                         logger.debug(f'source_: {type(source_)}')
