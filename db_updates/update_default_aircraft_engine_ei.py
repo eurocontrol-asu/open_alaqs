@@ -41,6 +41,7 @@ if __name__ == "__main__":
     """
     # NOTES
     # Assuming PM_SUL is PM_10
+    # Check which other fields might be relevant
     # How to get the engine relationship between both tables?    
     """
 
