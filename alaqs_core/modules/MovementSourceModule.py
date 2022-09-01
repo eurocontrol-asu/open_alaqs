@@ -165,7 +165,10 @@ class MovementSourceModule(SourceModule):
             "pm10_prefoa3_g": 0.,
             "pm10_nonvol_g": 0.,
             "pm10_sul_g": 0.,
-            "pm10_organic_g": 0.
+            "pm10_organic_g": 0.,
+            "nvpm_g": 0.,
+            "nvpm_number":0.
+
         })
 
         # Create a function that returns a list of default emissions
