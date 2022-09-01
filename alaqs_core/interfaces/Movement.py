@@ -68,7 +68,9 @@ defaultEI = {
     "pm10_prefoa3_g_kg": 0.,
     "pm10_nonvol_g_kg": 0.,
     "pm10_sul_g_kg": 0.,
-    "pm10_organic_g_kg": 0.
+    "pm10_organic_g_kg": 0.,
+    "nvpm_g_kg": 0.,
+    "nvpm_number": 0.
 }
 
 
