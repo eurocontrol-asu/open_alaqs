@@ -4,7 +4,7 @@ import pandas as pd
 import sqlalchemy 
 import math
 
-
+# Source: Table D-1: Suggested SF values to predict missing SN in the ICAO EEDB, page 88
 SCALING_FACTORS = { "non_dac":{
         "TX":0.3,
         "TO":1.0,
@@ -32,19 +32,21 @@ SCALING_FACTORS = { "non_dac":{
         "AP":0.3}
     }
 
+# Source: Table D-2. Representative AFRk listed by ICAO power settings (mode k), page 89
 AIR_FUEL_RATIO = {
         "TX":106,
         "TO":45,
         "CL":51,
         "AP":83}
 
-
+# Source: Table D-4. Standard values for GMDk listed by ICAO thrust settings (mode k), page 91
 GEOMTRIC_MEAN_DIAMETERS = {
         "TX":20,
         "TO":40,
         "CL":40,
         "AP":20}
 
+# Constants
 NR = 10**24
 STANDARD_DEVIATION_PM = 1.8
 PARTICLE_EFFECTIVE_DENSITY = 1000
@@ -64,9 +66,121 @@ def get_engine(db_url: str):
     return sqlalchemy.create_engine(db_url)
 
 
+def calculate_smoke_number(db_line: pd.Series)->float:
+    """
+    Assign or if necessary calculate smoke number for engine
+
+    Args:
+        db_line (pd.Series): database line
+
+    Returns:
+        float: smoke number
+    """
+
+    # Assing smoke number and maximum smoke number to the variables
+    smoke_number = db_line["smoke_number"]
+    smoke_number_max = db_line["smoke_number_maximum"]
+
+    # Smoke number calculation based on Eq.1
+    if smoke_number ==0 and smoke_number_max != 0:
+        smoke_number = smoke_number_max*engine_scaling_factor
+
+    return smoke_number
+
+
+def calculate_nvpm_mass_concentration_ck(smoke_number_k:float)->float:
+    """
+    Calculate the estimated nvPM mass concentration at the instrument (Ck).
+    Source: Eq.D-2, page 90.
+
+    Args:
+        smoke_number_k (float): smoke number
+
+    Returns:
+        float: nvPM mass concentration
+    """
+
+    nvpm_mass_concentration = ((648.4*(math.exp(0.0766*smoke_number_k)))/1+ (math.exp(-1.098*(smoke_number_k-3.064))))
+    return nvpm_mass_concentration
+
+
+def calculate_exhaust_volume_qk(engine_afr:int, beta: int)->float:
+    """
+    Calculate engine exhaust volume Qk.
+    Source: Eq.D-4, page 90.
+
+    Args:
+        engine_afr (int): air fuel ratio
+        beta (int)
+
+    Returns:
+        float: exhaust volume
+    """
+
+    exhaust_volume = (0.777*engine_afr*(1+beta)+0.767)
+    return exhaust_volume
+
+
+def calculate_nvpm_mass_ei(nvpm_mass_concentration: float, exhaust_volume: float)->float:
+    """
+    Calculate nvPMmass EI at the instrument (EInvPMmass,k).
+    Source: Eq.D-3, page 90.
+
+    Args:
+        nvpm_mass_concentration (float)
+        exhaust_volume (float)
+
+
+    Returns:
+        float: nvpm_mass_ei
+    """    
+    ei_nvpm_mass_k = nvpm_mass_concentration*(10**-6)*exhaust_volume
+    return ei_nvpm_mass_k
+
+
+def calculate_loss_correction_factor(nvpm_mass_concentration: float, beta: int)->float:
+    """
+    Calculate the mode-dependent system loss correction factor for nvPMmass (kslm,k)
+    Source: Eq.D-5, page 91.
+
+    Args:
+        nvpm_mass_concentration (float)
+        beta (int)
+
+    Returns:
+        float: loss_correction_factor
+    """
+
+    loss_correction_factor = math.log(3.219*nvpm_mass_concentration*(1+beta)+312.5/nvpm_mass_concentration*(1+beta)+42.6)
+    return loss_correction_factor
+
+
+def calculate_nvpm_number_ei(ei_nvpm_mass: float, db_line: pd.Series)->float:
+    """
+    Calculate the nvPMnumber EI at engine exit plane for a single mode of engine operation k
+    Source: Eq.D-7, page 91.
+
+    Args:
+        ei_nvpm_mass (float)
+        db_line (pd.Series)
+
+
+    Returns:
+        float: ei_nvpm_number
+    """   
+
+    ei_nvpm_number = (6*ei_nvpm_mass*NR)/math.pi*PARTICLE_EFFECTIVE_DENSITY*((GEOMTRIC_MEAN_DIAMETERS[db_line["mode"]])**3)*(math.exp(4.5*(math.log(STANDARD_DEVIATION_PM))**2))
+    return ei_nvpm_number
+
+
 if __name__ == "__main__":
     """
-    # NOTES
+    Script introduces calculations for engine exhaust particulate emissions in the form of emission indices (EI's).
+    Based on 'First order Approximation V4.0 method for estimating particulate matter'mass and number emissions from
+    aircraft engines'. -ICAO Doc 9889, second edition, 2020, Attachment D to Appendix 1, page.84
+
+    Remark: all referenced equations and tables are in Attachement D, page:84
+
     """
 
     # Check if user added right number of arguments when calling the function
@@ -79,35 +193,30 @@ if __name__ == "__main__":
     with get_engine(sys.argv[1]).connect() as conn:
         old_blank_study = pd.read_sql("SELECT * FROM default_aircraft_engine_ei", con=conn)
 
+    # Add 2 columns for nvpm mass and number with aassigned default values
     old_blank_study["nvpm_ei"] = 0.0
     old_blank_study["nvpm_number_ei"] = 0.0
 
 
-    # Loop over each row of the old table and update the values of the entries found there
+    # Loop over each row of the old table, calculate nvpm_ei mass and number and add to the new columns
     for index, old_line in old_blank_study.iterrows():
 
+        # Evaluate scaling factor based on engine type
         if "aviadvigatel" in old_line["manufacturer"]:
-            engine_based_scaling_factor = SCALING_FACTORS["aviadgatel"][old_line["mode"]]
+            engine_scaling_factor = SCALING_FACTORS["aviadgatel"][old_line["mode"]]
         elif "textron" in old_line["manufacturer"]:
-            engine_based_scaling_factor = SCALING_FACTORS["textron"][old_line["mode"]]
+            engine_scaling_factor = SCALING_FACTORS["textron"][old_line["mode"]]
         elif "cfm" in old_line["manufacturer"]:
-            engine_based_scaling_factor = SCALING_FACTORS["cfm_dac"][old_line["mode"]]
+            engine_scaling_factor = SCALING_FACTORS["cfm_dac"][old_line["mode"]]
         elif "CF34" in old_line["engine_full_name"]:
-            engine_based_scaling_factor = SCALING_FACTORS["ge_cf34"][old_line["mode"]]
+            engine_scaling_factor = SCALING_FACTORS["ge_cf34"][old_line["mode"]]
         else:
-            engine_based_scaling_factor = SCALING_FACTORS["non_dac"][old_line["mode"]]
+            engine_scaling_factor = SCALING_FACTORS["non_dac"][old_line["mode"]]
 
-        
-        SNk = old_line["smoke_number"]
-        SNmax = old_line["smoke_number_maximum"]
 
-        #what is both snk and snmax are 0 ????
-        if SNk ==0 and SNmax != 0:
-            SNk = SNmax*engine_based_scaling_factor
+        smoke_number_k = calculate_smoke_number(old_line)
 
-        
-        # Calculate nvPM mass concentration:
-        Ck = ((648.4*(math.exp(0.0766*SNk)))/1+ (math.exp(-1.098*(SNk-3.064))))
+        nvpm_mass_concentration_ck = calculate_nvpm_mass_concentration_ck(smoke_number_k)
         
 
         #Evaluate beta 
@@ -117,33 +226,30 @@ if __name__ == "__main__":
 
         beta = 0
 
-        engine_based_afr = AIR_FUEL_RATIO[old_line["mode"]]
+        #Assign air fuel ratio based on engine mode
+        engine_afr = AIR_FUEL_RATIO[old_line["mode"]]
         
-        #Calculate  exhaust volume
-        Qk = (0.777*engine_based_afr*(1+beta)+0.767)
+        exhaust_volume_qk = calculate_exhaust_volume_qk(engine_afr, beta)
 
         #Calculate EInvPMmass
-        ei_nvpm_mass_k = Ck*(10**-6)*Qk
+        ei_nvpm_mass_k = calculate_nvpm_mass_ei(nvpm_mass_concentration_ck, exhaust_volume_qk)
 
-        #Calculate the mode-dependent system loss correction factor for nvPMmass(kslm,k)
-        kslm_k = math.log(3.219*Ck*(1+beta)+312.5/Ck*(1+beta)+42.6)
+        #Calculate loss correction factor
+        loss_correction_factor_kslm_k = calculate_loss_correction_factor(nvpm_mass_concentration_ck, beta)
 
-        #Calculate EInvPM mass (g/kg fuel)
-        ei_nvpm_mass_ek = kslm_k * ei_nvpm_mass_k
+        #Calculate the nvPMmass EIs for each engine mode at the engine exit plane 
+        ei_nvpm_mass_ek = loss_correction_factor_kslm_k * ei_nvpm_mass_k
 
         #Calculate EInvPM number (#/kg fuel)
-        ei_nvpm_number_ek = (6*ei_nvpm_mass_ek*NR)/math.pi*PARTICLE_EFFECTIVE_DENSITY*((GEOMTRIC_MEAN_DIAMETERS[old_line["mode"]])**3)*(math.exp(4.5*(math.log(STANDARD_DEVIATION_PM))**2))
+        ei_nvpm_number_ek = calculate_nvpm_number_ei(ei_nvpm_mass_ek, old_line)
 
-    
-        # print(f"----NVPM NUMBER EI---{type(ei_nvpm_number_ek)}")
-
-        #Add calculated EInvPm to the row
+        #Add calculated EInvPm to the table
         old_blank_study.loc[index, "nvpm_ei"] = ei_nvpm_mass_ek
         old_blank_study.loc[index, "nvpm_number_ei"] = ei_nvpm_number_ek
 
     # Log calculated values
-    print("Calculate nvpm_mass_ei:", (old_blank_study["nvpm_ei"]))
-    print("Calculate nvpm_number_ei:", (old_blank_study["nvpm_number_ei"]))
+    print("nvpm_mass_ei calculated successfully for number of rows:", (old_blank_study["nvpm_ei"] !=0).sum())
+    print("nvpm_mass_ei calculated successfully for number of rows:", (old_blank_study["nvpm_number_ei"] !=0).sum())
 
 
     # Save updated database
@@ -152,8 +258,19 @@ if __name__ == "__main__":
 
 
 
+"""
+Questions to Stavros
 
-# Questions:
-# - what is both snk and snmax are 0 ????
-#  - how to evaluate beta ?
-# - results precision ? 
+1. How to evaluate beta factor for nvPM mass calculation? Where is engine designator (MTF/TF) placed?
+ICAO document syas that:
+Values of SN, EIHC and BPR for engines can be found in the ICAO EEDB for the four power settings of the
+landing and take-off (LTO) cycle. Unfortunately, there are gaps in the data bank for SN and BPR values.
+
+2. Verify correct results precision
+"""
+
+
+# TODO:
+# - add tests
+# - look for reference values: page 73 Attachement B
+# - try to run calculation with that file
