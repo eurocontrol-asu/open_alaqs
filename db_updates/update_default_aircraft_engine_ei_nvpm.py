@@ -1,3 +1,4 @@
+import shutil
 import sys
 from pathlib import Path
 
@@ -209,6 +210,9 @@ if __name__ == "__main__":
         raise Exception(
             f"The output file already exists.\n{path_2}"
         )
+
+    # Copy the file
+    shutil.copy(str(path_1), str(path_2))
 
     # Load old table to update
     with get_engine(f"sqlite:///{path_1.absolute()}").connect() as conn:
