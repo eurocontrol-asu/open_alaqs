@@ -149,8 +149,6 @@ class MovementSourceModule(SourceModule):
 
         """
 
-        logger.debug('addAdditionalColumnsToDataFrame()')
-
         # Set default emissions
         default_emission = Emission(defaultValues={
             "fuel_kg": 0.,
@@ -167,8 +165,7 @@ class MovementSourceModule(SourceModule):
             "pm10_sul_g": 0.,
             "pm10_organic_g": 0.,
             "nvpm_g": 0.,
-            "nvpm_number":0.
-
+            "nvpm_number": 0.
         })
 
         # Create a function that returns a list of default emissions
