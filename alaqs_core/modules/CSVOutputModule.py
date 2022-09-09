@@ -1,10 +1,14 @@
 import os
 from collections import OrderedDict
+from datetime import datetime
+from typing import List, Tuple
 
 from PyQt5 import QtWidgets
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.interfaces.Emissions import Emission
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
+from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools.csv_interface import write_csv
 
 logger = get_logger(__name__)
@@ -37,33 +41,37 @@ class CSVOutputModule(OutputModule):
 
     def beginJob(self):
         """
-        Initialize the
+        Initialize the module
         """
 
-        # Initialize rows attribute with the header
-        self._rows = [
-            "Time",
-            "Source name",
-            "CO [kg]",
-            "CO2 [kg]",
-            "HC [kg]",
-            "NOx [kg]",
-            "SOx [kg]",
-            "PM10 [kg]",
-            "P1 [kg]",
-            "P2 [kg]",
-            "PM10Prefoa3 [kg]",
-            "PM10Nonvol [kg]",
-            "PM10Sul [kg]",
-            "PM10Organic [kg]"
-        ]
+        # Set the header
+        header = ["Time",
+                  "Source name",
+                  "CO [kg]",
+                  "CO2 [kg]",
+                  "HC [kg]",
+                  "NOx [kg]",
+                  "SOx [kg]",
+                  "PM10 [kg]",
+                  "P1 [kg]",
+                  "P2 [kg]",
+                  "PM10Prefoa3 [kg]",
+                  "PM10Nonvol [kg]",
+                  "PM10Sul [kg]",
+                  "PM10Organic [kg]"]
 
+        # Initialize rows attribute with the header
+        self._rows = [header]
+
+        # Ask the user to the set the output path
         file_, handler_ = QtWidgets.QFileDialog.getSaveFileName(
             None, 'Save results as csv file', '.', 'CSV (*.csv)')
 
+        # Set the output path
         self.setOutputPath(file_)
 
-    def process(self, timeval, result: list, **kwargs):
+    def process(self, timeval: datetime, result: List[Tuple[Source, Emission]],
+                **kwargs):
         """
         Process the results and create the records of the csv
 
@@ -117,9 +125,15 @@ class CSVOutputModule(OutputModule):
         Write output to csv file
         """
 
-        if self.getOutputPath() is not None:
-            write_csv(self.getOutputPath(), self._rows)
+        try:
 
-        if os.path.isfile(self.getOutputPath()):
-            QtWidgets.QMessageBox.information(
-                None, "CSVInterface Module", "Results saved as csv file")
+            if self.getOutputPath() is not None:
+                write_csv(self.getOutputPath(), self._rows)
+
+            if os.path.isfile(self.getOutputPath()):
+                QtWidgets.QMessageBox.information(None, "CSVOutputModule",
+                                                  "Results saved as csv file")
+
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(None, "CSVOutputModule",
+                                           "Couldn't save results as csv file")
