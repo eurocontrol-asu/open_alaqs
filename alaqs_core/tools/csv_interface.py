@@ -1,5 +1,6 @@
 import csv
 import os
+from typing import List
 
 import geopandas as gpd
 import pandas as pd
@@ -10,17 +11,16 @@ from open_alaqs.alaqs_core.alaqslogging import get_logger
 logger = get_logger(__name__)
 
 
-def write_csv(path, rows):
-    path_to_file = path
-    logger.debug("writing results to %s" % path_to_file)
+def write_csv(path_to_file: str, rows: List[list]):
+    logger.debug("Writing results to CSV file: '%s'" % path_to_file)
     try:
         rows_df = pd.DataFrame(rows[1:], columns=rows[0])
         rows_df.to_csv(path_to_file, index=False, sep=',', quotechar='"',
                        quoting=csv.QUOTE_NONNUMERIC, line_terminator='\n')
-
-    except Exception as exc:
+    except Exception as e:
         logger.error("Couldn't write to CSV file: '%s'" % path_to_file)
-        logger.error(exc)
+        logger.error(e)
+        raise e
 
 
 def read_csv(path):
