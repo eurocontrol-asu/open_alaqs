@@ -45,27 +45,31 @@ class CSVOutputModule(OutputModule):
         """
 
         # Set the header
-        header = ["Time",
-                  "Source name",
-                  "CO [kg]",
-                  "CO2 [kg]",
-                  "HC [kg]",
-                  "NOx [kg]",
-                  "SOx [kg]",
-                  "PM10 [kg]",
-                  "P1 [kg]",
-                  "P2 [kg]",
-                  "PM10Prefoa3 [kg]",
-                  "PM10Nonvol [kg]",
-                  "PM10Sul [kg]",
-                  "PM10Organic [kg]"]
+        header = [
+            "Time",
+            "Source name",
+            "CO [kg]",
+            "CO2 [kg]",
+            "HC [kg]",
+            "NOx [kg]",
+            "SOx [kg]",
+            "PM10 [kg]",
+            "P1 [kg]",
+            "P2 [kg]",
+            "PM10Prefoa3 [kg]",
+            "PM10Nonvol [kg]",
+            "PM10Sul [kg]",
+            "PM10Organic [kg]",
+            "nvPM mass [kg]",
+            "nvPM number"
+        ]
 
         # Initialize rows attribute with the header
         self._rows = [header]
 
         # Ask the user to the set the output path
         file_, handler_ = QtWidgets.QFileDialog.getSaveFileName(
-            None, 'Save results as csv file', '.', 'CSV (*.csv)')
+            None, 'Save results as CSV file', '.', 'CSV (*.csv)')
 
         # Set the output path
         self.setOutputPath(file_)
@@ -100,7 +104,10 @@ class CSVOutputModule(OutputModule):
                 total_emissions_.getPM10Prefoa3(unit="kg")[0],
                 total_emissions_.getPM10Nonvol(unit="kg")[0],
                 total_emissions_.getPM10Sul(unit="kg")[0],
-                total_emissions_.getPM10Organic(unit="kg")[0]])
+                total_emissions_.getPM10Organic(unit="kg")[0],
+                total_emissions_.getnvPM(unit="kg")[0],
+                total_emissions_.getnvPMnumber()[0],
+            ])
         else:
             for (source, emissions_) in result:
                 self._rows.append([
@@ -118,7 +125,10 @@ class CSVOutputModule(OutputModule):
                     sum(emissions_).getPM10Prefoa3(unit="kg")[0],
                     sum(emissions_).getPM10Nonvol(unit="kg")[0],
                     sum(emissions_).getPM10Sul(unit="kg")[0],
-                    sum(emissions_).getPM10Organic(unit="kg")[0]])
+                    sum(emissions_).getPM10Organic(unit="kg")[0],
+                    sum(emissions_).getnvPM(unit="kg")[0],
+                    sum(emissions_).getnvPMnumber()[0],
+                ])
 
     def endJob(self):
         """
@@ -132,8 +142,8 @@ class CSVOutputModule(OutputModule):
 
             if os.path.isfile(self.getOutputPath()):
                 QtWidgets.QMessageBox.information(None, "CSVOutputModule",
-                                                  "Results saved as csv file")
+                                                  "Results saved as CSV file")
 
         except Exception as e:
             QtWidgets.QMessageBox.critical(None, "CSVOutputModule",
-                                           "Couldn't save results as csv file")
+                                           "Couldn't save results as CSV file")

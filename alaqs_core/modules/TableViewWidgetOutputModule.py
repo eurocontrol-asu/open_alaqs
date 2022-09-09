@@ -101,7 +101,7 @@ class TableViewWidgetOutputModule(OutputModule):
             total_emissions_.getPM10Sul(unit="kg"),
             total_emissions_.getPM10Organic(unit="kg"),
             total_emissions_.getnvPM(unit="kg"),
-            total_emissions_.getnvPMnumber()
+            total_emissions_.getnvPMnumber(),
         ]):
 
             # Format the cell values
