@@ -68,7 +68,7 @@ def get_engine(db_url: str):
     return sqlalchemy.create_engine(db_url)
 
 
-def calculate_smoke_number(db_line: pd.Series) -> float:
+def calculate_smoke_number(db_line: pd.Series, engine_scaling_factor: float) -> float:
     """
     Assign or if necessary calculate smoke number for engine
 
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     """
 
     # Check if user added right number of arguments when calling the function
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 2:
         raise Exception(
             "Wrong number of arguments. Correct call: `python "
             f"{Path(__file__).name} sqlite:///old_url sqlite:///new_url`"
@@ -240,16 +240,13 @@ if __name__ == "__main__":
         else:
             engine_scaling_factor = SCALING_FACTORS["non_dac"][old_line["mode"]]
 
-        smoke_number_k = calculate_smoke_number(old_line)
+        smoke_number_k = calculate_smoke_number(old_line, engine_scaling_factor)
 
         nvpm_mass_concentration_ck = calculate_nvpm_mass_concentration_ck(
             smoke_number_k)
 
-        # Evaluate beta
-        # if engine with MTF : beta=BPR, else beta=0 ???????
-        # if "MTF" in engine.getValue("remark"):
-        # beta=BPR
-
+        #Evaluate beta 
+        # if engine with MTF : beta=BPR, else beta=0
         beta = 0
 
         # Assign air fuel ratio based on engine mode
