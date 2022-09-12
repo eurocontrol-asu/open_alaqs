@@ -25,7 +25,7 @@ defaultEI = {
     "pm10_sul_g_kg": 0.,
     "pm10_organic_g_kg": 0.,
     "nvpm_g_kg": 0.,
-    "nvpm_number":0.
+    "nvpm_number_kg": 0.
 }
 
 
@@ -41,12 +41,13 @@ class HelicopterEngineEmissionIndex(Store):
         }
 
     def setModePowerSetting(self, mode, power_setting):
-        self._modes_powersetting_map[mode]=power_setting
+        self._modes_powersetting_map[mode] = power_setting
+
     def getPowerSettingByMode(self, mode):
-        return self._modes_powersetting_map[mode] if mode in self._modes_powersetting_map else None
+        return self._modes_powersetting_map.get(mode)
 
     def getModes(self):
-        return ['GI1','GI2','TO','AP']
+        return ['GI1', 'GI2', 'TO', 'AP']
 
     def setObject(self, mode, val):
         # if self.hasKey(mode):
@@ -104,16 +105,16 @@ class HelicopterEngineEmissionIndex(Store):
             raise Exception ("Did not find emission index for mode '%s'." % (str(mode)))
         return emission_index
 
-    def getDefaultIndex(self, mode):
+    def getDefaultIndex(self, mode: str) -> dict:
         return {
-                "mode":str(mode),
-                "emission_index":EmissionIndex(initValues={}, defaultValues=defaultEI),
-                "thrust" : 0.,
-                "fuel_type" : "",
-                "source"  : "",
-                "coolant" : "",
-                "combustion_technology" : "",
-                "technology_age" : ""
+            "mode": str(mode),
+            "emission_index": EmissionIndex(defaultValues=defaultEI),
+            "thrust": 0.,
+            "fuel_type": "",
+            "source": "",
+            "coolant": "",
+            "combustion_technology": "",
+            "technology_age": ""
         }
 
     def __str__(self):
@@ -137,24 +138,24 @@ class EngineEmissionIndex(Store):
         }
 
     def setModePowerSetting(self, mode, power_setting):
-        self._modes_powersetting_map[mode]=power_setting
+        self._modes_powersetting_map[mode] = power_setting
 
     def getPowerSettingByMode(self, mode):
-        return self._modes_powersetting_map[mode] if mode in self._modes_powersetting_map else None
+        return self._modes_powersetting_map.get(mode)
 
     def getAlternativeModeNames(self):
         return {
-            "TX":"Idle",
-            "AP":"App",
+            "TX": "Idle",
+            "AP": "App",
             "CL": "C/O",
             "TO": "T/O",
-            "Idle":"TX",
-            "App":"AP",
+            "Idle": "TX",
+            "App": "AP",
             "C/O": "CL",
             "T/O": "TO",
-            "Takeoff":"T/O",
-            "Climbout":"C/O",
-            "Approach":"AP"
+            "Takeoff": "T/O",
+            "Climbout": "C/O",
+            "Approach": "AP"
         }
 
     def getEmissionIndexByMode(self, mode):
@@ -168,7 +169,7 @@ class EngineEmissionIndex(Store):
         if self.hasKey(mode):
             emission_index = self.getObject(mode)
 
-            if not emission_index is None and "emission_index" in emission_index:
+            if emission_index is not None and "emission_index" in emission_index:
                 emission_index = emission_index["emission_index"]
         else:
             raise Exception ("Did not find emission index for mode '%s'." % (str(mode)))
@@ -198,13 +199,13 @@ class EngineEmissionIndex(Store):
         if format.lower() == "bffm2":
             icao_eedb_bffm2 = {}
             map_names_ = {
-                "App":"Approach",
-                "AP":"Approach",
-                "TO":"Takeoff",
-                "T/O":"Takeoff",
-                "CL":"Climbout",
-                "C/O":"Climbout",
-                "TX":"Idle"
+                "App": "Approach",
+                "AP": "Approach",
+                "TO": "Takeoff",
+                "T/O": "Takeoff",
+                "CL": "Climbout",
+                "C/O": "Climbout",
+                "TX": "Idle"
             }
             for p in ["NOx", "CO", "HC"]:
                 icao_eedb_bffm2[p] = {}
@@ -344,7 +345,7 @@ class EngineEmissionIndex(Store):
 
             # Non-adjusted reference from EEDB at ISA conditions
             # maps fuel flow and emission indices
-            icao_eedb_bffm2  = self.getICAOEngineEmissionsDB(format="BFFM2")
+            icao_eedb_bffm2 = self.getICAOEngineEmissionsDB(format="BFFM2")
 
             # Do the calculation
             emission_index.setObject("fuel_kg_sec", fuel_flow)
@@ -362,44 +363,66 @@ class EngineEmissionIndex(Store):
 
         return emission_index
 
-    def setObject(self, mode, val):
+    def setObject(self, mode: str, val: dict):
         # if self.hasKey(mode):
         #     logger.warning("Already found engine ei with mode '%s' for engine with full name '%s'. Replacing existing entry." % (mode, val["engine_full_name"] if "engine_full_name" in val else "unknown"))
 
+        # Create an empty dictionary to store the emission index values
         ei_val = {}
-        for k in ["fuel_kg_sec", "smoke_number", "smoke_number_maximum"]:
-            if k in val and type(val[k]) == type(0.): # do not update values with emtpy strings
-                ei_val[k] = val[k]
 
-        for k in ["co", "hc", "nox", "sox", "pm10", "p1", "p2", "pm10_prefoa3", "pm10_nonvol", "pm10_sul", "pm10_organic"]:
-            if ("%s_ei"%k) in val and type(val["%s_ei"%k]) == type(0.): #   do not update values with empty strings
-                ei_val["%s_g_kg" % k] = val["%s_ei"%k]
+        # Create a dictionary with the key mapping
+        key_mapping = {
+            'fuel_kg_sec': 'fuel_kg_sec',
+            'smoke_number': 'smoke_number',
+            'smoke_number_maximum': 'smoke_number_maximum',
+            'co_g_kg': 'co_ei', 'hc_g_kg': 'hc_ei',
+            'nox_g_kg': 'nox_ei', 'sox_g_kg': 'sox_ei',
+            'pm10_g_kg': 'pm10_ei', 'p1_g_kg': 'p1_ei',
+            'p2_g_kg': 'p2_ei',
+            'pm10_prefoa3_g_kg': 'pm10_prefoa3_ei',
+            'pm10_nonvol_g_kg': 'pm10_nonvol_ei',
+            'pm10_sul_g_kg': 'pm10_sul_ei',
+            'pm10_organic_g_kg': 'pm10_organic_ei',
+            'nvpm_g_kg': 'nvpm_ei',
+            'nvpm_number_kg': 'nvpm_number_ei'}
 
-        self._objects[mode]= {
-                "emission_index": EmissionIndex(initValues=ei_val, defaultValues=defaultEI),
-                "source": val["source"] if "source" in val else "",
-                "coolant": val["coolant"] if "coolant" in val else "",
-                "combustion_technology": val["combustion_technology"] if "combustion_technology" in val else "",
-                "technology_age": val["technology_age"] if "technology_age" in val else "",
+        # Map the values
+        for ei_val_key, val_key in key_mapping.items():
+
+            # Set the values with not update values with empty strings
+            if val_key in val and isinstance(val.get(val_key), float):
+                ei_val[ei_val_key] = val[val_key]
+
+        # Create the emission index
+        emission_index = EmissionIndex(initValues=ei_val,
+                                       defaultValues=defaultEI)
+
+        # Set the emission index for the specified mode
+        self._objects[mode] = {
+            "emission_index": emission_index,
+            "source": val.get("source", ""),
+            "coolant": val.get("coolant", ""),
+            "combustion_technology": val.get("combustion_technology", ""),
+            "technology_age": val.get("technology_age", ""),
         }
 
-        # update mode if provided
+        # Update the mode if provided
         if "thrust" in val:
             self.setModePowerSetting(mode, val["thrust"])
 
-    def getModes(self):
+    def getModes(self) -> list:
         return list(self.getObjects().keys())
 
-    def getDefaultIndex(self, mode):
+    def getDefaultIndex(self, mode) -> dict:
         return {
-                "mode":str(mode),
-                "emission_index":EmissionIndex(initValues={}, defaultValues=defaultEI),
-                "thrust" : 0.,
-                "fuel_type" : "",
-                "source"  : "",
-                "coolant" : "",
-                "combustion_technology" : "",
-                "technology_age" : ""
+            "mode": str(mode),
+            "emission_index": EmissionIndex(defaultValues=defaultEI),
+            "thrust": 0.,
+            "fuel_type": "",
+            "source": "",
+            "coolant": "",
+            "combustion_technology": "",
+            "technology_age": ""
         }
 
     def __str__(self):

@@ -395,6 +395,10 @@ def dict_engine(engine_data):
     engine_dict['pm10_nonvol'] = conversion.convertToFloat(engine_data[26],0.)
     engine_dict['pm10_sul'] = conversion.convertToFloat(engine_data[27],0.)
     engine_dict['pm10_organic'] = conversion.convertToFloat(engine_data[28],0.)
+    engine_dict['nvpm_ei'] = conversion.convertToFloat(engine_data[29], 0.)
+    engine_dict['nvpm_number_ei'] = \
+        conversion.convertToFloat(engine_data[30], 0.)
+
     return engine_dict
 
 

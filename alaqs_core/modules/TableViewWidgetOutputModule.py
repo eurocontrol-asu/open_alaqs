@@ -61,8 +61,8 @@ class TableViewWidgetOutputModule(OutputModule):
             "PM10Nonvol [kg]",
             "PM10Sul [kg]",
             "PM10Organic [kg]",
-            "nvPM [kg]",
-            "nvPMnumber"
+            "nvPM mass [kg]",
+            "nvPM number"
         ])
 
     def process(self, timeval: datetime, result: List[Tuple[Source, Emission]],
@@ -101,7 +101,7 @@ class TableViewWidgetOutputModule(OutputModule):
             total_emissions_.getPM10Sul(unit="kg"),
             total_emissions_.getPM10Organic(unit="kg"),
             total_emissions_.getnvPM(unit="kg"),
-            total_emissions_.getnvPMnumber(unit="")
+            total_emissions_.getnvPMnumber(),
         ]):
 
             # Format the cell values

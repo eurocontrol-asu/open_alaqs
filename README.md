@@ -102,17 +102,13 @@ Once downloaded, run setup through the `Advanced Install` route.
 
 In the `Select Packages` screen there are multiple packages that need installing:
 
-- qgis-ltr-full (3.22.10-1)
-- python3-geopandas (0.8.1-2)
+- qgis-ltr-full (3.22.10-2)
+- python3-geopandas (0.11.1-1)
 - python3-shapely (1.8.0-1)
 - python3-geographiclib (1.50-1)
 - python3-pandas (1.1.3-1)
-- python3-matplotlib (3.3.2-1)
-- spatialite (5.0.1-7)
-
-> python3-matplotlib (3.3.2-1) is not the latest version, but (3.5.1-1) is currently unsupported because of breaking changes
-
-QGIS version 3.22.9 has been tested and it is also supported, so any of the two can be installed. The latest version of all packages can also be installed without causing compatibility issues. The only exception is python3-matplotlib. For this package, the version mentioned above should be installed (or, at least, the closest version).
+- python3-matplotlib (3.5.1-1)
+- spatialite (5.0.1-8)
 
 To find these packages, search for them in the search bar, and find them under the 'Libs' sub-menu and select them such that they are not to be skipped in the installation (previously installed packages are shown as 'Keep' in the 'New' column). For QGIS you should select the latest version in the Desktop and Libs sub-menus.
 

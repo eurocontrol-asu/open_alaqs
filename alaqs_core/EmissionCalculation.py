@@ -201,9 +201,7 @@ class EmissionCalculation:
             "nvpm_number": 0.
         }
 
-
-
-        # check if a dispersion module is enable
+        # check if a dispersion module is enabled
         dispersion_enabled = len(self.getDispersionModules()) > 0
 
         # list the selected modules
@@ -266,7 +264,6 @@ class EmissionCalculation:
                     for (timestamp_, source_, emission_) in mod_obj.process(
                             start_, end_, source_names=source_names,
                             ambient_conditions=ambient_condition):
-
 
                         logger.debug(f'{mod_name}: {timestamp_}')
                         logger.debug(f'source_: {type(source_)}')

@@ -23,106 +23,137 @@ class Aircraft:
         if val is None:
             val = {}
 
-        self._icao = str(val["icao"]) if "icao" in val else "unknown"
-        self._ac_group_code=str(val["ac_group_code"]) if "ac_group_code" in val else ""
-        self._ac_group=str(val["ac_group"]) if "ac_group" in val else ""
-        self._manufacturer=str(val["manufacturer"]) if "manufacturer" in val else ""
-        self._name=str(val["name"]) if "name" in val else ""
-        self._class=str(val["class"]) if "class" in val else ""
-        self._mtow =int(val["mtow"]) if "mtow" in val and val["mtow"] else 0
-        self._engine_count =int(val["engine_count"]) if "engine_count" in val and val["engine_count"] else 0
-        self._departure_profile_name=str(val["departure_profile"]) if "departure_profile" in val else ""
-        self._arrival_profile_name=str(val["arrival_profile"]) if "arrival_profile" in val else ""
-        self._bada_id=str(val["bada_id"]) if "bada_id" in val else ""
-        self._wake_category=str(val["wake_category"]) if "wake_category" in val else ""
-        self._apu_id =str(val["apu_id"]) if "apu_id" in val else ""
-        self._registration = str(val["aircraft_registration"]) if "aircraft_registration" in val else ""
+        self._icao = str(val.get("icao", "unknown"))
+        self._ac_group_code = str(val.get("ac_group_code", ""))
+        self._ac_group = str(val.get("ac_group", ""))
+        self._manufacturer = str(val.get("manufacturer", ""))
+        self._name = str(val.get("name", ""))
+        self._class = str(val.get("class", ""))
+        self._mtow = int(val.get("mtow", 0))
+        self._engine_count = int(val.get("engine_count", 0))
+        self._departure_profile_name = str(val.get("departure_profile", ""))
+        self._arrival_profile_name = str(val.get("arrival_profile", ""))
+        self._bada_id = str(val.get("bada_id", ""))
+        self._wake_category = str(val.get("wake_category", ""))
+        self._apu_id = str(val.get("apu_id", ""))
+        self._registration = str(val.get("aircraft_registration", ""))
 
         self._engine = None
         self._defaultengine = None
         self._apu = None
         self._dynamics = {"TX": None, "AP": None, "CL": None, "TO": None}
 
-    def setRegistration(self, val):
+    def setRegistration(self, val: str):
         self._registration = val
-    def getRegistration(self):
+
+    def getRegistration(self) -> str:
         return self._registration
-    def getDefaultEngine(self):
+
+    def getDefaultEngine(self) -> str:
         return self._defaultengine
+
     def setDefaultEngine(self, var):
         self._defaultengine = var
+
     def getDefaultDepartureProfileName(self):
         return self._departure_profile_name
+
     def setDefaultDepartureProfileName(self, var):
         self._departure_profile_name = var
+
     def getDefaultArrivalProfileName(self):
         return self._arrival_profile_name
+
     def setDefaultArrivalProfileName(self, var):
         self._arrival_profile_name = var
 
     def getApu(self):
         return self._apu
+
     def setApu(self, var):
         self._apu = var
 
     def getApuTimes(self):
         return self._apu_times
+
     def setApuTimes(self, var):
         self._apu_times = var
 
     def getApuEmissions(self):
         return self._apu_emissions
+
     def setApuEmissions(self, var):
         self._apu_emissions = var
 
     def getEmissionDynamicsByMode(self):
         return self._dynamics
+
     def setEmissionDynamicsByMode(self, mode, var):
-        self._dynamics.update({mode:var})
+        self._dynamics.update({mode: var})
 
     def getICAOIdentifier(self):
         return self._icao
+
     def setICAOIdentifier(self, val):
         self._icao = val
+
     def getType(self):
         return self.getICAOIdentifier()
+
     def setType(self, val):
         self.setICAOIdentifier(val)
+
     def getGroupCode(self):
         return self._ac_group_code
+
     def setGroupCode(self, var):
         self._ac_group_code = var
+
     def getManufacturer(self):
         return self._manufacturer
+
     def setManufacturer(self, var):
         self._manufacturer = var
+
     def getGroup(self):
         return self._ac_group
+
     def setGroup(self, var):
         self._ac_group = var
+
     def getClass(self):
         return self._class
+
     def setClass(self, var):
         self._class = var
+
     def getName(self):
         return self._name
+
     def setName(self, var):
         self._name = var
+
     def getMTOW(self):
         return self._mtow
+
     def setMTOW(self, var):
         self._mtow = var
 
-    def getEngineCount(self):
+    def getEngineCount(self) -> int:
         return self._engine_count
-    def setEngineCount(self, var):
+
+    def setEngineCount(self, var: int):
         self._engine_count = var
+
     def getWakeCategory(self):
         return self._wake_category
+
     def setWakeCategory(self, var):
         self._wake_category = var
+
     def getAPUIdentifier(self):
         return self._apu_id
+
     def setAPUIdentifier(self, var):
         self._apu_id = var
 
