@@ -1,0 +1,4 @@
+oid,engine_type,engine_full_name,engine_name,thrust,mode,fuel_kg_sec,co_ei,hc_ei,nox_ei,sox_ei,pm10_ei,p1_ei,p2_ei,smoke_number,smoke_number_maximum,fuel_type,manufacturer,source,remark,status,engine_name_type,coolant,combustion_technology,technology_age,pm10_prefoa3,pm10_nonvol,pm10_sul,pm10_organic,nvpm_ei,nvpm_number_ei
+0,J,TFE731-2-2B,1AS001,1,TO,0.205,1.394,0.114,15.25,0.54,1.982389326,1.920319326,0.01311,71,71,ASTM D1655-73T,ALLIED SIGNAL,ICAO_EDDB v25,,Out of production,TFE731-2-2B,NULL,NULL,NULL,NULL,1.920319326,0.04896,0.01311,69.74889267,4.04E+34
+252,J,GE90-76B,2GE052,1,TO,2.83,0.09,0.07,44.86,1,0.05701,0,0.00805,0,10.22,Jet A,GE AIRCRAFT ENGINES,ICAO_EDDB v25,,Out of production,GE90-76B  DAC I,NULL,NULL,NULL,NULL,0,0.04896,0.00805,0.4275759,2.47E+32
+705,,Prop-200hp,Prop-200hp,1,TO,0.0112,1077.4,11.78,2.19,,0,0,0,0,0,,DIVERSE,FOCA_DATABASE,,,Prop-200hp,NULL,NULL,NULL,NULL,0,0,0,0.186516945,1.08E+32
