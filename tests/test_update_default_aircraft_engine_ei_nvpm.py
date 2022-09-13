@@ -1,35 +1,39 @@
+import pytest
 from open_alaqs.db_updates.update_default_aircraft_engine_ei_nvpm import calculate_smoke_number, calculate_nvpm_mass_concentration_ck, calculate_exhaust_volume_qk,calculate_nvpm_mass_ei, calculate_nvpm_number_ei, calculate_loss_correction_factor
 import pandas as pd
 from pathlib import Path
 from open_alaqs.db_updates.update_default_aircraft_engine_ei_nvpm import SCALING_FACTORS, AIR_FUEL_RATIO, GEOMTRIC_MEAN_DIAMETERS, NR, STANDARD_DEVIATION_PM, PARTICLE_EFFECTIVE_DENSITY
 
-#Get data for 
-repository = Path(__file__).parents[1]
-data = pd.read_csv(repository / "tests/data/test_update_default_aircraft_engine_ei_nvpm_data.csv")
+#Calculation constants
+MODE = "TO"
+ENGINE_SCALING_FACTOR = SCALING_FACTORS["non_dac"][MODE]
+ENGINE_AFR = AIR_FUEL_RATIO[MODE]
+BETA = 0
 
 
-def test_calculate_nvpm_mass_and_number_sn():
+@pytest.fixture
+def sample_data():
+    repository = Path(__file__).parents[1]
+    data = pd.read_csv(repository / "tests/data/test_update_default_aircraft_engine_ei_nvpm_data.csv")
+    return data
+
+
+def test_calculate_nvpm_mass_and_number_sn(sample_data):
     """
     Example calculation for TFE731-2-2B, manufacturer ALLIED SIGNAL
     from Doc 9889 Airport Air Quality Manual Second Edition, 2020.
 
     Use case with smoke number present in the database.
     """
+    # Fetch 1'st use case
+    old_line = sample_data.iloc[0]
 
-    old_line = data.iloc[0]
-
-    engine_scaling_factor = SCALING_FACTORS["non_dac"][old_line["mode"]]
-    smoke_number_k = calculate_smoke_number(old_line, engine_scaling_factor)
+    smoke_number_k = calculate_smoke_number(old_line, ENGINE_SCALING_FACTOR)
 
     nvpm_mass_concentration_ck = calculate_nvpm_mass_concentration_ck(
         smoke_number_k)
-
-    beta = 0
-
-    # Assign air fuel ratio based on engine mode
-    engine_afr = AIR_FUEL_RATIO[old_line["mode"]]
     
-    exhaust_volume_qk = calculate_exhaust_volume_qk(engine_afr, beta)
+    exhaust_volume_qk = calculate_exhaust_volume_qk(ENGINE_AFR, BETA)
 
     # Calculate EInvPMmass
     ei_nvpm_mass_k = calculate_nvpm_mass_ei(nvpm_mass_concentration_ck,
@@ -37,7 +41,7 @@ def test_calculate_nvpm_mass_and_number_sn():
 
     # Calculate loss correction factor
     loss_correction_factor_kslm_k = calculate_loss_correction_factor(
-        nvpm_mass_concentration_ck, beta)
+        nvpm_mass_concentration_ck, BETA)
 
     # Calculate the nvPMmass EIs for each engine mode at the engine exit
     # plane
@@ -51,7 +55,7 @@ def test_calculate_nvpm_mass_and_number_sn():
     assert ei_nvpm_number_ek == 4.0357537008181945e+34
 
 
-def test_calculate_nvpm_mass_and_number_sn_max_only():
+def test_calculate_nvpm_mass_and_number_sn_max_only(sample_data):
     """
     Example calculation for GE90-76B, manufacturer GE AIRCRAFT ENGINES
     from Doc 9889 Airport Air Quality Manual Second Edition, 2020.
@@ -59,19 +63,15 @@ def test_calculate_nvpm_mass_and_number_sn_max_only():
     Use case without smoke number present in the database, only smoke number maximum present.
     """
 
-    old_line = data.iloc[1]
-    engine_scaling_factor = SCALING_FACTORS["non_dac"][old_line["mode"]]
-    smoke_number_k = calculate_smoke_number(old_line, engine_scaling_factor)
+    # Fetch 2'nd use case
+    old_line = sample_data.iloc[1]
+
+    smoke_number_k = calculate_smoke_number(old_line, ENGINE_SCALING_FACTOR)
 
     nvpm_mass_concentration_ck = calculate_nvpm_mass_concentration_ck(
         smoke_number_k)
-
-    beta = 0
-
-    # Assign air fuel ratio based on engine mode
-    engine_afr = AIR_FUEL_RATIO[old_line["mode"]]
     
-    exhaust_volume_qk = calculate_exhaust_volume_qk(engine_afr, beta)
+    exhaust_volume_qk = calculate_exhaust_volume_qk(ENGINE_AFR, BETA)
 
     # Calculate EInvPMmass
     ei_nvpm_mass_k = calculate_nvpm_mass_ei(nvpm_mass_concentration_ck,
@@ -79,7 +79,7 @@ def test_calculate_nvpm_mass_and_number_sn_max_only():
 
     # Calculate loss correction factor
     loss_correction_factor_kslm_k = calculate_loss_correction_factor(
-        nvpm_mass_concentration_ck, beta)
+        nvpm_mass_concentration_ck, BETA)
 
     # Calculate the nvPMmass EIs for each engine mode at the engine exit
     # plane
@@ -93,26 +93,24 @@ def test_calculate_nvpm_mass_and_number_sn_max_only():
     assert ei_nvpm_number_ek == 2.4740048960915522e+32
 
 
-def test_calculate_nvpm_mass_and_number_no_sn():
+def test_calculate_nvpm_mass_and_number_no_sn(sample_data):
     """
     Example calculation for Prop-200hp, manufacturer DIVERSE
     from Doc 9889 Airport Air Quality Manual Second Edition, 2020.
 
     Use case without smoke number or smoke number maximum.
     """
-    old_line = data.iloc[2]
-    engine_scaling_factor = SCALING_FACTORS["non_dac"][old_line["mode"]]
-    smoke_number_k = calculate_smoke_number(old_line, engine_scaling_factor)
+
+    # Fetch 3'rd use case
+    old_line = sample_data.iloc[2]
+
+    smoke_number_k = calculate_smoke_number(old_line, ENGINE_SCALING_FACTOR)
 
     nvpm_mass_concentration_ck = calculate_nvpm_mass_concentration_ck(
         smoke_number_k)
 
-    beta = 0
-
-    # Assign air fuel ratio based on engine mode
-    engine_afr =  AIR_FUEL_RATIO[old_line["mode"]]
     
-    exhaust_volume_qk = calculate_exhaust_volume_qk(engine_afr, beta)
+    exhaust_volume_qk = calculate_exhaust_volume_qk(ENGINE_AFR, BETA)
 
     # Calculate EInvPMmass
     ei_nvpm_mass_k = calculate_nvpm_mass_ei(nvpm_mass_concentration_ck,
@@ -120,7 +118,7 @@ def test_calculate_nvpm_mass_and_number_no_sn():
 
     # Calculate loss correction factor
     loss_correction_factor_kslm_k = calculate_loss_correction_factor(
-        nvpm_mass_concentration_ck, beta)
+        nvpm_mass_concentration_ck, BETA)
 
     # Calculate the nvPMmass EIs for each engine mode at the engine exit
     # plane
