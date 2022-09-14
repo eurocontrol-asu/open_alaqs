@@ -191,7 +191,7 @@ if __name__ == "__main__":
     """
 
     # Check if user added right number of arguments when calling the function
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         raise Exception(
             "Wrong number of arguments. Correct call: `python "
             f"{Path(__file__).name} sqlite:///old_url sqlite:///new_url`"
