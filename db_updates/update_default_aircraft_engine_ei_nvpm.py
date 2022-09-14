@@ -270,7 +270,7 @@ if __name__ == "__main__":
         ei_nvpm_number_ek = calculate_nvpm_number_ei(ei_nvpm_mass_ek, old_line)
 
         # Add calculated EInvPm to the table
-        old_blank_study.loc[index, "nvpm_ei"] = ei_nvpm_mass_ek
+        old_blank_study.loc[index, "nvpm_ei"] = round(ei_nvpm_mass_ek, 5)
         old_blank_study.loc[index, "nvpm_number_ei"] = ei_nvpm_number_ek
 
     # Log calculated values
