@@ -102,18 +102,18 @@ def calculate_nvpm_mass_concentration_ck(smoke_number_k: float) -> float:
         float: nvPM mass concentration
     """
 
-    return (648.4 * (math.exp(0.0766 * smoke_number_k))) / 1 + \
-           (math.exp(-1.098 * (smoke_number_k - 3.064)))
+    return (648.4 * (math.exp(0.0766 * smoke_number_k))) / (1 + \
+           math.exp(-1.098 * (smoke_number_k - 3.064)))
 
 
-def calculate_exhaust_volume_qk(engine_afr: int, beta: int) -> float:
+def calculate_exhaust_volume_qk(engine_afr: int, beta: float) -> float:
     """
     Calculate engine exhaust volume Qk.
     Source: Eq.D-4, page 90.
 
     Args:
         engine_afr (int): air fuel ratio
-        beta (int)
+        beta (float)
 
     Returns:
         float: exhaust volume
@@ -136,11 +136,11 @@ def calculate_nvpm_mass_ei(nvpm_mass_concentration: float,
     Returns:
         float: nvpm_mass_ei
     """
-    return nvpm_mass_concentration * (10 ** -6) * exhaust_volume
+    return nvpm_mass_concentration * exhaust_volume/1000
 
 
 def calculate_loss_correction_factor(nvpm_mass_concentration: float,
-                                     beta: int) -> float:
+                                     beta: float) -> float:
     """
     Calculate the mode-dependent system loss correction factor for
      nvPMmass (kslm,k)
@@ -148,15 +148,14 @@ def calculate_loss_correction_factor(nvpm_mass_concentration: float,
 
     Args:
         nvpm_mass_concentration (float)
-        beta (int)
+        beta (float)
 
     Returns:
         float: loss_correction_factor
     """
 
-    return math.log(3.219 * nvpm_mass_concentration * (
-            1 + beta) + 312.5 / nvpm_mass_concentration * (1 + beta) + 42.6)
-
+    return math.log(((3.219 * nvpm_mass_concentration * (
+            1 + beta)) + 312.5) / ((nvpm_mass_concentration * (1 + beta)) + 42.6))
 
 def calculate_nvpm_number_ei(ei_nvpm_mass: float, db_line: pd.Series) -> float:
     """
@@ -173,10 +172,26 @@ def calculate_nvpm_number_ei(ei_nvpm_mass: float, db_line: pd.Series) -> float:
         float: ei_nvpm_number
     """
 
-    return (6 * ei_nvpm_mass * NR) / math.pi * PARTICLE_EFFECTIVE_DENSITY * (
-            (GEOMTRIC_MEAN_DIAMETERS[db_line["mode"]]) ** 3) * (
+    return 6 * (ei_nvpm_mass/1000) * NR / (math.pi * PARTICLE_EFFECTIVE_DENSITY * (
+            (GEOMTRIC_MEAN_DIAMETERS[db_line["mode"]]) ** 3) * 
                math.exp(4.5 * (math.log(STANDARD_DEVIATION_PM)) ** 2))
 
+
+def evalute_beta(old_line: pd.Series) -> float:
+    """
+    Function that evaluates beta factor based on engine type.
+
+    Args:
+        db_line (pd.Series): single row from database
+
+    Returns:
+        float: beta value
+    """
+
+    if old_line["eng_type"] == "MTF":
+        return old_line["bpr"]
+    else:
+        return 0.0
 
 if __name__ == "__main__":
     """
@@ -245,9 +260,7 @@ if __name__ == "__main__":
         nvpm_mass_concentration_ck = calculate_nvpm_mass_concentration_ck(
             smoke_number_k)
 
-        #Evaluate beta 
-        # if engine with MTF : beta=BPR, else beta=0
-        beta = 0
+        beta = evalute_beta(old_line)
 
         # Assign air fuel ratio based on engine mode
         engine_afr = AIR_FUEL_RATIO[old_line["mode"]]
