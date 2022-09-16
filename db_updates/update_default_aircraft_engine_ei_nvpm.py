@@ -1,12 +1,14 @@
 import shutil
 import sys
 from pathlib import Path
-
 import pandas as pd
-import sqlalchemy
 import math
-
+import logging
 from update_default_aircraft_engine_ei import get_engine
+
+
+logging.getLogger().setLevel(logging.INFO)
+
 
 # Source: Table D-1: Suggested SF values to predict missing SN in the ICAO EEDB, page 88
 SCALING_FACTORS = {
@@ -265,13 +267,12 @@ if __name__ == "__main__":
         old_blank_study.loc[index, "nvpm_number_ei"] = ei_nvpm_number_ek
 
     # Log calculated values
-    print(
-        "nvpm_mass_ei calculated successfully for number of rows:",
-        (old_blank_study["nvpm_ei"] != 0).sum(),
+    logging.info(
+        f"nvpm_mass_ei calculated successfully for number of rows: {(old_blank_study['nvpm_ei'] != 0).sum()}"
     )
-    print(
-        "nvpm_mass_ei calculated successfully for number of rows:",
-        (old_blank_study["nvpm_number_ei"] != 0).sum(),
+
+    logging.info(
+        f"nvpm_mass_ei calculated successfully for number of rows: {(old_blank_study['nvpm_number_ei'] != 0).sum()}"
     )
 
     # Save updated database
