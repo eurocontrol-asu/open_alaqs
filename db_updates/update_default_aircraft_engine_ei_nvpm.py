@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import math
 import logging
-from update_default_aircraft_engine_ei import get_engine
+from open_alaqs.db_updates.update_default_aircraft_engine_ei import get_engine
 
 
 logging.getLogger().setLevel(logging.INFO)
