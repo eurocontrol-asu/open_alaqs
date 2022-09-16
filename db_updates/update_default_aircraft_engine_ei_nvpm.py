@@ -3,69 +3,33 @@ import sys
 from pathlib import Path
 
 import pandas as pd
-import sqlalchemy 
+import sqlalchemy
 import math
 
+from update_default_aircraft_engine_ei import get_engine
+
 # Source: Table D-1: Suggested SF values to predict missing SN in the ICAO EEDB, page 88
-SCALING_FACTORS = {"non_dac": {
-    "TX": 0.3,
-    "TO": 1.0,
-    "CL": 0.9,
-    "AP": 0.3},
-    "aviadvigatel": {
-        "TX": 0.3,
-        "TO": 1.0,
-        "CL": 1.0,
-        "AP": 0.8},
-    "ge_cf34": {
-        "TX": 0.3,
-        "TO": 1.0,
-        "CL": 0.4,
-        "AP": 0.3},
-    "textron_lycoming": {
-        "TX": 0.3,
-        "TO": 1.0,
-        "CL": 1.0,
-        "AP": 0.6},
-    "cfm_dac": {
-        "TX": 1.0,
-        "TO": 0.3,
-        "CL": 0.3,
-        "AP": 0.3}
+SCALING_FACTORS = {
+    "non_dac": {"TX": 0.3, "TO": 1.0, "CL": 0.9, "AP": 0.3},
+    "aviadvigatel": {"TX": 0.3, "TO": 1.0, "CL": 1.0, "AP": 0.8},
+    "ge_cf34": {"TX": 0.3, "TO": 1.0, "CL": 0.4, "AP": 0.3},
+    "textron_lycoming": {"TX": 0.3, "TO": 1.0, "CL": 1.0, "AP": 0.6},
+    "cfm_dac": {"TX": 1.0, "TO": 0.3, "CL": 0.3, "AP": 0.3},
 }
 
+
 # Source: Table D-2. Representative AFRk listed by ICAO power settings (mode k), page 89
-AIR_FUEL_RATIO = {
-    "TX": 106,
-    "TO": 45,
-    "CL": 51,
-    "AP": 83}
+AIR_FUEL_RATIO = {"TX": 106, "TO": 45, "CL": 51, "AP": 83}
+
 
 # Source: Table D-4. Standard values for GMDk listed by ICAO thrust settings (mode k), page 91
-GEOMTRIC_MEAN_DIAMETERS = {
-    "TX": 20,
-    "TO": 40,
-    "CL": 40,
-    "AP": 20}
+GEOMTRIC_MEAN_DIAMETERS = {"TX": 20, "TO": 40, "CL": 40, "AP": 20}
+
 
 # Constants
-NR = 10 ** 24
+NR = 10**24
 STANDARD_DEVIATION_PM = 1.8
 PARTICLE_EFFECTIVE_DENSITY = 1000
-
-
-def rename_column(df: pd.DataFrame, name: str, new_name: str) -> pd.DataFrame:
-    """
-    Changes a single column of a dataframe
-    """
-    return df.rename(columns={name: new_name})
-
-
-def get_engine(db_url: str):
-    """
-    Returns the database engine
-    """
-    return sqlalchemy.create_engine(db_url)
 
 
 def calculate_smoke_number(db_line: pd.Series, engine_scaling_factor: float) -> float:
@@ -102,8 +66,9 @@ def calculate_nvpm_mass_concentration_ck(smoke_number_k: float) -> float:
         float: nvPM mass concentration
     """
 
-    return (648.4 * (math.exp(0.0766 * smoke_number_k))) / (1 + \
-           math.exp(-1.098 * (smoke_number_k - 3.064)))
+    return (648.4 * (math.exp(0.0766 * smoke_number_k))) / (
+        1 + math.exp(-1.098 * (smoke_number_k - 3.064))
+    )
 
 
 def calculate_exhaust_volume_qk(engine_afr: int, beta: float) -> float:
@@ -122,8 +87,9 @@ def calculate_exhaust_volume_qk(engine_afr: int, beta: float) -> float:
     return 0.777 * engine_afr * (1 + beta) + 0.767
 
 
-def calculate_nvpm_mass_ei(nvpm_mass_concentration: float,
-                           exhaust_volume: float) -> float:
+def calculate_nvpm_mass_ei(
+    nvpm_mass_concentration: float, exhaust_volume: float
+) -> float:
     """
     Calculate nvPMmass EI at the instrument (EInvPMmass,k).
     Source: Eq.D-3, page 90.
@@ -136,11 +102,12 @@ def calculate_nvpm_mass_ei(nvpm_mass_concentration: float,
     Returns:
         float: nvpm_mass_ei
     """
-    return nvpm_mass_concentration * exhaust_volume/1000
+    return nvpm_mass_concentration * exhaust_volume / 1000
 
 
-def calculate_loss_correction_factor(nvpm_mass_concentration: float,
-                                     beta: float) -> float:
+def calculate_loss_correction_factor(
+    nvpm_mass_concentration: float, beta: float
+) -> float:
     """
     Calculate the mode-dependent system loss correction factor for
      nvPMmass (kslm,k)
@@ -154,8 +121,11 @@ def calculate_loss_correction_factor(nvpm_mass_concentration: float,
         float: loss_correction_factor
     """
 
-    return math.log(((3.219 * nvpm_mass_concentration * (
-            1 + beta)) + 312.5) / ((nvpm_mass_concentration * (1 + beta)) + 42.6))
+    return math.log(
+        ((3.219 * nvpm_mass_concentration * (1 + beta)) + 312.5)
+        / ((nvpm_mass_concentration * (1 + beta)) + 42.6)
+    )
+
 
 def calculate_nvpm_number_ei(ei_nvpm_mass: float, db_line: pd.Series) -> float:
     """
@@ -172,9 +142,17 @@ def calculate_nvpm_number_ei(ei_nvpm_mass: float, db_line: pd.Series) -> float:
         float: ei_nvpm_number
     """
 
-    return 6 * (ei_nvpm_mass/1000) * NR / (math.pi * PARTICLE_EFFECTIVE_DENSITY * (
-            (GEOMTRIC_MEAN_DIAMETERS[db_line["mode"]]) ** 3) * 
-               math.exp(4.5 * (math.log(STANDARD_DEVIATION_PM)) ** 2))
+    return (
+        6
+        * (ei_nvpm_mass / 1000)
+        * NR
+        / (
+            math.pi
+            * PARTICLE_EFFECTIVE_DENSITY
+            * ((GEOMTRIC_MEAN_DIAMETERS[db_line["mode"]]) ** 3)
+            * math.exp(4.5 * (math.log(STANDARD_DEVIATION_PM)) ** 2)
+        )
+    )
 
 
 def evalute_beta(old_line: pd.Series) -> float:
@@ -193,11 +171,12 @@ def evalute_beta(old_line: pd.Series) -> float:
     else:
         return 0.0
 
+
 if __name__ == "__main__":
     """
-    Script introduces calculations for engine exhaust particulate emissions in 
-    the form of emission indices (EI's). Based on 'First order Approximation 
-    V4.0 method for estimating particulate matter 'mass and number emissions 
+    Script introduces calculations for engine exhaust particulate emissions in
+    the form of emission indices (EI's). Based on 'First order Approximation
+    V4.0 method for estimating particulate matter 'mass and number emissions
     from aircraft engines'.
     ICAO Doc 9889, second edition, 2020, Attachment D to Appendix 1, page.84
 
@@ -217,14 +196,10 @@ if __name__ == "__main__":
     path_2 = Path(sys.argv[2])
 
     if not path_1.exists():
-        raise Exception(
-            f"The input file that you try to use does not exist.\n{path_1}"
-        )
+        raise Exception(f"The input file that you try to use does not exist.\n{path_1}")
 
     if path_2.exists():
-        raise Exception(
-            f"The output file already exists.\n{path_2}"
-        )
+        raise Exception(f"The output file already exists.\n{path_2}")
 
     # Copy the file
     shutil.copy(str(path_1), str(path_2))
@@ -232,7 +207,8 @@ if __name__ == "__main__":
     # Load old table to update
     with get_engine(f"sqlite:///{path_1.absolute()}").connect() as conn:
         old_blank_study = pd.read_sql(
-            "SELECT * FROM default_aircraft_engine_ei", con=conn)
+            "SELECT * FROM default_aircraft_engine_ei", con=conn
+        )
 
     # Add 2 columns for nvpm mass and number with assigned default values
     old_blank_study["nvpm_ei"] = 0.0
@@ -244,8 +220,7 @@ if __name__ == "__main__":
 
         # Evaluate scaling factor based on engine type
         if "aviadvigatel" in old_line["manufacturer"]:
-            engine_scaling_factor = \
-                SCALING_FACTORS["aviadgatel"][old_line["mode"]]
+            engine_scaling_factor = SCALING_FACTORS["aviadgatel"][old_line["mode"]]
         elif "textron" in old_line["manufacturer"]:
             engine_scaling_factor = SCALING_FACTORS["textron"][old_line["mode"]]
         elif "cfm" in old_line["manufacturer"]:
@@ -258,22 +233,25 @@ if __name__ == "__main__":
         smoke_number_k = calculate_smoke_number(old_line, engine_scaling_factor)
 
         nvpm_mass_concentration_ck = calculate_nvpm_mass_concentration_ck(
-            smoke_number_k)
+            smoke_number_k
+        )
 
         beta = evalute_beta(old_line)
 
         # Assign air fuel ratio based on engine mode
         engine_afr = AIR_FUEL_RATIO[old_line["mode"]]
-        
+
         exhaust_volume_qk = calculate_exhaust_volume_qk(engine_afr, beta)
 
         # Calculate EInvPMmass
-        ei_nvpm_mass_k = calculate_nvpm_mass_ei(nvpm_mass_concentration_ck,
-                                                exhaust_volume_qk)
+        ei_nvpm_mass_k = calculate_nvpm_mass_ei(
+            nvpm_mass_concentration_ck, exhaust_volume_qk
+        )
 
         # Calculate loss correction factor
         loss_correction_factor_kslm_k = calculate_loss_correction_factor(
-            nvpm_mass_concentration_ck, beta)
+            nvpm_mass_concentration_ck, beta
+        )
 
         # Calculate the nvPMmass EIs for each engine mode at the engine exit
         # plane
@@ -287,15 +265,17 @@ if __name__ == "__main__":
         old_blank_study.loc[index, "nvpm_number_ei"] = ei_nvpm_number_ek
 
     # Log calculated values
-    print("nvpm_mass_ei calculated successfully for number of rows:",
-          (old_blank_study["nvpm_ei"] != 0).sum())
-    print("nvpm_mass_ei calculated successfully for number of rows:",
-          (old_blank_study["nvpm_number_ei"] != 0).sum())
+    print(
+        "nvpm_mass_ei calculated successfully for number of rows:",
+        (old_blank_study["nvpm_ei"] != 0).sum(),
+    )
+    print(
+        "nvpm_mass_ei calculated successfully for number of rows:",
+        (old_blank_study["nvpm_number_ei"] != 0).sum(),
+    )
 
     # Save updated database
     with get_engine(f"sqlite:///{path_2.absolute()}").connect() as conn:
         old_blank_study.to_sql(
-            "default_aircraft_engine_ei",
-            con=conn,
-            index=False,
-            if_exists='replace')
+            "default_aircraft_engine_ei", con=conn, index=False, if_exists="replace"
+        )
