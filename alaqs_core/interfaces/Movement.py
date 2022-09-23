@@ -48,7 +48,9 @@ defaultEmissions = {
     "pm10_prefoa3_g": 0.,
     "pm10_nonvol_g": 0.,
     "pm10_sul_g": 0.,
-    "pm10_organic_g": 0.
+    "pm10_organic_g": 0.,
+    "nvpm_g": 0.,
+    "nvpm_number": 0.
 }
 defaultEI = {
     "fuel_kg_sec": 0.,
@@ -66,7 +68,9 @@ defaultEI = {
     "pm10_prefoa3_g_kg": 0.,
     "pm10_nonvol_g_kg": 0.,
     "pm10_sul_g_kg": 0.,
-    "pm10_organic_g_kg": 0.
+    "pm10_organic_g_kg": 0.,
+    "nvpm_g_kg": 0.,
+    "nvpm_number": 0.
 }
 
 
@@ -641,8 +645,9 @@ class Movement:
                 else emission_index_.getEmissionIndexByMode("AP")
             time_in_segment_ = ei_.getObject('time_min') * 60. if ei_.hasKey('time_min') else 0.
 
-            heli_emissions.add(ei_, time_in_segment_*number_of_engines)
-            emissions_dict_ = {"emissions": heli_emissions, "distance_time": float(time_in_segment_),
+            heli_emissions.add(ei_, time_in_segment_ * number_of_engines)
+            emissions_dict_ = {"emissions": heli_emissions,
+                               "distance_time": float(time_in_segment_),
                                "distance_space": float(space_in_segment_)}
             emissions.append(emissions_dict_)
 
@@ -894,14 +899,20 @@ class Movement:
                                                                             method["config"]["airport_altitude"], self.getTakeoffWeightRatio(), ac=method["config"]["ambient_conditions"])
                         copy_emission_index_.setObject("nox_g_kg", corr_nox_ei)
 
-
-            if (copy_emission_index_ is None):
+            if copy_emission_index_ is None:
                 logger.error("Did not find emission index for aircraft with type '%s'." % (self.getAircraft()))
-            emissions.add(copy_emission_index_,
-                              float(time_in_segment_) * float(self.getAircraft().getEngineCount()))
 
-        return {"emissions": emissions, "distance_time": float(time_in_segment_),
-                "distance_space": float(space_in_segment_)}
+            # Calculate the effective time (s)
+            effective_time_s = float(
+                time_in_segment_) * self.getAircraft().getEngineCount()
+
+            emissions.add(copy_emission_index_, effective_time_s)
+
+        return {
+            "emissions": emissions,
+            "distance_time": float(time_in_segment_),
+            "distance_space": float(space_in_segment_)
+        }
 
     def calculateEmissions(self, atRunway = True, method=None, mode="",
                            limit=None):

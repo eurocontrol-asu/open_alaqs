@@ -16,37 +16,38 @@ class EngineStore(Store, metaclass=Singleton):
     Class to store instances of 'Engine' objects
     """
 
-    def __init__(self, db_path="", db=None):
+    def __init__(self, db_path: str = "", db: dict = None):
         if db is None:
-            db = {
-                "engine_emission_indices_db": None,
-                "engine_modes_db": None,
-                "engine_start_emission_factors_db": None}
+            db = {"engine_emission_indices_db": None,
+                  "engine_modes_db": None,
+                  "engine_start_emission_factors_db": None}
         Store.__init__(self)
 
         self._db_path = db_path
 
-        #Emission indices
+        # Set the engine emission indices database
         self._emission_indices_db = None
-        if  "engine_emission_indices_db" in db:
-            if isinstance(db["engine_emission_indices_db"], EngineEmissionIndicesDatabase):
-                self._emission_indices_db = db["engine_emission_indices_db"]
-            elif isinstance(db["engine_emission_indices_db"], str) and os.path.isfile(db["engine_emission_indices_db"]):
-                self._emission_indices_db =EngineEmissionIndicesDatabase(db["engine_emission_indices_db"])
-
+        _engine_ei_db = db.get("engine_emission_indices_db")
+        if isinstance(_engine_ei_db, EngineEmissionIndicesDatabase):
+            self._emission_indices_db = _engine_ei_db
+        elif isinstance(_engine_ei_db, str) and os.path.isfile(_engine_ei_db):
+            self._emission_indices_db = \
+                EngineEmissionIndicesDatabase(_engine_ei_db)
         if self._emission_indices_db is None:
-            self._emission_indices_db =EngineEmissionIndicesDatabase(db_path)
+            self._emission_indices_db = EngineEmissionIndicesDatabase(db_path)
 
-        self._emission_indices = self._emission_indices_db.getEngineEmissionIndices()
+        # Get the emission indices
+        self._emission_indices = \
+            self._emission_indices_db.getEngineEmissionIndices()
 
-        #Engine Modes
+        # Set the engine modes database
         self._emission_modes_db = None
-        if  "emission_modes_db" in db:
-            if isinstance(db["emission_modes_db"], EngineModeDatabase):
-                self._emission_modes_db = db["emission_modes_db"]
-            elif isinstance(db["emission_modes_db"], str) and os.path.isfile(db["emission_modes_db"]):
-                self._emission_modes_db = EngineModeDatabase(db["emission_modes_db"])
-
+        _emission_modes_db = db.get("emission_modes_db")
+        if isinstance(_emission_modes_db, EngineModeDatabase):
+            self._emission_modes_db = _emission_modes_db
+        elif isinstance(_emission_modes_db, str) and \
+                os.path.isfile(_emission_modes_db):
+            self._emission_modes_db = EngineModeDatabase(_emission_modes_db)
         if self._emission_modes_db is None:
             self._emission_modes_db = EngineModeDatabase(db_path)
 
@@ -58,17 +59,17 @@ class EngineStore(Store, metaclass=Singleton):
         #        for ei_key, ei_object in self._emission_indices.items():
         #            ei_object.setModePowerSetting(mode_, power_setting_)
 
-        #instantiate all engine objects
+        # instantiate all engine objects
         self.initEngines()
 
     def initEngines(self):
         for engine_name, ei in list(self.getEngineEmissionIndices().items()):
-            #add engine to store
-            self.setObject(engine_name, Engine({"name":engine_name}))
-            #associate each engine an emission-index object
+            # add engine to store
+            self.setObject(engine_name, Engine({"name": engine_name}))
+            # associate each engine an emission-index object
             self.getObject(engine_name).setEmissionIndex(ei)
 
-            #self.getObject(engine_name).setStartEmissionFactors(ei) #association of start ef by aircraft group! but information only available for movements ->set emission factor when instantiating aircraft object
+            # self.getObject(engine_name).setStartEmissionFactors(ei) #association of start ef by aircraft group! but information only available for movements ->set emission factor when instantiating aircraft object
 
     def getEngineEmissionIndicesDatabase(self):
         return self._emission_indices_db
