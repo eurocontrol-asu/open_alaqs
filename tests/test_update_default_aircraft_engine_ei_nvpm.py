@@ -1,7 +1,6 @@
 from pathlib import Path
 import pandas as pd
 import pytest
-
 from open_alaqs.db_updates.update_default_aircraft_engine_ei_nvpm import (
     SCALING_FACTORS,
     AIR_FUEL_RATIO,
