@@ -157,7 +157,7 @@ def calculate_nvpm_number_ei(ei_nvpm_mass: float, db_line: pd.Series) -> float:
     )
 
 
-def evalute_beta(old_line: pd.Series) -> float:
+def evaluate_beta(old_line: pd.Series) -> float:
     """
     Function that evaluates beta factor based on engine type.
 
@@ -238,7 +238,7 @@ if __name__ == "__main__":
             smoke_number_k
         )
 
-        beta = evalute_beta(old_line)
+        beta = evaluate_beta(old_line)
 
         # Assign air fuel ratio based on engine mode
         engine_afr = AIR_FUEL_RATIO[old_line["mode"]]
