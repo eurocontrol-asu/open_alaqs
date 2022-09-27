@@ -1,2 +1,0 @@
-Scenario,DateTime(YYYY-mm-dd hh:mm:ss),Temperature(K),Humidity(kg_water/kg_dry_air),RelativeHumidity(%),SeaLevelPressure(mb),WindSpeed(m/s),WindDirection(degrees),ObukhovLength(m),MixingHeight(m)
-default,2015-01-01 00:00:00,288.5,0.00634,0.68,97600,3,225,99999,914.4

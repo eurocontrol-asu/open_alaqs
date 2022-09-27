@@ -1,10 +1,11 @@
+from pathlib import Path
 import sys
 
 import pandas as pd
 import numpy as np
 import sqlalchemy   
 
-
+MOST_FREQUENT_ENGINES_FILE = "most_freq_eng_per_aircraft_type.csv"
 EMISSIONS_FILE = "EEA_AEM_Acft_Mapping_Eng_LTO_Indices_2022_02-05-2022_v4.xlsx"
 ENGINES_EMISSIONS_TAB = "AEM_ENGINE_LTO_VALUES.(v256)"
 ENGINES_ID_LIST_TAB = "ENGINES_ID_LIST"
@@ -21,6 +22,8 @@ def get_engine(db_url: str):
     """
     Returns the database engine
     """
+    db_url = "sqlite:///" + db_url + ".alaqs"
+
     return sqlalchemy.create_engine(db_url)
 
 
@@ -45,6 +48,8 @@ if __name__ == "__main__":
     # How to get the engine relationship between both tables?    
     """
 
+    file_path = Path(__file__).parent
+
     # Check if user added right number of arguments when calling the function
     if len(sys.argv) != 3:
         raise Exception(
@@ -52,12 +57,13 @@ if __name__ == "__main__":
         )
 
     # Import relevant tabs from Excel
+    most_frequent_engines = pd.read_csv(file_path / MOST_FREQUENT_ENGINES_FILE)
     engines_id_list = pd.read_excel(
-        EMISSIONS_FILE,
+        file_path / EMISSIONS_FILE,
         ENGINES_ID_LIST_TAB
     )
     engine_emissions = pd.read_excel(
-        EMISSIONS_FILE,
+        file_path / EMISSIONS_FILE,
         ENGINES_EMISSIONS_TAB
     )
 
@@ -175,3 +181,8 @@ if __name__ == "__main__":
     with get_engine(sys.argv[2]).connect() as conn:
         old_blank_study = old_blank_study.drop(columns={"STATUS"})
         old_blank_study.to_sql("default_aircraft_engine_ei", con=conn, index = False, if_exists = 'replace')
+
+
+# AEM engine LTO values: use for other emissions
+# source
+# in folder profiles: ICAO doc 8643 for arrival/departure profiles

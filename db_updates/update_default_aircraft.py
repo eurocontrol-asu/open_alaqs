@@ -1,3 +1,4 @@
+from pathlib import Path
 import sys
 
 import pandas as pd
@@ -23,6 +24,8 @@ def get_engine(db_url: str):
     """
     Returns the database engine
     """
+    db_url = "sqlite:///" + db_url + ".alaqs"
+
     return sqlalchemy.create_engine(db_url)
 
 
@@ -38,6 +41,8 @@ if __name__ == "__main__":
     # Missing ac_group_code, ac_group, engine, mtow, depaurte_profile, arrival_profile, apu_id. Using
     old blank study to fill gaps. Not all are covered 
     """
+    
+    file_path = Path(__file__).parent
 
     # Check if user added right number of arguments when calling the function
     if len(sys.argv) != 3:
@@ -46,18 +51,18 @@ if __name__ == "__main__":
         )
 
     # Import relevant tabs
-    most_frequent_engines = pd.read_csv(MOST_FREQUENT_ENGINES_FILE)
+    most_frequent_engines = pd.read_csv(file_path / MOST_FREQUENT_ENGINES_FILE)
     aircraft_to_engine_number = pd.read_excel(
-        EMISSIONS_FILE, 
+        file_path / EMISSIONS_FILE, 
         AIRCRAFT_TO_ENGINE_TAB
     )
     icao_doc_8643 = pd.read_excel(
-        EMISSIONS_FILE,
+        file_path / EMISSIONS_FILE,
         MANUFACTURER_INFO_TAB
     )
     icao_doc_8643 = icao_doc_8643.drop(columns="engine_count")
     engines_id_list = pd.read_excel(
-        EMISSIONS_FILE,
+        file_path / EMISSIONS_FILE,
         ENGINES_ID_LIST_TAB
     )
 
@@ -101,7 +106,6 @@ if __name__ == "__main__":
                 "icao",
                 "ac_group_code", 
                 "ac_group", 
-                "engine", 
                 "mtow", 
                 "departure_profile", 
                 "arrival_profile", 
@@ -129,12 +133,23 @@ if __name__ == "__main__":
     new_df = rename_column(new_df, "MODEL_NAME1", "engine_name")
     new_df = rename_column(new_df, "engine_type", "engine_type_delete")
     new_df = rename_column(new_df, "ENGINE_TYPE_y", "engine_type")
+    new_df = rename_column(new_df, "ENGINE_CODE", "engine")
 
     # Create class column
     new_df["class"] = new_df["description"] + "/" + new_df["wake_category"] 
 
     # Save updated data
     with get_engine(sys.argv[2]).connect() as conn:
+
+        # The lines above correspond to individual changes to specific aircraft
+        # Remove military aircraft
+        military = ["A178", "A22", "C1", "KC2", "T34T"]
+        new_df = new_df.drop(new_df[new_df["icao"].isin(military)].index)
+
+        # Add information
+        # new_df.loc[new_df["icao"] == "A337", "mtow"] = 227000 # Wikipedia
+        # new_df.loc[new_df["icao"] == "A338", "mtow"] = 251000 # https://contentzone.eurocontrol.int/aircraftperformance/details.aspx?ICAO=A338&GroupFilter=3
+
         default_aircraft = new_df[
             [
                 "oid", 
