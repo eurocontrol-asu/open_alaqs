@@ -279,3 +279,18 @@ Leave a star in GitHub, give a clap in Medium and share this guide if you found 
 <!-- Add the footer here -->
 
 <!-- ![Footer](https://github.com/navendu-pottekkat/awesome-readme/blob/master/fooooooter.png) -->
+
+# Updating OpenALAQS database
+
+The folder `db_updates` contains scripts that update some of the OpenALAQS tables.
+
+- The script `update_default_aircraft` creates a new aircraft table based on a list of most frequently used aircraft types. The following
+commands should be used to run the script:
+
+```shell
+cd db_updates
+python -m update_default_aircraft `name_of_old_database` `name_of_new_database`
+```
+
+The fields `name_of_old_database` and `name_of_new_database` should only include the actual name of the databases. No extensions need to
+be added (such as .alaqs).
