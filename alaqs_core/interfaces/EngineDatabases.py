@@ -119,24 +119,6 @@ class HelicopterEngineEmissionIndicesDatabase(SQLSerializable,
 
         self._heli_emission_indices = OrderedDict()
         self._modes = ['GI1', 'GI2', 'TO', 'AP']
-        defaultEI = {
-            "fuel_kg_sec": 0.,
-            "co_g_kg": 0.,
-            "co2_g_kg": 3.16 * 1000.,
-            "hc_g_kg": 0.,
-            "nox_g_kg": 0.,
-            "sox_g_kg": 0.,
-            "pm10_g_kg": 0.,
-            "p1_g_kg": 0.,
-            "p2_g_kg": 0.,
-            "smoke_number": 0.,
-            "smoke_number_maximum": 0.,
-            "fuel_type": "",
-            "pm10_prefoa3_g_kg": 0.,
-            "pm10_nonvol_g_kg": 0.,
-            "pm10_sul_g_kg": 0.,
-            "pm10_organic_g_kg": 0.
-        }
 
         if self._db_path:
             self.deserialize()
@@ -226,7 +208,9 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
                 ("pm10_prefoa3", "DECIMAL"),
                 ("pm10_nonvol", "DECIMAL"),
                 ("pm10_sul", "DECIMAL"),
-                ("pm10_organic", "DECIMAL")
+                ("pm10_organic", "DECIMAL"),
+                ("nvpm_ei", "DECIMAL"),
+                ("nvpm_number_ei", "DECIMAL"),
             ])
 
         SQLSerializable.__init__(self, db_path_string, table_name_string,
@@ -238,15 +222,22 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
             self.deserialize()
             self.initEmissionIndices()
 
-    def initEmissionIndices(self):
-        for ei_key, ei_val in list(self.getEntries().items()):
-            id_name = ei_val["engine_name"] if ei_val["engine_name"] else ei_val["engine_full_name"]
+    def initEmissionIndices(self) -> None:
+        for ei_key, ei_val in self.getEntries().items():
+            id_name = ei_val["engine_name"] if ei_val["engine_name"] else \
+                ei_val["engine_full_name"]
             self.addEngineEmissionIndex(id_name, ei_val)
 
-    def addEngineEmissionIndex(self, icaoIdentifier, ei_dict):
-        if not icaoIdentifier in self._emission_indices:
+    def addEngineEmissionIndex(self, icaoIdentifier: str,
+                               ei_dict: dict) -> None:
+
+        # Create an emission index
+        if icaoIdentifier not in self._emission_indices:
             self._emission_indices[icaoIdentifier] = EngineEmissionIndex()
-        self._emission_indices[icaoIdentifier].setObject(ei_dict["mode"] if "mode" in ei_dict else "unknown", ei_dict)
+
+        # Set the values of the emission index
+        self._emission_indices[icaoIdentifier].setObject(
+            ei_dict.get("mode", "unknown"), ei_dict)
 
     def getEngineEmissionIndices(self):
         return self._emission_indices

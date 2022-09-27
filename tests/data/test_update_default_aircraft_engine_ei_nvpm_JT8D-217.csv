@@ -1,0 +1,5 @@
+oid,engine_type,eng_type,bpr,engine_full_name,engine_name,thrust,mode,fuel_kg_sec,co_ei,hc_ei,nox_ei,sox_ei,pm10_ei,p1_ei,p2_ei,smoke_number,smoke_number_maximum,fuel_type,manufacturer,source,remark,status,engine_name_type,coolant,combustion_technology,technology_age,pm10_prefoa3,pm10_nonvol,pm10_sul,pm10_organic,nvpm_ei,nvpm_number_ei
+665,J,MTF,1.73,JT8D-217,,,TX,,,,,,,,,0,13.3,,,,,,,,,,,,,,,
+666,J,MTF,1.73,JT8D-217,,,TO,,,,,,,,,13.2,13.3,,,,,,,,,,,,,,,
+667,J,MTF,1.73,JT8D-217,,,AP,,,,,,,,,0,13.3,,,,,,,,,,,,,,,
+668,J,MTF,1.73,JT8D-217,,,CL,,,,,,,,,0,13.3,,,,,,,,,,,,,,,

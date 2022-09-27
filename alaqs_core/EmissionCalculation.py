@@ -196,10 +196,12 @@ class EmissionCalculation:
             "pm10_prefoa3_g": 0.,
             "pm10_nonvol_g": 0.,
             "pm10_sul_g": 0.,
-            "pm10_organic_g": 0.
+            "pm10_organic_g": 0.,
+            "nvpm_g": 0.,
+            "nvpm_number": 0.
         }
 
-        # check if a dispersion module is enable
+        # check if a dispersion module is enabled
         dispersion_enabled = len(self.getDispersionModules()) > 0
 
         # list the selected modules

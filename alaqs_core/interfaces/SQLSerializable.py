@@ -97,18 +97,19 @@ class SQLSerializable:
         if not self._table_columns or not self._table_name:
             logger.error("Did not find table column ('%s') or table name definition ('%s')" % (str(self._table_columns), str(self._table_name)))
             return False
-        if not (type(self._table_columns) == type(OrderedDict())):
+        if not isinstance(self._table_columns, OrderedDict):
             logger.error("Expected type for table columns is '%s' but got '%s'." % (str(type(OrderedDict())), type(self._table_columns)))
             return False
 
-        #all usual sql columns
+        # all usual sql columns
         columns_ = list(self._table_columns.keys())
-        #all spatialite sql columns
+        # all spatialite sql columns
         if self._geometry_columns:
             geometry_column_names_ = []
             for k_ in self._geometry_columns:
                 if "column_name" in k_:
-                    geometry_column_names_.append("AsText(%s)" % (str(k_["column_name"])))
+                    geometry_column_names_.append(
+                        "AsText(%s)" % (str(k_["column_name"])))
             columns_.extend(geometry_column_names_)
 
         sql_text = "SELECT %s FROM %s;" % (",".join(columns_), self._table_name)
