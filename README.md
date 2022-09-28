@@ -282,7 +282,8 @@ Leave a star in GitHub, give a clap in Medium and share this guide if you found 
 
 # Updating OpenALAQS database
 
-The folder `db_updates` contains scripts that update some of the OpenALAQS tables.
+The folder `db_updates` contains scripts that update some of the OpenALAQS tables. The old version of the OpenALAQS database
+needs to be inside the folder. All other files (.csv and .xslx) needed for the update should also be inside the folder.
 
 - The script `update_default_aircraft` creates a new aircraft table based on a list of most frequently used aircraft types. The following
 commands should be used to run the script:
