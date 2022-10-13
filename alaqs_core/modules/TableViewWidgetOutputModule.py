@@ -52,17 +52,15 @@ class TableViewWidgetOutputModule(OutputModule):
             "CO [kg]",
             "CO2 [kg]",
             "HC [kg]",
-            "NOx [kg]",
-            "SOx [kg]",
-            "PM10 [kg]",
-            "P1 [kg]",
-            "P2 [kg]",
-            "PM10Prefoa3 [kg]",
-            "PM10Nonvol [kg]",
-            "PM10Sul [kg]",
-            "PM10Organic [kg]",
-            "nvPM mass [kg]",
-            "nvPM number"
+            "NOX [kg]",
+            "SOX [kg]",
+            "PM_total [kg]",
+            "PM_01 [kg]",
+            "PM_25 [kg]",
+            "PMnon_volatile [kg]",
+            "PM_SUL [kg]",
+            "PMvolatile [kg]",
+            "PMnon_volatile_number"
         ])
 
     def process(self, timeval: datetime, result: List[Tuple[Source, Emission]],
