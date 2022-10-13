@@ -19,7 +19,6 @@ logger = get_logger(__name__)
 #             "smoke_number" : 0.,
 #             "smoke_number_maximum" : 0.,
 #             "fuel_type"  : "",
-#             "pm10_prefoa3_g_kg" : 0.,
 #             "pm10_nonvol_g_kg" : 0.,
 #             "pm10_sul_g_kg" : 0.,
 #             "pm10_organic_g_kg" : 0.

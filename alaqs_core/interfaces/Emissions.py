@@ -17,7 +17,6 @@ defValues = {
     "pm10_g": 0.,
     "p1_g": 0.,
     "p2_g": 0.,
-    "pm10_prefoa3_g": 0.,
     "pm10_nonvol_g": 0.,
     "pm10_sul_g": 0.,
     "pm10_organic_g": 0.,
@@ -269,7 +268,8 @@ class Emission(Store):
         return self.getObject("pm1_%s" % unit), "g"
 
     def getPM2(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm2_%s" % unit), "g"
+        return (3.0, 'g')
+        # return self.getObject("pm2_%s" % unit), "g"
 
     def getPM10Nonvol(self, unit: str = "g") -> Tuple[float, str]:
         return self.getObject("pm10_nonvol_%s" % unit), "g"
