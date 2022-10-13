@@ -60,7 +60,6 @@ class SQLiteOutputModule(OutputModule):
                 "pm10_kg":total_emissions_.getPM10(unit="kg")[0],
                 "pm1_kg":total_emissions_.getPM1(unit="kg")[0],
                 "pm2_kg":total_emissions_.getPM2(unit="kg")[0],
-                "pm10prefoa3_kg":total_emissions_.getPM10Prefoa3(unit="kg")[0],
                 "pm10nonvol_kg":total_emissions_.getPM10Nonvol(unit="kg")[0],
                 "pm10sul_kg":total_emissions_.getPM10Sul(unit="kg")[0],
                 "pm10organic_kg":total_emissions_.getPM10Organic(unit="kg")[0]
@@ -78,7 +77,6 @@ class SQLiteOutputModule(OutputModule):
                     "pm10_kg":sum(emissions_).getPM10(unit="kg")[0],
                     "pm1_kg":sum(emissions_).getPM1(unit="kg")[0],
                     "pm2_kg":sum(emissions_).getPM2(unit="kg")[0],
-                    "pm10prefoa3_kg":sum(emissions_).getPM10Prefoa3(unit="kg")[0],
                     "pm10nonvol_kg":sum(emissions_).getPM10Nonvol(unit="kg")[0],
                     "pm10sul_kg":sum(emissions_).getPM10Sul(unit="kg")[0],
                     "pm10organic_kg":sum(emissions_).getPM10Organic(unit="kg")[0]
@@ -117,7 +115,6 @@ class EmissionCalculationResultDatabase(SQLSerializable, metaclass=Singleton):
                 ("pm10_kg", "DECIMAL"),
                 ("pm1_kg", "DECIMAL"),
                 ("pm2_kg", "DECIMAL"),
-                ("pm10prefoa3_kg", "DECIMAL"),
                 ("pm10nonvol_kg", "DECIMAL"),
                 ("pm10sul_kg", "DECIMAL"),
                 ("pm10organic_kg", "DECIMAL")

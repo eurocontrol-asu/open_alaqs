@@ -91,9 +91,6 @@ class EmissionIndex(Store):
     def getPM2(self, unit="g_kg"):
         return (self.getObject("pm2_%s" % (unit)), "g")
 
-    def getPM10Prefoa3(self, unit="g_kg"):
-        return (self.getObject("pm10_prefoa3_%s" % (unit)), "g")
-
     def getPM10Nonvol(self, unit="g_kg"):
         return (self.getObject("pm10_nonvol_%s" % (unit)), "g")
 
@@ -199,7 +196,7 @@ class Emission(Store):
 
         # Set the pollutant keys ({pollutant}_{unit}) dependent on fuel burned
         pollutants = ["co_g", "co2_g", "hc_g", "nox_g", "sox_g", "pm10_g",
-                      "p1_g", "p2_g", "pm10_prefoa3_g", "pm10_nonvol_g",
+                      "p1_g", "p2_g", "pm10_nonvol_g",
                       "pm10_sul_g", "pm10_organic_g", "nvpm_g", "nvpm_number"]
 
         # Determine the total emissions for each pollutant
@@ -227,9 +224,7 @@ class Emission(Store):
         elif "hc" in name:
             return self.getHC(unit=unit)
         elif "pm10" in name:
-            if "prefoa3" in name:
-                return self.getPM10Prefoa3(unit=unit)
-            elif "nonvol" in name:
+            if "nonvol" in name:
                 return self.getPM10Nonvol(unit=unit)
             elif "sul" in name:
                 return self.getPM10Sul(unit=unit)
@@ -275,9 +270,6 @@ class Emission(Store):
 
     def getPM2(self, unit: str = "g") -> Tuple[float, str]:
         return self.getObject("pm2_%s" % unit), "g"
-
-    def getPM10Prefoa3(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm10_prefoa3_%s" % unit), "g"
 
     def getPM10Nonvol(self, unit: str = "g") -> Tuple[float, str]:
         return self.getObject("pm10_nonvol_%s" % unit), "g"
@@ -327,9 +319,6 @@ class Emission(Store):
 
     def addPM2(self, val_in_grams):
         return self.addValue("pm2_g", val_in_grams)
-
-    def addPM10Prefoa3(self, val_in_grams):
-        return self.addValue("pm10_prefoa3_g", val_in_grams)
 
     def addPM10Nonvol(self, val_in_grams):
         return self.addValue("pm10_nonvol_g", val_in_grams)
