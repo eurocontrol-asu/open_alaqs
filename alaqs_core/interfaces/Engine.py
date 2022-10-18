@@ -20,7 +20,6 @@ defaultEI = {
     "smoke_number": 0.,
     "smoke_number_maximum": 0.,
     "fuel_type": "",
-    "pm10_nonvol_g_kg": 0.,
     "pm10_sul_g_kg": 0.,
     "pm10_organic_g_kg": 0.,
     "nvpm_g_kg": 0.,
@@ -73,7 +72,7 @@ class HelicopterEngineEmissionIndex(Store):
 
         # ToDo: Add all pollutants
         for k in ["sox", "p1", "p2", "smoke_number", "smoke_number_maximum",
-                "pm10_nonvol", "pm10_sul", "pm10_organic"]:
+                "pm10_sul", "pm10_organic"]:
             ei_val["%s_g_kg"%k] = 0.
             ei_val["%s_g_kg"%k] = 0.
             ei_val["%s_g_kg"%k] = 0.
@@ -378,7 +377,6 @@ class EngineEmissionIndex(Store):
             'nox_g_kg': 'nox_ei', 'sox_g_kg': 'sox_ei',
             'pm10_g_kg': 'pm10_ei', 'p1_g_kg': 'p1_ei',
             'p2_g_kg': 'p2_ei',
-            'pm10_nonvol_g_kg': 'pm10_nonvol_ei',
             'pm10_sul_g_kg': 'pm10_sul_ei',
             'pm10_organic_g_kg': 'pm10_organic_ei',
             'nvpm_g_kg': 'nvpm_ei',

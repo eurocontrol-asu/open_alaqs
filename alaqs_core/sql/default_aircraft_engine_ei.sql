@@ -26,7 +26,6 @@ CREATE TABLE "default_aircraft_engine_ei" (
   "coolant" VARCHAR(5), 
   "combustion_technology" TEXT, 
   "technology_age" TEXT,
-  "pm10_nonvol" DECIMAL, 
   "pm10_sul" DECIMAL, 
   "pm10_organic" DECIMAL
 );

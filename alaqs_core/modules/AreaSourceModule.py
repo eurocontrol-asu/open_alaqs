@@ -62,7 +62,6 @@ class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
                 "pm10_kg": 0.,
                 "p1_kg": 0.,
                 "p2_kg": 0.,
-                "pm10_nonvol_kg": 0.,
                 "pm10_sul_kg": 0.,
                 "pm10_organic_kg": 0.
             }, defaultValues={})

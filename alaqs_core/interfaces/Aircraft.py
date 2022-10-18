@@ -244,7 +244,6 @@ class AircraftStore(Store, metaclass=Singleton):
                 #         #     "pm10_g" : 0.,
                 #         #     "p1_g" : 0.,
                 #         #     "p2_g": 0.,
-                #         #     "pm10_nonvol_g" : 0.,
                 #         #     "pm10_sul_g" : 0.,
                 #         #     "pm10_organic_g" : 0.
                 #         # })
@@ -295,7 +294,6 @@ class AircraftStore(Store, metaclass=Singleton):
                         "pm10_g" : 0.,
                         "p1_g" : 0.,
                         "p2_g": 0.,
-                        "pm10_nonvol_g" : 0.,
                         "pm10_sul_g" : 0.,
                         "pm10_organic_g" : 0.
                     })

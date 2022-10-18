@@ -94,7 +94,6 @@ class TableViewWidgetOutputModule(OutputModule):
             total_emissions_.getPM10(unit="kg"),
             total_emissions_.getPM1(unit="kg"),
             total_emissions_.getPM2(unit="kg"),
-            total_emissions_.getPM10Nonvol(unit="kg"),
             total_emissions_.getPM10Sul(unit="kg"),
             total_emissions_.getPM10Organic(unit="kg"),
             total_emissions_.getnvPM(unit="kg"),
