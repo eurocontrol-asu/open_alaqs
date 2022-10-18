@@ -42,10 +42,10 @@ class EmissionIndex(Store):
         elif "co" in name:
             return self.getCO()
         elif "nox" in name or "no" in name:
-            return self.getNOx()
+            return self.getNOX()
         # elif "sox" in name:
         elif "sox" in name or "so" in name:
-            return self.getSOx()
+            return self.getSOX()
         elif "hc" in name:
             return self.getHC()
         elif "pm10" in name or "p10" in name:
@@ -75,10 +75,10 @@ class EmissionIndex(Store):
     def getHC(self, unit="g_kg"):
         return (self.getObject("hc_%s" % (unit)), "g")
 
-    def getNOx(self, unit="g_kg"):
+    def getNOX(self, unit="g_kg"):
         return (self.getObject("nox_%s" % (unit)), "g")
 
-    def getSOx(self, unit="g_kg"):
+    def getSOX(self, unit="g_kg"):
         return (self.getObject("sox_%s" % (unit)), "g")
 
     def getPM10(self, unit="g_kg"):
@@ -217,9 +217,9 @@ class Emission(Store):
         elif "co" in name:
             return self.getCO(unit=unit)
         elif "nox" in name or "no" in name:
-            return self.getNOx(unit=unit)
+            return self.getNOX(unit=unit)
         elif "sox" in name:
-            return self.getSOx(unit=unit)
+            return self.getSOX(unit=unit)
         elif "hc" in name:
             return self.getHC(unit=unit)
         elif "pm10" in name:
@@ -255,10 +255,10 @@ class Emission(Store):
     def getHC(self, unit: str = "g") -> Tuple[float, str]:
         return self.getObject("hc_%s" % unit), "g"
 
-    def getNOx(self, unit: str = "g") -> Tuple[float, str]:
+    def getNOX(self, unit: str = "g") -> Tuple[float, str]:
         return self.getObject("nox_%s" % unit), "g"
 
-    def getSOx(self, unit: str = "g") -> Tuple[float, str]:
+    def getSOX(self, unit: str = "g") -> Tuple[float, str]:
         return self.getObject("sox_%s" % unit), "g"
 
     def getPM10(self, unit: str = "g") -> Tuple[float, str]:
@@ -305,10 +305,10 @@ class Emission(Store):
     def addHC(self, val_in_grams):
         return self.addValue("hc_g", val_in_grams)
 
-    def addNOx(self, val_in_grams):
+    def addNOX(self, val_in_grams):
         return self.addValue("nox_g", val_in_grams)
 
-    def addSOx(self, val_in_grams):
+    def addSOX(self, val_in_grams):
         return self.addValue("sox_g", val_in_grams)
 
     def addPM10(self, val_in_grams):

@@ -250,8 +250,8 @@ class Movement:
             if not gpu_emission_index is None:
                 gpu_emissions.addCO(gpu_emission_index.getCO("kg_hour")[0]*1000.* occupancy_in_min_GPU/60.)
                 gpu_emissions.addHC(gpu_emission_index.getHC("kg_hour")[0]*1000.* occupancy_in_min_GPU/60.)
-                gpu_emissions.addNOx(gpu_emission_index.getNOx("kg_hour")[0]*1000.* occupancy_in_min_GPU/60.)
-                gpu_emissions.addSOx(gpu_emission_index.getSOx("kg_hour")[0]*1000.* occupancy_in_min_GPU/60.)
+                gpu_emissions.addNOX(gpu_emission_index.getNOX("kg_hour")[0] * 1000. * occupancy_in_min_GPU / 60.)
+                gpu_emissions.addSOX(gpu_emission_index.getSOX("kg_hour")[0] * 1000. * occupancy_in_min_GPU / 60.)
                 gpu_emissions.addPM10(gpu_emission_index.getPM10("kg_hour")[0]*1000.* occupancy_in_min_GPU/60.)
                 gpu_emissions.setGeometryText(self.getGate().getGeometryText())
                 emissions.append({'distance_space': 0.0, 'distance_time': 0.0, 'emissions': gpu_emissions})
@@ -262,8 +262,8 @@ class Movement:
             if not gse_emission_index is None:
                 gse_emissions.addCO(gse_emission_index.getCO("kg_hour")[0]*1000. * occupancy_in_min_GSE/60.)
                 gse_emissions.addHC(gse_emission_index.getHC("kg_hour")[0]*1000.* occupancy_in_min_GSE/60.)
-                gse_emissions.addNOx(gse_emission_index.getNOx("kg_hour")[0]*1000.* occupancy_in_min_GSE/60.)
-                gse_emissions.addSOx(gse_emission_index.getSOx("kg_hour")[0]*1000.* occupancy_in_min_GSE/60.)
+                gse_emissions.addNOX(gse_emission_index.getNOX("kg_hour")[0] * 1000. * occupancy_in_min_GSE / 60.)
+                gse_emissions.addSOX(gse_emission_index.getSOX("kg_hour")[0] * 1000. * occupancy_in_min_GSE / 60.)
                 gse_emissions.addPM10(gse_emission_index.getPM10("kg_hour")[0]*1000.* occupancy_in_min_GSE/60.)
                 gse_emissions.setGeometryText(self.getGate().getGeometryText())
                 emissions.append({'distance_space': 0.0, 'distance_time': 0.0, 'emissions': gse_emissions})
@@ -462,9 +462,9 @@ class Movement:
                             if "hc_g_s"  in apu_em:
                                 em_.addHC(apu_em["hc_g_s"] * apu_time)
                             if "nox_g_s"  in apu_em:
-                                em_.addNOx(apu_em["nox_g_s"] * apu_time)
+                                em_.addNOX(apu_em["nox_g_s"] * apu_time)
                             if "sox_g_s"  in apu_em:
-                                em_.addSOx(apu_em["sox_g_s"] * apu_time)
+                                em_.addSOX(apu_em["sox_g_s"] * apu_time)
                             if "pm10_g_s"  in apu_em:
                                 em_.addPM10(apu_em["pm10_g_s"] * apu_time)
 
@@ -856,7 +856,7 @@ class Movement:
                 copy_emission_index_ = copy.deepcopy(emission_index_)
                 if method["config"]["apply_nox_corrections"]:
                     logger.info("Applying NOx Correction for Ambient Conditions")
-                    corr_nox_ei = nox_correction_for_ambient_conditions(emission_index_.getNOx(),
+                    corr_nox_ei = nox_correction_for_ambient_conditions(emission_index_.getNOX(),
                                                                         method["config"]["airport_altitude"], self.getTakeoffWeightRatio(),
                                                                         ac=method["config"]["ambient_conditions"])
                     copy_emission_index_.setObject("nox_g_kg", corr_nox_ei)
@@ -883,7 +883,7 @@ class Movement:
                             logger.error("Couldn't add emission index for PM10 (%s)"%self.getName())
 
                         sox_g_kg = self.getAircraftEngine().getEmissionIndex().getEmissionIndexByMode(
-                            startPoint_.getMode()).getSOx()
+                            startPoint_.getMode()).getSOX()
                         try:
                             copy_emission_index_.setObject("sox_g_kg", sox_g_kg[0])
                         except:
@@ -892,7 +892,7 @@ class Movement:
                     if method["config"]["apply_nox_corrections"]:
                         logger.info("Applying NOx Correction for Ambient Conditions. NOx EI will be calculated using 'By mode' method.")
                         nox_g_kg = self.getAircraftEngine().getEmissionIndex().getEmissionIndexByMode(
-                            startPoint_.getMode()).getNOx()
+                            startPoint_.getMode()).getNOX()
                         corr_nox_ei = nox_correction_for_ambient_conditions(nox_g_kg,
                                                                             method["config"]["airport_altitude"], self.getTakeoffWeightRatio(), ac=method["config"]["ambient_conditions"])
                         copy_emission_index_.setObject("nox_g_kg", corr_nox_ei)

@@ -308,8 +308,8 @@ class AircraftStore(Store, metaclass=Singleton):
                             if value["aircraft_group"] == ac_group:
                                 start_ei.addCO(value["co"])
                                 start_ei.addHC(value["hc"])
-                                start_ei.addNOx(value["nox"])
-                                start_ei.addSOx(value["sox"])
+                                start_ei.addNOX(value["nox"])
+                                start_ei.addSOX(value["sox"])
                                 start_ei.addPM10(value["pm10"])
                                 start_ei.addPM1(value["p1"])
                                 start_ei.addPM2(value["p2"])
