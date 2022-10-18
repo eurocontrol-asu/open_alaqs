@@ -220,16 +220,19 @@ if __name__ == "__main__":
     for index, old_line in old_blank_study.iterrows():
 
         # Evaluate scaling factor based on engine type
-        if "aviadvigatel" in old_line["manufacturer"]:
-            engine_scaling_factor = SCALING_FACTORS["aviadgatel"][old_line["mode"]]
-        elif "textron" in old_line["manufacturer"]:
-            engine_scaling_factor = SCALING_FACTORS["textron"][old_line["mode"]]
-        elif "cfm" in old_line["manufacturer"]:
-            engine_scaling_factor = SCALING_FACTORS["cfm_dac"][old_line["mode"]]
-        elif "CF34" in old_line["engine_full_name"]:
-            engine_scaling_factor = SCALING_FACTORS["ge_cf34"][old_line["mode"]]
-        else:
+        if old_line["manufacturer"] is None:
             engine_scaling_factor = SCALING_FACTORS["non_dac"][old_line["mode"]]
+        else:
+            if "aviadvigatel" in old_line["manufacturer"]:
+                engine_scaling_factor = SCALING_FACTORS["aviadgatel"][old_line["mode"]]
+            elif "textron" in old_line["manufacturer"]:
+                engine_scaling_factor = SCALING_FACTORS["textron"][old_line["mode"]]
+            elif "cfm" in old_line["manufacturer"]:
+                engine_scaling_factor = SCALING_FACTORS["cfm_dac"][old_line["mode"]]
+            elif "CF34" in old_line["engine_full_name"]:
+                engine_scaling_factor = SCALING_FACTORS["ge_cf34"][old_line["mode"]]
+            else:
+                engine_scaling_factor = SCALING_FACTORS["non_dac"][old_line["mode"]]
 
         smoke_number_k = calculate_smoke_number(old_line, engine_scaling_factor)
 
