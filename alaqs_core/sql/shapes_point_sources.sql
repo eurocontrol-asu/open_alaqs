@@ -18,7 +18,7 @@ CREATE TABLE "shapes_point_sources" (
   "hc_kg_k" DECIMAL,
   "nox_kg_k" DECIMAL,
   "sox_kg_k" DECIMAL,
-  "pm10_kg_k" DECIMAL,
+  "pm_total_kg_k" DECIMAL,
   "p1_kg_k" DECIMAL,
   "p2_kg_k" DECIMAL,
   "instudy" TEXT,

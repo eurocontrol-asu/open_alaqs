@@ -767,7 +767,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
             for poll in self._pollutants_list:
                 if poll.startswith('PM'):
-                    poll = "PM-2" if poll == "PM10" else "PM-1"
+                    poll = "PM-2" if poll == "PM_total" else "PM-1"
                 text_file.write("%s\t%s\t' total %s (in g/s) (set in series.dmna)\n" \
                                 % (poll.lower(), ("\t").join(
                     ["?" if poll in self._total_sources[src] else "0" for iq, src in
@@ -1147,7 +1147,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
             self._total_sources.setdefault(source_id, [])
             if _pollutant.startswith("PM"):
-                _pollutant = "PM-2" if _pollutant == "PM10" else "PM-1"
+                _pollutant = "PM-2" if _pollutant == "PM_total" else "PM-1"
             if _pollutant not in self._total_sources[source_id]:
                 self._total_sources.setdefault(source_id, []).append(_pollutant)
 

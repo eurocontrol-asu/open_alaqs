@@ -1,6 +1,6 @@
-DROP TABLE IF EXISTS "default_vehicle_pm10_ef";
+DROP TABLE IF EXISTS "default_vehicle_pm_total_ef";
 
-CREATE TABLE "default_vehicle_pm10_ef" (
+CREATE TABLE "default_vehicle_pm_total_ef" (
   "oid" INTEGER PRIMARY KEY, 
   "vehicle_type" TEXT, 
   "class" TEXT, 

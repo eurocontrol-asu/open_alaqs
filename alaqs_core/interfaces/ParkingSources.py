@@ -45,7 +45,7 @@ class ParkingSources(Source):
         init_values = {}
         default_values = {}
         for key_ in ["co_gm_vh", "hc_gm_vh", "nox_gm_vh", "sox_gm_vh",
-                     "pm10_gm_vh", "p1_gm_vh", "p2_gm_vh"]:
+                     "pm_total_gm_vh", "p1_gm_vh", "p2_gm_vh"]:
             if key_ in val:
                 init_values[key_] = float(val[key_])
                 default_values[key_] = 0.
@@ -174,7 +174,7 @@ class ParkingSourcesDatabase(SQLSerializable, metaclass=Singleton):
                 ("hc_gm_vh", "DECIMAL"),
                 ("nox_gm_vh", "DECIMAL"),
                 ("sox_gm_vh", "DECIMAL"),
-                ("pm10_gm_vh", "DECIMAL"),
+                ("pm_total_gm_vh", "DECIMAL"),
                 ("p1_gm_vh", "DECIMAL"),
                 ("p2_gm_vh", "DECIMAL"),
                 ("method", "TEXT"),

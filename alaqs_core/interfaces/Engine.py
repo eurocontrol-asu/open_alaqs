@@ -14,7 +14,7 @@ defaultEI = {
     "hc_g_kg": 0.,
     "nox_g_kg": 0.,
     "sox_g_kg": 0.,
-    "pm10_g_kg": 0.,
+    "pm_total_g_kg": 0.,
     "p1_g_kg": 0.,
     "p2_g_kg": 0.,
     "smoke_number": 0.,
@@ -56,8 +56,8 @@ class HelicopterEngineEmissionIndex(Store):
         ei_val["fuel_kg_sec"] = val['%s_ff_per_engine_kg_s'%(mode.lower())] \
             if '%s_ff_per_engine_kg_s'%(mode.lower()) in val else 0.
 
-        for k in ["co", "hc", "nox", "pm10"]:
-            if k == "pm10":
+        for k in ["co", "hc", "nox", "pm_total"]:
+            if k == "pm_total":
                 ei_val["%s_g_kg"%k] = val['%s_eipm_g_kg'%(mode.lower())]
             else:
                 ei_val["%s_g_kg"%k] = val['%s_ei%s_g_kg'%(mode.lower(), k)]
@@ -375,7 +375,7 @@ class EngineEmissionIndex(Store):
             'smoke_number_maximum': 'smoke_number_maximum',
             'co_g_kg': 'co_ei', 'hc_g_kg': 'hc_ei',
             'nox_g_kg': 'nox_ei', 'sox_g_kg': 'sox_ei',
-            'pm10_g_kg': 'pm10_ei', 'p1_g_kg': 'p1_ei',
+            'pm_total_g_kg': 'pm_total_ei', 'p1_g_kg': 'p1_ei',
             'p2_g_kg': 'p2_ei',
             'pm10_sul_g_kg': 'pm10_sul_ei',
             'pm10_organic_g_kg': 'pm10_organic_ei',

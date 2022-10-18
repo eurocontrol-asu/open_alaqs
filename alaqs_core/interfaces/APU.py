@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 #             "hc_g_kg" : 0.,
 #             "nox_g_kg" : 0.,
 #             "sox_g_kg" : 0.,
-#             "pm10_g_kg" : 0.,
+#             "pm_total_g_kg" : 0.,
 #             "p1_g_kg" : 0.,
 #             "p2_g_kg": 0.,
 #             "smoke_number" : 0.,
@@ -43,8 +43,8 @@ class APU:
                                          "nox_kg_h"] * 1 / 3.6 if "nox_kg_h" in val else 0.
         self._emissions["sox_g_s"] = val[
                                          "sox_kg_h"] * 1 / 3.6 if "sox_kg_h" in val else 0.
-        self._emissions["pm10_g_s"] = val[
-                                          "pm10_kg_h"] * 1 / 3.6 if "pm10_kg_h" in val else 0.
+        self._emissions["pm_total_g_s"] = val[
+                                          "pm_total_kg_h"] * 1 / 3.6 if "pm_total_kg_h" in val else 0.
         self._emissions["co2_g_s"] = val[
                                          "fuel_kg_h"] * 3.16 * 1000. / 3600 if "fuel_kg_h" in val else 0.
 
@@ -190,7 +190,7 @@ class APUDatabase(SQLSerializable, metaclass=Singleton):
                 ("hc_kg_h", "DECIMAL"),
                 ("nox_kg_h", "DECIMAL"),
                 ("sox_kg_h", "DECIMAL"),
-                ("pm10_kg_h", "DECIMAL")
+                ("pm_total_kg_h", "DECIMAL")
             ])
         if geometry_columns is None:
             geometry_columns = []

@@ -30,7 +30,7 @@ class EngineEmissionFactorsStartDatabase(SQLSerializable, metaclass=Singleton):
                 ("hc", "DOUBLE PRECISION NULL"),
                 ("nox", "DOUBLE PRECISION NULL"),
                 ("sox", "DOUBLE PRECISION NULL"),
-                ("pm10", "DOUBLE PRECISION NULL"),
+                ("pm_total", "DOUBLE PRECISION NULL"),
                 ("p1", "DOUBLE PRECISION NULL"),
                 ("p2", "DOUBLE PRECISION NULL"),
             ])
@@ -191,7 +191,7 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
                 ("hc_ei", "DECIMAL"),
                 ("nox_ei", "DECIMAL"),
                 ("sox_ei", "DECIMAL"),
-                ("pm10_ei", "DECIMAL"),
+                ("pm_total_ei", "DECIMAL"),
                 ("p1_ei", "DECIMAL"),
                 ("p2_ei", "INTEGER"),
                 ("smoke_number", "DECIMAL"),

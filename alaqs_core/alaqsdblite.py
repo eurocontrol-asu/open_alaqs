@@ -503,7 +503,7 @@ def add_roadway_dict(roadway_dict):
         p14 = roadway_dict['roadway_hc_gm_km']
         p15 = roadway_dict['roadway_nox_gm_km']
         p16 = roadway_dict['roadway_sox_gm_km']
-        p17 = roadway_dict['roadway_pm10_gm_km']
+        p17 = roadway_dict['roadway_pm_total_gm_km']
         p18 = roadway_dict['roadway_p1_gm_km']
         p19 = roadway_dict['roadway_p2_gm_km']
         p20 = roadway_dict['roadway_method']
@@ -521,7 +521,7 @@ def add_roadway_dict(roadway_dict):
         elif result is None or result == []:
             sql_text = "INSERT INTO shapes_roadways (roadway_id,vehicle_year,speed,distance,height," \
                        "vehicle_light,vehicle_medium,vehicle_heavy,hour_profile,daily_profile,month_profile," \
-                       "co_gm_km,hc_gm_km,nox_gm_km,sox_gm_km,pm10_gm_km,p1_gm_km,p2_gm_km,method,instudy,scenario," \
+                       "co_gm_km,hc_gm_km,nox_gm_km,sox_gm_km,pm_total_gm_km,p1_gm_km,p2_gm_km,method,instudy,scenario," \
                        "geometry) VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s'," \
                        "'%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s'," \
                        "ST_Transform(GeomFromText('%s', 4326), 3857))" % \
@@ -532,7 +532,7 @@ def add_roadway_dict(roadway_dict):
             sql_text = "UPDATE shapes_roadways SET roadway_id='%s', vehicle_year='%s', speed='%s', " \
                        "distance='%s', height='%s', vehicle_light='%s', vehicle_medium='%s', vehicle_heavy='%s', " \
                        "hour_profile='%s', daily_profile='%s', month_profile='%s', co_gm_km='%s', " \
-                       "hc_gm_km='%s', nox_gm_km='%s', sox_gm_km='%s', pm10_gm_km='%s', p1_gm_km='%s', p2_gm_km='%s', " \
+                       "hc_gm_km='%s', nox_gm_km='%s', sox_gm_km='%s', pm_total_gm_km='%s', p1_gm_km='%s', p2_gm_km='%s', " \
                        "method='%s', instudy='%s', scenario='%s', " \
                        "geometry=ST_Transform(GeomFromText('%s', 4326), 3857) WHERE roadway_id='%s';" % \
                        (p0, p1, p3, p4, p5, p6, p7, p8, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20,
@@ -555,7 +555,7 @@ def get_roadway(roadway_id):
     try:
         sql_text = "SELECT oid, roadway_id, vehicle_year, vehicle_hour, speed, distance, height, \
             vehicle_light, vehicle_medium, vehicle_heavy, year_hour, hour_profile, daily_profile, month_profile, \
-            co_gm_km, hc_gm_km, nox_gm_km, sox_gm_km, pm10_gm_km, p1_gm_km, p2_gm_km, method, instudy, \
+            co_gm_km, hc_gm_km, nox_gm_km, sox_gm_km, pm_total_gm_km, p1_gm_km, p2_gm_km, method, instudy, \
             scenario,vehicle_years_old,AsText(geometry) FROM shapes_roadways WHERE roadway_id=\"%s\";" % roadway_id
         result = query_string(sql_text)
         return result
@@ -880,7 +880,7 @@ def add_point_source(point_source_dict):
         p15 = point_source_dict['source_hc_kg_k']
         p16 = point_source_dict['source_nox_kg_k']
         p17 = point_source_dict['source_sox_kg_k']
-        p18 = point_source_dict['source_pm10_kg_k']
+        p18 = point_source_dict['source_pm_total_kg_k']
         p19 = point_source_dict['source_p1_kg_k']
         p20 = point_source_dict['source_p2_kg_k']
         p21 = point_source_dict['source_instudy']
@@ -894,7 +894,7 @@ def add_point_source(point_source_dict):
         elif (result == []) or (result is None):
             sql_text = "INSERT INTO shapes_point_sources (source_id, height, category, type, substance, temperature, " \
                        "diameter, velocity, ops_year, hour_profile, daily_profile, month_profile, " \
-                       "co_kg_k, hc_kg_k, nox_kg_k, sox_kg_k, pm10_kg_k, p1_kg_k, p2_kg_k, instudy, geometry) VALUES " \
+                       "co_kg_k, hc_kg_k, nox_kg_k, sox_kg_k, pm_total_kg_k, p1_kg_k, p2_kg_k, instudy, geometry) VALUES " \
                        "('%s','%s','%s','%s','%s','%s','%s','%s', '%s','%s','%s','%s','%s','%s','%s','%s'," \
                        "'%s','%s','%s','%s', ST_Transform(GeomFromText('%s', 4326), 3857))" % \
                        (p0, p1, p2, p3, p4, p5, p6, p7, p8, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22)
@@ -903,7 +903,7 @@ def add_point_source(point_source_dict):
             sql_text = "UPDATE shapes_point_sources SET source_id='%s',height='%s',category='%s',type='%s', " \
                        "substance='%s',temperature='%s',diameter='%s',velocity='%s',ops_year='%s',hour_profile='%s'," \
                        "daily_profile='%s',month_profile='%s',co_kg_k='%s',hc_kg_k='%s',nox_kg_k='%s',sox_kg_k='%s'," \
-                       "sox_kg_k='%s',pm10_kg_k='%s',p1_kg_k='%s',p2_kg_k='%s'," \
+                       "sox_kg_k='%s',pm_total_kg_k='%s',p1_kg_k='%s',p2_kg_k='%s'," \
                        "geometry=ST_Transform(GeomFromText('%s', 4326), 3857) WHERE source_id='%s';" % \
                        (p0, p1, p2, p3, p4, p5, p6, p7, p8, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p0)
             logger.info("Updated point source %s in database" % p0)
@@ -925,7 +925,7 @@ def get_point_source(source_id):
     try:
         sql_text = "SELECT source_id, height, category, type, substance, temperature, diameter, velocity, \
             ops_year, ops_hour, year_hour, hour_profile, daily_profile, month_profile, co_kg_k, hc_kg_k, \
-            nox_kg_k, sox_kg_k, pm10_kg_k, p1_kg_k, p2_kg_k, instudy, AsText(geometry) \
+            nox_kg_k, sox_kg_k, pm_total_kg_k, p1_kg_k, p2_kg_k, instudy, AsText(geometry) \
             FROM shapes_point_sources WHERE source_id=\"%s\";" % source_id
         result = query_string(sql_text)
         return result
@@ -1130,7 +1130,7 @@ def add_parking(properties):
         p16 = properties['parking_hc_gm_vh']
         p17 = properties['parking_nox_gm_vh']
         p18 = properties['parking_sox_gm_vh']
-        p19 = properties['parking_pm10_gm_vh']
+        p19 = properties['parking_pm_total_gm_vh']
         p20 = properties['parking_p1_gm_vh']
         p21 = properties['parking_p2_gm_vh']
         p22 = properties['parking_method']
@@ -1146,7 +1146,7 @@ def add_parking(properties):
         elif result is None or result == []:
             sql_text = "INSERT INTO shapes_parking (parking_id,height,distance,idle_time,park_time,vehicle_light," \
                        "vehicle_medium,vehicle_heavy,vehicle_year,speed,hour_profile," \
-                       "daily_profile,month_profile,co_gm_vh,hc_gm_vh,nox_gm_vh,sox_gm_vh,pm10_gm_vh,p1_gm_vh," \
+                       "daily_profile,month_profile,co_gm_vh,hc_gm_vh,nox_gm_vh,sox_gm_vh,pm_total_gm_vh,p1_gm_vh," \
                        "p2_gm_vh,method,instudy,geometry) VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s'," \
                        "'%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s'," \
                        "ST_Transform(GeomFromText('%s', 4326),3857))" % \
@@ -1157,7 +1157,7 @@ def add_parking(properties):
             sql_text = "UPDATE shapes_parking SET parking_id='%s',height='%s',distance='%s',idle_time='%s'," \
                        "park_time='%s',vehicle_light='%s',vehicle_medium='%s',vehicle_heavy='%s', vehicle_year='%s'," \
                        "speed='%s',hour_profile='%s',daily_profile='%s',month_profile='%s',co_gm_vh='%s'," \
-                       "hc_gm_vh='%s',nox_gm_vh='%s',sox_gm_vh='%s',pm10_gm_vh='%s',p1_gm_vh='%s',p2_gm_vh='%s'," \
+                       "hc_gm_vh='%s',nox_gm_vh='%s',sox_gm_vh='%s',pm_total_gm_vh='%s',p1_gm_vh='%s',p2_gm_vh='%s'," \
                        "method='%s',instudy='%s',geometry=ST_Transform(GeomFromText('%s', 4326),3857) " \
                        "WHERE parking_id='%s';" % \
                        (p0, p1, p2, p3, p4, p5, p6, p7, p8, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21,
@@ -1181,7 +1181,7 @@ def get_parking(parking_id):
     try:
         sql_text = "SELECT parking_id,height,distance, idle_time,park_time,vehicle_light,\
         vehicle_medium,vehicle_heavy,vehicle_year,vehicle_hour,year_hour,speed,hour_profile,\
-        daily_profile,month_profile,co_gm_vh,hc_gm_vh,nox_gm_vh,sox_gm_vh,pm10_gm_vh,\
+        daily_profile,month_profile,co_gm_vh,hc_gm_vh,nox_gm_vh,sox_gm_vh,pm_total_gm_vh,\
         p1_gm_vh,p2_gm_vh,method,instudy,AsText(geometry) FROM shapes_parking WHERE parking_id = \"%s\";" % parking_id
         result = query_string(sql_text)
         if len(result) > 0:
@@ -1203,7 +1203,7 @@ def get_parkings():
     try:
         sql_text = "SELECT parking_id,height,distance, idle_time,park_time,vehicle_light,\
         vehicle_medium,vehicle_heavy,vehicle_year,vehicle_hour,year_hour,speed,hour_profile,\
-        daily_profile,month_profile,co_gm_vh,hc_gm_vh,nox_gm_vh,sox_gm_vh,pm10_gm_vh,\
+        daily_profile,month_profile,co_gm_vh,hc_gm_vh,nox_gm_vh,sox_gm_vh,pm_total_gm_vh,\
         p1_gm_vh,p2_gm_vh,method,instudy,AsText(geometry) FROM shapes_parking ORDER BY parking_id COLLATE NOCASE;"
         result = query_string(sql_text)
         if len(result) > 0:
@@ -1812,7 +1812,7 @@ def inventory_calc_taxiway_emissions(inventory_path, taxiway_name):
                 hc = 0
                 nox = 0
                 sox = 0
-                pm10 = 0
+                pm_total = 0
                 p1 = 0
                 p2 = 0
 
@@ -1863,13 +1863,13 @@ def inventory_calc_taxiway_emissions(inventory_path, taxiway_name):
                                     hc += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(engine_dict['hc_ei']) * float(aircraft_dict['engine_count'])
                                     nox += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(engine_dict['nox_ei']) * float(aircraft_dict['engine_count'])
                                     sox += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(engine_dict['sox_ei']) * float(aircraft_dict['engine_count'])
-                                    pm10 += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(engine_dict['pm10_ei']) * float(aircraft_dict['engine_count'])
+                                    pm_total += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(engine_dict['pm_total_ei']) * float(aircraft_dict['engine_count'])
                                 except:
                                     pass
 
                                 # TODO add queuing emissions for departures
 
-                record = [interval_data['interval_start'], co, hc, nox, sox, pm10, p1, p2]
+                record = [interval_data['interval_start'], co, hc, nox, sox, pm_total, p1, p2]
                 emission_profile.append(record)
 
         conn.close()

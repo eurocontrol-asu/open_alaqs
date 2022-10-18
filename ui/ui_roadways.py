@@ -56,7 +56,7 @@ def form_open(form, layer, feature):
         hc_gm_km_field=form.findChild(QtWidgets.QLineEdit, "hc_gm_km"),
         nox_gm_km_field=form.findChild(QtWidgets.QLineEdit, "nox_gm_km"),
         sox_gm_km_field=form.findChild(QtWidgets.QLineEdit, "sox_gm_km"),
-        pm10_gm_km_field=form.findChild(QtWidgets.QLineEdit, "pm10_gm_km"),
+        pm_total_gm_km_field=form.findChild(QtWidgets.QLineEdit, "pm_total_gm_km"),
         p1_gm_km_field=form.findChild(QtWidgets.QLineEdit, "p1_gm_km"),
         p2_gm_km_field=form.findChild(QtWidgets.QLineEdit, "p2_gm_km"),
         scenario_field=form.findChild(QtWidgets.QComboBox, "scenario"),
@@ -163,7 +163,7 @@ def recalculate_emissions(fields: dict):
         fields['hc_gm_km_field'].setText(str(emission_profile['hc_ef']))
         fields['nox_gm_km_field'].setText(str(emission_profile['nox_ef']))
         fields['sox_gm_km_field'].setText(str(emission_profile['sox_ef']))
-        fields['pm10_gm_km_field'].setText(str(emission_profile['pm10_ef']))
+        fields['pm_total_gm_km_field'].setText(str(emission_profile['pm_total_ef']))
         fields['p1_gm_km_field'].setText(str(emission_profile['p1_ef']))
         fields['p2_gm_km_field'].setText(str(emission_profile['p2_ef']))
 
@@ -278,7 +278,7 @@ def validate(fields: dict):
         validate_field(fields['hc_gm_km_field'], "float"),
         validate_field(fields['nox_gm_km_field'], "float"),
         validate_field(fields['sox_gm_km_field'], "float"),
-        validate_field(fields['pm10_gm_km_field'], "float"),
+        validate_field(fields['pm_total_gm_km_field'], "float"),
         validate_field(fields['p1_gm_km_field'], "float"),
         validate_field(fields['p2_gm_km_field'], "float"),
     ]

@@ -28,6 +28,6 @@ class ConcentrationVisualizationWidget(ModuleConfigurationWidget):
                     "hourly", "8-hours mean", "daily mean", "annual mean"],
                 "selected": "annual mean"},
             "Pollutant": {
-                "available": ["CO2", "CO", "HC", "NOx", "SOx", "PM10"],
+                "available": ["CO2", "CO", "HC", "NOx", "SOx", "PM_total"],
                 "selected": None}
         })

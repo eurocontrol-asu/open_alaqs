@@ -11,5 +11,5 @@ CREATE TABLE "default_aircraft_apu_ef" (
   "hc_kg_h" DECIMAL, 
   "nox_kg_h" DECIMAL, 
   "sox_kg_h" DECIMAL, 
-  "pm10_kg_h" DECIMAL, 
+  "pm_total_kg_h" DECIMAL,
 );

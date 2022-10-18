@@ -36,7 +36,7 @@ class PointSources(Source):
 
         init_values = {}
         default_values = {}
-        for key_ in ["co_kg_k", "hc_kg_k", "nox_kg_k", "sox_kg_k", "pm10_kg_k",
+        for key_ in ["co_kg_k", "hc_kg_k", "nox_kg_k", "sox_kg_k", "pm_total_kg_k",
                      "p1_kg_k", "p2_kg_k"]:
             if key_ in val:
                 init_values[key_] = float(val[key_])
@@ -176,7 +176,7 @@ class PointSourcesDatabase(SQLSerializable, metaclass=Singleton):
                 ("hc_kg_k", "DECIMAL"),
                 ("nox_kg_k", "DECIMAL"),
                 ("sox_kg_k", "DECIMAL"),
-                ("pm10_kg_k", "DECIMAL"),
+                ("pm_total_kg_k", "DECIMAL"),
                 ("p1_kg_k", "DECIMAL"),
                 ("p2_kg_k", "DECIMAL"),
                 ("instudy", "DECIMAL")

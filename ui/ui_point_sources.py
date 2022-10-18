@@ -57,7 +57,7 @@ def form_open(form, layer, feature):
         hc_kg_k=form.findChild(QtWidgets.QLineEdit, "hc_kg_k"),
         nox_kg_k=form.findChild(QtWidgets.QLineEdit, "nox_kg_k"),
         sox_kg_k=form.findChild(QtWidgets.QLineEdit, "sox_kg_k"),
-        pm10_kg_k=form.findChild(QtWidgets.QLineEdit, "pm10_kg_k"),
+        pm_total_kg_k=form.findChild(QtWidgets.QLineEdit, "pm_total_kg_k"),
         p1_kg_k=form.findChild(QtWidgets.QLineEdit, "p1_kg_k"),
         p2_kg_k=form.findChild(QtWidgets.QLineEdit, "p2_kg_k"),
         substance=form.findChild(QtWidgets.QLineEdit, "substance"),
@@ -222,7 +222,7 @@ def change_type_field(fields: dict, type_name: str):
         fields['hc_kg_k'].setText("")
         fields['nox_kg_k'].setText("")
         fields['sox_kg_k'].setText("")
-        fields['pm10_kg_k'].setText("")
+        fields['pm_total_kg_k'].setText("")
         fields['p1_kg_k'].setText("")
         fields['p2_kg_k'].setText("")
 
@@ -249,7 +249,7 @@ def change_type_field(fields: dict, type_name: str):
     hc_kg_k = data[9]
     nox_kg_k = data[10]
     sox_kg_k = data[11]
-    pm10_kg_k = data[12]
+    pm_total_kg_k = data[12]
     p1_kg_k = data[13]
     p2_kg_k = data[14]
     substance = data[15]
@@ -274,7 +274,7 @@ def change_type_field(fields: dict, type_name: str):
     fields['hc_kg_k'].setText(str(hc_kg_k))
     fields['nox_kg_k'].setText(str(nox_kg_k))
     fields['sox_kg_k'].setText(str(sox_kg_k))
-    fields['pm10_kg_k'].setText(str(pm10_kg_k))
+    fields['pm_total_kg_k'].setText(str(pm_total_kg_k))
     fields['p1_kg_k'].setText(str(p1_kg_k))
     fields['p2_kg_k'].setText(str(p2_kg_k))
 
@@ -377,7 +377,7 @@ def validate(fields: dict):
         validate_field(fields['hc_kg_k'], "float"),
         validate_field(fields['nox_kg_k'], "float"),
         validate_field(fields['sox_kg_k'], "float"),
-        validate_field(fields['pm10_kg_k'], "float"),
+        validate_field(fields['pm_total_kg_k'], "float"),
         validate_field(fields['p1_kg_k'], "float"),
         validate_field(fields['p2_kg_k'], "float"),
     ]

@@ -57,7 +57,7 @@ def form_open(form, layer, feature):
         hc_gm_vh_field=form.findChild(QtWidgets.QLineEdit, "hc_gm_vh"),
         nox_gm_vh_field=form.findChild(QtWidgets.QLineEdit, "nox_gm_vh"),
         sox_gm_vh_field=form.findChild(QtWidgets.QLineEdit, "sox_gm_vh"),
-        pm10_gm_vh_field=form.findChild(QtWidgets.QLineEdit, "pm10_gm_vh"),
+        pm_total_gm_vh_field=form.findChild(QtWidgets.QLineEdit, "pm_total_gm_vh"),
         p1_gm_vh_field=form.findChild(QtWidgets.QLineEdit, "p1_gm_vh"),
         p2_gm_vh_field=form.findChild(QtWidgets.QLineEdit, "p2_gm_vh"),
         method_field=form.findChild(QtWidgets.QLineEdit, "method"),
@@ -241,7 +241,7 @@ def recalculate_emissions(fields, form):
         fields['hc_gm_vh_field'].setText(str(emission_profile['hc_ef']))
         fields['nox_gm_vh_field'].setText(str(emission_profile['nox_ef']))
         fields['sox_gm_vh_field'].setText(str(emission_profile['sox_ef']))
-        fields['pm10_gm_vh_field'].setText(str(emission_profile['pm10_ef']))
+        fields['pm_total_gm_vh_field'].setText(str(emission_profile['pm_total_ef']))
         fields['p1_gm_vh_field'].setText(str(emission_profile['p1_ef']))
         fields['p2_gm_vh_field'].setText(str(emission_profile['p2_ef']))
 
@@ -281,7 +281,7 @@ def validate(fields):
         validate_field(fields['hc_gm_vh_field'], "float"),
         validate_field(fields['nox_gm_vh_field'], "float"),
         validate_field(fields['sox_gm_vh_field'], "float"),
-        validate_field(fields['pm10_gm_vh_field'], "float"),
+        validate_field(fields['pm_total_gm_vh_field'], "float"),
         validate_field(fields['p1_gm_vh_field'], "float"),
         validate_field(fields['p2_gm_vh_field'], "float")
     ]

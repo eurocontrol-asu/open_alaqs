@@ -13,7 +13,7 @@ CREATE TABLE "default_gate_profiles" (
   "hc" DECIMAL,
   "nox" DECIMAL,
   "sox" DECIMAL,
-  "pm10" DECIMAL,
+  "pm_total" DECIMAL,
   "source" TEXT,
   UNIQUE ("oid")
 );

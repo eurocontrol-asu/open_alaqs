@@ -241,7 +241,7 @@ class AircraftStore(Store, metaclass=Singleton):
                 #         #     "hc_g" : 0.,
                 #         #     "nox_g" : 0.,
                 #         #     "sox_g" : 0.,
-                #         #     "pm10_g" : 0.,
+                #         #     "pm_total_g" : 0.,
                 #         #     "p1_g" : 0.,
                 #         #     "p2_g": 0.,
                 #         #     "pm10_sul_g" : 0.,
@@ -291,7 +291,7 @@ class AircraftStore(Store, metaclass=Singleton):
                         "hc_g" : 0.,
                         "nox_g" : 0.,
                         "sox_g" : 0.,
-                        "pm10_g" : 0.,
+                        "pm_total_g" : 0.,
                         "p1_g" : 0.,
                         "p2_g": 0.,
                         "pm10_sul_g" : 0.,
@@ -308,7 +308,7 @@ class AircraftStore(Store, metaclass=Singleton):
                                 start_ei.addHC(value["hc"])
                                 start_ei.addNOX(value["nox"])
                                 start_ei.addSOX(value["sox"])
-                                start_ei.addPM10(value["pm10"])
+                                start_ei.addPM_total(value["pm_total"])
                                 start_ei.addPM1(value["p1"])
                                 start_ei.addPM2(value["p2"])
                         ac.getDefaultEngine().setStartEmissions(start_ei) #association of start ef by aircraft group!

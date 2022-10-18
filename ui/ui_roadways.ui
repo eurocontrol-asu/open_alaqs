@@ -279,7 +279,7 @@
        <item row="5" column="1">
         <layout class="QHBoxLayout" name="horizontalLayout_6">
          <item>
-          <widget class="QLineEdit" name="pm10_gm_km"/>
+          <widget class="QLineEdit" name="pm_total_gm_km"/>
          </item>
         </layout>
        </item>
@@ -344,7 +344,7 @@
        <item row="5" column="0">
         <widget class="QLabel" name="label_17">
          <property name="text">
-          <string>PM10 [g/km]</string>
+          <string>PM_total [g/km]</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -459,7 +459,7 @@
   <tabstop>hc_gm_km</tabstop>
   <tabstop>nox_gm_km</tabstop>
   <tabstop>sox_gm_km</tabstop>
-  <tabstop>pm10_gm_km</tabstop>
+  <tabstop>pm_total_gm_km</tabstop>
   <tabstop>p1_gm_km</tabstop>
   <tabstop>p2_gm_km</tabstop>
   <tabstop>method</tabstop>

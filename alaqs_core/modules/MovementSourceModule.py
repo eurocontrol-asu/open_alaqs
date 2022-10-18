@@ -157,7 +157,7 @@ class MovementSourceModule(SourceModule):
             "hc_g": 0.,
             "nox_g": 0.,
             "sox_g": 0.,
-            "pm10_g": 0.,
+            "pm_total_g": 0.,
             "p1_g": 0.,
             "p2_g": 0.,
             "pm10_sul_g": 0.,

@@ -105,7 +105,7 @@ def dict_roadway_data(roadway_data):
         dict_data['hc_gm_km'] = conversion.convertToFloat(roadway_data[13], 0.)
         dict_data['nox_gm_km'] = conversion.convertToFloat(roadway_data[14], 0.)
         dict_data['sox_gm_km'] = conversion.convertToFloat(roadway_data[15], 0.)
-        dict_data['pm10_gm_km'] = conversion.convertToFloat(roadway_data[16], 0.)
+        dict_data['pm_total_gm_km'] = conversion.convertToFloat(roadway_data[16], 0.)
         dict_data['p1_gm_km'] = conversion.convertToFloat(roadway_data[17], 0.)
         dict_data['p2_gm_km'] = conversion.convertToFloat(roadway_data[18], 0.)
         dict_data['method'] = str(roadway_data[19])
@@ -138,7 +138,7 @@ def dict_parking_data(parking_data):
         dict_data['hc_gm_vh'] = conversion.convertToFloat(parking_data[15], 0.)
         dict_data['nox_gm_vh'] = conversion.convertToFloat(parking_data[16], 0.)
         dict_data['sox_gm_vh'] = conversion.convertToFloat(parking_data[17], 0.)
-        dict_data['pm10_gm_vh'] = conversion.convertToFloat(parking_data[18], 0.)
+        dict_data['pm_total_gm_vh'] = conversion.convertToFloat(parking_data[18], 0.)
         dict_data['p1_gm_vh'] = conversion.convertToFloat(parking_data[19], 0.)
         dict_data['p2_gm_vh'] = conversion.convertToFloat(parking_data[20], 0.)
         dict_data['method'] = parking_data[21]
@@ -169,7 +169,7 @@ def dict_stationary_source(source_data):
         dict_source_data['hc_kg_k'] = conversion.convertToFloat(source_data[14],0.)
         dict_source_data['nox_kg_k'] = conversion.convertToFloat(source_data[15],0.)
         dict_source_data['sox_kg_k'] = conversion.convertToFloat(source_data[16],0.)
-        dict_source_data['pm10_kg_k'] = conversion.convertToFloat(source_data[17],0.)
+        dict_source_data['pm_total_kg_k'] = conversion.convertToFloat(source_data[17],0.)
         dict_source_data['p1_kg_k'] = conversion.convertToFloat(source_data[18],0.)
         dict_source_data['p2_kg_k'] = conversion.convertToFloat(source_data[19],0.)
         return dict_source_data
@@ -192,7 +192,7 @@ def dict_area_source(source_data):
         dict_source_data['hc_kg_unit'] = conversion.convertToFloat(source_data[9],0.)
         dict_source_data['nox_kg_unit'] = conversion.convertToFloat(source_data[10],0.)
         dict_source_data['sox_kg_unit'] = conversion.convertToFloat(source_data[11],0.)
-        dict_source_data['pm10_kg_unit'] = conversion.convertToFloat(source_data[12],0.)
+        dict_source_data['pm_total_kg_unit'] = conversion.convertToFloat(source_data[12],0.)
         dict_source_data['p1_kg_unit'] = conversion.convertToFloat(source_data[13],0.)
         dict_source_data['p2_kg_unit'] = conversion.convertToFloat(source_data[14],0.)
         dict_source_data['instudy'] = conversion.convertToInt(source_data[15], 1)
@@ -297,7 +297,7 @@ def dict_start_profile_data(start_profile_data):
     dict_start_profile['hc'] = conversion.convertToFloat(start_profile_data[5], 0.)
     dict_start_profile['nox'] = conversion.convertToFloat(start_profile_data[6], 0.)
     dict_start_profile['sox'] = conversion.convertToFloat(start_profile_data[7], 0.)
-    dict_start_profile['pm10'] = conversion.convertToFloat(start_profile_data[8], 0.)
+    dict_start_profile['pm_total'] = conversion.convertToFloat(start_profile_data[8], 0.)
     dict_start_profile['p1'] = conversion.convertToFloat(start_profile_data[9], 0.)
     dict_start_profile['p2'] = conversion.convertToFloat(start_profile_data[10], 0.)
     return dict_start_profile
@@ -336,9 +336,9 @@ def dict_apu(apu_data):
     apu_dict['hc'] = conversion.convertToFloat(apu_data[7], 0.)
     apu_dict['nox'] = conversion.convertToFloat(apu_data[8], 0.)
     apu_dict['sox'] = conversion.convertToFloat(apu_data[9], 0.)
-    apu_dict['pm10'] = conversion.convertToFloat(apu_data[10], 0.)
-    apu_dict['pm10_a'] = conversion.convertToFloat(apu_data[11], 0.)
-    apu_dict['pm10_b'] = conversion.convertToFloat(apu_data[12], 0.)
+    apu_dict['pm_total'] = conversion.convertToFloat(apu_data[10], 0.)
+    apu_dict['pm_total_a'] = conversion.convertToFloat(apu_data[11], 0.)
+    apu_dict['pm_total_b'] = conversion.convertToFloat(apu_data[12], 0.)
     return apu_dict
 
 
@@ -373,9 +373,9 @@ def dict_engine(engine_data):
         engine_dict['sox_ei'] = conversion.convertToFloat(engine_data[10],0.)
 
     if engine_data[11] == "" or engine_data[10] is None:
-        engine_dict['pm10_ei'] = 0.
+        engine_dict['pm_total_ei'] = 0.
     else:
-        engine_dict['pm10_ei'] = conversion.convertToFloat(engine_data[11],0.)
+        engine_dict['pm_total_ei'] = conversion.convertToFloat(engine_data[11],0.)
 
     engine_dict['p1_ei'] = conversion.convertToFloat(engine_data[12],0.)
     engine_dict['p2_ei'] = conversion.convertToFloat(engine_data[13],0.)
@@ -415,7 +415,7 @@ def dict_gate_profile(gate_data):
         gate_dict['hc'] = conversion.convertToFloat(gate_data[9], 0.)
         gate_dict['nox'] = conversion.convertToFloat(gate_data[10], 0.)
         gate_dict['sox'] = conversion.convertToFloat(gate_data[11], 0.)
-        gate_dict['pm10'] = conversion.convertToFloat(gate_data[12], 0.)
+        gate_dict['pm_total'] = conversion.convertToFloat(gate_data[12], 0.)
         gate_dict['source'] = gate_data[13]
         return gate_dict
     except Exception as e:

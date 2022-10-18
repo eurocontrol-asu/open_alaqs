@@ -1,5 +1,5 @@
 'CO', 'Carbon Monoxide'
 'HC', 'Hydrocarbon'
 'NOX', 'Nitrogen Oxides'
-'PM10', 'Particulate Matter < 10micron'
+'PM_total', 'Particulate Matter < 10micron'
 'SOX', 'Sulphur Oxides'

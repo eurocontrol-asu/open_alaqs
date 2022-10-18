@@ -2302,8 +2302,8 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.resetEmissionCalculationConfiguration()
 
         # initialize GUI
-        # self._pollutants_list = ["CO", "HC", "NOx", "SOx", "PM10", "P1", "P2"]
-        self._pollutants_list = ["CO2", "CO", "HC", "NOx", "SOx", "PM10"]
+        # self._pollutants_list = ["CO", "HC", "NOx", "SOx", "PM_total", "P1", "P2"]
+        self._pollutants_list = ["CO2", "CO", "HC", "NOx", "SOx", "PM_total"]
         self.populate_pollutants()
         self.updateMinMaxGUI()
 
@@ -3097,7 +3097,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
     @catch_errors
     def choose_pollutant(self):
         available_pollutants = [
-            "CO2", "CO", "HC", "NOx", "SOx", "PM10", "P1", "P2"
+            "CO2", "CO", "HC", "NOx", "SOx", "PM_total", "P1", "P2"
         ]
         self.resetEmissionCalculationConfiguration(config={
             "Pollutant": {

@@ -13,7 +13,7 @@ CREATE TABLE "shapes_area_sources" (
   "hc_kg_unit" DECIMAL,
   "nox_kg_unit" DECIMAL,
   "sox_kg_unit" DECIMAL,
-  "pm10_kg_unit" DECIMAL,
+  "pm_total_kg_unit" DECIMAL,
   "p1_kg_unit" DECIMAL,
   "p2_kg_unit" DECIMAL,
   "instudy" TEXT,

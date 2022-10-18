@@ -14,7 +14,7 @@ defValues = {
     "hc_g": 0.,
     "nox_g": 0.,
     "sox_g": 0.,
-    "pm10_g": 0.,
+    "pm_total_g": 0.,
     "p1_g": 0.,
     "p2_g": 0.,
     "pm10_sul_g": 0.,
@@ -47,8 +47,8 @@ class EmissionIndex(Store):
             return self.getSOX()
         elif "hc" in name:
             return self.getHC()
-        elif "pm10" in name or "p10" in name:
-            return self.getPM10()
+        elif "pm_total" in name or "p10" in name:
+            return self.getPM_total()
         elif "pm1" in name or "p1" in name:
             return self.getPM1()
         elif "pm2" in name or "p2" in name:
@@ -80,8 +80,8 @@ class EmissionIndex(Store):
     def getSOX(self, unit="g_kg"):
         return (self.getObject("sox_%s" % (unit)), "g")
 
-    def getPM10(self, unit="g_kg"):
-        return (self.getObject("pm10_%s" % (unit)), "g")
+    def getPM_total(self, unit="g_kg"):
+        return (self.getObject("pm_total_%s" % (unit)), "g")
 
     def getPM1(self, unit="g_kg"):
         return (self.getObject("pm1_%s" % (unit)), "g")
@@ -190,7 +190,7 @@ class Emission(Store):
         self.addValue("fuel_kg", fuel_burned)
 
         # Set the pollutant keys ({pollutant}_{unit}) dependent on fuel burned
-        pollutants = ["co_g", "co2_g", "hc_g", "nox_g", "sox_g", "pm10_g",
+        pollutants = ["co_g", "co2_g", "hc_g", "nox_g", "sox_g", "pm_total_g",
                       "p1_g", "p2_g", "pm10_sul_g", "pm10_organic_g", "nvpm_g", "nvpm_number"]
 
         # Determine the total emissions for each pollutant
@@ -220,10 +220,10 @@ class Emission(Store):
         elif "pm10" in name:
             if "sul" in name:
                 return self.getPM10Sul(unit=unit)
-            elif "organic" in name:
-                return self.getPM10Organic(unit=unit)
             else:
-                return self.getPM10(unit=unit)
+                return self.getPM10Organic(unit=unit)
+        elif "pm_total" in name:
+            return self.getPM_total(unit=unit)
         elif "pm1" in name or "p1" in name:
             return self.getPM1(unit=unit)
         elif "pm2" in name or "p2" in name:
@@ -254,8 +254,8 @@ class Emission(Store):
     def getSOX(self, unit: str = "g") -> Tuple[float, str]:
         return self.getObject("sox_%s" % unit), "g"
 
-    def getPM10(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm10_%s" % unit), "g"
+    def getPM_total(self, unit: str = "g") -> Tuple[float, str]:
+        return self.getObject("pm_total_%s" % unit), "g"
 
     def getPM1(self, unit: str = "g") -> Tuple[float, str]:
         return self.getObject("pm1_%s" % unit), "g"
@@ -300,8 +300,8 @@ class Emission(Store):
     def addSOX(self, val_in_grams):
         return self.addValue("sox_g", val_in_grams)
 
-    def addPM10(self, val_in_grams):
-        return self.addValue("pm10_g", val_in_grams)
+    def addPM_total(self, val_in_grams):
+        return self.addValue("pm_total_g", val_in_grams)
 
     def addPM1(self, val_in_grams):
         return self.addValue("pm1_g", val_in_grams)

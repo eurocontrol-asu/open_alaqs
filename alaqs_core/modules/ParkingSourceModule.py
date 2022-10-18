@@ -69,7 +69,7 @@ class ParkingSourceWithTimeProfileModule(SourceWithTimeProfileModule):
                 "hc_kg": 0.,
                 "nox_kg": 0.,
                 "sox_kg": 0.,
-                "pm10_kg": 0.,
+                "pm_total_kg": 0.,
                 "p1_kg": 0.,
                 "p2_kg": 0.,
                 "pm10_sul_kg": 0.,

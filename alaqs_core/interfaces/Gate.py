@@ -230,7 +230,7 @@ class DefaultGateEmissionProfile:
         initValues = {}
         defaultValues = {}
         suffix = "_kg_hour"
-        for key_ in ["co", "hc", "nox", "sox", "pm10"]:
+        for key_ in ["co", "hc", "nox", "sox", "pm_total"]:
             if key_ in val:
                 initValues[key_ + suffix] = float(val[key_])/1000.
                 defaultValues[key_ + suffix] = 0.
@@ -352,7 +352,7 @@ class DefaultGateEmissionProfileDatabase(SQLSerializable, metaclass=Singleton):
                 ("hc", "DECIMAL"),
                 ("nox", "DECIMAL"),
                 ("sox", "DECIMAL"),
-                ("pm10", "DECIMAL"),
+                ("pm_total", "DECIMAL"),
                 ("source", "TEXT"),
             ])
         if geometry_columns is None:

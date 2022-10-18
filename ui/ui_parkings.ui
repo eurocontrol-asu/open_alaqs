@@ -281,7 +281,7 @@
        <item row="4" column="0">
         <widget class="QLabel" name="label_17">
          <property name="text">
-          <string>PM10 [g/vehicle]</string>
+          <string>PM_total [g/vehicle]</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -289,7 +289,7 @@
         </widget>
        </item>
        <item row="4" column="1">
-        <widget class="QLineEdit" name="pm10_gm_vh"/>
+        <widget class="QLineEdit" name="pm_total_gm_vh"/>
        </item>
        <item row="5" column="0">
         <widget class="QLabel" name="label_18">
@@ -375,7 +375,7 @@
   <tabstop>hc_gm_vh</tabstop>
   <tabstop>nox_gm_vh</tabstop>
   <tabstop>sox_gm_vh</tabstop>
-  <tabstop>pm10_gm_vh</tabstop>
+  <tabstop>pm_total_gm_vh</tabstop>
   <tabstop>p1_gm_vh</tabstop>
   <tabstop>p2_gm_vh</tabstop>
  </tabstops>

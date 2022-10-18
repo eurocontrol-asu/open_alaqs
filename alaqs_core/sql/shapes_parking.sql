@@ -19,7 +19,7 @@ CREATE TABLE "shapes_parking" (
   "hc_gm_vh" DECIMAL,
   "nox_gm_vh" DECIMAL,
   "sox_gm_vh" DECIMAL,
-  "pm10_gm_vh" DECIMAL,
+  "pm_total_gm_vh" DECIMAL,
   "p1_gm_vh" DECIMAL,
   "p2_gm_vh" DECIMAL,
   "method" TEXT,

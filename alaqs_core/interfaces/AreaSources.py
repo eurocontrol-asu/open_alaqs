@@ -41,7 +41,7 @@ class AreaSources(Source):
         init_values = {}
         default_values = {}
         for key_ in ["co_kg_unit", "hc_kg_unit", "nox_kg_unit", "sox_kg_unit",
-                     "pm10_kg_unit", "p1_kg_unit", "p2_kg_unit"]:
+                     "pm_total_kg_unit", "p1_kg_unit", "p2_kg_unit"]:
             if key_ in val:
                 init_values[key_] = float(val[key_])
                 default_values[key_] = 0.
@@ -131,7 +131,7 @@ class AreaSourcesDatabase(SQLSerializable, metaclass=Singleton):
                 ("hc_kg_unit", "DECIMAL"),
                 ("nox_kg_unit", "DECIMAL"),
                 ("sox_kg_unit", "DECIMAL"),
-                ("pm10_kg_unit", "DECIMAL"),
+                ("pm_total_kg_unit", "DECIMAL"),
                 ("p1_kg_unit", "DECIMAL"),
                 ("p2_kg_unit", "DECIMAL"),
                 ("instudy", "DECIMAL")

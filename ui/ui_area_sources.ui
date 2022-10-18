@@ -242,7 +242,7 @@
        <item row="4" column="0">
         <widget class="QLabel" name="label_17">
          <property name="text">
-          <string>PM10 [kg/unit]</string>
+          <string>PM_total [kg/unit]</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -250,7 +250,7 @@
         </widget>
        </item>
        <item row="4" column="1">
-        <widget class="QLineEdit" name="pm10_kg_unit"/>
+        <widget class="QLineEdit" name="pm_total_kg_unit"/>
        </item>
        <item row="5" column="0">
         <widget class="QLabel" name="label_18">
@@ -296,7 +296,7 @@
   <tabstop>hc_kg_unit</tabstop>
   <tabstop>nox_kg_unit</tabstop>
   <tabstop>sox_kg_unit</tabstop>
-  <tabstop>pm10_kg_unit</tabstop>
+  <tabstop>pm_total_kg_unit</tabstop>
   <tabstop>p1_kg_unit</tabstop>
   <tabstop>p2_kg_unit</tabstop>
  </tabstops>

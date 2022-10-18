@@ -42,7 +42,7 @@ defaultEmissions = {
     "hc_g": 0.,
     "nox_g": 0.,
     "sox_g": 0.,
-    "pm10_g": 0.,
+    "pm_total_g": 0.,
     "p1_g": 0.,
     "p2_g": 0.,
     "pm10_sul_g": 0.,
@@ -57,7 +57,7 @@ defaultEI = {
     "hc_g_kg": 0.,
     "nox_g_kg": 0.,
     "sox_g_kg": 0.,
-    "pm10_g_kg": 0.,
+    "pm_total_g_kg": 0.,
     "p1_g_kg": 0.,
     "p2_g_kg": 0.,
     "smoke_number": 0.,
@@ -250,7 +250,7 @@ class Movement:
                 gpu_emissions.addHC(gpu_emission_index.getHC("kg_hour")[0]*1000.* occupancy_in_min_GPU/60.)
                 gpu_emissions.addNOX(gpu_emission_index.getNOX("kg_hour")[0] * 1000. * occupancy_in_min_GPU / 60.)
                 gpu_emissions.addSOX(gpu_emission_index.getSOX("kg_hour")[0] * 1000. * occupancy_in_min_GPU / 60.)
-                gpu_emissions.addPM10(gpu_emission_index.getPM10("kg_hour")[0]*1000.* occupancy_in_min_GPU/60.)
+                gpu_emissions.addPM_total(gpu_emission_index.getPM_total("kg_hour")[0] * 1000. * occupancy_in_min_GPU / 60.)
                 gpu_emissions.setGeometryText(self.getGate().getGeometryText())
                 emissions.append({'distance_space': 0.0, 'distance_time': 0.0, 'emissions': gpu_emissions})
             # else:
@@ -262,7 +262,7 @@ class Movement:
                 gse_emissions.addHC(gse_emission_index.getHC("kg_hour")[0]*1000.* occupancy_in_min_GSE/60.)
                 gse_emissions.addNOX(gse_emission_index.getNOX("kg_hour")[0] * 1000. * occupancy_in_min_GSE / 60.)
                 gse_emissions.addSOX(gse_emission_index.getSOX("kg_hour")[0] * 1000. * occupancy_in_min_GSE / 60.)
-                gse_emissions.addPM10(gse_emission_index.getPM10("kg_hour")[0]*1000.* occupancy_in_min_GSE/60.)
+                gse_emissions.addPM_total(gse_emission_index.getPM_total("kg_hour")[0] * 1000. * occupancy_in_min_GSE / 60.)
                 gse_emissions.setGeometryText(self.getGate().getGeometryText())
                 emissions.append({'distance_space': 0.0, 'distance_time': 0.0, 'emissions': gse_emissions})
             # else:
@@ -463,8 +463,8 @@ class Movement:
                                 em_.addNOX(apu_em["nox_g_s"] * apu_time)
                             if "sox_g_s"  in apu_em:
                                 em_.addSOX(apu_em["sox_g_s"] * apu_time)
-                            if "pm10_g_s"  in apu_em:
-                                em_.addPM10(apu_em["pm10_g_s"] * apu_time)
+                            if "pm_total_g_s"  in apu_em:
+                                em_.addPM_total(apu_em["pm_total_g_s"] * apu_time)
 
                         # else:
                         #     print("No APU or wrong APU code for mov %s (%s, %s)"%(self.getName(),
@@ -526,7 +526,7 @@ class Movement:
                         elif self.isArrival():
                             if index_segment_ == 0:
                                 if not self.getAircraft().getMTOW() is None and self.getAircraft().getMTOW() > 18632 : # in kg:
-                                    em_.addPM10(self.getAircraft().getMTOW()*0.000476 - 8.74)
+                                    em_.addPM_total(self.getAircraft().getMTOW() * 0.000476 - 8.74)
 
                             if not self.getTaxiEngineCount() is None:
                                 if not self.getSingleEngineTaxiingMainEngineOffAfterRunwayExit() is None:
@@ -873,12 +873,12 @@ class Movement:
                     else:
                         copy_emission_index_ = copy.deepcopy(emission_index_)
 
-                        pm10_g_kg = self.getAircraftEngine().getEmissionIndex().getEmissionIndexByMode(
-                            startPoint_.getMode()).getPM10()
+                        pm_total_g_kg = self.getAircraftEngine().getEmissionIndex().getEmissionIndexByMode(
+                            startPoint_.getMode()).getPM_total()
                         try:
-                            copy_emission_index_.setObject("pm10_g_kg", pm10_g_kg[0])
+                            copy_emission_index_.setObject("pm_total_g_kg", pm_total_g_kg[0])
                         except:
-                            logger.error("Couldn't add emission index for PM10 (%s)"%self.getName())
+                            logger.error("Couldn't add emission index for PM_total (%s)"%self.getName())
 
                         sox_g_kg = self.getAircraftEngine().getEmissionIndex().getEmissionIndexByMode(
                             startPoint_.getMode()).getSOX()
@@ -1782,7 +1782,7 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
 #
 #     # for mov in movements[::-1]:
 #     results_df = pd.DataFrame(index=range(0, len(movements)),
-#                               columns=['name','gate','fuel_kg', 'co2_kg', 'co_g', 'hc_g', 'nox_g', 'sox_g', 'pm10_g'])
+#                               columns=['name','gate','fuel_kg', 'co2_kg', 'co_g', 'hc_g', 'nox_g', 'sox_g', 'pm_total_g'])
 #     cnt = 0
 #     for mov in movements:
 #
@@ -1799,7 +1799,7 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
 #             #     mov.getDepartureArrivalFlag(), prof_id, mov.getGate().getName(), mov.getGate().getType(), \
 #             #     emissions.getFuel()[0], emissions.getValue("CO2", "g")[0], emissions.getValue("CO", "g")[0], \
 #             #     emissions.getValue("NOx", "g")[0], emissions.getValue("SOx", "g")[0], emissions.getValue("HC", "g")[0], \
-#             #     emissions.getValue("PM10", "g")[0]
+#             #     emissions.getValue("PM_total", "g")[0]
 #         except:
 #             # fix_print_with_import
 #             print("----------------------------------")
@@ -1845,7 +1845,7 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
 #         #     results_df.loc[cnt, "hc_g"] = emissions.getValue("HC", "g")[0]
 #         #     results_df.loc[cnt, "nox_g"] = emissions.getValue("NOx", "g")[0]
 #         #     results_df.loc[cnt, "sox_g"] = emissions.getValue("SOx", "g")[0]
-#         #     results_df.loc[cnt, "pm10_g"] = emissions.getValue("PM10", "g")[0]
+#         #     results_df.loc[cnt, "pm_total_g"] = emissions.getValue("PM_total", "g")[0]
 #         # except:
 #         #     results_df.loc[cnt, "name"] = mov.getName()
 #         #     results_df.loc[cnt, "gate"] = mov.getGate().getName()

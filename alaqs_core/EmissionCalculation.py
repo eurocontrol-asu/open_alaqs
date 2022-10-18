@@ -190,7 +190,7 @@ class EmissionCalculation:
             "hc_g": 0.,
             "nox_g": 0.,
             "sox_g": 0.,
-            "pm10_g": 0.,
+            "pm_total_g": 0.,
             "p1_g": 0.,
             "p2_g": 0.,
             "pm10_sul_g": 0.,
@@ -451,7 +451,7 @@ class EmissionCalculation:
 #     #                                                     "add title":"test",
 #     #                                                     # "options string": "NOSTANDARD;SCINOTAT;Kmax=1;Average=1",
 #     #                                                     "options string": "NOSTANDARD;SCINOTAT;Kmax=1",
-#     #                                                     "pollutants_list":['CO2', 'CO', 'HC', 'NOx', 'SOx', 'PM10'],
+#     #                                                     "pollutants_list":['CO2', 'CO', 'HC', 'NOx', 'SOx', 'PM_total'],
 #     #                                                     "output_path":work_dir,
 #     #                                                     "receptors":csv_gdf}
 #     #                        )

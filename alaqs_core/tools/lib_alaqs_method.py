@@ -342,7 +342,7 @@ def roadway_emission_factors_alaqs_method(input_data: dict) -> dict:
         emission_factors['nox_ef'] = (input_data[
                                           'travel_distance'] / 1000 + l_idle) * avg_ef_nox
         emission_factors['sox_ef'] = 0
-        emission_factors['pm10_ef'] = (input_data[
+        emission_factors['pm_total_ef'] = (input_data[
                                            'travel_distance'] / 1000 + l_idle) * avg_ef_pm
         emission_factors['p1_ef'] = 0
         emission_factors['p2_ef'] = 0
@@ -351,7 +351,7 @@ def roadway_emission_factors_alaqs_method(input_data: dict) -> dict:
         emission_factors['hc_ef'] = avg_ef_hc
         emission_factors['nox_ef'] = avg_ef_nox
         emission_factors['sox_ef'] = 0
-        emission_factors['pm10_ef'] = avg_ef_pm
+        emission_factors['pm_total_ef'] = avg_ef_pm
         emission_factors['p1_ef'] = 0
         emission_factors['p2_ef'] = 0
 

@@ -46,7 +46,7 @@ def form_open(form, layer, feature):
         hc_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "hc_kg_unit"),
         nox_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "nox_kg_unit"),
         sox_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "sox_kg_unit"),
-        pm10_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "pm10_kg_unit"),
+        pm_total_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "pm_total_kg_unit"),
         p1_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "p1_kg_unit"),
         p2_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "p2_kg_unit"),
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
@@ -182,7 +182,7 @@ def validate(fields: dict):
         validate_field(fields['hc_kg_unit_field'], "float"),
         validate_field(fields['nox_kg_unit_field'], "float"),
         validate_field(fields['sox_kg_unit_field'], "float"),
-        validate_field(fields['pm10_kg_unit_field'], "float"),
+        validate_field(fields['pm_total_kg_unit_field'], "float"),
         validate_field(fields['p1_kg_unit_field'], "float"),
         validate_field(fields['p2_kg_unit_field'], "float")
     ]

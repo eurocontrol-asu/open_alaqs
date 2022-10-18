@@ -13,7 +13,7 @@ CREATE TABLE "user_stand_ef" (
   "hc" DECIMAL NULL, 
   "nox" DECIMAL NULL, 
   "sox" DECIMAL NULL, 
-  "pm10" DECIMAL NULL, 
+  "pm_total" DECIMAL NULL,
   "p1" DECIMAL NULL, 
   "p2" DECIMAL NULL
 );

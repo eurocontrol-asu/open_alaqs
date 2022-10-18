@@ -17,7 +17,7 @@ CREATE TABLE "shapes_roadways" (
   "hc_gm_km" DECIMAL,
   "nox_gm_km" DECIMAL,
   "sox_gm_km" DECIMAL,
-  "pm10_gm_km" DECIMAL,
+  "pm_total_gm_km" DECIMAL,
   "p1_gm_km" DECIMAL,
   "p2_gm_km" DECIMAL,
   "method" TEXT,

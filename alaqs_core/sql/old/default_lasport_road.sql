@@ -15,5 +15,5 @@ CREATE TABLE "default_lasport_road" (
   "co" DECIMAL NULL, 
   "hc" DECIMAL NULL, 
   "nox" DECIMAL NULL, 
-  "pm10" DECIMAL NULL
+  "pm_total" DECIMAL NULL
 );
