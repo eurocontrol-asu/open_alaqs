@@ -57,9 +57,9 @@ class TableViewWidgetOutputModule(OutputModule):
             "PM_total [kg]",
             "PM_01 [kg]",
             "PM_25 [kg]",
-            "PMnon_volatile [kg]",
             "PM_SUL [kg]",
             "PMvolatile [kg]",
+            "PMnon_volatile [kg]",
             "PMnon_volatile_number"
         ])
 
