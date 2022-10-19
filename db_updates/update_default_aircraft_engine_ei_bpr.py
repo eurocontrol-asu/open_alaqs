@@ -15,16 +15,18 @@ if __name__ == "__main__":
     Script that updates .alaqs database file with missing columns: eng_type, b/p_ratio
     """
 
+    file_path = Path(__file__).parent
+
     # Check if user added right number of arguments when calling the function
     if len(sys.argv) != 3:
         raise Exception(
             "Wrong number of arguments. Correct call: `python "
-            f"{Path(__file__).name} sqlite:///old_url sqlite:///new_url`"
+            f"{Path(__file__).name} old_url new_url`"
         )
 
     # Check if the input file exists and the output file does not exist
-    path_1 = Path(sys.argv[1])
-    path_2 = Path(sys.argv[2])
+    path_1 = Path(sys.argv[1]+".alaqs")
+    path_2 = Path(sys.argv[2]+".alaqs")
 
     if not path_1.exists():
         raise Exception(f"The input file that you try to use does not exist.\n{path_1}")
@@ -36,10 +38,10 @@ if __name__ == "__main__":
     shutil.copy(str(path_1), str(path_2))
 
     # Import relevant tabs from Excel
-    icao_eedb = pd.read_excel(ICAO_EEDB)
+    icao_eedb = pd.read_excel(file_path / ICAO_EEDB)
 
     # Load old table to update
-    with get_engine(f"sqlite:///{path_1.absolute()}").connect() as conn:
+    with get_engine(f"{sys.argv[1]}").connect() as conn:
         old_blank_study = pd.read_sql(
             "SELECT * FROM default_aircraft_engine_ei", con=conn
         )
@@ -81,7 +83,7 @@ if __name__ == "__main__":
     logging.info(f"Number of engines not found in ICAO EEDB: {engines_not_found}")
 
     # Save updated database
-    with get_engine(f"sqlite:///{path_2.absolute()}").connect() as conn:
+    with get_engine(f"{sys.argv[2]}").connect() as conn:
         old_blank_study.to_sql(
             "default_aircraft_engine_ei", con=conn, index=False, if_exists="replace"
         )

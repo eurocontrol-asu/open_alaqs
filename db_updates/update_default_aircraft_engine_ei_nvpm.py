@@ -6,7 +6,6 @@ import math
 import logging
 from open_alaqs.db_updates.update_default_aircraft_engine_ei import get_engine
 
-
 logging.getLogger().setLevel(logging.INFO)
 
 
@@ -190,12 +189,12 @@ if __name__ == "__main__":
     if len(sys.argv) != 3:
         raise Exception(
             "Wrong number of arguments. Correct call: `python "
-            f"{Path(__file__).name} sqlite:///old_url sqlite:///new_url`"
+            f"{Path(__file__).name} old_url new_url`"
         )
 
     # Check if the input file exists and the output file does not exist
-    path_1 = Path(sys.argv[1])
-    path_2 = Path(sys.argv[2])
+    path_1 = Path(sys.argv[1]+".alaqs")
+    path_2 = Path(sys.argv[2]+".alaqs")
 
     if not path_1.exists():
         raise Exception(f"The input file that you try to use does not exist.\n{path_1}")
@@ -207,7 +206,7 @@ if __name__ == "__main__":
     shutil.copy(str(path_1), str(path_2))
 
     # Load old table to update
-    with get_engine(f"sqlite:///{path_1.absolute()}").connect() as conn:
+    with get_engine(f"{sys.argv[1]}").connect() as conn:
         old_blank_study = pd.read_sql(
             "SELECT * FROM default_aircraft_engine_ei", con=conn
         )
@@ -221,16 +220,19 @@ if __name__ == "__main__":
     for index, old_line in old_blank_study.iterrows():
 
         # Evaluate scaling factor based on engine type
-        if "aviadvigatel" in old_line["manufacturer"]:
-            engine_scaling_factor = SCALING_FACTORS["aviadgatel"][old_line["mode"]]
-        elif "textron" in old_line["manufacturer"]:
-            engine_scaling_factor = SCALING_FACTORS["textron"][old_line["mode"]]
-        elif "cfm" in old_line["manufacturer"]:
-            engine_scaling_factor = SCALING_FACTORS["cfm_dac"][old_line["mode"]]
-        elif "CF34" in old_line["engine_full_name"]:
-            engine_scaling_factor = SCALING_FACTORS["ge_cf34"][old_line["mode"]]
-        else:
+        if old_line["manufacturer"] is None:
             engine_scaling_factor = SCALING_FACTORS["non_dac"][old_line["mode"]]
+        else:
+            if "aviadvigatel" in old_line["manufacturer"]:
+                engine_scaling_factor = SCALING_FACTORS["aviadgatel"][old_line["mode"]]
+            elif "textron" in old_line["manufacturer"]:
+                engine_scaling_factor = SCALING_FACTORS["textron"][old_line["mode"]]
+            elif "cfm" in old_line["manufacturer"]:
+                engine_scaling_factor = SCALING_FACTORS["cfm_dac"][old_line["mode"]]
+            elif "CF34" in old_line["engine_full_name"]:
+                engine_scaling_factor = SCALING_FACTORS["ge_cf34"][old_line["mode"]]
+            else:
+                engine_scaling_factor = SCALING_FACTORS["non_dac"][old_line["mode"]]
 
         smoke_number_k = calculate_smoke_number(old_line, engine_scaling_factor)
 
@@ -276,7 +278,7 @@ if __name__ == "__main__":
     )
 
     # Save updated database
-    with get_engine(f"sqlite:///{path_2.absolute()}").connect() as conn:
+    with get_engine(f"{sys.argv[2]}").connect() as conn:
         old_blank_study.to_sql(
             "default_aircraft_engine_ei", con=conn, index=False, if_exists="replace"
         )
