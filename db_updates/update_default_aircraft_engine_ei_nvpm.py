@@ -4,10 +4,19 @@ from pathlib import Path
 import pandas as pd
 import math
 import logging
-from open_alaqs.db_updates.update_default_aircraft_engine_ei import get_engine
+import sqlalchemy
 
 
 logging.getLogger().setLevel(logging.INFO)
+
+
+def get_engine(db_url: str):
+    """
+    Returns the database engine
+    """
+    db_url = "sqlite:///" + db_url + ".alaqs"
+
+    return sqlalchemy.create_engine(db_url)
 
 
 # Source: Table D-1: Suggested SF values to predict missing SN in the ICAO EEDB, page 88
@@ -174,47 +183,19 @@ def evaluate_beta(old_line: pd.Series) -> float:
         return 0.0
 
 
-if __name__ == "__main__":
+def update_default_aircraft_engine_ei_nvpm(old_blank_study: pd.DataFrame) -> pd.DataFrame:
+    """Adds nvPM EI to aircraft engines
+
+    Args:
+        old_blank_study (pd.DataFrame): dataframe with old .alaqs study data
+
+    Returns:
+        pd.DataFrame: dataframe with new columns added to .alaqs study
     """
-    Script introduces calculations for engine exhaust particulate emissions in
-    the form of emission indices (EI's). Based on 'First order Approximation
-    V4.0 method for estimating particulate matter 'mass and number emissions
-    from aircraft engines'.
-    ICAO Doc 9889, second edition, 2020, Attachment D to Appendix 1, page.84
-
-    Remark: all referenced equations and tables are in Attachment D, page:84
-
-    """
-
-    # Check if user added right number of arguments when calling the function
-    if len(sys.argv) != 3:
-        raise Exception(
-            "Wrong number of arguments. Correct call: `python "
-            f"{Path(__file__).name} sqlite:///old_url sqlite:///new_url`"
-        )
-
-    # Check if the input file exists and the output file does not exist
-    path_1 = Path(sys.argv[1])
-    path_2 = Path(sys.argv[2])
-
-    if not path_1.exists():
-        raise Exception(f"The input file that you try to use does not exist.\n{path_1}")
-
-    if path_2.exists():
-        raise Exception(f"The output file already exists.\n{path_2}")
-
-    # Copy the file
-    shutil.copy(str(path_1), str(path_2))
-
-    # Load old table to update
-    with get_engine(f"sqlite:///{path_1.absolute()}").connect() as conn:
-        old_blank_study = pd.read_sql(
-            "SELECT * FROM default_aircraft_engine_ei", con=conn
-        )
 
     # Add 2 columns for nvpm mass and number with assigned default values
-    old_blank_study["nvpm_ei"] = 0.0
-    old_blank_study["nvpm_number_ei"] = 0.0
+    old_blank_study["PMnon_volatile_EI"] = 0.0
+    old_blank_study["PMnon_volatile_number_EI"] = 0.0
 
     # Loop over each row of the old table, calculate nvpm_ei mass and number and
     # add to the new columns
@@ -263,20 +244,63 @@ if __name__ == "__main__":
         ei_nvpm_number_ek = calculate_nvpm_number_ei(ei_nvpm_mass_ek, old_line)
 
         # Add calculated EInvPm to the table
-        old_blank_study.loc[index, "nvpm_ei"] = round(ei_nvpm_mass_ek, 5)
-        old_blank_study.loc[index, "nvpm_number_ei"] = ei_nvpm_number_ek
+        old_blank_study.loc[index, "PMnon_volatile_EI"] = round(ei_nvpm_mass_ek, 5)
+        old_blank_study.loc[index, "PMnon_volatile_number_EI"] = ei_nvpm_number_ek
 
     # Log calculated values
     logging.info(
-        f"nvpm_mass_ei calculated successfully for number of rows: {(old_blank_study['nvpm_ei'] != 0).sum()}"
+        f"nvpm_mass_ei calculated successfully for number of rows: {(old_blank_study['PMnon_volatile_EI'] != 0).sum()}"
     )
 
     logging.info(
-        f"nvpm_mass_ei calculated successfully for number of rows: {(old_blank_study['nvpm_number_ei'] != 0).sum()}"
+        f"nvpm_mass_ei calculated successfully for number of rows: {(old_blank_study['PMnon_volatile_number_EI'] != 0).sum()}"
     )
 
+    return old_blank_study
+
+
+if __name__ == "__main__":
+    """
+    Script introduces calculations for engine exhaust particulate emissions in
+    the form of emission indices (EI's). Based on 'First order Approximation
+    V4.0 method for estimating particulate matter 'mass and number emissions
+    from aircraft engines'.
+    ICAO Doc 9889, second edition, 2020, Attachment D to Appendix 1, page.84
+
+    Remark: all referenced equations and tables are in Attachment D, page:84
+
+    """
+
+    # Check if user added right number of arguments when calling the function
+    if len(sys.argv) != 3:
+        raise Exception(
+            "Wrong number of arguments. Correct call: `python "
+            f"{Path(__file__).name} sqlite:///old_url sqlite:///new_url`"
+        )
+
+    # Check if the input file exists and the output file does not exist
+    path_1 = sys.argv[1]
+    path_2 = sys.argv[2]
+
+    if not Path(path_1 + ".alaqs").exists():
+        raise Exception(f"The input file that you try to use does not exist.\n{path_1}")
+
+    if Path(path_2 + ".alaqs").exists():
+        raise Exception(f"The output file already exists.\n{path_2}")
+
+    # Copy the file
+    shutil.copy(str(Path(path_1 + ".alaqs")), str(Path(path_2 + ".alaqs")))
+
+    # Load old table to update
+    with get_engine(str(path_1)).connect() as conn:
+        old_blank_study = pd.read_sql(
+            "SELECT * FROM default_aircraft_engine_ei", con=conn
+        )
+
+    old_blank_study = update_default_aircraft_engine_ei_nvpm(old_blank_study)
+
     # Save updated database
-    with get_engine(f"sqlite:///{path_2.absolute()}").connect() as conn:
+    with get_engine(path_2).connect() as conn:
         old_blank_study.to_sql(
             "default_aircraft_engine_ei", con=conn, index=False, if_exists="replace"
         )
