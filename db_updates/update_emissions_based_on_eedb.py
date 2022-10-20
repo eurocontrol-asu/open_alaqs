@@ -1,3 +1,4 @@
+from enum import unique
 from pathlib import Path
 import shutil
 import sys
@@ -61,11 +62,11 @@ def get_values_from_command_line() -> Tuple[str, str, str]:
     return args[1], args[2], args[3]
 
 
-def get_tabs_from_eedb_emissions_database_and_old_study() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, str]:
+def get_tabs_from_eedb_emissions_database_and_old_study() -> Tuple[pd.DataFrame, pd.DataFrame, str, str]:
     """_summary_
 
     Returns:
-        Tuple[pd.DataFrame, pd.DataFrame]: _description_
+        Tuple[pd.DataFrame, pd.DataFrame, str, str]: _description_
     """
 
     file_name, old_study_name, new_study_name  = get_values_from_command_line()
@@ -83,11 +84,7 @@ def get_tabs_from_eedb_emissions_database_and_old_study() -> Tuple[pd.DataFrame,
     gas_emissions = pd.read_excel(full_file_path, sheet_name=GAS_EMISSIONS_TAB)
     nvmp_emissions = pd.read_excel(full_file_path, sheet_name=NVPM_EMISSIONS_TAB)
 
-    # Load old table to update
-    with get_engine(old_study_name).connect() as conn:
-        old_study_emissions = pd.read_sql("SELECT * FROM default_aircraft_engine_ei", con=conn)
-
-    return gas_emissions, nvmp_emissions, old_study_emissions, new_study_name
+    return gas_emissions, nvmp_emissions, old_study_name, new_study_name
 
 
 def get_gas_ei(all_emissions: pd.DataFrame, row: pd.Series, mode: str, gas: str) -> float:
@@ -190,7 +187,7 @@ def compute_pm_volatile_ei(hc: float, mode: str) -> float:
 def update_emissions_based_on_eedb():
 
     # Get gas and nvPM emissions and merge them in the same dataframe
-    gas_emissions, nvmp_emissions, old_study_emissions, new_study_path = \
+    gas_emissions, nvmp_emissions, old_study_path, new_study_path = \
         get_tabs_from_eedb_emissions_database_and_old_study()
     all_emissions = gas_emissions.merge(nvmp_emissions, how="outer", on=["UID No"])
 
@@ -268,6 +265,16 @@ def update_emissions_based_on_eedb():
         new_emissions.to_sql(
             "default_aircraft_engine_ei", con=conn, index=False, if_exists="replace"
         )
+
+    # Get engines in old study
+    with get_engine(old_study_path).connect() as conn:
+        old_engines = pd.read_sql("SELECT * FROM default_aircraft", con=conn)
+
+    # Check which engines are not found in the new emissions table
+    old_engines["FOUND"] = old_engines["engine"].isin(new_emissions["engine_name"].unique())
+    nr_engines_not_found = len(old_engines[old_engines["FOUND"] == False])
+
+    print(f"{nr_engines_not_found} engines from the aircraft table were not found in the new table.")
 
 
 if __name__ == "__main__":
