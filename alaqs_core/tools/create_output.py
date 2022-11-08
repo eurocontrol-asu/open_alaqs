@@ -159,22 +159,22 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup,
     return None
 
 
+@catch_errors
 def inventory_create_blank(inventory_name):
     """
     Copy a blank version of the ALAQS inventory to the desired location
     :param inventory_name: the path where the inventory file is to be copied
     :return: None if successful, error otherwise
     """
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(__file__),
-                                  '../templates/inventory.alaqs'), inventory_name)
-        msg = "[+] Created a blank ALAQS output file"
-        logger.info(msg)
-        return None
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_create_blank.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+
+    # Get the template path
+    template_path = os.path.join(os.path.dirname(__file__),
+                                 '../templates/inventory.alaqs')
+
+    # Copy the template
+    shutil.copy2(template_path, inventory_name)
+
+    logger.info("[+] Created a blank ALAQS output file")
 
 
 @catch_errors
@@ -234,7 +234,7 @@ def inventory_update_tbl_inv_period(database_path, model_parameters, study_setup
     return None
 
 
-
+@catch_errors
 def inventory_update_tbl_inv_time(inventory_path, model_parameters):
     """
     Update the invTime table with hourly intervals based on the user study definitions
@@ -242,89 +242,81 @@ def inventory_update_tbl_inv_time(inventory_path, model_parameters):
     :param model_parameters: a dict of user defined parameters for the current output
     :return:
     """
+    time_list = []
+    hour_delta = timedelta(hours=1)
     try:
-        time_list = []
-        hour_delta = timedelta(hours=1)
-        try:
-            start_time = datetime.strptime(model_parameters['study_start_date'], "%Y-%m-%d %H:%M:%S")
-            end_time = datetime.strptime(model_parameters['study_end_date'], "%Y-%m-%d %H:%M:%S")
-        except:
-            start_time = model_parameters['study_start_date']
-            end_time = model_parameters['study_end_date']
+        start_time = datetime.strptime(model_parameters['study_start_date'],
+                                       "%Y-%m-%d %H:%M:%S")
+        end_time = datetime.strptime(model_parameters['study_end_date'],
+                                     "%Y-%m-%d %H:%M:%S")
+    except:
+        start_time = model_parameters['study_start_date']
+        end_time = model_parameters['study_end_date']
 
-        # Create a time stamp for the start of the first hour - kind of floor(start_time)
-        current_hour = start_time - timedelta(minutes=start_time.minute % 60, seconds=start_time.second,
-                                                       microseconds=start_time.microsecond)
+    # Create a time stamp for the start of the first hour - kind of floor(start_time)
+    current_hour = start_time - timedelta(minutes=start_time.minute % 60,
+                                          seconds=start_time.second,
+                                          microseconds=start_time.microsecond)
 
-        # Build a list of hours we need to model
-        while current_hour <= end_time:
+    # Build a list of hours we need to model
+    while current_hour <= end_time:
+        interval_start = current_hour
+        year = interval_start.strftime("%Y")
+        month = interval_start.strftime("%m")
+        day = interval_start.strftime("%d")
+        hour = interval_start.strftime("%H")
+        weekday_id = interval_start.weekday()
+        mix_height = '914.4'
 
-            interval_start = current_hour
-            year = interval_start.strftime("%Y")
-            month = interval_start.strftime("%m")
-            day = interval_start.strftime("%d")
-            hour = interval_start.strftime("%H")
-            weekday_id = interval_start.weekday()
-            mix_height = '914.4'
+        time_list.append(
+            [interval_start, year, month, day, hour, weekday_id, mix_height])
+        current_hour = current_hour + hour_delta
 
-            time_list.append([interval_start, year, month, day, hour, weekday_id, mix_height])
-            current_hour = current_hour + hour_delta
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
+    cur.executemany(
+        "INSERT INTO tbl_InvTime (time, year, month, day, hour, weekday_id, mix_height) VALUES (?,?,?,?,?,?,?);",
+        time_list)
+    conn.commit()
+    conn.close()
 
-        conn = sqlite.connect(inventory_path)
-        cur = conn.cursor()
-        cur.executemany("INSERT INTO tbl_InvTime (time, year, month, day, hour, weekday_id, mix_height) VALUES (?,?,?,?,?,?,?);",
-                        time_list)
-        conn.commit()
-        conn.close()
-        msg = "[+] Updated the output time table"
-        logger.info(msg)
-
-
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_update_tbl_inv_time.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    logger.info("[+] Updated the output time table")
 
 
+@catch_errors
 def inventory_insert_movements(inventory_name, model_parameters):
     """
     Insert user defined movement table into the alaqs output file
     :param inventory_name: path to the alaqs output file
     :param model_parameters: a list of user defined model parameters used to generate the study output
     """
-    try:
-        conn = sqlite.connect(inventory_name)
-        cur = conn.cursor()
+    conn = sqlite.connect(inventory_name)
+    cur = conn.cursor()
 
-        with open(model_parameters['movement_path'], 'rt') as movements:
-            all_movements = []
-            movement_line = 0
-            columns_ = 0
-            for movement in movements:
-                movement_line += 1
-                if movement_line > 1:
-                    movement_data = \
-                        [movement_line - 1] + movement.strip().split(";")
-                    if not columns_:
-                        columns_ = len(movement_data)
-                    all_movements.append(movement_data)
+    with open(model_parameters['movement_path'], 'rt') as movements:
+        all_movements = []
+        movement_line = 0
+        columns_ = 0
+        for movement in movements:
+            movement_line += 1
+            if movement_line > 1:
+                movement_data = \
+                    [movement_line - 1] + movement.strip().split(";")
+                if not columns_:
+                    columns_ = len(movement_data)
+                all_movements.append(movement_data)
 
-        values_str_ = "?,"*columns_
-        values_str_ = values_str_[:-1]
-        cur.executemany('INSERT INTO user_aircraft_movements VALUES (%s)' %(values_str_), all_movements)
-        conn.commit()
-        conn.close()
-        msg = "[+] Aircraft movements copied to output file"
-        logger.info(msg)
-
-        return None
-
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_insert_movements.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    values_str_ = "?," * columns_
+    values_str_ = values_str_[:-1]
+    cur.executemany(
+        'INSERT INTO user_aircraft_movements VALUES (%s)' % (values_str_),
+        all_movements)
+    conn.commit()
+    conn.close()
+    logger.info("[+] Aircraft movements copied to output file")
 
 
+@catch_errors
 def inventory_copy_study_setup(inventory_path):
     """
     This function copies data from the currently active project to the inventory output file
@@ -332,28 +324,23 @@ def inventory_copy_study_setup(inventory_path):
     :param inventory_path:
     :return:
     """
-    try:
-        conn = sqlite.connect(inventory_path)
-        cur = conn.cursor()
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
 
-        study_setup_data = alaqsdblite.query_string("SELECT * FROM user_study_setup;")
-        cur.execute('INSERT INTO user_study_setup VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);', study_setup_data[0])
-        conn.commit()
-        conn.close()
-        msg = "[+] Copied the study setup"
-        logger.info(msg)
+    study_setup_data = alaqsdblite.query_string(
+        "SELECT * FROM user_study_setup;")
+    cur.execute(
+        'INSERT INTO user_study_setup VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);',
+        study_setup_data[0])
+    conn.commit()
+    conn.close()
 
-        return None
-
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_study_setup.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    logger.info("[+] Copied the study setup")
 
 
 def inventory_update_mixing_heights(inventory_path):
     # fix_print_with_import
-    print("Need to update mixing heights using study_setup")
+    logger.debug("Need to update mixing heights using study_setup")
 
 
 @catch_errors
@@ -389,75 +376,76 @@ def inventory_copy_activity_profiles(inventory_path) -> None:
 
     logger.info("[+] Copied the activity profiles")
 
+
+@catch_errors
 def inventory_copy_gate_profiles(inventory_path):
     """
-    Copy all gate profiles from the currently active alaqs project database to the output file
+    Copy all gate profiles from the currently active alaqs project database to
+     the output file
     :param inventory_path: path to the alaqs output file
     """
-    try:
-        conn = sqlite.connect(inventory_path)
-        cur = conn.cursor()
-        gate_profiles = alaqsdblite.query_string("SELECT * FROM default_gate_profiles;")
-        cur.executemany('INSERT INTO default_gate_profiles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', gate_profiles)
-        conn.commit()
-        conn.close()
-        msg = "[+] Copied the gate profiles"
-        logger.info(msg)
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
 
-        return None
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_gate_profiles.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    gate_profiles = alaqsdblite.query_string(
+        "SELECT * FROM default_gate_profiles;")
+
+    cur.executemany(
+        'INSERT INTO default_gate_profiles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        gate_profiles)
+
+    conn.commit()
+    conn.close()
+
+    logger.info("[+] Copied the gate profiles")
 
 
+@catch_errors
 def inventory_copy_emission_dynamics(inventory_path):
     """
-    Copy all emission_dynamics from the currently active alaqs project database to the output file
+    Copy all emission_dynamics from the currently active alaqs project database
+     to the output file
     :param inventory_path: path to the alaqs output file
     """
-    try:
-        conn = sqlite.connect(inventory_path)
-        cur = conn.cursor()
-        emission_dynamics = alaqsdblite.query_string("SELECT * FROM default_emission_dynamics;")
-        cur.executemany('INSERT INTO default_emission_dynamics VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', emission_dynamics)
-        conn.commit()
-        conn.close()
-        msg = "[+] Copied the emission dynamics"
-        logger.info(msg)
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
 
-        return None
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_emission_dynamics.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    emission_dynamics = alaqsdblite.query_string(
+        "SELECT * FROM default_emission_dynamics;")
+    cur.executemany(
+        'INSERT INTO default_emission_dynamics VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+        emission_dynamics)
+
+    conn.commit()
+    conn.close()
+
+    logger.info("[+] Copied the emission dynamics")
 
 
+@catch_errors
 def inventory_copy_taxiway_routes(inventory_path):
     """
-    Copy all taxiway routes from the currently active project database to alaqs output file
+    Copy all taxiway routes from the currently active project database to alaqs
+     output file
     :param inventory_path: path to the alaqs output file
     """
-    try:
-        conn = sqlite.connect(inventory_path)
-        cur = conn.cursor()
-        gate_profiles = alaqsdblite.query_string("SELECT * FROM user_taxiroute_taxiways;")
-        cur.executemany('INSERT INTO user_taxiroute_taxiways VALUES (?,?,?,?,?,?,?,?)', gate_profiles)
-        conn.commit()
-        conn.close()
-        msg = "[+] Copied the taxiway routes"
-        logger.info(msg)
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
+    gate_profiles = alaqsdblite.query_string(
+        "SELECT * FROM user_taxiroute_taxiways;")
+    cur.executemany(
+        'INSERT INTO user_taxiroute_taxiways VALUES (?,?,?,?,?,?,?,?)',
+        gate_profiles)
+    conn.commit()
+    conn.close()
 
-        return None
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_taxiway_routes.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    logger.info("[+] Copied the taxiway routes")
 
 
 def inventory_copy_vector_layers(inventory_path):
     """
-    Copy all vector layers from the currently active alaqs project file to the output file
+    Copy all vector layers from the currently active alaqs project file to the
+     output file
     :param inventory_path: path to the alaqs output file
     """
 
@@ -612,185 +600,146 @@ def inventory_copy_vector_layers(inventory_path):
         conn.close()
 
 
+@catch_errors
 def inventory_copy_aircraft(inventory_path):
     """
     We only need to take forward data on the aircraft that are in the movement
      table.
     :param inventory_path: the path of the inventory file being written to
     """
-    try:
-        # Establish a connection
-        conn = sqlite.connect(inventory_path)
-        conn.text_factory = str
-        cur = conn.cursor()
 
-        data = alaqsdblite.query_string("SELECT * FROM default_aircraft;")
-        cur.executemany(
-            'INSERT INTO default_aircraft VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-            data)
+    # Establish a connection
+    conn = sqlite.connect(inventory_path)
+    conn.text_factory = str
+    cur = conn.cursor()
 
-        # movement_aircraft = alaqsdblite.query_string("SELECT DISTINCT aircraft FROM user_aircraft_movements;")
-        ##for aircraft_name in movement_aircraft:
-        #
-        #    # Get details of this aircraft from the main project database
-        #    sql_text = "SELECT * FROM default_aircraft WHERE icao=\"%s\";" % aircraft_name
-        #    data = alaqsdblite.query_string(sql_text)
-        #    # insert into the output
-        #    curs.executemany('INSERT INTO default_aircraft VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', data)
+    data = alaqsdblite.query_string("SELECT * FROM default_aircraft;")
+    cur.executemany(
+        'INSERT INTO default_aircraft VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        data)
 
-        # House keeping
-        conn.commit()
-        conn.close()
-        msg = "[+] Copied unique aircraft data"
-        logger.info(msg)
+    conn.commit()
+    conn.close()
+
+    logger.info("[+] Copied unique aircraft data")
 
 
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_aircraft.__name__,
-                                           Exception, e)
-        logger.error(error_msg)
-        return error_msg
-
-
+@catch_errors
 def inventory_copy_aircraft_engine_ei(inventory_path):
     """
     We only need to take forward data on the engine ei that are in the movement table.
     :param inventory_path: the path of the inventory file being written to
     """
-    try:
-        # Establish a connection
-        conn = sqlite.connect(inventory_path)
-        curs = conn.cursor()
-        conn.text_factory = str
-        # aircraft_engines = alaqsdblite.query_string("SELECT DISTINCT engine FROM default_aircraft;")
 
-        # SS
-        # aircraft_engines = alaqsdblite.query_string("SELECT DISTINCT engine FROM default_aircraft;")
-        aircraft_engines = alaqsdblite.query_string("SELECT DISTINCT engine_name FROM default_aircraft_engine_ei;")
+    # Establish a connection
+    conn = sqlite.connect(inventory_path)
+    curs = conn.cursor()
+    conn.text_factory = str
+    # aircraft_engines = alaqsdblite.query_string("SELECT DISTINCT engine FROM default_aircraft;")
 
-        for engine in aircraft_engines:
-            # Get details of this aircraft from the main project database
-            sql_text = "SELECT * FROM default_aircraft_engine_ei WHERE engine_name=\"%s\";" % engine
-            data = alaqsdblite.query_string(sql_text)
-            # insert into the output
-            curs.executemany('INSERT INTO default_aircraft_engine_ei VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', data)
-        # House keeping
-        conn.commit()
-        conn.close()
+    # SS
+    # aircraft_engines = alaqsdblite.query_string("SELECT DISTINCT engine FROM default_aircraft;")
+    aircraft_engines = alaqsdblite.query_string(
+        "SELECT DISTINCT engine_name FROM default_aircraft_engine_ei;")
 
-        msg = "[+] Copied unique aircraft engine data"
-        logger.info(msg)
+    for engine in aircraft_engines:
+        # Get details of this aircraft from the main project database
+        sql_text = "SELECT * FROM default_aircraft_engine_ei WHERE engine_name=\"%s\";" % engine
+        data = alaqsdblite.query_string(sql_text)
+        # insert into the output
+        curs.executemany(
+            'INSERT INTO default_aircraft_engine_ei VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            data)
+    # House keeping
+    conn.commit()
+    conn.close()
 
-    except Exception as e:
-        error = alaqsutils.print_error(inventory_copy_aircraft_engine_ei.__name__, Exception, e)
-        return error
+    logger.info("[+] Copied unique aircraft engine data")
 
 
+@catch_errors
 def inventory_copy_aircraft_profiles(inventory_path):
     """
     Copy all gate profiles from the currently active alaqs project database to the output file
     :param inventory_path: path to the alaqs output file
     """
-    try:
-        conn = sqlite.connect(inventory_path)
-        cur = conn.cursor()
-        profiles = alaqsdblite.query_string("SELECT * FROM default_aircraft_profiles;")
-        cur.executemany('INSERT INTO default_aircraft_profiles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', profiles)
-        conn.commit()
-        conn.close()
-        msg = "[+] Copied aircraft profiles"
-        logger.info(msg)
-
-        return None
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_aircraft_profiles.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
+    profiles = alaqsdblite.query_string(
+        "SELECT * FROM default_aircraft_profiles;")
+    cur.executemany(
+        'INSERT INTO default_aircraft_profiles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        profiles)
+    conn.commit()
+    conn.close()
+    logger.info("[+] Copied aircraft profiles")
 
 
+@catch_errors
 def inventory_copy_aircraft_start_ef(inventory_path):
     """
-    Copy all gate profiles from the currently active alaqs project database to the output file
+    Copy all gate profiles from the currently active alaqs project database to
+     the output file
     :param inventory_path: path to the alaqs output file
     """
-    try:
-        conn = sqlite.connect(inventory_path)
-        cur = conn.cursor()
-        start_ef = alaqsdblite.query_string("SELECT * FROM default_aircraft_start_ef;")
-        cur.executemany('INSERT INTO default_aircraft_start_ef VALUES (?,?,?,?,?,?,?,?,?,?,?)', start_ef)
-        conn.commit()
-        conn.close()
-        msg = "[+] Copied unique aircraft start emissions"
-        logger.info(msg)
-
-        return None
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_aircraft_start_ef.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
+    start_ef = alaqsdblite.query_string(
+        "SELECT * FROM default_aircraft_start_ef;")
+    cur.executemany(
+        'INSERT INTO default_aircraft_start_ef VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+        start_ef)
+    conn.commit()
+    conn.close()
+    logger.info("[+] Copied unique aircraft start emissions")
 
 
+@catch_errors
 def inventory_copy_stationary_substance(inventory_path):
     """
-    Copy all gate profiles from the currently active alaqs project database to the output file
+    Copy all gate profiles from the currently active alaqs project database to
+     the output file
     :param inventory_path: path to the alaqs output file
     """
-    try:
-        conn = sqlite.connect(inventory_path)
-        cur = conn.cursor()
-        start_ef = alaqsdblite.query_string("SELECT * FROM default_stationary_substance;")
-        cur.executemany('INSERT INTO default_stationary_substance VALUES (?,?,?)', start_ef)
-        conn.commit()
-        conn.close()
-        msg = "[+] Copied stationary substances"
-        logger.info(msg)
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
+    start_ef = alaqsdblite.query_string(
+        "SELECT * FROM default_stationary_substance;")
+    cur.executemany('INSERT INTO default_stationary_substance VALUES (?,?,?)',
+                    start_ef)
+    conn.commit()
+    conn.close()
+    logger.info("[+] Copied stationary substances")
 
-        return None
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_stationary_substance.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
-
-
+@catch_errors
 def inventory_copy_stationary_category(inventory_path):
     """
     Copy all gate profiles from the currently active alaqs project database to the output file
     :param inventory_path: path to the alaqs output file
     """
-    try:
-        conn = sqlite.connect(inventory_path)
-        cur = conn.cursor()
-        start_ef = alaqsdblite.query_string("SELECT * FROM default_stationary_category;")
-        cur.executemany('INSERT INTO default_stationary_category VALUES (?,?,?)', start_ef)
-        conn.commit()
-        conn.close()
-        msg = "[+] Copied stationary categories"
-        logger.info(msg)
-
-        return None
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_stationary_category.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
+    start_ef = alaqsdblite.query_string(
+        "SELECT * FROM default_stationary_category;")
+    cur.executemany('INSERT INTO default_stationary_category VALUES (?,?,?)',
+                    start_ef)
+    conn.commit()
+    conn.close()
+    logger.info("[+] Copied stationary categories")
 
 
+@catch_errors
 def inventory_copy_aircraft_engine_mode(inventory_path):
     """
     Copy all gate profiles from the currently active alaqs project database to the output file
     :param inventory_path: path to the alaqs output file
     """
-    try:
-        conn = sqlite.connect(inventory_path)
-        cur = conn.cursor()
-        start_ef = alaqsdblite.query_string("SELECT * FROM default_aircraft_engine_mode;")
-        cur.executemany('INSERT INTO default_aircraft_engine_mode VALUES (?,?,?,?)', start_ef)
-        conn.commit()
-        conn.close()
-        msg = "[+] Copied unique aircraft engine modes"
-        logger.info(msg)
-
-        return None
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_aircraft_engine_mode.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
+    start_ef = alaqsdblite.query_string(
+        "SELECT * FROM default_aircraft_engine_mode;")
+    cur.executemany('INSERT INTO default_aircraft_engine_mode VALUES (?,?,?,?)',
+                    start_ef)
+    conn.commit()
+    conn.close()
+    logger.info("[+] Copied unique aircraft engine modes")
