@@ -188,7 +188,7 @@ def create_project_database(db_name):
     new_study_path.touch()
 
     # Get the filepath of the blank study
-    blank_study_path = file_path.parent / 'templates/new_blank_study.alaqs'
+    blank_study_path = file_path.parent / 'templates/project.alaqs'
 
     shutil.copy2(blank_study_path, new_study_path)
     msg = "[+] Created a blank ALAQS study file in %s" % db_name

@@ -163,7 +163,7 @@ class PointSourcesDatabase(SQLSerializable, metaclass=Singleton):
                 ("source_id", "TEXT"),
                 ("height", "DECIMAL"),
                 ("category", "TEXT"),
-                ("type", "TEXT"),
+                ("point_type", "TEXT"),
                 ("substance", "TEXT"),
                 ("temperature", "DECIMAL"),
                 ("diameter", "DECIMAL"),
