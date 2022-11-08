@@ -12,5 +12,5 @@ CREATE TABLE "default_emission_dynamics" (
   "vertical_shift_m" DECIMAL NULL DEFAULT 0, 
   "horizontal_extent_m_sas" DECIMAL NULL DEFAULT 0, 
   "vertical_extent_m_sas" DECIMAL NULL DEFAULT 0, 
-  "vertical_shift_m_sas" DECIMAL NULL DEFAULT 0, 
+  "vertical_shift_m_sas" DECIMAL NULL DEFAULT 0
 );
