@@ -17,6 +17,24 @@ from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 logger = get_logger(__name__)
 
 
+def catch_errors(f):
+    """
+    Decorator to catch all errors when executing the function.
+    This decorator catches errors and writes them to the log.
+
+    :param f: function to execute
+    :return:
+    """
+
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            alaqsutils.print_error(f.__name__, Exception, e)
+
+    return wrapper
+
+
 def create_alaqs_output(inventory_path, model_parameters, study_setup,
                         met_csv_path=""):
     """
@@ -159,56 +177,62 @@ def inventory_create_blank(inventory_name):
         return error_msg
 
 
+@catch_errors
 def inventory_update_tbl_inv_period(database_path, model_parameters, study_setup):
     """
     Add records to the study output that lists one hour intervals for the whole of the user defined study duration
     :param database_path: the path to the study output file
     :param model_parameters: a list of model parameters used to generate an ALAQS output
     """
+
     try:
+        min_time = datetime.strptime(model_parameters['study_start_date'],
+                                     "%Y-%m-%d %H:%M:%S")
+        max_time = datetime.strptime(model_parameters['study_end_date'],
+                                     "%Y-%m-%d %H:%M:%S")
+    except:
+        min_time = datetime.strftime(model_parameters['study_start_date'],
+                                     "%Y-%m-%d %H:%M:%S")
+        max_time = datetime.strftime(model_parameters['study_end_date'],
+                                     "%Y-%m-%d %H:%M:%S")
 
-        try:
-            min_time = datetime.strptime(model_parameters['study_start_date'], "%Y-%m-%d %H:%M:%S")
-            max_time = datetime.strptime(model_parameters['study_end_date'], "%Y-%m-%d %H:%M:%S")
-        except:
-            min_time = datetime.strftime(model_parameters['study_start_date'], "%Y-%m-%d %H:%M:%S")
-            max_time = datetime.strftime(model_parameters['study_end_date'], "%Y-%m-%d %H:%M:%S")
+    logger.info("Min time: %s" % min_time)
+    logger.info("Max time: %s" % max_time)
 
-        logger.info("Min time: %s" % min_time)
-        logger.info("Max time: %s" % max_time)
+    interval = 1 / 24
+    temp_isa = 273.16 + 15 + study_setup['airport_elevation'] / 1000 * -6.5
+    copert = 0
+    nox_corr = 0
+    ffm = 0
+    mix_height = 0
+    smsh = 0
 
-        interval = 1 / 24
-        temp_isa = 273.16 + 15 + study_setup['airport_elevation'] / 1000 * -6.5
-        copert = 0
-        nox_corr = 0
-        ffm = 0
-        mix_height = 0
-        smsh = 0
+    if model_parameters['use_copert'] is True:
+        copert = 1
+    if model_parameters['use_nox_correction'] is True:
+        nox_corr = 1
+    if model_parameters['use_fuel_flow'] is True:
+        ffm = 1
+    if model_parameters['use_smooth_and_shift'] is True:
+        smsh = 1
+    if model_parameters['use_variable_mixing_height'] is True:
+        mix_height = 1
 
-        if model_parameters['use_copert'] is True:
-            copert = 1
-        if model_parameters['use_nox_correction'] is True:
-            nox_corr = 1
-        if model_parameters['use_fuel_flow'] is True:
-            ffm = 1
-        if model_parameters['use_smooth_and_shift'] is True:
-            smsh = 1
-        if model_parameters['use_variable_mixing_height'] is True:
-            mix_height = 1
+    sql_interface.query_text(database_path,
+                             "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, vert_limit=%d, apt_elev=%d, "
+                             "copert=%d, nox_corr=%d, ffm=%d, smsh=%d, mix_height=%d, min_time=\"%s\", "
+                             "max_time=\"%s\";" % (interval, temp_isa,
+                                                   model_parameters[
+                                                       'vertical_limit'],
+                                                   study_setup[
+                                                       'airport_elevation'],
+                                                   copert, nox_corr, ffm,
+                                                   smsh, mix_height, min_time,
+                                                   max_time))
+    msg = "[+] Updated the output inventory period"
+    logger.info(msg)
+    return None
 
-        sql_interface.query_text(database_path, "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, vert_limit=%d, apt_elev=%d, "
-                                  "copert=%d, nox_corr=%d, ffm=%d, smsh=%d, mix_height=%d, min_time=\"%s\", "
-                                  "max_time=\"%s\";" % (interval, temp_isa, model_parameters['vertical_limit'],
-                                                        study_setup['airport_elevation'], copert, nox_corr, ffm,
-                                                        smsh, mix_height, min_time, max_time))
-        msg = "[+] Updated the output inventory period"
-        logger.info(msg)
-        return None
-
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_update_tbl_inv_period.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
 
 
 def inventory_update_tbl_inv_time(inventory_path, model_parameters):
@@ -332,37 +356,38 @@ def inventory_update_mixing_heights(inventory_path):
     print("Need to update mixing heights using study_setup")
 
 
-def inventory_copy_activity_profiles(inventory_path):
+@catch_errors
+def inventory_copy_activity_profiles(inventory_path) -> None:
     """
     Copy all activity profiles from the currently active project database to the output file
     :param inventory_path: path ot the alaqs output file
     """
-    try:
-        conn = sqlite.connect(inventory_path)
-        cur = conn.cursor()
 
-        hourly_activity_profiles = alaqsdblite.query_string("SELECT * FROM user_hour_profile;")
-        cur.executemany('INSERT INTO user_hour_profile VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                        hourly_activity_profiles)
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
 
-        daily_activity_profiles = alaqsdblite.query_string("SELECT * FROM user_day_profile;")
-        cur.executemany('INSERT INTO user_day_profile VALUES (?,?,?,?,?,?,?,?,?)', daily_activity_profiles)
+    # Get the hourly, daily and monthly activity profiles
+    hourly_activity_profiles = alaqsdblite.query_string(
+        "SELECT * FROM user_hour_profile;")
+    daily_activity_profiles = alaqsdblite.query_string(
+        "SELECT * FROM user_day_profile;")
+    monthly_activity_profiles = alaqsdblite.query_string(
+        "SELECT * FROM user_month_profile;")
 
-        monthly_activity_profiles = alaqsdblite.query_string("SELECT * FROM user_month_profile;")
-        cur.executemany('INSERT INTO user_month_profile VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                        monthly_activity_profiles)
+    # Set the hourly, daily and monthly activity profiles
+    cur.executemany('INSERT INTO user_hour_profile VALUES '
+                    '(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                    hourly_activity_profiles)
+    cur.executemany('INSERT INTO user_day_profile VALUES (?,?,?,?,?,?,?,?,?)',
+                    daily_activity_profiles)
+    cur.executemany('INSERT INTO user_month_profile VALUES '
+                    '(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                    monthly_activity_profiles)
 
-        conn.commit()
-        conn.close()
-        msg = "[+] Copied the activity profiles"
-        logger.info(msg)
+    conn.commit()
+    conn.close()
 
-        return None
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_activity_profiles.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
-
+    logger.info("[+] Copied the activity profiles")
 
 def inventory_copy_gate_profiles(inventory_path):
     """
@@ -492,7 +517,7 @@ def inventory_copy_vector_layers(inventory_path):
 
         try:
             receptors = alaqsdblite.query_string("SELECT * FROM shapes_receptor_points;")
-            curs.executemany('INSERT INTO shapes_receptor_points VALUES (?,?,?,?,?,?)', receptors)
+            curs.executemany('INSERT INTO shapes_receptor_points VALUES (?,?,?,?,?,?,?)', receptors)
             conn.commit()
             msg = "[+] Receptor points copied to output file"
             logger.info(msg)

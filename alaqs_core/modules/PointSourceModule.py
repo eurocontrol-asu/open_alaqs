@@ -40,12 +40,7 @@ class PointSourceWithTimeProfileModule(SourceWithTimeProfileModule):
         if not self.getDatabasePath() is None:
             self.setStore(PointSourcesStore(self.getDatabasePath()))
 
-    def beginJob(self):
-        SourceWithTimeProfileModule.beginJob(
-            self)  # super(PointSourceWithTimeProfileModule, self).beginJob()
-
-    def process(self, start_time, end_time, source_names=None,
-                **kwargs):
+    def process(self, start_time, end_time, source_names=None, **kwargs):
         if source_names is None:
             source_names = []
         result_ = []

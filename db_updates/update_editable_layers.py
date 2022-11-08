@@ -27,8 +27,7 @@ if __name__ == "__main__":
     sql_folder = (Path(__file__).parents[1] / 'alaqs_core/sql')
 
     # Get the path to the editable layers template
-    editable_layers_template_path = Path(
-        __file__).parent / 'editable_layers.sqlite'
+    editable_layers_template_path = templates / 'editable_layers.sqlite'
 
     for new_alaqs_path, old_alaqs_path in convert.items():
 
@@ -86,6 +85,9 @@ if __name__ == "__main__":
             sql_to_execute['sql'] & sql_to_execute['old'] & \
             ~sql_to_execute['template']
 
+        # Determine if it's an inventory template
+        inventory_template = sql_to_execute.loc[sql_to_execute['to_execute'], 'name'].str.startswith('tbl_').any()
+
         # Copy the tables to the new .alaqs file
         print("Creating", sql_to_execute['to_execute'].sum(), "tables")
         for _, table_to_create in sql_to_execute.loc[
@@ -104,20 +106,25 @@ if __name__ == "__main__":
             # Execute the sql query
             for s in sql.split(';'):
                 if len(s) > 0 and "AddGeometryColumn" not in s:
-                    new_alaqs_engine.execute(f"{s};")
+                    if not inventory_template:
+                        new_alaqs_engine.execute(f"{s};")
+                    elif not s.strip().startswith("INSERT INTO "):
+                        new_alaqs_engine.execute(f"{s};")
 
         # Validate that all relevant tables are there
         new_tables = \
             pd.read_sql(tables_sql, new_alaqs_engine).sort_values('name')
-        new_tables = \
-            new_tables[new_tables['name'] == new_tables['name'].str.lower()]
+        new_tables = new_tables[
+            (new_tables['name'] == new_tables['name'].str.lower()) |
+            new_tables['name'].str.startswith('tbl_')
+        ]
         new_tables['new'] = True
 
         new_tables = new_tables.merge(
             old_tables, how='outer', on='name', suffixes=('_new', '_old')
         ).fillna(False)
 
-        prefixes = ['default_', 'shapes_', 'user_']
+        prefixes = ['default_', 'shapes_', 'user_', 'tbl_']
         new_tables['relevant'] = pd.concat([
             new_tables['name'].str.startswith(p) for p in prefixes
         ], axis=1).any(axis=1)
@@ -127,11 +134,13 @@ if __name__ == "__main__":
         assert not new_tables['missing'].any()
 
         # Fill the database with default data
-        new_tables['to_copy'] = new_tables['name'].str.startswith('default_')
-        print("Copying", new_tables['to_copy'].sum(), "tables")
+        new_tables['to_copy'] = \
+            new_tables['name'].str.startswith('default_') | \
+            new_tables['name'].str.startswith('tbl_')
+        print("Importing", new_tables['to_copy'].sum(), "tables")
         for _, table_to_copy in new_tables.loc[
             new_tables['to_copy'], 'name'].iteritems():
-            print("*\tCopy", table_to_copy)
+            print("*\tImport", table_to_copy)
 
             # Get the data
             data = \
