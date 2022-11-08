@@ -149,7 +149,7 @@ def inventory_create_blank(inventory_name):
     """
     try:
         shutil.copy2(os.path.join(os.path.dirname(__file__),
-                                  '../templates/inventory_template.alaqs'), inventory_name)
+                                  '../templates/inventory.alaqs'), inventory_name)
         msg = "[+] Created a blank ALAQS output file"
         logger.info(msg)
         return None

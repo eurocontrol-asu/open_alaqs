@@ -532,7 +532,7 @@
 532, 'METEO_SURFACE', 'tbl_MeteoSurface', 1, 'xxxHourId', 'hour_id', NULL, 'Hour identifier = serial number where start hour =0'
 533, 'METEO_SURFACE', 'tbl_MeteoSurface', 2, 'xxxDateHour', 'date_hour', NULL, 'Date and Hour of meteorological observation'
 534, 'METEO_SURFACE', 'tbl_MeteoSurface', 3, 'xxxJulianDay', 'julian_day', NULL, 'Julian day'
-535, 'METEO_SURFACE', 'tbl_MeteoSurface', 4, 'xxxSensibleHeatFlux', 'sens_heat_flux', 'W/m�', 'xxxWindRefHeight'
+535, 'METEO_SURFACE', 'tbl_MeteoSurface', 4, 'xxxSensibleHeatFlux', 'sens_heat_flux', 'W/m2', 'xxxWindRefHeight'
 536, 'METEO_SURFACE', 'tbl_MeteoSurface', 5, 'xxxSurfFrictionVelocity', 'surf_friction_vel', 'm/s', 'Surface Friction Velocity (m/s)'
 537, 'METEO_SURFACE', 'tbl_MeteoSurface', 6, 'xxxConvVelocityScale', 'conv_vel_scale', 'm/s', 'Convective Velocity Scale (m/s)'
 538, 'METEO_SURFACE', 'tbl_MeteoSurface', 7, 'xxxVertPotTempGrad', 'vptg', NULL, 'Vertical potential temperature gradient in the 500m layer obove PBL'
