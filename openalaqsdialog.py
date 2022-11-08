@@ -124,7 +124,7 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
         """
         directory = str(QtWidgets.QFileDialog.getExistingDirectory(
             parent=None))
-        if directory.strip() is not "":
+        if directory.strip() != "":
             self.ui.lineEditDatabaseDirectory.setText(directory)
         return None
 
@@ -504,7 +504,7 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             self.ui.comboBoxRoadwayCountry, "str")
         self.study_information = str(
             self.ui.textEditStudyInformation.toPlainText())
-        if self.study_information is "":
+        if self.study_information == "":
             self.study_information = "Not set"
 
         self.study_setup = [self.project_name, self.airport_name,
@@ -651,7 +651,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         :param profile_id: the unique ID of the hourly profile to be displayed
         :return: :raise Exception:
         """
-        if str(profile_id).strip() is "":
+        if str(profile_id).strip() == "":
             self.clear_hourly_profile()
             return None
 
@@ -695,7 +695,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
 
         :param profile_id: the unique ID of the daily profile to be displayed
         """
-        if str(profile_id).strip() is "":
+        if str(profile_id).strip() == "":
             self.clear_daily_profile()
             return None
         profile_data = alaqs.get_daily_profile(profile_id)
@@ -721,7 +721,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
 
         :param profile_id: the unique ID of the monthly profile to be displayed
         """
-        if str(profile_id).strip() is "":
+        if str(profile_id).strip() == "":
             self.clear_monthly_profile()
             return None
         profile_data = alaqs.get_monthly_profile(profile_id)
@@ -1892,7 +1892,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         """
         directory = str(
             QtWidgets.QFileDialog.getExistingDirectory(parent=None))
-        if directory.strip() is not "":
+        if directory.strip() != "":
             self.ui.output_save_path.setText(directory)
         return None
 
@@ -2889,7 +2889,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             "Select AUSTAL file",
             "",
             "austal.exe")
-        if directory.strip() is not "":
+        if directory.strip() != "":
             self.ui.lineEditFilename_a2k.setText(directory)
         return None
 
@@ -2900,7 +2900,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         """
         directory = str(
             QtWidgets.QFileDialog.getExistingDirectory(parent=None))
-        if directory.strip() is not "":
+        if directory.strip() != "":
             self.ui.lineEditFilename_work_dir.setText(directory)
         return None
 
