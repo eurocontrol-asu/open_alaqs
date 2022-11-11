@@ -1,3 +1,6 @@
+"""
+TODO: This script needs to generate the default_aircraft.csv file in /data
+"""
 from pathlib import Path
 import sys
 
@@ -6,8 +9,8 @@ import numpy as np
 import sqlalchemy   
 
 
-MOST_FREQUENT_ENGINES_FILE = "most_freq_eng_per_aircraft_type.csv"
-EMISSIONS_FILE = "EEA_AEM_Acft_Mapping_Eng_LTO_Indices_2022_02-05-2022_v4.xlsx"
+MOST_FREQUENT_ENGINES_FILE = "../src/most_freq_eng_per_aircraft_type.csv"
+EMISSIONS_FILE = "../src/EEA_AEM_Acft_Mapping_Eng_LTO_Indices_2022_02-05-2022_v4.xlsx"
 AIRCRAFT_TO_ENGINE_TAB = "ACT_PRF.aircraft_engine.txt"
 MANUFACTURER_INFO_TAB = "ICAO Doc 8643 - 04042022"
 ENGINES_ID_LIST_TAB = "ENGINES_ID_LIST"

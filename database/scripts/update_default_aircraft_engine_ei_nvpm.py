@@ -1,3 +1,6 @@
+"""
+TODO: This script needs to merged with update_default_aircraft_engine_ei.py
+"""
 import shutil
 import sys
 from pathlib import Path

@@ -1,3 +1,6 @@
+"""
+TODO: This script needs to renamed to generate.py and needs to add data from /data folder (not an old .alaqs file)
+"""
 import shutil
 from pathlib import Path
 
