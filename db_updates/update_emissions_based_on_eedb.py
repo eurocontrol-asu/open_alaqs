@@ -3,32 +3,15 @@ from pathlib import Path
 import shutil
 import sys
 from typing import Tuple
+import logging
 
 import pandas as pd
 import sqlalchemy
 
 from update_default_aircraft_engine_ei_nvpm import update_default_aircraft_engine_ei_nvpm
+import constants as c
 
-
-# Tabs where data is sabed in EEDB database file
-GAS_EMISSIONS_TAB = "Gaseous Emissions and Smoke"
-NVPM_EMISSIONS_TAB = "nvPM Emissions"
-
-# Constants for PM_SUL_EI calculation
-# Constants values taken from ICAO DOC 9889, Attachment D to Appendix 1
-MW_OUT = 96
-MW_SULPHUR = 32
-FSC =  0.068
-EPSILON = 2.4
-
-# Constants for PM_Volatile calculation
-# Constants values taken from ICAO DOC 9889, Attachment D to Appendix 1
-REFERENCE_RATIO_PM_VOLATILE = {
-    "T/O": 115,
-    "C/O": 76,
-    "App": 56.25,
-    "Idle": 6.17
-}
+logging.getLogger().setLevel(logging.INFO)
 
 
 def get_engine(db_url: str):
@@ -38,53 +21,6 @@ def get_engine(db_url: str):
     db_url = "sqlite:///" + db_url + ".alaqs"
 
     return sqlalchemy.create_engine(db_url)
-
-
-def get_values_from_command_line() -> Tuple[str, str, str]:
-    """_summary_
-
-    Raises:
-        Exception: _description_
-
-    Returns:
-        Tuple[str, str, str]: _description_
-    """
-
-    args = sys.argv
-
-    if len(args) != 4:
-        raise Exception(
-            "Wrong number of arguments. Expected call: python " \
-                "db_updates/update_emissions_based_on_eedb.py <eedb_database_file_name> " \
-                    "<old_blank_alaqs_study_name> <new_blank_alaqs_study_name>"
-        )
-
-    return args[1], args[2], args[3]
-
-
-def get_tabs_from_eedb_emissions_database_and_old_study() -> Tuple[pd.DataFrame, pd.DataFrame, str, str]:
-    """_summary_
-
-    Returns:
-        Tuple[pd.DataFrame, pd.DataFrame, str, str]: _description_
-    """
-
-    file_name, old_study_name, new_study_name  = get_values_from_command_line()
-    full_file_path = Path(__file__).parent / (file_name + ".xlsx")
-
-    if not Path(old_study_name + ".alaqs").exists():
-        raise Exception(f"The input file that you try to use does not exist.\n{old_study_name}")
-
-    if Path(new_study_name + ".alaqs").exists():
-        raise Exception(f"The output file already exists.\n{new_study_name}")
-
-    # Copy the file
-    shutil.copy(str(Path(old_study_name + ".alaqs")), str(Path(new_study_name + ".alaqs")))
-
-    gas_emissions = pd.read_excel(full_file_path, sheet_name=GAS_EMISSIONS_TAB)
-    nvmp_emissions = pd.read_excel(full_file_path, sheet_name=NVPM_EMISSIONS_TAB)
-
-    return gas_emissions, nvmp_emissions, old_study_name, new_study_name
 
 
 def get_gas_ei(all_emissions: pd.DataFrame, row: pd.Series, mode: str, gas: str) -> float:
@@ -167,7 +103,7 @@ def compute_pm_sul_ei() -> float:
         float: _description_
     """
     
-    return (10 ** 6) * ((FSC * EPSILON * MW_OUT) / MW_SULPHUR) / 1000
+    return (10 ** 6) * ((c.FSC * c.EPSILON * c.MW_OUT) / c.MW_SULPHUR) / 1000
 
 
 def compute_pm_volatile_ei(hc: float, mode: str) -> float:
@@ -181,14 +117,22 @@ def compute_pm_volatile_ei(hc: float, mode: str) -> float:
         float: _description_
     """
 
-    return REFERENCE_RATIO_PM_VOLATILE[mode] * hc / 1000
+    return c.REFERENCE_RATIO_PM_VOLATILE[mode] * hc / 1000
 
 
-def update_emissions_based_on_eedb():
+def update_emissions_based_on_eedb(old_database: str, new_database: str):
+    """_summary_
 
-    # Get gas and nvPM emissions and merge them in the same dataframe
-    gas_emissions, nvmp_emissions, old_study_path, new_study_path = \
-        get_tabs_from_eedb_emissions_database_and_old_study()
+    Args:
+        old_database (str): _description_
+        new_database (str): _description_
+    """
+
+    file_path = Path(__file__).parent / c.DATA_PATH
+
+    gas_emissions = pd.read_excel(file_path / c.FILE_ICAO_EEDB, sheet_name=c.TAB_GAS_EMISSIONS)
+    nvmp_emissions = pd.read_excel(file_path / c.FILE_ICAO_EEDB, sheet_name=c.TAB_NVPM_EMISSIONS)
+
     all_emissions = gas_emissions.merge(nvmp_emissions, how="outer", on=["UID No"])
 
     # Initialize new emissions dataframe
@@ -252,7 +196,7 @@ def update_emissions_based_on_eedb():
             row["PM_volatile_EI"] = compute_pm_volatile_ei(row["HC_EI"], mode)
 
             new_emissions = new_emissions.append(row, ignore_index=True)
-    
+
     # Calculate nvPM EI
     new_emissions = update_default_aircraft_engine_ei_nvpm(new_emissions)
 
@@ -261,21 +205,17 @@ def update_emissions_based_on_eedb():
     new_emissions["PM_TOTAL_EI"] = new_emissions["PM_01_EI"] + new_emissions["PM_02_EI"]
 
     # Open new table
-    with get_engine(new_study_path).connect() as conn:
+    with get_engine(new_database).connect() as conn:
         new_emissions.to_sql(
             "default_aircraft_engine_ei", con=conn, index=False, if_exists="replace"
         )
 
-    # Get engines in old study
-    with get_engine(old_study_path).connect() as conn:
-        old_engines = pd.read_sql("SELECT * FROM default_aircraft", con=conn)
+        new_engines = pd.read_sql("SELECT * FROM default_aircraft", con=conn)
 
     # Check which engines are not found in the new emissions table
-    old_engines["FOUND"] = old_engines["engine"].isin(new_emissions["engine_name"].unique())
-    nr_engines_not_found = len(old_engines[old_engines["FOUND"] == False])
+    new_engines["FOUND"] = new_engines["engine"].isin(new_emissions["engine_name"].unique())
+    nr_engines_not_found = len(new_engines[new_engines["FOUND"] == False])
+    print(new_engines[new_engines["FOUND"] == False])
 
-    print(f"{nr_engines_not_found} engines from the aircraft table were not found in the new table.")
-
-
-if __name__ == "__main__":
-    update_emissions_based_on_eedb()
+    logging.info(f"{nr_engines_not_found}/{len(new_engines)} engines from the aircraft table were "\
+        "not found in the engine emissions table.")

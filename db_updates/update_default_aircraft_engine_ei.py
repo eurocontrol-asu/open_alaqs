@@ -5,10 +5,10 @@ import pandas as pd
 import numpy as np
 import sqlalchemy   
 
-MOST_FREQUENT_ENGINES_FILE = "most_freq_eng_per_aircraft_type.csv"
-EMISSIONS_FILE = "EEA_AEM_Acft_Mapping_Eng_LTO_Indices_2022_02-05-2022_v4.xlsx"
+FILE_MOST_FREQUENT_ENGINES = "most_freq_eng_per_aircraft_type.csv"
+FILE_EMISSIONS = "EEA_AEM_Acft_Mapping_Eng_LTO_Indices_2022_02-05-2022_v4.xlsx"
 ENGINES_EMISSIONS_TAB = "AEM_ENGINE_LTO_VALUES.(v256)"
-ENGINES_ID_LIST_TAB = "ENGINES_ID_LIST"
+TAB_ENGINES_ID_LIST = "ENGINES_ID_LIST"
 
 
 def rename_column(df: pd.DataFrame, name: str, new_name: str) -> pd.DataFrame:
@@ -57,13 +57,13 @@ if __name__ == "__main__":
         )
 
     # Import relevant tabs from Excel
-    most_frequent_engines = pd.read_csv(file_path / MOST_FREQUENT_ENGINES_FILE)
+    most_frequent_engines = pd.read_csv(file_path / FILE_MOST_FREQUENT_ENGINES)
     engines_id_list = pd.read_excel(
-        file_path / EMISSIONS_FILE,
-        ENGINES_ID_LIST_TAB
+        file_path / FILE_EMISSIONS,
+        TAB_ENGINES_ID_LIST
     )
     engine_emissions = pd.read_excel(
-        file_path / EMISSIONS_FILE,
+        file_path / FILE_EMISSIONS,
         ENGINES_EMISSIONS_TAB
     )
 

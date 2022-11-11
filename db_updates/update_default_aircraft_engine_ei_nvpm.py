@@ -6,6 +6,8 @@ import math
 import logging
 import sqlalchemy
 
+import constants as c
+
 
 logging.getLogger().setLevel(logging.INFO)
 
@@ -17,30 +19,6 @@ def get_engine(db_url: str):
     db_url = "sqlite:///" + db_url + ".alaqs"
 
     return sqlalchemy.create_engine(db_url)
-
-
-# Source: Table D-1: Suggested SF values to predict missing SN in the ICAO EEDB, page 88
-SCALING_FACTORS = {
-    "non_dac": {"TX": 0.3, "TO": 1.0, "CL": 0.9, "AP": 0.3},
-    "aviadvigatel": {"TX": 0.3, "TO": 1.0, "CL": 1.0, "AP": 0.8},
-    "ge_cf34": {"TX": 0.3, "TO": 1.0, "CL": 0.4, "AP": 0.3},
-    "textron_lycoming": {"TX": 0.3, "TO": 1.0, "CL": 1.0, "AP": 0.6},
-    "cfm_dac": {"TX": 1.0, "TO": 0.3, "CL": 0.3, "AP": 0.3},
-}
-
-
-# Source: Table D-2. Representative AFRk listed by ICAO power settings (mode k), page 89
-AIR_FUEL_RATIO = {"TX": 106, "TO": 45, "CL": 51, "AP": 83}
-
-
-# Source: Table D-4. Standard values for GMDk listed by ICAO thrust settings (mode k), page 91
-GEOMTRIC_MEAN_DIAMETERS = {"TX": 20, "TO": 40, "CL": 40, "AP": 20}
-
-
-# Constants
-NR = 10**24
-STANDARD_DEVIATION_PM = 1.8
-PARTICLE_EFFECTIVE_DENSITY = 1000
 
 
 def calculate_smoke_number(db_line: pd.Series, engine_scaling_factor: float) -> float:
@@ -156,12 +134,12 @@ def calculate_nvpm_number_ei(ei_nvpm_mass: float, db_line: pd.Series) -> float:
     return (
         6
         * (ei_nvpm_mass / 1000)
-        * NR
+        * c.NR
         / (
             math.pi
-            * PARTICLE_EFFECTIVE_DENSITY
-            * ((GEOMTRIC_MEAN_DIAMETERS[db_line["mode"]]) ** 3)
-            * math.exp(4.5 * (math.log(STANDARD_DEVIATION_PM)) ** 2)
+            * c.PARTICLE_EFFECTIVE_DENSITY
+            * ((c.GEOMTRIC_MEAN_DIAMETERS[db_line["mode"]]) ** 3)
+            * math.exp(4.5 * (math.log(c.STANDARD_DEVIATION_PM)) ** 2)
         )
     )
 
@@ -203,15 +181,15 @@ def update_default_aircraft_engine_ei_nvpm(old_blank_study: pd.DataFrame) -> pd.
 
         # Evaluate scaling factor based on engine type
         if "aviadvigatel" in old_line["manufacturer"]:
-            engine_scaling_factor = SCALING_FACTORS["aviadgatel"][old_line["mode"]]
+            engine_scaling_factor = c.SCALING_FACTORS["aviadgatel"][old_line["mode"]]
         elif "textron" in old_line["manufacturer"]:
-            engine_scaling_factor = SCALING_FACTORS["textron"][old_line["mode"]]
+            engine_scaling_factor = c.SCALING_FACTORS["textron"][old_line["mode"]]
         elif "cfm" in old_line["manufacturer"]:
-            engine_scaling_factor = SCALING_FACTORS["cfm_dac"][old_line["mode"]]
+            engine_scaling_factor = c.SCALING_FACTORS["cfm_dac"][old_line["mode"]]
         elif "CF34" in old_line["engine_full_name"]:
-            engine_scaling_factor = SCALING_FACTORS["ge_cf34"][old_line["mode"]]
+            engine_scaling_factor = c.SCALING_FACTORS["ge_cf34"][old_line["mode"]]
         else:
-            engine_scaling_factor = SCALING_FACTORS["non_dac"][old_line["mode"]]
+            engine_scaling_factor = c.SCALING_FACTORS["non_dac"][old_line["mode"]]
 
         smoke_number_k = calculate_smoke_number(old_line, engine_scaling_factor)
 
@@ -222,7 +200,7 @@ def update_default_aircraft_engine_ei_nvpm(old_blank_study: pd.DataFrame) -> pd.
         beta = evaluate_beta(old_line)
 
         # Assign air fuel ratio based on engine mode
-        engine_afr = AIR_FUEL_RATIO[old_line["mode"]]
+        engine_afr = c.AIR_FUEL_RATIO[old_line["mode"]]
 
         exhaust_volume_qk = calculate_exhaust_volume_qk(engine_afr, beta)
 
@@ -249,58 +227,13 @@ def update_default_aircraft_engine_ei_nvpm(old_blank_study: pd.DataFrame) -> pd.
 
     # Log calculated values
     logging.info(
-        f"nvpm_mass_ei calculated successfully for number of rows: {(old_blank_study['PMnon_volatile_EI'] != 0).sum()}"
+        f"PMnon_volatile_EI calculated successfully for number of rows: "\
+            f"{(old_blank_study['PMnon_volatile_EI'] != 0).sum()}"
     )
 
     logging.info(
-        f"nvpm_mass_ei calculated successfully for number of rows: {(old_blank_study['PMnon_volatile_number_EI'] != 0).sum()}"
+        f"PMnon_volatile_number_EI calculated successfully for number of rows: "\
+            f"{(old_blank_study['PMnon_volatile_number_EI'] != 0).sum()}"
     )
 
     return old_blank_study
-
-
-if __name__ == "__main__":
-    """
-    Script introduces calculations for engine exhaust particulate emissions in
-    the form of emission indices (EI's). Based on 'First order Approximation
-    V4.0 method for estimating particulate matter 'mass and number emissions
-    from aircraft engines'.
-    ICAO Doc 9889, second edition, 2020, Attachment D to Appendix 1, page.84
-
-    Remark: all referenced equations and tables are in Attachment D, page:84
-
-    """
-
-    # Check if user added right number of arguments when calling the function
-    if len(sys.argv) != 3:
-        raise Exception(
-            "Wrong number of arguments. Correct call: `python "
-            f"{Path(__file__).name} sqlite:///old_url sqlite:///new_url`"
-        )
-
-    # Check if the input file exists and the output file does not exist
-    path_1 = sys.argv[1]
-    path_2 = sys.argv[2]
-
-    if not Path(path_1 + ".alaqs").exists():
-        raise Exception(f"The input file that you try to use does not exist.\n{path_1}")
-
-    if Path(path_2 + ".alaqs").exists():
-        raise Exception(f"The output file already exists.\n{path_2}")
-
-    # Copy the file
-    shutil.copy(str(Path(path_1 + ".alaqs")), str(Path(path_2 + ".alaqs")))
-
-    # Load old table to update
-    with get_engine(str(path_1)).connect() as conn:
-        old_blank_study = pd.read_sql(
-            "SELECT * FROM default_aircraft_engine_ei", con=conn
-        )
-
-    old_blank_study = update_default_aircraft_engine_ei_nvpm(old_blank_study)
-
-    # Save updated database
-    with get_engine(path_2).connect() as conn:
-        old_blank_study.to_sql(
-            "default_aircraft_engine_ei", con=conn, index=False, if_exists="replace"
-        )
