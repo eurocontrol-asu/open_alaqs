@@ -4,33 +4,21 @@ from pathlib import Path
 import pandas as pd
 import math
 import logging
-from open_alaqs.db_updates.update_default_aircraft_engine_ei import get_engine
+import sqlalchemy
+
+import constants as c
+
 
 logging.getLogger().setLevel(logging.INFO)
 
 
-# Source: Table D-1: Suggested SF values to predict missing SN in the ICAO EEDB, page 88
-SCALING_FACTORS = {
-    "non_dac": {"TX": 0.3, "TO": 1.0, "CL": 0.9, "AP": 0.3},
-    "aviadvigatel": {"TX": 0.3, "TO": 1.0, "CL": 1.0, "AP": 0.8},
-    "ge_cf34": {"TX": 0.3, "TO": 1.0, "CL": 0.4, "AP": 0.3},
-    "textron_lycoming": {"TX": 0.3, "TO": 1.0, "CL": 1.0, "AP": 0.6},
-    "cfm_dac": {"TX": 1.0, "TO": 0.3, "CL": 0.3, "AP": 0.3},
-}
+def get_engine(db_url: str):
+    """
+    Returns the database engine
+    """
+    db_url = "sqlite:///" + db_url + ".alaqs"
 
-
-# Source: Table D-2. Representative AFRk listed by ICAO power settings (mode k), page 89
-AIR_FUEL_RATIO = {"TX": 106, "TO": 45, "CL": 51, "AP": 83}
-
-
-# Source: Table D-4. Standard values for GMDk listed by ICAO thrust settings (mode k), page 91
-GEOMTRIC_MEAN_DIAMETERS = {"TX": 20, "TO": 40, "CL": 40, "AP": 20}
-
-
-# Constants
-NR = 10**24
-STANDARD_DEVIATION_PM = 1.8
-PARTICLE_EFFECTIVE_DENSITY = 1000
+    return sqlalchemy.create_engine(db_url)
 
 
 def calculate_smoke_number(db_line: pd.Series, engine_scaling_factor: float) -> float:
@@ -146,12 +134,12 @@ def calculate_nvpm_number_ei(ei_nvpm_mass: float, db_line: pd.Series) -> float:
     return (
         6
         * (ei_nvpm_mass / 1000)
-        * NR
+        * c.NR
         / (
             math.pi
-            * PARTICLE_EFFECTIVE_DENSITY
-            * ((GEOMTRIC_MEAN_DIAMETERS[db_line["mode"]]) ** 3)
-            * math.exp(4.5 * (math.log(STANDARD_DEVIATION_PM)) ** 2)
+            * c.PARTICLE_EFFECTIVE_DENSITY
+            * ((c.GEOMTRIC_MEAN_DIAMETERS[db_line["mode"]]) ** 3)
+            * math.exp(4.5 * (math.log(c.STANDARD_DEVIATION_PM)) ** 2)
         )
     )
 
@@ -173,47 +161,19 @@ def evaluate_beta(old_line: pd.Series) -> float:
         return 0.0
 
 
-if __name__ == "__main__":
+def update_default_aircraft_engine_ei_nvpm(old_blank_study: pd.DataFrame) -> pd.DataFrame:
+    """Adds nvPM EI to aircraft engines
+
+    Args:
+        old_blank_study (pd.DataFrame): dataframe with old .alaqs study data
+
+    Returns:
+        pd.DataFrame: dataframe with new columns added to .alaqs study
     """
-    Script introduces calculations for engine exhaust particulate emissions in
-    the form of emission indices (EI's). Based on 'First order Approximation
-    V4.0 method for estimating particulate matter 'mass and number emissions
-    from aircraft engines'.
-    ICAO Doc 9889, second edition, 2020, Attachment D to Appendix 1, page.84
-
-    Remark: all referenced equations and tables are in Attachment D, page:84
-
-    """
-
-    # Check if user added right number of arguments when calling the function
-    if len(sys.argv) != 3:
-        raise Exception(
-            "Wrong number of arguments. Correct call: `python "
-            f"{Path(__file__).name} old_url new_url`"
-        )
-
-    # Check if the input file exists and the output file does not exist
-    path_1 = Path(sys.argv[1]+".alaqs")
-    path_2 = Path(sys.argv[2]+".alaqs")
-
-    if not path_1.exists():
-        raise Exception(f"The input file that you try to use does not exist.\n{path_1}")
-
-    if path_2.exists():
-        raise Exception(f"The output file already exists.\n{path_2}")
-
-    # Copy the file
-    shutil.copy(str(path_1), str(path_2))
-
-    # Load old table to update
-    with get_engine(f"{sys.argv[1]}").connect() as conn:
-        old_blank_study = pd.read_sql(
-            "SELECT * FROM default_aircraft_engine_ei", con=conn
-        )
 
     # Add 2 columns for nvpm mass and number with assigned default values
-    old_blank_study["nvpm_ei"] = 0.0
-    old_blank_study["nvpm_number_ei"] = 0.0
+    old_blank_study["PMnon_volatile_EI"] = 0.0
+    old_blank_study["PMnon_volatile_number_EI"] = 0.0
 
     # Loop over each row of the old table, calculate nvpm_ei mass and number and
     # add to the new columns
@@ -243,7 +203,7 @@ if __name__ == "__main__":
         beta = evaluate_beta(old_line)
 
         # Assign air fuel ratio based on engine mode
-        engine_afr = AIR_FUEL_RATIO[old_line["mode"]]
+        engine_afr = c.AIR_FUEL_RATIO[old_line["mode"]]
 
         exhaust_volume_qk = calculate_exhaust_volume_qk(engine_afr, beta)
 
@@ -265,20 +225,18 @@ if __name__ == "__main__":
         ei_nvpm_number_ek = calculate_nvpm_number_ei(ei_nvpm_mass_ek, old_line)
 
         # Add calculated EInvPm to the table
-        old_blank_study.loc[index, "nvpm_ei"] = round(ei_nvpm_mass_ek, 5)
-        old_blank_study.loc[index, "nvpm_number_ei"] = ei_nvpm_number_ek
+        old_blank_study.loc[index, "PMnon_volatile_EI"] = round(ei_nvpm_mass_ek, 5)
+        old_blank_study.loc[index, "PMnon_volatile_number_EI"] = ei_nvpm_number_ek
 
     # Log calculated values
     logging.info(
-        f"nvpm_mass_ei calculated successfully for number of rows: {(old_blank_study['nvpm_ei'] != 0).sum()}"
+        f"PMnon_volatile_EI calculated successfully for number of rows: "\
+            f"{(old_blank_study['PMnon_volatile_EI'] != 0).sum()}"
     )
 
     logging.info(
-        f"nvpm_mass_ei calculated successfully for number of rows: {(old_blank_study['nvpm_number_ei'] != 0).sum()}"
+        f"PMnon_volatile_number_EI calculated successfully for number of rows: "\
+            f"{(old_blank_study['PMnon_volatile_number_EI'] != 0).sum()}"
     )
 
-    # Save updated database
-    with get_engine(f"{sys.argv[2]}").connect() as conn:
-        old_blank_study.to_sql(
-            "default_aircraft_engine_ei", con=conn, index=False, if_exists="replace"
-        )
+    return old_blank_study

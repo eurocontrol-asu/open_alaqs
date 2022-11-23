@@ -25,23 +25,23 @@ if __name__ == "__main__":
         )
 
     # Check if the input file exists and the output file does not exist
-    path_1 = Path(sys.argv[1]+".alaqs")
-    path_2 = Path(sys.argv[2]+".alaqs")
+    path_1 = sys.argv[1]
+    path_2 = sys.argv[2]
 
-    if not path_1.exists():
+    if not Path(path_1 + ".alaqs").exists():
         raise Exception(f"The input file that you try to use does not exist.\n{path_1}")
 
-    if path_2.exists():
+    if Path(path_2 + ".alaqs").exists():
         raise Exception(f"The output file already exists.\n{path_2}")
 
     # Copy the file
-    shutil.copy(str(path_1), str(path_2))
+    shutil.copy(str(Path(path_1 + ".alaqs")), str(Path(path_2 + ".alaqs")))
 
     # Import relevant tabs from Excel
     icao_eedb = pd.read_excel(file_path / ICAO_EEDB)
 
     # Load old table to update
-    with get_engine(f"{sys.argv[1]}").connect() as conn:
+    with get_engine(path_1).connect() as conn:
         old_blank_study = pd.read_sql(
             "SELECT * FROM default_aircraft_engine_ei", con=conn
         )
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     logging.info(f"Number of engines not found in ICAO EEDB: {engines_not_found}")
 
     # Save updated database
-    with get_engine(f"{sys.argv[2]}").connect() as conn:
+    with get_engine(path_2).connect() as conn:
         old_blank_study.to_sql(
             "default_aircraft_engine_ei", con=conn, index=False, if_exists="replace"
         )
