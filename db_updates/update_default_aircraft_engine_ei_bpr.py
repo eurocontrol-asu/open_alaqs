@@ -15,11 +15,13 @@ if __name__ == "__main__":
     Script that updates .alaqs database file with missing columns: eng_type, b/p_ratio
     """
 
+    file_path = Path(__file__).parent
+
     # Check if user added right number of arguments when calling the function
     if len(sys.argv) != 3:
         raise Exception(
             "Wrong number of arguments. Correct call: `python "
-            f"{Path(__file__).name} sqlite:///old_url sqlite:///new_url`"
+            f"{Path(__file__).name} old_url new_url`"
         )
 
     # Check if the input file exists and the output file does not exist
@@ -36,7 +38,7 @@ if __name__ == "__main__":
     shutil.copy(str(Path(path_1 + ".alaqs")), str(Path(path_2 + ".alaqs")))
 
     # Import relevant tabs from Excel
-    icao_eedb = pd.read_excel(ICAO_EEDB)
+    icao_eedb = pd.read_excel(file_path / ICAO_EEDB)
 
     # Load old table to update
     with get_engine(path_1).connect() as conn:
