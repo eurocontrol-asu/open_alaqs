@@ -9,7 +9,7 @@ import math
 import logging
 import sqlalchemy
 
-import constants as c
+import database.scripts.constants as c
 
 
 logging.getLogger().setLevel(logging.INFO)
