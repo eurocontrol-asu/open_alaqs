@@ -4,8 +4,74 @@ import numpy as np
 import pandas as pd
 import constants as c
 from database.scripts.update_default_aircraft_engine_ei_nvpm import update_default_aircraft_engine_ei_nvpm
-from database.scripts._delete_update_emissions_based_on_eedb import compute_pm_volatile_ei, compute_pm_sul_ei, get_smoke_number, \
-    get_gas_ei, get_fuel_flow
+
+
+def compute_pm_volatile_ei(hc: float, mode: str) -> float:
+    """_summary_
+
+    Args:
+        hc (float): _description_
+        mode (str): _description_
+
+    Returns:
+        float: _description_
+    """
+
+    return c.REFERENCE_RATIO_PM_VOLATILE[mode] * hc / 1000
+
+
+def compute_pm_sul_ei() -> float:
+    """_summary_
+
+    Returns:
+        float: _description_
+    """
+
+    return (10 ** 6) * ((c.FSC * c.EPSILON * c.MW_OUT) / c.MW_SULPHUR) / 1000
+
+
+def get_smoke_number(all_emissions: pd.DataFrame, row: pd.Series, mode: str) -> float:
+    """_summary_
+
+    Args:
+        all_emissions (pd.DataFrame): _description_
+        row (pd.Series): _description_
+        mode (str): _description_
+
+    Returns:
+        float: _description_
+    """
+
+    return all_emissions[f"SN {mode}"].loc[all_emissions["UID No"] == row["engine_name"]].iloc[0]
+
+
+def get_gas_ei(all_emissions: pd.DataFrame, row: pd.Series, mode: str, gas: str) -> float:
+    """_summary_
+
+    Args:
+        all_emissions (pd.DataFrame): _description_
+        mode (str): _description_
+
+    Returns:
+        float: _description_
+    """
+
+    return all_emissions[f"{gas} EI {mode} (g/kg)"].loc[all_emissions["UID No"] == row["engine_name"]].iloc[0]
+
+
+def get_fuel_flow(all_emissions: pd.DataFrame, row: pd.Series, mode: str) -> float:
+    """_summary_
+
+    Args:
+        row (pd.Series): _description_
+        mode (str): _description_
+
+    Returns:
+        float: _description_
+    """
+
+    return all_emissions[f"Fuel Flow {mode} (kg/sec)_x"].loc[all_emissions["UID No"] == row["engine_name"]].iloc[0]
+
 
 if __name__ == "__main__":
 
