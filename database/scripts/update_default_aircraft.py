@@ -6,14 +6,9 @@ import sys
 
 import pandas as pd
 import numpy as np
-import sqlalchemy   
+import sqlalchemy
 
-
-MOST_FREQUENT_ENGINES_FILE = "../src/most_freq_eng_per_aircraft_type.csv"
-EMISSIONS_FILE = "../src/EEA_AEM_Acft_Mapping_Eng_LTO_Indices_2022_02-05-2022_v4.xlsx"
-AIRCRAFT_TO_ENGINE_TAB = "ACT_PRF.aircraft_engine.txt"
-MANUFACTURER_INFO_TAB = "ICAO Doc 8643 - 04042022"
-ENGINES_ID_LIST_TAB = "ENGINES_ID_LIST"
+import constants as c
 
 
 def rename_column(df: pd.DataFrame, name: str, new_name: str) -> pd.DataFrame:
@@ -32,7 +27,7 @@ def get_engine(db_url: str):
     return sqlalchemy.create_engine(db_url)
 
 
-if __name__ == "__main__":
+def update_default_aircraft(old_database: str, new_database: str):
     """
     # NOTES
     # Only considered the most frequently used aircraft
@@ -45,29 +40,27 @@ if __name__ == "__main__":
     old blank study to fill gaps. Not all are covered 
     """
     
-    file_path = Path(__file__).parent
-
-    # Check if user added right number of arguments when calling the function
-    if len(sys.argv) != 3:
-        raise Exception(
-            "Wrong number of arguments. Correct call: `python update_default_aircraft_engine_ei old_url new_url`"
-        )
+    file_path = Path(__file__).parent / c.DATA_PATH
 
     # Import relevant tabs
-    most_frequent_engines = pd.read_csv(file_path / MOST_FREQUENT_ENGINES_FILE)
+    most_frequent_engines = pd.read_csv(file_path / c.FILE_MOST_FREQUENT_ENGINES)
     aircraft_to_engine_number = pd.read_excel(
-        file_path / EMISSIONS_FILE, 
-        AIRCRAFT_TO_ENGINE_TAB
+        file_path / c.FILE_EMISSIONS,
+        c.TAB_AIRCRAFT_TO_ENGINE
     )
     icao_doc_8643 = pd.read_excel(
-        file_path / EMISSIONS_FILE,
-        MANUFACTURER_INFO_TAB
+        file_path / c.FILE_EMISSIONS,
+        c.TAB_MANUFACTURER_INFO
     )
     icao_doc_8643 = icao_doc_8643.drop(columns="engine_count")
     engines_id_list = pd.read_excel(
-        file_path / EMISSIONS_FILE,
-        ENGINES_ID_LIST_TAB
+        file_path / c.FILE_EMISSIONS,
+        c.TAB_ENGINES_ID_LIST
     )
+    aircraft_mtow = pd.read_excel(
+        file_path / c.FILE_MTOW_INFORMATION,
+        converters={"mtow": int}
+    )[["icao", "mtow"]]
 
     # Include only the most frequent engines for each aircraft type
     most_frequent_engines = most_frequent_engines.loc[most_frequent_engines["MOST_FREQ"] == "*"]
@@ -99,7 +92,7 @@ if __name__ == "__main__":
     )
 
     # Load missing fields from old blank study database
-    with get_engine(sys.argv[1]).connect() as conn:
+    with get_engine(old_database).connect() as conn:
         old_blank_study = pd.read_sql("SELECT * FROM default_aircraft", con=conn)
 
     # Merge missing fields in Excel sheets
@@ -142,16 +135,15 @@ if __name__ == "__main__":
     new_df["class"] = new_df["description"] + "/" + new_df["wake_category"] 
 
     # Save updated data
-    with get_engine(sys.argv[2]).connect() as conn:
+    with get_engine(new_database).connect() as conn:
 
         # The lines above correspond to individual changes to specific aircraft
         # Remove military aircraft
-        military = ["A178", "A22", "C1", "KC2", "T34T"]
+        military = ["A178", "A22", "C1", "KC2", "T34T", "D8"]
         new_df = new_df.drop(new_df[new_df["icao"].isin(military)].index)
 
-        # Add information
-        # new_df.loc[new_df["icao"] == "A337", "mtow"] = 227000 # Wikipedia
-        # new_df.loc[new_df["icao"] == "A338", "mtow"] = 251000 # https://contentzone.eurocontrol.int/aircraftperformance/details.aspx?ICAO=A338&GroupFilter=3
+        # Add MTOW information
+        new_df.loc[new_df.icao.isin(aircraft_mtow.icao), ["mtow"]] = aircraft_mtow[["mtow"]].values
 
         default_aircraft = new_df[
             [
