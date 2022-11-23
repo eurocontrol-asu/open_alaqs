@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 import shutil
 
-from update_default_aircraft import update_default_aircraft
+from _delete_update_default_aircraft import update_default_aircraft
 from update_emissions_based_on_eedb import update_emissions_based_on_eedb
 
 import constants as c
