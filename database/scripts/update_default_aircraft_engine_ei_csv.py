@@ -104,6 +104,8 @@ if __name__ == "__main__":
         "PM_SUL_EI": "pm10_ei",
         "PM_01_EI": "p1_ei",
         "PM_02_EI": "p2_ei",
+        "PMnon_volatile_EI": "nvpm_ei",
+        "PMnon_volatile_number_EI": "nvpm_number_ei"
     })
 
     # Set the columns
@@ -136,7 +138,11 @@ if __name__ == "__main__":
         "pm10_prefoa3",
         "pm10_nonvol",
         "pm10_sul",
-        "pm10_organic"
+        "pm10_organic",
+        "eng_type",
+        "bpr",
+        "nvpm_ei",
+        "nvpm_number_ei",
     ]]
 
     new_emissions.to_csv(default_aircraft_engine_ei_csv, sep=';', index=False)

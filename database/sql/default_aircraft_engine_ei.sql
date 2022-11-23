@@ -7,7 +7,7 @@ CREATE TABLE "default_aircraft_engine_ei" (
   "engine_name" TEXT, 
   "thrust" DECIMAL, 
   "mode" VARCHAR(2), 
-  "fuel_kg_sec" DECIMAL, 
+  "fuel_kg_sec" DECIMAL,
   "co_ei" DECIMAL, 
   "hc_ei" DECIMAL, 
   "nox_ei" DECIMAL, 
@@ -29,5 +29,9 @@ CREATE TABLE "default_aircraft_engine_ei" (
   "pm10_prefoa3" DECIMAL, 
   "pm10_nonvol" DECIMAL, 
   "pm10_sul" DECIMAL, 
-  "pm10_organic" DECIMAL
+  "pm10_organic" DECIMAL,
+  "eng_type" TEXT,
+  "bpr" DECIMAL,
+  "nvpm_ei" DECIMAL,
+  "nvpm_number_ei" DECIMAL
 );
