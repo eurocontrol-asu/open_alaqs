@@ -94,7 +94,7 @@ if __name__ == "__main__":
             sql = file.read()
 
         # Check if the SQL query should be executed to the project template
-        if re.search(r'(default|shapes|user)_(.*).sql', sql_path.name) is not None:
+        if re.search(r'(default|user)_(.*).sql', sql_path.name) is not None:
 
             # Execute the SQL query
             for s in sql.split(';'):
@@ -102,7 +102,7 @@ if __name__ == "__main__":
                     project_engine.execute(f"{s};")
 
         # Check if the SQL query should be executed to the inventory template
-        if re.search(r'(default|shapes|user|tbl)_(.*).sql', sql_path.name) is not None:
+        if re.search(r'(default|user|tbl)_(.*).sql', sql_path.name) is not None:
 
             # Execute the SQL query
             for s in sql.split(';'):
