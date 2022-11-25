@@ -13,6 +13,12 @@ SQL_DIR = Path(__file__).parent / 'sql'
 DATA_DIR = Path(__file__).parent / 'data'
 TEMPLATES_DIR = Path(__file__).parents[1] / 'alaqs_core/templates'
 
+# Set the match patterns
+MATCH_PATTERNS = {
+    'project': r'(default|user)_(.*).sql',
+    'inventory': r'(default|user|tbl)_(.*).sql'
+}
+
 
 def get_engine(p: Path) -> sqlalchemy.engine.Engine:
     if isinstance(p, PosixPath):
@@ -63,6 +69,29 @@ def get_data(p: Path, d: pd.DataFrame):
     return data
 
 
+def apply_sql(engine, sql_paths, file_type):
+    if file_type not in ('project', 'inventory'):
+        raise ValueError(f'{file_type} is not supported. It should be either \'project\' or \'inventory\'')
+
+    # Determine the match pattern
+    match_pattern = MATCH_PATTERNS[file_type]
+
+    for sql_path in sql_paths:
+
+        # Read the .sql file
+        with sql_path.open() as file:
+            sql = file.read()
+
+        # Check if the SQL query should be executed to the file
+        if re.search(match_pattern, sql_path.name) is not None:
+
+            # Execute the SQL query
+            for s in sql.split(';'):
+                if len(s) > 0 and ("AddGeometryColumn" not in s) and (
+                        file_type != 'inventory' or not s.strip().startswith("INSERT INTO ")):
+                    engine.execute(f"{s};")
+
+
 if __name__ == "__main__":
     """
     Build a new *.alaqs project template and a new *_out.alaqs inventory template. 
@@ -84,30 +113,12 @@ if __name__ == "__main__":
     shutil.copy(editable_layers_template_path, project_template)
     shutil.copy(editable_layers_template_path, inventory_template)
 
-    # Get the SQL queries to execute
-    for sql_path in SQL_DIR.glob('*.sql'):
+    # Get the files containing SQL queries
+    sql_files = list(SQL_DIR.glob('*.sql'))
 
-        print('create', sql_path.stem)
-
-        # Read the .sql file
-        with sql_path.open() as file:
-            sql = file.read()
-
-        # Check if the SQL query should be executed to the project template
-        if re.search(r'(default|user)_(.*).sql', sql_path.name) is not None:
-
-            # Execute the SQL query
-            for s in sql.split(';'):
-                if len(s) > 0 and ("AddGeometryColumn" not in s):
-                    project_engine.execute(f"{s};")
-
-        # Check if the SQL query should be executed to the inventory template
-        if re.search(r'(default|user|tbl)_(.*).sql', sql_path.name) is not None:
-
-            # Execute the SQL query
-            for s in sql.split(';'):
-                if len(s) > 0 and ("AddGeometryColumn" not in s) and not s.strip().startswith("INSERT INTO "):
-                    inventory_engine.execute(f"{s};")
+    # Execute the SQL queries in the files to the templates
+    apply_sql(project_engine, sql_files, file_type='project')
+    apply_sql(inventory_engine, sql_files, file_type='inventory')
 
     # Get the csv files to import
     for csv_path in DATA_DIR.glob('*.csv'):
