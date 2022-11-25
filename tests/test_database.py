@@ -8,23 +8,22 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 
-from database.generate_templates import get_data, apply_sql, MATCH_PATTERNS
+from database.generate_templates import get_data, apply_sql, MATCH_PATTERNS, get_engine
 
 DB_DIR = Path(__file__).parents[1] / 'database'
-SQL_DIR = DB_DIR / 'sql'
-DATA_DIR = DB_DIR / 'data'
+TEMPLATES_DIR = Path(__file__).parents[1] / 'alaqs_core/templates'
 
 
 @pytest.fixture(scope="module")
 def sql_files():
     # Get the files with SQL queries to execute
-    return list(SQL_DIR.glob('*.sql'))
+    return list((DB_DIR / 'sql').glob('*.sql'))
 
 
 @pytest.fixture(scope="module")
 def csv_files():
-    # Get the files with SQL queries to execute
-    return list(DATA_DIR.glob('*.csv'))
+    # Get the files with data to insert
+    return list((DB_DIR / 'data').glob('*.csv'))
 
 
 @pytest.mark.parametrize("template_type", ['project', 'inventory'])
@@ -81,9 +80,65 @@ def test_csv(sql_files: list, csv_files: list, template_type: str):
             raise ValueError("What to do when the database is not empty?")
 
 
-def test_project_template():
-    # todo Test if the project template is consistent with sql and csv files
-    raise NotImplementedError
+@pytest.mark.parametrize("template_type", ['project', 'inventory'])
+def test_template_sql(sql_files: list, template_type: str):
+    """
+    Test if the template is consistent with the sql files
+    """
+
+    # Create in-memory sqlite database
+    sql_engine = create_engine("sqlite:///:memory:")
+
+    # Execute the SQL queries in the files to the templates
+    apply_sql(sql_engine, sql_files, file_type=template_type)
+
+    # Get the template
+    template_engine = get_engine(TEMPLATES_DIR / f'{template_type}.alaqs')
+
+    # Get the editable layers
+    qgis_engine = get_engine(DB_DIR / f'src/editable_layers.sqlite')
+
+    # Check if all the tables are present
+    template_tables = set(template_engine.table_names())
+    sql_tables = set(sql_engine.table_names())
+    qgis_tables = {
+        'shapes_tracks',
+        'shapes_area_sources',
+        'shapes_buildings',
+        'shapes_gates',
+        'shapes_parking',
+        'shapes_roadways',
+        'shapes_runways',
+        'shapes_taxiways',
+        'shapes_point_sources',
+    }
+
+    assert len(sql_tables - template_tables) == 0
+    assert len(qgis_tables - template_tables) == 0
+
+    # Check if the columns are present
+    for table in sql_tables:
+        # Get the columns of template
+        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', template_engine)
+
+        # Get the columns of sql files
+        sql_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', sql_engine)
+
+        # Check if the columns match
+        assert (template_d.columns == sql_d.columns).all()
+
+    for table in qgis_tables:
+        # Get the columns of template
+        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', template_engine)
+
+        # Get the columns of sql files
+        qgis_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', qgis_engine)
+
+        # Check if the columns match
+        assert (template_d.columns == qgis_d.columns).all()
+
+        # Specifically check if the geometry column is present
+        assert 'geometry' in template_d
 
 
 def test_inventory_template():
