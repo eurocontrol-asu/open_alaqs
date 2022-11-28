@@ -141,6 +141,20 @@ def test_template_sql(sql_files: list, template_type: str):
         assert 'geometry' in template_d
 
 
-def test_inventory_template():
-    # todo Test if the inventory template is consistent with sql files
-    raise NotImplementedError
+@pytest.mark.parametrize("csv_file", list((DB_DIR / 'data').glob('*.csv')),
+                         ids=list(d.stem for d in (DB_DIR / 'data').glob('*.csv')))
+def test_template_data(sql_files: list, csv_file: Path):
+    """
+    Test if the data in the project template is consistent with csv files
+    """
+
+    # Get the template
+    template_engine = get_engine(TEMPLATES_DIR / f'project.alaqs')
+
+    # Get the contents of the table
+    template_data = pd.read_sql(f"SELECT * FROM {csv_file.stem}", template_engine)
+
+    # Read the .csv file (try ';' and ',' as separators)
+    data = get_data(csv_file, template_data)
+
+    pd.testing.assert_frame_equal(template_data, data)
