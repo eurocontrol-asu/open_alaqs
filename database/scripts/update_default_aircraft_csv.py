@@ -101,27 +101,31 @@ if __name__ == "__main__":
     # Add MTOW information
     new_df.loc[new_df.icao.isin(aircraft_mtow.icao), ["mtow"]] = aircraft_mtow[["mtow"]].values
 
-    # Filter the relevant columns
-    default_aircraft = new_df[
-        [
-            "oid",
-            "icao",
-            "ac_group_code",
-            "ac_group",
-            "manufacturer",
-            "name",
-            "class",
-            "mtow",
-            "engine_count",
-            "engine_name",
-            "engine",
-            "departure_profile",
-            "arrival_profile",
-            "bada_id",
-            "wake_category",
-            "apu_id"
-        ]
+    # Set the relevant columns
+    relevant_columns = [
+        "oid",
+        "icao",
+        "ac_group_code",
+        "ac_group",
+        "manufacturer",
+        "name",
+        "class",
+        "mtow",
+        "engine_count",
+        "engine_name",
+        "engine",
+        "departure_profile",
+        "arrival_profile",
+        "bada_id",
+        "wake_category",
+        "apu_id"
     ]
+
+    # Filter the relevant columns
+    default_aircraft = new_df[relevant_columns]
+
+    # Remove duplicate entries (check all relevant columns except oid)
+    default_aircraft = default_aircraft.drop_duplicates(relevant_columns[1:], keep='first')
 
     # Export as csv
     default_aircraft.to_csv(default_aircraft_csv, index=False, sep=';')
