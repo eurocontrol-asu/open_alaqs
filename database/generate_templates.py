@@ -1,3 +1,4 @@
+import logging
 import re
 import shutil
 from pathlib import Path, PosixPath
@@ -7,6 +8,8 @@ import pandas as pd
 import sqlalchemy
 from pandas.errors import ParserError
 from sqlalchemy.exc import IntegrityError
+
+logging.basicConfig(level=logging.DEBUG)
 
 SRC_DIR = Path(__file__).parent / 'src'
 SQL_DIR = Path(__file__).parent / 'sql'
@@ -109,7 +112,7 @@ if __name__ == "__main__":
     editable_layers_template_path = SRC_DIR / 'editable_layers.sqlite'
 
     # Duplicate the QGIS template to act as basis for the new project and inventory templates
-    print('duplicate', editable_layers_template_path.name)
+    logging.info(f'duplicate {editable_layers_template_path.name}')
     shutil.copy(editable_layers_template_path, project_template)
     shutil.copy(editable_layers_template_path, inventory_template)
 
@@ -120,10 +123,13 @@ if __name__ == "__main__":
     apply_sql(project_engine, sql_files, file_type='project')
     apply_sql(inventory_engine, sql_files, file_type='inventory')
 
-    # Get the csv files to import
-    for csv_path in DATA_DIR.glob('*.csv'):
+    # Get the csv files
+    csv_files = sorted(DATA_DIR.glob('*.csv'))
 
-        print('import', csv_path.stem)
+    # Get the csv files to import
+    for csv_path in csv_files:
+
+        logging.debug(f'import {csv_path.stem}')
 
         # Get the contents of the table
         project_data = pd.read_sql(f"SELECT * FROM {csv_path.stem}", project_engine)
@@ -135,7 +141,8 @@ if __name__ == "__main__":
         if data is not None and project_data.empty and not data.empty:
             try:
                 data.to_sql(csv_path.stem, project_engine, index=False, if_exists='append')
+                logging.debug(f'successfully imported {data.shape[0]} rows')
             except IntegrityError as e:
-                warn(e.args[0])
+                logging.error(e.args[0])
         elif not project_data.empty:
             raise ValueError("What to do when the database is not empty?")
