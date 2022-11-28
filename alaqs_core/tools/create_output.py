@@ -673,7 +673,7 @@ def inventory_copy_aircraft_engine_ei(inventory_path):
             sql_text = "SELECT * FROM default_aircraft_engine_ei WHERE engine_name=\"%s\";" % engine
             data = alaqsdblite.query_string(sql_text)
             # insert into the output
-            curs.executemany('INSERT INTO default_aircraft_engine_ei VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', data)
+            curs.executemany('INSERT INTO default_aircraft_engine_ei VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', data)
         # House keeping
         conn.commit()
         conn.close()
