@@ -234,7 +234,7 @@ def inventory_update_tbl_inv_period(database_path, model_parameters, study_setup
     return None
 
 
-
+@catch_errors
 def inventory_update_tbl_inv_time(inventory_path, model_parameters):
     """
     Update the invTime table with hourly intervals based on the user study definitions
@@ -242,89 +242,85 @@ def inventory_update_tbl_inv_time(inventory_path, model_parameters):
     :param model_parameters: a dict of user defined parameters for the current output
     :return:
     """
+    time_list = []
+    hour_delta = timedelta(hours=1)
     try:
-        time_list = []
-        hour_delta = timedelta(hours=1)
-        try:
-            start_time = datetime.strptime(model_parameters['study_start_date'], "%Y-%m-%d %H:%M:%S")
-            end_time = datetime.strptime(model_parameters['study_end_date'], "%Y-%m-%d %H:%M:%S")
-        except:
-            start_time = model_parameters['study_start_date']
-            end_time = model_parameters['study_end_date']
+        start_time = datetime.strptime(model_parameters['study_start_date'],
+                                       "%Y-%m-%d %H:%M:%S")
+        end_time = datetime.strptime(model_parameters['study_end_date'],
+                                     "%Y-%m-%d %H:%M:%S")
+    except:
+        start_time = model_parameters['study_start_date']
+        end_time = model_parameters['study_end_date']
 
-        # Create a time stamp for the start of the first hour - kind of floor(start_time)
-        current_hour = start_time - timedelta(minutes=start_time.minute % 60, seconds=start_time.second,
-                                                       microseconds=start_time.microsecond)
+    # Create a time stamp for the start of the first hour - kind of floor(start_time)
+    current_hour = start_time - timedelta(minutes=start_time.minute % 60,
+                                          seconds=start_time.second,
+                                          microseconds=start_time.microsecond)
 
-        # Build a list of hours we need to model
-        while current_hour <= end_time:
+    # Build a list of hours we need to model
+    while current_hour <= end_time:
+        interval_start = current_hour
+        year = interval_start.strftime("%Y")
+        month = interval_start.strftime("%m")
+        day = interval_start.strftime("%d")
+        hour = interval_start.strftime("%H")
+        weekday_id = interval_start.weekday()
+        mix_height = '914.4'
 
-            interval_start = current_hour
-            year = interval_start.strftime("%Y")
-            month = interval_start.strftime("%m")
-            day = interval_start.strftime("%d")
-            hour = interval_start.strftime("%H")
-            weekday_id = interval_start.weekday()
-            mix_height = '914.4'
+        time_list.append(
+            [interval_start, year, month, day, hour, weekday_id, mix_height])
+        current_hour = current_hour + hour_delta
 
-            time_list.append([interval_start, year, month, day, hour, weekday_id, mix_height])
-            current_hour = current_hour + hour_delta
-
-        conn = sqlite.connect(inventory_path)
-        cur = conn.cursor()
-        cur.executemany("INSERT INTO tbl_InvTime (time, year, month, day, hour, weekday_id, mix_height) VALUES (?,?,?,?,?,?,?);",
-                        time_list)
-        conn.commit()
-        conn.close()
-        msg = "[+] Updated the output time table"
-        logger.info(msg)
-
-
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_update_tbl_inv_time.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
+    cur.executemany(
+        "INSERT INTO tbl_InvTime (time, year, month, day, hour, weekday_id, mix_height) VALUES (?,?,?,?,?,?,?);",
+        time_list)
+    conn.commit()
+    conn.close()
+    msg = "[+] Updated the output time table"
+    logger.info(msg)
 
 
+@catch_errors
 def inventory_insert_movements(inventory_name, model_parameters):
     """
     Insert user defined movement table into the alaqs output file
     :param inventory_name: path to the alaqs output file
     :param model_parameters: a list of user defined model parameters used to generate the study output
     """
-    try:
-        conn = sqlite.connect(inventory_name)
-        cur = conn.cursor()
 
-        with open(model_parameters['movement_path'], 'rt') as movements:
-            all_movements = []
-            movement_line = 0
-            columns_ = 0
-            for movement in movements:
-                movement_line += 1
-                if movement_line > 1:
-                    movement_data = \
-                        [movement_line - 1] + movement.strip().split(";")
-                    if not columns_:
-                        columns_ = len(movement_data)
-                    all_movements.append(movement_data)
+    conn = sqlite.connect(inventory_name)
+    cur = conn.cursor()
 
-        values_str_ = "?,"*columns_
+    with open(model_parameters['movement_path'], 'rt') as movements:
+        all_movements = []
+        movement_line = 0
+        columns_ = 0
+        for movement in movements:
+            movement_line += 1
+            if movement_line > 1:
+                movement_data = \
+                    [movement_line - 1] + movement.strip().split(";")
+                if not columns_:
+                    columns_ = len(movement_data)
+                all_movements.append(movement_data)
+
+    n_rows = len(all_movements)
+    if n_rows > 0:
+        values_str_ = "?," * columns_
         values_str_ = values_str_[:-1]
-        cur.executemany('INSERT INTO user_aircraft_movements VALUES (%s)' %(values_str_), all_movements)
+        cur.executemany(
+            'INSERT INTO user_aircraft_movements VALUES (%s)' % values_str_,
+            all_movements)
         conn.commit()
-        conn.close()
-        msg = "[+] Aircraft movements copied to output file"
-        logger.info(msg)
-
-        return None
-
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_insert_movements.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    msg = f"[+] Aircraft movements copied to output file ({n_rows} rows)"
+    conn.close()
+    logger.info(msg)
 
 
+@catch_errors
 def inventory_copy_study_setup(inventory_path):
     """
     This function copies data from the currently active project to the inventory output file
@@ -332,23 +328,18 @@ def inventory_copy_study_setup(inventory_path):
     :param inventory_path:
     :return:
     """
-    try:
-        conn = sqlite.connect(inventory_path)
-        cur = conn.cursor()
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
 
-        study_setup_data = alaqsdblite.query_string("SELECT * FROM user_study_setup;")
-        cur.execute('INSERT INTO user_study_setup VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);', study_setup_data[0])
-        conn.commit()
-        conn.close()
-        msg = "[+] Copied the study setup"
-        logger.info(msg)
-
-        return None
-
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_study_setup.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    study_setup_data = alaqsdblite.query_string(
+        "SELECT * FROM user_study_setup;")
+    cur.execute(
+        'INSERT INTO user_study_setup VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);',
+        study_setup_data[0])
+    conn.commit()
+    conn.close()
+    msg = "[+] Copied the study setup"
+    logger.info(msg)
 
 
 def inventory_update_mixing_heights(inventory_path):
