@@ -83,7 +83,7 @@ class TableViewWidgetOutputModule(OutputModule):
         self._widget.getTable().setRowCount(current_row_count + 1)
 
         # Get the new row index
-        new_row_index = current_row_count - 1
+        new_row_index = current_row_count
 
         # Write cells
         for index_col_, val_ in enumerate([
