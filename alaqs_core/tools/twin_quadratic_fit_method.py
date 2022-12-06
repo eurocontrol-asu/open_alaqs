@@ -3,7 +3,7 @@ from open_alaqs.alaqs_core.alaqslogging import get_logger
 logger = get_logger(__name__)
 
 
-def calculate_fuel_flow_from_power_setting(power_setting, icao_eedb):
+def calculate_fuel_flow_from_power_setting(power_setting: float, icao_eedb: dict):
     """
     Calculates the fuel flow associated to a particular power setting with the
      twin-quadratic fit method
@@ -32,8 +32,9 @@ def calculate_fuel_flow_from_power_setting(power_setting, icao_eedb):
         x2 = 0.85
         x3 = 1.0
     else:
-        raise ValueError('The power setting should be between 0.6 and 1.0 '
-                         '(inclusive).')
+        raise ValueError('The power setting should be between 0.07 and 1.0 '
+                         '(inclusive). The requested power setting is '
+                         f'{power_setting}')
 
     # Y = AX**2 + BX + C
     # with three known points:
