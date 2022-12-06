@@ -430,7 +430,11 @@ class AUSTAL2000DispersionModule(DispersionModule):
         sorted_results_keys = list(sorted_results.keys())
 
         # Get the first and last key of the sorted results and series
-        first_key, last_key = sorted_results_keys[::len(sorted_results_keys)-1]
+        if len(sorted_results_keys) == 1:
+            first_key = sorted_results_keys[0]
+            last_key = sorted_results_keys[0]
+        else:
+            first_key, last_key = sorted_results_keys[::len(sorted_results_keys)-1]
         first_key_series = next(iter(sorted_series))
 
         # Get the associated dates
@@ -454,8 +458,14 @@ class AUSTAL2000DispersionModule(DispersionModule):
         missed_hours = []
 
         # Go over all hours in the relevant timerange
-        for _day_ in rrule.rrule(rrule.DAILY, dtstart=start_date, until=end_date):
-            for hour_ in rrule.rrule(rrule.HOURLY, dtstart=_day_, until=_day_ + timedelta(days=+1, hours=-1)):
+        for _day_ in rrule.rrule(rrule.DAILY, dtstart=start_date,
+                                 until=end_date):
+
+            # Determine the end of the day
+            _day_end = _day_ + timedelta(days=+1, hours=-1)
+
+            for hour_ in rrule.rrule(rrule.HOURLY, dtstart=_day_,
+                                     until=_day_end):
 
                 # Get the timestamp as string
                 hour_str = hour_.strftime(date_fmt)
