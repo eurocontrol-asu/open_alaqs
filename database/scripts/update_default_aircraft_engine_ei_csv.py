@@ -430,4 +430,4 @@ if __name__ == "__main__":
         "nvpm_number_ei",
     ]]
 
-    new_emissions.to_csv(default_aircraft_engine_ei_csv, sep=';', index=False)
+    new_emissions.to_csv(default_aircraft_engine_ei_csv, index=False)

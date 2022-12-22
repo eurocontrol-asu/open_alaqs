@@ -1,7 +1,8 @@
-8, 'area_sources', 'AS', 'shp_AreaSource', 'Source_id', 'Height', 'POLYGON', NULL
-4, 'gates', 'GA', 'shp_Gates', 'Gate_id', NULL, 'POLYGON', NULL
-2, 'parkings', 'PL', 'shp_Parklots', 'Parking_id', 'Height', 'POLYGON', NULL
+oid,category,code,shp_table,id_field,elevation_field,type,size
 1, 'roadways', 'RD', 'shp_Roadways', 'Roadway_id', 'Height', 'RECTANGLE', '200 30 0'
-7, 'runways', 'RW', 'shp_Runways', 'Runway_id', NULL, 'BLOCK', '100;30;12;1 200;30;20;14 400;30;40;16'
+2, 'parkings', 'PL', 'shp_Parklots', 'Parking_id', 'Height', 'POLYGON', NULL
 3, 'stationary_sources', 'ST', 'shp_Statnry', 'Source_id', 'Height', 'POINT', '10'
+4, 'gates', 'GA', 'shp_Gates', 'Gate_id', NULL, 'POLYGON', NULL
 5, 'taxiways', 'TW', 'shp_Taxiways', 'Taxiway_id', NULL, 'RECTANGLE', '200 30 12'
+7, 'runways', 'RW', 'shp_Runways', 'Runway_id', NULL, 'BLOCK', '100;30;12;1 200;30;20;14 400;30;40;16'
+8, 'area_sources', 'AS', 'shp_AreaSource', 'Source_id', 'Height', 'POLYGON', NULL

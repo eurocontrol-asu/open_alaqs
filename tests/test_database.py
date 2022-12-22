@@ -1,5 +1,4 @@
 import re
-import unittest
 from pathlib import Path
 from warnings import warn
 
@@ -157,4 +156,10 @@ def test_template_data(sql_files: list, csv_file: Path):
     # Read the .csv file (try ';' and ',' as separators)
     data = get_data(csv_file, template_data)
 
-    pd.testing.assert_frame_equal(template_data, data)
+    # Check the empty columns
+    template_empty_columns = set(template_data.columns[template_data.isna().all()])
+    empty_columns = set(data.columns[data.isna().all()])
+    assert template_empty_columns == empty_columns
+
+    # Check the non-empty columns
+    pd.testing.assert_frame_equal(template_data.loc[:, ~data.isna().all()], data.loc[:, ~data.isna().all()])

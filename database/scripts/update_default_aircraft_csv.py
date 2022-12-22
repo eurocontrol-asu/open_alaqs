@@ -128,4 +128,4 @@ if __name__ == "__main__":
     default_aircraft = default_aircraft.drop_duplicates(relevant_columns[1:], keep='first')
 
     # Export as csv
-    default_aircraft.to_csv(default_aircraft_csv, index=False, sep=';')
+    default_aircraft.to_csv(default_aircraft_csv, index=False)

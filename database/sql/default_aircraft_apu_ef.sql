@@ -3,9 +3,6 @@ DROP TABLE IF EXISTS "default_aircraft_apu_ef";
 CREATE TABLE "default_aircraft_apu_ef" (
   "oid" INTEGER PRIMARY KEY, 
   "apu_id" TEXT,
-  "mode" TEXT,
-  "time_arr" DECIMAL, 
-  "time_dep" DECIMAL, 
   "fuel_kg_h" DECIMAL, 
   "co_kg_h" DECIMAL, 
   "hc_kg_h" DECIMAL, 
