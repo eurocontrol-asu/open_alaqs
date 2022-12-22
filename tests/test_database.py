@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 
-from database.generate_templates import get_data, apply_sql, MATCH_PATTERNS, get_engine
+from database.generate_templates import apply_sql, MATCH_PATTERNS, get_engine
 
 DB_DIR = Path(__file__).parents[1] / 'database'
 TEMPLATES_DIR = Path(__file__).parents[1] / 'alaqs_core/templates'
@@ -66,8 +66,8 @@ def test_csv(sql_files: list, csv_files: list, template_type: str):
         # Get the contents of the table
         project_data = pd.read_sql(f"SELECT * FROM {csv_path.stem}", engine)
 
-        # Read the .csv file (try ';' and ',' as separators)
-        data = get_data(csv_path, project_data)
+        # Read the .csv file
+        data = pd.read_csv(csv_path)
 
         # Import the data to fill the table
         if data is not None and project_data.empty and not data.empty:
@@ -153,8 +153,8 @@ def test_template_data(sql_files: list, csv_file: Path):
     # Get the contents of the table
     template_data = pd.read_sql(f"SELECT * FROM {csv_file.stem}", template_engine)
 
-    # Read the .csv file (try ';' and ',' as separators)
-    data = get_data(csv_file, template_data)
+    # Read the .csv file
+    data = pd.read_csv(csv_file)
 
     # Check the empty columns
     template_empty_columns = set(template_data.columns[template_data.isna().all()])

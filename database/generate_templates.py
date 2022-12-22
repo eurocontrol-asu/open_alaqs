@@ -31,47 +31,6 @@ def get_engine(p: Path) -> sqlalchemy.engine.Engine:
     return sqlalchemy.create_engine(uri)
 
 
-def get_data(p: Path, d: pd.DataFrame):
-    # Read the .csv file with ';' as separator
-    try:
-        data1 = pd.read_csv(p, sep=';')
-    except ParserError:
-        data1 = pd.DataFrame()
-
-    # Read the .csv file with ';' as separator
-    try:
-        data2 = pd.read_csv(p, sep=',')
-    except ParserError:
-        data2 = pd.DataFrame()
-
-    # Check if there is data in the file
-    if data1.empty and data2.empty:
-        return
-
-    # Check if the shapes are matching
-    if data1.shape[1] == d.shape[1]:
-        data = data1
-        sep = ';'
-    elif data2.shape[1] == d.shape[1]:
-        data = data2
-        sep = ','
-    else:
-        warn("The shapes are not matching!")
-        return
-
-    # Check if the headers are present
-    if (data.columns == d.columns).all():
-        return data
-
-    # Fetch the data without headers
-    data = pd.read_csv(p, sep=sep, header=None)
-
-    # Add the column names
-    data.columns = d.columns
-
-    return data
-
-
 def apply_sql(engine, sql_paths, file_type):
     if file_type not in ('project', 'inventory'):
         raise ValueError(f'{file_type} is not supported. It should be either \'project\' or \'inventory\'')
@@ -134,8 +93,8 @@ if __name__ == "__main__":
         # Get the contents of the table
         project_data = pd.read_sql(f"SELECT * FROM {csv_path.stem}", project_engine)
 
-        # Read the .csv file (try ';' and ',' as separators)
-        data = get_data(csv_path, project_data)
+        # Read the .csv file
+        data = pd.read_csv(csv_path)
 
         # Import the data to fill the table
         if data is not None and project_data.empty and not data.empty:
