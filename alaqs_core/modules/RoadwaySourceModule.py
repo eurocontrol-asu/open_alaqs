@@ -43,22 +43,20 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
         if not self.getDatabasePath() is None:
             self.setStore(RoadwaySourcesStore(self.getDatabasePath()))
 
-    def beginJob(self):
-        SourceWithTimeProfileModule.beginJob(
-            self)  # super(RoadwaySourceWithTimeProfileModule, self).beginJob()
+    def beginJob(self) -> None:
+        SourceWithTimeProfileModule.beginJob(self)
 
-    def process(self, start_time, end_time, source_names=None,
-                **kwargs):
+    def process(self, start_time, end_time, source_names=None, **kwargs):
         if source_names is None:
             source_names = []
         result_ = []
 
-        for source_id, source in list(self.getSources().items()):
-            if source_names and ("all" not in source_names) \
-                    and (source_id not in source_names):
-                # logger.error("Cannot process source with id '%s':" % source_id)
+        for source_id, source in self.getSources().items():
+            if ("all" not in source_names) and (source_id not in source_names):
                 continue
 
+            # Get the relative activity (percentage of total emissions) for this
+            #  hour
             activity_multiplier = self.getRelativeActivityPerHour(
                 start_time, source.getUnitsPerYear(),
                 source.getHourProfile(), source.getDailyProfile(),
@@ -81,17 +79,21 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
                 "pm10_organic_kg": 0.
             }, defaultValues={})
 
-            # FIXME:
-            # Factor 1./1000. to convert from g to kg
-            emissions.addGeneric(source.getEmissionIndex(), source.getLength(
-                unitInKM=True) * activity_multiplier / 1000., unit="gm_km",
-                                 new_unit="kg")
+            # Add emissions (and convert g to kg)
+            emissions.addGeneric(
+                source.getEmissionIndex(),
+                source.getLength(unitInKM=True) * activity_multiplier / 1000.,
+                unit="g_km",
+                new_unit="kg")
 
+            # Add emission geometry
             emissions.setGeometryText(source.getGeometryText())
 
+            # Add to list of all emissions
             result_.append(
                 (start_time.getTimeAsDateTime(), source, [emissions]))
 
+        # Return list of all emissions
         return result_
 
     def endJob(self):
