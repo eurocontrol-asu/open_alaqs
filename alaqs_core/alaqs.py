@@ -199,39 +199,31 @@ def get_roadway_methods():
     Get a list of available roadway methods from the database
     """
     result = alaqsdblite.get_roadway_methods()
-    if result is not None:
+    if result is None:
         raise Exception("No roadway methods were returned from this database")
     return result
 
 
+@catch_errors
 def get_roadway_countries():
     """
     Get a list of countries available for roadway modelling
     """
-    try:
-        result = alaqsdblite.get_roadway_countries()
-        if result is not None:
-            return result
+    result = alaqsdblite.get_roadway_countries()
+    if result is None:
         raise Exception("No roadway methods were returned from this database")
-    except Exception as e:
-        error = alaqsutils.print_error(get_roadway_countries.__name__,
-                                       Exception, e)
-        return error
+    return result
 
 
+@catch_errors
 def get_roadway_fleet_years():
     """
     Get a list of years available for roadway modelling
     """
-    try:
-        result = alaqsdblite.get_roadway_years()
-        if result is not None:
-            return result
+    result = alaqsdblite.get_roadway_years()
+    if result is None:
         raise Exception("No roadway methods were returned from this database")
-    except Exception as e:
-        error = alaqsutils.print_error(get_roadway_fleet_years.__name__,
-                                       Exception, e)
-        return error
+    return result
 
 
 # ###################

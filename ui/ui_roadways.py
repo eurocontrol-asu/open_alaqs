@@ -23,7 +23,7 @@ def catch_errors(f):
         try:
             return f(*args, **kwargs)
         except Exception as e:
-            alaqsutils.print_error(f.__name__, Exception, e)
+            alaqsutils.print_error(f.__name__, Exception, e, log=logger)
 
     return wrapper
 
@@ -108,20 +108,52 @@ def form_open(form, layer, feature):
 @catch_errors
 def recalculate_emissions(fields: dict):
     try:
-        # Validate provided input
-        name = validate_field(fields['name_field'], "str")
-        vehicle_year = validate_field(fields['vehicle_year_field'], "int")
-        height = validate_field(fields['height_field'], "float")
-        speed = validate_field(fields['speed_field'], "float")
-        vehicle_light = validate_field(fields['vehicle_light_field'], "float")
-        vehicle_medium = validate_field(fields['vehicle_medium_field'], "float")
-        vehicle_heavy = validate_field(fields['vehicle_heavy_field'], "float")
-        method = str(fields['method_field'].text())
-        if False in (name, vehicle_year, height, speed, vehicle_light, vehicle_medium, vehicle_heavy, method):
+        logger.debug(f"Hi 111")
+
+        # Set the types per field (for validation)
+        field_types = {
+            'name_field': 'str',
+            'vehicle_year_field': "int",
+            'height_field': "float",
+            'speed_field': "float",
+            'vehicle_light_field': "float",
+            'vehicle_medium_field': "float",
+            'vehicle_heavy_field': "float",
+        }
+
+        logger.debug(f"Hi 124")
+
+        # Validate the input
+        valid_fields = {}
+        validation_errors = []
+        for field_name, field_type in field_types.items():
+            logger.debug(f"Hi 130 {field_name}")
+            field_value = validate_field(fields[field_name], field_type)
+            if isinstance(field_value, bool) and not field_value:
+                logger.error(f"{field_name} should be of type {field_type}, "
+                             f"the current value is {field_value}")
+                validation_errors.append(field_name)
+            else:
+                valid_fields[field_name] = field_value
+        logger.debug(f"Hi 139")
+        if validation_errors:
+            msg = f"Please complete all fields first. The following " \
+                  f"{len(validation_errors)} fields are incomplete or " \
+                  f"incorrect:\n- " + ("\n- ".join(validation_errors))
             msg_box = QtWidgets.QMessageBox()
-            msg_box.setText("Please complete all fields first")
+            msg_box.setText(msg)
             msg_box.exec_()
             return False
+
+        logger.debug(f"Hi 148")
+
+        # Validate provided input
+        name = valid_fields['name_field']
+        height = valid_fields['height_field']
+        speed = valid_fields['speed_field']
+        vehicle_light = valid_fields['vehicle_light_field']
+        vehicle_medium = valid_fields['vehicle_medium_field']
+        vehicle_heavy = valid_fields['vehicle_heavy_field']
 
         # Check the fleet mix
         vl = float(fields['vehicle_light_field'].text())
@@ -136,7 +168,6 @@ def recalculate_emissions(fields: dict):
         # Prepare the input for the roadway emission factors calculation method
         form_data = {
             'name': name,
-            # 'vehicle_year': vehicle_year,  unused
             'height': height,
             'speed': speed,
             'vehicle_light': float(vehicle_light),
@@ -161,9 +192,6 @@ def recalculate_emissions(fields: dict):
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             emission_profile = copert5.roadway_emission_factors(form_data, study_data)
             QtWidgets.QApplication.restoreOverrideCursor()
-
-        if method == "Open-ALAQS":
-            emission_profile = lib_alaqs_method.roadway_emission_factors_alaqs_method(form_data)
 
         fields['co_gm_km_field'].setText(str(emission_profile['co_ef']))
         fields['hc_gm_km_field'].setText(str(emission_profile['hc_ef']))
