@@ -28,7 +28,7 @@ def catch_errors(f):
 
 
 @catch_errors
-def roadway_emission_factors(input_data: dict) -> dict:
+def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
     """
     This function creates a set of averaged emission factors for a roadway (or parking) based on:
     - The roadway fleet year (set using the study setup UI)
@@ -59,8 +59,7 @@ def roadway_emission_factors(input_data: dict) -> dict:
     # road_number_per_year = roadway_data['number_per_year']
     road_speed = input_data['speed']
 
-    # Get the study data for additional information needed
-    study_data = alaqs.load_study_setup_dict()
+    # Get additional information from the study data
     airport_temperature = study_data['airport_temperature']
     airport_roadway_method = study_data['roadway_method']
     airport_roadway_year = study_data['roadway_fleet_year']

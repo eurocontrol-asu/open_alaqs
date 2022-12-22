@@ -2,11 +2,10 @@ from PyQt5 import QtCore, QtWidgets
 from qgis.core import *
 from qgis.gui import *
 
-from open_alaqs.alaqs_core import alaqs, alaqsutils
-from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.alaqs_core.tools.lib_alaqs_method import \
-    roadway_emission_factors_alaqs_method
-
+from alaqs_core import alaqs, alaqsutils
+from alaqs_core.alaqslogging import get_logger
+from alaqs_core.tools import copert5
+from alaqs_core.tools import lib_alaqs_method
 
 logger = get_logger(__name__)
 
@@ -41,17 +40,12 @@ def form_open(form, layer, feature):
         vehicle_year_field=form.findChild(QtWidgets.QLineEdit, "vehicle_year"),
         height_field=form.findChild(QtWidgets.QLineEdit, "height"),
         speed_field=form.findChild(QtWidgets.QLineEdit, "speed"),
-        vehicle_light_field=form.findChild(QtWidgets.QLineEdit,
-                                           "vehicle_light"),
-        vehicle_medium_field=form.findChild(QtWidgets.QLineEdit,
-                                            "vehicle_medium"),
-        vehicle_heavy_field=form.findChild(QtWidgets.QLineEdit,
-                                           "vehicle_heavy"),
+        vehicle_light_field=form.findChild(QtWidgets.QLineEdit, "vehicle_light"),
+        vehicle_medium_field=form.findChild(QtWidgets.QLineEdit, "vehicle_medium"),
+        vehicle_heavy_field=form.findChild(QtWidgets.QLineEdit, "vehicle_heavy"),
         hour_profile_field=form.findChild(QtWidgets.QComboBox, "hour_profile"),
-        daily_profile_field=form.findChild(QtWidgets.QComboBox,
-                                           "daily_profile"),
-        month_profile_field=form.findChild(QtWidgets.QComboBox,
-                                           "month_profile"),
+        daily_profile_field=form.findChild(QtWidgets.QComboBox, "daily_profile"),
+        month_profile_field=form.findChild(QtWidgets.QComboBox, "month_profile"),
         co_gm_km_field=form.findChild(QtWidgets.QLineEdit, "co_gm_km"),
         hc_gm_km_field=form.findChild(QtWidgets.QLineEdit, "hc_gm_km"),
         nox_gm_km_field=form.findChild(QtWidgets.QLineEdit, "nox_gm_km"),
@@ -101,12 +95,9 @@ def form_open(form, layer, feature):
 
     # Connect all QComboBoxes and the instudy checkbox on save
     def on_save():
-        form.changeAttribute("hour_profile",
-                             fields['hour_profile_field'].currentText())
-        form.changeAttribute("daily_profile",
-                             fields['daily_profile_field'].currentText())
-        form.changeAttribute("month_profile",
-                             fields['month_profile_field'].currentText())
+        form.changeAttribute("hour_profile", fields['hour_profile_field'].currentText())
+        form.changeAttribute("daily_profile", fields['daily_profile_field'].currentText())
+        form.changeAttribute("month_profile", fields['month_profile_field'].currentText())
         feature["instudy"] = str(int(fields['instudy'].isChecked()))
 
     fields['button_box'].accepted.connect(on_save)
@@ -126,8 +117,7 @@ def recalculate_emissions(fields: dict):
         vehicle_medium = validate_field(fields['vehicle_medium_field'], "float")
         vehicle_heavy = validate_field(fields['vehicle_heavy_field'], "float")
         method = str(fields['method_field'].text())
-        if False in (name, vehicle_year, height, speed, vehicle_light,
-                     vehicle_medium, vehicle_heavy, method):
+        if False in (name, vehicle_year, height, speed, vehicle_light, vehicle_medium, vehicle_heavy, method):
             msg_box = QtWidgets.QMessageBox()
             msg_box.setText("Please complete all fields first")
             msg_box.exec_()
@@ -146,7 +136,7 @@ def recalculate_emissions(fields: dict):
         # Prepare the input for the roadway emission factors calculation method
         form_data = {
             'name': name,
-            'vehicle_year': vehicle_year,
+            # 'vehicle_year': vehicle_year,  unused
             'height': height,
             'speed': speed,
             'vehicle_light': float(vehicle_light),
@@ -155,13 +145,25 @@ def recalculate_emissions(fields: dict):
             'parking': False,
         }
 
-        emission_profile = {}
+        # Get the study data for additional information needed
+        study_data = alaqs.load_study_setup_dict()
+
+        # Get the roadway method
+        roadway_method = study_data['roadway_method']
 
         # Calculate emissions according to the ALAQS method
-        if method == "Open-ALAQS":
+        emission_profile = {}
+        if roadway_method == 'ALAQS Method':
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            emission_profile = roadway_emission_factors_alaqs_method(form_data)
+            emission_profile = lib_alaqs_method.roadway_emission_factors_alaqs_method(form_data, study_data)
             QtWidgets.QApplication.restoreOverrideCursor()
+        elif roadway_method == 'COPERT 5':
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            emission_profile = copert5.roadway_emission_factors(form_data, study_data)
+            QtWidgets.QApplication.restoreOverrideCursor()
+
+        if method == "Open-ALAQS":
+            emission_profile = lib_alaqs_method.roadway_emission_factors_alaqs_method(form_data)
 
         fields['co_gm_km_field'].setText(str(emission_profile['co_ef']))
         fields['hc_gm_km_field'].setText(str(emission_profile['hc_ef']))
@@ -301,7 +303,7 @@ def validate_field(ui_element, var_type):
             #     value = str(ui_element.currentText()).strip()
             # except:
             #     value = str(ui_element.text()).strip()
-            if value == "" or value == NULL or value == None:
+            if value == "" or value is None:
                 color_ui_background(ui_element, "red")
                 ui_element.setToolTip("This value should be a string")
                 return False
@@ -315,7 +317,7 @@ def validate_field(ui_element, var_type):
             # except:
             #     value = str(ui_element.text()).strip()
             try:
-                if value == "" or value == NULL or value == None:
+                if value == "" or value is None:
                     color_ui_background(ui_element, "red")
                     #raise Exception()
                 value = int(value)
@@ -332,7 +334,7 @@ def validate_field(ui_element, var_type):
             # except:
             #     value = str(ui_element.text()).strip()
             try:
-                if value == "" or value == NULL or value == None:
+                if value == "" or value is None:
                     color_ui_background(ui_element, "red")
                     # raise Exception()
                 value = float(value)
@@ -356,4 +358,4 @@ def color_ui_background(ui_element, color):
     else:
         color_style = "QWidget { background-color: rgba(0,255,0,0.3); }"
         ui_element.setStyleSheet(color_style)
-        pass
+
