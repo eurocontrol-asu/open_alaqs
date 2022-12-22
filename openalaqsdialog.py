@@ -379,28 +379,20 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             self.ui.lineEditAirportID.setText(str(study_data['oid']))
             self.ui.lineEditAirportID.setEnabled(False)
             self.ui.lineEditAirportCode.setText(study_data['airport_code'])
-            self.ui.lineEditAirportCountry.setText(
-                study_data['airport_country'])
-            self.ui.lineEditAirportLatitude.setText(
-                str(study_data['airport_latitude']))
-            self.ui.lineEditAirportLongitude.setText(
-                str(study_data['airport_longitude']))
-            self.ui.lineEditAirportElevation.setText(
-                str(study_data['airport_elevation']))
-            self.ui.lineEditAirportTemperature.setText(
-                str(study_data['airport_temperature']))
-            self.ui.lineEditVerticalLimit.setText(
-                str(study_data['vertical_limit']))
-            self.ui.lineEditParkingMethod.setText(
-                study_data['parking_method'])
+            self.ui.lineEditAirportCountry.setText(study_data['airport_country'])
+            self.ui.lineEditAirportLatitude.setText(str(study_data['airport_latitude']))
+            self.ui.lineEditAirportLongitude.setText(str(study_data['airport_longitude']))
+            self.ui.lineEditAirportElevation.setText(str(study_data['airport_elevation']))
+            self.ui.lineEditAirportTemperature.setText(str(study_data['airport_temperature']))
+            self.ui.lineEditVerticalLimit.setText(str(study_data['vertical_limit']))
+            self.ui.lineEditParkingMethod.setText(study_data['parking_method'])
 
             roadway_methods = alaqs.get_roadway_methods()
             if roadway_methods is not None:
                 self.ui.comboBoxRoadwayMethod.clear()
                 for method in roadway_methods:
                     self.ui.comboBoxRoadwayMethod.addItem(method)
-                index = self.ui.comboBoxRoadwayMethod.findText(
-                    study_data['roadway_method'])
+                index = self.ui.comboBoxRoadwayMethod.findText(study_data['roadway_method'])
                 if index == -1:
                     if self.ui.comboBoxRoadwayMethod.count():
                         self.ui.comboBoxRoadwayMethod.setCurrentIndex(0)
@@ -412,41 +404,29 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
                 self.ui.comboBoxRoadwayFleetYear.clear()
                 for year in roadway_fleet_years:
                     self.ui.comboBoxRoadwayFleetYear.addItem(year)
-                fleet_year_index = \
-                    self.ui.comboBoxRoadwayFleetYear.findText(
-                        str(study_data['roadway_fleet_year']))
+                fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText(str(study_data['roadway_fleet_year']))
                 if fleet_year_index == -1:
-                    fleet_year_index = \
-                        self.ui.comboBoxRoadwayFleetYear.findText("2010")
-
+                    fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText("2010")
                 if fleet_year_index != -1:
-                    self.ui.comboBoxRoadwayFleetYear.setCurrentIndex(
-                        fleet_year_index)
+                    self.ui.comboBoxRoadwayFleetYear.setCurrentIndex(fleet_year_index)
 
             roadway_countries = alaqs.get_roadway_countries()
-            if not (roadway_countries is None):
+            if roadway_countries is not None:
                 self.ui.comboBoxRoadwayCountry.clear()
                 for country in roadway_countries:
                     self.ui.comboBoxRoadwayCountry.addItem(country[0])
-                roadway_country_index = \
-                    self.ui.comboBoxRoadwayCountry.findText(
-                        study_data['roadway_country'])
+                roadway_country_index = self.ui.comboBoxRoadwayCountry.findText(study_data['roadway_country'])
                 if roadway_country_index == -1:
-                    roadway_country_index = \
-                        self.ui.comboBoxRoadwayCountry.findText("EU")
-
+                    roadway_country_index = self.ui.comboBoxRoadwayCountry.findText("EU")
                 if roadway_country_index != -1:
-                    self.ui.comboBoxRoadwayCountry.setCurrentIndex(
-                        roadway_country_index)
+                    self.ui.comboBoxRoadwayCountry.setCurrentIndex(roadway_country_index)
 
-            self.ui.textEditStudyInformation.setPlainText(
-                study_data['study_info'])
+            self.ui.textEditStudyInformation.setPlainText(study_data['study_info'])
 
             created_date = study_data['date_created']
             modified_date = study_data['date_modified']
             latest_date = created_date
-            if conversion.convertTimeToSeconds(modified_date) > \
-                    conversion.convertTimeToSeconds(created_date):
+            if conversion.convertTimeToSeconds(modified_date) > conversion.convertTimeToSeconds(created_date):
                 latest_date = modified_date
 
             self.ui.labelDateCreated.setText(str(created_date))

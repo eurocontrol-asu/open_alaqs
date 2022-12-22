@@ -21,6 +21,25 @@ from open_alaqs.alaqs_core.tools.create_output import create_alaqs_output
 logger = get_logger(__name__)
 
 
+def catch_errors(f):
+    """
+    Decorator to catch all errors when executing the function.
+    This decorator catches errors and writes them to the log.
+
+    :param f: function to execute
+    :return:
+    """
+
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            alaqsutils.print_error(f.__name__, Exception, e, log=logger)
+            raise e
+
+    return wrapper
+
+
 def create_project(database_name):
     """
     This function is used to create a new project database with all default
@@ -174,19 +193,15 @@ def add_roadway_dict(roadway_dict):
         return error
 
 
+@catch_errors
 def get_roadway_methods():
     """
     Get a list of available roadway methods from the database
     """
-    try:
-        result = alaqsdblite.get_roadway_methods()
-        if result is not None:
-            return result
+    result = alaqsdblite.get_roadway_methods()
+    if result is not None:
         raise Exception("No roadway methods were returned from this database")
-    except Exception as e:
-        error = alaqsutils.print_error(get_roadway_methods.__name__, Exception,
-                                       e)
-        return error
+    return result
 
 
 def get_roadway_countries():
