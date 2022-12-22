@@ -114,9 +114,10 @@ def form_open(form, layer, feature):
     return form
 
 
+@catch_errors
 def recalculate_emissions(fields: dict):
     try:
-        # Do some validation first
+        # Validate provided input
         name = validate_field(fields['name_field'], "str")
         vehicle_year = validate_field(fields['vehicle_year_field'], "int")
         height = validate_field(fields['height_field'], "float")
@@ -125,14 +126,14 @@ def recalculate_emissions(fields: dict):
         vehicle_medium = validate_field(fields['vehicle_medium_field'], "float")
         vehicle_heavy = validate_field(fields['vehicle_heavy_field'], "float")
         method = str(fields['method_field'].text())
-
-        if name is False or vehicle_year is False or height is False or speed is False or vehicle_light is False or \
-                        vehicle_medium is False or vehicle_heavy is False or method is False:
+        if False in (name, vehicle_year, height, speed, vehicle_light,
+                     vehicle_medium, vehicle_heavy, method):
             msg_box = QtWidgets.QMessageBox()
             msg_box.setText("Please complete all fields first")
             msg_box.exec_()
             return False
-        
+
+        # Check the fleet mix
         vl = float(fields['vehicle_light_field'].text())
         vm = float(fields['vehicle_medium_field'].text())
         vh = float(fields['vehicle_heavy_field'].text())
@@ -142,21 +143,24 @@ def recalculate_emissions(fields: dict):
             msg_box.exec_()
             return False
 
-        form_data_dict = dict()
-        form_data_dict['name'] = name
-        form_data_dict['vehicle_year'] = vehicle_year
-        form_data_dict['height'] = height
-        form_data_dict['speed'] = speed
-        form_data_dict['vehicle_light'] = float(vehicle_light)
-        form_data_dict['vehicle_medium'] = float(vehicle_medium)
-        form_data_dict['vehicle_heavy'] = float(vehicle_heavy)
-        form_data_dict['parking'] = False
-        
-        emission_profile = None
+        # Prepare the input for the roadway emission factors calculation method
+        form_data = {
+            'name': name,
+            'vehicle_year': vehicle_year,
+            'height': height,
+            'speed': speed,
+            'vehicle_light': float(vehicle_light),
+            'vehicle_medium': float(vehicle_medium),
+            'vehicle_heavy': float(vehicle_heavy),
+            'parking': False,
+        }
+
+        emission_profile = {}
+
+        # Calculate emissions according to the ALAQS method
         if method == "Open-ALAQS":
-            # Calculate emissions according to the ALAQS method
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            emission_profile = roadway_emission_factors_alaqs_method(form_data_dict)
+            emission_profile = roadway_emission_factors_alaqs_method(form_data)
             QtWidgets.QApplication.restoreOverrideCursor()
 
         fields['co_gm_km_field'].setText(str(emission_profile['co_ef']))
@@ -171,8 +175,7 @@ def recalculate_emissions(fields: dict):
         msg_box = QtWidgets.QMessageBox()
         msg_box.setText("Emissions could not be calculated: %s" % e)
         msg_box.exec_()
-        error = alaqsutils.print_error(populate_hourly_profiles.__name__, Exception, e)
-        return error
+        raise e
 
 
 @catch_errors

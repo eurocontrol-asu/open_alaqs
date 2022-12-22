@@ -53,7 +53,6 @@ def roadway_emission_factors_alaqs_method(input_data: dict) -> dict:
     """
 
     # Unpack input
-    # road_number_per_year = roadway_data['number_per_year']
     road_speed = input_data['speed']
 
     # Get the study data for additional information needed
