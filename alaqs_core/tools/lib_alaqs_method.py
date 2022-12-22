@@ -460,10 +460,8 @@ def get_emission_factors(copert_data, velocity, change_point):
         f1 = copert_data[9]
         g1 = copert_data[10]
         h1 = copert_data[11]
-        emission_factor = a1 + b1 * velocity + c1 * math.pow(velocity,
-                                                             2) + d1 * math.pow(
-            velocity, e1) + \
-                          f1 * math.log(velocity) + g1 * math.exp(h1 * velocity)
+        emission_factor = a1 + b1 * velocity + c1 * math.pow(velocity, 2) + d1 * math.pow(velocity, e1) + f1 * math.log(
+            velocity) + g1 * math.exp(h1 * velocity)
         # debug_file("%s,%s,%s,%s,%s,%s,%s,%s,%s" % (a1, b1, c1, d1, e1, f1, g1, h1, emission_factor))
     else:
         a2 = copert_data[13]
@@ -474,10 +472,8 @@ def get_emission_factors(copert_data, velocity, change_point):
         f2 = copert_data[18]
         g2 = copert_data[19]
         h2 = copert_data[20]
-        emission_factor = a2 + b2 * velocity + c2 * math.pow(velocity,
-                                                             2) + d2 * math.pow(
-            velocity, e2) + \
-                          f2 * math.log(velocity) + g2 * math.exp(h2 * velocity)
+        emission_factor = a2 + b2 * velocity + c2 * math.pow(velocity, 2) + d2 * math.pow(velocity, e2) + f2 * math.log(
+            velocity) + g2 * math.exp(h2 * velocity)
         # debug_file("%s,%s,%s,%s,%s,%s,%s,%s,%s" % (a2, b2, c2, d2, e2, f2, g2, h2, emission_factor))
     return emission_factor
 
