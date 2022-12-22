@@ -1421,13 +1421,13 @@ class MovementStore(Store, metaclass=Singleton):
                             list(runway_store.getObjects().keys()) if
                             rwy in key]
                 if len(rwy_used) > 0:
-                    logger.warning("Runway %s was found in the DB multiple "
+                    logger.warning(f"Runway {rwy} was found in the DB multiple "
                                    "times.")
                 eq_mdf.loc[indices, "runway"] = rwy_used[0]
 
             else:
                 eq_mdf.loc[indices, "runway"] = np.nan
-                logger.warning("Runway %s wasn't found in the DB" % rwy)
+                logger.warning(f"Runway {rwy} wasn't found in the DB")
 
         # Check if gates exist in the database
         stage_1.nextValue()

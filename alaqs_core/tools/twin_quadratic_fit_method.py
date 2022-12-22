@@ -3,7 +3,7 @@ from open_alaqs.alaqs_core.alaqslogging import get_logger
 logger = get_logger(__name__)
 
 
-def calculate_fuel_flow_from_power_setting(power_setting, icao_eedb):
+def calculate_fuel_flow_from_power_setting(power_setting: float, icao_eedb: dict):
     """
     Calculates the fuel flow associated to a particular power setting with the
      twin-quadratic fit method
@@ -20,7 +20,25 @@ def calculate_fuel_flow_from_power_setting(power_setting, icao_eedb):
                 "settings [%%] from ICAO EEDB!", key)
             return None
 
-    if .60 <= power_setting <= .85:
+    if 0 <= power_setting < .07:
+        # based on the 7 per cent, 30 per cent and 85 per cent thrust
+        x1 = 0.07
+        x2 = 0.30
+        x3 = 0.85
+
+        logger.warning('EXPERIMENTAL support for thrust settings between 0% and'
+                       f' 7%. The requested power setting is {power_setting}')
+
+    elif .07 <= power_setting < .60:
+        # based on the 7 per cent, 30 per cent and 85 per cent thrust
+        x1 = 0.07
+        x2 = 0.30
+        x3 = 0.85
+
+        logger.warning('EXPERIMENTAL support for thrust settings between 7% and'
+                       f' 60%. The requested power setting is {power_setting}')
+
+    elif .60 <= power_setting <= .85:
         # based on the 7 per cent, 30 per cent and 85 per cent thrust
         x1 = 0.07
         x2 = 0.30
@@ -32,8 +50,9 @@ def calculate_fuel_flow_from_power_setting(power_setting, icao_eedb):
         x2 = 0.85
         x3 = 1.0
     else:
-        raise ValueError('The power setting should be between 0.6 and 1.0 '
-                         '(inclusive).')
+        raise ValueError('The power setting should be between 0.07 and 1.0 '
+                         '(inclusive). The requested power setting is '
+                         f'{power_setting}')
 
     # Y = AX**2 + BX + C
     # with three known points:

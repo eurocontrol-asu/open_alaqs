@@ -81,13 +81,14 @@ class EmissionCalculation:
         return progressbar
 
     def getAmbientCondition(self, timestamp_datetime):
+        # Get the time in seconds
         t_ = conversion.convertTimeToSeconds(timestamp_datetime)
+
+        # Get the ambient conditions
         ac_ = self._ambient_conditions_store.getAmbientConditions(scenario="")
-        if ac_:
-            # print "AC_ %s"%min(ac_, key=lambda x: abs(t_ - x.getDate()))
-            return min(ac_, key=lambda x: abs(t_ - x.getDate()))
-        else:
-            return None
+
+        # Return the ambient condition closest to the provided date
+        return min(ac_, key=lambda x: abs(t_ - x.getDate()))
 
     def getModuleManager(self):
         # ModuleManger is a Singleton
@@ -251,6 +252,8 @@ class EmissionCalculation:
                     ambient_condition = self.getAmbientCondition(
                         start_.getTime())
                 except Exception:
+                    logger.warning('Couldn\'t load the ambient condition, so '
+                                   'default conditions are used.')
                     ambient_condition = AmbientCondition()
 
                 period_emissions = []
