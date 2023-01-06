@@ -28,7 +28,7 @@ def catch_errors(f):
 
 
 @catch_errors
-def roadway_emission_factors_alaqs_method(input_data: dict) -> dict:
+def roadway_emission_factors_alaqs_method(input_data: dict, study_data: dict) -> dict:
     """
     This function creates a set of averaged emission factors for a roadway (or parking) based on:
     - The roadway fleet year (set using the study setup UI)
@@ -53,11 +53,9 @@ def roadway_emission_factors_alaqs_method(input_data: dict) -> dict:
     """
 
     # Unpack input
-    # road_number_per_year = roadway_data['number_per_year']
     road_speed = input_data['speed']
 
-    # Get the study data for additional information needed
-    study_data = alaqs.load_study_setup_dict()
+    # Get additional information from the study data
     airport_temperature = study_data['airport_temperature']
     airport_roadway_method = study_data['roadway_method']
     airport_roadway_year = study_data['roadway_fleet_year']
@@ -460,10 +458,8 @@ def get_emission_factors(copert_data, velocity, change_point):
         f1 = copert_data[9]
         g1 = copert_data[10]
         h1 = copert_data[11]
-        emission_factor = a1 + b1 * velocity + c1 * math.pow(velocity,
-                                                             2) + d1 * math.pow(
-            velocity, e1) + \
-                          f1 * math.log(velocity) + g1 * math.exp(h1 * velocity)
+        emission_factor = a1 + b1 * velocity + c1 * math.pow(velocity, 2) + d1 * math.pow(velocity, e1) + f1 * math.log(
+            velocity) + g1 * math.exp(h1 * velocity)
         # debug_file("%s,%s,%s,%s,%s,%s,%s,%s,%s" % (a1, b1, c1, d1, e1, f1, g1, h1, emission_factor))
     else:
         a2 = copert_data[13]
@@ -474,10 +470,8 @@ def get_emission_factors(copert_data, velocity, change_point):
         f2 = copert_data[18]
         g2 = copert_data[19]
         h2 = copert_data[20]
-        emission_factor = a2 + b2 * velocity + c2 * math.pow(velocity,
-                                                             2) + d2 * math.pow(
-            velocity, e2) + \
-                          f2 * math.log(velocity) + g2 * math.exp(h2 * velocity)
+        emission_factor = a2 + b2 * velocity + c2 * math.pow(velocity, 2) + d2 * math.pow(velocity, e2) + f2 * math.log(
+            velocity) + g2 * math.exp(h2 * velocity)
         # debug_file("%s,%s,%s,%s,%s,%s,%s,%s,%s" % (a2, b2, c2, d2, e2, f2, g2, h2, emission_factor))
     return emission_factor
 

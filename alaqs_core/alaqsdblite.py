@@ -279,16 +279,11 @@ def get_study_setup():
         # return error
 
 
-def get_roadway_methods():
+def get_roadway_methods() -> tuple:
     """
     Return a list of types of available roadway methods from database
     """
-    try:
-        methods = ["ALAQS Method"]
-        return methods
-    except Exception as e:
-        alaqsutils.print_error(get_roadway_methods.__name__, Exception, e, log=logger)
-        return None
+    return "ALAQS Method", "COPERT 5"
 
 
 def get_roadway_countries():

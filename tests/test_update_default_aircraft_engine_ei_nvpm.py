@@ -3,11 +3,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-from open_alaqs.db_updates.update_default_aircraft_engine_ei_nvpm import (
-    SCALING_FACTORS,
-    AIR_FUEL_RATIO,
-)
-from open_alaqs.db_updates.update_default_aircraft_engine_ei_nvpm import (
+from database.scripts.constants import SCALING_FACTORS, AIR_FUEL_RATIO
+from database.scripts.update_default_aircraft_engine_ei_csv import (
     calculate_smoke_number,
     calculate_nvpm_mass_concentration_ck,
     calculate_exhaust_volume_qk,

@@ -72,6 +72,23 @@ def catch_errors(f):
     return wrapper
 
 
+def log_activity(f):
+    """
+    Decorator to log activity
+
+    :param f: function to execute
+    :return:
+    """
+
+    def wrapper(*args, **kwargs):
+        logger.debug(f"{f.__name__}(*args, **kwargs) with")
+        logger.debug(f"\targs={args}")
+        logger.debug(f"\tkwargs={kwargs}")
+        return f(*args, **kwargs)
+
+    return wrapper
+
+
 class OpenAlaqsAbout(QtWidgets.QDialog):
     """
     This class provides a dialog that presents a summary of the Open ALAQS
@@ -362,28 +379,20 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             self.ui.lineEditAirportID.setText(str(study_data['oid']))
             self.ui.lineEditAirportID.setEnabled(False)
             self.ui.lineEditAirportCode.setText(study_data['airport_code'])
-            self.ui.lineEditAirportCountry.setText(
-                study_data['airport_country'])
-            self.ui.lineEditAirportLatitude.setText(
-                str(study_data['airport_latitude']))
-            self.ui.lineEditAirportLongitude.setText(
-                str(study_data['airport_longitude']))
-            self.ui.lineEditAirportElevation.setText(
-                str(study_data['airport_elevation']))
-            self.ui.lineEditAirportTemperature.setText(
-                str(study_data['airport_temperature']))
-            self.ui.lineEditVerticalLimit.setText(
-                str(study_data['vertical_limit']))
-            self.ui.lineEditParkingMethod.setText(
-                study_data['parking_method'])
+            self.ui.lineEditAirportCountry.setText(study_data['airport_country'])
+            self.ui.lineEditAirportLatitude.setText(str(study_data['airport_latitude']))
+            self.ui.lineEditAirportLongitude.setText(str(study_data['airport_longitude']))
+            self.ui.lineEditAirportElevation.setText(str(study_data['airport_elevation']))
+            self.ui.lineEditAirportTemperature.setText(str(study_data['airport_temperature']))
+            self.ui.lineEditVerticalLimit.setText(str(study_data['vertical_limit']))
+            self.ui.lineEditParkingMethod.setText(study_data['parking_method'])
 
             roadway_methods = alaqs.get_roadway_methods()
             if roadway_methods is not None:
                 self.ui.comboBoxRoadwayMethod.clear()
                 for method in roadway_methods:
                     self.ui.comboBoxRoadwayMethod.addItem(method)
-                index = self.ui.comboBoxRoadwayMethod.findText(
-                    study_data['roadway_method'])
+                index = self.ui.comboBoxRoadwayMethod.findText(study_data['roadway_method'])
                 if index == -1:
                     if self.ui.comboBoxRoadwayMethod.count():
                         self.ui.comboBoxRoadwayMethod.setCurrentIndex(0)
@@ -395,41 +404,29 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
                 self.ui.comboBoxRoadwayFleetYear.clear()
                 for year in roadway_fleet_years:
                     self.ui.comboBoxRoadwayFleetYear.addItem(year)
-                fleet_year_index = \
-                    self.ui.comboBoxRoadwayFleetYear.findText(
-                        str(study_data['roadway_fleet_year']))
+                fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText(str(study_data['roadway_fleet_year']))
                 if fleet_year_index == -1:
-                    fleet_year_index = \
-                        self.ui.comboBoxRoadwayFleetYear.findText("2010")
-
+                    fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText("2010")
                 if fleet_year_index != -1:
-                    self.ui.comboBoxRoadwayFleetYear.setCurrentIndex(
-                        fleet_year_index)
+                    self.ui.comboBoxRoadwayFleetYear.setCurrentIndex(fleet_year_index)
 
             roadway_countries = alaqs.get_roadway_countries()
-            if not (roadway_countries is None):
+            if roadway_countries is not None:
                 self.ui.comboBoxRoadwayCountry.clear()
                 for country in roadway_countries:
                     self.ui.comboBoxRoadwayCountry.addItem(country[0])
-                roadway_country_index = \
-                    self.ui.comboBoxRoadwayCountry.findText(
-                        study_data['roadway_country'])
+                roadway_country_index = self.ui.comboBoxRoadwayCountry.findText(study_data['roadway_country'])
                 if roadway_country_index == -1:
-                    roadway_country_index = \
-                        self.ui.comboBoxRoadwayCountry.findText("EU")
-
+                    roadway_country_index = self.ui.comboBoxRoadwayCountry.findText("EU")
                 if roadway_country_index != -1:
-                    self.ui.comboBoxRoadwayCountry.setCurrentIndex(
-                        roadway_country_index)
+                    self.ui.comboBoxRoadwayCountry.setCurrentIndex(roadway_country_index)
 
-            self.ui.textEditStudyInformation.setPlainText(
-                study_data['study_info'])
+            self.ui.textEditStudyInformation.setPlainText(study_data['study_info'])
 
             created_date = study_data['date_created']
             modified_date = study_data['date_modified']
             latest_date = created_date
-            if conversion.convertTimeToSeconds(modified_date) > \
-                    conversion.convertTimeToSeconds(created_date):
+            if conversion.convertTimeToSeconds(modified_date) > conversion.convertTimeToSeconds(created_date):
                 latest_date = modified_date
 
             self.ui.labelDateCreated.setText(str(created_date))
@@ -1665,58 +1662,56 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         taxiway_segments = list()
         table_rows = self.ui.taxiway_segments.rowCount()
 
+        # Notify the user that the taxiway list is blank
+        if table_rows <= 0:
+            QtWidgets.QMessageBox.information(
+                self, "Notice", "Taxiway list is blank.")
+            return
+
+        for row in range(table_rows):
+            taxiway_segments.append(
+                str(self.ui.taxiway_segments.item(row, 0).text()))
+
+        # Now get the assigned aircraft groups
+        aircraft_groups = list()
+        table_rows = self.ui.selected_ac_groups.rowCount()
         if table_rows > 0:
             for row in range(table_rows):
-                taxiway_segments.append(
-                    str(self.ui.taxiway_segments.item(row, 0).text()))
+                aircraft_groups.append(
+                    str(self.ui.selected_ac_groups.item(row, 0).text()))
 
-            # Now get the assigned aircraft groups
-            aircraft_groups = list()
-            table_rows = self.ui.selected_ac_groups.rowCount()
-            if table_rows > 0:
-                for row in range(table_rows):
-                    aircraft_groups.append(
-                        str(self.ui.selected_ac_groups.item(row, 0).text()))
+        # Create the taxiway route dict
+        split_data = taxi_route_name.split("/")
+        taxiway_route = dict()
+        taxiway_route['name'] = taxi_route_name
+        taxiway_route['gate'] = split_data[0]
+        taxiway_route['runway'] = split_data[1]
+        taxiway_route['dept_arr'] = split_data[2]
+        taxiway_route['instance'] = split_data[3]
+        taxiway_route['sequence'] = ",".join(taxiway_segments)
+        taxiway_route['groups'] = ",".join(aircraft_groups)
 
-            # Create the taxiway route dict
-            split_data = taxi_route_name.split("/")
-            taxiway_route = dict()
-            taxiway_route['name'] = taxi_route_name
-            taxiway_route['gate'] = split_data[0]
-            taxiway_route['runway'] = split_data[1]
-            taxiway_route['dept_arr'] = split_data[2]
-            taxiway_route['instance'] = split_data[3]
-            taxiway_route['sequence'] = ",".join(taxiway_segments)
-            taxiway_route['groups'] = ",".join(aircraft_groups)
+        # Delete existing route
+        if delete_taxiroute:
+            self.delete_taxiway_route(taxi_route_name)
 
-            # Delete existing route
-            if delete_taxiroute:
-                self.delete_taxiway_route(taxi_route_name)
+        # Save to database
+        result = alaqs.add_taxiway_route(taxiway_route)
 
-            # Save to database
-            result = alaqs.add_taxiway_route(taxiway_route)
+        # Repopulate sources
+        self.populate_routes(taxi_route_name)
 
-            # Repopulate sources
-            self.populate_routes(taxi_route_name)
-
-            if result is not None:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "Notice",
-                    "Taxi route could not be saved: %s" % str(result))
-            else:
-                QtWidgets.QMessageBox.information(
-                    self,
-                    "Notice",
-                    "Taxi route was saved.")
-            return
+        if result is not None:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Notice",
+                "Taxi route could not be saved: %s" % str(result))
         else:
             QtWidgets.QMessageBox.information(
                 self,
                 "Notice",
-                "Taxiway list is blank.")
-            return
-
+                "Taxi route was saved.")
+        return
 
 class OpenAlaqsLogfile(QtWidgets.QDialog):
     """
@@ -3108,7 +3103,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
 class OpenAlaqsEnabledMacros(QtWidgets.QDialog):
     """
-    This class provides a dialogue that informs the user that macros have been 
+    This class provides a dialogue that informs the user that macros have been
     enabled.
     """
 

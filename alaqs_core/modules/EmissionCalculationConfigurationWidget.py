@@ -3,9 +3,7 @@ from collections import OrderedDict
 
 import geopandas as gpd
 from PyQt5 import QtCore, QtWidgets
-
-from open_alaqs.alaqs_core.modules.ModuleConfigurationWidget import \
-    ModuleConfigurationWidget
+from open_alaqs.alaqs_core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.alaqs_core.tools.csv_interface import read_csv_to_geodataframe
 
 
@@ -31,21 +29,17 @@ class EmissionCalculationConfigurationWidget(ModuleConfigurationWidget):
 
         self._receptors_filename_field = QtWidgets.QLineEdit()
         self._receptors_filename_field.setFixedWidth(150)
-        self._receptors_filename_field.setToolTip("Select CSV file with "
-                                                  "receptor points")
+        self._receptors_filename_field.setToolTip("Select CSV file with receptor points")
 
         self._receptors_filename_browse = QtWidgets.QPushButton("Load File")
         self._receptors_filename_browse.clicked.connect(self.load_receptors_csv)
 
-        self.getSettings()["Receptor Points (*.csv)"].addWidget(
-            self._receptors_filename_field)
-        self.getSettings()["Receptor Points (*.csv)"].addWidget(
-            self._receptors_filename_browse)
+        self.getSettings()["Receptor Points (*.csv)"].addWidget(self._receptors_filename_field)
+        self.getSettings()["Receptor Points (*.csv)"].addWidget(self._receptors_filename_browse)
         self.getSettings()["Receptor Points (*.csv)"].addStretch()
 
         self.initValues({
-            "Start (incl.)": config.get("Start (incl.)",
-                                        "2000-01-01 00:00:00"),
+            "Start (incl.)": config.get("Start (incl.)", "2000-01-01 00:00:00"),
             "End (incl.)": config.get("End (incl.)", "2000-01-02 00:00:00"),
             "Method": {
                 "available": [],
@@ -75,8 +69,7 @@ class EmissionCalculationConfigurationWidget(ModuleConfigurationWidget):
             else:
                 raise Exception("File does not exists.")
         except Exception as e:
-            QtWidgets.QMessageBox.warning(
-                self, "Error", "Could not open receptors file:  %s." % e)
+            QtWidgets.QMessageBox.warning(self, "Error", "Could not open receptors file:  %s." % e)
             return e
 
     def get_receptors_from_csv(self, filename_):

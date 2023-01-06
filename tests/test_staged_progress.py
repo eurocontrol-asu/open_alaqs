@@ -1,3 +1,7 @@
+import pytest
+
+PyQt5 = pytest.importorskip("PyQt5")
+
 from open_alaqs.alaqs_core.tools.ProgressBarStage import ProgressBarStage
 
 

@@ -1,0 +1,11 @@
+oid,aircraft_group,aircraft_code,emission_unit,co,hc,nox,sox,pm10,p1,p2
+1,HELICOPTER HEAVY,H2,gram/aircraft,0.0,100.0,0.0,0.0,0.0,0.0,0.0
+2,HELICOPTER LIGHT,H1,gram/aircraft,0.0,50.0,0.0,0.0,0.0,0.0,0.0
+3,JET BUSINESS,JB,gram/aircraft,0.0,217.0,0.0,0.0,0.0,0.0,0.0
+4,JET LARGE,JL,gram/aircraft,0.0,682.0,0.0,0.0,0.0,0.0,0.0
+5,JET MEDIUM,JM,gram/aircraft,0.0,417.0,0.0,0.0,0.0,0.0,0.0
+6,JET REGIONAL,JR,gram/aircraft,0.0,278.0,0.0,0.0,0.0,0.0,0.0
+7,JET SMALL,JS,gram/aircraft,0.0,288.0,0.0,0.0,0.0,0.0,0.0
+8,PROPELLER,PP,gram/aircraft,0.0,50.0,0.0,0.0,0.0,0.0,0.0
+9,SUPERSONIC,SS,gram/aircraft,0.0,500.0,0.0,0.0,0.0,0.0,0.0
+10,TURBOPROP,TP,gram/aircraft,0.0,100.0,0.0,0.0,0.0,0.0,0.0

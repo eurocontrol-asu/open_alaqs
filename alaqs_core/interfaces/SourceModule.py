@@ -154,7 +154,4 @@ class SourceWithTimeProfileModule(SourceModule):
         #     logger.info("%s" % (str(x)))
 
         # Calculate the activity multiplier
-        multiplier = \
-            operating_factor * hour_factor * weekday_factor * month_factor
-
-        return multiplier
+        return operating_factor * hour_factor * weekday_factor * month_factor

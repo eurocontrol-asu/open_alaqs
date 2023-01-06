@@ -289,7 +289,7 @@ needs to be inside the folder. All other files (.csv and .xslx) needed for the u
 commands should be used to run the script:
 
 ```shell
-cd db_updates
+cd database
 python -m update_default_aircraft `name_of_old_database` `name_of_new_database`
 ```
 
