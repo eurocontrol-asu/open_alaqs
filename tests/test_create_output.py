@@ -1,9 +1,38 @@
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
+import pytest
 from open_alaqs.alaqs_core.tools.create_output import create_alaqs_output
 
 
+def spatialite_installed():
+    """Create and initialize a geodatabase"""
+    try:
+        con = sqlite3.connect(":memory:")
+        con.enable_load_extension(True)
+
+        # Next line is very important. Without it, mod_spatialite library will not find
+        # dlls it depends on.
+        # os.environ['PATH'] = SpatiaLitePath + ';' + os.environ['PATH']
+        # con.load_extension(os.path.join(SpatiaLitePath, 'mod_spatialite'))
+        cur = con.cursor()
+        cur.execute('SELECT InitSpatialMetaData(1)')
+
+        con.commit()
+        con.close()
+
+        # Spatialite has been installed properly
+        installed = True
+
+    except sqlite3.OperationalError as e:
+        # Spatialite hasn't been installed
+        installed = False
+
+    return installed
+
+
+@pytest.mark.skipif(not spatialite_installed(), reason='Spatialite is not available')
 def test_create_output():
     # Get the example folder
     example_folder = Path(__file__).parents[1] / 'example'
