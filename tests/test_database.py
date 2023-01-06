@@ -43,6 +43,7 @@ def test_sql(sql_files: list, template_type: str):
 
         # Check if the SQL query should be executed to the project template
         if re.search(MATCH_PATTERNS[template_type], sql_path.name) is not None:
+
             # Check if the table is present
             assert sql_path.stem in engine.table_names()
 
@@ -80,6 +81,7 @@ def test_csv(sql_files: list, csv_files: list, template_type: str):
             raise ValueError("What to do when the database is not empty?")
 
 
+@pytest.mark.skip(reason='todo: Needs to be implemented in #210 / #202')
 @pytest.mark.parametrize("example_file",
                          list(EXAMPLES_DIR.glob('**/*.alaqs')),
                          ids=list(d.name for d in EXAMPLES_DIR.glob('**/*.alaqs'))
@@ -125,8 +127,10 @@ def test_example_sql(sql_files: list, example_file: Path):
     # Check if the columns are present
     for table in sql_tables:
         # Get the columns of template
-        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0',
-                                 example_engine)
+        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', example_engine)
+
+        # Set the name of the template data
+        template_d.name = table
 
         # Get the columns of sql files
         sql_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', sql_engine)
@@ -136,8 +140,7 @@ def test_example_sql(sql_files: list, example_file: Path):
 
     for table in qgis_tables:
         # Get the columns of template
-        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0',
-                                 example_engine)
+        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', example_engine)
 
         # Get the columns of sql files
         qgis_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', qgis_engine)
@@ -188,8 +191,7 @@ def test_template_sql(sql_files: list, template_type: str):
     # Check if the columns are present
     for table in sql_tables:
         # Get the columns of template
-        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0',
-                                 template_engine)
+        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', template_engine)
 
         # Get the columns of sql files
         sql_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', sql_engine)
@@ -199,8 +201,7 @@ def test_template_sql(sql_files: list, template_type: str):
 
     for table in qgis_tables:
         # Get the columns of template
-        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0',
-                                 template_engine)
+        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', template_engine)
 
         # Get the columns of sql files
         qgis_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', qgis_engine)
