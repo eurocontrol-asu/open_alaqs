@@ -100,5 +100,4 @@ def test_create_output():
         'airport_temperature': 13
     }
 
-    create_alaqs_output(test_output_path, test_model_parameters,
-                        test_study_setup)
+    create_alaqs_output(test_output_path, test_model_parameters, test_study_setup)
