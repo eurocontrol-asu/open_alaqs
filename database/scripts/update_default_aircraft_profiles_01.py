@@ -4,10 +4,14 @@ import pandas as pd
 
 if __name__ == "__main__":
 
+    # Set the IMPACT study and scenario name
+    study = 'DEMO_Noise_&_Emissions'
+    scenario = 'Open_ALAQS_Default_Profiles'
+
     # Set the path to the source file and the destination file
     dst_csv = Path(__file__).parents[1] / 'data/default_aircraft_profiles.csv'
-    src_operations_csv = Path(__file__).parents[1] / 'src/DEMO_Noise_&_Emissions_TEST_1_Operations.csv'
-    src_trajectories_csv = Path(__file__).parents[1] / 'src/DEMO_Noise_&_Emissions_TEST_1_Dep_Arr_Trajectories.csv'
+    src_operations_csv = Path(__file__).parents[1] / f'src/{study}_{scenario}_Operations.csv'
+    src_trajectories_csv = Path(__file__).parents[1] / f'src/{study}_{scenario}_Dep_Arr_Trajectories.csv'
 
     # Read the IMPACT output files
     trj = pd.read_csv(src_trajectories_csv, sep=';')
@@ -77,7 +81,7 @@ if __name__ == "__main__":
             profile_id = profile_ids["PROFILE_ID"]
         else:
             profile_id = profile_ids[f"{'DEP' if type_of_operation == 'DEPARTURE' else 'DES'}_PROFILE_ID"]
-        profile['profile_id'] = f'{op["INPUT_ACFT_ID"]}-{profile_id}'
+        profile['profile_id'] = f'{op["ICAO_CODE"]}-{profile_id}'
 
         # Add the profile to the list
         all_profiles.append(profile)
