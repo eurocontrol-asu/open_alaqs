@@ -17,5 +17,11 @@ if __name__ == "__main__":
     # Change the column names
     data.columns = [str(c).lower().replace(' ', '_').replace('/', '-') for c in data.columns]
 
+    # Keep the non-numerical and tens columns
+    keep_num_columns = [str(i) for i in range(10, 150, 10)]
+    data = data[data.columns[
+        ~data.columns.str.isnumeric() | (data.columns.isin(keep_num_columns))
+    ]]
+
     # Store the data
     data.to_csv(dst_csv, index=False)
