@@ -10,10 +10,12 @@ if __name__ == "__main__":
 
     # Set the path to the source file and the destination file
     dst_csv = Path(__file__).parents[1] / 'data/default_aircraft_profiles.csv'
+    src_aircraft_csv = Path(__file__).parents[1] / f'src/ANP2.3_Aircraft.csv'
     src_operations_csv = Path(__file__).parents[1] / f'src/{study}_{scenario}_Operations.csv'
     src_trajectories_csv = Path(__file__).parents[1] / f'src/{study}_{scenario}_Dep_Arr_Trajectories.csv'
 
     # Read the IMPACT output files
+    acft = pd.read_csv(src_aircraft_csv, sep=';', index_col='ACFT_ID')
     trj = pd.read_csv(src_trajectories_csv, sep=';')
     ops = pd.read_csv(src_operations_csv, sep=';', index_col='FLIGHT_ID')
 
@@ -82,6 +84,24 @@ if __name__ == "__main__":
         else:
             profile_id = profile_ids[f"{'DEP' if type_of_operation == 'DEPARTURE' else 'DES'}_PROFILE_ID"]
         profile['profile_id'] = f'{op["ICAO_CODE"]}-{profile_id}'
+
+        # Get the ANP aircraft
+        anp_aircraft = acft.loc[op['ANP_TYPE']]
+
+        # Scale power
+        if anp_aircraft['Power Parameter'] == 'CNT (lb)':
+            profile['power'] /= anp_aircraft['Max Sea Level Static Thrust (lb)']
+        elif anp_aircraft['Power Parameter'] == 'CNT (% of Max Static Thrust)':
+            profile['power'] /= anp_aircraft['Max Sea Level Static Thrust (lb)']
+        else:
+            raise NotImplementedError
+
+        assert profile['power'].mean() < 1
+
+        if not (profile['power'] < 0).all():
+            profile.loc[profile['power'] < 0, 'power'] = 0
+
+        assert (profile['power'] >= 0).all()
 
         # Add the profile to the list
         all_profiles.append(profile)
