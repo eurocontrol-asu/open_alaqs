@@ -43,6 +43,9 @@ if __name__ == "__main__":
             'ELEVATION_FT': 'vertical_feet',
         })
 
+        # Reset the points column
+        profile['point'] += 1 - profile['point'].min()
+
         # Add mode
         if type_of_operation == 'ARRIVAL':
             profile['mode'] = 'AP'
