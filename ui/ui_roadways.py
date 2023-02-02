@@ -32,17 +32,35 @@ def form_open(form, layer, feature):
     logger.debug(f"This is the modified simple form")
     logger.debug(f"Layer {layer} and feature {feature}")
     logger.debug(f"Attributes of fields: {feature.fields().names()}")
-    logger.debug(f"Attributes of feature: {feature.attributes()}")
-
-    # Get all the fields from the form
     fields = dict(
         name_field=form.findChild(QtWidgets.QLineEdit, "roadway_id"),
         vehicle_year_field=form.findChild(QtWidgets.QLineEdit, "vehicle_year"),
         height_field=form.findChild(QtWidgets.QLineEdit, "height"),
         speed_field=form.findChild(QtWidgets.QLineEdit, "speed"),
-        vehicle_light_field=form.findChild(QtWidgets.QLineEdit, "vehicle_light"),
-        vehicle_medium_field=form.findChild(QtWidgets.QLineEdit, "vehicle_medium"),
-        vehicle_heavy_field=form.findChild(QtWidgets.QLineEdit, "vehicle_heavy"),
+
+        # todo: Add the new fields
+
+        # The Euro standard fields
+        pc_euro_standard=form.findChild(QtWidgets.QLineEdit, "pc_euro_standard"),
+        lcv_euro_standard=form.findChild(QtWidgets.QLineEdit, "lcv_euro_standard"),
+        hdt_euro_standard=form.findChild(QtWidgets.QLineEdit, "hdt_euro_standard"),
+        motorcycle_euro_standard=form.findChild(QtWidgets.QLineEdit, "motorcycle_euro_standard"),
+        bus_euro_standard=form.findChild(QtWidgets.QLineEdit, "bus_euro_standard"),
+
+        # The fleet mix fields
+        pc_petrol_standard=form.findChild(QtWidgets.QLineEdit, "pc_petrol_percentage"),
+        pc_diesel_standard=form.findChild(QtWidgets.QLineEdit, "pc_diesel_percentage"),
+        lcv_petrol_standard=form.findChild(QtWidgets.QLineEdit, "lcv_petrol_percentage"),
+        lcv_diesel_standard=form.findChild(QtWidgets.QLineEdit, "lcv_diesel_percentage"),
+        hdt_petrol_standard=form.findChild(QtWidgets.QLineEdit, "hdt_petrol_percentage"),
+        hdt_diesel_standard=form.findChild(QtWidgets.QLineEdit, "hdt_diesel_percentage"),
+        motorcycle_petrol_standard=form.findChild(QtWidgets.QLineEdit, "motorcycle_petrol_percentage"),
+        bus_diesel_standard=form.findChild(QtWidgets.QLineEdit, "bus_diesel_percentage"),
+
+        # vehicle_light_field=form.findChild(QtWidgets.QLineEdit, "vehicle_light"),
+        # vehicle_medium_field=form.findChild(QtWidgets.QLineEdit, "vehicle_medium"),
+        # vehicle_heavy_field=form.findChild(QtWidgets.QLineEdit, "vehicle_heavy"),
+
         hour_profile_field=form.findChild(QtWidgets.QComboBox, "hour_profile"),
         daily_profile_field=form.findChild(QtWidgets.QComboBox, "daily_profile"),
         month_profile_field=form.findChild(QtWidgets.QComboBox, "month_profile"),
@@ -60,6 +78,9 @@ def form_open(form, layer, feature):
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
     )
+
+    # Get all the fields from the form
+    logger.debug(f"Attributes of feature: {feature.attributes()}")
 
     # Hide the instudy field
     fields['instudy'].setHidden(True)
@@ -111,6 +132,7 @@ def recalculate_emissions(fields: dict):
         logger.debug(f"Hi 111")
 
         # Set the types per field (for validation)
+        # todo[rpfk]: Add new fields here
         field_types = {
             'name_field': 'str',
             'vehicle_year_field': "int",
