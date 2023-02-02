@@ -198,3 +198,16 @@ def emissions(fleet: pd.DataFrame, efs: pd.DataFrame) -> pd.DataFrame:
         fleet[f'E{p}[g]'] = fleet[f'E_hot{p}[g]'] + fleet[f'E_cold{p}[g]']
 
     return fleet
+
+
+def average_emission_factors(e: pd.DataFrame) -> pd.Series:
+    # Determine the total emissions
+    total_emissions = e[[f'E{p}[g]' for p in POLLUTANTS]].sum()
+
+    # Determine the total mileage
+    total_mileage = e[['N', 'M[km]']].product(axis=1).sum()
+
+    # Calculate the average emission factors
+    emission_factors = pd.Series({f'e{p}[g/km]': total_emissions[f'E{p}[g]'] / total_mileage for p in POLLUTANTS})
+
+    return emission_factors
