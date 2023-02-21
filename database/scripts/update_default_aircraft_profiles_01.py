@@ -34,6 +34,7 @@ if __name__ == "__main__":
             'TAS_KT',
             'LOCAL_DISTANCE_FT',
             'ELEVATION_FT',
+            'FUEL_FLOW_KGM'
         ]
 
         # Get the relevant columns
@@ -47,6 +48,7 @@ if __name__ == "__main__":
             'TAS_KT': 'tas_knots',
             'LOCAL_DISTANCE_FT': 'horizontal_feet',
             'ELEVATION_FT': 'vertical_feet',
+            'FUEL_FLOW_KGM': 'fuel_flow_kgm',
         })
 
         # Reset the points column
@@ -135,6 +137,7 @@ if __name__ == "__main__":
         'power',
         'mode',
         'course',
+        'fuel_flow_kgm',
     ]
 
     # Write to data/default_aircraft_profiles.csv
