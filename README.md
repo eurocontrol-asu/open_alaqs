@@ -229,6 +229,27 @@ pyuic5 -o ui/ui_about.py --from-imports ui/ui_about.ui
 
 > Pro tip: if you want to view the interface without running QGIS, you can use the following command: `pyuic5 --preview ui/ui_about.ui`
 
+## Updating the Open-ALAQS database templates
+
+The Open-ALAQS database templates can be edited by modifying the sql and csv files in the `/database` folder.
+The folder `updates` contains scripts that build the OpenALAQS tables.
+All source files (.sql and .csv) needed for the build are inside the `/sql` and `/data` folder.
+Other scripts and files supporting the creation of the sql and csv files are located in `/scripts` and `/src`. 
+
+To build the Open-ALAQS database templates, run the following command in your terminal:
+
+```shell
+cd database
+python -m generate_templates
+```
+
+To generate the CAEP examples, run the following command in the Python console in QGIS:
+
+```python
+from open_alaqs.database.create_caep_examples import create_caep_examples
+create_caep_examples()
+```
+
 # Contribute
 [(Back to top)](#table-of-contents)
 
@@ -279,19 +300,3 @@ Leave a star in GitHub, give a clap in Medium and share this guide if you found 
 <!-- Add the footer here -->
 
 <!-- ![Footer](https://github.com/navendu-pottekkat/awesome-readme/blob/master/fooooooter.png) -->
-
-# Updating OpenALAQS database
-
-The folder `db_updates` contains scripts that update some of the OpenALAQS tables. The old version of the OpenALAQS database
-needs to be inside the folder. All other files (.csv and .xslx) needed for the update should also be inside the folder.
-
-- The script `update_default_aircraft` creates a new aircraft table based on a list of most frequently used aircraft types. The following
-commands should be used to run the script:
-
-```shell
-cd database
-python -m update_default_aircraft `name_of_old_database` `name_of_new_database`
-```
-
-The fields `name_of_old_database` and `name_of_new_database` should only include the actual name of the databases. No extensions need to
-be added (such as .alaqs).
