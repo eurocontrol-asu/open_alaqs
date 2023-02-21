@@ -6,6 +6,7 @@ import struct
 import sys
 from pathlib import Path
 
+import pandas as pd
 from open_alaqs.alaqs_core import alaqsutils
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 
@@ -200,7 +201,7 @@ def create_project_database(db_name):
     return None
 
 
-def query_string(sql_text):
+def query_string(sql_text: str) -> list:
     """
     A specific query for accessing project databases. Checks the query
     using regular expressions to try and make sure that the critical
@@ -232,7 +233,38 @@ def query_string(sql_text):
             logger.debug("INFO: Query \"%s\" executed successfully" % sql_text)
         else:
             alaqsutils.print_error(query_string.__name__, Exception, e, log=logger)
-        return None
+
+
+def query_string_df(sql_text: str) -> pd.DataFrame:
+    """
+    A specific query for accessing project databases. Checks the query
+    using regular expressions to try and make sure that the critical
+    databases are not deleted or updated (as this may have detrimental
+    effects on other projects that do not require the same changes)
+
+    :param: sql_text : the query to be executed
+    :return: result : the query response
+    :return: error : Result if query is successful. None if error
+    :raise: None
+    """
+    try:
+        # Tidy up the string a bit. Mainly cosmetic for log file
+        sql_text = sql_text.replace("  ", "")
+
+        # Start a connection to the database
+        conn, result = connect()
+        if conn is None:
+            raise Exception("Could not connect to database.")
+
+        data = pd.read_sql(sql_text, conn)
+        conn.close()
+
+        return data
+    except Exception as e:
+        if "no results to fetch" in e:
+            logger.debug("INFO: Query \"%s\" executed successfully" % sql_text)
+        else:
+            alaqsutils.print_error(query_string.__name__, Exception, e, log=logger)
 
 
 def airport_lookup(airport_code):
@@ -261,7 +293,7 @@ def get_study_setup():
     from the user_study_setup table.
     """
     try:
-        #sql_text = "SELECT * FROM user_study_setup WHERE airport_id=\"%s\";" % airport_id
+        # sql_text = "SELECT * FROM user_study_setup WHERE airport_id=\"%s\";" % airport_id
         sql_text = "SELECT * FROM user_study_setup"
         result = query_string(sql_text)
 
@@ -417,12 +449,12 @@ def add_gate_dict(gate_dict):
         elif result is None or result == []:
             sql_text = "INSERT INTO shapes_gates (gate_id,gate_type,instudy,gate_height,geometry) \
                 VALUES ('%s','%s','%s','%s',ST_Transform(GeomFromText('%s', 4326), 3857))" % \
-                (p0, p1, p3, p2, p4)
+                       (p0, p1, p3, p2, p4)
             logger.info("Added gate %s to database" % p0)
         else:
             sql_text = "UPDATE shapes_gates SET gate_id='%s', gate_type='%s', instudy='%s', gate_height='%s', \
                 geometry=ST_Transform(GeomFromText('%s', 4326),3857) WHERE gate_id='%s';" % \
-                (p0, p1, p3, p2, p4, p0)
+                       (p0, p1, p3, p2, p4, p0)
             logger.info("Updated gate %s in database" % p0)
 
         result = query_string(sql_text)
@@ -483,14 +515,14 @@ def add_roadway_dict(roadway_dict):
         # Split out and validate taxiway properties
         p0 = roadway_dict['roadway_id']
         p1 = roadway_dict['roadway_vehicle_year']
-        #p2 = roadway_dict['roadway_vehicle_hour']
+        # p2 = roadway_dict['roadway_vehicle_hour']
         p3 = roadway_dict['roadway_speed']
         p4 = roadway_dict['roadway_distance']
         p5 = roadway_dict['roadway_height']
         p6 = roadway_dict['roadway_vehicle_light']
         p7 = roadway_dict['roadway_vehicle_medium']
         p8 = roadway_dict['roadway_vehicle_heavy']
-        #p9 = roadway_dict['roadway_year_hour']
+        # p9 = roadway_dict['roadway_year_hour']
         p10 = roadway_dict['roadway_hour_profile']
         p11 = roadway_dict['roadway_daily_profile']
         p12 = roadway_dict['roadway_month_profile']
@@ -504,7 +536,7 @@ def add_roadway_dict(roadway_dict):
         p20 = roadway_dict['roadway_method']
         p21 = roadway_dict['roadway_instudy']
         p22 = roadway_dict['roadway_scenario']
-        #p23 = roadway_dict['roadway_vehicle_years']
+        # p23 = roadway_dict['roadway_vehicle_years']
         p24 = roadway_dict['roadway_wkt']
 
         # Check if gate already exists
@@ -757,8 +789,10 @@ def add_taxiway_route(taxiway_route):
         sql_text = "INSERT INTO user_taxiroute_taxiways (gate, route_name, runway, " \
                    "departure_arrival, instance_id, sequence, groups) VALUES " \
                    "(\"%s\",\"%s\",\"%s\",\"%s\",%s,\"%s\",\"%s\")" % (taxiway_route['gate'], taxiway_route['name'],
-                                                                       taxiway_route['runway'], taxiway_route['dept_arr'],
-                                                                       taxiway_route['instance'], taxiway_route['sequence'],
+                                                                       taxiway_route['runway'],
+                                                                       taxiway_route['dept_arr'],
+                                                                       taxiway_route['instance'],
+                                                                       taxiway_route['sequence'],
                                                                        taxiway_route['groups'])
         result = query_string(sql_text)
         if isinstance(result, str):
@@ -900,7 +934,8 @@ def add_point_source(point_source_dict):
                        "daily_profile='%s',month_profile='%s',co_kg_k='%s',hc_kg_k='%s',nox_kg_k='%s',sox_kg_k='%s'," \
                        "sox_kg_k='%s',pm10_kg_k='%s',p1_kg_k='%s',p2_kg_k='%s'," \
                        "geometry=ST_Transform(GeomFromText('%s', 4326), 3857) WHERE source_id='%s';" % \
-                       (p0, p1, p2, p3, p4, p5, p6, p7, p8, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p0)
+                       (p0, p1, p2, p3, p4, p5, p6, p7, p8, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22,
+                        p0)
             logger.info("Updated point source %s in database" % p0)
         result = query_string(sql_text)
         if result is None or result == []:
@@ -1115,8 +1150,8 @@ def add_parking(properties):
         p6 = properties['parking_vehicle_medium']
         p7 = properties['parking_vehicle_heavy']
         p8 = properties['parking_vehicle_year']
-        #p9 = properties['parking_vehicle_hour']
-        #p10 = properties['parking_year_hour']
+        # p9 = properties['parking_vehicle_hour']
+        # p10 = properties['parking_year_hour']
         p11 = properties['parking_speed']
         p12 = properties['parking_hour_profile']
         p13 = properties['parking_daily_profile']
@@ -1339,12 +1374,12 @@ def add_monthly_profile_dict(monthly_profile_dict):
         elif result is None or result == []:
             sql_text = "INSERT INTO user_month_profile (profile_name,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec) \
                 VALUES ( '%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')" % \
-                (p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12)
+                       (p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12)
             logger.info("Added month profile %s to database" % p0)
         else:
             sql_text = "UPDATE user_month_profile SET profile_name='%s',jan='%s',feb='%s',mar='%s',apr='%s',\
                 may='%s',jun='%s',jul='%s',aug='%s',sep='%s',oct='%s',nov='%s',dec='%s' WHERE profile_name='%s';" % \
-                (p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p0)
+                       (p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p0)
             logger.info("Updated monthly profile %s to database" % p0)
         result = query_string(sql_text)
         if result is None or result == []:
@@ -1480,16 +1515,16 @@ def add_hourly_profile(properties):
     """
     try:
         # Split out and validate properties
-        p0 = properties[0]   # name
-        p1 = properties[1]   # h00
-        p2 = properties[2]   # h01
-        p3 = properties[3]   # h02
-        p4 = properties[4]   # h03
-        p5 = properties[5]   # h04
-        p6 = properties[6]   # h05
-        p7 = properties[7]   # h06
-        p8 = properties[8]   # h07
-        p9 = properties[9]   # h08
+        p0 = properties[0]  # name
+        p1 = properties[1]  # h00
+        p2 = properties[2]  # h01
+        p3 = properties[3]  # h02
+        p4 = properties[4]  # h03
+        p5 = properties[5]  # h04
+        p6 = properties[6]  # h05
+        p7 = properties[7]  # h06
+        p8 = properties[8]  # h07
+        p9 = properties[9]  # h08
         p10 = properties[10]  # h09
         p11 = properties[11]  # h10
         p12 = properties[12]  # h11
@@ -1514,7 +1549,7 @@ def add_hourly_profile(properties):
         if isinstance(result, str):
             raise Exception("Problem saving profile: %s" % result)
 
-        #if result is [] or result is "" or result is None:
+        # if result is [] or result is "" or result is None:
         if len(result) == 0:
             sql_text = "INSERT INTO user_hour_profile (profile_name,h01,h02,h03,h04,h05,h06,h07,h08,h09,h10,h11," \
                        "h12,h13,h14,h15,h16,h17,h18,h19,h20,h21,h22,h23,h24) VALUES (\"%s\",%s,%s,%s,%s,%s,%s,%s,%s," \
@@ -1546,14 +1581,14 @@ def add_daily_profile(properties):
     """
     try:
         # Split out and validate properties
-        p0 = properties[0]   # name
-        p1 = properties[1]   # mon
-        p2 = properties[2]   # tue
-        p3 = properties[3]   # wed
-        p4 = properties[4]   # thu
-        p5 = properties[5]   # fri
-        p6 = properties[6]   # sat
-        p7 = properties[7]   # sun
+        p0 = properties[0]  # name
+        p1 = properties[1]  # mon
+        p2 = properties[2]  # tue
+        p3 = properties[3]  # wed
+        p4 = properties[4]  # thu
+        p5 = properties[5]  # fri
+        p6 = properties[6]  # sat
+        p7 = properties[7]  # sun
 
         # Check if profile already exists
         sql_text = "SELECT * FROM user_day_profile WHERE profile_name=\"%s\";" % p0.replace("'", "")
@@ -1565,11 +1600,11 @@ def add_daily_profile(properties):
         if len(result) == 0:
             sql_text = "INSERT INTO user_day_profile (profile_name,mon,tue,wed,thu,fri,sat,sun) VALUES ( \
                 \"%s\",%s,%s,%s,%s,%s,%s,%s)" % \
-                (p0, p1, p2, p3, p4, p5, p6, p7)
+                       (p0, p1, p2, p3, p4, p5, p6, p7)
         else:
             sql_text = "UPDATE user_day_profile SET profile_name=\"%s\",mon=%s,tue=%s,wed=%s,thu=%s,fri=%s,sat=%s," \
                        "sun=%s WHERE profile_name=\"%s\";" % \
-                (p0, p1, p2, p3, p4, p5, p6, p7, p0)
+                       (p0, p1, p2, p3, p4, p5, p6, p7, p0)
         result = query_string(sql_text)
 
         if len(result) == 0:
@@ -1588,19 +1623,19 @@ def add_monthly_profile(properties):
     """
     try:
         # Split out and validate properties
-        p0 = properties[0]   # name
-        p1 = properties[1]   # jan
-        p2 = properties[2]   # feb
-        p3 = properties[3]   # mar
-        p4 = properties[4]   # apr
-        p5 = properties[5]   # may
-        p6 = properties[6]   # jun
-        p7 = properties[7]   # jul
-        p8 = properties[8]   # aug
-        p9 = properties[9]   # sep
-        p10 = properties[10]   # oct
-        p11 = properties[11]   # nov
-        p12 = properties[12]   # dec
+        p0 = properties[0]  # name
+        p1 = properties[1]  # jan
+        p2 = properties[2]  # feb
+        p3 = properties[3]  # mar
+        p4 = properties[4]  # apr
+        p5 = properties[5]  # may
+        p6 = properties[6]  # jun
+        p7 = properties[7]  # jul
+        p8 = properties[8]  # aug
+        p9 = properties[9]  # sep
+        p10 = properties[10]  # oct
+        p11 = properties[11]  # nov
+        p12 = properties[12]  # dec
 
         # Check if profile already exists
         sql_text = "SELECT * FROM user_month_profile WHERE profile_name=\"%s\";" % p0.replace("'", "")
@@ -1612,11 +1647,11 @@ def add_monthly_profile(properties):
         if len(result) == 0:
             sql_text = "INSERT INTO user_month_profile (profile_name,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec) \
                 VALUES ( \"%s\",%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)" % \
-                (p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12)
+                       (p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12)
         else:
             sql_text = "UPDATE user_month_profile SET profile_name=\"%s\",jan=%s,feb=%s,mar=%s,apr=%s,may=%s,jun=%s," \
                        "jul=%s,aug=%s,sep=%s,oct=%s,nov=%s,dec=%s WHERE profile_name=\"%s\";" % \
-                (p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p0)
+                       (p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p0)
         result = query_string(sql_text)
         if len(result) == 0:
             return None
@@ -1844,7 +1879,8 @@ def inventory_calc_taxiway_emissions(inventory_path, taxiway_name):
                             if taxiway_name in sequence_data:
 
                                 # Get details of the aircraft
-                                sql_text = "SELECT * FROM default_aircraft WHERE icao=\"%s\";" % movement_dict['aircraft']
+                                sql_text = "SELECT * FROM default_aircraft WHERE icao=\"%s\";" % movement_dict[
+                                    'aircraft']
                                 aircraft_data = query_string(sql_text)
                                 aircraft_dict = alaqsutils.dict_aircraft(aircraft_data[0])
 
@@ -1854,11 +1890,16 @@ def inventory_calc_taxiway_emissions(inventory_path, taxiway_name):
                                 engine_data = query_string(sql_text)
                                 try:
                                     engine_dict = alaqsutils.dict_engine(engine_data[0])
-                                    co += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(engine_dict['co_ei']) * float(aircraft_dict['engine_count'])
-                                    hc += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(engine_dict['hc_ei']) * float(aircraft_dict['engine_count'])
-                                    nox += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(engine_dict['nox_ei']) * float(aircraft_dict['engine_count'])
-                                    sox += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(engine_dict['sox_ei']) * float(aircraft_dict['engine_count'])
-                                    pm10 += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(engine_dict['pm10_ei']) * float(aircraft_dict['engine_count'])
+                                    co += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(
+                                        engine_dict['co_ei']) * float(aircraft_dict['engine_count'])
+                                    hc += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(
+                                        engine_dict['hc_ei']) * float(aircraft_dict['engine_count'])
+                                    nox += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(
+                                        engine_dict['nox_ei']) * float(aircraft_dict['engine_count'])
+                                    sox += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(
+                                        engine_dict['sox_ei']) * float(aircraft_dict['engine_count'])
+                                    pm10 += float(taxiway_time) * float(engine_dict['fuel_kg_sec']) * float(
+                                        engine_dict['pm10_ei']) * float(aircraft_dict['engine_count'])
                                 except:
                                     pass
 
