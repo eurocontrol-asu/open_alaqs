@@ -152,14 +152,11 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
         """
         try:
             # collect form data
-            database_name = \
-                oautk.validate_field(self.ui.lineEditDatabaseName, "str")
-            database_directory = \
-                oautk.validate_field(self.ui.lineEditDatabaseDirectory, "str")
+            database_name = oautk.validate_field(self.ui.lineEditDatabaseName, "str")
+            database_directory = oautk.validate_field(self.ui.lineEditDatabaseDirectory, "str")
 
             if database_name is False or database_directory is False:
-                QtWidgets.QMessageBox.information(self, "Error",
-                                                  "Please review input fields")
+                QtWidgets.QMessageBox.information(self, "Error", "Please review input fields")
                 return False
 
             # strip extension (if any)
@@ -171,8 +168,7 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
 
             if os.path.exists(database_path):
                 warning_message = "File at path\n'%s'\nalready exists. " \
-                                  "Overwrite existing file?" % (
-                                      str(database_path))
+                                  "Overwrite existing file?" % (str(database_path))
                 answer = QtWidgets.QMessageBox.warning(
                     self,
                     "Warning",
@@ -183,12 +179,9 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
                     os.remove(database_path)
                 else:
                     return False
-            try:
-                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                result = alaqs.create_project(database_path)
-                QtWidgets.QApplication.restoreOverrideCursor()
-            except Exception as e:
-                raise Exception(e)
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            result = alaqs.create_project(database_path)
+            QtWidgets.QApplication.restoreOverrideCursor()
 
             if result is not None:
                 raise Exception(result)
@@ -197,10 +190,8 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
                 self.hide()
                 return self.get_values()
         except Exception as e:
-            QtWidgets.QMessageBox.warning(self, "Error",
-                                          "Could not create project: %s." % e)
-            error = alaqsutils.print_error(self.create_database.__name__,
-                                           Exception, e)
+            QtWidgets.QMessageBox.warning(self, "Error", "Could not create project: %s." % e)
+            error = alaqsutils.print_error(self.create_database.__name__, Exception, e)
             self.close()
             return error
 
@@ -406,7 +397,7 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
                     self.ui.comboBoxRoadwayFleetYear.addItem(year)
                 fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText(str(study_data['roadway_fleet_year']))
                 if fleet_year_index == -1:
-                    fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText("2010")
+                    fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText("2020")
                 if fleet_year_index != -1:
                     self.ui.comboBoxRoadwayFleetYear.setCurrentIndex(fleet_year_index)
 
@@ -414,10 +405,11 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             if roadway_countries is not None:
                 self.ui.comboBoxRoadwayCountry.clear()
                 for country in roadway_countries:
-                    self.ui.comboBoxRoadwayCountry.addItem(country[0])
+                    self.ui.comboBoxRoadwayCountry.addItem(country)
+
                 roadway_country_index = self.ui.comboBoxRoadwayCountry.findText(study_data['roadway_country'])
                 if roadway_country_index == -1:
-                    roadway_country_index = self.ui.comboBoxRoadwayCountry.findText("EU")
+                    roadway_country_index = self.ui.comboBoxRoadwayCountry.findText("EU27")
                 if roadway_country_index != -1:
                     self.ui.comboBoxRoadwayCountry.setCurrentIndex(roadway_country_index)
 
