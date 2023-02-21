@@ -181,84 +181,84 @@
       </attribute>
       <layout class="QFormLayout" name="formLayout_5">
        <item row="0" column="0">
-        <widget class="QLabel" name="pCPetrolLabel">
+        <widget class="QLabel" name="pc_petrol_label">
          <property name="text">
           <string>PC (Petrol) [%]</string>
          </property>
         </widget>
        </item>
        <item row="0" column="1">
-        <widget class="QLineEdit" name="pCPetrolLineEdit"/>
+        <widget class="QLineEdit" name="pc_petrol_percentage"/>
        </item>
        <item row="1" column="0">
-        <widget class="QLabel" name="pCDieselLabel">
+        <widget class="QLabel" name="pc_diesel_label">
          <property name="text">
           <string>PC (Diesel) [%]</string>
          </property>
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QLineEdit" name="pCDieselLineEdit"/>
+        <widget class="QLineEdit" name="pc_diesel_percentage"/>
        </item>
        <item row="2" column="0">
-        <widget class="QLabel" name="lCVPetrolLabel">
+        <widget class="QLabel" name="lcv_petrol_label">
          <property name="text">
           <string>LCV (Petrol) [%]</string>
          </property>
         </widget>
        </item>
        <item row="2" column="1">
-        <widget class="QLineEdit" name="lCVPetrolLineEdit"/>
+        <widget class="QLineEdit" name="lcv_petrol_percentage"/>
        </item>
        <item row="3" column="0">
-        <widget class="QLabel" name="lCVDieselLabel">
+        <widget class="QLabel" name="lcv_diesel_label">
          <property name="text">
           <string>LCV (Diesel) [%]</string>
          </property>
         </widget>
        </item>
        <item row="3" column="1">
-        <widget class="QLineEdit" name="lCVDieselLineEdit"/>
+        <widget class="QLineEdit" name="lcv_diesel_percentage"/>
        </item>
        <item row="4" column="0">
-        <widget class="QLabel" name="hDTPetrolLabel">
+        <widget class="QLabel" name="hdt_petrol_label">
          <property name="text">
           <string>HDT (Petrol) [%]</string>
          </property>
         </widget>
        </item>
        <item row="4" column="1">
-        <widget class="QLineEdit" name="hDTPetrolLineEdit"/>
+        <widget class="QLineEdit" name="hdt_petrol_percentage"/>
        </item>
        <item row="5" column="0">
-        <widget class="QLabel" name="hDTDieselLabel">
+        <widget class="QLabel" name="hdt_diesel_label">
          <property name="text">
           <string>HDT (Diesel) [%]</string>
          </property>
         </widget>
        </item>
        <item row="5" column="1">
-        <widget class="QLineEdit" name="hDTDieselLineEdit"/>
+        <widget class="QLineEdit" name="hdt_diesel_percentage"/>
        </item>
        <item row="6" column="0">
-        <widget class="QLabel" name="motorcycleLabel">
+        <widget class="QLabel" name="motorcycle_label">
          <property name="text">
           <string>Motorcycle [%]</string>
          </property>
         </widget>
        </item>
        <item row="6" column="1">
-        <widget class="QLineEdit" name="motorcycleLineEdit"/>
+        <widget class="QLineEdit" name="motorcycle_petrol_percentage"/>
        </item>
        <item row="7" column="0">
-        <widget class="QLabel" name="busLabel">
+        <widget class="QLabel" name="bus_label">
          <property name="text">
           <string>Bus [%]</string>
          </property>
         </widget>
        </item>
        <item row="7" column="1">
-        <widget class="QLineEdit" name="busLineEdit"/>
+        <widget class="QLineEdit" name="bus_diesel_percentage"/>
        </item>
       </layout>
      </widget>

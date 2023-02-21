@@ -7,6 +7,8 @@ from alaqs_core.alaqslogging import get_logger
 from alaqs_core.tools import copert5
 from alaqs_core.tools import lib_alaqs_method
 
+from open_alaqs.alaqs_core.tools.copert5_utils import VEHICLE_CATEGORIES
+
 logger = get_logger(__name__)
 
 
@@ -38,8 +40,6 @@ def form_open(form, layer, feature):
         height_field=form.findChild(QtWidgets.QLineEdit, "height"),
         speed_field=form.findChild(QtWidgets.QLineEdit, "speed"),
 
-        # todo: Add the new fields
-
         # The Euro standard fields
         pc_euro_standard=form.findChild(QtWidgets.QLineEdit, "pc_euro_standard"),
         lcv_euro_standard=form.findChild(QtWidgets.QLineEdit, "lcv_euro_standard"),
@@ -48,18 +48,14 @@ def form_open(form, layer, feature):
         bus_euro_standard=form.findChild(QtWidgets.QLineEdit, "bus_euro_standard"),
 
         # The fleet mix fields
-        pc_petrol_standard=form.findChild(QtWidgets.QLineEdit, "pc_petrol_percentage"),
-        pc_diesel_standard=form.findChild(QtWidgets.QLineEdit, "pc_diesel_percentage"),
-        lcv_petrol_standard=form.findChild(QtWidgets.QLineEdit, "lcv_petrol_percentage"),
-        lcv_diesel_standard=form.findChild(QtWidgets.QLineEdit, "lcv_diesel_percentage"),
-        hdt_petrol_standard=form.findChild(QtWidgets.QLineEdit, "hdt_petrol_percentage"),
-        hdt_diesel_standard=form.findChild(QtWidgets.QLineEdit, "hdt_diesel_percentage"),
-        motorcycle_petrol_standard=form.findChild(QtWidgets.QLineEdit, "motorcycle_petrol_percentage"),
-        bus_diesel_standard=form.findChild(QtWidgets.QLineEdit, "bus_diesel_percentage"),
-
-        # vehicle_light_field=form.findChild(QtWidgets.QLineEdit, "vehicle_light"),
-        # vehicle_medium_field=form.findChild(QtWidgets.QLineEdit, "vehicle_medium"),
-        # vehicle_heavy_field=form.findChild(QtWidgets.QLineEdit, "vehicle_heavy"),
+        pc_petrol=form.findChild(QtWidgets.QLineEdit, "pc_petrol_percentage"),
+        pc_diesel=form.findChild(QtWidgets.QLineEdit, "pc_diesel_percentage"),
+        lcv_petrol=form.findChild(QtWidgets.QLineEdit, "lcv_petrol_percentage"),
+        lcv_diesel=form.findChild(QtWidgets.QLineEdit, "lcv_diesel_percentage"),
+        hdt_petrol=form.findChild(QtWidgets.QLineEdit, "hdt_petrol_percentage"),
+        hdt_diesel=form.findChild(QtWidgets.QLineEdit, "hdt_diesel_percentage"),
+        motorcycle_petrol=form.findChild(QtWidgets.QLineEdit, "motorcycle_petrol_percentage"),
+        bus_diesel=form.findChild(QtWidgets.QLineEdit, "bus_diesel_percentage"),
 
         hour_profile_field=form.findChild(QtWidgets.QComboBox, "hour_profile"),
         daily_profile_field=form.findChild(QtWidgets.QComboBox, "daily_profile"),
@@ -126,30 +122,37 @@ def form_open(form, layer, feature):
     return form
 
 
-@catch_errors
+# @catch_errors
 def recalculate_emissions(fields: dict):
     try:
-        logger.debug(f"Hi 111")
+
+        # Set the fleet mix percentages
+        fleet_percentage_fields = [
+            "pc_petrol",
+            "pc_diesel",
+            "lcv_petrol",
+            "lcv_diesel",
+            "hdt_petrol",
+            "hdt_diesel",
+            "motorcycle_petrol",
+            "bus_diesel",
+        ]
 
         # Set the types per field (for validation)
-        # todo[rpfk]: Add new fields here
         field_types = {
             'name_field': 'str',
             'vehicle_year_field': "int",
             'height_field': "float",
             'speed_field': "float",
-            'vehicle_light_field': "float",
-            'vehicle_medium_field': "float",
-            'vehicle_heavy_field': "float",
         }
 
-        logger.debug(f"Hi 124")
+        for f in fleet_percentage_fields:
+            field_types[f] = 'float'
 
         # Validate the input
         valid_fields = {}
         validation_errors = []
         for field_name, field_type in field_types.items():
-            logger.debug(f"Hi 130 {field_name}")
             field_value = validate_field(fields[field_name], field_type)
             if isinstance(field_value, bool) and not field_value:
                 logger.error(f"{field_name} should be of type {field_type}, "
@@ -157,7 +160,6 @@ def recalculate_emissions(fields: dict):
                 validation_errors.append(field_name)
             else:
                 valid_fields[field_name] = field_value
-        logger.debug(f"Hi 139")
         if validation_errors:
             msg = f"Please complete all fields first. The following " \
                   f"{len(validation_errors)} fields are incomplete or " \
@@ -167,23 +169,18 @@ def recalculate_emissions(fields: dict):
             msg_box.exec_()
             return False
 
-        logger.debug(f"Hi 148")
-
         # Validate provided input
         name = valid_fields['name_field']
         height = valid_fields['height_field']
         speed = valid_fields['speed_field']
-        vehicle_light = valid_fields['vehicle_light_field']
-        vehicle_medium = valid_fields['vehicle_medium_field']
-        vehicle_heavy = valid_fields['vehicle_heavy_field']
 
-        # Check the fleet mix
-        vl = float(fields['vehicle_light_field'].text())
-        vm = float(fields['vehicle_medium_field'].text())
-        vh = float(fields['vehicle_heavy_field'].text())
-        if (vl + vm + vh) != 100:
+        # Calculate the total
+        fleet_percentage_total = sum([float(fields[f].text()) for f in fleet_percentage_fields])
+
+        if fleet_percentage_total != 100:
             msg_box = QtWidgets.QMessageBox()
-            msg_box.setText("Fleet mix must be decimal values that total 100%")
+            msg_box.setText("Fleet mix must be decimal values that total 100%. "
+                            f"Current sum is {fleet_percentage_total}%.")
             msg_box.exec_()
             return False
 
@@ -192,11 +189,10 @@ def recalculate_emissions(fields: dict):
             'name': name,
             'height': height,
             'speed': speed,
-            'vehicle_light': float(vehicle_light),
-            'vehicle_medium': float(vehicle_medium),
-            'vehicle_heavy': float(vehicle_heavy),
             'parking': False,
         }
+        for f in fleet_percentage_fields:
+            form_data[f + '_percentage'] = float(fields[f].text())
 
         # Get the study data for additional information needed
         study_data = alaqs.load_study_setup_dict()
@@ -204,13 +200,19 @@ def recalculate_emissions(fields: dict):
         # Get the roadway method
         roadway_method = study_data['roadway_method']
 
+        # Get the roadway country and fleet year
+        roadway_country = study_data['roadway_country']
+        roadway_fleet_year = study_data['roadway_fleet_year']
+
+        # Get the Euro standards
+        euro_standards = alaqs.get_roadway_euro_standards(roadway_country, roadway_fleet_year)
+
+        for short_vehicle_category, vehicle_category in VEHICLE_CATEGORIES.items():
+            form_data[f'{short_vehicle_category}_euro_standard'] = euro_standards[vehicle_category]
+
         # Calculate emissions according to the ALAQS method
         emission_profile = {}
-        if roadway_method == 'ALAQS Method':
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            emission_profile = lib_alaqs_method.roadway_emission_factors_alaqs_method(form_data, study_data)
-            QtWidgets.QApplication.restoreOverrideCursor()
-        elif roadway_method == 'COPERT 5':
+        if roadway_method == 'COPERT 5':
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             emission_profile = copert5.roadway_emission_factors(form_data, study_data)
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -323,9 +325,14 @@ def validate(fields: dict):
         validate_field(fields['height_field'], "float"),
         #validate_field(fields['distance_field'], "float"),
         validate_field(fields['speed_field'], "float"),
-        validate_field(fields['vehicle_light_field'], "float"),
-        validate_field(fields['vehicle_medium_field'], "float"),
-        validate_field(fields['vehicle_heavy_field'], "float"),
+        validate_field(fields['pc_petrol'], "float"),
+        validate_field(fields['pc_diesel'], "float"),
+        validate_field(fields['lcv_petrol'], "float"),
+        validate_field(fields['lcv_diesel'], "float"),
+        validate_field(fields['hdt_petrol'], "float"),
+        validate_field(fields['hdt_diesel'], "float"),
+        validate_field(fields['motorcycle_petrol'], "float"),
+        validate_field(fields['bus_diesel'], "float"),
         validate_field(fields['hour_profile_field'], "str"),
         validate_field(fields['daily_profile_field'], "str"),
         validate_field(fields['month_profile_field'], "str"),
@@ -343,6 +350,8 @@ def validate(fields: dict):
 
 
 def validate_field(ui_element, var_type):
+    if ui_element is None:
+        return False
     try:
         value = str(ui_element.currentText()).strip()
     except:

@@ -40,6 +40,7 @@ def catch_errors(f):
     return wrapper
 
 
+@catch_errors
 def create_project(database_name):
     """
     This function is used to create a new project database with all default
@@ -50,21 +51,13 @@ def create_project(database_name):
     :return: error : None if successful. Error message if not successful
     :raise: None
     """
-    try:
-        if database_name.strip() == "":
-            raise Exception("database_name cannot be empty")
+    if database_name.strip() == "":
+        raise Exception("database_name cannot be empty")
 
-        result = alaqsdblite.create_project_database(database_name)
-        if result is not None:
-            error = f"Problem from alaqsdblite.create_project_database():" \
-                    f" {result}"
-            raise Exception(error)
-
-        return None
-
-    except Exception as e:
-        error = alaqsutils.print_error(create_project.__name__, Exception, e)
-        return error
+    result = alaqsdblite.create_project_database(database_name)
+    if result is not None:
+        error = f"Problem from alaqsdblite.create_project_database(): {result}"
+        raise Exception(error)
 
 
 # ##########################
@@ -222,7 +215,18 @@ def get_roadway_fleet_years():
     """
     result = alaqsdblite.get_roadway_years()
     if result is None:
-        raise Exception("No roadway methods were returned from this database")
+        raise Exception("No roadway fleet years were returned from this database")
+    return result
+
+
+@catch_errors
+def get_roadway_euro_standards(country: str, fleet_year: str) -> dict:
+    """
+    Get a list of Euro standards for roadway modelling
+    """
+    result = alaqsdblite.get_roadway_euro_standards(country, fleet_year)
+    if result is None:
+        raise Exception("No Euro standards were returned from this database")
     return result
 
 

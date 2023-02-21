@@ -318,54 +318,62 @@ def get_roadway_methods() -> tuple:
     return "COPERT 5",
 
 
-def get_roadway_countries():
+@catch_errors
+def get_roadway_countries() -> tuple:
     """
     Return a list of unique countries that are available in the roadway emissions database
     """
-    try:
-        country_query = "SELECT DISTINCT(country) FROM default_vehicle_fleet_euro_standards ORDER BY country;"
-        countries = query_string(country_query)
-        return countries
-    except Exception as e:
-        alaqsutils.print_error(get_roadway_countries.__name__, Exception, e, log=logger)
-        return None
+    country_query = "SELECT DISTINCT(country) FROM default_vehicle_fleet_euro_standards ORDER BY country;"
+    countries = query_string(country_query)
+    return tuple(c[0] for c in countries)
 
 
-def get_roadway_years():
+@catch_errors
+def get_roadway_years() -> tuple:
     """
     Return a list of unique years for which roadway fleet data is available
     """
-    try:
-        years_query = "SELECT DISTINCT(fleet_year) FROM default_vehicle_fleet_euro_standards ORDER BY country;"
-        years = query_string(years_query)
-        return years
-    except Exception as e:
-        alaqsutils.print_error(get_roadway_years.__name__, Exception, e, log=logger)
-        return None
+    years_query = "SELECT DISTINCT(fleet_year) FROM default_vehicle_fleet_euro_standards ORDER BY country;"
+    years = query_string(years_query)
+    return tuple(y[0] for y in years)
 
 
+@catch_errors
+def get_roadway_euro_standards(country: str, fleet_year: str) -> dict:
+    """
+    Return a list of Euro standards for roadway fleet
+    """
+    euro_standards_query = f"SELECT vehicle_category, euro_standard " \
+                           f"FROM default_vehicle_fleet_euro_standards " \
+                           f"WHERE country = '{country}' AND fleet_year = '{fleet_year}';"
+
+    euro_standards = query_string(euro_standards_query)
+
+    return {vehicle_category: euro_standard for (vehicle_category, euro_standard) in euro_standards}
+
+
+@catch_errors
 def save_study_setup(study_setup):
     """
     This function updates the study setup record for the currently active project
     """
-    try:
-        project_name = study_setup[0]
-        airport_name = study_setup[1]
-        airport_id = study_setup[2]
-        icao_code = study_setup[3]
-        airport_country = study_setup[4]
-        airport_lat = study_setup[5]
-        airport_lon = study_setup[6]
-        airport_elevation = study_setup[7]
-        airport_temp = study_setup[8]
-        vertical_limit = study_setup[9]
-        parking_method = study_setup[10]
-        roadway_method = study_setup[11]
-        roadway_fleet_year = study_setup[12]
-        roadway_country = study_setup[13]
-        study_info = study_setup[14]
+    project_name = study_setup[0]
+    airport_name = study_setup[1]
+    airport_id = study_setup[2]
+    icao_code = study_setup[3]
+    airport_country = study_setup[4]
+    airport_lat = study_setup[5]
+    airport_lon = study_setup[6]
+    airport_elevation = study_setup[7]
+    airport_temp = study_setup[8]
+    vertical_limit = study_setup[9]
+    parking_method = study_setup[10]
+    roadway_method = study_setup[11]
+    roadway_fleet_year = study_setup[12]
+    roadway_country = study_setup[13]
+    study_info = study_setup[14]
 
-        sql_text = "UPDATE user_study_setup SET \
+    sql_text = "UPDATE user_study_setup SET \
         airport_id=%s, project_name=\"%s\", airport_name=\"%s\", airport_code=\"%s\", \
         airport_country=\"%s\", airport_latitude=%f, airport_longitude=%f, \
         airport_elevation='%f', airport_temperature=%f, vertical_limit=%f, \
@@ -375,38 +383,35 @@ def save_study_setup(study_setup):
                                  airport_lon, airport_elevation, airport_temp, vertical_limit, roadway_method,
                                  roadway_fleet_year, roadway_country, parking_method, study_info, airport_id)
 
-        result = query_string(sql_text)
-        if (result is None) or (result == []):
-            return None
-        else:
-            raise Exception(result)
-    except Exception as e:
-        error = alaqsutils.print_error(save_study_setup.__name__, Exception, e, log=logger)
-        return error
+    result = query_string(sql_text)
+    if (result is None) or (result == []):
+        return None
+    else:
+        raise Exception(result)
 
 
+@catch_errors
 def save_study_setup_dict(study_setup_dict):
     """
     This function updates the study setup record for the currently active project
     """
-    try:
-        project_name = study_setup_dict['project_name']
-        airport_name = study_setup_dict['airport_name']
-        airport_id = study_setup_dict['airport_id']
-        icao_code = study_setup_dict['airport_code']
-        airport_country = study_setup_dict['airport_country']
-        airport_lat = study_setup_dict['airport_latitude']
-        airport_lon = study_setup_dict['airport_longitude']
-        airport_elevation = study_setup_dict['airport_elevation']
-        airport_temp = study_setup_dict['airport_temperature']
-        vertical_limit = study_setup_dict['vertical_limit']
-        parking_method = study_setup_dict['parking_method']
-        roadway_method = study_setup_dict['roadway_method']
-        roadway_fleet_year = study_setup_dict['roadway_fleet_year']
-        roadway_country = study_setup_dict['roadway_country']
-        study_info = study_setup_dict['study_info']
+    project_name = study_setup_dict['project_name']
+    airport_name = study_setup_dict['airport_name']
+    airport_id = study_setup_dict['airport_id']
+    icao_code = study_setup_dict['airport_code']
+    airport_country = study_setup_dict['airport_country']
+    airport_lat = study_setup_dict['airport_latitude']
+    airport_lon = study_setup_dict['airport_longitude']
+    airport_elevation = study_setup_dict['airport_elevation']
+    airport_temp = study_setup_dict['airport_temperature']
+    vertical_limit = study_setup_dict['vertical_limit']
+    parking_method = study_setup_dict['parking_method']
+    roadway_method = study_setup_dict['roadway_method']
+    roadway_fleet_year = study_setup_dict['roadway_fleet_year']
+    roadway_country = study_setup_dict['roadway_country']
+    study_info = study_setup_dict['study_info']
 
-        sql_text = "UPDATE user_study_setup SET \
+    sql_text = "UPDATE user_study_setup SET \
         airport_id=%s, project_name=\"%s\", airport_name=\"%s\", airport_code=\"%s\", \
         airport_country=\"%s\", airport_latitude=%f, airport_longitude=%f, \
         airport_elevation='%f', airport_temperature=%f, vertical_limit=%f, \
@@ -416,14 +421,11 @@ def save_study_setup_dict(study_setup_dict):
                                  airport_lon, airport_elevation, airport_temp, vertical_limit, roadway_method,
                                  roadway_fleet_year, roadway_country, parking_method, study_info, airport_id)
 
-        result = query_string(sql_text)
-        if (result is None) or (result == []):
-            return None
-        else:
-            raise Exception(result)
-    except Exception as e:
-        error = alaqsutils.print_error(save_study_setup.__name__, Exception, e, log=logger)
-        return error
+    result = query_string(sql_text)
+    if (result is None) or (result == []):
+        return None
+    else:
+        raise Exception(result)
 
 
 # #################################################

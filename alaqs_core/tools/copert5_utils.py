@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 
 FUELS = ['petrol', 'diesel']
-EURO_STANDARDS = ['Euro 1', 'Euro 2', 'Euro 3', 'Euro 4', 'Euro 5']
+EURO_STANDARDS = ['Conventional', 'Euro 1', 'Euro 2', 'Euro 3', 'Euro 4', 'Euro 5', 'Euro 6 a/b/c', 'Euro 6 d',
+                  'Euro 6 d-temp', 'Euro I', 'Euro II', 'Euro III', 'Euro IV', 'Euro V', 'Euro VI A/B/C', 'Euro VI D/E']
 POLLUTANTS = ['CO', 'NOx', 'VOC']
 
 VEHICLE_CATEGORIES = {

@@ -123,9 +123,9 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
 
     # Return the result as dict
     emission_factors_dict = {
-        'co_ef': emission_factors[f'eCO[g/km]'],
-        'hc_ef': emission_factors[f'eVOC[g/km]'],
-        'nox_ef': emission_factors[f'eNOx[g/km]'],
+        'co_ef': emission_factors['eCO[g/km]'],
+        'hc_ef': emission_factors['eVOC[g/km]'],
+        'nox_ef': emission_factors['eNOx[g/km]'],
         'sox_ef': 0,
         'pm10_ef': 0,
         'p1_ef': 0,
