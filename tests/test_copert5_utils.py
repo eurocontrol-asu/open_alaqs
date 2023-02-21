@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from alaqs_core.tools.copert5_utils import emissions, VEHICLE_CATEGORIES, ef_query, average_emission_factors
+from alaqs_core.tools.copert5_utils import calculate_emissions, VEHICLE_CATEGORIES, ef_query, average_emission_factors
 from database.generate_templates import get_engine
 
 TEMPLATES_DIR = Path(__file__).parents[1] / 'alaqs_core/templates'
@@ -58,7 +58,7 @@ def test_emissions_passenger_cars():
         ef_data.merge(vc, how='left', left_on='vehicle_category', right_on='category_long')['category_short']
 
     # Calculate the emissions
-    e = emissions(fleet, ef_data)
+    e = calculate_emissions(fleet, ef_data)
 
     # Calculate the average emission factors
     ef = average_emission_factors(e)

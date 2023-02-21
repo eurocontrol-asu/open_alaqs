@@ -144,7 +144,7 @@ def cold_mileage_fractions(trip_length: float = 12.4, temperature: float = 15) -
     return fractions.set_index(['vehicle_category', 'fuel', 'euro_standard']).drop(columns={'alternative'})
 
 
-def emissions(fleet: pd.DataFrame, efs: pd.DataFrame) -> pd.DataFrame:
+def calculate_emissions(fleet: pd.DataFrame, efs: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate the emissions for each technology (a combination of vehicle category, fuel type and euro standard).
 
@@ -189,9 +189,12 @@ def emissions(fleet: pd.DataFrame, efs: pd.DataFrame) -> pd.DataFrame:
     beta = cold_mileage_fractions()
     fleet = fleet.merge(beta, how='left', left_index=True, right_index=True)
 
-    # Add emissions (g) during transient thermal engine operation (cold start)
+    # Add emissions (g) during transient thermal engine operation (cold start) if bc is known else assume 0
     for p in POLLUTANTS:
-        fleet[f'E_cold{p}[g]'] = fleet[['beta', f'bc{p}', 'N', 'M[km]', f'e_cold{p}[g/km]']].product(axis=1)
+        if f'bc{p}' in fleet:
+            fleet[f'E_cold{p}[g]'] = fleet[['beta', f'bc{p}', 'N', 'M[km]', f'e_cold{p}[g/km]']].product(axis=1)
+        else:
+            fleet[f'E_cold{p}[g]'] = 0
 
     # Calculate the total emissions (g)
     for p in POLLUTANTS:
