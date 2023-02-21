@@ -232,9 +232,9 @@ pyuic5 -o ui/ui_about.py --from-imports ui/ui_about.ui
 ## Updating the Open-ALAQS database templates
 
 The Open-ALAQS database templates can be edited by modifying the sql and csv files in the `/database` folder.
-The folder `updates` contains scripts that build the OpenALAQS tables.
-All source files (.sql and .csv) needed for the build are inside the `/sql` and `/data` folder.
-Other scripts and files supporting the creation of the sql and csv files are located in `/scripts` and `/src`. 
+The folder `/database` contains scripts that build the OpenALAQS tables.
+All source files (.sql and .csv) needed for the build are inside the `/database/sql` and `/database/data` folder.
+Other scripts and files supporting the creation of the sql and csv files are located in `/database/scripts` and `/database/src`. 
 
 To build the Open-ALAQS database templates, run the following command in your terminal:
 
