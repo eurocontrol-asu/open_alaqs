@@ -17,5 +17,6 @@ CREATE TABLE IF NOT EXISTS "default_aircraft_profiles" (
 	"power"	DECIMAL,
 	"mode"	VARCHAR(5),
 	"course"	VARCHAR(15),
+	"fuel_flow_kgm"	VARCHAR(15),
 	PRIMARY KEY("oid")
 );
