@@ -315,7 +315,7 @@ def get_roadway_methods() -> tuple:
     """
     Return a list of types of available roadway methods from database
     """
-    return "ALAQS Method", "COPERT 5"
+    return "COPERT 5"
 
 
 def get_roadway_countries():
@@ -323,9 +323,8 @@ def get_roadway_countries():
     Return a list of unique countries that are available in the roadway emissions database
     """
     try:
-        country_query = "SELECT DISTINCT(country) FROM default_cost319_vehicle_fleet ORDER BY country;"
+        country_query = "SELECT DISTINCT(country) FROM default_vehicle_fleet_euro_standards ORDER BY country;"
         countries = query_string(country_query)
-
         return countries
     except Exception as e:
         alaqsutils.print_error(get_roadway_countries.__name__, Exception, e, log=logger)
@@ -337,7 +336,8 @@ def get_roadway_years():
     Return a list of unique years for which roadway fleet data is available
     """
     try:
-        years = ["1990", "1995", "2000", "2005", "2010", "2015", "2020"]
+        years_query = "SELECT DISTINCT(fleet_year) FROM default_vehicle_fleet_euro_standards ORDER BY country;"
+        years = query_string(years_query)
         return years
     except Exception as e:
         alaqsutils.print_error(get_roadway_years.__name__, Exception, e, log=logger)
