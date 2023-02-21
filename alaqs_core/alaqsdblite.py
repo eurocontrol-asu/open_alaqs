@@ -315,7 +315,7 @@ def get_roadway_methods() -> tuple:
     """
     Return a list of types of available roadway methods from database
     """
-    return "COPERT 5"
+    return "COPERT 5",
 
 
 def get_roadway_countries():
