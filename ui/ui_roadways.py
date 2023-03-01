@@ -5,11 +5,10 @@ from qgis.gui import *
 from alaqs_core import alaqs, alaqsutils
 from alaqs_core.alaqslogging import get_logger
 from alaqs_core.tools import copert5
-from alaqs_core.tools import lib_alaqs_method
 
 from open_alaqs.alaqs_core.tools.copert5_utils import VEHICLE_CATEGORIES
 
-logger = get_logger(__name__)
+logger = get_logger("open_alaqs.ui.ui_roadways")
 
 
 def catch_errors(f):
@@ -31,21 +30,11 @@ def catch_errors(f):
 
 
 def form_open(form, layer, feature):
-    logger.debug(f"This is the modified simple form")
-    logger.debug(f"Layer {layer} and feature {feature}")
-    logger.debug(f"Attributes of fields: {feature.fields().names()}")
     fields = dict(
         name_field=form.findChild(QtWidgets.QLineEdit, "roadway_id"),
         vehicle_year_field=form.findChild(QtWidgets.QLineEdit, "vehicle_year"),
         height_field=form.findChild(QtWidgets.QLineEdit, "height"),
         speed_field=form.findChild(QtWidgets.QLineEdit, "speed"),
-
-        # The Euro standard fields
-        pc_euro_standard=form.findChild(QtWidgets.QLineEdit, "pc_euro_standard"),
-        lcv_euro_standard=form.findChild(QtWidgets.QLineEdit, "lcv_euro_standard"),
-        hdt_euro_standard=form.findChild(QtWidgets.QLineEdit, "hdt_euro_standard"),
-        motorcycle_euro_standard=form.findChild(QtWidgets.QLineEdit, "motorcycle_euro_standard"),
-        bus_euro_standard=form.findChild(QtWidgets.QLineEdit, "bus_euro_standard"),
 
         # The fleet mix fields
         pc_petrol=form.findChild(QtWidgets.QLineEdit, "pc_petrol_percentage"),
@@ -74,9 +63,6 @@ def form_open(form, layer, feature):
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
     )
-
-    # Get all the fields from the form
-    logger.debug(f"Attributes of feature: {feature.attributes()}")
 
     # Hide the instudy field
     fields['instudy'].setHidden(True)
@@ -207,6 +193,12 @@ def recalculate_emissions(fields: dict):
         # Get the Euro standards
         euro_standards = alaqs.get_roadway_euro_standards(roadway_country, roadway_fleet_year)
 
+        # Log the Euro standards
+        val = "\n\tEuro Standards:"
+        for vehicle_category, euro_standard in sorted(euro_standards.items()):
+            val += f"\n\t\t{vehicle_category} : {euro_standard}"
+        logger.info(val)
+
         for short_vehicle_category, vehicle_category in VEHICLE_CATEGORIES.items():
             form_data[f'{short_vehicle_category}_euro_standard'] = euro_standards[vehicle_category]
 
@@ -323,7 +315,7 @@ def validate(fields: dict):
         validate_field(fields['name_field'], "str"),
         validate_field(fields['vehicle_year_field'], "int"),
         validate_field(fields['height_field'], "float"),
-        #validate_field(fields['distance_field'], "float"),
+        # validate_field(fields['distance_field'], "float"),
         validate_field(fields['speed_field'], "float"),
         validate_field(fields['pc_petrol'], "float"),
         validate_field(fields['pc_diesel'], "float"),
@@ -378,7 +370,6 @@ def validate_field(ui_element, var_type):
             try:
                 if value == "" or value is None:
                     color_ui_background(ui_element, "red")
-                    #raise Exception()
                 value = int(value)
                 color_ui_background(ui_element, "white")
                 return value
@@ -417,4 +408,3 @@ def color_ui_background(ui_element, color):
     else:
         color_style = "QWidget { background-color: rgba(0,255,0,0.3); }"
         ui_element.setStyleSheet(color_style)
-
