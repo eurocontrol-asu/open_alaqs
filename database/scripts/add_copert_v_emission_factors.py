@@ -26,6 +26,10 @@ if __name__ == "__main__":
         ~data.columns.str.isnumeric() | (data.columns.isin(keep_num_columns))
     ]]
 
+    # Make sure the all tens columns contain numerical values
+    for column in data.columns[data.columns.isin(keep_num_columns)]:
+        data[column] = pd.to_numeric(data[column], errors='coerce').fillna(0)
+
     # Store the data
     data.to_csv(dst_csv, index=False)
 
