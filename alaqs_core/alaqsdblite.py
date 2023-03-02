@@ -335,7 +335,7 @@ def get_roadway_years() -> tuple:
     """
     years_query = "SELECT DISTINCT(fleet_year) FROM default_vehicle_fleet_euro_standards ORDER BY country;"
     years = query_string(years_query)
-    return tuple(y[0] for y in years)
+    return tuple(str(y[0]) for y in years)
 
 
 @catch_errors
