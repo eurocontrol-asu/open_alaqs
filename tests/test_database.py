@@ -81,7 +81,6 @@ def test_csv(sql_files: list, csv_files: list, template_type: str):
             raise ValueError("What to do when the database is not empty?")
 
 
-@pytest.mark.skip(reason='todo: Needs to be implemented in #210 / #202')
 @pytest.mark.parametrize("example_file",
                          list(EXAMPLES_DIR.glob('**/*.alaqs')),
                          ids=list(d.name for d in EXAMPLES_DIR.glob('**/*.alaqs'))
