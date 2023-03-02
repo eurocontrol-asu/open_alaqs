@@ -26,6 +26,10 @@ if __name__ == "__main__":
         ~data.columns.str.isnumeric() | (data.columns.isin(keep_num_columns))
     ]]
 
+    # Make sure the all tens columns contain numerical values
+    for column in data.columns[data.columns.isin(keep_num_columns)]:
+        data[column] = pd.to_numeric(data[column], errors='coerce').fillna(0)
+
     # Store the data
     data.to_csv(dst_csv, index=False)
 
@@ -64,9 +68,9 @@ if __name__ == "__main__":
             # Get the average euro standard for each vehicle category
             vc_average = vc_applicable.sort_values('introduction').groupby('vehicle_category', as_index=False).last()
 
-            # Add fleet year and country
-            vc_average['fleet_year'] = fleet_year
+            # Add country and fleet year
             vc_average['country'] = country
+            vc_average['fleet_year'] = fleet_year
 
             fleet_euro_standards.append(vc_average.drop(columns={'introduction'}))
     fleet_euro_standards_df = pd.concat(fleet_euro_standards)

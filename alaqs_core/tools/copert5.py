@@ -53,6 +53,12 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
     :rtype: dict
     """
 
+    # Log the input data
+    val = "\n\tRoadway emission factors input data:"
+    for key, value in sorted(input_data.items()):
+        val += f"\n\t\t{key} : {value}"
+    logger.info(val)
+
     # Create a dataframe with the fleet
     fleet = pd.DataFrame([
         {
@@ -106,11 +112,11 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
     ])
     fleet['M[km]'] = 1000
 
-    # todo: Set the speed
-    speed = 10
+    # Get the speed
+    speed = input_data['speed']
 
-    # todo: Set the country
-    country = 'Belgium'
+    # Get the country
+    country = study_data['roadway_country']
 
     # Fetch the emission factors from the database
     efs = get_emission_factors(speed, country)

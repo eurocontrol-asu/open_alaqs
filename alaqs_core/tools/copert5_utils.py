@@ -79,57 +79,59 @@ def cold_mileage_fractions(trip_length: float = 12.4, temperature: float = 15) -
     # Map the fractions to each technology
     # The comments indicate the source of the β-reduction factors
     # Table 3-41: β-reduction factors (bci,k) for Euro 1 to Euro 5 petrol vehicles (relative to Euro 1)
-    fractions = pd.DataFrame([
-        ['pc', 'petrol', 'Conventional', default_beta, 1, 1, 1],  # Equation 10
-        ['pc', 'petrol', 'Euro 1', default_beta, 1, 1, 1],  # Equation 10
-        ['pc', 'petrol', 'Euro 2', default_beta, 0.72, 0.72, 0.56],  # Table 3-41
-        ['pc', 'petrol', 'Euro 3', default_beta, 0.62, 0.32, 0.32],  # Table 3-41
-        ['pc', 'petrol', 'Euro 4', default_beta, 0.18, 0.18, 0.18],  # Table 3-41
-        ['pc', 'petrol', 'Euro 5', default_beta, 0.18, 0.18, 0.18],  # Table 3-41
-        ['pc', 'petrol', 'Euro 6', default_beta, bc6pco, bc6pnox, bc6pvoc],  # Table 3-43
-        ['pc', 'diesel', 'Conventional', default_beta, 1, 1, 1],  # Equation 10
-        ['pc', 'diesel', 'Euro 1', default_beta, 1, 1, 1],  # Equation 10
-        ['pc', 'diesel', 'Euro 2', default_beta, 1, 1, 1],  # Equation 10
-        ['pc', 'diesel', 'Euro 3', default_beta, 1, 1, 1],  # Equation 10
-        ['pc', 'diesel', 'Euro 4', default_beta, 1, 1, 1],  # Equation 10
-        ['pc', 'diesel', 'Euro 5', default_beta, 1, 1, 1],  # Equation 10
-        ['pc', 'diesel', 'Euro 6', default_beta, bc6dco, bc6dnox, bc6dvoc],  # Table 3-46
-        ['lcv', 'petrol', 'Conventional', default_beta, 1, 1, 1],  # Equation 10
-        ['lcv', 'petrol', 'Euro 1', default_beta, 1, 1, 1],  # Equation 10
-        ['lcv', 'petrol', 'Euro 2', default_beta, 0.72, 0.72, 0.56],  # Table 3-41
-        ['lcv', 'petrol', 'Euro 3', default_beta, 0.62, 0.32, 0.32],  # Table 3-41
-        ['lcv', 'petrol', 'Euro 4', default_beta, 0.18, 0.18, 0.18],  # Table 3-41
-        ['lcv', 'petrol', 'Euro 5', default_beta, 0.18, 0.18, 0.18],  # Table 3-41
-        ['lcv', 'petrol', 'Euro 6', default_beta, bc6pco, bc6pnox, bc6pvoc],  # Table 3-43
-        ['lcv', 'diesel', 'Conventional', default_beta, 1, 1, 1],  # Equation 10
-        ['lcv', 'diesel', 'Euro 1', default_beta, 1, 1, 1],  # Equation 10
-        ['lcv', 'diesel', 'Euro 2', default_beta, 1, 1, 1],  # Equation 10
-        ['lcv', 'diesel', 'Euro 3', default_beta, 1, 1, 1],  # Equation 10
-        ['lcv', 'diesel', 'Euro 4', default_beta, 1, 1, 1],  # Equation 10
-        ['lcv', 'diesel', 'Euro 5', default_beta, 1, 1, 1],  # Equation 10
-        ['lcv', 'diesel', 'Euro 6', default_beta, 1, 1, 1],  # Equation 10
-        ['hdt', 'petrol', 'Conventional', 0, 1, 1, 1],  # Only hot emissions
-        ['hdt', 'diesel', 'Conventional', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['hdt', 'diesel', 'Euro I', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['hdt', 'diesel', 'Euro II', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['hdt', 'diesel', 'Euro III', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['hdt', 'diesel', 'Euro IV', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['hdt', 'diesel', 'Euro V', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['hdt', 'diesel', 'Euro VI', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['bus', 'diesel', 'Conventional', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['bus', 'diesel', 'Euro I', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['bus', 'diesel', 'Euro II', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['bus', 'diesel', 'Euro III', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['bus', 'diesel', 'Euro IV', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['bus', 'diesel', 'Euro V', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['bus', 'diesel', 'Euro VI', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
-        ['motorcycle', 'petrol', 'Conventional', 0, 1, 1, 1],  # Only hot emissions
-        ['motorcycle', 'petrol', 'Euro 1', 0, 1, 1, 1],  # Only hot emissions
-        ['motorcycle', 'petrol', 'Euro 2', 0, 1, 1, 1],  # Only hot emissions
-        ['motorcycle', 'petrol', 'Euro 3', 0, 1, 1, 1],  # Only hot emissions
-        ['motorcycle', 'petrol', 'Euro 4', 0, 1, 1, 1],  # Only hot emissions
-        ['motorcycle', 'petrol', 'Euro 5', 0, 1, 1, 1],  # Only hot emissions
-    ], columns=['vehicle_category', 'fuel', 'euro_standard', 'beta', 'bcCO', 'bcNOx', 'bcVOC'])
+    fractions = pd.DataFrame(
+        columns=['vehicle_category', 'fuel', 'euro_standard', 'beta', 'bcCO', 'bcNOx', 'bcVOC'],
+        data=[
+            ['pc', 'petrol', 'Conventional', default_beta, 1, 1, 1],  # Equation 10
+            ['pc', 'petrol', 'Euro 1', default_beta, 1, 1, 1],  # Equation 10
+            ['pc', 'petrol', 'Euro 2', default_beta, 0.72, 0.72, 0.56],  # Table 3-41
+            ['pc', 'petrol', 'Euro 3', default_beta, 0.62, 0.32, 0.32],  # Table 3-41
+            ['pc', 'petrol', 'Euro 4', default_beta, 0.18, 0.18, 0.18],  # Table 3-41
+            ['pc', 'petrol', 'Euro 5', default_beta, 0.18, 0.18, 0.18],  # Table 3-41
+            ['pc', 'petrol', 'Euro 6', default_beta, bc6pco, bc6pnox, bc6pvoc],  # Table 3-43
+            ['pc', 'diesel', 'Conventional', default_beta, 1, 1, 1],  # Equation 10
+            ['pc', 'diesel', 'Euro 1', default_beta, 1, 1, 1],  # Equation 10
+            ['pc', 'diesel', 'Euro 2', default_beta, 1, 1, 1],  # Equation 10
+            ['pc', 'diesel', 'Euro 3', default_beta, 1, 1, 1],  # Equation 10
+            ['pc', 'diesel', 'Euro 4', default_beta, 1, 1, 1],  # Equation 10
+            ['pc', 'diesel', 'Euro 5', default_beta, 1, 1, 1],  # Equation 10
+            ['pc', 'diesel', 'Euro 6', default_beta, bc6dco, bc6dnox, bc6dvoc],  # Table 3-46
+            ['lcv', 'petrol', 'Conventional', default_beta, 1, 1, 1],  # Equation 10
+            ['lcv', 'petrol', 'Euro 1', default_beta, 1, 1, 1],  # Equation 10
+            ['lcv', 'petrol', 'Euro 2', default_beta, 0.72, 0.72, 0.56],  # Table 3-41
+            ['lcv', 'petrol', 'Euro 3', default_beta, 0.62, 0.32, 0.32],  # Table 3-41
+            ['lcv', 'petrol', 'Euro 4', default_beta, 0.18, 0.18, 0.18],  # Table 3-41
+            ['lcv', 'petrol', 'Euro 5', default_beta, 0.18, 0.18, 0.18],  # Table 3-41
+            ['lcv', 'petrol', 'Euro 6', default_beta, bc6pco, bc6pnox, bc6pvoc],  # Table 3-43
+            ['lcv', 'diesel', 'Conventional', default_beta, 1, 1, 1],  # Equation 10
+            ['lcv', 'diesel', 'Euro 1', default_beta, 1, 1, 1],  # Equation 10
+            ['lcv', 'diesel', 'Euro 2', default_beta, 1, 1, 1],  # Equation 10
+            ['lcv', 'diesel', 'Euro 3', default_beta, 1, 1, 1],  # Equation 10
+            ['lcv', 'diesel', 'Euro 4', default_beta, 1, 1, 1],  # Equation 10
+            ['lcv', 'diesel', 'Euro 5', default_beta, 1, 1, 1],  # Equation 10
+            ['lcv', 'diesel', 'Euro 6', default_beta, 1, 1, 1],  # Equation 10
+            ['hdt', 'petrol', 'Conventional', 0, 1, 1, 1],  # Only hot emissions
+            ['hdt', 'diesel', 'Conventional', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['hdt', 'diesel', 'Euro I', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['hdt', 'diesel', 'Euro II', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['hdt', 'diesel', 'Euro III', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['hdt', 'diesel', 'Euro IV', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['hdt', 'diesel', 'Euro V', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['hdt', 'diesel', 'Euro VI', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['bus', 'diesel', 'Conventional', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['bus', 'diesel', 'Euro I', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['bus', 'diesel', 'Euro II', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['bus', 'diesel', 'Euro III', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['bus', 'diesel', 'Euro IV', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['bus', 'diesel', 'Euro V', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['bus', 'diesel', 'Euro VI', beta_hdt_diesel, 1, 1, 1],  # Method for diesel heavy-duty vehicles and buses
+            ['motorcycle', 'petrol', 'Conventional', 0, 1, 1, 1],  # Only hot emissions
+            ['motorcycle', 'petrol', 'Euro 1', 0, 1, 1, 1],  # Only hot emissions
+            ['motorcycle', 'petrol', 'Euro 2', 0, 1, 1, 1],  # Only hot emissions
+            ['motorcycle', 'petrol', 'Euro 3', 0, 1, 1, 1],  # Only hot emissions
+            ['motorcycle', 'petrol', 'Euro 4', 0, 1, 1, 1],  # Only hot emissions
+            ['motorcycle', 'petrol', 'Euro 5', 0, 1, 1, 1],  # Only hot emissions
+        ])
 
     # Add Euro 6 variations
     fractions = fractions.merge(pd.DataFrame([
