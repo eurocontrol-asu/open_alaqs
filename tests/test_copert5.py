@@ -1,9 +1,9 @@
 from pathlib import Path
 
 import pandas as pd
-import pytest
+from pandas import testing as tm
 
-from alaqs_core.tools.copert5_utils import normalize_speed, ef_query
+from alaqs_core.tools.copert5_utils import ef_query, calculate_emissions, average_emission_factors
 from database.generate_templates import get_engine
 
 TEMPLATES_DIR = Path(__file__).parents[1] / 'alaqs_core/templates'
@@ -40,54 +40,25 @@ def test_query():
     assert data.shape == (1255, 7)
 
 
-@pytest.mark.skip(reason="Validation results need to be reviewed")
 def test_calculation():
     """
     Check if the calculation is performed correctly
     """
 
     # Set the country
-    country = 'Belgium'
+    country = 'EU27'
 
     # Set the speed
-    speed = 10
+    speed = 50
 
     # Set the fleet mix
-    fleet = {
-        "pc": {
-            "euro_standard": "Euro 5",
-            "mix": {
-                "petrol": 12.5,
-                "diesel": 12.5,
-            },
-        },
-        "lcv": {
-            "euro_standard": "Euro 5",
-            "mix": {
-                "petrol": 12.5,
-                "diesel": 12.5,
-            },
-        },
-        "hdt": {
-            "euro_standard": "Euro V",
-            "mix": {
-                "petrol": 12.5,
-                "diesel": 12.5,
-            },
-        },
-        "motorcycle": {
-            "euro_standard": "Euro 5",
-            "mix": {
-                "petrol": 12.5,
-            },
-        },
-        "bus": {
-            "euro_standard": "Euro V",
-            "mix": {
-                "diesel": 12.5,
-            },
-        },
-    }
+    fleet = pd.DataFrame([{
+        'vehicle_category': 'pc',
+        'fuel': 'petrol',
+        'euro_standard': 'Euro 4',
+        'N': 100,
+        'M[km]': 1000
+    }])
 
     # Build the query
     sql = ef_query(speed, country)
@@ -96,53 +67,30 @@ def test_calculation():
     template_engine = get_engine(TEMPLATES_DIR / f'project.alaqs')
 
     # Get the contents of the table
-    data = pd.read_sql(sql, template_engine)
+    ef_data = pd.read_sql(sql, template_engine)
 
-    assert data.shape == (1255, 7)
+    # Get the categories
+    vc = pd.DataFrame({
+        'category_short': VEHICLE_CATEGORIES.keys(),
+        'category_long': VEHICLE_CATEGORIES.values(),
+    })
 
-    # todo: Determine average trip length
-    # todo: Determine average temperature
+    # Change column names
+    ef_data['fuel'] = ef_data['fuel'].str.lower()
+    ef_data['vehicle_category'] = \
+        ef_data.merge(vc, how='left', left_on='vehicle_category', right_on='category_long')['category_short']
 
-    efs = []
-    for vehicle_category, vc_settings in fleet.items():
+    # Calculate the emissions
+    emissions = calculate_emissions(fleet, ef_data)
 
-        # Get the data for this vehicle category
-        data_vc = data[
-            (data['vehicle_category'] == VEHICLE_CATEGORIES[vehicle_category]) &
-            (data['euro_standard'] == vc_settings['euro_standard']) &
-            (data['hot-cold-evaporation'] == 'Hot')
-            ]
+    # Calculate the average emission factors
+    emission_factors = average_emission_factors(emissions)
 
-        assert not data_vc.empty
+    # Set the reference values (hot emission factors)
+    emission_factor_refs = pd.Series({
+        'eCO[g/km]': 0.198159277,
+        'eNOx[g/km]': 0.045065088,
+        'eVOC[g/km]': 0.012275,
+    })
 
-        assert not data_vc.duplicated(['vehicle_category', 'pollutant', 'fuel']).any()
-
-        for fuel, data_vc_fuel in data_vc.groupby('fuel'):
-            # todo: Determine Hot emissions
-
-            # todo: Determine Cold emissions
-
-            # Determine the fleet percentage
-            percentage = vc_settings['mix'][fuel.lower()]
-
-            assert data_vc_fuel['pollutant'].unique().shape[0] == 10
-
-            # Scale the emission factors
-            data_vc_fuel_ef = data_vc_fuel[['pollutant', 'e[g/km]']].set_index('pollutant') * percentage / 100
-
-            efs.append(data_vc_fuel_ef)
-
-    # Combine all emission factors
-    efs = pd.concat(efs, axis=1).sum(axis=1)
-
-    # todo: Update the reference values from the file
-    assert abs(efs['CH4'] - 0.028530671) < 1e-5, 'CH4'
-    assert abs(efs['NH3'] - 0.004395411) < 1e-5, 'NH3'
-    assert abs(efs['CO'] - 1.830404253) < 1e-5, 'CO'
-    assert abs(efs['CO2'] - 610.6688142) < 1e-5, 'CO2'
-    assert abs(efs['NOx'] - 3.795697097) < 1e-5, 'NOx'
-    assert abs(efs['PM0.1'] - 0.002388824) < 1e-5, 'PM0.1'
-    assert abs(efs['PM2.5'] - 0.023888237) < 1e-5, 'PM2.5'
-    assert abs(efs['PM10'] - 0.02389) < 1e-5, 'PM10'
-    assert abs(efs['SO2'] - 0.002308892) < 1e-5, 'SO2'
-    assert abs(efs['VOC'] - 0.997554748) < 1e-5, 'VOC'
+    tm.assert_series_equal(emission_factors, emission_factor_refs)
