@@ -107,17 +107,21 @@ Once downloaded, run setup through the `Advanced Install` route.
 
 In the `Select Packages` screen there are multiple packages that need installing:
 
-- qgis-ltr-full (3.22.10-2)
-- python3-geopandas (0.11.1-1)
-- python3-shapely (1.8.0-1)
+- qgis-ltr-full (3.22.16-1)
+- python3-geopandas (0.11.1-3)
+- python3-shapely (1.8.5.post1-1)
 - python3-geographiclib (1.50-1)
 - python3-pandas (1.1.3-1)
 - python3-matplotlib (3.5.1-1)
-- spatialite (5.0.1-8)
+- spatialite (5.0.1-10)
 
 To find these packages, search for them in the search bar, and find them under the 'Libs' sub-menu and select them such that they are not to be skipped in the installation (previously installed packages are shown as 'Keep' in the 'New' column). For QGIS you should select the latest version in the Desktop and Libs sub-menus.
 
 Now finish the setup by accepting the unmet dependencies and accepting the license agreements.
+
+> Running an old version of QGIS?
+> If originally installed using the OSGeo4W Network Installer, the installer can also be used to upgrade to a newer version of QGIS.
+> If not installed using the OSGeo4W Network Installer, please uninstall the old version and install the new version using the OSGeo4W Network Installer or follow the installation guide from QGIS.
 
 ## Install Open-ALAQS
 
