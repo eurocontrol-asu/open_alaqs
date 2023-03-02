@@ -57,6 +57,9 @@ if __name__ == "__main__":
         'user_study_setup',
         'user_taxiroute_aircraft_group',
         'user_taxiroute_taxiways',
+        'user_hour_profile',
+        'user_day_profile',
+        'user_month_profile',
     ]
 
     # Get the sql files to execute
