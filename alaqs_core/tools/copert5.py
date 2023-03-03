@@ -3,7 +3,8 @@ from open_alaqs.alaqs_core import alaqsdblite
 from open_alaqs.alaqs_core import alaqsutils
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-from alaqs_core.tools.copert5_utils import calculate_emissions, average_emission_factors, ef_query, VEHICLE_CATEGORIES
+from alaqs_core.tools.copert5_utils import calculate_emissions, average_emission_factors, ef_query, VEHICLE_CATEGORIES, \
+    calculate_evaporation, average_evaporation
 
 logger = get_logger(__name__)
 
@@ -126,6 +127,31 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
 
     # Calculate the average emission factors
     emission_factors = average_emission_factors(emissions)
+
+    if input_data['parking']:
+
+        # Get the idle time [min] and travel distance [km]
+        idle_time = input_data['idle_time']
+        distance = input_data['travel_distance']
+
+        # Calculate the evaporation
+        evaporation = calculate_evaporation(fleet, efs)
+
+        # Calculate the average evaporation per vehicle
+        mean_evaporation = average_evaporation(evaporation, idle_time)
+
+        # Calculate the average emissions per vehicle
+        emission_factors_dict = {
+            'co_ef': emission_factors['eCO[g/km]'] * distance,
+            'hc_ef': emission_factors['eVOC[g/km]'] * distance + mean_evaporation['eVOC[g/vh]'],
+            'nox_ef': emission_factors['eNOx[g/km]'] * distance,
+            'sox_ef': 0,
+            'pm10_ef': 0,
+            'p1_ef': 0,
+            'p2_ef': 0,
+        }
+
+        return emission_factors_dict
 
     # Return the result as dict
     emission_factors_dict = {

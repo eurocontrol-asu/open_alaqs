@@ -108,7 +108,7 @@ def form_open(form, layer, feature):
     return form
 
 
-# @catch_errors
+@catch_errors
 def recalculate_emissions(fields: dict):
     try:
 
@@ -131,7 +131,6 @@ def recalculate_emissions(fields: dict):
             'height_field': "float",
             'speed_field': "float",
         }
-
         for f in fleet_percentage_fields:
             field_types[f] = 'float'
 
@@ -155,11 +154,6 @@ def recalculate_emissions(fields: dict):
             msg_box.exec_()
             return False
 
-        # Validate provided input
-        name = valid_fields['name_field']
-        height = valid_fields['height_field']
-        speed = valid_fields['speed_field']
-
         # Calculate the total
         fleet_percentage_total = sum([float(fields[f].text()) for f in fleet_percentage_fields])
 
@@ -169,6 +163,11 @@ def recalculate_emissions(fields: dict):
                             f"Current sum is {fleet_percentage_total}%.")
             msg_box.exec_()
             return False
+
+        # Get the relevant validated fields
+        name = valid_fields['name_field']
+        height = valid_fields['height_field']
+        speed = valid_fields['speed_field']
 
         # Prepare the input for the roadway emission factors calculation method
         form_data = {
@@ -209,6 +208,7 @@ def recalculate_emissions(fields: dict):
             emission_profile = copert5.roadway_emission_factors(form_data, study_data)
             QtWidgets.QApplication.restoreOverrideCursor()
 
+        # Update the emission fields
         fields['co_gm_km_field'].setText(str(emission_profile['co_ef']))
         fields['hc_gm_km_field'].setText(str(emission_profile['hc_ef']))
         fields['nox_gm_km_field'].setText(str(emission_profile['nox_ef']))
@@ -315,8 +315,8 @@ def validate(fields: dict):
         validate_field(fields['name_field'], "str"),
         validate_field(fields['vehicle_year_field'], "int"),
         validate_field(fields['height_field'], "float"),
-        # validate_field(fields['distance_field'], "float"),
         validate_field(fields['speed_field'], "float"),
+        # validate_field(fields['distance_field'], "float"),
         validate_field(fields['pc_petrol'], "float"),
         validate_field(fields['pc_diesel'], "float"),
         validate_field(fields['lcv_petrol'], "float"),
