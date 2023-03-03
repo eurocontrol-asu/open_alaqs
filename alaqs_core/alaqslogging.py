@@ -9,7 +9,7 @@ log_format = '%(asctime)s - %(levelname)s - %(name)-12s : %(message)s'
 log_date_format = '%d-%m-%Y %H:%M:%S'
 
 # Set the (default) log level
-log_level = 'DEBUG'
+log_level = 'INFO'
 
 
 def log_init():
