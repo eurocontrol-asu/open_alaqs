@@ -89,8 +89,14 @@ def test_roadway_calculation():
 
     # Set the reference values (hot emission factors)
     emission_factor_refs = pd.Series({
+        'eCH4[g/km]': 0.001982406,
         'eCO[g/km]': 0.198159277,
+        'eCO2[g/km]': 164.3222752,
+        'eNH3[g/km]': 0.011199387,
         'eNOx[g/km]': 0.045065088,
+        'ePM0.1[g/km]': 0.000104992,
+        'ePM2.5[g/km]': 0.001049922,
+        'eSO2[g/km]': 0.000538297,
         'eVOC[g/km]': 0.012275,
     })
 
@@ -157,9 +163,15 @@ def test_parking_calculation():
 
     # Calculate the average emissions per vehicle
     emission_factors = pd.Series({
+        'eCH4[g/km]': mean_emission_factors['eCH4[g/km]'] * distance,
         'eCO[g/km]': mean_emission_factors['eCO[g/km]'] * distance,
-        'eVOC[g/km]': mean_emission_factors['eVOC[g/km]'] * distance + mean_evaporation['eVOC[g/vh]'],
+        'eCO2[g/km]': mean_emission_factors['eCO2[g/km]'] * distance,
+        'eNH3[g/km]': mean_emission_factors['eNH3[g/km]'] * distance,
         'eNOx[g/km]': mean_emission_factors['eNOx[g/km]'] * distance,
+        'ePM0.1[g/km]': mean_emission_factors['ePM0.1[g/km]'] * distance,
+        'ePM2.5[g/km]': mean_emission_factors['ePM2.5[g/km]'] * distance,
+        'eSO2[g/km]': mean_emission_factors['eSO2[g/km]'] * distance,
+        'eVOC[g/km]': mean_emission_factors['eVOC[g/km]'] * distance + mean_evaporation['eVOC[g/vh]'],
     })
 
     # Set the reference values (hot emission factors)
@@ -169,9 +181,15 @@ def test_parking_calculation():
 
     # Set the reference values (hot emission factors)
     emission_factor_refs = pd.Series({
+        'eCH4[g/km]': 0.001982406 * distance,
         'eCO[g/km]': 0.198159277 * distance,
-        'eVOC[g/km]': 0.012275 * distance + 0.033798717802083,
+        'eCO2[g/km]': 164.3222752 * distance,
+        'eNH3[g/km]': 0.011199387 * distance,
         'eNOx[g/km]': 0.045065088 * distance,
+        'ePM0.1[g/km]': 0.000104992 * distance,
+        'ePM2.5[g/km]': 0.001049922 * distance,
+        'eSO2[g/km]': 0.000538297 * distance,
+        'eVOC[g/km]': 0.012275 * distance + 0.033798717802083,
     })
 
     tm.assert_series_equal(emission_factors, emission_factor_refs)

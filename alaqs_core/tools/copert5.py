@@ -145,10 +145,10 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
             'co_ef': emission_factors['eCO[g/km]'] * distance,
             'hc_ef': emission_factors['eVOC[g/km]'] * distance + mean_evaporation['eVOC[g/vh]'],
             'nox_ef': emission_factors['eNOx[g/km]'] * distance,
-            'sox_ef': 0,
-            'pm10_ef': 0,
-            'p1_ef': 0,
-            'p2_ef': 0,
+            'sox_ef': emission_factors['eSO2[g/km]'] * distance,
+            'pm10_ef': emission_factors['ePM2.5[g/km]'] * distance,
+            'p1_ef': emission_factors['ePM0.1[g/km]'] * distance,
+            'p2_ef': emission_factors['ePM2.5[g/km]'] * distance,
         }
 
         return emission_factors_dict
@@ -158,10 +158,10 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
         'co_ef': emission_factors['eCO[g/km]'],
         'hc_ef': emission_factors['eVOC[g/km]'],
         'nox_ef': emission_factors['eNOx[g/km]'],
-        'sox_ef': 0,
-        'pm10_ef': 0,
-        'p1_ef': 0,
-        'p2_ef': 0,
+        'sox_ef': emission_factors['eSO2[g/km]'],
+        'pm10_ef': emission_factors['ePM2.5[g/km]'],
+        'p1_ef': emission_factors['ePM0.1[g/km]'],
+        'p2_ef': emission_factors['ePM2.5[g/km]'],
     }
 
     return emission_factors_dict
