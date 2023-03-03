@@ -269,7 +269,6 @@ class EmissionCalculation:
                             ambient_conditions=ambient_condition):
 
                         logger.debug(f'{mod_name}: {timestamp_}')
-                        logger.debug(f'source_: {type(source_)}')
 
                         if emission_ is not None:
                             period_emissions.append((source_, emission_))

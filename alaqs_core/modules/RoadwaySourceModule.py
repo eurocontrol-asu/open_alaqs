@@ -55,8 +55,7 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
             if ("all" not in source_names) and (source_id not in source_names):
                 continue
 
-            # Get the relative activity (percentage of total emissions) for this
-            #  hour
+            # Get the relative activity (percentage of total emissions) for this hour
             activity_multiplier = self.getRelativeActivityPerHour(
                 start_time, source.getUnitsPerYear(),
                 source.getHourProfile(), source.getDailyProfile(),
@@ -83,15 +82,14 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
             emissions.addGeneric(
                 source.getEmissionIndex(),
                 source.getLength(unitInKM=True) * activity_multiplier / 1000.,
-                unit="g_km",
+                unit="gm_km",
                 new_unit="kg")
 
             # Add emission geometry
             emissions.setGeometryText(source.getGeometryText())
 
             # Add to list of all emissions
-            result_.append(
-                (start_time.getTimeAsDateTime(), source, [emissions]))
+            result_.append((start_time.getTimeAsDateTime(), source, [emissions]))
 
         # Return list of all emissions
         return result_
