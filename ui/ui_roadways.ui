@@ -82,7 +82,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>0</number>
      </property>
      <property name="usesScrollButtons">
       <bool>true</bool>
@@ -126,6 +126,26 @@
        </item>
        <item row="1" column="1">
         <widget class="QLineEdit" name="height"/>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="speed_label">
+         <property name="text">
+          <string>Speed [km/h]</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="speed"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="scenario_label">
+         <property name="text">
+          <string>Scenario</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QComboBox" name="scenario"/>
        </item>
       </layout>
      </widget>
@@ -441,40 +461,6 @@
     </widget>
    </item>
    <item>
-    <layout class="QFormLayout" name="formLayout">
-     <property name="fieldGrowthPolicy">
-      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_21">
-       <property name="text">
-        <string>Scenario</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QComboBox" name="scenario"/>
-     </item>
-     <item row="0" column="1">
-      <widget class="QLineEdit" name="speed">
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_20">
-       <property name="text">
-        <string>Speed (km/h)</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -502,8 +488,6 @@
   <tabstop>p2_gm_km</tabstop>
   <tabstop>method</tabstop>
   <tabstop>button_recalculate</tabstop>
-  <tabstop>speed</tabstop>
-  <tabstop>scenario</tabstop>
   <tabstop>instudy</tabstop>
   <tabstop>tabWidget</tabstop>
  </tabstops>
