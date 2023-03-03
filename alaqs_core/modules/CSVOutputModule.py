@@ -53,15 +53,13 @@ class CSVOutputModule(OutputModule):
             "HC [kg]",
             "NOx [kg]",
             "SOx [kg]",
-            "PM10 [kg]",
-            "P1 [kg]",
-            "P2 [kg]",
-            "PM10Prefoa3 [kg]",
-            "PM10Nonvol [kg]",
-            "PM10Sul [kg]",
-            "PM10Organic [kg]",
-            "nvPM mass [kg]",
-            "nvPM number"
+            "PMTotal [kg]",
+            "PM01 [kg]",
+            "PM25 [kg]",
+            "PMSul [kg]",
+            "PMVolatile [kg]",
+            "PMNonVolatile [kg]",
+            "PMNonVolatileNumber [-]"
         ]
 
         # Initialize rows attribute with the header
@@ -101,8 +99,6 @@ class CSVOutputModule(OutputModule):
                 total_emissions_.getPM10(unit="kg")[0],
                 total_emissions_.getPM1(unit="kg")[0],
                 total_emissions_.getPM2(unit="kg")[0],
-                total_emissions_.getPM10Prefoa3(unit="kg")[0],
-                total_emissions_.getPM10Nonvol(unit="kg")[0],
                 total_emissions_.getPM10Sul(unit="kg")[0],
                 total_emissions_.getPM10Organic(unit="kg")[0],
                 total_emissions_.getnvPM(unit="kg")[0],
@@ -122,8 +118,6 @@ class CSVOutputModule(OutputModule):
                     sum(emissions_).getPM10(unit="kg")[0],
                     sum(emissions_).getPM1(unit="kg")[0],
                     sum(emissions_).getPM2(unit="kg")[0],
-                    sum(emissions_).getPM10Prefoa3(unit="kg")[0],
-                    sum(emissions_).getPM10Nonvol(unit="kg")[0],
                     sum(emissions_).getPM10Sul(unit="kg")[0],
                     sum(emissions_).getPM10Organic(unit="kg")[0],
                     sum(emissions_).getnvPM(unit="kg")[0],
@@ -134,16 +128,10 @@ class CSVOutputModule(OutputModule):
         """
         Write output to csv file
         """
-
         try:
-
             if self.getOutputPath() is not None:
                 write_csv(self.getOutputPath(), self._rows)
-
             if os.path.isfile(self.getOutputPath()):
-                QtWidgets.QMessageBox.information(None, "CSVOutputModule",
-                                                  "Results saved as CSV file")
-
+                QtWidgets.QMessageBox.information(None, "CSVOutputModule", "Results saved as CSV file")
         except Exception as e:
-            QtWidgets.QMessageBox.critical(None, "CSVOutputModule",
-                                           "Couldn't save results as CSV file")
+            QtWidgets.QMessageBox.critical(None, "CSVOutputModule", "Couldn't save results as CSV file")

@@ -10,7 +10,6 @@ from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools import conversion
 from open_alaqs.ui.TableViewDialog import Ui_TableViewDialog
 
-
 logger = get_logger(__name__)
 
 
@@ -23,7 +22,7 @@ class TableViewWidgetOutputModule(OutputModule):
     def getModuleName():
         return "TableViewWidgetOutputModule"
 
-    def __init__(self, values_dict = None):
+    def __init__(self, values_dict=None):
         if values_dict is None:
             values_dict = {}
         OutputModule.__init__(self, values_dict)
@@ -54,15 +53,13 @@ class TableViewWidgetOutputModule(OutputModule):
             "HC [kg]",
             "NOx [kg]",
             "SOx [kg]",
-            "PM10 [kg]",
-            "P1 [kg]",
-            "P2 [kg]",
-            "PM10Prefoa3 [kg]",
-            "PM10Nonvol [kg]",
-            "PM10Sul [kg]",
-            "PM10Organic [kg]",
-            "nvPM mass [kg]",
-            "nvPM number"
+            "PMTotal [kg]",
+            "PM01 [kg]",
+            "PM25 [kg]",
+            "PMSul [kg]",
+            "PMVolatile [kg]",
+            "PMNonVolatile [kg]",
+            "PMNonVolatileNumber [-]"
         ])
 
     def process(self, timeval: datetime, result: List[Tuple[Source, Emission]],
@@ -96,8 +93,6 @@ class TableViewWidgetOutputModule(OutputModule):
             total_emissions_.getPM10(unit="kg"),
             total_emissions_.getPM1(unit="kg"),
             total_emissions_.getPM2(unit="kg"),
-            total_emissions_.getPM10Prefoa3(unit="kg"),
-            total_emissions_.getPM10Nonvol(unit="kg"),
             total_emissions_.getPM10Sul(unit="kg"),
             total_emissions_.getPM10Organic(unit="kg"),
             total_emissions_.getnvPM(unit="kg"),
@@ -125,6 +120,7 @@ class TableViewWidget(QtWidgets.QDialog):
     """
     This class provides a dialog for visualizing ALAQS results.
     """
+
     def __init__(self, parent=None):
         super(TableViewWidget, self).__init__(parent)
 
