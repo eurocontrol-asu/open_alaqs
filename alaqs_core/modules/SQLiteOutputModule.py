@@ -20,22 +20,23 @@ class SQLiteOutputModule(OutputModule):
     def getModuleName():
         return "SQLiteOutputModule"
 
-    def __init__(self, values_dict = None):
+    def __init__(self, values_dict=None):
         if values_dict is None:
             values_dict = {}
         OutputModule.__init__(self, values_dict)
         self._isDetailedOutput = values_dict.get("detailed_output", False)
 
         self.setConfigurationWidget(OrderedDict([
-            ("detailed output" , QtWidgets.QCheckBox)
+            ("detailed output", QtWidgets.QCheckBox)
         ]))
 
         self.getConfigurationWidget().initValues({"detailed output": False})
 
     def beginJob(self):
-        #initialize database connections
+        # initialize database connections
         self._db = None
-        self.setOutputPath(QtWidgets.QFileDialog.getSaveFileName(None, 'Save results as SQLite file', ".","'SQLite (*.db)'"))
+        self.setOutputPath(
+            QtWidgets.QFileDialog.getSaveFileName(None, 'Save results as SQLite file', ".", "'SQLite (*.db)'"))
 
         if not self.getOutputPath()[0] is None:
             self._db = EmissionCalculationResultDatabase(self.getOutputPath()[0])
@@ -44,44 +45,44 @@ class SQLiteOutputModule(OutputModule):
             self._db.create_table(self.getOutputPath()[0])
 
     def process(self, timeval, result, **kwargs):
-        #result is of format [(Source, Emission)]
+        # result is of format [(Source, Emission)]
 
         rows_ = []
         if not self._isDetailedOutput:
             total_emissions_ = sum([sum(emissions_) for (source, emissions_) in result])
             rows_.append({
-                "time":timeval,
-                "source_id":"total",
-                "co_kg":total_emissions_.getCO(unit="kg")[0],
-                "co2_kg":total_emissions_.getCO2(unit="kg")[0],
-                "hc_kg":total_emissions_.getHC(unit="kg")[0],
-                "nox_kg":total_emissions_.getNOx(unit="kg")[0],
-                "sox_kg":total_emissions_.getSOx(unit="kg")[0],
-                "pm10_kg":total_emissions_.getPM10(unit="kg")[0],
-                "pm1_kg":total_emissions_.getPM1(unit="kg")[0],
-                "pm2_kg":total_emissions_.getPM2(unit="kg")[0],
-                "pm10prefoa3_kg":total_emissions_.getPM10Prefoa3(unit="kg")[0],
-                "pm10nonvol_kg":total_emissions_.getPM10Nonvol(unit="kg")[0],
-                "pm10sul_kg":total_emissions_.getPM10Sul(unit="kg")[0],
-                "pm10organic_kg":total_emissions_.getPM10Organic(unit="kg")[0]
-                })
+                "time": timeval,
+                "source_id": "total",
+                "co_kg": total_emissions_.getCO(unit="kg")[0],
+                "co2_kg": total_emissions_.getCO2(unit="kg")[0],
+                "hc_kg": total_emissions_.getHC(unit="kg")[0],
+                "nox_kg": total_emissions_.getNOx(unit="kg")[0],
+                "sox_kg": total_emissions_.getSOx(unit="kg")[0],
+                "pmtotal_kg": total_emissions_.getPM10(unit="kg")[0],
+                "pm01_kg": total_emissions_.getPM1(unit="kg")[0],
+                "pm25_kg": total_emissions_.getPM2(unit="kg")[0],
+                "pmsul_kg": total_emissions_.getPM10Sul(unit="kg")[0],
+                "pmvolatile_kg": total_emissions_.getPM10Organic(unit="kg")[0],
+                "pmnonvolatile_kg": total_emissions_.getnvPM(unit="kg")[0],
+                "pmnonvolatilenumber_kg": total_emissions_.getnvPMnumber(unit="kg")[0],
+            })
         else:
             for (source, emissions_) in result:
                 rows_.append({
-                    "time":timeval,
-                    "source_id":source.getName(),
-                    "co_kg":sum(emissions_).getCO(unit="kg")[0],
-                    "co2_kg":sum(emissions_).getCO2(unit="kg")[0],
-                    "hc_kg":sum(emissions_).getHC(unit="kg")[0],
-                    "nox_kg":sum(emissions_).getNOx(unit="kg")[0],
-                    "sox_kg":sum(emissions_).getSOx(unit="kg")[0],
-                    "pm10_kg":sum(emissions_).getPM10(unit="kg")[0],
-                    "pm1_kg":sum(emissions_).getPM1(unit="kg")[0],
-                    "pm2_kg":sum(emissions_).getPM2(unit="kg")[0],
-                    "pm10prefoa3_kg":sum(emissions_).getPM10Prefoa3(unit="kg")[0],
-                    "pm10nonvol_kg":sum(emissions_).getPM10Nonvol(unit="kg")[0],
-                    "pm10sul_kg":sum(emissions_).getPM10Sul(unit="kg")[0],
-                    "pm10organic_kg":sum(emissions_).getPM10Organic(unit="kg")[0]
+                    "time": timeval,
+                    "source_id": source.getName(),
+                    "co_kg": sum(emissions_).getCO(unit="kg")[0],
+                    "co2_kg": sum(emissions_).getCO2(unit="kg")[0],
+                    "hc_kg": sum(emissions_).getHC(unit="kg")[0],
+                    "nox_kg": sum(emissions_).getNOx(unit="kg")[0],
+                    "sox_kg": sum(emissions_).getSOx(unit="kg")[0],
+                    "pmtotal_kg": sum(emissions_).getPM10(unit="kg")[0],
+                    "pm01_kg": sum(emissions_).getPM1(unit="kg")[0],
+                    "pm25_kg": sum(emissions_).getPM2(unit="kg")[0],
+                    "pmsul_kg": sum(emissions_).getPM10Sul(unit="kg")[0],
+                    "pmvolatile_kg": sum(emissions_).getPM10Organic(unit="kg")[0],
+                    "pmnonvolatile_kg": sum(emissions_).getnvPM(unit="kg")[0],
+                    "pmnonvolatilenumber_kg": sum(emissions_).getnvPMnumber(unit="kg")[0],
                 })
 
         if rows_ and not self._db is None:
@@ -114,13 +115,13 @@ class EmissionCalculationResultDatabase(SQLSerializable, metaclass=Singleton):
                 ("hc_kg", "DECIMAL"),
                 ("nox_kg", "DECIMAL"),
                 ("sox_kg", "DECIMAL"),
-                ("pm10_kg", "DECIMAL"),
-                ("pm1_kg", "DECIMAL"),
-                ("pm2_kg", "DECIMAL"),
-                ("pm10prefoa3_kg", "DECIMAL"),
-                ("pm10nonvol_kg", "DECIMAL"),
-                ("pm10sul_kg", "DECIMAL"),
-                ("pm10organic_kg", "DECIMAL")
+                ("pmtotal_kg", "DECIMAL"),
+                ("pm01_kg", "DECIMAL"),
+                ("pm25_kg", "DECIMAL"),
+                ("pmsul_kg", "DECIMAL"),
+                ("pmvolatile_kg", "DECIMAL"),
+                ("pmnonvolatile_kg", "DECIMAL"),
+                ("pmnonvolatile_number", "DECIMAL"),
             ])
         if geometry_columns is None:
             geometry_columns = []
