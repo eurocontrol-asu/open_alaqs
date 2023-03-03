@@ -8,7 +8,7 @@ import pandas as pd
 FUELS = ['petrol', 'diesel']
 EURO_STANDARDS = ['Conventional', 'Euro 1', 'Euro 2', 'Euro 3', 'Euro 4', 'Euro 5', 'Euro 6 a/b/c', 'Euro 6 d',
                   'Euro 6 d-temp', 'Euro I', 'Euro II', 'Euro III', 'Euro IV', 'Euro V', 'Euro VI A/B/C', 'Euro VI D/E']
-POLLUTANTS = ['CO', 'NOx', 'VOC']
+POLLUTANTS = ['CH4', 'CO', 'CO2', 'NH3', 'NOx', 'PM0.1', 'PM2.5', 'SO2', 'VOC']
 
 VEHICLE_CATEGORIES = {
     "bus": "Buses",
@@ -233,7 +233,6 @@ def calculate_evaporation(fleet: pd.DataFrame, efs: pd.DataFrame) -> pd.DataFram
     # Determine evaporation emission factors (VOC only)
     efs_evap = efs[efs['hot-cold-evaporation'] == 'Evaporation'].pivot(
         index=['vehicle_category', 'fuel', 'euro_standard'], columns='evaporation_split', values='e[g/km]')
-    # todo[rpfk]: Check unit with Stavros
     efs_evap['eVOC[g/day]'] = efs_evap.sum(axis=1)
     fleet = fleet.merge(efs_evap[['eVOC[g/day]']], how='left', left_index=True, right_index=True)
 
