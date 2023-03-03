@@ -2035,7 +2035,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
 
         # Loop over the MET file and perform some basic checks
         for row_, date_ in enumerate(csv['DateTime(YYYY-mm-dd hh:mm:ss)']):
-            logger.info("Processing time interval: %s" % (
+            logger.debug("Processing time interval: %s" % (
                 csv['DateTime(YYYY-mm-dd hh:mm:ss)'][row_]))
             if CheckAmbientConditions(
                     conversion.convertToFloat(csv['Temperature(K)'][row_]),
