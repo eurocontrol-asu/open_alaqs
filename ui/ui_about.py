@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui/ui_about.ui'
+# Form implementation generated from reading ui file '.\ui\ui_about.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.4
 #
@@ -50,15 +50,6 @@ class Ui_DialogAbout(object):
         self.horizontalLayout.setObjectName("horizontalLayout")
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
-        self.AddWatermarkButton = QtWidgets.QPushButton(DialogAbout)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.AddWatermarkButton.sizePolicy().hasHeightForWidth())
-        self.AddWatermarkButton.setSizePolicy(sizePolicy)
-        self.AddWatermarkButton.setMaximumSize(QtCore.QSize(121, 23))
-        self.AddWatermarkButton.setObjectName("AddWatermarkButton")
-        self.horizontalLayout.addWidget(self.AddWatermarkButton)
         self.formLayout.setLayout(3, QtWidgets.QFormLayout.FieldRole, self.horizontalLayout)
 
         self.retranslateUi(DialogAbout)
@@ -67,6 +58,5 @@ class Ui_DialogAbout(object):
     def retranslateUi(self, DialogAbout):
         _translate = QtCore.QCoreApplication.translate
         DialogAbout.setWindowTitle(_translate("DialogAbout", "OpenALAQS - About"))
-        self.label.setText(_translate("DialogAbout", "<html><head/><body><p align=\"center\"><span style=\" font-size:12pt; font-weight:600;\">Open ALAQS: Airport Local Air Quality Studies</span><br/>Version 3.0.dev (September 2019)</p><p align=\"center\">This is a beta version of the ALAQS local air quality software released for review and testing only.<br/>It should therefore not be used for commerical studies and is released without guarantee.</p><p align=\"center\">Released under xxx License. For more information, contact open-alaqs@eurocontrol.int</p></body></html>"))
-        self.AddWatermarkButton.setText(_translate("DialogAbout", "Add watermark to layer"))
+        self.label.setText(_translate("DialogAbout", "<html><head/><body><p align=\"center\"><span style=\" font-size:12pt; font-weight:600;\">Open ALAQS: Airport Local Air Quality Studies</span><br/>Version 3.1 (March 2023)</p><p align=\"center\">This is a beta version of the ALAQS local air quality software released for review and testing only.<br/>It should therefore not be used for commerical studies and is released without guarantee.</p><p align=\"center\">Released under xxx License. For more information, contact open-alaqs@eurocontrol.int</p></body></html>"))
 from . import alaqs_resources_rc
