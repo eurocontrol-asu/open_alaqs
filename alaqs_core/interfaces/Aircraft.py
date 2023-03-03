@@ -1,150 +1,159 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-from future.utils import with_metaclass
-
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-    from .SQLSerializable import SQLSerializable
-    from .Singleton import Singleton
-
-    from .Store import Store
-    # from Engine import Engine
-    from .EngineStore import EngineStore, HeliEngineStore
-    from .EngineDatabases import EngineEmissionIndicesDatabase,EngineModeDatabase,EngineEmissionFactorsStartDatabase
-    from .EngineDatabases import HelicopterEngineEmissionIndicesDatabase
-    from .APU import APUStore
-    from .EmissionDynamics import EmissionDynamicsStore
-    from .Emissions import Emission, EmissionIndex
-
-except:
-    import __init__  # setup the paths for direct calls of the module
-    from SQLSerializable import SQLSerializable
-    from Singleton import Singleton
-
-    from Store import Store
-    # from Engine import Engine
-    from EngineStore import EngineStore, HeliEngineStore
-    from EngineDatabases import EngineEmissionIndicesDatabase, EngineModeDatabase, EngineEmissionFactorsStartDatabase
-    from EngineDatabases import HelicopterEngineEmissionIndicesDatabase
-    from APU import APUStore
-    from EmissionDynamics import EmissionDynamicsStore
-    from Emissions import Emission, EmissionIndex
-
-__author__ = 'ENVISA'
-import logging
-logger = logging.getLogger("__alaqs__.%s" % (__name__))
-
-import os
-import sys
-from collections import OrderedDict
 import difflib
+import os
+from collections import OrderedDict
+
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.interfaces.APU import APUStore
+from open_alaqs.alaqs_core.interfaces.EmissionDynamics import \
+    EmissionDynamicsStore
+from open_alaqs.alaqs_core.interfaces.Emissions import Emission
+from open_alaqs.alaqs_core.interfaces.EngineDatabases import \
+    EngineEmissionFactorsStartDatabase
+from open_alaqs.alaqs_core.interfaces.EngineStore import EngineStore, \
+    HeliEngineStore
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
+
+logger = get_logger(__name__)
 
 
-class Aircraft(object):
-    def __init__(self, val={}):
+class Aircraft:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
 
-        self._icao = str(val["icao"]) if "icao" in val else "unknown"
-        self._ac_group_code=str(val["ac_group_code"]) if "ac_group_code" in val else ""
-        self._ac_group=str(val["ac_group"]) if "ac_group" in val else ""
-        self._manufacturer=str(val["manufacturer"]) if "manufacturer" in val else ""
-        self._name=str(val["name"]) if "name" in val else ""
-        self._class=str(val["class"]) if "class" in val else ""
-        self._mtow =int(val["mtow"]) if "mtow" in val and val["mtow"] else 0
-        self._engine_count =int(val["engine_count"]) if "engine_count" in val and val["engine_count"] else 0
-        self._departure_profile_name=str(val["departure_profile"]) if "departure_profile" in val else ""
-        self._arrival_profile_name=str(val["arrival_profile"]) if "arrival_profile" in val else ""
-        self._bada_id=str(val["bada_id"]) if "bada_id" in val else ""
-        self._wake_category=str(val["wake_category"]) if "wake_category" in val else ""
-        self._apu_id =str(val["apu_id"]) if "apu_id" in val else ""
-        self._registration = str(val["aircraft_registration"]) if "aircraft_registration" in val else ""
+        self._icao = str(val.get("icao", "unknown"))
+        self._ac_group_code = str(val.get("ac_group_code", ""))
+        self._ac_group = str(val.get("ac_group", ""))
+        self._manufacturer = str(val.get("manufacturer", ""))
+        self._name = str(val.get("name", ""))
+        self._class = str(val.get("class", ""))
+        self._mtow = int(val.get("mtow", 0))
+        self._engine_count = int(val.get("engine_count", 0))
+        self._departure_profile_name = str(val.get("departure_profile", ""))
+        self._arrival_profile_name = str(val.get("arrival_profile", ""))
+        self._bada_id = str(val.get("bada_id", ""))
+        self._wake_category = str(val.get("wake_category", ""))
+        self._apu_id = str(val.get("apu_id", ""))
+        self._registration = str(val.get("aircraft_registration", ""))
 
         self._engine = None
         self._defaultengine = None
         self._apu = None
         self._dynamics = {"TX": None, "AP": None, "CL": None, "TO": None}
 
-    def setRegistration(self, val):
+    def setRegistration(self, val: str):
         self._registration = val
-    def getRegistration(self):
+
+    def getRegistration(self) -> str:
         return self._registration
-    def getDefaultEngine(self):
+
+    def getDefaultEngine(self) -> str:
         return self._defaultengine
+
     def setDefaultEngine(self, var):
         self._defaultengine = var
+
     def getDefaultDepartureProfileName(self):
         return self._departure_profile_name
+
     def setDefaultDepartureProfileName(self, var):
         self._departure_profile_name = var
+
     def getDefaultArrivalProfileName(self):
         return self._arrival_profile_name
+
     def setDefaultArrivalProfileName(self, var):
         self._arrival_profile_name = var
 
     def getApu(self):
         return self._apu
+
     def setApu(self, var):
         self._apu = var
 
     def getApuTimes(self):
         return self._apu_times
+
     def setApuTimes(self, var):
         self._apu_times = var
 
     def getApuEmissions(self):
         return self._apu_emissions
+
     def setApuEmissions(self, var):
         self._apu_emissions = var
 
     def getEmissionDynamicsByMode(self):
         return self._dynamics
+
     def setEmissionDynamicsByMode(self, mode, var):
-        self._dynamics.update({mode:var})
+        self._dynamics.update({mode: var})
 
     def getICAOIdentifier(self):
         return self._icao
+
     def setICAOIdentifier(self, val):
         self._icao = val
+
     def getType(self):
         return self.getICAOIdentifier()
+
     def setType(self, val):
         self.setICAOIdentifier(val)
+
     def getGroupCode(self):
         return self._ac_group_code
+
     def setGroupCode(self, var):
         self._ac_group_code = var
+
     def getManufacturer(self):
         return self._manufacturer
+
     def setManufacturer(self, var):
         self._manufacturer = var
+
     def getGroup(self):
         return self._ac_group
+
     def setGroup(self, var):
         self._ac_group = var
+
     def getClass(self):
         return self._class
+
     def setClass(self, var):
         self._class = var
+
     def getName(self):
         return self._name
+
     def setName(self, var):
         self._name = var
+
     def getMTOW(self):
         return self._mtow
+
     def setMTOW(self, var):
         self._mtow = var
 
-    def getEngineCount(self):
+    def getEngineCount(self) -> int:
         return self._engine_count
-    def setEngineCount(self, var):
+
+    def setEngineCount(self, var: int):
         self._engine_count = var
+
     def getWakeCategory(self):
         return self._wake_category
+
     def setWakeCategory(self, var):
         self._wake_category = var
+
     def getAPUIdentifier(self):
         return self._apu_id
+
     def setAPUIdentifier(self, var):
         self._apu_id = var
 
@@ -162,12 +171,15 @@ class Aircraft(object):
         val += "\n\t Default Engine: %s" % ("\n\t".join(str(self.getDefaultEngine()).split("\n")))
         return val
 
-class AircraftStore(with_metaclass(Singleton, Store)):
+
+class AircraftStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'Aircraft' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
@@ -390,7 +402,8 @@ class AircraftStore(with_metaclass(Singleton, Store)):
     def getHeliEngineStore(self):
         return HeliEngineStore(self._db_path)
 
-class AircraftDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class AircraftDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to default_aircraft table in the spatialite database
     """
@@ -398,84 +411,89 @@ class AircraftDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="default_aircraft",
-                 table_columns_type_dict=OrderedDict([
-                  ("oid" , "INTEGER PRIMARY KEY"),
-                  ("icao" , "TEXT"),
-                  ("ac_group_code", "TEXT"),
-                  ("ac_group","TEXT"),
-                  ("manufacturer","TEXT"),
-                  ("name","TEXT"),
-                  ("class","TEXT"),
-                  ("mtow","DECIMAL"),
-                  ("engine_count","INTEGER"),
-                  ("engine_name","TEXT"),
-                  ("engine","TEXT"),
-                  ("departure_profile","TEXT"),
-                  ("arrival_profile","TEXT"),
-                  ("bada_id","TEXT"),
-                  ("wake_category","TEXT"),
-                  ("apu_id","TEXT")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key=""
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key)
+                 ):
+
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY"),
+                ("icao", "TEXT"),
+                ("ac_group_code", "TEXT"),
+                ("ac_group", "TEXT"),
+                ("manufacturer", "TEXT"),
+                ("name", "TEXT"),
+                ("class", "TEXT"),
+                ("mtow", "DECIMAL"),
+                ("engine_count", "INTEGER"),
+                ("engine_name", "TEXT"),
+                ("engine", "TEXT"),
+                ("departure_profile", "TEXT"),
+                ("arrival_profile", "TEXT"),
+                ("bada_id", "TEXT"),
+                ("wake_category", "TEXT"),
+                ("apu_id", "TEXT")
+            ])
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key)
 
         if self._db_path:
             self.deserialize()
 
-if __name__ == "__main__":
-    # from PyQt4 import QtGui
-    # #from python_qt_binding import QtGui, QtCore  # new imports
-    # app = QtGui.QApplication(sys.argv)
-
-    # create a logger for this module
-    # create console handler and set level to debug
-    # logging.basicConfig(level=logging.DEBUG)
-    # logger.setLevel(logging.DEBUG)
-
-    # path_to_database = os.path.join("..", "..", "example", "test_movs.alaqs")
-    path_to_database = os.path.join("..", "..", "example", "CAEPport", "old", "02042020_out.alaqs")
-
-    if not os.path.isfile(path_to_database):
-        # fix_print_with_import
-        print("Database %s not found"%path_to_database)
-
-    Aircraft_store = AircraftStore(path_to_database)
-    engine_store = list(Aircraft_store.getEngineStore().getObjects().keys())
-    h_engine_store = list(Aircraft_store.getHeliEngineStore().getObjects().keys())
-
-    # from Movement import MovementStore
-    # movement_store = MovementStore(path_to_database)
-
-    testAC = ['L410', 'AT45', 'AT72', 'B763']
-    # testEN = ['T034', 'T794', '1CM007', '1CM007', '6AL006', '6GE093']
-
-    for i, ac_key in enumerate(testAC):
-        # if ac_key not in AircraftStore(path_to_database).getObjects().keys():
-        if not Aircraft_store.hasKey(ac_key):
-            # fix_print_with_import
-            print("Could not find aircraft associated to type '%s'" % (ac_key))
-        else:
-            acs = Aircraft_store.getObject(ac_key)
-            print(acs)
-        # break
-
-    #         # break
-    #         ac_new = None
-    #         matched = difflib.get_close_matches(testEN[i], store.getEngineStore().getObjects().keys())
-    #         if matched:
-    #             # ac_new = matched[0]
-    #             print "Matched aircraft type '%s' to %s'." % (testEN[i], matched)
-    #             # ac_new = matched[0]
-    #             # if not ac_new.lower() == ac_key.lower():
-    #             #     print "Matched aircraft type '%s' to %s'." % (ac_key, ac_new)
-    #         else:
-    #             print "Skipping movement for aircraft associated to type '%s'." % (ac_key)
-    #             continue
-
-
-    # for id, ac_ in Aircraft_store.getObjects().items():
-    #     print id, ac_.getName(), ac_.getGroup()
-    #     print ac_.getApu(), ac_.getApuTimes(), ac_.getApuEmissions()
-    #     print "--------"
-        # #logger.debug(id, val)
+# if __name__ == "__main__":
+#     # from PyQt4 import QtGui
+#     # #from python_qt_binding import QtGui, QtCore  # new imports
+#     # app = QtGui.QApplication(sys.argv)
+#
+#     # create a logger for this module
+#     # create console handler and set level to debug
+#     # logging.basicConfig(level=logging.DEBUG)
+#     # logger.setLevel(logging.DEBUG)
+#
+#     # path_to_database = os.path.join("..", "..", "example", "test_movs.alaqs")
+#     path_to_database = os.path.join("..", "..", "example", "CAEPport", "old", "02042020_out.alaqs")
+#
+#     if not os.path.isfile(path_to_database):
+#         # fix_print_with_import
+#         print("Database %s not found"%path_to_database)
+#
+#     Aircraft_store = AircraftStore(path_to_database)
+#     engine_store = list(Aircraft_store.getEngineStore().getObjects().keys())
+#     h_engine_store = list(Aircraft_store.getHeliEngineStore().getObjects().keys())
+#
+#     # from Movement import MovementStore
+#     # movement_store = MovementStore(path_to_database)
+#
+#     testAC = ['L410', 'AT45', 'AT72', 'B763']
+#     # testEN = ['T034', 'T794', '1CM007', '1CM007', '6AL006', '6GE093']
+#
+#     for i, ac_key in enumerate(testAC):
+#         # if ac_key not in AircraftStore(path_to_database).getObjects().keys():
+#         if not Aircraft_store.hasKey(ac_key):
+#             # fix_print_with_import
+#             print("Could not find aircraft associated to type '%s'" % (ac_key))
+#         else:
+#             acs = Aircraft_store.getObject(ac_key)
+#             print(acs)
+#         # break
+#
+#     #         # break
+#     #         ac_new = None
+#     #         matched = difflib.get_close_matches(testEN[i], store.getEngineStore().getObjects().keys())
+#     #         if matched:
+#     #             # ac_new = matched[0]
+#     #             print "Matched aircraft type '%s' to %s'." % (testEN[i], matched)
+#     #             # ac_new = matched[0]
+#     #             # if not ac_new.lower() == ac_key.lower():
+#     #             #     print "Matched aircraft type '%s' to %s'." % (ac_key, ac_new)
+#     #         else:
+#     #             print "Skipping movement for aircraft associated to type '%s'." % (ac_key)
+#     #             continue
+#
+#
+#     # for id, ac_ in Aircraft_store.getObjects().items():
+#     #     print id, ac_.getName(), ac_.getGroup()
+#     #     print ac_.getApu(), ac_.getApuTimes(), ac_.getApuEmissions()
+#     #     print "--------"
+#         # #logger.debug(id, val)

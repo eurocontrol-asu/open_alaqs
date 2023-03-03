@@ -1,175 +1,194 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from qgis.gui import QgsEditorWidgetWrapper
+from PyQt5 import QtWidgets
 
-import alaqs
-import alaqsutils
+from open_alaqs.alaqs_core import alaqs, alaqsutils
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-form = None
-name_field = None
-unit_field = None
-height_field = None
-heat_flux_field = None
-hour_profile_field = None
-daily_profile_field = None
-month_profile_field = None
-co_kg_unit_field = None
-hc_kg_unit_field = None
-nox_kg_unit_field = None
-sox_kg_unit_field = None
-pm10_kg_unit_field = None
-p1_kg_unit_field = None
-p2_kg_unit_field = None
-instudy = None
+logger = get_logger(__name__)
 
 
-def form_open(my_dialog, layer_id, feature_id):
-    global form
-    global name_field
-    global unit_field
-    global height_field
-    global heat_flux_field
-    global hour_profile_field
-    global daily_profile_field
-    global month_profile_field
-    global co_kg_unit_field
-    global hc_kg_unit_field
-    global nox_kg_unit_field
-    global sox_kg_unit_field
-    global pm10_kg_unit_field
-    global p1_kg_unit_field
-    global p2_kg_unit_field
-    global instudy
+def catch_errors(f):
+    """
+    Decorator to catch all errors when executing the function.
+    This decorator catches errors and writes them to the log.
+
+    :param f: function to execute
+    :return:
+    """
+
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            alaqsutils.print_error(f.__name__, Exception, e)
+
+    return wrapper
 
 
-    form = my_dialog
-    name_field = form.findChild(QtWidgets.QLineEdit, "source_id")
-    unit_field = form.findChild(QtWidgets.QLineEdit, "unit_year")
-    height_field = form.findChild(QtWidgets.QLineEdit, "height")
-    heat_flux_field = form.findChild(QtWidgets.QLineEdit, "heat_flux")
-    hour_profile_field = form.findChild(QtWidgets.QComboBox, "hourly_profile")
-    daily_profile_field = form.findChild(QtWidgets.QComboBox, "daily_profile")
-    month_profile_field = form.findChild(QtWidgets.QComboBox, "monthly_profile")
-    co_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "co_kg_unit")
-    hc_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "hc_kg_unit")
-    nox_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "nox_kg_unit")
-    sox_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "sox_kg_unit")
-    pm10_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "pm10_kg_unit")
-    p1_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "p1_kg_unit")
-    p2_kg_unit_field = form.findChild(QtWidgets.QLineEdit, "p2_kg_unit")
-    button_box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
-    instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
+def form_open(form, layer, feature):
+    logger.debug(f"This is the modified simple form")
+    logger.debug(f"Layer {layer} and feature {feature}")
+    logger.debug(f"Attributes of fields: {feature.fields().names()}")
+    logger.debug(f"Attributes of feature: {feature.attributes()}")
 
-    # #disconnect old-style signals, which are created e.g. by QGIS from the ui file
-    # try:
-    #     QObject.disconnect(button_box, SIGNAL("accepted()"), form.accept)
-    # except Exception as e:
-    #     pass
-    #disconnect new-style signals
-    try:
-        button_box.accepted.disconnect(form.accept)
-    except Exception as e:
-        pass
+    # Get all the fields from the form
+    fields = dict(
+        name_field=form.findChild(QtWidgets.QLineEdit, "source_id"),
+        unit_field=form.findChild(QtWidgets.QLineEdit, "unit_year"),
+        height_field=form.findChild(QtWidgets.QLineEdit, "height"),
+        heat_flux_field=form.findChild(QtWidgets.QLineEdit, "heat_flux"),
+        hour_profile_field=form.findChild(QtWidgets.QComboBox,
+                                          "hourly_profile"),
+        daily_profile_field=form.findChild(QtWidgets.QComboBox,
+                                           "daily_profile"),
+        month_profile_field=form.findChild(QtWidgets.QComboBox,
+                                           "monthly_profile"),
+        co_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "co_kg_unit"),
+        hc_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "hc_kg_unit"),
+        nox_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "nox_kg_unit"),
+        sox_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "sox_kg_unit"),
+        pm10_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "pm10_kg_unit"),
+        p1_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "p1_kg_unit"),
+        p2_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "p2_kg_unit"),
+        button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
+        instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
+    )
 
-    # By default the source is accounted for in the study - Set to 0 to ignore
-    # instudy.setChecked(True)
-    # QgsEditorWidgetWrapper.fromWidget( instudy ).setValue(1)
-    # QgsEditorWidgetWrapper.fromWidget( height_field ).setValue(0)
-    # QgsEditorWidgetWrapper.fromWidget( heat_flux_field ).setValue(0)
+    # Hide the instudy field
+    fields['instudy'].setHidden(True)
 
-    height_field.setText('0')
-    height_field.setEnabled(False)
-    heat_flux_field.setText('0')
-    heat_flux_field.setEnabled(False)
+    # Disable the height and heat flux fields
+    fields['height_field'].setText('0')
+    fields['height_field'].setEnabled(False)
+    fields['heat_flux_field'].setText('0')
+    fields['heat_flux_field'].setEnabled(False)
 
-    populate_hourly_profiles()
-    populate_daily_profiles()
-    populate_monthly_profiles()
+    # Seed the profiles
+    populate_hourly_profiles(fields['hour_profile_field'])
+    populate_daily_profiles(fields['daily_profile_field'])
+    populate_monthly_profiles(fields['month_profile_field'])
 
-    button_box.accepted.connect(validate)
-    # button_box.rejected.connect(form.reject)
+    # Add input validation to text fields in the form
+    for key, value in fields.items():
+        if isinstance(value, QtWidgets.QLineEdit):
+            fields[key].textChanged.connect(lambda: validate(fields))
 
-def populate_hourly_profiles():
-    try:
-        hour_profile_field.addItem("default")
-        hourly_profiles = alaqs.get_hourly_profiles()
-        if (hourly_profiles is None) or (hourly_profiles == []):
-            return None
-        else:
-            for profile in hourly_profiles:
-                if profile[1] != "default":
-                    hour_profile_field.addItem(profile[1])
-            hour_profile_field.setCurrentIndex(0)
-            hour_profile_field.setEditable(False)
-    except Exception as e:
-        error = alaqsutils.print_error(populate_hourly_profiles.__name__, Exception, e)
-        return error
+    # Block the ok button (will be overwritten after validation)
+    fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
 
-
-def populate_daily_profiles():
-    try:
-        daily_profile_field.addItem("default")
-        daily_profiles = alaqs.get_daily_profiles()
-        if (daily_profiles is None) or (daily_profiles == []):
-            return None
-        else:
-            for profile in daily_profiles:
-                if profile[1] != "default":
-                    daily_profile_field.addItem(profile[1])
-            daily_profile_field.setCurrentIndex(0)
-            daily_profile_field.setEditable(False)
-    except Exception as e:
-        error = alaqsutils.print_error(populate_daily_profiles.__name__, Exception, e)
-        return error
+    # Connect all QComboBoxes and the instudy checkbox on save
+    def on_save():
+        form.changeAttribute("hourly_profile",
+                             fields['hour_profile_field'].currentText())
+        form.changeAttribute("daily_profile",
+                             fields['daily_profile_field'].currentText())
+        form.changeAttribute("monthly_profile",
+                             fields['month_profile_field'].currentText())
+        feature["instudy"] = str(int(fields['instudy'].isChecked()))
+    fields['button_box'].accepted.connect(on_save)
 
 
-def populate_monthly_profiles():
-    try:
-        month_profile_field.addItem("default")
-        monthly_profiles = alaqs.get_monthly_profiles()
-        if (monthly_profiles is None) or (monthly_profiles == []):
-            return None
-        else:
-            for profile in monthly_profiles:
-                if profile[1] != "default":
-                    month_profile_field.addItem(profile[1])
-            month_profile_field.setCurrentIndex(0)
-            month_profile_field.setEditable(False)
-    except Exception as e:
-        error = alaqsutils.print_error(populate_monthly_profiles.__name__, Exception, e)
-        return error
+@catch_errors
+def populate_hourly_profiles(field):
+    # Make sure the field is empty
+    field.clear()
+
+    # Set the default field
+    field.addItem("default")
+
+    # Get the available hourly profiles
+    hourly_profiles = alaqs.get_hourly_profiles()
+
+    if (hourly_profiles is None) or (hourly_profiles == []):
+        logger.debug("No hourly profiles were found.")
+        return
+
+    # Add all the hourly profiles to the list (except the default profile)
+    for profile in hourly_profiles:
+        if profile[1] != "default":
+            field.addItem(profile[1])
+
+    # Set the default category to 0 and make the list un-editable
+    field.setCurrentIndex(0)
+    field.setEditable(False)
 
 
-def validate():
+@catch_errors
+def populate_daily_profiles(field):
+    # Make sure the field is empty
+    field.clear()
+
+    # Set the default field
+    field.addItem("default")
+
+    # Get the available daily profiles
+    daily_profiles = alaqs.get_daily_profiles()
+
+    if (daily_profiles is None) or (daily_profiles == []):
+        logger.debug("No daily profiles were found.")
+        return
+
+    # Add all the daily profiles to the list (except the default profile)
+    for profile in daily_profiles:
+        if profile[1] != "default":
+            field.addItem(profile[1])
+
+    # Set the default category to 0 and make the list un-editable
+    field.setCurrentIndex(0)
+    field.setEditable(False)
+
+
+@catch_errors
+def populate_monthly_profiles(field):
+    # Make sure the field is empty
+    field.clear()
+
+    # Set the default field
+    field.addItem("default")
+
+    # Get the available monthly profiles
+    monthly_profiles = alaqs.get_monthly_profiles()
+
+    if (monthly_profiles is None) or (monthly_profiles == []):
+        logger.debug("No monthly profiles were found.")
+        return
+
+    # Add all the monthly profiles to the list (except the default profile)
+    for profile in monthly_profiles:
+        if profile[1] != "default":
+            field.addItem(profile[1])
+
+    # Set the default category to 0 and make the list un-editable
+    field.setCurrentIndex(0)
+    field.setEditable(False)
+
+
+def validate(fields: dict):
     """
     This function validates that all of the required fields have been completed
     correctly. If they have, the attributes are committed to the feature.
     Otherwise an error message is displayed and the incorrect field is
     highlighted in red.
     """
-    results = list()
-    results.append(validate_field(name_field, "str"))
-    results.append(validate_field(unit_field, "float"))
-    results.append(validate_field(height_field, "float"))
-    results.append(validate_field(heat_flux_field, "float"))
-    results.append(validate_field(co_kg_unit_field, "float"))
-    results.append(validate_field(hc_kg_unit_field, "float"))
-    results.append(validate_field(nox_kg_unit_field, "float"))
-    results.append(validate_field(sox_kg_unit_field, "float"))
-    results.append(validate_field(pm10_kg_unit_field, "float"))
-    results.append(validate_field(p1_kg_unit_field, "float"))
-    results.append(validate_field(p2_kg_unit_field, "float"))
 
-    if False in results:
-        msg = QtWidgets.QMessageBox()
-        msg.setIcon(QtWidgets.QMessageBox.Critical)
-        msg.setWindowTitle('Validation error')
-        msg.setText("Please complete all fields.")
-        # msg.setInformativeText(
-        #     "It seems that some fields are empty. You need to provide values for all fields in red.")
-        msg.exec_()
-        return
+    # Get the button box
+    button_box = fields['button_box']
 
-    form.save()
+    # Validate all fields
+    results = [
+        validate_field(fields['name_field'], "str"),
+        validate_field(fields['height_field'], "float"),
+        validate_field(fields['heat_flux_field'], "float"),
+        validate_field(fields['co_kg_unit_field'], "float"),
+        validate_field(fields['hc_kg_unit_field'], "float"),
+        validate_field(fields['nox_kg_unit_field'], "float"),
+        validate_field(fields['sox_kg_unit_field'], "float"),
+        validate_field(fields['pm10_kg_unit_field'], "float"),
+        validate_field(fields['p1_kg_unit_field'], "float"),
+        validate_field(fields['p2_kg_unit_field'], "float")
+    ]
+
+    # Block signals if any of the fields is invalid
+    button_box.button(button_box.Ok).blockSignals("False" in str(results))
 
 
 def validate_field(ui_element, var_type):

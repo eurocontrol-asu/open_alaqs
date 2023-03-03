@@ -1,64 +1,67 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
-from qgis.gui import QgsEditorWidgetWrapper
+from PyQt5 import QtWidgets
 
-form = None
-name_field = None
-time_field = None
-speed_field = None
-instudy = None
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-def form_open(my_dialog, layer_id, feature_id):
-    global form
-    global name_field
-    global time_field
-    global speed_field
-    global instudy
-
-    form = my_dialog
-    name_field = form.findChild(QtWidgets.QLineEdit, "taxiway_id")
-    time_field = form.findChild(QtWidgets.QLineEdit, "time")
-    speed_field = form.findChild(QtWidgets.QLineEdit, "speed")
-    button_box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
-    instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
-
-    # #disconnect old-style signals, which are created e.g. by QGIS from the ui file
-    # try:
-    #     QObject.disconnect(button_box, SIGNAL("accepted()"), form.accept)
-    # except Exception as e:
-    #     pass
-    #disconnect new-style signals
-    try:
-        #button_box.blockSignals(True)
-        button_box.accepted.disconnect(form.accept)
-    except Exception as e:
-        pass
-    button_box.accepted.connect(validate)
-    #button_box.rejected.connect(form.resetValues)
-
-    time_field.setText("Calculated")
-    time_field.setEnabled(False)
+logger = get_logger(__name__)
 
 
-def validate():
+def form_open(form, layer, feature):
+    logger.debug(f"This is the modified simple form")
+    logger.debug(f"Layer {layer} and feature {feature}")
+    logger.debug(f"Attributes of fields: {feature.fields().names()}")
+    logger.debug(f"Attributes of feature: {feature.attributes()}")
+
+    # Get all the fields from the form
+    fields = dict(
+        name_field=form.findChild(QtWidgets.QLineEdit, "taxiway_id"),
+        time_field=form.findChild(QtWidgets.QLineEdit, "time"),
+        speed_field=form.findChild(QtWidgets.QLineEdit, "speed"),
+        button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
+        instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
+    )
+
+    # Hide the instudy field
+    fields['instudy'].setHidden(True)
+
+    # Disable the time field
+    fields['time_field'].setText("Calculated")
+    fields['time_field'].setEnabled(False)
+
+    # Add input validation to text fields in the form
+    for key, value in fields.items():
+        if isinstance(value, QtWidgets.QLineEdit):
+            fields[key].textChanged.connect(lambda: validate(fields))
+
+    # Block the ok button (will be overwritten after validation)
+    fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
+
+    # Connect the instudy checkbox on save
+    def on_save():
+        feature["instudy"] = str(int(fields['instudy'].isChecked()))
+
+    fields['button_box'].accepted.connect(on_save)
+
+
+def validate(fields: dict):
     """
     This function validates that all of the required fields have been completed
     correctly. If they have, the attributes are committed to the feature. 
     Otherwise an error message is displayed and the incorrect field is 
     highlighted in red.
     """
-    results = list()
-    results.append(validate_field(name_field, "str"))
-    results.append(validate_field(speed_field, "float"))
-    if False in results:
-        QtWidgets.QMessageBox.warning(None, "Validation error", "Please fill in all the required fields")
-        return False
-    # for value in results:
-    #     if value is False:
-    #         QtWidgets.QMessageBox.warning(None, "Validation error", "Please fill in all the required fields")
-    #         return False
 
-    form.save()
+    # Get the button box
+    button_box = fields['button_box']
+
+    # Validate all fields
+    results = [
+        validate_field(fields["name_field"], "str"),
+        validate_field(fields['speed_field'], "float")
+    ]
+
+    # Block signals if any of the fields is invalid
+    button_box.button(button_box.Ok).blockSignals("False" in str(results))
+
 
 def validate_field(ui_element, var_type):
     try:

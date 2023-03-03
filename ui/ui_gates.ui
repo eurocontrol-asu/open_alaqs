@@ -86,6 +86,9 @@
      </item>
      <item>
       <widget class="QCheckBox" name="instudy">
+       <property name="toolTip">
+        <string>Enable to include the source in the study</string>
+       </property>
        <property name="layoutDirection">
         <enum>Qt::RightToLeft</enum>
        </property>

@@ -1,37 +1,22 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-except:
-    import __init__  # setup the paths for direct calls of the module
-
-from future.utils import with_metaclass
-__author__ = 'ENVISA'
-import logging
-logger = logging.getLogger("__alaqs__.%s" % (__name__))
-
-import sys, os
+import os
 from collections import OrderedDict
 
-try:
-    from .SQLSerializable import SQLSerializable
-    from .Singleton import Singleton
-    from .Store import Store
-except:
-    from SQLSerializable import SQLSerializable
-    from Singleton import Singleton
-    from Store import Store
-
-from tools import Spatial
-
-# ToDo: add this properly to avoid repetition
-from shapely.wkt import loads
 from shapely import geometry, ops
+from shapely.wkt import loads
 
-class Runway(object):
-    def __init__(self, val={}):
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.tools import spatial
+
+logger = get_logger(__name__)
+
+
+class Runway:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         self._name = str(val["runway_id"]) if "runway_id" in val else ""
         self._directions = self.getDirectionsByName(self._name)
         self._touchdown_offset = int(val["touchdown"]) if "touchdown" in val else 0
@@ -48,7 +33,7 @@ class Runway(object):
             self._geometry = ops.transform(lambda x, y, z=None: (x, y, self._height), self._geometry)
 
         if self._geometry_text and not (self._height is None):
-            self.setGeometryText(Spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
+            self.setGeometryText(spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
 
     def getHeight(self):
         return self._height
@@ -100,12 +85,15 @@ class Runway(object):
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 
-class RunwayStore(with_metaclass(Singleton, Store)):
+
+class RunwayStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'Runway' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
@@ -130,7 +118,8 @@ class RunwayStore(with_metaclass(Singleton, Store)):
     def getRunwayDatabase(self):
         return self._runway_db
 
-class RunwayDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class RunwayDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to runway shape file in the spatialite database
     """
@@ -138,52 +127,60 @@ class RunwayDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="shapes_runways",
-                 table_columns_type_dict=OrderedDict([
-                    ("oid" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("runway_id" , "TEXT"),
-                    ("capacity" , "INT"),
-                    ("touchdown" , "INT"),
-                    ("max_queue_speed" , "DECIMAL"),
-                    ("peak_queue_time", "DECIMAL"),
-                    ("instudy" , "DECIMAL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="",
-                 geometry_columns=[{
-                    "column_name":"geometry",
-                    "SRID":3857,
-                    "geometry_type":"LINESTRING",
-                    "geometry_type_dimension":2
-                 }]
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 geometry_columns=None
+                 ):
+
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("runway_id", "TEXT"),
+                ("capacity", "INT"),
+                ("touchdown", "INT"),
+                ("max_queue_speed", "DECIMAL"),
+                ("peak_queue_time", "DECIMAL"),
+                ("instudy", "DECIMAL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = [{
+                "column_name": "geometry",
+                "SRID": 3857,
+                "geometry_type": "LINESTRING",
+                "geometry_type_dimension": 2
+            }]
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path:
             self.deserialize()
 
-if __name__ == "__main__":
-    # create a logger for this module
-    #logging.basicConfig(level=logging.DEBUG)
-
-    # logger.setLevel(logging.DEBUG)
-    # create console handler and set level to debug
-    # ch = logging.StreamHandler()
-    # if loaded_color_logger:
-    #     ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
-
-    # ch.setLevel(logging.DEBUG)
-    # # create formatter
-    # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # # add formatter to ch
-    # ch.setFormatter(formatter)
-    # # add ch to logger
-    # logger.addHandler(ch)
-
-    # path_to_database = os.path.join("..", "..", "example", "exeter_out.alaqs")
-    path_to_database = os.path.join("..","..",  "example/", "test_movs.alaqs")
-
-
-    store = RunwayStore(path_to_database)
-    for rwy_name, rwy in list(store.getObjects().items()):
-        # fix_print_with_import
-        print(rwy_name, rwy)
-        # logger.debug(rwy)
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     #logging.basicConfig(level=logging.DEBUG)
+#
+#     # logger.setLevel(logging.DEBUG)
+#     # create console handler and set level to debug
+#     # ch = logging.StreamHandler()
+#     # if loaded_color_logger:
+#     #     ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
+#
+#     # ch.setLevel(logging.DEBUG)
+#     # # create formatter
+#     # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # # add formatter to ch
+#     # ch.setFormatter(formatter)
+#     # # add ch to logger
+#     # logger.addHandler(ch)
+#
+#     # path_to_database = os.path.join("..", "..", "example", "exeter_out.alaqs")
+#     path_to_database = os.path.join("..","..",  "example/", "test_movs.alaqs")
+#
+#
+#     store = RunwayStore(path_to_database)
+#     for rwy_name, rwy in list(store.getObjects().items()):
+#         # fix_print_with_import
+#         print(rwy_name, rwy)
+#         # logger.debug(rwy)

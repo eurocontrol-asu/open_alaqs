@@ -1,47 +1,43 @@
-from __future__ import absolute_import
-import os, sys
-# QT and QGIS Imports
+import os
 
-from builtins import str
-from qgis.PyQt import QtGui, QtWidgets
+from qgis.PyQt import QtWidgets
 from qgis.core import *
-# from qgis.core import QgsMapLayerRegistry
-# from qgis.PyQt import QtCore
-# from qgis.core import QgsProject
-from qgis.PyQt.QtWidgets import QTableWidgetItem
-from qgis.gui import QgsEditorWidgetWrapper
 
-import logging
-import alaqslogging
-logger = alaqslogging.logging.getLogger(__name__)
-logger.setLevel('DEBUG')
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+from open_alaqs.alaqs_config import PARKING_LABEL_ENABLED, AREA_LABEL_ENABLED, \
+    AREA_LABEL_FONT, AREA_LABEL_FONT_SIZE, AREA_LABEL_POSITION, \
+    AREA_FILL_COLOR, AREA_BORDER_COLOR, BUILDING_LABEL_ENABLED, \
+    BUILDING_LABEL_FONT, BUILDING_LABEL_FONT_SIZE, BUILDING_LABEL_POSITION, \
+    BUILDING_FILL_COLOR, BUILDING_BORDER_COLOR, GATE_LABEL_ENABLED, \
+    GATE_LABEL_FONT, GATE_LABEL_FONT_SIZE, GATE_LABEL_POSITION, \
+    GATE_FILL_COLOR, GATE_BORDER_COLOR, PARKING_LABEL_FONT, \
+    PARKING_LABEL_FONT_SIZE, PARKING_LABEL_POSITION, PARKING_FILL_COLOR, \
+    PARKING_BORDER_COLOR, ROADWAY_LABEL_ENABLED, ROADWAY_LABEL_FONT, \
+    ROADWAY_LABEL_FONT_SIZE, ROADWAY_LABEL_POSITION, ROADWAY_LINE_WIDTH, \
+    ROADWAY_LINE_COLOR, TAXIWAY_LABEL_ENABLED, TAXIWAY_LABEL_FONT, \
+    TAXIWAY_LABEL_FONT_SIZE, TAXIWAY_LABEL_POSITION, TAXIWAY_LINE_WIDTH, \
+    TAXIWAY_LINE_COLOR, RUNWAY_LABEL_ENABLED, RUNWAY_LABEL_FONT, \
+    RUNWAY_LABEL_FONT_SIZE, RUNWAY_LABEL_POSITION, RUNWAY_LINE_COLOR, \
+    RUNWAY_LINE_WIDTH
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-from . import alaqs_config
-# from . import watermark
+logger = get_logger(__name__)
 
-from .alaqs_core import alaqsutils
-from .alaqs_core import alaqs
-from .alaqs_core import alaqsdblite
 
 def validate_field(ui_element, var_type):
     """
-    Evaluates the text in a UI text field, returning the value if it is valid, or returning none and highlighting
-    the field red if it is incorrect.
+    Evaluates the text in a UI text field, returning the value if it is valid,
+    or returning none and highlighting the field red if it is incorrect.
+
     :param ui_element:
     :return: value if field is correct, False if value is not correct
     """
     try:
-        if var_type is "str":
+        if var_type == "str":
             try:
                 value = str(ui_element.currentText()).strip()
             except:
                 value = str(ui_element.text()).strip()
-            if value is "":
+            if value == "":
                 color_ui_background(ui_element, "red")
                 ui_element.setToolTip("This value should be a string")
                 return False
@@ -49,7 +45,7 @@ def validate_field(ui_element, var_type):
                 color_ui_background(ui_element, "white")
                 return value
 
-        elif var_type is "int":
+        elif var_type == "int":
             try:
                 value = str(ui_element.currentText()).strip()
             except:
@@ -65,7 +61,7 @@ def validate_field(ui_element, var_type):
                 ui_element.setToolTip("This value should be an integer")
                 return False
 
-        elif var_type is "float":
+        elif var_type == "float":
             try:
                 value = str(ui_element.currentText()).strip()
             except:
@@ -86,32 +82,39 @@ def validate_field(ui_element, var_type):
 
 def color_ui_background(ui_element, color):
     """
-    This function changes the background color of a UI object. This is used to alert users to incorrect values.
+    This function changes the background color of a UI object. This is used to
+    alert users to incorrect values.
+
     :param ui_element:
     :param color:
     """
-    if color is "red":
+    if color == "red":
         ui_element.setStyleSheet("background-color: rgba(255, 107, 107, 150);")
-    elif color is "white":
+    elif color == "white":
         ui_element.setStyleSheet("background-color: rgba(255, 255, 255, 255);")
     else:
         pass
 
 
-def add_spatialite_layer(iface, database_path, table_name, display_name, edit_form, edit_py, edit_init):
+def add_spatialite_layer(iface, database_path, table_name, display_name,
+                         edit_form, edit_py, edit_init):
     """
     This function is used to load a new layer into QGIS
-    :param database_path: the file path to the current spatialite database to be loaded
-    :param table_name: the name of the feature table from which geometry is being loaded
+
+    :param database_path: the file path to the current spatialite database to be
+     loaded
+    :param table_name: the name of the feature table from which geometry is
+     being loaded
     :param display_name: the name to be attached to the layer when loaded
     :param edit_form: the file name of the ui associated with this layer
-    :param edit_init: the file name of the py file that controls the form validation and actions
-    add_spatialite_layer(iface, database_path, "shapes_point_sources", "Point Sources", 'ui\\ui_point_sources.ui', 'ui\\ui_point_sources.py', 'ui_point_sources.form_open')
+    :param edit_init: the file name of the py file that controls the form
+     validation and actions add_spatialite_layer(iface, database_path,
+      "shapes_point_sources", "Point Sources", 'ui\\ui_point_sources.ui',
+       'ui\\ui_point_sources.py', 'ui_point_sources.form_open')
     """
 
     plugin_dir = os.path.dirname(os.path.abspath(__file__))
-    # uri = QgsDataSourceURI() # QGIS2
-    uri = QgsDataSourceUri() # QGIS3
+    uri = QgsDataSourceUri()  # QGIS3
     uri.setDatabase(database_path)
 
     schema = ''
@@ -125,215 +128,47 @@ def add_spatialite_layer(iface, database_path, table_name, display_name, edit_fo
     lconfig.setInitFilePath(os.path.join(plugin_dir, edit_py))
     lconfig.setInitFunction(edit_init)
     layer.setEditFormConfig(lconfig)
+    layer.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
 
-    # config = layer.editFormConfig()
-    # config.setInitCodeSource(1)
-    # config.setUiForm("ui_file.ui")
-    # config.setInitFilePath("py_file.py")
-    # config.setInitFunction("method_name")
-    # layer.setEditFormConfig(config)
-
-    # layer.setEditorLayout(QgsVectorLayer.UiFileLayout) #QgsVectorLayer.GeneratedLayout, QgsVectorLayer.TabLayout
-    # layer.setEditForm(os.path.join(plugin_dir, edit_form))
-    # layer.setEditFormInit(edit_init)
-    layer.setCrs(QgsCoordinateReferenceSystem(3857, QgsCoordinateReferenceSystem.EpsgCrsId))
-
-    # By default the source is accounted for in the study - comment this part or set to 0 to ignore
+    # By default the source is accounted for in the study - comment this part
+    # or set to 0 to ignore
     # instudy_idx = layer.fieldNameIndex("instudy")
     # in QGIS3
     instudy_idx = layer.fields().indexFromName("instudy")
-    if instudy_idx != -1 :
-        editor_widget_setup = QgsEditorWidgetSetup('ValueMap', {'map': {u'1': 1, u'0': 0} } )
-        layer.setEditorWidgetSetup( instudy_idx, editor_widget_setup )
+    if instudy_idx != -1:
+        editor_widget_setup = QgsEditorWidgetSetup('ValueMap',
+                                                   {'map': {u'1': 1, u'0': 0}})
+        layer.setEditorWidgetSetup(instudy_idx, editor_widget_setup)
 
     if display_name == "Area Sources":
-        # # height not used in this ALAQS version
-        # height_idx = layer.fields().indexFromName("height")#layer.fieldNameIndex("height")
-        # layer.setEditorWidgetSetup(height_idx, QgsEditorWidgetSetup('TextEdit', {'IsMultiline': 'False'}))
-        # # layer.setEditorWidgetV2( height_idx, 'TextEdit' )
-        # # layer.setFieldEditable( height_idx, False )
-        # # heat flux not used in this ALAQS version
-        # heat_flux_idx = layer.fields().indexFromName("heat_flux")#layer.fieldNameIndex( "heat_flux" )
-        # layer.setEditorWidgetSetup(heat_flux_idx, QgsEditorWidgetSetup('TextEdit', {'IsMultiline': 'False'}))
-        # # layer.setEditorWidgetV2( heat_flux_idx, 'TextEdit' )
-        # # layer.setFieldEditable( heat_flux_idx, False )
-        #
-        # hourly_idx = layer.fields().indexFromName("hourly_profile")#layer.fieldNameIndex("hourly_profile")
-        # layer.setEditorWidgetSetup(hourly_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'default': u'default'}}))
-        # # layer.setEditorWidgetV2( hourly_idx, 'ValueMap' )
-        # # layer.setEditorWidgetV2Config(hourly_idx, {u'default': u'default'})
-        #
-        # daily_idx = layer.fields().indexFromName("daily_profile")#layer.fieldNameIndex("daily_profile")
-        # layer.setEditorWidgetSetup(daily_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'default': u'default'}}))
-        # # layer.setEditorWidgetV2( daily_idx, 'ValueMap' )
-        # # layer.setEditorWidgetV2Config(daily_idx, {u'default': u'default'})
-        #
-        # monthly_idx = layer.fields().indexFromName("monthly_profile")#layer.fieldNameIndex("monthly_profile")
-        # layer.setEditorWidgetSetup(monthly_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'default': u'default'}}))
-        # # layer.setEditorWidgetV2( monthly_idx, 'ValueMap' )
-        # # layer.setEditorWidgetV2Config(monthly_idx, {u'default': u'default'})
         style_area_sources(layer)
-
-
     elif display_name == "Buildings":
-        # height_idx = layer.fields().indexFromName("height")#layer.fieldNameIndex( "height" )
-        # layer.setEditorWidgetSetup(height_idx, QgsEditorWidgetSetup('TextEdit', {'IsMultiline': 'False'}))
         style_buildings(layer)
-
     elif display_name == "Gates":
-        # height_idx = layer.fields().indexFromName("gate_height")#layer.pendingFields().fieldNameIndex("gate_height")
-        # layer.setEditorWidgetSetup(height_idx, QgsEditorWidgetSetup('TextEdit', {'IsMultiline': 'False'}))
-        #
-        # gate_type_idx = layer.fields().indexFromName("gate_type")#layer.fieldNameIndex("gate_type")
-        # layer.setEditorWidgetSetup(gate_type_idx, QgsEditorWidgetSetup('ValueMap',
-        #                                         {'map': {u'REMOTE': u'REMOTE', u'PIER': u'PIER', u'CARGO': u'CARGO'}}))
-
         style_gates(layer)
-
     elif display_name == "Parkings":
-        # height_idx = layer.fields().indexFromName("height")#layer.fieldNameIndex("height")
-        # layer.setEditorWidgetSetup(height_idx, QgsEditorWidgetSetup('TextEdit', {'IsMultiline': 'False'}))
-        #
-        # park_time_idx = layer.fields().indexFromName("park_time")#layer.fieldNameIndex("park_time")
-        # layer.setEditorWidgetSetup(park_time_idx, QgsEditorWidgetSetup('TextEdit', {'IsMultiline': 'False'}))
-        #
-        # method_idx = layer.fields().indexFromName("method")#layer.fieldNameIndex("method")
-        # layer.setEditorWidgetSetup(method_idx, QgsEditorWidgetSetup('TextEdit', {'IsMultiline': 'False'}))
-        #
-        # hourly_idx = layer.fields().indexFromName("hour_profile")#layer.fieldNameIndex("hour_profile")
-        # layer.setEditorWidgetSetup(hourly_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'default': u'default'}}))
-        # #{description:value} - description is shown in the combobox, value is stored in the attribute
-        #
-        # daily_idx = layer.fields().indexFromName("daily_profile")#layer.fieldNameIndex("daily_profile")
-        # layer.setEditorWidgetSetup(daily_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'default': u'default'}}))
-        #
-        # monthly_idx = layer.fields().indexFromName("month_profile")#layer.fieldNameIndex("month_profile")
-        # layer.setEditorWidgetSetup(monthly_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'default': u'default'}}))
-
         style_parkings(layer)
-
     elif display_name == "Point Sources":
-
-        # hourly_idx = layer.fields().indexFromName("hour_profile")#layer.fieldNameIndex("hour_profile")
-        # layer.setEditorWidgetSetup(hourly_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'default': u'default'}}))
-        # # layer.setEditorWidgetV2( hourly_idx, 'ValueMap' )
-        # # layer.setEditorWidgetV2Config(hourly_idx, {u'default': u'default'})
-        # #{description:value} - description is shown in the combobox, value is stored in the attribute
-        #
-        # daily_idx = layer.fields().indexFromName("daily_profile")#layer.fieldNameIndex("daily_profile")
-        # layer.setEditorWidgetSetup(daily_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'default': u'default'}}))
-        # # layer.setEditorWidgetV2( daily_idx, 'ValueMap' )
-        # # layer.setEditorWidgetV2Config(daily_idx, {u'default': u'default'})
-        #
-        # monthly_idx = layer.fields().indexFromName("month_profile")#layer.fieldNameIndex("month_profile")
-        # layer.setEditorWidgetSetup(monthly_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'default': u'default'}}))
-
-        # category_idx = layer.fields().indexFromName("category")#layer.fieldNameIndex("category")
-        # categories = alaqs.get_point_categories()
-        # category_field = {}
-        # for category in categories:
-        #     category_field[ category[2] ] = category[2]
-        # layer.setEditorWidgetSetup(category_idx, QgsEditorWidgetSetup('ValueMap', {'map': category_field}))
-        # #
-        # type_idx = layer.fields().indexFromName("type")#layer.fieldNameIndex("type")
-        # layer.setEditorWidgetSetup(type_idx, QgsEditorWidgetSetup('ValueMap', {'map': {}}))
-        #
-        # category_name = str(category_field.currentText()).strip()
-
         style_point_sources(layer)
-
     elif display_name == "Roadways":
-        # https://svn.osgeo.org/qgis/trunk/qgis/src/app/qgssnappingdialog.cpp
-        # http://osgeo-org.1560.x6.nabble.com/Python-how-to-set-snapping-options-td4100293.html
-        # http://osgeo-org.1560.x6.nabble.com/Setting-Snap-Options-with-Python-Problem-with-Snapping-Options-Dialogue-td4100225.html
-        #
-        # height_idx = layer.fields().indexFromName("height")#layer.fieldNameIndex("height")
-        # layer.setEditorWidgetSetup(height_idx, QgsEditorWidgetSetup('TextEdit', {'IsMultiline': 'False'}))
-        # # layer.setEditorWidgetV2( height_idx, 'TextEdit' )
-        # # layer.setFieldEditable( height_idx, False )
-        #
-        # method_idx = layer.fields().indexFromName("method")#layer.fieldNameIndex("method")
-        # layer.setEditorWidgetSetup(method_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'Method': u'ALAQS'}}))
-        # # layer.setEditorWidgetSetup(method_idx, QgsEditorWidgetSetup('Hidden', {}))
-        # # layer.setEditorWidgetSetup(method_idx, QgsEditorWidgetSetup('TextEdit', {'IsMultiline': 'False'}))
-        # # layer.setEditorWidgetV2( method_idx, 'TextEdit' )
-        # #ToDo:
-        # # layer.setEditorWidgetV2( method_idx, 'ValueMap' )
-        # # layer.setEditorWidgetV2Config(method_idx, {u'Method': u'ALAQS'})
-        # # layer.setFieldEditable( method_idx, False )
-        #
-        # scenario_idx = layer.fields().indexFromName("scenario")#layer.fieldNameIndex("scenario")
-        # layer.setEditorWidgetSetup(scenario_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'Not Applicable': u'Not Applicable'}}))
-        # # layer.setEditorWidgetV2( scenario_idx, 'ValueMap' )
-        # # layer.setEditorWidgetV2Config(scenario_idx, {u'Not Applicable': u'Not Applicable'})
-        #
-        # hourly_idx = layer.fields().indexFromName("hour_profile")#layer.fieldNameIndex("hour_profile")
-        # layer.setEditorWidgetSetup(hourly_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'default': u'default'}}))
-        # # layer.setEditorWidgetV2( hourly_idx, 'ValueMap' )
-        # # layer.setEditorWidgetV2Config(hourly_idx, {u'default': u'default'})
-        # #{description:value} - description is shown in the combobox, value is stored in the attribute
-        # daily_idx = layer.fields().indexFromName("daily_profile")#layer.fieldNameIndex("daily_profile")
-        # layer.setEditorWidgetSetup(daily_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'default': u'default'}}))
-        # # layer.setEditorWidgetV2( daily_idx, 'ValueMap' )
-        # # layer.setEditorWidgetV2Config(daily_idx, {u'default': u'default'})
-        # monthly_idx = layer.fields().indexFromName("month_profile")#layer.fieldNameIndex("month_profile")
-        # layer.setEditorWidgetSetup(monthly_idx, QgsEditorWidgetSetup('ValueMap', {'map': {u'default': u'default'}}))
-        # # layer.setEditorWidgetV2( monthly_idx, 'ValueMap' )
-        # # layer.setEditorWidgetV2Config(monthly_idx, {u'default': u'default'})
-        #
-        # # layer.startEditing()
-        # # for feat in layer.getFeatures():
-        # #     if feat.attributes()[height_idx] == NULL:
-        # #         # layer.dataProvider().changeAttributeValue(height_idx, feat.id(), 0)
-        # #         layer.dataProvider().changeAttributeValues({feat.id(): {height_idx: -999 }})
-        # #
-        # #     if feat.attributes()[method_idx] == NULL:
-        # #         layer.dataProvider().changeAttributeValues({feat.id(): {method_idx:"Open-ALAQS" }})
-        # #         # layer.dataProvider().changeAttributeValue(method_idx, feat.id(), "Open-ALAQS")
-        # #
-        # #     layer.updateFeature(feat)
-        # # layer.commitChanges()
-
         style_roadways(layer)
     elif display_name == "Runways":
         style_runways(layer)
     elif display_name == "Taxiways":
         style_taxiways(layer)
 
-    # elif display_name == "Tracks":
-        # op_idx = layer.fields().indexFromName("departure_arrival") #layer.fieldNameIndex("departure_arrival")
-        # editor_widget_setup = QgsEditorWidgetSetup( 'ValueMap', {u'Arrival': "Arrival", u'Departure': "Departure"} )
-        # layer.setEditorWidgetSetup( op_idx, editor_widget_setup )
-        # # layer.setEditorWidgetV2( op_idx, 'ValueMap' )
-        # # layer.setEditorWidgetV2Config(op_idx, {u'Arrival': "Arrival", u'Departure': "Departure"})
-        #
-        # # populate runways
-        # # rwy_idx = layer.fieldNameIndex("runway")
-        # rwy_idx = layer.fields().indexFromName("runway")
-        # # layer.setEditorWidgetV2( rwy_idx, 'ValueMap' )
-        # layer.setEditorWidgetSetup(rwy_idx, QgsEditorWidgetSetup( 'ValueMap', {} ))
-        # runways = alaqs.get_runways()
-        # if runways is None or runways == []:
-        #     pass
-        # else:
-        #     rwys = {}
-        #     for runway in runways:
-        #         directions  = runway[0].split("-")
-        #         for direction in directions:
-        #             rwys[direction.strip()] = direction.strip()
-        #     # layer.setEditorWidgetV2Config(rwy_idx, rwys)
-        #     layer.setEditorWidgetSetup(rwy_idx,  QgsEditorWidgetSetup( 'ValueMap', rwys ))
-        # pass
-
     if not layer.isValid():
-        QtWidgets.QMessageBox.information(iface.mainWindow() if iface and iface.mainWindow() else None, "Info", "That is not a valid layer...")
+        QtWidgets.QMessageBox.information(
+            iface.mainWindow() if iface and iface.mainWindow() else None,
+            "Info", "That is not a valid layer...")
     # QgsMapLayerRegistry.instance().addMapLayers([layer])
     QgsProject.instance().addMapLayers([layer])
 
 
 def style_area_sources(layer):
     """
-    This function adds styling to the Area Source layer. Values come from alaqsconfig.py
+    This function adds styling to the Area Source layer. Values come from
+     alaqsconfig.py
     :param layer: The vector layer that is to be styled
     """
     try:
@@ -344,17 +179,24 @@ def style_area_sources(layer):
         layer.setCustomProperty("labeling/placement", AREA_LABEL_POSITION)
         layer.setCustomProperty("labeling/fieldName", "source_id")
 
-        props = {'color': AREA_FILL_COLOR, 'style': 'solid', 'color_border': AREA_BORDER_COLOR, 'style_border': 'solid'}
-        s = QgsFillSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        props = {
+            'color': AREA_FILL_COLOR,
+            'style': 'solid',
+            'color_border': AREA_BORDER_COLOR,
+            'style_border': 'solid'
+        }
+        s = QgsFillSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Area layer")
     except Exception as e:
         logger.error(style_area_sources.__name__, Exception, e)
 
+
 def style_buildings(layer):
     """
-    This function adds styling to the Buildings layer. Values come from alaqsconfig.py
+    This function adds styling to the Buildings layer. Values come from
+     alaqsconfig.py
     :param layer: The vector layer that is to be styled
     """
     try:
@@ -365,9 +207,14 @@ def style_buildings(layer):
         layer.setCustomProperty("labeling/placement", BUILDING_LABEL_POSITION)
         layer.setCustomProperty("labeling/fieldName", "building_id")
 
-        props = {'color': BUILDING_FILL_COLOR, 'style': 'solid', 'color_border': BUILDING_BORDER_COLOR, 'style_border': 'solid'}
-        s = QgsFillSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        props = {
+            'color': BUILDING_FILL_COLOR,
+            'style': 'solid',
+            'color_border': BUILDING_BORDER_COLOR,
+            'style_border': 'solid'
+        }
+        s = QgsFillSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Buildings layer")
     except Exception as e:
@@ -376,7 +223,8 @@ def style_buildings(layer):
 
 def style_gates(layer):
     """
-    This function adds styling to the Gates layer. Values come from alaqsconfig.py
+    This function adds styling to the Gates layer. Values come from
+     alaqsconfig.py
     :param layer: The vector layer that is to be styled
     """
     try:
@@ -387,17 +235,24 @@ def style_gates(layer):
         layer.setCustomProperty("labeling/placement", GATE_LABEL_POSITION)
         layer.setCustomProperty("labeling/fieldName", "gate_id")
 
-        props = {'color': GATE_FILL_COLOR, 'style': 'solid', 'color_border': GATE_BORDER_COLOR, 'style_border': 'solid'}
-        s = QgsFillSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        props = {
+            'color': GATE_FILL_COLOR,
+            'style': 'solid',
+            'color_border': GATE_BORDER_COLOR,
+            'style_border': 'solid'
+        }
+        s = QgsFillSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Buildings layer")
     except Exception as e:
         logger.error(style_gates.__name__, Exception, e)
 
+
 def style_parkings(layer):
     """
-    This function adds styling to the Parking layer. Values come from alaqsconfig.py
+    This function adds styling to the Parking layer. Values come from
+     alaqsconfig.py
     :param layer: The vector layer that is to be styled
     """
     try:
@@ -408,9 +263,14 @@ def style_parkings(layer):
         layer.setCustomProperty("labeling/placement", PARKING_LABEL_POSITION)
         layer.setCustomProperty("labeling/fieldName", "parking_id")
 
-        props = {'color': PARKING_FILL_COLOR, 'style': 'solid', 'color_border': PARKING_BORDER_COLOR, 'style_border': 'solid'}
-        s = QgsFillSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        props = {
+            'color': PARKING_FILL_COLOR,
+            'style': 'solid',
+            'color_border': PARKING_BORDER_COLOR,
+            'style_border': 'solid'
+        }
+        s = QgsFillSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Parkings layer")
     except Exception as e:
@@ -419,7 +279,8 @@ def style_parkings(layer):
 
 def style_point_sources(layer):
     """
-    This function adds styling to the Point sources layer. Values come from alaqsconfig.py
+    This function adds styling to the Point sources layer. Values come from
+     alaqsconfig.py
     :param layer: The vector layer that is to be styled
     """
     try:
@@ -429,17 +290,14 @@ def style_point_sources(layer):
         layer.setCustomProperty("labeling/fontSize", "10")
         layer.setCustomProperty("labeling/fieldName", "source_id")
         layer.setCustomProperty("labeling/placement", "2")
-
-        #props = {'color': PARKING_FILL_COLOR, 'style': 'solid', 'color_border': PARKING_BORDER_COLOR, 'style_border': 'solid'}
-        #s = QgsFillSymbolV2.createSimple(props)
-        #layer.setRendererV2(QgsSingleSymbolRendererV2(s))
     except Exception as e:
         logger.error(style_point_sources.__name__, Exception, e)
 
 
 def style_roadways(layer):
     """
-    This function adds styling to the Roadways layer. Values come from alaqsconfig.py
+    This function adds styling to the Roadways layer. Values come from
+     alaqsconfig.py
     :param layer: The vector layer that is to be styled
     """
     try:
@@ -450,9 +308,12 @@ def style_roadways(layer):
         layer.setCustomProperty("labeling/placement", ROADWAY_LABEL_POSITION)
         layer.setCustomProperty("labeling/fieldName", "roadway_id")
 
-        props = {'width': ROADWAY_LINE_WIDTH, 'color': ROADWAY_LINE_COLOR}
-        s = QgsLineSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        props = {
+            'width': ROADWAY_LINE_WIDTH,
+            'color': ROADWAY_LINE_COLOR
+        }
+        s = QgsLineSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Roadways layer")
     except Exception as e:
@@ -461,7 +322,8 @@ def style_roadways(layer):
 
 def style_taxiways(layer):
     """
-    This function adds styling to the Taxiways layer. Values come from alaqsconfig.py
+    This function adds styling to the Taxiways layer. Values come from
+     alaqsconfig.py
     :param layer: The vector layer that is to be styled
     """
     try:
@@ -473,8 +335,8 @@ def style_taxiways(layer):
         layer.setCustomProperty("labeling/fieldName", "taxiway_id")
 
         props = {'width': TAXIWAY_LINE_WIDTH, 'color': TAXIWAY_LINE_COLOR}
-        s = QgsLineSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        s = QgsLineSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Taxiways layer")
     except Exception as e:
@@ -483,7 +345,8 @@ def style_taxiways(layer):
 
 def style_runways(layer):
     """
-    This function adds styling to the Runways layer. Values come from alaqsconfig.py
+    This function adds styling to the Runways layer. Values come from
+     alaqsconfig.py
     :param layer: The vector layer that is to be styled
     """
     try:
@@ -495,8 +358,8 @@ def style_runways(layer):
         layer.setCustomProperty("labeling/fieldName", "runway_id")
 
         props = {'width': RUNWAY_LINE_WIDTH, 'color': RUNWAY_LINE_COLOR}
-        s = QgsLineSymbolV2.createSimple(props)
-        layer.setRendererV2(QgsSingleSymbolRendererV2(s))
+        s = QgsLineSymbol.createSimple(props)
+        layer.setRenderer(QgsSingleSymbolRenderer(s))
 
         logger.debug("Styles applied to Runways layer")
     except Exception as e:
@@ -504,19 +367,35 @@ def style_runways(layer):
 
 
 def load_layers(iface, database_path):
-    add_spatialite_layer(iface, database_path, "shapes_point_sources", "Point Sources", 'ui\\ui_point_sources.ui', 'ui\\ui_point_sources.py', 'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_taxiways", "Taxiways", 'ui\\ui_taxiways.ui', 'ui\\ui_taxiways.py', 'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_runways", "Runways", 'ui\\ui_runways.ui', 'ui\\ui_runways.py', 'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_roadways", "Roadways", 'ui\\ui_roadways.ui', 'ui\\ui_roadways.py', 'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_parking", "Parkings", 'ui\\ui_parkings.ui', 'ui\\ui_parkings.py', 'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_gates", "Gates", 'ui\\ui_gates.ui', 'ui\\ui_gates.py', 'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_buildings", "Buildings", 'ui\\ui_buildings.ui', 'ui\\ui_buildings.py', 'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_area_sources", "Area Sources", 'ui\\ui_area_sources.ui', 'ui\\ui_area_sources.py', 'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_tracks", "Tracks", 'ui\\ui_tracks.ui', 'ui\\ui_tracks.py', 'form_open')
+    add_spatialite_layer(iface, database_path, "shapes_point_sources",
+                         "Point Sources", 'ui\\ui_point_sources.ui',
+                         'ui\\ui_point_sources.py', 'form_open')
+    add_spatialite_layer(iface, database_path, "shapes_taxiways", "Taxiways",
+                         'ui\\ui_taxiways.ui', 'ui\\ui_taxiways.py',
+                         'form_open')
+    add_spatialite_layer(iface, database_path, "shapes_runways", "Runways",
+                         'ui\\ui_runways.ui', 'ui\\ui_runways.py', 'form_open')
+    add_spatialite_layer(iface, database_path, "shapes_roadways", "Roadways",
+                         'ui\\ui_roadways.ui', 'ui\\ui_roadways.py',
+                         'form_open')
+    add_spatialite_layer(iface, database_path, "shapes_parking", "Parkings",
+                         'ui\\ui_parkings.ui', 'ui\\ui_parkings.py',
+                         'form_open')
+    add_spatialite_layer(iface, database_path, "shapes_gates", "Gates",
+                         'ui\\ui_gates.ui', 'ui\\ui_gates.py', 'form_open')
+    add_spatialite_layer(iface, database_path, "shapes_buildings", "Buildings",
+                         'ui\\ui_buildings.ui', 'ui\\ui_buildings.py',
+                         'form_open')
+    add_spatialite_layer(iface, database_path, "shapes_area_sources",
+                         "Area Sources", 'ui\\ui_area_sources.ui',
+                         'ui\\ui_area_sources.py', 'form_open')
+    add_spatialite_layer(iface, database_path, "shapes_tracks", "Tracks",
+                         'ui\\ui_tracks.ui', 'ui\\ui_tracks.py', 'form_open')
+
 
 def delete_alaqs_layers(iface):
-    # layer_names = ["Tracks", "Taxiways", "Runways", "Roadways", "Point Sources", "Parkings", "Gates", "Buildings", "Area Sources", WatermarkPluginLayer.LAYER_TYPE]
-    layer_names = ["Tracks", "Taxiways", "Runways", "Roadways", "Point Sources", "Parkings", "Gates", "Buildings", "Area Sources"]
+    layer_names = ["Tracks", "Taxiways", "Runways", "Roadways", "Point Sources",
+                   "Parkings", "Gates", "Buildings", "Area Sources"]
 
     # QGIS2
     # layers = iface.legendInterface().layers()
@@ -533,12 +412,13 @@ def delete_alaqs_layers(iface):
 def set_default_zoom(canvas, lat, lon):
     try:
         scale = 5000
-        crs_src = QgsCoordinateReferenceSystem(4326)
-        crs_dest = QgsCoordinateReferenceSystem(3857)
+        crs_src = QgsCoordinateReferenceSystem("EPSG:4326")
+        crs_dest = QgsCoordinateReferenceSystem("EPSG:3857")
         xform = QgsCoordinateTransform(crs_src, crs_dest)
 
         arp = xform.transform(QgsPoint(float(lon), float(lat)))
-        rect = QgsRectangle(float(arp[0]) - scale, float(arp[1]) - scale, float(arp[0]) + scale, float(arp[1]) + scale)
+        rect = QgsRectangle(float(arp[0]) - scale, float(arp[1]) - scale,
+                            float(arp[0]) + scale, float(arp[1]) + scale)
         canvas.setExtent(rect)
         canvas.refresh()
         return None
@@ -570,16 +450,16 @@ def set_selected_feature(layer, features):
         # Loop over features and record the ID of those we're highlighting
         for feature in layer:
             try:
-                if len(feature.attributes())>1:
-                    attribute_name = str(feature.attributes()[1]) #generic index for name
+                if len(feature.attributes()) > 1:
+                    # generic index for name
+                    attribute_name = str(feature.attributes()[1])
                     if attribute_name in features:
                         to_select.append(feature.id())
                 else:
-                    #raise Exception(str(feature.attributes()))
+                    # raise Exception(str(feature.attributes()))
                     pass
 
             except Exception as e:
-                #logger.error("set_selected_feature", Exception, "Did not find identification key at index 1 in attributes '%s'" % str(e))
                 pass
 
         # Select those features
@@ -587,5 +467,3 @@ def set_selected_feature(layer, features):
 
     except Exception as e:
         logger.error(set_selected_feature.__name__, Exception, e)
-
-

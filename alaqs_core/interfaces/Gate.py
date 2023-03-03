@@ -1,32 +1,19 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-from future.utils import with_metaclass
-__author__ = 'ENVISA'
-import logging
-logger = logging.getLogger("alaqs.%s" % (__name__))
-
-import os
-import sys
 from collections import OrderedDict
 
-try:
-    from .SQLSerializable import SQLSerializable
-    from .Singleton import Singleton
-    from .Store import Store
-    from .Emissions import EmissionIndex
-except:
-    from SQLSerializable import SQLSerializable
-    from Singleton import Singleton
-    from Store import Store
-    from Emissions import EmissionIndex
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.tools import spatial
 
-from tools import Spatial
-from tools import Conversions
+logger = get_logger(__name__)
 
-class Gate(object):
-    def __init__(self, val={}):
+
+class Gate:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         self._id = str(val["gate_id"]) if "gate_id" in val else None
         self._type = str(val["gate_type"]) if "gate_type" in val else None
         self._height = float(val["gate_height"]) if "gate_height" in val and not val["gate_height"] is None else 0.
@@ -35,7 +22,7 @@ class Gate(object):
         self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
 
         if self._geometry_text and not self._height is None:
-            self.setGeometryText(Spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
+            self.setGeometryText(spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
 
         self._emission_profiles = []
 
@@ -141,12 +128,15 @@ class Gate(object):
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 
-class GateStore(with_metaclass(Singleton, Store)):
+
+class GateStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'Gate' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
@@ -175,7 +165,8 @@ class GateStore(with_metaclass(Singleton, Store)):
     def getGateDatabase(self):
         return self._gate_db
 
-class GateDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class GateDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to gate shape file in the spatialite database
     """
@@ -183,29 +174,38 @@ class GateDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="shapes_gates",
-                 table_columns_type_dict=OrderedDict([
-                    ("oid" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("gate_id" , "TEXT"),
-                    ("gate_height" , "DECIMAL"),
-                    ("gate_type" , "TEXT"),
-                    ("instudy" , "DECIMAL")
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="",
-                 geometry_columns=[{
-                    "column_name":"geometry",
-                    "SRID":3857,
-                    "geometry_type":"POLYGON",
-                    "geometry_type_dimension":2
-                 }]
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 geometry_columns=None
+                 ):
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("gate_id", "TEXT"),
+                ("gate_height", "DECIMAL"),
+                ("gate_type", "TEXT"),
+                ("instudy", "DECIMAL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = [{
+                "column_name": "geometry",
+                "SRID": 3857,
+                "geometry_type": "POLYGON",
+                "geometry_type_dimension": 2
+            }]
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path:
             self.deserialize()
 
 
-class DefaultGateEmissionProfile(object):
-    def __init__(self, val={}):
+class DefaultGateEmissionProfile:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         self._gate_type = str(val["gate_type"]) if "gate_type" in val else None
         self._ac_group = str(val["ac_group"]) if "ac_group" in val else None
 
@@ -287,11 +287,6 @@ class DefaultGateEmissionProfile(object):
     def setEmissionIndex(self, val):
         self._emissionIndex = val
 
-    def getGateType(self):
-        return self._gate_type
-    def setGateType(self, var):
-        self._gate_type = var
-
     def __str__(self):
         val = "\n DefaultGateEmissionProfile"
         val += "\n\t Gate-Type: %s" % (self.getGateType())
@@ -307,7 +302,8 @@ class DefaultGateEmissionProfile(object):
         val += "%s" % (self.getEmissionIndex())
         return val
 
-class DefaultGateEmissionProfileStore(with_metaclass(Singleton, Store)):
+
+class DefaultGateEmissionProfileStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'DefaultGateEmissionProfile' objects
     """
@@ -329,7 +325,8 @@ class DefaultGateEmissionProfileStore(with_metaclass(Singleton, Store)):
     def getDefaultGateEmissionProfileDatabase(self):
         return self._db
 
-class DefaultGateEmissionProfileDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class DefaultGateEmissionProfileDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to default gate profiles in the spatialite database
     """
@@ -337,60 +334,67 @@ class DefaultGateEmissionProfileDatabase(with_metaclass(Singleton, SQLSerializab
     def __init__(self,
                  db_path_string,
                  table_name_string="default_gate_profiles",
-                 table_columns_type_dict=OrderedDict([
-                    ("oid" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("gate_type" , "VARCHAR(20)"),
-                    ("ac_group" , "VARCHAR(20)"),
-                    ("emis_type" , "VARCHAR(10)"),
-                    ("time_unit" , "VARCHAR(20)"),
-                    ("op_type", "VARCHAR(20)"),
-                    ("time", "DECIMAL"),
-                    ("emis_unit" , "VARCHAR(20)"),
-                    ("co" , "DECIMAL"),
-                    ("hc" , "DECIMAL"),
-                    ("nox" , "DECIMAL"),
-                    ("sox" , "DECIMAL"),
-                    ("pm10" , "DECIMAL"),
-                    ("source" , "TEXT"),
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="",
-                 geometry_columns=[]
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 geometry_columns=None
+                 ):
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                ("gate_type", "VARCHAR(20)"),
+                ("ac_group", "VARCHAR(20)"),
+                ("emis_type", "VARCHAR(10)"),
+                ("time_unit", "VARCHAR(20)"),
+                ("op_type", "VARCHAR(20)"),
+                ("time", "DECIMAL"),
+                ("emis_unit", "VARCHAR(20)"),
+                ("co", "DECIMAL"),
+                ("hc", "DECIMAL"),
+                ("nox", "DECIMAL"),
+                ("sox", "DECIMAL"),
+                ("pm10", "DECIMAL"),
+                ("source", "TEXT"),
+            ])
+        if geometry_columns is None:
+            geometry_columns = []
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path:
             self.deserialize()
 
-if __name__ == "__main__":
-    import alaqslogging
-    logger.setLevel(logging.DEBUG)
 
-    path_to_database = os.path.join("..", "..", "example/", "CAEPport", "CAEPport_out.alaqs")
-
-    if not os.path.isfile(path_to_database):
-        # fix_print_with_import
-        print("Path to database %s does not exist !"%path_to_database)
-    else:
-        # fix_print_with_import
-        print("Path to database found in: %s "%os.path.abspath(path_to_database))
-
-    store = GateStore(path_to_database)
-
-    ac_group = "TURBOPROP"
-    departure_arrival = "D"
-    source_type = "GPU"
-
-    for gate_name, gate in list(store.getObjects().items()):
-
-        # fix_print_with_import
-        print(gate_name, gate.getType())
-        # print gate.getEmissionIndexGPU("JET LARGE", "A")
-        # print gate.getEmissionIndexGSE("JET LARGE", "D")
-
-        profile_ = gate.getEmissionProfile(ac_group, departure_arrival, source_type)
-        if profile_:
-            # fix_print_with_import
-            print(profile_)
+# if __name__ == "__main__":
+#     logger.setLevel(logging.DEBUG)
+#
+#     path_to_database = os.path.join("..", "..", "example/", "CAEPport", "CAEPport_out.alaqs")
+#
+#     if not os.path.isfile(path_to_database):
+#         # fix_print_with_import
+#         print("Path to database %s does not exist !"%path_to_database)
+#     else:
+#         # fix_print_with_import
+#         print("Path to database found in: %s "%os.path.abspath(path_to_database))
+#
+#     store = GateStore(path_to_database)
+#
+#     ac_group = "TURBOPROP"
+#     departure_arrival = "D"
+#     source_type = "GPU"
+#
+#     for gate_name, gate in list(store.getObjects().items()):
+#
+#         # fix_print_with_import
+#         print(gate_name, gate.getType())
+#         # print gate.getEmissionIndexGPU("JET LARGE", "A")
+#         # print gate.getEmissionIndexGSE("JET LARGE", "D")
+#
+#         profile_ = gate.getEmissionProfile(ac_group, departure_arrival, source_type)
+#         if profile_:
+#             # fix_print_with_import
+#             print(profile_)
 
 
 

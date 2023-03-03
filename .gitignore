@@ -1,2 +1,7 @@
 __pycache__/
-alaqs-log.log
+*.log
+
+example-local/
+/example/case_1/
+/example/case_3/
+/local/

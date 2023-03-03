@@ -1,90 +1,191 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from qgis.gui import QgsEditorWidgetWrapper
+from PyQt5 import QtWidgets
 
-import alaqs
+from open_alaqs.alaqs_core import alaqs
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-form = None
-name_field = None
-runway_field = None
-arrdep_field = None
-instudy = None
+logger = get_logger(__name__)
 
-def form_open(my_dialog, layer_id, feature_id):
-    global form
-    global name_field
-    global runway_field
-    global arrdep_field
-    global instudy
 
-    form = my_dialog
-    name_field = form.findChild(QtWidgets.QLineEdit, "track_id")
-    runway_field = form.findChild(QtWidgets.QComboBox, "runway")
-    arrdep_field = form.findChild(QtWidgets.QComboBox, "departure_arrival")
-    button_box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
-    instudy = form.findChild(QtWidgets.QCheckBox, "instudy")
+def run_once(f):
+    """
+    Decorator to make sure the function is executed only once.
 
-    populate_combo_boxes()
-    
-    # #disconnect old-style signals, which are created e.g. by QGIS from the ui file
-    # try:
-    #     QObject.disconnect(button_box, SIGNAL("accepted()"), form.accept)
-    # except Exception, e:
-    #     pass
-    #disconnect new-style signals
+    :param f: function to execute
+    :return:
+    """
+
+    def wrapper(*args, **kwargs):
+        if not wrapper.has_run:
+            wrapper.has_run = True
+            return f(*args, **kwargs)
+
+    wrapper.has_run = False
+    return wrapper
+
+
+def form_open(form, layer, feature):
+    logger.debug(f"This is the modified simple form")
+    logger.debug(f"Layer {layer} and feature {feature}")
+    logger.debug(f"Attributes of fields: {feature.fields().names()}")
+    logger.debug(f"Attributes of feature: {feature.attributes()}")
+
+    # Get all the fields from the form
+    fields = dict(
+        name_field=form.findChild(QtWidgets.QLineEdit, "track_id"),
+        runway_field=form.findChild(QtWidgets.QComboBox, "runway"),
+        arrdep_field=form.findChild(QtWidgets.QComboBox, "departure_arrival"),
+        button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
+        instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
+    )
+
+    # Hide the instudy field
+    fields['instudy'].setHidden(True)
+
+    # Remove brackets from the departure/arrival field when it's already set
     try:
-        button_box.accepted.disconnect(form.accept)
-    except Exception, e:
+
+        # Get the current value of the feature
+        current_feature_value = feature.attribute("departure_arrival")
+
+        # Get the current value of the form
+        current_field_value = fields['arrdep_field'].currentText()
+
+        # If the form value is with brackets, replace the value in the combobox
+        if current_field_value == f'({current_feature_value})':
+
+            # Set the value without brackets
+            fields['arrdep_field'].setCurrentText(current_feature_value)
+
+            # Get the index of the value with brackets
+            arrdep_index = fields['arrdep_field'].findText(current_field_value)
+
+            # Remove the value with brackets
+            fields['arrdep_field'].removeItem(arrdep_index)
+
+    except KeyError:
         pass
+    except Exception as e:
+        raise e
 
-    button_box.accepted.connect(validate)
-    # button_box.rejected.connect(form.reject)
-    # QgsEditorWidgetWrapper.fromWidget( instudy ).setValue(1)
+    # Remove brackets from the runway field when it's already set
+    try:
 
-    # arrdep_field.addItem("Arrival")
-    # arrdep_field.addItem("Departure")
+        # Get the current value of the feature
+        current_feature_value = feature.attribute("runway")
 
-def populate_combo_boxes():
-    arrdep_field.addItem("Arrival")
-    arrdep_field.addItem("Departure")
+        # Get the current value of the form
+        current_field_value = fields['runway_field'].currentText()
+
+        # If the form value is with brackets, replace the value in the combobox
+        if current_field_value == f'({current_feature_value})':
+
+            # Set the value without brackets
+            fields['runway_field'].setCurrentText(current_feature_value)
+
+            # Get the index of the value with brackets
+            rwy_index = fields['runway_field'].findText(current_field_value)
+
+            # Remove the value with brackets
+            fields['runway_field'].removeItem(rwy_index)
+
+    except KeyError:
+        pass
+    except Exception as e:
+        raise e
+
+    # Seed the combo boxes
+    populate_combo_boxes(fields)
+
+    # Add input validation to text fields in the form
+    for key, value in fields.items():
+        if isinstance(value, QtWidgets.QLineEdit):
+            fields[key].textChanged.connect(lambda: validate(fields))
+        if isinstance(value, QtWidgets.QComboBox):
+            fields[key].currentTextChanged.connect(lambda: validate(fields))
+
+    # Block the ok button (will be overwritten after validation)
+    fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
+
+    # Connect all QComboBoxes and the instudy checkbox on save
+    def on_save():
+        form.changeAttribute("runway", fields['runway_field'].currentText())
+        form.changeAttribute("departure_arrival",
+                             fields['arrdep_field'].currentText())
+        feature["instudy"] = str(int(fields['instudy'].isChecked()))
+
+    fields['button_box'].accepted.connect(on_save)
+
+
+@run_once
+def populate_combo_boxes(fields: dict):
+    # Populate the arrival/departure field
+    populate_field(
+        field=fields['arrdep_field'],
+        options=["Arrival", "Departure"]
+    )
 
     runways = alaqs.get_runways()
     if runways is None or runways == []:
         msg_box = QtWidgets.QMessageBox()
-        msg.setIcon(QtWidgets.QMessageBox.Critical)
-        msg.setWindowTitle('Critical error')
+        msg_box.setIcon(QtWidgets.QMessageBox.Critical)
+        msg_box.setWindowTitle('Critical error')
         msg_box.setText("Please define your runways before creating tracks.")
         msg_box.exec_()
     else:
+
+        runway_options = []
+
         for runway in runways:
-            directions = runway[0].split("-")
+            directions = runway[0].split("/")
             for direction in directions:
-                runway_field.addItem(direction.strip())
-    runway_field.setEditable(False)
+                runway_options.append(direction.strip())
+
+        populate_field(
+            field=fields['runway_field'],
+            options=runway_options
+        )
 
 
-def validate():
+def populate_field(field, options: list):
+    """
+    Populate the field.
+    """
+
+    # Make sure the field is empty
+    field.clear()
+    field.addItem(None)
+
+    # Set the options
+    for option in options:
+        field.addItem(option)
+
+    # Set the default option to 0
+    field.setCurrentIndex(0)
+
+    # Make the list un-editable
+    field.setEditable(False)
+
+
+def validate(fields: dict):
     """
     This function validates that all of the required fields have been completed
     correctly. If they have, the attributes are committed to the feature. 
     Otherwise an error message is displayed and the incorrect field is 
     highlighted in red.
     """
-    results = list()
-    results.append(validate_field(name_field, "str"))
-    results.append(validate_field(runway_field, "str"))
-    results.append(validate_field(arrdep_field, "str"))
 
-    if False in results:
-        msg = QtWidgets.QMessageBox()
-        msg.setIcon(QtWidgets.QMessageBox.Critical)
-        msg.setWindowTitle('Validation error')
-        msg.setText("Please complete all fields.")
-        # msg.setInformativeText(
-        #     "It seems that some fields are empty. You need to provide values for all fields in red.")
-        msg.exec_()
-        return
+    # Get the button box
+    button_box = fields['button_box']
 
-    form.save()
+    # Validate all fields
+    results = [
+        validate_field(fields['name_field'], "str"),
+        validate_field(fields['runway_field'], "str"),
+        validate_field(fields['arrdep_field'], "str")
+    ]
+
+    # Block signals if any of the fields is invalid
+    button_box.button(button_box.Ok).blockSignals("False" in str(results))
 
 
 def validate_field(ui_element, var_type):

@@ -1,61 +1,53 @@
-
-from __future__ import absolute_import
-import logging
-from future.utils import with_metaclass
-__author__ = 'ENVISA'
-
 import os.path
 
-try:
-    from .Store import Store
-    from .Singleton import Singleton
-    from .EngineDatabases import EngineEmissionIndicesDatabase,EngineModeDatabase,EngineEmissionFactorsStartDatabase
-    from .EngineDatabases import HelicopterEngineEmissionIndicesDatabase
-    from .Engine import Engine
-except:
-    from Store import Store
-    from Singleton import Singleton
-    from EngineDatabases import EngineEmissionIndicesDatabase,EngineModeDatabase,EngineEmissionFactorsStartDatabase
-    from EngineDatabases import HelicopterEngineEmissionIndicesDatabase
-    from Engine import Engine
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.interfaces.Engine import Engine
+from open_alaqs.alaqs_core.interfaces.EngineDatabases import \
+    EngineEmissionIndicesDatabase, EngineModeDatabase, \
+    HelicopterEngineEmissionIndicesDatabase
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
+
+logger = get_logger(__name__)
 
 
-logger = logging.getLogger("__alaqs__.%s" % (__name__))
-
-class EngineStore(with_metaclass(Singleton, Store)):
+class EngineStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'Engine' objects
     """
 
-    def __init__(self, db_path="", db={
-                "engine_emission_indices_db":None,
-                "engine_modes_db":None,
-                "engine_start_emission_factors_db":None}):
+    def __init__(self, db_path: str = "", db: dict = None):
+        if db is None:
+            db = {"engine_emission_indices_db": None,
+                  "engine_modes_db": None,
+                  "engine_start_emission_factors_db": None}
         Store.__init__(self)
 
         self._db_path = db_path
 
-        #Emission indices
+        # Set the engine emission indices database
         self._emission_indices_db = None
-        if  "engine_emission_indices_db" in db:
-            if isinstance(db["engine_emission_indices_db"], EngineEmissionIndicesDatabase):
-                self._emission_indices_db = db["engine_emission_indices_db"]
-            elif isinstance(db["engine_emission_indices_db"], str) and os.path.isfile(db["engine_emission_indices_db"]):
-                self._emission_indices_db =EngineEmissionIndicesDatabase(db["engine_emission_indices_db"])
-
+        _engine_ei_db = db.get("engine_emission_indices_db")
+        if isinstance(_engine_ei_db, EngineEmissionIndicesDatabase):
+            self._emission_indices_db = _engine_ei_db
+        elif isinstance(_engine_ei_db, str) and os.path.isfile(_engine_ei_db):
+            self._emission_indices_db = \
+                EngineEmissionIndicesDatabase(_engine_ei_db)
         if self._emission_indices_db is None:
-            self._emission_indices_db =EngineEmissionIndicesDatabase(db_path)
+            self._emission_indices_db = EngineEmissionIndicesDatabase(db_path)
 
-        self._emission_indices = self._emission_indices_db.getEngineEmissionIndices()
+        # Get the emission indices
+        self._emission_indices = \
+            self._emission_indices_db.getEngineEmissionIndices()
 
-        #Engine Modes
+        # Set the engine modes database
         self._emission_modes_db = None
-        if  "emission_modes_db" in db:
-            if isinstance(db["emission_modes_db"], EngineModeDatabase):
-                self._emission_modes_db = db["emission_modes_db"]
-            elif isinstance(db["emission_modes_db"], str) and os.path.isfile(db["emission_modes_db"]):
-                self._emission_modes_db = EngineModeDatabase(db["emission_modes_db"])
-
+        _emission_modes_db = db.get("emission_modes_db")
+        if isinstance(_emission_modes_db, EngineModeDatabase):
+            self._emission_modes_db = _emission_modes_db
+        elif isinstance(_emission_modes_db, str) and \
+                os.path.isfile(_emission_modes_db):
+            self._emission_modes_db = EngineModeDatabase(_emission_modes_db)
         if self._emission_modes_db is None:
             self._emission_modes_db = EngineModeDatabase(db_path)
 
@@ -67,17 +59,17 @@ class EngineStore(with_metaclass(Singleton, Store)):
         #        for ei_key, ei_object in self._emission_indices.items():
         #            ei_object.setModePowerSetting(mode_, power_setting_)
 
-        #instantiate all engine objects
+        # instantiate all engine objects
         self.initEngines()
 
     def initEngines(self):
         for engine_name, ei in list(self.getEngineEmissionIndices().items()):
-            #add engine to store
-            self.setObject(engine_name, Engine({"name":engine_name}))
-            #associate each engine an emission-index object
+            # add engine to store
+            self.setObject(engine_name, Engine({"name": engine_name}))
+            # associate each engine an emission-index object
             self.getObject(engine_name).setEmissionIndex(ei)
 
-            #self.getObject(engine_name).setStartEmissionFactors(ei) #association of start ef by aircraft group! but information only available for movements ->set emission factor when instantiating aircraft object
+            # self.getObject(engine_name).setStartEmissionFactors(ei) #association of start ef by aircraft group! but information only available for movements ->set emission factor when instantiating aircraft object
 
     def getEngineEmissionIndicesDatabase(self):
         return self._emission_indices_db
@@ -100,29 +92,37 @@ class EngineStore(with_metaclass(Singleton, Store)):
         return None
 
 
-class HeliEngineStore(with_metaclass(Singleton, Store)):
+class HeliEngineStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'Engine' objects
     """
 
-    def __init__(self, db_path="", db={
-                "engine_emission_indices_db":None,
-                "engine_modes_db":None,
-                "engine_start_emission_factors_db":None}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {
+                "engine_emission_indices_db": None,
+                "engine_modes_db": None,
+                "engine_start_emission_factors_db": None}
+
         Store.__init__(self)
 
         self._db_path = db_path
 
-        #Emission indices
+        # Emission indices
         self._emission_indices_db = None
-        if  "engine_emission_indices_db" in db:
-            if isinstance(db["engine_emission_indices_db"], HelicopterEngineEmissionIndicesDatabase):
+        if "engine_emission_indices_db" in db:
+            if isinstance(db["engine_emission_indices_db"],
+                          HelicopterEngineEmissionIndicesDatabase):
                 self._emission_indices_db = db["engine_emission_indices_db"]
-            elif isinstance(db["engine_emission_indices_db"], str) and os.path.isfile(db["engine_emission_indices_db"]):
-                self._emission_indices_db = HelicopterEngineEmissionIndicesDatabase(db["engine_emission_indices_db"])
+            elif isinstance(db["engine_emission_indices_db"],
+                            str) and os.path.isfile(
+                    db["engine_emission_indices_db"]):
+                self._emission_indices_db = HelicopterEngineEmissionIndicesDatabase(
+                    db["engine_emission_indices_db"])
 
         if self._emission_indices_db is None:
-            self._emission_indices_db = HelicopterEngineEmissionIndicesDatabase(db_path)
+            self._emission_indices_db = HelicopterEngineEmissionIndicesDatabase(
+                db_path)
 
         self._emission_indices = self._emission_indices_db.getHeliEngineEmissionIndices()
         # self._emission_indices = self._emission_indices_db._heli_emission_indices
@@ -171,28 +171,29 @@ class HeliEngineStore(with_metaclass(Singleton, Store)):
         #         return power_setting_
         return None
 
-if __name__ == "__main__":
-    # create a logger for this module
-    logging.basicConfig(level=logging.DEBUG)
-    logger.setLevel(logging.DEBUG)
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    # create formatter
-    formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    # add ch to logger
-    logger.addHandler(ch)
 
-    path_to_database = os.path.join("..", "..", "example", "CAEPport", "old", "06042020_out.alaqs")
-
-    engine_store = EngineStore(path_to_database)
-    heli_engine_store = HeliEngineStore(path_to_database)
-
-    # #for key, ei in engine_store.getEngineEmissionIndices().items():
-    # #    logger.info("Engine '%s'" %(key))
-    # #    logger.info(ei)
-    # for engine_name, engine in engine_store.getObjects().items():
-    #     logger.info(engine_name, engine.__repr__())
-    # #print engine_store.get()EngineEmissionIndicesDatabase
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     logging.basicConfig(level=logging.DEBUG)
+#     logger.setLevel(logging.DEBUG)
+#     # create console handler and set level to debug
+#     ch = logging.StreamHandler()
+#     ch.setLevel(logging.DEBUG)
+#     # create formatter
+#     formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # add formatter to ch
+#     ch.setFormatter(formatter)
+#     # add ch to logger
+#     logger.addHandler(ch)
+#
+#     path_to_database = os.path.join("..", "..", "example", "CAEPport", "old", "06042020_out.alaqs")
+#
+#     engine_store = EngineStore(path_to_database)
+#     heli_engine_store = HeliEngineStore(path_to_database)
+#
+#     # #for key, ei in engine_store.getEngineEmissionIndices().items():
+#     # #    logger.info("Engine '%s'" %(key))
+#     # #    logger.info(ei)
+#     # for engine_name, engine in engine_store.getObjects().items():
+#     #     logger.info(engine_name, engine.__repr__())
+#     # #print engine_store.get()EngineEmissionIndicesDatabase

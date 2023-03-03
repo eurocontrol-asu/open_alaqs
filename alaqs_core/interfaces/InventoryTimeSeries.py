@@ -1,96 +1,92 @@
-from __future__ import absolute_import
-from builtins import str
-from builtins import object
-from future.utils import with_metaclass
-__author__ = 'ENVISA'
-import logging
-loaded_color_logger= False
-try:
-    from rainbow_logging_handler import RainbowLoggingHandler
-    loaded_color_logger = True
-except ImportError:
-    loaded_color_logger= False
-logger = logging.getLogger("__alaqs__.%s" % (__name__))
-
-import os
-import sys
-from collections import OrderedDict
-
-from .SQLSerializable import SQLSerializable
-from .Singleton import Singleton
-from tools import Conversions
-
-from .Store import Store
-
 import calendar
+import os
+from collections import OrderedDict
 from datetime import datetime, timedelta
 
-MONTH_MAP = {
-    1:"jan",
-    2:"feb",
-    3:"mar",
-    4:"apr",
-    5:"may",
-    6:"jun",
-    7:"jul",
-    8:"aug",
-    9:"sep",
-    10:"oct",
-    11:"nov",
-    12:"dec"
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.tools import conversion
+
+logger = get_logger(__name__)
+
+# Set the names of the month and days of the week to prevent locale issue
+month_abbreviations = {
+    1: "jan",
+    2: "feb",
+    3: "mar",
+    4: "apr",
+    5: "may",
+    6: "jun",
+    7: "jul",
+    8: "aug",
+    9: "sep",
+    10: "oct",
+    11: "nov",
+    12: "dec"
+}
+weekday_abbreviations = {
+    1: "mon",
+    2: "tue",
+    3: "wed",
+    4: "thu",
+    5: "fri",
+    6: "sat",
+    7: "sun"
 }
 
-WEEKDAY_MAP = {
-    1:"mon",
-    2:"tue",
-    3:"wed",
-    4:"thu",
-    5:"fri",
-    6:"sat",
-    7:"sun"
-}
+abbreviation_weekdays = {v: k for k, v in weekday_abbreviations.items()}
+abbreviation_months = {v: k for k, v in month_abbreviations.items()}
 
-class InventoryTimeSeries(object):
-    def __init__(self, val={}):
+
+class InventoryTime:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
         self._format = '%Y-%m-%d %H:%M:%S'
 
-        self._timeid = int(val["time_id"]) if "time_id" in val else -1
-        self._time = Conversions.convertTimeToSeconds(str(val["time"]) if "time" in val else "2000-01-01 00:00:00", self._format)
-        self._year = int(val["year"]) if "year" in val else 2015
-        self._month = int(val["month"]) if "month" in val else 1
-        self._day = int(val["day"]) if "day" in val else 1
-        self._hour = int(val["hour"]) if "hour" in val else 1
-        self._weekday_id = int(val["weekday_id"]) if "weekday_id" in val else 1
-        self._mix_height = float(val["mix_height"]) if "mix_height" in val else 914.4
+        self._time_id = int(val.get("time_id", -1))
+        self._time = conversion.convertTimeToSeconds(str(
+            val.get("time", "2000-01-01 00:00:00")
+        ), self._format)
+        self._year = int(val.get("year", 2015))
+        self._month = int(val.get("month", 1))
+        self._day = int(val.get("day", 1))
+        self._hour = int(val.get("hour", 1))
+        self._weekday_id = int(val.get("weekday_id", 1))
+        self._mix_height = float(val.get("mix_height", 914.4))
 
     def getTimeID(self):
-        return self._timeid
+        return self._time_id
+
     def setTimeID(self, val):
-        self._timeid = int(val)
+        self._time_id = int(val)
 
     def getTime(self):
         return self._time
 
     def getTimeAsString(self):
-        return Conversions.convertSecondsToTimeString(self._time, self._format)
+        return conversion.convertSecondsToTimeString(self._time, self._format)
 
     def getTimeAsTimeTuple(self):
-        return Conversions.convertSecondsToTime(self._time, self._format)
+        return conversion.convertSecondsToTime(self._time)
 
     def getTimeAsDateTime(self):
-        return Conversions.convertSecondsToDateTime(self._time, self._format)
+        return conversion.convertSecondsToDateTime(self._time, self._format)
 
     def setTime(self, val):
-        self._time = Conversions.convertTimeToSeconds(val, self._format)
+        self._time = conversion.convertTimeToSeconds(val, self._format)
 
     def getYear(self):
         return self._year
+
     def setYear(self, val):
-        self._year= int(val)
+        self._year = int(val)
 
     def getMonth(self):
-        if self._month in MONTH_MAP:
-            return MONTH_MAP[self._month]
+        if self._month in month_abbreviations:
+            return month_abbreviations[self._month]
         return None
 
     def getMonthID(self):
@@ -98,18 +94,24 @@ class InventoryTimeSeries(object):
 
     def setMonth(self, val):
         if isinstance(val, str):
-            if val.lower() in [value_ for key_, value_ in list(MONTH_MAP.items())]:
-                self._month = MONTH_MAP[val.lower()]
+            if val.lower() in abbreviation_months:
+                self._month = abbreviation_months[val.lower()]
             else:
-                raise Exception("Did not find index for month with name '%s'. Valid names are '%s'." % (val, ",".join([value_ for key_, value_ in list(MONTH_MAP.items())])))
+                raise Exception("Did not find index for month with name '%s'. "
+                                "Valid names are '%s'." % (
+                                    val,
+                                    ",".join(abbreviation_months.keys())))
         elif isinstance(val, int) or isinstance(val, float):
-            self._month= int(val)
+            self._month = int(val)
         else:
-            raise Exception("'%s' is of type '%s', but 'str' or int' expected.'" % (val, str(type(val))))
+            raise Exception(f"'{val}' is of type '{str(type(val))}', "
+                            f"but 'str' or int' expected.'")
 
     def getDay(self):
-        if (datetime(self._year, self._month, self._day).weekday() + 1) in WEEKDAY_MAP:
-            return WEEKDAY_MAP[1 + datetime(self._year, self._month, self._day).weekday()]
+        # Get the weekday (1-indexed)
+        weekday = datetime(self._year, self._month, self._day).weekday() + 1
+        if weekday in weekday_abbreviations:
+            return weekday_abbreviations[weekday]
         return None
 
     def getDayID(self):
@@ -117,30 +119,40 @@ class InventoryTimeSeries(object):
 
     def setDay(self, val):
         if isinstance(val, str):
-            if val.lower() in [value_ for key_, value_ in list(WEEKDAY_MAP.items())]:
-                self._day = WEEKDAY_MAP[val.lower()]
+            if val.lower() in abbreviation_weekdays:
+                self._day = abbreviation_weekdays[val.lower()]
             else:
-                raise Exception("Did not find index for month with name '%s'. Valid names are '%s'." % (val, ",".join([value_ for key_, value_ in list(WEEKDAY_MAP.items())])))
-        elif isinstance(val, int) or isinstance(val, float):
-            self._day= int(val)
+                raise Exception("Did not find index for month with name '%s'. "
+                                "Valid names are '%s'." % (
+                                    val,
+                                    ",".join(abbreviation_weekdays.keys())))
+        elif isinstance(val, (int, float)):
+            self._day = int(val)
         else:
-            raise Exception("'%s' is of type '%s', but 'str' or int' expected.'" % (val, str(type(val))))
+            raise Exception(f"'{val}' is of type '{str(type(val))}', "
+                            f"but 'str' or int' expected.'")
 
     def getHour(self):
         return self._hour
+
     def setHour(self, val):
-        self._hour= int(val)
+        self._hour = int(val)
+
     def getWeekdayID(self):
         return self._weekday_id
+
     def setWeekdayID(self, val):
-        self._weekday_id= int(val)
+        self._weekday_id = int(val)
+
     def getMixingHeight(self):
         return self._mix_height
+
     def setMixingHeight(self, val):
-        self._mix_height= float(val)
+        self._mix_height = float(val)
 
     def getFormat(self):
         return self._format
+
     def setFormat(self, val):
         self._format = val
 
@@ -155,7 +167,8 @@ class InventoryTimeSeries(object):
         return self.getTimeAsDateTime() + timedelta(**kwargs)
 
     def offsetAsString(self, **kwargs):
-        return datetime.strftime(self.offsetAsDateTime(**kwargs),  self.getFormat())
+        return datetime.strftime(self.offsetAsDateTime(**kwargs),
+                                 self.getFormat())
 
     def __str__(self):
         val = "\n Time id: %i" % (self.getTimeID())
@@ -169,44 +182,50 @@ class InventoryTimeSeries(object):
 
         return val
 
-class InventoryTimeSeriesStore(with_metaclass(Singleton, Store)):
+
+class InventoryTimeSeriesStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'InventoryTimeSeries' objects
     """
 
-    def __init__(self, db_path="", db={}):
+    def __init__(self, db_path="", db=None):
+        if db is None:
+            db = {}
         Store.__init__(self)
 
         self._db_path = db_path
 
-        #Engine Modes
+        # Engine Modes
         self._inventory_timeseries_db = None
-        if  "inventory_timeseries_db" in db:
-            if isinstance(db["inventory_timeseries_db"], InventoryTimeSeriesDatabase):
-                self._inventory_timeseries_db = db["inventory_timeseries_db"]
-            elif isinstance(db["inventory_timeseries_db"], str) and os.path.isfile(db["inventory_timeseries_db"]):
-                self._inventory_timeseries_db = InventoryTimeSeriesDatabase(db["inventory_timeseries_db"])
-
-        if self._inventory_timeseries_db is None:
+        inventory_timeseries_db_ = db.get("inventory_timeseries_db")
+        if isinstance(inventory_timeseries_db_, InventoryTimeSeriesDatabase):
+            self._inventory_timeseries_db = inventory_timeseries_db_
+        elif isinstance(inventory_timeseries_db_, str) \
+                and os.path.isfile(inventory_timeseries_db_):
+            self._inventory_timeseries_db = InventoryTimeSeriesDatabase(
+                inventory_timeseries_db_)
+        else:
             self._inventory_timeseries_db = InventoryTimeSeriesDatabase(db_path)
 
-        #instantiate all InventoryTimeSeries objects
-        self.initInventoryTimeSeries()
+        # instantiate all InventoryTime objects
+        self.initInventoryTimes()
 
-    def initInventoryTimeSeries(self):
-        for key, timeseries_dict in list(self.getInventoryTimeSeriesDatabase().getEntries().items()):
-            #add engine to store
-            self.setObject(timeseries_dict["time_id"] if "time_id" in timeseries_dict else -1, InventoryTimeSeries(timeseries_dict))
+    def initInventoryTimes(self):
+        entries = self.getInventoryTimeSeriesDatabase().getEntries()
+        for key, timeseries_dict in entries.items():
+            self.setObject(
+                timeseries_dict.get("time_id", -1),
+                InventoryTime(timeseries_dict))
 
     def getInventoryTimeSeriesDatabase(self):
         return self._inventory_timeseries_db
 
     def getTimeSeries(self):
-        # for index_, ts_ in self.getObjects().items():
         for index_, ts_ in sorted(self.getObjects().items()):
             yield ts_
 
-class InventoryTimeSeriesDatabase(with_metaclass(Singleton, SQLSerializable)):
+
+class InventoryTimeSeriesDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to runway shape file in the spatialite database
     """
@@ -214,48 +233,55 @@ class InventoryTimeSeriesDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="tbl_InvTime",
-                 table_columns_type_dict=OrderedDict([
-                    ("time_id" , "INTEGER PRIMARY KEY NOT NULL"),
-                    ("time" , "DATETIME"),
-                    ("year" , "INT"),
-                    ("month" , "INT"),
-                    ("day" , "INT"),
-                    ("hour", "DATETIME"),
-                    ("weekday_id" , "INT"),
-                    ("mix_height" , "DECIMAL")
-                ]),
-                 primary_key="time_id",
-                 geometry_columns=[]
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+                 table_columns_type_dict=None, primary_key="time_id",
+                 geometry_columns=None
+                 ):
+
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("time_id", "INTEGER PRIMARY KEY NOT NULL"),
+                ("time", "DATETIME"),
+                ("year", "INT"),
+                ("month", "INT"),
+                ("day", "INT"),
+                ("hour", "DATETIME"),
+                ("weekday_id", "INT"),
+                ("mix_height", "DECIMAL")
+            ])
+        if geometry_columns is None:
+            geometry_columns = []
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key,
+                                 geometry_columns)
 
         if self._db_path:
             self.deserialize()
 
-if __name__ == "__main__":
-    # create a logger for this module
-    #logging.basicConfig(level=logging.DEBUG)
-
-    # logger.setLevel(logging.DEBUG)
-    # # create console handler and set level to debug
-    # ch = logging.StreamHandler()
-    # if loaded_color_logger:
-    #     ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
-    #
-    # ch.setLevel(logging.DEBUG)
-    # # create formatter
-    # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    # # add formatter to ch
-    # ch.setFormatter(formatter)
-    # # add ch to logger
-    # logger.addHandler(ch)
-
-    path_to_database = os.path.join("..", "..", "example", "lfmn2_out.alaqs")
-
-    Timestore = InventoryTimeSeriesStore(path_to_database)
-
-    # for ts_id, ts in Timestore.getObjects().items():
-    #     print ts
-    #     print datetime(ts.getYear(), ts.getMonthID(), ts.getDayID()).weekday()
-    #     print WEEKDAY_MAP[1 + datetime(ts.getYear(), ts.getMonthID(), ts.getDayID()).weekday()]
-    #     # logger.debug(ts)
+# if __name__ == "__main__":
+#     # create a logger for this module
+#     #logging.basicConfig(level=logging.DEBUG)
+#
+#     # logger.setLevel(logging.DEBUG)
+#     # # create console handler and set level to debug
+#     # ch = logging.StreamHandler()
+#     # if loaded_color_logger:
+#     #     ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
+#     #
+#     # ch.setLevel(logging.DEBUG)
+#     # # create formatter
+#     # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+#     # # add formatter to ch
+#     # ch.setFormatter(formatter)
+#     # # add ch to logger
+#     # logger.addHandler(ch)
+#
+#     path_to_database = os.path.join("..", "..", "example", "lfmn2_out.alaqs")
+#
+#     Timestore = InventoryTimeSeriesStore(path_to_database)
+#
+#     # for ts_id, ts in Timestore.getObjects().items():
+#     #     print ts
+#     #     print datetime(ts.getYear(), ts.getMonthID(), ts.getDayID()).weekday()
+#     #     print WEEKDAY_MAP[1 + datetime(ts.getYear(), ts.getMonthID(), ts.getDayID()).weekday()]
+#     #     # logger.debug(ts)

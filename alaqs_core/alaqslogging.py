@@ -1,34 +1,37 @@
-__author__ = 'ENVISA'
 import logging
-import logging.handlers
-import os
-# import datetime
+from pathlib import Path
 
-# LOG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "alaqs-log.log")
-# logging.handlers = []
+# Set the path to the log file
+log_path = Path(__file__).parents[1] / 'alaqs.log'
 
-# from logging.handlers import RotatingFileHandler
+# Set the message format
+log_format = '%(asctime)s - %(levelname)s - %(name)-12s : %(message)s'
+log_date_format = '%d-%m-%Y %H:%M:%S'
 
-LOG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "alaqs-log.log")
-# logging.basicConfig(level='DEBUG', filename=LOG_FILE_PATH)
-for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler)
+# Set the (default) log level
+log_level = 'INFO'
 
-#adds the root logger
-logger_format = '%(asctime)s - %(levelname)s - %(name)-12s : %(message)s'
-logger_date_format = '%d-%m-%Y %H:%M:%S'
 
-logging.basicConfig(level=logging.INFO,
-                    format=logger_format,
-                    datefmt=logger_date_format,
-                    filename=LOG_FILE_PATH,
-                    filemode='w')
+def log_init():
+    """
+    Configure the logging module for the OpenALAQS plugin.
+    """
+    # Remove the log handlers
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
 
-# logger = logging.getLogger(__name__)
-# logger.setLevel('DEBUG')
+    # Configure the logger
+    logging.basicConfig(level=logging.INFO,
+                        format=log_format,
+                        datefmt=log_date_format,
+                        filename=log_path,
+                        filemode='w')
 
-# Use FileHandler() to log to a file
-# file_handler = logging.FileHandler(LOG_FILE_PATH, mode='w')
-# formatter = logging.Formatter(logger_format)
-# file_handler.setFormatter(formatter)
-# logger.addHandler(file_handler)
+
+def get_logger(name: str) -> logging.Logger:
+    """
+    Configure the logger for the indicated module by name.
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(log_level)
+    return logger

@@ -57,7 +57,7 @@ class Ui_DialogOpenDatabase(object):
 
     def retranslateUi(self, DialogOpenDatabase):
         _translate = QtCore.QCoreApplication.translate
-        DialogOpenDatabase.setWindowTitle(_translate("DialogOpenDatabase", "Open an existing ALAQS database"))
+        DialogOpenDatabase.setWindowTitle(_translate("DialogOpenDatabase", "OpenALAQS - Open an existing ALAQS database"))
         self.pushButtonBrowse.setText(_translate("DialogOpenDatabase", "Browse"))
         self.pushButtonOpenDatabase.setText(_translate("DialogOpenDatabase", "Open Project Database"))
         self.pushButtonCancel.setText(_translate("DialogOpenDatabase", "Cancel"))

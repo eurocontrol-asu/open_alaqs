@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>353</width>
-    <height>473</height>
+    <width>464</width>
+    <height>553</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -127,6 +127,26 @@
        <item row="1" column="1">
         <widget class="QLineEdit" name="height"/>
        </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="speed_label">
+         <property name="text">
+          <string>Speed [km/h]</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="speed"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="scenario_label">
+         <property name="text">
+          <string>Scenario</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QComboBox" name="scenario"/>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tab_2">
@@ -166,12 +186,99 @@
        <item row="2" column="0">
         <widget class="QLabel" name="label_12">
          <property name="text">
-          <string>Hourly</string>
+          <string>Monthly</string>
          </property>
         </widget>
        </item>
        <item row="2" column="1">
         <widget class="QComboBox" name="month_profile"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_4">
+      <attribute name="title">
+       <string>Fleet Mix</string>
+      </attribute>
+      <layout class="QFormLayout" name="formLayout_5">
+       <item row="0" column="0">
+        <widget class="QLabel" name="pc_petrol_label">
+         <property name="text">
+          <string>PC (Petrol) [%]</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="pc_petrol_percentage"/>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="pc_diesel_label">
+         <property name="text">
+          <string>PC (Diesel) [%]</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="pc_diesel_percentage"/>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="lcv_petrol_label">
+         <property name="text">
+          <string>LCV (Petrol) [%]</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="lcv_petrol_percentage"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="lcv_diesel_label">
+         <property name="text">
+          <string>LCV (Diesel) [%]</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="lcv_diesel_percentage"/>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="hdt_petrol_label">
+         <property name="text">
+          <string>HDT (Petrol) [%]</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLineEdit" name="hdt_petrol_percentage"/>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="hdt_diesel_label">
+         <property name="text">
+          <string>HDT (Diesel) [%]</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLineEdit" name="hdt_diesel_percentage"/>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="motorcycle_label">
+         <property name="text">
+          <string>Motorcycle [%]</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QLineEdit" name="motorcycle_petrol_percentage"/>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="bus_label">
+         <property name="text">
+          <string>Bus [%]</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QLineEdit" name="bus_diesel_percentage"/>
        </item>
       </layout>
      </widget>
@@ -351,87 +458,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_4">
-      <attribute name="title">
-       <string>Fleet Mix</string>
-      </attribute>
-      <layout class="QFormLayout" name="formLayout_5">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_22">
-         <property name="text">
-          <string>PC [%]</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLineEdit" name="vehicle_light"/>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label_23">
-         <property name="text">
-          <string>LDV [%]</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLineEdit" name="vehicle_medium"/>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_24">
-         <property name="text">
-          <string>HDV [%]</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLineEdit" name="vehicle_heavy"/>
-       </item>
-      </layout>
-     </widget>
     </widget>
-   </item>
-   <item>
-    <layout class="QFormLayout" name="formLayout">
-     <property name="fieldGrowthPolicy">
-      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_20">
-       <property name="text">
-        <string>Speed (km/h)</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QLineEdit" name="speed">
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_21">
-       <property name="text">
-        <string>Scenario</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QComboBox" name="scenario"/>
-     </item>
-    </layout>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
@@ -446,9 +473,23 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>buttonBox</tabstop>
+  <tabstop>roadway_id</tabstop>
+  <tabstop>vehicle_year</tabstop>
+  <tabstop>height</tabstop>
+  <tabstop>hour_profile</tabstop>
+  <tabstop>daily_profile</tabstop>
+  <tabstop>month_profile</tabstop>
+  <tabstop>co_gm_km</tabstop>
   <tabstop>hc_gm_km</tabstop>
+  <tabstop>nox_gm_km</tabstop>
+  <tabstop>sox_gm_km</tabstop>
+  <tabstop>pm10_gm_km</tabstop>
+  <tabstop>p1_gm_km</tabstop>
   <tabstop>p2_gm_km</tabstop>
+  <tabstop>method</tabstop>
+  <tabstop>button_recalculate</tabstop>
+  <tabstop>instudy</tabstop>
+  <tabstop>tabWidget</tabstop>
  </tabstops>
  <resources/>
  <connections>
@@ -459,8 +500,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>268</x>
+     <y>541</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -475,8 +516,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
+     <x>336</x>
+     <y>541</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>

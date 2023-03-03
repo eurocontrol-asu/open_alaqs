@@ -1,169 +1,147 @@
-# -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import absolute_import
-import sys, os
-sys.path.append("..")
-__author__ = 'ENVISA'
-
-
-# import logging
-import alaqslogging
-
-# logger = logging.getLogger(__name__)
-logger = alaqslogging.logging.getLogger(__name__)
-# To override the default severity of logging
-logger.setLevel('DEBUG')
-# Use FileHandler() to log to a file
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-# Don't forget to add the file handler
-logger.addHandler(file_handler)
-
-from builtins import str
-from builtins import object
-try:
-    from . import __init__ #setup the paths for direct calls of the module
-except:
-    import __init__
-from future.utils import with_metaclass
-
-import pandas as pd
-import geopandas as gpd
-import numpy as np
-from shapely.ops import nearest_points
-from shapely.wkt import loads
-from shapely.geometry import MultiPoint, Point, LineString, MultiLineString
-import datetime
-from os.path import expanduser
-# from qgis.PyQt import QtGui, QtCore, QtWidgets
-from PyQt5 import QtCore, QtGui, QtWidgets
-from collections import OrderedDict
-import difflib
 import copy
-import math
-from tools import Conversions
-from tools import Spatial
-from tools.NOx_correction_ambient import NOx_correction_for_ambient_conditions
-
-try:
-    from .SQLSerializable import SQLSerializable
-    from .Singleton import Singleton
-    from .Store import Store
-    from .EngineStore import EngineStore, HeliEngineStore
-    from .Aircraft import AircraftStore
-    from .AircraftTrajectory import AircraftTrajectoryStore, AircraftTrajectoryPoint, TrajectoryPoint, AircraftTrajectory
-    from .Emissions import Emission, EmissionIndex
-    from .Runway import RunwayDatabase
-    from .Runway import RunwayStore
-    from .Gate import GateStore
-    from .Taxiway import TaxiwayRoutesStore
-    from .AmbientCondition import AmbientCondition, AmbientConditionStore
-except:
-    from SQLSerializable import SQLSerializable
-    from Singleton import Singleton
-    from Store import Store
-    from EngineStore import EngineStore, HeliEngineStore
-    from Aircraft import AircraftStore
-    from AircraftTrajectory import AircraftTrajectoryStore, AircraftTrajectoryPoint, TrajectoryPoint, AircraftTrajectory
-    from Emissions import Emission, EmissionIndex
-    from Runway import RunwayDatabase, RunwayStore
-    from Gate import GateStore
-    from Taxiway import TaxiwayRoutesStore
-    from AmbientCondition import AmbientCondition, AmbientConditionStore
+import difflib
+import sys
+from collections import OrderedDict
 
 import matplotlib
-matplotlib.use('Qt5Agg')
-import matplotlib.pyplot as plt
-# plt.ion()
+import numpy as np
+import pandas as pd
+from PyQt5 import QtCore, QtWidgets
+from shapely.geometry import MultiLineString
+from shapely.wkt import loads
+from inspect import getframeinfo, currentframe
 
-defaultEmissions={
-                "fuel_kg" : 0.,
-                "co_g" : 0.,
-                "co2_g" : 0.,
-                "hc_g" : 0.,
-                "nox_g" : 0.,
-                "sox_g" : 0.,
-                "pm10_g" : 0.,
-                "p1_g" : 0.,
-                "p2_g": 0.,
-                "pm10_prefoa3_g" : 0.,
-                "pm10_nonvol_g" : 0.,
-                "pm10_sul_g" : 0.,
-                "pm10_organic_g" : 0.
-            }
-defaultEI={
-            "fuel_kg_sec" : 0.,
-            "co_g_kg" : 0.,
-            "co2_g_kg" : 3.16*1000.,
-            "hc_g_kg" : 0.,
-            "nox_g_kg" : 0.,
-            "sox_g_kg" : 0.,
-            "pm10_g_kg" : 0.,
-            "p1_g_kg" : 0.,
-            "p2_g_kg": 0.,
-            "smoke_number" : 0.,
-            "smoke_number_maximum" : 0.,
-            "fuel_type"  : "",
-            "pm10_prefoa3_g_kg" : 0.,
-            "pm10_nonvol_g_kg" : 0.,
-            "pm10_sul_g_kg" : 0.,
-            "pm10_organic_g_kg" : 0.
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.interfaces.Aircraft import AircraftStore
+from open_alaqs.alaqs_core.interfaces.AircraftTrajectory import \
+    AircraftTrajectoryStore, AircraftTrajectoryPoint, AircraftTrajectory
+from open_alaqs.alaqs_core.interfaces.Emissions import Emission
+from open_alaqs.alaqs_core.interfaces.EngineStore import EngineStore, \
+    HeliEngineStore
+from open_alaqs.alaqs_core.interfaces.Gate import GateStore
+from open_alaqs.alaqs_core.interfaces.Runway import RunwayStore
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.interfaces.Taxiway import TaxiwayRoutesStore
+from open_alaqs.alaqs_core.tools import conversion, spatial
+from open_alaqs.alaqs_core.tools.ProgressBarStage import ProgressBarStage
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
+from open_alaqs.alaqs_core.tools.nox_correction_ambient import \
+    nox_correction_for_ambient_conditions
+
+sys.path.append("..")
+
+matplotlib.use('Qt5Agg')
+
+logger = get_logger(__name__)
+
+defaultEmissions = {
+    "fuel_kg": 0.,
+    "co_g": 0.,
+    "co2_g": 0.,
+    "hc_g": 0.,
+    "nox_g": 0.,
+    "sox_g": 0.,
+    "pm10_g": 0.,
+    "p1_g": 0.,
+    "p2_g": 0.,
+    "pm10_prefoa3_g": 0.,
+    "pm10_nonvol_g": 0.,
+    "pm10_sul_g": 0.,
+    "pm10_organic_g": 0.,
+    "nvpm_g": 0.,
+    "nvpm_number": 0.
+}
+defaultEI = {
+    "fuel_kg_sec": 0.,
+    "co_g_kg": 0.,
+    "co2_g_kg": 3.16 * 1000.,
+    "hc_g_kg": 0.,
+    "nox_g_kg": 0.,
+    "sox_g_kg": 0.,
+    "pm10_g_kg": 0.,
+    "p1_g_kg": 0.,
+    "p2_g_kg": 0.,
+    "smoke_number": 0.,
+    "smoke_number_maximum": 0.,
+    "fuel_type": "",
+    "pm10_prefoa3_g_kg": 0.,
+    "pm10_nonvol_g_kg": 0.,
+    "pm10_sul_g_kg": 0.,
+    "pm10_organic_g_kg": 0.,
+    "nvpm_g_kg": 0.,
+    "nvpm_number": 0.
 }
 
-class Movement(object):
-    def __init__(self, val={}):
+
+class Movement:
+    def __init__(self, val=None):
+        if val is None:
+            val = {}
 
         self._time = None
         _col = "runway_time"
-        if not _col in val:
+        if _col not in val:
             logger.error("'%s' not set, but necessary input" % (_col))
         else:
-            self._time = Conversions.convertTimeToSeconds(val[_col])
+            self._time = conversion.convertTimeToSeconds(val[_col])
             if self._time is None:
                 logger.error("Could not convert '%s', which is of type '%s', to a valid time format." % (str(val[_col]), str(type(val[_col]))))
         self._block_time = None
         _col = "block_time"
-        if not _col in val:
+        if _col not in val:
             logger.error("'%s' not set, but necessary input" % (_col))
         else:
-            self._block_time = Conversions.convertTimeToSeconds(val[_col])
+            self._block_time = conversion.convertTimeToSeconds(val[_col])
             if self._block_time is None:
                 logger.error("Could not convert '%s', which is of type '%s', to a valid time format." % (str(val[_col]), str(type(val[_col]))))
 
-        self._engine_name = str(val["engine_name"]) if "engine_name" in val else ""
+        self._engine_name = str(val.get("engine_name", ""))
         self._apu_code = int(val["apu_code"]) if "apu_code" in val and val["apu_code"] else 0
         # self._apu_code = 0 #(stand only), 1 (stand and taxiway) or 2 ()stand, taxiing and take - off / climb - out or approach / landing
 
-        self._domestic = str(val["domestic"]) if "domestic" in val else ""
-        self._departure_arrival = str(val["departure_arrival"]) if "departure_arrival" in val else ""
-        self._profile_id = str(val["profile_id"]) if "profile_id" in val else ""
-        self._track_id = str(val["track_id"]) if "track_id" in val else ""
-        self._runway_direction = str(val["runway"]) if "runway" in val else ""
+        self._domestic = str(val.get("domestic", ""))
+        self._departure_arrival = str(val.get("departure_arrival", ""))
+        self._profile_id = str(val.get("profile_id", ""))
+        self._track_id = str(val.get("track_id", ""))
+        self._runway_direction = str(val.get("runway", ""))
 
-        self._gate_name = str(val["gate"]) if "gate" in val else ""
+        self._gate_name = str(val.get("gate", ""))
         self._gate = None
         self._taxi_route = None
-        self._taxi_engine_count = int(val["taxi_engine_count"]) if "taxi_engine_count" in val and val["taxi_engine_count"] else 2
-        self._tow_ratio = float(val["tow_ratio"]) if "tow_ratio" in val else 1.
-        self._taxi_fuel_ratio = float(val["taxi_fuel_ratio"]) if "taxi_fuel_ratio" in val else 1.
-        self._engine_thrust_level_taxiing = float(val["engine_thrust_level_taxiing"]) if "engine_thrust_level_taxiing" in val else 0.07
+        self._taxi_engine_count = conversion.convertToInt(
+            val.get("taxi_engine_count"), 2)
+        self._tow_ratio = conversion.convertToFloat(
+            val.get("tow_ratio"), 1)
+        self._taxi_fuel_ratio = conversion.convertToFloat(
+            val.get("taxi_fuel_ratio"), 1)
+        self._engine_thrust_level_taxiing = conversion.convertToFloat(
+            val.get("engine_thrust_level_taxiing"), .07)
 
-        self._set_time_of_main_engine_start_after_block_off_in_s = Conversions.convertToFloat(val["set_time_of_main_engine_start_after_block_off_in_s"]) if "set_time_of_main_engine_start_after_block_off_in_s" in val else None
-        self._set_time_of_main_engine_start_before_takeoff_in_s  = Conversions.convertToFloat(val["set_time_of_main_engine_start_before_takeoff_in_s"]) if "set_time_of_main_engine_start_before_takeoff_in_s" in val else None
-        self._set_time_of_main_engine_off_after_runway_exit_in_s = Conversions.convertToFloat(val["set_time_of_main_engine_off_after_runway_exit_in_s"]) if "set_time_of_main_engine_off_after_runway_exit_in_s" in val else None
+        self._set_time_of_main_engine_start_after_block_off_in_s = \
+            conversion.convertToFloat(
+                val.get("set_time_of_main_engine_start_after_block_off_in_s"))
+        self._set_time_of_main_engine_start_before_takeoff_in_s = \
+            conversion.convertToFloat(
+                val.get("set_time_of_main_engine_start_before_takeoff_in_s"))
+        self._set_time_of_main_engine_off_after_runway_exit_in_s = \
+            conversion.convertToFloat(
+                val.get("set_time_of_main_engine_off_after_runway_exit_in_s"))
 
-        if not self._set_time_of_main_engine_start_after_block_off_in_s is None:
-            self._set_time_of_main_engine_start_after_block_off_in_s = abs(self._set_time_of_main_engine_start_after_block_off_in_s)
+        if self._set_time_of_main_engine_start_after_block_off_in_s is not None:
+            self._set_time_of_main_engine_start_after_block_off_in_s = \
+                abs(self._set_time_of_main_engine_start_after_block_off_in_s)
 
-        if not self._set_time_of_main_engine_start_before_takeoff_in_s is None:
-            self._set_time_of_main_engine_start_before_takeoff_in_s = abs(self._set_time_of_main_engine_start_before_takeoff_in_s)
+        if self._set_time_of_main_engine_start_before_takeoff_in_s is not None:
+            self._set_time_of_main_engine_start_before_takeoff_in_s = \
+                abs(self._set_time_of_main_engine_start_before_takeoff_in_s)
 
-        if not self._set_time_of_main_engine_off_after_runway_exit_in_s is None:
-            self._set_time_of_main_engine_off_after_runway_exit_in_s = abs(self._set_time_of_main_engine_off_after_runway_exit_in_s)
+        if self._set_time_of_main_engine_off_after_runway_exit_in_s is not None:
+            self._set_time_of_main_engine_off_after_runway_exit_in_s = \
+                abs(self._set_time_of_main_engine_off_after_runway_exit_in_s)
 
-        self._number_of_stop_and_gos = Conversions.convertToFloat(val["number_of_stop_and_gos"]) if "number_of_stop_and_gos" in val else 0.
+        self._number_of_stop_and_gos = conversion.convertToFloat(
+            val.get("number_of_stop_and_gos", 0))
 
         self._aircraft = None
         self._aircraftengine = None
@@ -173,6 +151,7 @@ class Movement(object):
 
     def getAPUCode(self):
         return self._apu_code
+
     def setAPUCode(self, var):
         self._apu_code = var
 
@@ -184,25 +163,35 @@ class Movement(object):
         try:
             if ac_type and gate_type:
                 apu_emis_ = self.getAircraft().getApuEmissions()
-                if ac_type in self.getAircraft().getApuTimes():
-                    if gate_type in self.getAircraft().getApuTimes()[ac_type]:
-                        apu_time_ = self.getAircraft().getApuTimes()[ac_type][gate_type]["arr_s"] if self.isArrival() else \
-                            self.getAircraft().getApuTimes()[ac_type][gate_type]["dep_s"]
-        except Exception as exp:
+                _apu_times = self.getAircraft().getApuTimes()
+                if ac_type in _apu_times:
+                    _ac_apu_times = _apu_times[ac_type]
+                    if gate_type in _ac_apu_times:
+                        _gate_apu_times = _ac_apu_times[gate_type]
+                        apu_time_ = _gate_apu_times[
+                            "arr_s" if self.isArrival() else "dep_s"]
+        except Exception as e:
             if seg == 0:
-                logger.info("No APU info for %s (AC type: %s, gate type: %s)"%(self.getName(), ac_type, gate_type))
+                logger.info(
+                    "No APU info for %s (AC type: %s, gate type: %s)" % (
+                    self.getName(), ac_type, gate_type))
         return apu_time_, apu_emis_
 
     def getSingleEngineTaxiingTimeOfMainEngineStartAfterBlockOff(self):
         return self._set_time_of_main_engine_start_after_block_off_in_s
+
     def setSingleEngineTaxiingTimeOfMainEngineStartAfterBlockOff(self, var):
         self._set_time_of_main_engine_start_after_block_off_in_s = var
+
     def getSingleEngineTaxiingTimeOfMainEngineStartBeforeTakeoff(self):
         return self._set_time_of_main_engine_start_before_takeoff_in_s
+
     def setSingleEngineTaxiingTimeOfMainEngineStartBeforeTakeoff(self, var):
         self._set_time_of_main_engine_start_before_takeoff_in_s = var
+
     def getSingleEngineTaxiingMainEngineOffAfterRunwayExit(self):
         return self._set_time_of_main_engine_off_after_runway_exit_in_s
+
     def setSingleEngineTaxiingMainEngineOffAfterRunwayExit(self, var):
         self._set_time_of_main_engine_off_after_runway_exit_in_s = var
 
@@ -216,19 +205,22 @@ class Movement(object):
         # if self.getAircraft() and self.getAircraft().getRegistration():
         #     return self.getAircraft().getRegistration()
         # else:
-        return "%s-%s-%s-%s" % (self.getAircraft().getICAOIdentifier(),self.getDepartureArrivalFlag(),
-                                    self.getRunwayTime(as_str=True),self.getBlockTime(as_str=True))
+        return "%s-%s-%s-%s" % (
+            self.getAircraft().getICAOIdentifier(),
+            self.getDepartureArrivalFlag(),
+            self.getRunwayTime(as_str=True),
+            self.getBlockTime(as_str=True))
 
     def getEngineThrustLevelTaxiing(self):
         return self._engine_thrust_level_taxiing
+
     def setEngineThrustLevelTaxiing(self, var):
         self._engine_thrust_level_taxiing = var
 
     def calculateGateEmissions(self, sas='none'):
-        # logger.debug("Calculate gate emissions for aircraft of type '%s'" % (self.getAircraft().getType()))
-
-        """Calculate gate emissions for a specific source based on the source name and time period. The method for calculating
-        emissions from gates requires establishing the sum of three types of emissions:
+        """Calculate gate emissions for a specific source based on the source
+         name and time period. The method for calculating emissions from gates
+         requires establishing the sum of three types of emissions:
 
         1. Emissions from GSE - Data comes from default_gate
         2. Emissions from GPU
@@ -298,35 +290,36 @@ class Movement(object):
 
     def CalculateParallels(self, geometry_wkt_init, width, height, shift, EPSG_source, EPSG_target):
 
-        (geo_wkt, swap) = Spatial.reproject_geometry(geometry_wkt_init, EPSG_source, EPSG_target)
+        (geo_wkt, swap) = spatial.reproject_geometry(geometry_wkt_init, EPSG_source, EPSG_target)
 
-        points = Spatial.getAllPoints(geo_wkt, swap)
+        points = spatial.getAllPoints(geo_wkt, swap)
         lon1, lat1, alt1 = points[0][1], points[0][0], points[0][2]
         lon2, lat2, alt2 = points[1][1], points[1][0], points[1][2]
 
-        inverseDistance_dict = Spatial.getInverseDistance(lat1, lon1, lat2, lon2)
+        inverseDistance_dict = spatial.getInverseDistance(lat1, lon1, lat2, lon2)
         azi1, azi2 = inverseDistance_dict["azi1"], inverseDistance_dict["azi2"]
 
         # left
-        direct_dic1l = Spatial.getDistance(lat1, lon1, 90 + azi1, Conversions.convertToFloat(width) / 2, EPSG_id=EPSG_target)
-        direct_dic2l = Spatial.getDistance(lat2, lon2, 90 + azi2, Conversions.convertToFloat(width) / 2, EPSG_id=EPSG_target)
+        direct_dic1l = spatial.getDistance(lat1, lon1, 90 + azi1, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
+        direct_dic2l = spatial.getDistance(lat2, lon2, 90 + azi2, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
 
         newline_left = 'LINESTRING Z(%s %s %s, %s %s %s)' % (
         direct_dic1l['lon2'], direct_dic1l['lat2'], alt1 + height, direct_dic2l['lon2'], direct_dic2l['lat2'], alt2 + height)
 
         # right
-        direct_dic1r = Spatial.getDistance(lat1, lon1, 270 + azi1, Conversions.convertToFloat(width) / 2, EPSG_id=EPSG_target)
-        direct_dic2r = Spatial.getDistance(lat2, lon2, 270 + azi2, Conversions.convertToFloat(width) / 2, EPSG_id=EPSG_target)
+        direct_dic1r = spatial.getDistance(lat1, lon1, 270 + azi1, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
+        direct_dic2r = spatial.getDistance(lat2, lon2, 270 + azi2, conversion.convertToFloat(width) / 2, epsg_id=EPSG_target)
 
         newline_right = 'LINESTRING Z(%s %s %s, %s %s %s)' % (
         direct_dic1r['lon2'], direct_dic1r['lat2'], alt1 + height, direct_dic2r['lon2'], direct_dic2r['lat2'], alt2 + height)
 
         return newline_left, newline_right
 
-
-    def calculateTaxiingEmissions(self, method={"name":"bymode", "config":{}}, mode="TX", sas='none'):
+    def calculateTaxiingEmissions(self, method=None, mode="TX", sas='none'):
+        if method is None:
+            method = {"name": "bymode", "config": {}}
         try:
-            total_taxiing_time = Conversions.convertTimeToSeconds(abs(self.getBlockTime() - self.getRunwayTime()))
+            total_taxiing_time = conversion.convertTimeToSeconds(abs(self.getBlockTime() - self.getRunwayTime()))
         except:
             total_taxiing_time = None
         # print("total_taxiing_time %s"%total_taxiing_time)
@@ -350,10 +343,10 @@ class Movement(object):
                     total_taxiing_time = init_taxiing_time_from_segments
                     # in m/s
                     taxiing_average_speed = \
-                        Conversions.convertToFloat(taxiing_length)/Conversions.convertToFloat(init_taxiing_time_from_segments)
+                        conversion.convertToFloat(taxiing_length)/conversion.convertToFloat(init_taxiing_time_from_segments)
                 else:
                     taxiing_average_speed = \
-                        Conversions.convertToFloat(taxiing_length)/Conversions.convertToFloat(total_taxiing_time)
+                        conversion.convertToFloat(taxiing_length)/conversion.convertToFloat(total_taxiing_time)
                 # print("taxiing_average_speed %s"%taxiing_average_speed)
 
                 # Total taxiing time for calculating taxiing emissions is taken from the Movements Table
@@ -387,13 +380,19 @@ class Movement(object):
                             hor_ext = self.getAircraft().getEmissionDynamicsByMode()["TX"].getEmissionDynamics(sas_method)['horizontal_extension']
                             ver_ext = self.getAircraft().getEmissionDynamicsByMode()["TX"].getEmissionDynamics(sas_method)['vertical_extension']
                             ver_shift = self.getAircraft().getEmissionDynamicsByMode()["TX"].getEmissionDynamics(sas_method)['vertical_shift']
+                            logger.debug(f"{getframeinfo(currentframe())}")
+                            logger.debug("ver_shift:", ver_shift)
+                            logger.debug("ver_ext:", ver_ext)
+                            logger.debug("hor_ext:", hor_ext)
                             # print(hor_ext, ver_ext, ver_shift)
 
                             em_.setVerticalExtent({'z_min': 0.0+ver_shift, 'z_max': ver_ext+ver_shift})
+    	                    
+                            logger.debug({'z_min': 0.0+ver_shift, 'z_max': ver_ext+ver_shift})
 
                             # ToDo: add height
-                            multipolygon = Spatial.ogr.Geometry(Spatial.ogr.wkbMultiPolygon)
-                            all_points = Spatial.getAllPoints(taxiway_segment_.getGeometryText())
+                            multipolygon = spatial.ogr.Geometry(spatial.ogr.wkbMultiPolygon)
+                            all_points = spatial.getAllPoints(taxiway_segment_.getGeometryText())
                             for p_, point_ in enumerate(all_points):
                                 # point_ example (802522.928722, 5412293.034699, 0.0)
                                 if p_+1 < len(all_points):
@@ -402,7 +401,7 @@ class Movement(object):
                                         all_points[p_][0], all_points[p_][1], all_points[p_][2], all_points[p_+1][0], all_points[p_+1][1], all_points[p_+1][2]
                                     )
                                     leftline, rightline = self.CalculateParallels(geometry_wkt_i, hor_ext, 0, 0, 3857, 4326) #in lon / lat !
-                                    poly_geo = Spatial.getRectangleXYZFromBoundingBox(leftline, rightline, 3857, 4326)
+                                    poly_geo = spatial.getRectangleXYZFromBoundingBox(leftline, rightline, 3857, 4326)
                                     multipolygon.AddGeometry(poly_geo)
                                     em_.setGeometryText(multipolygon.ExportToWkt())
                             # except:
@@ -436,7 +435,7 @@ class Movement(object):
                         # load APU time and emission factors
                         apu_t, apu_em = self.loadAPUinfo(index_segment_)
                         apu_time = 0
-                        if (not apu_t is None) and (apu_t > 0) :
+                        if (apu_t is not None) and (apu_t > 0) :
                             # APU emissions will be added to the stand only
                             if self.getAPUCode() == 1 and index_segment_ == 0:
                                 apu_time = apu_t
@@ -590,53 +589,76 @@ class Movement(object):
 
         return emissions
 
-    def calculateFlightEmissions(self, atRunway = True, method={"name":"bymode", "config":{}}, mode="", limit={}):
+    def calculateFlightEmissions(
+            self,
+            atRunway=True,
+            method=None,
+            mode="",
+            limit=None
+    ):
+        if limit is None:
+            limit = {}
+        if method is None:
+            method = {"name": "bymode", "config": {}}
         emissions = []
         distance_time_all_segments_in_mode = 0.
         distance_space_all_segments_in_mode = 0.
-        traj = self.getTrajectory() if not atRunway else self.getTrajectoryAtRunway()
+        traj = self.getTrajectoryAtRunway() if atRunway else self.getTrajectory()
 
-        if not traj is None:
-            if not self.getAircraft().getGroup() == "HELICOPTER":
-                # get all individual segments (pairs  of points) for the particular mode
-                for (startPoint_, endPoint_) in traj.getPointPairs(mode):
-                    emissions_dict_ = self.calculateEmissionsPerSegment(startPoint_, endPoint_, atRunway=atRunway,
-                                                                        method=method, limit=limit)
-                    distance_time_all_segments_in_mode += emissions_dict_["distance_time"]
-                    distance_space_all_segments_in_mode += emissions_dict_["distance_space"]
-                    emissions.append(emissions_dict_)
-            else:
-                # Based on FOCA Guidance on the Determination of Helicopter Emissions and the FOCA Engine Emissions Databank
-                heli_emissions = Emission(defaultValues=defaultEmissions)
-                emission_index_ = self.getAircraftEngine().getEmissionIndex()
+        if traj is None:
+            return emissions
 
-                number_of_engines = self.getAircraft().getEngineCount() if \
-                        (not self.getAircraft() is None and not self.getAircraft().getEngineCount() is None) else 1
-
-                # get all individual segments (pairs  of points) for the geometry
-                emissions_geo = []
-                for (startPoint_, endPoint_) in traj.getPointPairs(mode):
-                    emissions_geo.append(
-                        loads(Spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText())))
-                entire_heli_geometry = MultiLineString(emissions_geo)
-                heli_emissions.setGeometryText(entire_heli_geometry)
-                space_in_segment_ = entire_heli_geometry.length
-
-                # the emissions are calculated for the whole trajectory not for each segment
-                ei_ = emission_index_.getEmissionIndexByMode("TO") if self.isDeparture() \
-                    else emission_index_.getEmissionIndexByMode("AP")
-                time_in_segment_ = ei_.getObject('time_min') * 60. if ei_.hasKey('time_min') else 0.
-
-                heli_emissions.add(ei_, time_in_segment_*number_of_engines)
-                emissions_dict_ = {"emissions": heli_emissions, "distance_time": float(time_in_segment_),
-                                   "distance_space": float(space_in_segment_)}
+        if self.getAircraft().getGroup() != "HELICOPTER":
+            # get all individual segments (pairs  of points) for the particular
+            # mode
+            for (startPoint_, endPoint_) in traj.getPointPairs(mode):
+                emissions_dict_ = self.calculateEmissionsPerSegment(
+                    startPoint_,
+                    endPoint_,
+                    atRunway=atRunway,
+                    method=method,
+                    limit=limit)
+                distance_time_all_segments_in_mode += \
+                    emissions_dict_["distance_time"]
+                distance_space_all_segments_in_mode += \
+                    emissions_dict_["distance_space"]
                 emissions.append(emissions_dict_)
+        else:
+            # Based on FOCA Guidance on the Determination of Helicopter Emissions and the FOCA Engine Emissions Databank
+            heli_emissions = Emission(defaultValues=defaultEmissions)
+            emission_index_ = self.getAircraftEngine().getEmissionIndex()
+
+            number_of_engines = self.getAircraft().getEngineCount() if \
+                (self.getAircraft() is not None and self.getAircraft().getEngineCount() is not None) else 1
+
+            # get all individual segments (pairs  of points) for the geometry
+            emissions_geo = []
+            for (startPoint_, endPoint_) in traj.getPointPairs(mode):
+                emissions_geo.append(
+                    loads(spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText())))
+            entire_heli_geometry = MultiLineString(emissions_geo)
+            heli_emissions.setGeometryText(entire_heli_geometry)
+            space_in_segment_ = entire_heli_geometry.length
+
+            # the emissions are calculated for the whole trajectory not for each segment
+            ei_ = emission_index_.getEmissionIndexByMode("TO") if self.isDeparture() \
+                else emission_index_.getEmissionIndexByMode("AP")
+            time_in_segment_ = ei_.getObject('time_min') * 60. if ei_.hasKey('time_min') else 0.
+
+            heli_emissions.add(ei_, time_in_segment_ * number_of_engines)
+            emissions_dict_ = {"emissions": heli_emissions,
+                               "distance_time": float(time_in_segment_),
+                               "distance_space": float(space_in_segment_)}
+            emissions.append(emissions_dict_)
 
         return emissions
 
-
-    def calculateEmissionsPerSegment(self, startPoint_, endPoint_, atRunway=True,
-                                     method={"name": "", "config": {}}, limit={}):
+    def calculateEmissionsPerSegment(self, startPoint_, endPoint_,
+                                     atRunway=True, method=None, limit=None):
+        if limit is None:
+            limit = {}
+        if method is None:
+            method = {"name": "", "config": {}}
         emissions = Emission(defaultValues=defaultEmissions)
         EPSG_id_source = 3857
         EPSG_id_target = 4326
@@ -682,7 +704,7 @@ class Movement(object):
                 endPoint_.setZ(limit["max_height"], unit_in_feet)
 
         emissions.setGeometryText(
-            Spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()))
+            spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()))
 
         startPoint_copy, endPoint_copy = copy.deepcopy(startPoint_), copy.deepcopy(endPoint_)
         # Smooth & Shift Approach
@@ -723,44 +745,44 @@ class Movement(object):
                 elif abs(z1_) - abs(ver_shift) > abs(ver_shift) and abs(z2_) - abs(ver_shift) <= abs(ver_shift):
 
                     (segment_geometry_wkt, swap) = \
-                        Spatial.reproject_geometry(Spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()), EPSG_id_source, EPSG_id_target)
+                        spatial.reproject_geometry(spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()), EPSG_id_source, EPSG_id_target)
 
-                    start_point = Spatial.getAllPoints(segment_geometry_wkt, swap)[0]
-                    end_point = Spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
-                    inverse_distance_segment = Spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])
+                    start_point = spatial.getAllPoints(segment_geometry_wkt, swap)[0]
+                    end_point = spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
+                    inverse_distance_segment = spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])
 
                     start_point_azimuth = inverse_distance_segment["azi1"]
                     target_point_distance = abs(abs(self.getTrajectory().getPoints()[startPoint_.getIdentifier()-1].getX()) - abs(x_shift))
-                    target_projected = Spatial.getDistance(start_point[0], start_point[1], start_point_azimuth, target_point_distance)
-                    target_projected_wkt = Spatial.getPointGeometryText(target_projected["lat2"], target_projected["lon2"], 0., swap)
-                    (target_projected_wkt, swap_) = Spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
+                    target_projected = spatial.getDistance(start_point[0], start_point[1], start_point_azimuth, target_point_distance)
+                    target_projected_wkt = spatial.getPointGeometryText(target_projected["lat2"], target_projected["lon2"], 0., swap)
+                    (target_projected_wkt, swap_) = spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
 
-                    self.getTrajectory().setTouchdownPoint(Spatial.CreateGeometryFromWkt(target_projected_wkt))
+                    self.getTrajectory().setTouchdownPoint(spatial.CreateGeometryFromWkt(target_projected_wkt))
 
                     # geometry_text_list = []
                     startPoint_copy.setZ(max(0, startPoint_.getZ() + ver_shift))
                     startPoint_copy.updateGeometryText()
-                    endPoint_copy.setX(Spatial.getAllPoints(target_projected_wkt)[0][0])
-                    endPoint_copy.setY(Spatial.getAllPoints(target_projected_wkt)[0][1])
+                    endPoint_copy.setX(spatial.getAllPoints(target_projected_wkt)[0][0])
+                    endPoint_copy.setY(spatial.getAllPoints(target_projected_wkt)[0][1])
                     endPoint_copy.setZ(0)
                     endPoint_copy.updateGeometryText()
 
                 else:
-                    (segment_geometry_wkt, swap) = Spatial.reproject_geometry(
-                        Spatial.getLineGeometryText(startPoint_.getGeometryText(), self.getTrajectory().getTouchdownPoint()),
+                    (segment_geometry_wkt, swap) = spatial.reproject_geometry(
+                        spatial.getLineGeometryText(startPoint_.getGeometryText(), self.getTrajectory().getTouchdownPoint()),
                         EPSG_id_source, EPSG_id_target)
-                    start_point, end_point = Spatial.getAllPoints(segment_geometry_wkt, swap)[0], Spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
-                    dist_startPoint_sasPoint = Spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])['s12']
+                    start_point, end_point = spatial.getAllPoints(segment_geometry_wkt, swap)[0], spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
+                    dist_startPoint_sasPoint = spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])['s12']
 
-                    (segment_geometry_wkt, swap) = Spatial.reproject_geometry(
-                        Spatial.getLineGeometryText(self.getTrajectory().getTouchdownPoint(), endPoint_.getGeometryText()),
+                    (segment_geometry_wkt, swap) = spatial.reproject_geometry(
+                        spatial.getLineGeometryText(self.getTrajectory().getTouchdownPoint(), endPoint_.getGeometryText()),
                         EPSG_id_source, EPSG_id_target)
-                    start_point, end_point = Spatial.getAllPoints(segment_geometry_wkt, swap)[0], Spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
-                    dist_sasPoint_endPoint = Spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])['s12']
+                    start_point, end_point = spatial.getAllPoints(segment_geometry_wkt, swap)[0], spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
+                    dist_sasPoint_endPoint = spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])['s12']
 
                     if dist_startPoint_sasPoint > dist_sasPoint_endPoint:
-                        startPoint_copy.setX(Spatial.getAllPoints(self.getTrajectory().getTouchdownPoint())[0][0])
-                        startPoint_copy.setY(Spatial.getAllPoints(self.getTrajectory().getTouchdownPoint())[0][1])
+                        startPoint_copy.setX(spatial.getAllPoints(self.getTrajectory().getTouchdownPoint())[0][0])
+                        startPoint_copy.setY(spatial.getAllPoints(self.getTrajectory().getTouchdownPoint())[0][1])
                     startPoint_copy.setZ(0)
                     startPoint_copy.updateGeometryText()
                     endPoint_copy.setZ(0)
@@ -773,35 +795,35 @@ class Movement(object):
                     ver_shift = self.getAircraft().getEmissionDynamicsByMode()["CL"].getEmissionDynamics(sas_method)['vertical_shift']
                     hor_shift = self.getAircraft().getEmissionDynamicsByMode()["CL"].getEmissionDynamics("default")['horizontal_shift']
 
-                (segment_geometry_wkt, swap) = Spatial.reproject_geometry(
-                        Spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()),
+                (segment_geometry_wkt, swap) = spatial.reproject_geometry(
+                        spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()),
                         EPSG_id_source, EPSG_id_target)
 
-                start_point = Spatial.getAllPoints(segment_geometry_wkt, swap)[0]
-                end_point = Spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
-                inverse_distance_segment = Spatial.getInverseDistance(start_point[0], start_point[1], end_point[0],end_point[1])
+                start_point = spatial.getAllPoints(segment_geometry_wkt, swap)[0]
+                end_point = spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
+                inverse_distance_segment = spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])
                 start_point_azimuth, end_point_azimuth = inverse_distance_segment["azi1"], inverse_distance_segment["azi2"]
 
-                target_projected = Spatial.getDistance(start_point[0], start_point[1], start_point_azimuth, -hor_shift)
-                target_projected_wkt = Spatial.getPointGeometryText(target_projected["lat2"], target_projected["lon2"], 0., swap)
-                (target_projected_wkt, swap_) = Spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
-                startPoint_copy.setX(Spatial.getAllPoints(target_projected_wkt)[0][0])
-                startPoint_copy.setY(Spatial.getAllPoints(target_projected_wkt)[0][1])
+                target_projected = spatial.getDistance(start_point[0], start_point[1], start_point_azimuth, -hor_shift)
+                target_projected_wkt = spatial.getPointGeometryText(target_projected["lat2"], target_projected["lon2"], 0., swap)
+                (target_projected_wkt, swap_) = spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
+                startPoint_copy.setX(spatial.getAllPoints(target_projected_wkt)[0][0])
+                startPoint_copy.setY(spatial.getAllPoints(target_projected_wkt)[0][1])
                 startPoint_copy.setZ(max(0, startPoint_.getZ() + ver_shift))
                 startPoint_copy.updateGeometryText()
 
-                target_projected = Spatial.getDistance(end_point[0], end_point[1], end_point_azimuth, -hor_shift)
-                target_projected_wkt = Spatial.getPointGeometryText(target_projected["lat2"], target_projected["lon2"], 0., swap)
-                (target_projected_wkt, swap_) = Spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
-                endPoint_copy.setX(Spatial.getAllPoints(target_projected_wkt)[0][0])
-                endPoint_copy.setY(Spatial.getAllPoints(target_projected_wkt)[0][1])
+                target_projected = spatial.getDistance(end_point[0], end_point[1], end_point_azimuth, -hor_shift)
+                target_projected_wkt = spatial.getPointGeometryText(target_projected["lat2"], target_projected["lon2"], 0., swap)
+                (target_projected_wkt, swap_) = spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
+                endPoint_copy.setX(spatial.getAllPoints(target_projected_wkt)[0][0])
+                endPoint_copy.setY(spatial.getAllPoints(target_projected_wkt)[0][1])
                 endPoint_copy.setZ(max(0, endPoint_.getZ() + ver_shift))
                 endPoint_copy.updateGeometryText()
 
                 emissions.setVerticalExtent({'z_min': startPoint_copy.getZ(), 'z_max': ver_ext + startPoint_copy.getZ()})
 
-            multipolygon = Spatial.ogr.Geometry(Spatial.ogr.wkbMultiPolygon)
-            all_points = Spatial.getAllPoints(Spatial.getLineGeometryText(startPoint_copy.getGeometryText(), endPoint_copy.getGeometryText()))
+            multipolygon = spatial.ogr.Geometry(spatial.ogr.wkbMultiPolygon)
+            all_points = spatial.getAllPoints(spatial.getLineGeometryText(startPoint_copy.getGeometryText(), endPoint_copy.getGeometryText()))
             for p_, point_ in enumerate(all_points):
                 # point_ example (802522.928722, 5412293.034699, 0.0)
                 if p_ + 1 == len(all_points):
@@ -811,14 +833,14 @@ class Movement(object):
                     all_points[p_ + 1][1], all_points[p_ + 1][2]
                 )
                 leftline, rightline = self.CalculateParallels(geometry_wkt_i, hor_ext, 0, 0, 3857, 4326)  # in lon / lat !
-                poly_geo = Spatial.getRectangleXYZFromBoundingBox(leftline, rightline, 3857, 4326)
+                poly_geo = spatial.getRectangleXYZFromBoundingBox(leftline, rightline, 3857, 4326)
                 multipolygon.AddGeometry(poly_geo)
                 emissions.setGeometryText(multipolygon.ExportToWkt())
 
         else:
             # logger.debug("Calculate RWY emissions WITHOUT Smooth & Shift Approach.")
             emissions.setVerticalExtent({'z_min': 0, 'z_max': 0})
-            emissions.setGeometryText(Spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()))
+            emissions.setGeometryText(spatial.getLineGeometryText(startPoint_.getGeometryText(), endPoint_.getGeometryText()))
 
         # emissions calculation
         traj = self.getTrajectory() if not atRunway else self.getTrajectoryAtRunway()
@@ -836,9 +858,9 @@ class Movement(object):
                 copy_emission_index_ = copy.deepcopy(emission_index_)
                 if method["config"]["apply_nox_corrections"]:
                     logger.info("Applying NOx Correction for Ambient Conditions")
-                    corr_nox_ei = NOx_correction_for_ambient_conditions(emission_index_.getNOx(),
-                        method["config"]["airport_altitude"],self.getTakeoffWeightRatio(),
-                        ac=method["config"]["ambient_conditions"])
+                    corr_nox_ei = nox_correction_for_ambient_conditions(emission_index_.getNOx(),
+                                                                        method["config"]["airport_altitude"], self.getTakeoffWeightRatio(),
+                                                                        ac=method["config"]["ambient_conditions"])
                     copy_emission_index_.setObject("nox_g_kg", corr_nox_ei)
 
             else:
@@ -873,31 +895,42 @@ class Movement(object):
                         logger.info("Applying NOx Correction for Ambient Conditions. NOx EI will be calculated using 'By mode' method.")
                         nox_g_kg = self.getAircraftEngine().getEmissionIndex().getEmissionIndexByMode(
                             startPoint_.getMode()).getNOx()
-                        corr_nox_ei = NOx_correction_for_ambient_conditions(nox_g_kg,
-                                method["config"]["airport_altitude"],self.getTakeoffWeightRatio(),ac=method["config"]["ambient_conditions"])
+                        corr_nox_ei = nox_correction_for_ambient_conditions(nox_g_kg,
+                                                                            method["config"]["airport_altitude"], self.getTakeoffWeightRatio(), ac=method["config"]["ambient_conditions"])
                         copy_emission_index_.setObject("nox_g_kg", corr_nox_ei)
 
-
-            if (copy_emission_index_ is None):
+            if copy_emission_index_ is None:
                 logger.error("Did not find emission index for aircraft with type '%s'." % (self.getAircraft()))
-            emissions.add(copy_emission_index_,
-                              float(time_in_segment_) * float(self.getAircraft().getEngineCount()))
 
-        return {"emissions": emissions, "distance_time": float(time_in_segment_),
-                "distance_space": float(space_in_segment_)}
+            # Calculate the effective time (s)
+            effective_time_s = float(
+                time_in_segment_) * self.getAircraft().getEngineCount()
 
-    def calculateEmissions(self, atRunway = True, method={"name":"bymode", "config":{}}, mode="", limit={}):
+            emissions.add(copy_emission_index_, effective_time_s)
+
+        return {
+            "emissions": emissions,
+            "distance_time": float(time_in_segment_),
+            "distance_space": float(space_in_segment_)
+        }
+
+    def calculateEmissions(self, atRunway = True, method=None, mode="",
+                           limit=None):
         # emissions_list = mov.calculateEmissions(method=method, limit=limit)
         # emissions = sum(em_["emissions"] for em_ in emissions_list)
+        if limit is None:
+            limit = {}
+        if method is None:
+            method = {"name": "bymode", "config": {}}
         emissions = []
 
         # add emissions on flight trajectory (incl. runway)
         emissions.extend(self.calculateFlightEmissions(atRunway, method, mode, limit))
 
-        # # add emissions at gate (gpu, gse etc.)
+        # add emissions at gate (gpu, gse etc.)
         emissions.extend(self.calculateGateEmissions(sas=method["config"]["apply_smooth_and_shift"]))
 
-        # # add taxiing emissions
+        # add taxiing emissions
         emissions.extend(self.calculateTaxiingEmissions(sas=method["config"]["apply_smooth_and_shift"]))
 
         # print("calculateEmissions: About to do some plots ")
@@ -972,7 +1005,8 @@ class Movement(object):
         return self._trajectory_at_runway
 
     def updateTrajectoryAtRunway(self):
-        self.setTrajectoryAtRunway(self.calculateTrajectoryAtRunway(offset_by_touchdown=True))
+        self.setTrajectoryAtRunway(
+            self.calculateTrajectoryAtRunway(offset_by_touchdown=True))
 
     def setTrajectoryAtRunway(self, var):
         self._trajectory_at_runway = var
@@ -981,34 +1015,47 @@ class Movement(object):
     def calculateTrajectoryAtRunway(self, offset_by_touchdown=True):
         trajectory = None
         if self.getTrajectory() is None:
-            logger.error("Could not find trajectory for movement at runway time '%s'." % (str(self.getRunwayTime(as_str=True))))
+            logger.error("Could not find trajectory for movement at runway "
+                         f"time '{self.getRunwayTime(as_str=True)}'.")
         elif self.getRunway() is None:
-            logger.error("Could not find runway for movement at runway time '%s'." % (str(self.getRunwayTime(as_str=True))))
+            logger.error("Could not find runway for movement at runway time "
+                         f"'{self.getRunwayTime(as_str=True)}'.")
         elif not (self.getRunwayDirection() in self.getRunway().getDirections()):
-            logger.error("Could not find runway direction '%s' (movement runway time='%s'." % (str(self.getRunwayDirection()), str(self.getRunwayTime(as_str=True))))
+            logger.error(f"Could not find runway direction "
+                         f"'{self.getRunwayDirection()}' (movement runway "
+                         f"time='{self.getRunwayTime(as_str=True)}'.")
         else:
-            trajectory = AircraftTrajectory(self.getTrajectory(), skipPointInitialization=True)
+
+            trajectory = AircraftTrajectory(
+                self.getTrajectory(), skipPointInitialization=True)
             trajectory.setIsCartesian(False)
+
             # Shift coordinates by touchdown offset (only for arrivals)
             if offset_by_touchdown:
-                offset_by_touchdown = True if self.isArrival() else False
+                offset_by_touchdown = self.isArrival()
 
-            EPSG_id_source=3857
-            EPSG_id_target=4326
+            # Set the EPSG identifiers for the source and target projection
+            epsg_id_source = 3857
+            epsg_id_target = 4326
+
             # Project geometry from 3857 to 4326
-            (runway_geometry_wkt, swap) = Spatial.reproject_geometry(self.getRunway().getGeometryText(), EPSG_id_source, EPSG_id_target)
+            (runway_geometry_wkt, swap) = spatial.reproject_geometry(
+                self.getRunway().getGeometryText(),
+                epsg_id_source, epsg_id_target)
 
             # Return tuple of points - runway ends
-            runway_points_tuple_list = Spatial.getAllPoints(runway_geometry_wkt, swap)
-            if len(runway_points_tuple_list)>=2:
-                # assumes that runway is a straight line (i.e. earth is flat!)
-                start_point = runway_points_tuple_list[0] # e.g. (lon, lat, alt)
-                end_point = runway_points_tuple_list[-1] # e.g. (43.6157352579433, 1.38014783105964, 0.0)
+            runway_points_tuple_list = spatial.getAllPoints(runway_geometry_wkt, swap)
 
-                #get the azimuth for the runway
+            if len(runway_points_tuple_list) >= 2:
+
+                # assumes that runway is a straight line (i.e. earth is flat!)
+                start_point = runway_points_tuple_list[0]  # e.g. (lon, lat, alt)
+                end_point = runway_points_tuple_list[-1]  # e.g. (43.6157352579433, 1.38014783105964, 0.0)
+
+                # get the azimuth for the runway
                 # getInverseDistance(lat1, lon1, lat2, lon2, EPSG_id=4326)
                 # inverseDistance_dict = Spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])
-                inverseDistance_dict = Spatial.getInverseDistance(start_point[1], start_point[0], end_point[1], end_point[0])
+                inverseDistance_dict = spatial.getInverseDistance(start_point[1], start_point[0], end_point[1], end_point[0])
                 start_point_azimuth = inverseDistance_dict["azi1"]
                 end_point_azimuth = inverseDistance_dict["azi2"]
 
@@ -1028,32 +1075,30 @@ class Movement(object):
                 # osgeo.ogr.Geometry: Point(lat, lon)
                 # Direction is either first or last point (assume that runway naming list represents direction of points)
 
-                if not self.getRunway().getDirections().index(self.getRunwayDirection()):
-                    runway_point, runway_azimuth = end_point, end_point_azimuth
-                    runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
-                    # runway_point, runway_azimuth = end_point, end_point_azimuth
-                    # runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
-                    # if self.getDepartureArrivalFlag() == "A":
-                    #     (rwy_point, rwy_point_wkt) = Spatial.reproject_Point(intersection.x, intersection.y,
-                    #                                                          EPSG_id_source, EPSG_id_target)
-                    #     runway_point = (rwy_point.GetY(), rwy_point.GetX())
-
-                else:
+                # Check if the direction of the runway needs to be reversed
+                if self.getRunway().getDirections().index(
+                        self.getRunwayDirection()) == 0:
                     runway_point, runway_azimuth = start_point, start_point_azimuth
+                else:
+                    runway_point, runway_azimuth = end_point, end_point_azimuth
+                    runway_azimuth = (runway_azimuth + 180) % 360
 
                 try:
-                    (rwy_point, rwy_point_wkt) = Spatial.reproject_Point(intersection.centroid.x, intersection.centroid.y,
-                                                                         EPSG_id_source, EPSG_id_target)
+                    (rwy_point, rwy_point_wkt) = spatial.reproject_Point(
+                        intersection.centroid.x, intersection.centroid.y,
+                        epsg_id_source, epsg_id_target)
                     runway_point = (rwy_point.GetY(), rwy_point.GetX())
-                except:
-                    logger.warning("No intersection point between runway '%s' and taxiroute '%s'"%(self.getRunwayDirection(),
-                                                                                                   self.getTaxiRoute().getName()))
+                except Exception:
+                    logger.warning(
+                        "No intersection point between runway '%s' and"
+                        " taxiroute '%s'" % (self.getRunwayDirection(),
+                                             self.getTaxiRoute().getName()))
 
                     # runway_point, runway_azimuth = start_point, start_point_azimuth
                     # # runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
                     # if self.getDepartureArrivalFlag() == "A":
                     #     (rwy_point, rwy_point_wkt) = Spatial.reproject_Point(intersection.x, intersection.y,
-                    #                                                          EPSG_id_source, EPSG_id_target)
+                    #                                                          epsg_id_source, epsg_id_target)
                     #     runway_point = (rwy_point.GetY(), rwy_point.GetX())
 
                     # if self.getDepartureArrivalFlag() == "D":
@@ -1061,7 +1106,7 @@ class Movement(object):
                     # else:
                     #     runway_point, runway_azimuth = end_point, end_point_azimuth
                     #     if not intersection.is_empty:
-                    #         (rwy_point, rwy_point_wkt) = Spatial.reproject_Point(intersection.x, intersection.y, EPSG_id_source, EPSG_id_target)
+                    #         (rwy_point, rwy_point_wkt) = Spatial.reproject_Point(intersection.x, intersection.y, epsg_id_source, epsg_id_target)
                     #         runway_point = (rwy_point.GetY(), rwy_point.GetX())
 
                 # # # For ARR (only), take back azimuth (# Less than 180 degrees (< 3.141592 rad), then add 180 degrees):
@@ -1073,11 +1118,14 @@ class Movement(object):
                 for point in self.getTrajectory().getPoints():
 
                     # aircraft trajectory point with from default_aircraft_profiles
-                    origin = (0.,0.,0.)
-                    #target point with cartesian coordinates
+                    origin = (0., 0., 0.)
+
+                    # target point with cartesian coordinates
                     target_point = point.getCoordinates()
-                    target_point_distance = Spatial.getDistanceXY(target_point[0], target_point[1], target_point[2],
-                                                                  origin[0], origin[1], origin[2])
+                    target_point_distance = spatial.getDistanceXY(
+                        target_point[0], target_point[1], target_point[2],
+                        origin[0], origin[1], origin[2])
+
                     # if self.getDepartureArrivalFlag() == "A":
                     #     target_point_distance = target_point_distance + self.getTrajectory().getPoints()[-1].getX()
                     # if self.getDepartureArrivalFlag() == "A":
@@ -1092,71 +1140,78 @@ class Movement(object):
                     #             # for ARR, when landing take forward azimuth
                     #             runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
 
+                    # get target point (calculation in 4326 projection)
+                    target_projected = spatial.getDistance(runway_point[1], runway_point[0], runway_azimuth, target_point_distance)
 
-                    #get target point (calculation in 4326 projection)
-                    target_projected = Spatial.getDistance(runway_point[1], runway_point[0], runway_azimuth, target_point_distance)
-                    #target point (wkt) with coordinates in 4326
-                    target_projected_wkt = Spatial.getPointGeometryText(target_projected["lon2"], target_projected["lat2"], 0., swap)
-                    #reproject target from 4326 to 3857
-                    (target_projected_wkt, swap_) = Spatial.reproject_geometry(target_projected_wkt, EPSG_id_target, EPSG_id_source)
+                    # target point (wkt) with coordinates in 4326
+                    target_projected_wkt = spatial.getPointGeometryText(target_projected["lon2"], target_projected["lat2"], 0., swap)
 
-                    #add target to list of points of the (shifted) trajectory
-                    for p in Spatial.getAllPoints(target_projected_wkt):
+                    # reproject target from 4326 to 3857
+                    (target_projected_wkt, swap_) = spatial.reproject_geometry(target_projected_wkt, epsg_id_target, epsg_id_source)
+
+                    # add target to list of points of the (shifted) trajectory
+                    for p in spatial.getAllPoints(target_projected_wkt):
                         p_ = AircraftTrajectoryPoint(point)
                         # Update x and y coordinates (z coordinate is not updated by distance calculation)
-                        p_.setCoordinates(p[0],p[1],target_point[2])
+                        p_.setCoordinates(p[0], p[1], target_point[2])
                         p_.updateGeometryText()
                         trajectory.addPoint(p_)
                     trajectory.updateGeometryText()
             else:
-                logger.error("Did not find enough points for geometry '%s'" % (runway_geometry_wkt))
+                logger.error("Did not find enough points for geometry '%s'" % (
+                    runway_geometry_wkt))
 
         return trajectory
 
     def getRunway(self):
         return self._runway
+
     def setRunway(self, var):
         self._runway = var
 
-    #["08R", "26L"]
+    # ["08R", "26L"]
     def getRunwayDirection(self):
         return self._runway_direction
 
     def setRunwayDirection(self, var):
         self._runway_direction = var
-        #if isinstance(var, str):
+        # if isinstance(var, str):
         #    var = ''.join(c for c in var if c.isdigit())
-        #    var = Conversions.convertToFloat(var)
-        #self._runway_direction = var
+        #    var = conversion.convertToFloat(var)
+        # self._runway_direction = var
 
     def getRunwayTime(self, as_str=False):
         if as_str:
-            if not (Conversions.convertToFloat(self._time) is None):
-                return Conversions.convertSecondsToTimeString(self._time)
+            if not (conversion.convertToFloat(self._time) is None):
+                return conversion.convertSecondsToTimeString(self._time)
         return self._time
+
     def setRunwayTime(self, val):
         self._time = val
 
     def getBlockTime(self, as_str=False):
         if as_str:
-            if not (Conversions.convertToFloat(self._block_time) is None):
-                return Conversions.convertSecondsToTimeString(self._block_time)
+            if not (conversion.convertToFloat(self._block_time) is None):
+                return conversion.convertSecondsToTimeString(self._block_time)
 
         return self._block_time
+
     def setBlockTime(self, val):
         self._block_time = val
 
     def setDomesticFlag(self, val):
-        self._domestic= val
+        self._domestic = val
+
     def getDomesticFlag(self):
         return self._domestic
 
     def setDepartureArrivalFlag(self, val):
-        self._departure_arrival= val
+        self._departure_arrival = val
+
     def getDepartureArrivalFlag(self):
         return self._departure_arrival
 
-    def isArrival(self):
+    def isArrival(self) -> bool:
         if self.getDepartureArrivalFlag().lower() in ["d", "dep", "departure"]:
             return False
         else:
@@ -1167,26 +1222,31 @@ class Movement(object):
 
     def getGate(self):
         return self._gate
+
     def setGate(self, var):
         self._gate = var
 
     def getGateName(self):
         return self._gate_name
+
     def setGateName(self, var):
         self._gate_name = var
 
     def getTaxiRoute(self):
         return self._taxi_route
+
     def setTaxiRoute(self, var):
         self._taxi_route = var
 
     def getTaxiEngineCount(self):
         return self._taxi_engine_count
+
     def setTaxiEngineCount(self, var):
         self._taxi_engine_count = var
 
     def getTakeoffWeightRatio(self):
         return self._tow_ratio
+
     def setTakeoffWeight(self, var):
         self._tow_ratio = var
 
@@ -1211,12 +1271,15 @@ class Movement(object):
         val += "\n\t Runway: %s" % ("\n\t".join(str(self.getRunway()).split("\n")))
         return val
 
-class MovementStore(with_metaclass(Singleton, Store)):
+
+class MovementStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'Movement' objects
     """
 
-    def __init__(self, db_path="", db={}, debug=False):
+    def __init__(self, db_path="", db=None, debug=False):
+        if db is None:
+            db = {}
         Store.__init__(self, ordered=True)
 
         self._db_path = db_path
@@ -1231,7 +1294,7 @@ class MovementStore(with_metaclass(Singleton, Store)):
         if self._movement_db is None:
             self._movement_db = MovementDatabase(db_path)
 
-        #instantiate all movement objects
+        # instantiate all movement objects
         self.initMovements(debug)
 
     def getMovementDatabase(self):
@@ -1275,236 +1338,318 @@ class MovementStore(with_metaclass(Singleton, Store)):
 
     def initMovements(self, debug=False):
 
+        # Start a progressbar, since this might take a while to process
         progressbar = self.ProgressBarWidget()
-        progressbar.setValue(0)
 
-        MovementDataFrame = pd.DataFrame.from_dict(self.getMovementDatabase().getEntries(), orient='index')
-        if MovementDataFrame.empty:
+        # Use stages to update the progress bar
+        stage_1 = ProgressBarStage.firstStage(progressbar, 7, maximum=7)
+
+        # Get the movements from the database as a dataframe
+        mdf = pd.DataFrame.from_dict(self.getMovementDatabase().getEntries(), orient='index')
+        logger.info("Number of movements in the DB: %s", mdf.shape[0])
+        if mdf.empty:
             return
-        logger.info("Number of movements in the DB: %s"%len(self.getMovementDatabase().getEntries()))
 
-        df_cols = ["aircraft", "engine_name", "runway", "runway_direction", "gate", "taxi_route", "profile_id",
-                   "trajectory", "runway_trajectory"]
-        Eq_MovementDataFrame = pd.DataFrame(index=MovementDataFrame.index, columns=df_cols)
-        Eq_MovementDataFrame = Eq_MovementDataFrame.fillna(np.nan)  # fill with None rather than NaNs
+        df_cols = ["aircraft", "engine_name", "runway", "runway_direction",
+                   "gate", "taxi_route", "profile_id", "trajectory",
+                   "runway_trajectory"]
+        eq_mdf = pd.DataFrame(index=mdf.index, columns=df_cols)
+        eq_mdf = eq_mdf.fillna(np.nan)  # fill with None rather than NaNs
 
-        aircraft_unique = MovementDataFrame["aircraft"].unique()
-        for acf in aircraft_unique:
-            indices = MovementDataFrame[MovementDataFrame.aircraft == acf].index
-            Eq_MovementDataFrame.loc[indices, "aircraft"] = np.nan if not self.getAircraftStore().hasKey(acf) else acf
-            if not self.getAircraftStore().hasKey(acf):
-                logger.error("Aircraft %s wasn't found in the DB"%acf)
+        # Check if aircraft exist in the database
+        stage_1.nextValue()
 
-        engine_unique = MovementDataFrame["engine_name"].unique()
-        for eng in engine_unique:
-            indices = MovementDataFrame[MovementDataFrame["engine_name"] == eng].index
-            Eq_MovementDataFrame.loc[indices, "engine_name"] = None
+        aircraft_store = self.getAircraftStore()
+        for acf in mdf["aircraft"].unique():
+            store_has_key = aircraft_store.hasKey(acf)
+            eq_mdf.loc[mdf.aircraft == acf, "aircraft"] = \
+                acf if store_has_key else np.nan
+            if not store_has_key:
+                logger.error("Aircraft %s wasn't found in the DB" % acf)
 
-            if self.getEngineStore().hasKey(eng):
-                Eq_MovementDataFrame.loc[indices, "engine_name"] = eng
+        # Check if engines exist in the database
+        stage_1.nextValue()
 
-            #     # if any(item == "HELICOPTER" for item in ac_types)
-            #     if not "HELICOPTER" in ac_types:
-            #         Eq_MovementDataFrame.loc[indices, "engine_name"] = eng
+        engine_store = self.getEngineStore()
+        heli_engine_store = self.getHeliEngineStore()
+        for eng in mdf["engine_name"].unique():
 
-            elif self.getHeliEngineStore().hasKey(eng):
-                Eq_MovementDataFrame.loc[indices, "engine_name"] = eng
+            indices = mdf["engine_name"] == eng
+
+            if engine_store.hasKey(eng):
+                eq_mdf.loc[indices, "engine_name"] = eng
+
+            elif heli_engine_store.hasKey(eng):
+                eq_mdf.loc[indices, "engine_name"] = eng
 
             else:
-                logger.debug("Engine %s not in ALAQS DB" % eng)
-                if not MovementDataFrame[MovementDataFrame["engine_name"]==eng].empty:
-                    def_ac = MovementDataFrame[MovementDataFrame["engine_name"]==eng]["aircraft"].iloc[0]
-                    if self.getAircraftStore().hasKey(def_ac):
-                        eng = self.getAircraftStore().getObject(acf).getDefaultEngine().getName()
-                        logger.debug("\t +++ taking default engine %s for aircraft %s" %(eng, def_ac))
-                        Eq_MovementDataFrame.loc[indices, "engine_name"] = eng \
-                            if self.getEngineStore().hasKey(eng) or self.getEngineStore().hasKey(eng) else None
+                logger.debug("Engine %s not in ALAQS DB", eng)
 
-            #     if "HELICOPTER" in ac_types:
-            #         Eq_MovementDataFrame.loc[indices, "engine_name"] = eng
-            # else:
-            #     print("Engine (%s) wasn't found in the DB"%eng)
-            #     # Add default engine for acft if engine is missing or is unknown
-            #     for ij_ in indices:
-            #         if self.getAircraftStore().hasKey(MovementDataFrame.loc[ij_, "aircraft"]):
-            #             Eq_MovementDataFrame.loc[ij_, "engine_name"] = self.getAircraftStore().getObject(
-            #                         MovementDataFrame.loc[ij_, "aircraft"]).getDefaultEngine().getName()
-            #
-            #             logger.warning("Engine (%s) wasn't found in the DB, taking default engine (%s)"%(eng,
-            #                 self.getAircraftStore().getObject(MovementDataFrame.loc[ij_, "aircraft"]).getDefaultEngine().getName()))
+                # Get the aircraft
+                def_ac = mdf[mdf["engine_name"] == eng]["aircraft"].iloc[0]
 
-        runway_unique = MovementDataFrame["runway"].unique()
-        for rwy in runway_unique:
-            indices = MovementDataFrame[MovementDataFrame["runway"] == rwy].index
-            if not self.getRunwayStore().isinKey(rwy):
-                Eq_MovementDataFrame.loc[indices, "runway"] = np.nan
-                logger.warning("Runway %s wasn't found in the DB"%rwy)
-            else:
-                Eq_MovementDataFrame.loc[indices, "runway_direction"] = rwy
-                rwy_used = [key for key in list(self.getRunwayStore().getObjects().keys()) if rwy in key]
-                Eq_MovementDataFrame.loc[indices, "runway"] = rwy_used[0]
+                # Check if the aircraft exists in the database
+                if aircraft_store.hasKey(def_ac):
 
-        gate_unique = MovementDataFrame["gate"].unique()
-        for gte in gate_unique:
-            indices = MovementDataFrame[MovementDataFrame["gate"] == gte].index
-            Eq_MovementDataFrame.loc[indices, "gate"] = np.nan if not self.getGateStore().hasKey(gte) else gte
-            if not self.getGateStore().hasKey(gte):
-                logger.warning("Gate %s wasn't found in the DB"%gte)
+                    # Get the default engine for this aircraft
+                    eng = aircraft_store.getObject(
+                        def_ac).getDefaultEngine().getName()
 
-        empty_tx_ind = MovementDataFrame[(MovementDataFrame["taxi_route"] == "")|(MovementDataFrame["taxi_route"] == np.NaN)].index
-        MovementDataFrame.loc[empty_tx_ind, "taxi_route"] = \
-        (MovementDataFrame[['gate', 'runway', 'departure_arrival']].apply('/'.join, axis=1).astype(str) + "/1").loc[empty_tx_ind]
+                    logger.debug(
+                        "\t +++ taking default engine %s for aircraft %s", (
+                            eng, def_ac))
 
-        taxiroute_unique = MovementDataFrame["taxi_route"].unique()
-        all_taxi_routes = list(self.getTaxiRouteStore().getObjects().keys())
-
-        for txr in taxiroute_unique:
-            indices = MovementDataFrame[MovementDataFrame["taxi_route"] == txr].index
-            if not self.getTaxiRouteStore().hasKey(txr):
-                if "/D/" in txr:
-                    alt_routes = difflib.get_close_matches(txr, [_tx_ for _tx_ in all_taxi_routes if "/D/" in _tx_])
-                elif "/A/" in txr:
-                    alt_routes = difflib.get_close_matches(txr, [_tx_ for _tx_ in all_taxi_routes if "/A/" in _tx_])
-                if alt_routes:
-                    Eq_MovementDataFrame.loc[indices, "taxi_route"] = alt_routes[0]
-                    logger.warning("Taxiroute '%s' was replaced with '%s'"%(txr, alt_routes[0]))
-                else:
-                    logger.error("No taxiroute found to replace '%s' which is not in the database"%(txr))
-                    Eq_MovementDataFrame.loc[indices, "taxi_route"] = np.NaN
-            else:
-                Eq_MovementDataFrame.loc[indices, "taxi_route"] = txr
-
-        profile_unique = MovementDataFrame["profile_id"].astype(str).unique()
-        for prf in profile_unique:
-            indices = MovementDataFrame[MovementDataFrame["profile_id"] == prf].index
-            # Add a default profile even when the profile_id is missing
-            if len(indices)==0 or not prf or pd.isna(prf) or not self.getAircraftTrajectoryStore().hasKey(prf):
-                for ag, airgroup in MovementDataFrame.groupby(["aircraft", "departure_arrival"]):
-                    ij_ = airgroup.index
-                    if self.getAircraftStore().hasKey(airgroup["aircraft"].iloc[0]):
-                        if airgroup["departure_arrival"].iloc[0] == "A":
-                            Eq_MovementDataFrame.loc[ij_, "profile_id"] = \
-                                self.getAircraftStore().getObject(airgroup["aircraft"].iloc[0]).getDefaultArrivalProfileName()
-                        elif airgroup["departure_arrival"].iloc[0] == "D":
-                            Eq_MovementDataFrame.loc[ij_, "profile_id"] = \
-                                self.getAircraftStore().getObject(airgroup["aircraft"].iloc[0]).getDefaultDepartureProfileName()
+                    if engine_store.hasKey(eng):
+                        eq_mdf.loc[indices, "engine_name"] = eng
                     else:
-                        logger.debug("AC %s not in AircraftStore" % (airgroup["aircraft"].iloc[0]))
-                        continue
+                        eq_mdf.loc[indices, "engine_name"] = None
 
-            # elif not prf or pd.isna(prf) or not self.getAircraftTrajectoryStore().hasKey(prf) :
-            #     for ij_ in indices:
-            #         if self.getAircraftStore().hasKey(MovementDataFrame.loc[ij_, "aircraft"]):
-            #             if MovementDataFrame.loc[ij_, "departure_arrival"] == "A":
-            #                 Eq_MovementDataFrame.loc[ij_, "profile_id"] =\
-            #                     self.getAircraftStore().getObject(MovementDataFrame.loc[ij_, "aircraft"]).getDefaultArrivalProfileName()
-            #             elif MovementDataFrame.loc[ij_, "departure_arrival"] == "D":
-            #                 Eq_MovementDataFrame.loc[ij_, "profile_id"] =\
-            #                     self.getAircraftStore().getObject(MovementDataFrame.loc[ij_, "aircraft"]).getDefaultDepartureProfileName()
-            #             # print(Eq_MovementDataFrame.loc[ij_, "profile_id"])
-            #         else:
-            #             # print("AC %s not in AircraftStore"%(MovementDataFrame.loc[ij_, "aircraft"]))
-            #             logger.debug("AC %s not in AircraftStore"%(MovementDataFrame.loc[ij_, "aircraft"]))
+        # Check if runways exist in the database
+        stage_1.nextValue()
+
+        runway_store = self.getRunwayStore()
+        for rwy in mdf["runway"].unique():
+
+            indices = mdf["runway"] == rwy
+
+            # Make sure runways are always 2 characters or more
+            rwy = rwy.zfill(2)
+
+            if runway_store.isinKey(rwy):
+                eq_mdf.loc[indices, "runway_direction"] = rwy
+                rwy_used = [key for key in
+                            list(runway_store.getObjects().keys()) if
+                            rwy in key]
+                if len(rwy_used) > 0:
+                    logger.warning(f"Runway {rwy} was found in the DB multiple "
+                                   "times.")
+                eq_mdf.loc[indices, "runway"] = rwy_used[0]
+
             else:
-                Eq_MovementDataFrame.loc[indices, "profile_id"] = None
+                eq_mdf.loc[indices, "runway"] = np.nan
+                logger.warning(f"Runway {rwy} wasn't found in the DB")
 
-        # select unique combinations of Eq_MovementDataFrame where runway and profile_id
-        unique_rwy_trajectories = \
-            Eq_MovementDataFrame[
-                ["runway", "runway_direction", "taxi_route", "profile_id"]].drop_duplicates().reset_index(drop=True)
-        for trj_ind in unique_rwy_trajectories.index:
-            # Should always have values for rwy, rwy_dir, tx_route, prf_id
-            rwy = unique_rwy_trajectories.loc[trj_ind]["runway"]
-            rwy_dir = unique_rwy_trajectories.loc[trj_ind]["runway_direction"]
-            tx_route = unique_rwy_trajectories.loc[trj_ind]["taxi_route"]
-            prf_id = unique_rwy_trajectories.loc[trj_ind]["profile_id"]
+        # Check if gates exist in the database
+        stage_1.nextValue()
 
-            # ToDo: Handle exceptions
-            mov_df = Eq_MovementDataFrame[
-                (Eq_MovementDataFrame.runway == rwy) & (Eq_MovementDataFrame.runway_direction == rwy_dir)
-                & (Eq_MovementDataFrame.taxi_route == tx_route) & (Eq_MovementDataFrame.profile_id == prf_id)
-            ]
-            if mov_df.empty:
-                logger.warning("No match found for RWY: %s, Direction: %s, Route: %s, Profile: %s"%(rwy, rwy_dir, tx_route, prf_id))
-                continue
+        gate_store = self.getGateStore()
+        for gte in mdf["gate"].unique():
+            store_has_key = gate_store.hasKey(gte)
+            eq_mdf.loc[mdf["gate"] == gte, "gate"] = \
+                gte if store_has_key else np.nan
+            if not store_has_key:
+                logger.warning("Gate %s wasn't found in the DB" % gte)
+
+        # Check if taxi routes exist in the database
+        stage_1.nextValue()
+
+        # Fill empty taxi routes
+        empty_tr = (mdf["taxi_route"] == "") | (mdf["taxi_route"].isna())
+        default_tr_columns = ['gate', 'runway', 'departure_arrival']
+        mdf.loc[empty_tr, "taxi_route"] = \
+            mdf.loc[empty_tr, default_tr_columns].apply('/'.join, axis=1) + "/1"
+
+        taxi_route_store = self.getTaxiRouteStore()
+        all_taxi_routes = taxi_route_store.getObjects().keys()
+        arrival_taxi_routes = [tr for tr in all_taxi_routes if "/A/" in tr]
+        departure_taxi_routes = [tr for tr in all_taxi_routes if "/D/" in tr]
+        for txr in mdf["taxi_route"].unique():
+            indices = mdf[mdf["taxi_route"] == txr].index
+            if taxi_route_store.hasKey(txr):
+                eq_mdf.loc[indices, "taxi_route"] = txr
             else:
-                inds = mov_df.index
+                alt_routes = []
+                if "/D/" in txr:
+                    alt_routes = \
+                        difflib.get_close_matches(txr, departure_taxi_routes)
+                elif "/A/" in txr:
+                    alt_routes = \
+                        difflib.get_close_matches(txr, arrival_taxi_routes)
 
-                proxy_dict = {"runway_time":MovementDataFrame["runway_time"].iloc[0],
-                              "block_time":MovementDataFrame["block_time"].iloc[0],
-                              }
-                proxy_mov = Movement(proxy_dict)
-                if "/D/" in tx_route:
-                    proxy_mov.setDepartureArrivalFlag("D")
+                if len(alt_routes) > 0:
+                    eq_mdf.loc[indices, "taxi_route"] = alt_routes[0]
+                    logger.warning("Taxiroute '%s' was replaced with '%s'",
+                                   (txr, alt_routes[0]))
                 else:
-                    proxy_mov.setDepartureArrivalFlag("A")
-                proxy_mov.setGate(self.getGateStore().getObject(mov_df.iloc[0]["gate"]))
-                proxy_mov.setAircraft(self.getAircraftStore().getObject(mov_df.iloc[0]["aircraft"]))
+                    logger.error("No taxiroute found to replace '%s' "
+                                 "which is not in the database", txr)
+                    eq_mdf.loc[indices, "taxi_route"] = np.NaN
 
-                if self.getEngineStore().hasKey(mov_df.iloc[0]["engine_name"]):
-                    proxy_mov.setAircraftEngine(self.getEngineStore().getObject(mov_df.iloc[0]["engine_name"]))
-                elif self.getHeliEngineStore().hasKey(mov_df.iloc[0]["engine_name"]):
-                    proxy_mov.setAircraftEngine(self.getHeliEngineStore().getObject(mov_df.iloc[0]["engine_name"]))
+        # Check if profiles exist in the database
+        stage_1.nextValue()
 
-                proxy_mov.setRunway(self.getRunwayStore().getObject(mov_df.iloc[0]["runway"]))
-                proxy_mov.setRunwayDirection(mov_df.iloc[0]["runway_direction"])
-                proxy_mov.setTaxiRoute(self.getTaxiRouteStore().getObject(mov_df.iloc[0]["taxi_route"]))
-                proxy_mov.setTrajectory(self.getAircraftTrajectoryStore().getObject(mov_df.iloc[0]["profile_id"]))
-                proxy_mov.updateTrajectoryAtRunway()
+        # Check if there are any profiles unspecified
+        profile_isna_any = mdf["profile_id"].isna().any()
 
-                Eq_MovementDataFrame.loc[inds, "runway"] = proxy_mov.getRunway()
-                Eq_MovementDataFrame.loc[inds, "taxi_route"] = proxy_mov.getTaxiRoute()
-                Eq_MovementDataFrame.loc[inds, "trajectory"] = proxy_mov.getTrajectory()
-                Eq_MovementDataFrame.loc[inds, "runway_trajectory"] = proxy_mov.getTrajectoryAtRunway()
+        # Get the unique profiles
+        profile_unique = mdf["profile_id"].astype(str).unique()
 
-        Movements_df = Eq_MovementDataFrame.dropna()
-        logger.info("Number of movements retained: %s"%Movements_df.shape[0])
-        # progressbar = self.ProgressBarWidget()
-        count_ = 0
-        for key, movement_dict in self.getMovementDatabase().getEntries().items():
+        # Check if the profiles exist in the store
+        trajectory_store = self.getAircraftTrajectoryStore()
+        profile_haskey_all = np.all(
+            list(trajectory_store.hasKey(prf) for prf in profile_unique))
+
+        # Add a default profile
+        if profile_isna_any and not profile_haskey_all:
+            for ag, airgroup in mdf.groupby(["aircraft", "departure_arrival"]):
+                ij_ = airgroup.index
+                _ac = airgroup["aircraft"].iloc[0]
+                _aircraft = aircraft_store.getObject(_ac)
+                if _aircraft is not None:
+                    _ad = airgroup["departure_arrival"].iloc[0]
+                    if _ad == "A":
+                        profile_id = _aircraft.getDefaultArrivalProfileName()
+                    elif _ad == "D":
+                        profile_id = _aircraft.getDefaultDepartureProfileName()
+                    else:
+                        logger.debug("%s for AC %s is not recognised as either "
+                                     "and arrival or departure", (_ad, _ac))
+                        continue
+                    eq_mdf.loc[ij_, "profile_id"] = profile_id
+                else:
+                    logger.debug("AC %s not in AircraftStore", _ac)
+                    continue
+
+        # Add nones if it matches the conditions
+        for prf in profile_unique:
+            indices = mdf[mdf["profile_id"] == prf].index
+            if len(indices) != 0 and prf and not pd.isna(prf) and \
+                    trajectory_store.hasKey(prf):
+                eq_mdf.loc[indices, "profile_id"] = prf
+
+        # Get unique combinations of eq_mdf
+        u_columns = ["runway", "runway_direction", "taxi_route", "profile_id"]
+        heli_engine_store = self.getHeliEngineStore()
+        engine_store = self.getEngineStore()
+
+        # Start the next stage
+        stage_2 = stage_1.nextStage(duration=10,
+                                    maximum=len(eq_mdf.groupby(u_columns)))
+        logger.debug(f'finished stage 1 '
+                     f'(n={stage_1._max - stage_1._min}) '
+                     f'in {stage_1._end_time - stage_1._start_time}')
+
+        for (rwy, rwy_dir, tx_route, prf_id), mov_df in eq_mdf.groupby(u_columns):
+
+            # Get the indices
+            inds = mov_df.index
+
+            # Create a proxy movement
+            proxy_mov = Movement({
+                "runway_time": mdf["runway_time"].iloc[0],
+                "block_time": mdf["block_time"].iloc[0],
+            })
+
+            # Set the departure/arrival flag
+            proxy_mov.setDepartureArrivalFlag("D" if "/D/" in tx_route else "A")
+
+            # Get the first movement from the group's dataframe
+            fm = mov_df.iloc[0]
+            fm_gate = gate_store.getObject(fm["gate"])
+            fm_aircraft = aircraft_store.getObject(fm["aircraft"])
+            fm_runway = runway_store.getObject(fm["runway"])
+            fm_taxi_route = taxi_route_store.getObject(fm["taxi_route"])
+            fm_trajectory = trajectory_store.getObject(fm["profile_id"])
+            fm_engine = None
+            if engine_store.hasKey(fm["engine_name"]):
+                fm_engine = engine_store.getObject(fm["engine_name"])
+            elif heli_engine_store.hasKey(fm["engine_name"]):
+                fm_engine = heli_engine_store.getObject(fm["engine_name"])
+
+            # Set the parameters of the proxy movement
+            proxy_mov.setGate(fm_gate)
+            proxy_mov.setAircraft(fm_aircraft)
+            proxy_mov.setAircraftEngine(fm_engine)
+            proxy_mov.setRunway(fm_runway)
+            proxy_mov.setRunwayDirection(fm["runway_direction"])
+            proxy_mov.setTaxiRoute(fm_taxi_route)
+            proxy_mov.setTrajectory(fm_trajectory)
+            proxy_mov.updateTrajectoryAtRunway()
+
+            # Update the dataframe
+            eq_mdf.loc[inds, "runway"] = proxy_mov.getRunway()
+            eq_mdf.loc[inds, "taxi_route"] = proxy_mov.getTaxiRoute()
+            eq_mdf.loc[inds, "trajectory"] = proxy_mov.getTrajectory()
+            eq_mdf.loc[inds, "runway_trajectory"] = \
+                proxy_mov.getTrajectoryAtRunway()
+
+            eq_mdf.loc[inds, "gate_obj"] = proxy_mov.getGate()
+            eq_mdf.loc[inds, "aircraft_obj"] = proxy_mov.getAircraft()
+            eq_mdf.loc[inds, "engine_obj"] = proxy_mov.getAircraftEngine()
+
+            stage_2.nextValue()
+
+        # Get the movements to retain
+        mdf_retained = eq_mdf[~eq_mdf[df_cols].isna().any(axis=1)]
+        logger.info("Number of movements retained: %s" % mdf_retained.shape[0])
+
+        # Start the final stage
+        stage_3 = stage_2.finalStage(maximum=mdf.shape[0])
+        logger.debug(f'finished stage 2 '
+                     f'(n={stage_2._max - stage_2._min}) '
+                     f'in {stage_2._end_time - stage_2._start_time}')
+
+        # Create a movement for every entry in the database
+        movement_db_entries = self.getMovementDatabase().getEntries()
+        for key, movement_dict in movement_db_entries.items():
+
+            # Create a movement
             mov = Movement(movement_dict)
-            count_ += +1
-            if (count_%10.0) == 0:
-                progressbar.setValue(float(100*float(count_)/len(self.getMovementDatabase().getEntries())))
-                QtCore.QCoreApplication.instance().processEvents()
+
+            # Get the relevant entry from mdf_retained
+            try:
+                mov_df_entry = mdf_retained.loc[key]
+            except KeyError:
+                logger.warning("Operation with 'oid' = %s will not be "
+                               "accounted for due to missing data", key)
+                continue
+
+            # Get the relevant objects
+            mov_aircraft = mov_df_entry["aircraft_obj"]
+
+            if mov_aircraft.getGroup() == "HELICOPTER":
+
+                # Get the helicopter engine
+                mov_engine = \
+                    heli_engine_store.getObject(mov_df_entry["engine_name"])
+            else:
+
+                # Get the aircraft engine
+                mov_engine = engine_store.getObject(mov_df_entry["engine_name"])
+
+            # Replace with Default Engine if it can't be found
+            if mov_engine is None:
+                mov_engine = mov_aircraft.getDefaultEngine()
+                logger.info("Engine wasn't found for movement %s. "
+                            "Will use default engine (%s).",
+                            (mov.getName(), mov_engine.getName()))
+
+            # Add the relevant objects to the movement
+            mov.setGate(mov_df_entry["gate_obj"])
+            mov.setAircraft(mov_aircraft)
+            mov.setAircraftEngine(mov_engine)
+            mov.setRunway(mov_df_entry["runway"])
+            mov.setRunwayDirection(mov_df_entry["runway_direction"])
+            mov.setTaxiRoute(mov_df_entry["taxi_route"])
+            mov.setTrajectory(mov_df_entry["trajectory"])
+            mov.setTrajectoryAtRunway(mov_df_entry["runway_trajectory"])
+
+            self.setObject(movement_dict.get("oid", "unknown"), mov)
+
+            # Update the progress bar
+            stage_3.nextValue()
             if progressbar.wasCanceled():
+                logger.warning('user canceled initMovements, '
+                               'so it might be incomplete')
                 break
 
-            if not key in Movements_df.index:
-                logger.warning("Operation with 'oid' = %s will not be accounted for due to missing data"%key)
-                # self.getMovementDatabase().removeEntry(key)
-                continue
-
-            mov.setGate(self.getGateStore().getObject(Movements_df.loc[key]["gate"]))
-            mov.setAircraft(self.getAircraftStore().getObject(Movements_df.loc[key]["aircraft"]))
-
-            if self.getAircraftStore().getObject(Movements_df.loc[key]["aircraft"]).getGroup() == "HELICOPTER":
-                if self.getHeliEngineStore().hasKey(Movements_df.loc[key]["engine_name"]):
-                    mov.setAircraftEngine(self.getHeliEngineStore().getObject(Movements_df.loc[key]["engine_name"]))
-                else:
-                    # replace with Default Engine
-                    default_eng=self.getAircraftStore().getObject(Movements_df.loc[key]["aircraft"]).getDefaultEngine()
-                    logger.info("Engine wasn't found for movement %s. Will use default engine (%s)."%(mov.getName(), default_eng.getName()))
-                    mov.setAircraftEngine(default_eng)
-            else:
-                if self.getEngineStore().hasKey(Movements_df.loc[key]["engine_name"]):
-                    mov.setAircraftEngine(self.getEngineStore().getObject(Movements_df.loc[key]["engine_name"]))
-                else:
-                    # replace with Default Engine
-                    default_eng=self.getAircraftStore().getObject(Movements_df.loc[key]["aircraft"]).getDefaultEngine()
-                    logger.info("Engine wasn't found for movement %s. Will use default engine (%s)."%(mov.getName(), default_eng.getName()))
-                    mov.setAircraftEngine(default_eng)
-
-            mov.setRunway(Movements_df.loc[key]["runway"])
-            mov.setRunwayDirection(Movements_df.loc[key]["runway_direction"])
-            mov.setTaxiRoute(Movements_df.loc[key]["taxi_route"])
-            mov.setTrajectory(Movements_df.loc[key]["trajectory"])
-            mov.setTrajectoryAtRunway(Movements_df.loc[key]["runway_trajectory"])
-
-            self.setObject(movement_dict["oid"] if "oid" in movement_dict else "unknown", mov)
+        stage_3.finish()
+        logger.debug(f'finished stage 3 '
+                     f'(n={stage_3._max - stage_3._min}) '
+                     f'in {stage_3._end_time - stage_3._start_time}')
 
 
-class MovementDatabase(with_metaclass(Singleton, SQLSerializable)):
+class MovementDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to user-defined movements stored in the database
     """
@@ -1512,305 +1657,306 @@ class MovementDatabase(with_metaclass(Singleton, SQLSerializable)):
     def __init__(self,
                  db_path_string,
                  table_name_string="user_aircraft_movements",
-                 table_columns_type_dict=OrderedDict([
-                     ("oid", "INTEGER PRIMARY KEY"),
-                     ("runway_time", "TIMESTAMP"),
-                     ("block_time", "TIMESTAMP"),
-                     ("aircraft_registration", "TEXT"),
-                     ("aircraft", "TEXT"),
-                     ("gate", "TEXT"),
-                     ("departure_arrival", "TEXT"),
-                     ("runway", "TEXT"),
-                     ("engine_name", "TEXT"),
-                     ("profile_id", "TEXT"),
-                     ("track_id", "TEXT"),
-                     ("taxi_route", "TEXT"),
-                     ("tow_ratio", "DECIMAL NULL"),
-                     ("apu_code", "INTEGER"),
-                     ("taxi_engine_count", "INTEGER"),
-                     ("set_time_of_main_engine_start_after_block_off_in_s", "DECIMAL NULL"),
-                     ("set_time_of_main_engine_start_before_takeoff_in_s", "DECIMAL NULL"),
-                     ("set_time_of_main_engine_off_after_runway_exit_in_s", "DECIMAL NULL"),
-                     ("engine_thrust_level_for_taxiing", "DECIMAL NULL"),
-                     ("taxi_fuel_ratio", "DECIMAL NULL"),
-                     ("number_of_stop_and_gos", "DECIMAL NULL"),
-                     ("domestic", "TEXT"),
-                     ("annual_operations", "DECIMAL NULL"),
-                ]),
+                 table_columns_type_dict=None,
                  primary_key="oid",
                  deserialize=True
-        ):
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key)
+                 ):
+        if table_columns_type_dict is None:
+            table_columns_type_dict = OrderedDict([
+                ("oid", "INTEGER PRIMARY KEY"),
+                ("runway_time", "TIMESTAMP"),
+                ("block_time", "TIMESTAMP"),
+                ("aircraft_registration", "TEXT"),
+                ("aircraft", "TEXT"),
+                ("gate", "TEXT"),
+                ("departure_arrival", "TEXT"),
+                ("runway", "TEXT"),
+                ("engine_name", "TEXT"),
+                ("profile_id", "TEXT"),
+                ("track_id", "TEXT"),
+                ("taxi_route", "TEXT"),
+                ("tow_ratio", "DECIMAL NULL"),
+                ("apu_code", "INTEGER"),
+                ("taxi_engine_count", "INTEGER"),
+                ("set_time_of_main_engine_start_after_block_off_in_s",
+                 "DECIMAL NULL"),
+                ("set_time_of_main_engine_start_before_takeoff_in_s",
+                 "DECIMAL NULL"),
+                ("set_time_of_main_engine_off_after_runway_exit_in_s",
+                 "DECIMAL NULL"),
+                ("engine_thrust_level_for_taxiing", "DECIMAL NULL"),
+                ("taxi_fuel_ratio", "DECIMAL NULL"),
+                ("number_of_stop_and_gos", "DECIMAL NULL"),
+                ("domestic", "TEXT"),
+            ])
+
+        SQLSerializable.__init__(self, db_path_string, table_name_string,
+                                 table_columns_type_dict, primary_key)
 
         if self._db_path and deserialize:
             self.deserialize()
 
-if __name__ == "__main__":
-    import sys, os
-
-    # print("--- %s seconds ---" % (time.time() - start_time))
-
-    # from qgis.PyQt import QtGui
-    from PyQt5 import QtCore, QtGui, QtWidgets
-    # from python_qt_binding import QtGui, QtCore  # new imports
-    # app = QtWidgets.QApplication(sys.argv)
-    app = QtWidgets.QApplication.instance()
-    if app is None:
-        app = QtWidgets.QApplication(sys.argv)
-        print('QApplication instance created: %s' % str(app))
-    else:
-        app.processEvents()
-        app.closeAllWindows()
-        print('QApplication instance already exists: %s' % str(app))
-    # from . import __init__
-    # import alaqslogging
-
-    import matplotlib
-    matplotlib.use('Qt5Agg')
-    import matplotlib.pyplot as plt
-    plt.ion()    # logging.getLogger('matplotlib.font_manager').disabled = True
-    import mplleaflet
-    import geopandas as gpd
-    import datetime
-    # from shapely.wkt import loads
-
-
-    # path_to_database = os.path.join("..","..","example/", "CAEPport", "CAEPport_out.alaqs")
-    # path_to_database = os.path.join("..","..","example/", "CAEPport", "CAEPport_out_noAPU.alaqs")
-    path_to_database = os.path.join("..", "..", "example/", "CAEPport_training", "caepport_out.alaqs")
-
-
-    if not os.path.isfile(path_to_database):
-        # fix_print_with_import
-        print("Database %s not found"%path_to_database)
-
-    store = MovementStore(path_to_database, debug=False)
-    # for key, movement_dict in  store.getMovementDatabase().getEntries().iteritems():
-    #     print(key, movement_dict)
-    #     #gate
-    #     if "gate" in movement_dict:
-    #         if store.getGateStore().hasKey(movement_dict["gate"]):
-    #             print store.getGateStore().getObject(movement_dict["gate"])
-    #                 self.getGateStore().getObject(mov_df.iloc[0]["gate"])
-    #         else:
-    #             print("Could not find gate with name '%s'." % (movement_dict["gate"]))
-
-    # print("--- %s seconds ---" % (time.time() - start_time))
-    # print("Number of Movements: %s"%len(store.getMovementDatabase().getEntries()))
-
-#     # then run calculateEmissionsPerSegment only once / unique mov and store result
-#     plot_ei = False
-
-    movements = []
-    for movement_name, movement in store.getObjects().items():
-        movements.append(movement)
-
-    limit = {
-        "max_height": 914.4,
-        "height_unit_in_feet":False
-    }
-    # max_limit = limit["max_height"] if limit['height_unit_in_feet'] is False else Conversions.convertMetersToFeet(limit["max_height"])
-
-    installation_corrections = {
-                        "Takeoff":1.010,    # 100%
-                        "Climbout":1.012,   # 85%
-                        "Approach":1.020,   # 30%
-                        "Idle":1.100        # 7%
-    }
-
-    # ambient_conditions = {}
-    # try:
-    #     from .AmbientCondition import AmbientCondition, AmbientConditionStore
-    # except:
-    #     from AmbientCondition import AmbientCondition, AmbientConditionStore
-    ambient_conditions = AmbientCondition()
-
-    method={
-        "name":"bymode",
-        "config":{
-            "apply_smooth_and_shift": 'none',
-            # "apply_smooth_and_shift": 'default',
-            # "apply_smooth_and_shift": 'smooth & shift',
-            "apply_nox_corrections": False,
-            "airport_altitude": 0.,
-            "installation_corrections": installation_corrections,
-            "ambient_conditions": ambient_conditions
-        }
-    }
-
-    # for mov in movements[::-1]:
-    results_df = pd.DataFrame(index=range(0, len(movements)),
-                              columns=['name','gate','fuel_kg', 'co2_kg', 'co_g', 'hc_g', 'nox_g', 'sox_g', 'pm10_g'])
-    cnt = 0
-    for mov in movements:
-
-        print(mov.getName(), mov.getRunwayDirection(), mov.getAircraft().getName(),mov.getAircraftEngine().getName(), mov.getTrajectory().getIdentifier())
-
-        emissions_list = mov.calculateEmissions(method=method, limit=limit)
-        emissions = sum(em_["emissions"] for em_ in emissions_list)
-        try:
-            # fix_print_with_import
-            print("Fuel:",emissions.getFuel()[0],"\t CO2(kg):",emissions.getCO2()[0]/1000.,
-                  "\t CO(g):",emissions.getValue("CO", "g")[0], "\t NOx(g):",emissions.getValue("NOx", "g")[0])
-            # print mov.getAircraft().getType(), mov.getAircraftEngine().getName(), \
-            #     Conversions.convertTimeToSeconds(abs(mov.getBlockTime() - mov.getRunwayTime())), \
-            #     mov.getDepartureArrivalFlag(), prof_id, mov.getGate().getName(), mov.getGate().getType(), \
-            #     emissions.getFuel()[0], emissions.getValue("CO2", "g")[0], emissions.getValue("CO", "g")[0], \
-            #     emissions.getValue("NOx", "g")[0], emissions.getValue("SOx", "g")[0], emissions.getValue("HC", "g")[0], \
-            #     emissions.getValue("PM10", "g")[0]
-        except:
-            # fix_print_with_import
-            print("----------------------------------")
-            # fix_print_with_import
-            print("Error for movement: %s"%mov.getName())
-            # fix_print_with_import
-            print("----------------------------------")
-
-        # fig, ax = plt.subplots()
-        # for em_ in emissions_list:
-        #     geom = em_["emissions"].getGeometry()
-        #     ax.set_title(mov.getName())
-        #     gpd.GeoSeries(geom).plot(ax=ax, color='r', alpha=0.25)
-
-        # gdf = gpd.GeoDataFrame(index=range(0, len(emissions_list)), columns=["CO", "geometry", "source", "L"])
-        # geoms = []
-        # cntgdf = 0
-        # for em_ in emissions_list:
-        #     try:
-        #         gdf.loc[cntgdf, "geometry"] = em_['emissions'].getGeometry()
-        #     except:
-        #         gdf.loc[cntgdf, "geometry"] = LineString()
-        #     # geoms.append(em_['emissions'].getGeometry())
-        #     gdf.loc[cntgdf, "CO"] = em_['emissions'].getValue('CO','g')[0]/1000
-        #     gdf.loc[cntgdf, "source"] = mov.getName()
-        #     gdf.loc[cntgdf, "L"] = em_['emissions'].getGeometry().length  # emissions_.getGeometry()
-        #     cntgdf += +1
-        #
-        # # gdf.loc[:, "geometry"] = geoms
-        # fig, ax = plt.subplots()
-        # ax.plot(mov.getRunway().getGeometry().xy[0], mov.getRunway().getGeometry().xy[1], linewidth=3, alpha=0.5, color="k")
-        # gdf[gdf.L>0].plot(ax=ax, column="L", legend=False, categorical=True, cmap='Set2')
-        # ax.set_title(mov.getName()+" / "+mov.getRunwayDirection())
-        # plt.show()
-        # break
-
-        # try:
-        #     results_df.loc[cnt, "name"] = mov.getName()
-        #     results_df.loc[cnt, "gate"] = mov.getGate().getName()
-        #     results_df.loc[cnt, "fuel_kg"] = emissions.getFuel()[0]
-        #     results_df.loc[cnt, "co2_kg"] = emissions.getCO2()[0]/1000.
-        #     results_df.loc[cnt, "co_g"] = emissions.getValue("CO", "g")[0]
-        #     results_df.loc[cnt, "hc_g"] = emissions.getValue("HC", "g")[0]
-        #     results_df.loc[cnt, "nox_g"] = emissions.getValue("NOx", "g")[0]
-        #     results_df.loc[cnt, "sox_g"] = emissions.getValue("SOx", "g")[0]
-        #     results_df.loc[cnt, "pm10_g"] = emissions.getValue("PM10", "g")[0]
-        # except:
-        #     results_df.loc[cnt, "name"] = mov.getName()
-        #     results_df.loc[cnt, "gate"] = mov.getGate().getName()
-        #     results_df.loc[cnt, "fuel_kg"] = np.nan
-        #     results_df.loc[cnt, "co2_kg"] = np.nan
-        #     results_df.loc[cnt, "co_g"] = np.nan
-        #     results_df.loc[cnt, "hc_g"] = np.nan
-        #     results_df.loc[cnt, "nox_g"] = np.nan
-        #     results_df.loc[cnt, "sox_g"] = np.nan
-        #     results_df.loc[cnt, "pm10_g"] = np.nan
-        #     # break
-        # cnt += +1
-
-    # results_df.to_excel("emissions_%s.xlsx"%(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")), index=False)
-
-    # # gdf.dropna(how='all').to_csv(emissions_CO_%s.csv"%(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")),index=False)
-    # gdf.dropna(how='all').plot(ax=ax, column="CO2", legend=True, categorical=True, cmap='jet')
-    # plt.show()
-    # # mplleaflet.show(fig=ax.figure, crs={'init': 'epsg:3857'}, tiles="cartodb_positron",
-    # #         path=os.path.join("..","..","example/", "CAEPport_training", "emissions_CO_%s.html"%(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))))
-    # # plt.savefig(emissions_CO_%s.png"%(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")), dpi=300, bbox_inches="tight")
-
-    # sys.exit(app.exec_())
-    app.quit()
-
-# CAEPport
-# if index_segment_ == 0 :
-# apu_time = None
-# if self.isArrival():
-#     if self.getAircraft().getGroup() == "JET LARGE" or self.getAircraft().getGroup() == "JET MEDIUM":
-#         apu_time = 0 if self.getGate().getType() == "PIER" else 30
-#     elif self.getAircraft().getGroup() == "JET REGIONAL" or self.getAircraft().getGroup() == "JET SMALL":
-#         apu_time = 0 if self.getGate().getType() == "PIER" else 15
 #
-# elif self.isDeparture():
-#     if self.getAircraft().getGroup() == "JET LARGE" or self.getAircraft().getGroup() == "JET MEDIUM":
-#         apu_time = 5 if self.getGate().getType() == "PIER" else 45
-#     elif self.getAircraft().getGroup() == "JET REGIONAL" or self.getAircraft().getGroup() == "JET SMALL":
-#         apu_time = 5 if self.getGate().getType() == "PIER" else 30
-
-# if not apu_time is None:
-#     apu_emiss_ = self.getAircraft().getApu().getEmissions("NR")
+# if __name__ == "__main__":
+#     # print("--- %s seconds ---" % (time.time() - start_time))
 #
-#     if "fuel_kg_sec" in apu_emiss_:
-#         em_.addFuel(apu_emiss_["fuel_kg_sec"] * apu_time)
-#     if "co_g_s" in apu_emiss_:
-#         em_.addCO(apu_emiss_["co_g_s"] * apu_time)
-#     if "co2_g_s" in apu_emiss_:
-#         em_.addCO2(apu_emiss_["co2_g_s"] * apu_time)
-#     if "hc_g_s" in apu_emiss_:
-#         em_.addHC(apu_emiss_["hc_g_s"] * apu_time)
-#     if "nox_g_s" in apu_emiss_:
-#         em_.addNOx(apu_emiss_["nox_g_s"] * apu_time)
-
-
-# if total APU time (theoretical) is greater than total taxiing time
-# if apu_time > abs(self.getBlockTime()-self.getRunwayTime()):
-
-#
-#     # 1: stand and taxiway
-#     elif self.getAPUCode()==1:
-#
-#     # 2: stand, taxiing and take-off/climb-out or approach/landing
-#     elif self.getAPUCode()==1:
-#
+#     # from qgis.PyQt import QtGui
+#     # from python_qt_binding import QtGui, QtCore  # new imports
+#     # app = QtWidgets.QApplication(sys.argv)
+#     app = QtWidgets.QApplication.instance()
+#     if app is None:
+#         app = QtWidgets.QApplication(sys.argv)
+#         print('QApplication instance created: %s' % str(app))
 #     else:
-#         logger.error("Wrong APU Code for movement %s"%(mov.getName()))
+#         app.processEvents()
+#         app.closeAllWindows()
+#         print('QApplication instance already exists: %s' % str(app))
+#     # from . import __init__
+#     # import alaqslogging
 #
-# else:
-#     apu_time = abs(self.getBlockTime()-self.getRunwayTime())
-
-# if index_segment_ == 0 and (self.isDeparture() or (self.isArrival() and self.getAPUCode()==1)):
-# add apu emissions to the first segment
-# apu_time = abs(self.getBlockTime()-self.getRunwayTime())
-
-# if not self.getAircraft().getApu() is None:
-#     apu_emiss_ = self.getAircraft().getApu().getEmissions("NL")
-#     if "fuel_kg_sec" in apu_emiss_:
-#         em_.addFuel(apu_emiss_["fuel_kg_sec"] * apu_time)
-#     if "co_g_s"  in apu_emiss_:
-#         em_.addCO(apu_emiss_["co_g_s"] * apu_time)
-#     if "co2_g_s"  in apu_emiss_:
-#         em_.addCO2(apu_emiss_["co2_g_s"] * apu_time)
-#     if "hc_g_s"  in apu_emiss_:
-#         em_.addHC(apu_emiss_["hc_g_s"] * apu_time)
-#     if "nox_g_s"  in apu_emiss_:
-#         em_.addNOx(apu_emiss_["nox_g_s"] * apu_time)
-
-# if not self.getAPUCode() is None and self.getAPUCode()>0:
-#     apu_time = self.getAircraft().getApuTimes()["arr_s"] if self.isArrival() else self.getAircraft().getApuTimes()["dep_s"]
-#     print(apu_time, self.getName())
-
-# apu_time = new_taxiway_segment_time
-# if not self.getAircraft().getApu() is None:
-#     apu_emiss_ = self.getAircraft().getApu().getEmissions("NR")
+#     import matplotlib
+#     matplotlib.use('Qt5Agg')
+#     import matplotlib.pyplot as plt
+#     plt.ion()    # logging.getLogger('matplotlib.font_manager').disabled = True
+#     # from shapely.wkt import loads
 #
-#     if "fuel_kg_sec" in apu_emiss_:
-#         em_.addFuel(apu_emiss_["fuel_kg_sec"] * apu_time)
-#     if "co_g_s"  in apu_emiss_:
-#         em_.addCO(apu_emiss_["co_g_s"] * apu_time)
-#     if "co2_g_s"  in apu_emiss_:
-#         em_.addCO2(apu_emiss_["co2_g_s"] * apu_time)
-#     if "hc_g_s"  in apu_emiss_:
-#         em_.addHC(apu_emiss_["hc_g_s"] * apu_time)
-#     if "nox_g_s"  in apu_emiss_:
-#         em_.addNOx(apu_emiss_["nox_g_s"] * apu_time)
-#         # em_.setCategory("APU")
-
-# Remaining emissions are queueing emissions.
-# These emissions are added to the last segment of the taxiway route for both departures and arrivals
+#
+#     # path_to_database = os.path.join("..","..","example/", "CAEPport", "CAEPport_out.alaqs")
+#     # path_to_database = os.path.join("..","..","example/", "CAEPport", "CAEPport_out_noAPU.alaqs")
+#     path_to_database = os.path.join("..", "..", "example/", "CAEPport_training", "caepport_out.alaqs")
+#
+#
+#     if not os.path.isfile(path_to_database):
+#         # fix_print_with_import
+#         print("Database %s not found"%path_to_database)
+#
+#     store = MovementStore(path_to_database, debug=False)
+#     # for key, movement_dict in  store.getMovementDatabase().getEntries().iteritems():
+#     #     print(key, movement_dict)
+#     #     #gate
+#     #     if "gate" in movement_dict:
+#     #         if store.getGateStore().hasKey(movement_dict["gate"]):
+#     #             print store.getGateStore().getObject(movement_dict["gate"])
+#     #                 self.getGateStore().getObject(mov_df.iloc[0]["gate"])
+#     #         else:
+#     #             print("Could not find gate with name '%s'." % (movement_dict["gate"]))
+#
+#     # print("--- %s seconds ---" % (time.time() - start_time))
+#     # print("Number of Movements: %s"%len(store.getMovementDatabase().getEntries()))
+#
+# #     # then run calculateEmissionsPerSegment only once / unique mov and store result
+# #     plot_ei = False
+#
+#     movements = []
+#     for movement_name, movement in store.getObjects().items():
+#         movements.append(movement)
+#
+#     limit = {
+#         "max_height": 914.4,
+#         "height_unit_in_feet":False
+#     }
+#     # max_limit = limit["max_height"] if limit['height_unit_in_feet'] is False else conversion.convertMetersToFeet(limit["max_height"])
+#
+#     installation_corrections = {
+#                         "Takeoff":1.010,    # 100%
+#                         "Climbout":1.012,   # 85%
+#                         "Approach":1.020,   # 30%
+#                         "Idle":1.100        # 7%
+#     }
+#
+#     # ambient_conditions = {}
+#     # try:
+#     #     from .AmbientCondition import AmbientCondition, AmbientConditionStore
+#     # except:
+#     #     from AmbientCondition import AmbientCondition, AmbientConditionStore
+#     ambient_conditions = AmbientCondition()
+#
+#     method={
+#         "name":"bymode",
+#         "config":{
+#             "apply_smooth_and_shift": 'none',
+#             # "apply_smooth_and_shift": 'default',
+#             # "apply_smooth_and_shift": 'smooth & shift',
+#             "apply_nox_corrections": False,
+#             "airport_altitude": 0.,
+#             "installation_corrections": installation_corrections,
+#             "ambient_conditions": ambient_conditions
+#         }
+#     }
+#
+#     # for mov in movements[::-1]:
+#     results_df = pd.DataFrame(index=range(0, len(movements)),
+#                               columns=['name','gate','fuel_kg', 'co2_kg', 'co_g', 'hc_g', 'nox_g', 'sox_g', 'pm10_g'])
+#     cnt = 0
+#     for mov in movements:
+#
+#         print(mov.getName(), mov.getRunwayDirection(), mov.getAircraft().getName(),mov.getAircraftEngine().getName(), mov.getTrajectory().getIdentifier())
+#
+#         emissions_list = mov.calculateEmissions(method=method, limit=limit)
+#         emissions = sum(em_["emissions"] for em_ in emissions_list)
+#         try:
+#             # fix_print_with_import
+#             print("Fuel:",emissions.getFuel()[0],"\t CO2(kg):",emissions.getCO2()[0]/1000.,
+#                   "\t CO(g):",emissions.getValue("CO", "g")[0], "\t NOx(g):",emissions.getValue("NOx", "g")[0])
+#             # print mov.getAircraft().getType(), mov.getAircraftEngine().getName(), \
+#             #     conversion.convertTimeToSeconds(abs(mov.getBlockTime() - mov.getRunwayTime())), \
+#             #     mov.getDepartureArrivalFlag(), prof_id, mov.getGate().getName(), mov.getGate().getType(), \
+#             #     emissions.getFuel()[0], emissions.getValue("CO2", "g")[0], emissions.getValue("CO", "g")[0], \
+#             #     emissions.getValue("NOx", "g")[0], emissions.getValue("SOx", "g")[0], emissions.getValue("HC", "g")[0], \
+#             #     emissions.getValue("PM10", "g")[0]
+#         except:
+#             # fix_print_with_import
+#             print("----------------------------------")
+#             # fix_print_with_import
+#             print("Error for movement: %s"%mov.getName())
+#             # fix_print_with_import
+#             print("----------------------------------")
+#
+#         # fig, ax = plt.subplots()
+#         # for em_ in emissions_list:
+#         #     geom = em_["emissions"].getGeometry()
+#         #     ax.set_title(mov.getName())
+#         #     gpd.GeoSeries(geom).plot(ax=ax, color='r', alpha=0.25)
+#
+#         # gdf = gpd.GeoDataFrame(index=range(0, len(emissions_list)), columns=["CO", "geometry", "source", "L"])
+#         # geoms = []
+#         # cntgdf = 0
+#         # for em_ in emissions_list:
+#         #     try:
+#         #         gdf.loc[cntgdf, "geometry"] = em_['emissions'].getGeometry()
+#         #     except:
+#         #         gdf.loc[cntgdf, "geometry"] = LineString()
+#         #     # geoms.append(em_['emissions'].getGeometry())
+#         #     gdf.loc[cntgdf, "CO"] = em_['emissions'].getValue('CO','g')[0]/1000
+#         #     gdf.loc[cntgdf, "source"] = mov.getName()
+#         #     gdf.loc[cntgdf, "L"] = em_['emissions'].getGeometry().length  # emissions_.getGeometry()
+#         #     cntgdf += +1
+#         #
+#         # # gdf.loc[:, "geometry"] = geoms
+#         # fig, ax = plt.subplots()
+#         # ax.plot(mov.getRunway().getGeometry().xy[0], mov.getRunway().getGeometry().xy[1], linewidth=3, alpha=0.5, color="k")
+#         # gdf[gdf.L>0].plot(ax=ax, column="L", legend=False, categorical=True, cmap='Set2')
+#         # ax.set_title(mov.getName()+" / "+mov.getRunwayDirection())
+#         # plt.show()
+#         # break
+#
+#         # try:
+#         #     results_df.loc[cnt, "name"] = mov.getName()
+#         #     results_df.loc[cnt, "gate"] = mov.getGate().getName()
+#         #     results_df.loc[cnt, "fuel_kg"] = emissions.getFuel()[0]
+#         #     results_df.loc[cnt, "co2_kg"] = emissions.getCO2()[0]/1000.
+#         #     results_df.loc[cnt, "co_g"] = emissions.getValue("CO", "g")[0]
+#         #     results_df.loc[cnt, "hc_g"] = emissions.getValue("HC", "g")[0]
+#         #     results_df.loc[cnt, "nox_g"] = emissions.getValue("NOx", "g")[0]
+#         #     results_df.loc[cnt, "sox_g"] = emissions.getValue("SOx", "g")[0]
+#         #     results_df.loc[cnt, "pm10_g"] = emissions.getValue("PM10", "g")[0]
+#         # except:
+#         #     results_df.loc[cnt, "name"] = mov.getName()
+#         #     results_df.loc[cnt, "gate"] = mov.getGate().getName()
+#         #     results_df.loc[cnt, "fuel_kg"] = np.nan
+#         #     results_df.loc[cnt, "co2_kg"] = np.nan
+#         #     results_df.loc[cnt, "co_g"] = np.nan
+#         #     results_df.loc[cnt, "hc_g"] = np.nan
+#         #     results_df.loc[cnt, "nox_g"] = np.nan
+#         #     results_df.loc[cnt, "sox_g"] = np.nan
+#         #     results_df.loc[cnt, "pm10_g"] = np.nan
+#         #     # break
+#         # cnt += +1
+#
+#     # results_df.to_excel("emissions_%s.xlsx"%(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")), index=False)
+#
+#     # # gdf.dropna(how='all').to_csv(emissions_CO_%s.csv"%(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")),index=False)
+#     # gdf.dropna(how='all').plot(ax=ax, column="CO2", legend=True, categorical=True, cmap='jet')
+#     # plt.show()
+#     # # mplleaflet.show(fig=ax.figure, crs={'init': 'epsg:3857'}, tiles="cartodb_positron",
+#     # #         path=os.path.join("..","..","example/", "CAEPport_training", "emissions_CO_%s.html"%(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))))
+#     # # plt.savefig(emissions_CO_%s.png"%(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")), dpi=300, bbox_inches="tight")
+#
+#     # sys.exit(app.exec_())
+#     app.quit()
+#
+# # CAEPport
+# # if index_segment_ == 0 :
+# # apu_time = None
+# # if self.isArrival():
+# #     if self.getAircraft().getGroup() == "JET LARGE" or self.getAircraft().getGroup() == "JET MEDIUM":
+# #         apu_time = 0 if self.getGate().getType() == "PIER" else 30
+# #     elif self.getAircraft().getGroup() == "JET REGIONAL" or self.getAircraft().getGroup() == "JET SMALL":
+# #         apu_time = 0 if self.getGate().getType() == "PIER" else 15
+# #
+# # elif self.isDeparture():
+# #     if self.getAircraft().getGroup() == "JET LARGE" or self.getAircraft().getGroup() == "JET MEDIUM":
+# #         apu_time = 5 if self.getGate().getType() == "PIER" else 45
+# #     elif self.getAircraft().getGroup() == "JET REGIONAL" or self.getAircraft().getGroup() == "JET SMALL":
+# #         apu_time = 5 if self.getGate().getType() == "PIER" else 30
+#
+# # if not apu_time is None:
+# #     apu_emiss_ = self.getAircraft().getApu().getEmissions("NR")
+# #
+# #     if "fuel_kg_sec" in apu_emiss_:
+# #         em_.addFuel(apu_emiss_["fuel_kg_sec"] * apu_time)
+# #     if "co_g_s" in apu_emiss_:
+# #         em_.addCO(apu_emiss_["co_g_s"] * apu_time)
+# #     if "co2_g_s" in apu_emiss_:
+# #         em_.addCO2(apu_emiss_["co2_g_s"] * apu_time)
+# #     if "hc_g_s" in apu_emiss_:
+# #         em_.addHC(apu_emiss_["hc_g_s"] * apu_time)
+# #     if "nox_g_s" in apu_emiss_:
+# #         em_.addNOx(apu_emiss_["nox_g_s"] * apu_time)
+#
+#
+# # if total APU time (theoretical) is greater than total taxiing time
+# # if apu_time > abs(self.getBlockTime()-self.getRunwayTime()):
+#
+# #
+# #     # 1: stand and taxiway
+# #     elif self.getAPUCode()==1:
+# #
+# #     # 2: stand, taxiing and take-off/climb-out or approach/landing
+# #     elif self.getAPUCode()==1:
+# #
+# #     else:
+# #         logger.error("Wrong APU Code for movement %s"%(mov.getName()))
+# #
+# # else:
+# #     apu_time = abs(self.getBlockTime()-self.getRunwayTime())
+#
+# # if index_segment_ == 0 and (self.isDeparture() or (self.isArrival() and self.getAPUCode()==1)):
+# # add apu emissions to the first segment
+# # apu_time = abs(self.getBlockTime()-self.getRunwayTime())
+#
+# # if not self.getAircraft().getApu() is None:
+# #     apu_emiss_ = self.getAircraft().getApu().getEmissions("NL")
+# #     if "fuel_kg_sec" in apu_emiss_:
+# #         em_.addFuel(apu_emiss_["fuel_kg_sec"] * apu_time)
+# #     if "co_g_s"  in apu_emiss_:
+# #         em_.addCO(apu_emiss_["co_g_s"] * apu_time)
+# #     if "co2_g_s"  in apu_emiss_:
+# #         em_.addCO2(apu_emiss_["co2_g_s"] * apu_time)
+# #     if "hc_g_s"  in apu_emiss_:
+# #         em_.addHC(apu_emiss_["hc_g_s"] * apu_time)
+# #     if "nox_g_s"  in apu_emiss_:
+# #         em_.addNOx(apu_emiss_["nox_g_s"] * apu_time)
+#
+# # if not self.getAPUCode() is None and self.getAPUCode()>0:
+# #     apu_time = self.getAircraft().getApuTimes()["arr_s"] if self.isArrival() else self.getAircraft().getApuTimes()["dep_s"]
+# #     print(apu_time, self.getName())
+#
+# # apu_time = new_taxiway_segment_time
+# # if not self.getAircraft().getApu() is None:
+# #     apu_emiss_ = self.getAircraft().getApu().getEmissions("NR")
+# #
+# #     if "fuel_kg_sec" in apu_emiss_:
+# #         em_.addFuel(apu_emiss_["fuel_kg_sec"] * apu_time)
+# #     if "co_g_s"  in apu_emiss_:
+# #         em_.addCO(apu_emiss_["co_g_s"] * apu_time)
+# #     if "co2_g_s"  in apu_emiss_:
+# #         em_.addCO2(apu_emiss_["co2_g_s"] * apu_time)
+# #     if "hc_g_s"  in apu_emiss_:
+# #         em_.addHC(apu_emiss_["hc_g_s"] * apu_time)
+# #     if "nox_g_s"  in apu_emiss_:
+# #         em_.addNOx(apu_emiss_["nox_g_s"] * apu_time)
+# #         # em_.setCategory("APU")
+#
+# # Remaining emissions are queueing emissions.
+# # These emissions are added to the last segment of the taxiway route for both departures and arrivals

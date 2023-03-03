@@ -1,56 +1,35 @@
-from __future__ import absolute_import
-from builtins import map
-from builtins import str
-from builtins import range
-# from . import __init__ #setup the paths for direct calls of the module
-import __init__
-
-import os, sys
-from PyQt5 import QtCore, QtGui, QtWidgets
-# from qgis.PyQt import QtGui, QtWidgets
-
-import alaqslogging
-logger = alaqslogging.logging.getLogger(__name__)
-logger.setLevel('DEBUG')
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-import alaqsutils           # For logging and conversion of data types
-import alaqsdblite          # Functions for working with ALAQS database
+import itertools
+import os
 from collections import OrderedDict
-
 from datetime import datetime, timedelta
 
-from tools import CSVInterface
-from tools import Spatial
-from tools import Conversions
-from tools import SQLInterface
-
-import plotting
-from plotting.ContourPlotVectorLayer import ContourPlotVectorLayer
-
-from interfaces.OutputModule import OutputModule
-from interfaces.Movement import Movement
-
-# import math
 import numpy as np
-import itertools
 import pandas as pd
+from PyQt5 import QtWidgets
 from shapely.geometry import Polygon, Point
+
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
+from open_alaqs.alaqs_core.plotting.ContourPlotVectorLayer import \
+    ContourPlotVectorLayer
+from open_alaqs.alaqs_core.tools import conversion, sql_interface
+
+logger = get_logger(__name__)
+
 
 class QGISVectorLayerDispersionModule(OutputModule):
     """
-    Module to that returns a QGIS vector layer with representation of concentrations.
+    Module to that returns a QGIS vector layer with representation of
+     concentrations.
     """
 
     @staticmethod
     def getModuleName():
         return "QGISVectorLayerDispersionModule"
 
-    def __init__(self, values_dict = {}):
+    def __init__(self, values_dict=None):
+        if values_dict is None:
+            values_dict = {}
         OutputModule.__init__(self, values_dict)
 
         # Layer configuration
@@ -62,21 +41,21 @@ class QGISVectorLayerDispersionModule(OutputModule):
 
         self._check_uncertainty = values_dict["check_uncertainty"] if "check_uncertainty" in values_dict else False
 
-        self._time_start = Conversions.convertStringToDateTime(values_dict["Start (incl.)"]) if "Start (incl.)" in values_dict else ""
-        self._time_end = Conversions.convertStringToDateTime(values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
+        self._time_start = conversion.convertStringToDateTime(values_dict["Start (incl.)"]) if "Start (incl.)" in values_dict else ""
+        self._time_end = conversion.convertStringToDateTime(values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
         self._timeseries = values_dict["timeseries"] if "timeseries" in values_dict else None
 
         self._concentration_database = values_dict["concentration_path"] if "concentration_path" in values_dict else None
 
         self._layer_name = ContourPlotVectorLayer.LAYER_NAME
         self._layer_name_suffix = values_dict["name_suffix"] if "name_suffix" in values_dict else ""
-        self._isPolygon = Conversions.convertToFloat(values_dict["Shape of Marker: Polygons instead of Points"]) if "Shape of Marker: Polygons instead of Points" in values_dict else True
+        self._isPolygon = conversion.convertToFloat(values_dict["Shape of Marker: Polygons instead of Points"]) if "Shape of Marker: Polygons instead of Points" in values_dict else True
         self._enable_labels = values_dict["Add labels with values to cell boxes"] if "Add labels with values to cell boxes" in values_dict else False
         self._3DVisualization = values_dict["3DVisualization"] if "3DVisualization" in values_dict else False
 
         self._contour_layer = None
         self._total_concentration = 0.
-        self._threshold_to_create_a_data_point = Conversions.convertToFloat(values_dict["threshold"]) if "threshold" in values_dict else 0.0001
+        self._threshold_to_create_a_data_point = conversion.convertToFloat(values_dict["threshold"]) if "threshold" in values_dict else 0.0001
         self._grid = values_dict["grid"] if "grid" in values_dict else None
 
         self.setConfigurationWidget(OrderedDict([
@@ -106,7 +85,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
         return self._min_height_in_m
     def setMinHeight(self, var, inFeet=False):
         if inFeet:
-            self._min_height_in_m = Conversions.convertFeetToMeters(var)
+            self._min_height_in_m = conversion.convertFeetToMeters(var)
         else:
             self._min_height_in_m = var
 
@@ -114,7 +93,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
         return self._max_height_in_m
     def setMaxHeight(self, var, inFeet=False):
         if inFeet:
-            self._max_height_in_m = Conversions.convertFeetToMeters(var)
+            self._max_height_in_m = conversion.convertFeetToMeters(var)
         else:
             self._max_height_in_m = var
 
@@ -205,13 +184,13 @@ class QGISVectorLayerDispersionModule(OutputModule):
             # Convert the ARP into EPSG 3857
             sql_text = "SELECT X(ST_Transform(ST_PointFromText('%s', 4326), 3857)), Y(ST_Transform(ST_PointFromText('%s', 4326), 3857));" % \
                        (reference_point_wkt, reference_point_wkt)
-            result = SQLInterface.query_text(self._grid._db_path, sql_text)
+            result = sql_interface.query_text(self._grid._db_path, sql_text)
             if result is None:
                 raise Exception("AUSTAL2000: Could not reset reference point as coordinates could not be transformed. The query was\n'%s'" % (sql_text))
                 return None
 
-            self._reference_x = Conversions.convertToFloat(result[0][0])
-            self._reference_y = Conversions.convertToFloat(result[0][1])
+            self._reference_x = conversion.convertToFloat(result[0][0])
+            self._reference_y = conversion.convertToFloat(result[0][1])
             self._reference_z = self._grid._reference_altitude
 
             # Calculate the coordinates of the bottom left of the grid
@@ -245,8 +224,8 @@ class QGISVectorLayerDispersionModule(OutputModule):
             # reconstruct actual date
             start_date = datetime.strptime(t0,'%Y-%m-%d.%H:%M:%S')
 
-            t1_day = Conversions.convertToInt(t1.split(".")[0]) if ("." in t1) else 0
-            t2_day = Conversions.convertToInt(t2.split(".")[0]) if ("." in t2) else 0
+            t1_day = conversion.convertToInt(t1.split(".")[0]) if ("." in t1) else 0
+            t2_day = conversion.convertToInt(t2.split(".")[0]) if ("." in t2) else 0
 
             t1_hour = datetime.strptime(t1.split(".")[1],'%H:%M:%S').replace(year=start_date.year) if ("." in t1) \
                 else datetime.strptime(t1,'%H:%M:%S').replace(year=start_date.year)
@@ -402,17 +381,17 @@ class QGISVectorLayerDispersionModule(OutputModule):
 
             self._header = [(self._pollutant, "double")]
 
-            self._xmin = Conversions.convertToFloat(output_data['xmin'][0]) if ('xmin' in output_data and len(output_data['xmin']) > 0) else None
-            self._ymin = Conversions.convertToFloat(output_data['ymin'][0]) if ('ymin' in output_data and len(output_data['ymin']) > 0) else None
-            self._delta = Conversions.convertToFloat(output_data['delta'][0]) if ('delta' in output_data and len(output_data['delta']) > 0) else None
+            self._xmin = conversion.convertToFloat(output_data['xmin'][0]) if ('xmin' in output_data and len(output_data['xmin']) > 0) else None
+            self._ymin = conversion.convertToFloat(output_data['ymin'][0]) if ('ymin' in output_data and len(output_data['ymin']) > 0) else None
+            self._delta = conversion.convertToFloat(output_data['delta'][0]) if ('delta' in output_data and len(output_data['delta']) > 0) else None
             self._sk = output_data['sk'] if ('sk' in output_data and len(output_data['sk']) > 0) else None
 
             # self._units = output_data['unit'][0].decode('latin-1') if ('unit' in output_data and len(output_data['unit']) > 0) else None
             self._units = output_data['unit'][0] if ('unit' in output_data and len(output_data['unit']) > 0) else None
 
-            self._index_i = Conversions.convertToInt(output_data['hghb'][0]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # columns
-            self._index_j = Conversions.convertToInt(output_data['hghb'][1]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # rows
-            self._index_k = Conversions.convertToInt(output_data['hghb'][2]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # z
+            self._index_i = conversion.convertToInt(output_data['hghb'][0]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # columns
+            self._index_j = conversion.convertToInt(output_data['hghb'][1]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # rows
+            self._index_k = conversion.convertToInt(output_data['hghb'][2]) if ('hghb' in output_data and len(output_data['hghb']) > 0) else None # z
 
             if not (self._index_k and self._index_i and self._index_j and len(concentration_matrix)>0):
                 logger.error("Error in reshaping concentration matrix: (%s, %s, %s)"%(self._index_k,self._index_i,self._index_j))
@@ -428,8 +407,8 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 # take the concentration up tp Kmax: <c> = c1*H1/(H1+H2+H3+...) + c2*H2/(H1+H2+H3+...) + c3*H3/(H1+H2+H3+...) + ...
                 total_column_concentration = np.zeros(shape=(self._index_j, self._index_i))
                 for z_ in range(1, self._index_k+1):
-                    total_column_concentration += (Conversions.convertToFloat(output_data['sk'][z_])*concentration_matrix_reshaped[z_-1,:,:].squeeze())/\
-                        Conversions.convertToFloat(output_data['sk'][self._index_k])
+                    total_column_concentration += (conversion.convertToFloat(output_data['sk'][z_])*concentration_matrix_reshaped[z_-1,:,:].squeeze())/\
+                        conversion.convertToFloat(output_data['sk'][self._index_k])
                 self._concentration_matrix = total_column_concentration
 
             return True
@@ -454,7 +433,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
         # ToDo: User defined vertical layer (Zmin, Zmax)?
         Zmax = 0
         # try:
-        #     Zmax = Conversions.convertToFloat(self._sk[self._index_k])
+        #     Zmax = conversion.convertToFloat(self._sk[self._index_k])
         #     logger.info("Maximum height: %s"%Zmax)
         # except:
         #     Zmax = 0

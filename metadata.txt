@@ -7,14 +7,14 @@ name=open_alaqs
 qgisMinimumVersion=3.0
 description=An open-source local air quality model
 
-version=3.0
+version=3.1
 author=Eurocontrol
 email=open-alaqs@eurocontrol.int
 
 about=The main objective of Open-ALAQS is to provide a four-dimensional emissions inventory for an airport in which the emissions from the various fixed and mobile sources are aggregated and subsequently displayed for analysis.
 
-tracker=http://bugs
-repository=http://repo
+tracker=https://gitlab.aerlabs.nl/eurocontrol/open_alaqs/-/issues
+repository=https://gitlab.aerlabs.nl/eurocontrol/open_alaqs
 # End of mandatory metadata
 
 # Recommended items:
@@ -26,7 +26,7 @@ hasProcessingProvider=no
 # Tags are comma separated with spaces allowed
 tags=python
 
-homepage=http://homepage
+homepage=https://www.eurocontrol.int/online-tool/airport-local-air-quality-studies
 category=Plugins
 icon=icon.png
 # experimental flag

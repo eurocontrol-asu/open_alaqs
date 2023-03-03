@@ -1,45 +1,21 @@
-from __future__ import absolute_import
-from builtins import str
-# from . import __init__ #setup the paths for direct calls of the module
-import __init__
-import os, sys
-import alaqsutils           # For logging and conversion of data types
-import alaqsdblite          # Functions for working with ALAQS database
-from collections import OrderedDict
-import pandas as pd
-pd.set_option('chained_assignment',None)
-import time
-
-# import logging              # For unit testing. Can be commented out for distribution
-# logger = logging.getLogger("alaqs.%s" % (__name__))
-import alaqslogging
-logger = alaqslogging.logging.getLogger(__name__)
-logger.setLevel('DEBUG')
-file_handler = alaqslogging.logging.FileHandler(alaqslogging.LOG_FILE_PATH)
-log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-formatter = alaqslogging.logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-from tools import CSVInterface
-from tools import Spatial
-from tools import Conversions
-from tools.Spatial import getRelativeHeightInCell
-
-from shapely.geometry import Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
-from shapely.wkt import loads
-
-import plotting
-from plotting.ContourPlotVectorLayer import ContourPlotVectorLayer
-
-from interfaces.OutputModule import OutputModule
-from interfaces.Movement import Movement
-
-# from qgis.PyQt import QtGui, QtWidgets
-from PyQt5 import QtCore, QtGui, QtWidgets
 import math
+from collections import OrderedDict
 
-# import matplotlib.pyplot as plt
+import pandas as pd
+from PyQt5 import QtWidgets
+from shapely.geometry import Point, LineString, MultiLineString, \
+    Polygon, MultiPolygon
+
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
+from open_alaqs.alaqs_core.plotting.ContourPlotVectorLayer import \
+    ContourPlotVectorLayer
+from open_alaqs.alaqs_core.tools import conversion, spatial
+
+pd.set_option('chained_assignment', None)
+
+logger = get_logger(__name__)
+
 
 class EmissionsQGISVectorLayerOutputModule(OutputModule):
     """
@@ -57,13 +33,13 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         self._options = values_dict["options"] if "options" in values_dict else ""
 
         #Results analysis
-        self._time_start = Conversions.convertStringToDateTime(values_dict["Start (incl.)"]) if "Start (incl.)" in values_dict else ""
-        self._time_end = Conversions.convertStringToDateTime(values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
+        self._time_start = conversion.convertStringToDateTime(values_dict["Start (incl.)"]) if "Start (incl.)" in values_dict else ""
+        self._time_end = conversion.convertStringToDateTime(values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
         self._pollutant = values_dict["pollutant"] if "pollutant" in values_dict else None
 
         self._layer_name = ContourPlotVectorLayer.LAYER_NAME
         self._layer_name_suffix = values_dict["name_suffix"] if "name_suffix" in values_dict else ""
-        self._isPolygon = Conversions.convertToFloat(values_dict["Shape of Marker: Polygons instead of Points"]) if "Shape of Marker: Polygons instead of Points" in values_dict else True
+        self._isPolygon = conversion.convertToFloat(values_dict["Shape of Marker: Polygons instead of Points"]) if "Shape of Marker: Polygons instead of Points" in values_dict else True
         self._enable_labels = values_dict["Add labels with values to cell boxes"] if "Add labels with values to cell boxes" in values_dict else False
         self._3DVisualization = values_dict["3DVisualization"] if "3DVisualization" in values_dict else False
 
@@ -71,7 +47,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
 
         self._total_emissions = 0.
 
-        self._threshold_to_create_a_data_point = Conversions.convertToFloat(values_dict["threshold"]) if "threshold" in values_dict else 0.0001
+        self._threshold_to_create_a_data_point = conversion.convertToFloat(values_dict["threshold"]) if "threshold" in values_dict else 0.0001
 
         self._grid = values_dict["grid"] if "grid" in values_dict else None #ec.get3DGrid()
 
@@ -102,7 +78,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         return self._min_height_in_m
     def setMinHeight(self, var, inFeet=False):
         if inFeet:
-            self._min_height_in_m = Conversions.convertFeetToMeters(var)
+            self._min_height_in_m = conversion.convertFeetToMeters(var)
         else:
             self._min_height_in_m = var
 
@@ -110,7 +86,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         return self._max_height_in_m
     def setMaxHeight(self, var, inFeet=False):
         if inFeet:
-            self._max_height_in_m = Conversions.convertFeetToMeters(var)
+            self._max_height_in_m = conversion.convertFeetToMeters(var)
         else:
             self._max_height_in_m = var
     def getThresholdToCreateDataPoint(self):
@@ -236,7 +212,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
 
 
     def getBoundingBox(self, geometry_wkt):
-        bbox = Spatial.getBoundingBox(geometry_wkt)
+        bbox = spatial.getBoundingBox(geometry_wkt)
         return bbox
 
     def getCellBox(self, x_,y_,z_, grid_):
@@ -462,8 +438,8 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         #         #
         #         # matched_cells = []
         #         # if isMultiPolygon_element_:
-        #         #     MultiPolygonEmissions = Conversions.convertToFloat(emissions_.getValue(self._pollutant, unit="kg")[0])\
-        #         #                             /Conversions.convertToFloat(geom.GetGeometryCount())
+        #         #     MultiPolygonEmissions = conversion.convertToFloat(emissions_.getValue(self._pollutant, unit="kg")[0])\
+        #         #                             /conversion.convertToFloat(geom.GetGeometryCount())
         #         #
         #         #     for i in range(0, geom.GetGeometryCount()):
         #         #         g = geom.GetGeometryRef(i)
