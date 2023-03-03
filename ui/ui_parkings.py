@@ -3,10 +3,10 @@ from PyQt5 import QtCore, QtWidgets
 from open_alaqs.alaqs_core import alaqs
 from open_alaqs.alaqs_core import alaqsutils
 from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.alaqs_core.tools.lib_alaqs_method import \
-    roadway_emission_factors_alaqs_method
+from open_alaqs.alaqs_core.tools import copert5
+from open_alaqs.alaqs_core.tools.copert5_utils import VEHICLE_CATEGORIES
 
-logger = get_logger(__name__)
+logger = get_logger("open_alaqs.ui.ui_parkings")
 
 
 def catch_errors(f):
@@ -22,37 +22,34 @@ def catch_errors(f):
         try:
             return f(*args, **kwargs)
         except Exception as e:
-            alaqsutils.print_error(f.__name__, Exception, e)
+            alaqsutils.print_error(f.__name__, Exception, e, log=logger)
 
     return wrapper
 
 
 def form_open(form, layer, feature):
-    logger.debug(f"This is the modified simple form")
-    logger.debug(f"Layer {layer} and feature {feature}")
-    logger.debug(f"Attributes of fields: {feature.fields().names()}")
-    logger.debug(f"Attributes of feature: {feature.attributes()}")
-
-    # Get all the fields from the form
     fields = dict(
         name_field=form.findChild(QtWidgets.QLineEdit, "parking_id"),
+        vehicle_year_field=form.findChild(QtWidgets.QLineEdit, "vehicle_year"),
         height_field=form.findChild(QtWidgets.QLineEdit, "height"),
         distance_field=form.findChild(QtWidgets.QLineEdit, "distance"),
         idle_time_field=form.findChild(QtWidgets.QLineEdit, "idle_time"),
         park_time_field=form.findChild(QtWidgets.QLineEdit, "park_time"),
-        vehicle_light_field=form.findChild(QtWidgets.QLineEdit,
-                                           "vehicle_light"),
-        vehicle_medium_field=form.findChild(QtWidgets.QLineEdit,
-                                            "vehicle_medium"),
-        vehicle_heavy_field=form.findChild(QtWidgets.QLineEdit,
-                                           "vehicle_heavy"),
-        vehicle_year_field=form.findChild(QtWidgets.QLineEdit, "vehicle_year"),
         speed_field=form.findChild(QtWidgets.QLineEdit, "speed"),
+
+        # The fleet mix fields
+        pc_petrol=form.findChild(QtWidgets.QLineEdit, "pc_petrol_percentage"),
+        pc_diesel=form.findChild(QtWidgets.QLineEdit, "pc_diesel_percentage"),
+        lcv_petrol=form.findChild(QtWidgets.QLineEdit, "lcv_petrol_percentage"),
+        lcv_diesel=form.findChild(QtWidgets.QLineEdit, "lcv_diesel_percentage"),
+        hdt_petrol=form.findChild(QtWidgets.QLineEdit, "hdt_petrol_percentage"),
+        hdt_diesel=form.findChild(QtWidgets.QLineEdit, "hdt_diesel_percentage"),
+        motorcycle_petrol=form.findChild(QtWidgets.QLineEdit, "motorcycle_petrol_percentage"),
+        bus_diesel=form.findChild(QtWidgets.QLineEdit, "bus_diesel_percentage"),
+
         hour_profile_field=form.findChild(QtWidgets.QComboBox, "hour_profile"),
-        daily_profile_field=form.findChild(QtWidgets.QComboBox,
-                                           "daily_profile"),
-        month_profile_field=form.findChild(QtWidgets.QComboBox,
-                                           "month_profile"),
+        daily_profile_field=form.findChild(QtWidgets.QComboBox, "daily_profile"),
+        month_profile_field=form.findChild(QtWidgets.QComboBox, "month_profile"),
         co_gm_vh_field=form.findChild(QtWidgets.QLineEdit, "co_gm_vh"),
         hc_gm_vh_field=form.findChild(QtWidgets.QLineEdit, "hc_gm_vh"),
         nox_gm_vh_field=form.findChild(QtWidgets.QLineEdit, "nox_gm_vh"),
@@ -61,6 +58,7 @@ def form_open(form, layer, feature):
         p1_gm_vh_field=form.findChild(QtWidgets.QLineEdit, "p1_gm_vh"),
         p2_gm_vh_field=form.findChild(QtWidgets.QLineEdit, "p2_gm_vh"),
         method_field=form.findChild(QtWidgets.QLineEdit, "method"),
+
         recalculate=form.findChild(QtWidgets.QPushButton, "button_recalculate"),
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
@@ -68,14 +66,6 @@ def form_open(form, layer, feature):
 
     # Hide the instudy field
     fields['instudy'].setHidden(True)
-
-    # Disable method, height and park time fields
-    fields['method_field'].setText("Open-ALAQS")
-    fields['method_field'].setEnabled(False)
-    fields['height_field'].setText("0")
-    fields['height_field'].setEnabled(False)
-    fields['park_time_field'].setText("0")
-    fields['park_time_field'].setEnabled(False)
 
     # Seed the profiles
     populate_hourly_profiles(fields['hour_profile_field'])
@@ -85,6 +75,19 @@ def form_open(form, layer, feature):
     # Connect the recalculate button with the recalculate_emissions method
     fields['recalculate'].clicked.connect(lambda: recalculate_emissions(fields, form))
 
+    # Disable various fields
+    fields['method_field'].setText("Open-ALAQS")
+    fields['method_field'].setEnabled(False)
+    fields['height_field'].setText("0")
+    fields['height_field'].setEnabled(False)
+    fields['park_time_field'].setText("0")
+    fields['park_time_field'].setEnabled(False)
+
+    # Connect the comboboxes to validation
+    fields['hour_profile_field'].currentTextChanged.connect(lambda: validate(fields))
+    fields['daily_profile_field'].currentTextChanged.connect(lambda: validate(fields))
+    fields['month_profile_field'].currentTextChanged.connect(lambda: validate(fields))
+
     # Add input validation to text fields in the form
     for key, value in fields.items():
         if isinstance(value, QtWidgets.QLineEdit):
@@ -93,17 +96,141 @@ def form_open(form, layer, feature):
     # Block the ok button (will be overwritten after validation)
     fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
 
-    # Connect the instudy checkbox on save
+    # Connect all QComboBoxes and the instudy checkbox on save
     def on_save():
-        form.changeAttribute("hour_profile",
-                             fields['hour_profile_field'].currentText())
-        form.changeAttribute("daily_profile",
-                             fields['daily_profile_field'].currentText())
-        form.changeAttribute("month_profile",
-                             fields['month_profile_field'].currentText())
+        form.changeAttribute("hour_profile", fields['hour_profile_field'].currentText())
+        form.changeAttribute("daily_profile", fields['daily_profile_field'].currentText())
+        form.changeAttribute("month_profile", fields['month_profile_field'].currentText())
         feature["instudy"] = str(int(fields['instudy'].isChecked()))
 
     fields['button_box'].accepted.connect(on_save)
+
+
+@catch_errors
+def recalculate_emissions(fields: dict, form):
+    try:
+
+        # Set the fleet mix percentages
+        fleet_percentage_fields = [
+            "pc_petrol",
+            "pc_diesel",
+            "lcv_petrol",
+            "lcv_diesel",
+            "hdt_petrol",
+            "hdt_diesel",
+            "motorcycle_petrol",
+            "bus_diesel",
+        ]
+
+        # Set the types per field (for validation)
+        field_types = {
+            'name_field': 'str',
+            'vehicle_year_field': "int",
+            'height_field': "float",
+            'speed_field': "float",
+            'distance_field': "float",
+            'idle_time_field': "float",
+            'park_time_field': "float",
+        }
+        for f in fleet_percentage_fields:
+            field_types[f] = 'float'
+
+        # Validate the input
+        valid_fields = {}
+        validation_errors = []
+        for field_name, field_type in field_types.items():
+            field_value = validate_field(fields[field_name], field_type)
+            if isinstance(field_value, bool) and not field_value:
+                logger.error(f"{field_name} should be of type {field_type}, "
+                             f"the current value is {field_value}")
+                validation_errors.append(field_name)
+            else:
+                valid_fields[field_name] = field_value
+        if validation_errors:
+            msg = f"Please complete all fields first. The following " \
+                  f"{len(validation_errors)} fields are incomplete or " \
+                  f"incorrect:\n- " + ("\n- ".join(validation_errors))
+            msg_box = QtWidgets.QMessageBox()
+            msg_box.setText(msg)
+            msg_box.exec_()
+            return False
+
+        # Calculate the total
+        fleet_percentage_total = sum([float(fields[f].text()) for f in fleet_percentage_fields])
+
+        if fleet_percentage_total != 100:
+            msg_box = QtWidgets.QMessageBox()
+            msg_box.setText("Fleet mix must be decimal values that total 100%. "
+                            f"Current sum is {fleet_percentage_total}%.")
+            msg_box.exec_()
+            return False
+
+        # Get the relevant validated fields
+        name = valid_fields['name_field']
+        vehicle_year = valid_fields['vehicle_year_field']
+        height = valid_fields['height_field']
+        speed = valid_fields['speed_field']
+        travel_distance = valid_fields['distance_field']
+        idle_time = valid_fields['idle_time_field']
+        park_time = valid_fields['park_time_field']
+
+        # Prepare the input for the roadway emission factors calculation method
+        form_data = {
+            'name': name,
+            'vehicle_year': vehicle_year,
+            'height': height,
+            'speed': speed,
+            'idle_time': float(idle_time),
+            'park_time': float(park_time),
+            'travel_distance': float(travel_distance),
+            'parking': True
+        }
+        for f in fleet_percentage_fields:
+            form_data[f + '_percentage'] = float(fields[f].text())
+
+        # Get the study data for additional information needed
+        study_data = alaqs.load_study_setup_dict()
+
+        # Get the roadway method
+        roadway_method = study_data['roadway_method']
+
+        # Get the roadway country and fleet year
+        roadway_country = study_data['roadway_country']
+        roadway_fleet_year = study_data['roadway_fleet_year']
+
+        # Get the Euro standards
+        euro_standards = alaqs.get_roadway_euro_standards(roadway_country, roadway_fleet_year)
+
+        # Log the Euro standards
+        val = "\n\tEuro Standards:"
+        for vehicle_category, euro_standard in sorted(euro_standards.items()):
+            val += f"\n\t\t{vehicle_category} : {euro_standard}"
+        logger.info(val)
+
+        for short_vehicle_category, vehicle_category in VEHICLE_CATEGORIES.items():
+            form_data[f'{short_vehicle_category}_euro_standard'] = euro_standards[vehicle_category]
+
+        # Calculate emissions according to the ALAQS method
+        emission_profile = {}
+        if roadway_method == 'COPERT 5':
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            emission_profile = copert5.roadway_emission_factors(form_data, study_data)
+            QtWidgets.QApplication.restoreOverrideCursor()
+
+        # Update the emission fields
+        fields['co_gm_vh_field'].setText(str(emission_profile['co_ef']))
+        fields['hc_gm_vh_field'].setText(str(emission_profile['hc_ef']))
+        fields['nox_gm_vh_field'].setText(str(emission_profile['nox_ef']))
+        fields['sox_gm_vh_field'].setText(str(emission_profile['sox_ef']))
+        fields['pm10_gm_vh_field'].setText(str(emission_profile['pm10_ef']))
+        fields['p1_gm_vh_field'].setText(str(emission_profile['p1_ef']))
+        fields['p2_gm_vh_field'].setText(str(emission_profile['p2_ef']))
+
+    except Exception as e:
+        msg_box = QtWidgets.QMessageBox()
+        msg_box.setText("Emissions could not be calculated: %s" % e)
+        msg_box.exec_()
+        raise e
 
 
 @catch_errors
@@ -181,80 +308,7 @@ def populate_monthly_profiles(field):
     field.setEditable(False)
 
 
-def recalculate_emissions(fields, form):
-    try:
-        # Validate all relevant fields
-        name = validate_field(fields['name_field'], "str")
-        vehicle_year = validate_field(fields['vehicle_year_field'], "int")
-        height = validate_field(fields['height_field'], "float")
-        speed = validate_field(fields['speed_field'], "float")
-        travel_distance = validate_field(fields['distance_field'], "float")
-        idle_time = validate_field(fields['idle_time_field'], "float")
-        park_time = validate_field(fields['park_time_field'], "float")
-        vehicle_light = validate_field(fields['vehicle_light_field'], "float")
-        vehicle_medium = validate_field(fields['vehicle_medium_field'], "float")
-        vehicle_heavy = validate_field(fields['vehicle_heavy_field'], "float")
-        method = str(fields['method_field'].text())
-
-        if name is False or vehicle_year is False or height is False or speed is False or vehicle_light is False or \
-                vehicle_medium is False or vehicle_heavy is False or method is False or \
-                travel_distance is False or idle_time is False or park_time is False:
-            msg_box = QtWidgets.QMessageBox()
-            msg_box.setText("Please complete all fields first")
-            msg_box.exec_()
-            return False
-
-        # Put all the values in a dictionary
-        form_data_dict = dict()
-        form_data_dict['name'] = name
-        form_data_dict['vehicle_year'] = vehicle_year
-        form_data_dict['height'] = height
-        form_data_dict['speed'] = speed
-        form_data_dict['vehicle_light'] = float(vehicle_light)
-        form_data_dict['vehicle_medium'] = float(vehicle_medium)
-        form_data_dict['vehicle_heavy'] = float(vehicle_heavy)
-        form_data_dict['idle_time'] = float(idle_time)
-        form_data_dict['park_time'] = float(park_time)
-        form_data_dict['travel_distance'] = float(travel_distance)
-        form_data_dict['parking'] = True
-
-        # Check if percentages add up to 100
-        vl = float(fields['vehicle_light_field'].text())
-        vm = float(fields['vehicle_medium_field'].text())
-        vh = float(fields['vehicle_heavy_field'].text())
-        if (vl + vm + vh) != 100:
-            QtWidgets.QMessageBox().warning(form, "Error",
-                                            "Fleet mix must be decimal values that total 100%",
-                                            QtWidgets.QMessageBox.Cancel)
-            return False
-
-        emission_profile = None
-        if method == "Open-ALAQS":
-            # Calculate emissions according to the ALAQS method
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            emission_profile = roadway_emission_factors_alaqs_method(
-                form_data_dict)
-            QtWidgets.QApplication.restoreOverrideCursor()
-
-        # Update the emission fields
-        fields['co_gm_vh_field'].setText(str(emission_profile['co_ef']))
-        fields['hc_gm_vh_field'].setText(str(emission_profile['hc_ef']))
-        fields['nox_gm_vh_field'].setText(str(emission_profile['nox_ef']))
-        fields['sox_gm_vh_field'].setText(str(emission_profile['sox_ef']))
-        fields['pm10_gm_vh_field'].setText(str(emission_profile['pm10_ef']))
-        fields['p1_gm_vh_field'].setText(str(emission_profile['p1_ef']))
-        fields['p2_gm_vh_field'].setText(str(emission_profile['p2_ef']))
-
-    except Exception as e:
-        msg_box = QtWidgets.QMessageBox()
-        msg_box.setText("Emissions could not be calculated: %s" % e)
-        msg_box.exec_()
-        error = alaqsutils.print_error(populate_hourly_profiles.__name__,
-                                       Exception, e)
-        return error
-
-
-def validate(fields):
+def validate(fields: dict):
     """
     This function validates that all of the required fields have been completed
     correctly. If they have, the attributes are committed to the feature. 
@@ -274,9 +328,17 @@ def validate(fields):
         validate_field(fields['distance_field'], "float"),
         validate_field(fields['idle_time_field'], "float"),
         validate_field(fields['park_time_field'], "float"),
-        validate_field(fields['vehicle_light_field'], "float"),
-        validate_field(fields['vehicle_medium_field'], "float"),
-        validate_field(fields['vehicle_heavy_field'], "float"),
+        validate_field(fields['pc_petrol'], "float"),
+        validate_field(fields['pc_diesel'], "float"),
+        validate_field(fields['lcv_petrol'], "float"),
+        validate_field(fields['lcv_diesel'], "float"),
+        validate_field(fields['hdt_petrol'], "float"),
+        validate_field(fields['hdt_diesel'], "float"),
+        validate_field(fields['motorcycle_petrol'], "float"),
+        validate_field(fields['bus_diesel'], "float"),
+        validate_field(fields['hour_profile_field'], "str"),
+        validate_field(fields['daily_profile_field'], "str"),
+        validate_field(fields['month_profile_field'], "str"),
         validate_field(fields['co_gm_vh_field'], "float"),
         validate_field(fields['hc_gm_vh_field'], "float"),
         validate_field(fields['nox_gm_vh_field'], "float"),
@@ -291,6 +353,8 @@ def validate(fields):
 
 
 def validate_field(ui_element, var_type):
+    if ui_element is None:
+        return False
     try:
         if var_type is "str":
             try:
