@@ -105,6 +105,9 @@ def test_parking_calculation():
     # Set the idle time [min]
     idle_time = 15
 
+    # Set the travel distance [km]
+    distance = 25
+
     # Set the country
     country = 'EU27'
 
@@ -150,7 +153,14 @@ def test_parking_calculation():
     mean_evaporation = average_evaporation(evaporation, idle_time)
 
     # Calculate the average emission factors
-    emission_factors = average_emission_factors(emissions)
+    mean_emission_factors = average_emission_factors(emissions)
+
+    # Calculate the average emissions per vehicle
+    emission_factors = pd.Series({
+        'eCO[g/km]': mean_emission_factors['eCO[g/km]'] * distance,
+        'eVOC[g/km]': mean_emission_factors['eVOC[g/km]'] * distance + mean_evaporation['eVOC[g/vh]'],
+        'eNOx[g/km]': mean_emission_factors['eNOx[g/km]'] * distance,
+    })
 
     # Set the reference values (hot emission factors)
     evaporation_refs = pd.Series({
@@ -159,11 +169,13 @@ def test_parking_calculation():
 
     # Set the reference values (hot emission factors)
     emission_factor_refs = pd.Series({
-        'eCO[g/km]': 0.198159277,
-        'eNOx[g/km]': 0.045065088,
-        'eVOC[g/km]': 0.012275,
+        'eCO[g/km]': 0.198159277 * distance,
+        'eVOC[g/km]': 0.012275 * distance + 0.033798717802083,
+        'eNOx[g/km]': 0.045065088 * distance,
     })
 
     tm.assert_series_equal(emission_factors, emission_factor_refs)
 
     tm.assert_series_equal(mean_evaporation, evaporation_refs)
+
+    pass
