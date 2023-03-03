@@ -206,6 +206,43 @@ def calculate_emissions(fleet: pd.DataFrame, efs: pd.DataFrame) -> pd.DataFrame:
     return fleet
 
 
+def calculate_evaporation(fleet: pd.DataFrame, efs: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate the evaporation emissions for each technology (a combination of vehicle category, fuel type and euro
+     standard).
+
+    :param fleet: The fleet mix with columns vehicle_category, fuel, euro_standard
+    :param efs: The emission factors
+    """
+
+    # Input data validation
+    if not fleet['vehicle_category'].isin(VEHICLE_CATEGORIES.keys()).all():
+        raise ValueError(f'vehicle_category should be one of the values in {VEHICLE_CATEGORIES.keys()}')
+    if not fleet['fuel'].isin(FUELS).all():
+        raise ValueError(f'fuel should be one of the values in {FUELS}')
+    if not fleet['euro_standard'].isin(EURO_STANDARDS).all():
+        raise ValueError(f'euro_standard should be one of the values in {EURO_STANDARDS}')
+    if 'N' not in fleet:
+        raise ValueError('number of vehicles, N, for each technology should be provided')
+    if 'M[km]' not in fleet:
+        raise ValueError('mileage per vehicle [km], M, for each technology should be provided')
+
+    # Set the technology as index
+    fleet = fleet.set_index(['vehicle_category', 'fuel', 'euro_standard'])
+
+    # Determine evaporation emission factors (VOC only)
+    efs_evap = efs[efs['hot-cold-evaporation'] == 'Evaporation'].pivot(
+        index=['vehicle_category', 'fuel', 'euro_standard'], columns='evaporation_split', values='e[g/km]')
+    # todo[rpfk]: Check unit with Stavros
+    efs_evap['eVOC[g/day]'] = efs_evap.sum(axis=1)
+    fleet = fleet.merge(efs_evap[['eVOC[g/day]']], how='left', left_index=True, right_index=True)
+
+    # Calculate the total evaporation emissions (g/day)
+    fleet[f'EVOC[g/day]'] = fleet[f'N'] * fleet[f'eVOC[g/day]']
+
+    return fleet
+
+
 def average_emission_factors(e: pd.DataFrame) -> pd.Series:
     # Determine the total emissions
     total_emissions = e[[f'E{p}[g]' for p in POLLUTANTS]].sum()
@@ -215,5 +252,18 @@ def average_emission_factors(e: pd.DataFrame) -> pd.Series:
 
     # Calculate the average emission factors
     emission_factors = pd.Series({f'e{p}[g/km]': total_emissions[f'E{p}[g]'] / total_mileage for p in POLLUTANTS})
+
+    return emission_factors
+
+
+def average_evaporation(e: pd.DataFrame, t_min: float) -> pd.Series:
+    # Determine the total emissions for t_min
+    total_evaporation = e[f'EVOC[g/day]'].sum() / (24 * 60) * t_min
+
+    # Determine the total number of vehicles
+    total_vehicles = e['N'].sum()
+
+    # Calculate the average evaporation
+    emission_factors = pd.Series({f'eVOC[g/vh]': total_evaporation / total_vehicles})
 
     return emission_factors
