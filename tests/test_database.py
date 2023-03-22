@@ -252,8 +252,6 @@ def test_profile_data():
     # Set the combination of columns that need to be unique
     primary_key = [
         'profile_id',
-        'arrival_departure',
-        'stage',
         'point'
     ]
 
