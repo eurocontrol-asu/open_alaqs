@@ -3,6 +3,9 @@ from pathlib import Path
 import pandas as pd
 
 if __name__ == "__main__":
+    """
+    Get the data from the IMPACT study and combine with the existing profiles
+    """
 
     # Set the IMPACT study and scenario name
     study = 'DEMO_Noise_&_Emissions'

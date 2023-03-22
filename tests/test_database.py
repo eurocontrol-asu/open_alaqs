@@ -43,7 +43,6 @@ def test_sql(sql_files: list, template_type: str):
 
         # Check if the SQL query should be executed to the project template
         if re.search(MATCH_PATTERNS[template_type], sql_path.name) is not None:
-
             # Check if the table is present
             assert sql_path.stem in engine.table_names()
 
@@ -235,3 +234,31 @@ def test_template_data(sql_files: list, csv_file: Path):
 
     # Check the non-empty columns
     pd.testing.assert_frame_equal(template_data.loc[:, ~data.isna().all()], data.loc[:, ~data.isna().all()])
+
+
+def test_profile_data():
+    """
+    Test if the profile data contains duplicate profile ids
+    """
+
+    # Get the file with profile data
+    f = DB_DIR / 'data' / 'default_aircraft_profiles.csv'
+
+    assert f.exists()
+
+    # Get the profile data
+    data = pd.read_csv(f)
+
+    # Set the combination of columns that need to be unique
+    primary_key = [
+        'profile_id',
+        'arrival_departure',
+        'stage',
+        'point'
+    ]
+
+    # Get the duplicates
+    is_duplicated = data[primary_key].duplicated()
+    duplicates = data[data[primary_key].duplicated(keep=False)].sort_values(primary_key)
+
+    assert not is_duplicated.any(), f'found {duplicates.shape[0]} duplicate keys (out of {data.shape[0]} keys)'
