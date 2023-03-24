@@ -3,8 +3,8 @@ from qgis.core import *
 from qgis.gui import *
 
 from open_alaqs.alaqs_core import alaqs, alaqsutils
-from open_alaqs.alaqs_core import get_logger
-from open_alaqs.alaqs_core import copert5
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.tools import copert5
 
 from open_alaqs.alaqs_core.tools.copert5_utils import VEHICLE_CATEGORIES
 
