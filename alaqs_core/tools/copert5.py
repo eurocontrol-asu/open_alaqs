@@ -3,7 +3,7 @@ from open_alaqs.alaqs_core import alaqsdblite
 from open_alaqs.alaqs_core import alaqsutils
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-from alaqs_core.tools.copert5_utils import calculate_emissions, average_emission_factors, ef_query, VEHICLE_CATEGORIES, \
+from open_alaqs.alaqs_core.tools.copert5_utils import calculate_emissions, average_emission_factors, ef_query, VEHICLE_CATEGORIES, \
     calculate_evaporation, average_evaporation
 
 logger = get_logger(__name__)
