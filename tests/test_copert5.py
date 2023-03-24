@@ -3,9 +3,9 @@ from pathlib import Path
 import pandas as pd
 from pandas import testing as tm
 
-from alaqs_core.tools.copert5_utils import ef_query, calculate_emissions, average_emission_factors, \
+from open_alaqs.alaqs_core.tools.copert5_utils import ef_query, calculate_emissions, average_emission_factors, \
     calculate_evaporation, average_evaporation
-from database.generate_templates import get_engine
+from open_alaqs.database.generate_templates import get_engine
 
 TEMPLATES_DIR = Path(__file__).parents[1] / 'alaqs_core/templates'
 

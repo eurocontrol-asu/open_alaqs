@@ -119,6 +119,32 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup,
     inventory_copy_emission_dynamics(inventory_path)
     inventory_copy_study_setup(inventory_path)
 
+    # Set the tables to copy
+    copy_tables = [
+        "default_airports",
+        "default_stationary_ef",
+        "default_cost319_vehicle_fleet",
+        "default_vehicle_nox_ef",
+        "default_apu_times",
+        "default_pollutants",
+        "default_grid_definition",
+        "default_helicopter_engine_ei",
+        "default_vehicle_fleet_euro_standards",
+        "default_apu_ef",
+        "default_aircraft_apu_ef",
+        "default_merge_definition",
+        "default_vehicle_hc_ef",
+        "default_vehicle_pm10_ef",
+        "default_layer_definition",
+        "default_dictionary",
+        "default_class_break",
+        "default_vehicle_co_ef",
+        "default_aircraft_registrations",
+        "default_vehicle_ef_copert5",
+    ]
+    for table in copy_tables:
+        inventory_copy_generic_table(inventory_path, table)
+
     # 3D Grid configuration
     grid_configuration_ = {
         'x_cells': 10,
@@ -135,15 +161,13 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup,
     for head in grid_cells_header:
         if head not in model_parameters:
             raise Exception("Did not find '%s' in '%s'." % (head, "model_parameters"))
-        else:
-            grid_configuration_[head] = model_parameters[head]
+        grid_configuration_[head] = model_parameters[head]
 
     grid_cells_header = ['airport_latitude', 'airport_longitude']
     for head in grid_cells_header:
         if head not in study_setup:
             raise Exception("Did not find '%s' in '%s'." % (head, "study_setup"))
-        else:
-            grid_configuration_[head.replace("airport", "reference")] = study_setup[head]
+        grid_configuration_[head.replace("airport", "reference")] = study_setup[head]
 
     # add grid configuration to sqlite database
     grid = Grid3D(inventory_path, grid_configuration_, deserialize=False)
@@ -156,25 +180,39 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup,
         store.serialize()
 
     logger.info("New output file with path '%s' has been created" % (str(inventory_path)))
-    return None
 
 
+@catch_errors
 def inventory_create_blank(inventory_name):
     """
     Copy a blank version of the ALAQS inventory to the desired location
     :param inventory_name: the path where the inventory file is to be copied
     :return: None if successful, error otherwise
     """
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(__file__),
-                                  '../templates/inventory.alaqs'), inventory_name)
-        msg = "[+] Created a blank ALAQS output file"
-        logger.info(msg)
-        return None
-    except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_create_blank.__name__, Exception, e)
-        logger.error(error_msg)
-        return error_msg
+    shutil.copy2(os.path.join(os.path.dirname(__file__), '../templates/inventory.alaqs'), inventory_name)
+    msg = "[+] Created a blank ALAQS output file"
+    logger.info(msg)
+
+
+@catch_errors
+def inventory_copy_generic_table(inventory_path, table: str):
+    """
+    This function copies data from the currently active project to the inventory output file
+
+    :param inventory_path:
+    :param table:
+    :return:
+    """
+    conn = sqlite.connect(inventory_path)
+    cur = conn.cursor()
+    table_data = alaqsdblite.query_string(f"SELECT * FROM {table};")
+    if len(table_data) > 0:
+        column_count = len(table_data[0])
+        cur.executemany(f'INSERT INTO {table} VALUES ({",".join(["?"] * column_count)});', table_data)
+        conn.commit()
+    conn.close()
+    msg = f"[+] Copied the {table} table"
+    logger.info(msg)
 
 
 @catch_errors
@@ -231,7 +269,6 @@ def inventory_update_tbl_inv_period(database_path, model_parameters, study_setup
                                                    max_time))
     msg = "[+] Updated the output inventory period"
     logger.info(msg)
-    return None
 
 
 @catch_errors
@@ -331,11 +368,8 @@ def inventory_copy_study_setup(inventory_path):
     conn = sqlite.connect(inventory_path)
     cur = conn.cursor()
 
-    study_setup_data = alaqsdblite.query_string(
-        "SELECT * FROM user_study_setup;")
-    cur.execute(
-        'INSERT INTO user_study_setup VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);',
-        study_setup_data[0])
+    study_setup_data = alaqsdblite.query_string("SELECT * FROM user_study_setup;")
+    cur.execute('INSERT INTO user_study_setup VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);', study_setup_data[0])
     conn.commit()
     conn.close()
     msg = "[+] Copied the study setup"
@@ -567,8 +601,6 @@ def inventory_copy_vector_layers(inventory_path):
 
         msg = "[+] Copied all vector layers"
         logger.info(msg)
-
-        return None
     except Exception as e:
         error_msg = alaqsutils.print_error(inventory_copy_activity_profiles.__name__, Exception, e)
         logger.error(error_msg)

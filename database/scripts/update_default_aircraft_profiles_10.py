@@ -3,6 +3,9 @@ from pathlib import Path
 import pandas as pd
 
 if __name__ == "__main__":
+    """
+    Get the data from the IMPACT study and combine with the existing profiles
+    """
 
     # Set the IMPACT study and scenario name
     study = 'DEMO_Noise_&_Emissions'
@@ -85,7 +88,7 @@ if __name__ == "__main__":
             profile_id = profile_ids["PROFILE_ID"]
         else:
             profile_id = profile_ids[f"{'DEP' if type_of_operation == 'DEPARTURE' else 'DES'}_PROFILE_ID"]
-        profile['profile_id'] = f'{op["ICAO_CODE"]}-{profile_id}'
+        profile['profile_id'] = f'{op["ICAO_CODE"]}-{profile_id}-{op["OP_TYPE"]}-{op["STAGE_LENGTH"]}'
 
         # Get the ANP aircraft
         anp_aircraft = acft.loc[op['ANP_TYPE']]

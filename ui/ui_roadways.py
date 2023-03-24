@@ -2,9 +2,9 @@ from PyQt5 import QtCore, QtWidgets
 from qgis.core import *
 from qgis.gui import *
 
-from alaqs_core import alaqs, alaqsutils
-from alaqs_core.alaqslogging import get_logger
-from alaqs_core.tools import copert5
+from open_alaqs.alaqs_core import alaqs, alaqsutils
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.tools import copert5
 
 from open_alaqs.alaqs_core.tools.copert5_utils import VEHICLE_CATEGORIES
 

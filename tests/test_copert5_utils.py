@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from alaqs_core.tools.copert5_utils import calculate_emissions, VEHICLE_CATEGORIES, ef_query, average_emission_factors
-from database.generate_templates import get_engine
+from open_alaqs.alaqs_core.tools.copert5_utils import calculate_emissions, VEHICLE_CATEGORIES, ef_query, average_emission_factors
+from open_alaqs.database.generate_templates import get_engine
 
 TEMPLATES_DIR = Path(__file__).parents[1] / 'alaqs_core/templates'
 

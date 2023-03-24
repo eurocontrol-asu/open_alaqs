@@ -116,3 +116,6 @@ if __name__ == "__main__":
     assert example_out_path.exists(), example_out_path
     assert example_movements_path.exists(), example_movements_path
     assert example_meteo_path.exists(), example_meteo_path
+
+    # Remove the output file because it misses data that has to be generated in QGIS
+    example_out_path.unlink()
