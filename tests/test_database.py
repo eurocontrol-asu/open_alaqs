@@ -288,3 +288,5 @@ def test_profile_data():
     duplicates = data[data[primary_key].duplicated(keep=False)].sort_values(primary_key)
 
     assert not is_duplicated.any(), f'found {duplicates.shape[0]} duplicate keys (out of {data.shape[0]} keys)'
+
+    assert not data['oid'].duplicated().any()
