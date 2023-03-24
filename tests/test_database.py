@@ -1,4 +1,5 @@
 import re
+from itertools import product
 from pathlib import Path
 from warnings import warn
 
@@ -148,6 +149,33 @@ def test_example_sql(sql_files: list, example_file: Path):
 
         # Specifically check if the geometry column is present
         assert 'geometry' in template_d
+
+
+out_example_paths = list(EXAMPLES_DIR.glob('**/*_out.alaqs'))
+csv_paths = list((DB_DIR / 'data').glob('*.csv'))
+combos = list(product(out_example_paths, csv_paths))
+
+
+@pytest.mark.parametrize("example_file,csv_path", combos, ids=list(f"{d[0].stem}-{d[1].stem}" for d in combos))
+def test_example_csv(example_file: Path, csv_path: Path):
+    """
+    Test if the examples are consistent with the csv files
+    """
+
+    # Get the template
+    example_engine = get_engine(example_file)
+
+    # Get the contents of the table
+    example_data = pd.read_sql(f"SELECT * FROM {csv_path.stem}", example_engine)
+
+    # Read the .csv file
+    data = pd.read_csv(csv_path)
+
+    assert data.shape[0] <= example_data.shape[0], \
+        f"there might be something wrong with the import of {csv_path.name}"
+
+    if not data.empty:
+        pd.testing.assert_frame_equal(data, example_data, check_dtype=False)
 
 
 @pytest.mark.parametrize("template_type", ['project', 'inventory'])
