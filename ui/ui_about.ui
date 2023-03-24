@@ -38,7 +38,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Open ALAQS: Airport Local Air Quality Studies&lt;/span&gt;&lt;br/&gt;Version 3.1 (March 2023)&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;This is a beta version of the ALAQS local air quality software released for review and testing only.&lt;br/&gt;It should therefore not be used for commerical studies and is released without guarantee.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Released under xxx License. For more information, contact open-alaqs@eurocontrol.int&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Open ALAQS: Airport Local Air Quality Studies&lt;/span&gt;&lt;br/&gt;Version 3.1.1 (March 2023)&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;This is a beta version of the ALAQS local air quality software released for review and testing only.&lt;br/&gt;It should therefore not be used for commerical studies and is released without guarantee.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Released under xxx License. For more information, contact open-alaqs@eurocontrol.int&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
    </item>
