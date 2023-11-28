@@ -10,6 +10,8 @@ import pandas as pd
 from open_alaqs.alaqs_core import alaqsutils
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 
+from qgis.utils import spatialite_connect
+
 logger = get_logger(__name__)
 
 
@@ -124,44 +126,12 @@ def connect():
     db_name = ProjectDatabase().path
 
     try:
-        conn = sqlite.connect(db_name)
+        conn = spatialite_connect(db_name)
     except Exception as e:
         error = alaqsutils.print_error(connect.__name__, Exception, e, log=logger)
         return None, error
-    try:
-        # Execute a basic query to be sure we're all good
-        # cur = conn.cursor()
-        # Load the spatialite dll. It is really important to make sure that the
-        # folder containing the DLLs is on PATH and not simply to use
-        # sys.path.append as this is temporary and will not allow the dependent
-        # (linked) DLLs to be found.
-        conn.enable_load_extension(True)
 
-        spatial_dll_filename = "mod_spatialite.dll"
-        if 8 * struct.calcsize("P") == 64:
-
-            # Get the filepath of this file
-            file_path = Path(__file__).absolute()
-
-            # Get the path to the Spatial DLL folder
-            spatial_dll_folder = str(file_path.parent / "spatialite-4.0.0-DLL")
-        else:
-            raise Exception("64bit installation of QGIS is now supported. "
-                            "Please try to use the 64bit installation.")
-
-        if spatial_dll_folder not in sys.path:
-            sys.path.append(spatial_dll_folder)
-
-        if spatial_dll_folder not in os.environ['PATH']:
-            os.environ['PATH'] = spatial_dll_folder + os.pathsep + \
-                                 os.environ['PATH']
-
-        conn.execute('SELECT load_extension("%s")' % spatial_dll_filename)
-
-        return conn, None
-    except Exception as e:
-        error = alaqsutils.print_error(connect.__name__, Exception, e, log=logger)
-        return None, error
+    return conn, None
 
 
 @catch_errors

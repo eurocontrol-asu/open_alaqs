@@ -14,6 +14,8 @@ from open_alaqs.alaqs_core import alaqsdblite
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools import conversion
 
+from qgis.utils import spatialite_connect
+
 logger = get_logger(__name__)
 
 alaqs_main_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -435,15 +437,7 @@ def get_linestring_length(database_path, table_name, feature_id, feature_name):
     :rtype: float
     """
     try:
-        conn = sqlite.connect(database_path)
-        conn.enable_load_extension(True)
-        spatial_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), SPATIALTE_EXTENSION_FOLDER)
-        if spatial_folder not in sys.path:
-            sys.path.append(spatial_folder)
-        if spatial_folder not in os.environ['PATH']:
-            os.environ['PATH'] = spatial_folder + ';' + os.environ['PATH']
-        spatial_dll = os.path.join(os.path.dirname(__file__), SPATIALTE_EXTENSION_LIB)
-        conn.execute('SELECT load_extension("%s")' % spatial_dll)
+        conn = spatialite_connect(database_path)
         curs = conn.cursor()
         sql = 'SELECT GLength(geometry) FROM %s WHERE %s=\"%s\";' % (table_name, feature_id, feature_name)
         curs.execute(sql)
