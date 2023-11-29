@@ -5,6 +5,8 @@ import sqlite3 as sqlite
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 
+from qgis.utils import spatialite_connect
+
 logger = get_logger(__name__)
 
 
@@ -18,28 +20,9 @@ def connect(database_path: str) -> sqlite.Connection:
     :rtype: object
     """
     try:
-        conn = sqlite.connect(database_path)
+        conn = spatialite_connect(database_path)
         # always return bytestrings
         conn.text_factory = str
-        conn.enable_load_extension(True)
-
-        spatial_dll_filename = "mod_spatialite.dll"
-        if 8 * struct.calcsize("P") == 64:
-            spatial_dll_folder = os.path.abspath(
-                os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
-                             "spatialite-4.0.0-DLL"))
-        else:
-            raise Exception("64bit installation of QGIS is now supported. "
-                            "Please try to use the 64bit installation.")
-
-        if spatial_dll_folder not in sys.path:
-            sys.path.append(spatial_dll_folder)
-        if spatial_dll_folder not in os.environ['PATH']:
-            os.environ['PATH'] = spatial_dll_folder + os.pathsep + os.environ[
-                'PATH']
-
-        conn.execute('SELECT load_extension("%s")' % spatial_dll_filename)
-
         return conn
     except Exception as e:
         msg = "Connection could not be established: %s" % e
@@ -102,7 +85,7 @@ def pd_query_text(database_path, sql_text):
 
     try:
         # Create a connection
-        conn = sqlite.connect(database_path)
+        conn = connect(database_path)
         conn.text_factory = str
         data = pd.read_sql(sql_text, conn)
         if not data.empty:
