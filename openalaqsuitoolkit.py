@@ -109,8 +109,8 @@ def add_spatialite_layer(iface, database_path, table_name, display_name,
     :param edit_form: the file name of the ui associated with this layer
     :param edit_init: the file name of the py file that controls the form
      validation and actions add_spatialite_layer(iface, database_path,
-      "shapes_point_sources", "Point Sources", 'ui\\ui_point_sources.ui',
-       'ui\\ui_point_sources.py', 'ui_point_sources.form_open')
+      "shapes_point_sources", "Point Sources", 'ui_point_sources.ui',
+       'ui_point_sources.py', 'ui_point_sources.form_open')
     """
 
     plugin_dir = os.path.dirname(os.path.abspath(__file__))
@@ -123,9 +123,9 @@ def add_spatialite_layer(iface, database_path, table_name, display_name,
     layer = QgsVectorLayer(uri.uri(), display_name, 'spatialite')
 
     lconfig = layer.editFormConfig()
-    lconfig.setInitCodeSource(QgsEditFormConfig.PythonInitCodeSource.NoSource)
-    lconfig.setUiForm(os.path.join(plugin_dir, edit_form))
-    lconfig.setInitFilePath(os.path.join(plugin_dir, edit_py))
+    lconfig.setInitCodeSource(QgsEditFormConfig.PythonInitCodeSource.File)
+    lconfig.setUiForm(os.path.join(plugin_dir, 'ui', edit_form))
+    lconfig.setInitFilePath(os.path.join(plugin_dir, 'ui', edit_py))
     lconfig.setInitFunction(edit_init)
     layer.setEditFormConfig(lconfig)
     layer.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
@@ -368,29 +368,29 @@ def style_runways(layer):
 
 def load_layers(iface, database_path):
     add_spatialite_layer(iface, database_path, "shapes_point_sources",
-                         "Point Sources", 'ui\\ui_point_sources.ui',
-                         'ui\\ui_point_sources.py', 'form_open')
+                         "Point Sources", 'ui_point_sources.ui',
+                         'ui_point_sources.py', 'form_open')
     add_spatialite_layer(iface, database_path, "shapes_taxiways", "Taxiways",
-                         'ui\\ui_taxiways.ui', 'ui\\ui_taxiways.py',
+                         'ui_taxiways.ui', 'ui_taxiways.py',
                          'form_open')
     add_spatialite_layer(iface, database_path, "shapes_runways", "Runways",
-                         'ui\\ui_runways.ui', 'ui\\ui_runways.py', 'form_open')
+                         'ui_runways.ui', 'ui_runways.py', 'form_open')
     add_spatialite_layer(iface, database_path, "shapes_roadways", "Roadways",
-                         'ui\\ui_roadways.ui', 'ui\\ui_roadways.py',
+                         'ui_roadways.ui', 'ui_roadways.py',
                          'form_open')
     add_spatialite_layer(iface, database_path, "shapes_parking", "Parkings",
-                         'ui\\ui_parkings.ui', 'ui\\ui_parkings.py',
+                         'ui_parkings.ui', 'ui_parkings.py',
                          'form_open')
     add_spatialite_layer(iface, database_path, "shapes_gates", "Gates",
-                         'ui\\ui_gates.ui', 'ui\\ui_gates.py', 'form_open')
+                         'ui_gates.ui', 'ui_gates.py', 'form_open')
     add_spatialite_layer(iface, database_path, "shapes_buildings", "Buildings",
-                         'ui\\ui_buildings.ui', 'ui\\ui_buildings.py',
+                         'ui_buildings.ui', 'ui_buildings.py',
                          'form_open')
     add_spatialite_layer(iface, database_path, "shapes_area_sources",
-                         "Area Sources", 'ui\\ui_area_sources.ui',
-                         'ui\\ui_area_sources.py', 'form_open')
+                         "Area Sources", 'ui_area_sources.ui',
+                         'ui_area_sources.py', 'form_open')
     add_spatialite_layer(iface, database_path, "shapes_tracks", "Tracks",
-                         'ui\\ui_tracks.ui', 'ui\\ui_tracks.py', 'form_open')
+                         'ui_tracks.ui', 'ui_tracks.py', 'form_open')
 
 
 def delete_alaqs_layers(iface):
