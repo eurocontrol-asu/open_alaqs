@@ -33,7 +33,10 @@ class Track:
         return self._runway
     def setRunway(self, val):
         self._runway = val
-        
+
+    def getDepartureArrivalFlag(self):
+        return "A" if self._departure_arrival == "Arrival" else "D"
+
     def getDepartureArrival(self):
         return self._departure_arrival
     def setDepartureArrival(self, val):
@@ -47,11 +50,10 @@ class Track:
     def getGeometry(self):
         return self._geometry
 
-
     def __str__(self):
         val = "\n Track with id '%s'" % (self.getName())
-        val += "\n\t Runway: %i" % (self.getRunway())
-        val += "\n\t Departure/Arrival: %i" % (self.getDepartureArrival())
+        val += "\n\t Runway: %s" % (self.getRunway())
+        val += "\n\t Departure/Arrival: %s (flag: %s)" % (self.getDepartureArrival(), self.getDepartureArrivalFlag())
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 

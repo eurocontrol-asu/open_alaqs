@@ -1116,7 +1116,15 @@ class Movement:
                 # DEP: construction starts with nearest point
                 # ARR: construction starts with point most far away
                 
-                if self.getTrack() is None:
+                has_track = self.getTrack() is not None
+                if has_track and self.getTaxiRoute().getRunway() != self.getTrack().getRunway():
+                    logger.warning("Paired taxi route '%s' and track '%s' do not share the same runway, reverting movement to default airplane profile" % (self.getTaxiRoute().getName(), self.getTrack().getName()))
+                    has_track = False
+                if has_track and self.getDepartureArrivalFlag() != self.getTrack().getDepartureArrivalFlag():
+                    logger.warning("Track '%s' departure/arrival flag does not match current movement, using default airplane profile instead" % (self.getTrack().getName()))
+                    has_track = False                        
+                
+                if not has_track:
                     # no track, create straight line from profile
                     
                     trajectory = AircraftTrajectory(
@@ -1167,7 +1175,7 @@ class Movement:
                         trajectory.updateGeometryText()
                 else:
                     # process track
-                    
+
                     # build distance to point array from aircraft profile
                     profile_points = self.getTrajectory().getPoints()
                     profile_distances = []
