@@ -11,6 +11,7 @@ from shapely.geometry import MultiLineString
 from shapely.wkt import loads
 from inspect import getframeinfo, currentframe
 
+from open_alaqs.alaqs_core import alaqs
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Aircraft import AircraftStore
 from open_alaqs.alaqs_core.interfaces.AircraftTrajectory import \
@@ -20,6 +21,7 @@ from open_alaqs.alaqs_core.interfaces.EngineStore import EngineStore, \
     HeliEngineStore
 from open_alaqs.alaqs_core.interfaces.Gate import GateStore
 from open_alaqs.alaqs_core.interfaces.Runway import RunwayStore
+from open_alaqs.alaqs_core.interfaces.Track import TrackStore
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.interfaces.Taxiway import TaxiwayRoutesStore
@@ -148,6 +150,7 @@ class Movement:
         self._runway = None
         self._trajectory_cartesian = None
         self._trajectory_at_runway = None
+        self._track = None
 
     def getAPUCode(self):
         return self._apu_code
@@ -1026,10 +1029,6 @@ class Movement:
                          f"time='{self.getRunwayTime(as_str=True)}'.")
         else:
 
-            trajectory = AircraftTrajectory(
-                self.getTrajectory(), skipPointInitialization=True)
-            trajectory.setIsCartesian(False)
-
             # Shift coordinates by touchdown offset (only for arrivals)
             if offset_by_touchdown:
                 offset_by_touchdown = self.isArrival()
@@ -1115,48 +1114,58 @@ class Movement:
 
                 # DEP: construction starts with nearest point
                 # ARR: construction starts with point most far away
-                for point in self.getTrajectory().getPoints():
-
-                    # aircraft trajectory point with from default_aircraft_profiles
-                    origin = (0., 0., 0.)
-
-                    # target point with cartesian coordinates
-                    target_point = point.getCoordinates()
-                    target_point_distance = spatial.getDistanceXY(
-                        target_point[0], target_point[1], target_point[2],
-                        origin[0], origin[1], origin[2])
-
-                    # if self.getDepartureArrivalFlag() == "A":
-                    #     target_point_distance = target_point_distance + self.getTrajectory().getPoints()[-1].getX()
-                    # if self.getDepartureArrivalFlag() == "A":
-                    #     if self.getRunway().getDirections().index(self.getRunwayDirection()):
-                    #         target_point_distance = target_point_distance - self.getTrajectory().getPoints()[-1].getX()
-                    #         if target_point == origin:
-                    #             # for ARR, when landing take forward azimuth
-                    #             runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
-                    #     else:
-                    #         target_point_distance = target_point_distance - self.getTrajectory().getPoints()[-1].getX()
-                    #         if target_point == origin:
-                    #             # for ARR, when landing take forward azimuth
-                    #             runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
-
-                    # get target point (calculation in 4326 projection)
-                    target_projected = spatial.getDistance(runway_point[1], runway_point[0], runway_azimuth, target_point_distance)
-
-                    # target point (wkt) with coordinates in 4326
-                    target_projected_wkt = spatial.getPointGeometryText(target_projected["lon2"], target_projected["lat2"], 0., swap)
-
-                    # reproject target from 4326 to 3857
-                    (target_projected_wkt, swap_) = spatial.reproject_geometry(target_projected_wkt, epsg_id_target, epsg_id_source)
-
-                    # add target to list of points of the (shifted) trajectory
-                    for p in spatial.getAllPoints(target_projected_wkt):
-                        p_ = AircraftTrajectoryPoint(point)
-                        # Update x and y coordinates (z coordinate is not updated by distance calculation)
-                        p_.setCoordinates(p[0], p[1], target_point[2])
-                        p_.updateGeometryText()
-                        trajectory.addPoint(p_)
-                    trajectory.updateGeometryText()
+                
+                # TODO: implement track scenario
+                if True:
+                    # No track, create straight line from profile
+                    
+                    trajectory = AircraftTrajectory(
+                        self.getTrajectory(), skipPointInitialization=True)
+                    trajectory.setIsCartesian(False)
+                    
+                    for point in self.getTrajectory().getPoints():
+                    
+                        # aircraft trajectory point with from default_aircraft_profiles
+                        origin = (0., 0., 0.)
+                    
+                        # target point with cartesian coordinates
+                        target_point = point.getCoordinates()
+                        target_point_distance = spatial.getDistanceXY(
+                            target_point[0], target_point[1], target_point[2],
+                            origin[0], origin[1], origin[2])
+                    
+                        # if self.getDepartureArrivalFlag() == "A":
+                        #     target_point_distance = target_point_distance + self.getTrajectory().getPoints()[-1].getX()
+                        # if self.getDepartureArrivalFlag() == "A":
+                        #     if self.getRunway().getDirections().index(self.getRunwayDirection()):
+                        #         target_point_distance = target_point_distance - self.getTrajectory().getPoints()[-1].getX()
+                        #         if target_point == origin:
+                        #             # for ARR, when landing take forward azimuth
+                        #             runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
+                        #     else:
+                        #         target_point_distance = target_point_distance - self.getTrajectory().getPoints()[-1].getX()
+                        #         if target_point == origin:
+                        #             # for ARR, when landing take forward azimuth
+                        #             runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
+                    
+                        # get target point (calculation in 4326 projection)
+                        target_projected = spatial.getDistance(runway_point[1], runway_point[0], runway_azimuth, target_point_distance)
+                    
+                        # target point (wkt) with coordinates in 4326
+                        target_projected_wkt = spatial.getPointGeometryText(target_projected["lon2"], target_projected["lat2"], 0., swap)
+                    
+                        # reproject target from 4326 to 3857
+                        (target_projected_wkt, swap_) = spatial.reproject_geometry(target_projected_wkt, epsg_id_target, epsg_id_source)
+                    
+                        # add target to list of points of the (shifted) trajectory
+                        for p in spatial.getAllPoints(target_projected_wkt):
+                            p_ = AircraftTrajectoryPoint(point)
+                            # Update x and y coordinates (z coordinate is not updated by distance calculation)
+                            p_.setCoordinates(p[0], p[1], target_point[2])
+                            p_.updateGeometryText()
+                            trajectory.addPoint(p_)
+                        trajectory.updateGeometryText()
+                        
             else:
                 logger.error("Did not find enough points for geometry '%s'" % (
                     runway_geometry_wkt))
@@ -1168,6 +1177,12 @@ class Movement:
 
     def setRunway(self, var):
         self._runway = var
+
+    def setTrack(self, var):
+        self._track = var
+
+    def getTrack(self):
+        return self._track
 
     # ["08R", "26L"]
     def getRunwayDirection(self):
@@ -1321,6 +1336,9 @@ class MovementStore(Store, metaclass=Singleton):
     def getTaxiRouteStore(self):
         return TaxiwayRoutesStore(self._db_path)
 
+    def getTrackStore(self):
+        return TrackStore(self._db_path)
+
     def ProgressBarWidget(self):
         # from PyQt4 import QtGui, QtCore
 
@@ -1352,7 +1370,7 @@ class MovementStore(Store, metaclass=Singleton):
 
         df_cols = ["aircraft", "engine_name", "runway", "runway_direction",
                    "gate", "taxi_route", "profile_id", "trajectory",
-                   "runway_trajectory"]
+                   "runway_trajectory", "track_id"]
         eq_mdf = pd.DataFrame(index=mdf.index, columns=df_cols)
         eq_mdf = eq_mdf.fillna(np.nan)  # fill with None rather than NaNs
 
@@ -1469,11 +1487,22 @@ class MovementStore(Store, metaclass=Singleton):
                 if len(alt_routes) > 0:
                     eq_mdf.loc[indices, "taxi_route"] = alt_routes[0]
                     logger.warning("Taxiroute '%s' was replaced with '%s'",
-                                   (txr, alt_routes[0]))
+                                   txr, alt_routes[0])
                 else:
                     logger.error("No taxiroute found to replace '%s' "
                                  "which is not in the database", txr)
                     eq_mdf.loc[indices, "taxi_route"] = np.NaN
+
+        # Check if track exist in the database
+        stage_1.nextValue()
+
+        track_store = self.getTrackStore()
+        for trk in mdf["track_id"].unique():
+            store_has_key = track_store.hasKey(trk)
+            eq_mdf.loc[mdf.track_id == trk, "track_id"] = \
+                trk if store_has_key else np.nan
+            if not store_has_key:
+                logger.warning("Track %s wasn't found in the DB" % trk)
 
         # Check if profiles exist in the database
         stage_1.nextValue()
@@ -1518,7 +1547,7 @@ class MovementStore(Store, metaclass=Singleton):
                 eq_mdf.loc[indices, "profile_id"] = prf
 
         # Get unique combinations of eq_mdf
-        u_columns = ["runway", "runway_direction", "taxi_route", "profile_id"]
+        u_columns = ["runway", "runway_direction", "taxi_route", "profile_id", "track_id"]
         heli_engine_store = self.getHeliEngineStore()
         engine_store = self.getEngineStore()
 
@@ -1529,8 +1558,7 @@ class MovementStore(Store, metaclass=Singleton):
                      f'(n={stage_1._max - stage_1._min}) '
                      f'in {stage_1._end_time - stage_1._start_time}')
 
-        for (rwy, rwy_dir, tx_route, prf_id), mov_df in eq_mdf.groupby(u_columns):
-
+        for (rwy, rwy_dir, tx_route, prf_id, trk_id), mov_df in eq_mdf.groupby(u_columns):
             # Get the indices
             inds = mov_df.index
 
@@ -1550,6 +1578,7 @@ class MovementStore(Store, metaclass=Singleton):
             fm_runway = runway_store.getObject(fm["runway"])
             fm_taxi_route = taxi_route_store.getObject(fm["taxi_route"])
             fm_trajectory = trajectory_store.getObject(fm["profile_id"])
+            fm_track = track_store.getObject(fm["track_id"])
             fm_engine = None
             if engine_store.hasKey(fm["engine_name"]):
                 fm_engine = engine_store.getObject(fm["engine_name"])
@@ -1562,13 +1591,15 @@ class MovementStore(Store, metaclass=Singleton):
             proxy_mov.setAircraftEngine(fm_engine)
             proxy_mov.setRunway(fm_runway)
             proxy_mov.setRunwayDirection(fm["runway_direction"])
+            proxy_mov.setTrack(fm_track)
             proxy_mov.setTaxiRoute(fm_taxi_route)
             proxy_mov.setTrajectory(fm_trajectory)
             proxy_mov.updateTrajectoryAtRunway()
-
+        
             # Update the dataframe
             eq_mdf.loc[inds, "runway"] = proxy_mov.getRunway()
             eq_mdf.loc[inds, "taxi_route"] = proxy_mov.getTaxiRoute()
+            eq_mdf.loc[inds, "track"] = proxy_mov.getTrack()
             eq_mdf.loc[inds, "trajectory"] = proxy_mov.getTrajectory()
             eq_mdf.loc[inds, "runway_trajectory"] = \
                 proxy_mov.getTrajectoryAtRunway()
@@ -1631,6 +1662,7 @@ class MovementStore(Store, metaclass=Singleton):
             mov.setRunway(mov_df_entry["runway"])
             mov.setRunwayDirection(mov_df_entry["runway_direction"])
             mov.setTaxiRoute(mov_df_entry["taxi_route"])
+            mov.setTrack(mov_df_entry["track"])
             mov.setTrajectory(mov_df_entry["trajectory"])
             mov.setTrajectoryAtRunway(mov_df_entry["runway_trajectory"])
 
