@@ -115,7 +115,7 @@ class TrackDatabase(SQLSerializable, metaclass=Singleton):
                 "column_name": "geometry",
                 "SRID": 3857,
                 "geometry_type": "LINESTRING",
-                "geometry_type_dimension": 2
+                "geometry_type_dimension": 3
             }]
 
         SQLSerializable.__init__(self, db_path_string, table_name_string,
