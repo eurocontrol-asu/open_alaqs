@@ -15,6 +15,13 @@ from open_alaqs.alaqs_core.tools.iterator import pairwise
 logger = get_logger(__name__)
 
 
+def getDistanceBetweenPoints(x1, y1, z1, x2, y2, z2):
+    """
+    Determine the distance between two points
+    """
+    return ((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2) ** 0.5
+
+
 def getDistanceXY(x, y, z=0., origin_x=0., origin_y=0., origin_z=0.) -> float:
     """
     Determine the radius for the circle by x and y relative to origin

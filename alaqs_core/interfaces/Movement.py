@@ -7,7 +7,8 @@ import matplotlib
 import numpy as np
 import pandas as pd
 from PyQt5 import QtCore, QtWidgets
-from shapely.geometry import MultiLineString
+from shapely import ops
+from shapely.geometry import LineString, MultiLineString
 from shapely.wkt import loads
 from inspect import getframeinfo, currentframe
 
@@ -607,7 +608,7 @@ class Movement:
         distance_time_all_segments_in_mode = 0.
         distance_space_all_segments_in_mode = 0.
         traj = self.getTrajectoryAtRunway() if atRunway else self.getTrajectory()
-
+        
         if traj is None:
             return emissions
 
@@ -1115,9 +1116,8 @@ class Movement:
                 # DEP: construction starts with nearest point
                 # ARR: construction starts with point most far away
                 
-                # TODO: implement track scenario
-                if True:
-                    # No track, create straight line from profile
+                if self.getTrack() is None:
+                    # no track, create straight line from profile
                     
                     trajectory = AircraftTrajectory(
                         self.getTrajectory(), skipPointInitialization=True)
@@ -1165,7 +1165,68 @@ class Movement:
                             p_.updateGeometryText()
                             trajectory.addPoint(p_)
                         trajectory.updateGeometryText()
+                else:
+                    # process track
+                    
+                    # build distance to point array from aircraft profile
+                    profile_points = self.getTrajectory().getPoints()
+                    profile_distances = []
+                    previous_point = (0., 0., 0.)
+                    cumulative_distance = 0.
+                    for point in profile_points:
+                        point = point.getCoordinates()
+                        distance = spatial.getDistanceBetweenPoints(
+                            point[0], point[1], point[2],
+                            previous_point[0], previous_point[1], previous_point[2])
+                        cumulative_distance = cumulative_distance + distance
+                        profile_distances.append(cumulative_distance)
+                        previous_point = point
+
+                    difference = self.getTrack().getGeometry().difference(self.getRunway().getGeometry().buffer(10))
+                    track_line = difference
+                    max_length = 0.0
+                    # check if the track has been broken into multipe parts, pick the longest one
+                    if difference.geom_type is 'MultiLineString':
+                        for line in list(difference.geoms):
+                            if line.length > max_length:
+                                max_length = line.length
+                                track_line = line
+
+                    track_line_points = list(track_line.coords)
+                    # add runway point to beginning of generated track line
+                    (point, point_wkt) = spatial.reproject_Point(
+                        runway_point[1], runway_point[0], epsg_id_target, epsg_id_source)
+                    track_line_points.insert(0, (point.GetX(), point.GetY(), 0))
+                    track_line = LineString(track_line_points)
+                    
+                    trajectory = AircraftTrajectory()
+                    trajectory.setIdentifier(self.getTrajectory().getIdentifier())
+                    trajectory.setStage(self.getTrajectory().getStage())
+                    trajectory.setSource(self.getTrajectory().getSource())
+                    trajectory.setDepartureArrivalFlag(self.getTrajectory().getDepartureArrivalFlag())
+                    trajectory.setWeight(self.getTrajectory().getWeight())
+                    
+                    # match track points to closest point from the profile trajectory
+                    previous_point = list(track_line.coords)[0]
+                    cumulative_distance = 0.
+                    for point in list(track_line.coords):
+                        distance = spatial.getDistanceBetweenPoints(
+                            point[0], point[1], point[2],
+                            previous_point[0], previous_point[1], previous_point[2])
+                        cumulative_distance = cumulative_distance + distance
                         
+                        closest_distance = profile_distances[-1]
+                        closest_idx = len(profile_distances) - 1
+                        for idx, d in enumerate(profile_distances):
+                            if abs(distance - d) < closest_distance:
+                                closest_distance = abs(distance - d)
+                                closest_idx = idx
+                        
+                        trajectory_point = AircraftTrajectoryPoint(profile_points[closest_idx])
+                        trajectory_point.setCoordinates(point[0], point[1], point[2])
+                        trajectory_point.updateGeometryText()
+                        trajectory.addPoint(trajectory_point)
+
             else:
                 logger.error("Did not find enough points for geometry '%s'" % (
                     runway_geometry_wkt))
