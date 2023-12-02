@@ -1121,7 +1121,7 @@ class Movement:
                     logger.warning("Paired taxi route '%s' and track '%s' do not share the same runway, reverting movement to default airplane profile" % (self.getTaxiRoute().getName(), self.getTrack().getName()))
                     has_track = False
                 if has_track and self.getDepartureArrivalFlag() != self.getTrack().getDepartureArrivalFlag():
-                    logger.warning("Track '%s' departure/arrival flag does not match current movement, using default airplane profile instead" % (self.getTrack().getName()))
+                    logger.warning("Track '%s' departure/arrival flag does not match movement, using default airplane profile instead" % (self.getTrack().getName()))
                     has_track = False                        
                 
                 if not has_track:
@@ -1201,12 +1201,15 @@ class Movement:
                                 track_line = line
 
                     track_line_points = list(track_line.coords)
-                    # add runway point to beginning of generated track line
+                    if self.getTrack().getDepartureArrivalFlag() == 'A':
+                        # reverse arrival track so ordering begins at runway
+                        track_line_points.reverse()
+
                     (point, point_wkt) = spatial.reproject_Point(
                         runway_point[1], runway_point[0], epsg_id_target, epsg_id_source)
                     track_line_points.insert(0, (point.GetX(), point.GetY(), 0))
                     track_line = LineString(track_line_points)
-                    
+
                     trajectory = AircraftTrajectory()
                     trajectory.setIdentifier(self.getTrajectory().getIdentifier())
                     trajectory.setStage(self.getTrajectory().getStage())
@@ -1234,6 +1237,7 @@ class Movement:
                         trajectory_point.setCoordinates(point[0], point[1], point[2])
                         trajectory_point.updateGeometryText()
                         trajectory.addPoint(trajectory_point)
+                    trajectory.updateGeometryText()
 
             else:
                 logger.error("Did not find enough points for geometry '%s'" % (
