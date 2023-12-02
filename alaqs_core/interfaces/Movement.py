@@ -1561,7 +1561,7 @@ class MovementStore(Store, metaclass=Singleton):
         for trk in mdf["track_id"].unique():
             store_has_key = track_store.hasKey(trk)
             eq_mdf.loc[mdf.track_id == trk, "track_id"] = \
-                trk if store_has_key else np.nan
+                trk if store_has_key else ''
             if not store_has_key:
                 logger.warning("Track %s wasn't found in the DB" % trk)
 
