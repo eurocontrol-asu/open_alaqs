@@ -203,76 +203,32 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
             return e, None
 
 
-class OpenAlaqsOpenDatabase(QtWidgets.QDialog):
+class OpenAlaqsOpenDatabase():
     """
     This class defines the 'open existing database' functionality.
     """
 
     def __init__(self, iface):
-        main_window = iface.mainWindow() if iface is not None else None
-        QtWidgets.QDialog.__init__(self, main_window)
-
-        # Set up the user interface from Designer
-        Ui_DialogOpenDatabase, _ = loadUiType(
-            os.path.join(os.path.dirname(__file__), "ui", "ui_open_database.ui")
-        )
-        self.ui = Ui_DialogOpenDatabase()
-        self.ui.setupUi(self)
-
-        # Collect some UI components
         self.iface = iface
         self.canvas = self.iface.mapCanvas()
-
-        self.ui.pushButtonBrowse.clicked.connect(self.browse_file)
-        self.ui.pushButtonOpenDatabase.clicked.connect(self.load_database)
-        self.ui.pushButtonCancel.clicked.connect(self.close)
 
         # define some variables that are used throughout the class
         self.db_path = None
 
-    def browse_file(self):
-        """
-        Open file dialog and browse for an existing alaqs database. If
-        successful, update the UI with the path to that file.
-        """
-
-        filename, _filter = QtWidgets.QFileDialog.getOpenFileName(
-            None, "Open an ALAQS database file", '', "(*.alaqs)")
-        try:
-            if os.path.exists(filename):
-                self.ui.lineEditFilename.setText(filename)
-                return None
-        except Exception as e:
-            QtWidgets.QMessageBox.warning(self, "Error",
-                                          "Could not open file:  %s." % e)
-            return e
-
     def load_database(self):
         """
-        Take the filename from the UI and try and load the database file into
-        QGIS
+        Open file dialog and browse for an existing alaqs database, then try
+        and load the database file into QGIS
         """
+        filename, _filter = QtWidgets.QFileDialog.getOpenFileName(
+            None, "Open an ALAQS database file", '', "(*.alaqs)")
+
         try:
-            filepath = oautk.validate_field(self.ui.lineEditFilename, "str")
-
-            self.db_path = filepath
-
-            if filepath is False:
-                QtWidgets.QMessageBox.warning(self, "Error",
-                                              "Please correct all fields")
-                return
-            else:
-                # OPEN AND LOAD THE DATABASE...
-                if not os.path.isfile(filepath):
-                    QtWidgets.QMessageBox.warning(
-                        self,
-                        "Error",
-                        "The chosen file could not be found.")
-                    return
-
-                # Store the filepath in-memory for future use
+            if os.path.exists(filename) and os.path.isfile(filename):
+                self.db_path = filename
+                # Store the database in-memory for future use
                 project_database = ProjectDatabase()
-                project_database.path = filepath
+                project_database.path = self.db_path
 
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                 result = alaqs.load_study_setup()
@@ -288,27 +244,16 @@ class OpenAlaqsOpenDatabase(QtWidgets.QDialog):
                                            Exception, e)
 
                 if result is not None:
-                    try:
-                        self.hide()
-                        self.get_values()
-                    except Exception as e:
-                        raise Exception(e)
+                    return True
                 else:
-                    self.hide()
-                    self.get_values()
+                    return False
         except Exception as e:
             error_message = "Could not open database file:  %s." % e
-            QtWidgets.QMessageBox.warning(self, "Error", error_message)
-            self.close()
+            QtWidgets.QMessageBox.warning(self.iface.mainWindow(), "Error", error_message)
+            return False
 
-    def get_values(self):
-        """
-        Send database path back to the main openalaqs function.
-        """
-        try:
-            return self.db_path
-        except Exception as e:
-            return e, None
+    def get_database_path(self):
+        return self.db_path
 
 
 class OpenAlaqsStudySetup(QtWidgets.QDialog):

@@ -259,16 +259,13 @@ class OpenALAQS:
         populate the study setup window, which it opens if successful.
         """
         self.dialogs['open_project'] = OpenAlaqsOpenDatabase(self.iface)
-        return_code = self.dialogs['open_project'].exec_()
-        if return_code == 0:
-
+        if self.dialogs['open_project'].load_database():
             # Get the database path
-            database_path = self.dialogs['open_project'].get_values()
+            database_path = self.dialogs['open_project'].get_database_path()
 
             # Continue if the path is valid
             if isinstance(database_path, str) and Path(database_path).exists():
                 openalaqsuitoolkit.load_layers(self.iface, database_path)
-                self.dialogs['open_project'].close()
                 self.actions['study_setup'].setEnabled(True)
                 self.actions['profiles_edit'].setEnabled(True)
                 self.actions['taxi_routes'].setEnabled(True)
@@ -279,8 +276,6 @@ class OpenALAQS:
                 self.actions['project_create'].setEnabled(False)
                 self.actions['project_close'].setEnabled(True)
                 self.run_study_setup()
-        else:
-            self.dialogs['open_project'].close()
 
     def run_project_close(self):
         """
