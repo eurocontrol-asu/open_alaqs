@@ -1763,17 +1763,25 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui.setupUi(self)
 
         # Connections
-        self.ui.vert_limit_m.textChanged.connect(self.m_to_ft)
+        self.ui.vert_limit_m.valueChanged.connect(self.m_to_ft)
         self.ui.vert_limit_ft.setEnabled(False)
-        self.ui.browse_save_path.clicked.connect(self.browse_save_path)
-        self.ui.browse_movement_table.clicked.connect(
-            self.browse_movement_table)
-        self.ui.browse_met_file.clicked.connect(self.browse_met_data)
-        self.ui.create_inventory.clicked.connect(self.create_inventory)
-        self.ui.cancel.clicked.connect(self.close)
+
+
+        #self.ui.status_update.setText("Ready")
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).setText("Create Inventory")
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(self.create_inventory)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(self.close)
 
         # Set some default values
-        self.ui.vert_limit_m.setText("914.4")
+        self.ui.movement_table_path.setFilter('CSV (*.csv);;TXT (*.txt)')
+        self.ui.movement_table_path.setDialogTitle('Open ALAQS Movement Data')
+        self.ui.movement_table_path.fileChanged.connect(self.movement_table_path_changed)
+        self.ui.met_file_path.setFilter('CSV (*.csv);;TXT (*.txt)')
+        self.ui.met_file_path.setDialogTitle('Open ALAQS Meteorological Data')
+        self.ui.met_file_path.fileChanged.connect(self.met_file_path_changed)
+        self.ui.output_save_path.setStorageMode(QgsFileWidget.GetDirectory)
+        self.ui.towing_speed.setValue(10.0)
+        self.ui.vert_limit_m.setValue(914.4)
         self.ui.area_sources.setCheckState(QtCore.Qt.Checked)
         self.ui.buildings.setCheckState(QtCore.Qt.Checked)
         self.ui.gates.setCheckState(QtCore.Qt.Checked)
@@ -1781,7 +1789,12 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui.roadways.setCheckState(QtCore.Qt.Checked)
         self.ui.stationary_sources.setCheckState(QtCore.Qt.Checked)
         self.ui.taxiway_queues.setCheckState(QtCore.Qt.Checked)
-        self.ui.status_update.setText("Ready")
+        self.ui.x_resolution.setValue(250)
+        self.ui.y_resolution.setValue(250)
+        self.ui.z_resolution.setValue(250)
+        self.ui.x_cells.setValue(40)
+        self.ui.y_cells.setValue(40)
+        self.ui.z_cells.setValue(40)
 
         # Bindings
         self.ui.apply_nox.toggled.connect(self.apply_nox_checked)
@@ -1795,47 +1808,18 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui.grid_3d.setEnabled(False)
         # self.ui.smooth_and_shift.setEnabled(False)
 
-    def browse_movement_table(self):
-        """
-        Opens a file browse dialog for users to be able to locate and load a
-         movement table into ALAQS
-        :return: None if successful; error message as a string if its
-         unsuccessful
-        """
-        filename, _filter = QtWidgets.QFileDialog.getOpenFileName(
-            self,
-            "Open ALAQS movement file",
-            "",
-            'CSV (*.csv);;TXT (*.txt)')
-
+    def movement_table_path_changed(self, path):
         try:
-
-            if os.path.exists(filename):
-                self.ui.movement_table_path.setText(filename)
+            if os.path.exists(path):
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                result = self.examine_movements(filename)
+                result = self.examine_movements(path)
                 QtWidgets.QApplication.restoreOverrideCursor()
                 if isinstance(result, str) or isinstance(result, Exception):
                     raise Exception(result)
                 return None
-            else:
-                raise Exception("File does not exists.")
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "Error", "%s" % e)
             return e
-
-    @catch_errors
-    def browse_save_path(self, *args, **kwargs):
-        """
-        This function opens a directory browsing dialog to collect the save
-         path for the new study from the user.
-        :return: None if successful, otherwise the trackback error
-        """
-        directory = str(
-            QtWidgets.QFileDialog.getExistingDirectory(parent=None))
-        if directory.strip() != "":
-            self.ui.output_save_path.setText(directory)
-        return None
 
     def examine_movements(self, movement_file):
         """
@@ -1897,15 +1881,9 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                             end_date = (date_time + timedelta(hours=1)).replace(
                                 minute=0, second=0)
 
-            self.ui.movements_total.setText(
-                "Total Movements: %d" % (int(movement_line) - 1))
-            self.ui.movement_start.setText(
-                "Movements Start: %s" % start_date.strftime(
-                    '%Y-%m-%d %H:%M:%S'))
-            self.ui.study_start_date.setDateTime(start_date)
-            self.ui.movement_end.setText(
-                "Movements End: %s" % end_date.strftime('%Y-%m-%d %H:%M:%S'))
-            self.ui.study_end_date.setDateTime(end_date)
+            self.ui.movements_summary.setText(
+                "Total Movements: %d; Start: %s; End: %s" % ((int(movement_line) - 1), start_date.strftime(
+                    '%Y-%m-%d %H:%M:%S'), end_date.strftime('%Y-%m-%d %H:%M:%S')))
             self.ui.status_update.setText("Movement file seems OK")
         except Exception as e:
             self.ui.status_update.setText(
@@ -1915,29 +1893,21 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             return e
         return None
 
-    def browse_met_data(self):
+    def met_file_path_changed(self, path):
         """
         Opens a dialog window for a user to be able to find and load a
          meteorological file into the current study
         database
         :return:
         """
-        filename, _filter = QtWidgets.QFileDialog.getOpenFileName(
-            self,
-            "Open an ALAQS MET File",
-            "",
-            'CSV (*.csv);;TXT (*.txt)')
         try:
-            if os.path.exists(filename):
-                self.ui.met_file_path.setText(filename)
+            if os.path.exists(path):
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                result = self.examine_met_file(filename)
+                result = self.examine_met_file(path)
                 QtWidgets.QApplication.restoreOverrideCursor()
                 if isinstance(result, str):
                     raise Exception()
                 return
-            else:
-                raise Exception("File does not exists.")
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "Error",
                                           "Could not open met file:  %s." % e)
@@ -1987,10 +1957,27 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                         "Did not find header '%s' in csv file." % (key))
             return False
 
+        # Arbitrarily out of range first guess dates
+        start_date = datetime.strptime("2999-01-01 00:00:00",
+                                       '%Y-%m-%d %H:%M:%S')
+        end_date = datetime.strptime("1900-01-01 00:00:00",
+                                     '%Y-%m-%d %H:%M:%S')
+
         # Loop over the MET file and perform some basic checks
         for row_, date_ in enumerate(csv['DateTime(YYYY-mm-dd hh:mm:ss)']):
             logger.debug("Processing time interval: %s" % (
                 csv['DateTime(YYYY-mm-dd hh:mm:ss)'][row_]))
+
+            date_time = datetime.strptime(csv['DateTime(YYYY-mm-dd hh:mm:ss)'][row_],
+                                          '%Y-%m-%d %H:%M:%S')
+            if date_time < start_date:
+                # start_date = date_time
+                start_date = (date_time).replace(minute=0, second=0)
+            if date_time > end_date:
+                # end_date = date_time
+                end_date = (date_time + timedelta(hours=1)).replace(
+                    minute=0, second=0)
+
             if CheckAmbientConditions(
                     conversion.convertToFloat(csv['Temperature(K)'][row_]),
                     288.15, 50):
@@ -2016,6 +2003,10 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                     914.4, 100):
                 logger.warning("Check Mixing Height units/value.")
 
+        self.ui.met_summary.setText(
+            "Start: %s; End: %s" % (start_date.strftime('%Y-%m-%d %H:%M:%S'),
+                end_date.strftime('%Y-%m-%d %H:%M:%S')))
+
         self.ui.status_update.setText("MET file seems OK")
         return True
 
@@ -2027,28 +2018,26 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         """
         try:
             # Collect parameters
-            movement_file_path = oautk.validate_field(
-                self.ui.movement_table_path, "str")
+            movement_file_path = self.ui.movement_table_path.filePath()
             output_save_name = oautk.validate_field(self.ui.output_save_name,
                                                     "str")
-            output_save_path = oautk.validate_field(self.ui.output_save_path,
-                                                    "str")
+            output_save_path = self.ui.output_save_path.filePath()
             met_csv_path = oautk.validate_field(self.ui.met_file_path, "str")
             study_start_date = oautk.validate_field(self.ui.study_start_date,
                                                     "str")
             study_end_date = oautk.validate_field(self.ui.study_end_date, "str")
-            vert_limit = oautk.validate_field(self.ui.vert_limit_m, "float")
-            towing_speed = oautk.validate_field(self.ui.towing_speed, "float")
+            vert_limit = self.ui.vert_limit_m.value()
+            towing_speed = self.ui.towing_speed.value()
             #   method = self.ui.method.currentText()
             #   met_file_path = oautk.validate_field(self, self.ui.met_file_path, "str")
-            x_resolution = oautk.validate_field(self.ui.x_resolution, "int")
-            y_resolution = oautk.validate_field(self.ui.y_resolution, "int")
-            z_resolution = oautk.validate_field(self.ui.z_resolution, "int")
-            x_cells = oautk.validate_field(self.ui.x_cells, "int")
-            y_cells = oautk.validate_field(self.ui.y_cells, "int")
-            z_cells = oautk.validate_field(self.ui.z_cells, "int")
+            x_resolution = self.ui.x_resolution.value()
+            y_resolution = self.ui.y_resolution.value()
+            z_resolution = self.ui.z_resolution.value()
+            x_cells = self.ui.x_cells.value()
+            y_cells = self.ui.y_cells.value()
+            z_cells = self.ui.z_cells.value()
 
-            if (movement_file_path is False) or \
+            if (movement_file_path is None) or \
                     (output_save_name is False) or \
                     (output_save_path is None) or \
                     (study_start_date is False) or \
@@ -2197,11 +2186,11 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         This isn't an essential process - more cosmetic
         """
         try:
-            m_value = float(self.ui.vert_limit_m.text())
+            m_value = self.ui.vert_limit_m.value()
             ft_value = m_value * 3.2808399
-            self.ui.vert_limit_ft.setText("{0:.2f}".format(ft_value))
+            self.ui.vert_limit_ft.setValue(ft_value)
             # Make sure that the cell background is plain white
-            oautk.color_ui_background(self.ui.vert_limit_m, "white")
+            oautk.color_ui_background(self.ui.vert_limit_m, "transparent")
         except:
             # Make the cell background red to highlight an error
             oautk.color_ui_background(self.ui.vert_limit_m, "red")
