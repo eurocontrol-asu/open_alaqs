@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from PyQt5 import QtCore, QtGui, QtWidgets
 from qgis.core import *
 from qgis.gui import *
+from qgis.PyQt.uic import loadUiType
 
 from open_alaqs import openalaqsuitoolkit as oautk
 from open_alaqs.alaqs_core import alaqs
@@ -39,17 +40,6 @@ from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
     OutputModuleManager, DispersionModuleManager
 from open_alaqs.alaqs_core.tools import sql_interface, conversion
 from open_alaqs.alaqs_core.tools.csv_interface import read_csv_to_dict
-from open_alaqs.ui.ui_about import Ui_DialogAbout
-from open_alaqs.ui.ui_create_database import Ui_DialogCreateDatabase
-from open_alaqs.ui.ui_inventory import Ui_DialogInventory
-from open_alaqs.ui.ui_logfile import Ui_DialogLogfile
-from open_alaqs.ui.ui_open_database import Ui_DialogOpenDatabase
-from open_alaqs.ui.ui_profiles_widget import Ui_FormProfiles
-from open_alaqs.ui.ui_results_analysis import Ui_ResultsAnalysisDialog
-from open_alaqs.ui.ui_run_austal2000 import Ui_DialogRunAUSTAL2000
-from open_alaqs.ui.ui_study_setup import Ui_DialogStudySetup
-from open_alaqs.ui.ui_taxiway_routes import Ui_TaxiRoutesDialog
-from open_alaqs.ui.ui_macros_enabled import Ui_DialogEnabledMacros
 
 logger = get_logger(__name__)
 
@@ -101,6 +91,10 @@ class OpenAlaqsAbout(QtWidgets.QDialog):
         """
         main_window = iface.mainWindow() if iface is not None else None
         QtWidgets.QDialog.__init__(self, main_window)
+
+        Ui_DialogAbout, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_about.ui")
+        )
         self.ui = Ui_DialogAbout()
         self.ui.setupUi(self)
         self.iface = iface
@@ -118,6 +112,9 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
         QtWidgets.QDialog.__init__(self, main_window)
 
         # Set up the user interface from Designer
+        Ui_DialogCreateDatabase, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_create_database.ui")
+        )
         self.ui = Ui_DialogCreateDatabase()
         self.ui.setupUi(self)
 
@@ -216,6 +213,9 @@ class OpenAlaqsOpenDatabase(QtWidgets.QDialog):
         QtWidgets.QDialog.__init__(self, main_window)
 
         # Set up the user interface from Designer
+        Ui_DialogOpenDatabase, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_open_database.ui")
+        )
         self.ui = Ui_DialogOpenDatabase()
         self.ui.setupUi(self)
 
@@ -321,7 +321,11 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
     def __init__(self, iface):
         main_window = iface.mainWindow() if iface is not None else None
         QtWidgets.QDialog.__init__(self, main_window)
+
         # Setup the user interface from Designer
+        Ui_DialogStudySetup, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_study_setup.ui")
+        )
         self.ui = Ui_DialogStudySetup()
         self.ui.setupUi(self)
 
@@ -546,6 +550,9 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         QtWidgets.QWidget.__init__(self, None, QtCore.Qt.WindowStaysOnTopHint)
 
         # Build the UI
+        Ui_FormProfiles, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_profiles_widget.ui")
+        )
         self.ui = Ui_FormProfiles()
         self.ui.setupUi(self)
 
@@ -1189,6 +1196,9 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         main_window = None if iface is None else iface.mainWindow()
         QtWidgets.QDialog.__init__(self, main_window)
 
+        Ui_TaxiRoutesDialog, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_taxiway_routes.ui")
+        )
         self.ui = Ui_TaxiRoutesDialog()
         self.ui.setupUi(self)
 
@@ -1715,6 +1725,10 @@ class OpenAlaqsLogfile(QtWidgets.QDialog):
         Initialises QDialog that displays the about UI for the plugin.
         """
         QtWidgets.QDialog.__init__(self)
+
+        Ui_DialogLogfile, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_logfile.ui")
+        )
         self.ui = Ui_DialogLogfile()
         self.ui.setupUi(self)
 
@@ -1804,7 +1818,11 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
 
     def __init__(self):
         QtWidgets.QDialog.__init__(self)
+
         # Setup the user interface from Designer
+        Ui_DialogInventory, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_inventory.ui")
+        )
         self.ui = Ui_DialogInventory()
         self.ui.setupUi(self)
 
@@ -2278,6 +2296,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self._iface = iface
 
         # Setup the user interface from Designer
+        Ui_ResultsAnalysisDialog, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_results_analysis.ui")
+        )
         self.ui = Ui_ResultsAnalysisDialog()
         self.ui.setupUi(self)
 
@@ -2731,6 +2752,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self._iface = iface
 
         # Setup the user interface from Designer
+        Ui_DialogRunAUSTAL2000, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_run_austal2000.ui")
+        )
         self.ui = Ui_DialogRunAUSTAL2000()
         self.ui.setupUi(self)
 
@@ -3106,6 +3130,10 @@ class OpenAlaqsEnabledMacros(QtWidgets.QDialog):
         """
         main_window = iface.mainWindow() if iface is not None else None
         QtWidgets.QDialog.__init__(self, main_window)
+
+        Ui_DialogEnabledMacros, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_macros_enabled.ui")
+        )
         self.ui = Ui_DialogEnabledMacros()
         self.ui.setupUi(self)
         self.iface = iface
