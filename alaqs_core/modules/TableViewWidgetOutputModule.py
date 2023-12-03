@@ -1,14 +1,19 @@
+import os
 from datetime import datetime
 from typing import List, Tuple
 
 from PyQt5 import QtWidgets
+from qgis.PyQt.uic import loadUiType
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import Emission
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
 from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.tools import conversion
-from open_alaqs.ui.TableViewDialog import Ui_TableViewDialog
+
+Ui_TableViewDialog, _ = loadUiType(
+    os.path.join(os.path.dirname(__file__), "..", "..", "ui", "ui_table_view_dialog.ui")
+)
 
 logger = get_logger(__name__)
 

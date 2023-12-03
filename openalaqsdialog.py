@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from PyQt5 import QtCore, QtGui, QtWidgets
 from qgis.core import *
 from qgis.gui import *
+from qgis.PyQt.uic import loadUiType
 
 from open_alaqs import openalaqsuitoolkit as oautk
 from open_alaqs.alaqs_core import alaqs
@@ -39,17 +40,6 @@ from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
     OutputModuleManager, DispersionModuleManager
 from open_alaqs.alaqs_core.tools import sql_interface, conversion
 from open_alaqs.alaqs_core.tools.csv_interface import read_csv_to_dict
-from open_alaqs.ui.ui_about import Ui_DialogAbout
-from open_alaqs.ui.ui_create_database import Ui_DialogCreateDatabase
-from open_alaqs.ui.ui_inventory import Ui_DialogInventory
-from open_alaqs.ui.ui_logfile import Ui_DialogLogfile
-from open_alaqs.ui.ui_open_database import Ui_DialogOpenDatabase
-from open_alaqs.ui.ui_profiles_widget import Ui_FormProfiles
-from open_alaqs.ui.ui_results_analysis import Ui_ResultsAnalysisDialog
-from open_alaqs.ui.ui_run_austal2000 import Ui_DialogRunAUSTAL2000
-from open_alaqs.ui.ui_study_setup import Ui_DialogStudySetup
-from open_alaqs.ui.ui_taxiway_routes import Ui_TaxiRoutesDialog
-from open_alaqs.ui.ui_macros_enabled import Ui_DialogEnabledMacros
 
 logger = get_logger(__name__)
 
@@ -101,6 +91,10 @@ class OpenAlaqsAbout(QtWidgets.QDialog):
         """
         main_window = iface.mainWindow() if iface is not None else None
         QtWidgets.QDialog.__init__(self, main_window)
+
+        Ui_DialogAbout, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_about.ui")
+        )
         self.ui = Ui_DialogAbout()
         self.ui.setupUi(self)
         self.iface = iface
@@ -118,6 +112,9 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
         QtWidgets.QDialog.__init__(self, main_window)
 
         # Set up the user interface from Designer
+        Ui_DialogCreateDatabase, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_create_database.ui")
+        )
         self.ui = Ui_DialogCreateDatabase()
         self.ui.setupUi(self)
 
@@ -206,73 +203,32 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
             return e, None
 
 
-class OpenAlaqsOpenDatabase(QtWidgets.QDialog):
+class OpenAlaqsOpenDatabase():
     """
     This class defines the 'open existing database' functionality.
     """
 
     def __init__(self, iface):
-        main_window = iface.mainWindow() if iface is not None else None
-        QtWidgets.QDialog.__init__(self, main_window)
-
-        # Set up the user interface from Designer
-        self.ui = Ui_DialogOpenDatabase()
-        self.ui.setupUi(self)
-
-        # Collect some UI components
         self.iface = iface
         self.canvas = self.iface.mapCanvas()
-
-        self.ui.pushButtonBrowse.clicked.connect(self.browse_file)
-        self.ui.pushButtonOpenDatabase.clicked.connect(self.load_database)
-        self.ui.pushButtonCancel.clicked.connect(self.close)
 
         # define some variables that are used throughout the class
         self.db_path = None
 
-    def browse_file(self):
-        """
-        Open file dialog and browse for an existing alaqs database. If
-        successful, update the UI with the path to that file.
-        """
-
-        filename, _filter = QtWidgets.QFileDialog.getOpenFileName(
-            None, "Open an ALAQS database file", '', "(*.alaqs)")
-        try:
-            if os.path.exists(filename):
-                self.ui.lineEditFilename.setText(filename)
-                return None
-        except Exception as e:
-            QtWidgets.QMessageBox.warning(self, "Error",
-                                          "Could not open file:  %s." % e)
-            return e
-
     def load_database(self):
         """
-        Take the filename from the UI and try and load the database file into
-        QGIS
+        Open file dialog and browse for an existing alaqs database, then try
+        and load the database file into QGIS
         """
+        filename, _filter = QtWidgets.QFileDialog.getOpenFileName(
+            None, "Open an ALAQS database file", '', "(*.alaqs)")
+        
         try:
-            filepath = oautk.validate_field(self.ui.lineEditFilename, "str")
-
-            self.db_path = filepath
-
-            if filepath is False:
-                QtWidgets.QMessageBox.warning(self, "Error",
-                                              "Please correct all fields")
-                return
-            else:
-                # OPEN AND LOAD THE DATABASE...
-                if not os.path.isfile(filepath):
-                    QtWidgets.QMessageBox.warning(
-                        self,
-                        "Error",
-                        "The chosen file could not be found.")
-                    return
-
-                # Store the filepath in-memory for future use
+            if os.path.exists(filename) and os.path.isfile(filename):
+                self.db_path = filename
+                # Store the database in-memory for future use
                 project_database = ProjectDatabase()
-                project_database.path = filepath
+                project_database.path = self.db_path
 
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                 result = alaqs.load_study_setup()
@@ -288,27 +244,16 @@ class OpenAlaqsOpenDatabase(QtWidgets.QDialog):
                                            Exception, e)
 
                 if result is not None:
-                    try:
-                        self.hide()
-                        self.get_values()
-                    except Exception as e:
-                        raise Exception(e)
+                    return True
                 else:
-                    self.hide()
-                    self.get_values()
+                    return False
         except Exception as e:
             error_message = "Could not open database file:  %s." % e
-            QtWidgets.QMessageBox.warning(self, "Error", error_message)
-            self.close()
+            QtWidgets.QMessageBox.warning(self.iface.mainWindow(), "Error", error_message)
+            return False
 
-    def get_values(self):
-        """
-        Send database path back to the main openalaqs function.
-        """
-        try:
-            return self.db_path
-        except Exception as e:
-            return e, None
+    def get_database_path(self):
+        return self.db_path
 
 
 class OpenAlaqsStudySetup(QtWidgets.QDialog):
@@ -321,7 +266,11 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
     def __init__(self, iface):
         main_window = iface.mainWindow() if iface is not None else None
         QtWidgets.QDialog.__init__(self, main_window)
+
         # Setup the user interface from Designer
+        Ui_DialogStudySetup, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_study_setup.ui")
+        )
         self.ui = Ui_DialogStudySetup()
         self.ui.setupUi(self)
 
@@ -351,8 +300,8 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
 
         # self.ui.lineEditParkingMethod.setText(False)
         self.ui.lineEditParkingMethod.setEnabled(False)
-        self.ui.pushButtonSave.clicked.connect(self.save_study_setup)
-        self.ui.pushButtonCancel.clicked.connect(self.close)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(self.save_study_setup)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(self.close)
 
     @catch_errors
     def load_study_data(self):
@@ -371,11 +320,11 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             self.ui.lineEditAirportID.setEnabled(False)
             self.ui.lineEditAirportCode.setText(study_data['airport_code'])
             self.ui.lineEditAirportCountry.setText(study_data['airport_country'])
-            self.ui.lineEditAirportLatitude.setText(str(study_data['airport_latitude']))
-            self.ui.lineEditAirportLongitude.setText(str(study_data['airport_longitude']))
-            self.ui.lineEditAirportElevation.setText(str(study_data['airport_elevation']))
-            self.ui.lineEditAirportTemperature.setText(str(study_data['airport_temperature']))
-            self.ui.lineEditVerticalLimit.setText(str(study_data['vertical_limit']))
+            self.ui.spinBoxAirportLatitude.setValue(study_data['airport_latitude'])
+            self.ui.spinBoxAirportLongitude.setValue(study_data['airport_longitude'])
+            self.ui.spinBoxAirportElevation.setValue(study_data['airport_elevation'])
+            self.ui.spinBoxAirportTemperature.setValue(study_data['airport_temperature'])
+            self.ui.spinBoxVerticalLimit.setValue(study_data['vertical_limit'])
             self.ui.lineEditParkingMethod.setText(study_data['parking_method'])
 
             roadway_methods = alaqs.get_roadway_methods()
@@ -450,11 +399,11 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             else:
                 self.ui.lineEditAirportName.setText(airport_data[0][2])
                 self.ui.lineEditAirportCountry.setText(airport_data[0][3])
-                self.ui.lineEditAirportLatitude.setText(str(airport_data[0][4]))
-                self.ui.lineEditAirportLongitude.setText(
-                    str(airport_data[0][5]))
-                self.ui.lineEditAirportElevation.setText(
-                    str(int(airport_data[0][6] * 0.3048)))  # in meters from ft
+                self.ui.spinBoxAirportLatitude.setValue(airport_data[0][4])
+                self.ui.spinBoxAirportLongitude.setValue(
+                    airport_data[0][5])
+                self.ui.spinBoxAirportElevation.setValue(
+                    int(airport_data[0][6] * 0.3048))  # in meters from ft
 
                 oautk.set_default_zoom(self.iface.mapCanvas(),
                                        airport_data[0][4], airport_data[0][5])
@@ -473,16 +422,11 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
                                               "str")
         self.airport_country = oautk.validate_field(
             self.ui.lineEditAirportCountry, "str")
-        self.airport_lat = oautk.validate_field(self.ui.lineEditAirportLatitude,
-                                                "float")
-        self.airport_lon = oautk.validate_field(
-            self.ui.lineEditAirportLongitude, "float")
-        self.airport_elevation = oautk.validate_field(
-            self.ui.lineEditAirportElevation, "int")
-        self.airport_temp = oautk.validate_field(
-            self.ui.lineEditAirportTemperature, "float")
-        self.vertical_limit = oautk.validate_field(
-            self.ui.lineEditVerticalLimit, "float")
+        self.airport_lat = self.ui.spinBoxAirportLatitude.value()
+        self.airport_lon = self.ui.spinBoxAirportLongitude.value()
+        self.airport_elevation = self.ui.spinBoxAirportElevation.value()
+        self.airport_temp = self.ui.spinBoxAirportTemperature.value()
+        self.vertical_limit = self.ui.spinBoxVerticalLimit.value()
         self.parking_method = oautk.validate_field(
             self.ui.lineEditParkingMethod, "str")
         self.roadway_method = oautk.validate_field(
@@ -516,10 +460,6 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
 
         result = alaqs.save_study_setup(self.study_setup)
         if result is None:
-            QtWidgets.QMessageBox.information(
-                self,
-                "Study Setup",
-                "Update Successful")
             self.hide()
             self.get_values()
             return None
@@ -546,6 +486,9 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         QtWidgets.QWidget.__init__(self, None, QtCore.Qt.WindowStaysOnTopHint)
 
         # Build the UI
+        Ui_FormProfiles, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_profiles_widget.ui")
+        )
         self.ui = Ui_FormProfiles()
         self.ui.setupUi(self)
 
@@ -1189,6 +1132,9 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         main_window = None if iface is None else iface.mainWindow()
         QtWidgets.QDialog.__init__(self, main_window)
 
+        Ui_TaxiRoutesDialog, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_taxiway_routes.ui")
+        )
         self.ui = Ui_TaxiRoutesDialog()
         self.ui.setupUi(self)
 
@@ -1715,6 +1661,10 @@ class OpenAlaqsLogfile(QtWidgets.QDialog):
         Initialises QDialog that displays the about UI for the plugin.
         """
         QtWidgets.QDialog.__init__(self)
+
+        Ui_DialogLogfile, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_logfile.ui")
+        )
         self.ui = Ui_DialogLogfile()
         self.ui.setupUi(self)
 
@@ -1804,7 +1754,11 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
 
     def __init__(self):
         QtWidgets.QDialog.__init__(self)
+
         # Setup the user interface from Designer
+        Ui_DialogInventory, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_inventory.ui")
+        )
         self.ui = Ui_DialogInventory()
         self.ui.setupUi(self)
 
@@ -2278,6 +2232,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self._iface = iface
 
         # Setup the user interface from Designer
+        Ui_ResultsAnalysisDialog, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_results_analysis.ui")
+        )
         self.ui = Ui_ResultsAnalysisDialog()
         self.ui.setupUi(self)
 
@@ -2731,6 +2688,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self._iface = iface
 
         # Setup the user interface from Designer
+        Ui_DialogRunAUSTAL2000, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_run_austal2000.ui")
+        )
         self.ui = Ui_DialogRunAUSTAL2000()
         self.ui.setupUi(self)
 
@@ -3106,6 +3066,10 @@ class OpenAlaqsEnabledMacros(QtWidgets.QDialog):
         """
         main_window = iface.mainWindow() if iface is not None else None
         QtWidgets.QDialog.__init__(self, main_window)
+
+        Ui_DialogEnabledMacros, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_macros_enabled.ui")
+        )
         self.ui = Ui_DialogEnabledMacros()
         self.ui.setupUi(self)
         self.iface = iface

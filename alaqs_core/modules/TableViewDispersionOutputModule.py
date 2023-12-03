@@ -3,14 +3,19 @@ from collections import OrderedDict
 from datetime import datetime, timedelta
 
 import numpy as np
-from PyQt5 import QtWidgets
 from dateutil import rrule
+
+from PyQt5 import QtWidgets
+from qgis.PyQt.uic import loadUiType
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
 from open_alaqs.alaqs_core.tools.csv_interface import write_csv
-from open_alaqs.ui.TableViewDialog import Ui_TableViewDialog
 from open_alaqs.alaqs_core.tools import conversion
+
+Ui_TableViewDialog, _ = loadUiType(
+    os.path.join(os.path.dirname(__file__), "..", "..", "ui", "ui_table_view_dialog.ui")
+)
 
 logger = get_logger(__name__)
 

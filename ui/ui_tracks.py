@@ -41,26 +41,30 @@ def form_open(form, layer, feature):
     # Hide the instudy field
     fields['instudy'].setHidden(True)
 
+    # Seed the combo boxes
+    populate_combo_boxes(fields)
+
     # Remove brackets from the departure/arrival field when it's already set
     try:
 
         # Get the current value of the feature
         current_feature_value = feature.attribute("departure_arrival")
+        print(current_feature_value)
 
         # Get the current value of the form
         current_field_value = fields['arrdep_field'].currentText()
 
         # If the form value is with brackets, replace the value in the combobox
         if current_field_value == f'({current_feature_value})':
-
             # Set the value without brackets
             fields['arrdep_field'].setCurrentText(current_feature_value)
-
             # Get the index of the value with brackets
             arrdep_index = fields['arrdep_field'].findText(current_field_value)
-
             # Remove the value with brackets
             fields['arrdep_field'].removeItem(arrdep_index)
+        else:
+            arrdep_index = fields['arrdep_field'].findText(current_feature_value)
+            fields['arrdep_field'].setCurrentIndex(arrdep_index)
 
     except KeyError:
         pass
@@ -78,23 +82,20 @@ def form_open(form, layer, feature):
 
         # If the form value is with brackets, replace the value in the combobox
         if current_field_value == f'({current_feature_value})':
-
             # Set the value without brackets
             fields['runway_field'].setCurrentText(current_feature_value)
-
             # Get the index of the value with brackets
             rwy_index = fields['runway_field'].findText(current_field_value)
-
             # Remove the value with brackets
             fields['runway_field'].removeItem(rwy_index)
+        else:
+            rwy_index = fields['runway_field'].findText(current_feature_value)
+            fields['runway_field'].setCurrentIndex(rwy_index)
 
     except KeyError:
         pass
     except Exception as e:
         raise e
-
-    # Seed the combo boxes
-    populate_combo_boxes(fields)
 
     # Add input validation to text fields in the form
     for key, value in fields.items():
