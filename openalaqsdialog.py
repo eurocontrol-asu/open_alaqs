@@ -222,7 +222,7 @@ class OpenAlaqsOpenDatabase():
         """
         filename, _filter = QtWidgets.QFileDialog.getOpenFileName(
             None, "Open an ALAQS database file", '', "(*.alaqs)")
-
+        
         try:
             if os.path.exists(filename) and os.path.isfile(filename):
                 self.db_path = filename
@@ -300,8 +300,8 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
 
         # self.ui.lineEditParkingMethod.setText(False)
         self.ui.lineEditParkingMethod.setEnabled(False)
-        self.ui.pushButtonSave.clicked.connect(self.save_study_setup)
-        self.ui.pushButtonCancel.clicked.connect(self.close)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(self.save_study_setup)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(self.close)
 
     @catch_errors
     def load_study_data(self):
@@ -320,11 +320,11 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             self.ui.lineEditAirportID.setEnabled(False)
             self.ui.lineEditAirportCode.setText(study_data['airport_code'])
             self.ui.lineEditAirportCountry.setText(study_data['airport_country'])
-            self.ui.lineEditAirportLatitude.setText(str(study_data['airport_latitude']))
-            self.ui.lineEditAirportLongitude.setText(str(study_data['airport_longitude']))
-            self.ui.lineEditAirportElevation.setText(str(study_data['airport_elevation']))
-            self.ui.lineEditAirportTemperature.setText(str(study_data['airport_temperature']))
-            self.ui.lineEditVerticalLimit.setText(str(study_data['vertical_limit']))
+            self.ui.spinBoxAirportLatitude.setValue(study_data['airport_latitude'])
+            self.ui.spinBoxAirportLongitude.setValue(study_data['airport_longitude'])
+            self.ui.spinBoxAirportElevation.setValue(study_data['airport_elevation'])
+            self.ui.spinBoxAirportTemperature.setValue(study_data['airport_temperature'])
+            self.ui.spinBoxVerticalLimit.setValue(study_data['vertical_limit'])
             self.ui.lineEditParkingMethod.setText(study_data['parking_method'])
 
             roadway_methods = alaqs.get_roadway_methods()
@@ -399,11 +399,11 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             else:
                 self.ui.lineEditAirportName.setText(airport_data[0][2])
                 self.ui.lineEditAirportCountry.setText(airport_data[0][3])
-                self.ui.lineEditAirportLatitude.setText(str(airport_data[0][4]))
-                self.ui.lineEditAirportLongitude.setText(
-                    str(airport_data[0][5]))
-                self.ui.lineEditAirportElevation.setText(
-                    str(int(airport_data[0][6] * 0.3048)))  # in meters from ft
+                self.ui.spinBoxAirportLatitude.setValue(airport_data[0][4])
+                self.ui.spinBoxAirportLongitude.setValue(
+                    airport_data[0][5])
+                self.ui.spinBoxAirportElevation.setValue(
+                    int(airport_data[0][6] * 0.3048))  # in meters from ft
 
                 oautk.set_default_zoom(self.iface.mapCanvas(),
                                        airport_data[0][4], airport_data[0][5])
@@ -422,16 +422,11 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
                                               "str")
         self.airport_country = oautk.validate_field(
             self.ui.lineEditAirportCountry, "str")
-        self.airport_lat = oautk.validate_field(self.ui.lineEditAirportLatitude,
-                                                "float")
-        self.airport_lon = oautk.validate_field(
-            self.ui.lineEditAirportLongitude, "float")
-        self.airport_elevation = oautk.validate_field(
-            self.ui.lineEditAirportElevation, "int")
-        self.airport_temp = oautk.validate_field(
-            self.ui.lineEditAirportTemperature, "float")
-        self.vertical_limit = oautk.validate_field(
-            self.ui.lineEditVerticalLimit, "float")
+        self.airport_lat = self.ui.spinBoxAirportLatitude.value()
+        self.airport_lon = self.ui.spinBoxAirportLongitude.value()
+        self.airport_elevation = self.ui.spinBoxAirportElevation.value()
+        self.airport_temp = self.ui.spinBoxAirportTemperature.value()
+        self.vertical_limit = self.ui.spinBoxVerticalLimit.value()
         self.parking_method = oautk.validate_field(
             self.ui.lineEditParkingMethod, "str")
         self.roadway_method = oautk.validate_field(
@@ -465,10 +460,6 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
 
         result = alaqs.save_study_setup(self.study_setup)
         if result is None:
-            QtWidgets.QMessageBox.information(
-                self,
-                "Study Setup",
-                "Update Successful")
             self.hide()
             self.get_values()
             return None
