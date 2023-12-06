@@ -1767,7 +1767,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui.vert_limit_ft.setEnabled(False)
 
 
-        #self.ui.status_update.setText("Ready")
+        self.ui.status_update.setText("Ready")
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).setText("Create Inventory")
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(self.create_inventory)
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(self.close)
@@ -1874,10 +1874,8 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                         date_time = datetime.strptime(movement_data[0],
                                                       '%Y-%m-%d %H:%M:%S')
                         if date_time < start_date:
-                            # start_date = date_time
                             start_date = (date_time).replace(minute=0, second=0)
                         if date_time > end_date:
-                            # end_date = date_time
                             end_date = (date_time + timedelta(hours=1)).replace(
                                 minute=0, second=0)
 
@@ -1971,10 +1969,8 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             date_time = datetime.strptime(csv['DateTime(YYYY-mm-dd hh:mm:ss)'][row_],
                                           '%Y-%m-%d %H:%M:%S')
             if date_time < start_date:
-                # start_date = date_time
                 start_date = (date_time).replace(minute=0, second=0)
             if date_time > end_date:
-                # end_date = date_time
                 end_date = (date_time + timedelta(hours=1)).replace(
                     minute=0, second=0)
 
