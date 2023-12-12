@@ -123,7 +123,7 @@ def add_spatialite_layer(iface, database_path, table_name, display_name,
     layer = QgsVectorLayer(uri.uri(), display_name, 'spatialite')
 
     lconfig = layer.editFormConfig()
-    lconfig.setInitCodeSource(QgsEditFormConfig.PythonInitCodeSource.File)
+    lconfig.setInitCodeSource(QgsEditFormConfig.PythonInitCodeSource.CodeSourceFile)
     lconfig.setUiForm(os.path.join(plugin_dir, 'ui', edit_form))
     lconfig.setInitFilePath(os.path.join(plugin_dir, 'ui', edit_py))
     lconfig.setInitFunction(edit_init)
