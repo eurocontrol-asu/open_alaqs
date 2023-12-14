@@ -2,6 +2,7 @@ from collections import OrderedDict
 from datetime import datetime
 
 from PyQt5 import QtCore, QtWidgets
+from qgis.gui import QgsDoubleSpinBox, QgsSpinBox
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools import conversion
@@ -34,11 +35,19 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
 
     def addSetting(self, name, widget_type):
         self._settings[name] = widget_type()
+        label = QtWidgets.QLabel("%s: " % name)
+
         if isinstance(self._settings[name], QtWidgets.QDateTimeEdit):
             self._settings[name].setDisplayFormat("yyyy-MM-dd HH:mm:ss")
-        # insert new row at the end of the QFormLayout
-        self.layout().insertRow(-1, QtWidgets.QLabel("%s: " % name),
-                                self._settings[name])
+        elif isinstance(self._settings[name], QtWidgets.QAbstractButton):
+            self._settings[name].setText(name)
+            label = None
+
+        if label:
+            self.layout().insertRow(-1, label,
+                                    self._settings[name])
+        else:
+            self.layout().insertRow(-1, self._settings[name])
 
     def getSettings(self):
         return self._settings
@@ -71,6 +80,9 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                     for row in range(widget.rowCount()):
                         val_[row, col] = widget.item(row, col).text() if (
                                 widget.item(row, col) is not None) else None
+            elif isinstance(widget, QgsDoubleSpinBox) or \
+                     isinstance(widget, QgsSpinBox):
+                val = widget.value()
 
             elif isinstance(widget, QtWidgets.QHBoxLayout) or \
                     isinstance(widget, QtWidgets.QVBoxLayout):
@@ -137,6 +149,10 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                                 conversion.convertSecondsToTimeString(
                                     conversion.convertTimeToSeconds(value)
                                 ), self._qtdateformat))
+                elif isinstance(widget, QgsDoubleSpinBox):
+                    val = widget.setValue(float(value))
+                elif isinstance(widget, QgsSpinBox):
+                    val = widget.setValue(int(value))
                 else:
                     logger.error("Did not find method to set values to widget "
                                  "of type '%s'.!" % (type(widget)))

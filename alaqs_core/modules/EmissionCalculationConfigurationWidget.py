@@ -4,7 +4,7 @@ from collections import OrderedDict
 import geopandas as gpd
 
 from PyQt5 import QtCore, QtWidgets
-from qgis.gui import QgsFileWidget
+from qgis.gui import QgsFileWidget, QgsDoubleSpinBox
 
 from open_alaqs.alaqs_core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.alaqs_core.tools.csv_interface import read_csv_to_geodataframe
@@ -15,18 +15,18 @@ class EmissionCalculationConfigurationWidget(ModuleConfigurationWidget):
     def __init__(self, parent=None, config=None):
         if config is None:
             config = {}
-
+        
         ModuleConfigurationWidget.__init__(self, config_dict=OrderedDict([
             ("Start (incl.)", QtWidgets.QDateTimeEdit),
             ("End (incl.)", QtWidgets.QDateTimeEdit),
             ("Method", QtWidgets.QComboBox),
             ("Source Dynamics", QtWidgets.QComboBox),
             ("Apply NOx corrections", QtWidgets.QCheckBox),
-            ("Vertical limit [m]", QtWidgets.QLineEdit),
+            ("Vertical limit", QgsDoubleSpinBox),
             ("Receptor Points (*.csv)", QtWidgets.QHBoxLayout),
         ]), parent=parent)
 
-        self.getSettings()["Vertical limit [m]"].setFixedWidth(60)
+        self.getSettings()["Vertical limit"].setSuffix(' m')
 
         self._receptor_points = gpd.GeoDataFrame()
 
