@@ -2222,6 +2222,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         )
         self.ui = Ui_ResultsAnalysisDialog()
         self.ui.setupUi(self)
+        self.ui.configuration_splitter.setSizes([80,200])
 
         # initialize calculation
         self._emission_calculation_ = None
@@ -2229,6 +2230,11 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         self.resetModuleConfiguration(module_names=[])
         self.resetEmissionCalculationConfiguration()
+
+        self.ui.configuration_modules_list.setCurrentRow(0)
+        self.ui.configuration_stack.setCurrentIndex(0)
+        self.ui.configuration_modules_list.currentRowChanged.connect(self.configuration_modules_list_current_row_changed)
+        self.ui.configuration_stack.currentChanged.connect(self.configuration_stack_current_changed)
 
         # initialize GUI
         # self._pollutants_list = ["CO", "HC", "NOx", "SOx", "PM10", "P1", "P2"]
@@ -2254,11 +2260,17 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.ui.add_contour.clicked.connect(lambda: self.runOutputModule(
             "EmissionsQGISVectorLayerOutputModule"))
 
-        # Bindings
-        self.ui.browseOutputFile.clicked.connect(self.browse_result_file)
-        # self.ui.buttonBox.clicked.connect(self.close)
+        self.ui.result_file_path.setFilter('ALAQS (*.alaqs)')
+        self.ui.result_file_path.setDialogTitle('Open Emission Inventory Data')
+        self.ui.result_file_path.fileChanged.connect(self.result_file_path_changed)
 
         self._return_values = {}
+
+    def configuration_modules_list_current_row_changed(self, row):
+        self.ui.configuration_stack.setCurrentIndex(row)
+
+    def configuration_stack_current_changed(self, index):
+        self.ui.configuration_modules_list.setCurrentRow(index)
 
     def pollutant_changed(self):
         self.populate_calculation_methods(
@@ -2283,25 +2295,16 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
     def resetEmissionCalculationConfiguration(self, config=None):
         if config is None:
             config = {}
-        page = None
-        for i_ in range(0, self.ui.Configuration_toolBox.count()):
-            if str(self.ui.Configuration_toolBox.itemText(
-                    i_)).lower() == "Emission Calculation".lower():
-                page = self.ui.Configuration_toolBox.widget(i_)
 
         if self._emission_calculation_configuration_widget is None:
             self._emission_calculation_configuration_widget = \
                 EmissionCalculationConfigurationWidget(parent=None)
-        self._emission_calculation_configuration_widget.initValues(config)
+            self.ui.configuration_stack.insertWidget(0, self._emission_calculation_configuration_widget)
 
-        if page is None:
-            self.ui.Configuration_toolBox.addItem(
-                self._emission_calculation_configuration_widget,
-                "Emission Calculation")
+        self._emission_calculation_configuration_widget.initValues(config)
         self.update()
 
     def resetModuleConfiguration(self, module_names):
-
         self.ui.output_modules_tab_widget.clear()
         for module_name_, module_instance_ in list(
                 DispersionModuleManager().getModuleInstances().items()):
@@ -2312,7 +2315,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                     scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
                     scroll_widget.setWidget(widget_)
                     self.ui.dispersion_modules_tab_widget.addTab(scroll_widget,
-                                                                 module_name_)
+                                                                 module_instance_.getModuleDisplayName())
 
         for module_name_, module_instance_ in list(
                 OutputModuleManager().getModuleInstances().items()):
@@ -2324,7 +2327,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                         scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
                         scroll_widget.setWidget(widget_)
                         self.ui.output_modules_tab_widget.addTab(scroll_widget,
-                                                                 module_name_)
+                                                                 module_instance_.getModuleDisplayName())
 
     def getOutputModulesConfiguration(self):
         tab = self.ui.output_modules_tab_widget
@@ -2482,27 +2485,21 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.populate_calculation_methods(
             pollutant=self.ui.pollutants_names.currentText())
 
-    def browse_result_file(self):
+    def result_file_path_changed(self, path):
         """
         Open a file browse window for the user to be able to locate and load an
          ALAQS output file
         """
-        inventory_path, _filter = QtWidgets.QFileDialog.getOpenFileName(
-            self,
-            "Open an ALAQS output file",
-            "",
-            'ALAQS (*.alaqs)')
         try:
-            if os.path.exists(inventory_path):
-                self.ui.result_file_path.setText(inventory_path)
+            if os.path.exists(path):
                 # Fill in the UI
                 self.ui.source_names.clear()
                 self.ui.source_types.clear()
-                self.updateMinMaxGUI(inventory_path)
+                self.updateMinMaxGUI(path)
                 self.populate_source_types()
 
             else:
-                raise Exception("File '%s' does not exist." % inventory_path)
+                raise Exception("File '%s' does not exist." % path)
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "Error",
                                           "Could not open file:  %s." % e)
@@ -2523,7 +2520,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         # reset calculation
         self._emission_calculation_ = None
-        inventory_path = self.ui.result_file_path.text()
+        inventory_path = self.ui.result_file_path.filePath()
         module_name = self.ui.source_types.currentText()
 
         for module_name_, module_obj_ in \
@@ -2553,7 +2550,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
     @catch_errors
     def update_emissions(self):
 
-        inventory_path = str(self.ui.result_file_path.text())
+        inventory_path = str(self.ui.result_file_path.filePath())
         if not os.path.exists(inventory_path):
             raise Exception("Error: Inventory path '%s' doesn't exist!" % (
                 inventory_path))

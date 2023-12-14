@@ -47,6 +47,10 @@ class AUSTAL2000DispersionModule(DispersionModule):
     def getModuleName():
         return "AUSTAL2000"
 
+    @staticmethod
+    def getModuleDisplayName():
+        return "AUSTAL2000"
+
     def __init__(self, values_dict=None):
         if values_dict is None:
             values_dict = {}

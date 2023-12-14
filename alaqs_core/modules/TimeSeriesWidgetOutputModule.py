@@ -28,6 +28,10 @@ class TimeSeriesWidgetOutputModule(OutputModule):
     def getModuleName():
         return "TimeSeriesWidgetOutputModule"
 
+    @staticmethod
+    def getModuleDisplayName():
+        return "Time Series"
+
     def __init__(self, values_dict=None):
         if values_dict is None:
             values_dict = {}
