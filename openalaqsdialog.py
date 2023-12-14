@@ -2314,6 +2314,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                     scroll_widget = QtWidgets.QScrollArea(self)
                     scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
                     scroll_widget.setWidget(widget_)
+                    scroll_widget.setWidgetResizable(True)
                     self.ui.dispersion_modules_tab_widget.addTab(scroll_widget,
                                                                  module_instance_.getModuleDisplayName())
 
@@ -2326,6 +2327,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                         scroll_widget = QtWidgets.QScrollArea(self)
                         scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
                         scroll_widget.setWidget(widget_)
+                        scroll_widget.setWidgetResizable(True)
                         self.ui.output_modules_tab_widget.addTab(scroll_widget,
                                                                  module_instance_.getModuleDisplayName())
 
