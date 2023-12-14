@@ -2,7 +2,10 @@ import os
 from collections import OrderedDict
 
 import geopandas as gpd
+
 from PyQt5 import QtCore, QtWidgets
+from qgis.gui import QgsFileWidget
+
 from open_alaqs.alaqs_core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.alaqs_core.tools.csv_interface import read_csv_to_geodataframe
 
@@ -27,16 +30,12 @@ class EmissionCalculationConfigurationWidget(ModuleConfigurationWidget):
 
         self._receptor_points = gpd.GeoDataFrame()
 
-        self._receptors_filename_field = QtWidgets.QLineEdit()
-        self._receptors_filename_field.setFixedWidth(150)
-        self._receptors_filename_field.setToolTip("Select CSV file with receptor points")
-
-        self._receptors_filename_browse = QtWidgets.QPushButton("Load File")
-        self._receptors_filename_browse.clicked.connect(self.load_receptors_csv)
+        self._receptors_filename_field = QgsFileWidget()
+        self._receptors_filename_field.setFilter('CSV (*.csv)')
+        self._receptors_filename_field.setDialogTitle('Select CSV File with Receptor Points')
+        self._receptors_filename_field.fileChanged.connect(self.load_receptors_csv)
 
         self.getSettings()["Receptor Points (*.csv)"].addWidget(self._receptors_filename_field)
-        self.getSettings()["Receptor Points (*.csv)"].addWidget(self._receptors_filename_browse)
-        self.getSettings()["Receptor Points (*.csv)"].addStretch()
 
         self.initValues({
             "Start (incl.)": config.get("Start (incl.)", "2000-01-01 00:00:00"),
@@ -51,18 +50,11 @@ class EmissionCalculationConfigurationWidget(ModuleConfigurationWidget):
             "Vertical limit [m]": 914.4,
         })
 
-    def load_receptors_csv(self):
-        filename, _filter = \
-            QtWidgets.QFileDialog.getOpenFileName(
-                self,
-                "Select file with receptor points",
-                "",
-                'CSV (*.csv)')
+    def load_receptors_csv(self, path):
         try:
-            if os.path.exists(filename):
-                self._receptors_filename_field.setText(filename)
+            if os.path.exists(path):
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                self.get_receptors_from_csv(filename)
+                self.get_receptors_from_csv(path)
                 QtWidgets.QApplication.restoreOverrideCursor()
                 # if isinstance(result, str):
                 #     raise Exception()
