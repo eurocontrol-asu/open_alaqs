@@ -20,6 +20,10 @@ class SQLiteOutputModule(OutputModule):
     def getModuleName():
         return "SQLiteOutputModule"
 
+    @staticmethod
+    def getModuleDisplayName():
+        return "SQLite"
+
     def __init__(self, values_dict=None):
         if values_dict is None:
             values_dict = {}

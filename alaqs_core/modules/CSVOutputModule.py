@@ -24,6 +24,10 @@ class CSVOutputModule(OutputModule):
     def getModuleName():
         return "CSVOutputModule"
 
+    @staticmethod
+    def getModuleDisplayName():
+        return "CSV"
+
     def __init__(self, values_dict=None):
         if values_dict is None:
             values_dict = {}

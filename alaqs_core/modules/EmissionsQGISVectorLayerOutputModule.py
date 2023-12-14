@@ -26,6 +26,10 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
     def getModuleName():
         return "EmissionsQGISVectorLayerOutputModule"
 
+    @staticmethod
+    def getModuleDisplayName():
+        return "Vector Layer"
+
     def __init__(self, values_dict = {}):
         OutputModule.__init__(self, values_dict)
 

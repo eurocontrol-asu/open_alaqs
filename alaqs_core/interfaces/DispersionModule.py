@@ -20,6 +20,10 @@ class DispersionModule:
     def getModuleName():
         return ""
 
+    @staticmethod
+    def getModuleDisplayName():
+        return ""
+
     def __init__(self, values_dict=None):
         if values_dict is None:
             values_dict = {}
