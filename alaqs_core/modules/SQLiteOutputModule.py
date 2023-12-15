@@ -28,13 +28,13 @@ class SQLiteOutputModule(OutputModule):
         if values_dict is None:
             values_dict = {}
         OutputModule.__init__(self, values_dict)
-        self._isDetailedOutput = values_dict.get("detailed_output", False)
+        self._isDetailedOutput = values_dict.get("detailed output", False)
 
         self.setConfigurationWidget(OrderedDict([
-            ("detailed output", QtWidgets.QCheckBox)
+            ("Detailed Output", QtWidgets.QCheckBox)
         ]))
 
-        self.getConfigurationWidget().initValues({"detailed output": False})
+        self.getConfigurationWidget().initValues({"Detailed Output": False})
 
     def beginJob(self):
         # initialize database connections

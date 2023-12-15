@@ -363,7 +363,7 @@
       <item>
        <widget class="QPushButton" name="ResultsTableButton">
         <property name="text">
-         <string>Emissions table</string>
+         <string>View Emissions Table</string>
         </property>
        </widget>
       </item>
@@ -373,14 +373,7 @@
          <string>Plot time vs. emission of pollutant</string>
         </property>
         <property name="text">
-         <string>Plot timeseries</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="toCSVButton">
-        <property name="text">
-         <string>Export to CSV</string>
+         <string>Plot Time Series</string>
         </property>
        </widget>
       </item>
@@ -393,16 +386,23 @@
          <string>Visualize emissions by adding a new layer.</string>
         </property>
         <property name="text">
-         <string>Plot vectorlayer</string>
+         <string>Plot Vector Layer</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="toCSVButton">
+        <property name="text">
+         <string>Export to CSV</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="toDBButton">
         <property name="text">
-         <string>Export to DB</string>
+         <string>Export to SQLite</string>
         </property>
-       </widget>
+       </widget>  
       </item>
      </layout>
     </item>

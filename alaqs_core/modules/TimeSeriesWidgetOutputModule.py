@@ -66,16 +66,16 @@ class TimeSeriesWidgetOutputModule(OutputModule):
             values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
         self._pollutant = values_dict.get("pollutant")
 
-        self.setConfigurationWidget(OrderedDict({
-            "xtitle": QtWidgets.QLineEdit,
-            "marker": QtWidgets.QLineEdit,
-            "receptor point": QtWidgets.QTableWidget,
-        }))
+        self.setConfigurationWidget(OrderedDict([
+            ("Title", QtWidgets.QLineEdit),
+            ("Marker", QtWidgets.QLineEdit),
+            ("Receptor Point", QtWidgets.QTableWidget),
+        ]))
 
         self.getConfigurationWidget().initValues(OrderedDict({
-            "xtitle": "Time [hh:mm:ss]",
-            "marker": "x",
-            "receptor point": self._TableWidgetInputs,
+            "Title": "Time [hh:mm:ss]",
+            "Marker": "x",
+            "Receptor Point": self._TableWidgetInputs,
         }))
 
     def beginJob(self):
