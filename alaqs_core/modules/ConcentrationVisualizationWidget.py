@@ -11,16 +11,16 @@ class ConcentrationVisualizationWidget(ModuleConfigurationWidget):
         if config is None:
             config = {}
         ModuleConfigurationWidget.__init__(self, config_dict=OrderedDict([
-            ("uncertainty", QtWidgets.QCheckBox),
             ("Start (incl.)", QtWidgets.QDateTimeEdit),
             ("End (incl.)", QtWidgets.QDateTimeEdit),
             ("Averaging", QtWidgets.QComboBox),
-            ("Pollutant", QtWidgets.QComboBox)
+            ("Pollutant", QtWidgets.QComboBox),
+            ("Enable Uncertainty", QtWidgets.QCheckBox),
 
         ]), parent=parent)
 
         self.initValues({
-            "uncertainty": False,
+            "Enable Uncertainty": False,
             "Start (incl.)": config.get("Start (incl.)", "2000-01-01 00:00:00"),
             "End (incl.)": config.get("End (incl.)", "2000-01-02 00:00:00"),
             "Averaging": {

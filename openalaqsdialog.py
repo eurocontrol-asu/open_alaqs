@@ -2775,10 +2775,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     if module_name_ not in ["QGISVectorLayerDispersionModule",
                                             "TimeSeriesDispersionModule"]:
                         self.ui.output_modules_tab_widget.addTab(scroll_widget,
-                                                                 module_name_)
+                                                                 module_instance_.getModuleDisplayName())
                     else:
                         self.ui.visualization_modules_tab_widget.addTab(
-                            scroll_widget, module_name_)
+                            scroll_widget, module_instance_.getModuleDisplayName())
 
     def load_alaqs_source_file(self, path):
         """
@@ -2889,8 +2889,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     averaging_period_ = \
                         conc_configuration["Averaging"]["selected"] \
                             if "Averaging" in conc_configuration else None
-                    check_std = conc_configuration["uncertainty"] \
-                        if "uncertainty" in conc_configuration else False
+                    check_std = conc_configuration["Enable Uncertainty"] \
+                        if "Enable Uncertainty" in conc_configuration else False
 
                     # ToDo: if not from within a current ALAQS simulation,
                     #  request DatabasePath to read 3DGrid
