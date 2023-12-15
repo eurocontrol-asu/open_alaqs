@@ -223,11 +223,11 @@
             </item>
             <item>
              <property name="text">
-              <string>Visualizations</string>
+              <string>Table View</string>
              </property>
              <property name="icon">
               <iconset resource="../../images/images.qrc">
-               <normaloff>:/images/themes/default/propertyicons/editmetadata.svg</normaloff>:/images/themes/default/propertyicons/editmetadata.svg</iconset>
+               <normaloff>:/images/themes/default/propertyicons/attributes.svg</normaloff>:/images/themes/default/propertyicons/attributes.svg</iconset>
              </property>
             </item>
            </widget>
@@ -345,14 +345,14 @@
      <item>
        <widget class="QPushButton" name="PlotTimeSeries">
         <property name="text">
-         <string>Plot timeseries</string>
+         <string>Plot Time Series</string>
         </property>
        </widget>
      </item>
      <item>
        <widget class="QPushButton" name="ResultsTable">
         <property name="text">
-         <string>Results table</string>
+         <string>Results Table</string>
         </property>
        </widget>
      </item>
