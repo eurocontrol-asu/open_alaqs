@@ -2270,7 +2270,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.ui.configuration_stack.setCurrentIndex(row)
 
     def configuration_stack_current_changed(self, index):
-        self.ui.configuration_modules_list.setCurrentRow(index)
+        self.ui.configuration_modules_list.setCurrentRow(index)        
 
     def pollutant_changed(self):
         self.populate_calculation_methods(
@@ -2443,7 +2443,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path_)
         # self.ui.start_dateTime.setMinimumDateTime(time_start_calc_)
         # self.ui.end_dateTime.setMaximumDateTime(time_end_calc_)
-
+        
         self.resetEmissionCalculationConfiguration(config={
             "Start (incl.)": time_start_calc_,
             "End (incl.)": time_end_calc_
@@ -2611,7 +2611,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 # Check compatibility of methods (Not possible to have both
                 # 'BFFM2' and 'Apply NOx correction')
                 BFFM2_selected = em_config["Method"]["selected"] == "BFFM2"
-                NOx_corr_selected = em_config["Apply NOx corrections"]
+                NOx_corr_selected = em_config["Apply NOx Corrections"]
                 if BFFM2_selected and NOx_corr_selected:
                     logger.warning("Not possible to use both 'BFFM2' "
                                    "and 'Apply NOx correction'")
@@ -2865,12 +2865,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             if str(self.ui.Configuration_toolBox.itemText(
                     i_)).lower() == "Concentration Calculation".lower():
                 page = self.ui.Configuration_toolBox.widget(i_)
-
+        
         if self._concentration_visualization_widget is None:
             self._concentration_visualization_widget = \
                 ConcentrationVisualizationWidget(parent=None)
         self._concentration_visualization_widget.initValues(config)
-
+        
         if page is None:
             self.ui.Configuration_toolBox.addItem(
                 self._concentration_visualization_widget,

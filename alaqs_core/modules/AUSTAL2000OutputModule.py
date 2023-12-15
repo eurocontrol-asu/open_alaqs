@@ -9,10 +9,12 @@ from typing import List, Tuple, Union
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from PyQt5 import QtGui, QtWidgets
 from dateutil import rrule
 from shapely.geometry import Polygon, MultiPolygon, Point, MultiLineString, \
     LineString
+
+from PyQt5 import QtGui, QtWidgets
+from qgis.gui import QgsDoubleSpinBox, QgsSpinBox
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.AmbientCondition import AmbientCondition
@@ -107,47 +109,49 @@ class AUSTAL2000DispersionModule(DispersionModule):
         self._y_left_border_calc_grid = None  # "y0\t-200\t' lower border (m)",
 
         # general parameters set from Widget
-        widget_parameters = OrderedDict({
-            ("enable", QtWidgets.QCheckBox,),
-            ("add title", QtWidgets.QLineEdit,),
-            ("roughness length (in m)", QtWidgets.QLineEdit,),
-            ("anemometer height (in m)", QtWidgets.QLineEdit,),
-            ("displacement height (in m)", QtWidgets.QLineEdit,),
-            ("options string", QtWidgets.QLineEdit,),
-            ("quality level", QtWidgets.QLineEdit,),
-            ("index sequence", QtWidgets.QLineEdit,),
-        })
-        self.setConfigurationWidget(OrderedDict(
-            sorted(list(widget_parameters.items()), key=lambda t: len(t[0]))))
+        widget_parameters = OrderedDict([("Enabled", QtWidgets.QCheckBox),
+            ("Title", QtWidgets.QLineEdit),
+            ("Roughness Length", QgsDoubleSpinBox),
+            ("Anemometer Height", QgsDoubleSpinBox),
+            ("Displacement Height", QgsDoubleSpinBox),
+            ("Options String", QtWidgets.QLineEdit),
+            ("Quality Level", QgsSpinBox),
+            ("Index Sequence", QtWidgets.QLineEdit)])
+        self.setConfigurationWidget(widget_parameters)
+
+        # ToDo: QL Range between -4 and 4
+        widget = self._configuration_widget.getSettings()["Roughness Length"]
+        widget.setMinimum(0.0)
+        widget.setMaximum(999999.9)
+        widget.setSuffix(" m")
+        widget = self._configuration_widget.getSettings()["Anemometer Height"]
+        widget.setMinimum(0.0)
+        widget.setMaximum(999999.9)
+        widget.setSuffix(" m")
+        widget = self._configuration_widget.getSettings()["Displacement Height"]
+        widget.setMinimum(0.0)
+        widget.setMaximum(999999.9)
+        widget.setSuffix(" m")
+        widget = self._configuration_widget.getSettings()["Quality Level"]
+        widget.setMinimum(1)
+        widget.setMaximum(10)
+        widget.setToolTip('+1 doubles the number of simulation particles')
+
+        self._configuration_widget.getSettings()["Options String"].setToolTip('options must be defined successively and separated by a semicolon')
+        self._configuration_widget.getSettings()["Enabled"].setToolTip('Enable to create AUSTAL2000 input files')
+        self._configuration_widget.getSettings()["Index Sequence"].setToolTip('index sequence in which the data values are listed (comma separated)')
+        self._configuration_widget.getSettings()["Index Sequence"].setEnabled(False)
 
         self.getConfigurationWidget().initValues({
-            "roughness length (in m)": 0.2,
-            "displacement height (in m)": 1.2,
-            "anemometer height (in m)": 11.2,
-            "add title": "",
-            "quality level": 1,
-            "index sequence": "k+,j-,i+",
-            "enable": False,
-            "options string": "NOSTANDARD;SCINOTAT;Kmax=1"
+            "Roughness Length": 0.2,
+            "Displacement Height": 1.2,
+            "Anemometer Height": 11.2,
+            "Title": "",
+            "Quality Level": 1,
+            "Index Sequence": "k+,j-,i+",
+            "Enabled": False,
+            "Options String": "NOSTANDARD;SCINOTAT;Kmax=1"
         })
-
-        self._configuration_widget.getSettings()["enable"].setToolTip('Enable to create AUSTAL2000 input files')
-
-        self._configuration_widget.getSettings()["index sequence"].setToolTip('index sequence in which the data values are listed (comma separated)')
-        self._configuration_widget.getSettings()["index sequence"].setEnabled(False)
-
-        self._configuration_widget.getSettings()["quality level"].setValidator(QtGui.QDoubleValidator())
-        # ToDo: QL Range between -4 and 4
-        self._configuration_widget.getSettings()["roughness length (in m)"].setValidator(QtGui.QDoubleValidator())
-        self._configuration_widget.getSettings()["displacement height (in m)"].setValidator(QtGui.QDoubleValidator())
-        self._configuration_widget.getSettings()["anemometer height (in m)"].setValidator(QtGui.QDoubleValidator())
-
-        self._configuration_widget.getSettings()["quality level"].setToolTip('+1 doubles the number of simulation particles')
-        self._configuration_widget.getSettings()["options string"].setToolTip('options must be defined successively and separated by a semicolon')
-
-        # self._configuration_widget.getSettings()["quality level"].setValidator(QtGui.QRegExpValidator(QtCore.QRegExp(r'^[0-9]')))
-        # self.setValidator(QtGui.QIntValidator()) # now edit will only accept integers
-        # self._configuration_widget.getSettings()["title"].setStyleSheet("QWidget {background-color:rgba(255, 107, 107, 150);}")
 
     # ToDo: Define the get set functions for all parameters
     def getTitle(self):

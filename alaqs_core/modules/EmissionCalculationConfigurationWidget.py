@@ -21,12 +21,15 @@ class EmissionCalculationConfigurationWidget(ModuleConfigurationWidget):
             ("End (incl.)", QtWidgets.QDateTimeEdit),
             ("Method", QtWidgets.QComboBox),
             ("Source Dynamics", QtWidgets.QComboBox),
-            ("Apply NOx corrections", QtWidgets.QCheckBox),
-            ("Vertical limit", QgsDoubleSpinBox),
-            ("Receptor Points (*.csv)", QtWidgets.QHBoxLayout),
+            ("Apply NOx Corrections", QtWidgets.QCheckBox),
+            ("Vertical Limit", QgsDoubleSpinBox),
+            ("Receptor Points", QtWidgets.QHBoxLayout),
         ]), parent=parent)
 
-        self.getSettings()["Vertical limit"].setSuffix(' m')
+        widget = self.getSettings()["Vertical Limit"]
+        widget.setSuffix(' m')
+        widget.setMinimum(0.0)
+        widget.setMaximum(999999.9)
 
         self._receptor_points = gpd.GeoDataFrame()
 
@@ -35,7 +38,7 @@ class EmissionCalculationConfigurationWidget(ModuleConfigurationWidget):
         self._receptors_filename_field.setDialogTitle('Select CSV File with Receptor Points')
         self._receptors_filename_field.fileChanged.connect(self.load_receptors_csv)
 
-        self.getSettings()["Receptor Points (*.csv)"].addWidget(self._receptors_filename_field)
+        self.getSettings()["Receptor Points"].addWidget(self._receptors_filename_field)
 
         self.initValues({
             "Start (incl.)": config.get("Start (incl.)", "2000-01-01 00:00:00"),
@@ -46,8 +49,8 @@ class EmissionCalculationConfigurationWidget(ModuleConfigurationWidget):
             "Source Dynamics": {
                 "available": ["none", "default", "smooth & shift"],
                 "selected": None},
-            "Apply NOx corrections": False,
-            "Vertical limit [m]": 914.4,
+            "Apply NOx Corrections": False,
+            "Vertical Limit": 914.4,
         })
 
     def load_receptors_csv(self, path):

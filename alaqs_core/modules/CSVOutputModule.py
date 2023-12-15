@@ -35,10 +35,10 @@ class CSVOutputModule(OutputModule):
         self._isDetailedOutput = values_dict.get("detailed output", False)
 
         self.setConfigurationWidget(OrderedDict([
-            ("detailed output", QtWidgets.QCheckBox)
+            ("Detailed Output", QtWidgets.QCheckBox)
         ]))
 
-        self.getConfigurationWidget().initValues({"detailed output": False})
+        self.getConfigurationWidget().initValues({"Detailed Output": False})
 
         self._rows = []
         self._headers = []
