@@ -2774,10 +2774,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     scroll_widget.setWidgetResizable(True)
                     if module_name_ not in ["QGISVectorLayerDispersionModule",
                                             "TimeSeriesDispersionModule"]:
-                        self.ui.output_modules_tab_widget.addTab(scroll_widget,
+                        self.ui.visualization_modules_tab_widget.addTab(scroll_widget,
                                                                  module_instance_.getModuleDisplayName())
                     else:
-                        self.ui.visualization_modules_tab_widget.addTab(
+                        self.ui.output_modules_tab_widget.addTab(
                             scroll_widget, module_instance_.getModuleDisplayName())
 
     def load_alaqs_source_file(self, path):
