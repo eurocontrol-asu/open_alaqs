@@ -67,7 +67,7 @@ class TimeSeriesDispersionModule(OutputModule):
         self.setConfigurationWidget(widget_parameters)
 
         self.getConfigurationWidget().initValues(OrderedDict({
-            "xtitle" : "Time [Y-m-d HH:MM]",
+            "X-Axis Title" : "Time [Y-m-d HH:MM]",
             "Enable Plotting of Daily Maximum Values": False
             # "moving average": False,
             # "options" : "*"
