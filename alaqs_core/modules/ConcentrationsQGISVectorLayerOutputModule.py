@@ -27,6 +27,10 @@ class QGISVectorLayerDispersionModule(OutputModule):
     def getModuleName():
         return "QGISVectorLayerDispersionModule"
 
+    @staticmethod
+    def getModuleDisplayName():
+        return "Vector Layer"
+
     def __init__(self, values_dict=None):
         if values_dict is None:
             values_dict = {}

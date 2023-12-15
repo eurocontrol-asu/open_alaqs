@@ -29,6 +29,10 @@ class TableViewDispersionModule(OutputModule):
     def getModuleName():
         return "TableViewDispersionModule"
 
+    @staticmethod
+    def getModuleDisplayName():
+        return "Table View"
+
     def __init__(self, values_dict = None):
         if values_dict is None:
             values_dict = {}
