@@ -73,7 +73,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
         ]))
 
         self.getConfigurationWidget().initValues(OrderedDict({
-            "Title": "Time [hh:mm:ss]",
+            "X-Axis Title": "Time [hh:mm:ss]",
             "Marker": "x",
             "Receptor Point": self._TableWidgetInputs,
         }))

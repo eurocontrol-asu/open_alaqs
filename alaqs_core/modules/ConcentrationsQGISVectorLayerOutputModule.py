@@ -72,18 +72,18 @@ class QGISVectorLayerDispersionModule(OutputModule):
             ("Add Title" , QtWidgets.QCheckBox),
         ]))
 
-        self.getConfigurationWidget().initValues({
-            "Use Polygons Instead of Points": True,
-            "Add Labels with Values to Cell Boxes" : False,
-            "Projection" : "EPSG:3857",
-            "Threshold" : "0.0001",
-            "Add Title" : True
-        })
-
         widget = self._configuration_widget.getSettings()["Threshold"]
         widget.setDecimals(4)
         widget.setMinimum(0.0)
         widget.setMaximum(999.9999)
+
+        self.getConfigurationWidget().initValues({
+            "Use Polygons Instead of Points": True,
+            "Add Labels with Values to Cell Boxes" : False,
+            "Projection" : "EPSG:3857",
+            "Threshold" : 0.0001,
+            "Add Title" : True
+        })
 
         self._header = []
 
