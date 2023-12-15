@@ -45,16 +45,15 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
 
         self._layer_name = ContourPlotVectorLayer.LAYER_NAME
         self._layer_name_suffix = values_dict["name_suffix"] if "name_suffix" in values_dict else ""
-        self._isPolygon = conversion.convertToFloat(values_dict["Shape of Marker: Polygons instead of Points"]) if "Shape of Marker: Polygons instead of Points" in values_dict else True
-        self._isPolygon = conversion.convertToFloat(values_dict["Use Polygons Instead of Points"]) if "Use Polygons Instead of Points" in values_dict else True
-        self._enable_labels = values_dict["Add labels with values to cell boxes"] if "Add labels with values to cell boxes" in values_dict else False
         self._3DVisualization = values_dict["3DVisualization"] if "3DVisualization" in values_dict else False
+        self._isPolygon = values_dict.get("Use Polygons Instead of Points", values_dict.get("Shape of Marker: Polygons instead of Points", True))
+        self._enable_labels = values_dict.get("Add Labels with Values to Cell Boxes", values_dict.get("Add labels with values to cell boxes", False))
 
         self._contour_layer = None
 
         self._total_emissions = 0.
 
-        self._threshold_to_create_a_data_point = conversion.convertToFloat(values_dict["threshold"]) if "threshold" in values_dict else 0.0001
+        self._threshold_to_create_a_data_point = conversion.convertToFloat(values_dict.get("Threshold", values_dict.get("threshold", 0.0001)))
 
         self._grid = values_dict["grid"] if "grid" in values_dict else None #ec.get3DGrid()
 

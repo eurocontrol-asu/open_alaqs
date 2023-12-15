@@ -28,7 +28,7 @@ class SQLiteOutputModule(OutputModule):
         if values_dict is None:
             values_dict = {}
         OutputModule.__init__(self, values_dict)
-        self._isDetailedOutput = values_dict.get("detailed output", False)
+        self._isDetailedOutput = values_dict.get("Detailed Output", values_dict.get("detailed output", False))
 
         self.setConfigurationWidget(OrderedDict([
             ("Detailed Output", QtWidgets.QCheckBox)
