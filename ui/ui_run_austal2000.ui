@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>641</width>
+    <width>700</width>
     <height>629</height>
    </rect>
   </property>
@@ -17,410 +17,357 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Run AUSTAL2000</string>
+   <string>AUSTAL2000 Dispersion Analysis</string>
   </property>
   <property name="modal">
    <bool>true</bool>
   </property>
-  <widget class="Line" name="line_2">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>130</y>
-     <width>591</width>
-     <height>16</height>
-    </rect>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="leftMargin">
+    <number>9</number>
    </property>
-   <property name="orientation">
-    <enum>Qt::Horizontal</enum>
+   <property name="topMargin">
+    <number>9</number>
    </property>
-  </widget>
-  <widget class="QPushButton" name="RunA2K">
-   <property name="geometry">
-    <rect>
-     <x>257</x>
-     <y>180</y>
-     <width>131</width>
-     <height>41</height>
-    </rect>
+   <property name="bottomMargin">
+    <number>9</number>
    </property>
-   <property name="text">
-    <string>Run AUSTAL2000</string>
-   </property>
-  </widget>
-  <widget class="QFrame" name="frame">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>230</y>
-     <width>621</width>
-     <height>391</height>
-    </rect>
-   </property>
-   <property name="frameShape">
-    <enum>QFrame::StyledPanel</enum>
-   </property>
-   <property name="frameShadow">
-    <enum>QFrame::Raised</enum>
-   </property>
-  </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>0</y>
-     <width>591</width>
-     <height>131</height>
-    </rect>
-   </property>
-   <layout class="QGridLayout" name="gridLayout_2">
-    <item row="0" column="0">
-     <widget class="QLabel" name="label">
-      <property name="text">
-       <string>Select AUSTAL2000 file:</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="0">
-     <widget class="QLineEdit" name="lineEditFilename_a2k">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>400</width>
-        <height>0</height>
-       </size>
-      </property>
-      <property name="acceptDrops">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QPushButton" name="pushButtonBrowse_a2k">
-      <property name="text">
-       <string>Browse</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0">
-     <widget class="QLabel" name="label_2">
-      <property name="text">
-       <string>Select working directory:</string>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="0">
-     <widget class="QLineEdit" name="lineEditFilename_work_dir">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>400</width>
-        <height>0</height>
-       </size>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="1">
-     <widget class="QPushButton" name="pushButtonBrowse_work_dir">
-      <property name="text">
-       <string>Browse</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>140</y>
-     <width>111</width>
-     <height>41</height>
-    </rect>
-   </property>
-   <layout class="QGridLayout" name="gridLayout_3">
-    <item row="0" column="0">
-     <widget class="QLabel" name="label_3">
-      <property name="text">
-       <string>Options:</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1" rowspan="2">
-     <widget class="QRadioButton" name="radioButton">
-      <property name="text">
-       <string>-D</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>235</y>
-     <width>598</width>
-     <height>381</height>
-    </rect>
-   </property>
-   <layout class="QGridLayout" name="gridLayout_4">
-    <item row="0" column="0">
+   <item>
+    <widget class="QGroupBox" name="outputGroupBox">
+     <property name="title">
+      <string>AUSTAL2000 Input</string>
+     </property>
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
-       <spacer name="horizontalSpacer_4">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>AUSTAL2000 Executable:</string>
         </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>198</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
+       </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QLabel" name="label_query_results">
-        <property name="font">
-         <font>
-          <weight>75</weight>
-          <bold>true</bold>
-         </font>
+       <widget class="QgsFileWidget" name="a2k_executable_path">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
+       </widget>
+      </item>    
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>Query Results</string>
+         <string>Work Directory:</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="2">
-       <spacer name="horizontalSpacer_3">
+      <item row="1" column="1">
+       <widget class="QgsFileWidget" name="work_directory_path">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" colspan="2">
+       <widget class="QCheckBox" name="erase_log">
+        <property name="text">
+         <string>Erase Log File at the Start of the Calculation</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0" colspan="2">
+       <widget class="QPushButton" name="RunA2K">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Run AUSTAL2000</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_7">
+     <item>
+      <widget class="QLabel" name="alaqs_output_file">
+       <property name="text">
+        <string>ALAQS output file:</string>
+       </property>
+       </widget>
+     </item>
+     <item>
+       <widget class="QgsFileWidget" name="alaqs_file_path">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>1</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QFrame" name="configuration_container">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>1</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_6">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <property name="horizontalSpacing">
+       <number>0</number>
+      </property>
+      <item row="0" column="1">
+       <widget class="QSplitter" name="configuration_splitter">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>198</width>
-          <height>20</height>
-         </size>
+        <property name="childrenCollapsible">
+         <bool>false</bool>
         </property>
-       </spacer>
-      </item>
-     </layout>
-    </item>
-    <item row="1" column="0">
-     <layout class="QGridLayout" name="gridLayout_11">
-      <item row="1" column="0">
-       <layout class="QGridLayout" name="gridLayout_9">
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_modules">
-          <property name="text">
-           <string>Modules:</string>
+        <widget class="QFrame" name="configuration_modules">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>1</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>32</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_23">
+          <property name="leftMargin">
+           <number>3</number>
           </property>
-         </widget>
-        </item>
-        <item row="0" column="1" rowspan="2">
-         <widget class="QToolBox" name="Configuration_toolBox">
-          <property name="frameShape">
-           <enum>QFrame::NoFrame</enum>
+          <property name="topMargin">
+           <number>0</number>
           </property>
-          <property name="frameShadow">
-           <enum>QFrame::Sunken</enum>
+          <property name="rightMargin">
+           <number>0</number>
           </property>
-          <property name="currentIndex">
-           <number>1</number>
+          <property name="bottomMargin">
+           <number>0</number>
           </property>
-          <widget class="QWidget" name="output_modules_page">
-           <property name="geometry">
-            <rect>
-             <x>0</x>
-             <y>0</y>
-             <width>98</width>
-             <height>28</height>
-            </rect>
-           </property>
-           <attribute name="label">
-            <string>Output Modules</string>
-           </attribute>
-           <widget class="QTabWidget" name="output_modules_tab_widget">
-            <property name="geometry">
-             <rect>
-              <x>20</x>
-              <y>0</y>
-              <width>431</width>
-              <height>151</height>
-             </rect>
-            </property>
+          <item>
+           <widget class="QListWidget" name="configuration_modules_list">
             <property name="minimumSize">
              <size>
-              <width>0</width>
-              <height>100</height>
+              <width>32</width>
+              <height>0</height>
              </size>
             </property>
-            <property name="font">
-             <font>
-              <kerning>true</kerning>
-             </font>
-            </property>
-            <property name="tabPosition">
-             <enum>QTabWidget::North</enum>
-            </property>
-            <property name="tabShape">
-             <enum>QTabWidget::Rounded</enum>
-            </property>
-            <property name="currentIndex">
-             <number>-1</number>
-            </property>
-            <property name="documentMode">
-             <bool>true</bool>
-            </property>
-            <property name="movable">
+            <property name="showDropIndicator" stdset="0">
              <bool>false</bool>
             </property>
-           </widget>
-          </widget>
-          <widget class="QWidget" name="visualisation_modules_page">
-           <property name="geometry">
-            <rect>
-             <x>0</x>
-             <y>0</y>
-             <width>523</width>
-             <height>172</height>
-            </rect>
-           </property>
-           <attribute name="label">
-            <string>Visualization Modules</string>
-           </attribute>
-           <widget class="QTabWidget" name="visualization_modules_tab_widget">
-            <property name="geometry">
-             <rect>
-              <x>12</x>
-              <y>0</y>
-              <width>451</width>
-              <height>161</height>
-             </rect>
-            </property>
-            <property name="minimumSize">
+            <property name="iconSize">
              <size>
-              <width>0</width>
-              <height>100</height>
+              <width>20</width>
+              <height>20</height>
              </size>
             </property>
-            <property name="currentIndex">
-             <number>-1</number>
-            </property>
-            <property name="documentMode">
-             <bool>true</bool>
-            </property>
+            <item>
+             <property name="text">
+              <string>Configuration</string>
+             </property>
+             <property name="icon">
+              <iconset resource="../../images/images.qrc">
+               <normaloff>:/images/themes/default/propertyicons/action.svg</normaloff>:/images/themes/default/propertyicons/action.svg</iconset>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Output Formats</string>
+             </property>
+             <property name="icon">
+              <iconset resource="../../images/images.qrc">
+               <normaloff>:/images/themes/default/mActionFileSave.svg</normaloff>:/images/themes/default/mActionFileSave.svg</iconset>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Visualizations</string>
+             </property>
+             <property name="icon">
+              <iconset resource="../../images/images.qrc">
+               <normaloff>:/images/themes/default/propertyicons/editmetadata.svg</normaloff>:/images/themes/default/propertyicons/editmetadata.svg</iconset>
+             </property>
+            </item>
            </widget>
-          </widget>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <spacer name="verticalSpacer">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QFrame" name="configuration_stack_container">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>10</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <property name="leftMargin">
+           <number>6</number>
           </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>228</height>
-           </size>
+          <property name="topMargin">
+           <number>0</number>
           </property>
-         </spacer>
-        </item>
-       </layout>
-      </item>
-      <item row="0" column="0">
-       <layout class="QGridLayout" name="gridLayout_7">
-        <item row="0" column="0">
-         <widget class="QLabel" name="alaqs_output_file">
-          <property name="text">
-           <string>Select ALAQS output file:</string>
+          <property name="rightMargin">
+           <number>0</number>
           </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QLineEdit" name="lineEditFilename_alaqs">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
+          <property name="bottomMargin">
+           <number>6</number>
           </property>
-          <property name="minimumSize">
-           <size>
-            <width>400</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QPushButton" name="pushButtonBrowse_alaqs">
-          <property name="text">
-           <string>Browse</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-     </layout>
-    </item>
-    <item row="2" column="0">
-     <layout class="QGridLayout" name="gridLayout_6">
-      <item row="0" column="3">
-       <widget class="QPushButton" name="CancelButton">
-        <property name="text">
-         <string>Close</string>
-        </property>
+          <item>
+           <widget class="QStackedWidget" name="configuration_stack">
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <widget class="QWidget" name="output_modules_page">
+             <layout class="QVBoxLayout" name="verticalLayout_9">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QTabWidget" name="output_modules_tab_widget"/>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="visualization_modules_page">
+             <layout class="QVBoxLayout" name="verticalLayout_10">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QTabWidget" name="visualization_modules_tab_widget">
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="visualization_modules_page">
+             <layout class="QVBoxLayout" name="verticalLayout_10">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QTabWidget" name="visualization_modules_tab_widget">
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </widget>
       </item>
-      <item row="0" column="0">
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_6">
+     <item>
        <widget class="QPushButton" name="VisualiseResults">
         <property name="text">
          <string>Visualise Results</string>
         </property>
        </widget>
-      </item>
-      <item row="0" column="1">
+     </item>
+     <item>
        <widget class="QPushButton" name="PlotTimeSeries">
         <property name="text">
          <string>Plot timeseries</string>
         </property>
        </widget>
-      </item>
-      <item row="0" column="2">
+     </item>
+     <item>
        <widget class="QPushButton" name="ResultsTable">
         <property name="text">
          <string>Results table</string>
         </property>
        </widget>
-      </item>
-     </layout>
-    </item>
-   </layout>
-  </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsFileWidget</class>
+   <extends>QWidget</extends>
+   <header>qgsfilewidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
