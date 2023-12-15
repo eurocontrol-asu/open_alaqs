@@ -2677,6 +2677,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         )
         self.ui = Ui_DialogRunAUSTAL2000()
         self.ui.setupUi(self)
+        self.ui.configuration_splitter.setSizes([80,200])
 
         # initialize calculation
         self._conc_calculation_ = None
@@ -2684,13 +2685,20 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.resetConcentrationCalculationConfiguration()
         self.updateMinMaxGUI()
 
-        self.ui.pushButtonBrowse_a2k.clicked.connect(self.get_austal_exe)
-        self.ui.pushButtonBrowse_work_dir.clicked.connect(self.browse_files_dir)
-        self.ui.pushButtonBrowse_alaqs.clicked.connect(
-            self.load_alaqs_source_file)
+        self.ui.configuration_modules_list.setCurrentRow(0)
+        self.ui.configuration_stack.setCurrentIndex(0)
+        self.ui.configuration_modules_list.currentRowChanged.connect(self.configuration_modules_list_current_row_changed)
+        self.ui.configuration_stack.currentChanged.connect(self.configuration_stack_current_changed)
+
+        self.ui.a2k_executable_path.setFilter("austal.exe")
+        self.ui.a2k_executable_path.setDialogTitle("Select AUSTAL Executable File")
+        self.ui.work_directory_path.setStorageMode(QgsFileWidget.GetDirectory)
+        self.ui.work_directory_path.setDialogTitle("Select AUSTAL Input Files (.txt, .dmna, etc.) Directory")
+        self.ui.alaqs_file_path.setFilter("ALAQS (*.alaqs)")
+        self.ui.alaqs_file_path.setDialogTitle("Select ALAQS Output File")
+        self.ui.alaqs_file_path.fileChanged.connect(self.load_alaqs_source_file)
 
         self.ui.RunA2K.clicked.connect(self.run_austal)
-        self.ui.CancelButton.clicked.connect(self.close)
 
         self.ui.ResultsTable.clicked.connect(
             lambda: self.runOutputModule("TableViewDispersionModule"))
@@ -2699,19 +2707,16 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.PlotTimeSeries.clicked.connect(
             lambda: self.runOutputModule("TimeSeriesDispersionModule"))
 
-        self.ui.lineEditFilename_a2k.setToolTip("Path to austal.exe")
-        self.ui.lineEditFilename_work_dir.setToolTip(
-            "Directory containing the input files for AUSTAL (.txt, .dmna, etc.)")
-        self.ui.lineEditFilename_alaqs.setToolTip(
-            "Path to alaqs database used to produce this simulation")
-
-        self.ui.radioButton.setToolTip(
-            "Option -D will erase the log file at the start of the calculation")
-
         self.resetModuleConfiguration(
             module_names=["CSVDispersionModule", "TableViewDispersionModule",
                           "TimeSeriesDispersionModule",
                           "QGISVectorLayerDispersionModule"])
+
+    def configuration_modules_list_current_row_changed(self, row):
+        self.ui.configuration_stack.setCurrentIndex(row)
+
+    def configuration_stack_current_changed(self, index):
+        self.ui.configuration_modules_list.setCurrentRow(index)        
 
     def updateMinMaxGUI(self, db_path_=""):
         (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path_)
@@ -2766,6 +2771,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     scroll_widget = QtWidgets.QScrollArea(self)
                     scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
                     scroll_widget.setWidget(widget_)
+                    scroll_widget.setWidgetResizable(True)
                     if module_name_ not in ["QGISVectorLayerDispersionModule",
                                             "TimeSeriesDispersionModule"]:
                         self.ui.output_modules_tab_widget.addTab(scroll_widget,
@@ -2774,18 +2780,14 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                         self.ui.visualization_modules_tab_widget.addTab(
                             scroll_widget, module_name_)
 
-    def load_alaqs_source_file(self):
+    def load_alaqs_source_file(self, path):
         """
         Open a file browse window for the user to be able to locate and load an
          ALAQS output file
         """
         try:
-            inventory_path, _filter = QtWidgets.QFileDialog.getOpenFileName(
-                self, "Open an ALAQS output file", "", 'ALAQS (*.alaqs)')
-
-            if os.path.exists(inventory_path):
-                self.ui.lineEditFilename_alaqs.setText(inventory_path)
-                self.updateMinMaxGUI(inventory_path)
+            if os.path.exists(path):
+                self.updateMinMaxGUI(path)
 
             study_data = alaqs.load_study_setup_dict()
 
@@ -2801,7 +2803,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 'reference_altitude': study_data.get('airport_elevation', 0.)
             }
             self._conc_calculation_ = EmissionCalculation({
-                "database_path": inventory_path,
+                "database_path": path,
                 "grid_configuration": grid_configuration})
         except Exception as e:
             QtWidgets.QMessageBox.warning(
@@ -2811,40 +2813,14 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.close()
 
     @catch_errors
-    def get_austal_exe(self, *args, **kwargs):
-        """
-        :return: None if successful, otherwise the trackback error
-        """
-        directory, _filter = QtWidgets.QFileDialog.getOpenFileName(
-            None,
-            "Select AUSTAL file",
-            "",
-            "austal.exe")
-        if directory.strip() != "":
-            self.ui.lineEditFilename_a2k.setText(directory)
-        return None
-
-    @catch_errors
-    def browse_files_dir(self, *args, **kwargs):
-        """
-        :return: None if successful, otherwise the trackback error
-        """
-        directory = str(
-            QtWidgets.QFileDialog.getExistingDirectory(parent=None))
-        if directory.strip() != "":
-            self.ui.lineEditFilename_work_dir.setText(directory)
-        return None
-
-    @catch_errors
     def run_austal(self, *args, **kwargs):
         from subprocess import call
-        austal_ = str(self.ui.lineEditFilename_a2k.text())
+        austal_ = str(self.ui.a2k_executable_path.filePath())
         logger.info("AUSTAL directory:%s" % austal_)
-        work_dir = str(self.ui.lineEditFilename_work_dir.text())
-        logger.info("AUSTAL input files directory:%s" % str(
-            self.ui.lineEditFilename_work_dir.text()))
+        work_dir = str(self.ui.work_directory_path.filePath())
+        logger.info("AUSTAL input files directory:%s" % work_dir)
 
-        if self.ui.radioButton.isChecked():
+        if self.ui.erase_log.isChecked():
             opt_ = "D"
             logger.info(
                 "Running AUSTAL with -D option. Log file will be re-written"
@@ -2856,25 +2832,18 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         p = call(cmd)
         if p == 0:
             logger.info("Dispersion simulation completed successfully")
-
+        
     def resetConcentrationCalculationConfiguration(self, config=None):
         if config is None:
             config = {}
         page = None
-        for i_ in range(0, self.ui.Configuration_toolBox.count()):
-            if str(self.ui.Configuration_toolBox.itemText(
-                    i_)).lower() == "Concentration Calculation".lower():
-                page = self.ui.Configuration_toolBox.widget(i_)
-        
+
         if self._concentration_visualization_widget is None:
             self._concentration_visualization_widget = \
                 ConcentrationVisualizationWidget(parent=None)
+            self.ui.configuration_stack.insertWidget(0, self._concentration_visualization_widget)
+
         self._concentration_visualization_widget.initValues(config)
-        
-        if page is None:
-            self.ui.Configuration_toolBox.addItem(
-                self._concentration_visualization_widget,
-                "Concentration Calculation")
         self.update()
 
     def getVisualizationOutputModulesConfiguration(self):
@@ -2894,7 +2863,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         try:
             # select output file to load
-            concentration_path = str(self.ui.lineEditFilename_work_dir.text())
+            concentration_path = str(self.ui.work_directory_path.filePath())
             if os.path.exists(concentration_path):
 
                 if self._conc_calculation_.get3DGrid() is None:
