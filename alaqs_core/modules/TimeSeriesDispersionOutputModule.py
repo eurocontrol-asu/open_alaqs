@@ -39,11 +39,11 @@ class TimeSeriesDispersionModule(OutputModule):
 
         # Plot configuration
         self._title = values_dict.get("title", "")
-        self._xtitle = values_dict.get("xtitle", "")
+        self._xtitle = values_dict.get("X-Axis Title",values_dict.get("xtitle", ""))
         self._ytitle = values_dict.get("ytitle", "")
         self._options = values_dict.get("options", "")
 
-        self._max_values = values_dict.get("max. values", False)
+        self._max_values = values_dict.get("Enable Plotting of Daily Maximum Values", values_dict.get("max. values", False))
 
         #Results analysis
         self._time_start = conversion.convertStringToDateTime(values_dict["Start (incl.)"]) if "Start (incl.)" in values_dict else ""
@@ -58,24 +58,22 @@ class TimeSeriesDispersionModule(OutputModule):
                                                        None)
         # self._total_concentration = 0.
 
-        WidgetParameters = OrderedDict({
-            "xtitle" : QtWidgets.QLineEdit,
-            "max. values": QtWidgets.QCheckBox
+        widget_parameters = OrderedDict([
+            ("X-Axis Title", QtWidgets.QLineEdit),
+            ("Enable Plotting of Daily Maximum Values", QtWidgets.QCheckBox)
             # "moving average": QtGui.QCheckBox
             # "options" : QtGui.QLineEdit
-        })
-
-        self.setConfigurationWidget(OrderedDict(sorted(list(WidgetParameters.items()), key=lambda t: len(t[0]))))
-        self.getConfigurationWidget().getSettings()["xtitle"].setFixedWidth(120)
+        ])
+        self.setConfigurationWidget(widget_parameters)
 
         self.getConfigurationWidget().initValues(OrderedDict({
             "xtitle" : "Time [Y-m-d HH:MM]",
-            "max. values": False
+            "Enable Plotting of Daily Maximum Values": False
             # "moving average": False,
             # "options" : "*"
         }))
 
-        self._configuration_widget.getSettings()["max. values"].setToolTip('Enabled to plot daily max. instead of daily mean values for the whole grid')
+        self._configuration_widget.getSettings()["Enable Plotting of Daily Maximum Values"].setToolTip('Enabled to plot daily max. instead of daily mean values for the whole grid')
         # self._configuration_widget.getSettings()["moving average"].setToolTip('n-8 for hourly values, n-5 for daily values')
 
     def assure_time_interval(self, output_data):

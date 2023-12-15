@@ -5,8 +5,10 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
-from PyQt5 import QtWidgets
 from shapely.geometry import Polygon, Point
+
+from PyQt5 import QtWidgets
+from qgis.gui import QgsFileWidget, QgsDoubleSpinBox
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
@@ -53,30 +55,35 @@ class QGISVectorLayerDispersionModule(OutputModule):
 
         self._layer_name = ContourPlotVectorLayer.LAYER_NAME
         self._layer_name_suffix = values_dict["name_suffix"] if "name_suffix" in values_dict else ""
-        self._isPolygon = conversion.convertToFloat(values_dict["Shape of Marker: Polygons instead of Points"]) if "Shape of Marker: Polygons instead of Points" in values_dict else True
-        self._enable_labels = values_dict["Add labels with values to cell boxes"] if "Add labels with values to cell boxes" in values_dict else False
+        self._isPolygon = values_dict.get("Use Polygons Instead of Points", values_dict.get("Shape of Marker: Polygons instead of Points", True))
+        self._enable_labels = values_dict.get("Add Labels with Values to Cell Boxes", values_dict.get("Add labels with values to cell boxes", False))
         self._3DVisualization = values_dict["3DVisualization"] if "3DVisualization" in values_dict else False
 
         self._contour_layer = None
         self._total_concentration = 0.
-        self._threshold_to_create_a_data_point = conversion.convertToFloat(values_dict["threshold"]) if "threshold" in values_dict else 0.0001
+        self._threshold_to_create_a_data_point = conversion.convertToFloat(values_dict.get("Threshold", values_dict.get("threshold", 0.0001)))
         self._grid = values_dict["grid"] if "grid" in values_dict else None
 
         self.setConfigurationWidget(OrderedDict([
-            ("Shape of Marker: Polygons instead of Points" , QtWidgets.QCheckBox),
-            ("Add labels with values to cell boxes" , QtWidgets.QCheckBox),
             ("Projection" , QtWidgets.QLabel),
-            ("threshold" , QtWidgets.QLineEdit),
-            ("Add title" , QtWidgets.QCheckBox),
+            ("Threshold" , QgsDoubleSpinBox),
+            ("Use Polygons Instead of Points" , QtWidgets.QCheckBox),
+            ("Add Labels with Values to Cell Boxes" , QtWidgets.QCheckBox),
+            ("Add Title" , QtWidgets.QCheckBox),
         ]))
 
         self.getConfigurationWidget().initValues({
-            "Shape of Marker: Polygons instead of Points": True,
-            "Add labels with values to cell boxes" : False,
+            "Use Polygons Instead of Points": True,
+            "Add Labels with Values to Cell Boxes" : False,
             "Projection" : "EPSG:3857",
-            "threshold" : "0.0001",
-            "Add title" : True
+            "Threshold" : "0.0001",
+            "Add Title" : True
         })
+
+        widget = self._configuration_widget.getSettings()["Threshold"]
+        widget.setDecimals(4)
+        widget.setMinimum(0.0)
+        widget.setMaximum(999.9999)
 
         self._header = []
 

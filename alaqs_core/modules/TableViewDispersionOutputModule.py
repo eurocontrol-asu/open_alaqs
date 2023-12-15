@@ -48,8 +48,8 @@ class TableViewDispersionModule(OutputModule):
 
         self._widget = TableViewWidget(self._parent)
 
-        self._max_values = values_dict.get("max. values", False)
-        self._save_csv = values_dict.get("csv output", False)
+        self._max_values = values_dict.get("Enable Plotting of Daily Maximum Values", values_dict.get("max. values", False))
+        self._save_csv = values_dict.get("Enable CSV File Output", values_dict.get("csv output", False))
 
         self._averaging_period = values_dict.get("averaging_period",
                                                  "annual mean")
@@ -58,15 +58,15 @@ class TableViewDispersionModule(OutputModule):
         self._concentration_database = values_dict.get("concentration_path")
 
         WidgetParameters = OrderedDict({
-            "max. values": QtWidgets.QCheckBox,
-            "csv output" : QtWidgets.QCheckBox
+            "Enable Plotting of Daily Maximum Values": QtWidgets.QCheckBox,
+            "Enable CSV File Output" : QtWidgets.QCheckBox
         })
 
         self.setConfigurationWidget(OrderedDict(sorted(list(WidgetParameters.items()), key=lambda t: len(t[0]))))
 
         self.getConfigurationWidget().initValues(OrderedDict({
-            "max. values": False,
-            "csv output" : False
+            "Enable Plotting of Daily Maximum Values": False,
+            "Enable CSV File Output" : False
         }))
 
     def getWidget(self):
