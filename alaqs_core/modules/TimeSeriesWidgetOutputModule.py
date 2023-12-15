@@ -43,10 +43,10 @@ class TimeSeriesWidgetOutputModule(OutputModule):
 
         # Plot configuration
         self._title = values_dict.get("title", "")
-        self._xtitle = values_dict.get("xtitle", "")
+        self._xtitle = values_dict.get("X-Axis Title",values_dict.get("xtitle", ""))
         self._ytitle = values_dict.get("ytitle", "")
-        self._marker = values_dict.get("marker", "")
-        self._receptor = values_dict.get("receptor point", {})
+        self._marker = values_dict.get("Marker", values_dict.get("marker",""))
+        self._receptor = values_dict.get("Receptor Point", values_dict.get("receptor point", {}))
         self._grid = values_dict.get("grid")
 
         self._TableWidgetHeader = ('id', 'longitude', 'latitude', 'epsg')
@@ -67,7 +67,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
         self._pollutant = values_dict.get("pollutant")
 
         self.setConfigurationWidget(OrderedDict([
-            ("Title", QtWidgets.QLineEdit),
+            ("X-Axis Title", QtWidgets.QLineEdit),
             ("Marker", QtWidgets.QLineEdit),
             ("Receptor Point", QtWidgets.QTableWidget),
         ]))
