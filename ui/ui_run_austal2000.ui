@@ -221,15 +221,6 @@
                <normaloff>:/images/themes/default/mActionFileSave.svg</normaloff>:/images/themes/default/mActionFileSave.svg</iconset>
              </property>
             </item>
-            <item>
-             <property name="text">
-              <string>Table View</string>
-             </property>
-             <property name="icon">
-              <iconset resource="../../images/images.qrc">
-               <normaloff>:/images/themes/default/propertyicons/attributes.svg</normaloff>:/images/themes/default/propertyicons/attributes.svg</iconset>
-             </property>
-            </item>
            </widget>
           </item>
          </layout>
