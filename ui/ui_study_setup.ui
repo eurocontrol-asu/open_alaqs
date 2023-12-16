@@ -185,6 +185,12 @@
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
+                <property name="minimum">
+                 <double>-90.0</double>                 
+                </property>
+                <property name="maximum">
+                 <double>90.0</double>                 
+                </property>
                 <property name="showClearButton" stdset="0">
                  <bool>false</bool>
                 </property>
@@ -205,6 +211,12 @@
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
+                <property name="minimum">
+                 <double>-180.0</double>                 
+                </property>
+                <property name="maximum">
+                 <double>180.0</double>                 
+                </property>
                 <property name="showClearButton" stdset="0">
                  <bool>false</bool>
                 </property>
@@ -220,12 +232,15 @@
              </widget>
             </item>
             <item row="5" column="1">
-             <widget class="QgsSpinBox" name="spinBoxAirportElevation">
+             <widget class="QgsDoubleSpinBox" name="spinBoxAirportElevation">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
+              </property>
+              <property name="maximum">
+               <double>999999.99999</double>
               </property>
               <property name="suffix">
                <string> m</string>
@@ -266,6 +281,9 @@
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
+              </property>
+              <property name="maximum">
+               <double>999999.99999</double>
               </property>
               <property name="suffix">
                <string> m</string>
