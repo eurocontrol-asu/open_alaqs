@@ -439,7 +439,7 @@ class Movement:
                         # load APU time and emission factors
                         apu_t, apu_em = self.loadAPUinfo(index_segment_)
                         apu_time = 0
-                        if (apu_t is not None) and (apu_t > 0) :
+                        if (apu_t is not None and apu_em is not None) and (apu_t > 0) :
                             # APU emissions will be added to the stand only
                             if self.getAPUCode() == 1 and index_segment_ == 0:
                                 apu_time = apu_t
