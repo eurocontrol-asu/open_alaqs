@@ -129,7 +129,6 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                             widget.setItem(0, value["header"].index('epsg'),
                                            QtWidgets.QTableWidgetItem('4326'))
 
-                    widget.setFixedHeight(55)
                     widget.resizeColumnsToContents()
 
                 elif isinstance(widget, QtWidgets.QHBoxLayout) or \

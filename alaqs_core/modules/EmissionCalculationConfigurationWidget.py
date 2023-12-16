@@ -20,8 +20,8 @@ class EmissionCalculationConfigurationWidget(ModuleConfigurationWidget):
             ("Start (incl.)", QtWidgets.QDateTimeEdit),
             ("End (incl.)", QtWidgets.QDateTimeEdit),
             ("Method", QtWidgets.QComboBox),
-            ("Source Dynamics", QtWidgets.QComboBox),
             ("Apply NOx Corrections", QtWidgets.QCheckBox),
+            ("Source Dynamics", QtWidgets.QComboBox),
             ("Vertical Limit", QgsDoubleSpinBox),
             ("Receptor Points", QtWidgets.QHBoxLayout),
         ]), parent=parent)
@@ -30,6 +30,8 @@ class EmissionCalculationConfigurationWidget(ModuleConfigurationWidget):
         widget.setSuffix(' m')
         widget.setMinimum(0.0)
         widget.setMaximum(999999.9)
+        
+        self.getSettings()["Apply NOx Corrections"].setToolTip("Only available when the method is set to 'bymode'.")
 
         self._receptor_points = gpd.GeoDataFrame()
 
