@@ -1782,31 +1782,12 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui.output_save_path.setStorageMode(QgsFileWidget.GetDirectory)
         self.ui.towing_speed.setValue(10.0)
         self.ui.vert_limit_m.setValue(914.4)
-        self.ui.area_sources.setCheckState(QtCore.Qt.Checked)
-        self.ui.buildings.setCheckState(QtCore.Qt.Checked)
-        self.ui.gates.setCheckState(QtCore.Qt.Checked)
-        self.ui.parking.setCheckState(QtCore.Qt.Checked)
-        self.ui.roadways.setCheckState(QtCore.Qt.Checked)
-        self.ui.stationary_sources.setCheckState(QtCore.Qt.Checked)
-        self.ui.taxiway_queues.setCheckState(QtCore.Qt.Checked)
         self.ui.x_resolution.setValue(250)
         self.ui.y_resolution.setValue(250)
         self.ui.z_resolution.setValue(250)
         self.ui.x_cells.setValue(40)
         self.ui.y_cells.setValue(40)
         self.ui.z_cells.setValue(40)
-
-        # Bindings
-        self.ui.apply_nox.toggled.connect(self.apply_nox_checked)
-        self.ui.apply_fuel_flow.toggled.connect(self.apply_fuel_flow_checked)
-
-        # Deactivate certain options until they are viable options
-        self.ui.apply_nox.setEnabled(False)
-        self.ui.apply_fuel_flow.setEnabled(False)
-        self.ui.variable_mixing_height.setEnabled(False)
-
-        self.ui.grid_3d.setEnabled(False)
-        # self.ui.smooth_and_shift.setEnabled(False)
 
     def movement_table_path_changed(self, path):
         try:
@@ -1878,6 +1859,9 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                         if date_time > end_date:
                             end_date = (date_time + timedelta(hours=1)).replace(
                                 minute=0, second=0)
+
+            self.ui.study_start_date.setDateTime(QtCore.QDateTime.fromString(start_date.strftime('%Y-%m-%d %H:%M:%S'), 'yyyy-M-d hh:mm:ss'))
+            self.ui.study_end_date.setDateTime(QtCore.QDateTime.fromString(end_date.strftime('%Y-%m-%d %H:%M:%S'), 'yyyy-M-d hh:mm:ss'))
 
             self.ui.movements_summary.setText(
                 "Total Movements: %d; Start: %s; End: %s" % ((int(movement_line) - 1), start_date.strftime(
@@ -2095,31 +2079,20 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             model_parameters['y_cells'] = y_cells
             model_parameters['z_cells'] = z_cells
 
-            model_parameters['include_area_sources'] = self.check_state(
-                self.ui.area_sources)
-            model_parameters['include_building'] = self.check_state(
-                self.ui.buildings)
-            model_parameters['include_gates'] = self.check_state(self.ui.gates)
-            model_parameters['include_parkings'] = self.check_state(
-                self.ui.parking)
-            model_parameters['include_roadways'] = self.check_state(
-                self.ui.roadways)
-            model_parameters['include_stationary_sources'] = self.check_state(
-                self.ui.stationary_sources)
-            model_parameters['include_taxiway_queues'] = self.check_state(
-                self.ui.taxiway_queues)
+            model_parameters['include_area_sources'] = True
+            model_parameters['include_building'] = True
+            model_parameters['include_gates'] = True
+            model_parameters['include_parkings'] = True
+            model_parameters['include_roadways'] = True
+            model_parameters['include_stationary_sources'] = True
+            model_parameters['include_taxiway_queues'] = True
 
-            model_parameters['use_copert'] = self.check_state(
-                self.ui.use_copert_db)
-            model_parameters['use_fuel_flow'] = self.check_state(
-                self.ui.apply_fuel_flow)
-            model_parameters['use_variable_mixing_height'] = self.check_state(
-                self.ui.variable_mixing_height)
-            model_parameters['use_nox_correction'] = self.check_state(
-                self.ui.apply_nox)
-            model_parameters['use_smooth_and_shift'] = self.check_state(
-                self.ui.smooth_and_shift)
-            model_parameters['use_3d_grid'] = self.check_state(self.ui.grid_3d)
+            model_parameters['use_copert'] = False
+            model_parameters['use_fuel_flow'] = False
+            model_parameters['use_variable_mixing_height'] = False
+            model_parameters['use_nox_correction'] = False
+            model_parameters['use_smooth_and_shift'] = False
+            model_parameters['use_3d_grid'] = True
 
             # Get the study setup as well
             study_setup = alaqs.load_study_setup_dict()
@@ -2156,24 +2129,6 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             error = alaqsutils.print_error(self.create_inventory.__name__,
                                            Exception, e)
             return error
-
-    def apply_nox_checked(self):
-        """
-        Switch between apply NOx checked and fuel flow checked
-        :return:
-        """
-        state = self.check_state(self.ui.apply_nox)
-        if state is True:
-            self.ui.apply_fuel_flow.setCheckState(QtCore.Qt.Unchecked)
-
-    def apply_fuel_flow_checked(self):
-        """
-        Switch between apply fuel flow checked and NOx checked
-        :return:
-        """
-        state = self.check_state(self.ui.apply_fuel_flow)
-        if state is True:
-            self.ui.apply_nox.setCheckState(QtCore.Qt.Unchecked)
 
     def m_to_ft(self):
         """
