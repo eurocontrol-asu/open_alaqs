@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>560</width>
-    <height>800</height>
+    <height>680</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -180,36 +180,6 @@
               <widget class="QLabel" name="met_summary">
                <property name="text">
                 <string>---</string>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="0" colspan="2">
-              <widget class="QCheckBox" name="apply_nox">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>Apply NOx Corrections</string>
-               </property>
-              </widget>
-             </item> 
-             <item row="4" column="0" colspan="2">
-              <widget class="QCheckBox" name="apply_fuel_flow">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-                <property name="text">
-                 <string>Apply Fuel Flow Corrections</string>
-                </property>
-              </widget>
-             </item>
-             <item row="5" column="0" colspan="2">
-              <widget class="QCheckBox" name="variable_mixing_height">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>Variable Mixing Height</string>
                </property>
               </widget>
              </item>
@@ -426,97 +396,6 @@
          </widget>
         </item>
         <item>
-          <widget class="QgsCollapsibleGroupBox" name="groupBox_2">
-          <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-            </sizepolicy>
-          </property>
-          <property name="title">
-            <string>Feature Types</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_2">
-            <item row="1" column="1">
-            <widget class="QCheckBox" name="stationary_sources">
-              <property name="enabled">
-              <bool>false</bool>
-              </property>
-              <property name="text">
-              <string>Stationary Sources</string>
-              </property>
-            </widget>
-            </item>
-            <item row="2" column="0">
-            <widget class="QCheckBox" name="gates">
-              <property name="enabled">
-              <bool>false</bool>
-              </property>
-              <property name="text">
-              <string>Gates</string>
-              </property>
-            </widget>
-            </item>
-            <item row="2" column="1">
-            <widget class="QCheckBox" name="taxiway_queues">
-              <property name="enabled">
-              <bool>false</bool>
-              </property>
-              <property name="text">
-              <string>Taxiways Queues</string>
-              </property>
-            </widget>
-            </item>
-            <item row="3" column="0">
-            <widget class="QCheckBox" name="parking">
-              <property name="enabled">
-              <bool>false</bool>
-              </property>
-              <property name="text">
-              <string>Parkings</string>
-              </property>
-            </widget>
-            </item>
-            <item row="0" column="0">
-            <widget class="QCheckBox" name="area_sources">
-              <property name="enabled">
-              <bool>false</bool>
-              </property>
-              <property name="text">
-              <string>Area Sources</string>
-              </property>
-              <property name="checked">
-              <bool>false</bool>
-              </property>
-            </widget>
-            </item>
-            <item row="1" column="0">
-            <widget class="QCheckBox" name="buildings">
-              <property name="enabled">
-              <bool>false</bool>
-              </property>
-              <property name="text">
-              <string>Buildings</string>
-              </property>
-            </widget>
-            </item>
-            <item row="0" column="1">
-            <widget class="QCheckBox" name="roadways">
-              <property name="enabled">
-              <bool>false</bool>
-              </property>
-              <property name="text">
-              <string>Roadways</string>
-              </property>
-              <property name="checked">
-              <bool>false</bool>
-              </property>
-            </widget>
-            </item>
-          </layout>
-          </widget>
-        </item>
-        <item>
          <widget class="QgsCollapsibleGroupBox" name="advancedGroupBox">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
@@ -575,6 +454,9 @@
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="maximum">
+                <double>999999.99999</double>
+               </property>
                <property name="enabled">
                 <bool>false</bool>
                </property>
@@ -588,42 +470,15 @@
                <property name="enabled">
                 <bool>false</bool>
                </property>
+               <property name="maximum">
+                <double>999999.99999</double>
+               </property>
                <property name="suffix">
                 <string> ft</string>
                </property>
               </widget>
              </item>
             </layout>
-           </item>
-           <item row="3" column="0" colspan="2">
-            <widget class="QCheckBox" name="grid_3d">
-             <property name="text">
-              <string>3D Grid</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="0" colspan="2">
-            <widget class="QCheckBox" name="smooth_and_shift">
-             <property name="enabled">
-               <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>Smooth and Shift</string>
-             </property>
-             <property name="checked">
-               <bool>false</bool>
-             </property>
-           </widget>
-           </item>
-           <item row="5" column="0" colspan="2">
-            <widget class="QCheckBox" name="use_copert_db">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>Use ALAQS-COPERT DB</string>
-             </property>
-            </widget>
            </item>
           </layout>
          </widget>
