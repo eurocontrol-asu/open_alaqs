@@ -502,8 +502,6 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         self.ui.pushButtonMonthlyClear.clicked.connect(
             self.clear_monthly_profile)
 
-        self.ui.pushButtonCancel.clicked.connect(self.close_ui)
-
         # Populate the comboBox menus
         self.populate_hourly_profiles()
         self.populate_daily_profiles()
