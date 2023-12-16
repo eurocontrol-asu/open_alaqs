@@ -271,40 +271,6 @@
               </property>
               <item>
                <widget class="QTabWidget" name="output_modules_tab_widget">
-                <property name="geometry">
-                 <rect>
-                  <x>12</x>
-                  <y>6</y>
-                  <width>561</width>
-                  <height>171</height>
-                 </rect>
-                </property>
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>100</height>
-                 </size>
-                </property>
-                <property name="font">
-                 <font>
-                  <kerning>true</kerning>
-                 </font>
-                </property>
-                <property name="tabPosition">
-                 <enum>QTabWidget::North</enum>
-                </property>
-                <property name="tabShape">
-                 <enum>QTabWidget::Rounded</enum>
-                </property>
-                <property name="currentIndex">
-                 <number>-1</number>
-                </property>
-                <property name="documentMode">
-                 <bool>true</bool>
-                </property>
-                <property name="movable">
-                 <bool>false</bool>
-                </property>
                </widget>
               </item>
              </layout>
@@ -325,26 +291,6 @@
               </property>
               <item>
                <widget class="QTabWidget" name="dispersion_modules_tab_widget">
-                <property name="geometry">
-                 <rect>
-                  <x>12</x>
-                  <y>-4</y>
-                  <width>521</width>
-                  <height>261</height>
-                 </rect>
-                </property>
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>100</height>
-                 </size>
-                </property>
-                <property name="currentIndex">
-                 <number>-1</number>
-                </property>
-                <property name="documentMode">
-                 <bool>true</bool>
-                </property>
                </widget>
               </item>
              </layout>

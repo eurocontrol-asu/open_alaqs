@@ -70,7 +70,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             if not os.path.isdir(self._output_path):
                 os.mkdir(self._output_path)
 
-        self._sequ = values_dict.get("index sequence", "k+,j-,i+")
+        self._sequ = "k+,j-,i+"
         self._grid = values_dict.get("grid", "")
 
         self._pollutants_list = values_dict.get("pollutants_list")
@@ -115,8 +115,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             ("Anemometer Height", QgsDoubleSpinBox),
             ("Displacement Height", QgsDoubleSpinBox),
             ("Options String", QtWidgets.QLineEdit),
-            ("Quality Level", QgsSpinBox),
-            ("Index Sequence", QtWidgets.QLineEdit)])
+            ("Quality Level", QgsSpinBox)])
         self.setConfigurationWidget(widget_parameters)
 
         # ToDo: QL Range between -4 and 4
@@ -139,8 +138,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         self._configuration_widget.getSettings()["Options String"].setToolTip('options must be defined successively and separated by a semicolon')
         self._configuration_widget.getSettings()["Enabled"].setToolTip('Enable to create AUSTAL2000 input files')
-        self._configuration_widget.getSettings()["Index Sequence"].setToolTip('index sequence in which the data values are listed (comma separated)')
-        self._configuration_widget.getSettings()["Index Sequence"].setEnabled(False)
 
         self.getConfigurationWidget().initValues({
             "Roughness Length": 0.2,
@@ -148,7 +145,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
             "Anemometer Height": 11.2,
             "Title": "",
             "Quality Level": 1,
-            "Index Sequence": "k+,j-,i+",
             "Enabled": False,
             "Options String": "NOSTANDARD;SCINOTAT;Kmax=1"
         })
