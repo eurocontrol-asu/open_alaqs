@@ -77,26 +77,36 @@ class AUSTAL2000DispersionModule(DispersionModule):
         if self._pollutant:
             self._pollutants_list = [self._pollutant]
 
+        self._enable = values_dict.get("Enabled", False)
         # "----------------- general parameters",
         # "ti\t'grid source'\t' title of the project",
-        self._title = values_dict.get("Title", values_dict.get("add title", "no title"))
+        self._title = values_dict.get("Title", values_dict.get("add title"))
+        if not self._title:
+            self._title = "no title"
         # "qs\t1\t' quality level",
-        self._quality_level = values_dict.get("Quality Level",values_dict.get("quality level", 1))
+        self._quality_level = values_dict.get("Quality Level",values_dict.get("quality level"))
+        if not self._quality_level:
+            self._quality_level = 1
         # for non-standard calculations
-        self._options = values_dict.get("Option String",values_dict.get("options string", "SCINOTAT"))
+        self._options = values_dict.get("Option String",values_dict.get("options string"))
+        if not self._options:
+            self._options = "SCINOTAT"
 
         # "----------------- meteorology",
         # ToDo: Modify AmbientCondition.py or derive z0, d0, and ha from main
         #  dialog (airport info)
         # "z\t0.2\t' roughness length (m)",
-        self._roughness_level = float(values_dict.get("Roughness Length", values_dict.get(
-            "roughness length (in m)", 0.2)))
+        self._roughness_level = values_dict.get("Roughness Length", values_dict.get(
+            "roughness length (in m)"))
+        self._roughness_level = 0.2 if not self._roughness_level else float(self._roughness_level) 
         # d0: default 6z0    # "d0\t1.2\t' displacement height (m)",
-        self._displacement_height = float(values_dict.get("Displacement Height", values_dict.get(
-            "displacement height (in m)", 6 * self._roughness_level)))
+        self._displacement_height = values_dict.get("Displacement Height", values_dict.get(
+            "displacement height (in m)", ))
+        self._displacement_height = 6 * self._roughness_level if not self._displacement_height else float(self._displacement_height) 
         # 10 m + d0 (6z0)  # "ha\t11.2\t' anemometer height (m)",
-        self._anemometer_height = float(values_dict.get("Anemometer Height", values_dict.get(
-            "anemometer height (in m)", 10.0 + 6 * self._roughness_level)))
+        self._anemometer_height = values_dict.get("Anemometer Height", values_dict.get(
+            "anemometer height (in m)"))
+        self._anemometer_height = 10 + 6 * self._roughness_level if not self._anemometer_height else float(self._anemometer_height) 
 
         self._reference_x = None
         self._reference_y = None
