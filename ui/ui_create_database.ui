@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>112</height>
+    <height>140</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -24,109 +24,62 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QFormLayout" name="formLayout">
-     <property name="fieldGrowthPolicy">
-      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <item row="0" column="0">
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="1" column="0">
       <widget class="QLabel" name="label_5">
        <property name="text">
-        <string>File Name</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <layout class="QHBoxLayout" name="horizontalLayout_3">
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <item>
-        <widget class="QLineEdit" name="lineEditDatabaseName"/>
-       </item>
-       <item>
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>.alaqs</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_6">
-       <property name="text">
-        <string>File Directory</string>
+        <string>File Name:</string>
        </property>
       </widget>
      </item>
      <item row="1" column="1">
-      <layout class="QHBoxLayout" name="horizontalLayout_4">
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <item>
-        <widget class="QLineEdit" name="lineEditDatabaseDirectory"/>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushButtonBrowse">
-         <property name="text">
-          <string>Browse...</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
+      <widget class="QLineEdit" name="lineEditDatabaseName"/>
      </item>
-     <item row="2" column="1">
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <property name="topMargin">
-        <number>0</number>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_6">
+       <property name="text">
+        <string>Directory:</string>
        </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-      </layout>
+      </widget>
      </item>
-     <item row="3" column="1">
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <item>
-        <spacer name="horizontalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushButtonCreateDatabase">
-         <property name="text">
-          <string>Create Project Database</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushButtonCancel">
-         <property name="text">
-          <string>Cancel</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
+     <item row="0" column="1">
+      <widget class="QgsFileWidget" name="databaseDirectory"/>
      </item>
     </layout>
    </item>
+   <item>
+    <spacer name="horizontalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>40</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Save|QDialogButtonBox::Close</set>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsFileWidget</class>
+   <extends>QWidget</extends>
+   <header>qgsfilewidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

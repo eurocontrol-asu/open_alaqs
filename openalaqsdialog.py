@@ -122,25 +122,14 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
         self.iface = iface
         self.canvas = self.iface.mapCanvas()
 
-        self.ui.pushButtonBrowse.clicked.connect(self.browse_directory)
-        self.ui.pushButtonCancel.clicked.connect(self.close)
-        self.ui.pushButtonCreateDatabase.clicked.connect(self.create_database)
+        self.ui.databaseDirectory.setStorageMode(QgsFileWidget.GetDirectory)
+
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).setText("Create ALAQS Project")
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(self.create_database)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(self.close)
 
         # Define some of the variables to be used throughout the class
         self.db_path = None
-
-    @catch_errors
-    def browse_directory(self, *args, **kwargs):
-        """
-        This function opens a directory browsing dialog to collect the save path
-        for the new study from the user.
-        :return: None if successful, otherwise the trackback error
-        """
-        directory = str(QtWidgets.QFileDialog.getExistingDirectory(
-            parent=None))
-        if directory.strip() != "":
-            self.ui.lineEditDatabaseDirectory.setText(directory)
-        return None
 
     def create_database(self):
         """
@@ -150,7 +139,7 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
         try:
             # collect form data
             database_name = oautk.validate_field(self.ui.lineEditDatabaseName, "str")
-            database_directory = oautk.validate_field(self.ui.lineEditDatabaseDirectory, "str")
+            database_directory = self.ui.databaseDirectory.filePath()
 
             if database_name is False or database_directory is False:
                 QtWidgets.QMessageBox.information(self, "Error", "Please review input fields")
