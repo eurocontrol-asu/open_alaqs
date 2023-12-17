@@ -2308,14 +2308,13 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         kwargs = {}
         if OutputModuleManager().hasModule(name):
+            # Get the OutputModule class
+            output_module_class = OutputModuleManager().getModuleByName(name)
 
             # Get the configuration for the OutputModule
             gui_modules_config_ = self.getOutputModulesConfiguration()
-            if name in gui_modules_config_:
-                config.update(gui_modules_config_[name])
-
-            # Get the OutputModule class
-            output_module_class = OutputModuleManager().getModuleByName(name)
+            if output_module_class.getModuleDisplayName() in gui_modules_config_:
+                config.update(gui_modules_config_[output_module_class.getModuleDisplayName()])
 
             # Configure and run the OutputModule
             output_module_ = output_module_class(values_dict=config)
@@ -2775,11 +2774,6 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self._concentration_visualization_widget.initValues(config)
         self.update()
 
-    def getVisualizationOutputModulesConfiguration(self):
-        tab = self.ui.visualization_modules_tab_widget
-        return {tab.tabText(index): tab.widget(index).widget().getValues() for
-                index in range(0, tab.count())}
-
     def getOutputModulesConfiguration(self):
         tab = self.ui.output_modules_tab_widget
         return {tab.tabText(index): tab.widget(index).widget().getValues() for
@@ -2801,13 +2795,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 kwargs = {}
                 if OutputModuleManager().hasModule(name):
 
-                    if name in ["CSVDispersionModule",
-                                "TableViewDispersionModule"]:
-                        gui_modules_config_ = \
-                            self.getOutputModulesConfiguration()
-                    else:
-                        gui_modules_config_ = \
-                            self.getVisualizationOutputModulesConfiguration()
+                    gui_modules_config_ = \
+                        self.getOutputModulesConfiguration()
 
                     # Configuration of the conc. calculation
                     # (from ConcentrationsQGISVectorLayerOutputModule)
@@ -2841,11 +2830,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     }
                     config.update(conc_configuration)
 
-                    if name in gui_modules_config_:
-                        config.update(gui_modules_config_[name])
-
                     output_module_ = OutputModuleManager().getModuleByName(
                         name)(values_dict=config)
+
+                    if output_module_.getModuleDisplayName() in gui_modules_config_:
+                        config.update(gui_modules_config_[output_module_.getModuleDisplayName()])
 
                     # Execute the output module
                     output_module_.beginJob()
