@@ -276,6 +276,10 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
 
         self.iface = iface
 
+        self.ui.comboBoxAirportCode.addItem("")
+        for code in alaqs.airport_codes():
+            self.ui.comboBoxAirportCode.addItem(code[0])
+
         # Define some of the variables that are used throughout the class
         self.project_name = None
         self.airport_name = None
@@ -297,11 +301,7 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.load_study_data()
 
         self.ui.comboBoxAirportCode.currentTextChanged.connect(self.airport_lookup)
-        self.ui.comboBoxAirportCode.addItem("")
-        for code in alaqs.airport_codes():
-            self.ui.comboBoxAirportCode.addItem(code[0])
 
-        # self.ui.lineEditParkingMethod.setText(False)
         self.ui.lineEditParkingMethod.setEnabled(False)
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(self.save_study_setup)
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(self.close)
@@ -321,7 +321,7 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             self.ui.lineEditAirportName.setText(study_data['airport_name'])
             self.ui.lineEditAirportID.setText(str(study_data['oid']))
             self.ui.lineEditAirportID.setEnabled(False)
-            self.ui.comboBoxAirportCode.lineEdit().setText(study_data['airport_code'])
+            self.ui.comboBoxAirportCode.setCurrentText(study_data['airport_code'])
             self.ui.lineEditAirportCountry.setText(study_data['airport_country'])
             self.ui.spinBoxAirportLatitude.setValue(study_data['airport_latitude'])
             self.ui.spinBoxAirportLongitude.setValue(study_data['airport_longitude'])
