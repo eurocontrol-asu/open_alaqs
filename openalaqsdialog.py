@@ -2565,7 +2565,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 {"pollutants_list": self._pollutants_list})
             dm_conf_[dm_name_].update({"pollutant": pollutant})
 
-            if dm_conf_[dm_name_].get("enable", False):
+            if dm_conf_[dm_name_].get("Enabled", dm_conf_[dm_name_].get("enable", False)):
                 dm_config = dm_conf_[dm_name_]
                 dm_config["receptors"] = \
                     self._emission_calculation_configuration_widget._receptor_points
