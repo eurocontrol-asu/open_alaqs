@@ -296,7 +296,10 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
 
         self.load_study_data()
 
-        self.ui.lineEditAirportCode.textChanged.connect(self.airport_lookup)
+        self.ui.comboBoxAirportCode.currentTextChanged.connect(self.airport_lookup)
+        self.ui.comboBoxAirportCode.addItem("")
+        for code in alaqs.airport_codes():
+            self.ui.comboBoxAirportCode.addItem(code[0])
 
         # self.ui.lineEditParkingMethod.setText(False)
         self.ui.lineEditParkingMethod.setEnabled(False)
@@ -318,7 +321,7 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             self.ui.lineEditAirportName.setText(study_data['airport_name'])
             self.ui.lineEditAirportID.setText(str(study_data['oid']))
             self.ui.lineEditAirportID.setEnabled(False)
-            self.ui.lineEditAirportCode.setText(study_data['airport_code'])
+            self.ui.comboBoxAirportCode.lineEdit().setText(study_data['airport_code'])
             self.ui.lineEditAirportCountry.setText(study_data['airport_country'])
             self.ui.spinBoxAirportLatitude.setValue(study_data['airport_latitude'])
             self.ui.spinBoxAirportLongitude.setValue(study_data['airport_longitude'])
@@ -381,22 +384,11 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         This function looks up airport details (name, lat, lon, country) based
         on an ICAO code and fills in the study setup UI accordingly.
         """
-        airport_code = self.ui.lineEditAirportCode.text()
+        airport_code = self.ui.comboBoxAirportCode.currentText()
         if len(airport_code) == 4:
             # Look up that ICAO code in the ALAQS database
             airport_data = alaqs.airport_lookup(airport_code)
-            if airport_data is None:
-                QtWidgets.QMessageBox.information(
-                    self,
-                    "Notice",
-                    "No airport found for this airport code. Correct the "
-                    "code or enter data manually")
-            elif isinstance(airport_data, str):
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "Notice",
-                    "Error looking up airport: %s" % airport_data)
-            else:
+            if airport_data and not isinstance(airport_data, str):
                 self.ui.lineEditAirportName.setText(airport_data[0][2])
                 self.ui.lineEditAirportCountry.setText(airport_data[0][3])
                 self.ui.spinBoxAirportLatitude.setValue(airport_data[0][4])
@@ -418,7 +410,7 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.airport_name = oautk.validate_field(self.ui.lineEditAirportName,
                                                  "str")
         self.airport_id = oautk.validate_field(self.ui.lineEditAirportID, "str")
-        self.icao_code = oautk.validate_field(self.ui.lineEditAirportCode,
+        self.icao_code = oautk.validate_field(self.ui.comboBoxAirportCode,
                                               "str")
         self.airport_country = oautk.validate_field(
             self.ui.lineEditAirportCountry, "str")
