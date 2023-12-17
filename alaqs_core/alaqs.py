@@ -141,6 +141,18 @@ def save_study_setup_dict(study_setup):
 
 
 @catch_errors
+def airport_codes():
+    """
+    Return airport ICAO codes in the current database
+    """
+    result = alaqsdblite.airport_codes()
+    if result is None or result == []:
+        return None
+    if isinstance(result, str):
+        raise Exception("Airport codes fetch failed: %s" % result)
+    return result
+
+@catch_errors
 def airport_lookup(airport_code):
     """
     Look up an airport based on its ICAO name and return data if available
