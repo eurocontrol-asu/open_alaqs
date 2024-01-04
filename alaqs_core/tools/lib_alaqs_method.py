@@ -654,7 +654,7 @@ def ldv_pre_euro_over_emission_ratio_diesel(temperature, pollutant):
 
 
 @catch_errors
-def ldv_euro_over_emission_ratio_gasoline(
+def ldv_euro_over_emission_ratio_gasoline(  # noqa: C901
     velocity, temperature, pollutant, vehicle_class
 ):
     """

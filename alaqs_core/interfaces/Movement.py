@@ -460,7 +460,7 @@ class Movement:
 
         return newline_left, newline_right
 
-    def calculateTaxiingEmissions(self, method=None, mode="TX", sas="none"):
+    def calculateTaxiingEmissions(self, method=None, mode="TX", sas="none"):  # noqa: C901
         if method is None:
             method = {"name": "bymode", "config": {}}
         try:
@@ -2090,7 +2090,7 @@ class MovementStore(Store, metaclass=Singleton):
         # progressbar.closeEvent = progressbar.cancel()
         return progressbar
 
-    def initMovements(self, debug=False):
+    def initMovements(self, debug=False):  # noqa: C901
 
         # Start a progressbar, since this might take a while to process
         progressbar = self.ProgressBarWidget()

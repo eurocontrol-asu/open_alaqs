@@ -42,7 +42,7 @@ def seg_intersect(a1, a2, b1, b2):
     return (num / denom) * db + b1
 
 
-def calculate_emission_index(
+def calculate_emission_index(  # noqa: C901
     pollutant,
     fuel_flow,
     icao_eedb,
