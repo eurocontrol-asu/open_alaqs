@@ -194,12 +194,12 @@ def validate(fields: dict):
 
 def validate_field(ui_element, var_type):
     try:
-        if var_type is "str":
+        if var_type == "str":
             try:
                 value = str(ui_element.currentText()).strip()
             except Exception:
                 value = str(ui_element.text()).strip()
-            if value is "":
+            if value == "":
                 color_ui_background(ui_element, "red")
                 ui_element.setToolTip("This value should be a string")
                 return False
@@ -207,7 +207,7 @@ def validate_field(ui_element, var_type):
                 color_ui_background(ui_element, "white")
                 return value
 
-        elif var_type is "int":
+        elif var_type == "int":
             try:
                 value = str(ui_element.currentText()).strip()
             except Exception:
@@ -223,7 +223,7 @@ def validate_field(ui_element, var_type):
                 ui_element.setToolTip("This value should be an integer")
                 return False
 
-        elif var_type is "float":
+        elif var_type == "float":
             try:
                 value = str(ui_element.currentText()).strip()
             except Exception:
@@ -243,9 +243,9 @@ def validate_field(ui_element, var_type):
 
 
 def color_ui_background(ui_element, color):
-    if color is "red":
+    if color == "red":
         ui_element.setStyleSheet("background-color: rgba(255, 107, 107, 150);")
-    elif color is "white":
+    elif color == "white":
         ui_element.setStyleSheet("background-color: rgba(255, 255, 255, 255);")
     else:
         pass

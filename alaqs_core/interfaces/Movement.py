@@ -1841,7 +1841,7 @@ class Movement:
                     track_line = difference
                     max_length = 0.0
                     # check if the track has been broken into multipe parts, pick the longest one
-                    if difference.geom_type is "MultiLineString":
+                    if difference.geom_type == "MultiLineString":
                         for line in list(difference.geoms):
                             if line.length > max_length:
                                 max_length = line.length

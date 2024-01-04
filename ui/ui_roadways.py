@@ -361,7 +361,7 @@ def validate_field(ui_element, var_type):
     except Exception:
         value = str(ui_element.text()).strip()
     try:
-        if var_type is "str":
+        if var_type == "str":
             # try:
             #     value = str(ui_element.currentText()).strip()
             # except Exception:
@@ -374,7 +374,7 @@ def validate_field(ui_element, var_type):
                 color_ui_background(ui_element, "white")
                 return value
 
-        elif var_type is "int":
+        elif var_type == "int":
             # try:
             #     value = str(ui_element.currentText()).strip()
             # except Exception:
@@ -390,7 +390,7 @@ def validate_field(ui_element, var_type):
                 ui_element.setToolTip("This value should be an integer")
                 return False
 
-        elif var_type is "float":
+        elif var_type == "float":
             # try:
             #     value = str(ui_element.currentText()).strip()
             # except Exception:
@@ -411,10 +411,10 @@ def validate_field(ui_element, var_type):
 
 
 def color_ui_background(ui_element, color):
-    if color is "red":
+    if color == "red":
         color_style = "QWidget { background-color: rgba(255, 107, 107, 150); }"
         ui_element.setStyleSheet(color_style)
-    elif color is "white":
+    elif color == "white":
         color_style = "QWidget { background-color: rgba(255, 255, 255, 255); }"
         ui_element.setStyleSheet(color_style)
     else:
