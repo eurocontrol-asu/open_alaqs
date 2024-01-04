@@ -228,7 +228,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
             return
 
         # store each grid point only once, otherwise add cell contents
-        if not cell_hash in self._data:
+        if cell_hash not in self._data:
             self._data[cell_hash] = data_point
         else:
             for attribute in data_point["attributes"]:

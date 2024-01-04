@@ -458,7 +458,7 @@ class EngineEmissionIndex(Store):
                     ambient_conditions=ambient_conditions,
                     installation_corrections=installation_corrections,
                 )
-                if "co" in pollutant.lower() and not "co2" in pollutant.lower():
+                if "co" in pollutant.lower() and "co2" not in pollutant.lower():
                     emission_index.setObject("co_g_kg", val)
                 if "nox" in pollutant.lower():
                     emission_index.setObject("nox_g_kg", val)

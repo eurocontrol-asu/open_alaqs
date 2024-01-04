@@ -647,7 +647,7 @@ class Grid3D(object):
 
         element_geometry_ = "ST_GeomFromText('%s', 3857)" % (str(geometry_text))
         match_expression = (
-            "ST_AREA" if not "LINESTRING" in element_geometry_ else "ST_LENGTH"
+            "ST_AREA" if "LINESTRING" not in element_geometry_ else "ST_LENGTH"
         )
 
         for i_, cell_hash in enumerate(cell_list):

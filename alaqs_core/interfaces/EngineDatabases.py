@@ -166,7 +166,7 @@ class HelicopterEngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singlet
             self.addEngineEmissionIndex(id_name, ei_val)
 
     def addEngineEmissionIndex(self, icaoIdentifier, ei_dict):
-        if not icaoIdentifier in self._heli_emission_indices:
+        if icaoIdentifier not in self._heli_emission_indices:
             self._heli_emission_indices[
                 icaoIdentifier
             ] = HelicopterEngineEmissionIndex()

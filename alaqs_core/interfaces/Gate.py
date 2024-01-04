@@ -102,7 +102,7 @@ class Gate:
         return found
 
     def addEmissionProfile(self, emission_profile):
-        if not emission_profile in self._emission_profiles:
+        if emission_profile not in self._emission_profiles:
             self._emission_profiles.append(emission_profile)
 
     def getEmissionIndexGPU(self, ac_group, op_type):
