@@ -113,7 +113,7 @@ class EmissionIndex(Store):
     def __str__(self):
         val = "\n\t Emissions indices:"
         for pollutant_name, value in sorted(self.getObjects().items()):
-            if not type(value) == type(0.0):
+            if not isinstance(value, float):
                 val += "\n\t\t%s : %s" % (str(pollutant_name), str(value))
             else:
                 val += "\n\t\t%s : %.5f" % (str(pollutant_name), float(value))

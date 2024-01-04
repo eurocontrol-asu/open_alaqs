@@ -235,7 +235,7 @@ class TaxiwayRoutesStore(Store, metaclass=Singleton):
             taxiway_route = TaxiwayRoute(_dict)
 
             # Add all segments to this route
-            if type(sequence) == type(""):
+            if isinstance(sequence, str):
                 segments_ = sequence.split(",")
 
                 for segment_ in segments_:

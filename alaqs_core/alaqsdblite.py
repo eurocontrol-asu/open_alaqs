@@ -2264,13 +2264,13 @@ def inventory_source_list(inventory_path, source_type):
         elif (
             source_list is None
             or source_list == []
-            or not (type(source_list) == type([]))
+            or not isinstance(source_list, list)
         ):
             return None
         else:
             source_list_ = []
             for s_ in source_list:
-                if type(s_) == type(()) and len(s_):
+                if isinstance(s_, tuple) and len(s_):
                     if not (s_[0] is None):
                         source_list_.append(s_)
             return source_list_

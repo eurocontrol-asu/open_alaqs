@@ -681,7 +681,7 @@ class Grid3D(object):
             result = sql_interface.query_text(self._db_path, sql_text)
 
             if result:
-                if type(result[0]) == type(()):
+                if isinstance(result[0], tuple):
                     values[cell_hash] = conversion.convertToFloat(result[0][0])
                 else:
                     logger.error(

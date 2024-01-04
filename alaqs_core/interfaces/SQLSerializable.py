@@ -26,7 +26,7 @@ class SQLSerializable:
         self._table_name = str(table_name_string)
         self._table_columns = OrderedDict()
 
-        if not type(table_columns_type_dict) == type(self._table_columns):
+        if not isinstance(table_columns_type_dict, dict):
             raise Exception(
                 "Expected type '%s' for columns-type mapping but got type '%s'."
                 % (str(type(OrderedDict())), type(table_columns_type_dict))
@@ -186,7 +186,7 @@ class SQLSerializable:
                         try:
                             # correct for NULL values
                             for key in values_dict:
-                                if type(values_dict[key]) == type(""):
+                                if isinstance(values_dict[key], str):
                                     if values_dict[key] == "NULL":
                                         values_dict[key] = None
 
