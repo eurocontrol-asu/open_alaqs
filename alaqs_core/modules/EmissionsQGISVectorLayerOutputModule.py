@@ -400,7 +400,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
                     # 2D grid
                     # ToDo: Add warning if geom extends beyond grid
                     # matched_cells_2D = self._grid2D[self._grid2D.intersects(geom)==True]
-                    matched_cells_2D = self._data[self._data.intersects(geom) == True]
+                    matched_cells_2D = self._data[self._data.intersects(geom) is True]
 
                     # Calculate Emissions' horizontal distribution
                     if isLine_element_:

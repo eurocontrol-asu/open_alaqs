@@ -761,7 +761,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 # logger.info(matched_cells)
 
                 matched_cells_2D = self._data_cells[
-                    self._data_cells.contains(geom) == True
+                    self._data_cells.contains(geom) is True
                 ]
 
                 # Calculate horizontal distribution
