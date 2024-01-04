@@ -2,10 +2,10 @@ import matplotlib
 
 matplotlib.use("Qt5Agg")
 
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.backends.qt_compat import QtWidgets
+import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.backends.backend_qt5agg import FigureCanvas  # noqa: E402
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar  # noqa: E402
+from matplotlib.backends.qt_compat import QtWidgets  # noqa: E402
 
 
 class MatplotlibQtDialog(QtWidgets.QDialog):
