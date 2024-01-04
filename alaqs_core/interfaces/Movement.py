@@ -1111,19 +1111,29 @@ class Movement:
                 .getEmissionDynamics("default")["horizontal_shift"]
             )
 
-            x1_, y1_, z1_ = (
-                self.getTrajectory()
-                .getPoints()[startPoint_.getIdentifier() - 1]
-                .getX(),
-                self.getTrajectory()
-                .getPoints()[startPoint_.getIdentifier() - 1]
-                .getY(),
+            # x1_, y1_, z1_ = (
+            #     self.getTrajectory()
+            #     .getPoints()[startPoint_.getIdentifier() - 1]
+            #     .getX(),
+            #     self.getTrajectory()
+            #     .getPoints()[startPoint_.getIdentifier() - 1]
+            #     .getY(),
+            #     self.getTrajectory()
+            #     .getPoints()[startPoint_.getIdentifier() - 1]
+            #     .getZ(),
+            # )
+            z1_ = (
                 self.getTrajectory()
                 .getPoints()[startPoint_.getIdentifier() - 1]
                 .getZ(),
             )
 
-            x2_, y2_, z2_ = (
+            # x2_, y2_, z2_ = (
+            #     self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getX(),
+            #     self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getY(),
+            #     self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getZ(),
+            # )
+            z2_ = (
                 self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getX(),
                 self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getY(),
                 self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getZ(),

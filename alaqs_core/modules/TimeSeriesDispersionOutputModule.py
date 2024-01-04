@@ -503,12 +503,12 @@ class TimeSeriesDispersionModule(OutputModule):
                 if self._averaging_period == "8-hours mean" and np.all(
                     0 <= self._8h_runnning_average
                 ):
-                    plot = self._widget.plot(
+                    self._widget.plot(
                         self._data_x, self._data_y, self._options, lw=2, color="k"
                     )
                     leg = ["Daily mean"]
                     no = 8
-                    plot = self._widget.plot(
+                    self._widget.plot(
                         self._data_x[no - 1:],
                         self._8h_runnning_average,
                         self._options,
@@ -519,7 +519,7 @@ class TimeSeriesDispersionModule(OutputModule):
                     leg.append("8h moving avg")
 
                 else:
-                    plot = self._widget.plot(
+                    self._widget.plot(
                         self._data_x, self._data_y, self._options, lw=2, color="k"
                     )
                     leg = (
@@ -545,7 +545,7 @@ class TimeSeriesDispersionModule(OutputModule):
                     )
 
             else:
-                plot = self._widget.plot(
+                self._widget.plot(
                     self._data_x, self._data_y_max, self._options, lw=2, color="k"
                 )
                 leg = (
@@ -561,7 +561,7 @@ class TimeSeriesDispersionModule(OutputModule):
                     0 <= self._8h_runnning_average_max
                 ):
                     no = 8
-                    plot = self._widget.plot(
+                    self._widget.plot(
                         self._data_x[no - 1:],
                         self._8h_runnning_average_max,
                         self._options,

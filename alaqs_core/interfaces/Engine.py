@@ -378,7 +378,7 @@ class EngineEmissionIndex(Store):
 
             # Non-adjusted reference from EEDB at ISA conditions
             # maps fuel flow and emission indices
-            icao_eedb_bffm2 = self.getICAOEngineEmissionsDB(format="BFFM2")
+            self.getICAOEngineEmissionsDB(format="BFFM2")
             logger.debug("ICAO EEDB in format '%s':" % ("BFFM2"))
             # logger.debug(icao_eedb_bffm2)
             # for pollutant in ["NOx", "CO", "HC"]:

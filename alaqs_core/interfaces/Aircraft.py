@@ -370,11 +370,11 @@ class AircraftStore(Store, metaclass=Singleton):
                     # APU infos:
 
                     # times
-                    apu_times = {
-                        "REMOTE": {"arr": 0, "dep": 0},
-                        "PIER": {"arr": 0, "dep": 0},
-                        "CARGO": {"arr": 0, "dep": 0},
-                    }
+                    # apu_times = {
+                    #     "REMOTE": {"arr": 0, "dep": 0},
+                    #     "PIER": {"arr": 0, "dep": 0},
+                    #     "CARGO": {"arr": 0, "dep": 0},
+                    # }
                     try:
                         if ac.getGroup():
                             apu_times_ = self.getAPUStore().get_apu_times(ac.getGroup())

@@ -713,7 +713,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
         # logger.debug("getGridXYFromReferencePoint(x0, y0): %s,%s"%(x0, y0))
 
         # ToDo: User defined vertical layer (Zmin, Zmax)?
-        Zmax = 0
+        # Zmax = 0
         # try:
         #     Zmax = conversion.convertToFloat(self._sk[self._index_k])
         #     logger.info("Maximum height: %s"%Zmax)
@@ -728,14 +728,14 @@ class QGISVectorLayerDispersionModule(OutputModule):
             conc_value = self._concentration_matrix[self._index_j - (y + 1), x]
 
             # ToDo: take into account the z level: self._index_k ?
-            bbox = {
-                "y_min": y0 + (y) * self._delta,
-                "y_max": y0 + (y) * self._delta,
-                "x_min": x0 + (x) * self._delta,
-                "x_max": x0 + (x) * self._delta,
-                "z_max": Zmax,
-                "z_min": 0,
-            }
+            # bbox = {
+            #     "y_min": y0 + (y) * self._delta,
+            #     "y_max": y0 + (y) * self._delta,
+            #     "x_min": x0 + (x) * self._delta,
+            #     "x_max": x0 + (x) * self._delta,
+            #     "z_max": Zmax,
+            #     "z_min": 0,
+            # }
 
             # ToDo: convert bbox to geom object ?
             geom = Point(

@@ -26,7 +26,7 @@ def spatialite_installed():
         # Spatialite has been installed properly
         installed = True
 
-    except sqlite3.OperationalError as e:
+    except sqlite3.OperationalError:
         # Spatialite hasn't been installed
         installed = False
 
