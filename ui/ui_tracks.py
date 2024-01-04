@@ -187,7 +187,7 @@ def validate_field(ui_element, var_type):
         if var_type is "str":
             try:
                 value = str(ui_element.currentText()).strip()
-            except:
+            except Exception:
                 value = str(ui_element.text()).strip()
             if value is "":
                 color_ui_background(ui_element, "red")
@@ -200,7 +200,7 @@ def validate_field(ui_element, var_type):
         elif var_type is "int":
             try:
                 value = str(ui_element.currentText()).strip()
-            except:
+            except Exception:
                 value = str(ui_element.text()).strip()
             try:
                 if value == "" or value is None:
@@ -208,7 +208,7 @@ def validate_field(ui_element, var_type):
                 value = int(value)
                 color_ui_background(ui_element, "white")
                 return value
-            except:
+            except Exception:
                 color_ui_background(ui_element, "red")
                 ui_element.setToolTip("This value should be an integer")
                 return False
@@ -216,7 +216,7 @@ def validate_field(ui_element, var_type):
         elif var_type is "float":
             try:
                 value = str(ui_element.currentText()).strip()
-            except:
+            except Exception:
                 value = str(ui_element.text()).strip()
             try:
                 if value == "" or value is None:
@@ -224,11 +224,11 @@ def validate_field(ui_element, var_type):
                 value = float(value)
                 color_ui_background(ui_element, "white")
                 return value
-            except:
+            except Exception:
                 color_ui_background(ui_element, "red")
                 ui_element.setToolTip("This value should be a float")
                 return False
-    except:
+    except Exception:
         return False
 
 

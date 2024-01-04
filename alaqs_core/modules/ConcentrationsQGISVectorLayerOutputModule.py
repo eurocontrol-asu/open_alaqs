@@ -378,7 +378,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
                     )
                 return False
 
-        except:
+        except Exception:
             logger.debug("Error in timedelta: (t1: %s, t2:%s, t0: %s)" % (t1, t2, t0))
             return False
 
@@ -717,7 +717,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
         # try:
         #     Zmax = conversion.convertToFloat(self._sk[self._index_k])
         #     logger.info("Maximum height: %s"%Zmax)
-        # except:
+        # except Exception:
         #     Zmax = 0
 
         conc_value_counter = 0

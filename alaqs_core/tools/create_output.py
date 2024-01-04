@@ -242,7 +242,7 @@ def inventory_update_tbl_inv_period(database_path, model_parameters, study_setup
         max_time = datetime.strptime(
             model_parameters["study_end_date"], "%Y-%m-%d %H:%M:%S"
         )
-    except:
+    except Exception:
         min_time = datetime.strftime(
             model_parameters["study_start_date"], "%Y-%m-%d %H:%M:%S"
         )
@@ -312,7 +312,7 @@ def inventory_update_tbl_inv_time(inventory_path, model_parameters):
         end_time = datetime.strptime(
             model_parameters["study_end_date"], "%Y-%m-%d %H:%M:%S"
         )
-    except:
+    except Exception:
         start_time = model_parameters["study_start_date"]
         end_time = model_parameters["study_end_date"]
 

@@ -473,7 +473,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                             )
                         elif child.is_file():
                             child.unlink()
-                    except:
+                    except Exception:
                         logger.error("Could not delete %s", child)
             else:
                 logger.warning(

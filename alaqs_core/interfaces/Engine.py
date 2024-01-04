@@ -440,7 +440,7 @@ class EngineEmissionIndex(Store):
                             "ambient_conditions"
                         ].getRelativeHumidity(),
                     }
-                except:
+                except Exception:
                     ac = ambient_conditions
                 ambient_conditions.update(ac)
 

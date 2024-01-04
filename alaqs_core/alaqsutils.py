@@ -33,7 +33,7 @@ def print_error(function_name, exception_object, e_object, log=logger):
     try:
         # fix_print_with_import
         print(exception_object, e_object)
-    except:
+    except Exception:
         pass
     exc_type, exc_obj, exc_tb = sys.exc_info()
     error = "[-] Error in %s() [line %d]: %s" % (
@@ -153,7 +153,7 @@ def dict_parking_data(parking_data):
         dict_data["instudy"] = conversion.convertToInt(parking_data[22], 1)
         dict_data["geometry"] = parking_data[23]
         return dict_data
-    except:
+    except Exception:
         return None
 
 
@@ -181,7 +181,7 @@ def dict_stationary_source(source_data):
         dict_source_data["p1_kg_k"] = conversion.convertToFloat(source_data[18], 0.0)
         dict_source_data["p2_kg_k"] = conversion.convertToFloat(source_data[19], 0.0)
         return dict_source_data
-    except:
+    except Exception:
         return None
 
 
@@ -212,7 +212,7 @@ def dict_area_source(source_data):
         dict_source_data["instudy"] = conversion.convertToInt(source_data[15], 1)
         dict_source_data["geometry"] = source_data[16]
         return dict_source_data
-    except:
+    except Exception:
         return None
 
 

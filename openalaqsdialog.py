@@ -1391,7 +1391,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         # Get rid of any None values that may have appeared
         try:
             selected_groups.remove("None")
-        except:
+        except Exception:
             pass
 
         # Update the UI
@@ -2226,7 +2226,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             self.ui.vert_limit_ft.setValue(ft_value)
             # Make sure that the cell background is plain white
             oautk.color_ui_background(self.ui.vert_limit_m, "transparent")
-        except:
+        except Exception:
             # Make the cell background red to highlight an error
             oautk.color_ui_background(self.ui.vert_limit_m, "red")
 
@@ -2239,7 +2239,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         """
         try:
             return ui_element.checkState() == QtCore.Qt.Checked
-        except:
+        except Exception:
             return None
 
 

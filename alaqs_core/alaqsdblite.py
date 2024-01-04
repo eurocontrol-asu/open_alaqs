@@ -2427,7 +2427,7 @@ def inventory_calc_taxiway_emissions(inventory_path, taxiway_name):
                                         * float(engine_dict["pm10_ei"])
                                         * float(aircraft_dict["engine_count"])
                                     )
-                                except:
+                                except Exception:
                                     pass
 
                                 # TODO add queuing emissions for departures

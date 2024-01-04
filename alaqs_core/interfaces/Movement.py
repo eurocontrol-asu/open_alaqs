@@ -467,7 +467,7 @@ class Movement:
             total_taxiing_time = conversion.convertTimeToSeconds(
                 abs(self.getBlockTime() - self.getRunwayTime())
             )
-        except:
+        except Exception:
             total_taxiing_time = None
         # print("total_taxiing_time %s"%total_taxiing_time)
         emissions = []
@@ -604,7 +604,7 @@ class Movement:
                                     )
                                     multipolygon.AddGeometry(poly_geo)
                                     em_.setGeometryText(multipolygon.ExportToWkt())
-                            # except:
+                            # except Exception:
                             #     logger.warning("Error while retrieving Smooth & Shift parameters. Switching to normal method.")
                             #     em_.setGeometryText(taxiway_segment_.getGeometryText())
 
@@ -1027,7 +1027,7 @@ class Movement:
                 "mach_number": (startPoint_.getTrueAirspeed() / speed_of_sound)
                 * ((288.15 / float(T)) ** (1.0 / 2))
             }
-        except:
+        except Exception:
             mach_value = {"mach_number": 0.0}
         method["config"].update(mach_value)
 
@@ -1425,7 +1425,7 @@ class Movement:
                         )
                         try:
                             copy_emission_index_.setObject("pm10_g_kg", pm10_g_kg[0])
-                        except:
+                        except Exception:
                             logger.error(
                                 "Couldn't add emission index for PM10 (%s)"
                                 % self.getName()
@@ -1439,7 +1439,7 @@ class Movement:
                         )
                         try:
                             copy_emission_index_.setObject("sox_g_kg", sox_g_kg[0])
-                        except:
+                        except Exception:
                             logger.error(
                                 "Couldn't add emission index for SOx (%s)"
                                 % self.getName()
@@ -2580,7 +2580,7 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
 #     # ambient_conditions = {}
 #     # try:
 #     #     from .AmbientCondition import AmbientCondition, AmbientConditionStore
-#     # except:
+#     # except Exception:
 #     #     from AmbientCondition import AmbientCondition, AmbientConditionStore
 #     ambient_conditions = AmbientCondition()
 #
@@ -2617,7 +2617,7 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
 #             #     emissions.getFuel()[0], emissions.getValue("CO2", "g")[0], emissions.getValue("CO", "g")[0], \
 #             #     emissions.getValue("NOx", "g")[0], emissions.getValue("SOx", "g")[0], emissions.getValue("HC", "g")[0], \
 #             #     emissions.getValue("PM10", "g")[0]
-#         except:
+#         except Exception:
 #             # fix_print_with_import
 #             print("----------------------------------")
 #             # fix_print_with_import
@@ -2637,7 +2637,7 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
 #         # for em_ in emissions_list:
 #         #     try:
 #         #         gdf.loc[cntgdf, "geometry"] = em_['emissions'].getGeometry()
-#         #     except:
+#         #     except Exception:
 #         #         gdf.loc[cntgdf, "geometry"] = LineString()
 #         #     # geoms.append(em_['emissions'].getGeometry())
 #         #     gdf.loc[cntgdf, "CO"] = em_['emissions'].getValue('CO','g')[0]/1000
@@ -2663,7 +2663,7 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
 #         #     results_df.loc[cnt, "nox_g"] = emissions.getValue("NOx", "g")[0]
 #         #     results_df.loc[cnt, "sox_g"] = emissions.getValue("SOx", "g")[0]
 #         #     results_df.loc[cnt, "pm10_g"] = emissions.getValue("PM10", "g")[0]
-#         # except:
+#         # except Exception:
 #         #     results_df.loc[cnt, "name"] = mov.getName()
 #         #     results_df.loc[cnt, "gate"] = mov.getGate().getName()
 #         #     results_df.loc[cnt, "fuel_kg"] = np.nan

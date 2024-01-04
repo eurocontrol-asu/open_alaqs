@@ -150,7 +150,7 @@ class TimeSeriesDispersionModule(OutputModule):
                 # logger.debug("Error in timedelta: (start: %s, end:%s)"%(t1, t2))
                 # logger.debug("\t (SD: %s, ED:%s, TD:%s)"%(start_time, end_time, tdelta.total_seconds()))
                 return False
-        except:
+        except Exception:
             return False
 
     def assert_validity(self, avg_period="annual mean"):

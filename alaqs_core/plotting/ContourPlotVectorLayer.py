@@ -27,7 +27,7 @@ class ContourPlotVectorLayer:
 
         self._vectorlayer = None
         self._myCrs = QgsCoordinateReferenceSystem("EPSG:3857")
-        # except:
+        # except Exception:
         #     self._myCrs = QgsCoordinateReferenceSystem(3857, 4326)
 
         self.createLayer(self._layerName)
