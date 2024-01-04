@@ -186,7 +186,7 @@ class TableViewDispersionModule(OutputModule):
     def CalculateMovingAverage(self, conc, n=3):
         ret = np.cumsum(conc, dtype=float)
         ret[n:] = ret[n:] - ret[:-n]
-        return ret[n - 1 :] / n
+        return ret[n - 1:] / n
 
     def assert_validity(self, avg_period="annual mean"):
         required_proportion = 0.90 if avg_period == "annual mean" else 0.75

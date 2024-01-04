@@ -195,7 +195,7 @@ class TimeSeriesDispersionModule(OutputModule):
     def CalculateMovingAverage(self, conc, n=3):
         ret = np.cumsum(conc, dtype=float)
         ret[n:] = ret[n:] - ret[:-n]
-        return ret[n - 1 :] / n
+        return ret[n - 1:] / n
 
     def beginJob(self):
 
@@ -305,7 +305,7 @@ class TimeSeriesDispersionModule(OutputModule):
                         ):  # take only first level for uncertainty: 0m to 3m
                             self._data_y.append(
                                 np.mean(
-                                    concentration_matrix_reshaped[0, :, :].squeeze()
+                                    concentration_matrix_reshaped[0, :,:].squeeze()
                                 )
                             )
                         else:
@@ -426,7 +426,7 @@ class TimeSeriesDispersionModule(OutputModule):
                             ):  # take only first level for uncertainty: 0m to 3m
                                 self._data_y.append(
                                     np.mean(
-                                        concentration_matrix_reshaped[0, :, :].squeeze()
+                                        concentration_matrix_reshaped[0, :,:].squeeze()
                                     )
                                 )
                             else:
@@ -509,7 +509,7 @@ class TimeSeriesDispersionModule(OutputModule):
                     leg = ["Daily mean"]
                     no = 8
                     plot = self._widget.plot(
-                        self._data_x[no - 1 :],
+                        self._data_x[no - 1:],
                         self._8h_runnning_average,
                         self._options,
                         lw=2,
@@ -562,7 +562,7 @@ class TimeSeriesDispersionModule(OutputModule):
                 ):
                     no = 8
                     plot = self._widget.plot(
-                        self._data_x[no - 1 :],
+                        self._data_x[no - 1:],
                         self._8h_runnning_average_max,
                         self._options,
                         lw=2,
