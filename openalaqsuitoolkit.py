@@ -1,6 +1,19 @@
 import os
 
-from qgis.core import *
+from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
+    QgsDataSourceUri,
+    QgsEditFormConfig,
+    QgsEditorWidgetSetup,
+    QgsFillSymbol,
+    QgsLineSymbol,
+    QgsPoint,
+    QgsProject,
+    QgsRectangle,
+    QgsSingleSymbolRenderer,
+    QgsVectorLayer,
+)
 from qgis.PyQt import QtWidgets
 
 from open_alaqs.alaqs_config import (

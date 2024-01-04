@@ -1,5 +1,22 @@
 from PyQt5 import QtCore, QtGui
-from qgis.core import *
+from qgis.core import (
+    QgsClassificationPrettyBreaks,
+    QgsCoordinateReferenceSystem,
+    QgsErrorMessage,
+    QgsFeature,
+    QgsField,
+    QgsFillSymbol,
+    QgsGeometry,
+    QgsGradientColorRamp,
+    QgsGradientStop,
+    QgsGraduatedSymbolRenderer,
+    QgsMarkerSymbol,
+    QgsMessageLog,
+    QgsPointXY,
+    QgsSingleSymbolRenderer,
+    QgsSymbol,
+    QgsVectorLayer,
+)
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools import conversion

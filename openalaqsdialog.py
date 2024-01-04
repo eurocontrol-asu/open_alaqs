@@ -22,8 +22,15 @@ import os
 from datetime import datetime, timedelta
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from qgis.core import *
-from qgis.gui import *
+from qgis.core import (
+    QgsMapLayer,
+    QgsProject,
+)
+from qgis.gui import (
+    QgsTextAnnotationItem,
+    QgsFileWidget,
+)
+from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.uic import loadUiType
 
 from open_alaqs import openalaqsuitoolkit as oautk

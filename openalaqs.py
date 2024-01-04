@@ -21,8 +21,7 @@
 """
 from pathlib import Path
 
-from qgis.core import *
-from qgis.gui import *
+from qgis.core import QgsSettings
 from qgis.PyQt import QtGui, QtWidgets
 
 from open_alaqs import openalaqsuitoolkit
