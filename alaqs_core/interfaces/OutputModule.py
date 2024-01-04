@@ -1,8 +1,9 @@
 from PyQt5 import QtWidgets
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.alaqs_core.modules.ModuleConfigurationWidget import \
-    ModuleConfigurationWidget
+from open_alaqs.alaqs_core.modules.ModuleConfigurationWidget import (
+    ModuleConfigurationWidget,
+)
 
 logger = get_logger(__name__)
 

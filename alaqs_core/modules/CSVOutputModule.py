@@ -32,11 +32,13 @@ class CSVOutputModule(OutputModule):
         if values_dict is None:
             values_dict = {}
         OutputModule.__init__(self, values_dict)
-        self._isDetailedOutput = values_dict.get("Detailed Output", values_dict.get("detailed output", False))
+        self._isDetailedOutput = values_dict.get(
+            "Detailed Output", values_dict.get("detailed output", False)
+        )
 
-        self.setConfigurationWidget(OrderedDict([
-            ("Detailed Output", QtWidgets.QCheckBox)
-        ]))
+        self.setConfigurationWidget(
+            OrderedDict([("Detailed Output", QtWidgets.QCheckBox)])
+        )
 
         self.getConfigurationWidget().initValues({"Detailed Output": False})
 
@@ -63,7 +65,7 @@ class CSVOutputModule(OutputModule):
             "PMSul [kg]",
             "PMVolatile [kg]",
             "PMNonVolatile [kg]",
-            "PMNonVolatileNumber [-]"
+            "PMNonVolatileNumber [-]",
         ]
 
         # Initialize rows attribute with the header
@@ -71,13 +73,15 @@ class CSVOutputModule(OutputModule):
 
         # Ask the user to the set the output path
         file_, handler_ = QtWidgets.QFileDialog.getSaveFileName(
-            None, 'Save results as CSV file', '.', 'CSV (*.csv)')
+            None, "Save results as CSV file", ".", "CSV (*.csv)"
+        )
 
         # Set the output path
         self.setOutputPath(file_)
 
-    def process(self, timeval: datetime, result: List[Tuple[Source, Emission]],
-                **kwargs):
+    def process(
+        self, timeval: datetime, result: List[Tuple[Source, Emission]], **kwargs
+    ):
         """
         Process the results and create the records of the csv
 
@@ -90,43 +94,48 @@ class CSVOutputModule(OutputModule):
         if not self._isDetailedOutput:
             # Sum all emissions
             total_emissions_ = sum(
-                [sum(emissions_) for (_, emissions_) in result if emissions_])
+                [sum(emissions_) for (_, emissions_) in result if emissions_]
+            )
 
-            self._rows.append([
-                timeval,
-                "total",
-                total_emissions_.getCO(unit="kg")[0],
-                total_emissions_.getCO2(unit="kg")[0],
-                total_emissions_.getHC(unit="kg")[0],
-                total_emissions_.getNOx(unit="kg")[0],
-                total_emissions_.getSOx(unit="kg")[0],
-                total_emissions_.getPM10(unit="kg")[0],
-                total_emissions_.getPM1(unit="kg")[0],
-                total_emissions_.getPM2(unit="kg")[0],
-                total_emissions_.getPM10Sul(unit="kg")[0],
-                total_emissions_.getPM10Organic(unit="kg")[0],
-                total_emissions_.getnvPM(unit="kg")[0],
-                total_emissions_.getnvPMnumber()[0],
-            ])
+            self._rows.append(
+                [
+                    timeval,
+                    "total",
+                    total_emissions_.getCO(unit="kg")[0],
+                    total_emissions_.getCO2(unit="kg")[0],
+                    total_emissions_.getHC(unit="kg")[0],
+                    total_emissions_.getNOx(unit="kg")[0],
+                    total_emissions_.getSOx(unit="kg")[0],
+                    total_emissions_.getPM10(unit="kg")[0],
+                    total_emissions_.getPM1(unit="kg")[0],
+                    total_emissions_.getPM2(unit="kg")[0],
+                    total_emissions_.getPM10Sul(unit="kg")[0],
+                    total_emissions_.getPM10Organic(unit="kg")[0],
+                    total_emissions_.getnvPM(unit="kg")[0],
+                    total_emissions_.getnvPMnumber()[0],
+                ]
+            )
         else:
             for (source, emissions_) in result:
-                self._rows.append([
-                    timeval,
-                    # emissions.getCategory()
-                    source.getName(),
-                    sum(emissions_).getCO(unit="kg")[0],
-                    sum(emissions_).getCO2(unit="kg")[0],
-                    sum(emissions_).getHC(unit="kg")[0],
-                    sum(emissions_).getNOx(unit="kg")[0],
-                    sum(emissions_).getSOx(unit="kg")[0],
-                    sum(emissions_).getPM10(unit="kg")[0],
-                    sum(emissions_).getPM1(unit="kg")[0],
-                    sum(emissions_).getPM2(unit="kg")[0],
-                    sum(emissions_).getPM10Sul(unit="kg")[0],
-                    sum(emissions_).getPM10Organic(unit="kg")[0],
-                    sum(emissions_).getnvPM(unit="kg")[0],
-                    sum(emissions_).getnvPMnumber()[0],
-                ])
+                self._rows.append(
+                    [
+                        timeval,
+                        # emissions.getCategory()
+                        source.getName(),
+                        sum(emissions_).getCO(unit="kg")[0],
+                        sum(emissions_).getCO2(unit="kg")[0],
+                        sum(emissions_).getHC(unit="kg")[0],
+                        sum(emissions_).getNOx(unit="kg")[0],
+                        sum(emissions_).getSOx(unit="kg")[0],
+                        sum(emissions_).getPM10(unit="kg")[0],
+                        sum(emissions_).getPM1(unit="kg")[0],
+                        sum(emissions_).getPM2(unit="kg")[0],
+                        sum(emissions_).getPM10Sul(unit="kg")[0],
+                        sum(emissions_).getPM10Organic(unit="kg")[0],
+                        sum(emissions_).getnvPM(unit="kg")[0],
+                        sum(emissions_).getnvPMnumber()[0],
+                    ]
+                )
 
     def endJob(self):
         """
@@ -136,6 +145,10 @@ class CSVOutputModule(OutputModule):
             if self.getOutputPath() is not None:
                 write_csv(self.getOutputPath(), self._rows)
             if os.path.isfile(self.getOutputPath()):
-                QtWidgets.QMessageBox.information(None, "CSVOutputModule", "Results saved as CSV file")
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(None, "CSVOutputModule", "Couldn't save results as CSV file")
+                QtWidgets.QMessageBox.information(
+                    None, "CSVOutputModule", "Results saved as CSV file"
+                )
+        except Exception:
+            QtWidgets.QMessageBox.critical(
+                None, "CSVOutputModule", "Couldn't save results as CSV file"
+            )

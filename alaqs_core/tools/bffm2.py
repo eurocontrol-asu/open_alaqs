@@ -2,7 +2,7 @@ import copy
 from dataclasses import dataclass
 
 import numpy as np
-from numpy import empty_like, dot
+from numpy import dot, empty_like
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 
@@ -15,6 +15,7 @@ class _Constants:
     An immutable dataclass for constants
 
     """
+
     epsilon: float = 1e-4
 
 
@@ -29,7 +30,7 @@ def perp(a):
 
 
 def seg_intersect(a1, a2, b1, b2):
-    np.seterr(divide='ignore', invalid='ignore')
+    np.seterr(divide="ignore", invalid="ignore")
 
     da = a2 - a1
     db = b2 - b1
@@ -41,9 +42,13 @@ def seg_intersect(a1, a2, b1, b2):
     return (num / denom) * db + b1
 
 
-def calculate_emission_index(pollutant, fuel_flow, icao_eedb,
-                             ambient_conditions=None,
-                             installation_corrections=None):
+def calculate_emission_index(
+    pollutant,
+    fuel_flow,
+    icao_eedb,
+    ambient_conditions=None,
+    installation_corrections=None,
+):
     """
     Calculates the emission index associated to a particular fuel flow with the
      BFFM2 method.
@@ -95,14 +100,14 @@ def calculate_emission_index(pollutant, fuel_flow, icao_eedb,
         "Takeoff": 1.010,  # 100%
         "Climbout": 1.012,  # 85%
         "Approach": 1.020,  # 30%
-        "Idle": 1.100  # 7%
+        "Idle": 1.100,  # 7%
     }
     installation_corrections_.update(installation_corrections)
     installation_corrections = installation_corrections_
 
     ambient_conditions_ = {
         "temperature_in_Kelvin": 288.15,  # ISA conditions
-        "pressure_in_Pa": 1013.25 * 100.,  # ISA conditions
+        "pressure_in_Pa": 1013.25 * 100.0,  # ISA conditions
         "relative_humidity": 0.6,  # normal day at ISA conditions
         "mach_number": 0.0  # ground or laboratory
         # "humidity_ratio_in_kg_water_per_kg_dry_air": 0.00634 #ISA default
@@ -112,50 +117,51 @@ def calculate_emission_index(pollutant, fuel_flow, icao_eedb,
     ambient_conditions = ambient_conditions_
 
     # some sanity checks
-    fuel_flow = max(0., fuel_flow)
+    fuel_flow = max(0.0, fuel_flow)
 
     for key_ in list(installation_corrections.keys()):
         for p_ in icao_eedb:
             if key_ not in icao_eedb[p_]:
-                logger.error(
-                    f"Did not find mandatory key '{key_}' in ICAO EEDB.")
+                logger.error(f"Did not find mandatory key '{key_}' in ICAO EEDB.")
 
     for p_ in icao_eedb:
         if not len(list(icao_eedb[p_].keys())) == 4:
             keys_should = ", ".join(list(installation_corrections.keys()))
             keys_are = ", ".join(list(icao_eedb[pollutant].keys()))
 
-            logger.error("Found not exactly four points in values provided for "
-                         f"ICAO EEDB. Keys should be '{keys_should}', but are "
-                         f"'{keys_are}'.")
+            logger.error(
+                "Found not exactly four points in values provided for "
+                f"ICAO EEDB. Keys should be '{keys_should}', but are "
+                f"'{keys_are}'."
+            )
 
     # 1. Multiply FF ref values with the above (default) adjustment factors if
     # not any other factors are passed into the function
     for ikey in icao_eedb[pollutant].keys():
         for ik, _ in list(icao_eedb[pollutant][ikey].items()):
-            icao_eedb[pollutant][ikey][ik * installation_corrections[ikey]] = \
-                icao_eedb[pollutant][ikey].pop(ik)
+            icao_eedb[pollutant][ikey][ik * installation_corrections[ikey]] = icao_eedb[
+                pollutant
+            ][ikey].pop(ik)
 
     # t_a = Ambient temperature (K)
-    t_a = ambient_conditions['temperature_in_Kelvin']
+    t_a = ambient_conditions["temperature_in_Kelvin"]
 
     # t_ac = Ambient temperature (°C)
     t_ac = t_a - 273.15
 
     # p_a = Ambient pressure (kPa)
-    p_a = ambient_conditions['pressure_in_Pa']
+    p_a = ambient_conditions["pressure_in_Pa"]
 
     # p_psia = Ambient pressure (psia) with 1 kPa = 0.14504 psia
     p_psia = p_a * 0.14504 * 1e-3
 
     # rh = Relative humidity
-    rh = ambient_conditions['relative_humidity']
+    rh = ambient_conditions["relative_humidity"]
 
     # m = Mach number
-    m = ambient_conditions['mach_number']
+    m = ambient_conditions["mach_number"]
 
-    omega = ambient_conditions.get('humidity_ratio_in_kg_water_per_kg_dry_air',
-                                   None)
+    omega = ambient_conditions.get("humidity_ratio_in_kg_water_per_kg_dry_air", None)
 
     # p_sat = Saturation vapor pressure (mbar)
     # t_ac in ° Celsius (C = K-273.15) !!
@@ -167,15 +173,17 @@ def calculate_emission_index(pollutant, fuel_flow, icao_eedb,
     # delta = Pressure ratio (ambient to sea level)
     delta = p_a / float(101325)
     if delta < 0.001:
-        logger.debug(f'delta (Pressure ratio) is unnatural: {delta:.3f}. '
-                     f'Pressure should be in Pa')
+        logger.debug(
+            f"delta (Pressure ratio) is unnatural: {delta:.3f}. "
+            f"Pressure should be in Pa"
+        )
 
     # omega = Humidity ratio (kg H2O/kg of dry air)
     if omega is None:
         omega = (0.62197058 * rh * p_sat) / (p_psia * 68.9473 - rh * p_sat)
 
     # h = Humidity coefficient
-    h = -19.0*(omega - 0.00634)
+    h = -19.0 * (omega - 0.00634)
 
     # P3T3 exponent (default value is 1.0)
     x = 1.0
@@ -185,7 +193,7 @@ def calculate_emission_index(pollutant, fuel_flow, icao_eedb,
 
     # FF_ref = Fuel flow at reference conditions (kg/s)
     # fuel_flow = Fuel flow at non-reference conditions (kg/s)
-    ff_ref = (fuel_flow / delta) * (theta ** 3.8) * np.exp(0.2 * m ** 2)
+    ff_ref = (fuel_flow / delta) * (theta**3.8) * np.exp(0.2 * m**2)
 
     ############################################################################
     # 2. Develop Log-Log relationship between EI_ref and adjusted FF_ref values
@@ -195,10 +203,10 @@ def calculate_emission_index(pollutant, fuel_flow, icao_eedb,
     #  EITHC values): Since zero values cannot be converted to Logs, a
     #  substitution to a small value is recommended.
 
-    eedb_idle = icao_eedb[pollutant]['Idle']
-    eedb_approach = icao_eedb[pollutant]['Approach']
-    eedb_climbout = icao_eedb[pollutant]['Climbout']
-    eedb_takeoff = icao_eedb[pollutant]['Takeoff']
+    eedb_idle = icao_eedb[pollutant]["Idle"]
+    eedb_approach = icao_eedb[pollutant]["Approach"]
+    eedb_climbout = icao_eedb[pollutant]["Climbout"]
+    eedb_takeoff = icao_eedb[pollutant]["Takeoff"]
 
     # if ikey == 'Idle':
     idle_check = 1
@@ -240,16 +248,18 @@ def calculate_emission_index(pollutant, fuel_flow, icao_eedb,
     eedb_climbout_values = list(eedb_climbout.values())
     eedb_takeoff_values = list(eedb_takeoff.values())
 
-    y1 = 0. if eedb_idle_values == [0.] else np.log10(eedb_idle_values)
-    y2 = 0. if eedb_approach_values == [0.] else np.log10(eedb_approach_values)
-    y3 = 0. if eedb_climbout_values == [0.] else np.log10(eedb_climbout_values)
-    y4 = 0. if eedb_takeoff_values == [0.] else np.log10(eedb_takeoff_values)
+    y1 = 0.0 if eedb_idle_values == [0.0] else np.log10(eedb_idle_values)
+    y2 = 0.0 if eedb_approach_values == [0.0] else np.log10(eedb_approach_values)
+    y3 = 0.0 if eedb_climbout_values == [0.0] else np.log10(eedb_climbout_values)
+    y4 = 0.0 if eedb_takeoff_values == [0.0] else np.log10(eedb_takeoff_values)
 
-    if y1 == y2 == y3 == y4 == 0.:
-        logger.error("All input values are zero. Reference points from database"
-                     " for pollutant '%s':" % pollutant)
+    if y1 == y2 == y3 == y4 == 0.0:
+        logger.error(
+            "All input values are zero. Reference points from database"
+            " for pollutant '%s':" % pollutant
+        )
         logger.error(icao_eedb[pollutant])
-        return 0.
+        return 0.0
 
     x_ff_log = np.log10(ff_ref if ff_ref else constants.epsilon)
 
@@ -269,16 +279,19 @@ def calculate_emission_index(pollutant, fuel_flow, icao_eedb,
             y_ff_log = coef_a1 * x_ff_log + coef_b1
 
         elif x1 <= x_ff_log <= x2:
-            y_ff_log = np.interp(x_ff_log, np.concatenate([x1, x2]),
-                                 np.concatenate([y1, y2]))
+            y_ff_log = np.interp(
+                x_ff_log, np.concatenate([x1, x2]), np.concatenate([y1, y2])
+            )
 
         elif x2 < x_ff_log <= x3:
-            y_ff_log = np.interp(x_ff_log, np.concatenate([x2, x3]),
-                                 np.concatenate([y2, y3]))
+            y_ff_log = np.interp(
+                x_ff_log, np.concatenate([x2, x3]), np.concatenate([y2, y3])
+            )
 
         elif x3 < x_ff_log <= x4:
-            y_ff_log = np.interp(x_ff_log, np.concatenate([x3, x4]),
-                                 np.concatenate([y3, y4]))
+            y_ff_log = np.interp(
+                x_ff_log, np.concatenate([x3, x4]), np.concatenate([y3, y4])
+            )
 
         elif x_ff_log > x4:
             # First (>100%) line equation (y=ax+b)
@@ -289,8 +302,10 @@ def calculate_emission_index(pollutant, fuel_flow, icao_eedb,
     elif pollutant.lower() == "co" or pollutant.lower() == "hc":
         # linear avg of y3,y4
         lin_av = np.log10(
-            1 / 2. * (np.asarray(eedb_climbout_values) + np.asarray(
-                eedb_takeoff_values)))
+            1
+            / 2.0
+            * (np.asarray(eedb_climbout_values) + np.asarray(eedb_takeoff_values))
+        )
 
         # Calculate the intersection between the two lines
         a = np.concatenate([x1, y1])
@@ -311,8 +326,9 @@ def calculate_emission_index(pollutant, fuel_flow, icao_eedb,
             y_ff_log = coef_a * x_ff_log + coef_b
 
         elif x1 <= x_ff_log <= x2:
-            y_ff_log = np.interp(x_ff_log, np.concatenate([x1, x2]),
-                                 np.concatenate([y1, y2]))
+            y_ff_log = np.interp(
+                x_ff_log, np.concatenate([x1, x2]), np.concatenate([y1, y2])
+            )
 
         elif x2 <= x_ff_log <= x3:
             if data_behavior == 1:
@@ -326,12 +342,14 @@ def calculate_emission_index(pollutant, fuel_flow, icao_eedb,
                     y_ff_log = coef_a * x_ff_log + coef_b
 
             elif data_behavior == 2:
-                y_ff_log = np.interp(x_ff_log, np.concatenate([x2, x3]),
-                                     np.concatenate([y2, lin_av]))
+                y_ff_log = np.interp(
+                    x_ff_log, np.concatenate([x2, x3]), np.concatenate([y2, lin_av])
+                )
 
         elif x3 < x_ff_log <= x4:
-            y_ff_log = np.interp(x_ff_log, np.concatenate([x3, x4]),
-                                 np.concatenate([y3, y4]))
+            y_ff_log = np.interp(
+                x_ff_log, np.concatenate([x3, x4]), np.concatenate([y3, y4])
+            )
 
         elif x_ff_log > x4:
             coef_a = (ip[1] - lin_av) / (ip[0] - x4)
@@ -349,36 +367,32 @@ def calculate_emission_index(pollutant, fuel_flow, icao_eedb,
 
     if pollutant.lower() == "nox":
         # ein_x_ref = NOx EI at reference conditions (g/kg)
-        ein_ox_ref = 10 ** y_ff_log if 10 ** (
-            y_ff_log) > constants.epsilon else 0.
+        ein_ox_ref = 10**y_ff_log if 10 ** (y_ff_log) > constants.epsilon else 0.0
 
         # ei = NOx EI at non-reference conditions (g/kg)
-        ei = ein_ox_ref * np.exp(h) * (delta ** 1.02 / theta ** 3.3) ** y
+        ei = ein_ox_ref * np.exp(h) * (delta**1.02 / theta**3.3) ** y
 
     elif pollutant.lower() == "co":
 
         # ei_co_ref = CO EI at reference conditions (g/kg)
-        ei_co_ref = 10 ** y_ff_log if 10 ** (
-            y_ff_log) > constants.epsilon else 0.
+        ei_co_ref = 10**y_ff_log if 10 ** (y_ff_log) > constants.epsilon else 0.0
 
         # ei = CO EI at non-reference conditions (g/kg)
-        ei = ei_co_ref * (theta ** 3.3 / delta ** 1.02) ** x
+        ei = ei_co_ref * (theta**3.3 / delta**1.02) ** x
 
     elif pollutant.lower() == "hc":
 
         # ei_hc_ref = THC EI at reference conditions (g/kg)
-        ei_hc_ref = 10 ** y_ff_log if 10 ** (
-            y_ff_log) > constants.epsilon else 0.
+        ei_hc_ref = 10**y_ff_log if 10 ** (y_ff_log) > constants.epsilon else 0.0
 
         # ei = THC EI at non-reference conditions (g/kg)
-        ei = float(ei_hc_ref) * (theta ** 3.3 / delta ** 1.02) ** x
+        ei = float(ei_hc_ref) * (theta**3.3 / delta**1.02) ** x
 
     else:
         logger.error(f"Pollutant '{pollutant}' unknown.")
 
     # Emission index in kg/s
-    emission_index = ei[0] if (
-                isinstance(ei, np.ndarray) and ei.size == 1) else ei
+    emission_index = ei[0] if (isinstance(ei, np.ndarray) and ei.size == 1) else ei
 
     return emission_index
 

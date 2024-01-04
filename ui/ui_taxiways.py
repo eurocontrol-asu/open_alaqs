@@ -17,15 +17,15 @@ def form_open(form, layer, feature):
         time_field=form.findChild(QtWidgets.QLineEdit, "time"),
         speed_field=form.findChild(QtWidgets.QLineEdit, "speed"),
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
-        instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
+        instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
     )
 
     # Hide the instudy field
-    fields['instudy'].setHidden(True)
+    fields["instudy"].setHidden(True)
 
     # Disable the time field
-    fields['time_field'].setText("Calculated")
-    fields['time_field'].setEnabled(False)
+    fields["time_field"].setText("Calculated")
+    fields["time_field"].setEnabled(False)
 
     # Add input validation to text fields in the form
     for key, value in fields.items():
@@ -33,30 +33,30 @@ def form_open(form, layer, feature):
             fields[key].textChanged.connect(lambda: validate(fields))
 
     # Block the ok button (will be overwritten after validation)
-    fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
+    fields["button_box"].button(fields["button_box"].Ok).blockSignals(True)
 
     # Connect the instudy checkbox on save
     def on_save():
-        feature["instudy"] = str(int(fields['instudy'].isChecked()))
+        feature["instudy"] = str(int(fields["instudy"].isChecked()))
 
-    fields['button_box'].accepted.connect(on_save)
+    fields["button_box"].accepted.connect(on_save)
 
 
 def validate(fields: dict):
     """
     This function validates that all of the required fields have been completed
-    correctly. If they have, the attributes are committed to the feature. 
-    Otherwise an error message is displayed and the incorrect field is 
+    correctly. If they have, the attributes are committed to the feature.
+    Otherwise an error message is displayed and the incorrect field is
     highlighted in red.
     """
 
     # Get the button box
-    button_box = fields['button_box']
+    button_box = fields["button_box"]
 
     # Validate all fields
     results = [
         validate_field(fields["name_field"], "str"),
-        validate_field(fields['speed_field'], "float")
+        validate_field(fields["speed_field"], "float"),
     ]
 
     # Block signals if any of the fields is invalid

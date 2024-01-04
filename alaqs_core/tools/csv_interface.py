@@ -15,8 +15,14 @@ def write_csv(path_to_file: str, rows: List[list]):
     logger.debug("Writing results to CSV file: '%s'" % path_to_file)
     try:
         rows_df = pd.DataFrame(rows[1:], columns=rows[0])
-        rows_df.to_csv(path_to_file, index=False, sep=',', quotechar='"',
-                       quoting=csv.QUOTE_NONNUMERIC, line_terminator='\n')
+        rows_df.to_csv(
+            path_to_file,
+            index=False,
+            sep=",",
+            quotechar='"',
+            quoting=csv.QUOTE_NONNUMERIC,
+            line_terminator="\n",
+        )
     except Exception as e:
         logger.error("Couldn't write to CSV file: '%s'" % path_to_file)
         logger.error(e)
@@ -27,8 +33,8 @@ def read_csv(path):
     path_to_file = path  # [0]
     if os.path.isfile(path_to_file):
         input_ = []
-        with open(path_to_file, 'r') as csvfile:
-            csv_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+        with open(path_to_file, "r") as csvfile:
+            csv_reader = csv.reader(csvfile, delimiter=",", quotechar='"')
             for row in csv_reader:
                 input_.append(row)
         return input_
@@ -50,17 +56,19 @@ def read_csv_to_dict(path):
                     for index_row, row in enumerate(input_[1:]):
                         value = row[index_column]
                         if value is None:
-                            logger.error(f"Could not find column with name "
-                                         f"'{head_column}' in CSV file at path "
-                                         f"'{path}' for row with index "
-                                         f"'{index_row + 1}'.")
+                            logger.error(
+                                f"Could not find column with name "
+                                f"'{head_column}' in CSV file at path "
+                                f"'{path}' for row with index "
+                                f"'{index_row + 1}'."
+                            )
                         input_dict[head_column].append(value)
                 else:
                     logger.error(
                         "Header '%s' of CSV file at path '%s' is expected in "
                         "the first row, but the columns do not have a unique "
-                        "name. Cannot parse this csv file." % (
-                            head_column, path))
+                        "name. Cannot parse this csv file." % (head_column, path)
+                    )
                     return {}
         else:
             logger.error("CSV file at path '%s' is empty." % path_to_file)
@@ -89,18 +97,24 @@ def read_csv_to_geodataframe(path):
             for index, row in csv_df.iterrows():
                 try:
                     # it will throw an error where the geometry WKT isn't valid
-                    csv_df.loc[index, 'geometry'] = loads(row['geometry'])
+                    csv_df.loc[index, "geometry"] = loads(row["geometry"])
                 except Exception:
                     logger.error("geometry WKT isn't valid (%s)" % row)
                     continue
             if not csv_df.empty:
                 gdf = gpd.GeoDataFrame(csv_df)
         else:
-            if ("longitude" in csv_df.keys()) and \
-                    ("latitude" in csv_df.keys()) and \
-                    ("altitude" in csv_df.keys()):
-                gdf = gpd.GeoDataFrame(csv_df, geometry=gpd.points_from_xy(
-                    csv_df.longitude, csv_df.latitude, csv_df.altitude))
+            if (
+                ("longitude" in csv_df.keys())
+                and ("latitude" in csv_df.keys())
+                and ("altitude" in csv_df.keys())
+            ):
+                gdf = gpd.GeoDataFrame(
+                    csv_df,
+                    geometry=gpd.points_from_xy(
+                        csv_df.longitude, csv_df.latitude, csv_df.altitude
+                    ),
+                )
             else:
                 logger.error("Couldn't find 'geometry' column in DataFrame")
 

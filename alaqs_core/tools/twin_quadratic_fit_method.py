@@ -17,42 +17,50 @@ def calculate_fuel_flow_from_power_setting(power_setting: float, icao_eedb: dict
         if key not in icao_eedb:
             logger.error(
                 "Did not find key %f with type 'float' in engine-thrust "
-                "settings [%%] from ICAO EEDB!", key)
+                "settings [%%] from ICAO EEDB!",
+                key,
+            )
             return None
 
-    if 0 <= power_setting < .07:
+    if 0 <= power_setting < 0.07:
         # based on the 7 per cent, 30 per cent and 85 per cent thrust
         x1 = 0.07
         x2 = 0.30
         x3 = 0.85
 
-        logger.warning('EXPERIMENTAL support for thrust settings between 0% and'
-                       f' 7%. The requested power setting is {power_setting}')
+        logger.warning(
+            "EXPERIMENTAL support for thrust settings between 0% and"
+            f" 7%. The requested power setting is {power_setting}"
+        )
 
-    elif .07 <= power_setting < .60:
+    elif 0.07 <= power_setting < 0.60:
         # based on the 7 per cent, 30 per cent and 85 per cent thrust
         x1 = 0.07
         x2 = 0.30
         x3 = 0.85
 
-        logger.warning('EXPERIMENTAL support for thrust settings between 7% and'
-                       f' 60%. The requested power setting is {power_setting}')
+        logger.warning(
+            "EXPERIMENTAL support for thrust settings between 7% and"
+            f" 60%. The requested power setting is {power_setting}"
+        )
 
-    elif .60 <= power_setting <= .85:
+    elif 0.60 <= power_setting <= 0.85:
         # based on the 7 per cent, 30 per cent and 85 per cent thrust
         x1 = 0.07
         x2 = 0.30
         x3 = 0.85
 
-    elif .85 < power_setting <= 1.00:
+    elif 0.85 < power_setting <= 1.00:
         # based on the 30 per cent, 85 per cent and 100 per cent thrust
         x1 = 0.30
         x2 = 0.85
         x3 = 1.0
     else:
-        raise ValueError('The power setting should be between 0.07 and 1.0 '
-                         '(inclusive). The requested power setting is '
-                         f'{power_setting}')
+        raise ValueError(
+            "The power setting should be between 0.07 and 1.0 "
+            "(inclusive). The requested power setting is "
+            f"{power_setting}"
+        )
 
     # Y = AX**2 + BX + C
     # with three known points:
@@ -69,19 +77,18 @@ def calculate_fuel_flow_from_power_setting(power_setting: float, icao_eedb: dict
     y3 = icao_eedb[x3] / icao_eedb[1]
 
     # Allowing solution for A, B and C as:
-    a = (y3 - y1) / ((x3 - x1) * (x1 - x2)) - (y3 - y2) / (
-            (x3 - x2) * (x1 - x2))
+    a = (y3 - y1) / ((x3 - x1) * (x1 - x2)) - (y3 - y2) / ((x3 - x2) * (x1 - x2))
     b = (y3 - y1) / (x3 - x1) - a * (x3 + x1)
-    c = y3 - a * x3 ** 2 - b * x3
+    c = y3 - a * x3**2 - b * x3
 
-    _y = a * _x ** 2 + b * _x + c
+    _y = a * _x**2 + b * _x + c
 
     # multiply by ICAO EEDB maximum rated thrust fuel
     max_rated_t = icao_eedb[1.0]
 
     fuel_flow_in_kg_s = _y * max_rated_t  # in kg/s
 
-    return max(0., fuel_flow_in_kg_s)
+    return max(0.0, fuel_flow_in_kg_s)
 
 
 # if __name__ == "__main__":

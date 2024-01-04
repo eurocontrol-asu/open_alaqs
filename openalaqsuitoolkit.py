@@ -1,23 +1,52 @@
 import os
 
-from qgis.PyQt import QtWidgets
 from qgis.core import *
+from qgis.PyQt import QtWidgets
 
-from open_alaqs.alaqs_config import PARKING_LABEL_ENABLED, AREA_LABEL_ENABLED, \
-    AREA_LABEL_FONT, AREA_LABEL_FONT_SIZE, AREA_LABEL_POSITION, \
-    AREA_FILL_COLOR, AREA_BORDER_COLOR, BUILDING_LABEL_ENABLED, \
-    BUILDING_LABEL_FONT, BUILDING_LABEL_FONT_SIZE, BUILDING_LABEL_POSITION, \
-    BUILDING_FILL_COLOR, BUILDING_BORDER_COLOR, GATE_LABEL_ENABLED, \
-    GATE_LABEL_FONT, GATE_LABEL_FONT_SIZE, GATE_LABEL_POSITION, \
-    GATE_FILL_COLOR, GATE_BORDER_COLOR, PARKING_LABEL_FONT, \
-    PARKING_LABEL_FONT_SIZE, PARKING_LABEL_POSITION, PARKING_FILL_COLOR, \
-    PARKING_BORDER_COLOR, ROADWAY_LABEL_ENABLED, ROADWAY_LABEL_FONT, \
-    ROADWAY_LABEL_FONT_SIZE, ROADWAY_LABEL_POSITION, ROADWAY_LINE_WIDTH, \
-    ROADWAY_LINE_COLOR, TAXIWAY_LABEL_ENABLED, TAXIWAY_LABEL_FONT, \
-    TAXIWAY_LABEL_FONT_SIZE, TAXIWAY_LABEL_POSITION, TAXIWAY_LINE_WIDTH, \
-    TAXIWAY_LINE_COLOR, RUNWAY_LABEL_ENABLED, RUNWAY_LABEL_FONT, \
-    RUNWAY_LABEL_FONT_SIZE, RUNWAY_LABEL_POSITION, RUNWAY_LINE_COLOR, \
-    RUNWAY_LINE_WIDTH
+from open_alaqs.alaqs_config import (
+    AREA_BORDER_COLOR,
+    AREA_FILL_COLOR,
+    AREA_LABEL_ENABLED,
+    AREA_LABEL_FONT,
+    AREA_LABEL_FONT_SIZE,
+    AREA_LABEL_POSITION,
+    BUILDING_BORDER_COLOR,
+    BUILDING_FILL_COLOR,
+    BUILDING_LABEL_ENABLED,
+    BUILDING_LABEL_FONT,
+    BUILDING_LABEL_FONT_SIZE,
+    BUILDING_LABEL_POSITION,
+    GATE_BORDER_COLOR,
+    GATE_FILL_COLOR,
+    GATE_LABEL_ENABLED,
+    GATE_LABEL_FONT,
+    GATE_LABEL_FONT_SIZE,
+    GATE_LABEL_POSITION,
+    PARKING_BORDER_COLOR,
+    PARKING_FILL_COLOR,
+    PARKING_LABEL_ENABLED,
+    PARKING_LABEL_FONT,
+    PARKING_LABEL_FONT_SIZE,
+    PARKING_LABEL_POSITION,
+    ROADWAY_LABEL_ENABLED,
+    ROADWAY_LABEL_FONT,
+    ROADWAY_LABEL_FONT_SIZE,
+    ROADWAY_LABEL_POSITION,
+    ROADWAY_LINE_COLOR,
+    ROADWAY_LINE_WIDTH,
+    RUNWAY_LABEL_ENABLED,
+    RUNWAY_LABEL_FONT,
+    RUNWAY_LABEL_FONT_SIZE,
+    RUNWAY_LABEL_POSITION,
+    RUNWAY_LINE_COLOR,
+    RUNWAY_LINE_WIDTH,
+    TAXIWAY_LABEL_ENABLED,
+    TAXIWAY_LABEL_FONT,
+    TAXIWAY_LABEL_FONT_SIZE,
+    TAXIWAY_LABEL_POSITION,
+    TAXIWAY_LINE_COLOR,
+    TAXIWAY_LINE_WIDTH,
+)
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 
 logger = get_logger(__name__)
@@ -96,8 +125,9 @@ def color_ui_background(ui_element, color):
         pass
 
 
-def add_spatialite_layer(iface, database_path, table_name, display_name,
-                         edit_form, edit_py, edit_init):
+def add_spatialite_layer(
+    iface, database_path, table_name, display_name, edit_form, edit_py, edit_init
+):
     """
     This function is used to load a new layer into QGIS
 
@@ -117,15 +147,15 @@ def add_spatialite_layer(iface, database_path, table_name, display_name,
     uri = QgsDataSourceUri()  # QGIS3
     uri.setDatabase(database_path)
 
-    schema = ''
-    geom_column = 'geometry'
+    schema = ""
+    geom_column = "geometry"
     uri.setDataSource(schema, table_name, geom_column)
-    layer = QgsVectorLayer(uri.uri(), display_name, 'spatialite')
+    layer = QgsVectorLayer(uri.uri(), display_name, "spatialite")
 
     lconfig = layer.editFormConfig()
     lconfig.setInitCodeSource(QgsEditFormConfig.PythonInitCodeSource.CodeSourceFile)
-    lconfig.setUiForm(os.path.join(plugin_dir, 'ui', edit_form))
-    lconfig.setInitFilePath(os.path.join(plugin_dir, 'ui', edit_py))
+    lconfig.setUiForm(os.path.join(plugin_dir, "ui", edit_form))
+    lconfig.setInitFilePath(os.path.join(plugin_dir, "ui", edit_py))
     lconfig.setInitFunction(edit_init)
     layer.setEditFormConfig(lconfig)
     layer.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
@@ -136,8 +166,9 @@ def add_spatialite_layer(iface, database_path, table_name, display_name,
     # in QGIS3
     instudy_idx = layer.fields().indexFromName("instudy")
     if instudy_idx != -1:
-        editor_widget_setup = QgsEditorWidgetSetup('ValueMap',
-                                                   {'map': {u'1': 1, u'0': 0}})
+        editor_widget_setup = QgsEditorWidgetSetup(
+            "ValueMap", {"map": {"1": 1, "0": 0}}
+        )
         layer.setEditorWidgetSetup(instudy_idx, editor_widget_setup)
 
     if display_name == "Area Sources":
@@ -160,7 +191,9 @@ def add_spatialite_layer(iface, database_path, table_name, display_name,
     if not layer.isValid():
         QtWidgets.QMessageBox.information(
             iface.mainWindow() if iface and iface.mainWindow() else None,
-            "Info", "That is not a valid layer...")
+            "Info",
+            "That is not a valid layer...",
+        )
     # QgsMapLayerRegistry.instance().addMapLayers([layer])
     QgsProject.instance().addMapLayers([layer])
 
@@ -180,10 +213,10 @@ def style_area_sources(layer):
         layer.setCustomProperty("labeling/fieldName", "source_id")
 
         props = {
-            'color': AREA_FILL_COLOR,
-            'style': 'solid',
-            'color_border': AREA_BORDER_COLOR,
-            'style_border': 'solid'
+            "color": AREA_FILL_COLOR,
+            "style": "solid",
+            "color_border": AREA_BORDER_COLOR,
+            "style_border": "solid",
         }
         s = QgsFillSymbol.createSimple(props)
         layer.setRenderer(QgsSingleSymbolRenderer(s))
@@ -208,10 +241,10 @@ def style_buildings(layer):
         layer.setCustomProperty("labeling/fieldName", "building_id")
 
         props = {
-            'color': BUILDING_FILL_COLOR,
-            'style': 'solid',
-            'color_border': BUILDING_BORDER_COLOR,
-            'style_border': 'solid'
+            "color": BUILDING_FILL_COLOR,
+            "style": "solid",
+            "color_border": BUILDING_BORDER_COLOR,
+            "style_border": "solid",
         }
         s = QgsFillSymbol.createSimple(props)
         layer.setRenderer(QgsSingleSymbolRenderer(s))
@@ -236,10 +269,10 @@ def style_gates(layer):
         layer.setCustomProperty("labeling/fieldName", "gate_id")
 
         props = {
-            'color': GATE_FILL_COLOR,
-            'style': 'solid',
-            'color_border': GATE_BORDER_COLOR,
-            'style_border': 'solid'
+            "color": GATE_FILL_COLOR,
+            "style": "solid",
+            "color_border": GATE_BORDER_COLOR,
+            "style_border": "solid",
         }
         s = QgsFillSymbol.createSimple(props)
         layer.setRenderer(QgsSingleSymbolRenderer(s))
@@ -264,10 +297,10 @@ def style_parkings(layer):
         layer.setCustomProperty("labeling/fieldName", "parking_id")
 
         props = {
-            'color': PARKING_FILL_COLOR,
-            'style': 'solid',
-            'color_border': PARKING_BORDER_COLOR,
-            'style_border': 'solid'
+            "color": PARKING_FILL_COLOR,
+            "style": "solid",
+            "color_border": PARKING_BORDER_COLOR,
+            "style_border": "solid",
         }
         s = QgsFillSymbol.createSimple(props)
         layer.setRenderer(QgsSingleSymbolRenderer(s))
@@ -308,10 +341,7 @@ def style_roadways(layer):
         layer.setCustomProperty("labeling/placement", ROADWAY_LABEL_POSITION)
         layer.setCustomProperty("labeling/fieldName", "roadway_id")
 
-        props = {
-            'width': ROADWAY_LINE_WIDTH,
-            'color': ROADWAY_LINE_COLOR
-        }
+        props = {"width": ROADWAY_LINE_WIDTH, "color": ROADWAY_LINE_COLOR}
         s = QgsLineSymbol.createSimple(props)
         layer.setRenderer(QgsSingleSymbolRenderer(s))
 
@@ -334,7 +364,7 @@ def style_taxiways(layer):
         layer.setCustomProperty("labeling/placement", TAXIWAY_LABEL_POSITION)
         layer.setCustomProperty("labeling/fieldName", "taxiway_id")
 
-        props = {'width': TAXIWAY_LINE_WIDTH, 'color': TAXIWAY_LINE_COLOR}
+        props = {"width": TAXIWAY_LINE_WIDTH, "color": TAXIWAY_LINE_COLOR}
         s = QgsLineSymbol.createSimple(props)
         layer.setRenderer(QgsSingleSymbolRenderer(s))
 
@@ -357,7 +387,7 @@ def style_runways(layer):
         layer.setCustomProperty("labeling/placement", RUNWAY_LABEL_POSITION)
         layer.setCustomProperty("labeling/fieldName", "runway_id")
 
-        props = {'width': RUNWAY_LINE_WIDTH, 'color': RUNWAY_LINE_COLOR}
+        props = {"width": RUNWAY_LINE_WIDTH, "color": RUNWAY_LINE_COLOR}
         s = QgsLineSymbol.createSimple(props)
         layer.setRenderer(QgsSingleSymbolRenderer(s))
 
@@ -367,35 +397,101 @@ def style_runways(layer):
 
 
 def load_layers(iface, database_path):
-    add_spatialite_layer(iface, database_path, "shapes_point_sources",
-                         "Point Sources", 'ui_point_sources.ui',
-                         'ui_point_sources.py', 'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_taxiways", "Taxiways",
-                         'ui_taxiways.ui', 'ui_taxiways.py',
-                         'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_runways", "Runways",
-                         'ui_runways.ui', 'ui_runways.py', 'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_roadways", "Roadways",
-                         'ui_roadways.ui', 'ui_roadways.py',
-                         'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_parking", "Parkings",
-                         'ui_parkings.ui', 'ui_parkings.py',
-                         'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_gates", "Gates",
-                         'ui_gates.ui', 'ui_gates.py', 'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_buildings", "Buildings",
-                         'ui_buildings.ui', 'ui_buildings.py',
-                         'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_area_sources",
-                         "Area Sources", 'ui_area_sources.ui',
-                         'ui_area_sources.py', 'form_open')
-    add_spatialite_layer(iface, database_path, "shapes_tracks", "Tracks",
-                         'ui_tracks.ui', 'ui_tracks.py', 'form_open')
+    add_spatialite_layer(
+        iface,
+        database_path,
+        "shapes_point_sources",
+        "Point Sources",
+        "ui_point_sources.ui",
+        "ui_point_sources.py",
+        "form_open",
+    )
+    add_spatialite_layer(
+        iface,
+        database_path,
+        "shapes_taxiways",
+        "Taxiways",
+        "ui_taxiways.ui",
+        "ui_taxiways.py",
+        "form_open",
+    )
+    add_spatialite_layer(
+        iface,
+        database_path,
+        "shapes_runways",
+        "Runways",
+        "ui_runways.ui",
+        "ui_runways.py",
+        "form_open",
+    )
+    add_spatialite_layer(
+        iface,
+        database_path,
+        "shapes_roadways",
+        "Roadways",
+        "ui_roadways.ui",
+        "ui_roadways.py",
+        "form_open",
+    )
+    add_spatialite_layer(
+        iface,
+        database_path,
+        "shapes_parking",
+        "Parkings",
+        "ui_parkings.ui",
+        "ui_parkings.py",
+        "form_open",
+    )
+    add_spatialite_layer(
+        iface,
+        database_path,
+        "shapes_gates",
+        "Gates",
+        "ui_gates.ui",
+        "ui_gates.py",
+        "form_open",
+    )
+    add_spatialite_layer(
+        iface,
+        database_path,
+        "shapes_buildings",
+        "Buildings",
+        "ui_buildings.ui",
+        "ui_buildings.py",
+        "form_open",
+    )
+    add_spatialite_layer(
+        iface,
+        database_path,
+        "shapes_area_sources",
+        "Area Sources",
+        "ui_area_sources.ui",
+        "ui_area_sources.py",
+        "form_open",
+    )
+    add_spatialite_layer(
+        iface,
+        database_path,
+        "shapes_tracks",
+        "Tracks",
+        "ui_tracks.ui",
+        "ui_tracks.py",
+        "form_open",
+    )
 
 
 def delete_alaqs_layers(iface):
-    layer_names = ["Tracks", "Taxiways", "Runways", "Roadways", "Point Sources",
-                   "Parkings", "Gates", "Buildings", "Area Sources"]
+    layer_names = [
+        "Tracks",
+        "Taxiways",
+        "Runways",
+        "Roadways",
+        "Point Sources",
+        "Parkings",
+        "Gates",
+        "Buildings",
+        "Area Sources",
+    ]
 
     # QGIS2
     # layers = iface.legendInterface().layers()
@@ -417,8 +513,12 @@ def set_default_zoom(canvas, lat, lon):
         xform = QgsCoordinateTransform(crs_src, crs_dest)
 
         arp = xform.transform(QgsPoint(float(lon), float(lat)))
-        rect = QgsRectangle(float(arp[0]) - scale, float(arp[1]) - scale,
-                            float(arp[0]) + scale, float(arp[1]) + scale)
+        rect = QgsRectangle(
+            float(arp[0]) - scale,
+            float(arp[1]) - scale,
+            float(arp[0]) + scale,
+            float(arp[1]) + scale,
+        )
         canvas.setExtent(rect)
         canvas.refresh()
         return None
@@ -459,7 +559,7 @@ def set_selected_feature(layer, features):
                     # raise Exception(str(feature.attributes()))
                     pass
 
-            except Exception as e:
+            except Exception:
                 pass
 
         # Select those features

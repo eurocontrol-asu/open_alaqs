@@ -1,6 +1,7 @@
+from typing import Tuple
+
 from shapely.geometry import GeometryCollection
 from shapely.wkt import loads
-from typing import Tuple
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Store import Store
@@ -8,21 +9,21 @@ from open_alaqs.alaqs_core.interfaces.Store import Store
 logger = get_logger(__name__)
 
 defValues = {
-    "fuel_kg": 0.,
-    "co_g": 0.,
-    "co2_g": 0.,
-    "hc_g": 0.,
-    "nox_g": 0.,
-    "sox_g": 0.,
-    "pm10_g": 0.,
-    "p1_g": 0.,
-    "p2_g": 0.,
-    "pm10_prefoa3_g": 0.,
-    "pm10_nonvol_g": 0.,
-    "pm10_sul_g": 0.,
-    "pm10_organic_g": 0.,
-    "nvpm_g": 0.,
-    "nvpm_number": 0.
+    "fuel_kg": 0.0,
+    "co_g": 0.0,
+    "co2_g": 0.0,
+    "hc_g": 0.0,
+    "nox_g": 0.0,
+    "sox_g": 0.0,
+    "pm10_g": 0.0,
+    "p1_g": 0.0,
+    "p2_g": 0.0,
+    "pm10_prefoa3_g": 0.0,
+    "pm10_nonvol_g": 0.0,
+    "pm10_sul_g": 0.0,
+    "pm10_organic_g": 0.0,
+    "nvpm_g": 0.0,
+    "nvpm_number": 0.0,
 }
 
 
@@ -62,7 +63,7 @@ class EmissionIndex(Store):
         else:
             logger.error("Did not find key that matches name '%s'" % (name))
 
-            return (None,None)
+            return (None, None)
 
     def getFuel(self, unit="kg_sec"):
         return (self.getObject("fuel_%s" % unit), "kg")
@@ -103,17 +104,16 @@ class EmissionIndex(Store):
     def getPM10Organic(self, unit="g_kg"):
         return (self.getObject("pm10_organic_%s" % (unit)), "g")
 
-    def getnvPM(self, unit="g_kg") ->Tuple[float, str]:
+    def getnvPM(self, unit="g_kg") -> Tuple[float, str]:
         return (self.getObject("nvpm_%s" % (unit)), "g")
 
-    def getnvPMnumber(self, unit="")->Tuple[float, str]:
+    def getnvPMnumber(self, unit="") -> Tuple[float, str]:
         return (self.getObject("nvpm_number"), "g")
-
 
     def __str__(self):
         val = "\n\t Emissions indices:"
         for pollutant_name, value in sorted(self.getObjects().items()):
-            if not type(value) == type(0.):
+            if not type(value) == type(0.0):
                 val += "\n\t\t%s : %s" % (str(pollutant_name), str(value))
             else:
                 val += "\n\t\t%s : %.5f" % (str(pollutant_name), float(value))
@@ -143,7 +143,7 @@ class Emission(Store):
 
     def isZero(self):
         for key, value in self.getObjects().items():
-            if not (value is None) and not (float(value) == 0.):
+            if not (value is None) and not (float(value) == 0.0):
                 return False
         return True
 
@@ -166,7 +166,9 @@ class Emission(Store):
 
     def setVerticalExtent(self, var):
         if not ("z_min" in list(var.keys()) and "z_max" in list(var.keys())):
-            logger.warning("Vertical extent not updated from dictionary, could not find min/max values")
+            logger.warning(
+                "Vertical extent not updated from dictionary, could not find min/max values"
+            )
         else:
             dz = var["z_max"] - var["z_min"]
             var.update({"delta_z": dz})
@@ -178,9 +180,9 @@ class Emission(Store):
         emissions_.setVerticalExtent(self.getVerticalExtent())
 
         for key in list(self.getObjects().keys()):
-            if "_g" in key and key.index("_g") == len(key)-2:
-                #add new key
-                emissions_.addObject("%s_kg" % (key[:-2]), self.getObject(key)/1000.)
+            if "_g" in key and key.index("_g") == len(key) - 2:
+                # add new key
+                emissions_.addObject("%s_kg" % (key[:-2]), self.getObject(key) / 1000.0)
             else:
                 emissions_.addObject(key, self.getObject(key))
         return emissions_
@@ -198,9 +200,22 @@ class Emission(Store):
         self.addValue("fuel_kg", fuel_burned)
 
         # Set the pollutant keys ({pollutant}_{unit}) dependent on fuel burned
-        pollutants = ["co_g", "co2_g", "hc_g", "nox_g", "sox_g", "pm10_g",
-                      "p1_g", "p2_g", "pm10_prefoa3_g", "pm10_nonvol_g",
-                      "pm10_sul_g", "pm10_organic_g", "nvpm_g", "nvpm_number"]
+        pollutants = [
+            "co_g",
+            "co2_g",
+            "hc_g",
+            "nox_g",
+            "sox_g",
+            "pm10_g",
+            "p1_g",
+            "p2_g",
+            "pm10_prefoa3_g",
+            "pm10_nonvol_g",
+            "pm10_sul_g",
+            "pm10_organic_g",
+            "nvpm_g",
+            "nvpm_number",
+        ]
 
         # Determine the total emissions for each pollutant
         for pollutant in pollutants:
@@ -209,8 +224,10 @@ class Emission(Store):
 
     def addGeneric(self, emission_index_, factor, unit, new_unit=""):
         for key in list(emission_index_.getObjects().keys()):
-            self.addValue("%s" % (self.rreplace(key, unit, new_unit, 1)),
-                          emission_index_.getObject("%s" % key) * factor)
+            self.addValue(
+                "%s" % (self.rreplace(key, unit, new_unit, 1)),
+                emission_index_.getObject("%s" % key) * factor,
+            )
 
     def getValue(self, name: str, unit: str = "kg") -> Tuple[float, str]:
         name = name.lower()
@@ -342,7 +359,7 @@ class Emission(Store):
 
     def addnvPM(self, val_in_grams):
         return self.addValue("nvpm_g", val_in_grams)
-    
+
     def addnvPMnumber(self, val):
         return self.addValue("nvpm_number", val)
 
@@ -352,7 +369,10 @@ class Emission(Store):
         val += "\n Vertical Extent: '%s'" % (str(self.getVerticalExtent()))
 
         for pollutant_name, value in sorted(self.getObjects().items()):
-            val += "\n\t\t%s : %.3f" % (str(pollutant_name), float(value) if value is not None else 0.)
+            val += "\n\t\t%s : %.3f" % (
+                str(pollutant_name),
+                float(value) if value is not None else 0.0,
+            )
         return val
 
     def rreplace(self, s, old, new, occurrence):

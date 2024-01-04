@@ -4,8 +4,9 @@ from collections import OrderedDict
 from PyQt5 import QtWidgets
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.alaqs_core.modules.ModuleConfigurationWidget import \
-    ModuleConfigurationWidget
+from open_alaqs.alaqs_core.modules.ModuleConfigurationWidget import (
+    ModuleConfigurationWidget,
+)
 
 sys.path.append("..")  # Adds higher directory to python modules path.
 logger = get_logger(__name__)
@@ -33,13 +34,18 @@ class DispersionModule:
         self._enable = values_dict.get("enable", False)
         self._configuration_widget = None
 
-        self.setConfigurationWidget(OrderedDict([
-            ("Enable", QtWidgets.QCheckBox,)
-        ]))
+        self.setConfigurationWidget(
+            OrderedDict(
+                [
+                    (
+                        "Enable",
+                        QtWidgets.QCheckBox,
+                    )
+                ]
+            )
+        )
 
-        self.getConfigurationWidget().initValues({
-            "Enable": False
-        })
+        self.getConfigurationWidget().initValues({"Enable": False})
 
     def isEnabled(self):
         return self._enable

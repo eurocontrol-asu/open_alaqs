@@ -34,16 +34,16 @@ def form_open(form, layer, feature):
         type_field=form.findChild(QtWidgets.QComboBox, "gate_type"),
         height_field=form.findChild(QtWidgets.QLineEdit, "gate_height"),
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
-        instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
+        instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
     )
 
     # Hide the instudy field
-    fields['instudy'].setHidden(True)
+    fields["instudy"].setHidden(True)
 
     # Disable the height field
-    fields['height_field'].setToolTip('Not implemented')
-    fields['height_field'].setText("0")
-    fields['height_field'].setEnabled(False)
+    fields["height_field"].setToolTip("Not implemented")
+    fields["height_field"].setText("0")
+    fields["height_field"].setEnabled(False)
 
     # Seed the combo boxes only once
     populate_combo_boxes(fields)
@@ -52,16 +52,17 @@ def form_open(form, layer, feature):
     for key, value in fields.items():
         if isinstance(value, QtWidgets.QLineEdit):
             fields[key].textChanged.connect(lambda: validate(fields))
-    fields['type_field'].currentTextChanged.connect(lambda: validate(fields))
+    fields["type_field"].currentTextChanged.connect(lambda: validate(fields))
 
     # Block the ok button (will be overwritten after validation)
-    fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
+    fields["button_box"].button(fields["button_box"].Ok).blockSignals(True)
 
     # Connect the instudy checkbox on save
     def on_save():
-        form.changeAttribute("gate_type", fields['type_field'].currentText())
-        feature["instudy"] = str(int(fields['instudy'].isChecked()))
-    fields['button_box'].accepted.connect(on_save)
+        form.changeAttribute("gate_type", fields["type_field"].currentText())
+        feature["instudy"] = str(int(fields["instudy"].isChecked()))
+
+    fields["button_box"].accepted.connect(on_save)
 
 
 def validate(fields: dict):
@@ -73,19 +74,18 @@ def validate(fields: dict):
     """
 
     # Get the button box
-    button_box = fields['button_box']
+    button_box = fields["button_box"]
 
     # Validate all fields
     results = [
-        validate_field(fields['name_field'], "str"),
-        validate_field(fields['type_field'], "str"),
-        validate_field(fields['height_field'], "float")
+        validate_field(fields["name_field"], "str"),
+        validate_field(fields["type_field"], "str"),
+        validate_field(fields["height_field"], "float"),
     ]
 
     # Block signals if any of the fields is invalid
     button_box.button(button_box.Ok).blockSignals(
-        ("False" in str(results)) or
-        (results[1] not in ('PIER', 'REMOTE', 'CARGO'))
+        ("False" in str(results)) or (results[1] not in ("PIER", "REMOTE", "CARGO"))
     )
 
 
@@ -150,6 +150,6 @@ def color_ui_background(ui_element, color):
 
 @run_once
 def populate_combo_boxes(fields: dict):
-    fields['type_field'].addItem("PIER")
-    fields['type_field'].addItem("REMOTE")
-    fields['type_field'].addItem("CARGO")
+    fields["type_field"].addItem("PIER")
+    fields["type_field"].addItem("REMOTE")
+    fields["type_field"].addItem("CARGO")

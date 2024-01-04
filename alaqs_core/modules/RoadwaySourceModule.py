@@ -5,8 +5,7 @@ This class provides all of the calculation methods required to perform emissions
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import Emission
 from open_alaqs.alaqs_core.interfaces.RoadwaySources import RoadwaySourcesStore
-from open_alaqs.alaqs_core.interfaces.SourceModule import \
-    SourceWithTimeProfileModule
+from open_alaqs.alaqs_core.interfaces.SourceModule import SourceWithTimeProfileModule
 
 logger = get_logger(__name__)
 
@@ -57,33 +56,40 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
 
             # Get the relative activity (percentage of total emissions) for this hour
             activity_multiplier = self.getRelativeActivityPerHour(
-                start_time, source.getUnitsPerYear(),
-                source.getHourProfile(), source.getDailyProfile(),
-                source.getMonthProfile())
+                start_time,
+                source.getUnitsPerYear(),
+                source.getHourProfile(),
+                source.getDailyProfile(),
+                source.getMonthProfile(),
+            )
 
             # Calculate the emissions for this time interval
-            emissions = Emission(initValues={
-                "fuel_kg": 0.,
-                "co2_kg": 0.,
-                "co_kg": 0.,
-                "hc_kg": 0.,
-                "nox_kg": 0.,
-                "sox_kg": 0.,
-                "pm10_kg": 0.,
-                "p1_kg": 0.,
-                "p2_kg": 0.,
-                "pm10_prefoa3_kg": 0.,
-                "pm10_nonvol_kg": 0.,
-                "pm10_sul_kg": 0.,
-                "pm10_organic_kg": 0.
-            }, defaultValues={})
+            emissions = Emission(
+                initValues={
+                    "fuel_kg": 0.0,
+                    "co2_kg": 0.0,
+                    "co_kg": 0.0,
+                    "hc_kg": 0.0,
+                    "nox_kg": 0.0,
+                    "sox_kg": 0.0,
+                    "pm10_kg": 0.0,
+                    "p1_kg": 0.0,
+                    "p2_kg": 0.0,
+                    "pm10_prefoa3_kg": 0.0,
+                    "pm10_nonvol_kg": 0.0,
+                    "pm10_sul_kg": 0.0,
+                    "pm10_organic_kg": 0.0,
+                },
+                defaultValues={},
+            )
 
             # Add emissions (and convert g to kg)
             emissions.addGeneric(
                 source.getEmissionIndex(),
-                source.getLength(unitInKM=True) * activity_multiplier / 1000.,
+                source.getLength(unitInKM=True) * activity_multiplier / 1000.0,
                 unit="gm_km",
-                new_unit="kg")
+                new_unit="kg",
+            )
 
             # Add emission geometry
             emissions.setGeometryText(source.getGeometryText())

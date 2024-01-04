@@ -79,8 +79,7 @@ def test_next_value():
     staged_progress = FakeProgressBar(0, 100)
 
     # Create the stages
-    stage = ProgressBarStage.firstStage(staged_progress,
-                                        staged_progress.maximum())
+    stage = ProgressBarStage.firstStage(staged_progress, staged_progress.maximum())
 
     assert int(stage._start) == 0
     assert int(stage._end) == 100

@@ -36,12 +36,9 @@ def form_open(form, layer, feature):
         unit_field=form.findChild(QtWidgets.QLineEdit, "unit_year"),
         height_field=form.findChild(QtWidgets.QLineEdit, "height"),
         heat_flux_field=form.findChild(QtWidgets.QLineEdit, "heat_flux"),
-        hour_profile_field=form.findChild(QtWidgets.QComboBox,
-                                          "hourly_profile"),
-        daily_profile_field=form.findChild(QtWidgets.QComboBox,
-                                           "daily_profile"),
-        month_profile_field=form.findChild(QtWidgets.QComboBox,
-                                           "monthly_profile"),
+        hour_profile_field=form.findChild(QtWidgets.QComboBox, "hourly_profile"),
+        daily_profile_field=form.findChild(QtWidgets.QComboBox, "daily_profile"),
+        month_profile_field=form.findChild(QtWidgets.QComboBox, "monthly_profile"),
         co_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "co_kg_unit"),
         hc_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "hc_kg_unit"),
         nox_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "nox_kg_unit"),
@@ -50,22 +47,22 @@ def form_open(form, layer, feature):
         p1_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "p1_kg_unit"),
         p2_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "p2_kg_unit"),
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
-        instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
+        instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
     )
 
     # Hide the instudy field
-    fields['instudy'].setHidden(True)
+    fields["instudy"].setHidden(True)
 
     # Disable the height and heat flux fields
-    fields['height_field'].setText('0')
-    fields['height_field'].setEnabled(False)
-    fields['heat_flux_field'].setText('0')
-    fields['heat_flux_field'].setEnabled(False)
+    fields["height_field"].setText("0")
+    fields["height_field"].setEnabled(False)
+    fields["heat_flux_field"].setText("0")
+    fields["heat_flux_field"].setEnabled(False)
 
     # Seed the profiles
-    populate_hourly_profiles(fields['hour_profile_field'])
-    populate_daily_profiles(fields['daily_profile_field'])
-    populate_monthly_profiles(fields['month_profile_field'])
+    populate_hourly_profiles(fields["hour_profile_field"])
+    populate_daily_profiles(fields["daily_profile_field"])
+    populate_monthly_profiles(fields["month_profile_field"])
 
     # Add input validation to text fields in the form
     for key, value in fields.items():
@@ -73,18 +70,22 @@ def form_open(form, layer, feature):
             fields[key].textChanged.connect(lambda: validate(fields))
 
     # Block the ok button (will be overwritten after validation)
-    fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
+    fields["button_box"].button(fields["button_box"].Ok).blockSignals(True)
 
     # Connect all QComboBoxes and the instudy checkbox on save
     def on_save():
-        form.changeAttribute("hourly_profile",
-                             fields['hour_profile_field'].currentText())
-        form.changeAttribute("daily_profile",
-                             fields['daily_profile_field'].currentText())
-        form.changeAttribute("monthly_profile",
-                             fields['month_profile_field'].currentText())
-        feature["instudy"] = str(int(fields['instudy'].isChecked()))
-    fields['button_box'].accepted.connect(on_save)
+        form.changeAttribute(
+            "hourly_profile", fields["hour_profile_field"].currentText()
+        )
+        form.changeAttribute(
+            "daily_profile", fields["daily_profile_field"].currentText()
+        )
+        form.changeAttribute(
+            "monthly_profile", fields["month_profile_field"].currentText()
+        )
+        feature["instudy"] = str(int(fields["instudy"].isChecked()))
+
+    fields["button_box"].accepted.connect(on_save)
 
 
 @catch_errors
@@ -171,20 +172,20 @@ def validate(fields: dict):
     """
 
     # Get the button box
-    button_box = fields['button_box']
+    button_box = fields["button_box"]
 
     # Validate all fields
     results = [
-        validate_field(fields['name_field'], "str"),
-        validate_field(fields['height_field'], "float"),
-        validate_field(fields['heat_flux_field'], "float"),
-        validate_field(fields['co_kg_unit_field'], "float"),
-        validate_field(fields['hc_kg_unit_field'], "float"),
-        validate_field(fields['nox_kg_unit_field'], "float"),
-        validate_field(fields['sox_kg_unit_field'], "float"),
-        validate_field(fields['pm10_kg_unit_field'], "float"),
-        validate_field(fields['p1_kg_unit_field'], "float"),
-        validate_field(fields['p2_kg_unit_field'], "float")
+        validate_field(fields["name_field"], "str"),
+        validate_field(fields["height_field"], "float"),
+        validate_field(fields["heat_flux_field"], "float"),
+        validate_field(fields["co_kg_unit_field"], "float"),
+        validate_field(fields["hc_kg_unit_field"], "float"),
+        validate_field(fields["nox_kg_unit_field"], "float"),
+        validate_field(fields["sox_kg_unit_field"], "float"),
+        validate_field(fields["pm10_kg_unit_field"], "float"),
+        validate_field(fields["p1_kg_unit_field"], "float"),
+        validate_field(fields["p2_kg_unit_field"], "float"),
     ]
 
     # Block signals if any of the fields is invalid

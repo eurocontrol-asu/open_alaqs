@@ -1,11 +1,8 @@
-import sys
-import os
-import struct
 import sqlite3 as sqlite
 
-from open_alaqs.alaqs_core.alaqslogging import get_logger
-
 from qgis.utils import spatialite_connect
+
+from open_alaqs.alaqs_core.alaqslogging import get_logger
 
 logger = get_logger(__name__)
 
@@ -69,7 +66,7 @@ def query_text(database_path, sql_text):
         try:
             conn.commit()
             conn.close()
-        except Exception as e:
+        except Exception:
             pass
 
 
@@ -126,7 +123,7 @@ def query_insert_many(database_path, sql_text, data_list):
         try:
             conn.commit()
             conn.close()
-        except Exception as e:
+        except Exception:
             pass
 
 
@@ -152,13 +149,13 @@ def hasTable(database_path, table_name):
         # Process the result
         if not isinstance(data, str):
             found = True
-    except Exception as e:
+    except Exception:
         pass
     finally:
         try:
             if conn is not None:
                 conn.close()
-        except Exception as e:
+        except Exception:
             pass
 
     return found

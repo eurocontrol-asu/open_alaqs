@@ -16,15 +16,15 @@ def form_open(form, layer, feature):
         name_field=form.findChild(QtWidgets.QLineEdit, "building_id"),
         height_field=form.findChild(QtWidgets.QLineEdit, "height"),
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
-        instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
+        instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
     )
 
     # Hide the instudy field
-    fields['instudy'].setHidden(True)
+    fields["instudy"].setHidden(True)
 
     # height not used in this ALAQS version
-    fields['height_field'].setText("0")
-    fields['height_field'].setEnabled(False)
+    fields["height_field"].setText("0")
+    fields["height_field"].setEnabled(False)
 
     # Add input validation to text fields in the form
     for key, value in fields.items():
@@ -32,13 +32,13 @@ def form_open(form, layer, feature):
             fields[key].textChanged.connect(lambda: validate(fields))
 
     # Block the ok button (will be overwritten after validation)
-    fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
+    fields["button_box"].button(fields["button_box"].Ok).blockSignals(True)
 
     # Connect all QComboBoxes and the instudy checkbox on save
     def on_save():
-        feature["instudy"] = str(int(fields['instudy'].isChecked()))
+        feature["instudy"] = str(int(fields["instudy"].isChecked()))
 
-    fields['button_box'].accepted.connect(on_save)
+    fields["button_box"].accepted.connect(on_save)
 
     return form
 
@@ -52,12 +52,12 @@ def validate(fields: dict):
     """
 
     # Get the button box
-    button_box = fields['button_box']
+    button_box = fields["button_box"]
 
     # Validate all fields
     results = [
-        validate_field(fields['name_field'], "str"),
-        validate_field(fields['height_field'], "float")
+        validate_field(fields["name_field"], "str"),
+        validate_field(fields["height_field"], "float"),
     ]
 
     # Block signals if any of the fields is invalid

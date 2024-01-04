@@ -34,32 +34,28 @@ class MovementSourceModule(SourceModule):
             movement_store = MovementStore(self.getDatabasePath())
             self.setStore(movement_store)
 
-        self._calculation_limit = {
-            "max_height": 914.4,
-            "height_unit_in_feet": False
-        }
+        self._calculation_limit = {"max_height": 914.4, "height_unit_in_feet": False}
 
         self._installation_corrections = {
             "Takeoff": 1.010,  # 100%
             "Climbout": 1.012,  # 85%
             "Approach": 1.020,  # 30%
-            "Idle": 1.100  # 7%
+            "Idle": 1.100,  # 7%
         }
 
         self._ambient_conditions = AmbientCondition()
 
         if "Method" not in values_dict:
             values_dict["Method"] = {}
-        self._method = {
-            "name": values_dict["Method"].get("selected", "")
-        }
+        self._method = {"name": values_dict["Method"].get("selected", "")}
 
         self._nox_correction = values_dict.get("Apply NOx corrections", False)
-        self._smooth_and_shift = 'None'
+        self._smooth_and_shift = "None"
         if ("Source Dynamics" in values_dict) and (
-                "selected" in values_dict["Source Dynamics"]):
+            "selected" in values_dict["Source Dynamics"]
+        ):
             self._smooth_and_shift = values_dict["Source Dynamics"]["selected"]
-        self._reference_altitude = values_dict.get("reference_altitude", .0)
+        self._reference_altitude = values_dict.get("reference_altitude", 0.0)
 
     def getMethod(self):
         return self._method
@@ -113,23 +109,37 @@ class MovementSourceModule(SourceModule):
 
         # process only movements of the runway under study
         if runway_names and not (movement.getRunway().getName() in runway_names):
-            return pd.Int64Index([], dtype='int64'), None
+            return pd.Int64Index([], dtype="int64"), None
             # continue
-        if source_names and not ("all" in source_names) and not (movement.getName() in source_names):
-            return pd.Int64Index([], dtype='int64'), None
+        if (
+            source_names
+            and not ("all" in source_names)
+            and not (movement.getName() in source_names)
+        ):
+            return pd.Int64Index([], dtype="int64"), None
             # continue
 
-        gate_emissions = movement.calculateGateEmissions(sas=method["config"]["apply_smooth_and_shift"])
+        gate_emissions = movement.calculateGateEmissions(
+            sas=method["config"]["apply_smooth_and_shift"]
+        )
         return gate_emissions
 
-    def FetchFlightEmissions(self, group, method, mode, limit, source_names, runway_names, atRunway=True):
+    def FetchFlightEmissions(
+        self, group, method, mode, limit, source_names, runway_names, atRunway=True
+    ):
 
         movement = group["Sources"].iloc[0]
 
-        if source_names and not ("all" in source_names) and not (movement.getName() in source_names):
-            return pd.Int64Index([], dtype='int64'), None
+        if (
+            source_names
+            and not ("all" in source_names)
+            and not (movement.getName() in source_names)
+        ):
+            return pd.Int64Index([], dtype="int64"), None
             # continue
-        flight_emissions = movement.calculateFlightEmissions(atRunway, method, mode, limit)
+        flight_emissions = movement.calculateFlightEmissions(
+            atRunway, method, mode, limit
+        )
         return flight_emissions
 
     @staticmethod
@@ -150,23 +160,25 @@ class MovementSourceModule(SourceModule):
         """
 
         # Set default emissions
-        default_emission = Emission(defaultValues={
-            "fuel_kg": 0.,
-            "co_g": 0.,
-            "co2_g": 0.,
-            "hc_g": 0.,
-            "nox_g": 0.,
-            "sox_g": 0.,
-            "pm10_g": 0.,
-            "p1_g": 0.,
-            "p2_g": 0.,
-            "pm10_prefoa3_g": 0.,
-            "pm10_nonvol_g": 0.,
-            "pm10_sul_g": 0.,
-            "pm10_organic_g": 0.,
-            "nvpm_g": 0.,
-            "nvpm_number": 0.
-        })
+        default_emission = Emission(
+            defaultValues={
+                "fuel_kg": 0.0,
+                "co_g": 0.0,
+                "co2_g": 0.0,
+                "hc_g": 0.0,
+                "nox_g": 0.0,
+                "sox_g": 0.0,
+                "pm10_g": 0.0,
+                "p1_g": 0.0,
+                "p2_g": 0.0,
+                "pm10_prefoa3_g": 0.0,
+                "pm10_nonvol_g": 0.0,
+                "pm10_sul_g": 0.0,
+                "pm10_organic_g": 0.0,
+                "nvpm_g": 0.0,
+                "nvpm_number": 0.0,
+            }
+        )
 
         # Create a function that returns a list of default emissions
         def _default_emissions(*args):
@@ -183,19 +195,21 @@ class MovementSourceModule(SourceModule):
 
         # Add the aircraft and aircraft group
         df[["aircraft", "ac_group"]] = pd.DataFrame(
-            [self.getAircraftGroup(m) for m in df["Sources"]], index=df.index)
+            [self.getAircraftGroup(m) for m in df["Sources"]], index=df.index
+        )
 
         # Add the engine
-        df.loc[:, "engine"] = \
-            [mov.getAircraftEngine().getName() for mov in df["Sources"]]
+        df.loc[:, "engine"] = [
+            mov.getAircraftEngine().getName() for mov in df["Sources"]
+        ]
 
         # Add the departure/arrival
-        df.loc[:, "departure_arrival"] = \
-            [mov.getDepartureArrivalFlag() for mov in df["Sources"]]
+        df.loc[:, "departure_arrival"] = [
+            mov.getDepartureArrivalFlag() for mov in df["Sources"]
+        ]
 
         # Add the profile id
-        df.loc[:, "profile_id"] = \
-            df["Sources"].apply(self.getDefaultProfileName)
+        df.loc[:, "profile_id"] = df["Sources"].apply(self.getDefaultProfileName)
 
         # Add default gate and flight emissions
         empty_series = pd.Series(index=df.index, dtype=object)
@@ -203,7 +217,7 @@ class MovementSourceModule(SourceModule):
         df.loc[:, "FlightEmissions"] = empty_series.apply(_default_emissions)
 
         # Update the DataFrame
-        self._dataframe = df.astype('object')
+        self._dataframe = df.astype("object")
 
     def beginJob(self):
         self.loadSources()
@@ -211,13 +225,13 @@ class MovementSourceModule(SourceModule):
         self.addAdditionalColumnsToDataFrame()
 
     def process(
-            self,
-            start_time,
-            end_time,
-            source_names=None,
-            runway_names=None,
-            ambient_conditions=None,
-            **kwargs
+        self,
+        start_time,
+        end_time,
+        source_names=None,
+        runway_names=None,
+        ambient_conditions=None,
+        **kwargs
     ) -> List[Tuple[datetime, Source, Emission]]:
         if runway_names is None:
             runway_names = []
@@ -226,13 +240,16 @@ class MovementSourceModule(SourceModule):
         result_ = []
 
         try:
-            self.getCalculationLimit()['max_height'] = \
-                ambient_conditions.getMixingHeight()
+            self.getCalculationLimit()[
+                "max_height"
+            ] = ambient_conditions.getMixingHeight()
         except AttributeError:
             # limit set by default to 3000 ft (914.4m)
-            self.getCalculationLimit()['max_height'] = 914.4
-            logger.info("Taking default mixing height (3000ft) on %s",
-                        start_time.getTimeAsDateTime())
+            self.getCalculationLimit()["max_height"] = 914.4
+            logger.info(
+                "Taking default mixing height (3000ft) on %s",
+                start_time.getTimeAsDateTime(),
+            )
 
         limit_ = self.getCalculationLimit()
         limit_["height_unit_in_feet"] = False
@@ -244,17 +261,17 @@ class MovementSourceModule(SourceModule):
                 "apply_nox_corrections": self.getApplyNOxCorrection(),
                 "airport_altitude": self.getAirportAltitude(),
                 "installation_corrections": self.getInstallationCorrections(),
-                "ambient_conditions": ambient_conditions
-            }
+                "ambient_conditions": ambient_conditions,
+            },
         }
 
         # Load movements from DataFrame
         df = self.getDataframe()
 
         # Get the movements between start and end time of this period
-        relevant_movements = \
-            (df["RunwayTime"] >= start_time.getTime()) & \
-            (df["RunwayTime"] < end_time.getTime())
+        relevant_movements = (df["RunwayTime"] >= start_time.getTime()) & (
+            df["RunwayTime"] < end_time.getTime()
+        )
 
         # Return an empty list if there are no movements in this period
         if df[relevant_movements].empty:
@@ -270,7 +287,8 @@ class MovementSourceModule(SourceModule):
 
             # Calculate the gate emissions
             gemissions = self.FetchGateEmissions(
-                group, calc_method, source_names, runway_names)
+                group, calc_method, source_names, runway_names
+            )
 
             # Update the gate emissions
             for ix in group.index:
@@ -289,7 +307,8 @@ class MovementSourceModule(SourceModule):
 
             # Determine the flight emissions
             flight_emissions = self.FetchFlightEmissions(
-                group, calc_method, mode_, limit_, source_names, runway_names)
+                group, calc_method, mode_, limit_, source_names, runway_names
+            )
 
             # Update the flight emissions
             for ix in group.index:
@@ -302,20 +321,24 @@ class MovementSourceModule(SourceModule):
         for movement_name, movement in self.getSources().items():
 
             # process only movements of the runway under study
-            if runway_names and not (
-                    movement.getRunway().getName() in runway_names):
+            if runway_names and not (movement.getRunway().getName() in runway_names):
                 continue
-            if source_names and ("all" not in source_names) and (
-                    movement.getName() not in source_names):
+            if (
+                source_names
+                and ("all" not in source_names)
+                and (movement.getName() not in source_names)
+            ):
                 continue
             # Fetch movements that use this runway for this time period
             if not (
-                    start_time.getTime() <= movement.getRunwayTime() < end_time.getTime()):
+                start_time.getTime() <= movement.getRunwayTime() < end_time.getTime()
+            ):
                 continue
 
             # add Taxiing Emissions
             te = movement.calculateTaxiingEmissions(
-                sas=calc_method["config"]["apply_smooth_and_shift"])
+                sas=calc_method["config"]["apply_smooth_and_shift"]
+            )
 
             # add Gate Emissions
             ge = df[df["Sources"] == movement]["GateEmissions"].iloc[0]
@@ -336,8 +359,7 @@ class MovementSourceModule(SourceModule):
                 for em_ in emissions_extended:
                     if "emissions" in em_ and not em_["emissions"] is None:
                         if not em_["emissions"].isZero():
-                            emissions_.append(
-                                em_["emissions"].transposeToKilograms())
+                            emissions_.append(em_["emissions"].transposeToKilograms())
 
                             # gdf.loc[cnt, "NOx"] = em_["emissions"].transposeToKilograms().getValue("NOx", unit="kg")[0]
                             # gdf.loc[cnt, "geometry"] = em_["emissions"].getGeometry()
@@ -350,7 +372,8 @@ class MovementSourceModule(SourceModule):
                 emissions_extended = None
 
             result_.append(
-                (start_time.getTimeAsDateTime(), movement, emissions_extended))
+                (start_time.getTimeAsDateTime(), movement, emissions_extended)
+            )
 
         return result_
 

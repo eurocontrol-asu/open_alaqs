@@ -2,13 +2,12 @@ import os
 from collections import OrderedDict
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
-from open_alaqs.alaqs_core.interfaces.Source import Source
-from open_alaqs.alaqs_core.tools.Singleton import Singleton
-from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
-
+from open_alaqs.alaqs_core.interfaces.Source import Source
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import spatial
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
 
@@ -23,24 +22,30 @@ class PointSources(Source):
         self._category = str(val.get("category", ""))
         self._type = str(val.get("type", ""))
         self._substance = str(val.get("substance", ""))
-        self._temperature = \
-            float(val["temperature"]) if "temperature" in val else None
+        self._temperature = float(val["temperature"]) if "temperature" in val else None
         self._diameter = float(val["diameter"]) if "diameter" in val else None
         self._velocity = float(val["velocity"]) if "velocity" in val else None
         self._ops_year = float(val.get("ops_year", 0))
 
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
-                spatial.addHeightToGeometryWkt(
-                    self.getGeometryText(), self.getHeight()))
+                spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight())
+            )
 
         init_values = {}
         default_values = {}
-        for key_ in ["co_kg_k", "hc_kg_k", "nox_kg_k", "sox_kg_k", "pm10_kg_k",
-                     "p1_kg_k", "p2_kg_k"]:
+        for key_ in [
+            "co_kg_k",
+            "hc_kg_k",
+            "nox_kg_k",
+            "sox_kg_k",
+            "pm10_kg_k",
+            "p1_kg_k",
+            "p2_kg_k",
+        ]:
             if key_ in val:
                 init_values[key_] = float(val[key_])
-                default_values[key_] = 0.
+                default_values[key_] = 0.0
 
         self._emissionIndex = EmissionIndex(init_values, default_values)
 
@@ -122,8 +127,7 @@ class PointSourcesStore(Store, metaclass=Singleton):
         if "point_db" in db:
             if isinstance(db["point_db"], PointSourcesDatabase):
                 self._point_db = db["point_db"]
-            elif isinstance(db["point_db"], str) and \
-                    os.path.isfile(db["point_db"]):
+            elif isinstance(db["point_db"], str) and os.path.isfile(db["point_db"]):
                 self._point_db = PointSourcesDatabase(db["point_db"])
 
         if self._point_db is None:
@@ -134,11 +138,12 @@ class PointSourcesStore(Store, metaclass=Singleton):
 
     def initPointSources(self):
         for key, point_dict in list(
-                self.getPointSourcesDatabase().getEntries().items()):
+            self.getPointSourcesDatabase().getEntries().items()
+        ):
             # add engine to store
             self.setObject(
-                point_dict.get("source_id", "unknown"),
-                PointSources(point_dict))
+                point_dict.get("source_id", "unknown"), PointSources(point_dict)
+            )
 
     def getPointSourcesDatabase(self):
         return self._point_db
@@ -150,51 +155,62 @@ class PointSourcesDatabase(SQLSerializable, metaclass=Singleton):
      database
     """
 
-    def __init__(self,
-                 db_path_string,
-                 table_name_string="shapes_point_sources",
-                 table_columns_type_dict=None,
-                 primary_key="",
-                 geometry_columns=None
-                 ):
+    def __init__(
+        self,
+        db_path_string,
+        table_name_string="shapes_point_sources",
+        table_columns_type_dict=None,
+        primary_key="",
+        geometry_columns=None,
+    ):
         if table_columns_type_dict is None:
-            table_columns_type_dict = OrderedDict([
-                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
-                ("source_id", "TEXT"),
-                ("height", "DECIMAL"),
-                ("category", "TEXT"),
-                ("point_type", "TEXT"),
-                ("substance", "TEXT"),
-                ("temperature", "DECIMAL"),
-                ("diameter", "DECIMAL"),
-                ("velocity", "DECIMAL"),
-                ("ops_year", "DECIMAL"),
-                ("hour_profile", "TEXT"),
-                ("daily_profile", "TEXT"),
-                ("month_profile", "TEXT"),
-                ("co_kg_k", "DECIMAL"),
-                ("hc_kg_k", "DECIMAL"),
-                ("nox_kg_k", "DECIMAL"),
-                ("sox_kg_k", "DECIMAL"),
-                ("pm10_kg_k", "DECIMAL"),
-                ("p1_kg_k", "DECIMAL"),
-                ("p2_kg_k", "DECIMAL"),
-                ("instudy", "DECIMAL")
-            ])
+            table_columns_type_dict = OrderedDict(
+                [
+                    ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                    ("source_id", "TEXT"),
+                    ("height", "DECIMAL"),
+                    ("category", "TEXT"),
+                    ("point_type", "TEXT"),
+                    ("substance", "TEXT"),
+                    ("temperature", "DECIMAL"),
+                    ("diameter", "DECIMAL"),
+                    ("velocity", "DECIMAL"),
+                    ("ops_year", "DECIMAL"),
+                    ("hour_profile", "TEXT"),
+                    ("daily_profile", "TEXT"),
+                    ("month_profile", "TEXT"),
+                    ("co_kg_k", "DECIMAL"),
+                    ("hc_kg_k", "DECIMAL"),
+                    ("nox_kg_k", "DECIMAL"),
+                    ("sox_kg_k", "DECIMAL"),
+                    ("pm10_kg_k", "DECIMAL"),
+                    ("p1_kg_k", "DECIMAL"),
+                    ("p2_kg_k", "DECIMAL"),
+                    ("instudy", "DECIMAL"),
+                ]
+            )
         if geometry_columns is None:
-            geometry_columns = [{
-                "column_name": "geometry",
-                "SRID": 3857,
-                "geometry_type": "POINT",
-                "geometry_type_dimension": 2
-            }]
+            geometry_columns = [
+                {
+                    "column_name": "geometry",
+                    "SRID": 3857,
+                    "geometry_type": "POINT",
+                    "geometry_type_dimension": 2,
+                }
+            ]
 
-        SQLSerializable.__init__(self, db_path_string, table_name_string,
-                                 table_columns_type_dict, primary_key,
-                                 geometry_columns)
+        SQLSerializable.__init__(
+            self,
+            db_path_string,
+            table_name_string,
+            table_columns_type_dict,
+            primary_key,
+            geometry_columns,
+        )
 
         if self._db_path:
             self.deserialize()
+
 
 # if __name__ == "__main__":
 #     # create a logger for this module

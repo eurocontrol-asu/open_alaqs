@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS "shapes_parking";
 
 CREATE TABLE "shapes_parking" (
-  "oid" INTEGER PRIMARY KEY NOT NULL, 
+  "oid" INTEGER PRIMARY KEY NOT NULL,
   "parking_id" TEXT,
   "height" DECIMAL,
   "distance" DECIMAL,

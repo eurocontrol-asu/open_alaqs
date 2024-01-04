@@ -7,7 +7,7 @@
 # WARNING! All changes made in this file will be lost!
 
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 
 class Ui_FormDataBrowser(object):
@@ -27,13 +27,17 @@ class Ui_FormDataBrowser(object):
         self.data.setRowCount(0)
         self.verticalLayout.addWidget(self.data)
         self.buttonBox = QtWidgets.QDialogButtonBox(FormDataBrowser)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.buttonBox.sizePolicy().hasHeightForWidth())
         self.buttonBox.setSizePolicy(sizePolicy)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(
+            QtWidgets.QDialogButtonBox.Cancel | QtWidgets.QDialogButtonBox.Ok
+        )
         self.buttonBox.setObjectName("buttonBox")
         self.verticalLayout.addWidget(self.buttonBox)
         self.verticalLayout.setStretch(0, 1)
@@ -50,11 +54,14 @@ class Ui_FormDataBrowser(object):
 
     def retranslateUi(self, FormDataBrowser):
         _translate = QtCore.QCoreApplication.translate
-        FormDataBrowser.setWindowTitle(_translate("FormDataBrowser", "OpenALAQS - Browse Data"))
+        FormDataBrowser.setWindowTitle(
+            _translate("FormDataBrowser", "OpenALAQS - Browse Data")
+        )
 
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     FormDataBrowser = QtWidgets.QDialog()
     ui = Ui_FormDataBrowser()

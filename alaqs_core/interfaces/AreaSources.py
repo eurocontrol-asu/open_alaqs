@@ -2,18 +2,16 @@ import os
 from collections import OrderedDict
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
-from open_alaqs.alaqs_core.interfaces.Source import Source
-from open_alaqs.alaqs_core.tools.Singleton import Singleton
-
-from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
-
+from open_alaqs.alaqs_core.interfaces.Source import Source
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import spatial
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 
 loaded_color_logger = False
 try:
-    from rainbow_logging_handler import RainbowLoggingHandler
+    pass
 
     loaded_color_logger = True
 except ImportError:
@@ -30,21 +28,27 @@ class AreaSources(Source):
 
         self._id = str(val["source_id"]) if "source_id" in val else None
         self._unit_year = float(val.get("unit_year", 0))
-        self._heat_flux = \
-            float(val["heat_flux"]) if "heat_flux" in val else None
+        self._heat_flux = float(val["heat_flux"]) if "heat_flux" in val else None
 
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
-                spatial.addHeightToGeometryWkt(
-                    self.getGeometryText(), self.getHeight()))
+                spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight())
+            )
 
         init_values = {}
         default_values = {}
-        for key_ in ["co_kg_unit", "hc_kg_unit", "nox_kg_unit", "sox_kg_unit",
-                     "pm10_kg_unit", "p1_kg_unit", "p2_kg_unit"]:
+        for key_ in [
+            "co_kg_unit",
+            "hc_kg_unit",
+            "nox_kg_unit",
+            "sox_kg_unit",
+            "pm10_kg_unit",
+            "p1_kg_unit",
+            "p2_kg_unit",
+        ]:
             if key_ in val:
                 init_values[key_] = float(val[key_])
-                default_values[key_] = 0.
+                default_values[key_] = 0.0
 
         self._emissionIndex = EmissionIndex(init_values, default_values)
 
@@ -85,8 +89,7 @@ class AreaSourcesStore(Store, metaclass=Singleton):
         if "area_db" in db:
             if isinstance(db["area_db"], AreaSourcesDatabase):
                 self._area_db = db["area_db"]
-            elif isinstance(db["area_db"], str) and os.path.isfile(
-                    db["area_db"]):
+            elif isinstance(db["area_db"], str) and os.path.isfile(db["area_db"]):
                 self._area_db = AreaSourcesDatabase(db["area_db"])
 
         if self._area_db is None:
@@ -98,7 +101,10 @@ class AreaSourcesStore(Store, metaclass=Singleton):
     def initAreaSourcess(self):
         for key, area_dict in list(self.getAreaSourcesDatabase().getEntries().items()):
             # add engine to store
-            self.setObject(area_dict["source_id"] if "source_id" in area_dict else "unknown", AreaSources(area_dict))
+            self.setObject(
+                area_dict["source_id"] if "source_id" in area_dict else "unknown",
+                AreaSources(area_dict),
+            )
 
     def getAreaSourcesDatabase(self):
         return self._area_db
@@ -109,45 +115,58 @@ class AreaSourcesDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to area shape file in the spatialite database
     """
 
-    def __init__(self,
-                 db_path_string,
-                 table_name_string="shapes_area_sources",
-                 table_columns_type_dict=None,
-                 primary_key="",
-                 geometry_columns=None
-                 ):
+    def __init__(
+        self,
+        db_path_string,
+        table_name_string="shapes_area_sources",
+        table_columns_type_dict=None,
+        primary_key="",
+        geometry_columns=None,
+    ):
 
         if table_columns_type_dict is None:
-            table_columns_type_dict = OrderedDict([
-                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
-                ("source_id", "TEXT"),
-                ("unit_year", "DECIMAL"),
-                ("height", "DECIMAL"),
-                ("heat_flux", "DECIMAL"),
-                ("hourly_profile", "TEXT"),
-                ("daily_profile", "TEXT"),
-                ("monthly_profile", "TEXT"),
-                ("co_kg_unit", "DECIMAL"),
-                ("hc_kg_unit", "DECIMAL"),
-                ("nox_kg_unit", "DECIMAL"),
-                ("sox_kg_unit", "DECIMAL"),
-                ("pm10_kg_unit", "DECIMAL"),
-                ("p1_kg_unit", "DECIMAL"),
-                ("p2_kg_unit", "DECIMAL"),
-                ("instudy", "DECIMAL")
-            ])
+            table_columns_type_dict = OrderedDict(
+                [
+                    ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                    ("source_id", "TEXT"),
+                    ("unit_year", "DECIMAL"),
+                    ("height", "DECIMAL"),
+                    ("heat_flux", "DECIMAL"),
+                    ("hourly_profile", "TEXT"),
+                    ("daily_profile", "TEXT"),
+                    ("monthly_profile", "TEXT"),
+                    ("co_kg_unit", "DECIMAL"),
+                    ("hc_kg_unit", "DECIMAL"),
+                    ("nox_kg_unit", "DECIMAL"),
+                    ("sox_kg_unit", "DECIMAL"),
+                    ("pm10_kg_unit", "DECIMAL"),
+                    ("p1_kg_unit", "DECIMAL"),
+                    ("p2_kg_unit", "DECIMAL"),
+                    ("instudy", "DECIMAL"),
+                ]
+            )
         if geometry_columns is None:
-            geometry_columns = [{
-                "column_name": "geometry",
-                "SRID": 3857,
-                "geometry_type": "POLYGON",
-                "geometry_type_dimension": 2
-            }]
+            geometry_columns = [
+                {
+                    "column_name": "geometry",
+                    "SRID": 3857,
+                    "geometry_type": "POLYGON",
+                    "geometry_type_dimension": 2,
+                }
+            ]
 
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+        SQLSerializable.__init__(
+            self,
+            db_path_string,
+            table_name_string,
+            table_columns_type_dict,
+            primary_key,
+            geometry_columns,
+        )
 
         if self._db_path:
             self.deserialize()
+
 
 # if __name__ == "__main__":
 #     # create a logger for this module
