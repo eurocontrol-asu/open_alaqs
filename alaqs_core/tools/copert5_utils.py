@@ -444,7 +444,7 @@ def calculate_evaporation(fleet: pd.DataFrame, efs: pd.DataFrame) -> pd.DataFram
     )
 
     # Calculate the total evaporation emissions (g/day)
-    fleet[f"EVOC[g/day]"] = fleet[f"N"] * fleet[f"eVOC[g/day]"]
+    fleet["EVOC[g/day]"] = fleet["N"] * fleet["eVOC[g/day]"]
 
     return fleet
 
@@ -466,12 +466,12 @@ def average_emission_factors(e: pd.DataFrame) -> pd.Series:
 
 def average_evaporation(e: pd.DataFrame, t_min: float) -> pd.Series:
     # Determine the total emissions for t_min
-    total_evaporation = e[f"EVOC[g/day]"].sum() / (24 * 60) * t_min
+    total_evaporation = e["EVOC[g/day]"].sum() / (24 * 60) * t_min
 
     # Determine the total number of vehicles
     total_vehicles = e["N"].sum()
 
     # Calculate the average evaporation
-    emission_factors = pd.Series({f"eVOC[g/vh]": total_evaporation / total_vehicles})
+    emission_factors = pd.Series({"eVOC[g/vh]": total_evaporation / total_vehicles})
 
     return emission_factors

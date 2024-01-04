@@ -22,7 +22,7 @@ def test_query():
     sql = ef_query(15.1, country="Belgium")
 
     # Get the template
-    template_engine = get_engine(TEMPLATES_DIR / f"project.alaqs")
+    template_engine = get_engine(TEMPLATES_DIR / "project.alaqs")
 
     # Get the contents of the table
     data = pd.read_sql(sql, template_engine)
@@ -48,7 +48,7 @@ def test_emissions_passenger_cars():
     sql = ef_query(15.1, country="Belgium")
 
     # Get the template
-    template_engine = get_engine(TEMPLATES_DIR / f"project.alaqs")
+    template_engine = get_engine(TEMPLATES_DIR / "project.alaqs")
 
     # Get the contents of the table
     ef_data = pd.read_sql(sql, template_engine)

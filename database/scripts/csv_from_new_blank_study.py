@@ -12,7 +12,7 @@ DATA_DIR = Path(__file__).parents[1] / "data"
 if __name__ == "__main__":
 
     # Create the sqlite engine
-    engine = get_engine(SRC_DIR / f"new_blank_study.alaqs")
+    engine = get_engine(SRC_DIR / "new_blank_study.alaqs")
 
     # Get all tables
     tables = inspect(engine).get_table_names()

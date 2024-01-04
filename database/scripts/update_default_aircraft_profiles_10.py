@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     # Set the path to the source file and the destination file
     dst_csv = Path(__file__).parents[1] / "data/default_aircraft_profiles.csv"
-    src_aircraft_csv = Path(__file__).parents[1] / f"src/ANP2.3_Aircraft.csv"
+    src_aircraft_csv = Path(__file__).parents[1] / "src/ANP2.3_Aircraft.csv"
     src_operations_csv = (
         Path(__file__).parents[1] / f"src/{study}_{scenario}_Operations.csv"
     )

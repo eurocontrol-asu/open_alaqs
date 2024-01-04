@@ -25,7 +25,7 @@ def run_once(f):
 
 
 def form_open(form, layer, feature):
-    logger.debug(f"This is the modified simple form")
+    logger.debug("This is the modified simple form")
     logger.debug(f"Layer {layer} and feature {feature}")
     logger.debug(f"Attributes of fields: {feature.fields().names()}")
     logger.debug(f"Attributes of feature: {feature.attributes()}")
@@ -63,7 +63,7 @@ def form_open(form, layer, feature):
         runway_1, runway_2 = fields["name_field"].text().split("/")
 
         logger.debug(f"Runway direction detect: {runway_1}/{runway_2}")
-        logger.debug(f"Setting the runway numbers and letters")
+        logger.debug("Setting the runway numbers and letters")
 
         # Find the runway number and letter
         regex_search = re.search(r"^(\d{2})([LCR]?)$", runway_1)

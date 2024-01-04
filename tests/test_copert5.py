@@ -38,7 +38,7 @@ def test_query():
     sql = ef_query(speed, country)
 
     # Get the template
-    template_engine = get_engine(TEMPLATES_DIR / f"project.alaqs")
+    template_engine = get_engine(TEMPLATES_DIR / "project.alaqs")
 
     # Get the contents of the table
     data = pd.read_sql(sql, template_engine)
@@ -74,7 +74,7 @@ def test_roadway_calculation():
     sql = ef_query(speed, country)
 
     # Get the template
-    template_engine = get_engine(TEMPLATES_DIR / f"project.alaqs")
+    template_engine = get_engine(TEMPLATES_DIR / "project.alaqs")
 
     # Get the contents of the table
     efs = pd.read_sql(sql, template_engine)
@@ -151,7 +151,7 @@ def test_parking_calculation():
     sql = ef_query(speed, country)
 
     # Get the template
-    template_engine = get_engine(TEMPLATES_DIR / f"project.alaqs")
+    template_engine = get_engine(TEMPLATES_DIR / "project.alaqs")
 
     # Get the contents of the table
     efs = pd.read_sql(sql, template_engine)

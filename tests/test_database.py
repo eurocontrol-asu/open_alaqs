@@ -104,7 +104,7 @@ def test_example_sql(sql_files: list, example_file: Path):
     example_engine = get_engine(example_file)
 
     # Get the editable layers
-    qgis_engine = get_engine(DB_DIR / f"src/editable_layers.sqlite")
+    qgis_engine = get_engine(DB_DIR / "src/editable_layers.sqlite")
 
     # Check if all the tables are present
     example_tables = set(example_engine.table_names())
@@ -200,7 +200,7 @@ def test_template_sql(sql_files: list, template_type: str):
     template_engine = get_engine(TEMPLATES_DIR / f"{template_type}.alaqs")
 
     # Get the editable layers
-    qgis_engine = get_engine(DB_DIR / f"src/editable_layers.sqlite")
+    qgis_engine = get_engine(DB_DIR / "src/editable_layers.sqlite")
 
     # Check if all the tables are present
     template_tables = set(template_engine.table_names())
@@ -256,7 +256,7 @@ def test_template_data(sql_files: list, csv_file: Path):
     """
 
     # Get the template
-    template_engine = get_engine(TEMPLATES_DIR / f"project.alaqs")
+    template_engine = get_engine(TEMPLATES_DIR / "project.alaqs")
 
     # Get the contents of the table
     template_data = pd.read_sql(f"SELECT * FROM {csv_file.stem}", template_engine)

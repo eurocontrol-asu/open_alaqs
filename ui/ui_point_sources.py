@@ -42,7 +42,7 @@ def catch_errors(f):
 
 
 def form_open(form, layer, feature):
-    logger.debug(f"This is the modified simple form")
+    logger.debug("This is the modified simple form")
     logger.debug(f"Layer {layer} and feature {feature}")
     logger.debug(f"Attributes of fields: {feature.fields().names()}")
     logger.debug(f"Attributes of feature: {feature.attributes()}")
