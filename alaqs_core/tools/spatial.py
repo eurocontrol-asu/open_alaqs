@@ -101,7 +101,7 @@ def getArea(val):
         return area
     raise Exception(
         "val with value '%s' is of type '%s', but only '%s' "
-        "implemented.".format(val, type(val), type(""))
+        "implemented." % (val, type(val), type(""))
     )
 
 
