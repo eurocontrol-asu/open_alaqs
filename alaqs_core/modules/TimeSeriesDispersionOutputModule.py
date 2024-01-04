@@ -305,7 +305,7 @@ class TimeSeriesDispersionModule(OutputModule):
                         ):  # take only first level for uncertainty: 0m to 3m
                             self._data_y.append(
                                 np.mean(
-                                    concentration_matrix_reshaped[0, :,:].squeeze()
+                                    concentration_matrix_reshaped[0, :, :].squeeze()
                                 )
                             )
                         else:
@@ -426,7 +426,7 @@ class TimeSeriesDispersionModule(OutputModule):
                             ):  # take only first level for uncertainty: 0m to 3m
                                 self._data_y.append(
                                     np.mean(
-                                        concentration_matrix_reshaped[0, :,:].squeeze()
+                                        concentration_matrix_reshaped[0, :, :].squeeze()
                                     )
                                 )
                             else:
