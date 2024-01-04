@@ -549,7 +549,7 @@ class TableViewDispersionModule(OutputModule):
                 self._widget.getTable().setItem(
                     self._widget.getTable().rowCount() - 1,
                     index_col_,
-                    QtWidgets.QTableWidgetItem(str(val_) if not val_ is None else ""),
+                    QtWidgets.QTableWidgetItem(str(val_) if val_ is not None else ""),
                 )
 
         return True

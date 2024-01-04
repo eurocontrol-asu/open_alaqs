@@ -108,7 +108,7 @@ class ContourPlotVectorLayer:
 
         symbol.setOpacity(1.0 - float(self._style["transparency"]))
 
-        if not symbol is None:
+        if symbol is not None:
             self._vectorlayer.setRenderer(QgsSingleSymbolRenderer(symbol))
 
     def setStyle(self, config):

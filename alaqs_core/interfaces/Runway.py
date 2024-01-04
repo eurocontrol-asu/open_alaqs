@@ -37,12 +37,12 @@ class Runway:
             else geometry.GeometryCollection()
         )
         # add height to self._geometry
-        if self._geometry and not (self._height is None):
+        if self._geometry and self._height is not None:
             self._geometry = ops.transform(
                 lambda x, y, z=None: (x, y, self._height), self._geometry
             )
 
-        if self._geometry_text and not (self._height is None):
+        if self._geometry_text and self._height is not None:
             self.setGeometryText(
                 spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight())
             )

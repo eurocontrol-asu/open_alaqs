@@ -256,7 +256,7 @@ class Movement:
         emissions = []
         # calculate emissions for ground equipment (i.e. GPU and GSE)
         if (
-            not self.getGate() is None
+            self.getGate() is not None
             and not self.getAircraft().getGroup() == "HELICOPTER"
         ):
             # GPU emissions
@@ -280,7 +280,7 @@ class Movement:
             gpu_emission_index = self.getGate().getEmissionIndexGPU(
                 ac_group_GPU, self._departure_arrival
             )
-            if not gpu_emission_index is None:
+            if gpu_emission_index is not None:
                 gpu_emissions.addCO(
                     gpu_emission_index.getCO("kg_hour")[0]
                     * 1000.0
@@ -325,7 +325,7 @@ class Movement:
             gse_emission_index = self.getGate().getEmissionIndexGSE(
                 ac_group_GSE, self._departure_arrival
             )
-            if not gse_emission_index is None:
+            if gse_emission_index is not None:
                 gse_emissions.addCO(
                     gse_emission_index.getCO("kg_hour")[0]
                     * 1000.0
@@ -376,7 +376,7 @@ class Movement:
                 logger.warning(
                     "Zero GPU/GSE emissions will be added for %s" % (self.getName())
                 )
-                if not self.getGate() is None:
+                if self.getGate() is not None:
                     # GSE emissions
                     gse_emissions = Emission(defaultValues=defaultEmissions)
                     # GSE, lower edge: 0m, upper edge: 5m
@@ -472,7 +472,7 @@ class Movement:
         # print("total_taxiing_time %s"%total_taxiing_time)
         emissions = []
 
-        if not self.getTaxiRoute() is None:
+        if self.getTaxiRoute() is not None:
             if not self.getAircraft().getGroup() == "HELICOPTER":
 
                 # calculate taxiing_length and taxiing_time_from_segments (initial)
@@ -694,11 +694,11 @@ class Movement:
                         if self.isDeparture():
 
                             # Single-Engine Taxiing
-                            if not self.getTaxiEngineCount() is None:
+                            if self.getTaxiEngineCount() is not None:
 
                                 if (
-                                    not self.getSingleEngineTaxiingTimeOfMainEngineStartAfterBlockOff()
-                                    is None
+                                    self.getSingleEngineTaxiingTimeOfMainEngineStartAfterBlockOff()
+                                    is not None
                                 ):
                                     if (
                                         taxiing_time_while_aircraft_moving
@@ -807,14 +807,14 @@ class Movement:
                         elif self.isArrival():
                             if index_segment_ == 0:
                                 if (
-                                    not self.getAircraft().getMTOW() is None
+                                    self.getAircraft().getMTOW() is not None
                                     and self.getAircraft().getMTOW() > 18632
                                 ):  # in kg:
                                     em_.addPM10(
                                         self.getAircraft().getMTOW() * 0.000476 - 8.74
                                     )
 
-                            if not self.getTaxiEngineCount() is None:
+                            if self.getTaxiEngineCount() is not None:
                                 if (
                                     not self.getSingleEngineTaxiingMainEngineOffAfterRunwayExit()
                                     is None
@@ -849,7 +849,7 @@ class Movement:
 
                             # add emissions due to stop & go's
                             if (
-                                not self.getNumberOfStops() is None
+                                self.getNumberOfStops() is not None
                                 or self.getNumberOfStops() == 0.0
                             ):
                                 average_duration_of_stop_and_gos_in_s = 9.0
@@ -873,7 +873,7 @@ class Movement:
                 TX_segs = self.getTaxiRoute().getSegments()
                 # Helicopter taxiing emissions will be added to the first segment of the taxiway
                 taxiway_segment_1 = TX_segs[0] if len(TX_segs) > 0 else None
-                if total_taxiing_time > 0 and not taxiway_segment_1 is None:
+                if total_taxiing_time > 0 and taxiway_segment_1 is not None:
                     em_ = Emission(defaultValues=defaultEmissions)
                     # check number of engines if 2 get GI2 as well
                     number_of_engines = self.getAircraft().getEngineCount()
@@ -1366,7 +1366,7 @@ class Movement:
 
         # emissions calculation
         traj = self.getTrajectory() if not atRunway else self.getTrajectoryAtRunway()
-        if not traj is None:
+        if traj is not None:
             # time spent in segment
             time_in_segment_ = traj.calculateDistanceBetweenPoints(
                 startPoint_, endPoint_, "time"
@@ -1544,7 +1544,7 @@ class Movement:
         profile_ = self.getGate().getEmissionProfile(
             ac_group, self._departure_arrival, source_type
         )
-        if not profile_ is None:
+        if profile_ is not None:
             occupancy_in_min = profile_.getOccupancy()
         # ToDo: Default time in no information ?
         # if not profile_ is None:
@@ -1919,7 +1919,7 @@ class Movement:
 
     def getRunwayTime(self, as_str=False):
         if as_str:
-            if not (conversion.convertToFloat(self._time) is None):
+            if conversion.convertToFloat(self._time) is not None:
                 return conversion.convertSecondsToTimeString(self._time)
         return self._time
 
@@ -1928,7 +1928,7 @@ class Movement:
 
     def getBlockTime(self, as_str=False):
         if as_str:
-            if not (conversion.convertToFloat(self._block_time) is None):
+            if conversion.convertToFloat(self._block_time) is not None:
                 return conversion.convertSecondsToTimeString(self._block_time)
 
         return self._block_time

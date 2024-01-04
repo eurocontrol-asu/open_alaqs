@@ -116,7 +116,7 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                             widget.addItem(v_)
                     if "selected" in value:
                         j_ = -1
-                        if not value["selected"] is None:
+                        if value["selected"] is not None:
                             j_ = widget.findText(value["selected"])
                         else:
                             if widget.count():

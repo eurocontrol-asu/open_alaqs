@@ -123,7 +123,7 @@ class Store:
         """multiply self with other, e.g. Store() * 2."""
 
         # check if 'other' is numerical value, i.e. can be converted to a float
-        if not conversion.convertToFloat(other) is None:
+        if conversion.convertToFloat(other) is not None:
             values = {}
             for key in self.getObjects():
                 if conversion.convertToFloat(self.getObject(key)) is None:
@@ -160,7 +160,7 @@ class Store:
         """inplace multiply self with other, e.g. Store() *= 2."""
 
         # check if 'other' is numerical value, i.e. can be converted to a float
-        if not conversion.convertToFloat(other) is None:
+        if conversion.convertToFloat(other) is not None:
             for key_ in self.getObjects():
                 if conversion.convertToFloat(self.getObject(key_)) is None:
                     self.setObject(key_, None)
@@ -190,7 +190,7 @@ class Store:
     def __div__(self, other):
         """divide self with other, e.g. Store()/2."""
         if (
-            not conversion.convertToFloat(other) is None
+            conversion.convertToFloat(other) is not None
         ):  # check if 'other' is numerical value, i.e. can be converted to a float
             values = {}
             for key in list(self.getObjects().keys()):
@@ -227,10 +227,10 @@ class Store:
     def __idiv__(self, other):
         """inplace divide self with other, e.g. Store() / 2."""
         if (
-            not conversion.convertToFloat(other) is None
+            conversion.convertToFloat(other) is not None
         ):  # check if 'other' is numerical value, i.e. can be converted to a float
             for key_ in list(self.getObjects().keys()):
-                if other and not (conversion.convertToFloat(key_) is None):
+                if other and conversion.convertToFloat(key_) is not None:
                     self.setObject(key_, self.getObject(key_) / other)
                 else:
                     self.setObject(key_, None)
@@ -259,7 +259,7 @@ class Store:
     def __abs__(self):
         values = {}
         for key_ in list(self.getObjects().keys()):
-            if not conversion.convertToFloat(self.getObject(key_)) is None:
+            if conversion.convertToFloat(self.getObject(key_)) is not None:
                 values[key_] = abs(self.getObject(key_))
             else:
                 values[key_] = self.getObject(key_)

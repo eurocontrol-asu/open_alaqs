@@ -143,7 +143,7 @@ class Emission(Store):
 
     def isZero(self):
         for key, value in self.getObjects().items():
-            if not (value is None) and not (float(value) == 0.0):
+            if value is not None and float(value) != 0.0:
                 return False
         return True
 

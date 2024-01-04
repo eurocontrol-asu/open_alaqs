@@ -2367,7 +2367,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         ):
             if not module_names or module_name_ in module_names:
                 widget_ = module_instance_.getConfigurationWidget()
-                if not widget_ is None:
+                if widget_ is not None:
                     scroll_widget = QtWidgets.QScrollArea(self)
                     scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
                     scroll_widget.setWidget(widget_)
@@ -2874,7 +2874,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         ):
             if not module_names or module_name_ in module_names:
                 widget_ = module_instance_.getConfigurationWidget()
-                if not widget_ is None:
+                if widget_ is not None:
                     scroll_widget = QtWidgets.QScrollArea(self)
                     scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
                     scroll_widget.setWidget(widget_)

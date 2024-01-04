@@ -357,7 +357,7 @@ class MovementSourceModule(SourceModule):
             if emissions_extended:
                 emissions_ = []
                 for em_ in emissions_extended:
-                    if "emissions" in em_ and not em_["emissions"] is None:
+                    if "emissions" in em_ and em_["emissions"] is not None:
                         if not em_["emissions"].isZero():
                             emissions_.append(em_["emissions"].transposeToKilograms())
 

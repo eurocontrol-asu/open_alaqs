@@ -160,7 +160,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
             if total_emissions_:
                 self._data_x.append(timeval)
 
-                if not self._pollutant is None:
+                if self._pollutant is not None:
                     self._data_y.append(
                         total_emissions_.getValue(self._pollutant, unit="kg")[0]
                     )

@@ -18,14 +18,14 @@ class Gate:
         self._type = str(val["gate_type"]) if "gate_type" in val else None
         self._height = (
             float(val["gate_height"])
-            if "gate_height" in val and not val["gate_height"] is None
+            if "gate_height" in val and val["gate_height"] is not None
             else 0.0
         )
 
         self._instudy = int(val["instudy"]) if "instudy" in val else 1
         self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
 
-        if self._geometry_text and not self._height is None:
+        if self._geometry_text and self._height is not None:
             self.setGeometryText(
                 spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight())
             )
@@ -95,7 +95,7 @@ class Gate:
                 ):
                     found = profile_
 
-        if not found is None:
+        if found is not None:
             return found.getEmissionIndex()
         # logger.error("Did not find a gate emission profile for source type '%s' and aircraft group '%s'. "
         #              "Update the table 'default_gate_profiles' to include emission indices for this source." % (source_type, ac_group))

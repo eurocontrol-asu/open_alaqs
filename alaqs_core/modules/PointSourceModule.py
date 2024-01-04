@@ -36,7 +36,7 @@ class PointSourceWithTimeProfileModule(SourceWithTimeProfileModule):
             values_dict = {}
         SourceWithTimeProfileModule.__init__(self, values_dict)
 
-        if not self.getDatabasePath() is None:
+        if self.getDatabasePath() is not None:
             self.setStore(PointSourcesStore(self.getDatabasePath()))
 
     def process(self, start_time, end_time, source_names=None, **kwargs):

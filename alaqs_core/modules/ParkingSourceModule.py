@@ -38,7 +38,7 @@ class ParkingSourceWithTimeProfileModule(SourceWithTimeProfileModule):
             values_dict = {}
         SourceWithTimeProfileModule.__init__(self, values_dict)
 
-        if not self.getDatabasePath() is None:
+        if self.getDatabasePath() is not None:
             self.setStore(ParkingSourcesStore(self.getDatabasePath()))
 
     def beginJob(self):

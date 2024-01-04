@@ -47,10 +47,10 @@ class SQLiteOutputModule(OutputModule):
             )
         )
 
-        if not self.getOutputPath()[0] is None:
+        if self.getOutputPath()[0] is not None:
             self._db = EmissionCalculationResultDatabase(self.getOutputPath()[0])
 
-        if not self._db is None:
+        if self._db is not None:
             self._db.create_table(self.getOutputPath()[0])
 
     def process(self, timeval, result, **kwargs):
@@ -102,7 +102,7 @@ class SQLiteOutputModule(OutputModule):
                     }
                 )
 
-        if rows_ and not self._db is None:
+        if rows_ and self._db is not None:
             self._db.insert_rows(self.getOutputPath()[0], rows_)
 
     def endJob(self):

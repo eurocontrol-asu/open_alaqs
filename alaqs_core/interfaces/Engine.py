@@ -119,7 +119,7 @@ class HelicopterEngineEmissionIndex(Store):
         emission_index = None
         if self.hasKey(mode):
             emission_index = self.getObject(mode)
-            if not emission_index is None and "emission_index" in emission_index:
+            if emission_index is not None and "emission_index" in emission_index:
                 emission_index = emission_index["emission_index"]
         else:
             raise Exception("Did not find emission index for mode '%s'." % (str(mode)))
@@ -214,7 +214,7 @@ class EngineEmissionIndex(Store):
                 index1 = self.getPowerSettingByMode(mode_)
 
             if not (emission_index_ is None or index1 is None):
-                if not id2 is None and emission_index_.hasKey(id2):
+                if id2 is not None and emission_index_.hasKey(id2):
                     icao_eedb[index1] = emission_index_.getObject(id2)
                 else:
                     icao_eedb[index1] = emission_index_

@@ -154,7 +154,7 @@ class AircraftTrajectory:
             self._points.append(val)
         else:
             p = AircraftTrajectoryPoint(val)
-            if not id is None:
+            if id is not None:
                 p.setIdentifier(id)
             self._points.append(p)
         self.updateGeometryText()

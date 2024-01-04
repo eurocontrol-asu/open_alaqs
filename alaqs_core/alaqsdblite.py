@@ -2271,7 +2271,7 @@ def inventory_source_list(inventory_path, source_type):
             source_list_ = []
             for s_ in source_list:
                 if isinstance(s_, tuple) and len(s_):
-                    if not (s_[0] is None):
+                    if s_[0] is not None:
                         source_list_.append(s_)
             return source_list_
 

@@ -109,13 +109,13 @@ class TaxiwaySegment:
         self._id = str(val["taxiway_id"]) if "taxiway_id" in val else None
         self._height = (
             float(val["height"])
-            if "height" in val and not val["height"] is None
+            if "height" in val and val["height"] is not None
             else 0.0
         )
 
         self._speed_in_m_s = (
             float(val["speed"]) / 3.6
-            if "speed" in val and not val["speed"] is None
+            if "speed" in val and val["speed"] is not None
             else 0.0
         )
 
@@ -129,7 +129,7 @@ class TaxiwaySegment:
 
         self._length = None
 
-        if self._geometry_text and not self._height is None:
+        if self._geometry_text and self._height is not None:
             self.setGeometryText(
                 spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight())
             )
@@ -138,7 +138,7 @@ class TaxiwaySegment:
             )
 
         self._time_in_s = 0.0
-        if not self._length is None:
+        if self._length is not None:
             self._time_in_s = self._length / self._speed_in_m_s
 
     def getName(self):

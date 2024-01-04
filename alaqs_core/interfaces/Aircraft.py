@@ -311,7 +311,7 @@ class AircraftStore(Store, metaclass=Singleton):
                     continue
                     # return
 
-                if not ac.getDefaultEngine() is None:
+                if ac.getDefaultEngine() is not None:
                     #   Main-engine-start-emission factors
                     matched = difflib.get_close_matches(
                         ac.getGroup(),
