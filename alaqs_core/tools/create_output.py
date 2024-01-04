@@ -703,7 +703,7 @@ def inventory_copy_aircraft(inventory_path):
     )
 
     # movement_aircraft = alaqsdblite.query_string("SELECT DISTINCT aircraft FROM user_aircraft_movements;")
-    ##for aircraft_name in movement_aircraft:
+    # #for aircraft_name in movement_aircraft:
     #
     #    # Get details of this aircraft from the main project database
     #    sql_text = "SELECT * FROM default_aircraft WHERE icao=\"%s\";" % aircraft_name
