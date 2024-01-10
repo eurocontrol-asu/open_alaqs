@@ -22,15 +22,8 @@ import os
 from datetime import datetime, timedelta
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from qgis.core import (
-    QgsMapLayer,
-    QgsProject,
-)
-from qgis.gui import (
-    QgsTextAnnotationItem,
-    QgsFileWidget,
-)
-from qgis.PyQt.QtGui import QColor
+from qgis.core import QgsMapLayer, QgsProject, QgsTextAnnotation
+from qgis.gui import QgsFileWidget
 from qgis.PyQt.uic import loadUiType
 
 from open_alaqs import openalaqsuitoolkit as oautk
@@ -2491,8 +2484,8 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                     # add text to graphics renderer
                     addTitleToLayer = gui_modules_config_.get("Add title", False)
                     if addTitleToLayer:
-                        textItem = QgsTextAnnotationItem(self._iface.mapCanvas())
-                        textItem.setMapPositionFixed(False)
+                        textItem = QgsTextAnnotation(self._iface.mapCanvas())
+                        textItem.setHasFixedMapPosition(False)
                         text = QtGui.QTextDocument(
                             "%s emissions (%.1f kg)\n%s - %s"
                             % (
@@ -2505,9 +2498,11 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                         text.setDefaultFont(QtGui.QFont("Arial", 12))
                         textItem.setDocument(text)
                         textItem.setFrameSize(QtCore.QSizeF(500, 48))
-                        textItem.setOffsetFromReferencePoint(QtCore.QPointF(20, 75))
-                        textItem.setFrameBorderWidth(0.0)
-                        textItem.setFrameColor(QColor("white"))
+                        textItem.setFrameOffsetFromReferencePoint(
+                            QtCore.QPointF(20, 75)
+                        )
+                        # textItem.setFrameBorderWidth(0.0)
+                        # textItem.setFrameColor(QColor("white"))
 
                         self._iface.mapCanvas().scene().addItem(textItem)
 
@@ -3066,10 +3061,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                             )
 
                             if addTitleToLayer:
-                                textItem = QgsTextAnnotationItem(
-                                    self._iface.mapCanvas()
-                                )
-                                textItem.setMapPositionFixed(False)
+                                textItem = QgsTextAnnotation(self._iface.mapCanvas())
+                                textItem.setHasFixedMapPosition(False)
 
                                 concentration = output_module_.getTotalConcentration()
 
@@ -3086,11 +3079,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                                 text.setDefaultFont(QtGui.QFont("Arial", 12))
                                 textItem.setDocument(text)
                                 textItem.setFrameSize(QtCore.QSizeF(500, 48))
-                                textItem.setOffsetFromReferencePoint(
+                                textItem.setFrameOffsetFromReferencePoint(
                                     QtCore.QPointF(20, 75)
                                 )
-                                textItem.setFrameBorderWidth(0.0)
-                                textItem.setFrameColor(QColor("white"))
+                                # textItem.setFrameBorderWidth(0.0)
+                                # textItem.setFrameColor(QColor("white"))
 
                                 self._iface.mapCanvas().scene().addItem(textItem)
                 else:
