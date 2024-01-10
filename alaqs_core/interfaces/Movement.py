@@ -460,7 +460,9 @@ class Movement:
 
         return newline_left, newline_right
 
-    def calculateTaxiingEmissions(self, method=None, mode="TX", sas="none"):  # noqa: C901
+    def calculateTaxiingEmissions(  # noqa: C901
+        self, method=None, mode="TX", sas="none"
+    ):
         if method is None:
             method = {"name": "bymode", "config": {}}
         try:
