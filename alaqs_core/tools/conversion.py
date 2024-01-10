@@ -1,7 +1,7 @@
 import calendar
 import time
 from datetime import datetime
-from typing import Union, Any
+from typing import Any, Union
 
 
 # For time conversions: Use UTC time only
@@ -53,9 +53,7 @@ def convertSecondsToTime(value: float) -> Union[time.struct_time, None]:
     return datetime.utcfromtimestamp(int(value)).utctimetuple()
 
 
-def convertStringToTime(
-        value: str,
-        format_="%Y-%m-%d %H:%M:%S") -> Union[tuple, None]:
+def convertStringToTime(value: str, format_="%Y-%m-%d %H:%M:%S") -> Union[tuple, None]:
     """
     Convert a timestamp as string to a time tuple.
 
@@ -70,8 +68,8 @@ def convertStringToTime(
 
 
 def convertStringToDateTime(
-        value: str,
-        format_="%Y-%m-%d %H:%M:%S") -> Union[datetime, None]:
+    value: str, format_="%Y-%m-%d %H:%M:%S"
+) -> Union[datetime, None]:
     """
     Convert a timestamp as string to datetime object.
 
@@ -88,8 +86,8 @@ def convertStringToDateTime(
 
 
 def convertTimeToSeconds(
-        value: Union[str, datetime, tuple],
-        format_="%Y-%m-%d %H:%M:%S") -> Union[float, None]:
+    value: Union[str, datetime, tuple], format_="%Y-%m-%d %H:%M:%S"
+) -> Union[float, None]:
     """
     Convert a timestamp as string, datetime object, or time tuple to a timestamp
     in seconds.
@@ -113,8 +111,8 @@ def convertTimeToSeconds(
 
 
 def convertSecondsToDateTime(
-        value: Union[str, float],
-        format_: str = "%Y-%m-%d %H:%M:%S") -> Union[datetime, None]:
+    value: Union[str, float], format_: str = "%Y-%m-%d %H:%M:%S"
+) -> Union[datetime, None]:
     """
     Converts a timestamp in seconds or as string to a DateTime instance.
 
@@ -133,8 +131,8 @@ def convertSecondsToDateTime(
 
 
 def convertSecondsToTimeString(
-        value: float,
-        format_: str = "%Y-%m-%d %H:%M:%S") -> Union[str, None]:
+    value: float, format_: str = "%Y-%m-%d %H:%M:%S"
+) -> Union[str, None]:
     """
     Converts a timestamp in seconds to a string using the provided format.
 

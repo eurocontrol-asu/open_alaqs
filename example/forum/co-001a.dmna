@@ -24,7 +24,7 @@ valid 1.000000
 sequ  "k+,j-,i+"
 locl  "C"
 file  "co-001a"
-form  "con%10.3e" 
+form  "con%10.3e"
 unit  "mg/m³"
 refv  1.000e+001
 dims  3

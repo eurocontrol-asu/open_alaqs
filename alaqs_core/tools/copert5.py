@@ -1,10 +1,15 @@
 import pandas as pd
-from open_alaqs.alaqs_core import alaqsdblite
-from open_alaqs.alaqs_core import alaqsutils
-from open_alaqs.alaqs_core.alaqslogging import get_logger
 
-from open_alaqs.alaqs_core.tools.copert5_utils import calculate_emissions, average_emission_factors, ef_query, VEHICLE_CATEGORIES, \
-    calculate_evaporation, average_evaporation
+from open_alaqs.alaqs_core import alaqsdblite, alaqsutils
+from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.alaqs_core.tools.copert5_utils import (
+    VEHICLE_CATEGORIES,
+    average_emission_factors,
+    average_evaporation,
+    calculate_emissions,
+    calculate_evaporation,
+    ef_query,
+)
 
 logger = get_logger(__name__)
 
@@ -61,63 +66,65 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
     logger.info(val)
 
     # Create a dataframe with the fleet
-    fleet = pd.DataFrame([
-        {
-            'vehicle_category': 'pc',
-            'fuel': 'petrol',
-            'euro_standard': input_data['pc_euro_standard'],
-            'N': input_data['pc_petrol_percentage'],
-        },
-        {
-            'vehicle_category': 'pc',
-            'fuel': 'diesel',
-            'euro_standard': input_data['pc_euro_standard'],
-            'N': input_data['pc_diesel_percentage'],
-        },
-        {
-            'vehicle_category': 'lcv',
-            'fuel': 'petrol',
-            'euro_standard': input_data['lcv_euro_standard'],
-            'N': input_data['lcv_petrol_percentage'],
-        },
-        {
-            'vehicle_category': 'lcv',
-            'fuel': 'diesel',
-            'euro_standard': input_data['lcv_euro_standard'],
-            'N': input_data['lcv_diesel_percentage'],
-        },
-        {
-            'vehicle_category': 'hdt',
-            'fuel': 'petrol',
-            'euro_standard': input_data['hdt_euro_standard'],
-            'N': input_data['hdt_petrol_percentage'],
-        },
-        {
-            'vehicle_category': 'hdt',
-            'fuel': 'diesel',
-            'euro_standard': input_data['hdt_euro_standard'],
-            'N': input_data['hdt_diesel_percentage'],
-        },
-        {
-            'vehicle_category': 'motorcycle',
-            'fuel': 'petrol',
-            'euro_standard': input_data['motorcycle_euro_standard'],
-            'N': input_data['motorcycle_petrol_percentage'],
-        },
-        {
-            'vehicle_category': 'bus',
-            'fuel': 'diesel',
-            'euro_standard': input_data['bus_euro_standard'],
-            'N': input_data['bus_diesel_percentage'],
-        },
-    ])
-    fleet['M[km]'] = 1000
+    fleet = pd.DataFrame(
+        [
+            {
+                "vehicle_category": "pc",
+                "fuel": "petrol",
+                "euro_standard": input_data["pc_euro_standard"],
+                "N": input_data["pc_petrol_percentage"],
+            },
+            {
+                "vehicle_category": "pc",
+                "fuel": "diesel",
+                "euro_standard": input_data["pc_euro_standard"],
+                "N": input_data["pc_diesel_percentage"],
+            },
+            {
+                "vehicle_category": "lcv",
+                "fuel": "petrol",
+                "euro_standard": input_data["lcv_euro_standard"],
+                "N": input_data["lcv_petrol_percentage"],
+            },
+            {
+                "vehicle_category": "lcv",
+                "fuel": "diesel",
+                "euro_standard": input_data["lcv_euro_standard"],
+                "N": input_data["lcv_diesel_percentage"],
+            },
+            {
+                "vehicle_category": "hdt",
+                "fuel": "petrol",
+                "euro_standard": input_data["hdt_euro_standard"],
+                "N": input_data["hdt_petrol_percentage"],
+            },
+            {
+                "vehicle_category": "hdt",
+                "fuel": "diesel",
+                "euro_standard": input_data["hdt_euro_standard"],
+                "N": input_data["hdt_diesel_percentage"],
+            },
+            {
+                "vehicle_category": "motorcycle",
+                "fuel": "petrol",
+                "euro_standard": input_data["motorcycle_euro_standard"],
+                "N": input_data["motorcycle_petrol_percentage"],
+            },
+            {
+                "vehicle_category": "bus",
+                "fuel": "diesel",
+                "euro_standard": input_data["bus_euro_standard"],
+                "N": input_data["bus_diesel_percentage"],
+            },
+        ]
+    )
+    fleet["M[km]"] = 1000
 
     # Get the speed
-    speed = input_data['speed']
+    speed = input_data["speed"]
 
     # Get the country
-    country = study_data['roadway_country']
+    country = study_data["roadway_country"]
 
     # Fetch the emission factors from the database
     efs = get_emission_factors(speed, country)
@@ -128,11 +135,11 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
     # Calculate the average emission factors
     emission_factors = average_emission_factors(emissions)
 
-    if input_data['parking']:
+    if input_data["parking"]:
 
         # Get the idle time [min] and travel distance [km]
-        idle_time = input_data['idle_time']
-        distance = input_data['travel_distance']
+        idle_time = input_data["idle_time"]
+        distance = input_data["travel_distance"]
 
         # Calculate the evaporation
         evaporation = calculate_evaporation(fleet, efs)
@@ -142,26 +149,27 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
 
         # Calculate the average emissions per vehicle
         emission_factors_dict = {
-            'co_ef': emission_factors['eCO[g/km]'] * distance,
-            'hc_ef': emission_factors['eVOC[g/km]'] * distance + mean_evaporation['eVOC[g/vh]'],
-            'nox_ef': emission_factors['eNOx[g/km]'] * distance,
-            'sox_ef': emission_factors['eSO2[g/km]'] * distance,
-            'pm10_ef': emission_factors['ePM2.5[g/km]'] * distance,
-            'p1_ef': emission_factors['ePM0.1[g/km]'] * distance,
-            'p2_ef': emission_factors['ePM2.5[g/km]'] * distance,
+            "co_ef": emission_factors["eCO[g/km]"] * distance,
+            "hc_ef": emission_factors["eVOC[g/km]"] * distance
+            + mean_evaporation["eVOC[g/vh]"],
+            "nox_ef": emission_factors["eNOx[g/km]"] * distance,
+            "sox_ef": emission_factors["eSO2[g/km]"] * distance,
+            "pm10_ef": emission_factors["ePM2.5[g/km]"] * distance,
+            "p1_ef": emission_factors["ePM0.1[g/km]"] * distance,
+            "p2_ef": emission_factors["ePM2.5[g/km]"] * distance,
         }
 
         return emission_factors_dict
 
     # Return the result as dict
     emission_factors_dict = {
-        'co_ef': emission_factors['eCO[g/km]'],
-        'hc_ef': emission_factors['eVOC[g/km]'],
-        'nox_ef': emission_factors['eNOx[g/km]'],
-        'sox_ef': emission_factors['eSO2[g/km]'],
-        'pm10_ef': emission_factors['ePM2.5[g/km]'],
-        'p1_ef': emission_factors['ePM0.1[g/km]'],
-        'p2_ef': emission_factors['ePM2.5[g/km]'],
+        "co_ef": emission_factors["eCO[g/km]"],
+        "hc_ef": emission_factors["eVOC[g/km]"],
+        "nox_ef": emission_factors["eNOx[g/km]"],
+        "sox_ef": emission_factors["eSO2[g/km]"],
+        "pm10_ef": emission_factors["ePM2.5[g/km]"],
+        "p1_ef": emission_factors["ePM0.1[g/km]"],
+        "p2_ef": emission_factors["ePM2.5[g/km]"],
     }
 
     return emission_factors_dict
@@ -175,14 +183,17 @@ def get_emission_factors(speed: float, country: str):
     ef_data = alaqsdblite.query_string_df(sql)
 
     # Get the categories
-    vc = pd.DataFrame({
-        'category_short': VEHICLE_CATEGORIES.keys(),
-        'category_long': VEHICLE_CATEGORIES.values(),
-    })
+    vc = pd.DataFrame(
+        {
+            "category_short": VEHICLE_CATEGORIES.keys(),
+            "category_long": VEHICLE_CATEGORIES.values(),
+        }
+    )
 
     # Change column names
-    ef_data['fuel'] = ef_data['fuel'].str.lower()
-    ef_data['vehicle_category'] = \
-        ef_data.merge(vc, how='left', left_on='vehicle_category', right_on='category_long')['category_short']
+    ef_data["fuel"] = ef_data["fuel"].str.lower()
+    ef_data["vehicle_category"] = ef_data.merge(
+        vc, how="left", left_on="vehicle_category", right_on="category_long"
+    )["category_short"]
 
     return ef_data

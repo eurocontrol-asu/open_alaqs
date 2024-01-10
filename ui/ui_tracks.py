@@ -24,7 +24,7 @@ def run_once(f):
 
 
 def form_open(form, layer, feature):
-    logger.debug(f"This is the modified simple form")
+    logger.debug("This is the modified simple form")
     logger.debug(f"Layer {layer} and feature {feature}")
     logger.debug(f"Attributes of fields: {feature.fields().names()}")
     logger.debug(f"Attributes of feature: {feature.attributes()}")
@@ -35,11 +35,11 @@ def form_open(form, layer, feature):
         runway_field=form.findChild(QtWidgets.QComboBox, "runway"),
         arrdep_field=form.findChild(QtWidgets.QComboBox, "departure_arrival"),
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
-        instudy=form.findChild(QtWidgets.QCheckBox, "instudy")
+        instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
     )
 
     # Hide the instudy field
-    fields['instudy'].setHidden(True)
+    fields["instudy"].setHidden(True)
 
     # Seed the combo boxes
     populate_combo_boxes(fields)
@@ -52,19 +52,19 @@ def form_open(form, layer, feature):
         print(current_feature_value)
 
         # Get the current value of the form
-        current_field_value = fields['arrdep_field'].currentText()
+        current_field_value = fields["arrdep_field"].currentText()
 
         # If the form value is with brackets, replace the value in the combobox
-        if current_field_value == f'({current_feature_value})':
+        if current_field_value == f"({current_feature_value})":
             # Set the value without brackets
-            fields['arrdep_field'].setCurrentText(current_feature_value)
+            fields["arrdep_field"].setCurrentText(current_feature_value)
             # Get the index of the value with brackets
-            arrdep_index = fields['arrdep_field'].findText(current_field_value)
+            arrdep_index = fields["arrdep_field"].findText(current_field_value)
             # Remove the value with brackets
-            fields['arrdep_field'].removeItem(arrdep_index)
+            fields["arrdep_field"].removeItem(arrdep_index)
         else:
-            arrdep_index = fields['arrdep_field'].findText(current_feature_value)
-            fields['arrdep_field'].setCurrentIndex(arrdep_index)
+            arrdep_index = fields["arrdep_field"].findText(current_feature_value)
+            fields["arrdep_field"].setCurrentIndex(arrdep_index)
 
     except KeyError:
         pass
@@ -78,19 +78,19 @@ def form_open(form, layer, feature):
         current_feature_value = feature.attribute("runway")
 
         # Get the current value of the form
-        current_field_value = fields['runway_field'].currentText()
+        current_field_value = fields["runway_field"].currentText()
 
         # If the form value is with brackets, replace the value in the combobox
-        if current_field_value == f'({current_feature_value})':
+        if current_field_value == f"({current_feature_value})":
             # Set the value without brackets
-            fields['runway_field'].setCurrentText(current_feature_value)
+            fields["runway_field"].setCurrentText(current_feature_value)
             # Get the index of the value with brackets
-            rwy_index = fields['runway_field'].findText(current_field_value)
+            rwy_index = fields["runway_field"].findText(current_field_value)
             # Remove the value with brackets
-            fields['runway_field'].removeItem(rwy_index)
+            fields["runway_field"].removeItem(rwy_index)
         else:
-            rwy_index = fields['runway_field'].findText(current_feature_value)
-            fields['runway_field'].setCurrentIndex(rwy_index)
+            rwy_index = fields["runway_field"].findText(current_feature_value)
+            fields["runway_field"].setCurrentIndex(rwy_index)
 
     except KeyError:
         pass
@@ -105,31 +105,27 @@ def form_open(form, layer, feature):
             fields[key].currentTextChanged.connect(lambda: validate(fields))
 
     # Block the ok button (will be overwritten after validation)
-    fields['button_box'].button(fields['button_box'].Ok).blockSignals(True)
+    fields["button_box"].button(fields["button_box"].Ok).blockSignals(True)
 
     # Connect all QComboBoxes and the instudy checkbox on save
     def on_save():
-        form.changeAttribute("runway", fields['runway_field'].currentText())
-        form.changeAttribute("departure_arrival",
-                             fields['arrdep_field'].currentText())
-        feature["instudy"] = str(int(fields['instudy'].isChecked()))
+        form.changeAttribute("runway", fields["runway_field"].currentText())
+        form.changeAttribute("departure_arrival", fields["arrdep_field"].currentText())
+        feature["instudy"] = str(int(fields["instudy"].isChecked()))
 
-    fields['button_box'].accepted.connect(on_save)
+    fields["button_box"].accepted.connect(on_save)
 
 
 @run_once
 def populate_combo_boxes(fields: dict):
     # Populate the arrival/departure field
-    populate_field(
-        field=fields['arrdep_field'],
-        options=["Arrival", "Departure"]
-    )
+    populate_field(field=fields["arrdep_field"], options=["Arrival", "Departure"])
 
     runways = alaqs.get_runways()
     if runways is None or runways == []:
         msg_box = QtWidgets.QMessageBox()
         msg_box.setIcon(QtWidgets.QMessageBox.Critical)
-        msg_box.setWindowTitle('Critical error')
+        msg_box.setWindowTitle("Critical error")
         msg_box.setText("Please define your runways before creating tracks.")
         msg_box.exec_()
     else:
@@ -141,10 +137,7 @@ def populate_combo_boxes(fields: dict):
             for direction in directions:
                 runway_options.append(direction.strip())
 
-        populate_field(
-            field=fields['runway_field'],
-            options=runway_options
-        )
+        populate_field(field=fields["runway_field"], options=runway_options)
 
 
 def populate_field(field, options: list):
@@ -170,19 +163,19 @@ def populate_field(field, options: list):
 def validate(fields: dict):
     """
     This function validates that all of the required fields have been completed
-    correctly. If they have, the attributes are committed to the feature. 
-    Otherwise an error message is displayed and the incorrect field is 
+    correctly. If they have, the attributes are committed to the feature.
+    Otherwise an error message is displayed and the incorrect field is
     highlighted in red.
     """
 
     # Get the button box
-    button_box = fields['button_box']
+    button_box = fields["button_box"]
 
     # Validate all fields
     results = [
-        validate_field(fields['name_field'], "str"),
-        validate_field(fields['runway_field'], "str"),
-        validate_field(fields['arrdep_field'], "str")
+        validate_field(fields["name_field"], "str"),
+        validate_field(fields["runway_field"], "str"),
+        validate_field(fields["arrdep_field"], "str"),
     ]
 
     # Block signals if any of the fields is invalid
@@ -191,12 +184,12 @@ def validate(fields: dict):
 
 def validate_field(ui_element, var_type):
     try:
-        if var_type is "str":
+        if var_type == "str":
             try:
                 value = str(ui_element.currentText()).strip()
-            except:
+            except Exception:
                 value = str(ui_element.text()).strip()
-            if value is "":
+            if value == "":
                 color_ui_background(ui_element, "red")
                 ui_element.setToolTip("This value should be a string")
                 return False
@@ -204,10 +197,10 @@ def validate_field(ui_element, var_type):
                 color_ui_background(ui_element, "white")
                 return value
 
-        elif var_type is "int":
+        elif var_type == "int":
             try:
                 value = str(ui_element.currentText()).strip()
-            except:
+            except Exception:
                 value = str(ui_element.text()).strip()
             try:
                 if value == "" or value is None:
@@ -215,15 +208,15 @@ def validate_field(ui_element, var_type):
                 value = int(value)
                 color_ui_background(ui_element, "white")
                 return value
-            except:
+            except Exception:
                 color_ui_background(ui_element, "red")
                 ui_element.setToolTip("This value should be an integer")
                 return False
 
-        elif var_type is "float":
+        elif var_type == "float":
             try:
                 value = str(ui_element.currentText()).strip()
-            except:
+            except Exception:
                 value = str(ui_element.text()).strip()
             try:
                 if value == "" or value is None:
@@ -231,18 +224,18 @@ def validate_field(ui_element, var_type):
                 value = float(value)
                 color_ui_background(ui_element, "white")
                 return value
-            except:
+            except Exception:
                 color_ui_background(ui_element, "red")
                 ui_element.setToolTip("This value should be a float")
                 return False
-    except:
+    except Exception:
         return False
 
 
 def color_ui_background(ui_element, color):
-    if color is "red":
+    if color == "red":
         ui_element.setStyleSheet("background-color: rgba(255, 107, 107, 150);")
-    elif color is "white":
+    elif color == "white":
         ui_element.setStyleSheet("background-color: rgba(255, 255, 255, 255);")
     else:
         pass

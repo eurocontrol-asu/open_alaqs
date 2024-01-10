@@ -20,17 +20,12 @@ TAB_NVPM_EMISSIONS = "nvPM Emissions"
 # Constants values taken from ICAO DOC 9889, Attachment D to Appendix 1
 MW_OUT = 96
 MW_SULPHUR = 32
-FSC =  0.068
+FSC = 0.068
 EPSILON = 2.4
 
 # Constants for PM_Volatile calculation
 # Constants values taken from ICAO DOC 9889, Attachment D to Appendix 1
-REFERENCE_RATIO_PM_VOLATILE = {
-    "T/O": 115,
-    "C/O": 76,
-    "App": 56.25,
-    "Idle": 6.17
-}
+REFERENCE_RATIO_PM_VOLATILE = {"T/O": 115, "C/O": 76, "App": 56.25, "Idle": 6.17}
 
 
 # -> uPDATE DEFAULT AIRCRAFT ENGINE TABLE (adding nvPM)

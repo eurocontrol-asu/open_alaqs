@@ -2,7 +2,7 @@ import pytest
 
 PyQt5 = pytest.importorskip("PyQt5")
 
-from open_alaqs.alaqs_core.tools.ProgressBarStage import ProgressBarStage
+from open_alaqs.alaqs_core.tools.ProgressBarStage import ProgressBarStage  # noqa: E402
 
 
 class FakeProgressBar:
@@ -79,8 +79,7 @@ def test_next_value():
     staged_progress = FakeProgressBar(0, 100)
 
     # Create the stages
-    stage = ProgressBarStage.firstStage(staged_progress,
-                                        staged_progress.maximum())
+    stage = ProgressBarStage.firstStage(staged_progress, staged_progress.maximum())
 
     assert int(stage._start) == 0
     assert int(stage._end) == 100

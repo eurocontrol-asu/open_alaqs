@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS "shapes_point_sources";
 
 CREATE TABLE "shapes_point_sources" (
-  "oid" INTEGER PRIMARY KEY NOT NULL, 
+  "oid" INTEGER PRIMARY KEY NOT NULL,
   "source_id" TEXT,
   "height" DECIMAL,
   "category" TEXT,

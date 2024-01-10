@@ -71,7 +71,7 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="1">      
+       <item row="2" column="1">
         <widget class="QLineEdit" name="lineEditHourly01"/>
        </item>
        <item row="3" column="0">
@@ -483,7 +483,7 @@
         </layout>
        </item>
       </layout>
-     </widget> 
+     </widget>
      <widget class="QWidget" name="tab_3">
       <attribute name="title">
        <string>Monthly</string>
@@ -672,7 +672,7 @@
             <string>Save</string>
            </property>
           </widget>
-         </item>   
+         </item>
         </layout>
        </item>
       </layout>

@@ -33,16 +33,19 @@ class TableViewWidgetOutputModule(OutputModule):
         OutputModule.__init__(self, values_dict)
 
         # Widget configuration
-        self._parent = values_dict[
-            "parent"] if "parent" in values_dict else None
+        self._parent = values_dict["parent"] if "parent" in values_dict else None
 
         # Results analysis
         self._time_start = ""
         if "Start (incl.)" in values_dict:
-            self._time_start = \
-                conversion.convertStringToDateTime(values_dict["Start (incl.)"])
-        self._time_end = conversion.convertStringToDateTime(
-            values_dict["End (incl.)"]) if "End (incl.)" in values_dict else ""
+            self._time_start = conversion.convertStringToDateTime(
+                values_dict["Start (incl.)"]
+            )
+        self._time_end = (
+            conversion.convertStringToDateTime(values_dict["End (incl.)"])
+            if "End (incl.)" in values_dict
+            else ""
+        )
         self._pollutant = values_dict.get("pollutant")
 
         self._widget = TableViewWidget(self._parent)
@@ -51,24 +54,27 @@ class TableViewWidgetOutputModule(OutputModule):
         return self._widget
 
     def beginJob(self):
-        self._widget.setDataTableHeaders([
-            "Time",
-            "CO [kg]",
-            "CO2 [kg]",
-            "HC [kg]",
-            "NOx [kg]",
-            "SOx [kg]",
-            "PMTotal [kg]",
-            "PM01 [kg]",
-            "PM25 [kg]",
-            "PMSul [kg]",
-            "PMVolatile [kg]",
-            "PMNonVolatile [kg]",
-            "PMNonVolatileNumber [-]"
-        ])
+        self._widget.setDataTableHeaders(
+            [
+                "Time",
+                "CO [kg]",
+                "CO2 [kg]",
+                "HC [kg]",
+                "NOx [kg]",
+                "SOx [kg]",
+                "PMTotal [kg]",
+                "PM01 [kg]",
+                "PM25 [kg]",
+                "PMSul [kg]",
+                "PMVolatile [kg]",
+                "PMNonVolatile [kg]",
+                "PMNonVolatileNumber [-]",
+            ]
+        )
 
-    def process(self, timeval: datetime, result: List[Tuple[Source, Emission]],
-                **kwargs):
+    def process(
+        self, timeval: datetime, result: List[Tuple[Source, Emission]], **kwargs
+    ):
 
         # filter by configured time
         if self._time_start and self._time_end:
@@ -88,21 +94,23 @@ class TableViewWidgetOutputModule(OutputModule):
         new_row_index = current_row_count
 
         # Write cells
-        for index_col_, val_ in enumerate([
-            (timeval, ""),
-            total_emissions_.getCO(unit="kg"),
-            total_emissions_.getCO2(unit="kg"),
-            total_emissions_.getHC(unit="kg"),
-            total_emissions_.getNOx(unit="kg"),
-            total_emissions_.getSOx(unit="kg"),
-            total_emissions_.getPM10(unit="kg"),
-            total_emissions_.getPM1(unit="kg"),
-            total_emissions_.getPM2(unit="kg"),
-            total_emissions_.getPM10Sul(unit="kg"),
-            total_emissions_.getPM10Organic(unit="kg"),
-            total_emissions_.getnvPM(unit="kg"),
-            total_emissions_.getnvPMnumber(),
-        ]):
+        for index_col_, val_ in enumerate(
+            [
+                (timeval, ""),
+                total_emissions_.getCO(unit="kg"),
+                total_emissions_.getCO2(unit="kg"),
+                total_emissions_.getHC(unit="kg"),
+                total_emissions_.getNOx(unit="kg"),
+                total_emissions_.getSOx(unit="kg"),
+                total_emissions_.getPM10(unit="kg"),
+                total_emissions_.getPM1(unit="kg"),
+                total_emissions_.getPM2(unit="kg"),
+                total_emissions_.getPM10Sul(unit="kg"),
+                total_emissions_.getPM10Organic(unit="kg"),
+                total_emissions_.getnvPM(unit="kg"),
+                total_emissions_.getnvPMnumber(),
+            ]
+        ):
 
             # Format the cell values
             if val_[0] is None:
@@ -114,7 +122,8 @@ class TableViewWidgetOutputModule(OutputModule):
 
             # Update the cells
             self._widget.getTable().setItem(
-                new_row_index, index_col_, QtWidgets.QTableWidgetItem(rval_))
+                new_row_index, index_col_, QtWidgets.QTableWidgetItem(rval_)
+            )
 
     def endJob(self):
         self._widget.resizeToContent()

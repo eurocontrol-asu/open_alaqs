@@ -44,8 +44,7 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
             label = None
 
         if label:
-            self.layout().insertRow(-1, label,
-                                    self._settings[name])
+            self.layout().insertRow(-1, label, self._settings[name])
         else:
             self.layout().insertRow(-1, self._settings[name])
 
@@ -65,32 +64,37 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
             elif isinstance(widget, QtWidgets.QDateTimeEdit):
                 val_ = conversion.convertSecondsToTimeString(
                     conversion.convertTimeToSeconds(
-                        widget.dateTime().toPyDateTime(),
-                        self._pydateformat
-                    ), self._pydateformat)
+                        widget.dateTime().toPyDateTime(), self._pydateformat
+                    ),
+                    self._pydateformat,
+                )
             elif isinstance(widget, QtWidgets.QComboBox):
                 val_ = {
-                    "available": [widget.itemText(i_) for i_ in
-                                  range(widget.count())],
-                    "selected": widget.currentText()
+                    "available": [widget.itemText(i_) for i_ in range(widget.count())],
+                    "selected": widget.currentText(),
                 }
             elif isinstance(widget, QtWidgets.QTableWidget):
                 val_ = {}
                 for col in range(widget.columnCount()):
                     for row in range(widget.rowCount()):
-                        val_[row, col] = widget.item(row, col).text() if (
-                                widget.item(row, col) is not None) else None
-            elif isinstance(widget, QgsDoubleSpinBox) or \
-                     isinstance(widget, QgsSpinBox):
-                val = widget.value()
+                        val_[row, col] = (
+                            widget.item(row, col).text()
+                            if (widget.item(row, col) is not None)
+                            else None
+                        )
+            elif isinstance(widget, QgsDoubleSpinBox) or isinstance(widget, QgsSpinBox):
+                widget.value()
 
-            elif isinstance(widget, QtWidgets.QHBoxLayout) or \
-                    isinstance(widget, QtWidgets.QVBoxLayout):
+            elif isinstance(widget, QtWidgets.QHBoxLayout) or isinstance(
+                widget, QtWidgets.QVBoxLayout
+            ):
                 continue
 
             else:
-                logger.error("Did not find method to read values from widget of"
-                             " type '%s'!" % (type(widget)))
+                logger.error(
+                    "Did not find method to read values from widget of"
+                    " type '%s'!" % (type(widget))
+                )
 
             values_[name] = val_
         return values_
@@ -112,7 +116,7 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                             widget.addItem(v_)
                     if "selected" in value:
                         j_ = -1
-                        if not value["selected"] is None:
+                        if value["selected"] is not None:
                             j_ = widget.findText(value["selected"])
                         else:
                             if widget.count():
@@ -125,14 +129,18 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                         widget.setColumnCount(value["columns"])
                     if "header" in value and isinstance(value["header"], tuple):
                         widget.setHorizontalHeaderLabels(value["header"])
-                        if 'epsg' in value["header"]:
-                            widget.setItem(0, value["header"].index('epsg'),
-                                           QtWidgets.QTableWidgetItem('4326'))
+                        if "epsg" in value["header"]:
+                            widget.setItem(
+                                0,
+                                value["header"].index("epsg"),
+                                QtWidgets.QTableWidgetItem("4326"),
+                            )
 
                     widget.resizeColumnsToContents()
 
-                elif isinstance(widget, QtWidgets.QHBoxLayout) or \
-                        isinstance(widget, QtWidgets.QVBoxLayout):
+                elif isinstance(widget, QtWidgets.QHBoxLayout) or isinstance(
+                    widget, QtWidgets.QVBoxLayout
+                ):
                     continue
 
                 elif isinstance(widget, QtWidgets.QDateTimeEdit):
@@ -140,22 +148,26 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                         widget.setDateTime(value)
                     elif isinstance(value, str):
                         widget.setDateTime(
-                            QtCore.QDateTime.fromString(value,
-                                                        self._qtdateformat))
+                            QtCore.QDateTime.fromString(value, self._qtdateformat)
+                        )
                     else:
                         widget.setDateTime(
                             QtCore.QDateTime.fromString(
                                 conversion.convertSecondsToTimeString(
                                     conversion.convertTimeToSeconds(value)
-                                ), self._qtdateformat))
+                                ),
+                                self._qtdateformat,
+                            )
+                        )
                 elif isinstance(widget, QgsDoubleSpinBox):
-                    val = widget.setValue(float(value))
+                    widget.setValue(float(value))
                 elif isinstance(widget, QgsSpinBox):
-                    val = widget.setValue(int(value))
+                    widget.setValue(int(value))
                 else:
-                    logger.error("Did not find method to set values to widget "
-                                 "of type '%s'.!" % (type(widget)))
+                    logger.error(
+                        "Did not find method to set values to widget "
+                        "of type '%s'.!" % (type(widget))
+                    )
             else:
-                logger.error("Did not find setting '%s' in internal "
-                             "store" % name)
+                logger.error("Did not find setting '%s' in internal " "store" % name)
         self.update()

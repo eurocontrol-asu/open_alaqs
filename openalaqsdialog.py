@@ -22,23 +22,34 @@ import os
 from datetime import datetime, timedelta
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from qgis.core import *
-from qgis.gui import *
+from qgis.core import (
+    QgsMapLayer,
+    QgsProject,
+)
+from qgis.gui import (
+    QgsTextAnnotationItem,
+    QgsFileWidget,
+)
+from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.uic import loadUiType
 
 from open_alaqs import openalaqsuitoolkit as oautk
-from open_alaqs.alaqs_core import alaqs
-from open_alaqs.alaqs_core import alaqsutils
-from open_alaqs.alaqs_core.EmissionCalculation import EmissionCalculation
+from open_alaqs.alaqs_core import alaqs, alaqsutils
 from open_alaqs.alaqs_core.alaqsdblite import ProjectDatabase
 from open_alaqs.alaqs_core.alaqslogging import get_logger, log_path
-from open_alaqs.alaqs_core.modules.ConcentrationVisualizationWidget import \
-    ConcentrationVisualizationWidget
-from open_alaqs.alaqs_core.modules.EmissionCalculationConfigurationWidget \
-    import EmissionCalculationConfigurationWidget
-from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
-    OutputModuleManager, DispersionModuleManager
-from open_alaqs.alaqs_core.tools import sql_interface, conversion
+from open_alaqs.alaqs_core.EmissionCalculation import EmissionCalculation
+from open_alaqs.alaqs_core.modules.ConcentrationVisualizationWidget import (
+    ConcentrationVisualizationWidget,
+)
+from open_alaqs.alaqs_core.modules.EmissionCalculationConfigurationWidget import (
+    EmissionCalculationConfigurationWidget,
+)
+from open_alaqs.alaqs_core.modules.ModuleManager import (
+    DispersionModuleManager,
+    OutputModuleManager,
+    SourceModuleManager,
+)
+from open_alaqs.alaqs_core.tools import conversion, sql_interface
 from open_alaqs.alaqs_core.tools.csv_interface import read_csv_to_dict
 
 logger = get_logger(__name__)
@@ -124,9 +135,15 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
 
         self.ui.databaseDirectory.setStorageMode(QgsFileWidget.GetDirectory)
 
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).setText("Create ALAQS Project")
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(self.create_database)
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(self.close)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).setText(
+            "Create ALAQS Project"
+        )
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(
+            self.create_database
+        )
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(
+            self.close
+        )
 
         # Define some of the variables to be used throughout the class
         self.db_path = None
@@ -142,7 +159,9 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
             database_directory = self.ui.databaseDirectory.filePath()
 
             if database_name is False or database_directory is False:
-                QtWidgets.QMessageBox.information(self, "Error", "Please review input fields")
+                QtWidgets.QMessageBox.information(
+                    self, "Error", "Please review input fields"
+                )
                 return False
 
             # strip extension (if any)
@@ -153,14 +172,17 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
             database_path = os.path.join(database_directory, database_name)
 
             if os.path.exists(database_path):
-                warning_message = "File at path\n'%s'\nalready exists. " \
-                                  "Overwrite existing file?" % (str(database_path))
+                warning_message = (
+                    "File at path\n'%s'\nalready exists. "
+                    "Overwrite existing file?" % (str(database_path))
+                )
                 answer = QtWidgets.QMessageBox.warning(
                     self,
                     "Warning",
                     warning_message,
                     QtWidgets.QMessageBox.Yes,
-                    QtWidgets.QMessageBox.No)
+                    QtWidgets.QMessageBox.No,
+                )
                 if answer == QtWidgets.QMessageBox.Yes:
                     os.remove(database_path)
                 else:
@@ -176,7 +198,9 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
                 self.hide()
                 return self.get_values()
         except Exception as e:
-            QtWidgets.QMessageBox.warning(self, "Error", "Could not create project: %s." % e)
+            QtWidgets.QMessageBox.warning(
+                self, "Error", "Could not create project: %s." % e
+            )
             error = alaqsutils.print_error(self.create_database.__name__, Exception, e)
             self.close()
             return error
@@ -192,7 +216,7 @@ class OpenAlaqsCreateDatabase(QtWidgets.QDialog):
             return e, None
 
 
-class OpenAlaqsOpenDatabase():
+class OpenAlaqsOpenDatabase:
     """
     This class defines the 'open existing database' functionality.
     """
@@ -210,8 +234,9 @@ class OpenAlaqsOpenDatabase():
         and load the database file into QGIS
         """
         filename, _filter = QtWidgets.QFileDialog.getOpenFileName(
-            None, "Open an ALAQS database file", '', "(*.alaqs)")
-        
+            None, "Open an ALAQS database file", "", "(*.alaqs)"
+        )
+
         try:
             if os.path.exists(filename) and os.path.isfile(filename):
                 self.db_path = filename
@@ -225,12 +250,13 @@ class OpenAlaqsOpenDatabase():
 
                 try:
                     study_data = alaqs.load_study_setup_dict()
-                    oautk.set_default_zoom(self.canvas,
-                                           study_data['airport_latitude'],
-                                           study_data['airport_longitude'])
+                    oautk.set_default_zoom(
+                        self.canvas,
+                        study_data["airport_latitude"],
+                        study_data["airport_longitude"],
+                    )
                 except Exception as e:
-                    alaqsutils.print_error(self.load_database.__name__,
-                                           Exception, e)
+                    alaqsutils.print_error(self.load_database.__name__, Exception, e)
 
                 if result is not None:
                     return True
@@ -238,7 +264,9 @@ class OpenAlaqsOpenDatabase():
                     return False
         except Exception as e:
             error_message = "Could not open database file:  %s." % e
-            QtWidgets.QMessageBox.warning(self.iface.mainWindow(), "Error", error_message)
+            QtWidgets.QMessageBox.warning(
+                self.iface.mainWindow(), "Error", error_message
+            )
             return False
 
     def get_database_path(self):
@@ -292,8 +320,12 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.ui.comboBoxAirportCode.currentTextChanged.connect(self.airport_lookup)
 
         self.ui.lineEditParkingMethod.setEnabled(False)
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(self.save_study_setup)
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(self.close)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(
+            self.save_study_setup
+        )
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(
+            self.close
+        )
 
     @catch_errors
     def load_study_data(self):
@@ -306,25 +338,29 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             # try and load stuff into the UI
             study_data = alaqs.load_study_setup_dict()
 
-            self.ui.lineEditProjectName.setText(study_data['project_name'])
-            self.ui.lineEditAirportName.setText(study_data['airport_name'])
-            self.ui.lineEditAirportID.setText(str(study_data['oid']))
+            self.ui.lineEditProjectName.setText(study_data["project_name"])
+            self.ui.lineEditAirportName.setText(study_data["airport_name"])
+            self.ui.lineEditAirportID.setText(str(study_data["oid"]))
             self.ui.lineEditAirportID.setEnabled(False)
-            self.ui.comboBoxAirportCode.setCurrentText(study_data['airport_code'])
-            self.ui.lineEditAirportCountry.setText(study_data['airport_country'])
-            self.ui.spinBoxAirportLatitude.setValue(study_data['airport_latitude'])
-            self.ui.spinBoxAirportLongitude.setValue(study_data['airport_longitude'])
-            self.ui.spinBoxAirportElevation.setValue(study_data['airport_elevation'])
-            self.ui.spinBoxAirportTemperature.setValue(study_data['airport_temperature'])
-            self.ui.spinBoxVerticalLimit.setValue(study_data['vertical_limit'])
-            self.ui.lineEditParkingMethod.setText(study_data['parking_method'])
+            self.ui.comboBoxAirportCode.setCurrentText(study_data["airport_code"])
+            self.ui.lineEditAirportCountry.setText(study_data["airport_country"])
+            self.ui.spinBoxAirportLatitude.setValue(study_data["airport_latitude"])
+            self.ui.spinBoxAirportLongitude.setValue(study_data["airport_longitude"])
+            self.ui.spinBoxAirportElevation.setValue(study_data["airport_elevation"])
+            self.ui.spinBoxAirportTemperature.setValue(
+                study_data["airport_temperature"]
+            )
+            self.ui.spinBoxVerticalLimit.setValue(study_data["vertical_limit"])
+            self.ui.lineEditParkingMethod.setText(study_data["parking_method"])
 
             roadway_methods = alaqs.get_roadway_methods()
             if roadway_methods is not None:
                 self.ui.comboBoxRoadwayMethod.clear()
                 for method in roadway_methods:
                     self.ui.comboBoxRoadwayMethod.addItem(method)
-                index = self.ui.comboBoxRoadwayMethod.findText(study_data['roadway_method'])
+                index = self.ui.comboBoxRoadwayMethod.findText(
+                    study_data["roadway_method"]
+                )
                 if index == -1:
                     if self.ui.comboBoxRoadwayMethod.count():
                         self.ui.comboBoxRoadwayMethod.setCurrentIndex(0)
@@ -336,7 +372,9 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
                 self.ui.comboBoxRoadwayFleetYear.clear()
                 for year in roadway_fleet_years:
                     self.ui.comboBoxRoadwayFleetYear.addItem(year)
-                fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText(str(study_data['roadway_fleet_year']))
+                fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText(
+                    str(study_data["roadway_fleet_year"])
+                )
                 if fleet_year_index == -1:
                     fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText("2020")
                 if fleet_year_index != -1:
@@ -348,18 +386,26 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
                 for country in roadway_countries:
                     self.ui.comboBoxRoadwayCountry.addItem(country)
 
-                roadway_country_index = self.ui.comboBoxRoadwayCountry.findText(study_data['roadway_country'])
+                roadway_country_index = self.ui.comboBoxRoadwayCountry.findText(
+                    study_data["roadway_country"]
+                )
                 if roadway_country_index == -1:
-                    roadway_country_index = self.ui.comboBoxRoadwayCountry.findText("EU27")
+                    roadway_country_index = self.ui.comboBoxRoadwayCountry.findText(
+                        "EU27"
+                    )
                 if roadway_country_index != -1:
-                    self.ui.comboBoxRoadwayCountry.setCurrentIndex(roadway_country_index)
+                    self.ui.comboBoxRoadwayCountry.setCurrentIndex(
+                        roadway_country_index
+                    )
 
-            self.ui.textEditStudyInformation.setPlainText(study_data['study_info'])
+            self.ui.textEditStudyInformation.setPlainText(study_data["study_info"])
 
-            created_date = study_data['date_created']
-            modified_date = study_data['date_modified']
+            created_date = study_data["date_created"]
+            modified_date = study_data["date_modified"]
             latest_date = created_date
-            if conversion.convertTimeToSeconds(modified_date) > conversion.convertTimeToSeconds(created_date):
+            if conversion.convertTimeToSeconds(
+                modified_date
+            ) > conversion.convertTimeToSeconds(created_date):
                 latest_date = modified_date
 
             self.ui.labelDateCreated.setText(str(created_date))
@@ -381,62 +427,68 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
                 self.ui.lineEditAirportName.setText(airport_data[0][2])
                 self.ui.lineEditAirportCountry.setText(airport_data[0][3])
                 self.ui.spinBoxAirportLatitude.setValue(airport_data[0][4])
-                self.ui.spinBoxAirportLongitude.setValue(
-                    airport_data[0][5])
+                self.ui.spinBoxAirportLongitude.setValue(airport_data[0][5])
                 self.ui.spinBoxAirportElevation.setValue(
-                    int(airport_data[0][6] * 0.3048))  # in meters from ft
+                    int(airport_data[0][6] * 0.3048)
+                )  # in meters from ft
 
-                oautk.set_default_zoom(self.iface.mapCanvas(),
-                                       airport_data[0][4], airport_data[0][5])
+                oautk.set_default_zoom(
+                    self.iface.mapCanvas(), airport_data[0][4], airport_data[0][5]
+                )
 
     def save_study_setup(self):
         """
         Saves any updates to the study setup back to the study database.
         """
         # Collect form information
-        self.project_name = oautk.validate_field(self.ui.lineEditProjectName,
-                                                 "str")
-        self.airport_name = oautk.validate_field(self.ui.lineEditAirportName,
-                                                 "str")
+        self.project_name = oautk.validate_field(self.ui.lineEditProjectName, "str")
+        self.airport_name = oautk.validate_field(self.ui.lineEditAirportName, "str")
         self.airport_id = oautk.validate_field(self.ui.lineEditAirportID, "str")
-        self.icao_code = oautk.validate_field(self.ui.comboBoxAirportCode,
-                                              "str")
+        self.icao_code = oautk.validate_field(self.ui.comboBoxAirportCode, "str")
         self.airport_country = oautk.validate_field(
-            self.ui.lineEditAirportCountry, "str")
+            self.ui.lineEditAirportCountry, "str"
+        )
         self.airport_lat = self.ui.spinBoxAirportLatitude.value()
         self.airport_lon = self.ui.spinBoxAirportLongitude.value()
         self.airport_elevation = self.ui.spinBoxAirportElevation.value()
         self.airport_temp = self.ui.spinBoxAirportTemperature.value()
         self.vertical_limit = self.ui.spinBoxVerticalLimit.value()
-        self.parking_method = oautk.validate_field(
-            self.ui.lineEditParkingMethod, "str")
-        self.roadway_method = oautk.validate_field(
-            self.ui.comboBoxRoadwayMethod, "str")
+        self.parking_method = oautk.validate_field(self.ui.lineEditParkingMethod, "str")
+        self.roadway_method = oautk.validate_field(self.ui.comboBoxRoadwayMethod, "str")
         self.roadway_fleet_year = oautk.validate_field(
-            self.ui.comboBoxRoadwayFleetYear, "int")
+            self.ui.comboBoxRoadwayFleetYear, "int"
+        )
         self.roadway_country = oautk.validate_field(
-            self.ui.comboBoxRoadwayCountry, "str")
-        self.study_information = str(
-            self.ui.textEditStudyInformation.toPlainText())
+            self.ui.comboBoxRoadwayCountry, "str"
+        )
+        self.study_information = str(self.ui.textEditStudyInformation.toPlainText())
         if self.study_information == "":
             self.study_information = "Not set"
 
-        self.study_setup = [self.project_name, self.airport_name,
-                            self.airport_id, self.icao_code,
-                            self.airport_country, self.airport_lat,
-                            self.airport_lon, self.airport_elevation,
-                            self.airport_temp, self.vertical_limit,
-                            self.parking_method, self.roadway_method,
-                            self.roadway_fleet_year, self.roadway_country,
-                            self.study_information]
+        self.study_setup = [
+            self.project_name,
+            self.airport_name,
+            self.airport_id,
+            self.icao_code,
+            self.airport_country,
+            self.airport_lat,
+            self.airport_lon,
+            self.airport_elevation,
+            self.airport_temp,
+            self.vertical_limit,
+            self.parking_method,
+            self.roadway_method,
+            self.roadway_fleet_year,
+            self.roadway_country,
+            self.study_information,
+        ]
 
         # Check for values that failed validation
         for value in self.study_setup:
             if value is False:
                 QtWidgets.QMessageBox.information(
-                    self,
-                    "Information",
-                    "Please correct input parameters")
+                    self, "Information", "Please correct input parameters"
+                )
                 return
 
         result = alaqs.save_study_setup(self.study_setup)
@@ -446,9 +498,8 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             return None
         else:
             QtWidgets.QMessageBox.warning(
-                self,
-                "Study Setup",
-                "Update Unsuccessful: %s" % result)
+                self, "Study Setup", "Update Unsuccessful: %s" % result
+            )
             return result
 
     def get_values(self):
@@ -478,29 +529,29 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         self.canvas = self.iface.mapCanvas()
 
         # Bindings
-        self.ui.comboBoxHourlyName.currentIndexChanged['QString'].connect(
-            self.change_hourly_profile)
-        self.ui.pushButtonHourlyDelete.clicked.connect(
-            self.delete_hourly_profile)
+        self.ui.comboBoxHourlyName.currentIndexChanged["QString"].connect(
+            self.change_hourly_profile
+        )
+        self.ui.pushButtonHourlyDelete.clicked.connect(self.delete_hourly_profile)
         self.ui.pushButtonHourlyNew.clicked.connect(self.new_hourly_profile)
         self.ui.pushButtonHourlySave.clicked.connect(self.save_hourly_profile)
         self.ui.pushButtonHourlyClear.clicked.connect(self.clear_hourly_profile)
 
-        self.ui.comboBoxDailyName.currentIndexChanged['QString'].connect(
-            self.change_daily_profile)
+        self.ui.comboBoxDailyName.currentIndexChanged["QString"].connect(
+            self.change_daily_profile
+        )
         self.ui.pushButtonDailyDelete.clicked.connect(self.delete_daily_profile)
         self.ui.pushButtonDailyNew.clicked.connect(self.new_daily_profile)
         self.ui.pushButtonDailySave.clicked.connect(self.save_daily_profile)
         self.ui.pushButtonDailyClear.clicked.connect(self.clear_daily_profile)
 
-        self.ui.comboBoxMonthlyName.currentIndexChanged['QString'].connect(
-            self.change_monthly_profile)
-        self.ui.pushButtonMonthlyDelete.clicked.connect(
-            self.delete_monthly_profile)
+        self.ui.comboBoxMonthlyName.currentIndexChanged["QString"].connect(
+            self.change_monthly_profile
+        )
+        self.ui.pushButtonMonthlyDelete.clicked.connect(self.delete_monthly_profile)
         self.ui.pushButtonMonthlyNew.clicked.connect(self.new_monthly_profile)
         self.ui.pushButtonMonthlySave.clicked.connect(self.save_monthly_profile)
-        self.ui.pushButtonMonthlyClear.clicked.connect(
-            self.clear_monthly_profile)
+        self.ui.pushButtonMonthlyClear.clicked.connect(self.clear_monthly_profile)
 
         # Populate the comboBox menus
         self.populate_hourly_profiles()
@@ -664,14 +715,14 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             "Delete Profiles",
             "Are you sure you want to delete this profile?",
             QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No)
+            QtWidgets.QMessageBox.No,
+        )
         if reply == QtWidgets.QMessageBox.Yes:
 
             profile_name = str(self.ui.comboBoxHourlyName.currentText()).strip()
             QtWidgets.QMessageBox.information(
-                self,
-                "Info",
-                "Deleting '%s'" % str(profile_name))
+                self, "Info", "Deleting '%s'" % str(profile_name)
+            )
             result = alaqs.delete_hourly_profile(profile_name)
             if result is None:
                 self.populate_hourly_profiles()
@@ -680,8 +731,8 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 QtWidgets.QMessageBox.warning(
                     self,
                     "Delete Profiles",
-                    "Profile %s could not be deleted: %s" % (
-                        profile_name, result))
+                    "Profile %s could not be deleted: %s" % (profile_name, result),
+                )
                 return "The selected hourly profile could not be deleted."
 
     def delete_daily_profile(self):
@@ -693,13 +744,13 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             "Delete Profiles",
             "Are you sure you want to delete this profile?",
             QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No)
+            QtWidgets.QMessageBox.No,
+        )
         if result == QtWidgets.QMessageBox.Yes:
             profile_name = str(self.ui.comboBoxDailyName.currentText()).strip()
             QtWidgets.QMessageBox.information(
-                self,
-                "Info",
-                "Deleting '%s'" % str(profile_name))
+                self, "Info", "Deleting '%s'" % str(profile_name)
+            )
             result = alaqs.delete_daily_profile(profile_name)
             if result is None:
                 self.populate_daily_profiles()
@@ -708,8 +759,8 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 QtWidgets.QMessageBox.warning(
                     self,
                     "Delete Profiles",
-                    "Profile %s could not be deleted: %s" % (
-                        profile_name, result))
+                    "Profile %s could not be deleted: %s" % (profile_name, result),
+                )
                 return "The selected daily profile could not be deleted"
 
     def delete_monthly_profile(self):
@@ -721,14 +772,13 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             "Delete Profiles",
             "Are you sure you want to delete this profile?",
             QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No)
+            QtWidgets.QMessageBox.No,
+        )
         if result == QtWidgets.QMessageBox.Yes:
-            profile_name = str(
-                self.ui.comboBoxMonthlyName.currentText()).strip()
+            profile_name = str(self.ui.comboBoxMonthlyName.currentText()).strip()
             QtWidgets.QMessageBox.information(
-                self,
-                "Info",
-                "Deleting '%s'" % str(profile_name))
+                self, "Info", "Deleting '%s'" % str(profile_name)
+            )
             result = alaqs.delete_monthly_profile(profile_name)
             if result is None:
                 self.populate_monthly_profiles()
@@ -737,8 +787,8 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 QtWidgets.QMessageBox.warning(
                     self,
                     "Delete Profiles",
-                    "Profile %s could not be deleted: %s" % (
-                        profile_name, result))
+                    "Profile %s could not be deleted: %s" % (profile_name, result),
+                )
                 return "The selected monthly profile could not be deleted"
 
     @catch_errors
@@ -790,8 +840,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
          active ALAQS database
         :return:
         """
-        profile_name = oautk.validate_field(self.ui.comboBoxHourlyName,
-                                            "str")
+        profile_name = oautk.validate_field(self.ui.comboBoxHourlyName, "str")
         h00 = oautk.validate_field(self.ui.lineEditHourly00, "float")
         h01 = oautk.validate_field(self.ui.lineEditHourly01, "float")
         h02 = oautk.validate_field(self.ui.lineEditHourly02, "float")
@@ -817,24 +866,46 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         h22 = oautk.validate_field(self.ui.lineEditHourly22, "float")
         h23 = oautk.validate_field(self.ui.lineEditHourly23, "float")
 
-        properties = [profile_name, h00, h01, h02, h03, h04, h05, h06, h07,
-                      h08, h09, h10, h11, h12, h13, h14,
-                      h15, h16, h17, h18, h19, h20, h21, h22, h23]
+        properties = [
+            profile_name,
+            h00,
+            h01,
+            h02,
+            h03,
+            h04,
+            h05,
+            h06,
+            h07,
+            h08,
+            h09,
+            h10,
+            h11,
+            h12,
+            h13,
+            h14,
+            h15,
+            h16,
+            h17,
+            h18,
+            h19,
+            h20,
+            h21,
+            h22,
+            h23,
+        ]
 
         for value in properties:
             if value is False:
                 QtWidgets.QMessageBox.warning(
-                    self,
-                    "Error",
-                    "Please correct all input fields")
+                    self, "Error", "Please correct all input fields"
+                )
                 return
 
         for value in properties[1:]:
             if value > 1:
                 QtWidgets.QMessageBox.warning(
-                    self,
-                    "Error",
-                    "Profile values cannot be greater than 1")
+                    self, "Error", "Profile values cannot be greater than 1"
+                )
                 return
 
         pass_check = False
@@ -843,16 +914,14 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 pass_check = True
         if pass_check is False:
             QtWidgets.QMessageBox.warning(
-                self,
-                "Error",
-                "At least one profile value must be equal to 1")
+                self, "Error", "At least one profile value must be equal to 1"
+            )
             return
 
         if profile_name == "New Profile":
             QtWidgets.QMessageBox.warning(
-                self,
-                "Error",
-                "Profile name cannot be 'New Profile'")
+                self, "Error", "Profile name cannot be 'New Profile'"
+            )
             return
 
         answer = QtWidgets.QMessageBox.information(
@@ -860,7 +929,8 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             "New Profile",
             "Are you sure you want to save changes to this profile?",
             QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No)
+            QtWidgets.QMessageBox.No,
+        )
         if answer == QtWidgets.QMessageBox.Yes:
             # Commit to database
             result = alaqs.add_hourly_profile(properties)
@@ -869,9 +939,8 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 return None
             else:
                 QtWidgets.QMessageBox.warning(
-                    self,
-                    "New profile",
-                    "Profile could not be saved: %s" % result)
+                    self, "New profile", "Profile could not be saved: %s" % result
+                )
                 return None
 
     def save_daily_profile(self):
@@ -897,17 +966,15 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         for value in properties:
             if value is False:
                 QtWidgets.QMessageBox.warning(
-                    self,
-                    "New Profile",
-                    "Please correct all input values")
+                    self, "New Profile", "Please correct all input values"
+                )
                 return None
 
         for value in properties[2:]:
             if value > 1:
                 QtWidgets.QMessageBox.warning(
-                    self,
-                    "Error",
-                    "Profile values cannot be greater than 1")
+                    self, "Error", "Profile values cannot be greater than 1"
+                )
                 return
 
         pass_check = False
@@ -916,16 +983,14 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 pass_check = True
         if pass_check is False:
             QtWidgets.QMessageBox.warning(
-                self,
-                "Error",
-                "At least one profile value must be equal to 1")
+                self, "Error", "At least one profile value must be equal to 1"
+            )
             return
 
         if profile_name == "New Profile":
             QtWidgets.QMessageBox.warning(
-                self,
-                "New Profile",
-                "Profile name cannot be 'New Profile'")
+                self, "New Profile", "Profile name cannot be 'New Profile'"
+            )
             return None
 
         answer = QtWidgets.QMessageBox.warning(
@@ -933,7 +998,8 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             "New Profile",
             "Are you sure you want to save changes to this profile?",
             QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No)
+            QtWidgets.QMessageBox.No,
+        )
         if answer == QtWidgets.QMessageBox.Yes:
             # Commit to database
             result = alaqs.add_daily_profile(properties)
@@ -942,9 +1008,8 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 return None
             else:
                 QtWidgets.QMessageBox.warning(
-                    self,
-                    "New profile",
-                    "Profile could not be saved: %s" % result)
+                    self, "New profile", "Profile could not be saved: %s" % result
+                )
                 return None
 
     def save_monthly_profile(self):
@@ -969,31 +1034,40 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         november = oautk.validate_field(self.ui.lineEditMonthlyNov, "float")
         december = oautk.validate_field(self.ui.lineEditMonthlyDec, "float")
 
-        properties = [profile_name, january, february, march, april, may, june,
-                      july, august, september, october,
-                      november, december]
+        properties = [
+            profile_name,
+            january,
+            february,
+            march,
+            april,
+            may,
+            june,
+            july,
+            august,
+            september,
+            october,
+            november,
+            december,
+        ]
 
         for value in properties:
             if value is False:
                 QtWidgets.QMessageBox.warning(
-                    self,
-                    "New Profile",
-                    "Please complete all input values")
+                    self, "New Profile", "Please complete all input values"
+                )
                 return None
 
         if profile_name == "New Profile":
             QtWidgets.QMessageBox.warning(
-                self,
-                "New Profile",
-                "Profile name cannot be 'New Profile'")
+                self, "New Profile", "Profile name cannot be 'New Profile'"
+            )
             return None
 
         for value in properties[2:]:
             if value > 1:
                 QtWidgets.QMessageBox.warning(
-                    self,
-                    "Error",
-                    "Profile values cannot be greater than 1")
+                    self, "Error", "Profile values cannot be greater than 1"
+                )
                 return
 
         pass_check = False
@@ -1002,9 +1076,8 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 pass_check = True
         if pass_check is False:
             QtWidgets.QMessageBox.warning(
-                self,
-                "Error",
-                "At least one profile value must be equal to 1")
+                self, "Error", "At least one profile value must be equal to 1"
+            )
             return
 
         answer = QtWidgets.QMessageBox.warning(
@@ -1012,7 +1085,8 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             "New Profile",
             "Are you sure you want to save changes to this profile?",
             QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No)
+            QtWidgets.QMessageBox.No,
+        )
 
         if answer == QtWidgets.QMessageBox.Yes:
             # Commit to database
@@ -1022,9 +1096,8 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 return None
             else:
                 QtWidgets.QMessageBox.warning(
-                    self,
-                    "New profile",
-                    "Profile could not be saved: %s" % result)
+                    self, "New profile", "Profile could not be saved: %s" % result
+                )
                 return None
 
     @catch_errors
@@ -1106,7 +1179,6 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
 
 
 class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
-
     def __init__(self, iface):
         main_window = None if iface is None else iface.mainWindow()
         QtWidgets.QDialog.__init__(self, main_window)
@@ -1128,14 +1200,12 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         self.populate_instance()
         self.visualize_route_name()
 
-        self.ui.gate.currentIndexChanged['QString'].connect(
-            self.visualize_route_name)
-        self.ui.runway.currentIndexChanged['QString'].connect(
-            self.visualize_route_name)
-        self.ui.instance.currentIndexChanged['QString'].connect(
-            self.visualize_route_name)
-        self.ui.arrdep.currentIndexChanged['QString'].connect(
-            self.visualize_route_name)
+        self.ui.gate.currentIndexChanged["QString"].connect(self.visualize_route_name)
+        self.ui.runway.currentIndexChanged["QString"].connect(self.visualize_route_name)
+        self.ui.instance.currentIndexChanged["QString"].connect(
+            self.visualize_route_name
+        )
+        self.ui.arrdep.currentIndexChanged["QString"].connect(self.visualize_route_name)
 
         self.ui.routes.currentIndexChanged.connect(self.route_changed)
         self.ui.create.clicked.connect(self.create_new_taxi_route)
@@ -1169,8 +1239,9 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
 
     def remove_taxiway_from_table(self):
         names_to_remove = ""
-        names_to_remove = [item.text() for item in
-                           self.ui.taxiway_segments.selectedItems()]
+        names_to_remove = [
+            item.text() for item in self.ui.taxiway_segments.selectedItems()
+        ]
 
         if len(names_to_remove):
             all_taxiway_segments_ = list()
@@ -1178,12 +1249,12 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
             if table_rows > 0:
                 for row in range(table_rows):
                     all_taxiway_segments_.append(
-                        self.ui.taxiway_segments.item(row, 0).text())
+                        self.ui.taxiway_segments.item(row, 0).text()
+                    )
 
             for name_ in names_to_remove:
                 if name_ in all_taxiway_segments_:
-                    all_taxiway_segments_.pop(
-                        all_taxiway_segments_.index(name_))
+                    all_taxiway_segments_.pop(all_taxiway_segments_.index(name_))
             self.update_taxiway_segments_table(all_taxiway_segments_)
 
     @catch_errors
@@ -1269,8 +1340,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
             logger.debug("Taxiway Routes Tool: routes populated")
 
         # Add the signal to pick up new selected taxiways
-        self.canvas.selectionChanged.connect(
-            self.add_taxiways_from_canvas_to_table)
+        self.canvas.selectionChanged.connect(self.add_taxiways_from_canvas_to_table)
 
         if select_name:
             index_select_name_ = self.ui.routes.findText(select_name)
@@ -1286,8 +1356,14 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         """
         # TODO these values should really come from database rather than being
         #  hard coded
-        aircraft_groups = ["JET SMALL", "JET MEDIUM", "JET LARGE",
-                           "JET BUSINESS", "JET REGIONAL", "TURBOPROP"]
+        aircraft_groups = [
+            "JET SMALL",
+            "JET MEDIUM",
+            "JET LARGE",
+            "JET BUSINESS",
+            "JET REGIONAL",
+            "TURBOPROP",
+        ]
         self.ui.available_ac_groups.clear()
         self.ui.available_ac_groups.setColumnCount(1)
         self.ui.available_ac_groups.setHorizontalHeaderLabels(["Group Name"])
@@ -1322,7 +1398,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         # Get rid of any None values that may have appeared
         try:
             selected_groups.remove("None")
-        except:
+        except Exception:
             pass
 
         # Update the UI
@@ -1364,11 +1440,12 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         self.ui.taxiway_route_name.setText(route_name)
 
         # TODO Highlight the chosen features
-        gate_layer = oautk.get_layer(self.iface, "Gates")
-        runway_layer = oautk.get_layer(self.iface, "Runways")
+        oautk.get_layer(self.iface, "Gates")
+        oautk.get_layer(self.iface, "Runways")
 
-    def build_route_name(self, gate_name=None, runway_name=None, instance=None,
-                         arrdep=None):
+    def build_route_name(
+        self, gate_name=None, runway_name=None, instance=None, arrdep=None
+    ):
         """
         This function builds a correctly formatted taxiway route name based on
          the gate and runway combination defined
@@ -1405,7 +1482,8 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
 
         if new_taxi_route_name in existing_taxi_routes:
             QtWidgets.QMessageBox.information(
-                self, "Notice", "Taxi route already exists")
+                self, "Notice", "Taxi route already exists"
+            )
             return
 
         # Add the new route name to the list
@@ -1450,8 +1528,10 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
 
         to_select = []
         for feature in layer.getFeatures():
-            if len(feature.attributes()) > 1 and str(feature.attributes()[1]) \
-                    in taxiway_segments:
+            if (
+                len(feature.attributes()) > 1
+                and str(feature.attributes()[1]) in taxiway_segments
+            ):
                 to_select.append(feature.id())
 
         if to_select:
@@ -1491,7 +1571,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
 
                 if selected_taxiway_id not in taxiway_segments:
                     taxiway_segments.append(selected_taxiway_id)
-            except Exception as e:
+            except Exception:
                 pass
 
         return taxiway_segments
@@ -1527,12 +1607,14 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         if new_route_name != "":
             route_data = alaqs.get_taxiway_route(new_route_name)
             if route_data is not None:
-                taxiway_segments_ = route_data[0][6].split(',') if \
-                    route_data[0][6] else []
+                taxiway_segments_ = (
+                    route_data[0][6].split(",") if route_data[0][6] else []
+                )
                 self.update_taxiway_segments_table(taxiway_segments_)
 
-                selected_ac_groups_ = route_data[0][7].split(',') if \
-                    route_data[0][7] else []
+                selected_ac_groups_ = (
+                    route_data[0][7].split(",") if route_data[0][7] else []
+                )
                 self.update_selected_ac_groups(selected_ac_groups_)
 
     def delete_taxiway_route(self, name=""):
@@ -1542,8 +1624,9 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         taxi_route_name = self.ui.routes.currentText() if not name else name
         result = alaqs.delete_taxiway_route(taxi_route_name)
         if result is not None:
-            QtWidgets.QMessageBox.warning(self, "Notice",
-                                          "Taxi route not deleted: %s" % result)
+            QtWidgets.QMessageBox.warning(
+                self, "Notice", "Taxi route not deleted: %s" % result
+            )
             return
         self.populate_routes()
 
@@ -1565,11 +1648,12 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         if already_exists:
             reply = QtWidgets.QMessageBox.question(
                 self,
-                'Notice',
+                "Notice",
                 "Taxi route '%s' already exists in database."
                 " Overwrite existing route?" % taxi_route_name,
                 QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No)
+                QtWidgets.QMessageBox.No,
+            )
             if reply == QtWidgets.QMessageBox.Yes:
                 delete_taxiroute = True
             else:
@@ -1581,13 +1665,11 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
 
         # Notify the user that the taxiway list is blank
         if table_rows <= 0:
-            QtWidgets.QMessageBox.information(
-                self, "Notice", "Taxiway list is blank.")
+            QtWidgets.QMessageBox.information(self, "Notice", "Taxiway list is blank.")
             return
 
         for row in range(table_rows):
-            taxiway_segments.append(
-                str(self.ui.taxiway_segments.item(row, 0).text()))
+            taxiway_segments.append(str(self.ui.taxiway_segments.item(row, 0).text()))
 
         # Now get the assigned aircraft groups
         aircraft_groups = list()
@@ -1595,18 +1677,19 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         if table_rows > 0:
             for row in range(table_rows):
                 aircraft_groups.append(
-                    str(self.ui.selected_ac_groups.item(row, 0).text()))
+                    str(self.ui.selected_ac_groups.item(row, 0).text())
+                )
 
         # Create the taxiway route dict
         split_data = taxi_route_name.split("/")
         taxiway_route = dict()
-        taxiway_route['name'] = taxi_route_name
-        taxiway_route['gate'] = split_data[0]
-        taxiway_route['runway'] = split_data[1]
-        taxiway_route['dept_arr'] = split_data[2]
-        taxiway_route['instance'] = split_data[3]
-        taxiway_route['sequence'] = ",".join(taxiway_segments)
-        taxiway_route['groups'] = ",".join(aircraft_groups)
+        taxiway_route["name"] = taxi_route_name
+        taxiway_route["gate"] = split_data[0]
+        taxiway_route["runway"] = split_data[1]
+        taxiway_route["dept_arr"] = split_data[2]
+        taxiway_route["instance"] = split_data[3]
+        taxiway_route["sequence"] = ",".join(taxiway_segments)
+        taxiway_route["groups"] = ",".join(aircraft_groups)
 
         # Delete existing route
         if delete_taxiroute:
@@ -1620,15 +1703,12 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
 
         if result is not None:
             QtWidgets.QMessageBox.warning(
-                self,
-                "Notice",
-                "Taxi route could not be saved: %s" % str(result))
+                self, "Notice", "Taxi route could not be saved: %s" % str(result)
+            )
         else:
-            QtWidgets.QMessageBox.information(
-                self,
-                "Notice",
-                "Taxi route was saved.")
+            QtWidgets.QMessageBox.information(self, "Notice", "Taxi route was saved.")
         return
+
 
 class OpenAlaqsLogfile(QtWidgets.QDialog):
     """
@@ -1660,12 +1740,13 @@ class OpenAlaqsLogfile(QtWidgets.QDialog):
         """
         try:
             self.ui.logfile_text_area.clear()
-            with log_path.open('rt') as log_file:
+            with log_path.open("rt") as log_file:
                 data = "".join(log_file.readlines())
                 self.ui.logfile_text_area.setText(data)
         except Exception as e:
-            QtWidgets.QMessageBox.warning(self, "Error",
-                                          "Could not open log file: %s" % e)
+            QtWidgets.QMessageBox.warning(
+                self, "Error", "Could not open log file: %s" % e
+            )
 
     def clear_logfile(self):
         """
@@ -1678,7 +1759,8 @@ class OpenAlaqsLogfile(QtWidgets.QDialog):
             "",
             "Delete the log file?",
             QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No)
+            QtWidgets.QMessageBox.No,
+        )
 
         if question == QtWidgets.QMessageBox.Yes:
             self.ui.logfile_text_area.clear()
@@ -1690,15 +1772,14 @@ class OpenAlaqsLogfile(QtWidgets.QDialog):
         :return:
         """
         try:
-            with log_path.open('w'):
+            with log_path.open("w"):
                 pass
 
             self.load_log_file()
         except Exception as e:
             QtWidgets.QMessageBox.warning(
-                self,
-                "Error",
-                "Could not reset the log file: %s" % e)
+                self, "Error", "Could not reset the log file: %s" % e
+            )
 
     def save_logfile(self):
         """
@@ -1707,22 +1788,22 @@ class OpenAlaqsLogfile(QtWidgets.QDialog):
         """
         try:
             # Get the current log file path
-            with log_path.open('r') as current_log_file:
+            with log_path.open("r") as current_log_file:
                 current_log_file_text = current_log_file.read()
 
                 new_path = QtWidgets.QFileDialog.getSaveFileName(
-                    self, 'Save log file as ...', '')
+                    self, "Save log file as ...", ""
+                )
                 if new_path:
-                    new_file = open(new_path, 'wt')
+                    new_file = open(new_path, "wt")
                     new_file.write(current_log_file_text)
                     new_file.close()
 
             self.load_log_file()
         except Exception as e:
             QtWidgets.QMessageBox.warning(
-                self,
-                "Error",
-                "Could not reset the log file: %s" % e)
+                self, "Error", "Could not reset the log file: %s" % e
+            )
 
 
 class OpenAlaqsInventory(QtWidgets.QDialog):
@@ -1745,18 +1826,25 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui.vert_limit_m.valueChanged.connect(self.m_to_ft)
         self.ui.vert_limit_ft.setEnabled(False)
 
-
         self.ui.status_update.setText("Ready")
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).setText("Create Inventory")
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(self.create_inventory)
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(self.close)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).setText(
+            "Create Inventory"
+        )
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(
+            self.create_inventory
+        )
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(
+            self.close
+        )
 
         # Set some default values
-        self.ui.movement_table_path.setFilter('CSV (*.csv);;TXT (*.txt)')
-        self.ui.movement_table_path.setDialogTitle('Open ALAQS Movement Data')
-        self.ui.movement_table_path.fileChanged.connect(self.movement_table_path_changed)
-        self.ui.met_file_path.setFilter('CSV (*.csv);;TXT (*.txt)')
-        self.ui.met_file_path.setDialogTitle('Open ALAQS Meteorological Data')
+        self.ui.movement_table_path.setFilter("CSV (*.csv);;TXT (*.txt)")
+        self.ui.movement_table_path.setDialogTitle("Open ALAQS Movement Data")
+        self.ui.movement_table_path.fileChanged.connect(
+            self.movement_table_path_changed
+        )
+        self.ui.met_file_path.setFilter("CSV (*.csv);;TXT (*.txt)")
+        self.ui.met_file_path.setDialogTitle("Open ALAQS Meteorological Data")
         self.ui.met_file_path.fileChanged.connect(self.met_file_path_changed)
         self.ui.output_save_path.setStorageMode(QgsFileWidget.GetDirectory)
         self.ui.towing_speed.setValue(10.0)
@@ -1796,20 +1884,20 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             QtWidgets.qApp.processEvents()
 
             # Open the movement file
-            with open(movement_file, 'r') as movement_file:
+            with open(movement_file, "r") as movement_file:
                 # with open(movement_file, 'rt') as movement_file:
                 movement_line = 0
 
                 # Arbitrarily out of range first guess dates
-                start_date = datetime.strptime("2999-01-01 00:00:00",
-                                               '%Y-%m-%d %H:%M:%S')
-                end_date = datetime.strptime("1900-01-01 00:00:00",
-                                             '%Y-%m-%d %H:%M:%S')
+                start_date = datetime.strptime(
+                    "2999-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"
+                )
+                end_date = datetime.strptime("1900-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
 
                 # Loop over the movement file and perform some basic checks
                 for index_line, line in enumerate(movement_file):
                     movement_line += 1
-                    movement_data = line.split(';')
+                    movement_data = line.split(";")
                     # skip empty lines
                     if len(movement_data) == 1 and movement_data[0] == "\n":
                         continue
@@ -1817,40 +1905,52 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                     if movement_line == 1:
                         # Check out the header row
                         if len(movement_data) < 1:
-                            raise Exception(
-                                "Movement file contains no data on line 1")
+                            raise Exception("Movement file contains no data on line 1")
                         if not isinstance(movement_data[0], str):
-                            raise Exception(
-                                "Movement file is missing header row")
+                            raise Exception("Movement file is missing header row")
                     else:
                         # Get the range of movement dates
                         try:
-                            mov = alaqsutils.dict_movement(movement_data)
+                            alaqsutils.dict_movement(movement_data)
                         except Exception as e:
                             raise Exception(
                                 "Line'%i':\n%s\nhas the following error:"
-                                "\n %s" % (index_line, line, e))
+                                "\n %s" % (index_line, line, e)
+                            )
 
-                        date_time = datetime.strptime(movement_data[0],
-                                                      '%Y-%m-%d %H:%M:%S')
+                        date_time = datetime.strptime(
+                            movement_data[0], "%Y-%m-%d %H:%M:%S"
+                        )
                         if date_time < start_date:
                             start_date = (date_time).replace(minute=0, second=0)
                         if date_time > end_date:
                             end_date = (date_time + timedelta(hours=1)).replace(
-                                minute=0, second=0)
+                                minute=0, second=0
+                            )
 
-            self.ui.study_start_date.setDateTime(QtCore.QDateTime.fromString(start_date.strftime('%Y-%m-%d %H:%M:%S'), 'yyyy-M-d hh:mm:ss'))
-            self.ui.study_end_date.setDateTime(QtCore.QDateTime.fromString(end_date.strftime('%Y-%m-%d %H:%M:%S'), 'yyyy-M-d hh:mm:ss'))
+            self.ui.study_start_date.setDateTime(
+                QtCore.QDateTime.fromString(
+                    start_date.strftime("%Y-%m-%d %H:%M:%S"), "yyyy-M-d hh:mm:ss"
+                )
+            )
+            self.ui.study_end_date.setDateTime(
+                QtCore.QDateTime.fromString(
+                    end_date.strftime("%Y-%m-%d %H:%M:%S"), "yyyy-M-d hh:mm:ss"
+                )
+            )
 
             self.ui.movements_summary.setText(
-                "Total Movements: %d; Start: %s; End: %s" % ((int(movement_line) - 1), start_date.strftime(
-                    '%Y-%m-%d %H:%M:%S'), end_date.strftime('%Y-%m-%d %H:%M:%S')))
+                "Total Movements: %d; Start: %s; End: %s"
+                % (
+                    (int(movement_line) - 1),
+                    start_date.strftime("%Y-%m-%d %H:%M:%S"),
+                    end_date.strftime("%Y-%m-%d %H:%M:%S"),
+                )
+            )
             self.ui.status_update.setText("Movement file seems OK")
         except Exception as e:
-            self.ui.status_update.setText(
-                "Problem with movement file. See log file")
-            alaqsutils.print_error(self.examine_movements.__name__, Exception,
-                                   e)
+            self.ui.status_update.setText("Problem with movement file. See log file")
+            alaqsutils.print_error(self.examine_movements.__name__, Exception, e)
             return e
         return None
 
@@ -1870,8 +1970,9 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                     raise Exception()
                 return
         except Exception as e:
-            QtWidgets.QMessageBox.warning(self, "Error",
-                                          "Could not open met file:  %s." % e)
+            QtWidgets.QMessageBox.warning(
+                self, "Error", "Could not open met file:  %s." % e
+            )
             return e
 
     def examine_met_file(self, met_file):
@@ -1885,8 +1986,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
 
         # ToDo: More general configuration
         def CheckAmbientConditions(parameter, isa_value, tolerance):
-            return 100 * float(
-                abs(parameter - isa_value)) / isa_value > tolerance
+            return 100 * float(abs(parameter - isa_value)) / isa_value > tolerance
 
         csv = read_csv_to_dict(met_file)
 
@@ -1900,71 +2000,83 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             "WindSpeed(m/s)": "WindSpeed",
             "WindDirection(degrees)": "WindDirection",
             "ObukhovLength(m)": "ObukhovLength",
-            "MixingHeight(m)": "MixingHeight"
+            "MixingHeight(m)": "MixingHeight",
         }
 
         # check if all headers are found
         if not sorted(csv.keys()) == sorted(headers_.keys()):
             QtWidgets.QMessageBox.information(
-                self,
-                "Warning",
-                "Headers of meteo csv file do not match..")
+                self, "Warning", "Headers of meteo csv file do not match.."
+            )
 
             for key in list(headers_.keys()):
                 if not list(csv.keys()):
                     QtWidgets.QMessageBox.information(
-                        self,
-                        "Warning",
-                        "Did not find header '%s' in csv file." % (key))
+                        self, "Warning", "Did not find header '%s' in csv file." % (key)
+                    )
             return False
 
         # Arbitrarily out of range first guess dates
-        start_date = datetime.strptime("2999-01-01 00:00:00",
-                                       '%Y-%m-%d %H:%M:%S')
-        end_date = datetime.strptime("1900-01-01 00:00:00",
-                                     '%Y-%m-%d %H:%M:%S')
+        start_date = datetime.strptime("2999-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+        end_date = datetime.strptime("1900-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
 
         # Loop over the MET file and perform some basic checks
-        for row_, date_ in enumerate(csv['DateTime(YYYY-mm-dd hh:mm:ss)']):
-            logger.debug("Processing time interval: %s" % (
-                csv['DateTime(YYYY-mm-dd hh:mm:ss)'][row_]))
+        for row_, date_ in enumerate(csv["DateTime(YYYY-mm-dd hh:mm:ss)"]):
+            logger.debug(
+                "Processing time interval: %s"
+                % (csv["DateTime(YYYY-mm-dd hh:mm:ss)"][row_])
+            )
 
-            date_time = datetime.strptime(csv['DateTime(YYYY-mm-dd hh:mm:ss)'][row_],
-                                          '%Y-%m-%d %H:%M:%S')
+            date_time = datetime.strptime(
+                csv["DateTime(YYYY-mm-dd hh:mm:ss)"][row_], "%Y-%m-%d %H:%M:%S"
+            )
             if date_time < start_date:
                 start_date = (date_time).replace(minute=0, second=0)
             if date_time > end_date:
-                end_date = (date_time + timedelta(hours=1)).replace(
-                    minute=0, second=0)
+                end_date = (date_time + timedelta(hours=1)).replace(minute=0, second=0)
 
             if CheckAmbientConditions(
-                    conversion.convertToFloat(csv['Temperature(K)'][row_]),
-                    288.15, 50):
+                conversion.convertToFloat(csv["Temperature(K)"][row_]), 288.15, 50
+            ):
                 logger.warning("Check temperature units/value.")
-            if CheckAmbientConditions(conversion.convertToFloat(
-                    csv['Humidity(kg_water/kg_dry_air)'][row_]), 0.00634, 100):
+            if CheckAmbientConditions(
+                conversion.convertToFloat(csv["Humidity(kg_water/kg_dry_air)"][row_]),
+                0.00634,
+                100,
+            ):
                 logger.warning("Check Humidity units/value.")
-            if CheckAmbientConditions(conversion.convertToFloat(
-                    csv['RelativeHumidity(%)'][row_]), 0.6, 90):
+            if CheckAmbientConditions(
+                conversion.convertToFloat(csv["RelativeHumidity(%)"][row_]), 0.6, 90
+            ):
                 logger.warning("Check Relative Humidity units/value.")
-            if CheckAmbientConditions(conversion.convertToFloat(
-                    csv['SeaLevelPressure(mb)'][row_]), 101325.0, 70):
+            if CheckAmbientConditions(
+                conversion.convertToFloat(csv["SeaLevelPressure(mb)"][row_]),
+                101325.0,
+                70,
+            ):
                 logger.warning("Check Sea Level Pressure units/value.")
             if CheckAmbientConditions(
-                    conversion.convertToFloat(csv['WindSpeed(m/s)'][row_]),
-                    15.0, 100):
+                conversion.convertToFloat(csv["WindSpeed(m/s)"][row_]), 15.0, 100
+            ):
                 logger.warning("Check Wind Speed units/value.")
-            if CheckAmbientConditions(conversion.convertToFloat(
-                    csv['WindDirection(degrees)'][row_]), 360.0, 100):
+            if CheckAmbientConditions(
+                conversion.convertToFloat(csv["WindDirection(degrees)"][row_]),
+                360.0,
+                100,
+            ):
                 logger.warning("Check Wind Direction units/value.")
             if CheckAmbientConditions(
-                    conversion.convertToFloat(csv['MixingHeight(m)'][row_]),
-                    914.4, 100):
+                conversion.convertToFloat(csv["MixingHeight(m)"][row_]), 914.4, 100
+            ):
                 logger.warning("Check Mixing Height units/value.")
 
         self.ui.met_summary.setText(
-            "Start: %s; End: %s" % (start_date.strftime('%Y-%m-%d %H:%M:%S'),
-                end_date.strftime('%Y-%m-%d %H:%M:%S')))
+            "Start: %s; End: %s"
+            % (
+                start_date.strftime("%Y-%m-%d %H:%M:%S"),
+                end_date.strftime("%Y-%m-%d %H:%M:%S"),
+            )
+        )
 
         self.ui.status_update.setText("MET file seems OK")
         return True
@@ -1978,12 +2090,10 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         try:
             # Collect parameters
             movement_file_path = self.ui.movement_table_path.filePath()
-            output_save_name = oautk.validate_field(self.ui.output_save_name,
-                                                    "str")
+            output_save_name = oautk.validate_field(self.ui.output_save_name, "str")
             output_save_path = self.ui.output_save_path.filePath()
             met_csv_path = oautk.validate_field(self.ui.met_file_path, "str")
-            study_start_date = oautk.validate_field(self.ui.study_start_date,
-                                                    "str")
+            study_start_date = oautk.validate_field(self.ui.study_start_date, "str")
             study_end_date = oautk.validate_field(self.ui.study_end_date, "str")
             vert_limit = self.ui.vert_limit_m.value()
             towing_speed = self.ui.towing_speed.value()
@@ -1996,48 +2106,52 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             y_cells = self.ui.y_cells.value()
             z_cells = self.ui.z_cells.value()
 
-            if (movement_file_path is None) or \
-                    (output_save_name is False) or \
-                    (output_save_path is None) or \
-                    (study_start_date is False) or \
-                    (study_end_date is False) or \
-                    (vert_limit is False) or \
-                    (towing_speed is False) or \
-                    (x_resolution is False) or \
-                    (y_resolution is False) or \
-                    (z_resolution is False) or \
-                    (x_cells is False) or \
-                    (y_cells is False) or \
-                    (z_cells is False):
+            if (
+                (movement_file_path is None)
+                or (output_save_name is False)
+                or (output_save_path is None)
+                or (study_start_date is False)
+                or (study_end_date is False)
+                or (vert_limit is False)
+                or (towing_speed is False)
+                or (x_resolution is False)
+                or (y_resolution is False)
+                or (z_resolution is False)
+                or (x_cells is False)
+                or (y_cells is False)
+                or (z_cells is False)
+            ):
                 QtWidgets.QMessageBox.warning(
-                    self,
-                    "Error",
-                    "Please correct your input parameters.")
+                    self, "Error", "Please correct your input parameters."
+                )
                 return
 
             # Check dates - Start should be before end
-            study_start_date = datetime.strptime(study_start_date,
-                                                 "%Y-%m-%d %H:%M:%S")
-            study_end_date = datetime.strptime(study_end_date,
-                                               "%Y-%m-%d %H:%M:%S")
+            study_start_date = datetime.strptime(study_start_date, "%Y-%m-%d %H:%M:%S")
+            study_end_date = datetime.strptime(study_end_date, "%Y-%m-%d %H:%M:%S")
             if study_start_date >= study_end_date:
                 QtWidgets.QMessageBox.warning(
                     self,
                     "Error",
-                    "Study end date cannot be before or equal to start date.")
+                    "Study end date cannot be before or equal to start date.",
+                )
                 return
 
-            full_save_path = os.path.join(output_save_path, output_save_name,
-                                          "_out.alaqs")
+            full_save_path = os.path.join(
+                output_save_path, output_save_name, "_out.alaqs"
+            )
             if os.path.isfile(full_save_path):
-                overwrite_msg = "A file with this name already exists." \
-                                " Are you sure you want to overwrite it?"
+                overwrite_msg = (
+                    "A file with this name already exists."
+                    " Are you sure you want to overwrite it?"
+                )
                 reply = QtWidgets.QMessageBox.question(
                     self,
-                    'Message',
+                    "Message",
                     overwrite_msg,
                     QtWidgets.QMessageBox.Yes,
-                    QtWidgets.QMessageBox.No)
+                    QtWidgets.QMessageBox.No,
+                )
                 if reply == QtWidgets.QMessageBox.Yes:
                     pass
                 else:
@@ -2046,67 +2160,65 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             # build some dict to control what is and is not run
             model_parameters = dict()
 
-            model_parameters['movement_path'] = movement_file_path
-            model_parameters['study_start_date'] = study_start_date
-            model_parameters['study_end_date'] = study_end_date
-            model_parameters['towing_speed'] = towing_speed
-            model_parameters['vertical_limit'] = vert_limit
-            model_parameters['x_resolution'] = x_resolution
-            model_parameters['y_resolution'] = y_resolution
-            model_parameters['z_resolution'] = z_resolution
-            model_parameters['x_cells'] = x_cells
-            model_parameters['y_cells'] = y_cells
-            model_parameters['z_cells'] = z_cells
+            model_parameters["movement_path"] = movement_file_path
+            model_parameters["study_start_date"] = study_start_date
+            model_parameters["study_end_date"] = study_end_date
+            model_parameters["towing_speed"] = towing_speed
+            model_parameters["vertical_limit"] = vert_limit
+            model_parameters["x_resolution"] = x_resolution
+            model_parameters["y_resolution"] = y_resolution
+            model_parameters["z_resolution"] = z_resolution
+            model_parameters["x_cells"] = x_cells
+            model_parameters["y_cells"] = y_cells
+            model_parameters["z_cells"] = z_cells
 
-            model_parameters['include_area_sources'] = True
-            model_parameters['include_building'] = True
-            model_parameters['include_gates'] = True
-            model_parameters['include_parkings'] = True
-            model_parameters['include_roadways'] = True
-            model_parameters['include_stationary_sources'] = True
-            model_parameters['include_taxiway_queues'] = True
+            model_parameters["include_area_sources"] = True
+            model_parameters["include_building"] = True
+            model_parameters["include_gates"] = True
+            model_parameters["include_parkings"] = True
+            model_parameters["include_roadways"] = True
+            model_parameters["include_stationary_sources"] = True
+            model_parameters["include_taxiway_queues"] = True
 
-            model_parameters['use_copert'] = False
-            model_parameters['use_fuel_flow'] = False
-            model_parameters['use_variable_mixing_height'] = False
-            model_parameters['use_nox_correction'] = False
-            model_parameters['use_smooth_and_shift'] = False
-            model_parameters['use_3d_grid'] = True
+            model_parameters["use_copert"] = False
+            model_parameters["use_fuel_flow"] = False
+            model_parameters["use_variable_mixing_height"] = False
+            model_parameters["use_nox_correction"] = False
+            model_parameters["use_smooth_and_shift"] = False
+            model_parameters["use_3d_grid"] = True
 
             # Get the study setup as well
             study_setup = alaqs.load_study_setup_dict()
 
             # Create a blank study output database
-            self.ui.status_update.setText(
-                "Copying inventory database template...")
+            self.ui.status_update.setText("Copying inventory database template...")
             QtWidgets.qApp.processEvents()
             output_save_name = "%s_out.alaqs" % output_save_name
             inventory_path = os.path.join(output_save_path, output_save_name)
 
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            result = alaqs.inventory_creation_new(inventory_path,
-                                                  model_parameters, study_setup,
-                                                  met_csv_path)
+            result = alaqs.inventory_creation_new(
+                inventory_path, model_parameters, study_setup, met_csv_path
+            )
             QtWidgets.QApplication.restoreOverrideCursor()
 
             if isinstance(result, str):
                 QtWidgets.QMessageBox.warning(
-                    self,
-                    "Error",
-                    "A new ALAQS output file could not be created.")
+                    self, "Error", "A new ALAQS output file could not be created."
+                )
                 return
             else:
                 QtWidgets.QMessageBox.information(
                     self,
                     "ALAQS - Inventory",
                     "A new ALAQS output file has been created. "
-                    "Please use the 'Results' tool to evaluate the output.")
+                    "Please use the 'Results' tool to evaluate the output.",
+                )
             self.ui.status_update.setText("Done.")
         except Exception as e:
             self.ui.status_update.setText("**Error** See log file")
             QtWidgets.QApplication.restoreOverrideCursor()
-            error = alaqsutils.print_error(self.create_inventory.__name__,
-                                           Exception, e)
+            error = alaqsutils.print_error(self.create_inventory.__name__, Exception, e)
             return error
 
     def m_to_ft(self):
@@ -2121,7 +2233,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             self.ui.vert_limit_ft.setValue(ft_value)
             # Make sure that the cell background is plain white
             oautk.color_ui_background(self.ui.vert_limit_m, "transparent")
-        except:
+        except Exception:
             # Make the cell background red to highlight an error
             oautk.color_ui_background(self.ui.vert_limit_m, "red")
 
@@ -2134,7 +2246,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         """
         try:
             return ui_element.checkState() == QtCore.Qt.Checked
-        except:
+        except Exception:
             return None
 
 
@@ -2156,7 +2268,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         )
         self.ui = Ui_ResultsAnalysisDialog()
         self.ui.setupUi(self)
-        self.ui.configuration_splitter.setSizes([80,200])
+        self.ui.configuration_splitter.setSizes([80, 200])
 
         # initialize calculation
         self._emission_calculation_ = None
@@ -2167,8 +2279,12 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         self.ui.configuration_modules_list.setCurrentRow(0)
         self.ui.configuration_stack.setCurrentIndex(0)
-        self.ui.configuration_modules_list.currentRowChanged.connect(self.configuration_modules_list_current_row_changed)
-        self.ui.configuration_stack.currentChanged.connect(self.configuration_stack_current_changed)
+        self.ui.configuration_modules_list.currentRowChanged.connect(
+            self.configuration_modules_list_current_row_changed
+        )
+        self.ui.configuration_stack.currentChanged.connect(
+            self.configuration_stack_current_changed
+        )
 
         # initialize GUI
         # self._pollutants_list = ["CO", "HC", "NOx", "SOx", "PM10", "P1", "P2"]
@@ -2176,26 +2292,34 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.populate_pollutants()
         self.updateMinMaxGUI()
 
-        self.ui.pollutants_names.currentIndexChanged['QString'].connect(
-            self.pollutant_changed)
-        self.ui.source_names.currentIndexChanged['QString'].connect(
-            self.source_name_changed)
-        self.ui.source_types.currentIndexChanged['QString'].connect(
-            self.source_type_changed)
+        self.ui.pollutants_names.currentIndexChanged["QString"].connect(
+            self.pollutant_changed
+        )
+        self.ui.source_names.currentIndexChanged["QString"].connect(
+            self.source_name_changed
+        )
+        self.ui.source_types.currentIndexChanged["QString"].connect(
+            self.source_type_changed
+        )
 
         self.ui.toDBButton.clicked.connect(
-            lambda: self.runOutputModule("SQLiteOutputModule"))
+            lambda: self.runOutputModule("SQLiteOutputModule")
+        )
         self.ui.toCSVButton.clicked.connect(
-            lambda: self.runOutputModule("CSVOutputModule"))
+            lambda: self.runOutputModule("CSVOutputModule")
+        )
         self.ui.ResultsTableButton.clicked.connect(
-            lambda: self.runOutputModule("TableViewWidgetOutputModule"))
+            lambda: self.runOutputModule("TableViewWidgetOutputModule")
+        )
         self.ui.plot_time_series_vs_emissions.clicked.connect(
-            lambda: self.runOutputModule("TimeSeriesWidgetOutputModule"))
-        self.ui.add_contour.clicked.connect(lambda: self.runOutputModule(
-            "EmissionsQGISVectorLayerOutputModule"))
+            lambda: self.runOutputModule("TimeSeriesWidgetOutputModule")
+        )
+        self.ui.add_contour.clicked.connect(
+            lambda: self.runOutputModule("EmissionsQGISVectorLayerOutputModule")
+        )
 
-        self.ui.result_file_path.setFilter('ALAQS (*.alaqs)')
-        self.ui.result_file_path.setDialogTitle('Open Emission Inventory Data')
+        self.ui.result_file_path.setFilter("ALAQS (*.alaqs)")
+        self.ui.result_file_path.setDialogTitle("Open Emission Inventory Data")
         self.ui.result_file_path.fileChanged.connect(self.result_file_path_changed)
 
         self._return_values = {}
@@ -2204,11 +2328,12 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.ui.configuration_stack.setCurrentIndex(row)
 
     def configuration_stack_current_changed(self, index):
-        self.ui.configuration_modules_list.setCurrentRow(index)        
+        self.ui.configuration_modules_list.setCurrentRow(index)
 
     def pollutant_changed(self):
         self.populate_calculation_methods(
-            pollutant=self.ui.pollutants_names.currentText())
+            pollutant=self.ui.pollutants_names.currentText()
+        )
 
     @catch_errors
     def populate_calculation_methods(self, pollutant=None):
@@ -2223,17 +2348,21 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         else:
             available_methods = ["bymode"]
 
-        self.resetEmissionCalculationConfiguration(config={
-            "Method": {"available": available_methods, "selected": None}})
+        self.resetEmissionCalculationConfiguration(
+            config={"Method": {"available": available_methods, "selected": None}}
+        )
 
     def resetEmissionCalculationConfiguration(self, config=None):
         if config is None:
             config = {}
 
         if self._emission_calculation_configuration_widget is None:
-            self._emission_calculation_configuration_widget = \
+            self._emission_calculation_configuration_widget = (
                 EmissionCalculationConfigurationWidget(parent=None)
-            self.ui.configuration_stack.insertWidget(0, self._emission_calculation_configuration_widget)
+            )
+            self.ui.configuration_stack.insertWidget(
+                0, self._emission_calculation_configuration_widget
+            )
 
         self._emission_calculation_configuration_widget.initValues(config)
         self.update()
@@ -2241,39 +2370,47 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
     def resetModuleConfiguration(self, module_names):
         self.ui.output_modules_tab_widget.clear()
         for module_name_, module_instance_ in list(
-                DispersionModuleManager().getModuleInstances().items()):
+            DispersionModuleManager().getModuleInstances().items()
+        ):
             if not module_names or module_name_ in module_names:
                 widget_ = module_instance_.getConfigurationWidget()
-                if not widget_ is None:
+                if widget_ is not None:
                     scroll_widget = QtWidgets.QScrollArea(self)
                     scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
                     scroll_widget.setWidget(widget_)
                     scroll_widget.setWidgetResizable(True)
-                    self.ui.dispersion_modules_tab_widget.addTab(scroll_widget,
-                                                                 module_instance_.getModuleDisplayName())
+                    self.ui.dispersion_modules_tab_widget.addTab(
+                        scroll_widget, module_instance_.getModuleDisplayName()
+                    )
 
         for module_name_, module_instance_ in list(
-                OutputModuleManager().getModuleInstances().items()):
+            OutputModuleManager().getModuleInstances().items()
+        ):
             if "Dispersion" not in module_name_:
                 if not module_names or module_name_ in module_names:
                     widget_ = module_instance_.getConfigurationWidget()
-                    if  widget_ is not None:
+                    if widget_ is not None:
                         scroll_widget = QtWidgets.QScrollArea(self)
                         scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
                         scroll_widget.setWidget(widget_)
                         scroll_widget.setWidgetResizable(True)
-                        self.ui.output_modules_tab_widget.addTab(scroll_widget,
-                                                                 module_instance_.getModuleDisplayName())
+                        self.ui.output_modules_tab_widget.addTab(
+                            scroll_widget, module_instance_.getModuleDisplayName()
+                        )
 
     def getOutputModulesConfiguration(self):
         tab = self.ui.output_modules_tab_widget
-        return {tab.tabText(index): tab.widget(index).widget().getValues() for
-                index in range(0, tab.count())}
+        return {
+            tab.tabText(index): tab.widget(index).widget().getValues()
+            for index in range(0, tab.count())
+        }
 
     def getDispersionModulesConfiguration(self):
         tab = self.ui.dispersion_modules_tab_widget
-        return {tab.tabText(index): tab.widget(index).widget().getValues() for
-                index in range(0, tab.count())}
+        return {
+            tab.tabText(index): tab.widget(index).widget().getValues()
+            for index in range(0, tab.count())
+        }
 
     def runOutputModule(self, name):
 
@@ -2291,19 +2428,22 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         config = {
             "parent": self,
             "pollutant": pollutant,
-            "title": "Total emissions of '%s'" % (
-                source_name if source_name.lower() != "all" else (
-                        "%s sources" % module_name)),
+            "title": "Total emissions of '%s'"
+            % (
+                source_name
+                if source_name.lower() != "all"
+                else ("%s sources" % module_name)
+            ),
             "ytitle": "Emissions of '%s' [kg]" % pollutant,
             "grid": self._emission_calculation_.get3DGrid(),
             "database_path": self._emission_calculation_.getDatabasePath(),
         }
 
         # Configuration of the emissions calculation
-        em_configuration = \
-            self._emission_calculation_configuration_widget.getValues()
-        em_configuration["receptors"] = \
-            self._emission_calculation_configuration_widget._receptor_points
+        em_configuration = self._emission_calculation_configuration_widget.getValues()
+        em_configuration[
+            "receptors"
+        ] = self._emission_calculation_configuration_widget._receptor_points
         config.update(em_configuration)
 
         kwargs = {}
@@ -2314,13 +2454,16 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             # Get the configuration for the OutputModule
             gui_modules_config_ = self.getOutputModulesConfiguration()
             if output_module_class.getModuleDisplayName() in gui_modules_config_:
-                config.update(gui_modules_config_[output_module_class.getModuleDisplayName()])
+                config.update(
+                    gui_modules_config_[output_module_class.getModuleDisplayName()]
+                )
 
             # Configure and run the OutputModule
             output_module_ = output_module_class(values_dict=config)
             output_module_.beginJob()
             for timeval, rows in list(
-                    self._emission_calculation_.getEmissions().items()):
+                self._emission_calculation_.getEmissions().items()
+            ):
                 output_module_.process(timeval, rows, **kwargs)
             res = output_module_.endJob()
 
@@ -2342,29 +2485,28 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 # add coordinate-references system
                 if res.crs() is not None:
                     # self._iface.mapCanvas().mapRenderer().setDestinationCrs(res.crs())
-                    self._iface.mapCanvas().mapSettings().setDestinationCrs(
-                        res.crs())
+                    self._iface.mapCanvas().mapSettings().setDestinationCrs(res.crs())
 
                 if name == "EmissionsQGISVectorLayerOutputModule":
                     # add text to graphics renderer
-                    addTitleToLayer = gui_modules_config_.get("Add title",
-                                                              False)
+                    addTitleToLayer = gui_modules_config_.get("Add title", False)
                     if addTitleToLayer:
-                        textItem = QgsTextAnnotationItem(
-                            self._iface.mapCanvas())
+                        textItem = QgsTextAnnotationItem(self._iface.mapCanvas())
                         textItem.setMapPositionFixed(False)
                         text = QtGui.QTextDocument(
-                            "%s emissions (%.1f kg)\n%s - %s" % (
+                            "%s emissions (%.1f kg)\n%s - %s"
+                            % (
                                 str(output_module_.getPollutant()),
                                 round(output_module_.getTotalEmissions(), 1),
                                 str(output_module_.getTimeStart()),
-                                str(output_module_.getTimeEnd())))
+                                str(output_module_.getTimeEnd()),
+                            )
+                        )
                         text.setDefaultFont(QtGui.QFont("Arial", 12))
                         textItem.setDocument(text)
                         textItem.setFrameSize(QtCore.QSizeF(500, 48))
-                        textItem.setOffsetFromReferencePoint(
-                            QtCore.QPointF(20, 75))
-                        textItem.setFrameBorderWidth(0.)
+                        textItem.setOffsetFromReferencePoint(QtCore.QPointF(20, 75))
+                        textItem.setFrameBorderWidth(0.0)
                         textItem.setFrameColor(QColor("white"))
 
                         self._iface.mapCanvas().scene().addItem(textItem)
@@ -2376,24 +2518,27 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path_)
         # self.ui.start_dateTime.setMinimumDateTime(time_start_calc_)
         # self.ui.end_dateTime.setMaximumDateTime(time_end_calc_)
-        
-        self.resetEmissionCalculationConfiguration(config={
-            "Start (incl.)": time_start_calc_,
-            "End (incl.)": time_end_calc_
-        })
+
+        self.resetEmissionCalculationConfiguration(
+            config={"Start (incl.)": time_start_calc_, "End (incl.)": time_end_calc_}
+        )
         self.ui.source_types.clear()
         self.ui.source_names.clear()
 
     def getMinMaxTime(self, db_path=""):
         if db_path:
-            time_series_ = [datetime.strptime(t_[1], "%Y-%m-%d %H:%M:%S") for t_
-                            in alaqsutils.inventory_time_series(db_path)]
+            time_series_ = [
+                datetime.strptime(t_[1], "%Y-%m-%d %H:%M:%S")
+                for t_ in alaqsutils.inventory_time_series(db_path)
+            ]
             time_series_.sort()
             if len(time_series_) >= 2:
                 return (time_series_[0], time_series_[-1])
 
-        return (datetime.strptime("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
-                datetime.strptime("2000-01-02 00:00:00", "%Y-%m-%d %H:%M:%S"))
+        return (
+            datetime.strptime("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
+            datetime.strptime("2000-01-02 00:00:00", "%Y-%m-%d %H:%M:%S"),
+        )
 
     @catch_errors
     def populate_source_types(self):
@@ -2418,7 +2563,8 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         if self.ui.pollutants_names.count():
             self.ui.pollutants_names.setCurrentIndex(0)
         self.populate_calculation_methods(
-            pollutant=self.ui.pollutants_names.currentText())
+            pollutant=self.ui.pollutants_names.currentText()
+        )
 
     def result_file_path_changed(self, path):
         """
@@ -2436,8 +2582,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             else:
                 raise Exception("File '%s' does not exist." % path)
         except Exception as e:
-            QtWidgets.QMessageBox.warning(self, "Error",
-                                          "Could not open file:  %s." % e)
+            QtWidgets.QMessageBox.warning(
+                self, "Error", "Could not open file:  %s." % e
+            )
             return e
 
     def source_name_changed(self):
@@ -2458,18 +2605,21 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         inventory_path = self.ui.result_file_path.filePath()
         module_name = self.ui.source_types.currentText()
 
-        for module_name_, module_obj_ in \
-                SourceModuleManager().getModulesByName(module_name):
+        for module_name_, module_obj_ in SourceModuleManager().getModulesByName(
+            module_name
+        ):
             mod_ = None
 
             # instantiate module to get access to the sources
             em_config = {"database_path": inventory_path}
             if module_name == "MovementSource":
-                widget_values = \
+                widget_values = (
                     self._emission_calculation_configuration_widget.getValues()
+                )
                 em_config.update(widget_values)
-                em_config["receptors"] = \
-                    self._emission_calculation_configuration_widget._receptor_points
+                em_config[
+                    "receptors"
+                ] = self._emission_calculation_configuration_widget._receptor_points
 
             mod_ = module_obj_(em_config)
             mod_.loadSources()
@@ -2487,48 +2637,54 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         inventory_path = str(self.ui.result_file_path.filePath())
         if not os.path.exists(inventory_path):
-            raise Exception("Error: Inventory path '%s' doesn't exist!" % (
-                inventory_path))
+            raise Exception(
+                "Error: Inventory path '%s' doesn't exist!" % (inventory_path)
+            )
 
         # Temporarily set the project database to extract the airport data
         project_database = ProjectDatabase()
         project_database_path = getattr(project_database, "path", None)
         project_database.path = inventory_path
         study_data = alaqs.load_study_setup_dict()
-        ref_latitude = study_data.get('airport_latitude', 0.)
-        ref_longitude = study_data.get('airport_longitude', 0.)
-        ref_altitude = study_data.get('airport_elevation', 0.)
+        ref_latitude = study_data.get("airport_latitude", 0.0)
+        ref_longitude = study_data.get("airport_longitude", 0.0)
+        ref_altitude = study_data.get("airport_elevation", 0.0)
         if project_database_path is None:
             del project_database.path
         else:
             project_database.path = project_database_path
 
         grid_configuration = {
-            'x_cells': 100,
-            'y_cells': 100,
-            'z_cells': 1,
-            'x_resolution': 100,
-            'y_resolution': 100,
-            'z_resolution': 100,
-            'reference_latitude': ref_latitude,
-            'reference_longitude': ref_longitude,
-            'reference_altitude': ref_altitude
+            "x_cells": 100,
+            "y_cells": 100,
+            "z_cells": 1,
+            "x_resolution": 100,
+            "y_resolution": 100,
+            "z_resolution": 100,
+            "reference_latitude": ref_latitude,
+            "reference_longitude": ref_longitude,
+            "reference_altitude": ref_altitude,
         }
 
         em_config = self._emission_calculation_configuration_widget.getValues()
 
-        self._emission_calculation_ = EmissionCalculation({
-            "database_path": inventory_path,
-            "grid_configuration": grid_configuration,
-            "Start (incl.)": em_config["Start (incl.)"],
-            "End (incl.)": em_config["End (incl.)"]
-        })
+        self._emission_calculation_ = EmissionCalculation(
+            {
+                "database_path": inventory_path,
+                "grid_configuration": grid_configuration,
+                "Start (incl.)": em_config["Start (incl.)"],
+                "End (incl.)": em_config["End (incl.)"],
+            }
+        )
 
         # Modules
         # module_name = str(self.ui.source_types.currentText())
         module_name = self.ui.source_types.currentText()
-        module_names_ = SourceModuleManager().getModuleNames() if \
-            module_name.lower() == "all" else [module_name]
+        module_names_ = (
+            SourceModuleManager().getModuleNames()
+            if module_name.lower() == "all"
+            else [module_name]
+        )
 
         # if module_name.lower()=="all" and not module_name is None:
         # if not module_name is None :
@@ -2538,19 +2694,20 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             if m_name_ == "MovementSource":
                 em_config = self._emission_calculation_configuration_widget.getValues()
                 em_config["reference_altitude"] = ref_altitude
-                em_config["receptors"] = \
-                    self._emission_calculation_configuration_widget._receptor_points
+                em_config[
+                    "receptors"
+                ] = self._emission_calculation_configuration_widget._receptor_points
 
                 # Check compatibility of methods (Not possible to have both
                 # 'BFFM2' and 'Apply NOx correction')
                 BFFM2_selected = em_config["Method"]["selected"] == "BFFM2"
                 NOx_corr_selected = em_config["Apply NOx Corrections"]
                 if BFFM2_selected and NOx_corr_selected:
-                    logger.warning("Not possible to use both 'BFFM2' "
-                                   "and 'Apply NOx correction'")
+                    logger.warning(
+                        "Not possible to use both 'BFFM2' " "and 'Apply NOx correction'"
+                    )
 
-                self._emission_calculation_.addModule(
-                    m_name_, configuration=em_config)
+                self._emission_calculation_.addModule(m_name_, configuration=em_config)
             else:
                 self._emission_calculation_.addModule(m_name_)
 
@@ -2560,20 +2717,22 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         # dm_name_ should be AUSTAL2000OutputModule
         for dm_name_ in dm_conf_:
-            dm_conf_[dm_name_].update(
-                {"pollutants_list": self._pollutants_list})
+            dm_conf_[dm_name_].update({"pollutants_list": self._pollutants_list})
             dm_conf_[dm_name_].update({"pollutant": pollutant})
 
-            if dm_conf_[dm_name_].get("Enabled", dm_conf_[dm_name_].get("enable", False)):
+            if dm_conf_[dm_name_].get(
+                "Enabled", dm_conf_[dm_name_].get("enable", False)
+            ):
                 dm_config = dm_conf_[dm_name_]
-                dm_config["receptors"] = \
-                    self._emission_calculation_configuration_widget._receptor_points
+                dm_config[
+                    "receptors"
+                ] = self._emission_calculation_configuration_widget._receptor_points
 
                 if self._emission_calculation_.get3DGrid():
-                    dm_config.update(
-                        {"grid": self._emission_calculation_.get3DGrid()})
+                    dm_config.update({"grid": self._emission_calculation_.get3DGrid()})
                     self._emission_calculation_.addDispersionModule(
-                        dm_name_, configuration=dm_config)
+                        dm_name_, configuration=dm_config
+                    )
 
         # Sources
         source_name = self.ui.source_names.currentText()
@@ -2610,7 +2769,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         )
         self.ui = Ui_DialogRunAUSTAL2000()
         self.ui.setupUi(self)
-        self.ui.configuration_splitter.setSizes([80,200])
+        self.ui.configuration_splitter.setSizes([80, 200])
 
         # initialize calculation
         self._conc_calculation_ = None
@@ -2620,13 +2779,19 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         self.ui.configuration_modules_list.setCurrentRow(0)
         self.ui.configuration_stack.setCurrentIndex(0)
-        self.ui.configuration_modules_list.currentRowChanged.connect(self.configuration_modules_list_current_row_changed)
-        self.ui.configuration_stack.currentChanged.connect(self.configuration_stack_current_changed)
+        self.ui.configuration_modules_list.currentRowChanged.connect(
+            self.configuration_modules_list_current_row_changed
+        )
+        self.ui.configuration_stack.currentChanged.connect(
+            self.configuration_stack_current_changed
+        )
 
         self.ui.a2k_executable_path.setFilter("austal.exe")
         self.ui.a2k_executable_path.setDialogTitle("Select AUSTAL Executable File")
         self.ui.work_directory_path.setStorageMode(QgsFileWidget.GetDirectory)
-        self.ui.work_directory_path.setDialogTitle("Select AUSTAL Input Files (.txt, .dmna, etc.) Directory")
+        self.ui.work_directory_path.setDialogTitle(
+            "Select AUSTAL Input Files (.txt, .dmna, etc.) Directory"
+        )
         self.ui.alaqs_file_path.setFilter("ALAQS (*.alaqs)")
         self.ui.alaqs_file_path.setDialogTitle("Select ALAQS Output File")
         self.ui.alaqs_file_path.fileChanged.connect(self.load_alaqs_source_file)
@@ -2634,61 +2799,76 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.RunA2K.clicked.connect(self.run_austal)
 
         self.ui.ResultsTable.clicked.connect(
-            lambda: self.runOutputModule("TableViewDispersionModule"))
+            lambda: self.runOutputModule("TableViewDispersionModule")
+        )
         self.ui.VisualiseResults.clicked.connect(
-            lambda: self.runOutputModule("QGISVectorLayerDispersionModule"))
+            lambda: self.runOutputModule("QGISVectorLayerDispersionModule")
+        )
         self.ui.PlotTimeSeries.clicked.connect(
-            lambda: self.runOutputModule("TimeSeriesDispersionModule"))
+            lambda: self.runOutputModule("TimeSeriesDispersionModule")
+        )
 
         self.resetModuleConfiguration(
-            module_names=["CSVDispersionModule", "TableViewDispersionModule",
-                          "TimeSeriesDispersionModule",
-                          "QGISVectorLayerDispersionModule"])
+            module_names=[
+                "CSVDispersionModule",
+                "TableViewDispersionModule",
+                "TimeSeriesDispersionModule",
+                "QGISVectorLayerDispersionModule",
+            ]
+        )
 
     def configuration_modules_list_current_row_changed(self, row):
         self.ui.configuration_stack.setCurrentIndex(row)
 
     def configuration_stack_current_changed(self, index):
-        self.ui.configuration_modules_list.setCurrentRow(index)        
+        self.ui.configuration_modules_list.setCurrentRow(index)
 
     def updateMinMaxGUI(self, db_path_=""):
         (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path_)
-        self.resetConcentrationCalculationConfiguration(config={
-            "Start (incl.)": time_start_calc_,
-            "End (incl.)": time_end_calc_
-        })
+        self.resetConcentrationCalculationConfiguration(
+            config={"Start (incl.)": time_start_calc_, "End (incl.)": time_end_calc_}
+        )
 
     def getMinMaxTime(self, db_path=""):
         if db_path:
-            time_series_ = [datetime.strptime(t_[1], "%Y-%m-%d %H:%M:%S") for t_
-                            in alaqsutils.inventory_time_series(db_path)]
+            time_series_ = [
+                datetime.strptime(t_[1], "%Y-%m-%d %H:%M:%S")
+                for t_ in alaqsutils.inventory_time_series(db_path)
+            ]
             time_series_.sort()
             if len(time_series_) >= 2:
                 return (time_series_[0], time_series_[-1])
 
-        return (datetime.strptime("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
-                datetime.strptime("2000-01-02 00:00:00", "%Y-%m-%d %H:%M:%S"))
+        return (
+            datetime.strptime("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
+            datetime.strptime("2000-01-02 00:00:00", "%Y-%m-%d %H:%M:%S"),
+        )
 
     def getTimeSeries(self, db_path=""):
         from datetime import timedelta
+
         from dateutil import rrule
 
         if db_path:
             try:
-                time_series_ = [datetime.strptime(t_[1], "%Y-%m-%d %H:%M:%S")
-                                for t_ in
-                                alaqsutils.inventory_time_series(db_path)]
+                time_series_ = [
+                    datetime.strptime(t_[1], "%Y-%m-%d %H:%M:%S")
+                    for t_ in alaqsutils.inventory_time_series(db_path)
+                ]
                 time_series_.sort()
 
             except Exception as e:
                 logger.warning("Database error: '%s'" % (e))
                 (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path)
                 time_series_ = []
-                for _day_ in rrule.rrule(rrule.DAILY, dtstart=time_start_calc_,
-                                         until=time_end_calc_):
-                    for hour_ in rrule.rrule(rrule.HOURLY, dtstart=_day_,
-                                             until=_day_ + timedelta(days=+1,
-                                                                     hours=-1)):
+                for _day_ in rrule.rrule(
+                    rrule.DAILY, dtstart=time_start_calc_, until=time_end_calc_
+                ):
+                    for hour_ in rrule.rrule(
+                        rrule.HOURLY,
+                        dtstart=_day_,
+                        until=_day_ + timedelta(days=+1, hours=-1),
+                    ):
                         time_series_.append(hour_.strftime("%Y-%m-%d %H:%M:%S"))
                 time_series_.sort()
             return time_series_
@@ -2697,16 +2877,18 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.output_modules_tab_widget.clear()
 
         for module_name_, module_instance_ in list(
-                OutputModuleManager().getModuleInstances().items()):
+            OutputModuleManager().getModuleInstances().items()
+        ):
             if not module_names or module_name_ in module_names:
                 widget_ = module_instance_.getConfigurationWidget()
-                if not widget_ is None:
+                if widget_ is not None:
                     scroll_widget = QtWidgets.QScrollArea(self)
                     scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
                     scroll_widget.setWidget(widget_)
                     scroll_widget.setWidgetResizable(True)
-                    self.ui.output_modules_tab_widget.addTab(scroll_widget,
-                        module_instance_.getModuleDisplayName())
+                    self.ui.output_modules_tab_widget.addTab(
+                        scroll_widget, module_instance_.getModuleDisplayName()
+                    )
 
     def load_alaqs_source_file(self, path):
         """
@@ -2720,29 +2902,29 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             study_data = alaqs.load_study_setup_dict()
 
             grid_configuration = {
-                'x_cells': 100,
-                'y_cells': 100,
-                'z_cells': 1,
-                'x_resolution': 250,
-                'y_resolution': 250,
-                'z_resolution': 300,
-                'reference_latitude': study_data.get('airport_latitude', 0.),
-                'reference_longitude': study_data.get('airport_longitude', 0.),
-                'reference_altitude': study_data.get('airport_elevation', 0.)
+                "x_cells": 100,
+                "y_cells": 100,
+                "z_cells": 1,
+                "x_resolution": 250,
+                "y_resolution": 250,
+                "z_resolution": 300,
+                "reference_latitude": study_data.get("airport_latitude", 0.0),
+                "reference_longitude": study_data.get("airport_longitude", 0.0),
+                "reference_altitude": study_data.get("airport_elevation", 0.0),
             }
-            self._conc_calculation_ = EmissionCalculation({
-                "database_path": path,
-                "grid_configuration": grid_configuration})
+            self._conc_calculation_ = EmissionCalculation(
+                {"database_path": path, "grid_configuration": grid_configuration}
+            )
         except Exception as e:
             QtWidgets.QMessageBox.warning(
-                self,
-                "Error",
-                "Could not open database file:  %s." % e)
+                self, "Error", "Could not open database file:  %s." % e
+            )
             self.close()
 
     @catch_errors
     def run_austal(self, *args, **kwargs):
         from subprocess import call
+
         austal_ = str(self.ui.a2k_executable_path.filePath())
         logger.info("AUSTAL directory:%s" % austal_)
         work_dir = str(self.ui.work_directory_path.filePath())
@@ -2752,7 +2934,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             opt_ = "D"
             logger.info(
                 "Running AUSTAL with -D option. Log file will be re-written"
-                " at the start of the calculation.")
+                " at the start of the calculation."
+            )
             cmd = "%s -%s %s" % (austal_, opt_, work_dir)
         else:
             cmd = "%s %s" % (austal_, work_dir)
@@ -2760,24 +2943,28 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         p = call(cmd)
         if p == 0:
             logger.info("Dispersion simulation completed successfully")
-        
+
     def resetConcentrationCalculationConfiguration(self, config=None):
         if config is None:
             config = {}
-        page = None
 
         if self._concentration_visualization_widget is None:
-            self._concentration_visualization_widget = \
-                ConcentrationVisualizationWidget(parent=None)
-            self.ui.configuration_stack.insertWidget(0, self._concentration_visualization_widget)
+            self._concentration_visualization_widget = ConcentrationVisualizationWidget(
+                parent=None
+            )
+            self.ui.configuration_stack.insertWidget(
+                0, self._concentration_visualization_widget
+            )
 
         self._concentration_visualization_widget.initValues(config)
         self.update()
 
     def getOutputModulesConfiguration(self):
         tab = self.ui.output_modules_tab_widget
-        return {tab.tabText(index): tab.widget(index).widget().getValues() for
-                index in range(0, tab.count())}
+        return {
+            tab.tabText(index): tab.widget(index).widget().getValues()
+            for index in range(0, tab.count())
+        }
 
     def ShowNotice(self):
         QtWidgets.QMessageBox.information(self, "Notice", "Feature not ready")
@@ -2792,49 +2979,62 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 if self._conc_calculation_.get3DGrid() is None:
                     raise Exception("No 3DGrid found.")
 
-                kwargs = {}
                 if OutputModuleManager().hasModule(name):
 
-                    gui_modules_config_ = \
-                        self.getOutputModulesConfiguration()
+                    gui_modules_config_ = self.getOutputModulesConfiguration()
 
                     # Configuration of the conc. calculation
                     # (from ConcentrationsQGISVectorLayerOutputModule)
-                    conc_configuration = \
+                    conc_configuration = (
                         self._concentration_visualization_widget.getValues()
-                    pollutant_ = conc_configuration["Pollutant"]["selected"] \
-                        if "Pollutant" in conc_configuration else None
-                    averaging_period_ = \
-                        conc_configuration["Averaging"]["selected"] \
-                            if "Averaging" in conc_configuration else None
-                    check_std = conc_configuration["Enable Uncertainty"] \
-                        if "Enable Uncertainty" in conc_configuration else False
+                    )
+                    pollutant_ = (
+                        conc_configuration["Pollutant"]["selected"]
+                        if "Pollutant" in conc_configuration
+                        else None
+                    )
+                    averaging_period_ = (
+                        conc_configuration["Averaging"]["selected"]
+                        if "Averaging" in conc_configuration
+                        else None
+                    )
+                    check_std = (
+                        conc_configuration["Enable Uncertainty"]
+                        if "Enable Uncertainty" in conc_configuration
+                        else False
+                    )
 
                     # ToDo: if not from within a current ALAQS simulation,
                     #  request DatabasePath to read 3DGrid
-                    _polutant = conc_configuration["Pollutant"]["selected"] \
-                        if "Pollutant" in conc_configuration else None
+                    _polutant = (
+                        conc_configuration["Pollutant"]["selected"]
+                        if "Pollutant" in conc_configuration
+                        else None
+                    )
                     config = {
                         "parent": self,
                         "pollutant": _polutant,
                         "title": "Mean concentration of '%s'" % pollutant_,
                         "ytitle": "%s" % pollutant_,
                         "grid": self._conc_calculation_.get3DGrid(),
-                        "database_path":
-                            self._conc_calculation_.getDatabasePath(),
+                        "database_path": self._conc_calculation_.getDatabasePath(),
                         "concentration_path": concentration_path,
                         "averaging_period": averaging_period_,
                         "timeseries": self.getTimeSeries(
-                            self._conc_calculation_.getDatabasePath()),
-                        "check_uncertainty": check_std
+                            self._conc_calculation_.getDatabasePath()
+                        ),
+                        "check_uncertainty": check_std,
                     }
                     config.update(conc_configuration)
 
-                    output_module_ = OutputModuleManager().getModuleByName(
-                        name)(values_dict=config)
+                    output_module_ = OutputModuleManager().getModuleByName(name)(
+                        values_dict=config
+                    )
 
                     if output_module_.getModuleDisplayName() in gui_modules_config_:
-                        config.update(gui_modules_config_[output_module_.getModuleDisplayName()])
+                        config.update(
+                            gui_modules_config_[output_module_.getModuleDisplayName()]
+                        )
 
                     # Execute the output module
                     output_module_.beginJob()
@@ -2847,8 +3047,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                         # Replace existing layers with same name...
                         for layer in self._iface.mapCanvas().layers():
                             if layer.name() == res.name():
-                                QgsProject.instance().removeMapLayers(
-                                    [layer.id()])
+                                QgsProject.instance().removeMapLayers([layer.id()])
                         # and add the vector layer to the existing QGIS layers
                         QgsProject.instance().addMapLayers([res])
                         # automatically zoom to new layer
@@ -2857,38 +3056,43 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                         # add coordinate-references system
                         if res.crs() is not None:
                             self._iface.mapCanvas().mapSettings().setDestinationCrs(
-                                res.crs())
+                                res.crs()
+                            )
 
                         if name == "ConcentrationsQGISVectorLayerOutputModule":
                             # add text to graphics renderer
                             addTitleToLayer = gui_modules_config_.get(
-                                "Add title", False)
+                                "Add title", False
+                            )
 
                             if addTitleToLayer:
                                 textItem = QgsTextAnnotationItem(
-                                    self._iface.mapCanvas())
+                                    self._iface.mapCanvas()
+                                )
                                 textItem.setMapPositionFixed(False)
 
-                                concentration = \
-                                    output_module_.getTotalConcentration()
+                                concentration = output_module_.getTotalConcentration()
 
                                 text = QtGui.QTextDocument(
-                                    "%s Concentration (%.1f kg)\n%s - %s" % (
+                                    "%s Concentration (%.1f kg)\n%s - %s"
+                                    % (
                                         str(output_module_.getPollutant()),
                                         round(concentration, 1),
                                         str(output_module_.getTimeStart()),
-                                        str(output_module_.getTimeEnd())))
+                                        str(output_module_.getTimeEnd()),
+                                    )
+                                )
 
                                 text.setDefaultFont(QtGui.QFont("Arial", 12))
                                 textItem.setDocument(text)
                                 textItem.setFrameSize(QtCore.QSizeF(500, 48))
                                 textItem.setOffsetFromReferencePoint(
-                                    QtCore.QPointF(20, 75))
-                                textItem.setFrameBorderWidth(0.)
+                                    QtCore.QPointF(20, 75)
+                                )
+                                textItem.setFrameBorderWidth(0.0)
                                 textItem.setFrameColor(QColor("white"))
 
-                                self._iface.mapCanvas().scene().addItem(
-                                    textItem)
+                                self._iface.mapCanvas().scene().addItem(textItem)
                 else:
                     logger.error("Did not find module '%s'" % (name))
             else:
@@ -2898,30 +3102,24 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             QtWidgets.QMessageBox.warning(
                 self,
                 "Error",
-                "Could not execute runOutputModule: %s (error: %s)" % (
-                    name, e))
+                "Could not execute runOutputModule: %s (error: %s)" % (name, e),
+            )
 
     @catch_errors
     def choose_averaging_period(self):
-        available_methods = [
-            "hourly", "8-hours mean", "daily mean", "annual mean"
-        ]
-        self.resetEmissionCalculationConfiguration(config={
-            "Averaging Period": {
-                "available": available_methods,
-                "selected": None
-            }})
+        available_methods = ["hourly", "8-hours mean", "daily mean", "annual mean"]
+        self.resetEmissionCalculationConfiguration(
+            config={
+                "Averaging Period": {"available": available_methods, "selected": None}
+            }
+        )
 
     @catch_errors
     def choose_pollutant(self):
-        available_pollutants = [
-            "CO2", "CO", "HC", "NOx", "SOx", "PM10", "P1", "P2"
-        ]
-        self.resetEmissionCalculationConfiguration(config={
-            "Pollutant": {
-                "available": available_pollutants,
-                "selected": None
-            }})
+        available_pollutants = ["CO2", "CO", "HC", "NOx", "SOx", "PM10", "P1", "P2"]
+        self.resetEmissionCalculationConfiguration(
+            config={"Pollutant": {"available": available_pollutants, "selected": None}}
+        )
 
 
 class OpenAlaqsEnabledMacros(QtWidgets.QDialog):

@@ -5,9 +5,9 @@ from shapely.wkt import loads
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
-from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import spatial
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
 
@@ -19,42 +19,52 @@ class TaxiwayRoute:
         self._id = str(val["route_name"]) if "route_name" in val else None
         self._gate = str(val["gate"]) if "gate" in val else None
         self._runway = str(val["runway"]) if "runway" in val else None
-        self._departure_arrival = str(val["departure_arrival"]) if "departure_arrival" in val else None
+        self._departure_arrival = (
+            str(val["departure_arrival"]) if "departure_arrival" in val else None
+        )
         self._instance_id = int(val["instance_id"]) if "instance_id" in val else 0
         self._groups = str(val["groups"]).split(",") if "groups" in val else []
         self._segments = []
 
     def getSegments(self):
         return self._segments
+
     def setSegments(self, var):
         self._segments = var
+
     def addSegment(self, var):
         self._segments.append(var)
+
     def addSegments(self, var_list):
         self._segments.extend(var_list)
 
     def getName(self):
         return self._id
+
     def setName(self, val):
         self._id = val
 
     def getGate(self):
         return self._gate
+
     def setGate(self, var):
         self._gate = var
 
     def getRunway(self):
         return self._runway
+
     def setRunway(self, var):
         self._runway = var
 
     def getInstance(self):
         return self._instance_id
+
     def setInstance(self, var):
         self._instance_id = var
 
     def getSegmentsAsLineString(self):
         from shapely.geometry import MultiLineString
+
         if self.getSegments():
             return MultiLineString([x.getGeometry() for x in self.getSegments()])
         else:
@@ -64,8 +74,9 @@ class TaxiwayRoute:
 
     def getAircraftGroups(self):
         return self._groups
+
     def setAircraftGroups(self, var):
-        self.__groups= var
+        self.__groups = var
 
     def isDeparture(self):
         return self._departure_arrival.lower() == "d"
@@ -84,7 +95,9 @@ class TaxiwayRoute:
         val += "\n\t Is used by departures: %s" % (self.isDeparture())
         val += "\n\t Is used by arrivals: %s" % (self.isArrival())
         val += "\n\t Aircraft groups: %s" % (", ".join(self.getAircraftGroups()))
-        val += "\n\t Taxiway segments: %s" % ("".join([str(x).replace("\n", "\n\t\t") for x in self.getSegments()]))
+        val += "\n\t Taxiway segments: %s" % (
+            "".join([str(x).replace("\n", "\n\t\t") for x in self.getSegments()])
+        )
 
         return val
 
@@ -94,60 +107,82 @@ class TaxiwaySegment:
         if val is None:
             val = {}
         self._id = str(val["taxiway_id"]) if "taxiway_id" in val else None
-        self._height = float(val["height"]) if "height" in val and not val["height"] is None else 0.
+        self._height = (
+            float(val["height"])
+            if "height" in val and val["height"] is not None
+            else 0.0
+        )
 
-        self._speed_in_m_s = float(val["speed"])/3.6 if "speed" in val and not val["speed"] is None else 0.
+        self._speed_in_m_s = (
+            float(val["speed"]) / 3.6
+            if "speed" in val and val["speed"] is not None
+            else 0.0
+        )
 
         self._instudy = int(val["instudy"]) if "instudy" in val else 1
         self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
-        self._geometry = loads(str(val["geometry"])) if "geometry" in val else geometry.GeometryCollection()
+        self._geometry = (
+            loads(str(val["geometry"]))
+            if "geometry" in val
+            else geometry.GeometryCollection()
+        )
 
         self._length = None
 
-        if self._geometry_text and not self._height is None:
-            self.setGeometryText(spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
-            self._length = spatial.getDistanceOfLineStringXY(self.getGeometryText(), epsg_id_source=3857, epsg_id_target=4326)
+        if self._geometry_text and self._height is not None:
+            self.setGeometryText(
+                spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight())
+            )
+            self._length = spatial.getDistanceOfLineStringXY(
+                self.getGeometryText(), epsg_id_source=3857, epsg_id_target=4326
+            )
 
-        self._time_in_s = 0.
-        if not self._length is None:
-            self._time_in_s = self._length/self._speed_in_m_s
+        self._time_in_s = 0.0
+        if self._length is not None:
+            self._time_in_s = self._length / self._speed_in_m_s
 
     def getName(self):
         return self._id
+
     def setName(self, val):
         self._id = val
 
     def getHeight(self):
         return self._height
+
     def setHeight(self, var):
         self._height = var
 
     def getLength(self):
         return self._length
+
     def setLength(self, var):
         self._length = var
 
     def getSpeed(self):
         return self._speed_in_m_s
+
     def setSpeed(self, var):
         self._speed_in_m_s = var
 
     def getTime(self):
         return self._time_in_s
+
     def setTime(self, var):
         self._time_in_s = var
 
     def getGeometryText(self):
         return self._geometry_text
+
     def setGeometryText(self, val):
         self._geometry_text = val
 
     def getGeometry(self):
         return self._geometry
 
-
     def getInStudy(self):
         return self._instudy
+
     def setInStudy(self, val):
         self._instudy = val
 
@@ -174,13 +209,13 @@ class TaxiwayRoutesStore(Store, metaclass=Singleton):
 
         self._db_path = db_path
 
-        #Store with taxiway segments
+        # Store with taxiway segments
         self._taxiway_segments_store = TaxiwaySegmentsStore(self._db_path)
 
-        #Store with taxiway routes
+        # Store with taxiway routes
         self._taxiway_routes_db = TaxiwayRouteDatabase(self._db_path)
 
-        #instantiate all TaxiwayRoutes objects
+        # instantiate all TaxiwayRoutes objects
         self.initTaxiwayRoutes()
 
     def getTaxiwaySegmentsStore(self):
@@ -200,14 +235,19 @@ class TaxiwayRoutesStore(Store, metaclass=Singleton):
             taxiway_route = TaxiwayRoute(_dict)
 
             # Add all segments to this route
-            if type(sequence) == type(""):
+            if isinstance(sequence, str):
                 segments_ = sequence.split(",")
 
                 for segment_ in segments_:
                     if self.getTaxiwaySegmentsStore().hasKey(segment_):
-                        taxiway_route.addSegment(self.getTaxiwaySegmentsStore().getObject(segment_))
+                        taxiway_route.addSegment(
+                            self.getTaxiwaySegmentsStore().getObject(segment_)
+                        )
 
-            self.setObject(_dict["route_name"] if "route_name" in _dict else "unknown", taxiway_route)
+            self.setObject(
+                _dict["route_name"] if "route_name" in _dict else "unknown",
+                taxiway_route,
+            )
 
 
 class TaxiwaySegmentsStore(Store, metaclass=Singleton):
@@ -222,7 +262,7 @@ class TaxiwaySegmentsStore(Store, metaclass=Singleton):
 
         self._db_path = db_path
         self._taxiway_segments_db = TaxiwaySegmentsDatabase(self._db_path)
-        #instantiate all TaxiwaySegment objects
+        # instantiate all TaxiwaySegment objects
         self.initTaxiwaySegments()
 
     def getTaxiwaySegmentsDatabase(self):
@@ -230,14 +270,26 @@ class TaxiwaySegmentsStore(Store, metaclass=Singleton):
 
     def initTaxiwaySegments(self):
 
-        for key, taxiway_dict in list(self.getTaxiwaySegmentsDatabase().getEntries().items()):
-            #add taxiway to store
+        for key, taxiway_dict in list(
+            self.getTaxiwaySegmentsDatabase().getEntries().items()
+        ):
+            # add taxiway to store
 
-            if not taxiway_dict['geometry'].replace("LINESTRING", "").replace("(", "").replace(")", ""):
-                logger.debug("Empty segment: %s"%(taxiway_dict['taxiway_id']))
+            if (
+                not taxiway_dict["geometry"]
+                .replace("LINESTRING", "")
+                .replace("(", "")
+                .replace(")", "")
+            ):
+                logger.debug("Empty segment: %s" % (taxiway_dict["taxiway_id"]))
             else:
                 taxiway = TaxiwaySegment(taxiway_dict)
-                self.setObject(taxiway_dict["taxiway_id"] if "taxiway_id" in taxiway_dict else "unknown", taxiway)
+                self.setObject(
+                    taxiway_dict["taxiway_id"]
+                    if "taxiway_id" in taxiway_dict
+                    else "unknown",
+                    taxiway,
+                )
 
 
 class TaxiwaySegmentsDatabase(SQLSerializable, metaclass=Singleton):
@@ -245,31 +297,43 @@ class TaxiwaySegmentsDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to taxiway shape file in the spatialite database
     """
 
-    def __init__(self,
-                 db_path_string,
-                 table_name_string="shapes_taxiways",
-                 table_columns_type_dict=None,
-                 primary_key="",
-                 geometry_columns=None
-                 ):
+    def __init__(
+        self,
+        db_path_string,
+        table_name_string="shapes_taxiways",
+        table_columns_type_dict=None,
+        primary_key="",
+        geometry_columns=None,
+    ):
 
         if table_columns_type_dict is None:
-            table_columns_type_dict = OrderedDict([
-                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
-                ("taxiway_id", "TEXT"),
-                ("speed", "DECIMAL"),
-                ("time", "DECIMAL"),
-                ("instudy", "DECIMAL")
-            ])
+            table_columns_type_dict = OrderedDict(
+                [
+                    ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                    ("taxiway_id", "TEXT"),
+                    ("speed", "DECIMAL"),
+                    ("time", "DECIMAL"),
+                    ("instudy", "DECIMAL"),
+                ]
+            )
         if geometry_columns is None:
-            geometry_columns = [{
-                "column_name": "geometry",
-                "SRID": 3857,
-                "geometry_type": "POLYGON",
-                "geometry_type_dimension": 2
-            }]
+            geometry_columns = [
+                {
+                    "column_name": "geometry",
+                    "SRID": 3857,
+                    "geometry_type": "POLYGON",
+                    "geometry_type_dimension": 2,
+                }
+            ]
 
-        SQLSerializable.__init__(self, db_path_string, table_name_string, table_columns_type_dict, primary_key, geometry_columns)
+        SQLSerializable.__init__(
+            self,
+            db_path_string,
+            table_name_string,
+            table_columns_type_dict,
+            primary_key,
+            geometry_columns,
+        )
 
         if self._db_path:
             self.deserialize()
@@ -280,35 +344,44 @@ class TaxiwayRouteDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to taxiway shape file in the spatialite database
     """
 
-    def __init__(self,
-                 db_path_string,
-                 table_name_string="user_taxiroute_taxiways",
-                 table_columns_type_dict=None,
-                 primary_key="",
-                 geometry_columns=None
-                 ):
+    def __init__(
+        self,
+        db_path_string,
+        table_name_string="user_taxiroute_taxiways",
+        table_columns_type_dict=None,
+        primary_key="",
+        geometry_columns=None,
+    ):
 
         if table_columns_type_dict is None:
-            table_columns_type_dict = OrderedDict([
-                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
-                ("gate", "TEXT"),
-                ("route_name", "TEXT"),
-                ("runway", "TEXT"),
-                ("departure_arrival", "VARCHAR(1)"),
-                ("instance_id", "INTEGER"),
-                ("sequence", "TEXT"),
-                ("groups", "TEXT")
-            ])
+            table_columns_type_dict = OrderedDict(
+                [
+                    ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                    ("gate", "TEXT"),
+                    ("route_name", "TEXT"),
+                    ("runway", "TEXT"),
+                    ("departure_arrival", "VARCHAR(1)"),
+                    ("instance_id", "INTEGER"),
+                    ("sequence", "TEXT"),
+                    ("groups", "TEXT"),
+                ]
+            )
 
         if geometry_columns is None:
             geometry_columns = []
 
-        SQLSerializable.__init__(self, db_path_string, table_name_string,
-                                 table_columns_type_dict, primary_key,
-                                 geometry_columns)
+        SQLSerializable.__init__(
+            self,
+            db_path_string,
+            table_name_string,
+            table_columns_type_dict,
+            primary_key,
+            geometry_columns,
+        )
 
         if self._db_path:
             self.deserialize()
+
 
 # if __name__ == "__main__":
 #     # import alaqslogging

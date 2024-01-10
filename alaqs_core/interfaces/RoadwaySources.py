@@ -3,11 +3,11 @@ from collections import OrderedDict
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
-from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Source import Source
-from open_alaqs.alaqs_core.tools.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import spatial
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
 
@@ -22,26 +22,33 @@ class RoadwaySources(Source):
         self._scenario = str(val.get("scenario", ""))
         self._vehicle_year = float(val.get("vehicle_year", 0))
         _distance = val.get("distance", 0)
-        self._distance = .0 if _distance is None else float(_distance)
+        self._distance = 0.0 if _distance is None else float(_distance)
         self._speed = float(val.get("speed", 0))
         self._fleet_mix = {
             "vehicle_light": float(val.get("vehicle_light", 0)),
             "vehicle_medium": float(val.get("vehicle_medium", 0)),
-            "vehicle_heavy": float(val.get("vehicle_heavy", 0))
+            "vehicle_heavy": float(val.get("vehicle_heavy", 0)),
         }
 
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
-                spatial.addHeightToGeometryWkt(
-                    self.getGeometryText(), self.getHeight()))
+                spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight())
+            )
 
         init_values = {}
         default_values = {}
-        for key_ in ["co_gm_km", "hc_gm_km", "nox_gm_km", "sox_gm_km",
-                     "pm10_gm_km", "p1_gm_km", "p2_gm_km"]:
+        for key_ in [
+            "co_gm_km",
+            "hc_gm_km",
+            "nox_gm_km",
+            "sox_gm_km",
+            "pm10_gm_km",
+            "p1_gm_km",
+            "p2_gm_km",
+        ]:
             if key_ in val:
                 init_values[key_] = float(val[key_])
-                default_values[key_] = 0.
+                default_values[key_] = 0.0
 
         self._emissionIndex = EmissionIndex(init_values, default_values)
 
@@ -84,7 +91,10 @@ class RoadwaySources(Source):
     def getLength(self, unitInKM=False):
         # Get the length of the road in meters (internally, length is stored in meters)
         if self.__length is None:
-            self.setLength(spatial.getDistanceOfLineStringXY(self.getGeometryText()) / (1000. if unitInKM else 1.))
+            self.setLength(
+                spatial.getDistanceOfLineStringXY(self.getGeometryText())
+                / (1000.0 if unitInKM else 1.0)
+            )
         return self.__length
 
     def setLength(self, val):
@@ -100,7 +110,14 @@ class RoadwaySources(Source):
         val += "\n\t Height: %f" % (self.getHeight())
         val += "\n\t Distance: %s" % (self.getDistance())
         val += "\n\t Speed: %s" % (self.getSpeed())
-        val += "\n\t Fleet Mix: %s" % (", ".join(["%s:%f" % (key_, self.getFleetMix()[key_]) for key_ in sorted(self.getFleetMix().keys())]))
+        val += "\n\t Fleet Mix: %s" % (
+            ", ".join(
+                [
+                    "%s:%f" % (key_, self.getFleetMix()[key_])
+                    for key_ in sorted(self.getFleetMix().keys())
+                ]
+            )
+        )
         val += "\n\t Hour Profile: %s" % (self.getHourProfile())
         val += "\n\t Daily Profile: %s" % (self.getDailyProfile())
         val += "\n\t Month Profile: %s" % (self.getMonthProfile())
@@ -123,9 +140,9 @@ class RoadwaySourcesStore(Store, metaclass=Singleton):
 
         self._db_path = db_path
 
-        #Engine Modes
+        # Engine Modes
         self._roadway_db = None
-        if  "roadway_db" in db:
+        if "roadway_db" in db:
             if isinstance(db["roadway_db"], RoadwaySourcesDatabase):
                 self._roadway_db = db["roadway_db"]
             elif isinstance(db["roadway_db"], str) and os.path.isfile(db["roadway_db"]):
@@ -134,18 +151,25 @@ class RoadwaySourcesStore(Store, metaclass=Singleton):
         if self._roadway_db is None:
             self._roadway_db = RoadwaySourcesDatabase(db_path)
 
-        #instantiate all roadway objects
+        # instantiate all roadway objects
         self.initRoadwaySourcess()
 
     def initRoadwaySourcess(self):
-        for key, roadway_dict in list(self.getRoadwaySourcesDatabase().getEntries().items()):
-            #add engine to store
-            if not roadway_dict['geometry'].replace("LINESTRING", "").replace("(", "").replace(")", ""):
-                logger.debug("Empty segment: %s" % (roadway_dict['roadway_id']))
+        for key, roadway_dict in list(
+            self.getRoadwaySourcesDatabase().getEntries().items()
+        ):
+            # add engine to store
+            if (
+                not roadway_dict["geometry"]
+                .replace("LINESTRING", "")
+                .replace("(", "")
+                .replace(")", "")
+            ):
+                logger.debug("Empty segment: %s" % (roadway_dict["roadway_id"]))
             else:
                 self.setObject(
                     roadway_dict.get("roadway_id", "unknown"),
-                    RoadwaySources(roadway_dict)
+                    RoadwaySources(roadway_dict),
                 )
 
     def getRoadwaySourcesDatabase(self):
@@ -157,52 +181,63 @@ class RoadwaySourcesDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to roadway shape file in the spatialite database
     """
 
-    def __init__(self,
-                 db_path_string,
-                 table_name_string="shapes_roadways",
-                 table_columns_type_dict=None,
-                 primary_key="",
-                 geometry_columns=None
-                 ):
+    def __init__(
+        self,
+        db_path_string,
+        table_name_string="shapes_roadways",
+        table_columns_type_dict=None,
+        primary_key="",
+        geometry_columns=None,
+    ):
         if table_columns_type_dict is None:
-            table_columns_type_dict = OrderedDict([
-                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
-                ("roadway_id", "TEXT"),
-                ("vehicle_year", "DECIMAL"),
-                ("height", "DECIMAL"),
-                ("distance", "DECIMAL"),
-                ("speed", "DECIMAL"),
-                ("vehicle_light", "DECIMAL"),
-                ("vehicle_medium", "DECIMAL"),
-                ("vehicle_heavy", "DECIMAL"),
-                ("hour_profile", "TEXT"),
-                ("daily_profile", "TEXT"),
-                ("month_profile", "TEXT"),
-                ("co_gm_km", "DECIMAL"),
-                ("hc_gm_km", "DECIMAL"),
-                ("nox_gm_km", "DECIMAL"),
-                ("sox_gm_km", "DECIMAL"),
-                ("pm10_gm_km", "DECIMAL"),
-                ("p1_gm_km", "DECIMAL"),
-                ("p2_gm_km", "DECIMAL"),
-                ("method", "TEXT"),
-                ("scenario", "TEXT"),
-                ("instudy", "DECIMAL")
-            ])
+            table_columns_type_dict = OrderedDict(
+                [
+                    ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                    ("roadway_id", "TEXT"),
+                    ("vehicle_year", "DECIMAL"),
+                    ("height", "DECIMAL"),
+                    ("distance", "DECIMAL"),
+                    ("speed", "DECIMAL"),
+                    ("vehicle_light", "DECIMAL"),
+                    ("vehicle_medium", "DECIMAL"),
+                    ("vehicle_heavy", "DECIMAL"),
+                    ("hour_profile", "TEXT"),
+                    ("daily_profile", "TEXT"),
+                    ("month_profile", "TEXT"),
+                    ("co_gm_km", "DECIMAL"),
+                    ("hc_gm_km", "DECIMAL"),
+                    ("nox_gm_km", "DECIMAL"),
+                    ("sox_gm_km", "DECIMAL"),
+                    ("pm10_gm_km", "DECIMAL"),
+                    ("p1_gm_km", "DECIMAL"),
+                    ("p2_gm_km", "DECIMAL"),
+                    ("method", "TEXT"),
+                    ("scenario", "TEXT"),
+                    ("instudy", "DECIMAL"),
+                ]
+            )
         if geometry_columns is None:
-            geometry_columns = [{
-                "column_name": "geometry",
-                "SRID": 3857,
-                "geometry_type": "LINESTRING",
-                "geometry_type_dimension": 2
-            }]
+            geometry_columns = [
+                {
+                    "column_name": "geometry",
+                    "SRID": 3857,
+                    "geometry_type": "LINESTRING",
+                    "geometry_type_dimension": 2,
+                }
+            ]
 
-        SQLSerializable.__init__(self, db_path_string, table_name_string,
-                                 table_columns_type_dict, primary_key,
-                                 geometry_columns)
+        SQLSerializable.__init__(
+            self,
+            db_path_string,
+            table_name_string,
+            table_columns_type_dict,
+            primary_key,
+            geometry_columns,
+        )
 
         if self._db_path:
             self.deserialize()
+
 
 # if __name__ == "__main__":
 #     # create a logger for this module

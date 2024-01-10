@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
-from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import conversion
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
 
@@ -24,7 +24,7 @@ month_abbreviations = {
     9: "sep",
     10: "oct",
     11: "nov",
-    12: "dec"
+    12: "dec",
 }
 weekday_abbreviations = {
     1: "mon",
@@ -33,7 +33,7 @@ weekday_abbreviations = {
     4: "thu",
     5: "fri",
     6: "sat",
-    7: "sun"
+    7: "sun",
 }
 
 abbreviation_weekdays = {v: k for k, v in weekday_abbreviations.items()}
@@ -44,12 +44,12 @@ class InventoryTime:
     def __init__(self, val=None):
         if val is None:
             val = {}
-        self._format = '%Y-%m-%d %H:%M:%S'
+        self._format = "%Y-%m-%d %H:%M:%S"
 
         self._time_id = int(val.get("time_id", -1))
-        self._time = conversion.convertTimeToSeconds(str(
-            val.get("time", "2000-01-01 00:00:00")
-        ), self._format)
+        self._time = conversion.convertTimeToSeconds(
+            str(val.get("time", "2000-01-01 00:00:00")), self._format
+        )
         self._year = int(val.get("year", 2015))
         self._month = int(val.get("month", 1))
         self._day = int(val.get("day", 1))
@@ -97,15 +97,18 @@ class InventoryTime:
             if val.lower() in abbreviation_months:
                 self._month = abbreviation_months[val.lower()]
             else:
-                raise Exception("Did not find index for month with name '%s'. "
-                                "Valid names are '%s'." % (
-                                    val,
-                                    ",".join(abbreviation_months.keys())))
+                raise Exception(
+                    "Did not find index for month with name '%s'. "
+                    "Valid names are '%s'."
+                    % (val, ",".join(abbreviation_months.keys()))
+                )
         elif isinstance(val, int) or isinstance(val, float):
             self._month = int(val)
         else:
-            raise Exception(f"'{val}' is of type '{str(type(val))}', "
-                            f"but 'str' or int' expected.'")
+            raise Exception(
+                f"'{val}' is of type '{str(type(val))}', "
+                f"but 'str' or int' expected.'"
+            )
 
     def getDay(self):
         # Get the weekday (1-indexed)
@@ -122,15 +125,18 @@ class InventoryTime:
             if val.lower() in abbreviation_weekdays:
                 self._day = abbreviation_weekdays[val.lower()]
             else:
-                raise Exception("Did not find index for month with name '%s'. "
-                                "Valid names are '%s'." % (
-                                    val,
-                                    ",".join(abbreviation_weekdays.keys())))
+                raise Exception(
+                    "Did not find index for month with name '%s'. "
+                    "Valid names are '%s'."
+                    % (val, ",".join(abbreviation_weekdays.keys()))
+                )
         elif isinstance(val, (int, float)):
             self._day = int(val)
         else:
-            raise Exception(f"'{val}' is of type '{str(type(val))}', "
-                            f"but 'str' or int' expected.'")
+            raise Exception(
+                f"'{val}' is of type '{str(type(val))}', "
+                f"but 'str' or int' expected.'"
+            )
 
     def getHour(self):
         return self._hour
@@ -159,16 +165,15 @@ class InventoryTime:
     # TODO what happens if the time period includes both? This is unresolved in original ALAQS and here
     def getTotalHoursInYear(self):
         if calendar.isleap(self.getYear()):
-            return 8784.
+            return 8784.0
         else:
-            return 8760.
+            return 8760.0
 
     def offsetAsDateTime(self, **kwargs):
         return self.getTimeAsDateTime() + timedelta(**kwargs)
 
     def offsetAsString(self, **kwargs):
-        return datetime.strftime(self.offsetAsDateTime(**kwargs),
-                                 self.getFormat())
+        return datetime.strftime(self.offsetAsDateTime(**kwargs), self.getFormat())
 
     def __str__(self):
         val = "\n Time id: %i" % (self.getTimeID())
@@ -200,10 +205,12 @@ class InventoryTimeSeriesStore(Store, metaclass=Singleton):
         inventory_timeseries_db_ = db.get("inventory_timeseries_db")
         if isinstance(inventory_timeseries_db_, InventoryTimeSeriesDatabase):
             self._inventory_timeseries_db = inventory_timeseries_db_
-        elif isinstance(inventory_timeseries_db_, str) \
-                and os.path.isfile(inventory_timeseries_db_):
+        elif isinstance(inventory_timeseries_db_, str) and os.path.isfile(
+            inventory_timeseries_db_
+        ):
             self._inventory_timeseries_db = InventoryTimeSeriesDatabase(
-                inventory_timeseries_db_)
+                inventory_timeseries_db_
+            )
         else:
             self._inventory_timeseries_db = InventoryTimeSeriesDatabase(db_path)
 
@@ -214,8 +221,8 @@ class InventoryTimeSeriesStore(Store, metaclass=Singleton):
         entries = self.getInventoryTimeSeriesDatabase().getEntries()
         for key, timeseries_dict in entries.items():
             self.setObject(
-                timeseries_dict.get("time_id", -1),
-                InventoryTime(timeseries_dict))
+                timeseries_dict.get("time_id", -1), InventoryTime(timeseries_dict)
+            )
 
     def getInventoryTimeSeriesDatabase(self):
         return self._inventory_timeseries_db
@@ -230,33 +237,43 @@ class InventoryTimeSeriesDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to runway shape file in the spatialite database
     """
 
-    def __init__(self,
-                 db_path_string,
-                 table_name_string="tbl_InvTime",
-                 table_columns_type_dict=None, primary_key="time_id",
-                 geometry_columns=None
-                 ):
+    def __init__(
+        self,
+        db_path_string,
+        table_name_string="tbl_InvTime",
+        table_columns_type_dict=None,
+        primary_key="time_id",
+        geometry_columns=None,
+    ):
 
         if table_columns_type_dict is None:
-            table_columns_type_dict = OrderedDict([
-                ("time_id", "INTEGER PRIMARY KEY NOT NULL"),
-                ("time", "DATETIME"),
-                ("year", "INT"),
-                ("month", "INT"),
-                ("day", "INT"),
-                ("hour", "DATETIME"),
-                ("weekday_id", "INT"),
-                ("mix_height", "DECIMAL")
-            ])
+            table_columns_type_dict = OrderedDict(
+                [
+                    ("time_id", "INTEGER PRIMARY KEY NOT NULL"),
+                    ("time", "DATETIME"),
+                    ("year", "INT"),
+                    ("month", "INT"),
+                    ("day", "INT"),
+                    ("hour", "DATETIME"),
+                    ("weekday_id", "INT"),
+                    ("mix_height", "DECIMAL"),
+                ]
+            )
         if geometry_columns is None:
             geometry_columns = []
 
-        SQLSerializable.__init__(self, db_path_string, table_name_string,
-                                 table_columns_type_dict, primary_key,
-                                 geometry_columns)
+        SQLSerializable.__init__(
+            self,
+            db_path_string,
+            table_name_string,
+            table_columns_type_dict,
+            primary_key,
+            geometry_columns,
+        )
 
         if self._db_path:
             self.deserialize()
+
 
 # if __name__ == "__main__":
 #     # create a logger for this module

@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS "shapes_taxiways";
 
 CREATE TABLE "shapes_taxiways" (
-  "oid" INTEGER PRIMARY KEY NOT NULL, 
+  "oid" INTEGER PRIMARY KEY NOT NULL,
   "taxiway_id" TEXT,
   "speed" DECIMAL,
   "time" DECIMAL,

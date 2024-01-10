@@ -1,13 +1,11 @@
 import matplotlib
 
-matplotlib.use('Qt5Agg')
+matplotlib.use("Qt5Agg")
 
-from matplotlib.backends.qt_compat import QtWidgets
-
-from matplotlib.backends.backend_qt5agg import FigureCanvas, \
-    NavigationToolbar2QT as NavigationToolbar
-
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.backends.backend_qt5agg import FigureCanvas  # noqa: E402
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar  # noqa: E402
+from matplotlib.backends.qt_compat import QtWidgets  # noqa: E402
 
 
 class MatplotlibQtDialog(QtWidgets.QDialog):
@@ -21,14 +19,15 @@ class MatplotlibQtDialog(QtWidgets.QDialog):
         # self._axes.hold(False)
 
         self._canvas = FigureCanvas(self._figure)
-        self._canvas.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                   QtWidgets.QSizePolicy.Expanding)
+        self._canvas.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         self._canvas.updateGeometry()
         # layout.setStyleSheet("background:white")
 
         self._toolbar = NavigationToolbar(self._canvas, parent=self)
 
-        self._closeButton = QtWidgets.QPushButton('Close')
+        self._closeButton = QtWidgets.QPushButton("Close")
         self._closeButton.clicked.connect(self.close)
 
         # layout

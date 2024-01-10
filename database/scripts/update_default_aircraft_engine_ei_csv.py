@@ -26,20 +26,20 @@ def calculate_nvpm_number_ei(ei_nvpm_mass: float, db_line: pd.Series) -> float:
     """
 
     return (
-            6
-            * (ei_nvpm_mass / 1000)
-            * c.NR
-            / (
-                    math.pi
-                    * c.PARTICLE_EFFECTIVE_DENSITY
-                    * ((c.GEOMTRIC_MEAN_DIAMETERS[db_line["mode"]]) ** 3)
-                    * math.exp(4.5 * (math.log(c.STANDARD_DEVIATION_PM)) ** 2)
-            )
+        6
+        * (ei_nvpm_mass / 1000)
+        * c.NR
+        / (
+            math.pi
+            * c.PARTICLE_EFFECTIVE_DENSITY
+            * ((c.GEOMTRIC_MEAN_DIAMETERS[db_line["mode"]]) ** 3)
+            * math.exp(4.5 * (math.log(c.STANDARD_DEVIATION_PM)) ** 2)
+        )
     )
 
 
 def calculate_loss_correction_factor(
-        nvpm_mass_concentration: float, beta: float
+    nvpm_mass_concentration: float, beta: float
 ) -> float:
     """
     Calculate the mode-dependent system loss correction factor for
@@ -61,7 +61,7 @@ def calculate_loss_correction_factor(
 
 
 def calculate_nvpm_mass_ei(
-        nvpm_mass_concentration: float, exhaust_volume: float
+    nvpm_mass_concentration: float, exhaust_volume: float
 ) -> float:
     """
     Calculate nvPMmass EI at the instrument (EInvPMmass,k).
@@ -107,7 +107,7 @@ def calculate_nvpm_mass_concentration_ck(smoke_number_k: float) -> float:
     """
 
     return (648.4 * (math.exp(0.0766 * smoke_number_k))) / (
-            1 + math.exp(-1.098 * (smoke_number_k - 3.064))
+        1 + math.exp(-1.098 * (smoke_number_k - 3.064))
     )
 
 
@@ -150,7 +150,9 @@ def evaluate_beta(old_line: pd.Series) -> float:
         return 0.0
 
 
-def update_default_aircraft_engine_ei_nvpm(old_blank_study: pd.DataFrame) -> pd.DataFrame:
+def update_default_aircraft_engine_ei_nvpm(
+    old_blank_study: pd.DataFrame,
+) -> pd.DataFrame:
     """Adds nvPM EI to aircraft engines
 
     Args:
@@ -173,7 +175,9 @@ def update_default_aircraft_engine_ei_nvpm(old_blank_study: pd.DataFrame) -> pd.
             engine_scaling_factor = c.SCALING_FACTORS["non_dac"][old_line["mode"]]
         else:
             if "aviadvigatel" in old_line["manufacturer"]:
-                engine_scaling_factor = c.SCALING_FACTORS["aviadgatel"][old_line["mode"]]
+                engine_scaling_factor = c.SCALING_FACTORS["aviadgatel"][
+                    old_line["mode"]
+                ]
             elif "textron" in old_line["manufacturer"]:
                 engine_scaling_factor = c.SCALING_FACTORS["textron"][old_line["mode"]]
             elif "cfm" in old_line["manufacturer"]:
@@ -185,7 +189,9 @@ def update_default_aircraft_engine_ei_nvpm(old_blank_study: pd.DataFrame) -> pd.
 
         smoke_number_k = calculate_smoke_number(old_line, engine_scaling_factor)
 
-        nvpm_mass_concentration_ck = calculate_nvpm_mass_concentration_ck(smoke_number_k)
+        nvpm_mass_concentration_ck = calculate_nvpm_mass_concentration_ck(
+            smoke_number_k
+        )
 
         beta = evaluate_beta(old_line)
 
@@ -195,10 +201,14 @@ def update_default_aircraft_engine_ei_nvpm(old_blank_study: pd.DataFrame) -> pd.
         exhaust_volume_qk = calculate_exhaust_volume_qk(engine_afr, beta)
 
         # Calculate EInvPMmass
-        ei_nvpm_mass_k = calculate_nvpm_mass_ei(nvpm_mass_concentration_ck, exhaust_volume_qk)
+        ei_nvpm_mass_k = calculate_nvpm_mass_ei(
+            nvpm_mass_concentration_ck, exhaust_volume_qk
+        )
 
         # Calculate loss correction factor
-        loss_correction_factor_kslm_k = calculate_loss_correction_factor(nvpm_mass_concentration_ck, beta)
+        loss_correction_factor_kslm_k = calculate_loss_correction_factor(
+            nvpm_mass_concentration_ck, beta
+        )
 
         # Calculate the nvPMmass EIs for each engine mode at the engine exit
         # plane
@@ -213,12 +223,12 @@ def update_default_aircraft_engine_ei_nvpm(old_blank_study: pd.DataFrame) -> pd.
 
     # Log calculated values
     logging.info(
-        f"PMnon_volatile_EI calculated successfully for number of rows: " \
+        f"PMnon_volatile_EI calculated successfully for number of rows: "
         f"{(old_blank_study['PMnon_volatile_EI'] != 0).sum()}"
     )
 
     logging.info(
-        f"PMnon_volatile_number_EI calculated successfully for number of rows: " \
+        f"PMnon_volatile_number_EI calculated successfully for number of rows: "
         f"{(old_blank_study['PMnon_volatile_number_EI'] != 0).sum()}"
     )
 
@@ -246,7 +256,7 @@ def compute_pm_sul_ei() -> float:
         float: _description_
     """
 
-    return (10 ** 6) * ((c.FSC * c.EPSILON * c.MW_OUT) / c.MW_SULPHUR) / 1000
+    return (10**6) * ((c.FSC * c.EPSILON * c.MW_OUT) / c.MW_SULPHUR) / 1000
 
 
 def get_smoke_number(all_emissions: pd.DataFrame, row: pd.Series, mode: str) -> float:
@@ -261,10 +271,16 @@ def get_smoke_number(all_emissions: pd.DataFrame, row: pd.Series, mode: str) -> 
         float: _description_
     """
 
-    return all_emissions[f"SN {mode}"].loc[all_emissions["UID No"] == row["engine_name"]].iloc[0]
+    return (
+        all_emissions[f"SN {mode}"]
+        .loc[all_emissions["UID No"] == row["engine_name"]]
+        .iloc[0]
+    )
 
 
-def get_gas_ei(all_emissions: pd.DataFrame, row: pd.Series, mode: str, gas: str) -> float:
+def get_gas_ei(
+    all_emissions: pd.DataFrame, row: pd.Series, mode: str, gas: str
+) -> float:
     """_summary_
 
     Args:
@@ -275,7 +291,11 @@ def get_gas_ei(all_emissions: pd.DataFrame, row: pd.Series, mode: str, gas: str)
         float: _description_
     """
 
-    return all_emissions[f"{gas} EI {mode} (g/kg)"].loc[all_emissions["UID No"] == row["engine_name"]].iloc[0]
+    return (
+        all_emissions[f"{gas} EI {mode} (g/kg)"]
+        .loc[all_emissions["UID No"] == row["engine_name"]]
+        .iloc[0]
+    )
 
 
 def get_fuel_flow(all_emissions: pd.DataFrame, row: pd.Series, mode: str) -> float:
@@ -289,20 +309,32 @@ def get_fuel_flow(all_emissions: pd.DataFrame, row: pd.Series, mode: str) -> flo
         float: _description_
     """
 
-    return all_emissions[f"Fuel Flow {mode} (kg/sec)_x"].loc[all_emissions["UID No"] == row["engine_name"]].iloc[0]
+    return (
+        all_emissions[f"Fuel Flow {mode} (kg/sec)_x"]
+        .loc[all_emissions["UID No"] == row["engine_name"]]
+        .iloc[0]
+    )
 
 
 if __name__ == "__main__":
 
     # Set the path to the file that's being updated
-    default_aircraft_engine_ei_csv = Path(__file__).parents[1] / 'data/default_aircraft_engine_ei.csv'
-    old_default_aircraft_engine_ei_csv = Path(__file__).parents[1] / 'src/default_aircraft_engine_ei.csv'
+    default_aircraft_engine_ei_csv = (
+        Path(__file__).parents[1] / "data/default_aircraft_engine_ei.csv"
+    )
+    old_default_aircraft_engine_ei_csv = (
+        Path(__file__).parents[1] / "src/default_aircraft_engine_ei.csv"
+    )
 
     # Get the relevant data from the source
-    src_path = Path(__file__).parents[1] / 'src'
+    src_path = Path(__file__).parents[1] / "src"
 
-    gas_emissions = pd.read_excel(src_path / c.FILE_ICAO_EEDB, sheet_name=c.TAB_GAS_EMISSIONS)
-    nvmp_emissions = pd.read_excel(src_path / c.FILE_ICAO_EEDB, sheet_name=c.TAB_NVPM_EMISSIONS)
+    gas_emissions = pd.read_excel(
+        src_path / c.FILE_ICAO_EEDB, sheet_name=c.TAB_GAS_EMISSIONS
+    )
+    nvmp_emissions = pd.read_excel(
+        src_path / c.FILE_ICAO_EEDB, sheet_name=c.TAB_NVPM_EMISSIONS
+    )
 
     all_emissions = gas_emissions.merge(nvmp_emissions, how="outer", on=["UID No"])
 
@@ -310,27 +342,33 @@ if __name__ == "__main__":
     emissions_df = pd.DataFrame()
 
     # Add engine names
-    emissions_df[[
-        "engine_full_name",
-        "engine_name",
-        "manufacturer",
-        "status",
-        "fuel_type",
-        "eng_type",
-        "bpr"
-    ]] = all_emissions[[
-        "Engine Identification_x",
-        "UID No",
-        "Manufacturer_x",
-        "Current Engine Status",
-        "Fuel Spec",
-        "Eng Type_x",
-        "B/P Ratio_x"
-    ]]
+    emissions_df[
+        [
+            "engine_full_name",
+            "engine_name",
+            "manufacturer",
+            "status",
+            "fuel_type",
+            "eng_type",
+            "bpr",
+        ]
+    ] = all_emissions[
+        [
+            "Engine Identification_x",
+            "UID No",
+            "Manufacturer_x",
+            "Current Engine Status",
+            "Fuel Spec",
+            "Eng Type_x",
+            "B/P Ratio_x",
+        ]
+    ]
 
     # Engine name type is a combination of Engine Identification and Combustor Description
-    emissions_df["engine_name_type"] = \
-        all_emissions["Engine Identification_x"] + all_emissions["Combustor Description_x"]
+    emissions_df["engine_name_type"] = (
+        all_emissions["Engine Identification_x"]
+        + all_emissions["Combustor Description_x"]
+    )
 
     # Engine type is J, since all engines in EEDB are jet engines
     emissions_df["engine_type"] = "J"
@@ -339,14 +377,19 @@ if __name__ == "__main__":
     emissions_df["source"] = "EEDB"
 
     # Remark, coolant, combustion_technology and technology_age columns are empty
-    emissions_df[["remark", "coolant", "combustion_technology", "technology_age"]] = None
+    emissions_df[
+        ["remark", "coolant", "combustion_technology", "technology_age"]
+    ] = None
 
     # Doc 9889 defines SOX EI as 1 g per kg of fuel burnt for all jet engines
     emissions_df["SOX_EI"] = 1
 
     # Define the right parameters for each flight mode, according to old table
     flight_modes_parameters = {
-        "T/O": [1, "TO"], "C/O": [0.85, "CL"], "App": [0.3, "AP"], "Idle": [0.07, "TX"]
+        "T/O": [1, "TO"],
+        "C/O": [0.85, "CL"],
+        "App": [0.3, "AP"],
+        "Idle": [0.07, "TX"],
     }
 
     _new_emissions = []
@@ -371,63 +414,69 @@ if __name__ == "__main__":
     # Calculate nvPM EI
     new_emissions = update_default_aircraft_engine_ei_nvpm(new_emissions)
 
-    new_emissions["PM_01_EI"] = new_emissions["PM_volatile_EI"] + new_emissions["PMnon_volatile_EI"]
+    new_emissions["PM_01_EI"] = (
+        new_emissions["PM_volatile_EI"] + new_emissions["PMnon_volatile_EI"]
+    )
     new_emissions["PM_02_EI"] = new_emissions["PM_01_EI"]
     new_emissions["PM_TOTAL_EI"] = new_emissions["PM_01_EI"] + new_emissions["PM_02_EI"]
 
     # Add missing columns
-    new_emissions['oid'] = np.arange(1, new_emissions.shape[0] + 1)
-    new_emissions[['pm10_prefoa3', 'pm10_nonvol', 'pm10_sul', 'pm10_organic']] = None
+    new_emissions["oid"] = np.arange(1, new_emissions.shape[0] + 1)
+    new_emissions[["pm10_prefoa3", "pm10_nonvol", "pm10_sul", "pm10_organic"]] = None
 
     # Rename columns
-    new_emissions = new_emissions.rename(columns={
-        "FUEL_FLOW": "fuel_kg_sec",
-        "CO_EI": "co_ei",
-        "HC_EI": "hc_ei",
-        "NOX_EI": "nox_ei",
-        "SOX_EI": "sox_ei",
-        "PM_SUL_EI": "pm10_ei",
-        "PM_01_EI": "p1_ei",
-        "PM_02_EI": "p2_ei",
-        "PMnon_volatile_EI": "nvpm_ei",
-        "PMnon_volatile_number_EI": "nvpm_number_ei"
-    })
+    new_emissions = new_emissions.rename(
+        columns={
+            "FUEL_FLOW": "fuel_kg_sec",
+            "CO_EI": "co_ei",
+            "HC_EI": "hc_ei",
+            "NOX_EI": "nox_ei",
+            "SOX_EI": "sox_ei",
+            "PM_SUL_EI": "pm10_ei",
+            "PM_01_EI": "p1_ei",
+            "PM_02_EI": "p2_ei",
+            "PMnon_volatile_EI": "nvpm_ei",
+            "PMnon_volatile_number_EI": "nvpm_number_ei",
+        }
+    )
 
     # Set the columns
-    new_emissions = new_emissions[[
-        "oid",
-        "engine_type",
-        "engine_full_name",
-        "engine_name",
-        "thrust",
-        "mode",
-        "fuel_kg_sec",
-        "co_ei",
-        "hc_ei",
-        "nox_ei",
-        "sox_ei",
-        "pm10_ei",
-        "p1_ei",
-        "p2_ei",
-        "smoke_number",
-        "smoke_number_maximum",
-        "fuel_type",
-        "manufacturer",
-        "source",
-        "remark",
-        "status",
-        "engine_name_type",
-        "coolant",
-        "combustion_technology",
-        "technology_age",
-        "pm10_prefoa3",
-        "pm10_nonvol",
-        "pm10_sul",
-        "pm10_organic",
-        "eng_type",
-        "bpr",
-        "nvpm_ei",
-        "nvpm_number_ei",
-    ]]
+    new_emissions = new_emissions[
+        [
+            "oid",
+            "engine_type",
+            "engine_full_name",
+            "engine_name",
+            "thrust",
+            "mode",
+            "fuel_kg_sec",
+            "co_ei",
+            "hc_ei",
+            "nox_ei",
+            "sox_ei",
+            "pm10_ei",
+            "p1_ei",
+            "p2_ei",
+            "smoke_number",
+            "smoke_number_maximum",
+            "fuel_type",
+            "manufacturer",
+            "source",
+            "remark",
+            "status",
+            "engine_name_type",
+            "coolant",
+            "combustion_technology",
+            "technology_age",
+            "pm10_prefoa3",
+            "pm10_nonvol",
+            "pm10_sul",
+            "pm10_organic",
+            "eng_type",
+            "bpr",
+            "nvpm_ei",
+            "nvpm_number_ei",
+        ]
+    ]
 
     new_emissions.to_csv(default_aircraft_engine_ei_csv, index=False)

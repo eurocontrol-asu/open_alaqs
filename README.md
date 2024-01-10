@@ -14,7 +14,7 @@ The best dimensions for the banner is **1280x650px**. You could also use this fo
 
 I personally use [**Canva**](https://www.canva.com/) for creating the banner images. All the basic stuff is **free**(*you won't need the pro version in most cases*).
 
-There are endless badges that you could use in your projects. And they do depend on the project. Some of the ones that I commonly use in every projects are given below. 
+There are endless badges that you could use in your projects. And they do depend on the project. Some of the ones that I commonly use in every projects are given below.
 
 I use [**Shields IO**](https://shields.io/) for making badges. It is a simple and easy to use tool that you can use for almost all your badge cravings. -->
 
@@ -75,7 +75,7 @@ Here is a sample TOC(*wow! such cool!*) that is actually the TOC for this README
 # Installation
 [(Back to top)](#table-of-contents)
 
-<!-- *You might have noticed the **Back to top** button(if not, please notice, it's right there!). This is a good idea because it makes your README **easy to navigate.*** 
+<!-- *You might have noticed the **Back to top** button(if not, please notice, it's right there!). This is a good idea because it makes your README **easy to navigate.***
 
 The first one should be how to install(how to generally use your project or set-up for editing in their machine).
 
@@ -94,7 +94,7 @@ To use this project, first clone the repo on your device using the command below
 ```git clone https://github.com/navendu-pottekkat/nsfw-filter.git``` -->
 
 Open-ALAQS is a QGIS plugin, so to install Open-ALAQS, QGIS needs to be installed.
-After QGIS is installed, Open-ALAQS can be installed. 
+After QGIS is installed, Open-ALAQS can be installed.
 
 ## Install QGIS
 
@@ -147,7 +147,7 @@ Now clone the repository in the plugins folder:
 cd {YOUR_QGIS_PLUGINS_PATH}
 
 # Clone the repository
-git clone git@gitlab.aerlabs.nl:eurocontrol/open_alaqs.git 
+git clone git@gitlab.aerlabs.nl:eurocontrol/open_alaqs.git
 ```
 
 The line above uses a git command.
@@ -243,7 +243,7 @@ pyuic5 -o ui/ui_about.py --from-imports ui/ui_about.ui
 The Open-ALAQS database templates can be edited by modifying the sql and csv files in the `/database` folder.
 The folder `/database` contains scripts that build the OpenALAQS tables.
 All source files (.sql and .csv) needed for the build are inside the `/database/sql` and `/database/data` folder.
-Other scripts and files supporting the creation of the sql and csv files are located in `/database/scripts` and `/database/src`. 
+Other scripts and files supporting the creation of the sql and csv files are located in `/database/scripts` and `/database/src`.
 
 To build the Open-ALAQS database templates, run the following command in your terminal:
 
@@ -278,7 +278,7 @@ A good idea is to also display the sponsors with their organisation logos or bad
 ### Adding new features or fixing bugs
 [(Back to top)](#table-of-contents)
 
-<!-- This is to give people an idea how they can raise issues or feature requests in your projects. 
+<!-- This is to give people an idea how they can raise issues or feature requests in your projects.
 
 You could also give guidelines for submitting and issue or a pull request to your project.
 

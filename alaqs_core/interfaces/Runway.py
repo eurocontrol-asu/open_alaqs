@@ -6,9 +6,9 @@ from shapely.wkt import loads
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
-from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import spatial
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
 
@@ -21,27 +21,41 @@ class Runway:
         self._directions = self.getDirectionsByName(self._name)
         self._touchdown_offset = int(val["touchdown"]) if "touchdown" in val else 0
         self._capacity = int(val["capacity"]) if "capacity" in val else 0
-        self._max_queue_speed = float(val["max_queue_speed"]) if "max_queue_speed" in val else 0.
-        self._peak_queue_time = float(val["peak_queue_time"]) if "peak_queue_time" in val else 0.
+        self._max_queue_speed = (
+            float(val["max_queue_speed"]) if "max_queue_speed" in val else 0.0
+        )
+        self._peak_queue_time = (
+            float(val["peak_queue_time"]) if "peak_queue_time" in val else 0.0
+        )
 
-        self._height = 0.
+        self._height = 0.0
         self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
 
-        self._geometry = loads(val["geometry"]) if "geometry" in val else geometry.GeometryCollection()
+        self._geometry = (
+            loads(val["geometry"])
+            if "geometry" in val
+            else geometry.GeometryCollection()
+        )
         # add height to self._geometry
-        if self._geometry and not (self._height is None):
-            self._geometry = ops.transform(lambda x, y, z=None: (x, y, self._height), self._geometry)
+        if self._geometry and self._height is not None:
+            self._geometry = ops.transform(
+                lambda x, y, z=None: (x, y, self._height), self._geometry
+            )
 
-        if self._geometry_text and not (self._height is None):
-            self.setGeometryText(spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight()))
+        if self._geometry_text and self._height is not None:
+            self.setGeometryText(
+                spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight())
+            )
 
     def getHeight(self):
         return self._height
+
     def setHeight(self, var):
         self._height = var
 
     def getDirections(self):
         return self._directions
+
     def getDirectionsByName(self, val):
         if val:
             return val.replace(" ", "").split("/")
@@ -49,32 +63,42 @@ class Runway:
 
     def getName(self):
         return self._name
+
     def setName(self, val):
         self._name = val
+
     def getTouchdownOffset(self):
         return self._touchdown_offset
+
     def setTouchdownOffset(self, val):
         self._touchdown_offset = val
+
     def getCapacity(self):
         return self._capacity
+
     def setCapacity(self, val):
         self._capacity = val
+
     def getQueueSpeed(self):
         return self._max_queue_speed
+
     def setQueueSpeed(self, val):
         self._max_queue_speed = val
+
     def getPeakQueueTime(self):
         return self._peak_queue_time
+
     def setPeakQueueTime(self, val):
         self._peak_queue_time = val
+
     def getGeometryText(self):
         return self._geometry_text
+
     def setGeometryText(self, val):
         self._geometry_text = val
 
     def getGeometry(self):
         return self._geometry
-
 
     def __str__(self):
         val = "\n Runway with id '%s'" % (self.getName())
@@ -99,7 +123,7 @@ class RunwayStore(Store, metaclass=Singleton):
         self._db_path = db_path
 
         self._runway_db = None
-        if  "runway_db" in db:
+        if "runway_db" in db:
             if isinstance(db["runway_db"], RunwayDatabase):
                 self._runway_db = db["runway_db"]
             elif isinstance(db["runway_db"], str) and os.path.isfile(db["runway_db"]):
@@ -108,12 +132,15 @@ class RunwayStore(Store, metaclass=Singleton):
         if self._runway_db is None:
             self._runway_db = RunwayDatabase(db_path)
 
-        #instantiate all runway objects
+        # instantiate all runway objects
         self.initRunways()
 
     def initRunways(self):
         for key, runway_dict in list(self.getRunwayDatabase().getEntries().items()):
-            self.setObject(runway_dict["runway_id"] if "runway_id" in runway_dict else "unknown", Runway(runway_dict))
+            self.setObject(
+                runway_dict["runway_id"] if "runway_id" in runway_dict else "unknown",
+                Runway(runway_dict),
+            )
 
     def getRunwayDatabase(self):
         return self._runway_db
@@ -124,38 +151,49 @@ class RunwayDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to runway shape file in the spatialite database
     """
 
-    def __init__(self,
-                 db_path_string,
-                 table_name_string="shapes_runways",
-                 table_columns_type_dict=None,
-                 primary_key="",
-                 geometry_columns=None
-                 ):
+    def __init__(
+        self,
+        db_path_string,
+        table_name_string="shapes_runways",
+        table_columns_type_dict=None,
+        primary_key="",
+        geometry_columns=None,
+    ):
 
         if table_columns_type_dict is None:
-            table_columns_type_dict = OrderedDict([
-                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
-                ("runway_id", "TEXT"),
-                ("capacity", "INT"),
-                ("touchdown", "INT"),
-                ("max_queue_speed", "DECIMAL"),
-                ("peak_queue_time", "DECIMAL"),
-                ("instudy", "DECIMAL")
-            ])
+            table_columns_type_dict = OrderedDict(
+                [
+                    ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                    ("runway_id", "TEXT"),
+                    ("capacity", "INT"),
+                    ("touchdown", "INT"),
+                    ("max_queue_speed", "DECIMAL"),
+                    ("peak_queue_time", "DECIMAL"),
+                    ("instudy", "DECIMAL"),
+                ]
+            )
         if geometry_columns is None:
-            geometry_columns = [{
-                "column_name": "geometry",
-                "SRID": 3857,
-                "geometry_type": "LINESTRING",
-                "geometry_type_dimension": 2
-            }]
+            geometry_columns = [
+                {
+                    "column_name": "geometry",
+                    "SRID": 3857,
+                    "geometry_type": "LINESTRING",
+                    "geometry_type_dimension": 2,
+                }
+            ]
 
-        SQLSerializable.__init__(self, db_path_string, table_name_string,
-                                 table_columns_type_dict, primary_key,
-                                 geometry_columns)
+        SQLSerializable.__init__(
+            self,
+            db_path_string,
+            table_name_string,
+            table_columns_type_dict,
+            primary_key,
+            geometry_columns,
+        )
 
         if self._db_path:
             self.deserialize()
+
 
 # if __name__ == "__main__":
 #     # create a logger for this module

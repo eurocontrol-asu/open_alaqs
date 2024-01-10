@@ -4,16 +4,15 @@ from collections import OrderedDict
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.APU import APUStore
-from open_alaqs.alaqs_core.interfaces.EmissionDynamics import \
-    EmissionDynamicsStore
+from open_alaqs.alaqs_core.interfaces.EmissionDynamics import EmissionDynamicsStore
 from open_alaqs.alaqs_core.interfaces.Emissions import Emission
-from open_alaqs.alaqs_core.interfaces.EngineDatabases import \
-    EngineEmissionFactorsStartDatabase
-from open_alaqs.alaqs_core.interfaces.EngineStore import EngineStore, \
-    HeliEngineStore
+from open_alaqs.alaqs_core.interfaces.EngineDatabases import (
+    EngineEmissionFactorsStartDatabase,
+)
+from open_alaqs.alaqs_core.interfaces.EngineStore import EngineStore, HeliEngineStore
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
-from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
 
@@ -166,9 +165,11 @@ class Aircraft:
         val += "\n\t Wake category: %s" % (self.getWakeCategory())
         val += "\n\t Group: %s" % (self.getGroup())
         val += "\n\t MTOW: %i" % (self.getMTOW())
-        #val += "\n\t Engine Name: %s" % (self._engine_icao)
+        # val += "\n\t Engine Name: %s" % (self._engine_icao)
         val += "\n\t Engine Count: %i" % (self.getEngineCount())
-        val += "\n\t Default Engine: %s" % ("\n\t".join(str(self.getDefaultEngine()).split("\n")))
+        val += "\n\t Default Engine: %s" % (
+            "\n\t".join(str(self.getDefaultEngine()).split("\n"))
+        )
         return val
 
 
@@ -188,24 +189,35 @@ class AircraftStore(Store, metaclass=Singleton):
         if "aircraft_db" in db:
             if isinstance(db["aircraft_db"], AircraftDatabase):
                 self._aircraft_db = db["aircraft_db"]
-            elif isinstance(db["aircraft_db"], str) and os.path.isfile(db["aircraft_db"]):
+            elif isinstance(db["aircraft_db"], str) and os.path.isfile(
+                db["aircraft_db"]
+            ):
                 self._aircraft_db = AircraftDatabase(db["aircraft_db"])
 
         if self._aircraft_db is None:
             self._aircraft_db = AircraftDatabase(db_path)
 
-        #Engine-start-emission factors
+        # Engine-start-emission factors
         self._start_emission_factors_db = None
-        if  "engine_start_emission_factors_db" in db:
-            if isinstance(db["engine_start_emission_factors_db"], EngineEmissionFactorsStartDatabase):
+        if "engine_start_emission_factors_db" in db:
+            if isinstance(
+                db["engine_start_emission_factors_db"],
+                EngineEmissionFactorsStartDatabase,
+            ):
                 self._start_emission_factors_db = db["engine_start_emission_factors_db"]
-            elif isinstance(db["engine_start_emission_factors_db"], str) and os.path.isfile(db["engine_start_emission_factors_db"]):
-                self._start_emission_factors_db = EngineEmissionFactorsStartDatabase(db["engine_start_emission_factors_db"])
+            elif isinstance(
+                db["engine_start_emission_factors_db"], str
+            ) and os.path.isfile(db["engine_start_emission_factors_db"]):
+                self._start_emission_factors_db = EngineEmissionFactorsStartDatabase(
+                    db["engine_start_emission_factors_db"]
+                )
 
         if self._start_emission_factors_db is None:
-            self._start_emission_factors_db = EngineEmissionFactorsStartDatabase(db_path)
+            self._start_emission_factors_db = EngineEmissionFactorsStartDatabase(
+                db_path
+            )
 
-        #instantiate all aircraft objects
+        # instantiate all aircraft objects
         self.initAircraft()
 
     def getAPUStore(self):
@@ -224,7 +236,7 @@ class AircraftStore(Store, metaclass=Singleton):
         for key_, ac_dict in self.getAircraftDatabase().getEntries().items():
 
             try:
-                #add aircraft to store
+                # add aircraft to store
                 ac = Aircraft(ac_dict)
                 # if ac.getGroup() == "HELICOPTER":
                 #
@@ -260,53 +272,89 @@ class AircraftStore(Store, metaclass=Singleton):
                 #                                                                                ac.getICAOIdentifier()))
                 #         continue
 
-                #default engine assignment
-                if "engine" in ac_dict and self.getEngineStore().hasKey(ac_dict["engine"]):
-                    ac.setDefaultEngine(self.getEngineStore().getObject(ac_dict["engine"]))
+                # default engine assignment
+                if "engine" in ac_dict and self.getEngineStore().hasKey(
+                    ac_dict["engine"]
+                ):
+                    ac.setDefaultEngine(
+                        self.getEngineStore().getObject(ac_dict["engine"])
+                    )
 
-                elif "engine" in ac_dict and not self.getEngineStore().hasKey(ac_dict["engine"]):
+                elif "engine" in ac_dict and not self.getEngineStore().hasKey(
+                    ac_dict["engine"]
+                ):
                     if self.getEngineStore().hasKey(ac_dict["engine_name"]):
-                        logger.info("Engine sub %s for %s"%(ac_dict["engine_name"], ac_dict["engine"]))
-                        ac.setDefaultEngine(self.getEngineStore().getObject(ac_dict["engine_name"]))
+                        logger.info(
+                            "Engine sub %s for %s"
+                            % (ac_dict["engine_name"], ac_dict["engine"])
+                        )
+                        ac.setDefaultEngine(
+                            self.getEngineStore().getObject(ac_dict["engine_name"])
+                        )
 
                 # try HELICOPTER DB
-                elif "engine_name" in ac_dict and self.getHeliEngineStore().hasKey(ac_dict["engine_name"]):
-                    ac.setDefaultEngine(self.getHeliEngineStore().getObject(ac_dict["engine_name"]))
+                elif "engine_name" in ac_dict and self.getHeliEngineStore().hasKey(
+                    ac_dict["engine_name"]
+                ):
+                    ac.setDefaultEngine(
+                        self.getHeliEngineStore().getObject(ac_dict["engine_name"])
+                    )
 
                 else:
                     # If engine not found in the DB, the aircraft is ignored
                     # if not ac_dict["engine"] in unmatched_engines:
                     #     unmatched_engines.append(ac_dict["engine"])
-                    logger.warning("Could not find engine with id '%s' for AC %s"%(ac_dict["engine"], ac.getICAOIdentifier()))
+                    logger.warning(
+                        "Could not find engine with id '%s' for AC %s"
+                        % (ac_dict["engine"], ac.getICAOIdentifier())
+                    )
                     continue
                     # return
 
-                if not ac.getDefaultEngine() is None:
+                if ac.getDefaultEngine() is not None:
                     #   Main-engine-start-emission factors
-                    matched = difflib.get_close_matches(ac.getGroup(), [values["aircraft_group"]
-                                for key, values in list(self.getEngineStartEmissionFactorsDatabase().getEntries().items())])
+                    matched = difflib.get_close_matches(
+                        ac.getGroup(),
+                        [
+                            values["aircraft_group"]
+                            for key, values in list(
+                                self.getEngineStartEmissionFactorsDatabase()
+                                .getEntries()
+                                .items()
+                            )
+                        ],
+                    )
                     ac_group = matched[0] if matched else None
 
-                    start_ei = Emission(defaultValues={"fuel_kg" : 0.,
-                        "co_g" : 0.,
-                        "co2_g" : 0.,
-                        "hc_g" : 0.,
-                        "nox_g" : 0.,
-                        "sox_g" : 0.,
-                        "pm10_g" : 0.,
-                        "p1_g" : 0.,
-                        "p2_g": 0.,
-                        "pm10_prefoa3_g" : 0.,
-                        "pm10_nonvol_g" : 0.,
-                        "pm10_sul_g" : 0.,
-                        "pm10_organic_g" : 0.
-                    })
-                    start_ei.setVerticalExtent({'z_min': 0, 'z_max': 5})
+                    start_ei = Emission(
+                        defaultValues={
+                            "fuel_kg": 0.0,
+                            "co_g": 0.0,
+                            "co2_g": 0.0,
+                            "hc_g": 0.0,
+                            "nox_g": 0.0,
+                            "sox_g": 0.0,
+                            "pm10_g": 0.0,
+                            "p1_g": 0.0,
+                            "p2_g": 0.0,
+                            "pm10_prefoa3_g": 0.0,
+                            "pm10_nonvol_g": 0.0,
+                            "pm10_sul_g": 0.0,
+                            "pm10_organic_g": 0.0,
+                        }
+                    )
+                    start_ei.setVerticalExtent({"z_min": 0, "z_max": 5})
 
                     if ac_group is None:
-                        ac.getDefaultEngine().setStartEmissions(start_ei) # association of start ef by aircraft group!
+                        ac.getDefaultEngine().setStartEmissions(
+                            start_ei
+                        )  # association of start ef by aircraft group!
                     else:
-                        for key, value in list(self.getEngineStartEmissionFactorsDatabase().getEntries().items()):
+                        for key, value in list(
+                            self.getEngineStartEmissionFactorsDatabase()
+                            .getEntries()
+                            .items()
+                        ):
                             if value["aircraft_group"] == ac_group:
                                 start_ei.addCO(value["co"])
                                 start_ei.addHC(value["hc"])
@@ -315,22 +363,23 @@ class AircraftStore(Store, metaclass=Singleton):
                                 start_ei.addPM10(value["pm10"])
                                 start_ei.addPM1(value["p1"])
                                 start_ei.addPM2(value["p2"])
-                        ac.getDefaultEngine().setStartEmissions(start_ei) #association of start ef by aircraft group!
+                        ac.getDefaultEngine().setStartEmissions(
+                            start_ei
+                        )  # association of start ef by aircraft group!
 
-                    apu_group = None
                     # APU infos:
 
                     # times
-                    apu_times = {
-                        "REMOTE":{"arr":0, "dep":0},
-                         "PIER":{"arr":0, "dep":0},
-                         "CARGO":{"arr":0, "dep":0}
-                                 }
+                    # apu_times = {
+                    #     "REMOTE": {"arr": 0, "dep": 0},
+                    #     "PIER": {"arr": 0, "dep": 0},
+                    #     "CARGO": {"arr": 0, "dep": 0},
+                    # }
                     try:
                         if ac.getGroup():
                             apu_times_ = self.getAPUStore().get_apu_times(ac.getGroup())
                     except Exception as exc_:
-                        logger.error("Problem with assigning APU times %s"%exc_)
+                        logger.error("Problem with assigning APU times %s" % exc_)
                     ac.setApuTimes(apu_times_)
 
                     # emission factors
@@ -338,12 +387,26 @@ class AircraftStore(Store, metaclass=Singleton):
                     ac.setApuEmissions(None)
                     try:
                         if "apu_id" in ac_dict:
-                            apu_val_list = [values_.getName() for key_, values_ in list(self.getAPUStore().getObjects().items())]
-                            apu_val_emissions = [values_._emissions for key_, values_ in list(self.getAPUStore().getObjects().items())]
-                            matched = difflib.get_close_matches(ac._apu_id, apu_val_list)
+                            apu_val_list = [
+                                values_.getName()
+                                for key_, values_ in list(
+                                    self.getAPUStore().getObjects().items()
+                                )
+                            ]
+                            apu_val_emissions = [
+                                values_._emissions
+                                for key_, values_ in list(
+                                    self.getAPUStore().getObjects().items()
+                                )
+                            ]
+                            matched = difflib.get_close_matches(
+                                ac._apu_id, apu_val_list
+                            )
                             if matched:
                                 ac.setApu(matched[0])
-                                ac.setApuEmissions(apu_val_emissions[apu_val_list.index(matched[0])])
+                                ac.setApuEmissions(
+                                    apu_val_emissions[apu_val_list.index(matched[0])]
+                                )
                     except Exception as exc_:
                         logger.error("Problem with assigning APU id %s" % exc_)
 
@@ -360,23 +423,36 @@ class AircraftStore(Store, metaclass=Singleton):
                 #     # logger.warning("Did not find apu emission factors for aircraft '%s' (%s). Update the table 'default_apu_ef'." % (ac.getICAOIdentifier(), ac.getGroup()))
                 #     pass
 
-                sas_group = None
                 group_ = None
 
-                if (ac.getGroup() == 'HELICOPTER') or (ac.getGroup() == 'HELICOPTER LIGHT'):
+                if (ac.getGroup() == "HELICOPTER") or (
+                    ac.getGroup() == "HELICOPTER LIGHT"
+                ):
                     group_ = "HELI SMALL"
-                elif (ac.getGroup() == 'HELICOPTER HEAVY') or (ac.getGroup() == 'HELICOPTER LARGE') \
-                        or (ac.getGroup() == 'HELICOPTER MEDIUM'):
+                elif (
+                    (ac.getGroup() == "HELICOPTER HEAVY")
+                    or (ac.getGroup() == "HELICOPTER LARGE")
+                    or (ac.getGroup() == "HELICOPTER MEDIUM")
+                ):
                     group_ = "HELI LARGE"
                 else:
                     group_ = ac.getGroup()
 
                 # Smooth and Shift factors
-                matched = difflib.get_close_matches(group_, [values.getDynamicsGroup() for key, values in
-                                                        list(self.getEmissionDynamicsStore().getObjects().items())])
+                matched = difflib.get_close_matches(
+                    group_,
+                    [
+                        values.getDynamicsGroup()
+                        for key, values in list(
+                            self.getEmissionDynamicsStore().getObjects().items()
+                        )
+                    ],
+                )
                 if matched:
-                    sas_group = matched[0]
-                    for key, sas in list(self.getEmissionDynamicsStore().getObjects().items()):
+                    matched[0]
+                    for key, sas in list(
+                        self.getEmissionDynamicsStore().getObjects().items()
+                    ):
                         if group_ in sas.getDynamicsGroup():
                             if "TX" in sas.getDynamicsGroup():
                                 ac.setEmissionDynamicsByMode("TX", sas)
@@ -393,12 +469,12 @@ class AircraftStore(Store, metaclass=Singleton):
                 print(exc_)
                 continue
 
-
     def getAircraftDatabase(self):
         return self._aircraft_db
 
     def getEngineStore(self):
         return EngineStore(self._db_path)
+
     def getHeliEngineStore(self):
         return HeliEngineStore(self._db_path)
 
@@ -408,38 +484,47 @@ class AircraftDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to default_aircraft table in the spatialite database
     """
 
-    def __init__(self,
-                 db_path_string,
-                 table_name_string="default_aircraft",
-                 table_columns_type_dict=None,
-                 primary_key=""
-                 ):
+    def __init__(
+        self,
+        db_path_string,
+        table_name_string="default_aircraft",
+        table_columns_type_dict=None,
+        primary_key="",
+    ):
 
         if table_columns_type_dict is None:
-            table_columns_type_dict = OrderedDict([
-                ("oid", "INTEGER PRIMARY KEY"),
-                ("icao", "TEXT"),
-                ("ac_group_code", "TEXT"),
-                ("ac_group", "TEXT"),
-                ("manufacturer", "TEXT"),
-                ("name", "TEXT"),
-                ("class", "TEXT"),
-                ("mtow", "DECIMAL"),
-                ("engine_count", "INTEGER"),
-                ("engine_name", "TEXT"),
-                ("engine", "TEXT"),
-                ("departure_profile", "TEXT"),
-                ("arrival_profile", "TEXT"),
-                ("bada_id", "TEXT"),
-                ("wake_category", "TEXT"),
-                ("apu_id", "TEXT")
-            ])
+            table_columns_type_dict = OrderedDict(
+                [
+                    ("oid", "INTEGER PRIMARY KEY"),
+                    ("icao", "TEXT"),
+                    ("ac_group_code", "TEXT"),
+                    ("ac_group", "TEXT"),
+                    ("manufacturer", "TEXT"),
+                    ("name", "TEXT"),
+                    ("class", "TEXT"),
+                    ("mtow", "DECIMAL"),
+                    ("engine_count", "INTEGER"),
+                    ("engine_name", "TEXT"),
+                    ("engine", "TEXT"),
+                    ("departure_profile", "TEXT"),
+                    ("arrival_profile", "TEXT"),
+                    ("bada_id", "TEXT"),
+                    ("wake_category", "TEXT"),
+                    ("apu_id", "TEXT"),
+                ]
+            )
 
-        SQLSerializable.__init__(self, db_path_string, table_name_string,
-                                 table_columns_type_dict, primary_key)
+        SQLSerializable.__init__(
+            self,
+            db_path_string,
+            table_name_string,
+            table_columns_type_dict,
+            primary_key,
+        )
 
         if self._db_path:
             self.deserialize()
+
 
 # if __name__ == "__main__":
 #     # from PyQt4 import QtGui

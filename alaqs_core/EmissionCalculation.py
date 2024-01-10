@@ -4,19 +4,24 @@ from collections import OrderedDict
 from PyQt5 import QtCore, QtWidgets
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.alaqs_core.interfaces.AmbientCondition import \
-    AmbientConditionStore, AmbientCondition
+from open_alaqs.alaqs_core.interfaces.AmbientCondition import (
+    AmbientCondition,
+    AmbientConditionStore,
+)
 from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
 from open_alaqs.alaqs_core.interfaces.Emissions import Emission
-from open_alaqs.alaqs_core.interfaces.InventoryTimeSeries import \
-    InventoryTimeSeriesStore
+from open_alaqs.alaqs_core.interfaces.InventoryTimeSeries import (
+    InventoryTimeSeriesStore,
+)
 from open_alaqs.alaqs_core.interfaces.Source import Source
 from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
-from open_alaqs.alaqs_core.modules.ModuleManager import SourceModuleManager, \
-    DispersionModuleManager
+from open_alaqs.alaqs_core.modules.ModuleManager import (
+    DispersionModuleManager,
+    SourceModuleManager,
+)
 from open_alaqs.alaqs_core.tools import conversion
-from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 from open_alaqs.alaqs_core.tools.conversion import convertTimeToSeconds
+from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 from open_alaqs.alaqs_core.tools.iterator import pairwise
 
 logger = get_logger(__name__)
@@ -29,35 +34,41 @@ class EmissionCalculation:
 
         self._database_path = values_dict.get("database_path")
         if self._database_path is None:
-            raise Exception("Value '%s' not defined for class '%s'" %
-                            ("database_path", "EmissionCalculation"))
+            raise Exception(
+                "Value '%s' not defined for class '%s'"
+                % ("database_path", "EmissionCalculation")
+            )
 
         # Get the time series for this inventory
         self._start_incl = convertTimeToSeconds(values_dict.get("Start (incl.)"))
-        self._end_incl = convertTimeToSeconds(values_dict.get('End (incl.)'))
+        self._end_incl = convertTimeToSeconds(values_dict.get("End (incl.)"))
         self._inventoryTimeSeriesStore = InventoryTimeSeriesStore(
-            self.getDatabasePath())
+            self.getDatabasePath()
+        )
         self._emissions = OrderedDict()
         self._module_manager = SourceModuleManager()
         self._modules = OrderedDict()
         self._dispersion_modules = OrderedDict()
         self._dispersion_module_manager = DispersionModuleManager()
-        self._ambient_conditions_store = \
-            AmbientConditionStore(self.getDatabasePath())
+        self._ambient_conditions_store = AmbientConditionStore(self.getDatabasePath())
 
-        self._3DGrid = Grid3D(self.getDatabasePath(), values_dict.get(
-            "grid_configuration",
-            {
-                'x_cells': 10,
-                'y_cells': 10,
-                'z_cells': 1,
-                'x_resolution': 100,
-                'y_resolution': 100,
-                'z_resolution': 100,
-                'reference_latitude': '0.0',  # airport_latitude
-                'reference_longitude': '0.0',  # airport_longitude
-                'reference_altitude': '0.0'  # airport_altitude
-            }))
+        self._3DGrid = Grid3D(
+            self.getDatabasePath(),
+            values_dict.get(
+                "grid_configuration",
+                {
+                    "x_cells": 10,
+                    "y_cells": 10,
+                    "z_cells": 1,
+                    "x_resolution": 100,
+                    "y_resolution": 100,
+                    "z_resolution": 100,
+                    "reference_latitude": "0.0",  # airport_latitude
+                    "reference_longitude": "0.0",  # airport_longitude
+                    "reference_altitude": "0.0",  # airport_altitude
+                },
+            ),
+        )
 
         self._debug = values_dict.get("debug", False)
 
@@ -66,10 +77,15 @@ class EmissionCalculation:
         if dispersion_enabled:
             progressbar = QtWidgets.QProgressDialog(
                 "Calculating emissions & writing input files for"
-                " dispersion model ...", "Cancel", 0, 99)
+                " dispersion model ...",
+                "Cancel",
+                0,
+                99,
+            )
         else:
             progressbar = QtWidgets.QProgressDialog(
-                "Calculating emissions ...", "Cancel", 0, 99)
+                "Calculating emissions ...", "Cancel", 0, 99
+            )
         progressbar.setWindowTitle("Emissions Calculation")
         # self._progressbar.setValue(1)
         progressbar.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
@@ -107,8 +123,10 @@ class EmissionCalculation:
                 logger.error("Did not find module with name '%s'" % name)
                 return False
             elif len(found_) > 1:
-                logger.warning("Found multiple matches for modules with name "
-                               "'%s'. Using only first match." % name)
+                logger.warning(
+                    "Found multiple matches for modules with name "
+                    "'%s'. Using only first match." % name
+                )
             obj = found_[0][1]  # returns tuple (name, obj)
 
         # instantiate objects
@@ -127,8 +145,7 @@ class EmissionCalculation:
             try:
 
                 config_ = {
-                    "database_path":
-                        db_path if db_path else self.getDatabasePath()
+                    "database_path": db_path if db_path else self.getDatabasePath()
                 }
 
                 config_.update(configuration)
@@ -148,13 +165,13 @@ class EmissionCalculation:
         if obj is None:
             found_ = self.getDispersionModuleManager().getModulesByName(name)
             if len(found_) == 0:
-                logger.error(
-                    "Did not find dispersion module with name '%s'" % name)
+                logger.error("Did not find dispersion module with name '%s'" % name)
                 return False
             elif len(found_) > 1:
-                logger.warning("Found multiple matches for dispersion modules "
-                               "with name '%s'. Using only first match." % (
-                                   name))
+                logger.warning(
+                    "Found multiple matches for dispersion modules "
+                    "with name '%s'. Using only first match." % (name)
+                )
             obj = found_[0][1]  # returns tuple (name, obj)
         # instantiate objects
         if isinstance(obj, DispersionModule):
@@ -166,12 +183,12 @@ class EmissionCalculation:
                     # if issubclass(obj, DispersionModule):
                     config_ = {}
                     config_.update(configuration)
-                    self._dispersion_modules[name] = obj(
-                        values_dict=configuration)
+                    self._dispersion_modules[name] = obj(values_dict=configuration)
                     return True
-                except Exception as e:
-                    logger.error("issubclass(obj, SourceModule) failed for "
-                                 "DispersionModule")
+                except Exception:
+                    logger.error(
+                        "issubclass(obj, SourceModule) failed for " "DispersionModule"
+                    )
                     return False
         return False
 
@@ -185,31 +202,34 @@ class EmissionCalculation:
             source_names = []
 
         default_emissions = {
-            "fuel_kg": 0.,
-            "co_g": 0.,
-            "co2_g": 0.,
-            "hc_g": 0.,
-            "nox_g": 0.,
-            "sox_g": 0.,
-            "pm10_g": 0.,
-            "p1_g": 0.,
-            "p2_g": 0.,
-            "pm10_prefoa3_g": 0.,
-            "pm10_nonvol_g": 0.,
-            "pm10_sul_g": 0.,
-            "pm10_organic_g": 0.,
-            "nvpm_g": 0.,
-            "nvpm_number": 0.
+            "fuel_kg": 0.0,
+            "co_g": 0.0,
+            "co2_g": 0.0,
+            "hc_g": 0.0,
+            "nox_g": 0.0,
+            "sox_g": 0.0,
+            "pm10_g": 0.0,
+            "p1_g": 0.0,
+            "p2_g": 0.0,
+            "pm10_prefoa3_g": 0.0,
+            "pm10_nonvol_g": 0.0,
+            "pm10_sul_g": 0.0,
+            "pm10_organic_g": 0.0,
+            "nvpm_g": 0.0,
+            "nvpm_number": 0.0,
         }
 
         # check if a dispersion module is enabled
         dispersion_enabled = len(self.getDispersionModules()) > 0
 
         # list the selected modules
-        logger.debug("Selected source modules: %s",
-                     ', '.join(self.getModules().keys()))
-        logger.debug("Selected dispersion modules: %s", ', '.join(
-            self.getDispersionModules().keys()) if dispersion_enabled else None)
+        logger.debug("Selected source modules: %s", ", ".join(self.getModules().keys()))
+        logger.debug(
+            "Selected dispersion modules: %s",
+            ", ".join(self.getDispersionModules().keys())
+            if dispersion_enabled
+            else None,
+        )
 
         # execute beginJob(..) of SourceModules
         logger.debug("Execute beginJob(..) of source modules")
@@ -218,16 +238,17 @@ class EmissionCalculation:
 
         # execute beginJob(..) of dispersion modules
         logger.debug("Execute beginJob(..) of dispersion modules")
-        for dispersion_mod_name, dispersion_mod_obj in \
-                self.getDispersionModules().items():
+        for (
+            dispersion_mod_name,
+            dispersion_mod_obj,
+        ) in self.getDispersionModules().items():
             dispersion_mod_obj.beginJob()
 
         # execute process(..)
         logger.debug("Execute process(..)")
         try:
             # configure the progress bar
-            progressbar = self.ProgressBarWidget(
-                dispersion_enabled=dispersion_enabled)
+            progressbar = self.ProgressBarWidget(dispersion_enabled=dispersion_enabled)
             count_ = 0
             total_count_ = len(list(self.getTimeSeries())) - 1
 
@@ -237,7 +258,7 @@ class EmissionCalculation:
                 start_time = start_.getTimeAsDateTime()
                 end_time = end_.getTimeAsDateTime()
 
-                logger.debug(f'start {start_time}, end {end_time}')
+                logger.debug(f"start {start_time}, end {end_time}")
 
                 # update the progress bar
                 progressbar.setValue(int(100 * count_ / total_count_))
@@ -249,11 +270,12 @@ class EmissionCalculation:
                 # get the ambient condition
                 # ToDo: only run on (start_, end_) with emission sources?
                 try:
-                    ambient_condition = self.getAmbientCondition(
-                        start_.getTime())
+                    ambient_condition = self.getAmbientCondition(start_.getTime())
                 except Exception:
-                    logger.warning('Couldn\'t load the ambient condition, so '
-                                   'default conditions are used.')
+                    logger.warning(
+                        "Couldn't load the ambient condition, so "
+                        "default conditions are used."
+                    )
                     ambient_condition = AmbientCondition()
 
                 period_emissions = []
@@ -265,33 +287,39 @@ class EmissionCalculation:
                     # process() returns a list of tuples for each specific
                     # time interval (start_, end_)
                     for (timestamp_, source_, emission_) in mod_obj.process(
-                            start_, end_, source_names=source_names,
-                            ambient_conditions=ambient_condition):
+                        start_,
+                        end_,
+                        source_names=source_names,
+                        ambient_conditions=ambient_condition,
+                    ):
 
-                        logger.debug(f'{mod_name}: {timestamp_}')
+                        logger.debug(f"{mod_name}: {timestamp_}")
 
                         if emission_ is not None:
                             period_emissions.append((source_, emission_))
                         else:
-                            period_emissions.append((source_, [
-                                Emission(default_emissions, default_emissions)
-                            ]))
+                            period_emissions.append(
+                                (
+                                    source_,
+                                    [Emission(default_emissions, default_emissions)],
+                                )
+                            )
 
                 # calculate dispersion per model
-                for dispersion_mod_name, dispersion_mod_obj in \
-                        self.getDispersionModules().items():
-                    logger.debug(f'{dispersion_mod_name}: {start_time}')
+                for (
+                    dispersion_mod_name,
+                    dispersion_mod_obj,
+                ) in self.getDispersionModules().items():
+                    logger.debug(f"{dispersion_mod_name}: {start_time}")
                     dispersion_mod_obj.process(
-                        start_,
-                        end_,
-                        period_emissions,
-                        ambient_condition)
+                        start_, end_, period_emissions, ambient_condition
+                    )
 
                 # add a generic (zero) emission if the list is empty
                 if len(period_emissions) == 0:
-                    period_emissions.append((Source(), [
-                        Emission(default_emissions, default_emissions)
-                    ]))
+                    period_emissions.append(
+                        (Source(), [Emission(default_emissions, default_emissions)])
+                    )
 
                 # add the emissions to the dict
                 self._emissions[start_time] = period_emissions
@@ -306,8 +334,10 @@ class EmissionCalculation:
 
         # execute endJob(..) of dispersion modules
         logger.debug("Execute endJob(..) of dispersion modules")
-        for dispersion_mod_name, dispersion_mod_obj in \
-                self.getDispersionModules().items():
+        for (
+            dispersion_mod_name,
+            dispersion_mod_obj,
+        ) in self.getDispersionModules().items():
             dispersion_mod_obj.endJob()
 
     def getModules(self):
@@ -342,7 +372,8 @@ class EmissionCalculation:
     def sortEmissionsByTime(self):
         # sort emissions by index (which is a timestamp)
         self._emissions = OrderedDict(
-            sorted(iter(self.getEmissions().items()), key=lambda x: x[0]))
+            sorted(iter(self.getEmissions().items()), key=lambda x: x[0])
+        )
 
     def setDatabasePath(self, val):
         self._database_path = val
@@ -365,9 +396,7 @@ class EmissionCalculation:
     # returns a generator of TimeSeries objects
     def getTimeSeries(self):
         return self.filter_by_time(
-            self.getTimeSeriesStore().getTimeSeries(),
-            self._start_incl,
-            self._end_incl
+            self.getTimeSeriesStore().getTimeSeries(), self._start_incl, self._end_incl
         )
 
     def getPeriods(self):
@@ -378,6 +407,7 @@ class EmissionCalculation:
 
     def set3DGrid(self, var):
         self._3DGrid = var
+
 
 # if __name__ == "__main__":
 #

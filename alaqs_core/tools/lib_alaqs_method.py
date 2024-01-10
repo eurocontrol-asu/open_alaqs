@@ -1,8 +1,6 @@
 import math
 
-from open_alaqs.alaqs_core import alaqs
-from open_alaqs.alaqs_core import alaqsdblite
-from open_alaqs.alaqs_core import alaqsutils
+from open_alaqs.alaqs_core import alaqsdblite, alaqsutils
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 
 logger = get_logger(__name__)
@@ -53,176 +51,177 @@ def roadway_emission_factors_alaqs_method(input_data: dict, study_data: dict) ->
     """
 
     # Unpack input
-    road_speed = input_data['speed']
+    road_speed = input_data["speed"]
 
     # Get additional information from the study data
-    airport_temperature = study_data['airport_temperature']
-    airport_roadway_method = study_data['roadway_method']
-    airport_roadway_year = study_data['roadway_fleet_year']
-    airport_roadway_country = study_data['roadway_country']
-    airport_parking_method = study_data['parking_method']
+    airport_temperature = study_data["airport_temperature"]
+    airport_roadway_method = study_data["roadway_method"]
+    airport_roadway_year = study_data["roadway_fleet_year"]
+    airport_roadway_country = study_data["roadway_country"]
+    airport_parking_method = study_data["parking_method"]
 
     # Create a dict that is the input for the various ef aggregation functions
     aggregation_input = dict()
-    aggregation_input['roadway_country'] = airport_roadway_country
-    aggregation_input['roadway_method'] = airport_roadway_method
-    aggregation_input['roadway_year'] = airport_roadway_year
-    aggregation_input['parking_method'] = airport_parking_method
-    aggregation_input['temperature_average'] = airport_temperature
-    aggregation_input['velocity'] = road_speed
+    aggregation_input["roadway_country"] = airport_roadway_country
+    aggregation_input["roadway_method"] = airport_roadway_method
+    aggregation_input["roadway_year"] = airport_roadway_year
+    aggregation_input["parking_method"] = airport_parking_method
+    aggregation_input["temperature_average"] = airport_temperature
+    aggregation_input["velocity"] = road_speed
 
     # Add some fields that are used to keep running totals during calculation
-    aggregation_input['total_em_voc_pc'] = 0
-    aggregation_input['total_em_voc_ldv'] = 0
-    aggregation_input['total_em_voc_hdv'] = 0
-    aggregation_input['total_em_co_pc'] = 0
-    aggregation_input['total_em_co_ldv'] = 0
-    aggregation_input['total_em_co_hdv'] = 0
-    aggregation_input['total_em_nox_pc'] = 0
-    aggregation_input['total_em_nox_ldv'] = 0
-    aggregation_input['total_em_nox_hdv'] = 0
-    aggregation_input['total_em_pm_pc'] = 0
-    aggregation_input['total_em_pm_ldv'] = 0
-    aggregation_input['total_em_pm_hdv'] = 0
-    aggregation_input['weighted_sum_pc'] = 0
-    aggregation_input['weighted_sum_ldv'] = 0
-    aggregation_input['weighted_sum_hdv'] = 0
+    aggregation_input["total_em_voc_pc"] = 0
+    aggregation_input["total_em_voc_ldv"] = 0
+    aggregation_input["total_em_voc_hdv"] = 0
+    aggregation_input["total_em_co_pc"] = 0
+    aggregation_input["total_em_co_ldv"] = 0
+    aggregation_input["total_em_co_hdv"] = 0
+    aggregation_input["total_em_nox_pc"] = 0
+    aggregation_input["total_em_nox_ldv"] = 0
+    aggregation_input["total_em_nox_hdv"] = 0
+    aggregation_input["total_em_pm_pc"] = 0
+    aggregation_input["total_em_pm_ldv"] = 0
+    aggregation_input["total_em_pm_hdv"] = 0
+    aggregation_input["weighted_sum_pc"] = 0
+    aggregation_input["weighted_sum_ldv"] = 0
+    aggregation_input["weighted_sum_hdv"] = 0
 
     # Get the average trip length
-    aggregation_input['average_trip_length'] = get_average_trip_length(
-        airport_roadway_country)
+    aggregation_input["average_trip_length"] = get_average_trip_length(
+        airport_roadway_country
+    )
 
     # Equivalent of modAggrPcEuroIEf.PCAggregatedPreEURO_EF
-    aggregation_input['vehicle_type'] = "PC"
+    aggregation_input["vehicle_type"] = "PC"
 
     # Emission_Class = 'Pre-ECE'
-    aggregation_input['vehicle_fuel'] = "Gasoline"
+    aggregation_input["vehicle_fuel"] = "Gasoline"
 
-    aggregation_input['vehicle_class'] = "Pre-ECE"
-    aggregation_input['vehicle_size'] = "<1.4 l"
+    aggregation_input["vehicle_class"] = "Pre-ECE"
+    aggregation_input["vehicle_size"] = "<1.4 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = "1.4 - 2.0 l"
+    aggregation_input["vehicle_size"] = "1.4 - 2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
+    aggregation_input["vehicle_size"] = ">2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
 
     # Emission_Class = 'ECE 15/00-01'
-    aggregation_input['vehicle_class'] = "ECE 15/00-01"
-    aggregation_input['vehicle_size'] = "<1.4 l"
+    aggregation_input["vehicle_class"] = "ECE 15/00-01"
+    aggregation_input["vehicle_size"] = "<1.4 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = "1.4 - 2.0 l"
+    aggregation_input["vehicle_size"] = "1.4 - 2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
+    aggregation_input["vehicle_size"] = ">2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
 
     # Emission_Class = 'ECE 15-02'
-    aggregation_input['vehicle_class'] = "ECE 15/02"
-    aggregation_input['vehicle_size'] = "<1.4 l"
+    aggregation_input["vehicle_class"] = "ECE 15/02"
+    aggregation_input["vehicle_size"] = "<1.4 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = "1.4 - 2.0 l"
+    aggregation_input["vehicle_size"] = "1.4 - 2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
+    aggregation_input["vehicle_size"] = ">2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
 
     # Emission_Class = 'ECE 15-03'
-    aggregation_input['vehicle_class'] = "ECE 15/03"
-    aggregation_input['vehicle_size'] = "<1.4 l"
+    aggregation_input["vehicle_class"] = "ECE 15/03"
+    aggregation_input["vehicle_size"] = "<1.4 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = "1.4 - 2.0 l"
+    aggregation_input["vehicle_size"] = "1.4 - 2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
+    aggregation_input["vehicle_size"] = ">2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
 
     # Emission_Class = 'ECE 15-04'
-    aggregation_input['vehicle_class'] = "ECE 15/04"
-    aggregation_input['vehicle_size'] = "<1.4 l"
+    aggregation_input["vehicle_class"] = "ECE 15/04"
+    aggregation_input["vehicle_size"] = "<1.4 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = "1.4 - 2.0 l"
+    aggregation_input["vehicle_size"] = "1.4 - 2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
+    aggregation_input["vehicle_size"] = ">2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
 
     # Emission_Class = 'Improved Conv'
-    aggregation_input['vehicle_class'] = "Improved Conv"
-    aggregation_input['vehicle_size'] = "<1.4 l"
+    aggregation_input["vehicle_class"] = "Improved Conv"
+    aggregation_input["vehicle_size"] = "<1.4 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = "1.4 - 2.0 l"
+    aggregation_input["vehicle_size"] = "1.4 - 2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
 
     # Emission_Class = 'Open Loop'
-    aggregation_input['vehicle_class'] = "Open Loop"
-    aggregation_input['vehicle_size'] = "<1.4 l"
+    aggregation_input["vehicle_class"] = "Open Loop"
+    aggregation_input["vehicle_size"] = "<1.4 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = "1.4 - 2.0 l"
+    aggregation_input["vehicle_size"] = "1.4 - 2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
 
     # Emission_Class = 'Uncontrolled'
-    aggregation_input['vehicle_fuel'] = "Diesel"
+    aggregation_input["vehicle_fuel"] = "Diesel"
 
-    aggregation_input['vehicle_class'] = "Uncontrolled"
-    aggregation_input['vehicle_size'] = "<2.0 l"
+    aggregation_input["vehicle_class"] = "Uncontrolled"
+    aggregation_input["vehicle_size"] = "<2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
+    aggregation_input["vehicle_size"] = ">2.0 l"
     aggregation_input = aggregated_pre_euro_ef(aggregation_input)
 
     # Equivalent of modAggrPcEf.PCAggregatedEURO_EF
-    aggregation_input['vehicle_fuel'] = "Gasoline"
-    aggregation_input['vehicle_class'] = "EURO I"
-    aggregation_input['vehicle_size'] = "<1.4 l"
+    aggregation_input["vehicle_fuel"] = "Gasoline"
+    aggregation_input["vehicle_class"] = "EURO I"
+    aggregation_input["vehicle_size"] = "<1.4 l"
     aggregation_input = aggregated_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = "1.4 - 2.0 l"
+    aggregation_input["vehicle_size"] = "1.4 - 2.0 l"
     aggregation_input = aggregated_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
-    aggregation_input = aggregated_euro_ef(aggregation_input)
-
-    aggregation_input['vehicle_class'] = "EURO II"
-    aggregation_input['vehicle_size'] = "<1.4 l"
-    aggregation_input = aggregated_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = "1.4 - 2.0 l"
-    aggregation_input = aggregated_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
+    aggregation_input["vehicle_size"] = ">2.0 l"
     aggregation_input = aggregated_euro_ef(aggregation_input)
 
-    aggregation_input['vehicle_class'] = "EURO III"
-    aggregation_input['vehicle_size'] = "<1.4 l"
+    aggregation_input["vehicle_class"] = "EURO II"
+    aggregation_input["vehicle_size"] = "<1.4 l"
     aggregation_input = aggregated_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = "1.4 - 2.0 l"
+    aggregation_input["vehicle_size"] = "1.4 - 2.0 l"
     aggregation_input = aggregated_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
-    aggregation_input = aggregated_euro_ef(aggregation_input)
-
-    aggregation_input['vehicle_class'] = "EURO IV"
-    aggregation_input['vehicle_size'] = "<1.4 l"
-    aggregation_input = aggregated_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = "1.4 - 2.0 l"
-    aggregation_input = aggregated_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
+    aggregation_input["vehicle_size"] = ">2.0 l"
     aggregation_input = aggregated_euro_ef(aggregation_input)
 
-    aggregation_input['vehicle_fuel'] = "Diesel"
-
-    aggregation_input['vehicle_class'] = "EURO I"
-    aggregation_input['vehicle_size'] = "<2.0 l"
+    aggregation_input["vehicle_class"] = "EURO III"
+    aggregation_input["vehicle_size"] = "<1.4 l"
     aggregation_input = aggregated_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
+    aggregation_input["vehicle_size"] = "1.4 - 2.0 l"
     aggregation_input = aggregated_euro_ef(aggregation_input)
-
-    aggregation_input['vehicle_class'] = "EURO II"
-    aggregation_input['vehicle_size'] = "<2.0 l"
-    aggregation_input = aggregated_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
+    aggregation_input["vehicle_size"] = ">2.0 l"
     aggregation_input = aggregated_euro_ef(aggregation_input)
 
-    aggregation_input['vehicle_class'] = "EURO III"
-    aggregation_input['vehicle_size'] = "<2.0 l"
+    aggregation_input["vehicle_class"] = "EURO IV"
+    aggregation_input["vehicle_size"] = "<1.4 l"
     aggregation_input = aggregated_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
+    aggregation_input["vehicle_size"] = "1.4 - 2.0 l"
+    aggregation_input = aggregated_euro_ef(aggregation_input)
+    aggregation_input["vehicle_size"] = ">2.0 l"
     aggregation_input = aggregated_euro_ef(aggregation_input)
 
-    aggregation_input['vehicle_class'] = "EURO IV"
-    aggregation_input['vehicle_size'] = "<2.0 l"
+    aggregation_input["vehicle_fuel"] = "Diesel"
+
+    aggregation_input["vehicle_class"] = "EURO I"
+    aggregation_input["vehicle_size"] = "<2.0 l"
     aggregation_input = aggregated_euro_ef(aggregation_input)
-    aggregation_input['vehicle_size'] = ">2.0 l"
+    aggregation_input["vehicle_size"] = ">2.0 l"
+    aggregation_input = aggregated_euro_ef(aggregation_input)
+
+    aggregation_input["vehicle_class"] = "EURO II"
+    aggregation_input["vehicle_size"] = "<2.0 l"
+    aggregation_input = aggregated_euro_ef(aggregation_input)
+    aggregation_input["vehicle_size"] = ">2.0 l"
+    aggregation_input = aggregated_euro_ef(aggregation_input)
+
+    aggregation_input["vehicle_class"] = "EURO III"
+    aggregation_input["vehicle_size"] = "<2.0 l"
+    aggregation_input = aggregated_euro_ef(aggregation_input)
+    aggregation_input["vehicle_size"] = ">2.0 l"
+    aggregation_input = aggregated_euro_ef(aggregation_input)
+
+    aggregation_input["vehicle_class"] = "EURO IV"
+    aggregation_input["vehicle_size"] = "<2.0 l"
+    aggregation_input = aggregated_euro_ef(aggregation_input)
+    aggregation_input["vehicle_size"] = ">2.0 l"
     aggregation_input = aggregated_euro_ef(aggregation_input)
 
     # TODO The code for LPG in original ALAQS is wrong and will need redoing
@@ -236,122 +235,146 @@ def roadway_emission_factors_alaqs_method(input_data: dict, study_data: dict) ->
     # aggregation_input = aggregated_euro_ef(aggregation_input)
 
     # Equivalent of modAggrPcMotEf.PCAggregatedMOT_EF
-    if input_data['parking'] is False:
-        aggregation_input['vehicle_type'] = "MOT"
-        aggregation_input['vehicle_fuel'] = "Gasoline"
-        aggregation_input['vehicle_class'] = "Uncontrolled"
-        aggregation_input['vehicle_size'] = "<50 cc"
-        aggregation_input['vehicle_mot'] = "Mopeds"
+    if input_data["parking"] is False:
+        aggregation_input["vehicle_type"] = "MOT"
+        aggregation_input["vehicle_fuel"] = "Gasoline"
+        aggregation_input["vehicle_class"] = "Uncontrolled"
+        aggregation_input["vehicle_size"] = "<50 cc"
+        aggregation_input["vehicle_mot"] = "Mopeds"
         aggregation_input = aggregated_mot_ef(aggregation_input)
-        aggregation_input['vehicle_class'] = "Stage I"
+        aggregation_input["vehicle_class"] = "Stage I"
         aggregation_input = aggregated_mot_ef(aggregation_input)
-        aggregation_input['vehicle_class'] = "Stage II"
+        aggregation_input["vehicle_class"] = "Stage II"
         aggregation_input = aggregated_mot_ef(aggregation_input)
-        aggregation_input['vehicle_class'] = "Uncontrolled"
-        aggregation_input['vehicle_size'] = ">50 cc 2-s"
+        aggregation_input["vehicle_class"] = "Uncontrolled"
+        aggregation_input["vehicle_size"] = ">50 cc 2-s"
         aggregation_input = aggregated_mot_ef(aggregation_input)
-        aggregation_input['vehicle_class'] = "Controlled"
+        aggregation_input["vehicle_class"] = "Controlled"
         aggregation_input = aggregated_mot_ef(aggregation_input)
         # TODO include rest of the bikes...
 
     # Equivalent of modAggrPcLdvEf.PCAggregatedLDV_EF
-    aggregation_input['vehicle_type'] = "LDV"
+    aggregation_input["vehicle_type"] = "LDV"
 
-    aggregation_input['vehicle_fuel'] = "Gasoline"
+    aggregation_input["vehicle_fuel"] = "Gasoline"
 
-    aggregation_input['vehicle_size'] = "All"
+    aggregation_input["vehicle_size"] = "All"
 
-    aggregation_input['vehicle_class'] = "Uncontrolled"
+    aggregation_input["vehicle_class"] = "Uncontrolled"
     aggregation_input = aggregated_ldv_ef(aggregation_input)
-    aggregation_input['vehicle_class'] = "EURO I"
+    aggregation_input["vehicle_class"] = "EURO I"
     aggregation_input = aggregated_ldv_ef(aggregation_input)
-    aggregation_input['vehicle_class'] = "EURO II"
+    aggregation_input["vehicle_class"] = "EURO II"
     aggregation_input = aggregated_ldv_ef(aggregation_input)
-    aggregation_input['vehicle_class'] = "EURO III"
+    aggregation_input["vehicle_class"] = "EURO III"
     aggregation_input = aggregated_ldv_ef(aggregation_input)
-    aggregation_input['vehicle_class'] = "EURO IV"
+    aggregation_input["vehicle_class"] = "EURO IV"
     aggregation_input = aggregated_ldv_ef(aggregation_input)
-    aggregation_input['vehicle_fuel'] = "Diesel"
-    aggregation_input['vehicle_class'] = "Uncontrolled"
+    aggregation_input["vehicle_fuel"] = "Diesel"
+    aggregation_input["vehicle_class"] = "Uncontrolled"
     aggregation_input = aggregated_ldv_ef(aggregation_input)
-    aggregation_input['vehicle_class'] = "EURO I"
+    aggregation_input["vehicle_class"] = "EURO I"
     aggregation_input = aggregated_ldv_ef(aggregation_input)
-    aggregation_input['vehicle_class'] = "EURO II"
+    aggregation_input["vehicle_class"] = "EURO II"
     aggregation_input = aggregated_ldv_ef(aggregation_input)
-    aggregation_input['vehicle_class'] = "EURO III"
+    aggregation_input["vehicle_class"] = "EURO III"
     aggregation_input = aggregated_ldv_ef(aggregation_input)
-    aggregation_input['vehicle_class'] = "EURO IV"
+    aggregation_input["vehicle_class"] = "EURO IV"
     aggregation_input = aggregated_ldv_ef(aggregation_input)
 
     # Calculate the emission factors for each vehicle category
-    avg_ef_nox_pc = calculate_avg_ef(aggregation_input['total_em_nox_pc'],
-                                     aggregation_input['weighted_sum_pc'])
-    avg_ef_nox_ldv = calculate_avg_ef(aggregation_input['total_em_nox_ldv'],
-                                      aggregation_input['weighted_sum_ldv'])
-    avg_ef_nox_hdv = calculate_avg_ef(aggregation_input['total_em_nox_hdv'],
-                                      aggregation_input['weighted_sum_hdv'])
+    avg_ef_nox_pc = calculate_avg_ef(
+        aggregation_input["total_em_nox_pc"], aggregation_input["weighted_sum_pc"]
+    )
+    avg_ef_nox_ldv = calculate_avg_ef(
+        aggregation_input["total_em_nox_ldv"], aggregation_input["weighted_sum_ldv"]
+    )
+    avg_ef_nox_hdv = calculate_avg_ef(
+        aggregation_input["total_em_nox_hdv"], aggregation_input["weighted_sum_hdv"]
+    )
 
-    avg_ef_hc_pc = calculate_avg_ef(aggregation_input['total_em_voc_pc'],
-                                    aggregation_input['weighted_sum_pc'])
-    avg_ef_hc_ldv = calculate_avg_ef(aggregation_input['total_em_voc_ldv'],
-                                     aggregation_input['weighted_sum_ldv'])
-    avg_ef_hc_hdv = calculate_avg_ef(aggregation_input['total_em_co_hdv'],
-                                     aggregation_input['weighted_sum_hdv'])
+    avg_ef_hc_pc = calculate_avg_ef(
+        aggregation_input["total_em_voc_pc"], aggregation_input["weighted_sum_pc"]
+    )
+    avg_ef_hc_ldv = calculate_avg_ef(
+        aggregation_input["total_em_voc_ldv"], aggregation_input["weighted_sum_ldv"]
+    )
+    avg_ef_hc_hdv = calculate_avg_ef(
+        aggregation_input["total_em_co_hdv"], aggregation_input["weighted_sum_hdv"]
+    )
 
-    avg_ef_co_pc = calculate_avg_ef(aggregation_input['total_em_co_pc'],
-                                    aggregation_input['weighted_sum_pc'])
-    avg_ef_co_ldv = calculate_avg_ef(aggregation_input['total_em_co_ldv'],
-                                     aggregation_input['weighted_sum_ldv'])
-    avg_ef_co_hdv = calculate_avg_ef(aggregation_input['total_em_co_hdv'],
-                                     aggregation_input['weighted_sum_hdv'])
+    avg_ef_co_pc = calculate_avg_ef(
+        aggregation_input["total_em_co_pc"], aggregation_input["weighted_sum_pc"]
+    )
+    avg_ef_co_ldv = calculate_avg_ef(
+        aggregation_input["total_em_co_ldv"], aggregation_input["weighted_sum_ldv"]
+    )
+    avg_ef_co_hdv = calculate_avg_ef(
+        aggregation_input["total_em_co_hdv"], aggregation_input["weighted_sum_hdv"]
+    )
 
-    avg_ef_pm_pc = calculate_avg_ef(aggregation_input['total_em_pm_pc'],
-                                    aggregation_input['weighted_sum_pc'])
-    avg_ef_pm_ldv = calculate_avg_ef(aggregation_input['total_em_pm_ldv'],
-                                     aggregation_input['weighted_sum_ldv'])
-    avg_ef_pm_hdv = calculate_avg_ef(aggregation_input['total_em_pm_hdv'],
-                                     aggregation_input['weighted_sum_hdv'])
+    avg_ef_pm_pc = calculate_avg_ef(
+        aggregation_input["total_em_pm_pc"], aggregation_input["weighted_sum_pc"]
+    )
+    avg_ef_pm_ldv = calculate_avg_ef(
+        aggregation_input["total_em_pm_ldv"], aggregation_input["weighted_sum_ldv"]
+    )
+    avg_ef_pm_hdv = calculate_avg_ef(
+        aggregation_input["total_em_pm_hdv"], aggregation_input["weighted_sum_hdv"]
+    )
 
     # Calculate the overall averaged emission factors based on % in each category
-    avg_ef_nox = avg_ef_nox_pc * input_data['vehicle_light'] / 100 + \
-                 avg_ef_nox_ldv * input_data['vehicle_medium'] / 100 + \
-                 avg_ef_nox_hdv * input_data['vehicle_heavy'] / 100
+    avg_ef_nox = (
+        avg_ef_nox_pc * input_data["vehicle_light"] / 100
+        + avg_ef_nox_ldv * input_data["vehicle_medium"] / 100
+        + avg_ef_nox_hdv * input_data["vehicle_heavy"] / 100
+    )
 
-    avg_ef_hc = avg_ef_hc_pc * input_data['vehicle_light'] / 100 + \
-                avg_ef_hc_ldv * input_data['vehicle_medium'] / 100 + \
-                avg_ef_hc_hdv * input_data['vehicle_heavy'] / 100
+    avg_ef_hc = (
+        avg_ef_hc_pc * input_data["vehicle_light"] / 100
+        + avg_ef_hc_ldv * input_data["vehicle_medium"] / 100
+        + avg_ef_hc_hdv * input_data["vehicle_heavy"] / 100
+    )
 
-    avg_ef_co = avg_ef_co_pc * input_data['vehicle_light'] / 100 + \
-                avg_ef_co_ldv * input_data['vehicle_medium'] / 100 + \
-                avg_ef_co_hdv * input_data['vehicle_heavy'] / 100
+    avg_ef_co = (
+        avg_ef_co_pc * input_data["vehicle_light"] / 100
+        + avg_ef_co_ldv * input_data["vehicle_medium"] / 100
+        + avg_ef_co_hdv * input_data["vehicle_heavy"] / 100
+    )
 
-    avg_ef_pm = avg_ef_pm_pc * input_data['vehicle_light'] / 100 + \
-                avg_ef_pm_ldv * input_data['vehicle_medium'] / 100 + \
-                avg_ef_pm_hdv * input_data['vehicle_heavy'] / 100
+    avg_ef_pm = (
+        avg_ef_pm_pc * input_data["vehicle_light"] / 100
+        + avg_ef_pm_ldv * input_data["vehicle_medium"] / 100
+        + avg_ef_pm_hdv * input_data["vehicle_heavy"] / 100
+    )
 
     # Return the result
     emission_factors = dict()
-    if input_data['parking']:
-        l_idle = aggregation_input['velocity'] * input_data['idle_time'] / 60
-        emission_factors['co_ef'] = (input_data[
-                                         'travel_distance'] / 1000 + l_idle) * avg_ef_co
-        emission_factors['hc_ef'] = (input_data[
-                                         'travel_distance'] / 1000 + l_idle) * avg_ef_hc
-        emission_factors['nox_ef'] = (input_data[
-                                          'travel_distance'] / 1000 + l_idle) * avg_ef_nox
-        emission_factors['sox_ef'] = 0
-        emission_factors['pm10_ef'] = (input_data[
-                                           'travel_distance'] / 1000 + l_idle) * avg_ef_pm
-        emission_factors['p1_ef'] = 0
-        emission_factors['p2_ef'] = 0
+    if input_data["parking"]:
+        l_idle = aggregation_input["velocity"] * input_data["idle_time"] / 60
+        emission_factors["co_ef"] = (
+            input_data["travel_distance"] / 1000 + l_idle
+        ) * avg_ef_co
+        emission_factors["hc_ef"] = (
+            input_data["travel_distance"] / 1000 + l_idle
+        ) * avg_ef_hc
+        emission_factors["nox_ef"] = (
+            input_data["travel_distance"] / 1000 + l_idle
+        ) * avg_ef_nox
+        emission_factors["sox_ef"] = 0
+        emission_factors["pm10_ef"] = (
+            input_data["travel_distance"] / 1000 + l_idle
+        ) * avg_ef_pm
+        emission_factors["p1_ef"] = 0
+        emission_factors["p2_ef"] = 0
     else:
-        emission_factors['co_ef'] = avg_ef_co
-        emission_factors['hc_ef'] = avg_ef_hc
-        emission_factors['nox_ef'] = avg_ef_nox
-        emission_factors['sox_ef'] = 0
-        emission_factors['pm10_ef'] = avg_ef_pm
-        emission_factors['p1_ef'] = 0
-        emission_factors['p2_ef'] = 0
+        emission_factors["co_ef"] = avg_ef_co
+        emission_factors["hc_ef"] = avg_ef_hc
+        emission_factors["nox_ef"] = avg_ef_nox
+        emission_factors["sox_ef"] = 0
+        emission_factors["pm10_ef"] = avg_ef_pm
+        emission_factors["p1_ef"] = 0
+        emission_factors["p2_ef"] = 0
 
     return emission_factors
 
@@ -384,14 +407,18 @@ def cold_mileage_percent(trip_length, temperature):
     """
     # Estimates the parameter beta the cold mileage percentage for
     # Pre-EURO I vehicles
-    beta = 0.6474 - 0.02545 * trip_length - (
-            0.00974 - 0.000385 * trip_length) * temperature
+    beta = (
+        0.6474
+        - 0.02545 * trip_length
+        - (0.00974 - 0.000385 * trip_length) * temperature
+    )
     return beta
 
 
 @catch_errors
-def post_euro_i_cold_mileage_percent(trip_length, temperature, pollutant,
-                                     vehicle_class):
+def post_euro_i_cold_mileage_percent(
+    trip_length, temperature, pollutant, vehicle_class
+):
     """
     # TODO this description comes from old ALAQS and needs improved documentation
     Calculate the percentage of a trip that are associated with cold emissions for post EURO I scenarios
@@ -404,29 +431,29 @@ def post_euro_i_cold_mileage_percent(trip_length, temperature, pollutant,
     beta = cold_mileage_percent(trip_length, temperature)
     if vehicle_class == "EURO II":
         if pollutant == "NO":
-            beta *= (1 - 0.72)
+            beta *= 1 - 0.72
         elif pollutant == "CO":
-            beta *= (1 - 0.72)
+            beta *= 1 - 0.72
         elif pollutant == "VOC":
-            beta *= (1 - 0.56)
+            beta *= 1 - 0.56
         else:
             beta = beta
     elif vehicle_class == "EURO III":
         if pollutant == "NO":
-            beta *= (1 - 0.32)
+            beta *= 1 - 0.32
         elif pollutant == "CO":
-            beta *= (1 - 0.62)
+            beta *= 1 - 0.62
         elif pollutant == "VOC":
-            beta *= (1 - 0.32)
+            beta *= 1 - 0.32
         else:
             beta = beta
     elif vehicle_class == "EURO IV":
         if pollutant == "NO":
-            beta *= (1 - 0.18)
+            beta *= 1 - 0.18
         elif pollutant == "CO":
-            beta *= (1 - 0.18)
+            beta *= 1 - 0.18
         elif pollutant == "VOC":
-            beta *= (1 - 0.18)
+            beta *= 1 - 0.18
         else:
             beta = beta
     return beta
@@ -458,8 +485,14 @@ def get_emission_factors(copert_data, velocity, change_point):
         f1 = copert_data[9]
         g1 = copert_data[10]
         h1 = copert_data[11]
-        emission_factor = a1 + b1 * velocity + c1 * math.pow(velocity, 2) + d1 * math.pow(velocity, e1) + f1 * math.log(
-            velocity) + g1 * math.exp(h1 * velocity)
+        emission_factor = (
+            a1
+            + b1 * velocity
+            + c1 * math.pow(velocity, 2)
+            + d1 * math.pow(velocity, e1)
+            + f1 * math.log(velocity)
+            + g1 * math.exp(h1 * velocity)
+        )
         # debug_file("%s,%s,%s,%s,%s,%s,%s,%s,%s" % (a1, b1, c1, d1, e1, f1, g1, h1, emission_factor))
     else:
         a2 = copert_data[13]
@@ -470,8 +503,14 @@ def get_emission_factors(copert_data, velocity, change_point):
         f2 = copert_data[18]
         g2 = copert_data[19]
         h2 = copert_data[20]
-        emission_factor = a2 + b2 * velocity + c2 * math.pow(velocity, 2) + d2 * math.pow(velocity, e2) + f2 * math.log(
-            velocity) + g2 * math.exp(h2 * velocity)
+        emission_factor = (
+            a2
+            + b2 * velocity
+            + c2 * math.pow(velocity, 2)
+            + d2 * math.pow(velocity, e2)
+            + f2 * math.log(velocity)
+            + g2 * math.exp(h2 * velocity)
+        )
         # debug_file("%s,%s,%s,%s,%s,%s,%s,%s,%s" % (a2, b2, c2, d2, e2, f2, g2, h2, emission_factor))
     return emission_factor
 
@@ -539,37 +578,37 @@ def get_hot_emission_change_points(vehicle_class, vehicle_size):
     change_points = dict()
 
     if vehicle_class == "Pre-ECE":
-        change_points['NO'] = 130
-        change_points['CO'] = 100
-        change_points['HC'] = 100
+        change_points["NO"] = 130
+        change_points["CO"] = 100
+        change_points["HC"] = 100
     elif vehicle_class == "ECE 15/00-01":
         if vehicle_size == "<1.4 l":
-            change_points['NO'] = 130
-            change_points['CO'] = 100
-            change_points['HC'] = 100
+            change_points["NO"] = 130
+            change_points["CO"] = 100
+            change_points["HC"] = 100
         else:
-            change_points['NO'] = 130
-            change_points['CO'] = 50
-            change_points['HC'] = 50
+            change_points["NO"] = 130
+            change_points["CO"] = 50
+            change_points["HC"] = 50
     elif vehicle_class == "ECE 15/02" or vehicle_class == "ECE 15/03":
         if vehicle_size == "<1.4 l":
-            change_points['NO'] = 130
-            change_points['CO'] = 19.3
-            change_points['HC'] = 80
+            change_points["NO"] = 130
+            change_points["CO"] = 19.3
+            change_points["HC"] = 80
         else:
-            change_points['NO'] = 130
-            change_points['CO'] = 19.3
-            change_points['HC'] = 60
+            change_points["NO"] = 130
+            change_points["CO"] = 19.3
+            change_points["HC"] = 60
     elif vehicle_class == "ECE 15/04":
-        change_points['NO'] = 130
-        change_points['CO'] = 60
-        change_points['HC'] = 60
+        change_points["NO"] = 130
+        change_points["CO"] = 60
+        change_points["HC"] = 60
     else:
-        change_points['NO'] = 130
-        change_points['CO'] = 130
-        change_points['HC'] = 130
+        change_points["NO"] = 130
+        change_points["CO"] = 130
+        change_points["HC"] = 130
     # print vehicle_class, vehicle_size, change_points
-    change_points['PM'] = 130
+    change_points["PM"] = 130
 
     # debug_file("%s,%s,%s" % (change_points['NO'], change_points['CO'], change_points['HC']))
 
@@ -615,8 +654,9 @@ def ldv_pre_euro_over_emission_ratio_diesel(temperature, pollutant):
 
 
 @catch_errors
-def ldv_euro_over_emission_ratio_gasoline(velocity, temperature, pollutant,
-                                          vehicle_class):
+def ldv_euro_over_emission_ratio_gasoline(  # noqa: C901
+    velocity, temperature, pollutant, vehicle_class
+):
     """
     Calculates the over-emission ratio for Euro I and later gasoline vehicles
     :param velocity: speed in km/h
@@ -741,10 +781,13 @@ def get_emissions_factor_ldv_diesel(velocity, pollutant):
     elif pollutant == "CO":
         emission_factor = 0.0002 * math.pow(velocity, 2) - 0.0256 * velocity + 1.8281
     elif pollutant == "VOC":
-        emission_factor = 0.0000175 * math.pow(velocity, 2) - 0.00284 * velocity + 0.2162
+        emission_factor = (
+            0.0000175 * math.pow(velocity, 2) - 0.00284 * velocity + 0.2162
+        )
     elif pollutant == "PM":
-        emission_factor = 0.0000125 * math.pow(velocity,
-                                               2) - 0.000577 * velocity + 0.023
+        emission_factor = (
+            0.0000125 * math.pow(velocity, 2) - 0.000577 * velocity + 0.023
+        )
     return emission_factor
 
 
@@ -757,31 +800,35 @@ def aggregated_pre_euro_ef(aggregated_input: dict) -> dict:
     """
 
     # Unpack the necessary data
-    year = aggregated_input['roadway_year']
-    country = aggregated_input['roadway_country']
-    average_trip_length = aggregated_input['average_trip_length']
-    average_temperature = aggregated_input['temperature_average']
-    vehicle_class = aggregated_input['vehicle_class']
-    vehicle_fuel = aggregated_input['vehicle_fuel']
-    vehicle_size = aggregated_input['vehicle_size']
-    vehicle_type = aggregated_input['vehicle_type']
-    velocity = aggregated_input['velocity']
+    year = aggregated_input["roadway_year"]
+    country = aggregated_input["roadway_country"]
+    average_trip_length = aggregated_input["average_trip_length"]
+    average_temperature = aggregated_input["temperature_average"]
+    vehicle_class = aggregated_input["vehicle_class"]
+    vehicle_fuel = aggregated_input["vehicle_fuel"]
+    vehicle_size = aggregated_input["vehicle_size"]
+    vehicle_type = aggregated_input["vehicle_type"]
+    velocity = aggregated_input["velocity"]
 
     # Get the base year total cars and average mileage for the baseline year
-    sql = "SELECT base_year_%s, average_mileage FROM default_cost319_vehicle_fleet " \
-          "WHERE country=\"%s\" AND category_abbreviation=\"%s\" " \
-          "AND fuel_engine=\"%s\" AND size=\"%s\" AND emission_class=\"%s\";" \
-          % (year, country, vehicle_type, vehicle_fuel, vehicle_size, vehicle_class)
+    sql = (
+        "SELECT base_year_%s, average_mileage FROM default_cost319_vehicle_fleet "
+        'WHERE country="%s" AND category_abbreviation="%s" '
+        'AND fuel_engine="%s" AND size="%s" AND emission_class="%s";'
+        % (year, country, vehicle_type, vehicle_fuel, vehicle_size, vehicle_class)
+    )
     sql_result = alaqsdblite.query_string(sql)
 
     if sql_result is not []:
-        base_year_total_cars = float(sql_result[0][0])      # Number of vehicles in category
-        average_mileage = float(sql_result[0][1])           # Total annual mileage per vehicle (km)
+        base_year_total_cars = float(sql_result[0][0])  # Number of vehicles in category
+        average_mileage = float(
+            sql_result[0][1]
+        )  # Total annual mileage per vehicle (km)
 
         # Product is the total number of miles for all vehicles
         product = base_year_total_cars * average_mileage
-        aggregated_input['weighted_sum_pc'] += product         # Total km for all vehicles
-        #debug_file("%s,%s,%s" % (base_year_total_cars, average_mileage, product))
+        aggregated_input["weighted_sum_pc"] += product  # Total km for all vehicles
+        # debug_file("%s,%s,%s" % (base_year_total_cars, average_mileage, product))
 
         # Set some variables as zero to avoid "used before definition" errors
         total_em_pm = 0
@@ -801,39 +848,61 @@ def aggregated_pre_euro_ef(aggregated_input: dict) -> dict:
         # Get the points at which we're dealing with A1 or A2 data
         change_point = get_hot_emission_change_points(vehicle_class, vehicle_size)
 
-        sql_nox = "SELECT * FROM default_vehicle_nox_ef WHERE vehicle_type=\"%s\" AND Class =\"%s %s\" " \
-                  "AND Legislation =\"%s\";" % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""), vehicle_class)
+        sql_nox = (
+            'SELECT * FROM default_vehicle_nox_ef WHERE vehicle_type="%s" AND Class ="%s %s" '
+            'AND Legislation ="%s";'
+            % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""), vehicle_class)
+        )
         sql_result = alaqsdblite.query_string(sql_nox)
-        ef_nox = get_emission_factors(sql_result[0], velocity, change_point['NO'])
+        ef_nox = get_emission_factors(sql_result[0], velocity, change_point["NO"])
 
-        sql_co = "SELECT * FROM default_vehicle_co_ef WHERE vehicle_type=\"%s\" AND Class =\"%s %s\" " \
-                 "AND Legislation =\"%s\";" % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""), vehicle_class)
+        sql_co = (
+            'SELECT * FROM default_vehicle_co_ef WHERE vehicle_type="%s" AND Class ="%s %s" '
+            'AND Legislation ="%s";'
+            % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""), vehicle_class)
+        )
         sql_result = alaqsdblite.query_string(sql_co)
-        ef_co = get_emission_factors(sql_result[0], velocity, change_point['CO'])
+        ef_co = get_emission_factors(sql_result[0], velocity, change_point["CO"])
 
-        sql_hc = "SELECT * FROM default_vehicle_hc_ef WHERE vehicle_type=\"%s\" AND Class =\"%s %s\" " \
-                 "AND Legislation =\"%s\";" % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""), vehicle_class)
+        sql_hc = (
+            'SELECT * FROM default_vehicle_hc_ef WHERE vehicle_type="%s" AND Class ="%s %s" '
+            'AND Legislation ="%s";'
+            % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""), vehicle_class)
+        )
         sql_result = alaqsdblite.query_string(sql_hc)
-        ef_voc = get_emission_factors(sql_result[0], velocity, change_point['HC'])
+        ef_voc = get_emission_factors(sql_result[0], velocity, change_point["HC"])
 
         # Get cold emissions
         nox_cold = None
         co_cold = None
         voc_cold = None
         if vehicle_fuel == "Gasoline":
-            nox_cold = beta_nox * (ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "NO") - 1)
-            co_cold = beta_co * (ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "CO") - 1)
-            voc_cold = beta_voc * (ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "VOC") - 1)
+            nox_cold = beta_nox * (
+                ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "NO") - 1
+            )
+            co_cold = beta_co * (
+                ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "CO") - 1
+            )
+            voc_cold = beta_voc * (
+                ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "VOC")
+                - 1
+            )
         elif vehicle_fuel == "Diesel":
-            nox_cold = beta_nox * (ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "NO") - 1)
-            co_cold = beta_co * (ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "CO") - 1)
-            voc_cold = beta_voc * (ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "VOC") - 1)
+            nox_cold = beta_nox * (
+                ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "NO") - 1
+            )
+            co_cold = beta_co * (
+                ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "CO") - 1
+            )
+            voc_cold = beta_voc * (
+                ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "VOC") - 1
+            )
 
         # Add cold start contribution
-        ef_nox *= (1 + nox_cold)
-        ef_co *= (1 + co_cold)
-        ef_voc *= (1 + voc_cold)
-        #debug_file("%s,%s,%s" % (ef_nox, ef_co, ef_voc))
+        ef_nox *= 1 + nox_cold
+        ef_co *= 1 + co_cold
+        ef_voc *= 1 + voc_cold
+        # debug_file("%s,%s,%s" % (ef_nox, ef_co, ef_voc))
 
         # Emission rate
         total_em_nox = ef_nox * product
@@ -841,20 +910,30 @@ def aggregated_pre_euro_ef(aggregated_input: dict) -> dict:
         total_em_voc = ef_voc * product
 
         if vehicle_fuel == "Diesel":
-            sql_pm = "SELECT * FROM default_vehicle_hc_ef WHERE vehicle_type=\"%s\" AND Class =\"%s %s\" " \
-                     "AND Legislation =\"%s\";" % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""), vehicle_class)
+            sql_pm = (
+                'SELECT * FROM default_vehicle_hc_ef WHERE vehicle_type="%s" AND Class ="%s %s" '
+                'AND Legislation ="%s";'
+                % (
+                    vehicle_type,
+                    vehicle_fuel,
+                    vehicle_size.replace(" ", ""),
+                    vehicle_class,
+                )
+            )
             sql_result = alaqsdblite.query_string(sql_pm)
             ef_pm = get_emission_factors(sql_result[0], velocity, 130)
-            pm_cold = beta_pm * (ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "PM") - 1)
-            ef_pm *= (1 + pm_cold)
+            pm_cold = beta_pm * (
+                ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "PM") - 1
+            )
+            ef_pm *= 1 + pm_cold
             total_em_pm = ef_pm * product
 
-        aggregated_input['total_em_nox_pc'] += total_em_nox
-        aggregated_input['total_em_voc_pc'] += total_em_voc
-        aggregated_input['total_em_co_pc'] += total_em_co
-        aggregated_input['total_em_pm_pc'] += total_em_pm
+        aggregated_input["total_em_nox_pc"] += total_em_nox
+        aggregated_input["total_em_voc_pc"] += total_em_voc
+        aggregated_input["total_em_co_pc"] += total_em_co
+        aggregated_input["total_em_pm_pc"] += total_em_pm
 
-    #debug_file("", True)
+    # debug_file("", True)
     return aggregated_input
 
 
@@ -865,28 +944,30 @@ def aggregated_euro_ef(aggregated_input):
      modAggrPcEuroEf.PCAggregatedEURO_EF
     """
     # Unpack our necessary data
-    year = aggregated_input['roadway_year']
-    country = aggregated_input['roadway_country']
-    average_trip_length = aggregated_input['average_trip_length']
-    average_temperature = aggregated_input['temperature_average']
-    vehicle_class = aggregated_input['vehicle_class']
-    vehicle_fuel = aggregated_input['vehicle_fuel']
-    vehicle_size = aggregated_input['vehicle_size']
-    vehicle_type = aggregated_input['vehicle_type']
-    velocity = aggregated_input['velocity']
+    year = aggregated_input["roadway_year"]
+    country = aggregated_input["roadway_country"]
+    average_trip_length = aggregated_input["average_trip_length"]
+    average_temperature = aggregated_input["temperature_average"]
+    vehicle_class = aggregated_input["vehicle_class"]
+    vehicle_fuel = aggregated_input["vehicle_fuel"]
+    vehicle_size = aggregated_input["vehicle_size"]
+    vehicle_type = aggregated_input["vehicle_type"]
+    velocity = aggregated_input["velocity"]
 
-    sql = "SELECT base_year_%s, average_mileage FROM default_cost319_vehicle_fleet " \
-          "WHERE country=\"%s\" AND category_abbreviation=\"%s\" " \
-          "AND fuel_engine=\"%s\" AND size=\"%s\" AND emission_class=\"%s\";" \
-          % (year, country, vehicle_type, vehicle_fuel, vehicle_size, vehicle_class)
+    sql = (
+        "SELECT base_year_%s, average_mileage FROM default_cost319_vehicle_fleet "
+        'WHERE country="%s" AND category_abbreviation="%s" '
+        'AND fuel_engine="%s" AND size="%s" AND emission_class="%s";'
+        % (year, country, vehicle_type, vehicle_fuel, vehicle_size, vehicle_class)
+    )
     sql_result = alaqsdblite.query_string(sql)
 
     if sql_result is not []:
         base_year_total_cars = float(sql_result[0][0])
         average_mileage = float(sql_result[0][1])
         product = base_year_total_cars * average_mileage
-        aggregated_input['weighted_sum_pc'] += product
-        #debug_file("%s,%s,%s" % (base_year_total_cars, average_mileage, product))
+        aggregated_input["weighted_sum_pc"] += product
+        # debug_file("%s,%s,%s" % (base_year_total_cars, average_mileage, product))
 
         # Zero some of the variables to avoid "used before definition" errors
         total_em_pm = 0
@@ -904,12 +985,15 @@ def aggregated_euro_ef(aggregated_input):
                 beta_voc = beta
                 beta_pm = beta
             else:
-                beta_nox = post_euro_i_cold_mileage_percent(average_trip_length, average_temperature, "NO",
-                                                            vehicle_class)
-                beta_co = post_euro_i_cold_mileage_percent(average_trip_length, average_temperature, "CO",
-                                                           vehicle_class)
-                beta_voc = post_euro_i_cold_mileage_percent(average_trip_length, average_temperature, "VOC",
-                                                            vehicle_class)
+                beta_nox = post_euro_i_cold_mileage_percent(
+                    average_trip_length, average_temperature, "NO", vehicle_class
+                )
+                beta_co = post_euro_i_cold_mileage_percent(
+                    average_trip_length, average_temperature, "CO", vehicle_class
+                )
+                beta_voc = post_euro_i_cold_mileage_percent(
+                    average_trip_length, average_temperature, "VOC", vehicle_class
+                )
         elif vehicle_fuel == "Diesel":
             beta = cold_mileage_percent(average_trip_length, average_temperature)
             beta_nox = beta
@@ -925,23 +1009,29 @@ def aggregated_euro_ef(aggregated_input):
         get_hot_emission_change_points(vehicle_class, vehicle_size)
 
         # NOX Emissions
-        sql_nox = "SELECT * FROM default_vehicle_nox_ef WHERE vehicle_type=\"%s\" AND Class =\"%s %s\" " \
-                  "AND Legislation =\"%s\";" % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""),
-                                                vehicle_class)
+        sql_nox = (
+            'SELECT * FROM default_vehicle_nox_ef WHERE vehicle_type="%s" AND Class ="%s %s" '
+            'AND Legislation ="%s";'
+            % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""), vehicle_class)
+        )
         sql_result = alaqsdblite.query_string(sql_nox)
         ef_nox = get_emission_factors(sql_result[0], velocity, 130)
 
         # CO Emissions
-        sql_co = "SELECT * FROM default_vehicle_co_ef WHERE vehicle_type=\"%s\" AND Class =\"%s %s\" " \
-                 "AND Legislation =\"%s\";" % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""),
-                                               vehicle_class)
+        sql_co = (
+            'SELECT * FROM default_vehicle_co_ef WHERE vehicle_type="%s" AND Class ="%s %s" '
+            'AND Legislation ="%s";'
+            % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""), vehicle_class)
+        )
         sql_result = alaqsdblite.query_string(sql_co)
         ef_co = get_emission_factors(sql_result[0], velocity, 130)
 
         # HC Emissions
-        sql_hc = "SELECT * FROM default_vehicle_hc_ef WHERE vehicle_type=\"%s\" AND Class =\"%s %s\" " \
-                 "AND Legislation =\"%s\";" % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""),
-                                               vehicle_class)
+        sql_hc = (
+            'SELECT * FROM default_vehicle_hc_ef WHERE vehicle_type="%s" AND Class ="%s %s" '
+            'AND Legislation ="%s";'
+            % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""), vehicle_class)
+        )
         sql_result = alaqsdblite.query_string(sql_hc)
         ef_voc = get_emission_factors(sql_result[0], velocity, 130)
 
@@ -951,23 +1041,43 @@ def aggregated_euro_ef(aggregated_input):
         voc_cold = None
         pm_cold = None
         if vehicle_fuel == "Gasoline":
-            nox_cold = beta_nox * (ldv_euro_over_emission_ratio_gasoline(velocity, average_temperature, "NO",
-                                                                         vehicle_size) - 1)
-            co_cold = beta_co * (ldv_euro_over_emission_ratio_gasoline(velocity, average_temperature, "CO",
-                                                                       vehicle_size) - 1)
-            voc_cold = beta_voc * (ldv_euro_over_emission_ratio_gasoline(velocity, average_temperature, "VOC",
-                                                                         vehicle_size) - 1)
+            nox_cold = beta_nox * (
+                ldv_euro_over_emission_ratio_gasoline(
+                    velocity, average_temperature, "NO", vehicle_size
+                )
+                - 1
+            )
+            co_cold = beta_co * (
+                ldv_euro_over_emission_ratio_gasoline(
+                    velocity, average_temperature, "CO", vehicle_size
+                )
+                - 1
+            )
+            voc_cold = beta_voc * (
+                ldv_euro_over_emission_ratio_gasoline(
+                    velocity, average_temperature, "VOC", vehicle_size
+                )
+                - 1
+            )
         elif vehicle_fuel == "Diesel":
-            nox_cold = beta_nox * (ldv_euro_over_emission_ratio_diesel(average_temperature, "NO") - 1)
-            co_cold = beta_co * (ldv_euro_over_emission_ratio_diesel(average_temperature, "CO") - 1)
-            voc_cold = beta_voc * (ldv_euro_over_emission_ratio_diesel(average_temperature, "VOC") - 1)
-            pm_cold = beta_pm * (ldv_euro_over_emission_ratio_diesel(average_temperature, "PM") - 1)
+            nox_cold = beta_nox * (
+                ldv_euro_over_emission_ratio_diesel(average_temperature, "NO") - 1
+            )
+            co_cold = beta_co * (
+                ldv_euro_over_emission_ratio_diesel(average_temperature, "CO") - 1
+            )
+            voc_cold = beta_voc * (
+                ldv_euro_over_emission_ratio_diesel(average_temperature, "VOC") - 1
+            )
+            pm_cold = beta_pm * (
+                ldv_euro_over_emission_ratio_diesel(average_temperature, "PM") - 1
+            )
 
         # Add cold start contribution to hot emission factor
-        ef_nox *= (1 + nox_cold)
-        ef_co *= (1 + co_cold)
-        ef_voc *= (1 + voc_cold)
-        #debug_file("%s,%s,%s" % (ef_nox, ef_co, ef_voc))
+        ef_nox *= 1 + nox_cold
+        ef_co *= 1 + co_cold
+        ef_voc *= 1 + voc_cold
+        # debug_file("%s,%s,%s" % (ef_nox, ef_co, ef_voc))
 
         # Emission rate
         total_em_nox = ef_nox * product
@@ -976,20 +1086,27 @@ def aggregated_euro_ef(aggregated_input):
 
         # Particulates only seem to have relevance for diesel emissions
         if vehicle_fuel == "Diesel":
-            sql_pm = "SELECT * FROM default_vehicle_hc_ef WHERE vehicle_type=\"%s\" AND Class =\"%s %s\" " \
-                     "AND Legislation =\"%s\";" % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""),
-                                                   vehicle_class)
+            sql_pm = (
+                'SELECT * FROM default_vehicle_hc_ef WHERE vehicle_type="%s" AND Class ="%s %s" '
+                'AND Legislation ="%s";'
+                % (
+                    vehicle_type,
+                    vehicle_fuel,
+                    vehicle_size.replace(" ", ""),
+                    vehicle_class,
+                )
+            )
             sql_result = alaqsdblite.query_string(sql_pm)
             ef_pm = get_emission_factors(sql_result[0], velocity, 130)
-            ef_pm *= (1 + pm_cold)
+            ef_pm *= 1 + pm_cold
             total_em_pm = ef_pm * product
 
-        aggregated_input['total_em_nox_pc'] += total_em_nox
-        aggregated_input['total_em_voc_pc'] += total_em_voc
-        aggregated_input['total_em_co_pc'] += total_em_co
-        aggregated_input['total_em_pm_pc'] += total_em_pm
+        aggregated_input["total_em_nox_pc"] += total_em_nox
+        aggregated_input["total_em_voc_pc"] += total_em_voc
+        aggregated_input["total_em_co_pc"] += total_em_co
+        aggregated_input["total_em_pm_pc"] += total_em_pm
 
-    #debug_file("", True)
+    # debug_file("", True)
     return aggregated_input
 
 
@@ -999,30 +1116,32 @@ def aggregated_mot_ef(aggregated_input):
     Function that recreates method originally in modAggrPcEuroEf.PCAggregatedMOT
     """
     # Unpack our necessary data
-    year = aggregated_input['roadway_year']
-    country = aggregated_input['roadway_country']
-    average_trip_length = aggregated_input['average_trip_length']
-    average_temperature = aggregated_input['temperature_average']
-    vehicle_class = aggregated_input['vehicle_class']
-    vehicle_fuel = aggregated_input['vehicle_fuel']
-    vehicle_size = aggregated_input['vehicle_size']
-    vehicle_type = aggregated_input['vehicle_type']
-    vehicle_mot = aggregated_input['vehicle_mot']
-    velocity = aggregated_input['velocity']
+    year = aggregated_input["roadway_year"]
+    country = aggregated_input["roadway_country"]
+    average_trip_length = aggregated_input["average_trip_length"]
+    average_temperature = aggregated_input["temperature_average"]
+    vehicle_class = aggregated_input["vehicle_class"]
+    vehicle_fuel = aggregated_input["vehicle_fuel"]
+    vehicle_size = aggregated_input["vehicle_size"]
+    vehicle_type = aggregated_input["vehicle_type"]
+    vehicle_mot = aggregated_input["vehicle_mot"]
+    velocity = aggregated_input["velocity"]
 
     # Get the base year total cars and average mileage for the baseline year
-    sql = "SELECT base_year_%s, average_mileage FROM default_cost319_vehicle_fleet " \
-          "WHERE country=\"%s\" AND category_abbreviation=\"%s\" " \
-          "AND size=\"%s\" AND emission_class=\"%s\";" \
-          % (year, country, vehicle_type, vehicle_size, vehicle_class)
+    sql = (
+        "SELECT base_year_%s, average_mileage FROM default_cost319_vehicle_fleet "
+        'WHERE country="%s" AND category_abbreviation="%s" '
+        'AND size="%s" AND emission_class="%s";'
+        % (year, country, vehicle_type, vehicle_size, vehicle_class)
+    )
     sql_result = alaqsdblite.query_string(sql)
 
     if sql_result is not []:
         base_year_total_cars = float(sql_result[0][0])
         average_mileage = float(sql_result[0][1])
         product = base_year_total_cars * average_mileage
-        aggregated_input['weighted_sum_pc'] += product
-        #debug_file("%s,%s,%s" % (base_year_total_cars, average_mileage, product))
+        aggregated_input["weighted_sum_pc"] += product
+        # debug_file("%s,%s,%s" % (base_year_total_cars, average_mileage, product))
 
         # Set some variables as zero to avoid "used before definition" errors
         total_em_pm = 0
@@ -1047,39 +1166,61 @@ def aggregated_mot_ef(aggregated_input):
         # Get hot emissions
         change_point = get_hot_emission_change_points(vehicle_class, vehicle_size)
 
-        sql_nox = "SELECT * FROM default_vehicle_nox_ef WHERE vehicle_type=\"%s\" AND Class=\"%s %s\" " \
-                  "AND Legislation=\"%s\";" % (vehicle_type, vehicle_mot, vehicle_size.replace(" ", ""), vehicle_class)
+        sql_nox = (
+            'SELECT * FROM default_vehicle_nox_ef WHERE vehicle_type="%s" AND Class="%s %s" '
+            'AND Legislation="%s";'
+            % (vehicle_type, vehicle_mot, vehicle_size.replace(" ", ""), vehicle_class)
+        )
         sql_result = alaqsdblite.query_string(sql_nox)
-        ef_nox = get_emission_factors(sql_result[0], velocity, change_point['NO'])
+        ef_nox = get_emission_factors(sql_result[0], velocity, change_point["NO"])
 
-        sql_co = "SELECT * FROM default_vehicle_co_ef WHERE vehicle_type=\"%s\" AND Class =\"%s %s\" " \
-                 "AND Legislation =\"%s\";" % (vehicle_type, vehicle_mot, vehicle_size.replace(" ", ""), vehicle_class)
+        sql_co = (
+            'SELECT * FROM default_vehicle_co_ef WHERE vehicle_type="%s" AND Class ="%s %s" '
+            'AND Legislation ="%s";'
+            % (vehicle_type, vehicle_mot, vehicle_size.replace(" ", ""), vehicle_class)
+        )
         sql_result = alaqsdblite.query_string(sql_co)
-        ef_co = get_emission_factors(sql_result[0], velocity, change_point['CO'])
+        ef_co = get_emission_factors(sql_result[0], velocity, change_point["CO"])
 
-        sql_hc = "SELECT * FROM default_vehicle_hc_ef WHERE vehicle_type=\"%s\" AND Class =\"%s %s\" " \
-                 "AND Legislation =\"%s\";" % (vehicle_type, vehicle_mot, vehicle_size.replace(" ", ""), vehicle_class)
+        sql_hc = (
+            'SELECT * FROM default_vehicle_hc_ef WHERE vehicle_type="%s" AND Class ="%s %s" '
+            'AND Legislation ="%s";'
+            % (vehicle_type, vehicle_mot, vehicle_size.replace(" ", ""), vehicle_class)
+        )
         sql_result = alaqsdblite.query_string(sql_hc)
-        ef_voc = get_emission_factors(sql_result[0], velocity, change_point['HC'])
+        ef_voc = get_emission_factors(sql_result[0], velocity, change_point["HC"])
 
         # Get cold emissions
         nox_cold = None
         co_cold = None
         voc_cold = None
         if vehicle_fuel == "Gasoline":
-            nox_cold = beta_nox * (ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "NO") - 1)
-            co_cold = beta_co * (ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "CO") - 1)
-            voc_cold = beta_voc * (ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "VOC") - 1)
+            nox_cold = beta_nox * (
+                ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "NO") - 1
+            )
+            co_cold = beta_co * (
+                ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "CO") - 1
+            )
+            voc_cold = beta_voc * (
+                ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "VOC")
+                - 1
+            )
         elif vehicle_fuel == "Diesel":
-            nox_cold = beta_nox * (ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "NO") - 1)
-            co_cold = beta_co * (ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "CO") - 1)
-            voc_cold = beta_voc * (ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "VOC") - 1)
+            nox_cold = beta_nox * (
+                ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "NO") - 1
+            )
+            co_cold = beta_co * (
+                ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "CO") - 1
+            )
+            voc_cold = beta_voc * (
+                ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "VOC") - 1
+            )
 
         # Add cold start contribution
-        ef_nox *= (1 + nox_cold)
-        ef_co *= (1 + co_cold)
-        ef_voc *= (1 + voc_cold)
-        #("%s,%s,%s" % (ef_nox, ef_co, ef_voc))
+        ef_nox *= 1 + nox_cold
+        ef_co *= 1 + co_cold
+        ef_voc *= 1 + voc_cold
+        # ("%s,%s,%s" % (ef_nox, ef_co, ef_voc))
 
         # Emission rate
         total_em_nox = ef_nox * product
@@ -1087,20 +1228,30 @@ def aggregated_mot_ef(aggregated_input):
         total_em_voc = ef_voc * product
 
         if vehicle_fuel == "Diesel":
-            sql_pm = "SELECT * FROM default_vehicle_hc_ef WHERE vehicle_type=\"%s\" AND Class =\"%s %s\" " \
-                     "AND Legislation =\"%s\";" % (vehicle_type, vehicle_fuel, vehicle_size.replace(" ", ""), vehicle_class)
+            sql_pm = (
+                'SELECT * FROM default_vehicle_hc_ef WHERE vehicle_type="%s" AND Class ="%s %s" '
+                'AND Legislation ="%s";'
+                % (
+                    vehicle_type,
+                    vehicle_fuel,
+                    vehicle_size.replace(" ", ""),
+                    vehicle_class,
+                )
+            )
             sql_result = alaqsdblite.query_string(sql_pm)
             ef_pm = get_emission_factors(sql_result[0], velocity, 130)
-            pm_cold = beta_pm * (ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "PM") - 1)
-            ef_pm *= (1 + pm_cold)
+            pm_cold = beta_pm * (
+                ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "PM") - 1
+            )
+            ef_pm *= 1 + pm_cold
             total_em_pm = ef_pm * product
 
-        aggregated_input['total_em_nox_pc'] += total_em_nox
-        aggregated_input['total_em_voc_pc'] += total_em_voc
-        aggregated_input['total_em_co_pc'] += total_em_co
-        aggregated_input['total_em_pm_pc'] += total_em_pm
+        aggregated_input["total_em_nox_pc"] += total_em_nox
+        aggregated_input["total_em_voc_pc"] += total_em_voc
+        aggregated_input["total_em_co_pc"] += total_em_co
+        aggregated_input["total_em_pm_pc"] += total_em_pm
 
-    #debug_file("", True)
+    # debug_file("", True)
     return aggregated_input
 
 
@@ -1110,29 +1261,31 @@ def aggregated_ldv_ef(aggregated_input):
     Function that recreates method originally in modAggrPcEuroEf.PCAggregatedLDV
     """
     # Unpack our necessary data
-    year = aggregated_input['roadway_year']
-    country = aggregated_input['roadway_country']
-    average_trip_length = aggregated_input['average_trip_length']
-    average_temperature = aggregated_input['temperature_average']
-    vehicle_class = aggregated_input['vehicle_class']
-    vehicle_fuel = aggregated_input['vehicle_fuel']
-    vehicle_size = aggregated_input['vehicle_size']
-    vehicle_type = aggregated_input['vehicle_type']
-    velocity = aggregated_input['velocity']
+    year = aggregated_input["roadway_year"]
+    country = aggregated_input["roadway_country"]
+    average_trip_length = aggregated_input["average_trip_length"]
+    average_temperature = aggregated_input["temperature_average"]
+    vehicle_class = aggregated_input["vehicle_class"]
+    vehicle_fuel = aggregated_input["vehicle_fuel"]
+    vehicle_size = aggregated_input["vehicle_size"]
+    vehicle_type = aggregated_input["vehicle_type"]
+    velocity = aggregated_input["velocity"]
 
     # Get the base year total cars and average mileage for the baseline year
-    sql = "SELECT base_year_%s, average_mileage FROM default_cost319_vehicle_fleet " \
-          "WHERE country=\"%s\" AND category_abbreviation=\"%s\" AND fuel_engine=\"%s\" " \
-          "AND size=\"%s\" AND emission_class=\"%s\";" \
-          % (year, country, vehicle_type, vehicle_fuel, vehicle_size, vehicle_class)
+    sql = (
+        "SELECT base_year_%s, average_mileage FROM default_cost319_vehicle_fleet "
+        'WHERE country="%s" AND category_abbreviation="%s" AND fuel_engine="%s" '
+        'AND size="%s" AND emission_class="%s";'
+        % (year, country, vehicle_type, vehicle_fuel, vehicle_size, vehicle_class)
+    )
     sql_result = alaqsdblite.query_string(sql)
 
     if sql_result is not []:
         base_year_total_cars = float(sql_result[0][0])
         average_mileage = float(sql_result[0][1])
         product = base_year_total_cars * average_mileage
-        aggregated_input['weighted_sum_ldv'] += product
-        #debug_file("%s,%s,%s" % (base_year_total_cars, average_mileage, product))
+        aggregated_input["weighted_sum_ldv"] += product
+        # debug_file("%s,%s,%s" % (base_year_total_cars, average_mileage, product))
 
         # Set some variables as zero to avoid "used before definition" errors
         total_em_pm = 0
@@ -1162,18 +1315,31 @@ def aggregated_ldv_ef(aggregated_input):
         co_cold = None
         voc_cold = None
         if vehicle_fuel == "Gasoline":
-            nox_cold = beta_nox * (ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "NO") - 1)
-            co_cold = beta_co * (ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "CO") - 1)
-            voc_cold = beta_voc * (ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "VOC") - 1)
+            nox_cold = beta_nox * (
+                ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "NO") - 1
+            )
+            co_cold = beta_co * (
+                ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "CO") - 1
+            )
+            voc_cold = beta_voc * (
+                ldv_pre_euro_over_emission_ratio_gasoline(average_temperature, "VOC")
+                - 1
+            )
         elif vehicle_fuel == "Diesel":
-            nox_cold = beta_nox * (ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "NO") - 1)
-            co_cold = beta_co * (ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "CO") - 1)
-            voc_cold = beta_voc * (ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "VOC") - 1)
+            nox_cold = beta_nox * (
+                ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "NO") - 1
+            )
+            co_cold = beta_co * (
+                ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "CO") - 1
+            )
+            voc_cold = beta_voc * (
+                ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "VOC") - 1
+            )
 
         # Add cold start contribution
-        ef_nox *= (1 + nox_cold)
-        ef_co *= (1 + co_cold)
-        ef_voc *= (1 + voc_cold)
+        ef_nox *= 1 + nox_cold
+        ef_co *= 1 + co_cold
+        ef_voc *= 1 + voc_cold
 
         # Emission rate
         total_em_nox = ef_nox * product
@@ -1182,14 +1348,16 @@ def aggregated_ldv_ef(aggregated_input):
 
         if vehicle_fuel == "Diesel":
             ef_pm = get_emissions_factor_ldv_diesel(velocity, "PM")
-            pm_cold = beta_pm * (ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "PM") - 1)
-            ef_pm *= (1 + pm_cold)
+            pm_cold = beta_pm * (
+                ldv_pre_euro_over_emission_ratio_diesel(average_temperature, "PM") - 1
+            )
+            ef_pm *= 1 + pm_cold
             total_em_pm = ef_pm * product
 
-        aggregated_input['total_em_nox_ldv'] += total_em_nox
-        aggregated_input['total_em_voc_ldv'] += total_em_voc
-        aggregated_input['total_em_co_ldv'] += total_em_co
-        aggregated_input['total_em_pm_ldv'] += total_em_pm
+        aggregated_input["total_em_nox_ldv"] += total_em_nox
+        aggregated_input["total_em_voc_ldv"] += total_em_voc
+        aggregated_input["total_em_co_ldv"] += total_em_co
+        aggregated_input["total_em_pm_ldv"] += total_em_pm
 
-    #debug_file("", True)
+    # debug_file("", True)
     return aggregated_input

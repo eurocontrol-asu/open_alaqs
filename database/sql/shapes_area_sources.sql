@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS "shapes_area_sources";
 
 CREATE TABLE "shapes_area_sources" (
-  "oid" INTEGER PRIMARY KEY, 
+  "oid" INTEGER PRIMARY KEY,
   "source_id" TEXT,
   "unit_year" TEXT,
   "height" DECIMAL,

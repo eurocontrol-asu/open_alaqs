@@ -1,14 +1,13 @@
 import os
 from collections import OrderedDict
 
-from shapely import geometry, ops
+from shapely import geometry
 from shapely.wkt import loads
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
-from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.Store import Store
-from open_alaqs.alaqs_core.tools import spatial
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
 
@@ -19,18 +18,26 @@ class Track:
             val = {}
         self._name = str(val["track_id"]) if "track_id" in val else ""
         self._runway = str(val["runway"]) if "runway" in val else ""
-        self._departure_arrival = str(val["departure_arrival"]) if "departure_arrival" in val else ""
+        self._departure_arrival = (
+            str(val["departure_arrival"]) if "departure_arrival" in val else ""
+        )
 
         self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
-        self._geometry = loads(val["geometry"]) if "geometry" in val else geometry.GeometryCollection()
+        self._geometry = (
+            loads(val["geometry"])
+            if "geometry" in val
+            else geometry.GeometryCollection()
+        )
 
     def getName(self):
         return self._name
+
     def setName(self, val):
         self._name = val
 
     def getRunway(self):
         return self._runway
+
     def setRunway(self, val):
         self._runway = val
 
@@ -39,11 +46,13 @@ class Track:
 
     def getDepartureArrival(self):
         return self._departure_arrival
+
     def setDepartureArrival(self, val):
         self._departure_arrival = val
-        
+
     def getGeometryText(self):
         return self._geometry_text
+
     def setGeometryText(self, val):
         self._geometry_text = val
 
@@ -53,7 +62,10 @@ class Track:
     def __str__(self):
         val = "\n Track with id '%s'" % (self.getName())
         val += "\n\t Runway: %s" % (self.getRunway())
-        val += "\n\t Departure/Arrival: %s (flag: %s)" % (self.getDepartureArrival(), self.getDepartureArrivalFlag())
+        val += "\n\t Departure/Arrival: %s (flag: %s)" % (
+            self.getDepartureArrival(),
+            self.getDepartureArrivalFlag(),
+        )
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 
@@ -80,12 +92,15 @@ class TrackStore(Store, metaclass=Singleton):
         if self._track_db is None:
             self._track_db = TrackDatabase(db_path)
 
-        #instantiate all track objects
+        # instantiate all track objects
         self.initTracks()
 
     def initTracks(self):
         for key, track_dict in list(self.getTrackDatabase().getEntries().items()):
-            self.setObject(track_dict["track_id"] if "track_id" in track_dict else "unknown", Track(track_dict))
+            self.setObject(
+                track_dict["track_id"] if "track_id" in track_dict else "unknown",
+                Track(track_dict),
+            )
 
     def getTrackDatabase(self):
         return self._track_db
@@ -96,33 +111,43 @@ class TrackDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to tracks in the spatialite database
     """
 
-    def __init__(self,
-                 db_path_string,
-                 table_name_string="shapes_tracks",
-                 table_columns_type_dict=None,
-                 primary_key="",
-                 geometry_columns=None
-                 ):
+    def __init__(
+        self,
+        db_path_string,
+        table_name_string="shapes_tracks",
+        table_columns_type_dict=None,
+        primary_key="",
+        geometry_columns=None,
+    ):
 
         if table_columns_type_dict is None:
-            table_columns_type_dict = OrderedDict([
-                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
-                ("track_id", "TEXT"),
-                ("runway", "TEXT"),
-                ("departure_arrival", "TEXT"),
-                ("instudy", "INTEGER")
-            ])
+            table_columns_type_dict = OrderedDict(
+                [
+                    ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                    ("track_id", "TEXT"),
+                    ("runway", "TEXT"),
+                    ("departure_arrival", "TEXT"),
+                    ("instudy", "INTEGER"),
+                ]
+            )
         if geometry_columns is None:
-            geometry_columns = [{
-                "column_name": "geometry",
-                "SRID": 3857,
-                "geometry_type": "LINESTRING",
-                "geometry_type_dimension": 3
-            }]
+            geometry_columns = [
+                {
+                    "column_name": "geometry",
+                    "SRID": 3857,
+                    "geometry_type": "LINESTRING",
+                    "geometry_type_dimension": 3,
+                }
+            ]
 
-        SQLSerializable.__init__(self, db_path_string, table_name_string,
-                                 table_columns_type_dict, primary_key,
-                                 geometry_columns)
+        SQLSerializable.__init__(
+            self,
+            db_path_string,
+            table_name_string,
+            table_columns_type_dict,
+            primary_key,
+            geometry_columns,
+        )
 
         if self._db_path:
             self.deserialize()

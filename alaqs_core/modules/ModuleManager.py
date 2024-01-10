@@ -6,14 +6,13 @@ from collections import OrderedDict
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.DispersionModule import DispersionModule
 from open_alaqs.alaqs_core.interfaces.OutputModule import OutputModule
-from open_alaqs.alaqs_core.tools.Singleton import Singleton
 from open_alaqs.alaqs_core.interfaces.SourceModule import SourceModule
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
 
 
 class ModuleManager(metaclass=Singleton):
-
     def __init__(self, moduletype):
         self._modules = OrderedDict()
         self._module_type = moduletype
@@ -26,7 +25,8 @@ class ModuleManager(metaclass=Singleton):
     # load all modules in current directory
     def loadModules(self):
         for loader, name, _ in pkgutil.walk_packages(
-                [os.path.abspath(os.path.dirname(__file__))]):
+            [os.path.abspath(os.path.dirname(__file__))]
+        ):
             module = loader.find_module(name).load_module(name)
             for _name, obj in inspect.getmembers(module):
 
@@ -54,23 +54,25 @@ class ModuleManager(metaclass=Singleton):
 
     def addModule(self, name, classinfo):
         if name in self._modules:
-            logger.warning("Already found a module with name '%s' and class "
-                           "'%s'. Overwriting existing with name '%s' and "
-                           "class '%s'."
-                           % (name, self._modules[name], name, str(classinfo)))
+            logger.warning(
+                "Already found a module with name '%s' and class "
+                "'%s'. Overwriting existing with name '%s' and "
+                "class '%s'." % (name, self._modules[name], name, str(classinfo))
+            )
         self._modules[name] = classinfo
 
     def getModulesByType(self, typename):
-        return [x for x in iter(self._modules.items()) if
-                x[1].__name__ == typename.__name__]
+        return [
+            x for x in iter(self._modules.items()) if x[1].__name__ == typename.__name__
+        ]
 
     def getModulesByName(self, name):
-        return [x for x in iter(self._modules.items()) if
-                x[1].getModuleName() == name]
+        return [x for x in iter(self._modules.items()) if x[1].getModuleName() == name]
 
     def getModuleByName(self, name):
-        matched_ = [x for x in iter(self._modules.items()) if
-                    x[1].getModuleName() == name]
+        matched_ = [
+            x for x in iter(self._modules.items()) if x[1].getModuleName() == name
+        ]
         if len(matched_):
             return matched_[0][1]
         return None

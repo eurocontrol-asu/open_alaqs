@@ -24,7 +24,7 @@ valid 1.000000
 sequ  "k+,j-,i+"
 locl  "C"
 file  "co-001s"
-form  "dev%(*100)5.1f" 
+form  "dev%(*100)5.1f"
 refv  0.03
 dims  3
 size  4

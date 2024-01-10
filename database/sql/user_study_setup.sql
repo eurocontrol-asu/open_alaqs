@@ -52,8 +52,8 @@ CREATE TABLE "user_study_setup" (
 );
 
 INSERT INTO "user_study_setup" (
-    airport_id, alaqs_version, project_name, airport_name, airport_code, airport_country, airport_latitude, 
-    airport_longitude, airport_elevation, airport_temperature, vertical_limit, roadway_method, 
+    airport_id, alaqs_version, project_name, airport_name, airport_code, airport_country, airport_latitude,
+    airport_longitude, airport_elevation, airport_temperature, vertical_limit, roadway_method,
     roadway_fleet_year, roadway_country, parking_method, study_info, date_created, date_modified) VALUES (
     1, "0.0.1", "Not set", "Not set", "Not set", "Not set", 0.0000, 0.0000, 0.0, 15.0, 913,
     "Not set", "Not set", "Not set", "DEFAULT", "Not set", DATETIME('now'), DATETIME('now') );

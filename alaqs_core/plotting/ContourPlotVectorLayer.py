@@ -1,5 +1,22 @@
 from PyQt5 import QtCore, QtGui
-from qgis.core import *
+from qgis.core import (
+    QgsClassificationPrettyBreaks,
+    QgsCoordinateReferenceSystem,
+    QgsErrorMessage,
+    QgsFeature,
+    QgsField,
+    QgsFillSymbol,
+    QgsGeometry,
+    QgsGradientColorRamp,
+    QgsGradientStop,
+    QgsGraduatedSymbolRenderer,
+    QgsMarkerSymbol,
+    QgsMessageLog,
+    QgsPointXY,
+    QgsSingleSymbolRenderer,
+    QgsSymbol,
+    QgsVectorLayer,
+)
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools import conversion
@@ -13,7 +30,7 @@ class ContourPlotVectorLayer:
      a contour plot with the QGIS contour plugin
     """
 
-    LAYER_NAME="Emissions"
+    LAYER_NAME = "Emissions"
 
     def __init__(self, config, header=None, data=None):
         self._layerName = ContourPlotVectorLayer.LAYER_NAME
@@ -27,7 +44,7 @@ class ContourPlotVectorLayer:
 
         self._vectorlayer = None
         self._myCrs = QgsCoordinateReferenceSystem("EPSG:3857")
-        # except:
+        # except Exception:
         #     self._myCrs = QgsCoordinateReferenceSystem(3857, 4326)
 
         self.createLayer(self._layerName)
@@ -48,7 +65,7 @@ class ContourPlotVectorLayer:
             config = {}
 
         # Get the minimum value
-        min_ = config.get("minValue", 0.)
+        min_ = config.get("minValue", 0.0)
 
         # Get the number of classes
         numberOfClasses_ = config.get("numberOfClasses", 7)
@@ -62,12 +79,14 @@ class ContourPlotVectorLayer:
         stop2 = QgsGradientStop(0.6, yellow)
         stops = [stop1, stop2]
         discrete = False
-        colorRamp_ = QgsGradientColorRamp(color1_, color2_, discrete, stops)
+        QgsGradientColorRamp(color1_, color2_, discrete, stops)
 
         if "fieldname" not in config and "fieldname" not in self._style:
-            raise Exception("Did not find field for color gradient renderer!!"
-                            " Add property 'fieldname' for method "
-                            "'setColorGradientRenderer'.")
+            raise Exception(
+                "Did not find field for color gradient renderer!!"
+                " Add property 'fieldname' for method "
+                "'setColorGradientRenderer'."
+            )
 
         columnName_ = config.get("fieldname", self._style["fieldname"])
 
@@ -92,10 +111,10 @@ class ContourPlotVectorLayer:
 
     def setSymbolRenderer(self):
         s_ = {
-            'color': str(self._style["color"]),
-            'color_border': str(self._style["color_border"]),
-            'style': str(self._style["style"]),
-            'style_border': str(self._style["style_border"])
+            "color": str(self._style["color"]),
+            "color_border": str(self._style["color_border"]),
+            "style": str(self._style["style"]),
+            "style_border": str(self._style["style_border"]),
         }  # width_border
 
         symbol = None
@@ -104,10 +123,10 @@ class ContourPlotVectorLayer:
         else:
             symbol = QgsMarkerSymbol.createSimple(s_)
 
-        symbol.setOpacity(1. - float(self._style["transparency"]))
+        symbol.setOpacity(1.0 - float(self._style["transparency"]))
 
-        if not symbol is None:
-            self._vectorlayer.setRenderer(QgsSingleSymbolRenderer( symbol ) )
+        if symbol is not None:
+            self._vectorlayer.setRenderer(QgsSingleSymbolRenderer(symbol))
 
     def setStyle(self, config):
         style = {}
@@ -121,10 +140,10 @@ class ContourPlotVectorLayer:
         if "transparency" in config:
             # takes values in [0,1]
             style["transparency"] = float(config["transparency"])
-            if style["transparency"] > 1.:
-                style["transparency"] = 1.
-            if style["transparency"] < 0.:
-                style["transparency"] = 0.
+            if style["transparency"] > 1.0:
+                style["transparency"] = 1.0
+            if style["transparency"] < 0.0:
+                style["transparency"] = 0.0
         else:
             style["transparency"] = 0.75
 
@@ -172,7 +191,7 @@ class ContourPlotVectorLayer:
         return self._myCrs
 
     def addHeader(self, header):
-        """ Adds header to QgsVectorLayer
+        """Adds header to QgsVectorLayer
 
         Possible typenames are: int, double, float, real
         Argument is a list of tuples(name, value_type)
@@ -211,7 +230,8 @@ class ContourPlotVectorLayer:
             self._vectorlayer.updateExtents()
         else:
             QgsErrorMessage.logMessage(
-                "Could not create header for contour layer.", "Contour Plot", 4)
+                "Could not create header for contour layer.", "Contour Plot", 4
+            )
 
     def addData(self, data):
         """Method to add data to the layer
@@ -249,25 +269,33 @@ class ContourPlotVectorLayer:
                 # make a copy and give ownership to python
                 feature.setFields(fields)
 
-                field_index = fields.indexFromName(point_value['hash'])
+                fields.indexFromName(point_value["hash"])
                 # if field_index > -1:
                 feat_value = conversion.convertToFloat(point_value["Q"])
                 # feature.setAttribute(key, feat_value)
                 if "fieldname" in self._style:
                     feature.setAttribute(self._style["fieldname"], feat_value)
                 else:
-                    logger.debug("Could not find field/header for '%s'." %
-                                 (str(self._style["fieldname"])))
+                    logger.debug(
+                        "Could not find field/header for '%s'."
+                        % (str(self._style["fieldname"]))
+                    )
 
                 # geometry
                 if self._style["isPolygon"]:
                     cell_bounds = point_value["geometry"].bounds
-                    feature.setGeometry(QgsGeometry.fromPolygonXY([[
-                        QgsPointXY(cell_bounds[0], cell_bounds[1]),
-                        QgsPointXY(cell_bounds[2], cell_bounds[1]),
-                        QgsPointXY(cell_bounds[2], cell_bounds[3]),
-                        QgsPointXY(cell_bounds[0], cell_bounds[3])
-                    ]]))
+                    feature.setGeometry(
+                        QgsGeometry.fromPolygonXY(
+                            [
+                                [
+                                    QgsPointXY(cell_bounds[0], cell_bounds[1]),
+                                    QgsPointXY(cell_bounds[2], cell_bounds[1]),
+                                    QgsPointXY(cell_bounds[2], cell_bounds[3]),
+                                    QgsPointXY(cell_bounds[0], cell_bounds[3]),
+                                ]
+                            ]
+                        )
+                    )
 
                 else:
                     point_geo = point_value["geometry"].centroid
@@ -284,7 +312,8 @@ class ContourPlotVectorLayer:
 
         else:
             QgsMessageLog.logMessage(
-                "Could not find contour layer to add data.", "ContourPlot", 4)
+                "Could not find contour layer to add data.", "ContourPlot", 4
+            )
             return False
 
         return True

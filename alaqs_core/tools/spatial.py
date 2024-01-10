@@ -22,22 +22,19 @@ def getDistanceBetweenPoints(x1, y1, z1, x2, y2, z2):
     return ((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2) ** 0.5
 
 
-def getDistanceXY(x, y, z=0., origin_x=0., origin_y=0., origin_z=0.) -> float:
+def getDistanceXY(x, y, z=0.0, origin_x=0.0, origin_y=0.0, origin_z=0.0) -> float:
     """
     Determine the radius for the circle by x and y relative to origin
     (origin_x,origin_y)
     """
     x = conversion.convertToFloat(x)
     y = conversion.convertToFloat(y)
-    return math.sqrt(x ** 2 + y ** 2)
+    return math.sqrt(x**2 + y**2)
 
 
 def getDistance(
-        lat1: float,
-        lon1: float,
-        azimuth: float,
-        distance: float,
-        epsg_id: int = 4326) -> dict:
+    lat1: float, lon1: float, azimuth: float, distance: float, epsg_id: int = 4326
+) -> dict:
     geod = getGeodesic(epsg_id)
 
     # Solve the direct geodesic problem where the length of the geodesic is
@@ -46,16 +43,15 @@ def getDistance(
 
 
 def getGeodesic(epsg_id=4326):
-    return Geodesic(getSpatialReference(epsg_id).GetSemiMajor(),
-                    1. / getSpatialReference(epsg_id).GetInvFlattening())
+    return Geodesic(
+        getSpatialReference(epsg_id).GetSemiMajor(),
+        1.0 / getSpatialReference(epsg_id).GetInvFlattening(),
+    )
 
 
 def getInverseDistance(
-        lat1: float,
-        lon1: float,
-        lat2: float,
-        lon2: float,
-        epsg_id: int = 4326) -> dict:
+    lat1: float, lon1: float, lat2: float, lon2: float, epsg_id: int = 4326
+) -> dict:
     geod = getGeodesic(epsg_id)
 
     # Solve the inverse geodesic problem
@@ -63,36 +59,37 @@ def getInverseDistance(
 
 
 def getDistanceOfLineStringXYZ(
-        geometry_wkt,
-        distance_z: float = 0.,
-        epsg_id_source: int = 3857,
-        epsg_id_target: int = 4326) -> float:
-    distance = getDistanceOfLineStringXY(geometry_wkt, epsg_id_source,
-                                         epsg_id_target)
+    geometry_wkt,
+    distance_z: float = 0.0,
+    epsg_id_source: int = 3857,
+    epsg_id_target: int = 4326,
+) -> float:
+    distance = getDistanceOfLineStringXY(geometry_wkt, epsg_id_source, epsg_id_target)
 
     return math.sqrt(distance * distance + distance_z * distance_z)
 
 
 def getDistanceOfLineStringXY(
-        geometry_wkt,
-        epsg_id_source: int = 3857,
-        epsg_id_target: int = 4326) -> float:
+    geometry_wkt, epsg_id_source: int = 3857, epsg_id_target: int = 4326
+) -> float:
     if isinstance(geometry_wkt, ogr.Geometry):
         geometry_wkt = geometry_wkt.ExportToWkt()
 
-    (geometry_wkt, swap) = reproject_geometry(geometry_wkt, epsg_id_source,
-                                              epsg_id_target)
+    (geometry_wkt, swap) = reproject_geometry(
+        geometry_wkt, epsg_id_source, epsg_id_target
+    )
     points_tuple_list = getAllPoints(geometry_wkt, swap)
-    res = 0.
+    res = 0.0
 
     # calculate length pairwise and sum the result
     for (start_point_, end_point_) in pairwise(points_tuple_list):
-        res_ = getInverseDistance(start_point_[0], start_point_[1],
-                                  end_point_[0], end_point_[1])
+        res_ = getInverseDistance(
+            start_point_[0], start_point_[1], end_point_[0], end_point_[1]
+        )
         if "s12" in res_:
             res_ = conversion.convertToFloat(res_["s12"])
             if res_ is None:
-                res_ = 0.
+                res_ = 0.0
         res += res_
     return res
 
@@ -102,8 +99,10 @@ def getArea(val):
         p = ogr.CreateGeometryFromWkt(val)
         area = p.GetArea()
         return area
-    raise Exception("val with value '%s' is of type '%s', but only '%s' "
-                    "implemented.".format(val, type(val), type("")))
+    raise Exception(
+        "val with value '%s' is of type '%s', but only '%s' "
+        "implemented." % (val, type(val), type(""))
+    )
 
 
 def getIntersectionXY(p1, p2):
@@ -127,7 +126,7 @@ def getIntersectionXY(p1, p2):
     return ""
 
 
-def getPoint(wkt, x=0., y=0., z=0., swap_xy=False):
+def getPoint(wkt, x=0.0, y=0.0, z=0.0, swap_xy=False):
     wkt = wkt.replace("POINTZ", "POINT").replace("pointz", "point")
     point = ogr.Geometry(ogr.wkbPoint)
 
@@ -152,7 +151,7 @@ def getPoint(wkt, x=0., y=0., z=0., swap_xy=False):
     return point
 
 
-def getPointGeometryText(p1, p2, p3=0., swap_xy=False):
+def getPointGeometryText(p1, p2, p3=0.0, swap_xy=False):
     return getPoint("", p1, p2, p3, swap_xy).ExportToWkt()
 
 
@@ -189,18 +188,18 @@ def getRectangleXYFromBoundingBox(bbox):
 
 
 def getRectangleXYZFromBoundingBox(
-        left_line,
-        right_line,
-        epsg_id_source=3857,
-        epsg_id_target=4326):
-    new_geometry_wkt_left = \
-        reproject_geometry(left_line, epsg_id_target, epsg_id_source)[0]
+    left_line, right_line, epsg_id_source=3857, epsg_id_target=4326
+):
+    new_geometry_wkt_left = reproject_geometry(
+        left_line, epsg_id_target, epsg_id_source
+    )[0]
     new_points = getAllPoints(new_geometry_wkt_left)
     lon_l1, lat_l1, alt11 = new_points[0][0], new_points[0][1], new_points[0][2]
     lon_l2, lat_l2, alt12 = new_points[1][0], new_points[1][1], new_points[1][2]
 
-    new_geometry_wkt_right = \
-        reproject_geometry(right_line, epsg_id_target, epsg_id_source)[0]
+    new_geometry_wkt_right = reproject_geometry(
+        right_line, epsg_id_target, epsg_id_source
+    )[0]
     new_points = getAllPoints(new_geometry_wkt_right)
     lon_r1, lat_r1, alt21 = new_points[0][0], new_points[0][1], new_points[0][2]
     lon_r2, lat_r2, alt22 = new_points[1][0], new_points[1][1], new_points[1][2]
@@ -232,7 +231,7 @@ def getBoundingBox(val: Union[ogr.Geometry, str]) -> Union[dict, None]:
             "y_min": bbox[2],
             "y_max": bbox[3],
             "z_min": bbox[4],
-            "z_max": bbox[5]
+            "z_max": bbox[5],
         }
     if isinstance(val, str):
         return getBoundingBox(ogr.CreateGeometryFromWkt(val))
@@ -240,8 +239,7 @@ def getBoundingBox(val: Union[ogr.Geometry, str]) -> Union[dict, None]:
 
 def addHeightToGeometryWkt(geometry_wkt, height):
     geom = shapely.wkt.loads(geometry_wkt)
-    shifted_geom = shapely.ops.transform(lambda x, y, z=None: (x, y, height),
-                                         geom)
+    shifted_geom = shapely.ops.transform(lambda x, y, z=None: (x, y, height), geom)
     # return shapely.wkt.dumps(shifted_geom)
     return str(shifted_geom)
 
@@ -258,73 +256,84 @@ def getRelativeAreaInBoundingBox(geometry_wkt, cell_bbox):
     total_area_of_geometry = getArea(geometry_wkt)
 
     bbox_polygon_ = getRectangleXYFromBoundingBox(cell_bbox)
-    relative_area_in_cell_ = 0.
+    relative_area_in_cell_ = 0.0
     matched_area_ = getIntersectionXY(geometry_wkt, bbox_polygon_)
     if matched_area_:
         matched_area_geom = ogr.CreateGeometryFromWkt(matched_area_)
 
         # http://www.gdal.org/ogr__core_8h.html
-        if matched_area_geom.GetGeometryType() in [ogr.wkbPoint,
-                                                   ogr.wkbMultiPoint,
-                                                   ogr.wkbPoint25D,
-                                                   ogr.wkbMultiPoint25D]:
-            relative_area_in_cell_ = 1.
-        elif matched_area_geom.GetGeometryType() in [ogr.wkbPolygon,
-                                                     ogr.wkbMultiPolygon,
-                                                     ogr.wkbPolygon25D,
-                                                     ogr.wkbMultiPolygon25D]:
-            relative_area_in_cell_ = \
+        if matched_area_geom.GetGeometryType() in [
+            ogr.wkbPoint,
+            ogr.wkbMultiPoint,
+            ogr.wkbPoint25D,
+            ogr.wkbMultiPoint25D,
+        ]:
+            relative_area_in_cell_ = 1.0
+        elif matched_area_geom.GetGeometryType() in [
+            ogr.wkbPolygon,
+            ogr.wkbMultiPolygon,
+            ogr.wkbPolygon25D,
+            ogr.wkbMultiPolygon25D,
+        ]:
+            relative_area_in_cell_ = (
                 matched_area_geom.GetArea() / total_area_of_geometry
+            )
         else:
             logger.error(
                 "Matched area '%s' with type id '%i' is neither polygon nor "
-                "point! Setting matching area to zero ... ", matched_area_,
-                matched_area_geom.GetGeometryType())
+                "point! Setting matching area to zero ... ",
+                matched_area_,
+                matched_area_geom.GetGeometryType(),
+            )
 
     return relative_area_in_cell_
 
 
 def getRelativeLengthXYInBoundingBox(
-        geometry_wkt,
-        cell_bbox,
-        epsg_id_source=3857,
-        epsg_id_target=4326):
+    geometry_wkt, cell_bbox, epsg_id_source=3857, epsg_id_target=4326
+):
     bbox_polygon_ = getRectangleXYFromBoundingBox(cell_bbox)
 
-    total_length = getDistanceOfLineStringXY(geometry_wkt,
-                                             epsg_id_source=epsg_id_source,
-                                             epsg_id_target=epsg_id_target)
+    total_length = getDistanceOfLineStringXY(
+        geometry_wkt, epsg_id_source=epsg_id_source, epsg_id_target=epsg_id_target
+    )
 
-    dist_xy = 0.
+    dist_xy = 0.0
     intersection_wkt = getIntersectionXY(geometry_wkt, bbox_polygon_)
     # logger.debug("Intersection: %s" % (intersection_wkt))
 
     if intersection_wkt:
-        dist_xy = getDistanceOfLineStringXY(intersection_wkt, epsg_id_source,
-                                            epsg_id_target)
+        dist_xy = getDistanceOfLineStringXY(
+            intersection_wkt, epsg_id_source, epsg_id_target
+        )
         # logger.debug("Distance (x,y): %s" % (dist_xy))
 
     if dist_xy and total_length:
         return abs(dist_xy) / abs(total_length)
-    return 0.
+    return 0.0
 
 
-def getRelativeHeightInBoundingBox(line_z_min: float, line_z_max: float,
-                                   cell_bbox: dict) -> float:
+def getRelativeHeightInBoundingBox(
+    line_z_min: float, line_z_max: float, cell_bbox: dict
+) -> float:
     total_height = float(abs(line_z_max - line_z_min))
 
     # if line.GetPointCount()==2:
     if line_z_max < cell_bbox["z_min"]:
-        height_line_in_bbox = 0.
+        height_line_in_bbox = 0.0
     elif line_z_min > cell_bbox["z_max"]:
-        height_line_in_bbox = 0.
+        height_line_in_bbox = 0.0
     else:
-        if total_height == 0.:
-            height_line_in_bbox = 1.
+        if total_height == 0.0:
+            height_line_in_bbox = 1.0
         else:
-            height_line_in_bbox = abs(
-                max(line_z_min, cell_bbox["z_min"]) - min(line_z_max, cell_bbox[
-                    "z_max"])) / total_height
+            height_line_in_bbox = (
+                abs(
+                    max(line_z_min, cell_bbox["z_min"])
+                    - min(line_z_max, cell_bbox["z_max"])
+                )
+                / total_height
+            )
     return height_line_in_bbox
 
 
@@ -370,10 +379,8 @@ transformations_cache = {}
 
 
 def reproject_Point(
-        x: float,
-        y: float,
-        epsg_id_source: int = 3857,
-        epsg_id_target: int = 4326) -> tuple:
+    x: float, y: float, epsg_id_source: int = 3857, epsg_id_target: int = 4326
+) -> tuple:
     try:
         # define point
         point = ogr.Geometry(ogr.wkbPoint)
@@ -405,7 +412,8 @@ def reproject_geometry(geometry_wkt, epsg_id_source=3857, epsg_id_target=4326):
 
     swap_coordinates = False
     if (source.IsGeographic() and not target.IsGeographic()) or (
-            not source.IsGeographic() and target.IsGeographic()):
+        not source.IsGeographic() and target.IsGeographic()
+    ):
         swap_coordinates = True
 
     return new_wkt_, swap_coordinates

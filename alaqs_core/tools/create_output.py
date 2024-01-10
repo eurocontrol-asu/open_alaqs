@@ -6,11 +6,9 @@ import shutil
 import sqlite3 as sqlite
 from datetime import datetime, timedelta
 
-from open_alaqs.alaqs_core import alaqsdblite
-from open_alaqs.alaqs_core import alaqsutils
+from open_alaqs.alaqs_core import alaqsdblite, alaqsutils
 from open_alaqs.alaqs_core.alaqslogging import get_logger
-from open_alaqs.alaqs_core.interfaces.AmbientCondition import \
-    AmbientConditionStore
+from open_alaqs.alaqs_core.interfaces.AmbientCondition import AmbientConditionStore
 from open_alaqs.alaqs_core.tools import sql_interface
 from open_alaqs.alaqs_core.tools.Grid3D import Grid3D
 
@@ -35,8 +33,7 @@ def catch_errors(f):
     return wrapper
 
 
-def create_alaqs_output(inventory_path, model_parameters, study_setup,
-                        met_csv_path=""):
+def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_path=""):
     """
     This is the only function in this class that should be called by an external
      function. This function creates a new ALAQS output file based on the
@@ -147,23 +144,30 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup,
 
     # 3D Grid configuration
     grid_configuration_ = {
-        'x_cells': 10,
-        'y_cells': 10,
-        'z_cells': 1,
-        'x_resolution': 100,
-        'y_resolution': 100,
-        'z_resolution': 100,
-        'reference_latitude': '0.0',  # airport_latitude
-        'reference_longitude': '0.0'  # airport_longitude
+        "x_cells": 10,
+        "y_cells": 10,
+        "z_cells": 1,
+        "x_resolution": 100,
+        "y_resolution": 100,
+        "z_resolution": 100,
+        "reference_latitude": "0.0",  # airport_latitude
+        "reference_longitude": "0.0",  # airport_longitude
     }
 
-    grid_cells_header = ['x_resolution', 'y_resolution', 'z_resolution', 'x_cells', 'y_cells', 'z_cells']
+    grid_cells_header = [
+        "x_resolution",
+        "y_resolution",
+        "z_resolution",
+        "x_cells",
+        "y_cells",
+        "z_cells",
+    ]
     for head in grid_cells_header:
         if head not in model_parameters:
             raise Exception("Did not find '%s' in '%s'." % (head, "model_parameters"))
         grid_configuration_[head] = model_parameters[head]
 
-    grid_cells_header = ['airport_latitude', 'airport_longitude']
+    grid_cells_header = ["airport_latitude", "airport_longitude"]
     for head in grid_cells_header:
         if head not in study_setup:
             raise Exception("Did not find '%s' in '%s'." % (head, "study_setup"))
@@ -179,7 +183,9 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup,
         store = AmbientConditionStore(inventory_path, init_csv_path=met_csv_path)
         store.serialize()
 
-    logger.info("New output file with path '%s' has been created" % (str(inventory_path)))
+    logger.info(
+        "New output file with path '%s' has been created" % (str(inventory_path))
+    )
 
 
 @catch_errors
@@ -189,7 +195,10 @@ def inventory_create_blank(inventory_name):
     :param inventory_name: the path where the inventory file is to be copied
     :return: None if successful, error otherwise
     """
-    shutil.copy2(os.path.join(os.path.dirname(__file__), '../templates/inventory.alaqs'), inventory_name)
+    shutil.copy2(
+        os.path.join(os.path.dirname(__file__), "../templates/inventory.alaqs"),
+        inventory_name,
+    )
     msg = "[+] Created a blank ALAQS output file"
     logger.info(msg)
 
@@ -208,7 +217,10 @@ def inventory_copy_generic_table(inventory_path, table: str):
     table_data = alaqsdblite.query_string(f"SELECT * FROM {table};")
     if len(table_data) > 0:
         column_count = len(table_data[0])
-        cur.executemany(f'INSERT INTO {table} VALUES ({",".join(["?"] * column_count)});', table_data)
+        cur.executemany(
+            f'INSERT INTO {table} VALUES ({",".join(["?"] * column_count)});',
+            table_data,
+        )
         conn.commit()
     conn.close()
     msg = f"[+] Copied the {table} table"
@@ -224,49 +236,61 @@ def inventory_update_tbl_inv_period(database_path, model_parameters, study_setup
     """
 
     try:
-        min_time = datetime.strptime(model_parameters['study_start_date'],
-                                     "%Y-%m-%d %H:%M:%S")
-        max_time = datetime.strptime(model_parameters['study_end_date'],
-                                     "%Y-%m-%d %H:%M:%S")
-    except:
-        min_time = datetime.strftime(model_parameters['study_start_date'],
-                                     "%Y-%m-%d %H:%M:%S")
-        max_time = datetime.strftime(model_parameters['study_end_date'],
-                                     "%Y-%m-%d %H:%M:%S")
+        min_time = datetime.strptime(
+            model_parameters["study_start_date"], "%Y-%m-%d %H:%M:%S"
+        )
+        max_time = datetime.strptime(
+            model_parameters["study_end_date"], "%Y-%m-%d %H:%M:%S"
+        )
+    except Exception:
+        min_time = datetime.strftime(
+            model_parameters["study_start_date"], "%Y-%m-%d %H:%M:%S"
+        )
+        max_time = datetime.strftime(
+            model_parameters["study_end_date"], "%Y-%m-%d %H:%M:%S"
+        )
 
     logger.info("Min time: %s" % min_time)
     logger.info("Max time: %s" % max_time)
 
     interval = 1 / 24
-    temp_isa = 273.16 + 15 + study_setup['airport_elevation'] / 1000 * -6.5
+    temp_isa = 273.16 + 15 + study_setup["airport_elevation"] / 1000 * -6.5
     copert = 0
     nox_corr = 0
     ffm = 0
     mix_height = 0
     smsh = 0
 
-    if model_parameters['use_copert'] is True:
+    if model_parameters["use_copert"] is True:
         copert = 1
-    if model_parameters['use_nox_correction'] is True:
+    if model_parameters["use_nox_correction"] is True:
         nox_corr = 1
-    if model_parameters['use_fuel_flow'] is True:
+    if model_parameters["use_fuel_flow"] is True:
         ffm = 1
-    if model_parameters['use_smooth_and_shift'] is True:
+    if model_parameters["use_smooth_and_shift"] is True:
         smsh = 1
-    if model_parameters['use_variable_mixing_height'] is True:
+    if model_parameters["use_variable_mixing_height"] is True:
         mix_height = 1
 
-    sql_interface.query_text(database_path,
-                             "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, vert_limit=%d, apt_elev=%d, "
-                             "copert=%d, nox_corr=%d, ffm=%d, smsh=%d, mix_height=%d, min_time=\"%s\", "
-                             "max_time=\"%s\";" % (interval, temp_isa,
-                                                   model_parameters[
-                                                       'vertical_limit'],
-                                                   study_setup[
-                                                       'airport_elevation'],
-                                                   copert, nox_corr, ffm,
-                                                   smsh, mix_height, min_time,
-                                                   max_time))
+    sql_interface.query_text(
+        database_path,
+        "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, vert_limit=%d, apt_elev=%d, "
+        'copert=%d, nox_corr=%d, ffm=%d, smsh=%d, mix_height=%d, min_time="%s", '
+        'max_time="%s";'
+        % (
+            interval,
+            temp_isa,
+            model_parameters["vertical_limit"],
+            study_setup["airport_elevation"],
+            copert,
+            nox_corr,
+            ffm,
+            smsh,
+            mix_height,
+            min_time,
+            max_time,
+        ),
+    )
     msg = "[+] Updated the output inventory period"
     logger.info(msg)
 
@@ -282,18 +306,22 @@ def inventory_update_tbl_inv_time(inventory_path, model_parameters):
     time_list = []
     hour_delta = timedelta(hours=1)
     try:
-        start_time = datetime.strptime(model_parameters['study_start_date'],
-                                       "%Y-%m-%d %H:%M:%S")
-        end_time = datetime.strptime(model_parameters['study_end_date'],
-                                     "%Y-%m-%d %H:%M:%S")
-    except:
-        start_time = model_parameters['study_start_date']
-        end_time = model_parameters['study_end_date']
+        start_time = datetime.strptime(
+            model_parameters["study_start_date"], "%Y-%m-%d %H:%M:%S"
+        )
+        end_time = datetime.strptime(
+            model_parameters["study_end_date"], "%Y-%m-%d %H:%M:%S"
+        )
+    except Exception:
+        start_time = model_parameters["study_start_date"]
+        end_time = model_parameters["study_end_date"]
 
     # Create a time stamp for the start of the first hour - kind of floor(start_time)
-    current_hour = start_time - timedelta(minutes=start_time.minute % 60,
-                                          seconds=start_time.second,
-                                          microseconds=start_time.microsecond)
+    current_hour = start_time - timedelta(
+        minutes=start_time.minute % 60,
+        seconds=start_time.second,
+        microseconds=start_time.microsecond,
+    )
 
     # Build a list of hours we need to model
     while current_hour <= end_time:
@@ -303,17 +331,19 @@ def inventory_update_tbl_inv_time(inventory_path, model_parameters):
         day = interval_start.strftime("%d")
         hour = interval_start.strftime("%H")
         weekday_id = interval_start.weekday()
-        mix_height = '914.4'
+        mix_height = "914.4"
 
         time_list.append(
-            [interval_start, year, month, day, hour, weekday_id, mix_height])
+            [interval_start, year, month, day, hour, weekday_id, mix_height]
+        )
         current_hour = current_hour + hour_delta
 
     conn = sqlite.connect(inventory_path)
     cur = conn.cursor()
     cur.executemany(
         "INSERT INTO tbl_InvTime (time, year, month, day, hour, weekday_id, mix_height) VALUES (?,?,?,?,?,?,?);",
-        time_list)
+        time_list,
+    )
     conn.commit()
     conn.close()
     msg = "[+] Updated the output time table"
@@ -331,15 +361,14 @@ def inventory_insert_movements(inventory_name, model_parameters):
     conn = sqlite.connect(inventory_name)
     cur = conn.cursor()
 
-    with open(model_parameters['movement_path'], 'rt') as movements:
+    with open(model_parameters["movement_path"], "rt") as movements:
         all_movements = []
         movement_line = 0
         columns_ = 0
         for movement in movements:
             movement_line += 1
             if movement_line > 1:
-                movement_data = \
-                    [movement_line - 1] + movement.strip().split(";")
+                movement_data = [movement_line - 1] + movement.strip().split(";")
                 if not columns_:
                     columns_ = len(movement_data)
                 all_movements.append(movement_data)
@@ -349,8 +378,9 @@ def inventory_insert_movements(inventory_name, model_parameters):
         values_str_ = "?," * columns_
         values_str_ = values_str_[:-1]
         cur.executemany(
-            'INSERT INTO user_aircraft_movements VALUES (%s)' % values_str_,
-            all_movements)
+            "INSERT INTO user_aircraft_movements VALUES (%s)" % values_str_,
+            all_movements,
+        )
         conn.commit()
     msg = f"[+] Aircraft movements copied to output file ({n_rows} rows)"
     conn.close()
@@ -369,7 +399,10 @@ def inventory_copy_study_setup(inventory_path):
     cur = conn.cursor()
 
     study_setup_data = alaqsdblite.query_string("SELECT * FROM user_study_setup;")
-    cur.execute('INSERT INTO user_study_setup VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);', study_setup_data[0])
+    cur.execute(
+        "INSERT INTO user_study_setup VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);",
+        study_setup_data[0],
+    )
     conn.commit()
     conn.close()
     msg = "[+] Copied the study setup"
@@ -393,21 +426,29 @@ def inventory_copy_activity_profiles(inventory_path) -> None:
 
     # Get the hourly, daily and monthly activity profiles
     hourly_activity_profiles = alaqsdblite.query_string(
-        "SELECT * FROM user_hour_profile;")
+        "SELECT * FROM user_hour_profile;"
+    )
     daily_activity_profiles = alaqsdblite.query_string(
-        "SELECT * FROM user_day_profile;")
+        "SELECT * FROM user_day_profile;"
+    )
     monthly_activity_profiles = alaqsdblite.query_string(
-        "SELECT * FROM user_month_profile;")
+        "SELECT * FROM user_month_profile;"
+    )
 
     # Set the hourly, daily and monthly activity profiles
-    cur.executemany('INSERT INTO user_hour_profile VALUES '
-                    '(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                    hourly_activity_profiles)
-    cur.executemany('INSERT INTO user_day_profile VALUES (?,?,?,?,?,?,?,?,?)',
-                    daily_activity_profiles)
-    cur.executemany('INSERT INTO user_month_profile VALUES '
-                    '(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                    monthly_activity_profiles)
+    cur.executemany(
+        "INSERT INTO user_hour_profile VALUES "
+        "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        hourly_activity_profiles,
+    )
+    cur.executemany(
+        "INSERT INTO user_day_profile VALUES (?,?,?,?,?,?,?,?,?)",
+        daily_activity_profiles,
+    )
+    cur.executemany(
+        "INSERT INTO user_month_profile VALUES " "(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        monthly_activity_profiles,
+    )
 
     conn.commit()
     conn.close()
@@ -424,7 +465,10 @@ def inventory_copy_gate_profiles(inventory_path):
     conn = sqlite.connect(inventory_path)
     cur = conn.cursor()
     gate_profiles = alaqsdblite.query_string("SELECT * FROM default_gate_profiles;")
-    cur.executemany('INSERT INTO default_gate_profiles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', gate_profiles)
+    cur.executemany(
+        "INSERT INTO default_gate_profiles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        gate_profiles,
+    )
     conn.commit()
     conn.close()
     msg = "[+] Copied the gate profiles"
@@ -439,8 +483,13 @@ def inventory_copy_emission_dynamics(inventory_path):
     """
     conn = sqlite.connect(inventory_path)
     cur = conn.cursor()
-    emission_dynamics = alaqsdblite.query_string("SELECT * FROM default_emission_dynamics;")
-    cur.executemany('INSERT INTO default_emission_dynamics VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', emission_dynamics)
+    emission_dynamics = alaqsdblite.query_string(
+        "SELECT * FROM default_emission_dynamics;"
+    )
+    cur.executemany(
+        "INSERT INTO default_emission_dynamics VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        emission_dynamics,
+    )
     conn.commit()
     conn.close()
     msg = "[+] Copied the emission dynamics"
@@ -456,7 +505,9 @@ def inventory_copy_taxiway_routes(inventory_path):
     conn = sqlite.connect(inventory_path)
     cur = conn.cursor()
     gate_profiles = alaqsdblite.query_string("SELECT * FROM user_taxiroute_taxiways;")
-    cur.executemany('INSERT INTO user_taxiroute_taxiways VALUES (?,?,?,?,?,?,?,?)', gate_profiles)
+    cur.executemany(
+        "INSERT INTO user_taxiroute_taxiways VALUES (?,?,?,?,?,?,?,?)", gate_profiles
+    )
     conn.commit()
     conn.close()
     msg = "[+] Copied the taxiway routes"
@@ -474,8 +525,13 @@ def inventory_copy_vector_layers(inventory_path):
         curs = conn.cursor()
 
         try:
-            area_sources = alaqsdblite.query_string("SELECT * FROM shapes_area_sources;")
-            curs.executemany('INSERT INTO shapes_area_sources VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', area_sources)
+            area_sources = alaqsdblite.query_string(
+                "SELECT * FROM shapes_area_sources;"
+            )
+            curs.executemany(
+                "INSERT INTO shapes_area_sources VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                area_sources,
+            )
             conn.commit()
             msg = "[+] Area sources copied to output file"
             logger.info(msg)
@@ -488,7 +544,9 @@ def inventory_copy_vector_layers(inventory_path):
 
         try:
             buildings = alaqsdblite.query_string("SELECT * FROM shapes_buildings;")
-            curs.executemany('INSERT INTO shapes_buildings VALUES (?,?,?,?,?)', buildings)
+            curs.executemany(
+                "INSERT INTO shapes_buildings VALUES (?,?,?,?,?)", buildings
+            )
             conn.commit()
             msg = "[+] Buildings copied to output file"
             logger.info(msg)
@@ -499,7 +557,7 @@ def inventory_copy_vector_layers(inventory_path):
 
         try:
             gates = alaqsdblite.query_string("SELECT * FROM shapes_gates;")
-            curs.executemany('INSERT INTO shapes_gates VALUES (?,?,?,?,?,?)', gates)
+            curs.executemany("INSERT INTO shapes_gates VALUES (?,?,?,?,?,?)", gates)
             conn.commit()
             msg = "[+] Gates copied to output file"
             logger.info(msg)
@@ -510,8 +568,10 @@ def inventory_copy_vector_layers(inventory_path):
 
         try:
             parking = alaqsdblite.query_string("SELECT * FROM shapes_parking;")
-            curs.executemany('INSERT INTO shapes_parking VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                             parking)
+            curs.executemany(
+                "INSERT INTO shapes_parking VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                parking,
+            )
             conn.commit()
             msg = "[+] Parkings copied to output file"
             logger.info(msg)
@@ -521,8 +581,12 @@ def inventory_copy_vector_layers(inventory_path):
             logger.error(msg)
 
         try:
-            receptors = alaqsdblite.query_string("SELECT * FROM shapes_receptor_points;")
-            curs.executemany('INSERT INTO shapes_receptor_points VALUES (?,?,?,?,?,?,?)', receptors)
+            receptors = alaqsdblite.query_string(
+                "SELECT * FROM shapes_receptor_points;"
+            )
+            curs.executemany(
+                "INSERT INTO shapes_receptor_points VALUES (?,?,?,?,?,?,?)", receptors
+            )
             conn.commit()
             msg = "[+] Receptor points copied to output file"
             logger.info(msg)
@@ -544,8 +608,10 @@ def inventory_copy_vector_layers(inventory_path):
 
         try:
             roadways = alaqsdblite.query_string("SELECT * FROM shapes_roadways;")
-            curs.executemany('INSERT INTO shapes_roadways VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                             roadways)
+            curs.executemany(
+                "INSERT INTO shapes_roadways VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                roadways,
+            )
             conn.commit()
             msg = "[+] Roadways copied to output file"
             logger.info(msg)
@@ -556,7 +622,9 @@ def inventory_copy_vector_layers(inventory_path):
 
         try:
             runways = alaqsdblite.query_string("SELECT * FROM shapes_runways;")
-            curs.executemany('INSERT INTO shapes_runways VALUES (?,?,?,?,?,?,?,?)', runways)
+            curs.executemany(
+                "INSERT INTO shapes_runways VALUES (?,?,?,?,?,?,?,?)", runways
+            )
             conn.commit()
             msg = "[+] Runways copied to output file"
             logger.info(msg)
@@ -566,9 +634,13 @@ def inventory_copy_vector_layers(inventory_path):
             logger.error(msg)
 
         try:
-            point_sources = alaqsdblite.query_string("SELECT * FROM shapes_point_sources;")
-            curs.executemany('INSERT INTO shapes_point_sources VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                             point_sources)
+            point_sources = alaqsdblite.query_string(
+                "SELECT * FROM shapes_point_sources;"
+            )
+            curs.executemany(
+                "INSERT INTO shapes_point_sources VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                point_sources,
+            )
             conn.commit()
             msg = "[+] Point sources copied to output file"
             logger.info(msg)
@@ -579,7 +651,9 @@ def inventory_copy_vector_layers(inventory_path):
 
         try:
             taxiways = alaqsdblite.query_string("SELECT * FROM shapes_taxiways;")
-            curs.executemany('INSERT INTO shapes_taxiways VALUES (?,?,?,?,?,?)', taxiways)
+            curs.executemany(
+                "INSERT INTO shapes_taxiways VALUES (?,?,?,?,?,?)", taxiways
+            )
             conn.commit()
             msg = "[+] Taxiways copied to output file"
             logger.info(msg)
@@ -590,7 +664,7 @@ def inventory_copy_vector_layers(inventory_path):
 
         try:
             tracks = alaqsdblite.query_string("SELECT * FROM shapes_tracks;")
-            curs.executemany('INSERT INTO shapes_tracks VALUES (?,?,?,?,?,?)', tracks)
+            curs.executemany("INSERT INTO shapes_tracks VALUES (?,?,?,?,?,?)", tracks)
             conn.commit()
             msg = "[+] Tracks copied to output file"
             logger.info(msg)
@@ -602,7 +676,9 @@ def inventory_copy_vector_layers(inventory_path):
         msg = "[+] Copied all vector layers"
         logger.info(msg)
     except Exception as e:
-        error_msg = alaqsutils.print_error(inventory_copy_activity_profiles.__name__, Exception, e)
+        error_msg = alaqsutils.print_error(
+            inventory_copy_activity_profiles.__name__, Exception, e
+        )
         logger.error(error_msg)
         return error_msg
     finally:
@@ -623,11 +699,11 @@ def inventory_copy_aircraft(inventory_path):
 
     data = alaqsdblite.query_string("SELECT * FROM default_aircraft;")
     cur.executemany(
-        'INSERT INTO default_aircraft VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-        data)
+        "INSERT INTO default_aircraft VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", data
+    )
 
     # movement_aircraft = alaqsdblite.query_string("SELECT DISTINCT aircraft FROM user_aircraft_movements;")
-    ##for aircraft_name in movement_aircraft:
+    # #for aircraft_name in movement_aircraft:
     #
     #    # Get details of this aircraft from the main project database
     #    sql_text = "SELECT * FROM default_aircraft WHERE icao=\"%s\";" % aircraft_name
@@ -656,15 +732,22 @@ def inventory_copy_aircraft_engine_ei(inventory_path):
 
     # SS
     # aircraft_engines = alaqsdblite.query_string("SELECT DISTINCT engine FROM default_aircraft;")
-    aircraft_engines = alaqsdblite.query_string("SELECT DISTINCT engine_name FROM default_aircraft_engine_ei;")
+    aircraft_engines = alaqsdblite.query_string(
+        "SELECT DISTINCT engine_name FROM default_aircraft_engine_ei;"
+    )
 
     for engine in aircraft_engines:
         # Get details of this aircraft from the main project database
-        sql_text = "SELECT * FROM default_aircraft_engine_ei WHERE engine_name=\"%s\";" % engine
+        sql_text = (
+            'SELECT * FROM default_aircraft_engine_ei WHERE engine_name="%s";' % engine
+        )
         data = alaqsdblite.query_string(sql_text)
         # insert into the output
-        curs.executemany('INSERT INTO default_aircraft_engine_ei '
-                         'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', data)
+        curs.executemany(
+            "INSERT INTO default_aircraft_engine_ei "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            data,
+        )
     # House keeping
     conn.commit()
     conn.close()
@@ -682,7 +765,10 @@ def inventory_copy_aircraft_profiles(inventory_path):
     conn = sqlite.connect(inventory_path)
     cur = conn.cursor()
     profiles = alaqsdblite.query_string("SELECT * FROM default_aircraft_profiles;")
-    cur.executemany('INSERT INTO default_aircraft_profiles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', profiles)
+    cur.executemany(
+        "INSERT INTO default_aircraft_profiles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        profiles,
+    )
     conn.commit()
     conn.close()
     msg = "[+] Copied aircraft profiles"
@@ -698,7 +784,9 @@ def inventory_copy_aircraft_start_ef(inventory_path):
     conn = sqlite.connect(inventory_path)
     cur = conn.cursor()
     start_ef = alaqsdblite.query_string("SELECT * FROM default_aircraft_start_ef;")
-    cur.executemany('INSERT INTO default_aircraft_start_ef VALUES (?,?,?,?,?,?,?,?,?,?,?)', start_ef)
+    cur.executemany(
+        "INSERT INTO default_aircraft_start_ef VALUES (?,?,?,?,?,?,?,?,?,?,?)", start_ef
+    )
     conn.commit()
     conn.close()
     msg = "[+] Copied unique aircraft start emissions"
@@ -714,7 +802,7 @@ def inventory_copy_stationary_substance(inventory_path):
     conn = sqlite.connect(inventory_path)
     cur = conn.cursor()
     start_ef = alaqsdblite.query_string("SELECT * FROM default_stationary_substance;")
-    cur.executemany('INSERT INTO default_stationary_substance VALUES (?,?,?)', start_ef)
+    cur.executemany("INSERT INTO default_stationary_substance VALUES (?,?,?)", start_ef)
     conn.commit()
     conn.close()
     msg = "[+] Copied stationary substances"
@@ -730,7 +818,7 @@ def inventory_copy_stationary_category(inventory_path):
     conn = sqlite.connect(inventory_path)
     cur = conn.cursor()
     start_ef = alaqsdblite.query_string("SELECT * FROM default_stationary_category;")
-    cur.executemany('INSERT INTO default_stationary_category VALUES (?,?,?)', start_ef)
+    cur.executemany("INSERT INTO default_stationary_category VALUES (?,?,?)", start_ef)
     conn.commit()
     conn.close()
     msg = "[+] Copied stationary categories"
@@ -746,7 +834,9 @@ def inventory_copy_aircraft_engine_mode(inventory_path):
     conn = sqlite.connect(inventory_path)
     cur = conn.cursor()
     start_ef = alaqsdblite.query_string("SELECT * FROM default_aircraft_engine_mode;")
-    cur.executemany('INSERT INTO default_aircraft_engine_mode VALUES (?,?,?,?)', start_ef)
+    cur.executemany(
+        "INSERT INTO default_aircraft_engine_mode VALUES (?,?,?,?)", start_ef
+    )
     conn.commit()
     conn.close()
     msg = "[+] Copied unique aircraft engine modes"

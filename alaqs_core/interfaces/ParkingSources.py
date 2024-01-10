@@ -3,15 +3,14 @@ from collections import OrderedDict
 
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.interfaces.Emissions import EmissionIndex
-from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Source import Source
-from open_alaqs.alaqs_core.tools.Singleton import Singleton
+from open_alaqs.alaqs_core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.alaqs_core.interfaces.Store import Store
 from open_alaqs.alaqs_core.tools import spatial
+from open_alaqs.alaqs_core.tools.Singleton import Singleton
 
 loaded_color_logger = False
 try:
-    from rainbow_logging_handler import RainbowLoggingHandler
     loaded_color_logger = True
 except ImportError:
     loaded_color_logger = False
@@ -34,21 +33,28 @@ class ParkingSources(Source):
         self._fleet_mix = {
             "vehicle_light": float(val.get("vehicle_light", 0)),
             "vehicle_medium": float(val.get("vehicle_medium", 0)),
-            "vehicle_heavy": float(val.get("vehicle_heavy", 0))
+            "vehicle_heavy": float(val.get("vehicle_heavy", 0)),
         }
 
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
-                spatial.addHeightToGeometryWkt(
-                    self.getGeometryText(), self.getHeight()))
+                spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight())
+            )
 
         init_values = {}
         default_values = {}
-        for key_ in ["co_gm_vh", "hc_gm_vh", "nox_gm_vh", "sox_gm_vh",
-                     "pm10_gm_vh", "p1_gm_vh", "p2_gm_vh"]:
+        for key_ in [
+            "co_gm_vh",
+            "hc_gm_vh",
+            "nox_gm_vh",
+            "sox_gm_vh",
+            "pm10_gm_vh",
+            "p1_gm_vh",
+            "p2_gm_vh",
+        ]:
             if key_ in val:
                 init_values[key_] = float(val[key_])
-                default_values[key_] = 0.
+                default_values[key_] = 0.0
 
         self._emissionIndex = EmissionIndex(init_values, default_values)
 
@@ -96,7 +102,14 @@ class ParkingSources(Source):
         val += "\n\t Idle Time: %s" % (self.getIdleTime())
         val += "\n\t Park Time: %s" % (self.getParkTime())
         val += "\n\t Speed: %s" % (self.getSpeed())
-        val += "\n\t Fleet Mix: %s" % (", ".join(["%s:%f" % (key_, self.getFleetMix()[key_]) for key_ in sorted(self.getFleetMix().keys())]))
+        val += "\n\t Fleet Mix: %s" % (
+            ", ".join(
+                [
+                    "%s:%f" % (key_, self.getFleetMix()[key_])
+                    for key_ in sorted(self.getFleetMix().keys())
+                ]
+            )
+        )
         val += "\n\t Hour Profile: %s" % (self.getHourProfile())
         val += "\n\t Daily Profile: %s" % (self.getDailyProfile())
         val += "\n\t Month Profile: %s" % (self.getMonthProfile())
@@ -123,8 +136,7 @@ class ParkingSourcesStore(Store, metaclass=Singleton):
         if "parking_db" in db:
             if isinstance(db["parking_db"], ParkingSourcesDatabase):
                 self._parking_db = db["parking_db"]
-            elif isinstance(db["parking_db"], str) and os.path.isfile(
-                    db["parking_db"]):
+            elif isinstance(db["parking_db"], str) and os.path.isfile(db["parking_db"]):
                 self._parking_db = ParkingSourcesDatabase(db["parking_db"])
 
         if self._parking_db is None:
@@ -134,9 +146,16 @@ class ParkingSourcesStore(Store, metaclass=Singleton):
         self.initParkingSourcess()
 
     def initParkingSourcess(self):
-        for key, parking_dict in list(self.getParkingSourcesDatabase().getEntries().items()):
-            #add engine to store
-            self.setObject(parking_dict["parking_id"] if "parking_id" in parking_dict else "unknown", ParkingSources(parking_dict))
+        for key, parking_dict in list(
+            self.getParkingSourcesDatabase().getEntries().items()
+        ):
+            # add engine to store
+            self.setObject(
+                parking_dict["parking_id"]
+                if "parking_id" in parking_dict
+                else "unknown",
+                ParkingSources(parking_dict),
+            )
 
     def getParkingSourcesDatabase(self):
         return self._parking_db
@@ -147,50 +166,60 @@ class ParkingSourcesDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to parking shape file in the spatialite database
     """
 
-    def __init__(self,
-                 db_path_string,
-                 table_name_string="shapes_parking",
-                 table_columns_type_dict=None,
-                 primary_key="",
-                 geometry_columns=None
-                 ):
+    def __init__(
+        self,
+        db_path_string,
+        table_name_string="shapes_parking",
+        table_columns_type_dict=None,
+        primary_key="",
+        geometry_columns=None,
+    ):
         if table_columns_type_dict is None:
-            table_columns_type_dict = OrderedDict([
-                ("oid", "INTEGER PRIMARY KEY NOT NULL"),
-                ("parking_id", "TEXT"),
-                ("height", "DECIMAL"),
-                ("distance", "DECIMAL"),
-                ("idle_time", "DECIMAL"),
-                ("park_time", "DECIMAL"),
-                ("vehicle_light", "DECIMAL"),
-                ("vehicle_medium", "DECIMAL"),
-                ("vehicle_heavy", "DECIMAL"),
-                ("vehicle_year", "DECIMAL"),
-                ("speed", "DECIMAL"),
-                ("hour_profile", "TEXT"),
-                ("daily_profile", "TEXT"),
-                ("month_profile", "TEXT"),
-                ("co_gm_vh", "DECIMAL"),
-                ("hc_gm_vh", "DECIMAL"),
-                ("nox_gm_vh", "DECIMAL"),
-                ("sox_gm_vh", "DECIMAL"),
-                ("pm10_gm_vh", "DECIMAL"),
-                ("p1_gm_vh", "DECIMAL"),
-                ("p2_gm_vh", "DECIMAL"),
-                ("method", "TEXT"),
-                ("instudy", "DECIMAL")
-            ])
+            table_columns_type_dict = OrderedDict(
+                [
+                    ("oid", "INTEGER PRIMARY KEY NOT NULL"),
+                    ("parking_id", "TEXT"),
+                    ("height", "DECIMAL"),
+                    ("distance", "DECIMAL"),
+                    ("idle_time", "DECIMAL"),
+                    ("park_time", "DECIMAL"),
+                    ("vehicle_light", "DECIMAL"),
+                    ("vehicle_medium", "DECIMAL"),
+                    ("vehicle_heavy", "DECIMAL"),
+                    ("vehicle_year", "DECIMAL"),
+                    ("speed", "DECIMAL"),
+                    ("hour_profile", "TEXT"),
+                    ("daily_profile", "TEXT"),
+                    ("month_profile", "TEXT"),
+                    ("co_gm_vh", "DECIMAL"),
+                    ("hc_gm_vh", "DECIMAL"),
+                    ("nox_gm_vh", "DECIMAL"),
+                    ("sox_gm_vh", "DECIMAL"),
+                    ("pm10_gm_vh", "DECIMAL"),
+                    ("p1_gm_vh", "DECIMAL"),
+                    ("p2_gm_vh", "DECIMAL"),
+                    ("method", "TEXT"),
+                    ("instudy", "DECIMAL"),
+                ]
+            )
         if geometry_columns is None:
-            geometry_columns = [{
-                "column_name": "geometry",
-                "SRID": 3857,
-                "geometry_type": "POLYGON",
-                "geometry_type_dimension": 2
-            }]
+            geometry_columns = [
+                {
+                    "column_name": "geometry",
+                    "SRID": 3857,
+                    "geometry_type": "POLYGON",
+                    "geometry_type_dimension": 2,
+                }
+            ]
 
-        SQLSerializable.__init__(self, db_path_string, table_name_string,
-                                 table_columns_type_dict, primary_key,
-                                 geometry_columns)
+        SQLSerializable.__init__(
+            self,
+            db_path_string,
+            table_name_string,
+            table_columns_type_dict,
+            primary_key,
+            geometry_columns,
+        )
 
         if self._db_path:
             self.deserialize()

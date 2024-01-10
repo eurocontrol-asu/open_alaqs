@@ -13,8 +13,7 @@ the database layer.
 @author: Dan Pearce (it@env-isa.com)
 """
 
-from open_alaqs.alaqs_core import alaqsdblite
-from open_alaqs.alaqs_core import alaqsutils
+from open_alaqs.alaqs_core import alaqsdblite, alaqsutils
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.alaqs_core.tools.create_output import create_alaqs_output
 
@@ -64,6 +63,7 @@ def create_project(database_name):
 # ###### STUDY SETUP #######
 # ##########################
 
+
 @catch_errors
 def load_study_setup():
     """
@@ -106,8 +106,10 @@ def save_study_setup(study_setup):
     :raises: None
     """
     if len(study_setup) != 15:
-        raise Exception(f"Incorrect number of study parameters supplied. "
-                        f"{len(study_setup)} provided - 15 needed")
+        raise Exception(
+            f"Incorrect number of study parameters supplied. "
+            f"{len(study_setup)} provided - 15 needed"
+        )
     for param in study_setup:
         if param == "":
             raise Exception("Study setup parameters cannot be blank")
@@ -129,8 +131,10 @@ def save_study_setup_dict(study_setup):
     :raises: None
     """
     if len(study_setup) != 19:
-        raise Exception("Incorrect number of study parameters supplied. "
-                        "%d provided - 20 needed" % len(study_setup))
+        raise Exception(
+            "Incorrect number of study parameters supplied. "
+            "%d provided - 20 needed" % len(study_setup)
+        )
     for param in study_setup:
         if param == "":
             raise Exception("Study setup parameters cannot be blank")
@@ -151,6 +155,7 @@ def airport_codes():
     if isinstance(result, str):
         raise Exception("Airport codes fetch failed: %s" % result)
     return result
+
 
 @catch_errors
 def airport_lookup(airport_code):
@@ -227,6 +232,7 @@ def get_roadway_euro_standards(country: str, fleet_year: str) -> dict:
 # ###### GATES ######
 # ###################
 
+
 @catch_errors
 def add_gate_dict(gate_dict):
     result = alaqsdblite.add_gate_dict(gate_dict)
@@ -265,6 +271,7 @@ def get_gates():
 # ###### RUNWAYS ######
 # #####################
 
+
 @catch_errors
 def add_runway_dict(runway_dict):
     result = alaqsdblite.add_runway_dict(runway_dict)
@@ -302,6 +309,7 @@ def get_runways():
 # ######################
 # ###### TAXIWAYS ######
 # ######################
+
 
 @catch_errors
 def add_taxiway_dict(taxiway_dict):
@@ -382,6 +390,7 @@ def add_taxiway_route(taxiway_route):
 #  ###### TRACKS ######
 #  ####################
 
+
 @catch_errors
 def get_track(track_id):
     """
@@ -411,6 +420,7 @@ def get_tracks():
 # ################################
 # ###### STATIONARY SOURCES ######
 # ################################
+
 
 @catch_errors
 def add_point_source(point_source_dict):
@@ -461,8 +471,7 @@ def get_point_category(category_id):
     """
     result = alaqsdblite.get_point_category(category_id)
     if isinstance(result, str):
-        raise Exception(
-            "Stationary category could not be found: %s" % result)
+        raise Exception("Stationary category could not be found: %s" % result)
     if (result == []) or (result is None):
         return None
     return result
@@ -475,8 +484,7 @@ def get_point_categories():
     """
     result = alaqsdblite.get_point_categories()
     if isinstance(result, str):
-        raise Exception(
-            "Source categories could not be returned: %s" % result)
+        raise Exception("Source categories could not be returned: %s" % result)
     if (result == []) or (result is None):
         return None
     return result
@@ -512,9 +520,10 @@ def get_point_types(category_number):
 # ###### BUILDINGS ######
 # #######################
 
+
 @catch_errors
 def add_building(building_dict):
-    """"
+    """ "
     This function is used to add a new building to the currently active
      database. This is used only when the tool is being used independently of
      QGIS.
@@ -559,9 +568,10 @@ def get_buildings():
 # ###### PARKINGS ######
 # ######################
 
+
 @catch_errors
 def add_parking(parking_dict):
-    """"
+    """ "
     This function is used to add a new building to the currently active
      database. This is used only when the tool is being used independently of
      QGIS.
@@ -605,6 +615,7 @@ def get_parkings():
 # ###### PROFILES ######
 # ######################
 
+
 @catch_errors
 def add_hourly_profile_dict(hourly_profile_dict):
     result = alaqsdblite.add_hourly_profile_dict(hourly_profile_dict)
@@ -636,8 +647,7 @@ def get_hourly_profiles():
     """
     result = alaqsdblite.get_hourly_profiles()
     if isinstance(result, str):
-        raise Exception(
-            "Hourly profiles could not be returned: %s" % result)
+        raise Exception("Hourly profiles could not be returned: %s" % result)
     if (result == []) or (result is None):
         return None
     return result
@@ -671,8 +681,12 @@ def get_monthly_profiles():
 
 @catch_errors
 def get_hourly_profile(profile_name):
-    if (profile_name == "") or (profile_name == []) or \
-            (profile_name is None) or (profile_name == "New Profile"):
+    if (
+        (profile_name == "")
+        or (profile_name == [])
+        or (profile_name is None)
+        or (profile_name == "New Profile")
+    ):
         return None
     result = alaqsdblite.get_hourly_profile(profile_name)
     if isinstance(result, str):
@@ -684,8 +698,12 @@ def get_hourly_profile(profile_name):
 
 @catch_errors
 def get_daily_profile(profile_name):
-    if (profile_name == "") or (profile_name == []) or \
-            (profile_name is None) or (profile_name == "New Profile"):
+    if (
+        (profile_name == "")
+        or (profile_name == [])
+        or (profile_name is None)
+        or (profile_name == "New Profile")
+    ):
         return None
     result = alaqsdblite.get_daily_profile(profile_name)
     if isinstance(result, str):
@@ -697,8 +715,12 @@ def get_daily_profile(profile_name):
 
 @catch_errors
 def get_monthly_profile(profile_name):
-    if (profile_name == "") or (profile_name == []) or \
-            (profile_name is None) or (profile_name == "New Profile"):
+    if (
+        (profile_name == "")
+        or (profile_name == [])
+        or (profile_name is None)
+        or (profile_name == "New Profile")
+    ):
         return None
     result = alaqsdblite.get_monthly_profile(profile_name)
     if isinstance(result, str):
@@ -772,8 +794,12 @@ def get_lasport_scenarios():
 
 
 @catch_errors
-def inventory_creation_new(inventory_path, model_parameters, study_setup, met_csv_path=""):
-    result = create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_path=met_csv_path)
+def inventory_creation_new(
+    inventory_path, model_parameters, study_setup, met_csv_path=""
+):
+    result = create_alaqs_output(
+        inventory_path, model_parameters, study_setup, met_csv_path=met_csv_path
+    )
     return result
 
 
@@ -789,7 +815,9 @@ def inventory_source_list(inventory_path, source_type):
 def inventory_copy_study_setup(inventory_path):
     result = alaqsdblite.inventory_copy_study_setup(inventory_path)
     if result is not None:
-        raise Exception("Study setup could not be copied to ALAQS output file: %s" % result)
+        raise Exception(
+            "Study setup could not be copied to ALAQS output file: %s" % result
+        )
     return None
 
 
@@ -797,7 +825,9 @@ def inventory_copy_study_setup(inventory_path):
 def inventory_copy_gate_profiles(inventory_path):
     result = alaqsdblite.inventory_copy_gate_profiles(inventory_path)
     if result is not None:
-        raise Exception("Gate profiles could not be copied to ALAQS output file: %s" % result)
+        raise Exception(
+            "Gate profiles could not be copied to ALAQS output file: %s" % result
+        )
     return None
 
 
@@ -805,7 +835,9 @@ def inventory_copy_gate_profiles(inventory_path):
 def inventory_copy_emission_dynamics(inventory_path):
     result = alaqsdblite.inventory_copy_emission_dynamics(inventory_path)
     if result is not None:
-        raise Exception("Emission dynamics could not be copied to ALAQS output file: %s" % result)
+        raise Exception(
+            "Emission dynamics could not be copied to ALAQS output file: %s" % result
+        )
     return None
 
 
@@ -820,7 +852,9 @@ def inventory_insert_movements(inventory_path, movement_path):
     """
     result = alaqsdblite.inventory_insert_movements(inventory_path, movement_path)
     if result is not None:
-        raise Exception("Movements could not be added to ALAQS output file: %s" % result)
+        raise Exception(
+            "Movements could not be added to ALAQS output file: %s" % result
+        )
     return None
 
 
@@ -828,7 +862,9 @@ def inventory_insert_movements(inventory_path, movement_path):
 def inventory_copy_activity_profiles(inventory_path):
     result = alaqsdblite.inventory_copy_activity_profiles(inventory_path)
     if result is not None:
-        raise Exception("Activity profiles could not be copied to ALAQS output file: %s" % result)
+        raise Exception(
+            "Activity profiles could not be copied to ALAQS output file: %s" % result
+        )
     return None
 
 

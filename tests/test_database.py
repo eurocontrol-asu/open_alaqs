@@ -8,26 +8,26 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 
-from database.generate_templates import apply_sql, MATCH_PATTERNS, get_engine
+from database.generate_templates import MATCH_PATTERNS, apply_sql, get_engine
 
-DB_DIR = Path(__file__).parents[1] / 'database'
-TEMPLATES_DIR = Path(__file__).parents[1] / 'alaqs_core/templates'
-EXAMPLES_DIR = Path(__file__).parents[1] / 'example'
+DB_DIR = Path(__file__).parents[1] / "database"
+TEMPLATES_DIR = Path(__file__).parents[1] / "alaqs_core/templates"
+EXAMPLES_DIR = Path(__file__).parents[1] / "example"
 
 
 @pytest.fixture(scope="module")
 def sql_files():
     # Get the files with SQL queries to execute
-    return list((DB_DIR / 'sql').glob('*.sql'))
+    return list((DB_DIR / "sql").glob("*.sql"))
 
 
 @pytest.fixture(scope="module")
 def csv_files():
     # Get the files with data to insert
-    return list((DB_DIR / 'data').glob('*.csv'))
+    return list((DB_DIR / "data").glob("*.csv"))
 
 
-@pytest.mark.parametrize("template_type", ['project', 'inventory'])
+@pytest.mark.parametrize("template_type", ["project", "inventory"])
 def test_sql(sql_files: list, template_type: str):
     """
     Test if the sql files can be processed
@@ -48,7 +48,7 @@ def test_sql(sql_files: list, template_type: str):
             assert sql_path.stem in engine.table_names()
 
 
-@pytest.mark.parametrize("template_type", ['project', 'inventory'])
+@pytest.mark.parametrize("template_type", ["project", "inventory"])
 def test_csv(sql_files: list, csv_files: list, template_type: str):
     """
     Test if the csv files can be processed
@@ -63,7 +63,7 @@ def test_csv(sql_files: list, csv_files: list, template_type: str):
     # Get the csv files to import
     for csv_path in csv_files:
 
-        print('import', csv_path.stem)
+        print("import", csv_path.stem)
 
         # Get the contents of the table
         project_data = pd.read_sql(f"SELECT * FROM {csv_path.stem}", engine)
@@ -74,24 +74,25 @@ def test_csv(sql_files: list, csv_files: list, template_type: str):
         # Import the data to fill the table
         if data is not None and project_data.empty and not data.empty:
             try:
-                data.to_sql(csv_path.stem, engine, index=False, if_exists='append')
+                data.to_sql(csv_path.stem, engine, index=False, if_exists="append")
             except IntegrityError as e:
                 warn(e.args[0])
         elif not project_data.empty:
             raise ValueError("What to do when the database is not empty?")
 
 
-@pytest.mark.parametrize("example_file",
-                         list(EXAMPLES_DIR.glob('**/*.alaqs')),
-                         ids=list(d.name for d in EXAMPLES_DIR.glob('**/*.alaqs'))
-                         )
+@pytest.mark.parametrize(
+    "example_file",
+    list(EXAMPLES_DIR.glob("**/*.alaqs")),
+    ids=list(d.name for d in EXAMPLES_DIR.glob("**/*.alaqs")),
+)
 def test_example_sql(sql_files: list, example_file: Path):
     """
     Test if the examples are consistent with the sql files
     """
 
     # Determine the type of file
-    template_type = 'inventory' if example_file.stem.endswith('_out') else 'project'
+    template_type = "inventory" if example_file.stem.endswith("_out") else "project"
 
     # Create in-memory sqlite database
     sql_engine = create_engine("sqlite:///:memory:")
@@ -103,21 +104,21 @@ def test_example_sql(sql_files: list, example_file: Path):
     example_engine = get_engine(example_file)
 
     # Get the editable layers
-    qgis_engine = get_engine(DB_DIR / f'src/editable_layers.sqlite')
+    qgis_engine = get_engine(DB_DIR / "src/editable_layers.sqlite")
 
     # Check if all the tables are present
     example_tables = set(example_engine.table_names())
     sql_tables = set(sql_engine.table_names())
     qgis_tables = {
-        'shapes_tracks',
-        'shapes_area_sources',
-        'shapes_buildings',
-        'shapes_gates',
-        'shapes_parking',
-        'shapes_roadways',
-        'shapes_runways',
-        'shapes_taxiways',
-        'shapes_point_sources',
+        "shapes_tracks",
+        "shapes_area_sources",
+        "shapes_buildings",
+        "shapes_gates",
+        "shapes_parking",
+        "shapes_roadways",
+        "shapes_runways",
+        "shapes_taxiways",
+        "shapes_point_sources",
     }
 
     assert len(sql_tables - example_tables) == 0
@@ -126,37 +127,41 @@ def test_example_sql(sql_files: list, example_file: Path):
     # Check if the columns are present
     for table in sql_tables:
         # Get the columns of template
-        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', example_engine)
+        template_d = pd.read_sql(f"SELECT * FROM {table} LIMIT 0", example_engine)
 
         # Set the name of the template data
         template_d.name = table
 
         # Get the columns of sql files
-        sql_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', sql_engine)
+        sql_d = pd.read_sql(f"SELECT * FROM {table} LIMIT 0", sql_engine)
 
         # Check if the columns match
         assert (template_d.columns == sql_d.columns).all()
 
     for table in qgis_tables:
         # Get the columns of template
-        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', example_engine)
+        template_d = pd.read_sql(f"SELECT * FROM {table} LIMIT 0", example_engine)
 
         # Get the columns of sql files
-        qgis_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', qgis_engine)
+        qgis_d = pd.read_sql(f"SELECT * FROM {table} LIMIT 0", qgis_engine)
 
         # Check if the columns match
         assert (template_d.columns == qgis_d.columns).all()
 
         # Specifically check if the geometry column is present
-        assert 'geometry' in template_d
+        assert "geometry" in template_d
 
 
-out_example_paths = list(EXAMPLES_DIR.glob('**/*_out.alaqs'))
-csv_paths = list((DB_DIR / 'data').glob('*.csv'))
+out_example_paths = list(EXAMPLES_DIR.glob("**/*_out.alaqs"))
+csv_paths = list((DB_DIR / "data").glob("*.csv"))
 combos = list(product(out_example_paths, csv_paths))
 
 
-@pytest.mark.parametrize("example_file,csv_path", combos, ids=list(f"{d[0].stem}-{d[1].stem}" for d in combos))
+@pytest.mark.parametrize(
+    "example_file,csv_path",
+    combos,
+    ids=list(f"{d[0].stem}-{d[1].stem}" for d in combos),
+)
 def test_example_csv(example_file: Path, csv_path: Path):
     """
     Test if the examples are consistent with the csv files
@@ -171,14 +176,15 @@ def test_example_csv(example_file: Path, csv_path: Path):
     # Read the .csv file
     data = pd.read_csv(csv_path)
 
-    assert data.shape[0] <= example_data.shape[0], \
-        f"there might be something wrong with the import of {csv_path.name}"
+    assert (
+        data.shape[0] <= example_data.shape[0]
+    ), f"there might be something wrong with the import of {csv_path.name}"
 
     if not data.empty:
         pd.testing.assert_frame_equal(data, example_data, check_dtype=False)
 
 
-@pytest.mark.parametrize("template_type", ['project', 'inventory'])
+@pytest.mark.parametrize("template_type", ["project", "inventory"])
 def test_template_sql(sql_files: list, template_type: str):
     """
     Test if the template is consistent with the sql files
@@ -191,24 +197,24 @@ def test_template_sql(sql_files: list, template_type: str):
     apply_sql(sql_engine, sql_files, file_type=template_type)
 
     # Get the template
-    template_engine = get_engine(TEMPLATES_DIR / f'{template_type}.alaqs')
+    template_engine = get_engine(TEMPLATES_DIR / f"{template_type}.alaqs")
 
     # Get the editable layers
-    qgis_engine = get_engine(DB_DIR / f'src/editable_layers.sqlite')
+    qgis_engine = get_engine(DB_DIR / "src/editable_layers.sqlite")
 
     # Check if all the tables are present
     template_tables = set(template_engine.table_names())
     sql_tables = set(sql_engine.table_names())
     qgis_tables = {
-        'shapes_tracks',
-        'shapes_area_sources',
-        'shapes_buildings',
-        'shapes_gates',
-        'shapes_parking',
-        'shapes_roadways',
-        'shapes_runways',
-        'shapes_taxiways',
-        'shapes_point_sources',
+        "shapes_tracks",
+        "shapes_area_sources",
+        "shapes_buildings",
+        "shapes_gates",
+        "shapes_parking",
+        "shapes_roadways",
+        "shapes_runways",
+        "shapes_taxiways",
+        "shapes_point_sources",
     }
 
     assert len(sql_tables - template_tables) == 0
@@ -217,37 +223,40 @@ def test_template_sql(sql_files: list, template_type: str):
     # Check if the columns are present
     for table in sql_tables:
         # Get the columns of template
-        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', template_engine)
+        template_d = pd.read_sql(f"SELECT * FROM {table} LIMIT 0", template_engine)
 
         # Get the columns of sql files
-        sql_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', sql_engine)
+        sql_d = pd.read_sql(f"SELECT * FROM {table} LIMIT 0", sql_engine)
 
         # Check if the columns match
         assert (template_d.columns == sql_d.columns).all()
 
     for table in qgis_tables:
         # Get the columns of template
-        template_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', template_engine)
+        template_d = pd.read_sql(f"SELECT * FROM {table} LIMIT 0", template_engine)
 
         # Get the columns of sql files
-        qgis_d = pd.read_sql(f'SELECT * FROM {table} LIMIT 0', qgis_engine)
+        qgis_d = pd.read_sql(f"SELECT * FROM {table} LIMIT 0", qgis_engine)
 
         # Check if the columns match
         assert (template_d.columns == qgis_d.columns).all()
 
         # Specifically check if the geometry column is present
-        assert 'geometry' in template_d
+        assert "geometry" in template_d
 
 
-@pytest.mark.parametrize("csv_file", list((DB_DIR / 'data').glob('*.csv')),
-                         ids=list(d.stem for d in (DB_DIR / 'data').glob('*.csv')))
+@pytest.mark.parametrize(
+    "csv_file",
+    list((DB_DIR / "data").glob("*.csv")),
+    ids=list(d.stem for d in (DB_DIR / "data").glob("*.csv")),
+)
 def test_template_data(sql_files: list, csv_file: Path):
     """
     Test if the data in the project template is consistent with csv files
     """
 
     # Get the template
-    template_engine = get_engine(TEMPLATES_DIR / f'project.alaqs')
+    template_engine = get_engine(TEMPLATES_DIR / "project.alaqs")
 
     # Get the contents of the table
     template_data = pd.read_sql(f"SELECT * FROM {csv_file.stem}", template_engine)
@@ -261,7 +270,9 @@ def test_template_data(sql_files: list, csv_file: Path):
     assert template_empty_columns == empty_columns
 
     # Check the non-empty columns
-    pd.testing.assert_frame_equal(template_data.loc[:, ~data.isna().all()], data.loc[:, ~data.isna().all()])
+    pd.testing.assert_frame_equal(
+        template_data.loc[:, ~data.isna().all()], data.loc[:, ~data.isna().all()]
+    )
 
 
 def test_profile_data():
@@ -270,7 +281,7 @@ def test_profile_data():
     """
 
     # Get the file with profile data
-    f = DB_DIR / 'data' / 'default_aircraft_profiles.csv'
+    f = DB_DIR / "data" / "default_aircraft_profiles.csv"
 
     assert f.exists()
 
@@ -278,15 +289,14 @@ def test_profile_data():
     data = pd.read_csv(f)
 
     # Set the combination of columns that need to be unique
-    primary_key = [
-        'profile_id',
-        'point'
-    ]
+    primary_key = ["profile_id", "point"]
 
     # Get the duplicates
     is_duplicated = data[primary_key].duplicated()
     duplicates = data[data[primary_key].duplicated(keep=False)].sort_values(primary_key)
 
-    assert not is_duplicated.any(), f'found {duplicates.shape[0]} duplicate keys (out of {data.shape[0]} keys)'
+    assert (
+        not is_duplicated.any()
+    ), f"found {duplicates.shape[0]} duplicate keys (out of {data.shape[0]} keys)"
 
-    assert not data['oid'].duplicated().any()
+    assert not data["oid"].duplicated().any()
