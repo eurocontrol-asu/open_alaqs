@@ -23,12 +23,14 @@ from pathlib import Path
 
 from qgis.core import QgsSettings
 from qgis.PyQt import QtGui, QtWidgets
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtWidgets import QFileDialog
 
 from open_alaqs import openalaqsuitoolkit
+from open_alaqs.alaqs_core import alaqs, alaqsutils
 from open_alaqs.alaqs_core.alaqslogging import get_logger
 from open_alaqs.openalaqsdialog import (
     OpenAlaqsAbout,
-    OpenAlaqsCreateDatabase,
     OpenAlaqsDispersionAnalysis,
     OpenAlaqsEnabledMacros,
     OpenAlaqsInventory,
@@ -248,26 +250,58 @@ class OpenALAQS:
         a blank database and blank shape files with no shapes currently
         included. When completed, it opens the study setup window.
         """
-        self.dialogs["create_project"] = OpenAlaqsCreateDatabase(self.iface)
-        result_code = self.dialogs["create_project"].exec_()
-        if result_code == 0:
-            database_path = self.dialogs["create_project"].get_values()
-            if database_path is not None:
-                openalaqsuitoolkit.load_layers(self.iface, database_path)
-                openalaqsuitoolkit.set_default_zoom(self.canvas, 51.4775, -0.4614)
-                self.dialogs["create_project"].close()
-                self.actions["study_setup"].setEnabled(True)
-                self.actions["profiles_edit"].setEnabled(True)
-                self.actions["taxi_routes"].setEnabled(True)
-                self.actions["build_inventory"].setEnabled(True)
-                self.actions["view_results_analysis"].setEnabled(True)
-                self.actions["calculate_dispersion"].setEnabled(True)
-                self.actions["project_load"].setEnabled(False)
-                self.actions["project_create"].setEnabled(False)
-                self.actions["project_close"].setEnabled(True)
-                self.run_study_setup(save_before_show=True)
-        else:
-            self.dialogs["create_project"].close()
+        db_suggested_filename, _ = QFileDialog.getSaveFileName(
+            None, "Create an Open ALAQS project file", filter="ALAQS projects (*.alaqs)"
+        )
+
+        if not db_suggested_filename:
+            return
+
+        db_filename = Path(db_suggested_filename)
+        if db_filename.suffix != ".alaqs":
+            db_filename = db_filename.with_suffix(db_filename.suffix + ".alaqs")
+
+        try:
+            if db_filename.exists():
+                should_overwrite = QtWidgets.QMessageBox.warning(
+                    None,
+                    "Warning",
+                    (
+                        "File at path '%s' already exists. "
+                        "Overwrite existing file?" % (str(db_suggested_filename))
+                    ),
+                    QtWidgets.QMessageBox.Yes,
+                    QtWidgets.QMessageBox.No,
+                )
+                if should_overwrite == QtWidgets.QMessageBox.Yes:
+                    db_filename.unlink()
+                else:
+                    return
+
+            QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
+            result = alaqs.create_project(str(db_filename))
+            QtWidgets.QApplication.restoreOverrideCursor()
+
+            if result is not None:
+                raise Exception(result)
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(
+                None, "Error", "Could not create project: %s." % e
+            )
+            alaqsutils.print_error(self.run_project_create.__name__, Exception, e)
+
+        openalaqsuitoolkit.load_layers(self.iface, str(db_filename))
+        openalaqsuitoolkit.set_default_zoom(self.canvas, 51.4775, -0.4614)
+        self.actions["study_setup"].setEnabled(True)
+        self.actions["profiles_edit"].setEnabled(True)
+        self.actions["taxi_routes"].setEnabled(True)
+        self.actions["build_inventory"].setEnabled(True)
+        self.actions["view_results_analysis"].setEnabled(True)
+        self.actions["calculate_dispersion"].setEnabled(True)
+        self.actions["project_load"].setEnabled(False)
+        self.actions["project_create"].setEnabled(False)
+        self.actions["project_close"].setEnabled(True)
+        self.run_study_setup(save_before_show=True)
 
     def run_project_load(self):
         """
