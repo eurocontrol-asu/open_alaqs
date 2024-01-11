@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from PyQt5 import QtCore, QtGui, QtWidgets
 from qgis.core import QgsMapLayer, QgsProject, QgsTextAnnotation
 from qgis.gui import QgsFileWidget
+from qgis.PyQt.QtWidgets import QMessageBox
 from qgis.PyQt.uic import loadUiType
 
 from open_alaqs import openalaqsuitoolkit as oautk
@@ -2412,6 +2413,12 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self._emission_calculation_ = None
         if self._emission_calculation_ is None:
             self.update_emissions()
+
+        if self._emission_calculation_ is None:
+            logger.error("Cannot calculate emissions.")
+            QMessageBox.warning(self, "Warning", "Cannot calculate emissions.")
+            return
+
         logger.info("emissions calculated!")
 
         module_name = str(self.ui.source_types.currentText())
