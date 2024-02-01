@@ -13,6 +13,8 @@ the database layer.
 @author: Dan Pearce (it@env-isa.com)
 """
 
+from typing import Optional
+
 from open_alaqs.core import alaqsdblite, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools.create_output import create_alaqs_output
@@ -126,7 +128,7 @@ def get_airport_codes() -> list[str]:
 
 
 @catch_errors
-def airport_lookup(icao_code: str) -> AirportDict | None:
+def airport_lookup(icao_code: str) -> Optional[AirportDict]:
     """Look up an airport based on its ICAO code and return data if available.
 
     Args:

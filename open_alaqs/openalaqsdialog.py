@@ -21,7 +21,19 @@
 import os
 from datetime import datetime, timedelta
 
-from qgis.core import QgsMapLayer, QgsProject, QgsSettings, QgsTextAnnotation
+from qgis.core import (
+    Qgis,
+    QgsApplication,
+    QgsExpression,
+    QgsFeatureRequest,
+    QgsMapLayer,
+    QgsProject,
+    QgsSettings,
+    QgsTextAnnotation,
+    QgsVectorLayer,
+    QgsVectorLayerUtils,
+)
+from qgis.core.additions.edit import edit
 from qgis.gui import QgsFileWidget
 from qgis.PyQt import QtCore, QtGui, QtWidgets
 from qgis.PyQt.QtCore import Qt
@@ -30,6 +42,7 @@ from qgis.PyQt.uic import loadUiType
 from qgis.utils import OverrideCursor
 
 from open_alaqs import openalaqsuitoolkit as oautk
+from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqsdblite import ProjectDatabase
 from open_alaqs.core.alaqslogging import get_logger, log_path
@@ -47,6 +60,8 @@ from open_alaqs.core.modules.ModuleManager import (
 )
 from open_alaqs.core.tools import conversion, sql_interface
 from open_alaqs.core.tools.csv_interface import read_csv_to_dict
+from open_alaqs.core.utils.osm import download_osm_airport_data
+from open_alaqs.enums import AlaqsLayerType
 
 logger = get_logger(__name__)
 
@@ -3064,3 +3079,214 @@ class OpenAlaqsEnabledMacros(QtWidgets.QDialog):
         self.ui.setupUi(self)
         self.iface = iface
         self.ui.pushButton.clicked.connect(self.close)
+
+
+class OpenAlaqsOsmImport(QtWidgets.QDialog):
+    def __init__(self):
+        QtWidgets.QDialog.__init__(self)
+
+        # Build the UI
+        Ui_FormProfiles, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_import_osm.ui")
+        )
+        self.ui = Ui_FormProfiles()
+        self.ui.setupUi(self)
+
+        processing_registry = QgsApplication.processingRegistry()
+        if not processing_registry.algorithmById("quickosm:downloadosmdatarawquery"):
+            self.ui.infoLabel.setEnabled(False)
+            self.ui.selectLayersGroupBox.setEnabled(False)
+            self.ui.importCheckBox.setEnabled(False)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
+
+            self.ui.errorLabel.setVisible(True)
+
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).clicked.connect(
+            self.download
+        )
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Cancel).clicked.connect(
+            self.close
+        )
+
+        self.project = QgsProject.instance()
+
+    def download(self):
+        self.setEnabled(False)
+
+        with OverrideCursor(Qt.WaitCursor):
+            self._download()
+
+        self.setEnabled(True)
+
+        self.close()
+
+    def _download(self):
+        study_setup = alaqs.load_study_setup()
+
+        if not study_setup:
+            logger.debug("Cannot download any data if no study setup is loaded.")
+            return
+
+        if (
+            study_setup["airport_latitude"] is None
+            or study_setup["airport_longitude"] is None
+        ):
+            logger.debug(
+                "Cannot download any data if the study setup does not have coordinates set."
+            )
+            return
+
+        layer_types = self._get_layer_types_to_download()
+
+        if not layer_types:
+            logger.debug(
+                "No ALAQS layers types have been selected to be download, skipping download."
+            )
+            return
+
+        coords = study_setup["airport_latitude"], study_setup["airport_longitude"]
+        points, lines, polygons = download_osm_airport_data(layer_types, coords)
+        osm_layers_by_geometry_type = {
+            Qgis.GeometryType.Point: points,
+            Qgis.GeometryType.Line: lines,
+            Qgis.GeometryType.Polygon: polygons,
+        }
+
+        tree_root = self.project.layerTreeRoot()
+        osm_group = tree_root.findGroup("OpenStreetMap Layers")
+        basemaps_group = next(
+            filter(
+                lambda n: n[1].name() == "Basemaps", enumerate(tree_root.children())
+            ),
+            None,
+        )
+        basemaps_group_idx = basemaps_group[0] if basemaps_group else -1
+
+        if osm_group:
+            osm_group.removeAllChildren()
+        else:
+            osm_group = tree_root.insertGroup(
+                basemaps_group_idx, "OpenStreetMap Layers"
+            )
+
+        points.setName("OSM Points")
+        lines.setName("OSM Lines")
+        polygons.setName("OSM Polygons")
+
+        self.project.addMapLayer(points, False)
+        self.project.addMapLayer(lines, False)
+        self.project.addMapLayer(polygons, False)
+
+        osm_group.addLayer(points)
+        osm_group.addLayer(lines)
+        osm_group.addLayer(polygons)
+
+        if self.ui.importCheckBox.isChecked():
+            self._import_osm_data(osm_layers_by_geometry_type)
+
+    def _import_osm_data(
+        self, osm_layers_by_geometry_type: dict[Qgis.GeometryType, QgsVectorLayer]
+    ) -> None:
+        for layer_type, layer_config in LAYERS_CONFIG.items():
+            alaqs_layer = oautk.get_alaqs_layer(layer_type)
+
+            if not alaqs_layer:
+                logger.error(f"Unable to find the ALAQS layer for {layer_type=}")
+                return
+
+            if "osm_tags" not in layer_config:
+                logger.debug(
+                    f"Skipping layer {layer_type}, it has no OSM tags configuration..."
+                )
+                continue
+
+            osm_layer = osm_layers_by_geometry_type[alaqs_layer.geometryType()]
+
+            tmp_or_expressions = []
+            for osm_tags in layer_config["osm_tags"]:
+                tmp_and_expressions = []
+
+                for osm_tag, osm_value in osm_tags.items():
+                    tmp_and_expressions.append(
+                        f"{QgsExpression.quotedColumnRef(osm_tag)} = {QgsExpression.quotedValue(osm_value)}"
+                    )
+
+                tmp_or_expressions.append(" AND ".join(tmp_and_expressions))
+
+            expression = QgsExpression(" OR ".join(tmp_or_expressions))
+            osm_features = osm_layer.getFeatures(QgsFeatureRequest(expression))
+            alaqs_features = []
+
+            for osm_f in osm_features:
+                alaqs_f_attrs = {}
+                alaqs_fields = alaqs_layer.fields()
+
+                for osm_attr_name, alaqs_attr_name in layer_config[
+                    "osm_attribute_mapping"
+                ].items():
+                    value = osm_f.attributeMap().get(osm_attr_name)
+
+                    if value is None:
+                        continue
+
+                    alaqs_attr_idx = alaqs_fields.indexFromName(alaqs_attr_name)
+                    alaqs_f_attrs[alaqs_attr_idx] = value
+
+                alaqs_f = QgsVectorLayerUtils.createFeature(
+                    alaqs_layer,
+                    osm_f.geometry(),
+                    alaqs_f_attrs,
+                )
+
+                if not alaqs_f.isValid():
+                    logger.warning(
+                        f'Invalid new feature in layer "{layer_config["name"]}" from OSM: {osm_f["full_id"]}'
+                    )
+
+                alaqs_features.append(alaqs_f)
+
+            if not alaqs_features:
+                logger.info(
+                    f'No OSM features found to be added to layer "{layer_config["name"]}"'
+                )
+                continue
+
+            with edit(alaqs_layer):
+                if not alaqs_layer.addFeatures(alaqs_features):
+                    logger.warning(
+                        f'Failed to add new OSM features to layer "{layer_config["name"]}"!'
+                    )
+
+    def _get_layer_types_to_download(self) -> list[AlaqsLayerType]:
+        """Returns a list of ALAQS layer types to be downloaded based on the UI checkbox selection.
+
+        Returns:
+            list[AlaqsLayerType]: list of ALAQS layer types
+        """
+        layer_types: list[AlaqsLayerType] = []
+
+        if self.ui.selectLayersGroupBox.isChecked():
+            if self.ui.buildingsCheckBox.isChecked():
+                layer_types.append(AlaqsLayerType.BUILDING)
+
+            if self.ui.gatesCheckBox.isChecked():
+                layer_types.append(AlaqsLayerType.GATE)
+
+            if self.ui.parkingsCheckBox.isChecked():
+                layer_types.append(AlaqsLayerType.PARKING)
+
+            if self.ui.pointSourcesCheckBox.isChecked():
+                layer_types.append(AlaqsLayerType.POINT_SOURCE)
+
+            if self.ui.roadwaysCheckBox.isChecked():
+                layer_types.append(AlaqsLayerType.ROADWAY)
+
+            if self.ui.taxiwaysCheckBox.isChecked():
+                layer_types.append(AlaqsLayerType.TAXIWAY)
+
+            if self.ui.runwaysCheckBox.isChecked():
+                layer_types.append(AlaqsLayerType.RUNWAY)
+        else:
+            layer_types = list(LAYERS_CONFIG.keys())
+
+        return layer_types

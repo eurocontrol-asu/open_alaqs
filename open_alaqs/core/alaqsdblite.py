@@ -2,7 +2,7 @@ import datetime
 import shutil
 import sqlite3 as sqlite
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 import pandas as pd
 from qgis.utils import spatialite_connect
@@ -192,7 +192,9 @@ def create_project_database(alaqs_db_filename: str) -> None:
     )
 
 
-def execute_sql(sql: str, params: list[Any] = [], fetchone: bool = True) -> dict | list:
+def execute_sql(
+    sql: str, params: list[Any] = [], fetchone: bool = True
+) -> Union[dict, list]:
     """Executes provided SQL query.
 
     Args:

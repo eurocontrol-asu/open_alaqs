@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 from qgis.core import (
     Qgis,
@@ -21,7 +22,7 @@ from qgis.PyQt import QtWidgets
 
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.enums import ALAQSLayer
+from open_alaqs.enums import AlaqsLayerType
 
 logger = get_logger(__name__)
 
@@ -102,7 +103,7 @@ def color_ui_background(ui_element, color):
 def load_spatialite_layer(
     iface,
     database_path: str,
-    alaqs_layer: ALAQSLayer,
+    alaqs_layer: AlaqsLayerType,
 ):
     """
     This function is used to load a new layer into QGIS
@@ -188,7 +189,7 @@ def load_basemap_layers(project: QgsProject = QgsProject.instance()) -> None:
             )
 
 
-def set_layer_style(layer: QgsVectorLayer, alaqs_layer: ALAQSLayer):
+def set_layer_style(layer: QgsVectorLayer, alaqs_layer: AlaqsLayerType):
     """
     This function adds styling to the giiven layer.
     :param layer: The vector layer that is to be styled
@@ -237,8 +238,18 @@ def set_layer_style(layer: QgsVectorLayer, alaqs_layer: ALAQSLayer):
 
 
 def load_layers(iface, database_path):
-    for alaqs_layer in ALAQSLayer:
+    for alaqs_layer in AlaqsLayerType:
         load_spatialite_layer(iface, database_path, alaqs_layer)
+
+
+def get_alaqs_layer(layer_type: AlaqsLayerType) -> Optional[QgsVectorLayer]:
+    layer_config = LAYERS_CONFIG[layer_type]
+    matching_layers = QgsProject.instance().mapLayersByName(layer_config["name"])
+
+    if len(matching_layers) != 1:
+        return None
+
+    return matching_layers[0]
 
 
 def delete_alaqs_layers(iface):
@@ -264,6 +275,7 @@ def delete_alaqs_layers(iface):
 
     layer_root = project.layerTreeRoot()
     layer_root.removeChildNode(layer_root.findGroup("Basemaps"))
+    layer_root.removeChildNode(layer_root.findGroup("OpenStreetMap Layers"))
 
 
 def set_default_zoom(canvas, lat, lon):
