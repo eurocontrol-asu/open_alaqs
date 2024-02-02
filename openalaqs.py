@@ -291,6 +291,7 @@ class OpenALAQS:
             alaqsutils.print_error(self.run_project_create.__name__, Exception, e)
 
         openalaqsuitoolkit.load_layers(self.iface, str(db_filename))
+        openalaqsuitoolkit.load_basemap_layers()
         openalaqsuitoolkit.set_default_zoom(self.canvas, 51.4775, -0.4614)
         self.actions["study_setup"].setEnabled(True)
         self.actions["profiles_edit"].setEnabled(True)
@@ -317,6 +318,7 @@ class OpenALAQS:
             # Continue if the path is valid
             if isinstance(database_path, str) and Path(database_path).exists():
                 openalaqsuitoolkit.load_layers(self.iface, database_path)
+                openalaqsuitoolkit.load_basemap_layers()
                 self.actions["study_setup"].setEnabled(True)
                 self.actions["profiles_edit"].setEnabled(True)
                 self.actions["taxi_routes"].setEnabled(True)
