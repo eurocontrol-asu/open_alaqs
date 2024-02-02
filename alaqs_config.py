@@ -3,58 +3,152 @@ This is a file that contains some of the variables that can be changed to change
 the appearance of a study created within ALAQS.
 """
 
-# Area Sources
-AREA_FILL_COLOR = "255,51,51"
-AREA_BORDER_COLOR = "0,0,0,100"
-AREA_LABEL_ENABLED = False
-AREA_LABEL_POSITION = 1
-AREA_LABEL_FONT = "Arial"
-AREA_LABEL_FONT_SIZE = 8
 
-# Building sources
-BUILDING_FILL_COLOR = "168,168,168"
-BUILDING_BORDER_COLOR = "0,0,0,255"
-BUILDING_LABEL_ENABLED = False
-BUILDING_LABEL_POSITION = 1
-BUILDING_LABEL_FONT = "Arial"
-BUILDING_LABEL_FONT_SIZE = 8
+from typing import TypedDict
 
-# Gates
-GATE_FILL_COLOR = "255,153,51"
-GATE_BORDER_COLOR = "0,0,0,255"
-GATE_LABEL_ENABLED = False
-GATE_LABEL_POSITION = 1
-GATE_LABEL_FONT = "Arial"
-GATE_LABEL_FONT_SIZE = 8
+from open_alaqs.enums import ALAQSLayer
 
-# Parking
-PARKING_FILL_COLOR = "100,149,237"
-PARKING_BORDER_COLOR = "0,0,0,255"
-PARKING_LABEL_ENABLED = False
-PARKING_LABEL_POSITION = 1
-PARKING_LABEL_FONT = "Arial"
-PARKING_LABEL_FONT_SIZE = 8
 
-# Roadway
-ROADWAY_LINE_COLOR = "255,255,0"
-ROADWAY_LINE_WIDTH = "0.75"
-ROADWAY_LABEL_ENABLED = False
-ROADWAY_LABEL_POSITION = 1
-ROADWAY_LABEL_FONT = "Arial"
-ROADWAY_LABEL_FONT_SIZE = 8
+class ALAQSLayerConfig(TypedDict):
+    name: str
+    table_name: str
+    ui_filename: str
+    py_filename: str
+    fill_color: str | None
+    border_color: str | None
+    line_width: int | None
+    line_color: int | None
+    label_enabled: bool
+    label_position: int
+    label_font_family: str
+    label_font_size: int
 
-# Taxiway
-TAXIWAY_LINE_COLOR = "46,255,53"
-TAXIWAY_LINE_WIDTH = "0.5"
-TAXIWAY_LABEL_ENABLED = False
-TAXIWAY_LABEL_POSITION = 1
-TAXIWAY_LABEL_FONT = "Arial"
-TAXIWAY_LABEL_FONT_SIZE = 8
 
-# Runway
-RUNWAY_LINE_COLOR = "235,235,235"
-RUNWAY_LINE_WIDTH = "2"
-RUNWAY_LABEL_ENABLED = False
-RUNWAY_LABEL_POSITION = 1
-RUNWAY_LABEL_FONT = "Arial"
-RUNWAY_LABEL_FONT_SIZE = 8
+LAYERS_CONFIG: dict[ALAQSLayer, ALAQSLayerConfig] = {
+    ALAQSLayer.AREA: {
+        "name": "Area Sources",
+        "table_name": "shapes_area_sources",
+        "ui_filename": "ui_area_sources.ui",
+        "py_filename": "ui_area_sources.py",
+        "fill_color": "255,51,51",
+        "border_color": "0,0,0,100",
+        "line_width": None,
+        "line_color": None,
+        "label_enabled": False,
+        "label_position": 1,
+        "label_font_family": "Arial",
+        "label_font_size": 8,
+    },
+    ALAQSLayer.BUILDING: {
+        "name": "Buildings",
+        "table_name": "shapes_buildings",
+        "ui_filename": "ui_buildings.ui",
+        "py_filename": "ui_buildings.py",
+        "fill_color": "168,168,168",
+        "border_color": "0,0,0,255",
+        "line_width": None,
+        "line_color": None,
+        "label_enabled": False,
+        "label_position": 1,
+        "label_font_family": "Arial",
+        "label_font_size": 8,
+    },
+    ALAQSLayer.GATE: {
+        "name": "Gates",
+        "table_name": "shapes_gates",
+        "ui_filename": "ui_gates.ui",
+        "py_filename": "ui_gates.py",
+        "fill_color": "255,153,51",
+        "border_color": "0,0,0,255",
+        "line_width": None,
+        "line_color": None,
+        "label_enabled": False,
+        "label_position": 1,
+        "label_font_family": "Arial",
+        "label_font_size": 8,
+    },
+    ALAQSLayer.PARKING: {
+        "name": "Parkings",
+        "table_name": "shapes_parking",
+        "ui_filename": "ui_parkings.ui",
+        "py_filename": "ui_parkings.py",
+        "fill_color": "100,149,237",
+        "border_color": "0,0,0,255",
+        "line_width": None,
+        "line_color": None,
+        "label_enabled": False,
+        "label_position": 1,
+        "label_font_family": "Arial",
+        "label_font_size": 8,
+    },
+    ALAQSLayer.POINT_SOURCE: {
+        "name": "Point Sources",
+        "table_name": "shapes_point_sources",
+        "ui_filename": "ui_point_sources.ui",
+        "py_filename": "ui_point_sources.py",
+        "fill_color": None,
+        "border_color": None,
+        "line_color": None,
+        "line_width": None,
+        "label_enabled": False,
+        "label_position": 1,
+        "label_font_family": "Arial",
+        "label_font_size": 8,
+    },
+    ALAQSLayer.ROADWAY: {
+        "name": "Roadways",
+        "table_name": "shapes_roadways",
+        "ui_filename": "ui_roadways.ui",
+        "py_filename": "ui_roadways.py",
+        "fill_color": None,
+        "border_color": None,
+        "line_color": "255,255,0",
+        "line_width": "0.75",
+        "label_enabled": False,
+        "label_position": 1,
+        "label_font_family": "Arial",
+        "label_font_size": 8,
+    },
+    ALAQSLayer.TAXIWAY: {
+        "name": "Taxiways",
+        "table_name": "shapes_taxiways",
+        "ui_filename": "ui_taxiways.ui",
+        "py_filename": "ui_taxiways.py",
+        "fill_color": None,
+        "border_color": None,
+        "line_color": "46,255,53",
+        "line_width": "0.5",
+        "label_enabled": False,
+        "label_position": 1,
+        "label_font_family": "Arial",
+        "label_font_size": 8,
+    },
+    ALAQSLayer.TRACK: {
+        "name": "Tracks",
+        "table_name": "shapes_tracks",
+        "ui_filename": "ui_tracks.ui",
+        "py_filename": "ui_tracks.py",
+        "fill_color": None,
+        "border_color": None,
+        "line_color": None,
+        "line_width": None,
+        "label_enabled": False,
+        "label_position": 1,
+        "label_font_family": "Arial",
+        "label_font_size": 8,
+    },
+    ALAQSLayer.RUNWAY: {
+        "name": "Runways",
+        "table_name": "shapes_runways",
+        "ui_filename": "ui_runways.ui",
+        "py_filename": "ui_runways.py",
+        "fill_color": None,
+        "border_color": None,
+        "line_color": "235,235,235",
+        "line_width": "2",
+        "label_enabled": False,
+        "label_position": 1,
+        "label_font_family": "Arial",
+        "label_font_size": 8,
+    },
+}
