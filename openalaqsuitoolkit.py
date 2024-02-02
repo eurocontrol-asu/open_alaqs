@@ -12,6 +12,7 @@ from qgis.core import (
     QgsMarkerSymbol,
     QgsPoint,
     QgsProject,
+    QgsRasterLayer,
     QgsRectangle,
     QgsSingleSymbolRenderer,
     QgsVectorLayer,
@@ -110,9 +111,9 @@ def load_spatialite_layer(
      loaded
     :param alaqs_layer: the type of layer we are trying to load
     """
-
+    project = QgsProject.instance()
     plugin_dir = os.path.dirname(os.path.abspath(__file__))
-    uri = QgsDataSourceUri()  # QGIS3
+    uri = QgsDataSourceUri()
     uri.setDatabase(database_path)
 
     layer_config = LAYERS_CONFIG[alaqs_layer]
@@ -130,10 +131,6 @@ def load_spatialite_layer(
     layer.setEditFormConfig(lconfig)
     layer.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
 
-    # By default the source is accounted for in the study - comment this part
-    # or set to 0 to ignore
-    # instudy_idx = layer.fieldNameIndex("instudy")
-    # in QGIS3
     instudy_idx = layer.fields().indexFromName("instudy")
     if instudy_idx != -1:
         editor_widget_setup = QgsEditorWidgetSetup(
@@ -141,15 +138,54 @@ def load_spatialite_layer(
         )
         layer.setEditorWidgetSetup(instudy_idx, editor_widget_setup)
 
-    set_layer_style(layer, alaqs_layer)
-
     if not layer.isValid():
         QtWidgets.QMessageBox.information(
             iface.mainWindow() if iface and iface.mainWindow() else None,
             "Info",
             "That is not a valid layer...",
         )
-    QgsProject.instance().addMapLayers([layer])
+
+    set_layer_style(layer, alaqs_layer)
+
+    project.addMapLayer(layer, False)
+
+    tree_root = project.layerTreeRoot()
+    tree_root.addLayer(layer)
+
+
+def load_basemap_layers(project: QgsProject = QgsProject.instance()) -> None:
+    """Loads a preset of online XYZ basemap layers to the current project. Does nothing if "Basemaps" layer group already exists in the layer tree."""
+    xyz_layer_definitions = {
+        "Google Satellite": "https://mt1.google.com/vt/lyrs%3Ds%26x%3D{x}%26y%3D{y}%26z%3D{z}",
+        "Google Maps": "https://mt1.google.com/vt/lyrs%3Dm%26x%3D{x}%26y%3D{y}%26z%3D{z}",
+        "OpenStreetMap Standard": "http://tile.openstreetmap.org/%7Bz%7D/%7Bx%7D/%7By%7D.png",
+        "Esri Gray (light)": "http://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/%7Bz%7D/%7By%7D/%7Bx%7D",
+        "Esri Imagery": "https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/%7Bz%7D/%7By%7D/%7Bx%7D",
+    }
+
+    tree_root = QgsProject.instance().layerTreeRoot()
+    basemaps_group = tree_root.findGroup("Basemaps")
+
+    if basemaps_group:
+        return
+
+    basemaps_group = tree_root.addGroup("Basemaps")
+    basemaps_group.setIsMutuallyExclusive(True)
+
+    for layer_name, layer_source in xyz_layer_definitions.items():
+        rl = QgsRasterLayer(
+            f"type=xyz&url={layer_source}",
+            layer_name,
+            "wms",
+        )
+
+        if rl.isValid():
+            project.addMapLayer(rl, False)
+            basemaps_group.addLayer(rl)
+        else:
+            logger.debug(
+                f'Invalid layer "{layer_name}" with datasource "{layer_source}"'
+            )
 
 
 def set_layer_style(layer: QgsVectorLayer, alaqs_layer: ALAQSLayer):
@@ -206,6 +242,7 @@ def load_layers(iface, database_path):
 
 
 def delete_alaqs_layers(iface):
+    project = QgsProject.instance()
     layer_names = [
         "Tracks",
         "Taxiways",
@@ -218,16 +255,15 @@ def delete_alaqs_layers(iface):
         "Area Sources",
     ]
 
-    # QGIS2
-    # layers = iface.legendInterface().layers()
-    # QGIS3
-    layers = [layer for layer in QgsProject.instance().mapLayers().values()]
+    layers = [layer for layer in project.mapLayers().values()]
 
     for layer in layers:
         layer_name = layer.name()
         if layer_name in layer_names:
-            # QgsMapLayerRegistry.instance().removeMapLayers([layer.id()])
-            QgsProject.instance().removeMapLayers([layer.id()])
+            project.removeMapLayers([layer.id()])
+
+    layer_root = project.layerTreeRoot()
+    layer_root.removeChildNode(layer_root.findGroup("Basemaps"))
 
 
 def set_default_zoom(canvas, lat, lon):
