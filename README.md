@@ -189,7 +189,7 @@ The following code sample can help to better understand where and when code is e
 ```python
 from inspect import getframeinfo, currentframe
 
-from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.core.alaqslogging import get_logger
 
 logger = get_logger(__name__)
 
@@ -201,7 +201,7 @@ In addition, the following wrapper can be used to track what's going in function
 It can easily be extended to track the execution time of functions as well.
 
 ```python
-from open_alaqs.alaqs_core.alaqslogging import get_logger
+from open_alaqs.core.alaqslogging import get_logger
 
 logger = get_logger(__name__)
 
