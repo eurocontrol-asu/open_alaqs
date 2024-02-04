@@ -22,7 +22,7 @@ import os
 from datetime import datetime, timedelta
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from qgis.core import QgsMapLayer, QgsProject, QgsTextAnnotation
+from qgis.core import QgsMapLayer, QgsProject, QgsTextAnnotation, QgsSettings
 from qgis.gui import QgsFileWidget
 from qgis.PyQt.QtWidgets import QMessageBox
 from qgis.PyQt.uic import loadUiType
@@ -2684,8 +2684,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.configuration_stack_current_changed
         )
 
-        self.ui.a2k_executable_path.setFilter("austal.exe")
+        settings = QgsSettings()
+        self.ui.a2k_executable_path.setFilePath(settings.value("open_alaqs/a2k_executable_path", ""))
+        self.ui.a2k_executable_path.setFilter("AUSTAL Executable (austal.exe austal)")
         self.ui.a2k_executable_path.setDialogTitle("Select AUSTAL Executable File")
+        self.ui.a2k_executable_path.fileChanged.connect(self.a2k_executable_path_file_changed)
         self.ui.work_directory_path.setStorageMode(QgsFileWidget.GetDirectory)
         self.ui.work_directory_path.setDialogTitle(
             "Select AUSTAL Input Files (.txt, .dmna, etc.) Directory"
@@ -2787,6 +2790,15 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     self.ui.output_modules_tab_widget.addTab(
                         scroll_widget, module_instance_.getModuleDisplayName()
                     )
+
+    def a2k_executable_path_file_changed(self, path):
+        """
+        Save the selected austal executable file path to restore on dialog
+        opening
+        """
+        if os.path.exists(path):
+            settings = QgsSettings()
+            settings.setValue("open_alaqs/a2k_executable_path", path)
 
     def load_alaqs_source_file(self, path):
         """
