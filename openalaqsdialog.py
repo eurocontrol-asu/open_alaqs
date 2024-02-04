@@ -2833,7 +2833,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
     @catch_errors
     def run_austal(self, *args, **kwargs):
-        from subprocess import call
+        from subprocess import Popen, PIPE
 
         austal_ = str(self.ui.a2k_executable_path.filePath())
         logger.info("AUSTAL directory:%s" % austal_)
@@ -2846,13 +2846,16 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "Running AUSTAL with -D option. Log file will be re-written"
                 " at the start of the calculation."
             )
-            cmd = "%s -%s %s" % (austal_, opt_, work_dir)
+            cmd = [austal_,"-%s" % (opt_), work_dir]
         else:
-            cmd = "%s %s" % (austal_, work_dir)
+            cmd = [austal_, work_dir]
 
-        p = call(cmd)
-        if p == 0:
+        p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        output, err = p.communicate()
+        if p.returncode == 0:
             logger.info("Dispersion simulation completed successfully")
+        else:
+            logger.error("AUSTAL execution failed with the following output: %s" % output)
 
     def resetConcentrationCalculationConfiguration(self, config=None):
         if config is None:
