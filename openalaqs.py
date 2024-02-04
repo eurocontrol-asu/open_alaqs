@@ -187,7 +187,7 @@ class OpenALAQS:
         )
 
         # Add buttons to toolbar
-        self.open_alaqs_toolbar = self.iface.addToolBar("OpenALAQS ToolBar")
+        self.open_alaqs_toolbar = self.iface.addToolBar("OpenALAQS Toolbar")
         self.open_alaqs_toolbar.addAction(self.actions["about"])
         self.open_alaqs_toolbar.addSeparator()
         self.open_alaqs_toolbar.addAction(self.actions["project_create"])
