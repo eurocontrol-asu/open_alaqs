@@ -22,7 +22,7 @@ import os
 from datetime import datetime, timedelta
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from qgis.core import QgsMapLayer, QgsProject, QgsTextAnnotation, QgsSettings
+from qgis.core import QgsMapLayer, QgsProject, QgsSettings, QgsTextAnnotation
 from qgis.gui import QgsFileWidget
 from qgis.PyQt.QtWidgets import QMessageBox
 from qgis.PyQt.uic import loadUiType
@@ -2685,10 +2685,14 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         )
 
         settings = QgsSettings()
-        self.ui.a2k_executable_path.setFilePath(settings.value("open_alaqs/a2k_executable_path", ""))
+        self.ui.a2k_executable_path.setFilePath(
+            settings.value("open_alaqs/a2k_executable_path", "")
+        )
         self.ui.a2k_executable_path.setFilter("AUSTAL Executable (austal.exe austal)")
         self.ui.a2k_executable_path.setDialogTitle("Select AUSTAL Executable File")
-        self.ui.a2k_executable_path.fileChanged.connect(self.a2k_executable_path_file_changed)
+        self.ui.a2k_executable_path.fileChanged.connect(
+            self.a2k_executable_path_file_changed
+        )
         self.ui.work_directory_path.setStorageMode(QgsFileWidget.GetDirectory)
         self.ui.work_directory_path.setDialogTitle(
             "Select AUSTAL Input Files (.txt, .dmna, etc.) Directory"
@@ -2833,7 +2837,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
     @catch_errors
     def run_austal(self, *args, **kwargs):
-        from subprocess import Popen, PIPE
+        from subprocess import PIPE, Popen
 
         austal_ = str(self.ui.a2k_executable_path.filePath())
         logger.info("AUSTAL directory:%s" % austal_)
@@ -2846,7 +2850,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "Running AUSTAL with -D option. Log file will be re-written"
                 " at the start of the calculation."
             )
-            cmd = [austal_,"-%s" % (opt_), work_dir]
+            cmd = [austal_, "-%s" % (opt_), work_dir]
         else:
             cmd = [austal_, work_dir]
 
@@ -2855,7 +2859,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if p.returncode == 0:
             logger.info("Dispersion simulation completed successfully")
         else:
-            logger.error("AUSTAL execution failed with the following output: %s" % output)
+            logger.error(
+                "AUSTAL execution failed with the following output: %s" % output
+            )
 
     def resetConcentrationCalculationConfiguration(self, config=None):
         if config is None:
