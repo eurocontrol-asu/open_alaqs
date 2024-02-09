@@ -25,6 +25,7 @@ from qgis.core import QgsSettings
 from qgis.PyQt import QtGui, QtWidgets
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import QFileDialog
+from qgis.utils import OverrideCursor
 
 from open_alaqs import openalaqsuitoolkit
 from open_alaqs.core import alaqs, alaqsutils
@@ -278,9 +279,8 @@ class OpenALAQS:
                 else:
                     return
 
-            QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
-            result = alaqs.create_project(str(db_filename))
-            QtWidgets.QApplication.restoreOverrideCursor()
+            with OverrideCursor(Qt.WaitCursor):
+                result = alaqs.create_project(str(db_filename))
 
             if result is not None:
                 raise Exception(result)

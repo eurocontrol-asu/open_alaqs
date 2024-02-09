@@ -3,7 +3,8 @@ from collections import OrderedDict
 
 import geopandas as gpd
 from qgis.gui import QgsDoubleSpinBox, QgsFileWidget
-from qgis.PyQt import QtCore, QtWidgets
+from qgis.PyQt import Qt, QtWidgets
+from qgis.utils import OverrideCursor
 
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.core.tools.csv_interface import read_csv_to_geodataframe
@@ -68,9 +69,8 @@ class EmissionCalculationConfigurationWidget(ModuleConfigurationWidget):
     def load_receptors_csv(self, path):
         try:
             if os.path.exists(path):
-                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                self.get_receptors_from_csv(path)
-                QtWidgets.QApplication.restoreOverrideCursor()
+                with OverrideCursor(Qt.WaitCursor):
+                    self.get_receptors_from_csv(path)
                 # if isinstance(result, str):
                 #     raise Exception()
             else:
