@@ -3,7 +3,8 @@ from collections import OrderedDict
 
 import geopandas as gpd
 from qgis.gui import QgsDoubleSpinBox, QgsFileWidget
-from qgis.PyQt import Qt, QtWidgets
+from qgis.PyQt import QtWidgets
+from qgis.PyQt.QtCore import Qt
 from qgis.utils import OverrideCursor
 
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget

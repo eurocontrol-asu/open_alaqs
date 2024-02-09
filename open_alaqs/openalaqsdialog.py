@@ -23,7 +23,8 @@ from datetime import datetime, timedelta
 
 from qgis.core import QgsMapLayer, QgsProject, QgsSettings, QgsTextAnnotation
 from qgis.gui import QgsFileWidget
-from qgis.PyQt import Qt, QtCore, QtGui, QtWidgets
+from qgis.PyQt import QtCore, QtGui, QtWidgets
+from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import QMessageBox
 from qgis.PyQt.uic import loadUiType
 from qgis.utils import OverrideCursor
