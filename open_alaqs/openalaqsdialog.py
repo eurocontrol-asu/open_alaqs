@@ -140,7 +140,7 @@ class OpenAlaqsOpenDatabase:
                     result = alaqs.load_study_setup()
 
                 try:
-                    study_data = alaqs.load_study_setup_dict()
+                    study_data = alaqs.load_study_setup()
                     oautk.set_default_zoom(
                         self.canvas,
                         study_data["airport_latitude"],
@@ -227,7 +227,7 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         result = alaqs.load_study_setup()
         if (result is not None) and (result is not []):
             # try and load stuff into the UI
-            study_data = alaqs.load_study_setup_dict()
+            study_data = alaqs.load_study_setup()
 
             self.ui.lineEditProjectName.setText(study_data["project_name"])
             self.ui.lineEditAirportName.setText(study_data["airport_name"])
@@ -2079,7 +2079,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             model_parameters["use_3d_grid"] = True
 
             # Get the study setup as well
-            study_setup = alaqs.load_study_setup_dict()
+            study_setup = alaqs.load_study_setup()
 
             # Create a blank study output database
             self.ui.status_update.setText("Copying inventory database template...")
@@ -2542,7 +2542,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         project_database = ProjectDatabase()
         project_database_path = getattr(project_database, "path", None)
         project_database.path = inventory_path
-        study_data = alaqs.load_study_setup_dict()
+        study_data = alaqs.load_study_setup()
         ref_latitude = study_data.get("airport_latitude", 0.0)
         ref_longitude = study_data.get("airport_longitude", 0.0)
         ref_altitude = study_data.get("airport_elevation", 0.0)
@@ -2812,7 +2812,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             if os.path.exists(path):
                 self.updateMinMaxGUI(path)
 
-            study_data = alaqs.load_study_setup_dict()
+            study_data = alaqs.load_study_setup()
 
             grid_configuration = {
                 "x_cells": 100,

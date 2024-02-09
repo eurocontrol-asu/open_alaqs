@@ -66,33 +66,17 @@ def create_project(database_name):
 
 @catch_errors
 def load_study_setup():
+    """Load project data for the current ALAQS study.
+
+    Returns:
+        sqlite3.Row - resulting user study setup
     """
-    This function will load the login credentials for the Spatialite database
-    to be used for a specific Open ALAQS study.
-
-    :return: result : None if successful. Error message if not successful
-    :raise: None
-    """
-    study_data = alaqsdblite.get_study_setup()
-
-    if not study_data:
-        return None
-
-    return study_data
-
-
-@catch_errors
-def load_study_setup_dict():
-    """
-    This function will load the login credentials for the SQLITE database
-    to be used for a specific Open ALAQS study.
-
-    :return: result : None if successful. Error message if not successful
-    :raise: None
-    """
-    study_data = alaqsdblite.get_study_setup()
-    study_data_dict = alaqsutils.dict_study_setup(study_data[0])
-    return study_data_dict
+    return alaqsdblite.execute_sql(
+        """
+            SELECT *
+            FROM user_study_setup
+        """
+    )
 
 
 @catch_errors
