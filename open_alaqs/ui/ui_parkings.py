@@ -1,4 +1,5 @@
-from qgis.PyQt import Qt, QtWidgets
+from qgis.PyQt import QtWidgets
+from qgis.PyQt.QtCore import Qt
 from qgis.utils import OverrideCursor
 
 from open_alaqs.core import alaqs, alaqsutils
