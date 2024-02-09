@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from PyQt5.QtWidgets import QProgressDialog
+from qgis.PyQt.QtWidgets import QProgressDialog
 
 
 class ProgressBarStage:
