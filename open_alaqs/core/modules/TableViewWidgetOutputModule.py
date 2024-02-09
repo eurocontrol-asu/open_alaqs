@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from typing import List, Tuple
 
-from PyQt5 import QtWidgets
+from qgis.PyQt import QtWidgets
 from qgis.PyQt.uic import loadUiType
 
 from open_alaqs.core.alaqslogging import get_logger

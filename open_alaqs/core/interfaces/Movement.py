@@ -7,7 +7,7 @@ from inspect import currentframe, getframeinfo
 import matplotlib
 import numpy as np
 import pandas as pd
-from PyQt5 import QtCore, QtWidgets
+from qgis.PyQt import QtCore, QtWidgets
 from shapely.geometry import LineString, MultiLineString
 from shapely.wkt import loads
 

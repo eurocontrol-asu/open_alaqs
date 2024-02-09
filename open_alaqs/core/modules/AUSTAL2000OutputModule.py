@@ -9,8 +9,8 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from dateutil import rrule
-from PyQt5 import QtWidgets
 from qgis.gui import QgsDoubleSpinBox, QgsSpinBox
+from qgis.PyQt import QtWidgets
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 
 from open_alaqs.core.alaqslogging import get_logger

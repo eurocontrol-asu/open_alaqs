@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets
+from qgis.PyQt import QtWidgets
 
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
@@ -441,7 +441,7 @@ def color_ui_background(ui_element, color):
 
 # if __name__ == "__main__":
 #     import sys
-#     from PyQt5 import QtCore, QtGui, QtWidgets
+#     from qgis.PyQt import QtCore, QtGui, QtWidgets
 #     from PyQt5.QtCore import Qt
 #
 #     app = QtWidgets.QApplication(sys.argv)

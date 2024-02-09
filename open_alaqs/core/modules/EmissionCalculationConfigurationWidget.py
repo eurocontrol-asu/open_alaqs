@@ -2,8 +2,8 @@ import os
 from collections import OrderedDict
 
 import geopandas as gpd
-from PyQt5 import QtCore, QtWidgets
 from qgis.gui import QgsDoubleSpinBox, QgsFileWidget
+from qgis.PyQt import QtCore, QtWidgets
 
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.core.tools.csv_interface import read_csv_to_geodataframe

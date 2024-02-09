@@ -21,9 +21,9 @@
 import os
 from datetime import datetime, timedelta
 
-from PyQt5 import QtCore, QtGui, QtWidgets
 from qgis.core import QgsMapLayer, QgsProject, QgsSettings, QgsTextAnnotation
 from qgis.gui import QgsFileWidget
+from qgis.PyQt import Qt, QtCore, QtGui, QtWidgets
 from qgis.PyQt.QtWidgets import QMessageBox
 from qgis.PyQt.uic import loadUiType
 

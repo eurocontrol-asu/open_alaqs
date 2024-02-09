@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import numpy as np
 from dateutil import rrule
 from matplotlib.dates import DateFormatter
-from PyQt5 import QtWidgets
+from qgis.PyQt import QtWidgets
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.OutputModule import OutputModule

@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtWidgets
+from qgis.PyQt import QtCore, QtWidgets
 
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger

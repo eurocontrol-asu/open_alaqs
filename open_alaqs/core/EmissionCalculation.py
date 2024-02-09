@@ -1,7 +1,7 @@
 import inspect
 from collections import OrderedDict
 
-from PyQt5 import QtCore, QtWidgets
+from qgis.PyQt import QtCore, QtWidgets
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.AmbientCondition import (
@@ -412,7 +412,7 @@ class EmissionCalculation:
 #     import time
 #     st_ = time.time()
 #     # from qgis.PyQt import QtGui
-#     from PyQt5 import QtCore, QtWidgets
+#     from qgis.PyQt import QtCore, QtWidgets
 #     # from python_qt_binding import QtGui, QtCore  # new imports
 #     # app = QtWidgets.QApplication(sys.argv)
 #

@@ -4,7 +4,7 @@ from collections import OrderedDict
 import matplotlib
 import pandas as pd
 from matplotlib.dates import DateFormatter
-from PyQt5 import QtWidgets
+from qgis.PyQt import QtWidgets
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 
 from open_alaqs.core.alaqslogging import get_logger

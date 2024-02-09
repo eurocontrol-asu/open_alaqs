@@ -1,8 +1,8 @@
 from collections import OrderedDict
 from datetime import datetime
 
-from PyQt5 import QtCore, QtWidgets
 from qgis.gui import QgsDoubleSpinBox, QgsSpinBox
+from qgis.PyQt import QtCore, QtWidgets
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools import conversion
