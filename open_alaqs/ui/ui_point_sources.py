@@ -437,17 +437,3 @@ def color_ui_background(ui_element, color):
     else:
         # ui_element.setStyleSheet("background-color: rgba(192,192,192,0.3);")
         pass
-
-
-# if __name__ == "__main__":
-#     import sys
-#     from qgis.PyQt import QtCore, QtGui, QtWidgets
-#     from PyQt5.QtCore import Qt
-#
-#     app = QtWidgets.QApplication(sys.argv)
-#     QtWidgets.QApplication.setQuitOnLastWindowClosed(False)
-#     Dialog = QtWidgets.QDialog()
-#     ui = Ui_Dialog()
-#     ui.setupUi(Dialog)
-#     Dialog.show()
-#     sys.exit(app.exec_())

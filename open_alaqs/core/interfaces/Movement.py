@@ -2078,8 +2078,6 @@ class MovementStore(Store, metaclass=Singleton):
         return TrackStore(self._db_path)
 
     def ProgressBarWidget(self):
-        # from PyQt4 import QtGui, QtCore
-
         progressbar = QtWidgets.QProgressDialog("Please wait...", "Cancel", 0, 99)
         progressbar.setWindowTitle("Initializing Movements from Database")
         progressbar.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
@@ -2088,8 +2086,7 @@ class MovementStore(Store, metaclass=Singleton):
         progressbar.setAutoClose(True)
         progressbar.resize(350, 100)
         progressbar.show()
-        # progressbar.canceled.connect(progressbar.cancel)
-        # progressbar.closeEvent = progressbar.cancel()
+
         return progressbar
 
     def initMovements(self, debug=False):  # noqa: C901
