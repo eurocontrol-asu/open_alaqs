@@ -4,6 +4,7 @@ the appearance of a study created within ALAQS.
 """
 
 
+from pathlib import Path
 from typing import TypedDict
 
 from open_alaqs.enums import ALAQSLayer
@@ -152,3 +153,7 @@ LAYERS_CONFIG: dict[ALAQSLayer, ALAQSLayerConfig] = {
         "label_font_size": 8,
     },
 }
+
+
+ALAQS_ROOT_PATH = Path(__file__).absolute().parent
+ALAQS_TEMPLATE_DB_FILENAME = "core/templates/project.alaqs"
