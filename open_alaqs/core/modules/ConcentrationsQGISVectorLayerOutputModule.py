@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
-from PyQt5 import QtWidgets
 from qgis.gui import QgsDoubleSpinBox
+from qgis.PyQt import QtWidgets
 from shapely.geometry import Point, Polygon
 
 from open_alaqs.core.alaqslogging import get_logger

@@ -1,4 +1,5 @@
-from PyQt5 import QtCore, QtWidgets
+from qgis.PyQt import Qt, QtWidgets
+from qgis.utils import OverrideCursor
 
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
@@ -227,9 +228,10 @@ def recalculate_emissions(fields: dict, form):
         # Calculate emissions according to the ALAQS method
         emission_profile = {}
         if roadway_method == "COPERT 5":
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            emission_profile = copert5.roadway_emission_factors(form_data, study_data)
-            QtWidgets.QApplication.restoreOverrideCursor()
+            with OverrideCursor(Qt.WaitCursor):
+                emission_profile = copert5.roadway_emission_factors(
+                    form_data, study_data
+                )
 
         # Update the emission fields
         fields["co_gm_vh_field"].setText(str(emission_profile["co_ef"]))

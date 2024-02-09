@@ -1,4 +1,3 @@
-from PyQt5 import QtCore, QtGui
 from qgis.core import (
     QgsClassificationPrettyBreaks,
     QgsCoordinateReferenceSystem,
@@ -17,6 +16,7 @@ from qgis.core import (
     QgsSymbol,
     QgsVectorLayer,
 )
+from qgis.PyQt import QtCore, QtGui
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools import conversion

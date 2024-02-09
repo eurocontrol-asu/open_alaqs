@@ -21,11 +21,12 @@
 import os
 from datetime import datetime, timedelta
 
-from PyQt5 import QtCore, QtGui, QtWidgets
 from qgis.core import QgsMapLayer, QgsProject, QgsSettings, QgsTextAnnotation
 from qgis.gui import QgsFileWidget
+from qgis.PyQt import Qt, QtCore, QtGui, QtWidgets
 from qgis.PyQt.QtWidgets import QMessageBox
 from qgis.PyQt.uic import loadUiType
+from qgis.utils import OverrideCursor
 
 from open_alaqs import openalaqsuitoolkit as oautk
 from open_alaqs.core import alaqs, alaqsutils
@@ -134,9 +135,8 @@ class OpenAlaqsOpenDatabase:
                 project_database = ProjectDatabase()
                 project_database.path = self.db_path
 
-                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                result = alaqs.load_study_setup()
-                QtWidgets.QApplication.restoreOverrideCursor()
+                with OverrideCursor(Qt.WaitCursor):
+                    result = alaqs.load_study_setup()
 
                 try:
                     study_data = alaqs.load_study_setup_dict()
@@ -405,7 +405,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
     """
 
     def __init__(self, iface):
-        QtWidgets.QWidget.__init__(self, None, QtCore.Qt.WindowStaysOnTopHint)
+        QtWidgets.QWidget.__init__(self, None, Qt.WindowStaysOnTopHint)
 
         # Build the UI
         Ui_FormProfiles, _ = loadUiType(
@@ -1749,9 +1749,9 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
     def movement_table_path_changed(self, path):
         try:
             if os.path.exists(path):
-                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                result = self.examine_movements(path)
-                QtWidgets.QApplication.restoreOverrideCursor()
+                with OverrideCursor(Qt.WaitCursor):
+                    result = self.examine_movements(path)
+
                 if isinstance(result, str) or isinstance(result, Exception):
                     raise Exception(result)
                 return None
@@ -1853,9 +1853,9 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         """
         try:
             if os.path.exists(path):
-                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                result = self.examine_met_file(path)
-                QtWidgets.QApplication.restoreOverrideCursor()
+                with OverrideCursor(Qt.WaitCursor):
+                    result = self.examine_met_file(path)
+
                 if isinstance(result, str):
                     raise Exception()
                 return
@@ -2086,11 +2086,10 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             output_save_name = "%s_out.alaqs" % output_save_name
             inventory_path = os.path.join(output_save_path, output_save_name)
 
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            result = alaqs.inventory_creation_new(
-                inventory_path, model_parameters, study_setup, met_csv_path
-            )
-            QtWidgets.QApplication.restoreOverrideCursor()
+            with OverrideCursor(Qt.WaitCursor):
+                result = alaqs.inventory_creation_new(
+                    inventory_path, model_parameters, study_setup, met_csv_path
+                )
 
             if isinstance(result, str):
                 QtWidgets.QMessageBox.warning(
@@ -2107,7 +2106,6 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             self.ui.status_update.setText("Done.")
         except Exception as e:
             self.ui.status_update.setText("**Error** See log file")
-            QtWidgets.QApplication.restoreOverrideCursor()
             error = alaqsutils.print_error(self.create_inventory.__name__, Exception, e)
             return error
 
@@ -2135,7 +2133,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         :return: boolean - True for checked, False for unchecked
         """
         try:
-            return ui_element.checkState() == QtCore.Qt.Checked
+            return ui_element.checkState() == Qt.Checked
         except Exception:
             return None
 

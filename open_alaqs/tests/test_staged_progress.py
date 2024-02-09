@@ -1,6 +1,6 @@
 import pytest
 
-PyQt5 = pytest.importorskip("PyQt5")
+PyQt = pytest.importorskip("qgis.PyQt")
 
 from open_alaqs.core.tools.ProgressBarStage import ProgressBarStage  # noqa: E402
 
