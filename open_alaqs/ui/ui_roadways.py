@@ -190,7 +190,7 @@ def recalculate_emissions(fields: dict):
             form_data[f + "_percentage"] = float(fields[f].text())
 
         # Get the study data for additional information needed
-        study_data = alaqs.load_study_setup_dict()
+        study_data = alaqs.load_study_setup()
 
         # Get the roadway method
         roadway_method = study_data["roadway_method"]

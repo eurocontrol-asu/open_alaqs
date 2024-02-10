@@ -16,6 +16,7 @@ the database layer.
 from open_alaqs.core import alaqsdblite, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools.create_output import create_alaqs_output
+from open_alaqs.typing import AirportDict, StudySetup
 
 logger = get_logger(__name__)
 
@@ -65,38 +66,22 @@ def create_project(database_name):
 
 
 @catch_errors
-def load_study_setup():
+def load_study_setup() -> StudySetup:
+    """Load project data for the current ALAQS study.
+
+    Returns:
+        sqlite3.Row - resulting user study setup
     """
-    This function will load the login credentials for the Spatialite database
-    to be used for a specific Open ALAQS study.
-
-    :return: result : None if successful. Error message if not successful
-    :raise: None
-    """
-    study_data = alaqsdblite.get_study_setup()
-
-    if not study_data:
-        return None
-
-    return study_data
+    return alaqsdblite.execute_sql(
+        """
+            SELECT *
+            FROM user_study_setup
+        """
+    )
 
 
 @catch_errors
-def load_study_setup_dict():
-    """
-    This function will load the login credentials for the SQLITE database
-    to be used for a specific Open ALAQS study.
-
-    :return: result : None if successful. Error message if not successful
-    :raise: None
-    """
-    study_data = alaqsdblite.get_study_setup()
-    study_data_dict = alaqsutils.dict_study_setup(study_data[0])
-    return study_data_dict
-
-
-@catch_errors
-def save_study_setup(study_setup):
+def save_study_setup(study_setup: StudySetup) -> None:
     """
     This function updates the study setup table in the currently OpenALAQS
     database.
@@ -110,65 +95,55 @@ def save_study_setup(study_setup):
             f"Incorrect number of study parameters supplied. "
             f"{len(study_setup)} provided - 15 needed"
         )
+
     for param in study_setup:
         if param == "":
             raise Exception("Study setup parameters cannot be blank")
-    result = alaqsdblite.save_study_setup(study_setup)
-    if result is None:
-        return None
 
-    raise Exception("Study setup could not be saved: %s" % result)
-
-
-@catch_errors
-def save_study_setup_dict(study_setup):
-    """
-    This function updates the study setup table in the currently OpenALAQS
-     database.
-
-    :param: study_setup : a list containing all values from the study_setup UI
-    :return: error : None if successful. Error message if not successful
-    :raises: None
-    """
-    if len(study_setup) != 19:
-        raise Exception(
-            "Incorrect number of study parameters supplied. "
-            "%d provided - 20 needed" % len(study_setup)
-        )
-    for param in study_setup:
-        if param == "":
-            raise Exception("Study setup parameters cannot be blank")
-    result = alaqsdblite.save_study_setup_dict(study_setup)
-    if result is None:
-        return None
-    raise Exception("Study setup could not be saved: %s" % result)
+    alaqsdblite.update_table(
+        "user_study_setup",
+        {
+            **study_setup,
+            "date_modified": "now",
+        },
+        {
+            "airport_id": study_setup["airport_id"],
+        },
+    )
 
 
 @catch_errors
-def airport_codes():
-    """
-    Return airport ICAO codes in the current database
-    """
-    result = alaqsdblite.airport_codes()
-    if result is None or result == []:
-        return None
-    if isinstance(result, str):
-        raise Exception("Airport codes fetch failed: %s" % result)
-    return result
+def get_airport_codes() -> list[str]:
+    """Return a list of airport ICAO codes"""
+    return alaqsdblite.execute_sql(
+        """
+            SELECT airport_code
+            FROM default_airports
+            ORDER BY airport_code
+        """,
+        fetchone=False,
+    )
 
 
 @catch_errors
-def airport_lookup(airport_code):
+def airport_lookup(icao_code: str) -> AirportDict | None:
+    """Look up an airport based on its ICAO code and return data if available.
+
+    Args:
+        icao_code (str): ICAO code to look for
+
+    Returns:
+        AirportDict | None: airport data
     """
-    Look up an airport based on its ICAO name and return data if available
-    :param airport_code: the ICAO code of the airport being looked up
-    """
-    result = alaqsdblite.airport_lookup(airport_code)
-    if result is None or result == []:
-        return None
-    if isinstance(result, str):
-        raise Exception("Airport lookup failed: %s" % result)
-    return result
+    return alaqsdblite.execute_sql(
+        """
+            SELECT *
+            FROM default_airports
+            WHERE
+                airport_code = ?
+        """,
+        [icao_code],
+    )
 
 
 # ######################

@@ -192,7 +192,7 @@ def create_project_database(alaqs_db_filename: str) -> None:
     )
 
 
-def execute_sql(sql: str, params: list[Any] = [], fetchone: bool = True) -> list:
+def execute_sql(sql: str, params: list[Any] = [], fetchone: bool = True) -> dict | list:
     """Executes provided SQL query.
 
     Args:
@@ -217,7 +217,12 @@ def execute_sql(sql: str, params: list[Any] = [], fetchone: bool = True) -> list
             conn.commit()
 
             if fetchone:
-                return cur.fetchone()
+                result = cur.fetchone()
+
+                if result is None:
+                    return None
+                else:
+                    return dict(result)
             else:
                 return cur.fetchall()
 
@@ -226,6 +231,65 @@ def execute_sql(sql: str, params: list[Any] = [], fetchone: bool = True) -> list
             logger.debug('INFO: Query "%s" executed successfully' % sql)
         else:
             alaqsutils.print_error(query_string.__name__, Exception, e, log=logger)
+
+
+def quote_identifier(identifier: str) -> str:
+    return f'''"{identifier.replace('"', '""')}"'''
+
+
+class SqlExpression:
+    def __init__(self, expression: str, *values: Any) -> None:
+        self.expression = expression
+        self.values = values
+
+    def __str__(self) -> str:
+        return self.expression
+
+
+def update_table(
+    table_name: str,
+    attribute_values: dict[str, Any],
+    where_values: dict[str, Any],
+) -> list[sqlite.Row]:
+    value_pairs = []
+    values = []
+
+    for attr_name, attr_value in attribute_values.items():
+        if isinstance(attr_value, SqlExpression):
+            expression = attr_value.expression
+            values += attr_value.values
+        else:
+            expression = "?"
+            values.append(attr_value)
+
+        value_pairs.append(f"{quote_identifier(attr_name)} = {expression}")
+
+    values_str = ", ".join(value_pairs)
+    sql = f"""
+        UPDATE {quote_identifier(table_name)}
+        SET {values_str}
+    """
+
+    if where_values:
+        where_value_pairs = []
+
+        for attr_name, attr_value in where_values.items():
+            if isinstance(attr_value, SqlExpression):
+                expression = attr_value.expression
+                values += attr_value.values
+            else:
+                expression = "?"
+                values.append(attr_value)
+
+            where_value_pairs.append(f"{quote_identifier(attr_name)} = {expression}")
+
+        where_values_str = " AND ".join(where_value_pairs)
+
+        sql += f"""
+            WHERE {where_values_str}
+        """
+
+    return execute_sql(sql, values)
 
 
 def query_string(sql_text: str) -> list:
@@ -292,69 +356,9 @@ def query_string_df(sql_text: str) -> pd.DataFrame:
             alaqsutils.print_error(query_string.__name__, Exception, e, log=logger)
 
 
-def airport_codes():
-    """
-    Return airport ICAO codes in the current database
-    :return:
-    """
-    try:
-        airport_query = (
-            "SELECT airport_code FROM default_airports ORDER BY airport_code"
-        )
-        airport_data = query_string(airport_query)
-        return airport_data
-    except Exception as e:
-        alaqsutils.print_error(airport_lookup.__name__, Exception, e, log=logger)
-        return None
-
-
-def airport_lookup(airport_code):
-    """
-    Lookup an airport in the current database using the ICAO code
-    :param airport_code:
-    :return:
-    """
-    try:
-        airport_query = (
-            'SELECT * FROM default_airports WHERE airport_code="%s";' % airport_code
-        )
-        airport_data = query_string(airport_query)
-        return airport_data
-    except Exception as e:
-        alaqsutils.print_error(airport_lookup.__name__, Exception, e, log=logger)
-        return None
-
-
 # #################################################
 # #########        STUDY SETUP         ############
 # #################################################
-
-
-def get_study_setup():
-    """
-    This function searches for and returns the complete airport information record
-    from the user_study_setup table.
-    """
-    try:
-        # sql_text = "SELECT * FROM user_study_setup WHERE airport_id=\"%s\";" % airport_id
-        sql_text = "SELECT * FROM user_study_setup"
-        result = query_string(sql_text)
-
-        if result is not None:
-            if len(result) > 0:
-                return result
-            elif result is []:
-                return None
-
-        raise Exception(
-            "Could not retrieve study setup from database. Query result is '%s'."
-            % (str(result))
-        )
-
-    except Exception as e:
-        raise e
-        # error = alaqsutils.print_error(get_study_setup.__name__, Exception, e, log=logger)
-        # return error
 
 
 def get_roadway_methods() -> tuple:
@@ -401,118 +405,6 @@ def get_roadway_euro_standards(country: str, fleet_year: str) -> dict:
         vehicle_category: euro_standard
         for (vehicle_category, euro_standard) in euro_standards
     }
-
-
-@catch_errors
-def save_study_setup(study_setup):
-    """
-    This function updates the study setup record for the currently active project
-    """
-    project_name = study_setup[0]
-    airport_name = study_setup[1]
-    airport_id = study_setup[2]
-    icao_code = study_setup[3]
-    airport_country = study_setup[4]
-    airport_lat = study_setup[5]
-    airport_lon = study_setup[6]
-    airport_elevation = study_setup[7]
-    airport_temp = study_setup[8]
-    vertical_limit = study_setup[9]
-    parking_method = study_setup[10]
-    roadway_method = study_setup[11]
-    roadway_fleet_year = study_setup[12]
-    roadway_country = study_setup[13]
-    study_info = study_setup[14]
-
-    sql_text = (
-        'UPDATE user_study_setup SET \
-        airport_id=%s, project_name="%s", airport_name="%s", airport_code="%s", \
-        airport_country="%s", airport_latitude=%f, airport_longitude=%f, \
-        airport_elevation=\'%f\', airport_temperature=%f, vertical_limit=%f, \
-        roadway_method="%s", roadway_fleet_year="%s", roadway_country="%s", \
-        parking_method="%s", study_info="%s", date_modified=DATETIME(\'now\') \
-        WHERE airport_id=%s;'
-        % (
-            airport_id,
-            project_name,
-            airport_name,
-            icao_code,
-            airport_country,
-            airport_lat,
-            airport_lon,
-            airport_elevation,
-            airport_temp,
-            vertical_limit,
-            roadway_method,
-            roadway_fleet_year,
-            roadway_country,
-            parking_method,
-            study_info,
-            airport_id,
-        )
-    )
-
-    result = query_string(sql_text)
-    if (result is None) or (result == []):
-        return None
-    else:
-        raise Exception(result)
-
-
-@catch_errors
-def save_study_setup_dict(study_setup_dict):
-    """
-    This function updates the study setup record for the currently active project
-    """
-    project_name = study_setup_dict["project_name"]
-    airport_name = study_setup_dict["airport_name"]
-    airport_id = study_setup_dict["airport_id"]
-    icao_code = study_setup_dict["airport_code"]
-    airport_country = study_setup_dict["airport_country"]
-    airport_lat = study_setup_dict["airport_latitude"]
-    airport_lon = study_setup_dict["airport_longitude"]
-    airport_elevation = study_setup_dict["airport_elevation"]
-    airport_temp = study_setup_dict["airport_temperature"]
-    vertical_limit = study_setup_dict["vertical_limit"]
-    parking_method = study_setup_dict["parking_method"]
-    roadway_method = study_setup_dict["roadway_method"]
-    roadway_fleet_year = study_setup_dict["roadway_fleet_year"]
-    roadway_country = study_setup_dict["roadway_country"]
-    study_info = study_setup_dict["study_info"]
-
-    sql_text = (
-        'UPDATE user_study_setup SET \
-        airport_id=%s, project_name="%s", airport_name="%s", airport_code="%s", \
-        airport_country="%s", airport_latitude=%f, airport_longitude=%f, \
-        airport_elevation=\'%f\', airport_temperature=%f, vertical_limit=%f, \
-        roadway_method="%s", roadway_fleet_year="%s", roadway_country="%s", \
-        parking_method="%s", study_info="%s", date_modified=DATETIME(\'now\') \
-        WHERE airport_id=%s;'
-        % (
-            airport_id,
-            project_name,
-            airport_name,
-            icao_code,
-            airport_country,
-            airport_lat,
-            airport_lon,
-            airport_elevation,
-            airport_temp,
-            vertical_limit,
-            roadway_method,
-            roadway_fleet_year,
-            roadway_country,
-            parking_method,
-            study_info,
-            airport_id,
-        )
-    )
-
-    result = query_string(sql_text)
-    if (result is None) or (result == []):
-        return None
-    else:
-        raise Exception(result)
 
 
 # #################################################
