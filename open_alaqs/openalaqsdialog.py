@@ -185,7 +185,7 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.iface = iface
 
         self.ui.comboBoxAirportCode.addItem("")
-        for code in alaqs.airport_codes():
+        for code in alaqs.get_airport_codes():
             self.ui.comboBoxAirportCode.addItem(code[0])
 
         # Define some of the variables that are used throughout the class

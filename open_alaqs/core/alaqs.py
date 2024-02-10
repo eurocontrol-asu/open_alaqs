@@ -112,16 +112,16 @@ def save_study_setup(study_setup):
 
 
 @catch_errors
-def airport_codes():
-    """
-    Return airport ICAO codes in the current database
-    """
-    result = alaqsdblite.airport_codes()
-    if result is None or result == []:
-        return None
-    if isinstance(result, str):
-        raise Exception("Airport codes fetch failed: %s" % result)
-    return result
+def get_airport_codes() -> list[str]:
+    """Return a list of airport ICAO codes"""
+    return alaqsdblite.execute_sql(
+        """
+            SELECT airport_code
+            FROM default_airports
+            ORDER BY airport_code
+        """,
+        fetchone=False,
+    )
 
 
 @catch_errors

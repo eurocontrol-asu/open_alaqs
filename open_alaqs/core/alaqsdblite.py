@@ -351,22 +351,6 @@ def query_string_df(sql_text: str) -> pd.DataFrame:
             alaqsutils.print_error(query_string.__name__, Exception, e, log=logger)
 
 
-def airport_codes():
-    """
-    Return airport ICAO codes in the current database
-    :return:
-    """
-    try:
-        airport_query = (
-            "SELECT airport_code FROM default_airports ORDER BY airport_code"
-        )
-        airport_data = query_string(airport_query)
-        return airport_data
-    except Exception as e:
-        alaqsutils.print_error(airport_lookup.__name__, Exception, e, log=logger)
-        return None
-
-
 def airport_lookup(airport_code):
     """
     Lookup an airport in the current database using the ICAO code
