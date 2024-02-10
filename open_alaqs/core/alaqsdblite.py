@@ -389,33 +389,6 @@ def airport_lookup(airport_code):
 # #################################################
 
 
-def get_study_setup():
-    """
-    This function searches for and returns the complete airport information record
-    from the user_study_setup table.
-    """
-    try:
-        # sql_text = "SELECT * FROM user_study_setup WHERE airport_id=\"%s\";" % airport_id
-        sql_text = "SELECT * FROM user_study_setup"
-        result = query_string(sql_text)
-
-        if result is not None:
-            if len(result) > 0:
-                return result
-            elif result is []:
-                return None
-
-        raise Exception(
-            "Could not retrieve study setup from database. Query result is '%s'."
-            % (str(result))
-        )
-
-    except Exception as e:
-        raise e
-        # error = alaqsutils.print_error(get_study_setup.__name__, Exception, e, log=logger)
-        # return error
-
-
 def get_roadway_methods() -> tuple:
     """
     Return a list of types of available roadway methods from database
