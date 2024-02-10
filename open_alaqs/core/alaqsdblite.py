@@ -192,7 +192,7 @@ def create_project_database(alaqs_db_filename: str) -> None:
     )
 
 
-def execute_sql(sql: str, params: list[Any] = [], fetchone: bool = True) -> list:
+def execute_sql(sql: str, params: list[Any] = [], fetchone: bool = True) -> dict | list:
     """Executes provided SQL query.
 
     Args:
@@ -217,7 +217,12 @@ def execute_sql(sql: str, params: list[Any] = [], fetchone: bool = True) -> list
             conn.commit()
 
             if fetchone:
-                return cur.fetchone()
+                result = cur.fetchone()
+
+                if result is None:
+                    return None
+                else:
+                    return dict(result)
             else:
                 return cur.fetchall()
 
@@ -349,23 +354,6 @@ def query_string_df(sql_text: str) -> pd.DataFrame:
             logger.debug('INFO: Query "%s" executed successfully' % sql_text)
         else:
             alaqsutils.print_error(query_string.__name__, Exception, e, log=logger)
-
-
-def airport_lookup(airport_code):
-    """
-    Lookup an airport in the current database using the ICAO code
-    :param airport_code:
-    :return:
-    """
-    try:
-        airport_query = (
-            'SELECT * FROM default_airports WHERE airport_code="%s";' % airport_code
-        )
-        airport_data = query_string(airport_query)
-        return airport_data
-    except Exception as e:
-        alaqsutils.print_error(airport_lookup.__name__, Exception, e, log=logger)
-        return None
 
 
 # #################################################

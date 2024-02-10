@@ -16,6 +16,7 @@ the database layer.
 from open_alaqs.core import alaqsdblite, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools.create_output import create_alaqs_output
+from open_alaqs.typing import AirportDict, StudySetup
 
 logger = get_logger(__name__)
 
@@ -65,7 +66,7 @@ def create_project(database_name):
 
 
 @catch_errors
-def load_study_setup():
+def load_study_setup() -> StudySetup:
     """Load project data for the current ALAQS study.
 
     Returns:
@@ -80,7 +81,7 @@ def load_study_setup():
 
 
 @catch_errors
-def save_study_setup(study_setup):
+def save_study_setup(study_setup: StudySetup) -> None:
     """
     This function updates the study setup table in the currently OpenALAQS
     database.
@@ -125,17 +126,24 @@ def get_airport_codes() -> list[str]:
 
 
 @catch_errors
-def airport_lookup(airport_code):
+def airport_lookup(icao_code: str) -> AirportDict | None:
+    """Look up an airport based on its ICAO code and return data if available.
+
+    Args:
+        icao_code (str): ICAO code to look for
+
+    Returns:
+        AirportDict | None: airport data
     """
-    Look up an airport based on its ICAO name and return data if available
-    :param airport_code: the ICAO code of the airport being looked up
-    """
-    result = alaqsdblite.airport_lookup(airport_code)
-    if result is None or result == []:
-        return None
-    if isinstance(result, str):
-        raise Exception("Airport lookup failed: %s" % result)
-    return result
+    return alaqsdblite.execute_sql(
+        """
+            SELECT *
+            FROM default_airports
+            WHERE
+                airport_code = ?
+        """,
+        [icao_code],
+    )
 
 
 # ######################

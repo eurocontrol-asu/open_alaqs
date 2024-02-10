@@ -314,16 +314,22 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             # Look up that ICAO code in the ALAQS database
             airport_data = alaqs.airport_lookup(airport_code)
             if airport_data and not isinstance(airport_data, str):
-                self.ui.lineEditAirportName.setText(airport_data[0][2])
-                self.ui.lineEditAirportCountry.setText(airport_data[0][3])
-                self.ui.spinBoxAirportLatitude.setValue(airport_data[0][4])
-                self.ui.spinBoxAirportLongitude.setValue(airport_data[0][5])
+                self.ui.lineEditAirportName.setText(airport_data["airport_name"])
+                self.ui.lineEditAirportCountry.setText(airport_data["airport_country"])
+                self.ui.spinBoxAirportLatitude.setValue(
+                    airport_data["airport_latitude"]
+                )
+                self.ui.spinBoxAirportLongitude.setValue(
+                    airport_data["airport_longitude"]
+                )
                 self.ui.spinBoxAirportElevation.setValue(
-                    int(airport_data[0][6] * 0.3048)
+                    int(airport_data["airport_elevation"] * 0.3048)
                 )  # in meters from ft
 
                 oautk.set_default_zoom(
-                    self.iface.mapCanvas(), airport_data[0][4], airport_data[0][5]
+                    self.iface.mapCanvas(),
+                    airport_data["airport_latitude"],
+                    airport_data["airport_longitude"],
                 )
 
     def save_study_setup(self):
