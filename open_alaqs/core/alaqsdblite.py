@@ -2,10 +2,12 @@ import datetime
 import shutil
 import sqlite3 as sqlite
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 from qgis.utils import spatialite_connect
 
+from open_alaqs.alaqs_config import ALAQS_ROOT_PATH, ALAQS_TEMPLATE_DB_FILENAME
 from open_alaqs.core import alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 
@@ -130,8 +132,38 @@ def connect():
     return conn, None
 
 
-@catch_errors
-def create_project_database(db_name):
+class connect_to_alaqs_db:
+    """
+    Executes a code block with a connection to the current ALAQS database.
+
+    Example:
+    ```
+    with connect_to_alaqs_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+    ```
+    """
+
+    def __init__(self, project_database: ProjectDatabase = ProjectDatabase()) -> None:
+        self.project_database = project_database
+        self.conn = None
+
+    def __enter__(self) -> sqlite.Connection:
+        if not hasattr(self.project_database, "path"):
+            raise Exception("Cannot connec to to undefined ALAQS database!")
+
+        self.conn = spatialite_connect(self.project_database.path)
+
+        return self.conn
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+        if self.conn:
+            self.conn.close()
+
+        return exc_type is None
+
+
+def create_project_database(alaqs_db_filename: str) -> None:
     """
     Create a new database in the PostgreSQL database that contains all of
     the default tables used in an Open ALAQS project. This function takes
@@ -141,30 +173,59 @@ def create_project_database(db_name):
     db_name : the name of the database to be created
     """
 
-    # Store the filepath in-memory for future use
+    # Store the filename in-memory for future use
     project_database = ProjectDatabase()
-    project_database.path = db_name
+    project_database.path = alaqs_db_filename
 
-    # Get the filepath of this file
-    file_path = Path(__file__).absolute()
+    shutil.copy2(
+        ALAQS_ROOT_PATH.joinpath(ALAQS_TEMPLATE_DB_FILENAME),
+        Path(alaqs_db_filename).absolute(),
+    )
 
-    # Get the filepath of the new study
-    new_study_path = Path(db_name).absolute()
-
-    # Create if it doesn't exist
-    new_study_path.touch()
-
-    # Get the filepath of the blank study
-    blank_study_path = file_path.parent / "templates/project.alaqs"
-
-    shutil.copy2(blank_study_path, new_study_path)
-    msg = "[+] Created a blank ALAQS study file in %s" % db_name
-    logger.info(msg)
+    logger.info("[+] Created a blank ALAQS study file in %s", alaqs_db_filename)
 
     # Update the study created date to now
-    query_string("UPDATE user_study_setup SET date_created = DATETIME('now');")
+    execute_sql(
+        """
+            UPDATE user_study_setup SET date_created = DATETIME('now')
+        """
+    )
 
-    return None
+
+def execute_sql(sql: str, params: list[Any] = [], fetchone: bool = True) -> list:
+    """Executes provided SQL query.
+
+    Args:
+        sql (str): SQL query to be executed
+        params (list[Any]): SQL query parameters. The list size should match the number of `?` placeholders in the sql query.
+        fetchone (bool): whether to expect maximum one row or to return all rows. Default: True
+
+    Returns:
+        list: all rows that are returned by the query
+    """
+
+    try:
+        # Tidy up the string a bit. Mainly cosmetic for log file
+        sql = sql.replace("  ", "")
+
+        with connect_to_alaqs_db() as conn:
+            conn.text_factory = str
+            conn.row_factory = sqlite.Row
+            cur = conn.cursor()
+
+            cur.execute(sql, params)
+            conn.commit()
+
+            if fetchone:
+                return cur.fetchone()
+            else:
+                return cur.fetchall()
+
+    except Exception as e:
+        if "no results to fetch" in str(e):
+            logger.debug('INFO: Query "%s" executed successfully' % sql)
+        else:
+            alaqsutils.print_error(query_string.__name__, Exception, e, log=logger)
 
 
 def query_string(sql_text: str) -> list:
@@ -183,17 +244,15 @@ def query_string(sql_text: str) -> list:
         # Tidy up the string a bit. Mainly cosmetic for log file
         sql_text = sql_text.replace("  ", "")
 
-        # Start a connection to the database
-        conn, result = connect()
-        if conn is None:
-            raise Exception("Could not connect to database.")
-        conn.text_factory = str
-        cur = conn.cursor()
-        cur.execute(sql_text)
-        conn.commit()
-        result = cur.fetchall()
-        conn.close()
-        return result
+        with connect_to_alaqs_db() as conn:
+            # Start a connection to the database
+            conn.text_factory = str
+            cur = conn.cursor()
+            cur.execute(sql_text)
+            conn.commit()
+            result = cur.fetchall()
+            return result
+
     except Exception as e:
         if "no results to fetch" in e:
             logger.debug('INFO: Query "%s" executed successfully' % sql_text)
