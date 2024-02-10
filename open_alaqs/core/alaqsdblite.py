@@ -228,6 +228,65 @@ def execute_sql(sql: str, params: list[Any] = [], fetchone: bool = True) -> list
             alaqsutils.print_error(query_string.__name__, Exception, e, log=logger)
 
 
+def quote_identifier(identifier: str) -> str:
+    return f'''"{identifier.replace('"', '""')}"'''
+
+
+class SqlExpression:
+    def __init__(self, expression: str, *values: Any) -> None:
+        self.expression = expression
+        self.values = values
+
+    def __str__(self) -> str:
+        return self.expression
+
+
+def update_table(
+    table_name: str,
+    attribute_values: dict[str, Any],
+    where_values: dict[str, Any],
+) -> list[sqlite.Row]:
+    value_pairs = []
+    values = []
+
+    for attr_name, attr_value in attribute_values.items():
+        if isinstance(attr_value, SqlExpression):
+            expression = attr_value.expression
+            values += attr_value.values
+        else:
+            expression = "?"
+            values.append(attr_value)
+
+        value_pairs.append(f"{quote_identifier(attr_name)} = {expression}")
+
+    values_str = ", ".join(value_pairs)
+    sql = f"""
+        UPDATE {quote_identifier(table_name)}
+        SET {values_str}
+    """
+
+    if where_values:
+        where_value_pairs = []
+
+        for attr_name, attr_value in where_values.items():
+            if isinstance(attr_value, SqlExpression):
+                expression = attr_value.expression
+                values += attr_value.values
+            else:
+                expression = "?"
+                values.append(attr_value)
+
+            where_value_pairs.append(f"{quote_identifier(attr_name)} = {expression}")
+
+        where_values_str = " AND ".join(where_value_pairs)
+
+        sql += f"""
+            WHERE {where_values_str}
+        """
+
+    return execute_sql(sql, values)
+
+
 def query_string(sql_text: str) -> list:
     """
     A specific query for accessing project databases. Checks the query
@@ -401,118 +460,6 @@ def get_roadway_euro_standards(country: str, fleet_year: str) -> dict:
         vehicle_category: euro_standard
         for (vehicle_category, euro_standard) in euro_standards
     }
-
-
-@catch_errors
-def save_study_setup(study_setup):
-    """
-    This function updates the study setup record for the currently active project
-    """
-    project_name = study_setup[0]
-    airport_name = study_setup[1]
-    airport_id = study_setup[2]
-    icao_code = study_setup[3]
-    airport_country = study_setup[4]
-    airport_lat = study_setup[5]
-    airport_lon = study_setup[6]
-    airport_elevation = study_setup[7]
-    airport_temp = study_setup[8]
-    vertical_limit = study_setup[9]
-    parking_method = study_setup[10]
-    roadway_method = study_setup[11]
-    roadway_fleet_year = study_setup[12]
-    roadway_country = study_setup[13]
-    study_info = study_setup[14]
-
-    sql_text = (
-        'UPDATE user_study_setup SET \
-        airport_id=%s, project_name="%s", airport_name="%s", airport_code="%s", \
-        airport_country="%s", airport_latitude=%f, airport_longitude=%f, \
-        airport_elevation=\'%f\', airport_temperature=%f, vertical_limit=%f, \
-        roadway_method="%s", roadway_fleet_year="%s", roadway_country="%s", \
-        parking_method="%s", study_info="%s", date_modified=DATETIME(\'now\') \
-        WHERE airport_id=%s;'
-        % (
-            airport_id,
-            project_name,
-            airport_name,
-            icao_code,
-            airport_country,
-            airport_lat,
-            airport_lon,
-            airport_elevation,
-            airport_temp,
-            vertical_limit,
-            roadway_method,
-            roadway_fleet_year,
-            roadway_country,
-            parking_method,
-            study_info,
-            airport_id,
-        )
-    )
-
-    result = query_string(sql_text)
-    if (result is None) or (result == []):
-        return None
-    else:
-        raise Exception(result)
-
-
-@catch_errors
-def save_study_setup_dict(study_setup_dict):
-    """
-    This function updates the study setup record for the currently active project
-    """
-    project_name = study_setup_dict["project_name"]
-    airport_name = study_setup_dict["airport_name"]
-    airport_id = study_setup_dict["airport_id"]
-    icao_code = study_setup_dict["airport_code"]
-    airport_country = study_setup_dict["airport_country"]
-    airport_lat = study_setup_dict["airport_latitude"]
-    airport_lon = study_setup_dict["airport_longitude"]
-    airport_elevation = study_setup_dict["airport_elevation"]
-    airport_temp = study_setup_dict["airport_temperature"]
-    vertical_limit = study_setup_dict["vertical_limit"]
-    parking_method = study_setup_dict["parking_method"]
-    roadway_method = study_setup_dict["roadway_method"]
-    roadway_fleet_year = study_setup_dict["roadway_fleet_year"]
-    roadway_country = study_setup_dict["roadway_country"]
-    study_info = study_setup_dict["study_info"]
-
-    sql_text = (
-        'UPDATE user_study_setup SET \
-        airport_id=%s, project_name="%s", airport_name="%s", airport_code="%s", \
-        airport_country="%s", airport_latitude=%f, airport_longitude=%f, \
-        airport_elevation=\'%f\', airport_temperature=%f, vertical_limit=%f, \
-        roadway_method="%s", roadway_fleet_year="%s", roadway_country="%s", \
-        parking_method="%s", study_info="%s", date_modified=DATETIME(\'now\') \
-        WHERE airport_id=%s;'
-        % (
-            airport_id,
-            project_name,
-            airport_name,
-            icao_code,
-            airport_country,
-            airport_lat,
-            airport_lon,
-            airport_elevation,
-            airport_temp,
-            vertical_limit,
-            roadway_method,
-            roadway_fleet_year,
-            roadway_country,
-            parking_method,
-            study_info,
-            airport_id,
-        )
-    )
-
-    result = query_string(sql_text)
-    if (result is None) or (result == []):
-        return None
-    else:
-        raise Exception(result)
 
 
 # #################################################

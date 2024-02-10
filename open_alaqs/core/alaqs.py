@@ -94,38 +94,21 @@ def save_study_setup(study_setup):
             f"Incorrect number of study parameters supplied. "
             f"{len(study_setup)} provided - 15 needed"
         )
+
     for param in study_setup:
         if param == "":
             raise Exception("Study setup parameters cannot be blank")
-    result = alaqsdblite.save_study_setup(study_setup)
-    if result is None:
-        return None
 
-    raise Exception("Study setup could not be saved: %s" % result)
-
-
-@catch_errors
-def save_study_setup_dict(study_setup):
-    """
-    This function updates the study setup table in the currently OpenALAQS
-     database.
-
-    :param: study_setup : a list containing all values from the study_setup UI
-    :return: error : None if successful. Error message if not successful
-    :raises: None
-    """
-    if len(study_setup) != 19:
-        raise Exception(
-            "Incorrect number of study parameters supplied. "
-            "%d provided - 20 needed" % len(study_setup)
-        )
-    for param in study_setup:
-        if param == "":
-            raise Exception("Study setup parameters cannot be blank")
-    result = alaqsdblite.save_study_setup_dict(study_setup)
-    if result is None:
-        return None
-    raise Exception("Study setup could not be saved: %s" % result)
+    alaqsdblite.update_table(
+        "user_study_setup",
+        {
+            **study_setup,
+            "date_modified": "now",
+        },
+        {
+            "airport_id": study_setup["airport_id"],
+        },
+    )
 
 
 @catch_errors

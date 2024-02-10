@@ -193,18 +193,17 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.airport_name = None
         self.airport_id = None
         self.icao_code = None
-        self.airport_lat = None
-        self.airport_lon = None
+        self.airport_latitude = None
+        self.airport_longitude = None
         self.airport_country = None
         self.airport_elevation = None
-        self.airport_temp = None
+        self.airport_temperature = None
         self.parking_method = None
         self.roadway_method = None
         self.roadway_country = None
         self.roadway_fleet_year = None
         self.vertical_limit = None
-        self.study_information = None
-        self.study_setup = None
+        self.study_info = None
 
         self.load_study_data()
 
@@ -339,10 +338,10 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.airport_country = oautk.validate_field(
             self.ui.lineEditAirportCountry, "str"
         )
-        self.airport_lat = self.ui.spinBoxAirportLatitude.value()
-        self.airport_lon = self.ui.spinBoxAirportLongitude.value()
+        self.airport_latitude = self.ui.spinBoxAirportLatitude.value()
+        self.airport_longitude = self.ui.spinBoxAirportLongitude.value()
         self.airport_elevation = self.ui.spinBoxAirportElevation.value()
-        self.airport_temp = self.ui.spinBoxAirportTemperature.value()
+        self.airport_temperature = self.ui.spinBoxAirportTemperature.value()
         self.vertical_limit = self.ui.spinBoxVerticalLimit.value()
         self.parking_method = oautk.validate_field(self.ui.lineEditParkingMethod, "str")
         self.roadway_method = oautk.validate_field(self.ui.comboBoxRoadwayMethod, "str")
@@ -352,37 +351,37 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.roadway_country = oautk.validate_field(
             self.ui.comboBoxRoadwayCountry, "str"
         )
-        self.study_information = str(self.ui.textEditStudyInformation.toPlainText())
-        if self.study_information == "":
-            self.study_information = "Not set"
+        self.study_info = str(self.ui.textEditStudyInformation.toPlainText())
+        if self.study_info == "":
+            self.study_info = "Not set"
 
-        self.study_setup = [
-            self.project_name,
-            self.airport_name,
-            self.airport_id,
-            self.icao_code,
-            self.airport_country,
-            self.airport_lat,
-            self.airport_lon,
-            self.airport_elevation,
-            self.airport_temp,
-            self.vertical_limit,
-            self.parking_method,
-            self.roadway_method,
-            self.roadway_fleet_year,
-            self.roadway_country,
-            self.study_information,
-        ]
+        study_setup = {
+            "project_name": self.project_name,
+            "airport_name": self.airport_name,
+            "airport_id": self.airport_id,
+            "airport_code": self.icao_code,
+            "airport_country": self.airport_country,
+            "airport_latitude": self.airport_latitude,
+            "airport_longitude": self.airport_longitude,
+            "airport_elevation": self.airport_elevation,
+            "airport_temperature": self.airport_temperature,
+            "vertical_limit": self.vertical_limit,
+            "parking_method": self.parking_method,
+            "roadway_method": self.roadway_method,
+            "roadway_fleet_year": self.roadway_fleet_year,
+            "roadway_country": self.roadway_country,
+            "study_info": self.study_info,
+        }
 
         # Check for values that failed validation
-        for value in self.study_setup:
+        for value in study_setup:
             if value is False:
                 QtWidgets.QMessageBox.information(
                     self, "Information", "Please correct input parameters"
                 )
                 return
 
-        result = alaqs.save_study_setup(self.study_setup)
+        result = alaqs.save_study_setup(study_setup)
         if result is None:
             self.hide()
             self.get_values()
