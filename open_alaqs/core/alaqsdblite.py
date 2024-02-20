@@ -319,11 +319,11 @@ def query_string(sql_text: str) -> list:
             result = cur.fetchall()
             return result
 
-    except Exception as e:
-        if "no results to fetch" in e:
+    except Exception as error:
+        if "no results to fetch" in str(error):
             logger.debug('INFO: Query "%s" executed successfully' % sql_text)
         else:
-            alaqsutils.print_error(query_string.__name__, Exception, e, log=logger)
+            alaqsutils.print_error(query_string.__name__, Exception, error, log=logger)
 
 
 def query_string_df(sql_text: str) -> pd.DataFrame:
@@ -351,11 +351,11 @@ def query_string_df(sql_text: str) -> pd.DataFrame:
         conn.close()
 
         return data
-    except Exception as e:
-        if "no results to fetch" in e:
+    except Exception as error:
+        if "no results to fetch" in str(error):
             logger.debug('INFO: Query "%s" executed successfully' % sql_text)
         else:
-            alaqsutils.print_error(query_string.__name__, Exception, e, log=logger)
+            alaqsutils.print_error(query_string.__name__, Exception, error, log=logger)
 
 
 # #################################################

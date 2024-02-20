@@ -705,8 +705,8 @@ class Grid3D(object):
             raise Exception(result)
         elif not result:
             logger.error(
-                "Error while matching cell hash and geometry with text '%s"
-                % (self.geometry_text)
+                "Error while matching cell hash and geometry with text '%s",
+                geometry_text,
             )
         else:
             logger.debug(result)
