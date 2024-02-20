@@ -28,6 +28,7 @@ from qgis.PyQt.QtWidgets import QFileDialog
 from qgis.utils import OverrideCursor
 
 from open_alaqs import openalaqsuitoolkit
+from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.openalaqsdialog import (
@@ -37,6 +38,7 @@ from open_alaqs.openalaqsdialog import (
     OpenAlaqsInventory,
     OpenAlaqsLogfile,
     OpenAlaqsOpenDatabase,
+    OpenAlaqsOsmImport,
     OpenAlaqsProfiles,
     OpenAlaqsResultsAnalysis,
     OpenAlaqsStudySetup,
@@ -139,6 +141,14 @@ class OpenALAQS:
             self.run_study_setup,
         )
 
+        # Create action that will show the Import OSM data dialog
+        self.actions["osm_import"] = self.create_connected_action(
+            QtGui.QIcon(str(icons_path / "osm-logo.png")),
+            "Import OSM data",
+            self.iface.mainWindow(),
+            self.run_osm_import,
+        )
+
         # Create action that will show the Profile Edit dialog
         self.actions["profiles_edit"] = self.create_connected_action(
             QtGui.QIcon(str(icons_path / "profiles.png")),
@@ -198,6 +208,7 @@ class OpenALAQS:
         # Create new airport
         self.open_alaqs_toolbar.addSeparator()
         self.open_alaqs_toolbar.addAction(self.actions["study_setup"])
+        self.open_alaqs_toolbar.addAction(self.actions["osm_import"])
         self.open_alaqs_toolbar.addAction(self.actions["profiles_edit"])
         self.open_alaqs_toolbar.addAction(self.actions["taxi_routes"])
         self.open_alaqs_toolbar.addAction(self.actions["build_inventory"])
@@ -212,6 +223,7 @@ class OpenALAQS:
         # Set some initially unavailable
         self.actions["project_close"].setEnabled(False)
         self.actions["study_setup"].setEnabled(False)
+        self.actions["osm_import"].setEnabled(False)
         self.actions["profiles_edit"].setEnabled(False)
         self.actions["taxi_routes"].setEnabled(False)
         self.actions["build_inventory"].setEnabled(False)
@@ -294,6 +306,7 @@ class OpenALAQS:
         openalaqsuitoolkit.load_basemap_layers()
         openalaqsuitoolkit.set_default_zoom(self.canvas, 51.4775, -0.4614)
         self.actions["study_setup"].setEnabled(True)
+        self.actions["osm_import"].setEnabled(True)
         self.actions["profiles_edit"].setEnabled(True)
         self.actions["taxi_routes"].setEnabled(True)
         self.actions["build_inventory"].setEnabled(True)
@@ -320,6 +333,7 @@ class OpenALAQS:
                 openalaqsuitoolkit.load_layers(self.iface, database_path)
                 openalaqsuitoolkit.load_basemap_layers()
                 self.actions["study_setup"].setEnabled(True)
+                self.actions["osm_import"].setEnabled(True)
                 self.actions["profiles_edit"].setEnabled(True)
                 self.actions["taxi_routes"].setEnabled(True)
                 self.actions["build_inventory"].setEnabled(True)
@@ -341,6 +355,7 @@ class OpenALAQS:
 
         self.actions["project_close"].setEnabled(False)
         self.actions["study_setup"].setEnabled(False)
+        self.actions["osm_import"].setEnabled(False)
         self.actions["profiles_edit"].setEnabled(False)
         self.actions["taxi_routes"].setEnabled(False)
         self.actions["build_inventory"].setEnabled(False)
@@ -367,6 +382,16 @@ class OpenALAQS:
                     self.dialogs["study_setup"].get_values()
                     self.dialogs["study_setup"].close()
                     self.actions["profiles_edit"].setEnabled(True)
+
+                    total_features_count = 0
+                    for layer_type in LAYERS_CONFIG.keys():
+                        total_features_count += openalaqsuitoolkit.get_alaqs_layer(
+                            layer_type
+                        ).featureCount()
+
+                    if total_features_count == 0:
+                        self.run_osm_import()
+
                 except Exception:
                     pass
             else:
@@ -378,6 +403,14 @@ class OpenALAQS:
                 "No database loaded.\n"
                 "Either create a new database or open an existing study",
             )
+
+    def run_osm_import(self):
+        """
+        Opens the widget dialog for administering OSM data imports.
+        """
+        self.dialogs["osm_import"] = OpenAlaqsOsmImport()
+        self.dialogs["osm_import"].show()
+        self.dialogs["osm_import"].exec_()
 
     def run_profiles_edit(self):
         """

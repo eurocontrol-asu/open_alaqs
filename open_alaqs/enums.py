@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class ALAQSLayer(str, Enum):
+class AlaqsLayerType(str, Enum):
     AREA = "area"
     BUILDING = "building"
     GATE = "gate"

@@ -5,9 +5,9 @@ the appearance of a study created within ALAQS.
 
 
 from pathlib import Path
-from typing import TypedDict
+from typing import Optional, TypedDict
 
-from open_alaqs.enums import ALAQSLayer
+from open_alaqs.enums import AlaqsLayerType
 
 
 class ALAQSLayerConfig(TypedDict):
@@ -15,18 +15,20 @@ class ALAQSLayerConfig(TypedDict):
     table_name: str
     ui_filename: str
     py_filename: str
-    fill_color: str | None
-    border_color: str | None
-    line_width: int | None
-    line_color: int | None
+    fill_color: Optional[str]
+    border_color: Optional[str]
+    line_width: Optional[int]
+    line_color: Optional[int]
     label_enabled: bool
     label_position: int
     label_font_family: str
     label_font_size: int
+    osm_tags: list[dict[str, str]]
+    osm_attribute_mapping: dict[str, str]
 
 
-LAYERS_CONFIG: dict[ALAQSLayer, ALAQSLayerConfig] = {
-    ALAQSLayer.AREA: {
+LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
+    AlaqsLayerType.AREA: {
         "name": "Area Sources",
         "table_name": "shapes_area_sources",
         "ui_filename": "ui_area_sources.ui",
@@ -40,7 +42,7 @@ LAYERS_CONFIG: dict[ALAQSLayer, ALAQSLayerConfig] = {
         "label_font_family": "Arial",
         "label_font_size": 8,
     },
-    ALAQSLayer.BUILDING: {
+    AlaqsLayerType.BUILDING: {
         "name": "Buildings",
         "table_name": "shapes_buildings",
         "ui_filename": "ui_buildings.ui",
@@ -53,8 +55,21 @@ LAYERS_CONFIG: dict[ALAQSLayer, ALAQSLayerConfig] = {
         "label_position": 1,
         "label_font_family": "Arial",
         "label_font_size": 8,
+        "osm_search_radius_m": 1000,
+        "osm_tags": [
+            {
+                "building": "industrial",
+            },
+            {
+                "building": "apartments",
+            },
+        ],
+        "osm_attribute_mapping": {
+            "building_id": "full_id",
+            "height": "height",
+        },
     },
-    ALAQSLayer.GATE: {
+    AlaqsLayerType.GATE: {
         "name": "Gates",
         "table_name": "shapes_gates",
         "ui_filename": "ui_gates.ui",
@@ -67,8 +82,18 @@ LAYERS_CONFIG: dict[ALAQSLayer, ALAQSLayerConfig] = {
         "label_position": 1,
         "label_font_family": "Arial",
         "label_font_size": 8,
+        "osm_search_radius_m": 5000,
+        "osm_tags": [
+            # {
+            #     "aeroway": "parking_position",
+            # },
+            {
+                "aeroway": "apron",
+            },
+        ],
+        "osm_attribute_mapping": {"gate_id": "ref"},
     },
-    ALAQSLayer.PARKING: {
+    AlaqsLayerType.PARKING: {
         "name": "Parkings",
         "table_name": "shapes_parking",
         "ui_filename": "ui_parkings.ui",
@@ -81,8 +106,17 @@ LAYERS_CONFIG: dict[ALAQSLayer, ALAQSLayerConfig] = {
         "label_position": 1,
         "label_font_family": "Arial",
         "label_font_size": 8,
+        "osm_search_radius_m": 5000,
+        "osm_tags": [
+            {
+                "amenity": "parking",
+            },
+        ],
+        "osm_attribute_mapping": {
+            "parking_id": "full_id",
+        },
     },
-    ALAQSLayer.POINT_SOURCE: {
+    AlaqsLayerType.POINT_SOURCE: {
         "name": "Point Sources",
         "table_name": "shapes_point_sources",
         "ui_filename": "ui_point_sources.ui",
@@ -96,7 +130,7 @@ LAYERS_CONFIG: dict[ALAQSLayer, ALAQSLayerConfig] = {
         "label_font_family": "Arial",
         "label_font_size": 8,
     },
-    ALAQSLayer.ROADWAY: {
+    AlaqsLayerType.ROADWAY: {
         "name": "Roadways",
         "table_name": "shapes_roadways",
         "ui_filename": "ui_roadways.ui",
@@ -110,7 +144,7 @@ LAYERS_CONFIG: dict[ALAQSLayer, ALAQSLayerConfig] = {
         "label_font_family": "Arial",
         "label_font_size": 8,
     },
-    ALAQSLayer.TAXIWAY: {
+    AlaqsLayerType.TAXIWAY: {
         "name": "Taxiways",
         "table_name": "shapes_taxiways",
         "ui_filename": "ui_taxiways.ui",
@@ -123,8 +157,17 @@ LAYERS_CONFIG: dict[ALAQSLayer, ALAQSLayerConfig] = {
         "label_position": 1,
         "label_font_family": "Arial",
         "label_font_size": 8,
+        "osm_search_radius_m": 5000,
+        "osm_tags": [
+            {
+                "aeroway": "taxiway",
+            },
+        ],
+        "osm_attribute_mapping": {
+            "ref": "taxiway_id",
+        },
     },
-    ALAQSLayer.TRACK: {
+    AlaqsLayerType.TRACK: {
         "name": "Tracks",
         "table_name": "shapes_tracks",
         "ui_filename": "ui_tracks.ui",
@@ -138,7 +181,7 @@ LAYERS_CONFIG: dict[ALAQSLayer, ALAQSLayerConfig] = {
         "label_font_family": "Arial",
         "label_font_size": 8,
     },
-    ALAQSLayer.RUNWAY: {
+    AlaqsLayerType.RUNWAY: {
         "name": "Runways",
         "table_name": "shapes_runways",
         "ui_filename": "ui_runways.ui",
@@ -151,6 +194,15 @@ LAYERS_CONFIG: dict[ALAQSLayer, ALAQSLayerConfig] = {
         "label_position": 1,
         "label_font_family": "Arial",
         "label_font_size": 8,
+        "osm_search_radius_m": 5000,
+        "osm_tags": [
+            {
+                "aeroway": "runway",
+            },
+        ],
+        "osm_attribute_mapping": {
+            "ref": "runway_id",
+        },
     },
 }
 
