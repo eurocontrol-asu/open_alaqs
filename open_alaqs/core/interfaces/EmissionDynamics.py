@@ -72,6 +72,7 @@ class EmissionDynamics:
             "vertical_shift",
             "vertical_extension",
         ]:
+            # TODO the current class no attribute `_emissions`, what is this?
             if direction in self._emissions[mode]:
                 self._emissions[mode][direction] = val
 

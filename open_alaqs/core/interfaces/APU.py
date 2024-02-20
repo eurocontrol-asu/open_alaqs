@@ -93,6 +93,7 @@ class APU:
         return list(self._emissions.keys())
 
     def getTimes(self):
+        # NOTE the current class has not attribute `_times`, what is this?
         return self._times
 
     def getEmissions(self, mode):
