@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import Optional, TypedDict
 
 import requests
 from qgis import processing
@@ -16,7 +16,7 @@ class OsmLayersOutput(TypedDict):
     OUTPUT_MULTIPOLYGONS: QgsVectorLayer
 
 
-def get_coords_for_icao_code(icao_code: str) -> tuple[float, float] | None:
+def get_coords_for_icao_code(icao_code: str) -> Optional[tuple[float, float]]:
     """Searches Nominatum for object that matches the passed string.
 
     Args:
@@ -39,7 +39,7 @@ def get_coords_for_icao_code(icao_code: str) -> tuple[float, float] | None:
 
 
 def format_coords_for_overpass_api(
-    coords: tuple[float, float], buffer_m: int | None = None
+    coords: tuple[float, float], buffer_m: Optional[int] = None
 ) -> str:
     """Returns coordinates formatted to be used in Overpass API
 
