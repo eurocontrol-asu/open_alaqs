@@ -65,16 +65,6 @@ class EmissionDynamics:
             return self._emission_dynamics[mode]
         return {}
 
-    def setEmissionDynamics(self, mode, direction, val):
-        if direction in [
-            "horizontal_shift",
-            "horizontal_extension",
-            "vertical_shift",
-            "vertical_extension",
-        ]:
-            if direction in self._emissions[mode]:
-                self._emissions[mode][direction] = val
-
     def __str__(self):
         val = "\n Emission Dynamics for source category '%s'" % (
             self.getDynamicsGroup()

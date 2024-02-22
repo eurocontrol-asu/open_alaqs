@@ -56,10 +56,7 @@ def create_project(database_name):
     if database_name.strip() == "":
         raise Exception("database_name cannot be empty")
 
-    result = alaqsdblite.create_project_database(database_name)
-    if result is not None:
-        error = f"Problem from alaqsdblite.create_project_database(): {result}"
-        raise Exception(error)
+    alaqsdblite.create_project_database(database_name)
 
 
 # ##########################
@@ -774,80 +771,6 @@ def get_lasport_scenarios():
 def inventory_creation_new(
     inventory_path, model_parameters, study_setup, met_csv_path=""
 ):
-    result = create_alaqs_output(
+    create_alaqs_output(
         inventory_path, model_parameters, study_setup, met_csv_path=met_csv_path
     )
-    return result
-
-
-@catch_errors
-def inventory_source_list(inventory_path, source_type):
-    source_list = alaqsdblite.inventory_source_list(inventory_path, source_type)
-    if isinstance(source_list, str):
-        raise Exception(source_list)
-    return source_list
-
-
-@catch_errors
-def inventory_copy_study_setup(inventory_path):
-    result = alaqsdblite.inventory_copy_study_setup(inventory_path)
-    if result is not None:
-        raise Exception(
-            "Study setup could not be copied to ALAQS output file: %s" % result
-        )
-    return None
-
-
-@catch_errors
-def inventory_copy_gate_profiles(inventory_path):
-    result = alaqsdblite.inventory_copy_gate_profiles(inventory_path)
-    if result is not None:
-        raise Exception(
-            "Gate profiles could not be copied to ALAQS output file: %s" % result
-        )
-    return None
-
-
-@catch_errors
-def inventory_copy_emission_dynamics(inventory_path):
-    result = alaqsdblite.inventory_copy_emission_dynamics(inventory_path)
-    if result is not None:
-        raise Exception(
-            "Emission dynamics could not be copied to ALAQS output file: %s" % result
-        )
-    return None
-
-
-@catch_errors
-def inventory_insert_movements(inventory_path, movement_path):
-    """
-    Thin layer to pass off the creation of a new ALAQS output database to the
-     database layer.
-
-    :param inventory_path: the path of the output to be created [string]
-    :param movement_path: the path of the movement file to be worked with
-    """
-    result = alaqsdblite.inventory_insert_movements(inventory_path, movement_path)
-    if result is not None:
-        raise Exception(
-            "Movements could not be added to ALAQS output file: %s" % result
-        )
-    return None
-
-
-@catch_errors
-def inventory_copy_activity_profiles(inventory_path):
-    result = alaqsdblite.inventory_copy_activity_profiles(inventory_path)
-    if result is not None:
-        raise Exception(
-            "Activity profiles could not be copied to ALAQS output file: %s" % result
-        )
-    return None
-
-
-@catch_errors
-def inventory_copy_vector_layers(inventory_path):
-    result = alaqsdblite.inventory_copy_vector_layers(inventory_path)
-    if result is not None:
-        raise Exception("Vector could not be copied to ALAQS output file: %s" % result)
-    return None

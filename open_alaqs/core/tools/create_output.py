@@ -44,7 +44,6 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_p
     :param study_setup: a dictionary with parameters related to the airport model
     :param met_csv_path: the path to the meteorological data
     :type inventory_path: str
-    :return: bool
     """
 
     # model_parameters

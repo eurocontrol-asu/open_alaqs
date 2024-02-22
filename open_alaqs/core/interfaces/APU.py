@@ -92,9 +92,6 @@ class APU:
     def getModes(self):
         return list(self._emissions.keys())
 
-    def getTimes(self):
-        return self._times
-
     def getEmissions(self, mode):
         if mode in self._emissions:
             return self._emissions[mode]

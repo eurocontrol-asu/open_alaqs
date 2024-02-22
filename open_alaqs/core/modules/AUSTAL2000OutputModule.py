@@ -657,7 +657,9 @@ class AUSTAL2000DispersionModule(DispersionModule):
             if not xy_rect:
                 logger.info(
                     "No matched_cells (%s) for Bbox: %s (Geo: %s) ? ",
-                    (xy_rect, bbox, source_wkt),
+                    xy_rect,
+                    bbox,
+                    source_wkt,
                 )
                 continue
 

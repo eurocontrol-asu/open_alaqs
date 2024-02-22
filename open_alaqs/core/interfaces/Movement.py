@@ -563,9 +563,9 @@ class Movement:
                                 .getEmissionDynamics(sas_method)["vertical_shift"]
                             )
                             logger.debug(f"{getframeinfo(currentframe())}")
-                            logger.debug("ver_shift:", ver_shift)
-                            logger.debug("ver_ext:", ver_ext)
-                            logger.debug("hor_ext:", hor_ext)
+                            logger.debug("ver_shift: %s", ver_shift)
+                            logger.debug("ver_ext: %s", ver_ext)
+                            logger.debug("hor_ext: %s", hor_ext)
                             # print(hor_ext, ver_ext, ver_shift)
 
                             em_.setVerticalExtent(
@@ -802,7 +802,7 @@ class Movement:
                                         )
                             else:
                                 logger.info(
-                                    "No Taxi Engine Count for %s" % self.getName()
+                                    "No Taxi Engine Count for %s", self.getName()
                                 )
 
                         # --- ARRIVALS ---
@@ -927,8 +927,8 @@ class Movement:
         else:
             # ToDo: Add zero emissions ?
             logger.error(
-                "Did not find a taxi route for movement '%s'. Cannot calculate taxiing emissions."
-                % (self.getName())
+                "Did not find a taxi route for movement '%s'. Cannot calculate taxiing emissions.",
+                self.getName(),
             )
             # emissions.append({"emissions": Emission(defaultValues=defaultEmissions), "distance_time": 0.0, "distance_space": 0.0})
 
@@ -2160,7 +2160,7 @@ class MovementStore(Store, metaclass=Singleton):
                     eng = aircraft_store.getObject(def_ac).getDefaultEngine().getName()
 
                     logger.debug(
-                        "\t +++ taking default engine %s for aircraft %s", (eng, def_ac)
+                        "\t +++ taking default engine %s for aircraft %s", eng, def_ac
                     )
 
                     if engine_store.hasKey(eng):
@@ -2283,7 +2283,8 @@ class MovementStore(Store, metaclass=Singleton):
                         logger.debug(
                             "%s for AC %s is not recognised as either "
                             "and arrival or departure",
-                            (_ad, _ac),
+                            _ad,
+                            _ac,
                         )
                         continue
                     eq_mdf.loc[ij_, "profile_id"] = profile_id
@@ -2424,7 +2425,8 @@ class MovementStore(Store, metaclass=Singleton):
                 logger.info(
                     "Engine wasn't found for movement %s. "
                     "Will use default engine (%s).",
-                    (mov.getName(), mov_engine.getName()),
+                    mov.getName(),
+                    mov_engine.getName(),
                 )
 
             # Add the relevant objects to the movement
