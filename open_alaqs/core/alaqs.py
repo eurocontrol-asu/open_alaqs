@@ -103,7 +103,7 @@ def save_study_setup(study_setup: StudySetup) -> None:
         "user_study_setup",
         {
             **study_setup,
-            "date_modified": "now",
+            "date_modified": alaqsdblite.SqlExpression("NOW()"),
         },
         {
             "airport_id": study_setup["airport_id"],
