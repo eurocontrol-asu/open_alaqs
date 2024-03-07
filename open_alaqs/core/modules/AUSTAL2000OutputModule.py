@@ -69,7 +69,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 os.mkdir(self._output_path)
 
         self._sequ = "k+,j-,i+"
-        self._grid = values_dict.get("grid", "")
+        self._grid: Grid3D = values_dict.get("grid", None)
 
         self._pollutants_list = values_dict.get("pollutants_list")
         if self._pollutant:
@@ -207,12 +207,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
     def setRoughnessLength(self, var):
         self._roughness_level = var
-
-    def getGrid(self) -> Grid3D:
-        return self._grid
-
-    def setGrid(self, var):
-        self._grid = var
 
     def isEnabled(self):
         return self._enable
@@ -642,9 +636,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         """
 
-        # Get the grid
-        grid = self.getGrid()
-
         # Get z_min and z_max
         z_min = bbox["z_min"]
         z_max = bbox["z_max"]
@@ -668,12 +659,12 @@ class AUSTAL2000DispersionModule(DispersionModule):
             for index_height_level, cell_hash in enumerate(xy_rect):
 
                 # Get the x, y, z coordinates
-                x_, y_, z_ = grid.convertCellHashListToCenterGridCellCoordinates(
+                x_, y_, z_ = self._grid.convertCellHashListToCenterGridCellCoordinates(
                     [cell_hash]
                 )[cell_hash]
 
                 # Get the cell box
-                cell_bbox = self.getCellBox(x_, y_, z_, grid)
+                cell_bbox = self.getCellBox(x_, y_, z_, self._grid)
 
                 # calculate the efficiency once for each x,y pair and reuse it
                 #  for all z levels
@@ -1124,8 +1115,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
         total_emissions_per_cell_list = []
 
         # Get the grid
-        grid = self.getGrid()
-
         for (source_, emissions__) in result:
 
             self._source_height = 0
@@ -1181,7 +1170,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                         matched_cells_coeff = self.getMatchedCellCoeffs(
                             g_wkt,
                             emissions_,
-                            grid,
+                            self._grid,
                             is_point_element_,
                             is_line_element_,
                             is_polygon_element_,
@@ -1201,7 +1190,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                     matched_cells_coeff = self.getMatchedCellCoeffs(
                         e_wkt,
                         emissions_,
-                        grid,
+                        self._grid,
                         is_point_element_,
                         is_line_element_,
                         is_polygon_element_,

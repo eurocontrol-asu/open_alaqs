@@ -18,6 +18,7 @@ from typing import Optional
 from open_alaqs.core import alaqsdblite, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools.create_output import create_alaqs_output
+from open_alaqs.core.tools.sql_interface import update_table
 from open_alaqs.typing import AirportDict, StudySetup
 
 logger = get_logger(__name__)
@@ -99,7 +100,8 @@ def save_study_setup(study_setup: StudySetup) -> None:
         if param == "":
             raise Exception("Study setup parameters cannot be blank")
 
-    alaqsdblite.update_table(
+    update_table(
+        alaqsdblite.ProjectDatabase().path,
         "user_study_setup",
         {
             **study_setup,

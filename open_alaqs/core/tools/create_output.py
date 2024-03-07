@@ -175,7 +175,7 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_p
     # add grid configuration to sqlite database
     grid = Grid3D(inventory_path, grid_configuration_, deserialize=False)
     # add grid to the database
-    grid.serializeConfiguration()
+    grid.serialize_configuration()
 
     # save ambient conditions to database
     if met_csv_path:

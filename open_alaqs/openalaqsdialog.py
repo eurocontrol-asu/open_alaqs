@@ -2484,7 +2484,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
     def result_file_path_changed(self, path):
         """
         Open a file browse window for the user to be able to locate and load an
-         ALAQS output file
+        ALAQS output file
         """
         try:
             if os.path.exists(path):

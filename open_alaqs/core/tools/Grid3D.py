@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Tuple
+from typing import Any, Tuple
 
 import geopandas as gpd
 import pandas as pd
@@ -12,20 +12,23 @@ from open_alaqs.core.tools.SizeLimitedDict import SizeLimitedDict
 logger = get_logger(__name__)
 
 
-class Grid3D(object):
+class Grid3D:
     """
     Class that contains the grid definition (number of cells in x,y,z
     dimensions, the resolution, and the reference (middle) x, y coordinates)
     and provides helper methods to work with the grid
     """
 
-    def __init__(self, db_path="", grid_config=None, deserialize=True):
+    def __init__(
+        self,
+        db_path: str = "",
+        grid_config: dict = None,
+        deserialize: bool = True,
+    ):
         if grid_config is None:
             grid_config = {}
 
         self._db_path = db_path
-        self._table_name_definition = "grid_3d_definition"
-        self._table_name_cell_coordinates = "grid_3d_cell_coordinates"
 
         # Definition of the grid
         # number of cells in x,y,z dimensions
@@ -122,81 +125,47 @@ class Grid3D(object):
     def getSortedElements(self):
         return OrderedDict(sorted(list(self._elements.items()), key=lambda t: t[0]))
 
-    def serializeConfiguration(self):
-        try:
-            # Create a new table to hold the grid definition needed to
-            # deserialize the Grid3D Object
-            result = self.insert_3d_grid_definition_table(
-                self._db_path, self._table_name_definition
-            )
-            if result is not True:
-                raise ValueError(result)
-        except Exception as e:
-            logger.error("Failed to serialize the 3D grid configuration: %s" % e)
-            return False
-
     def serialize(self):
         try:
-            self.serializeConfiguration()
-
-            # Create a new 3D table to hold a 3D grid
-            result = self.make_3d_grid_coordinates_table(
-                self._db_path, self._table_name_cell_coordinates
-            )
-            if result is not True:
-                raise ValueError(result)
-
-            # insert all cells with hashes and coordinates
-            result = self.insert_rows(
-                self._db_path,
-                self._table_name_cell_coordinates,
-                self.get_3d_grid_cells(),
-            )
-            if result is not True:
-                raise ValueError(result)
-
-            return True
+            self.serialize_configuration()
+            self.serialize_values(self._db_path, self.get_3d_grid_cells())
         except Exception as e:
             logger.error("Failed to serialize the 3D grid: %s" % e)
             return False
 
+        return True
+
     def deserialize(self):
-        sql_text = (
-            "SELECT table_name_cell_coordinates, x_cells, y_cells, "
-            "z_cells, x_resolution, y_resolution, z_resolution, "
-            "reference_latitude, reference_longitude FROM %s;"
-            % (self._table_name_definition)
-        )
-        result = sql_interface.query_text(self._db_path, sql_text)
-        # result contains: [('grid_3d_cell_coordinates', 50, 50, 10, 250, 250,
-        # 100, 49.916667, -6.316667)]
+        query = """
+            SELECT
+                table_name_cell_coordinates,
+                x_cells,
+                y_cells,
+                z_cells,
+                x_resolution,
+                y_resolution,
+                z_resolution,
+                reference_latitude,
+                reference_longitude
+            FROM "grid_3d_definition"
+        """
 
-        if isinstance(result, str):
-            raise Exception(result)
-        elif not result:
-            logger.error(
-                "Deserialization failed. No data returned from "
-                "database '%s' with table '%s'",
-                self._db_path,
-                self._table_name_definition,
-            )
-        else:
-            # if multiple entries found, take only the first
-            table_id = 0
-            self._table_name_cell_coordinates = result[table_id][0]
-            self._x_cells = result[table_id][1]
-            self._y_cells = result[table_id][2]
-            self._z_cells = result[table_id][3]
+        result = sql_interface.execute_sql(self._db_path, query)
 
-            self._x_resolution = result[table_id][4]
-            self._y_resolution = result[table_id][5]
-            self._z_resolution = result[table_id][6]
+        result = sql_interface.query_text(self._db_path, query)
 
-            self._reference_latitude = result[table_id][7]
-            self._reference_longitude = result[table_id][8]
-            logger.info(
-                "Deserialized Grid3D definition from db '%s' " % (self._db_path)
-            )
+        self._x_cells = result["x_cells"]
+        self._y_cells = result["y_cells"]
+        self._z_cells = result["z_cells"]
+
+        self._x_resolution = result["x_resolution"]
+        self._y_resolution = result["y_resolution"]
+        self._z_resolution = result["z_resolution"]
+
+        self._reference_latitude = result["reference_latitude"]
+        self._reference_longitude = result["reference_longitude"]
+
+        logger.info("Deserialized Grid3D definition from db '%s' " % (self._db_path))
 
     def resetGridOriginXYFromReferencePoint(self):
         """
@@ -292,7 +261,7 @@ class Grid3D(object):
         gdf.loc[:, "geometry"] = polys
         return gdf
 
-    def get_3d_grid_cells(self):
+    def get_3d_grid_cells(self) -> list[list[Any]]:
         """
         This function builds a table that contains the locations of every cell that make up the user defined 3D grid. The
         result is a list of cells, each with a unique ID and the coordinates of the minimum and maximum x, y, and z
@@ -326,129 +295,111 @@ class Grid3D(object):
         :return: bool of success
         :raise ValueError: if the database returns an error
         """
-        try:
-            if len(row_list) and len(row_list[0]):
-                values_str = "?" + ", ?" * (len(row_list[0]) - 1)
-                sql_text = "INSERT INTO %s VALUES (%s);" % (table_name, values_str)
-                result = sql_interface.query_insert_many(
-                    database_path, sql_text, row_list
-                )
-                if isinstance(result, str):
-                    logger.error("Row was not inserted: %s" % result)
-                    raise ValueError(result)
-                elif result is False:
-                    logger.error("Row was not inserted: function returned False")
-                    return False
 
-            # logger.debug("Row was inserted in table '%s'"%(table_name))
-            return True
-        except Exception as e:
-            return e
-
-    def insert_3d_grid_definition_table(self, database_path, table_name):
+    def serialize_configuration(self, database_path: str) -> bool:
         """
         Create a new table to hold the definition of the Grid3D Object
 
         :param database_path: the path to the database being written to
-        :param table_name: the name of the table to be created as a string
         :return: bool
-        :raise ValueError: if the query generates a string response (an error)
         """
+
         try:
-            # Create the table and drop existing tables
-            sql_query = 'DROP TABLE IF EXISTS "%s";' % table_name
-            sql_interface.query_text(database_path, sql_query)
+            logger.debug("Droping the existing 3D grid definition table...")
 
-            sql_query = (
-                'CREATE TABLE %s \
-                ("table_name_cell_coordinates" VARCHAR,\
-                "x_cells" DECIMAL,\
-                "y_cells" DECIMAL,\
-                "z_cells" DECIMAL,\
-                "x_resolution" DECIMAL,\
-                "y_resolution" DECIMAL,\
-                "z_resolution" DECIMAL,\
-                "reference_latitude" DECIMAL,\
-                "reference_longitude" DECIMAL\
-                );'
-                % table_name
+            sql_interface.perform_sql(
+                database_path,
+                """
+                    DROP TABLE IF EXISTS "grid_3d_definition"
+                """,
             )
-            result = sql_interface.query_text(database_path, sql_query)
 
-            if isinstance(result, str):
-                logger.error("Table for grid definition not created: %s" % result)
-                raise ValueError(result)
-            elif result is False:
-                logger.error(
-                    "Table for grid definition not created: query returned False"
-                )
-                return False
-            else:
-                logger.debug("Table for grid definition created")
+            logger.debug("Creating a new 3D grid definition table...")
 
-            # Fill the table
-            sql_query = "INSERT INTO %s VALUES (?,?,?,?,?,?,?,?,?);" % (table_name)
-            values = [
-                self._table_name_cell_coordinates,
-                self._x_cells,
-                self._y_cells,
-                self._z_cells,
-                self._x_resolution,
-                self._y_resolution,
-                self._z_resolution,
-                self._reference_latitude,
-                self._reference_longitude,
-            ]
-            result = sql_interface.query_insert_many(database_path, sql_query, [values])
+            sql_interface.perform_sql(
+                database_path,
+                """
+                    CREATE TABLE "grid_3d_definition"
+                    (
+                        "table_name_cell_coordinates" VARCHAR,
+                        "x_cells" DECIMAL,
+                        "y_cells" DECIMAL,
+                        "z_cells" DECIMAL,
+                        "x_resolution" DECIMAL,
+                        "y_resolution" DECIMAL,
+                        "z_resolution" DECIMAL,
+                        "reference_latitude" DECIMAL,
+                        "reference_longitude" DECIMAL
+                    )
+                """,
+            )
 
-            if isinstance(result, str):
-                logger.error(
-                    "Grid definition not added to table '%s': %s" % (table_name, result)
-                )
-                raise ValueError(result)
-            elif result is False:
-                logger.error(
-                    "Failed to add values for grid definition to table '%s'."
-                    % (table_name)
-                )
-                return False
-            else:
-                # logger.debug("Successfully added values for grid definition to table '%s'." % (table_name))
-                return True
-        except Exception as e:
-            logger.error("Exception: " % e)
+            logger.debug("Populating the newly created 3D grid definition table...")
+
+            sql_interface.insert_into_table(
+                database_path,
+                "grid_3d_definition",
+                {
+                    "table_name_cell_coordinates": "grid_3d_cell_coordinates",
+                    "x_cells": self._x_cells,
+                    "y_cells": self._y_cells,
+                    "z_cells": self._z_cells,
+                    "x_resolution": self._x_resolution,
+                    "y_resolution": self._y_resolution,
+                    "z_resolution": self._z_resolution,
+                    "reference_latitude": self._reference_latitude,
+                    "reference_longitude": self._reference_longitude,
+                },
+            )
+
+        except Exception as error:
+            logger.error(
+                f"Error while recreating and populating the 3D grid definition table: {error}",
+                exc_info=error,
+            )
+
+            return False
+
+        return True
 
     @staticmethod
-    def make_3d_grid_coordinates_table(database_path, table_name):
+    def serialize_values(database_path: str, rows: list[list[Any]]) -> bool:
         """
         Create a new 3D table to hold a 3D grid
-        :param database_path: the path to the database being written to
-        :param table_name: the name of the table to be created as a string
         :return: bool
         :raise ValueError: if the query generates a string response (an error)
         """
-        try:
-            sql_query = 'DROP TABLE IF EXISTS "%s";' % table_name
-            sql_interface.query_text(database_path, sql_query)
+        logger.debug("Droping the existing 3D grid cells table...")
 
-            sql_query = (
-                'CREATE TABLE %s ("cell_hash" VARCHAR(15),"x_min" DECIMAL,"x_max" DECIMAL, "y_min" DECIMAL,'
-                '"y_max" DECIMAL, "z_min" DECIMAL, "z_max" DECIMAL);' % table_name
-            )
-            result = sql_interface.query_text(database_path, sql_query)
-            if isinstance(result, str):
-                logger.error("Table for 3D cell hashes not created: %s" % result)
-                raise ValueError(result)
-            elif result is False:
-                logger.error(
-                    "Table for 3D cell hashes not created: query returned False"
+        sql_interface.perform_sql(
+            database_path,
+            """
+                DROP TABLE IF EXISTS "grid_3d_cell_coordinates"
+            """,
+        )
+
+        logger.debug("Droping the existing 3D grid cells table...")
+
+        sql_interface.perform_sql(
+            database_path,
+            """
+                CREATE TABLE "grid_3d_cell_coordinates" (
+                    "cell_hash" VARCHAR(15),
+                    "x_min" DECIMAL,
+                    "x_max" DECIMAL,
+                    "y_min" DECIMAL,
+                    "y_max" DECIMAL,
+                    "z_min" DECIMAL,
+                    "z_max" DECIMAL
                 )
-                return False
-            else:
-                # logger.debug("Table for 3D cell hashes created")
-                return True
-        except Exception:
-            pass
+            """,
+        )
+
+        logger.debug("Populating existing 3D grid cells table...")
+
+        sql_interface.insert_into_table(database_path, "grid_3d_cell_coordinates", rows)
+
+        logger.debug("3D grid cells table populated!")
 
     def convertXYZIndicesToGridCellMinMax(self, x_idx, y_idx, z_idx):
         val = {

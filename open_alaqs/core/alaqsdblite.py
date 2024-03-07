@@ -2,7 +2,6 @@ import datetime
 import shutil
 import sqlite3 as sqlite
 from pathlib import Path
-from typing import Any, Union
 
 import pandas as pd
 from qgis.utils import spatialite_connect
@@ -10,6 +9,7 @@ from qgis.utils import spatialite_connect
 from open_alaqs.alaqs_config import ALAQS_ROOT_PATH, ALAQS_TEMPLATE_DB_FILENAME
 from open_alaqs.core import alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.tools.sql_interface import execute_sql
 
 logger = get_logger(__name__)
 
@@ -186,112 +186,11 @@ def create_project_database(alaqs_db_filename: str) -> None:
 
     # Update the study created date to now
     execute_sql(
+        alaqs_db_filename,
         """
             UPDATE user_study_setup SET date_created = DATETIME('now')
-        """
+        """,
     )
-
-
-def execute_sql(
-    sql: str, params: list[Any] = [], fetchone: bool = True
-) -> Union[dict, list]:
-    """Executes provided SQL query.
-
-    Args:
-        sql (str): SQL query to be executed
-        params (list[Any]): SQL query parameters. The list size should match the number of `?` placeholders in the sql query.
-        fetchone (bool): whether to expect maximum one row or to return all rows. Default: True
-
-    Returns:
-        list: all rows that are returned by the query
-    """
-
-    try:
-        # Tidy up the string a bit. Mainly cosmetic for log file
-        sql = sql.replace("  ", "")
-
-        with connect_to_alaqs_db() as conn:
-            conn.text_factory = str
-            conn.row_factory = sqlite.Row
-            cur = conn.cursor()
-
-            cur.execute(sql, params)
-            conn.commit()
-
-            if fetchone:
-                result = cur.fetchone()
-
-                if result is None:
-                    return None
-                else:
-                    return dict(result)
-            else:
-                return cur.fetchall()
-
-    except Exception as e:
-        if "no results to fetch" in str(e):
-            logger.debug('INFO: Query "%s" executed successfully' % sql)
-        else:
-            alaqsutils.print_error(query_string.__name__, Exception, e, log=logger)
-
-
-def quote_identifier(identifier: str) -> str:
-    return f'''"{identifier.replace('"', '""')}"'''
-
-
-class SqlExpression:
-    def __init__(self, expression: str, *values: Any) -> None:
-        self.expression = expression
-        self.values = values
-
-    def __str__(self) -> str:
-        return self.expression
-
-
-def update_table(
-    table_name: str,
-    attribute_values: dict[str, Any],
-    where_values: dict[str, Any],
-) -> list[sqlite.Row]:
-    value_pairs = []
-    values = []
-
-    for attr_name, attr_value in attribute_values.items():
-        if isinstance(attr_value, SqlExpression):
-            expression = attr_value.expression
-            values += attr_value.values
-        else:
-            expression = "?"
-            values.append(attr_value)
-
-        value_pairs.append(f"{quote_identifier(attr_name)} = {expression}")
-
-    values_str = ", ".join(value_pairs)
-    sql = f"""
-        UPDATE {quote_identifier(table_name)}
-        SET {values_str}
-    """
-
-    if where_values:
-        where_value_pairs = []
-
-        for attr_name, attr_value in where_values.items():
-            if isinstance(attr_value, SqlExpression):
-                expression = attr_value.expression
-                values += attr_value.values
-            else:
-                expression = "?"
-                values.append(attr_value)
-
-            where_value_pairs.append(f"{quote_identifier(attr_name)} = {expression}")
-
-        where_values_str = " AND ".join(where_value_pairs)
-
-        sql += f"""
-            WHERE {where_values_str}
-        """
-
-    return execute_sql(sql, values)
 
 
 def query_string(sql_text: str) -> list:
