@@ -56,20 +56,20 @@ class Grid3D:
             self.deserialize()
 
         logger.info("3D Grid Definition:")
-        logger.info("\t Number of cells in x-direction: %i" % self._x_cells)
-        logger.info("\t Number of cells in y-direction: %i" % self._y_cells)
-        logger.info("\t Number of cells in z-direction: %i" % self._z_cells)
-        logger.info("\t Resolution in x-direction: %i" % self._x_resolution)
-        logger.info("\t Resolution in y-direction: %i" % self._y_resolution)
-        logger.info("\t Resolution in z-direction: %i" % self._x_resolution)
+        logger.info("\t Number of cells in x-direction: %i", self._x_cells)
+        logger.info("\t Number of cells in y-direction: %i", self._y_cells)
+        logger.info("\t Number of cells in z-direction: %i", self._z_cells)
+        logger.info("\t Resolution in x-direction: %i", self._x_resolution)
+        logger.info("\t Resolution in y-direction: %i", self._y_resolution)
+        logger.info("\t Resolution in z-direction: %i", self._x_resolution)
         logger.info(
-            "\t Reference latitude (center of grid): %.5f" % self._reference_latitude
+            "\t Reference latitude (center of grid): %.5f", self._reference_latitude
         )
         logger.info(
-            "\t Reference longitude (center of grid): %.5f" % self._reference_longitude
+            "\t Reference longitude (center of grid): %.5f", self._reference_longitude
         )
         logger.info(
-            "\t Reference altitude (center of grid): %.5f" % self._reference_altitude
+            "\t Reference altitude (center of grid): %.5f", self._reference_altitude
         )
 
         # calculate the grid origin from reference coordinates, which is the
@@ -77,7 +77,7 @@ class Grid3D:
         self._grid_origin_x = 0.0
         self._grid_origin_y = 0.0
         self._grid_origin_z = 0.0
-        self._reset_grid_origin_xy_from_reference_point()
+        self._grid_origin_x, self._grid_origin_y = self._calculate_origin_xy()
 
         self._elements = OrderedDict()
 
@@ -130,56 +130,39 @@ class Grid3D:
         self._reference_latitude = result["reference_latitude"]
         self._reference_longitude = result["reference_longitude"]
 
-        logger.info("Deserialized Grid3D definition from db '%s' " % (self._db_path))
+        logger.info("Deserialized Grid3D definition from db '%s' ", self._db_path)
 
-    def _reset_grid_origin_xy_from_reference_point(self):
+    def _calculate_origin_xy(self) -> tuple[float, float]:
         """
-        This method sets the origin of the grid to the bottom-left corner.
+        Calculates the origin of the grid to the bottom-left corner.
         "Reference" coordinates need to be related to the center of the grid.
         """
-        try:
-            reference_point_wkt = "POINT (%s %s)" % (
-                self._reference_longitude,
-                self._reference_latitude,
-            )
-            # logger.debug("Grid reference point: %s" % reference_point_wkt)
-            # reference_point_df = gpd.GeoDataFrame(index=range(0, 1), columns=["geometry"], crs={'init': 'epsg:4326'})
-            # reference_point_df.loc[0, "geometry"] = Point(self._reference_longitude, self._reference_latitude)
+        point_wkt = "POINT ({} {})".format(
+            self._reference_longitude,
+            self._reference_latitude,
+        )
+        sql = """
+            SELECT
+                X(
+                    ST_Transform(
+                        ST_PointFromText(?, 4326),
+                        3857
+                    )
+                ) AS y,
+                Y(
+                    ST_Transform(
+                        ST_PointFromText(?, 4326),
+                        3857
+                    )
+                ) AS x
+        """
+        row = sql_interface.execute_sql(self._db_path, sql, [point_wkt, point_wkt])
 
-            # Convert the ARP into EPSG 3857
-            # apt_ref_point_crs3857 = reference_point_df.to_crs({'init': 'epsg:3857'}).geometry.iloc[0]
+        # Calculate the coordinates of the bottom left of the grid
+        origin_x = row["x"] - (self._x_cells / 2.0) * self._x_resolution
+        origin_y = row["y"] - (self._y_cells / 2.0) * self._y_resolution
 
-            sql_text = (
-                "SELECT X(ST_Transform(ST_PointFromText('%s', 4326), 3857)), Y(ST_Transform(ST_PointFromText('%s', 4326), 3857));"
-                % (reference_point_wkt, reference_point_wkt)
-            )
-            result = sql_interface.query_text(self._db_path, sql_text)
-            # #Grid reference point: POINT (-6.316667 49.916667) > [(-703168.1539506749, 6431856.52141244)]
-            # result = [(apt_ref_point_crs3857.x, apt_ref_point_crs3857.y)]
-            if result is None:
-                raise Exception(
-                    "Could not reset reference point as coordinates could not be transformed. The query was\n'%s'"
-                    % (sql_text)
-                )
-
-            # reference_x = apt_ref_point_crs3857.x
-            reference_x = conversion.convertToFloat(result[0][0])
-            # reference_y = apt_ref_point_crs3857.y
-            reference_y = conversion.convertToFloat(result[0][1])
-
-            # Calculate the coordinates of the bottom left of the grid
-            self._grid_origin_x = float(reference_x) - (
-                float(self._x_cells) / 2.0
-            ) * float(self._x_resolution)
-            self._grid_origin_y = float(reference_y) - (
-                float(self._y_cells) / 2.0
-            ) * float(self._y_resolution)
-            # print "Grid origin: x=%.0f, y=%.0f" % (self._grid_origin_x, self._grid_origin_y)
-
-            return True
-        except Exception as e:
-            logger.error("Could not reset 3D grid origin from reference point: %s" % e)
-            return False
+        return origin_x, origin_y
 
     def _polygonise_2Dcells(df_row):
         return Polygon(
@@ -338,15 +321,13 @@ class Grid3D:
                         and "z_max" in cell
                     ):
                         logger.error(
-                            "Could not convert cell hash '%s' because either x_min, x_max, y_min, y_max, z_min, or z_max was not found."
-                            % (str(_hash))
+                            "Could not convert cell hash '%s' because either x_min, x_max, y_min, y_max, z_min, or z_max was not found.",
+                            str(_hash),
                         )
                         logger.error(
-                            "\t Output of '%s' was '%s'."
-                            % (
-                                "self.convertXYZIndicesToGridCellMinMax(x_idx,y_idx,z_idx)",
-                                str(cell),
-                            )
+                            "Output of '%s' was '%s'.",
+                            "self.convertXYZIndicesToGridCellMinMax(x_idx,y_idx,z_idx)",
+                            str(cell),
                         )
                     else:
                         self._hash_coordinates_map[_hash] = (
@@ -379,18 +360,27 @@ class Grid3D:
     @staticmethod
     def convertCellHashToXYZIndices(cell_hash):
         """
-        This function generates a unique cell hash based on an XYZ position
-         within a grid.
+        This function generates a unique cell hash based on an XYZ position within a grid.
         :param cell_hash: the unique hash of the cell
         :rtype: tuple with (x_idx, y_idx, z_idx)
         """
-        if len(cell_hash) == 15:
-            x_idx = int(conversion.convertToFloat(cell_hash[0:5]))
-            y_idx = int(conversion.convertToFloat(cell_hash[5:10]))
-            z_idx = int(conversion.convertToFloat(cell_hash[10:15]))
-        else:
-            raise Exception("Cell hash '%s' has wrong format" % cell_hash)
-        return x_idx, y_idx, z_idx
+        try:
+            if len(cell_hash) != 15:
+                raise Exception(
+                    "Cell hash '%s' expected to be 15 characters, but %s given",
+                    cell_hash,
+                    len(cell_hash),
+                )
+
+            x_idx = int(cell_hash[0:5])
+            y_idx = int(cell_hash[5:10])
+            z_idx = int(cell_hash[10:15])
+
+            return x_idx, y_idx, z_idx
+        except Exception as err:
+            raise Exception(
+                'Failed to get cell indices for "%s" hash: %s', cell_hash, err
+            )
 
     def convertCoordinatesToXYZIndices(self, x, y, z):
         x_idx = int((x - self._grid_origin_x) / self._x_resolution)
