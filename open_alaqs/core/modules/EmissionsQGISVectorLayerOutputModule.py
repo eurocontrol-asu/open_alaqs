@@ -157,62 +157,6 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
     def addToTotalEmissions(self, var):
         self._total_emissions += var
 
-    # def CalculateCellHashEfficiency(self, EmissionValue, SourceGeometryText, Bbox, cells_matched, isPoint_element_,
-    #                                 isLine_element_, isPolygon_element_):
-    #     debug_efficiency_ = 0.
-    #     debug_efficiency_xy = 0.
-    #
-    #     z_min = Bbox["z_min"]
-    #     z_max = Bbox["z_max"]
-    #
-    #     for xy_rect in cells_matched:
-    #         debug_efficiency_z = 0.
-    #
-    #         if not xy_rect:
-    #             # logger.debug("xy_rect: %s " % (xy_rect))
-    #             continue
-    #
-    #         efficiency_xy_ = 0.
-    #
-    #         for index_height_level, cell_hash in enumerate(xy_rect):
-    #
-    #             x_, y_, z_ = 0., 0., 0.
-    #             (x_, y_, z_) = self.getGrid().convertCellHashListToCenterGridCellCoordinates([cell_hash])[cell_hash]
-    #
-    #             cell_bbox = self.getCellBox(x_, y_, z_, self.getGrid())
-    #             data_point_ = self.getDataPoint(x_, y_, z_, self._isPolygon, self.getGrid())
-    #
-    #             # calculate once for each x,y pair (and all z levels):
-    #             if not index_height_level:
-    #                 efficiency_xy_ = self.getEfficiencyXY(SourceGeometryText, cell_bbox, isPoint=isPoint_element_,
-    #                                                       isLine=isLine_element_, isPolygon=isPolygon_element_)
-    #                 # debug_efficiency_xy += efficiency_xy_
-    #
-    #             # get relative height (Z) in bbox
-    #             efficiency_z_ = self.getEfficiencyZ(SourceGeometryText, z_min, z_max, cell_bbox,
-    #                                                 isPoint=isPoint_element_, isLine=isLine_element_,
-    #                                                 isPolygon=isPolygon_element_)
-    #
-    #             efficiency_ = 1. * float(efficiency_xy_) * float(efficiency_z_)
-    #             # debug_efficiency_z += efficiency_z_
-    #             # debug_efficiency_ += efficiency_
-    #
-    #             # emission_value_ = emissions_.getValue(self._pollutant, unit="kg")[0]  # in grams !
-    #             emission_value_ = EmissionValue
-    #
-    #             if emission_value_ is None:
-    #                 emission_value_ = 0.
-    #             else:
-    #                 emission_value_ *= float(efficiency_)
-    #
-    #             if emission_value_ > 0:
-    #                 # add current value to the total emissions counter
-    #                 self.addToTotalEmissions(emission_value_)
-    #                 # write the emission values to the data point
-    #                 data_point_.update({"attributes": {self._pollutant: emission_value_}})
-    #                 # save the data point in memory
-    #                 self.addDataPoint(self.getGrid(), cell_hash, data_point_)
-
     def getDataPoint(self, x_, y_, z_, isPolygon, grid_):
         data_point_ = {"coordinates": {"x": x_, "y": y_, "z": z_}}
         if isPolygon:
@@ -229,30 +173,6 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
                 }
             )
         return data_point_
-
-    # def addDataPoint(self, grid, cell_hash, data_point):
-    #     #strip z coordinates if 2D visualization, i.e. integrate over z axis
-    #     cell_hash_ = ""
-    #     if not self._3DVisualization:
-    #         cell_hash = self.getGrid().stripZCoordinateFromCellHash(cell_hash)
-    #     else:
-    #         cell_hash = cell_hash[:]
-    #
-    #     # skip data points if all emissions are smaller than threshold
-    #     if not sum([abs(data_point["attributes"][attribute])>self.getThresholdToCreateDataPoint() for attribute in data_point["attributes"]]):
-    #         # logger.debug("Skip data point (%s) with value '%s' due to threshold (%s and of type '%s')." \
-    #         #              % (str(data_point), str(sum([abs(data_point["attributes"][attribute]) for attribute in data_point["attributes"]])),str(self.getThresholdToCreateDataPoint()), str(type(self.getThresholdToCreateDataPoint()))))
-    #         return
-    #
-    #     #store each grid point only once, otherwise add cell contents
-    #     if not cell_hash in self._data:
-    #         self._data[cell_hash] = data_point
-    #     else:
-    #         for attribute in data_point["attributes"]:
-    #             if attribute in self._data[cell_hash]["attributes"]:
-    #                 self._data[cell_hash]["attributes"][attribute] += data_point["attributes"][attribute]
-    #             else:
-    #                 self._data[cell_hash]["attributes"][attribute] = data_point["attributes"][attribute]
 
     def getBoundingBox(self, geometry_wkt):
         bbox = spatial.getBoundingBox(geometry_wkt)
