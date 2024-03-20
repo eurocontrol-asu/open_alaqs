@@ -1,7 +1,6 @@
 __pycache__/
 *.log
-
-example-local/
-/example/case_1/
-/example/case_3/
-/local/
+.tool-versions
+.vscode/
+example/
+Pipfile*
