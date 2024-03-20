@@ -35,29 +35,29 @@ def apply_sql(engine, sql_paths, file_type):
             f"{file_type} is not supported. It should be either 'project' or 'inventory'"
         )
 
-    # Determine the match pattern
-    match_pattern = MATCH_PATTERNS[file_type]
-
     for sql_path in sql_paths:
+        # Check if the SQL query should be executed to the file
+        if re.search(MATCH_PATTERNS[file_type], sql_path.name) is None:
+            continue
 
         # Read the .sql file
         with sql_path.open() as file:
-            sql = file.read()
+            sql_queries = file.read()
 
-        # Check if the SQL query should be executed to the file
-        if re.search(match_pattern, sql_path.name) is not None:
+        # Execute the SQL query
+        for sql_query in sql_queries.split(";"):
+            sql_query = sql_query.strip()
 
-            # Execute the SQL query
-            for s in sql.split(";"):
-                if (
-                    len(s) > 0
-                    and ("AddGeometryColumn" not in s)
-                    and (
-                        file_type != "inventory"
-                        or not s.strip().startswith("INSERT INTO ")
-                    )
-                ):
-                    engine.execute(f"{s};")
+            # skip if empty query, adds geometry column or inserts in inventory table
+            if (
+                len(sql_query) == 0
+                or "AddGeometryColumn" in sql_query
+                or (file_type == "inventory" and sql_query.startswith("INSERT INTO "))
+            ):
+                continue
+
+            with engine.connect() as conn:
+                conn.execute(sqlalchemy.text(sql_query))
 
 
 if __name__ == "__main__":
@@ -69,10 +69,6 @@ if __name__ == "__main__":
     project_template = TEMPLATES_DIR / "project.alaqs"
     inventory_template = TEMPLATES_DIR / "inventory.alaqs"
 
-    # Create the sqlite engines to the databases
-    project_engine = get_engine(project_template)
-    inventory_engine = get_engine(inventory_template)
-
     # Get the path to the QGIS template with editable layers (tables named shapes_*)
     editable_layers_template_path = SRC_DIR / "editable_layers.sqlite"
 
@@ -80,6 +76,10 @@ if __name__ == "__main__":
     logging.info(f"duplicate {editable_layers_template_path.name}")
     shutil.copy(editable_layers_template_path, project_template)
     shutil.copy(editable_layers_template_path, inventory_template)
+
+    # Create the sqlite engines to the databases
+    project_engine = get_engine(project_template)
+    inventory_engine = get_engine(inventory_template)
 
     # Get the files containing SQL queries
     sql_files = list(SQL_DIR.glob("*.sql"))

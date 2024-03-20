@@ -1,6 +1,7 @@
-DROP TABLE IF EXISTS "default_aircraft";
+-- for some miraculous reason, we should NOT double quote the table name if it is "default_aircraft"
+DROP TABLE IF EXISTS default_aircraft;
 
-CREATE TABLE "default_aircraft" (
+CREATE TABLE default_aircraft (
   "oid" INTEGER PRIMARY KEY,
   "icao" TEXT,
   "ac_group_code" TEXT,
