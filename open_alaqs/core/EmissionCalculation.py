@@ -269,10 +269,11 @@ class EmissionCalculation:
                 # ToDo: only run on (start_, end_) with emission sources?
                 try:
                     ambient_condition = self.getAmbientCondition(start_.getTime())
-                except Exception:
+                except Exception as error:
                     logger.warning(
                         "Couldn't load the ambient condition, so "
-                        "default conditions are used."
+                        "default conditions are used:\n%s",
+                        error,
                     )
                     ambient_condition = AmbientCondition()
 
