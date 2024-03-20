@@ -2253,7 +2253,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             pollutant = self.ui.pollutants_names.currentText()
         available_methods = []
         if pollutant in ["CO", "NOx", "HC"]:
-            available_methods = ["BFFM2", "bymode"]
+            available_methods = ["bymode", "BFFM2"]
         else:
             available_methods = ["bymode"]
 
