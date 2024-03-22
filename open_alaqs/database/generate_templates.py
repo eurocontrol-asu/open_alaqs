@@ -89,27 +89,37 @@ if __name__ == "__main__":
     apply_sql(inventory_engine, sql_files, file_type="inventory")
 
     # Get the csv files
-    csv_files = sorted(DATA_DIR.glob("*.csv"))
+    csv_filenames = sorted(DATA_DIR.glob("*.csv"))
 
     # Get the csv files to import
-    for csv_path in csv_files:
+    for csv_filename in csv_filenames:
+        logging.debug('Importinng CSV "%s"...', csv_filename.stem)
 
-        logging.debug(f"import {csv_path.stem}")
+        alaqsdb_df = pd.read_sql(f"SELECT * FROM {csv_filename.stem}", project_engine)
 
-        # Get the contents of the table
-        project_data = pd.read_sql(f"SELECT * FROM {csv_path.stem}", project_engine)
-
-        # Read the .csv file
-        data = pd.read_csv(csv_path)
-
-        # Import the data to fill the table
-        if data is not None and project_data.empty and not data.empty:
-            try:
-                data.to_sql(
-                    csv_path.stem, project_engine, index=False, if_exists="append"
-                )
-                logging.debug(f"successfully imported {data.shape[0]} rows")
-            except IntegrityError as e:
-                logging.error(e.args[0])
-        elif not project_data.empty:
+        if not alaqsdb_df.empty:
             raise ValueError("What to do when the database is not empty?")
+
+        csv_df = pd.read_csv(csv_filename)
+
+        if csv_df.empty:
+            logging.warning('Nothing to import from CSV "%s"', csv_filename.stem)
+
+        try:
+            csv_df.to_sql(
+                csv_filename.stem,
+                project_engine,
+                index=False,
+                if_exists="append",
+            )
+
+            logging.info(
+                'Successfully imported %i rows from CSV "%s"',
+                csv_df.shape[0],
+                csv_filename.stem,
+            )
+
+        except IntegrityError as error:
+            logging.error('Failed to import data from CSV "%s"', csv_filename.stem)
+
+            raise error
