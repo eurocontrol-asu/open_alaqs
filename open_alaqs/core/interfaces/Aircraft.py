@@ -23,19 +23,19 @@ class Aircraft:
             val = {}
 
         self._icao = str(val.get("icao", "unknown"))
-        self._ac_group_code = str(val.get("ac_group_code", ""))
-        self._ac_group = str(val.get("ac_group", ""))
-        self._manufacturer = str(val.get("manufacturer", ""))
-        self._name = str(val.get("name", ""))
-        self._class = str(val.get("class", ""))
-        self._mtow = int(val.get("mtow", 0))
-        self._engine_count = int(val.get("engine_count", 0))
-        self._departure_profile_name = str(val.get("departure_profile", ""))
-        self._arrival_profile_name = str(val.get("arrival_profile", ""))
-        self._bada_id = str(val.get("bada_id", ""))
-        self._wake_category = str(val.get("wake_category", ""))
-        self._apu_id = str(val.get("apu_id", ""))
-        self._registration = str(val.get("aircraft_registration", ""))
+        self._ac_group_code = str(val.get("ac_group_code") or "")
+        self._ac_group = str(val.get("ac_group") or "")
+        self._manufacturer = str(val.get("manufacturer") or "")
+        self._name = str(val.get("name") or "")
+        self._class = str(val.get("class") or "")
+        self._mtow = int(val.get("mtow") or 0)
+        self._engine_count = int(val.get("engine_count") or 0)
+        self._departure_profile_name = str(val.get("departure_profile") or "")
+        self._arrival_profile_name = str(val.get("arrival_profile") or "")
+        self._bada_id = str(val.get("bada_id") or "")
+        self._wake_category = str(val.get("wake_category") or "")
+        self._apu_id = str(val.get("apu_id") or "")
+        self._registration = str(val.get("aircraft_registration") or "")
 
         self._engine = None
         self._defaultengine = None
