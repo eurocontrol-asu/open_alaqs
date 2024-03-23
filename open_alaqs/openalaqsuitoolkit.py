@@ -36,53 +36,35 @@ def validate_field(ui_element, var_type):
 
     :param ui_element:
     :return: value if field is correct, False if value is not correct
+
+    TODO OPENGIS.ch: Do not return `False` when invalid, but return `None`. In the future one might want to validate boolean fields too.
     """
+    if isinstance(ui_element, QtWidgets.QLineEdit):
+        value = ui_element.text()
+    elif isinstance(ui_element, QtWidgets.QComboBox):
+        value = ui_element.currentText()
+    value = value.strip()
+
+    if value == "":
+        color_ui_background(ui_element, "red")
+        ui_element.setToolTip("This value should not be empty")
+
+        return False
+
     try:
         if var_type == "str":
-            try:
-                value = str(ui_element.currentText()).strip()
-            except Exception:
-                value = str(ui_element.text()).strip()
-            if value == "":
-                color_ui_background(ui_element, "red")
-                ui_element.setToolTip("This value should be a string")
-                return False
-            else:
-                color_ui_background(ui_element, "white")
-                return value
-
+            value = str(value)
         elif var_type == "int":
-            try:
-                value = str(ui_element.currentText()).strip()
-            except Exception:
-                value = str(ui_element.text()).strip()
-            try:
-                if value == "" or value is None:
-                    raise Exception()
-                value = int(value)
-                color_ui_background(ui_element, "white")
-                return value
-            except Exception:
-                color_ui_background(ui_element, "red")
-                ui_element.setToolTip("This value should be an integer")
-                return False
-
+            value = int(value)
         elif var_type == "float":
-            try:
-                value = str(ui_element.currentText()).strip()
-            except Exception:
-                value = str(ui_element.text()).strip()
-            try:
-                if value == "" or value is None:
-                    raise Exception()
-                value = float(value)
-                color_ui_background(ui_element, "white")
-                return value
-            except Exception:
-                color_ui_background(ui_element, "red")
-                ui_element.setToolTip("This value should be a float")
-                return False
+            value = float(value)
+
+        color_ui_background(ui_element, "white")
+
+        return value
     except Exception:
+        color_ui_background(ui_element, "red")
+        ui_element.setToolTip("This value should be a float")
         return False
 
 
