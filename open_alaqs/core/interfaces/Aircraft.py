@@ -239,42 +239,24 @@ class AircraftStore(Store, metaclass=Singleton):
                 # add aircraft to store
                 ac = Aircraft(ac_dict)
 
-                # default engine assignment
-                if "engine" in ac_dict and self.getEngineStore().hasKey(
-                    ac_dict["engine"]
-                ):
-                    ac.setDefaultEngine(
-                        self.getEngineStore().getObject(ac_dict["engine"])
-                    )
+                engine = (
+                    self.getEngineStore().getObject(ac_dict["engine"])
+                    or self.getEngineStore().getObject(ac_dict["engine_name"])
+                    or self.getHeliEngineStore().getObject(ac_dict["engine_name"])
+                )
 
-                elif "engine" in ac_dict and not self.getEngineStore().hasKey(
-                    ac_dict["engine"]
-                ):
-                    if self.getEngineStore().hasKey(ac_dict["engine_name"]):
-                        logger.info(
-                            "Engine sub %s for %s"
-                            % (ac_dict["engine_name"], ac_dict["engine"])
-                        )
-                        ac.setDefaultEngine(
-                            self.getEngineStore().getObject(ac_dict["engine_name"])
-                        )
-
-                # try HELICOPTER DB
-                elif "engine_name" in ac_dict and self.getHeliEngineStore().hasKey(
-                    ac_dict["engine_name"]
-                ):
-                    ac.setDefaultEngine(
-                        self.getHeliEngineStore().getObject(ac_dict["engine_name"])
-                    )
-
-                else:
-                    # If engine not found in the DB, the aircraft is ignored
+                # If engine not found in the DB, the aircraft is ignored
+                if not engine:
                     logger.warning(
-                        "Could not find engine with id '%s' for AC %s"
-                        % (ac_dict["engine"], ac.getICAOIdentifier())
+                        'Could not find engine with id "%s" for aircraft "%s"',
+                        ac_dict["engine"],
+                        ac.getICAOIdentifier(),
                     )
-                    continue
-                    # return
+
+                    # TODO OPENGIS.ch: Verify with Stavros shall we ignore the aircraft, as the old code is misleading...
+                    # continue
+
+                ac.setDefaultEngine(engine)
 
                 if ac.getDefaultEngine() is not None:
                     #   Main-engine-start-emission factors
