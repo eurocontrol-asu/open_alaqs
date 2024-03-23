@@ -311,11 +311,9 @@ class AircraftStore(Store, metaclass=Singleton):
                             start_ei
                         )  # association of start ef by aircraft group!
 
-                    try:
-                        if ac.getGroup():
-                            apu_times_ = self.getAPUStore().get_apu_times(ac.getGroup())
-                    except Exception as exc_:
-                        logger.error("Problem with assigning APU times %s" % exc_)
+                    if ac.getGroup():
+                        apu_times_ = self.getAPUStore().get_apu_times(ac.getGroup())
+
                     ac.setApuTimes(apu_times_)
 
                     # emission factors
