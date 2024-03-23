@@ -1,7 +1,5 @@
-import difflib
 import os
 from collections import OrderedDict
-from typing import Iterable
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.APU import APUStore
@@ -14,17 +12,9 @@ from open_alaqs.core.interfaces.EngineStore import EngineStore, HeliEngineStore
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.interfaces.Store import Store
 from open_alaqs.core.tools.Singleton import Singleton
+from open_alaqs.core.utils.utils import fuzzy_match
 
 logger = get_logger(__name__)
-
-
-def fuzzy_match(search_term: str, values: Iterable[str]) -> str | None:
-    matched = difflib.get_close_matches(search_term, values, n=1)
-
-    if matched:
-        return matched[0]
-    else:
-        return None
 
 
 class Aircraft:
