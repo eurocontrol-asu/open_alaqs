@@ -240,16 +240,16 @@ pyuic5 -o ui/ui_about.py --from-imports ui/ui_about.ui
 
 ## Updating the Open-ALAQS database templates
 
-The Open-ALAQS database templates can be edited by modifying the sql and csv files in the `/database` folder.
-The folder `/database` contains scripts that build the OpenALAQS tables.
-All source files (.sql and .csv) needed for the build are inside the `/database/sql` and `/database/data` folder.
-Other scripts and files supporting the creation of the sql and csv files are located in `/database/scripts` and `/database/src`.
+The plugin produced `.alaqs` files are cloned from a template databases, that are in `./open_alaqs/core/templates/*.alaqs`.
+The template databases are generated from SQL and CSV files in the `./open_alaqs/database` directory.
+All source files (`.sql` and `.csv`) needed for the build are inside the `./open_alaqs/database/sql` and `./open_alaqs/database/data` folder.
+Other scripts and files supporting the creation of the SQL and CSV files are located in `./open_alaqs/database/scripts` and `./open_alaqs/database/src`.
 
-To build the Open-ALAQS database templates, run the following command in your terminal:
+Copy-pastable way to generate the template databases:
 
-```shell
-cd database
-python -m generate_templates
+```
+pipenv run pip install -r dev_requirements.txt
+pipenv run python -m open_alaqs.database.generate_templates
 ```
 
 To generate the CAEP examples, run the following command in the Python console in QGIS:
