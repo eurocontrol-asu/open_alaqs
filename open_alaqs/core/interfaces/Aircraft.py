@@ -358,15 +358,17 @@ class AircraftStore(Store, metaclass=Singleton):
                 )
                 if dynamic_group:
                     for sas in self.getEmissionDynamicsStore().getObjects().values():
-                        if dynamic_group in sas.getDynamicsGroup():
-                            if "TX" in sas.getDynamicsGroup():
-                                ac.setEmissionDynamicsByMode("TX", sas)
-                            elif "CL" in sas.getDynamicsGroup():
-                                ac.setEmissionDynamicsByMode("CL", sas)
-                            if "TO" in sas.getDynamicsGroup():
-                                ac.setEmissionDynamicsByMode("TO", sas)
-                            elif "AP" in sas.getDynamicsGroup():
-                                ac.setEmissionDynamicsByMode("AP", sas)
+                        if dynamic_group not in sas.getDynamicsGroup():
+                            continue
+
+                        if "TX" in sas.getDynamicsGroup():
+                            ac.setEmissionDynamicsByMode("TX", sas)
+                        elif "CL" in sas.getDynamicsGroup():
+                            ac.setEmissionDynamicsByMode("CL", sas)
+                        if "TO" in sas.getDynamicsGroup():
+                            ac.setEmissionDynamicsByMode("TO", sas)
+                        elif "AP" in sas.getDynamicsGroup():
+                            ac.setEmissionDynamicsByMode("AP", sas)
 
                 self.setObject(ac.getICAOIdentifier(), ac)
 
