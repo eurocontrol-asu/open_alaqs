@@ -331,26 +331,18 @@ class AircraftStore(Store, metaclass=Singleton):
                     # emission factors
                     ac.setApu(None)
                     ac.setApuEmissions(None)
-                    try:
-                        if "apu_id" in ac_dict:
-                            apu_val_list = [
-                                v.getName()
-                                for v in self.getAPUStore().getObjects().values()
-                            ]
-                            apu_val_emissions = [
-                                v._emissions()
-                                for v in self.getAPUStore().getObjects().values()
-                            ]
-                            matched = difflib.get_close_matches(
-                                ac._apu_id, apu_val_list
-                            )
-                            if matched:
-                                ac.setApu(matched[0])
-                                ac.setApuEmissions(
-                                    apu_val_emissions[apu_val_list.index(matched[0])]
-                                )
-                    except Exception as exc_:
-                        logger.error("Problem with assigning APU id %s" % exc_)
+
+                    apu_val_list = [
+                        v.getName() for v in self.getAPUStore().getObjects().values()
+                    ]
+                    apu = fuzzy_match(ac._apu_id, apu_val_list)
+                    if apu:
+                        apu_val_emissions = [
+                            v._emissions()
+                            for v in self.getAPUStore().getObjects().values()
+                        ]
+                        ac.setApu(apu)
+                        ac.setApuEmissions(apu_val_emissions[apu_val_list.index(apu)])
 
                 group_ = None
 
