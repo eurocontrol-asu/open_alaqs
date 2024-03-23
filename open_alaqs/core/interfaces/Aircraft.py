@@ -370,8 +370,10 @@ class AircraftStore(Store, metaclass=Singleton):
 
                 self.setObject(ac.getICAOIdentifier(), ac)
 
-            except Exception as exc_:
-                print(exc_)
+            except Exception as error:
+                logger.error(
+                    "Error whil initializing aircraft: %s", error, exc_info=error
+                )
                 continue
 
     def getAircraftDatabase(self):
