@@ -9,6 +9,7 @@ from qgis.core import (
     QgsEditFormConfig,
     QgsEditorWidgetSetup,
     QgsFillSymbol,
+    QgsGeometry,
     QgsLineSymbol,
     QgsMarkerSymbol,
     QgsPoint,
@@ -18,6 +19,7 @@ from qgis.core import (
     QgsSingleSymbolRenderer,
     QgsVectorLayer,
 )
+from qgis.gui import QgsMapCanvas
 from qgis.PyQt import QtWidgets
 
 from open_alaqs.alaqs_config import LAYERS_CONFIG
@@ -278,25 +280,25 @@ def delete_alaqs_layers(iface):
     layer_root.removeChildNode(layer_root.findGroup("OpenStreetMap Layers"))
 
 
-def set_default_zoom(canvas, lat, lon):
-    try:
-        scale = 5000
-        crs_src = QgsCoordinateReferenceSystem("EPSG:4326")
-        crs_dest = QgsCoordinateReferenceSystem("EPSG:3857")
-        xform = QgsCoordinateTransform(crs_src, crs_dest)
+def set_default_zoom(canvas: QgsMapCanvas, lat: float, lon: float) -> None:
+    MAP_SCALE = 5000
 
-        arp = xform.transform(QgsPoint(float(lon), float(lat)))
-        rect = QgsRectangle(
-            float(arp[0]) - scale,
-            float(arp[1]) - scale,
-            float(arp[0]) + scale,
-            float(arp[1]) + scale,
-        )
-        canvas.setExtent(rect)
-        canvas.refresh()
-        return None
-    except Exception:
-        pass
+    project = QgsProject.instance()
+    crs_src = QgsCoordinateReferenceSystem("EPSG:4326")
+    crs_tranform = QgsCoordinateTransform(crs_src, project.crs(), project)
+
+    geom = QgsGeometry.fromPoint(QgsPoint(lon, lat))
+    geom.transform(crs_tranform)
+    transformed_point = geom.asPoint()
+
+    rect = QgsRectangle(
+        float(transformed_point.x()) - MAP_SCALE,
+        float(transformed_point.y()) - MAP_SCALE,
+        float(transformed_point.x()) + MAP_SCALE,
+        float(transformed_point.y()) + MAP_SCALE,
+    )
+    canvas.setExtent(rect)
+    canvas.refresh()
 
 
 def get_layer(iface, layer_name):

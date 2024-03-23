@@ -154,15 +154,13 @@ class OpenAlaqsOpenDatabase:
                 with OverrideCursor(Qt.WaitCursor):
                     result = alaqs.load_study_setup()
 
-                try:
-                    study_data = alaqs.load_study_setup()
+                study_data = alaqs.load_study_setup()
+                if study_data:
                     oautk.set_default_zoom(
                         self.canvas,
                         study_data["airport_latitude"],
                         study_data["airport_longitude"],
                     )
-                except Exception as e:
-                    alaqsutils.print_error(self.load_database.__name__, Exception, e)
 
                 if result is not None:
                     return True
