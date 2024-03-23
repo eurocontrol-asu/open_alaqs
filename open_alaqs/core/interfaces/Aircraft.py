@@ -1,6 +1,7 @@
 import difflib
 import os
 from collections import OrderedDict
+from typing import Iterable
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.APU import APUStore
@@ -15,6 +16,15 @@ from open_alaqs.core.interfaces.Store import Store
 from open_alaqs.core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
+
+
+def fuzzy_match(search_term: str, values: Iterable[str]) -> str | None:
+    matched = difflib.get_close_matches(search_term, values, n=1)
+
+    if matched:
+        return matched[0]
+    else:
+        return None
 
 
 class Aircraft:
@@ -260,18 +270,15 @@ class AircraftStore(Store, metaclass=Singleton):
 
                 if ac.getDefaultEngine() is not None:
                     #   Main-engine-start-emission factors
-                    matched = difflib.get_close_matches(
+                    ac_group = fuzzy_match(
                         ac.getGroup(),
-                        [
-                            values["aircraft_group"]
-                            for key, values in list(
-                                self.getEngineStartEmissionFactorsDatabase()
-                                .getEntries()
-                                .items()
-                            )
-                        ],
+                        (
+                            v["aircraft_group"]
+                            for v in self.getEngineStartEmissionFactorsDatabase()
+                            .getEntries()
+                            .values()
+                        ),
                     )
-                    ac_group = matched[0] if matched else None
 
                     start_ei = Emission(
                         defaultValues={
