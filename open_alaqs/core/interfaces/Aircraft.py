@@ -347,23 +347,22 @@ class AircraftStore(Store, metaclass=Singleton):
                 # TODO OPENGIS.ch: Why do we rename the group from the `default_aircraft` - "HELICOPTER LIGHT", "HELICOPTER HEAVY", etc, to "HELI SMALL" and "HELI LARGE" as in `default_emission_dynamics`?
                 # Ideally I would recommend all these values to be added to `default_emission_dynamics` and remove the renaming.
                 # If really needed, this should be a method of the `Aircraft` class.
-                group_ = None
                 if (ac.getGroup() == "HELICOPTER") or (
                     ac.getGroup() == "HELICOPTER LIGHT"
                 ):
-                    group_ = "HELI SMALL"
+                    dynamic_group = "HELI SMALL"
                 elif (
                     (ac.getGroup() == "HELICOPTER HEAVY")
                     or (ac.getGroup() == "HELICOPTER LARGE")
                     or (ac.getGroup() == "HELICOPTER MEDIUM")
                 ):
-                    group_ = "HELI LARGE"
+                    dynamic_group = "HELI LARGE"
                 else:
-                    group_ = ac.getGroup()
+                    dynamic_group = ac.getGroup()
 
                 # Smooth and Shift factors
                 dynamic_group = fuzzy_match(
-                    group_,
+                    dynamic_group,
                     (
                         v.getDynamicsGroup()
                         for v in self.getEmissionDynamicsStore().getObjects().values()
@@ -371,7 +370,7 @@ class AircraftStore(Store, metaclass=Singleton):
                 )
                 if dynamic_group:
                     for sas in self.getEmissionDynamicsStore().getObjects().values():
-                        if group_ in sas.getDynamicsGroup():
+                        if dynamic_group in sas.getDynamicsGroup():
                             if "TX" in sas.getDynamicsGroup():
                                 ac.setEmissionDynamicsByMode("TX", sas)
                             elif "CL" in sas.getDynamicsGroup():
