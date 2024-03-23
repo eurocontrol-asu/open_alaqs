@@ -1,11 +1,11 @@
 import logging
 import re
 import shutil
+import sqlite3
 from pathlib import Path, PosixPath
 
 import pandas as pd
 import sqlalchemy
-from sqlalchemy.exc import IntegrityError
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -29,7 +29,13 @@ def get_engine(p: Path) -> sqlalchemy.engine.Engine:
     return sqlalchemy.create_engine(uri)
 
 
-def apply_sql(engine, sql_paths, file_type):
+def connect(p: Path) -> sqlite3.Connection:
+    logging.info("Connecting to %s...", p)
+
+    return sqlite3.connect(p)
+
+
+def apply_sql(conn: sqlite3.Connection, sql_paths, file_type):
     if file_type not in ("project", "inventory"):
         raise ValueError(
             f"{file_type} is not supported. It should be either 'project' or 'inventory'"
@@ -40,6 +46,8 @@ def apply_sql(engine, sql_paths, file_type):
         if re.search(MATCH_PATTERNS[file_type], sql_path.name) is None:
             continue
 
+        logging.info("Executing SQL file: %s", sql_path.name)
+
         # Read the .sql file
         with sql_path.open() as file:
             sql_queries = file.read()
@@ -48,16 +56,12 @@ def apply_sql(engine, sql_paths, file_type):
         for sql_query in sql_queries.split(";"):
             sql_query = sql_query.strip()
 
-            # skip if empty query, adds geometry column or inserts in inventory table
-            if (
-                len(sql_query) == 0
-                or "AddGeometryColumn" in sql_query
-                or (file_type == "inventory" and sql_query.startswith("INSERT INTO "))
-            ):
+            if len(sql_query) == 0:
                 continue
 
-            with engine.connect() as conn:
-                conn.execute(sqlalchemy.text(sql_query))
+            conn.execute(sql_query)
+
+    conn.commit()
 
 
 if __name__ == "__main__":
@@ -78,24 +82,24 @@ if __name__ == "__main__":
     shutil.copy(editable_layers_template_path, inventory_template)
 
     # Create the sqlite engines to the databases
-    project_engine = get_engine(project_template)
-    inventory_engine = get_engine(inventory_template)
+    project_conn = connect(project_template)
+    inventory_conn = connect(inventory_template)
 
     # Get the files containing SQL queries
     sql_files = list(SQL_DIR.glob("*.sql"))
 
     # Execute the SQL queries in the files to the templates
-    apply_sql(project_engine, sql_files, file_type="project")
-    apply_sql(inventory_engine, sql_files, file_type="inventory")
+    apply_sql(project_conn, sql_files, file_type="project")
+    apply_sql(inventory_conn, sql_files, file_type="inventory")
 
-    # Get the csv files
+    # # Get the csv files
     csv_filenames = sorted(DATA_DIR.glob("*.csv"))
 
     # Get the csv files to import
     for csv_filename in csv_filenames:
         logging.debug('Importinng CSV "%s"...', csv_filename.stem)
 
-        alaqsdb_df = pd.read_sql(f"SELECT * FROM {csv_filename.stem}", project_engine)
+        alaqsdb_df = pd.read_sql(f"SELECT * FROM {csv_filename.stem}", project_conn)
 
         if not alaqsdb_df.empty:
             raise ValueError("What to do when the database is not empty?")
@@ -108,7 +112,7 @@ if __name__ == "__main__":
         try:
             csv_df.to_sql(
                 csv_filename.stem,
-                project_engine,
+                project_conn,
                 index=False,
                 if_exists="append",
             )
@@ -119,7 +123,7 @@ if __name__ == "__main__":
                 csv_filename.stem,
             )
 
-        except IntegrityError as error:
+        except sqlite3.IntegrityError as error:
             logging.error('Failed to import data from CSV "%s"', csv_filename.stem)
 
             raise error
