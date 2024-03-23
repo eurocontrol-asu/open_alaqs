@@ -304,7 +304,7 @@ class AircraftStore(Store, metaclass=Singleton):
                             start_ei
                         )  # association of start ef by aircraft group!
                     else:
-                        for value in list(
+                        for value in (
                             self.getEngineStartEmissionFactorsDatabase()
                             .getEntries()
                             .values()
