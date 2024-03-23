@@ -304,10 +304,10 @@ class AircraftStore(Store, metaclass=Singleton):
                             start_ei
                         )  # association of start ef by aircraft group!
                     else:
-                        for key, value in list(
+                        for value in list(
                             self.getEngineStartEmissionFactorsDatabase()
                             .getEntries()
-                            .items()
+                            .values()
                         ):
                             if value["aircraft_group"] == ac_group:
                                 start_ei.addCO(value["co"])
@@ -334,16 +334,12 @@ class AircraftStore(Store, metaclass=Singleton):
                     try:
                         if "apu_id" in ac_dict:
                             apu_val_list = [
-                                values_.getName()
-                                for key_, values_ in list(
-                                    self.getAPUStore().getObjects().items()
-                                )
+                                v.getName()
+                                for v in self.getAPUStore().getObjects().values()
                             ]
                             apu_val_emissions = [
-                                values_._emissions
-                                for key_, values_ in list(
-                                    self.getAPUStore().getObjects().items()
-                                )
+                                v._emissions()
+                                for v in self.getAPUStore().getObjects().values()
                             ]
                             matched = difflib.get_close_matches(
                                 ac._apu_id, apu_val_list
@@ -375,17 +371,13 @@ class AircraftStore(Store, metaclass=Singleton):
                 matched = difflib.get_close_matches(
                     group_,
                     [
-                        values.getDynamicsGroup()
-                        for key, values in list(
-                            self.getEmissionDynamicsStore().getObjects().items()
-                        )
+                        v.getDynamicsGroup()
+                        for v in self.getEmissionDynamicsStore().getObjects().values()
                     ],
                 )
                 if matched:
                     matched[0]
-                    for key, sas in list(
-                        self.getEmissionDynamicsStore().getObjects().items()
-                    ):
+                    for sas in self.getEmissionDynamicsStore().getObjects().values():
                         if group_ in sas.getDynamicsGroup():
                             if "TX" in sas.getDynamicsGroup():
                                 ac.setEmissionDynamicsByMode("TX", sas)
