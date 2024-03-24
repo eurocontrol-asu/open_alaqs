@@ -205,6 +205,8 @@ def execute_sql(
     params: Optional[list] = None,
     fetchone: bool = True,
 ):
+    params = params or []
+
     with get_db_connection(db_filename) as conn:
         conn.text_factory = str
         conn.row_factory = sqlite.Row
