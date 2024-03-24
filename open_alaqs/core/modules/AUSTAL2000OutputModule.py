@@ -72,25 +72,28 @@ class AUSTAL2000DispersionModule(DispersionModule):
         self._grid: Grid3D = values_dict.get("grid", None)
 
         self._pollutants_list = values_dict.get("pollutants_list")
+
         if self._pollutant:
             self._pollutants_list = [self._pollutant]
 
         self._enable = values_dict.get("Enabled", False)
         # "----------------- general parameters",
-        # "ti\t'grid source'\t' title of the project",
+
         self._title = values_dict.get("Title", values_dict.get("add title"))
         if not self._title:
             self._title = "no title"
-        # "qs\t1\t' quality level",
+
         self._quality_level = values_dict.get(
             "Quality Level", values_dict.get("quality level")
         )
         if not self._quality_level:
             self._quality_level = 1
+
         # for non-standard calculations
         self._options = values_dict.get(
             "Option String", values_dict.get("options string")
         )
+
         if not self._options:
             self._options = "SCINOTAT"
 
