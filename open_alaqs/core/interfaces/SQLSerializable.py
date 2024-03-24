@@ -1,5 +1,6 @@
 import re
 from collections import OrderedDict
+from typing import Optional
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools import conversion, sql_interface
@@ -15,51 +16,36 @@ class SQLSerializable:
 
     def __init__(
         self,
-        db_path_string,
-        table_name_string,
-        table_columns_type_dict,
-        primary_key="",
-        geometry_columns: list = None,
-    ):
+        db_path_string: str,
+        table_name_string: str,
+        table_columns_type_dict: dict[str, str],
+        primary_key: str = "",
+        geometry_columns: list[Optional[str]] = None,
+    ) -> None:
 
-        self._db_path = str(db_path_string)
-        self._table_name = str(table_name_string)
-        self._table_columns = OrderedDict()
+        self._db_path = db_path_string
+        self._table_name = table_name_string
+        self._table_columns = table_columns_type_dict
+        self._geometry_columns = geometry_columns or []
+        self._entries = {}
 
-        if not isinstance(table_columns_type_dict, dict):
-            raise Exception(
-                "Expected type '%s' for columns-type mapping but got type '%s'."
-                % (str(type(OrderedDict())), type(table_columns_type_dict))
-            )
-        else:
-            self._table_columns = table_columns_type_dict
+        assert self._db_path
+        assert self._table_name
+        assert isinstance(table_columns_type_dict, dict)
 
-        self._primary_key = primary_key
-        if not self._primary_key:
-            # try to identify the primary key from the columns types
-            for key in self._table_columns:
-                if "PRIMARY KEY".lower() in self._table_columns[key].lower():
-                    self._primary_key = key
-                    # print("Identified '%s' as primary key from column types." % (key))
-        if not self._primary_key:
-            raise Exception("Primary key is empty or not valid.")
-        if self._primary_key not in self._table_columns:
-            raise Exception(
-                "Did not find primary key '%s' in dict for columns-type mapping."
-                % (str(self._primary_key))
-            )
+        self._primary_key = primary_key or self._guess_pk()
 
-        self._geometry_columns = geometry_columns
-        if self._geometry_columns is None:
-            self._geometry_columns = []
+        assert self._primary_key
 
-        self._entries = OrderedDict()
+    def _guess_pk(self) -> Optional[str]:
+        for key in self._table_columns:
+            if "PRIMARY KEY".lower() in self._table_columns[key].lower():
+                return key
 
-    def getDatabasePath(self):
+        return None
+
+    def getDatabasePath(self) -> str:
         return self._db_path
-
-    def getPrimaryKey(self):
-        return self._primary_key
 
     def setEntry(self, key, value_object):
         if self.hasEntry(key):
@@ -68,21 +54,11 @@ class SQLSerializable:
                 % (str(key))
             )
         self._entries[key] = value_object
-        # raise NotImplementedError("Should have implemented method with name '%s'." %(self.setEntry.__name__))
-
-    def removeEntry(self, key):
-        return self._entries.pop(key, None)
 
     def hasEntry(self, key):
         if key in self._entries:
             return True
         return False
-
-    def getEntry(self, key):
-        if not self.hasEntry(key):
-            return None
-        else:
-            return self._entries[key]
 
     def getEntries(self):
         return self._entries
