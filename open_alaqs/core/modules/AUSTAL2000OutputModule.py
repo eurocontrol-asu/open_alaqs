@@ -1129,7 +1129,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 if is_multi_polygon_element_ or is_multi_line_element_:
 
                     # Add the emissions for each geometry
-                    for i, g in enumerate(geom):
+                    for g in geom:
                         # Determine the emissions for this geometry based on
                         # area/length (depending on geometry type)
                         if isinstance(g, Polygon):
