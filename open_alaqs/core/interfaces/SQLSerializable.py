@@ -100,19 +100,16 @@ class SQLSerializable:
                 )
             else:
                 # insert rows
-                result = self.insert_rows(
-                    path_, [self.getEntries()[key] for key in self.getEntries()]
+                result = sql_interface.insert_into_table(
+                    path_,
+                    self._table_name,
+                    [self.getEntries()[key] for key in self.getEntries()],
                 )
-                if result is not True:
-                    raise Exception(
-                        "Error while inserting rows to table '%s'. Result was '%s'."
-                        % (self._table_name, str(result))
-                    )
-                else:
-                    logger.debug(
-                        "Inserted rows to table '%s' in database '%s'. Result was '%s'."
-                        % (self._table_name, path_, str(result))
-                    )
+
+                logger.debug(
+                    "Inserted rows to table '%s' in database '%s'. Result was '%s'."
+                    % (self._table_name, path_, str(result))
+                )
                 return True
         except Exception as e:
             logger.error(
@@ -230,52 +227,6 @@ class SQLSerializable:
             return data_dict
 
         return None
-
-    def insert_rows(self, path_, list_of_key_values_dicts):
-        """
-        This function inserts cell hashes into the table.
-        :param path_: database path
-        :param list_of_key_values_dicts: list of dictionaries with key:value association that are inserted to the table
-        :return: bool if operation was successful
-        :raise ValueError: if the database returns an error
-        """
-        try:
-            values_str = "?" + ", ?" * (len(list(self._table_columns.keys())) - 1)
-            sql_text = "INSERT INTO %s VALUES (%s);" % (self._table_name, values_str)
-
-            # check compatibility
-            entries = []
-            for entry in list_of_key_values_dicts:
-                skip = False
-                for k in list(self._table_columns.keys()):
-                    if not (k in entry):
-                        logger.error(
-                            "Could not insert entry '%s'. Did not find necessary key '%s' for this entry."
-                            % (str(k), str(k))
-                        )
-                        skip = True
-                if not skip:
-                    entries.append(entry)
-
-            result = sql_interface.query_insert_many(
-                path_,
-                sql_text,
-                [
-                    [entry[k] for k in list(self._table_columns.keys())]
-                    for entry in entries
-                ],
-            )
-            if isinstance(result, str):
-                logger.error("Row was not inserted: %s" % result)
-                raise ValueError(result)
-            elif result is False:
-                logger.error("Row was not inserted: function returned False")
-                return False
-
-            logger.debug("Row was inserted in table '%s'" % (self._table_name))
-            return True
-        except Exception as e:
-            return e
 
     def create_table(self, path_=""):
         """

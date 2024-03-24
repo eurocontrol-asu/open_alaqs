@@ -6,6 +6,7 @@ from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.tools.Singleton import Singleton
+from open_alaqs.core.tools.sql_interface import insert_into_table
 
 logger = get_logger(__name__)
 
@@ -103,7 +104,7 @@ class SQLiteOutputModule(OutputModule):
                 )
 
         if rows_ and self._db is not None:
-            self._db.insert_rows(self.getOutputPath()[0], rows_)
+            insert_into_table(self.getOutputPath()[0], self._db._table_name, rows_)
 
     def endJob(self):
         pass

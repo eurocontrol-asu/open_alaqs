@@ -97,37 +97,6 @@ def pd_query_text(database_path, sql_text):
         return None
 
 
-def query_insert_many(database_path, sql_text, data_list):
-    """
-    This function is used to insert many records into the database concurrently.
-    It is faster to use this function than to make multiple insert queries.
-
-    :param database_path: the path of the database to be worked with
-    :param sql_text: the SQL query to be run in the correct (?,?,?,...) format
-    :param data_list: a list of data lists to be inserted
-    :return: bool of success
-    """
-    conn = None
-    try:
-        # Create a connection
-        conn = connect(database_path)
-        curs = conn.cursor()
-        # Execute the query
-        curs.executemany(sql_text, data_list)
-        conn.commit()
-        # logger.debug("Query successful")
-        return True
-    except Exception as e:
-        logger.error(e)
-        return "Query could not be completed: %s" % e
-    finally:
-        try:
-            conn.commit()
-            conn.close()
-        except Exception:
-            pass
-
-
 def hasTable(database_path, table_name):
     """
     Check if a database at path
