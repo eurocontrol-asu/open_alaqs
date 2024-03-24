@@ -187,27 +187,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
             }
         )
 
-    # ToDo: Define the get set functions for all parameters
-    def getTitle(self):
-        return self._title
-
-    def setTitle(self, var):
-        self._title = var
-
-    # Quality Level
-    def getQualityLevel(self):
-        return self._quality_level
-
-    def setQualityLevel(self, var):
-        self._quality_level = var
-
-    # Roughness Length
-    def getRoughnessLength(self):
-        return self._roughness_level
-
-    def setRoughnessLength(self, var):
-        self._roughness_level = var
-
     def isEnabled(self):
         return self._enable
 
