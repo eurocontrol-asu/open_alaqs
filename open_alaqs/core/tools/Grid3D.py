@@ -117,8 +117,6 @@ class Grid3D:
 
         result = sql_interface.execute_sql(self._db_path, query)
 
-        result = sql_interface.query_text(self._db_path, query)
-
         self._x_cells = result["x_cells"]
         self._y_cells = result["y_cells"]
         self._z_cells = result["z_cells"]

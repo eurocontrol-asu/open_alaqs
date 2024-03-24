@@ -63,36 +63,30 @@ class SQLSerializable:
     def getEntries(self):
         return self._entries
 
-    def serialize(self, path_=""):
-        if not path_:
-            path_ = self._db_path
+    def serialize(self, path: str = "") -> bool:
+        db_path = path or self._db_path
 
         try:
-            result = self.create_table(path_)
-            if result is not True:
-                raise Exception(
-                    "Error while creating table '%s'. Result was '%s'."
-                    % (self._table_name, str(result))
-                )
-            else:
-                # insert rows
-                result = sql_interface.insert_into_table(
-                    path_,
-                    self._table_name,
-                    [self.getEntries()[key] for key in self.getEntries()],
-                )
+            self.create_table(db_path)
 
-                logger.debug(
-                    "Inserted rows to table '%s' in database '%s'. Result was '%s'."
-                    % (self._table_name, path_, str(result))
-                )
-                return True
+            result = sql_interface.insert_into_table(
+                db_path,
+                self._table_name,
+                [self.getEntries()[key] for key in self.getEntries()],
+            )
+
+            logger.debug(
+                "Inserted rows to table '%s' in database '%s'. Result was '%s'."
+                % (self._table_name, db_path, str(result))
+            )
         except Exception as e:
             logger.error(
                 "Failed to serialize the class '%s' with error '%s'"
                 % (self.__class__.__name__, str(e))
             )
             return False
+
+        return True
 
     def deserialize(self):
         if not self._table_columns or not self._table_name:
@@ -145,11 +139,11 @@ class SQLSerializable:
                         % (self._db_path, self._table_name, len(row), len(columns_))
                     )
                 else:
-                    if not self.getPrimaryKey() in values_dict:
+                    if self._primary_key not in values_dict:
                         logger.error(
                             "Primary key '%s' is not contained in returned values. Database is '%s' with table '%s' and requested columns '%s'."
                             % (
-                                self.getPrimaryKey(),
+                                self._primary_key,
                                 self._db_path,
                                 self._table_name,
                                 str(columns_),
@@ -177,17 +171,13 @@ class SQLSerializable:
                                             values_dict[key]
                                         )
                             self.setEntry(
-                                values_dict[self.getPrimaryKey()],
+                                values_dict[self._primary_key],
                                 self.getObject(values_dict),
                             )
 
                         except Exception as exc_:
                             logger.error(exc_)
             # logger.info("Deserialized %i rows from table '%s' in database '%s' " % (len(result), self._table_name, self._db_path))
-
-    # Can be overwritten by subclass to store user-defined objects
-    def getObject(self, values_dict):
-        return values_dict
 
     @staticmethod
     def result_to_dict(columns, data):
@@ -204,76 +194,60 @@ class SQLSerializable:
 
         return None
 
-    def create_table(self, path_=""):
+    def create_table(self, db_path: str = "") -> None:
         """
         Create a new table
         :param path_: database path
-        :return: bool
         :raise ValueError or Exception: if the query generates a string response (an error)
         """
-        if not path_:
-            path_ = self._db_path
-        try:
-            types_string = ""
-            for index_, key_ in enumerate(self._table_columns.keys()):
-                if not self._table_columns[key_]:
-                    raise Exception(
-                        "Could not create table. Column type for column '%s' is not valid."
-                        % (key_)
-                    )
-                if index_:
-                    types_string += ","
-                types_string += '"%s" %s' % (key_, self._table_columns[key_])
+        db_path = db_path or self._db_path
 
-            sql_query = 'DROP TABLE IF EXISTS "%s";' % self._table_name
-            sql_interface.query_text(path_, sql_query)
+        col_definitions = []
+        for col_name, col_definition in self._table_columns.items():
+            assert col_definition
 
-            sql_query = "CREATE TABLE %s (%s);" % (self._table_name, types_string)
-            result = sql_interface.query_text(path_, sql_query)
+            col_definitions.append(
+                f"{sql_interface.quote_identifier(col_name)} {col_definition}"
+            )
 
-            if isinstance(result, str):
-                logger.error("Table not created: %s" % result)
-                raise ValueError(result)
-            elif result is False:
-                logger.error("Table not created: query returned False")
-                return False
+        sql_interface.perform_sql(
+            db_path,
+            f"""
+                DROP TABLE IF EXISTS {sql_interface.quote_identifier(self._table_name)}
+            """,
+        )
 
-            # add geometry columns
-            for geom_col_dict_ in self._geometry_columns:
-                if all(
-                    k in geom_col_dict_
-                    for k in [
-                        "column_name",
-                        "SRID",
-                        "geometry_type",
-                        "geometry_type_dimension",
-                    ]
-                ):
-                    query_text_geom_ = (
-                        "SELECT AddGeometryColumn('%s', '%s', %i, %s, %i);"
-                        % (
-                            str(self._table_name),
-                            str(geom_col_dict_["column_name"]),
-                            int(geom_col_dict_["SRID"]),
-                            str(geom_col_dict_["geometry_type"]),
-                            int(geom_col_dict_["geometry_type_dimension"]),
-                        )
-                    )
-                    result = sql_interface.query_text(path_, query_text_geom_)
-                    if isinstance(result, str):
-                        logger.error("Table not created: %s" % result)
-                        raise ValueError(result)
-                    elif result is False:
-                        logger.error(
-                            "Table not created: Query 'AddGeometryColumn' returned False"
-                        )
-                        return False
+        col_definitions_sql = ", ".join(col_definitions)
 
-            logger.debug("Table '%s' created" % (self._table_name))
-            return True
-        except Exception as e:
-            logger.error(str(e))
-            return False
+        sql_interface.perform_sql(
+            db_path,
+            f"""
+                CREATE TABLE {sql_interface.quote_identifier(self._table_name)} ({col_definitions_sql})
+            """,
+        )
+
+        # add geometry columns
+        for geom_col_definition in self._geometry_columns:
+            assert geom_col_definition.get("column_name")
+            assert geom_col_definition.get("SRID")
+            assert geom_col_definition.get("geometry_type")
+            assert geom_col_definition.get("geometry_type_dimension")
+
+            sql_interface.perform_sql(
+                db_path,
+                """
+                SELECT AddGeometryColumn(?, ?, ?, ?, ?)
+                """,
+                (
+                    self._table_name,
+                    geom_col_definition["column_name"],
+                    geom_col_definition["SRID"],
+                    geom_col_definition["geometry_type"],
+                    geom_col_definition["geometry_type_dimension"],
+                ),
+            )
+
+        logger.debug("Table '%s' created", (self._table_name))
 
 
 # if __name__ == "__main__":
