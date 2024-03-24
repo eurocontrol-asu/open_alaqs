@@ -1106,8 +1106,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             for emissions_ in emissions__:
 
                 # Get the geometry text
-                e_wkt = emissions_.getGeometryText()
-                if e_wkt is None:
+                if emissions_.getGeometryText() is None:
                     logger.warning(
                         f"AUSTAL2000: Did not find geometry for "
                         f"source: {source_.getName()}"
@@ -1131,10 +1130,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
                     # Add the emissions for each geometry
                     for i, g in enumerate(geom):
-
-                        # Get the WKT representation of the geometry
-                        g_wkt = g.wkt
-
                         # Determine the emissions for this geometry based on
                         # area/length (depending on geometry type)
                         if isinstance(g, Polygon):
@@ -1150,7 +1145,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
                         # Get matched cell coefficients for this geometry
                         matched_cells_coeff = self.getMatchedCellCoeffs(
-                            g_wkt,
+                            g.wkt,
                             emissions_,
                             self._grid,
                             is_point_element_,
@@ -1170,7 +1165,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
                     # Get matched cell coefficients for this geometry
                     matched_cells_coeff = self.getMatchedCellCoeffs(
-                        e_wkt,
+                        emissions_.getGeometryText(),
                         emissions_,
                         self._grid,
                         is_point_element_,
