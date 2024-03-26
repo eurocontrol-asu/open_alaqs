@@ -10,6 +10,12 @@ from typing import Optional, TypedDict
 from open_alaqs.enums import AlaqsLayerType
 
 
+class OsmFilter(TypedDict):
+    within_aerodrome: bool
+    search_radius_m: int
+    tags: list[dict[str, str]]
+
+
 class ALAQSLayerConfig(TypedDict):
     name: str
     table_name: str
@@ -23,7 +29,7 @@ class ALAQSLayerConfig(TypedDict):
     label_position: int
     label_font_family: str
     label_font_size: int
-    osm_tags: list[dict[str, str]]
+    osm_filters: list[OsmFilter]
     osm_attribute_mapping: dict[str, str]
 
 
@@ -55,13 +61,60 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "label_position": 1,
         "label_font_family": "Arial",
         "label_font_size": 8,
-        "osm_search_radius_m": 1000,
-        "osm_tags": [
+        "osm_filters": [
             {
-                "building": "industrial",
+                "within_aerodrome": True,
+                "tags": {
+                    "building": "transportation",
+                },
             },
             {
-                "building": "apartments",
+                "within_aerodrome": True,
+                "tags": {
+                    "building": "retail",
+                },
+            },
+            {
+                "within_aerodrome": True,
+                "tags": {
+                    "building": "office",
+                },
+            },
+            {
+                "within_aerodrome": True,
+                "tags": {
+                    "building": "commerical",
+                },
+            },
+            {
+                "within_aerodrome": True,
+                "tags": {
+                    "building": "hotel",
+                },
+            },
+            {
+                "within_aerodrome": True,
+                "tags": {
+                    "building": "service",
+                },
+            },
+            {
+                "within_aerodrome": True,
+                "tags": {
+                    "building": "silo",
+                },
+            },
+            {
+                "within_aerodrome": True,
+                "tags": {
+                    "building": "warehouse",
+                },
+            },
+            {
+                "within_aerodrome": True,
+                "tags": {
+                    "building": "industrial",
+                },
             },
         ],
         "osm_attribute_mapping": {
@@ -82,14 +135,13 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "label_position": 1,
         "label_font_family": "Arial",
         "label_font_size": 8,
-        "osm_search_radius_m": 5000,
-        "osm_tags": [
-            # {
-            #     "aeroway": "parking_position",
-            # },
+        "osm_filters": [
             {
-                "aeroway": "apron",
-            },
+                "within_aerodrome": True,
+                "tags": {
+                    "aeroway": "apron",
+                },
+            }
         ],
         "osm_attribute_mapping": {"gate_id": "ref"},
     },
@@ -106,11 +158,13 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "label_position": 1,
         "label_font_family": "Arial",
         "label_font_size": 8,
-        "osm_search_radius_m": 5000,
-        "osm_tags": [
+        "osm_filters": [
             {
-                "amenity": "parking",
-            },
+                "within_aerodrome": True,
+                "tags": {
+                    "amenity": "parking",
+                },
+            }
         ],
         "osm_attribute_mapping": {
             "parking_id": "full_id",
@@ -143,6 +197,46 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "label_position": 1,
         "label_font_family": "Arial",
         "label_font_size": 8,
+        "osm_filters": [
+            {
+                "within_aerodrome": False,
+                "search_radius_m": 3000,
+                "tags": {
+                    "highway": "motorway",
+                },
+            },
+            {
+                "within_aerodrome": False,
+                "search_radius_m": 3000,
+                "tags": {
+                    "highway": "trunk",
+                },
+            },
+            {
+                "within_aerodrome": False,
+                "search_radius_m": 3000,
+                "tags": {
+                    "highway": "primary",
+                },
+            },
+            {
+                "within_aerodrome": False,
+                "search_radius_m": 3000,
+                "tags": {
+                    "highway": "secondary",
+                },
+            },
+            {
+                "within_aerodrome": False,
+                "search_radius_m": 3000,
+                "tags": {
+                    "highway": "tertiary",
+                },
+            },
+        ],
+        "osm_attribute_mapping": {
+            "ref": "roadway_id",
+        },
     },
     AlaqsLayerType.TAXIWAY: {
         "name": "Taxiways",
@@ -157,11 +251,13 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "label_position": 1,
         "label_font_family": "Arial",
         "label_font_size": 8,
-        "osm_search_radius_m": 5000,
-        "osm_tags": [
+        "osm_filters": [
             {
-                "aeroway": "taxiway",
-            },
+                "within_aerodrome": True,
+                "tags": {
+                    "aeroway": "taxiway",
+                },
+            }
         ],
         "osm_attribute_mapping": {
             "ref": "taxiway_id",
@@ -194,11 +290,14 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "label_position": 1,
         "label_font_family": "Arial",
         "label_font_size": 8,
-        "osm_search_radius_m": 5000,
-        "osm_tags": [
+        "osm_within_aerodrome": True,
+        "osm_filters": [
             {
-                "aeroway": "runway",
-            },
+                "within_aerodrome": True,
+                "tags": {
+                    "aeroway": "runway",
+                },
+            }
         ],
         "osm_attribute_mapping": {
             "ref": "runway_id",

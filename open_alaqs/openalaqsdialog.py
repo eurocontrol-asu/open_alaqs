@@ -3142,8 +3142,11 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
             )
             return
 
-        coords = study_setup["airport_latitude"], study_setup["airport_longitude"]
-        points, lines, polygons = download_osm_airport_data(layer_types, coords)
+        points, lines, polygons = download_osm_airport_data(
+            layer_types,
+            (study_setup["airport_latitude"], study_setup["airport_longitude"]),
+            study_setup["airport_code"],
+        )
         osm_layers_by_geometry_type = {
             Qgis.GeometryType.Point: points,
             Qgis.GeometryType.Line: lines,
@@ -3192,7 +3195,7 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
                 logger.error(f"Unable to find the ALAQS layer for {layer_type=}")
                 return
 
-            if "osm_tags" not in layer_config:
+            if "osm_filters" not in layer_config:
                 logger.debug(
                     f"Skipping layer {layer_type}, it has no OSM tags configuration..."
                 )
@@ -3201,13 +3204,18 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
             osm_layer = osm_layers_by_geometry_type[alaqs_layer.geometryType()]
 
             tmp_or_expressions = []
-            for osm_tags in layer_config["osm_tags"]:
+            for osm_filters in layer_config["osm_filters"]:
                 tmp_and_expressions = []
 
-                for osm_tag, osm_value in osm_tags.items():
-                    tmp_and_expressions.append(
-                        f"{QgsExpression.quotedColumnRef(osm_tag)} = {QgsExpression.quotedValue(osm_value)}"
-                    )
+                for osm_tag, osm_value in osm_filters["tags"].items():
+                    if osm_value is None:
+                        tmp_and_expressions.append(
+                            f"{QgsExpression.quotedColumnRef(osm_tag)} IS NOT NULL"
+                        )
+                    else:
+                        tmp_and_expressions.append(
+                            f"{QgsExpression.quotedColumnRef(osm_tag)} = {QgsExpression.quotedValue(osm_value)}"
+                        )
 
                 tmp_or_expressions.append(" AND ".join(tmp_and_expressions))
 

@@ -16,16 +16,26 @@ class OsmLayersOutput(TypedDict):
     OUTPUT_MULTIPOLYGONS: QgsVectorLayer
 
 
-def get_coords_for_icao_code(icao_code: str) -> Optional[tuple[float, float]]:
+class NominatimAerodrome(TypedDict):
+    type: str
+    osm_id: str
+    lat: str
+    lon: str
+    boundingbox: tuple[str, str, str, str]
+
+
+def get_nominatum_feature_by_icao_code(icao_code: str) -> Optional[NominatimAerodrome]:
     """Searches Nominatum for object that matches the passed string.
 
     Args:
         icao_code (str): ICAO airport code to search for
 
     Returns:
-        tuple[float, float] | None: latitute and longiture, or None if no results found
+        NominatimAerodrome | None: dict containing the Nominatum's first response object or None if no mathes found
     """
-    url = f"https://nominatim.qgis.org/search?q={icao_code}&format=json&info=QgisQuickOSMPlugin"
+    url = (
+        f"https://nominatim.qgis.org/search?q=aerodrome+{icao_code}&format=json&limit=1"
+    )
 
     response = requests.get(url)
     response.raise_for_status()
@@ -35,7 +45,16 @@ def get_coords_for_icao_code(icao_code: str) -> Optional[tuple[float, float]]:
     if not payload:
         return None
 
-    return payload[0]["lat"], payload[0]["lon"]
+    aerodrome = payload[0]
+
+    if aerodrome["type"] != "aerodrome" or aerodrome["class"] != "aeroway":
+        return None
+
+    return aerodrome
+
+
+def format_within_osm_feature(set_name: str) -> str:
+    return f"area.{set_name}"
 
 
 def format_coords_for_overpass_api(
@@ -61,13 +80,16 @@ def format_coords_for_overpass_api(
 
 
 def get_query_body(
-    layer_types: list[AlaqsLayerType], coords: tuple[float, float]
+    layer_types: list[AlaqsLayerType],
+    coords: tuple[float, float],
+    aerodrome: NominatimAerodrome,
 ) -> str:
     """Returns Overpass query body.
 
     Args:
         layer_types (list[AlaqsLayerType]): list of ALAQS query we want to query on OSM
         coords (tuple[float, float]): latitude and longitude
+        aerodrome (Optional[NominatumFeature]): aerodrome feature from Nominatum result
 
     Returns:
         str: resulting Overpass API query body.
@@ -78,22 +100,40 @@ def get_query_body(
     """
     query_body = ""
 
+    if aerodrome:
+        if aerodrome["osm_type"] == "relation":
+            osm_id = f'36{aerodrome["osm_id"]}'
+        else:
+            osm_id = aerodrome["osm_id"]
+
+        query_body += f"area({osm_id}) -> .airport_geom;\n"
+
+    query_body += "(\n"
+
     for layer_type in layer_types:
         layer_config = LAYERS_CONFIG[layer_type]
-        osm_tags = layer_config.get("osm_tags", [])
-        radius = layer_config.get("osm_search_radius_m", OSM_DEFAULT_SEARCH_RADIUS_M)
-        formatted_coords = format_coords_for_overpass_api(coords, radius)
 
-        for osm_tags_combo in osm_tags:
-            osm_tags_combo_str = ""
+        for osm_filter in layer_config.get("osm_filters", []):
+            if aerodrome and osm_filter.get("within_aerodrome", False):
+                overpass_filter = format_within_osm_feature("airport_geom")
+            else:
+                radius = osm_filter.get("search_radius_m", OSM_DEFAULT_SEARCH_RADIUS_M)
+                overpass_filter = format_coords_for_overpass_api(coords, radius)
 
-            for tag, value in osm_tags_combo.items():
-                osm_tags_combo_str += f'["{tag}"="{value}"]'
+            tags_combo_str = ""
 
-            if not osm_tags_combo_str:
+            for tag, value in osm_filter["tags"].items():
+                if value is None:
+                    tags_combo_str += f'["{tag}"]'
+                else:
+                    tags_combo_str += f'["{tag}"="{value}"]'
+
+            if not tags_combo_str:
                 continue
 
-            query_body += f"nwr{osm_tags_combo_str}({formatted_coords});\r\n"
+            query_body += f"nwr{tags_combo_str}({overpass_filter});\n"
+
+    query_body += ");\n"
 
     return query_body
 
@@ -101,13 +141,14 @@ def get_query_body(
 def download_osm_airport_data(
     layer_types: list[AlaqsLayerType],
     coords: tuple[float, float],
+    icao_code: str,
 ) -> tuple[QgsVectorLayer, QgsVectorLayer, QgsVectorLayer]:
-    query_body = get_query_body(layer_types, coords)
+    aerodrome = get_nominatum_feature_by_icao_code(icao_code)
+
+    query_body = get_query_body(layer_types, coords, aerodrome)
     query = f"""
         [out:xml] [timeout:25];
-        (
-            {query_body}
-        );
+        {query_body}
         (._;>;);
         out body;
     """
