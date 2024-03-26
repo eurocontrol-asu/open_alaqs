@@ -1,9 +1,7 @@
-import re
-from collections import OrderedDict
 from typing import Optional
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.tools import conversion, sql_interface
+from open_alaqs.core.tools import sql_interface
 
 logger = get_logger(__name__)
 
@@ -33,16 +31,9 @@ class SQLSerializable:
         assert self._table_name
         assert isinstance(table_columns_type_dict, dict)
 
-        self._primary_key = primary_key or self._guess_pk()
+        self._primary_key = primary_key or self._guess_pk_name()
 
         assert self._primary_key
-
-    def _guess_pk(self) -> Optional[str]:
-        for key in self._table_columns:
-            if "PRIMARY KEY".lower() in self._table_columns[key].lower():
-                return key
-
-        return None
 
     def getDatabasePath(self) -> str:
         return self._db_path
@@ -67,7 +58,7 @@ class SQLSerializable:
         db_path = path or self._db_path
 
         try:
-            self.create_table(db_path)
+            self._recreate_table(db_path)
 
             result = sql_interface.insert_into_table(
                 db_path,
@@ -89,112 +80,40 @@ class SQLSerializable:
         return True
 
     def deserialize(self):
-        if not self._table_columns or not self._table_name:
-            logger.error(
-                "Did not find table column ('%s') or table name definition ('%s')"
-                % (str(self._table_columns), str(self._table_name))
-            )
-            return False
-        if not isinstance(self._table_columns, OrderedDict):
-            logger.error(
-                "Expected type for table columns is '%s' but got '%s'."
-                % (str(type(OrderedDict())), type(self._table_columns))
-            )
-            return False
-
         # all usual sql columns
-        columns_ = list(self._table_columns.keys())
-        # all spatialite sql columns
-        if self._geometry_columns:
-            geometry_column_names_ = []
-            for k_ in self._geometry_columns:
-                if "column_name" in k_:
-                    geometry_column_names_.append(
-                        "AsText(%s)" % (str(k_["column_name"]))
-                    )
-            columns_.extend(geometry_column_names_)
+        columns = list(
+            map(lambda c: sql_interface.quote_identifier(c), self._table_columns.keys())
+        )
 
-        sql_text = "SELECT %s FROM %s;" % (",".join(columns_), self._table_name)
-        # result = SQLInterface.pd_query_text(self._db_path, sql_text)
-        result = sql_interface.query_text(self._db_path, sql_text)
-
-        if isinstance(result, str):
-            raise Exception(result)
-        elif isinstance(result, bool):
-            logger.info(
-                "Table '%s' in database '%s' is empty."
-                % (self._table_name, self._db_path)
+        for column_def in self._geometry_columns:
+            columns.append(
+                sql_interface.SqlExpression(
+                    f'AsText({sql_interface.quote_identifier(column_def["column_name"])})'
+                )
             )
-        elif result is None:
-            logger.error(
-                "Deserialization of database '%s' and table '%s' failed. Either file not found or table headers do not match expected headers."
-                % (self._db_path, self._table_name)
-            )
-        else:
-            for row in result:
-                values_dict = self.result_to_dict(columns_, row)
-                if values_dict is None:
-                    logger.error(
-                        "Deserialization failed. Database '%s' with table '%s' returned dimension %i but expected %i."
-                        % (self._db_path, self._table_name, len(row), len(columns_))
-                    )
-                else:
-                    if self._primary_key not in values_dict:
-                        logger.error(
-                            "Primary key '%s' is not contained in returned values. Database is '%s' with table '%s' and requested columns '%s'."
-                            % (
-                                self._primary_key,
-                                self._db_path,
-                                self._table_name,
-                                str(columns_),
-                            )
-                        )
-                    else:
-                        try:
-                            # correct for NULL values
-                            for key in values_dict:
-                                if isinstance(values_dict[key], str):
-                                    if values_dict[key] == "NULL":
-                                        values_dict[key] = None
 
-                            # fix int/float conversion when reading from SQL DB
-                            for key in values_dict:
-                                if values_dict[key] is None:
-                                    continue
-                                else:
-                                    if (
-                                        key in self._table_columns
-                                        and self._table_columns[key].lower()
-                                        in ["decimal"]
-                                    ):
-                                        values_dict[key] = conversion.convertToFloat(
-                                            values_dict[key]
-                                        )
-                            self.setEntry(
-                                values_dict[self._primary_key],
-                                self.getObject(values_dict),
-                            )
+        result = sql_interface.execute_sql(
+            self._db_path,
+            f"""
+                SELECT {", ".join(columns)}
+                FROM {sql_interface.quote_identifier(self._table_name)}
+            """,
+            fetchone=False,
+        )
 
-                        except Exception as exc_:
-                            logger.error(exc_)
-            # logger.info("Deserialized %i rows from table '%s' in database '%s' " % (len(result), self._table_name, self._db_path))
+        for row in result:
+            assert self._primary_key in row.keys()
 
-    @staticmethod
-    def result_to_dict(columns, data):
-        if len(data) == len(columns):
-            data_dict = OrderedDict()
-            for col_index, col_name in enumerate(columns):
-                # convert AsText(bla) to bla
-                geometry_type_ = re.search(r"AsText\((.+?)\)", col_name)
-                if geometry_type_:
-                    data_dict[geometry_type_.group(1)] = data[col_index]
-                else:
-                    data_dict[col_name] = data[col_index]
-            return data_dict
+            self.setEntry(row[self._primary_key], dict(row))
+
+    def _guess_pk_name(self) -> Optional[str]:
+        for key in self._table_columns:
+            if "PRIMARY KEY".lower() in self._table_columns[key].lower():
+                return key
 
         return None
 
-    def create_table(self, db_path: str = "") -> None:
+    def _recreate_table(self, db_path: str = "") -> None:
         """
         Create a new table
         :param path_: database path

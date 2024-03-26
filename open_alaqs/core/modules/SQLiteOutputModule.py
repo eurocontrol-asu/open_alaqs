@@ -52,7 +52,7 @@ class SQLiteOutputModule(OutputModule):
             self._db = EmissionCalculationResultDatabase(self.getOutputPath()[0])
 
         if self._db is not None:
-            self._db.create_table(self.getOutputPath()[0])
+            self._db._recreate_table(self.getOutputPath()[0])
 
     def process(self, timeval, result, **kwargs):
         # result is of format [(Source, Emission)]
