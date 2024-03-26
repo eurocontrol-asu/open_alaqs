@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools import sql_interface
@@ -38,18 +38,19 @@ class SQLSerializable:
     def getDatabasePath(self) -> str:
         return self._db_path
 
-    def setEntry(self, key, value_object):
+    def setEntry(self, key: Any, value_object: dict[str, Any]) -> None:
         if self.hasEntry(key):
             logger.warning(
                 "Already found entry with key '%s'. Replacing existing entry."
                 % (str(key))
             )
+
         self._entries[key] = value_object
 
-    def hasEntry(self, key):
+    def hasEntry(self, key: Any) -> bool:
         return key in self._entries
 
-    def getEntries(self):
+    def getEntries(self) -> dict[str, Any]:
         return self._entries
 
     def serialize(self, path: str = "") -> bool:
@@ -77,7 +78,7 @@ class SQLSerializable:
 
         return True
 
-    def deserialize(self):
+    def deserialize(self) -> None:
         # all usual sql columns
         columns = list(
             map(lambda c: sql_interface.quote_identifier(c), self._table_columns.keys())
