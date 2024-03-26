@@ -69,28 +69,31 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 os.mkdir(self._output_path)
 
         self._sequ = "k+,j-,i+"
-        self._grid = values_dict.get("grid", "")
+        self._grid: Grid3D = values_dict.get("grid", None)
 
         self._pollutants_list = values_dict.get("pollutants_list")
+
         if self._pollutant:
             self._pollutants_list = [self._pollutant]
 
         self._enable = values_dict.get("Enabled", False)
         # "----------------- general parameters",
-        # "ti\t'grid source'\t' title of the project",
+
         self._title = values_dict.get("Title", values_dict.get("add title"))
         if not self._title:
             self._title = "no title"
-        # "qs\t1\t' quality level",
+
         self._quality_level = values_dict.get(
             "Quality Level", values_dict.get("quality level")
         )
         if not self._quality_level:
             self._quality_level = 1
+
         # for non-standard calculations
         self._options = values_dict.get(
             "Option String", values_dict.get("options string")
         )
+
         if not self._options:
             self._options = "SCINOTAT"
 
@@ -186,33 +189,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 "Options String": "NOSTANDARD;SCINOTAT;Kmax=1",
             }
         )
-
-    # ToDo: Define the get set functions for all parameters
-    def getTitle(self):
-        return self._title
-
-    def setTitle(self, var):
-        self._title = var
-
-    # Quality Level
-    def getQualityLevel(self):
-        return self._quality_level
-
-    def setQualityLevel(self, var):
-        self._quality_level = var
-
-    # Roughness Length
-    def getRoughnessLength(self):
-        return self._roughness_level
-
-    def setRoughnessLength(self, var):
-        self._roughness_level = var
-
-    def getGrid(self) -> Grid3D:
-        return self._grid
-
-    def setGrid(self, var):
-        self._grid = var
 
     def isEnabled(self):
         return self._enable
@@ -642,9 +618,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         """
 
-        # Get the grid
-        grid = self.getGrid()
-
         # Get z_min and z_max
         z_min = bbox["z_min"]
         z_max = bbox["z_max"]
@@ -668,12 +641,12 @@ class AUSTAL2000DispersionModule(DispersionModule):
             for index_height_level, cell_hash in enumerate(xy_rect):
 
                 # Get the x, y, z coordinates
-                x_, y_, z_ = grid.convertCellHashListToCenterGridCellCoordinates(
+                x_, y_, z_ = self._grid.convertCellHashListToCenterGridCellCoordinates(
                     [cell_hash]
                 )[cell_hash]
 
                 # Get the cell box
-                cell_bbox = self.getCellBox(x_, y_, z_, grid)
+                cell_bbox = self.getCellBox(x_, y_, z_, self._grid)
 
                 # calculate the efficiency once for each x,y pair and reuse it
                 #  for all z levels
@@ -1124,8 +1097,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
         total_emissions_per_cell_list = []
 
         # Get the grid
-        grid = self.getGrid()
-
         for (source_, emissions__) in result:
 
             self._source_height = 0
@@ -1135,8 +1106,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             for emissions_ in emissions__:
 
                 # Get the geometry text
-                e_wkt = emissions_.getGeometryText()
-                if e_wkt is None:
+                if emissions_.getGeometryText() is None:
                     logger.warning(
                         f"AUSTAL2000: Did not find geometry for "
                         f"source: {source_.getName()}"
@@ -1159,11 +1129,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 if is_multi_polygon_element_ or is_multi_line_element_:
 
                     # Add the emissions for each geometry
-                    for i, g in enumerate(geom):
-
-                        # Get the WKT representation of the geometry
-                        g_wkt = g.wkt
-
+                    for g in geom:
                         # Determine the emissions for this geometry based on
                         # area/length (depending on geometry type)
                         if isinstance(g, Polygon):
@@ -1179,9 +1145,9 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
                         # Get matched cell coefficients for this geometry
                         matched_cells_coeff = self.getMatchedCellCoeffs(
-                            g_wkt,
+                            g.wkt,
                             emissions_,
-                            grid,
+                            self._grid,
                             is_point_element_,
                             is_line_element_,
                             is_polygon_element_,
@@ -1199,9 +1165,9 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
                     # Get matched cell coefficients for this geometry
                     matched_cells_coeff = self.getMatchedCellCoeffs(
-                        e_wkt,
+                        emissions_.getGeometryText(),
                         emissions_,
-                        grid,
+                        self._grid,
                         is_point_element_,
                         is_line_element_,
                         is_polygon_element_,

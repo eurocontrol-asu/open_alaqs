@@ -194,57 +194,6 @@ class QGISVectorLayerDispersionModule(OutputModule):
             )
         return data_point_
 
-    def addDataPoint(self, grid, cell_hash, data_point):
-        # strip z coordinates if 2D visualization, i.e. integrate over z axis
-        if not self._3DVisualization:
-            cell_hash = self.getGrid().stripZCoordinateFromCellHash(cell_hash)
-        else:
-            cell_hash = cell_hash[:]
-
-        # skip data points if all emissions are smaller than threshold
-        if not sum(
-            [
-                abs(data_point["attributes"][attribute])
-                > self.getThresholdToCreateDataPoint()
-                for attribute in data_point["attributes"]
-            ]
-        ):
-            logger.info(
-                "addDataPoint: Skip data point (%s) with value '%s' due to threshold (%s and of type '%s')."
-                % (
-                    str(data_point),
-                    str(
-                        sum(
-                            [
-                                abs(data_point["attributes"][attribute])
-                                for attribute in data_point["attributes"]
-                            ]
-                        )
-                    ),
-                    str(self.getThresholdToCreateDataPoint()),
-                    str(type(self.getThresholdToCreateDataPoint())),
-                )
-            )
-            return
-
-        # store each grid point only once, otherwise add cell contents
-        if cell_hash not in self._data:
-            self._data[cell_hash] = data_point
-        else:
-            for attribute in data_point["attributes"]:
-                if attribute in self._data[cell_hash]["attributes"]:
-                    # logger.debug("attribute '%s' already in data" % (data_point["attributes"][attribute]))
-                    # self._data[cell_hash]["attributes"][attribute]+= data_point["attributes"][attribute]
-                    pass
-                else:
-                    self._data[cell_hash]["attributes"][attribute] = data_point[
-                        "attributes"
-                    ][attribute]
-
-    # def getBoundingBox(self, geometry_wkt):
-    #     bbox = Spatial.getBoundingBox(geometry_wkt)
-    #     return bbox
-
     def polygonize_bbox(self, box_):
         return Polygon(
             [
@@ -766,37 +715,6 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 # matched_cells_2D.loc[matched_cells_2D.index, "Concentration"] = \
                 #     conc_value * matched_cells_2D.intersection(geom).area / geom.area
                 self._data_cells.loc[matched_cells_2D.index, "Q"] += conc_value
-
-                # # logger.info(matched_cells_2D.head())
-                # # ToDo: Add conc to self._data_cells
-                #
-                # # z_min = bbox["z_min"]
-                # # z_max = bbox["z_max"]
-                #
-                # for xy_rect in matched_cells:
-                #     if not xy_rect:
-                #         logger.info("No matched_cells (%s) for Bbox: %s ? "%(xy_rect, bbox))
-                #         continue
-                #
-                #     z_count = 0
-                #     for index_height_level, cell_hash in enumerate(xy_rect):
-                #
-                #         if z_count == 0:
-                #             x_,y_,z_ = 0.,0.,0.
-                #             (x_,y_,z_) = self.getGrid().convertCellHashListToCenterGridCellCoordinates([cell_hash])[cell_hash]
-                #
-                #             # cell_bbox = self.getCellBox(x_,y_,z_, self.getGrid())
-                #             data_point_ = self.getDataPoint(x_, y_, z_, self._isPolygon, self.getGrid())
-                #
-                #             #write the emission values to the data point
-                #             data_point_.update({"attributes":{self._pollutant: conc_value}})
-                #
-                #             #save the data point in memory
-                #             self.addDataPoint(self.getGrid(), cell_hash, data_point_)
-                #
-                #             z_count = 1
-                #         else:
-                #             z_count = 0
 
         if round(conc_value_counter, 3) < round(self._total_concentration, 3):
             logger.warning(

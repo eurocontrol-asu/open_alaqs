@@ -18,6 +18,7 @@ from typing import Optional
 from open_alaqs.core import alaqsdblite, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools.create_output import create_alaqs_output
+from open_alaqs.core.tools.sql_interface import SqlExpression, update_table
 from open_alaqs.typing import AirportDict, StudySetup
 
 logger = get_logger(__name__)
@@ -72,10 +73,11 @@ def load_study_setup() -> StudySetup:
         sqlite3.Row - resulting user study setup
     """
     return alaqsdblite.execute_sql(
+        alaqsdblite.ProjectDatabase().path,
         """
             SELECT *
             FROM user_study_setup
-        """
+        """,
     )
 
 
@@ -99,11 +101,12 @@ def save_study_setup(study_setup: StudySetup) -> None:
         if param == "":
             raise Exception("Study setup parameters cannot be blank")
 
-    alaqsdblite.update_table(
+    update_table(
+        alaqsdblite.ProjectDatabase().path,
         "user_study_setup",
         {
             **study_setup,
-            "date_modified": alaqsdblite.SqlExpression("DATETIME('now')"),
+            "date_modified": SqlExpression("DATETIME('now')"),
         },
         {
             "airport_id": study_setup["airport_id"],
@@ -115,6 +118,7 @@ def save_study_setup(study_setup: StudySetup) -> None:
 def get_airport_codes() -> list[str]:
     """Return a list of airport ICAO codes"""
     return alaqsdblite.execute_sql(
+        alaqsdblite.ProjectDatabase().path,
         """
             SELECT airport_code
             FROM default_airports
@@ -135,6 +139,7 @@ def airport_lookup(icao_code: str) -> Optional[AirportDict]:
         AirportDict | None: airport data
     """
     return alaqsdblite.execute_sql(
+        alaqsdblite.ProjectDatabase().path,
         """
             SELECT *
             FROM default_airports
