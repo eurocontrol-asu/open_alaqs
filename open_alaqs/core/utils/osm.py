@@ -101,7 +101,12 @@ def get_query_body(
     query_body = ""
 
     if aerodrome:
-        query_body += f'area({aerodrome["osm_id"]}) -> .airport_geom;\n'
+        if aerodrome["osm_type"] == "relation":
+            osm_id = f'36{aerodrome["osm_id"]}'
+        else:
+            osm_id = aerodrome["osm_id"]
+
+        query_body += f"area({osm_id}) -> .airport_geom;\n"
 
     query_body += "(\n"
 
