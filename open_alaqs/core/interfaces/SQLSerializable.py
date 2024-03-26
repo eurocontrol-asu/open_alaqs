@@ -47,9 +47,7 @@ class SQLSerializable:
         self._entries[key] = value_object
 
     def hasEntry(self, key):
-        if key in self._entries:
-            return True
-        return False
+        return key in self._entries
 
     def getEntries(self):
         return self._entries
