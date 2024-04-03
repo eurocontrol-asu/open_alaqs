@@ -92,7 +92,15 @@ if __name__ == "__main__":
     inventory_template = TEMPLATES_DIR / "inventory.alaqs"
 
     if args.full_recreate:
+        logging.debug(
+            'Overwrite the base template Spatialite file "%s"...', str(base_template)
+        )
+
+        base_template.unlink(missing_ok=True)
+
         connect(base_template, init_spatialite=True)
+
+    logging.debug('Using the Spatialite file "%s" as base!', str(base_template))
 
     shutil.copyfile(base_template, project_template)
     shutil.copyfile(base_template, inventory_template)
@@ -113,7 +121,7 @@ if __name__ == "__main__":
 
     # Get the csv files to import
     for csv_filename in csv_filenames:
-        logging.debug('Importinng CSV "%s"...', csv_filename.stem)
+        logging.debug('Importing CSV "%s"...', csv_filename.stem)
 
         alaqsdb_df = pd.read_sql(f"SELECT * FROM {csv_filename.stem}", project_conn)
 
