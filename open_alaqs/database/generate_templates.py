@@ -1,3 +1,4 @@
+import argparse
 import logging
 import re
 import shutil
@@ -29,14 +30,17 @@ def get_engine(p: Path) -> sqlalchemy.engine.Engine:
     return sqlalchemy.create_engine(uri)
 
 
-def connect(p: Path) -> sqlite3.Connection:
+def connect(p: Path, init_spatialite: bool = False) -> sqlite3.Connection:
     logging.info("Connecting to %s...", p)
 
     conn = sqlite3.connect(p)
 
     conn.enable_load_extension(True)
-    conn.execute("SELECT load_extension('mod_spatialite');")
+    conn.execute("SELECT load_extension('mod_spatialite')")
     conn.enable_load_extension(False)
+
+    if init_spatialite:
+        conn.execute("SELECT InitSpatialMetaData()")
 
     return conn
 
@@ -74,18 +78,24 @@ if __name__ == "__main__":
     """
     Build a new *.alaqs project template and a new *_out.alaqs inventory template.
     """
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--full-recreate",
+        help="recreate the Spatialite databases from scratch (slow, ~3 mins)",
+        action="store_true",
+    )
+    args = parser.parse_args()
 
     # Get the path to the project (*.alaqs) and inventory (*_out.alaqs) templates
+    base_template = TEMPLATES_DIR / "spatialite_base.alaqs"
     project_template = TEMPLATES_DIR / "project.alaqs"
     inventory_template = TEMPLATES_DIR / "inventory.alaqs"
 
-    # Get the path to the QGIS template with editable layers (tables named shapes_*)
-    editable_layers_template_path = SRC_DIR / "editable_layers.sqlite"
+    if args.full_recreate:
+        connect(base_template, init_spatialite=True)
 
-    # Duplicate the QGIS template to act as basis for the new project and inventory templates
-    logging.info(f"duplicate {editable_layers_template_path.name}")
-    shutil.copy(editable_layers_template_path, project_template)
-    shutil.copy(editable_layers_template_path, inventory_template)
+    shutil.copyfile(base_template, project_template)
+    shutil.copyfile(base_template, inventory_template)
 
     # Create the sqlite engines to the databases
     project_conn = connect(project_template)
