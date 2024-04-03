@@ -16,8 +16,8 @@ TEMPLATES_DIR = Path(__file__).parents[1] / "core/templates"
 
 # Set the match patterns
 MATCH_PATTERNS = {
-    "project": r"(default|user)_(.*).sql",
-    "inventory": r"(default|user|tbl)_(.*).sql",
+    "project": r"(shapes|default|user)_(.*).sql",
+    "inventory": r"(shapes|default|user|tbl)_(.*).sql",
 }
 
 
@@ -32,7 +32,13 @@ def get_engine(p: Path) -> sqlalchemy.engine.Engine:
 def connect(p: Path) -> sqlite3.Connection:
     logging.info("Connecting to %s...", p)
 
-    return sqlite3.connect(p)
+    conn = sqlite3.connect(p)
+
+    conn.enable_load_extension(True)
+    conn.execute("SELECT load_extension('mod_spatialite');")
+    conn.enable_load_extension(False)
+
+    return conn
 
 
 def apply_sql(conn: sqlite3.Connection, sql_paths, file_type):
