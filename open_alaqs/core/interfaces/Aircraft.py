@@ -253,8 +253,7 @@ class AircraftStore(Store, metaclass=Singleton):
                         ac.getICAOIdentifier(),
                     )
 
-                    # TODO OPENGIS.ch: Verify with Stavros shall we ignore the aircraft, as the old code is misleading...
-                    # continue
+                    continue
 
                 ac.setDefaultEngine(engine)
 
