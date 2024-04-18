@@ -301,16 +301,26 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
 
             self.ui.textEditStudyInformation.setPlainText(study_data["study_info"])
 
-            created_date = study_data["date_created"]
-            modified_date = study_data["date_modified"]
-            latest_date = created_date
-            if conversion.convertTimeToSeconds(
-                modified_date
-            ) > conversion.convertTimeToSeconds(created_date):
-                latest_date = modified_date
+            try:
+                date_created = datetime.datetime.fromisoformat(
+                    study_data["date_created"]
+                )
+            except Exception:
+                date_created = datetime.now()
 
-            self.ui.labelDateCreated.setText(str(created_date))
-            self.ui.labelDateModified.setText(str(latest_date))
+            try:
+                date_modified = datetime.datetime.fromisoformat(
+                    study_data["date_modified"]
+                )
+            except Exception:
+                date_modified = datetime.now()
+
+            self.ui.labelDateCreated.setText(
+                date_created.isoformat(sep=" ", timespec="seconds")
+            )
+            self.ui.labelDateModified.setText(
+                date_modified.isoformat(sep=" ", timespec="seconds")
+            )
         else:
             # load some defaults
             raise Exception("Could not load study setup.")
