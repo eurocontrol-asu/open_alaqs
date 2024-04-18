@@ -1,4 +1,3 @@
-import difflib
 import os
 from collections import OrderedDict
 
@@ -13,6 +12,7 @@ from open_alaqs.core.interfaces.EngineStore import EngineStore, HeliEngineStore
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.interfaces.Store import Store
 from open_alaqs.core.tools.Singleton import Singleton
+from open_alaqs.core.utils.utils import fuzzy_match
 
 logger = get_logger(__name__)
 
@@ -238,93 +238,36 @@ class AircraftStore(Store, metaclass=Singleton):
             try:
                 # add aircraft to store
                 ac = Aircraft(ac_dict)
-                # if ac.getGroup() == "HELICOPTER":
-                #
-                #     if "engine_name" in ac_dict.keys() and \
-                #             self.getHelicopterEngineStore().getHeliEngineEmissionIndices().has_key(ac_dict["engine_name"]):
-                #
-                #         heli_eng = Engine(ac_dict["engine_name"])
-                #         heli_eng.setName(ac_dict["engine_name"])
-                #         heli_eng_ei = self.getHelicopterEngineStore().getHeliEngineEmissionIndices().get(ac_dict["engine_name"])
-                #         heli_eng.setEmissionIndex(heli_eng_ei.getObjects())
-                #         # start_ei = Emission(defaultValues={"fuel_kg" : 0.,
-                #         #     "co_g" : 0.,
-                #         #     "co2_g" : 0.,
-                #         #     "hc_g" : 0.,
-                #         #     "nox_g" : 0.,
-                #         #     "sox_g" : 0.,
-                #         #     "pm10_g" : 0.,
-                #         #     "p1_g" : 0.,
-                #         #     "p2_g": 0.,
-                #         #     "pm10_prefoa3_g" : 0.,
-                #         #     "pm10_nonvol_g" : 0.,
-                #         #     "pm10_sul_g" : 0.,
-                #         #     "pm10_organic_g" : 0.
-                #         # })
-                #         # start_ei.setVerticalExtent({'z_min': 0, 'z_max': 5})
-                #         ac.setDefaultEngine(heli_eng)
-                #         # ac.getDefaultEngine().setStartEmissions(start_ei)
-                #         # emission factors
-                #         ac.setApu(None)
-                #         ac.setApuEmissions(None)
-                #     else:
-                #         logger.warning("Could not find engine with id '%s' for HELICOPTER %s"%(ac_dict["engine"],
-                #                                                                                ac.getICAOIdentifier()))
-                #         continue
 
-                # default engine assignment
-                if "engine" in ac_dict and self.getEngineStore().hasKey(
-                    ac_dict["engine"]
-                ):
-                    ac.setDefaultEngine(
-                        self.getEngineStore().getObject(ac_dict["engine"])
-                    )
+                engine = (
+                    self.getEngineStore().getObject(ac_dict["engine"])
+                    or self.getEngineStore().getObject(ac_dict["engine_name"])
+                    or self.getHeliEngineStore().getObject(ac_dict["engine_name"])
+                )
 
-                elif "engine" in ac_dict and not self.getEngineStore().hasKey(
-                    ac_dict["engine"]
-                ):
-                    if self.getEngineStore().hasKey(ac_dict["engine_name"]):
-                        logger.info(
-                            "Engine sub %s for %s"
-                            % (ac_dict["engine_name"], ac_dict["engine"])
-                        )
-                        ac.setDefaultEngine(
-                            self.getEngineStore().getObject(ac_dict["engine_name"])
-                        )
-
-                # try HELICOPTER DB
-                elif "engine_name" in ac_dict and self.getHeliEngineStore().hasKey(
-                    ac_dict["engine_name"]
-                ):
-                    ac.setDefaultEngine(
-                        self.getHeliEngineStore().getObject(ac_dict["engine_name"])
-                    )
-
-                else:
-                    # If engine not found in the DB, the aircraft is ignored
-                    # if not ac_dict["engine"] in unmatched_engines:
-                    #     unmatched_engines.append(ac_dict["engine"])
+                # If engine not found in the DB, the aircraft is ignored
+                if not engine:
                     logger.warning(
-                        "Could not find engine with id '%s' for AC %s"
-                        % (ac_dict["engine"], ac.getICAOIdentifier())
+                        'Could not find engine with id "%s" for aircraft "%s"',
+                        ac_dict["engine"],
+                        ac.getICAOIdentifier(),
                     )
+
                     continue
-                    # return
+
+                ac.setDefaultEngine(engine)
 
                 if ac.getDefaultEngine() is not None:
                     #   Main-engine-start-emission factors
-                    matched = difflib.get_close_matches(
+                    ac_group = fuzzy_match(
                         ac.getGroup(),
-                        [
-                            values["aircraft_group"]
-                            for key, values in list(
-                                self.getEngineStartEmissionFactorsDatabase()
-                                .getEntries()
-                                .items()
-                            )
-                        ],
+                        (
+                            v["aircraft_group"]
+                            for v in self.getEngineStartEmissionFactorsDatabase()
+                            .getEntries()
+                            .values()
+                        ),
                     )
-                    ac_group = matched[0] if matched else None
 
                     start_ei = Emission(
                         defaultValues={
@@ -350,10 +293,10 @@ class AircraftStore(Store, metaclass=Singleton):
                             start_ei
                         )  # association of start ef by aircraft group!
                     else:
-                        for key, value in list(
+                        for value in (
                             self.getEngineStartEmissionFactorsDatabase()
                             .getEntries()
-                            .items()
+                            .values()
                         ):
                             if value["aircraft_group"] == ac_group:
                                 start_ei.addCO(value["co"])
@@ -367,106 +310,71 @@ class AircraftStore(Store, metaclass=Singleton):
                             start_ei
                         )  # association of start ef by aircraft group!
 
-                    # APU infos:
+                    if ac.getGroup():
+                        apu_times_ = self.getAPUStore().get_apu_times(ac.getGroup())
 
-                    # times
-                    # apu_times = {
-                    #     "REMOTE": {"arr": 0, "dep": 0},
-                    #     "PIER": {"arr": 0, "dep": 0},
-                    #     "CARGO": {"arr": 0, "dep": 0},
-                    # }
-                    try:
-                        if ac.getGroup():
-                            apu_times_ = self.getAPUStore().get_apu_times(ac.getGroup())
-                    except Exception as exc_:
-                        logger.error("Problem with assigning APU times %s" % exc_)
                     ac.setApuTimes(apu_times_)
 
                     # emission factors
                     ac.setApu(None)
                     ac.setApuEmissions(None)
-                    try:
-                        if "apu_id" in ac_dict:
-                            apu_val_list = [
-                                values_.getName()
-                                for key_, values_ in list(
-                                    self.getAPUStore().getObjects().items()
-                                )
-                            ]
-                            apu_val_emissions = [
-                                values_._emissions
-                                for key_, values_ in list(
-                                    self.getAPUStore().getObjects().items()
-                                )
-                            ]
-                            matched = difflib.get_close_matches(
-                                ac._apu_id, apu_val_list
-                            )
-                            if matched:
-                                ac.setApu(matched[0])
-                                ac.setApuEmissions(
-                                    apu_val_emissions[apu_val_list.index(matched[0])]
-                                )
-                    except Exception as exc_:
-                        logger.error("Problem with assigning APU id %s" % exc_)
 
-                # emission factors
-                # matched = difflib.get_close_matches(ac.getGroup(), [values.getAircraftGroup()
-                #                                         for key, values in self.getAPUStore().getObjects().items()])
-                #
-                # if matched:
-                #     apu_group = matched[0]
-                #     for key, apu in self.getAPUStore().getObjects().items():
-                #         if apu.getAircraftGroup() == apu_group:
-                #             ac.setApu(apu)
-                # else:
-                #     # logger.warning("Did not find apu emission factors for aircraft '%s' (%s). Update the table 'default_apu_ef'." % (ac.getICAOIdentifier(), ac.getGroup()))
-                #     pass
+                    apu_val_list = [
+                        v.getName() for v in self.getAPUStore().getObjects().values()
+                    ]
+                    apu = fuzzy_match(ac._apu_id, apu_val_list)
+                    if apu:
+                        apu_val_emissions = [
+                            v._emissions()
+                            for v in self.getAPUStore().getObjects().values()
+                        ]
+                        ac.setApu(apu)
+                        ac.setApuEmissions(apu_val_emissions[apu_val_list.index(apu)])
 
-                group_ = None
-
+                # TODO OPENGIS.ch: Why do we rename the group from the `default_aircraft` - "HELICOPTER LIGHT", "HELICOPTER HEAVY", etc, to "HELI SMALL" and "HELI LARGE" as in `default_emission_dynamics`?
+                # Ideally I would recommend all these values to be added to `default_emission_dynamics` and remove the renaming.
+                # If really needed, this should be a method of the `Aircraft` class.
                 if (ac.getGroup() == "HELICOPTER") or (
                     ac.getGroup() == "HELICOPTER LIGHT"
                 ):
-                    group_ = "HELI SMALL"
+                    dynamic_group = "HELI SMALL"
                 elif (
                     (ac.getGroup() == "HELICOPTER HEAVY")
                     or (ac.getGroup() == "HELICOPTER LARGE")
                     or (ac.getGroup() == "HELICOPTER MEDIUM")
                 ):
-                    group_ = "HELI LARGE"
+                    dynamic_group = "HELI LARGE"
                 else:
-                    group_ = ac.getGroup()
+                    dynamic_group = ac.getGroup()
 
                 # Smooth and Shift factors
-                matched = difflib.get_close_matches(
-                    group_,
-                    [
-                        values.getDynamicsGroup()
-                        for key, values in list(
-                            self.getEmissionDynamicsStore().getObjects().items()
-                        )
-                    ],
+                dynamic_group = fuzzy_match(
+                    dynamic_group,
+                    (
+                        v.getDynamicsGroup()
+                        for v in self.getEmissionDynamicsStore().getObjects().values()
+                    ),
                 )
-                if matched:
-                    matched[0]
-                    for key, sas in list(
-                        self.getEmissionDynamicsStore().getObjects().items()
-                    ):
-                        if group_ in sas.getDynamicsGroup():
-                            if "TX" in sas.getDynamicsGroup():
-                                ac.setEmissionDynamicsByMode("TX", sas)
-                            elif "CL" in sas.getDynamicsGroup():
-                                ac.setEmissionDynamicsByMode("CL", sas)
-                            if "TO" in sas.getDynamicsGroup():
-                                ac.setEmissionDynamicsByMode("TO", sas)
-                            elif "AP" in sas.getDynamicsGroup():
-                                ac.setEmissionDynamicsByMode("AP", sas)
+                if dynamic_group:
+                    for sas in self.getEmissionDynamicsStore().getObjects().values():
+                        if dynamic_group not in sas.getDynamicsGroup():
+                            continue
+
+                        if "TX" in sas.getDynamicsGroup():
+                            ac.setEmissionDynamicsByMode("TX", sas)
+                        elif "CL" in sas.getDynamicsGroup():
+                            ac.setEmissionDynamicsByMode("CL", sas)
+                        if "TO" in sas.getDynamicsGroup():
+                            ac.setEmissionDynamicsByMode("TO", sas)
+                        elif "AP" in sas.getDynamicsGroup():
+                            ac.setEmissionDynamicsByMode("AP", sas)
 
                 self.setObject(ac.getICAOIdentifier(), ac)
 
-            except Exception as exc_:
-                print(exc_)
+            except Exception as error:
+                logger.error(
+                    "Error whil initializing aircraft: %s", error, exc_info=error
+                )
                 continue
 
     def getAircraftDatabase(self):
