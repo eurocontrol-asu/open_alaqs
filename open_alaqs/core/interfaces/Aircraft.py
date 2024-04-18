@@ -242,6 +242,7 @@ class AircraftStore(Store, metaclass=Singleton):
                 engine = (
                     self.getEngineStore().getObject(ac_dict["engine"])
                     or self.getEngineStore().getObject(ac_dict["engine_name"])
+                    or self.getHeliEngineStore().getObject(ac_dict["engine"])
                     or self.getHeliEngineStore().getObject(ac_dict["engine_name"])
                 )
 
