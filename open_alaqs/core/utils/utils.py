@@ -1,8 +1,8 @@
 import difflib
-from typing import Iterable
+from typing import Iterable, Optional
 
 
-def fuzzy_match(search_term: str, values: Iterable[str]) -> str | None:
+def fuzzy_match(search_term: str, values: Iterable[str]) -> Optional[str]:
     matched = difflib.get_close_matches(search_term, values, n=1)
 
     if matched:
