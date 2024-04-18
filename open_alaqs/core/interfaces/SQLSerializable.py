@@ -86,9 +86,7 @@ class SQLSerializable:
 
         for column_def in self._geometry_columns:
             columns.append(
-                sql_interface.SqlExpression(
-                    f'AsText({sql_interface.quote_identifier(column_def["column_name"])})'
-                )
+                f'AsText({sql_interface.quote_identifier(column_def["column_name"])})'
             )
 
         result = sql_interface.execute_sql(
