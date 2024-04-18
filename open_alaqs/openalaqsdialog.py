@@ -222,7 +222,6 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
 
         self.ui.comboBoxAirportCode.currentTextChanged.connect(self.airport_lookup)
 
-        self.ui.lineEditParkingMethod.setEnabled(False)
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(
             self.save_study_setup
         )
@@ -254,7 +253,6 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
                 study_data["airport_temperature"]
             )
             self.ui.spinBoxVerticalLimit.setValue(study_data["vertical_limit"])
-            self.ui.lineEditParkingMethod.setText(study_data["parking_method"])
 
             roadway_methods = alaqs.get_roadway_methods()
             if roadway_methods is not None:
@@ -362,7 +360,6 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.airport_elevation = self.ui.spinBoxAirportElevation.value()
         self.airport_temperature = self.ui.spinBoxAirportTemperature.value()
         self.vertical_limit = self.ui.spinBoxVerticalLimit.value()
-        self.parking_method = oautk.validate_field(self.ui.lineEditParkingMethod, "str")
         self.roadway_method = oautk.validate_field(self.ui.comboBoxRoadwayMethod, "str")
         self.roadway_fleet_year = oautk.validate_field(
             self.ui.comboBoxRoadwayFleetYear, "int"
