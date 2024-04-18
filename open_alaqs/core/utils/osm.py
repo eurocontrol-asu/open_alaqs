@@ -1,8 +1,14 @@
+import json
 from typing import Optional, TypedDict
 
-import requests
 from qgis import processing
-from qgis.core import QgsCoordinateReferenceSystem, QgsVectorLayer
+from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsNetworkAccessManager,
+    QgsVectorLayer,
+)
+from qgis.PyQt.QtCore import QUrl
+from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
 
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.enums import AlaqsLayerType
@@ -33,14 +39,22 @@ def get_nominatum_feature_by_icao_code(icao_code: str) -> Optional[NominatimAero
     Returns:
         NominatimAerodrome | None: dict containing the Nominatum's first response object or None if no mathes found
     """
-    url = (
+    url = QUrl(
         f"https://nominatim.qgis.org/search?q=aerodrome+{icao_code}&format=json&limit=1"
     )
 
-    response = requests.get(url)
-    response.raise_for_status()
+    nam = QgsNetworkAccessManager.instance()
+    request = QNetworkRequest(url)
+    reply = nam.blockingGet(request)
 
-    payload = response.json()
+    if reply.error() != QNetworkReply.NoError:
+        raise Exception(
+            "Failed Nominatim search: [{}] {}".format(
+                reply.error(), reply.errorString()
+            )
+        )
+
+    payload = json.loads(bytes(reply.content()))
 
     if not payload:
         return None
