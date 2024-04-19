@@ -1,9 +1,8 @@
 import importlib.machinery
 import importlib.util
 import inspect
-import os
-import pkgutil
 from collections import OrderedDict
+from pathlib import Path
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.DispersionModule import DispersionModule
@@ -26,11 +25,9 @@ class ModuleManager(metaclass=Singleton):
 
     # load all modules in current directory
     def loadModules(self):
-        for file_finder, name, _is_package in pkgutil.walk_packages(
-            [os.path.abspath(os.path.dirname(__file__))]
-        ):
+        for filename in Path(__file__).resolve().parent.glob("*.py"):
             loader = importlib.machinery.SourceFileLoader(
-                name, file_finder.find_module(name).path
+                filename.stem.lower(), str(filename)
             )
             spec = importlib.util.spec_from_loader(loader.name, loader)
             module = importlib.util.module_from_spec(spec)
