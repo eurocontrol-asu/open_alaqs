@@ -1,3 +1,5 @@
+import importlib.machinery
+import importlib.util
 import inspect
 import os
 import pkgutil
@@ -24,10 +26,16 @@ class ModuleManager(metaclass=Singleton):
 
     # load all modules in current directory
     def loadModules(self):
-        for loader, name, _ in pkgutil.walk_packages(
+        for file_finder, name, _is_package in pkgutil.walk_packages(
             [os.path.abspath(os.path.dirname(__file__))]
         ):
-            module = loader.find_module(name).load_module(name)
+            loader = importlib.machinery.SourceFileLoader(
+                name, file_finder.find_module(name).path
+            )
+            spec = importlib.util.spec_from_loader(loader.name, loader)
+            module = importlib.util.module_from_spec(spec)
+            loader.exec_module(module)
+
             for _name, obj in inspect.getmembers(module):
 
                 # include only classes
