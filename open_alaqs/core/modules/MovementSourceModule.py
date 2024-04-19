@@ -194,9 +194,7 @@ class MovementSourceModule(SourceModule):
         df.loc[:, "gate"] = [mov.getGate().getName() for mov in df["Sources"]]
 
         # Add the aircraft and aircraft group
-        df[["aircraft", "ac_group"]] = pd.DataFrame(
-            [self.getAircraftGroup(m) for m in df["Sources"]], index=df.index
-        )
+        df.loc[:, "ac_group"] = [self.getAircraftGroup(m) for m in df["Sources"]]
 
         # Add the engine
         df.loc[:, "engine"] = [
