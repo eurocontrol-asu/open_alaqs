@@ -143,11 +143,6 @@ class MovementSourceModule(SourceModule):
         return flight_emissions
 
     @staticmethod
-    def getAircraftGroup(movement):
-        aircraft = movement.getAircraft()
-        return aircraft.getName(), aircraft.getGroup()
-
-    @staticmethod
     def getDefaultProfileName(movement):
         if movement.isDeparture():
             return movement.getAircraft().getDefaultDepartureProfileName()
@@ -194,7 +189,8 @@ class MovementSourceModule(SourceModule):
         df.loc[:, "gate"] = [mov.getGate().getName() for mov in df["Sources"]]
 
         # Add the aircraft and aircraft group
-        df.loc[:, "ac_group"] = [self.getAircraftGroup(m) for m in df["Sources"]]
+        df.loc[:, "aircraft"] = [mov.getAircraft().getName() for mov in df["Sources"]]
+        df.loc[:, "ac_group"] = [mov.getAircraft().getGroup() for mov in df["Sources"]]
 
         # Add the engine
         df.loc[:, "engine"] = [
