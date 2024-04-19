@@ -1,11 +1,11 @@
 import calendar
 import time
 from datetime import datetime
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 
 # For time conversions: Use UTC time only
-def convertToFloat(value: Any, default: Any = None) -> Union[float, None]:
+def convertToFloat(value: Any, default: Optional[float] = None) -> Optional[float]:
     """
     Convert value to a float or if not possible return a default value.
 
@@ -13,17 +13,16 @@ def convertToFloat(value: Any, default: Any = None) -> Union[float, None]:
     :param default:
     :return:
     """
+    if value is None or value == "":
+        return default
+
     try:
-        if value is None:
-            raise ValueError("Could not convert value 'None' to float.")
         return float(value)  # float takes only string or float
     except ValueError:
-        if default is not None:
-            return convertToFloat(default)
-    return None
+        return default
 
 
-def convertToInt(value: Any, default: Any = None) -> Union[int, None]:
+def convertToInt(value: Any, default: Optional[int] = None) -> Optional[int]:
     """
     Convert value to an integer or if not possible return a default value.
 
@@ -31,14 +30,13 @@ def convertToInt(value: Any, default: Any = None) -> Union[int, None]:
     :param default:
     :return:
     """
+    if value is None or value == "":
+        return default
+
     try:
-        if value is None:
-            raise ValueError("Could not convert value 'None' to int.")
         return int(value)
     except ValueError:
-        if default is not None:
-            return convertToInt(default)
-    return None
+        return default
 
 
 def convertSecondsToTime(value: float) -> Union[time.struct_time, None]:
