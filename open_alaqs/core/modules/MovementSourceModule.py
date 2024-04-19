@@ -109,14 +109,14 @@ class MovementSourceModule(SourceModule):
 
         # process only movements of the runway under study
         if runway_names and not (movement.getRunway().getName() in runway_names):
-            return pd.Int64Index([], dtype="int64"), None
+            return pd.Index([], dtype="int64"), None
             # continue
         if (
             source_names
             and not ("all" in source_names)
             and not (movement.getName() in source_names)
         ):
-            return pd.Int64Index([], dtype="int64"), None
+            return pd.Index([], dtype="int64"), None
             # continue
 
         gate_emissions = movement.calculateGateEmissions(
@@ -135,7 +135,7 @@ class MovementSourceModule(SourceModule):
             and not ("all" in source_names)
             and not (movement.getName() in source_names)
         ):
-            return pd.Int64Index([], dtype="int64"), None
+            return pd.Index([], dtype="int64"), None
             # continue
         flight_emissions = movement.calculateFlightEmissions(
             atRunway, method, mode, limit
