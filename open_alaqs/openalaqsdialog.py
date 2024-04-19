@@ -20,6 +20,7 @@
 """
 import os
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from qgis.core import (
     Qgis,
@@ -2557,11 +2558,14 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
     @catch_errors
     def update_emissions(self):
 
-        inventory_path = str(self.ui.result_file_path.filePath())
-        if not os.path.exists(inventory_path):
-            raise Exception(
-                "Error: Inventory path '%s' doesn't exist!" % (inventory_path)
+        inventory_path = self.ui.result_file_path.filePath()
+
+        if not Path(inventory_path).exists() or not Path(inventory_path).is_file():
+            logger.error(
+                "Inventory path `%s` is not a file!",
+                inventory_path,
             )
+            return
 
         # Temporarily set the project database to extract the airport data
         project_database = ProjectDatabase()
