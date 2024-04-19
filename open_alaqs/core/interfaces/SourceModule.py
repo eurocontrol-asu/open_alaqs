@@ -33,7 +33,7 @@ class SourceModule:
         self._name = values_dict.get("name")
         self._sources = {}
         self._store = None
-        self._dataframe = pd.DataFrame()
+        self._dataframe = pd.DataFrame(columns=["oid", "Sources"])
 
     def getStore(self):
         return self._store
