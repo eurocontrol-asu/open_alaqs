@@ -207,6 +207,8 @@ class MovementSourceModule(SourceModule):
 
         # Add default gate and flight emissions
         empty_series = pd.Series(index=df.index, dtype=object)
+        # TODO OPENGIS.ch: the type of the `GateEmissions` column would be an `Emission` instance, but later we set it to
+        # `{distance_time:float, distance_space:float, emissions: list[Emissions]}`
         df.loc[:, "GateEmissions"] = empty_series.apply(_default_emissions)
         df.loc[:, "FlightEmissions"] = empty_series.apply(_default_emissions)
 
