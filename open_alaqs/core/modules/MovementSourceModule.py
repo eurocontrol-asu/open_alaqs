@@ -286,7 +286,7 @@ class MovementSourceModule(SourceModule):
 
             # Update the gate emissions
             for ix in group.index:
-                df.loc[ix, "GateEmissions"] = gemissions
+                df.at[ix, "GateEmissions"] = gemissions
 
         """
         Calculate Flight Emissions
@@ -306,7 +306,7 @@ class MovementSourceModule(SourceModule):
 
             # Update the flight emissions
             for ix in group.index:
-                df.loc[ix, "FlightEmissions"] = flight_emissions
+                df.at[ix, "FlightEmissions"] = flight_emissions
 
         """
         Calculate Taxiing Emissions
