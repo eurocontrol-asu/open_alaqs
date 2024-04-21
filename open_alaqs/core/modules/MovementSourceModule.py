@@ -280,13 +280,13 @@ class MovementSourceModule(SourceModule):
         for name, group in df[relevant_movements].groupby(gate_columns):
 
             # Calculate the gate emissions
-            gemissions = self.FetchGateEmissions(
+            gate_emissions = self.FetchGateEmissions(
                 group, calc_method, source_names, runway_names
             )
 
             # Update the gate emissions
             for ix in group.index:
-                df.at[ix, "GateEmissions"] = gemissions
+                df.at[ix, "GateEmissions"] = gate_emissions
 
         """
         Calculate Flight Emissions
