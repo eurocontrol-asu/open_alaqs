@@ -207,6 +207,8 @@ class MovementSourceModule(SourceModule):
 
         # Add default gate and flight emissions
         empty_series = pd.Series(index=df.index, dtype=object)
+        # TODO OPENGIS.ch: the type of the `GateEmissions` column would be an `Emission` instance, but later we set it to
+        # `{distance_time:float, distance_space:float, emissions: list[Emissions]}`
         df.loc[:, "GateEmissions"] = empty_series.apply(_default_emissions)
         df.loc[:, "FlightEmissions"] = empty_series.apply(_default_emissions)
 
@@ -280,13 +282,13 @@ class MovementSourceModule(SourceModule):
         for name, group in df[relevant_movements].groupby(gate_columns):
 
             # Calculate the gate emissions
-            gemissions = self.FetchGateEmissions(
+            gate_emissions = self.FetchGateEmissions(
                 group, calc_method, source_names, runway_names
             )
 
             # Update the gate emissions
             for ix in group.index:
-                df.loc[ix, "GateEmissions"] = gemissions
+                df.at[ix, "GateEmissions"] = gate_emissions
 
         """
         Calculate Flight Emissions
@@ -306,7 +308,7 @@ class MovementSourceModule(SourceModule):
 
             # Update the flight emissions
             for ix in group.index:
-                df.loc[ix, "FlightEmissions"] = flight_emissions
+                df.at[ix, "FlightEmissions"] = flight_emissions
 
         """
         Calculate Taxiing Emissions
