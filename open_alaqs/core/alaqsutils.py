@@ -8,6 +8,7 @@ Created on 21 Mar 2013
 """
 import os
 import sys
+import traceback
 
 from qgis.core import Qgis, QgsMessageLog
 from qgis.utils import spatialite_connect
@@ -38,25 +39,22 @@ def print_error(function_name, exception_object, e_object, log=logger):
         pass
 
     exc_type, exc_obj, exc_tb = sys.exc_info()
-    error = "[-] Error in %s() [line %d]: %s %s" % (
+    error_msg = "[-] Error in %s() [line %d]: %s %s" % (
         function_name,
         exc_tb.tb_lineno,
         exc_type,
         exc_obj,
     )
 
-    if "object has been deleted" in str(exc_obj):
-        return None
-    else:
-        log.error(error)
+    log.error(error_msg, exc_info=exception_object)
 
     QgsMessageLog.logMessage(
-        f"{str(e_object)}:\n{exc_tb}",
+        (error_msg + "\n" + "".join(traceback.format_exception(e_object))),
         tag="Open ALAQS",
         level=Qgis.MessageLevel.Critical,
     )
 
-    return error
+    return error_msg
 
 
 # ===========================================================
