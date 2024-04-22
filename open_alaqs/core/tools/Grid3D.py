@@ -12,6 +12,18 @@ from open_alaqs.core.tools.SizeLimitedDict import SizeLimitedDict
 logger = get_logger(__name__)
 
 
+def _polygonise_2Dcells(df_row):
+    # print("######################", list(map(lambda o: type(o), args)))
+    return Polygon(
+        [
+            (df_row.xmin, df_row.ymin),
+            (df_row.xmax, df_row.ymin),
+            (df_row.xmax, df_row.ymax),
+            (df_row.xmin, df_row.ymax),
+        ]
+    )
+
+
 class Grid3D:
     """
     Class that contains the grid definition (number of cells in x,y,z
@@ -162,23 +174,13 @@ class Grid3D:
 
         return origin_x, origin_y
 
-    def _polygonise_2Dcells(df_row):
-        return Polygon(
-            [
-                (df_row.xmin, df_row.ymin),
-                (df_row.xmax, df_row.ymin),
-                (df_row.xmax, df_row.ymax),
-                (df_row.xmin, df_row.ymax),
-            ]
-        )
-
     def get_df_from_2d_grid_cells(self):
         grid_cells_df = pd.DataFrame(
             list(self.get_3d_grid_cells()),
             columns=["hash", "xmin", "xmax", "ymin", "ymax", "zmin", "zmax"],
         )
         grid_cells_2d = grid_cells_df[grid_cells_df.zmin == 0].reset_index(drop=True)
-        polys = grid_cells_2d.apply(self._polygonise_2Dcells, axis=1)
+        polys = grid_cells_2d.apply(_polygonise_2Dcells, axis=1)
         gdf = gpd.GeoDataFrame(grid_cells_2d, columns=["hash", "geometry"])
         gdf.loc[:, "geometry"] = polys
         return gdf
@@ -188,7 +190,7 @@ class Grid3D:
             list(self.get_3d_grid_cells()),
             columns=["hash", "xmin", "xmax", "ymin", "ymax", "zmin", "zmax"],
         )
-        polys = grid_cells_df.apply(self._polygonise_2Dcells, axis=1)
+        polys = grid_cells_df.apply(_polygonise_2Dcells, axis=1)
         gdf = gpd.GeoDataFrame(
             grid_cells_df, columns=["hash", "geometry", "zmin", "zmax"]
         )
