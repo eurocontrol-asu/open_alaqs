@@ -24,8 +24,7 @@ def write_csv(path_to_file: str, rows: List[list]):
             lineterminator="\n",
         )
     except Exception as e:
-        logger.error("Couldn't write to CSV file: '%s'" % path_to_file)
-        logger.error(e)
+        logger.error("Couldn't write to CSV file: '%s'", path_to_file, exc_info=e)
         raise e
 
 
