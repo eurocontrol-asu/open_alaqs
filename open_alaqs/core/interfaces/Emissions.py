@@ -154,7 +154,7 @@ class Emission(Store):
         if self._geometry_wkt:
             return loads(str(self._geometry_wkt))
         else:
-            return loads(GeometryCollection().to_wkt())
+            return loads(GeometryCollection().wkt)
         # return Spatial.ogr.CreateGeometryFromWkt(self._geometry_wkt)
 
     def setGeometryText(self, var: str):

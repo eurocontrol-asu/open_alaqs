@@ -17,6 +17,7 @@ class Source:
         return self._id
 
     def setName(self, val):
+        # TODO OPENGIS.ch: this method is actually never used
         self._id = val
 
     def getEmissionIndex(self):
