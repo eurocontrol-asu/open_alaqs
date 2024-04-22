@@ -75,9 +75,7 @@ class SQLiteOutputModule(OutputModule):
                     "pmsul_kg": total_emissions_.getPM10Sul(unit="kg")[0],
                     "pmvolatile_kg": total_emissions_.getPM10Organic(unit="kg")[0],
                     "pmnonvolatile_kg": total_emissions_.getnvPM(unit="kg")[0],
-                    "pmnonvolatilenumber_kg": total_emissions_.getnvPMnumber(unit="kg")[
-                        0
-                    ],
+                    "pmnonvolatile_number": total_emissions_.getnvPMnumber()[0],
                 }
             )
         else:
@@ -97,9 +95,7 @@ class SQLiteOutputModule(OutputModule):
                         "pmsul_kg": sum(emissions_).getPM10Sul(unit="kg")[0],
                         "pmvolatile_kg": sum(emissions_).getPM10Organic(unit="kg")[0],
                         "pmnonvolatile_kg": sum(emissions_).getnvPM(unit="kg")[0],
-                        "pmnonvolatilenumber_kg": sum(emissions_).getnvPMnumber(
-                            unit="kg"
-                        )[0],
+                        "pmnonvolatile_number": sum(emissions_).getnvPMnumber()[0],
                     }
                 )
 
