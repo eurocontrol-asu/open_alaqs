@@ -201,6 +201,9 @@ def perform_sql(
     sql: str,
     params: Optional[list] = None,
 ) -> None:
+    if not params:
+        params = []
+
     with get_db_connection(db_filename) as conn:
         cur = conn.cursor()
         cur.execute(sql, params)
@@ -294,10 +297,11 @@ def insert_into_table(
         attr_expressions_str = ", ".join(attr_expressions)
         rows.append(f"({attr_expressions_str})")
 
+    attr_names_str = ", ".join(attr_names)
     rows_str = ", ".join(rows)
     sql = f"""
         INSERT INTO {quote_identifier(table_name)} (
-            {attr_names}
+            {attr_names_str}
         )
         VALUES {rows_str}
     """
