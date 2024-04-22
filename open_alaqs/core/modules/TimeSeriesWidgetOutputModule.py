@@ -200,7 +200,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
                         )
 
                         matched_cells_2D = self._griddata[
-                            self._griddata.intersects(geom) is True
+                            self._griddata.intersects(geom) == True  # noqa: E712
                         ]
 
                         # Calculate Emissions' horizontal distribution
@@ -239,7 +239,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
                 self._griddata.to_crs({"init": "epsg:%s" % self._epsg}).intersects(
                     self._receptor_geom
                 )
-                is True
+                == True  # noqa: E712
             ]
             if not receptor_cell.empty:
                 self._data_y.append(receptor_cell["Emission"].sum())

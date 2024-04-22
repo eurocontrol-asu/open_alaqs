@@ -709,7 +709,9 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 # matched_cells = self.getGrid().matchBoundingBoxToCellHashList(bbox, z_as_list=True)
                 # logger.info(matched_cells)
 
-                matched_cells_2D = self._data_cells[self._data_cells.contains(geom)]
+                matched_cells_2D = self._data_cells[
+                    self._data_cells.contains(geom) == True  # noqa: E712
+                ]
 
                 # Calculate horizontal distribution
                 # matched_cells_2D.loc[matched_cells_2D.index, "Concentration"] = \
