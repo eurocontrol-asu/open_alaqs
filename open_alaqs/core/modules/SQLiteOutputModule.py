@@ -48,11 +48,14 @@ class SQLiteOutputModule(OutputModule):
             )
         )
 
-        if self.getOutputPath()[0] is not None:
-            self._db = EmissionCalculationResultDatabase(self.getOutputPath()[0])
-
-        if self._db is not None:
-            self._db._recreate_table(self.getOutputPath()[0])
+        filename = self.getOutputPath()[0]
+        if filename:
+            self._db = EmissionCalculationResultDatabase(filename)
+            self._db._recreate_table(filename)
+        else:
+            QtWidgets.QMessageBox.warning(
+                None, "SQLiteOutputModule", "No export DB filename specified"
+            )
 
     def process(self, timeval, result, **kwargs):
         # result is of format [(Source, Emission)]
@@ -103,7 +106,11 @@ class SQLiteOutputModule(OutputModule):
             insert_into_table(self.getOutputPath()[0], self._db._table_name, rows_)
 
     def endJob(self):
-        pass
+        QtWidgets.QMessageBox.information(
+            None,
+            "SQLiteOutputModule",
+            f"Results saved as SQLite file at `{self.getOutputPath()[0]}`",
+        )
 
 
 class EmissionCalculationResultDatabase(SQLSerializable, metaclass=Singleton):
