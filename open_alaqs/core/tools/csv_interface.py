@@ -21,7 +21,7 @@ def write_csv(path_to_file: str, rows: List[list]):
             sep=",",
             quotechar='"',
             quoting=csv.QUOTE_NONNUMERIC,
-            line_terminator="\n",
+            lineterminator="\n",
         )
     except Exception as e:
         logger.error("Couldn't write to CSV file: '%s'" % path_to_file)
