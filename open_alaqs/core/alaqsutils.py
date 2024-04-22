@@ -48,8 +48,11 @@ def print_error(function_name, exception_object, e_object, log=logger):
 
     log.error(error_msg, exc_info=exception_object)
 
+    formatted_errror = traceback.format_exception(
+        None, e_object, e_object.__traceback__
+    )
     QgsMessageLog.logMessage(
-        (error_msg + "\n" + "".join(traceback.format_exception(e_object))),
+        (error_msg + "\n" + "".join(formatted_errror)),
         tag="Open ALAQS",
         level=Qgis.MessageLevel.Critical,
     )
