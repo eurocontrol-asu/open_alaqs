@@ -1043,6 +1043,8 @@ class Movement:
             if "height_unit_in_feet" in limit and limit["height_unit_in_feet"]:
                 unit_in_feet = limit["height_unit_in_feet"]  # True
 
+            # TODO OPENGIS.ch: if the height of the emission is above the "sacred number" of 914.14 meters, we ignore all the following emissions,
+            # as assumed they are getting higher and higher than this point
             if (
                 startPoint_.getZ(unit_in_feet) >= limit["max_height"]
                 and endPoint_.getZ(unit_in_feet) >= limit["max_height"]
