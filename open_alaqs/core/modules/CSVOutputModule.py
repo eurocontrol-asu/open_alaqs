@@ -141,14 +141,12 @@ class CSVOutputModule(OutputModule):
         """
         Write output to csv file
         """
-        try:
-            if self.getOutputPath() is not None:
-                write_csv(self.getOutputPath(), self._rows)
-            if os.path.isfile(self.getOutputPath()):
-                QtWidgets.QMessageBox.information(
-                    None, "CSVOutputModule", "Results saved as CSV file"
-                )
-        except Exception:
-            QtWidgets.QMessageBox.critical(
-                None, "CSVOutputModule", "Couldn't save results as CSV file"
+        filename = self.getOutputPath()
+
+        if filename:
+            write_csv(filename, self._rows)
+
+        if os.path.isfile(filename):
+            QtWidgets.QMessageBox.information(
+                None, "CSVOutputModule", f"Results saved as CSV file at `{filename}`"
             )
