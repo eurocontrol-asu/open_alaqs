@@ -499,7 +499,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
             )
             self._contour_layer = contour_layer
 
-            return self._contour_layer.getLayer()
+            return self._contour_layer.layer
 
         return None
 

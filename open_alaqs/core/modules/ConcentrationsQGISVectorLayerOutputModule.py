@@ -764,7 +764,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
 
             # logger.debug("Adding: fieldname:%s, minValue:%s, maxValue:%s"%(self._pollutant, contour_layer_min, contour_layer_max) )
             self._contour_layer = contour_layer
-            return self._contour_layer.getLayer()
+            return self._contour_layer.layer
 
         logger.warning("Could not complete endJob for QGISVectorLayerDispersionModule")
         return None

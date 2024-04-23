@@ -298,6 +298,3 @@ class ContourPlotVectorLayer:
             return False
 
         return True
-
-    def getLayer(self):
-        return self.layer
