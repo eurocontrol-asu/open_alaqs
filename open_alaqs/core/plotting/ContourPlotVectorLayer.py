@@ -112,65 +112,6 @@ class ContourPlotVectorLayer:
         if symbol is not None:
             self.layer.setRenderer(QgsSingleSymbolRenderer(symbol))
 
-    def setStyle(self, config):
-        style = {}
-
-        # set some default values for the layer configuration
-        if "isPolygon" in config:
-            style["isPolygon"] = config["isPolygon"]
-        else:
-            style["isPolygon"] = False
-
-        if "transparency" in config:
-            # takes values in [0,1]
-            style["transparency"] = float(config["transparency"])
-            if style["transparency"] > 1.0:
-                style["transparency"] = 1.0
-            if style["transparency"] < 0.0:
-                style["transparency"] = 0.0
-        else:
-            style["transparency"] = 0.75
-
-        if "color" in config:
-            # "R,G,B" or "#hexcode"
-            style["color"] = str(config["color"])
-        else:
-            style["color"] = "0,0,255"
-
-        if "color_border" in config:
-            # "R,G,B" or "#hexcode"
-            style["color"] = str(config["color_border"])
-        else:
-            style["color_border"] = "0,0,0"
-
-        if "color_border" in config:
-            # "R,G,B" or "#hexcode"
-            style["color_border"] = str(config["color_border"])
-        else:
-            style["color_border"] = "0,0,0"
-
-        if "style" in config:
-            # "R,G,B" or "#hexcode"
-            style["style"] = str(config["style"])
-        else:
-            style["style"] = "solid"
-
-        if "style_border" in config:
-            # "R,G,B" or "#hexcode"
-            style["style_border"] = str(config["style_border"])
-        else:
-            style["style_border"] = "solid"
-
-        if "Label_enable" in config and config["Label_enable"]:
-            style["Label_enable"] = config["Label_enable"]
-        else:
-            style["Label_enable"] = False
-
-        if "fieldname" in config and config["fieldname"] is not None:
-            style["fieldname"] = config["fieldname"]
-
-        self._style.update(style)
-
     def addHeader(self, header):
         """Adds header to QgsVectorLayer
 
