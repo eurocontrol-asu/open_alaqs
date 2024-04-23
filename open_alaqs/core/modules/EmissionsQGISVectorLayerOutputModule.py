@@ -2,6 +2,7 @@ import math
 from collections import OrderedDict
 
 import pandas as pd
+from qgis.core import Qgis
 from qgis.gui import QgsDoubleSpinBox
 from qgis.PyQt import QtWidgets
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
@@ -73,7 +74,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         self._total_emissions = 0.0
 
         self._threshold_to_create_a_data_point = conversion.convertToFloat(
-            values_dict.get("Threshold", values_dict.get("threshold", 0.0001))
+            values_dict.get("Threshold") or values_dict.get("threshold") or 0.0001
         )
 
         self._grid = (
@@ -467,21 +468,23 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
 
             # if self._header and self._data:
             # create a new instance of a ContourPlotLayer
+            geometry_type = (
+                Qgis.GeometryType.Polygon
+                if self._isPolygon
+                else Qgis.GeometryType.Point
+            )
             contour_layer = ContourPlotVectorLayer(
-                {
-                    "isPolygon": self._isPolygon,
-                    "Label_enable": self._enable_labels,
-                    "fieldname": self._pollutant,
-                    "name": self._layer_name,
-                    "name_suffix": self._layer_name_suffix,
-                }
+                layer_name=self._layer_name + self._layer_name_suffix,
+                geometry_type=geometry_type,
+                enable_labels=self._enable_labels,
+                field_name=self._pollutant,
             )
             contour_layer.addHeader(self._header)
             # ToDo: replace with data from grid3D
             # contour_layer.addData(self._grid3D[self._grid3D.Emission>0])
             contour_layer.addData(self._data)
-            contour_layer_min = math.floor(self._data.Q.min())
-            contour_layer_max = math.ceil(self._data.Q.max())
+            math.floor(self._data.Q.min())
+            math.ceil(self._data.Q.max())
 
             # contour_layer.addData([self._data[k] for k in self._data.keys()])
 
@@ -492,14 +495,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
             # contour_layer_max = max([self._data[k]["attributes"][self._pollutant] for k in self._data.keys()])
 
             contour_layer.setColorGradientRenderer(
-                {
-                    "numberOfClasses": 7,
-                    "color1": "lightGray",
-                    "color2": "darkRed",
-                    "fieldname": self._pollutant,
-                    "minValue": contour_layer_min,
-                    "maxValue": contour_layer_max,
-                }
+                classes_count=7,
             )
             self._contour_layer = contour_layer
 

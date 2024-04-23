@@ -1,4 +1,7 @@
+from typing import Literal, Union
+
 from qgis.core import (
+    Qgis,
     QgsClassificationPrettyBreaks,
     QgsCoordinateReferenceSystem,
     QgsErrorMessage,
@@ -16,7 +19,8 @@ from qgis.core import (
     QgsSymbol,
     QgsVectorLayer,
 )
-from qgis.PyQt import QtCore, QtGui
+from qgis.PyQt import QtCore
+from qgis.PyQt.QtGui import QColor
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools import conversion
@@ -32,82 +36,62 @@ class ContourPlotVectorLayer:
 
     LAYER_NAME = "Emissions"
 
-    def __init__(self, config, header=None, data=None):
-        self._layerName = ContourPlotVectorLayer.LAYER_NAME
-        if "name" in config:
-            self._layerName = config["name"]
-        if "name_suffix" in config:
-            self._layerName += config["name_suffix"]
+    def __init__(
+        self,
+        layer_name: str,
+        field_name: str,
+        geometry_type: Union[
+            Literal[Qgis.GeometryType.Polygon], Literal[Qgis.GeometryType.Point]
+        ],
+        enable_labels: bool,
+    ) -> None:
+        self.field_name = field_name
+        self.enable_labels = enable_labels
 
-        self._style = {}
-        self.setStyle(config)
+        if field_name:
+            layer_name = f"{field_name} {layer_name}"
 
-        self._vectorlayer = None
-        self._myCrs = QgsCoordinateReferenceSystem("EPSG:3857")
-        # except Exception:
-        #     self._myCrs = QgsCoordinateReferenceSystem(3857, 4326)
-
-        self.createLayer(self._layerName)
-
-        if header is not None:
-            self.addHeader(header)
-        # else:
-        #     self.addHeader([("NOx", "double")])
-
-        if data is not None:
-            self.addData(data)
-
-    def getLayerName(self):
-        return self._layerName
-
-    def setColorGradientRenderer(self, config=None):
-        if config is None:
-            config = {}
-
-        # Get the minimum value
-        min_ = config.get("minValue", 0.0)
-
-        # Get the number of classes
-        numberOfClasses_ = config.get("numberOfClasses", 7)
-
-        # Create the color gradient
-        color1_ = QtGui.QColor(config.get("color1", "white"))
-        color2_ = QtGui.QColor(config.get("color2", "red"))
-        green = QtGui.QColor(0, 255, 0)
-        yellow = QtGui.QColor(255, 255, 0)
-        stop1 = QgsGradientStop(0.3, green)
-        stop2 = QgsGradientStop(0.6, yellow)
-        stops = [stop1, stop2]
-        discrete = False
-        QgsGradientColorRamp(color1_, color2_, discrete, stops)
-
-        if "fieldname" not in config and "fieldname" not in self._style:
-            raise Exception(
-                "Did not find field for color gradient renderer!!"
-                " Add property 'fieldname' for method "
-                "'setColorGradientRenderer'."
+        if geometry_type == Qgis.GeometryType.Point:
+            self.layer = QgsVectorLayer("Point", layer_name, "memory")
+        elif geometry_type == Qgis.GeometryType.Polygon:
+            self.layer = QgsVectorLayer("Polygon", layer_name, "memory")
+        else:
+            raise NotImplementedError(
+                "Layer geometry type '{geometry_type}' is not supported yet!"
             )
 
-        columnName_ = config.get("fieldname", self._style["fieldname"])
+        # set coordinate reference system
+        self.layer.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
 
-        symbol_ = QgsSymbol.defaultSymbol(self._vectorlayer.geometryType())
-        symbol_.setOpacity(self._style["transparency"])
-        symbol_.symbolLayer(0).setStrokeColor(QtCore.Qt.transparent)
+    def setColorGradientRenderer(
+        self,
+        gradient_color1: QColor = QColor("lightGray"),
+        gradient_color2: QColor = QColor("darkRed"),
+        gradient_stop_colors: list[QColor] = [QColor("green"), QColor("yellow")],
+        classes_count: int = 7,
+    ) -> None:
+        # Create the color gradient
+        gradient_stops = []
+        for color_idx, color in enumerate(gradient_stop_colors, 1):
+            gradient_stops.append(
+                QgsGradientStop(color_idx / (len(gradient_stop_colors) + 1), color)
+            )
 
-        # Set the classification method
-        method_ = QgsClassificationPrettyBreaks()
+        gradient_color_ramp = QgsGradientColorRamp(
+            gradient_color1, gradient_color2, False, gradient_stops
+        )
+
+        symbol = QgsSymbol.defaultSymbol(self.layer.geometryType())
+        symbol.symbolLayer(0).setStrokeColor(QtCore.Qt.transparent)
 
         # Create and configure the renderer
-        renderer_ = QgsGraduatedSymbolRenderer(columnName_)
-        renderer_.setClassificationMethod(method_)
-        renderer_.updateClasses(self._vectorlayer, numberOfClasses_)
-        renderer_.updateSymbols(symbol_)
-        # todo: Add the custom color ramp
+        renderer = QgsGraduatedSymbolRenderer(self.field_name)
+        renderer.setClassificationMethod(QgsClassificationPrettyBreaks())
+        renderer.setSourceColorRamp(gradient_color_ramp)
+        renderer.updateClasses(self.layer, classes_count)
+        renderer.updateSymbols(symbol)
 
-        if min_ > 0.0:
-            renderer_.updateRangeLowerValue(min(0, min_), min_)
-
-        self._vectorlayer.setRenderer(renderer_)
+        self.layer.setRenderer(renderer)
 
     def setSymbolRenderer(self):
         s_ = {
@@ -126,7 +110,7 @@ class ContourPlotVectorLayer:
         symbol.setOpacity(1.0 - float(self._style["transparency"]))
 
         if symbol is not None:
-            self._vectorlayer.setRenderer(QgsSingleSymbolRenderer(symbol))
+            self.layer.setRenderer(QgsSingleSymbolRenderer(symbol))
 
     def setStyle(self, config):
         style = {}
@@ -187,9 +171,6 @@ class ContourPlotVectorLayer:
 
         self._style.update(style)
 
-    def getCrs(self):
-        return self._myCrs
-
     def addHeader(self, header):
         """Adds header to QgsVectorLayer
 
@@ -205,9 +186,9 @@ class ContourPlotVectorLayer:
         """
         self._header = header
 
-        if self._vectorlayer:
-            pr = self._vectorlayer.dataProvider()
-            self._vectorlayer.startEditing()
+        if self.layer:
+            pr = self.layer.dataProvider()
+            self.layer.startEditing()
 
             _h = []
             for name, type_string in header:
@@ -225,9 +206,9 @@ class ContourPlotVectorLayer:
             pr.addAttributes(_h)
 
             # and update the QgsVectorLayer
-            self._vectorlayer.updateFields()
-            self._vectorlayer.commitChanges()
-            self._vectorlayer.updateExtents()
+            self.layer.updateFields()
+            self.layer.commitChanges()
+            self.layer.updateExtents()
         else:
             QgsErrorMessage.logMessage(
                 "Could not create header for contour layer.", "Contour Plot", 4
@@ -251,10 +232,10 @@ class ContourPlotVectorLayer:
         # data is a GeoDataFrame (keys: hash, geometry, zmin, zmax, Emission)
         self._data = data
 
-        if self._vectorlayer:
+        if self.layer:
 
-            pr = self._vectorlayer.dataProvider()
-            self._vectorlayer.startEditing()
+            pr = self.layer.dataProvider()
+            self.layer.startEditing()
 
             for pv in data.index:
                 point_value = data.loc[pv]
@@ -306,9 +287,9 @@ class ContourPlotVectorLayer:
                 (res, outFeats) = pr.addFeatures([feature])
 
             # update fields, layer extents, and finalize edits
-            self._vectorlayer.updateFields()
-            self._vectorlayer.updateExtents()
-            self._vectorlayer.commitChanges()
+            self.layer.updateFields()
+            self.layer.updateExtents()
+            self.layer.commitChanges()
 
         else:
             QgsMessageLog.logMessage(
@@ -318,20 +299,5 @@ class ContourPlotVectorLayer:
 
         return True
 
-    def createLayer(self, name=""):
-        if name == "":
-            # ContourPlotVectorLayer.LAYER_NAME
-            name = self._layerName
-        if "fieldname" in self._style and self._style["fieldname"]:
-            name = "%s %s" % (self._style["fieldname"], self._layerName)
-
-        if self._style["isPolygon"]:
-            self._vectorlayer = QgsVectorLayer("Polygon", name, "memory")
-        else:
-            self._vectorlayer = QgsVectorLayer("Point", name, "memory")
-
-        # set coordinate reference system
-        self._vectorlayer.setCrs(self.getCrs())
-
     def getLayer(self):
-        return self._vectorlayer
+        return self.layer
