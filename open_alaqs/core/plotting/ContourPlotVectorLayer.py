@@ -1,20 +1,20 @@
 from typing import Literal, Union
 
+import pandas as pd
 from qgis.core import (
     Qgis,
     QgsClassificationPrettyBreaks,
     QgsCoordinateReferenceSystem,
     QgsErrorMessage,
-    QgsFeature,
     QgsField,
     QgsGeometry,
     QgsGradientColorRamp,
     QgsGradientStop,
     QgsGraduatedSymbolRenderer,
-    QgsMessageLog,
     QgsPointXY,
     QgsSymbol,
     QgsVectorLayer,
+    QgsVectorLayerUtils,
 )
 from qgis.PyQt import QtCore
 from qgis.PyQt.QtGui import QColor
@@ -133,87 +133,56 @@ class ContourPlotVectorLayer:
                 "Could not create header for contour layer.", "Contour Plot", 4
             )
 
-    def addData(self, data):
-        """Method to add data to the layer
-        Example argument:
-        data = [{
-                "coordinates":{
-                    "x":10,
-                    "y":10
-                },
-                "attributes":{
-                    "name":"foo",
-                    "value":2323.,
-                }
-            }]
-        """
+    def addData(self, df: pd.DataFrame) -> None:
+        """Add DataFrame data to the layer."""
+        assert "geometry" in df.columns
+        assert "Q" in df.columns
 
-        # data is a GeoDataFrame (keys: hash, geometry, zmin, zmax, Emission)
-        self._data = data
+        if not self.layer.startEditing():
+            raise Exception(f'Failed to start editing on layer "{self.layer.name()}"!')
 
-        if self.layer:
+        fields = self.layer.fields()
 
-            pr = self.layer.dataProvider()
-            self.layer.startEditing()
+        for _idx, row in df.iterrows():
+            if not row["geometry"]:
+                continue
 
-            for pv in data.index:
-                point_value = data.loc[pv]
+            if self.layer.geometryType() == Qgis.GeometryType.Polygon:
+                cell_bounds = row["geometry"].bounds
+                geom = QgsGeometry.fromPolygonXY(
+                    [
+                        [
+                            QgsPointXY(cell_bounds[1], cell_bounds[0]),
+                            QgsPointXY(cell_bounds[3], cell_bounds[0]),
+                            QgsPointXY(cell_bounds[3], cell_bounds[2]),
+                            QgsPointXY(cell_bounds[1], cell_bounds[2]),
+                        ]
+                    ]
+                )
+            elif self.layer.geometryType() == Qgis.GeometryType.Polygon:
+                shapely_point = row["geometry"].centroid
+                geom = QgsGeometry.fromPointXY(
+                    QgsPointXY(shapely_point.x, shapely_point.y)
+                )
 
-                if not point_value.Q or not point_value.geometry:
-                    continue
+            attr_index = fields.indexFromName(self.field_name)
+            attrs = {
+                attr_index: conversion.convertToFloat(row["Q"]),
+            }
+            f = QgsVectorLayerUtils.createFeature(self.layer, geom, attrs)
 
-                # get the field map of the vectorlayer
-                fields = pr.fields()
-                # create a new feature
-                feature = QgsFeature()
-                # make a copy and give ownership to python
-                feature.setFields(fields)
+            if not f.isValid():
+                raise Exception(
+                    f"Unable to create a valid feature to layer {self.layer.name()}!"
+                )
 
-                fields.indexFromName(point_value["hash"])
-                # if field_index > -1:
-                feat_value = conversion.convertToFloat(point_value["Q"])
-                # feature.setAttribute(key, feat_value)
-                if "fieldname" in self._style:
-                    feature.setAttribute(self._style["fieldname"], feat_value)
-                else:
-                    logger.debug(
-                        "Could not find field/header for '%s'."
-                        % (str(self._style["fieldname"]))
-                    )
+            if not self.layer.addFeature(f):
+                raise Exception(
+                    'Unable to add new feature to layer "{}": {}'.format(
+                        self.layer.name(),
+                        "".join(self.layer.dataProvider().errors()),
+                    ),
+                )
 
-                # geometry
-                if self._style["isPolygon"]:
-                    cell_bounds = point_value["geometry"].bounds
-                    feature.setGeometry(
-                        QgsGeometry.fromPolygonXY(
-                            [
-                                [
-                                    QgsPointXY(cell_bounds[0], cell_bounds[1]),
-                                    QgsPointXY(cell_bounds[2], cell_bounds[1]),
-                                    QgsPointXY(cell_bounds[2], cell_bounds[3]),
-                                    QgsPointXY(cell_bounds[0], cell_bounds[3]),
-                                ]
-                            ]
-                        )
-                    )
-
-                else:
-                    point_geo = point_value["geometry"].centroid
-                    qgs_point_xy = QgsPointXY(point_geo.x, point_geo.y)
-                    feature.setGeometry(QgsGeometry.fromPointXY(qgs_point_xy))
-
-                # add feature to the layer
-                (res, outFeats) = pr.addFeatures([feature])
-
-            # update fields, layer extents, and finalize edits
-            self.layer.updateFields()
-            self.layer.updateExtents()
-            self.layer.commitChanges()
-
-        else:
-            QgsMessageLog.logMessage(
-                "Could not find contour layer to add data.", "ContourPlot", 4
-            )
-            return False
-
-        return True
+        if not self.layer.commitChanges():
+            raise Exception(f'Failed to commit changes to layer "{self.layer.name()}"!')
