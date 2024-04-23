@@ -7,15 +7,12 @@ from qgis.core import (
     QgsErrorMessage,
     QgsFeature,
     QgsField,
-    QgsFillSymbol,
     QgsGeometry,
     QgsGradientColorRamp,
     QgsGradientStop,
     QgsGraduatedSymbolRenderer,
-    QgsMarkerSymbol,
     QgsMessageLog,
     QgsPointXY,
-    QgsSingleSymbolRenderer,
     QgsSymbol,
     QgsVectorLayer,
 )
@@ -92,25 +89,6 @@ class ContourPlotVectorLayer:
         renderer.updateSymbols(symbol)
 
         self.layer.setRenderer(renderer)
-
-    def setSymbolRenderer(self):
-        s_ = {
-            "color": str(self._style["color"]),
-            "color_border": str(self._style["color_border"]),
-            "style": str(self._style["style"]),
-            "style_border": str(self._style["style_border"]),
-        }  # width_border
-
-        symbol = None
-        if self._style["isPolygon"]:
-            symbol = QgsFillSymbol.createSimple(s_)
-        else:
-            symbol = QgsMarkerSymbol.createSimple(s_)
-
-        symbol.setOpacity(1.0 - float(self._style["transparency"]))
-
-        if symbol is not None:
-            self.layer.setRenderer(QgsSingleSymbolRenderer(symbol))
 
     def addHeader(self, header):
         """Adds header to QgsVectorLayer
