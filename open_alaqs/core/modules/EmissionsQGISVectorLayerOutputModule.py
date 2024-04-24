@@ -221,59 +221,33 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
 
                 try:
                     geom = emissions_.getGeometry()
-
-                    # some convenience variables
-                    isPoint_element_ = bool(
-                        isinstance(emissions_.getGeometry(), Point)
-                    )  # bool("POINT" in emissions_.getGeometryText())
-                    isLine_element_ = bool(
-                        isinstance(emissions_.getGeometry(), LineString)
-                    )
-                    isMultiLine_element_ = bool(
-                        isinstance(emissions_.getGeometry(), MultiLineString)
-                    )
-                    isPolygon_element_ = bool(
-                        isinstance(emissions_.getGeometry(), Polygon)
-                    )
-                    isMultiPolygon_element_ = bool(
-                        isinstance(emissions_.getGeometry(), MultiPolygon)
-                    )
-
-                    # 2D grid
-                    # ToDo: Add warning if geom extends beyond grid
-                    # matched_cells_2D = self._grid2D[self._grid2D.intersects(geom)==True]
                     matched_cells_2D = self._data[
                         self._data.intersects(geom) == True  # noqa: E712
                     ]
 
                     # Calculate Emissions' horizontal distribution
-                    if isLine_element_:
-                        # ToDo: Add if
-                        matched_cells_2D.loc[matched_cells_2D.index, "Q"] = (
+                    if isinstance(geom, Point):
+                        value = EmissionValue / len(matched_cells_2D)
+                    elif isinstance(geom, (LineString, MultiLineString)):
+                        value = (
                             EmissionValue
                             * matched_cells_2D.intersection(geom).length
                             / geom.length
                         )
-                    elif isMultiLine_element_:
-                        matched_cells_2D.loc[matched_cells_2D.index, "Q"] = (
-                            EmissionValue
-                            * matched_cells_2D.intersection(geom).length
-                            / geom.length
-                        )
-                    elif isPoint_element_:
-                        # ToDo: Add if
-                        matched_cells_2D.loc[
-                            matched_cells_2D.index, "Q"
-                        ] = EmissionValue / len(matched_cells_2D)
-                    elif isPolygon_element_ or isMultiPolygon_element_:
-                        matched_cells_2D.loc[matched_cells_2D.index, "Q"] = (
+                    elif isinstance(geom, (Polygon, MultiPolygon)):
+                        value = (
                             EmissionValue
                             * matched_cells_2D.intersection(geom).area
                             / geom.area
                         )
+                    else:
+                        raise NotImplementedError(
+                            "Usupported geometry type: {}".format(geom.__class__.name)
+                        )
+
+                    matched_cells_2D.loc[matched_cells_2D.index, "Q"] = value
 
                     self._data.loc[matched_cells_2D.index, "Q"] += matched_cells_2D["Q"]
-
                 except Exception as exc_:
                     logger.error(exc_)
                     continue
