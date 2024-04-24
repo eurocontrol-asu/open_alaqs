@@ -184,53 +184,12 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         }
         return cell_bbox
 
-    # def getEfficiencyXY(self, emissions_geometry_wkt, cell_bbox, isPoint, isLine, isPolygon):
-    #     #efficiency = relative area of geometry in the cell box
-    #     efficiency_ = 0.
-    #     if isPoint or isPolygon:
-    #         efficiency_ = Spatial.getRelativeAreaInBoundingBox(emissions_geometry_wkt, cell_bbox)
-    #     elif isLine:
-    #         #get relative length (X,Y) in bounding box (assumes constant speed)
-    #         efficiency_ = Spatial.getRelativeLengthXYInBoundingBox(emissions_geometry_wkt, cell_bbox)
-    #     return efficiency_
-    #
-    # def getEfficiencyZ(self, geometry_wkt, z_min, z_max, cell_box, isPoint, isLine, isPolygon):
-    #     efficiency_ = 0.
-    #     if isPoint:
-    #         #points match each cell exactly once
-    #         efficiency_ = Spatial.getRelativeHeightInBoundingBox(z_min, z_max, cell_box)
-    #     elif isPolygon or isLine:
-    #         efficiency_ = Spatial.getRelativeHeightInBoundingBox(z_min, z_max, cell_box)
-    #     return efficiency_
-
-    # def ProgressBarWidget(self):
-    #     progressbar = QtGui.QProgressDialog("Calculating emissions in grid cell", "Cancel", 0, 99)
-    #     progressbar.setWindowTitle("EmissionsQGISVectorLayerOutputModule")
-    #     progressbar.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-    #     progressbar.setWindowModality(QtCore.Qt.WindowModal)
-    #     progressbar.setAutoReset(True)
-    #     progressbar.setAutoClose(True)
-    #     progressbar.resize(350, 100)
-    #     progressbar.show()
-    #     return progressbar
-
     def beginJob(self):
         # prepare the attributes of each point of the vector layer
-        # self._data = {}
         self._total_emissions = 0.0
         self._header = [(self._pollutant, "double")]
-        # self._data = pd.DataFrame()
-
         self._data = self._grid.get_df_from_2d_grid_cells()
         self._data = self._data.assign(Q=pd.Series(0, index=self._data.index))
-
-        # self._data = self._grid.get_df_from_3d_grid_cells()
-        # self._grid3D = self._grid3D.assign(Emission=pd.Series(0, index=self._grid3D.index))
-        # self._grid3D = self._grid3D.assign(EmissionSource=pd.Series("", index=self._grid3D.index))
-        # self._grid2D = self._grid3D[self._grid3D.zmin == 0]
-        # self._grid2D = self._grid2D.assign(Emission=pd.Series(0, index=self._grid2D.index))
-
-        # self._data = self._data[self._data.zmin == 0]
 
     def process(self, timeval, result, **kwargs):
         # result is of format [(Source, Emission)]
@@ -243,17 +202,9 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
             if not (timeval >= self._time_start and timeval < self._time_end):
                 return True
 
-        # total_emissions_ = sum([sum(emissions_) for (source, emissions_) in result])
-
-        # Details of the projection
-        # EPSG_id_source=3857
-        # EPSG_id_target=4326
-
-        # emission_value_list = []
         self._all_matched_cells = []
 
         # loop over all emissions and append one data point for every grid cell
-
         for (source_, emissions__) in result:
             for emissions_ in emissions__:
 
@@ -288,30 +239,6 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
                         isinstance(emissions_.getGeometry(), MultiPolygon)
                     )
 
-                    # if geom.has_z:
-                    #     if isLine_element_:
-                    #         coords = [Point(cc) for cc in geom._get_coords()]
-                    #         z_dim = [c_.z for c_ in coords]
-                    #     elif isPoint_element_:
-                    #         z_dim = [geom.z, geom.z]
-                    #     elif isPolygon_element_:
-                    #         coords = [Point(cc) for cc in geom.exterior._get_coords()]
-                    #         z_dim = [c_.z for c_ in coords]
-                    #     elif isMultiPolygon_element_:
-                    #         coords = [Point(cc) for gm in geom for cc in gm.exterior._get_coords()]
-                    #         z_dim = [c_.z for c_ in coords]
-                    #     else:
-                    #         logger.error("Error in Geometry for source %s"%str(source_.getName()))
-                    #         logger.error("Geometry %s not recognised"%emissions_.getGeometry())
-                    #         continue
-
-                    # z_min = min(z_dim)
-                    # z_max = max(z_dim)
-
-                    # logger.info(str(source_.getName()))
-                    # logger.info(EmissionValue)
-                    # logger.info(z_dim)
-
                     # 2D grid
                     # ToDo: Add warning if geom extends beyond grid
                     # matched_cells_2D = self._grid2D[self._grid2D.intersects(geom)==True]
@@ -345,112 +272,11 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
                             / geom.area
                         )
 
-                    # if matched_cells_2D["Emission"].sum() < EmissionValue:
-                    #     # repls = (':', '_'), ('-', '_'), (' ', '_')
-                    #     src_ = str(source_.getName())
-                    #     # logger.warning("Geometry of %s out of bounds, domain too small?"%reduce(lambda a, kv: a.replace(*kv), repls, src_))
-                    #     logger.warning("Geometry %s out of bounds"%(geom))
-
-                    # if isLine_element_:
-                    #     self._ax.plot(geom.xy[0], geom.xy[1], "r")
-                    # elif isPoint_element_:
-                    #     self._ax.plot(geom.x, geom.y, "r*")
-                    # elif isPolygon_element_ or isMultiPolygon_element_:
-                    #     from descartes import PolygonPatch
-                    #     self._ax.add_patch(PolygonPatch(geom, fc="b", ec="k", alpha=0.5, zorder=2))
-                    # self._grid2D[(self._grid2D.Emission > 0)].plot(ax=self._ax, column="Emission", legend=False, cmap='hot_r')
-                    # plt.savefig("all_sources.png", dpi=300, bbox_inches="tight")
-
-                    # self._grid2D.loc[matched_cells_2D.index, "Emission"] += matched_cells_2D["Emission"]
-
                     self._data.loc[matched_cells_2D.index, "Q"] += matched_cells_2D["Q"]
 
-                    # if round(matched_cells_2D["Q"].sum(),4) > round(EmissionValue, 4):
-                    #     logger.error("Sum (%s) exceeds initial Value (%s) for geom: %s"
-                    #                  %(round(matched_cells_2D["Q"].sum(),4), round(EmissionValue, 4), geom))
-
-                    # # 3D grid
-                    # matched_cells_3D = self._grid3D[(self._grid3D.intersects(geom) == True)&
-                    #                                 (self._grid3D.zmax > z_min)&(self._grid3D.zmin <= z_max)]
-                    # matched_cells_3D = matched_cells_3D.assign(z_efficiency=pd.Series(0, index=matched_cells_3D.index))
-                    #
-                    # for cell2D in matched_cells_2D.index:
-                    #     cell_geo = matched_cells_2D.loc[cell2D, "geometry"]
-                    #     cell_em = matched_cells_2D.loc[cell2D, "Emission"]
-                    #
-                    #     cells3D = matched_cells_3D[matched_cells_3D.geometry == cell_geo]
-                    #     # Calculate coefficients for the vertical distribution of emissions
-                    #     cells3D.loc[cells3D.index, "z_efficiency"] = \
-                    #         matched_cells_3D[["zmin", "zmax"]].apply(getRelativeHeightInCell, args = (z_min, z_max), axis=1)
-                    #
-                    #     cells3D.loc[cells3D.index, "Emission"] = cell_em * cells3D["z_efficiency"]
-                    #     self._grid3D.loc[cells3D.index, "Emission"] += cells3D["Emission"]
-                    #     # self._grid3D.loc[cells3D.index, "EmissionSource"] = str(source_.getName() + ";") + \
-                    #     #                                         self._grid3D.loc[cells3D.index, "EmissionSource"].astype(str)
                 except Exception as exc_:
                     logger.error(exc_)
                     continue
-
-        # if self._header and not self._grid3D[self._grid3D.Emission > 0].empty:
-        #     self._data = self._grid3D[self._grid3D.Emission>0]
-
-        #             logger.info(cell2D, self._grid3D.loc[cells3D.index, "EmissionSource"])
-        # # print("%s emissions for time interval: %s"%(self._pollutant, timeval.strftime("%Y-%m-%d %H")))
-        #
-        #
-        # # fig, ax = plt.subplots()
-        # # self._grid3D[(self._grid3D.Emission > 0)&(self._grid3D.zmin == 0)].plot(ax=ax, column="Emission", legend=True, cmap='hot_r')
-        # # ax.set_title("%s emissions (z=0) for time interval: %s"%(self._pollutant, timeval.strftime("%Y-%m-%d %H")))
-        # # plt.savefig("em3D_z0_%s_%s.png"%(self._pollutant, timeval.strftime("%Y_%m_%d_%H")), dpi=300, bbox_inches="tight")
-        # #
-        # # fig, ax = plt.subplots()
-        # # self._grid2D[(self._grid2D.Emission > 0)].plot(ax=ax, column="Emission", legend=True, cmap='hot_r')
-        # # ax.set_title("%s emissions for time interval: %s"%(self._pollutant, timeval.strftime("%Y-%m-%d %H")))
-        # # plt.savefig("em2D_z0_%s_%s.png"%(self._pollutant, timeval.strftime("%Y_%m_%d_%H")), dpi=300, bbox_inches="tight")
-        #
-        #         # # # some convenience variables
-        #         # isPoint_element_ = bool(isinstance(emissions_.getGeometry(), Point)) #bool("POINT" in emissions_.getGeometryText())
-        #         # isLine_element_ = bool(isinstance(emissions_.getGeometry(), LineString))
-        #         # isPolygon_element_ = bool(isinstance(emissions_.getGeometry(), Polygon))
-        #         # isMultiPolygon_element_ = bool(isinstance(emissions_.getGeometry(), MultiPolygon))
-        #         # #
-        #         # # geom = Spatial.ogr.CreateGeometryFromWkt(emissions_.getGeometryText())
-        #         # geom = emissions_.getGeometry()
-        #         # if geom is None:
-        #         #     continue
-        #         #
-        #         # matched_cells = []
-        #         # if isMultiPolygon_element_:
-        #         #     MultiPolygonEmissions = conversion.convertToFloat(emissions_.getValue(self._pollutant, unit="kg")[0])\
-        #         #                             /conversion.convertToFloat(geom.GetGeometryCount())
-        #         #
-        #         #     for i in range(0, geom.GetGeometryCount()):
-        #         #         g = geom.GetGeometryRef(i)
-        #         #
-        #         #         bbox = self.getBoundingBox(g.ExportToWkt())
-        #         #         # Take into account the effective vertical source extent and shift
-        #         #         bbox["z_max"] = bbox["z_max"]+emissions_.getVerticalExtent()['delta_z'] \
-        #         #             if "delta_z" in emissions_.getVerticalExtent() else bbox["z_max"]
-        #         #         matched_cells = self.getGrid().matchBoundingBoxToCellHashList(bbox, z_as_list=True)
-        #         #
-        #         #         self.CalculateCellHashEfficiency(MultiPolygonEmissions,
-        #         #             g.ExportToWkt(), bbox, matched_cells, isPoint_element_, isLine_element_, isPolygon_element_)
-        #         #
-        #         # else:
-        #         #
-        #         #     bbox = self.getBoundingBox(emissions_.getGeometryText())
-        #         #
-        #         #     if "delta_z" in emissions_.getVerticalExtent() and "delta_z" > 0:
-        #         #         bbox["z_max"] = bbox["z_max"] + emissions_.getVerticalExtent()['delta_z']
-        #         #
-        #         #     matched_cells = self.getGrid().matchBoundingBoxToCellHashList(bbox, z_as_list=True)
-        #         #     # if len(matched_cells) > 0:
-        #         #     # logger.debug("matched_cells: %s" % matched_cells)
-        #         #     # logger.debug("Emissions: %s" % emissions_.getValue(self._pollutant, unit="kg")[0])
-        #         #
-        #         #     self.CalculateCellHashEfficiency(emissions_.getValue(self._pollutant, unit="kg")[0],
-        #         #                                      emissions_.getGeometryText(), bbox, matched_cells,
-        #         #                                          isPoint_element_, isLine_element_, isPolygon_element_)
 
     def endJob(self) -> None:
         if self._data.empty:
