@@ -1,4 +1,3 @@
-import math
 from collections import OrderedDict
 
 import pandas as pd
@@ -68,8 +67,6 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
             "Add Labels with Values to Cell Boxes",
             values_dict.get("Add labels with values to cell boxes", False),
         )
-
-        self._contour_layer = None
 
         self._total_emissions = 0.0
 
@@ -148,9 +145,6 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
 
     def getPollutant(self):
         return self._pollutant
-
-    def getContourLayer(self):
-        return self._contour_layer
 
     def getTotalEmissions(self):
         return self._total_emissions
@@ -458,52 +452,24 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         #         #                                      emissions_.getGeometryText(), bbox, matched_cells,
         #         #                                          isPoint_element_, isLine_element_, isPolygon_element_)
 
-    def endJob(self):
-        # if not self._grid2D[self._grid2D["Emission"] > 0].empty:
-        #     self._data = self._grid2D[self._grid2D["Emission"]>0]
+    def endJob(self) -> None:
+        if self._data.empty:
+            return None
 
-        # create the layer
-        # if self._header and not self._grid3D[self._grid3D.Emission>0].empty:
-        if self._header and not self._data.empty:
+        geometry_type = (
+            Qgis.GeometryType.Polygon if self._isPolygon else Qgis.GeometryType.Point
+        )
+        layer_wrapper = ContourPlotVectorLayer(
+            layer_name=self._layer_name + self._layer_name_suffix,
+            geometry_type=geometry_type,
+            enable_labels=self._enable_labels,
+            field_name=self._pollutant,
+        )
+        layer_wrapper.addHeader(self._header)
+        # TODO pre-OPENGIS.ch: replace with data from grid3D, `contour_layer.addData(self._grid3D[self._grid3D.Emission>0])``
+        layer_wrapper.addData(self._data)
+        layer_wrapper.setColorGradientRenderer(
+            classes_count=7,
+        )
 
-            # if self._header and self._data:
-            # create a new instance of a ContourPlotLayer
-            geometry_type = (
-                Qgis.GeometryType.Polygon
-                if self._isPolygon
-                else Qgis.GeometryType.Point
-            )
-            contour_layer = ContourPlotVectorLayer(
-                layer_name=self._layer_name + self._layer_name_suffix,
-                geometry_type=geometry_type,
-                enable_labels=self._enable_labels,
-                field_name=self._pollutant,
-            )
-            contour_layer.addHeader(self._header)
-            # ToDo: replace with data from grid3D
-            # contour_layer.addData(self._grid3D[self._grid3D.Emission>0])
-            contour_layer.addData(self._data)
-            math.floor(self._data.Q.min())
-            math.ceil(self._data.Q.max())
-
-            # contour_layer.addData([self._data[k] for k in self._data.keys()])
-
-            # contour_layer_min = math.floor(self._grid3D[self._grid3D.Emission>0].Emission.min())
-            # contour_layer_max = math.ceil(self._grid3D[self._grid3D.Emission>0].Emission.max())
-
-            # contour_layer_min = min([self._data[k]["attributes"][self._pollutant] for k in self._data.keys()])
-            # contour_layer_max = max([self._data[k]["attributes"][self._pollutant] for k in self._data.keys()])
-
-            contour_layer.setColorGradientRenderer(
-                classes_count=7,
-            )
-            self._contour_layer = contour_layer
-
-            return self._contour_layer.layer
-
-        return None
-
-    #
-
-    # import matplotlib.pyplot as plt
-    # from descartes import PolygonPatch
+        return layer_wrapper.layer
