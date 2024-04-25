@@ -191,11 +191,6 @@ class EmissionCalculation:
                     return False
         return False
 
-    # ToDo: More general configuration
-    @staticmethod
-    def CheckAmbientConditions(parameter, isa_value, tolerance):
-        return 100 * float(abs(parameter - isa_value)) / isa_value > tolerance
-
     def run(self, source_names: List, vertical_limit_m: float):
         if source_names is None:
             source_names = []
@@ -347,26 +342,6 @@ class EmissionCalculation:
     def getDispersionModules(self):
         return self._dispersion_modules
 
-    def availableModules(self):
-        return self.getModuleManager().getModules()
-
-    def availableDispersionModules(self):
-        return self.getDispersionModuleManager().getModules()
-
-    def addEmission(self, timeval, source, emission, to=None):
-        sort_ = False
-        if to is None:
-            to = self._emissions
-            sort_ = True
-
-        if timeval in to:
-            to[timeval].append((source, emission))
-        else:
-            to[timeval] = [(source, emission)]
-
-        if sort_:
-            self.sortEmissionsByTime()
-
     def getEmissions(self):
         return self._emissions
 
@@ -375,9 +350,6 @@ class EmissionCalculation:
         self._emissions = OrderedDict(
             sorted(iter(self.getEmissions().items()), key=lambda x: x[0])
         )
-
-    def setDatabasePath(self, val):
-        self._database_path = val
 
     def getDatabasePath(self):
         return self._database_path
