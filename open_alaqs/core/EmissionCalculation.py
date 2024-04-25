@@ -382,26 +382,11 @@ class EmissionCalculation:
     def getDatabasePath(self):
         return self._database_path
 
-    def getTimeSeriesStore(self):
-        return self._inventoryTimeSeriesStore
-
-    def setTimeSeriesStore(self, var):
-        self._inventoryTimeSeriesStore = var
-
-    @staticmethod
-    def filter_by_time(ts, start_inc, end_inc):
-        for t in ts:
-            if start_inc <= t.getTime() <= end_inc:
-                yield t
-
-    # returns a generator of TimeSeries objects
     def getTimeSeries(self):
-        return self.filter_by_time(
-            self.getTimeSeriesStore().getTimeSeries(), self._start_incl, self._end_incl
-        )
+        for t in self._inventoryTimeSeriesStore.getTimeSeries():
+            # TODO OPENGIS.ch: rewrite the condition with an `and`
+            if self._start_incl <= t.getTime() <= self._end_incl:
+                yield t
 
     def get3DGrid(self):
         return self._3DGrid
-
-    def set3DGrid(self, var):
-        self._3DGrid = var
