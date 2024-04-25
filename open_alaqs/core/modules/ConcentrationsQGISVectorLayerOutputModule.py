@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
+from qgis.core import Qgis
 from qgis.gui import QgsDoubleSpinBox
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import QVariant
@@ -731,16 +732,19 @@ class QGISVectorLayerDispersionModule(OutputModule):
         # if self._header and self._data:
         # if self._header and not self._data.empty:
         if self._header and not self._data_cells.empty:
-
+            geometry_type = (
+                Qgis.GeometryType.Polygon
+                if self._isPolygon
+                else Qgis.GeometryType.Point
+            )
             # create a new instance of a ContourPlotLayer
             contour_layer = ContourPlotVectorLayer(
-                {
-                    "isPolygon": self._isPolygon,
-                    "Label_enable": self._enable_labels,
-                    "fieldname": self._pollutant,
-                    "name": "Concentration [in %s]" % (self._units),
-                    "name_suffix": self._layer_name_suffix,
-                }
+                layer_name="Concentration [in {}] {}".format(
+                    self._units, self._layer_name_suffix
+                ),
+                geometry_type=geometry_type,
+                enable_labels=self._enable_labels,
+                field_name=self._pollutant,
             )
             contour_layer.addHeader(self._header)
             contour_layer.addData(self._data_cells)
