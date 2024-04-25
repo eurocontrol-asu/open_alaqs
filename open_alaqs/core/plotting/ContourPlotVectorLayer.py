@@ -3,7 +3,7 @@ from typing import Iterable, Literal, Union
 import pandas as pd
 from qgis.core import (
     Qgis,
-    QgsClassificationPrettyBreaks,
+    QgsClassificationJenks,
     QgsCoordinateReferenceSystem,
     QgsField,
     QgsGeometry,
@@ -79,7 +79,7 @@ class ContourPlotVectorLayer:
 
         # Create and configure the renderer
         renderer = QgsGraduatedSymbolRenderer(self.field_name)
-        renderer.setClassificationMethod(QgsClassificationPrettyBreaks())
+        renderer.setClassificationMethod(QgsClassificationJenks())
         renderer.setSourceColorRamp(gradient_color_ramp)
         renderer.updateClasses(self.layer, classes_count)
         renderer.updateSymbols(symbol)
