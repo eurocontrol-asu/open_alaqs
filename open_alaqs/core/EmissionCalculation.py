@@ -252,7 +252,7 @@ class EmissionCalculation:
             total_count_ = len(list(self.getTimeSeries())) - 1
 
             # loop on complete period
-            for (start_, end_) in self.getPeriods():
+            for (start_, end_) in pairwise(self.getTimeSeries()):
 
                 start_time = start_.getTimeAsDateTime()
                 end_time = end_.getTimeAsDateTime()
@@ -399,9 +399,6 @@ class EmissionCalculation:
         return self.filter_by_time(
             self.getTimeSeriesStore().getTimeSeries(), self._start_incl, self._end_incl
         )
-
-    def getPeriods(self):
-        return pairwise(self.getTimeSeries())
 
     def get3DGrid(self):
         return self._3DGrid
