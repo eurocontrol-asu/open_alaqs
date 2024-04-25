@@ -2656,12 +2656,10 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         em_config = self._emission_calculation_configuration_widget.get_values()
 
         self._emission_calculation_ = EmissionCalculation(
-            {
-                "database_path": inventory_path,
-                "grid_configuration": grid_configuration,
-                "start_dt_inclusive": em_config["start_dt_inclusive"],
-                "end_dt_inclusive": em_config["end_dt_inclusive"],
-            }
+            db_path=inventory_path,
+            grid_config=grid_configuration,
+            start_time=em_config["start_dt_inclusive"],
+            end_time=em_config["end_dt_inclusive"],
         )
 
         em_config = self._emission_calculation_configuration_widget.get_values()
@@ -2945,7 +2943,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "reference_altitude": study_data.get("airport_elevation", 0.0),
             }
             self._conc_calculation_ = EmissionCalculation(
-                {"database_path": path, "grid_configuration": grid_configuration}
+                db_path=path,
+                grid_config=grid_configuration,
             )
         except Exception as e:
             QtWidgets.QMessageBox.warning(

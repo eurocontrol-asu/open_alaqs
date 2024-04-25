@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Any, List
+from typing import Any, List, TypedDict
 
 from qgis.PyQt import QtCore, QtWidgets
 
@@ -22,48 +22,39 @@ from open_alaqs.core.tools.iterator import pairwise
 logger = get_logger(__name__)
 
 
-class EmissionCalculation:
-    def __init__(self, values_dict=None):
-        if values_dict is None:
-            values_dict = {}
+class GridConfig(TypedDict):
+    x_cells: int
+    y_cells: int
+    z_cells: int
+    x_resolution: int
+    y_resolution: int
+    z_resolution: int
+    reference_latitude: float
+    reference_longitude: float
+    reference_altitude: float
 
-        self._database_path = values_dict.get("database_path")
-        if self._database_path is None:
-            raise Exception(
-                "Value '%s' not defined for class '%s'"
-                % ("database_path", "EmissionCalculation")
-            )
+
+class EmissionCalculation:
+    def __init__(
+        self,
+        db_path: str,
+        grid_config: GridConfig,
+        start_time: str,
+        end_time: str,
+    ) -> None:
+        assert db_path
+
+        self._database_path = db_path
+        self._grid = Grid3D(self._database_path, grid_config)
 
         # Get the time series for this inventory
-        self._start_incl = convertTimeToSeconds(values_dict.get("start_dt_inclusive"))
-        self._end_incl = convertTimeToSeconds(values_dict.get("end_dt_inclusive"))
-        self._inventoryTimeSeriesStore = InventoryTimeSeriesStore(
-            self.getDatabasePath()
-        )
-        self._emissions = OrderedDict()
+        self._start_incl = convertTimeToSeconds(start_time)
+        self._end_incl = convertTimeToSeconds(end_time)
+        self._inventoryTimeSeriesStore = InventoryTimeSeriesStore(self._database_path)
+        self._emissions = {}
         self._source_modules = {}
         self._dispersion_modules = {}
-        self._ambient_conditions_store = AmbientConditionStore(self.getDatabasePath())
-
-        self._3DGrid = Grid3D(
-            self.getDatabasePath(),
-            values_dict.get(
-                "grid_configuration",
-                {
-                    "x_cells": 10,
-                    "y_cells": 10,
-                    "z_cells": 1,
-                    "x_resolution": 100,
-                    "y_resolution": 100,
-                    "z_resolution": 100,
-                    "reference_latitude": "0.0",  # airport_latitude
-                    "reference_longitude": "0.0",  # airport_longitude
-                    "reference_altitude": "0.0",  # airport_altitude
-                },
-            ),
-        )
-
-        self._debug = values_dict.get("debug", False)
+        self._ambient_conditions_store = AmbientConditionStore(self._database_path)
 
     @staticmethod
     def ProgressBarWidget(dispersion_enabled=False):
@@ -272,7 +263,7 @@ class EmissionCalculation:
 
     def sortEmissionsByTime(self):
         # sort emissions by index (which is a timestamp)
-        self._emissions = OrderedDict(
+        self._emissions = dict(
             sorted(iter(self.getEmissions().items()), key=lambda x: x[0])
         )
 
@@ -286,4 +277,4 @@ class EmissionCalculation:
                 yield t
 
     def get3DGrid(self):
-        return self._3DGrid
+        return self._grid
