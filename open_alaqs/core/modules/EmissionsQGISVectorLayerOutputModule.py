@@ -4,6 +4,7 @@ import pandas as pd
 from qgis.core import Qgis
 from qgis.gui import QgsDoubleSpinBox
 from qgis.PyQt import QtWidgets
+from qgis.PyQt.QtCore import QVariant
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 
 from open_alaqs.core.alaqslogging import get_logger
@@ -187,7 +188,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
     def beginJob(self):
         # prepare the attributes of each point of the vector layer
         self._total_emissions = 0.0
-        self._header = [(self._pollutant, "double")]
+        self._header = [(self._pollutant, QVariant.Double)]
         self._data = self._grid.get_df_from_2d_grid_cells()
         self._data = self._data.assign(Q=pd.Series(0, index=self._data.index))
 

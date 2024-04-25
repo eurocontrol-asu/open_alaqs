@@ -1,11 +1,10 @@
-from typing import Literal, Union
+from typing import Iterable, Literal, Union
 
 import pandas as pd
 from qgis.core import (
     Qgis,
     QgsClassificationPrettyBreaks,
     QgsCoordinateReferenceSystem,
-    QgsErrorMessage,
     QgsField,
     QgsGeometry,
     QgsGradientColorRamp,
@@ -16,7 +15,7 @@ from qgis.core import (
     QgsVectorLayer,
     QgsVectorLayerUtils,
 )
-from qgis.PyQt import QtCore
+from qgis.PyQt.QtCore import Qt, QVariant
 from qgis.PyQt.QtGui import QColor
 
 from open_alaqs.core.alaqslogging import get_logger
@@ -26,10 +25,7 @@ logger = get_logger(__name__)
 
 
 class ContourPlotVectorLayer:
-    """
-    Class returns a new vector layer with data points that can be used to create
-     a contour plot with the QGIS contour plugin
-    """
+    """Class returns a new vector layer with data points that can be used to create a contour plot with the QGIS contour plugin"""
 
     LAYER_NAME = "Emissions"
 
@@ -79,7 +75,7 @@ class ContourPlotVectorLayer:
         )
 
         symbol = QgsSymbol.defaultSymbol(self.layer.geometryType())
-        symbol.symbolLayer(0).setStrokeColor(QtCore.Qt.transparent)
+        symbol.symbolLayer(0).setStrokeColor(Qt.transparent)
 
         # Create and configure the renderer
         renderer = QgsGraduatedSymbolRenderer(self.field_name)
@@ -90,51 +86,24 @@ class ContourPlotVectorLayer:
 
         self.layer.setRenderer(renderer)
 
-    def addHeader(self, header):
-        """Adds header to QgsVectorLayer
+    def addHeader(self, headers: Iterable[tuple[str, QVariant.Type]]) -> None:
+        """Adds header to QgsVectorLayer"""
 
-        Possible typenames are: int, double, float, real
-        Argument is a list of tuples(name, value_type)
+        self.layer.startEditing()
 
-        Contour plugin requires a QgsField.typeName() with either "int",
-        "double", "real", or "float"
-        and crashes for strings.
+        for field_name, field_type in headers:
+            if not self.layer.addAttribute(QgsField(field_name, field_type)):
+                raise Exception(
+                    f'Could not add field "{field_name}" with {field_type=}!'
+                )
 
-        Example argument :
-        header = [("value_NOx", "double"}, ("id", "int")]
-        """
-        self._header = header
-
-        if self.layer:
-            pr = self.layer.dataProvider()
-            self.layer.startEditing()
-
-            _h = []
-            for name, type_string in header:
-                _type = QtCore.QVariant.Double
-
-                if type_string.lower() in ["double", "dbl", "real"]:
-                    _type = QtCore.QVariant.Double
-                elif type_string.lower() in ["int", "Integer"]:
-                    _type = QtCore.QVariant.Int
-                elif type_string.lower() in ["float", "flt"]:
-                    _type = QtCore.QVariant.Float
-
-                _h.append(QgsField(name, _type, type_string))
-
-            pr.addAttributes(_h)
-
-            # and update the QgsVectorLayer
-            self.layer.updateFields()
-            self.layer.commitChanges()
-            self.layer.updateExtents()
-        else:
-            QgsErrorMessage.logMessage(
-                "Could not create header for contour layer.", "Contour Plot", 4
-            )
+        self.layer.updateFields()
+        self.layer.commitChanges()
+        self.layer.updateExtents()
 
     def addData(self, df: pd.DataFrame) -> None:
         """Add DataFrame data to the layer."""
+
         assert "geometry" in df.columns
         assert "Q" in df.columns
 
