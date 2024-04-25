@@ -106,7 +106,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
             )
             for i in range(self._TableWidgetRows):
                 for j in range(self._TableWidgetCols):
-                    self._receptor_df.ix[i, j] = self._receptor[(i, j)]
+                    self._receptor_df.iloc[i, j] = self._receptor[(i, j)]
 
                 if (
                     not self._receptor_df.dropna(how="any").empty
