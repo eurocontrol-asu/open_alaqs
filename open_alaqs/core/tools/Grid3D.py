@@ -16,10 +16,10 @@ def _polygonise_2Dcells(df_row):
     # print("######################", list(map(lambda o: type(o), args)))
     return Polygon(
         [
-            (df_row.xmin, df_row.ymin),
-            (df_row.xmax, df_row.ymin),
-            (df_row.xmax, df_row.ymax),
-            (df_row.xmin, df_row.ymax),
+            (df_row.ymin, df_row.xmin),
+            (df_row.ymin, df_row.xmax),
+            (df_row.ymax, df_row.xmax),
+            (df_row.ymax, df_row.xmin),
         ]
     )
 

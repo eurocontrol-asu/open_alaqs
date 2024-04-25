@@ -152,10 +152,10 @@ class ContourPlotVectorLayer:
                 geom = QgsGeometry.fromPolygonXY(
                     [
                         [
-                            QgsPointXY(cell_bounds[1], cell_bounds[0]),
-                            QgsPointXY(cell_bounds[3], cell_bounds[0]),
-                            QgsPointXY(cell_bounds[3], cell_bounds[2]),
-                            QgsPointXY(cell_bounds[1], cell_bounds[2]),
+                            QgsPointXY(cell_bounds[0], cell_bounds[1]),
+                            QgsPointXY(cell_bounds[0], cell_bounds[3]),
+                            QgsPointXY(cell_bounds[2], cell_bounds[3]),
+                            QgsPointXY(cell_bounds[2], cell_bounds[1]),
                         ]
                     ]
                 )
