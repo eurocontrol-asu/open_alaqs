@@ -6,11 +6,13 @@ from qgis.core import (
     QgsClassificationJenks,
     QgsCoordinateReferenceSystem,
     QgsField,
+    QgsFillSymbol,
     QgsGeometry,
     QgsGradientColorRamp,
     QgsGradientStop,
     QgsGraduatedSymbolRenderer,
     QgsPointXY,
+    QgsRendererRange,
     QgsSymbol,
     QgsVectorLayer,
     QgsVectorLayerUtils,
@@ -76,6 +78,8 @@ class ContourPlotVectorLayer:
 
         symbol = QgsSymbol.defaultSymbol(self.layer.geometryType())
         symbol.symbolLayer(0).setStrokeColor(Qt.transparent)
+        transparent_symbol = QgsFillSymbol(symbol)
+        transparent_symbol.setColor(QColor("transparent"))
 
         # Create and configure the renderer
         renderer = QgsGraduatedSymbolRenderer(self.field_name)
@@ -83,6 +87,8 @@ class ContourPlotVectorLayer:
         renderer.setSourceColorRamp(gradient_color_ramp)
         renderer.updateClasses(self.layer, classes_count)
         renderer.updateSymbols(symbol)
+        renderer.addClassRange(QgsRendererRange(0.0, 0.0, transparent_symbol, "0"))
+        renderer.sortByValue()
 
         self.layer.setRenderer(renderer)
 
