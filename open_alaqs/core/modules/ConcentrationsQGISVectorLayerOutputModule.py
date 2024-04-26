@@ -5,8 +5,10 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
+from qgis.core import Qgis
 from qgis.gui import QgsDoubleSpinBox
 from qgis.PyQt import QtWidgets
+from qgis.PyQt.QtCore import QVariant
 from shapely.geometry import Point, Polygon
 
 from open_alaqs.core.alaqslogging import get_logger
@@ -560,7 +562,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
 
             output_data, index_, concentration_matrix = self.getA2KData()
 
-            self._header = [(self._pollutant, "double")]
+            self._header = [(self._pollutant, QVariant.Double)]
 
             self._xmin = (
                 conversion.convertToFloat(output_data["xmin"][0])
@@ -730,41 +732,27 @@ class QGISVectorLayerDispersionModule(OutputModule):
         # if self._header and self._data:
         # if self._header and not self._data.empty:
         if self._header and not self._data_cells.empty:
-
+            geometry_type = (
+                Qgis.GeometryType.Polygon
+                if self._isPolygon
+                else Qgis.GeometryType.Point
+            )
             # create a new instance of a ContourPlotLayer
             contour_layer = ContourPlotVectorLayer(
-                {
-                    "isPolygon": self._isPolygon,
-                    "Label_enable": self._enable_labels,
-                    "fieldname": self._pollutant,
-                    "name": "Concentration [in %s]" % (self._units),
-                    "name_suffix": self._layer_name_suffix,
-                }
+                layer_name="Concentration [in {}] {}".format(
+                    self._units, self._layer_name_suffix
+                ),
+                geometry_type=geometry_type,
+                enable_labels=self._enable_labels,
+                field_name=self._pollutant,
             )
             contour_layer.addHeader(self._header)
-
-            # contour_layer.addData([self._data[k] for k in self._data.keys()])
-            # contour_layer_min = min([self._data[k]["attributes"][self._pollutant] for k in self._data.keys()])
-            # contour_layer_max = max([self._data[k]["attributes"][self._pollutant] for k in self._data.keys()])
-
             contour_layer.addData(self._data_cells)
-            contour_layer_min = np.floor(self._data_cells.Q.min())
-            contour_layer_max = np.ceil(self._data_cells.Q.max())
+            contour_layer.setColorGradientRenderer(classes_count=7)
 
-            contour_layer.setColorGradientRenderer(
-                {
-                    "numberOfClasses": 7,
-                    "color1": "white",
-                    "color2": "red",
-                    "fieldname": self._pollutant,
-                    "minValue": contour_layer_min,
-                    "maxValue": contour_layer_max,
-                }
-            )
-
-            # logger.debug("Adding: fieldname:%s, minValue:%s, maxValue:%s"%(self._pollutant, contour_layer_min, contour_layer_max) )
             self._contour_layer = contour_layer
-            return self._contour_layer.getLayer()
+
+            return self._contour_layer.layer
 
         logger.warning("Could not complete endJob for QGISVectorLayerDispersionModule")
         return None
