@@ -2233,9 +2233,17 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             lambda: self.runOutputModule("EmissionsQGISVectorLayerOutputModule")
         )
 
+        s = QgsSettings()
+        last_result_file_path = s.value("OpenALAQS/last_result_file_path", "")
+
         self.ui.result_file_path.setFilter("ALAQS (*.alaqs)")
         self.ui.result_file_path.setDialogTitle("Open Emission Inventory Data")
+        self.ui.result_file_path.setFilePath(last_result_file_path)
         self.ui.result_file_path.fileChanged.connect(self.result_file_path_changed)
+
+        if os.path.isfile(last_result_file_path):
+            self.updateMinMaxGUI(last_result_file_path)
+            self.populate_source_types()
 
         self._return_values = {}
 
@@ -2494,21 +2502,18 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         Open a file browse window for the user to be able to locate and load an
         ALAQS output file
         """
-        try:
-            if os.path.exists(path):
-                # Fill in the UI
-                self.ui.source_names.clear()
-                self.ui.source_types.clear()
-                self.updateMinMaxGUI(path)
-                self.populate_source_types()
+        if not os.path.isfile(path):
+            raise Exception("File '%s' does not exist." % path)
 
-            else:
-                raise Exception("File '%s' does not exist." % path)
-        except Exception as e:
-            QtWidgets.QMessageBox.warning(
-                self, "Error", "Could not open file:  %s." % e
-            )
-            return e
+        # Fill in the UI
+        self.ui.source_names.clear()
+        self.ui.source_types.clear()
+
+        s = QgsSettings()
+        s.setValue("OpenALAQS/last_result_file_path", path)
+
+        self.updateMinMaxGUI(path)
+        self.populate_source_types()
 
     def source_name_changed(self):
         # reset calculation
