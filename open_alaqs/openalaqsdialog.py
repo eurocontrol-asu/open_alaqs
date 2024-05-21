@@ -1440,6 +1440,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         if layer is None:
             return
 
+        # TODO OPENGIS.ch: this is should be the taxiway layer, not the currently active (possible raster) layer
         layer.removeSelection()
         layer.select(layer.dataProvider().attributeIndexes())
 
