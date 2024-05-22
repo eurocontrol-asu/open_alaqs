@@ -2523,11 +2523,10 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self._emission_calculation_ = None
         # self._emission_calculation_configuration_widget = None
 
-    @catch_errors
     def source_type_changed(self, *args, **kwargs):
         """
         This function updates the UI based on the new source type chosen by the
-         user (e.g. list all gates, taxiways, roadways, etc.)
+        user (e.g. list all gates, taxiways, roadways, etc.)
         :return:
         """
 
