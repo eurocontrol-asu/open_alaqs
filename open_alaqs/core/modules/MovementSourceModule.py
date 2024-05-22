@@ -227,6 +227,7 @@ class MovementSourceModule(SourceModule):
         source_names=None,
         runway_names=None,
         ambient_conditions=None,
+        vertical_limit_m: float = 914.4,
         **kwargs
     ) -> List[Tuple[datetime, Source, Emission]]:
         if runway_names is None:
@@ -240,8 +241,7 @@ class MovementSourceModule(SourceModule):
                 "max_height"
             ] = ambient_conditions.getMixingHeight()
         except AttributeError:
-            # limit set by default to 3000 ft (914.4m)
-            self.getCalculationLimit()["max_height"] = 914.4
+            self.getCalculationLimit()["max_height"] = vertical_limit_m
             logger.info(
                 "Taking default mixing height (3000ft) on %s",
                 start_time.getTimeAsDateTime(),

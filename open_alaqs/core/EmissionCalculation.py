@@ -1,5 +1,6 @@
 import inspect
 from collections import OrderedDict
+from typing import List
 
 from qgis.PyQt import QtCore, QtWidgets
 
@@ -195,7 +196,7 @@ class EmissionCalculation:
     def CheckAmbientConditions(parameter, isa_value, tolerance):
         return 100 * float(abs(parameter - isa_value)) / isa_value > tolerance
 
-    def run(self, source_names=None):
+    def run(self, source_names: List, vertical_limit_m: float):
         if source_names is None:
             source_names = []
 
@@ -290,6 +291,7 @@ class EmissionCalculation:
                         end_,
                         source_names=source_names,
                         ambient_conditions=ambient_condition,
+                        vertical_limit_m=vertical_limit_m,
                     ):
 
                         logger.debug(f"{mod_name}: {timestamp_}")

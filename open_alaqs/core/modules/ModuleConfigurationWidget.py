@@ -83,7 +83,7 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                             else None
                         )
             elif isinstance(widget, QgsDoubleSpinBox) or isinstance(widget, QgsSpinBox):
-                widget.value()
+                val_ = widget.value()
 
             elif isinstance(widget, QtWidgets.QHBoxLayout) or isinstance(
                 widget, QtWidgets.QVBoxLayout

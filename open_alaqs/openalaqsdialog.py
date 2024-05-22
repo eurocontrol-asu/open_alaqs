@@ -253,6 +253,7 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             self.ui.spinBoxAirportTemperature.setValue(
                 study_data["airport_temperature"]
             )
+            # TODO OPENGIS.ch: remove the Vertical limit from the form, use the one in the Emission Inventory Analysis only
             self.ui.spinBoxVerticalLimit.setValue(study_data["vertical_limit"])
 
             roadway_methods = alaqs.get_roadway_methods()
@@ -1741,6 +1742,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui.setupUi(self)
 
         # Connections
+        # TODO OPENGIS.ch: remove the Vertical limit from the form, use the one in the Emission Inventory Analysis only
         self.ui.vert_limit_m.valueChanged.connect(self.m_to_ft)
         self.ui.vert_limit_ft.setEnabled(False)
 
@@ -2521,11 +2523,10 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self._emission_calculation_ = None
         # self._emission_calculation_configuration_widget = None
 
-    @catch_errors
     def source_type_changed(self, *args, **kwargs):
         """
         This function updates the UI based on the new source type chosen by the
-         user (e.g. list all gates, taxiways, roadways, etc.)
+        user (e.g. list all gates, taxiways, roadways, etc.)
         :return:
         """
 
@@ -2669,7 +2670,10 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         # Sources
         source_name = self.ui.source_names.currentText()
         source_names = [source_name if source_name is not None else "all"]
-        self._emission_calculation_.run(source_names=source_names)
+        self._emission_calculation_.run(
+            source_names=source_names,
+            vertical_limit_m=em_config["Vertical Limit"],
+        )
         self._emission_calculation_.sortEmissionsByTime()
 
     def get_values(self):
