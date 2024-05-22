@@ -1,5 +1,6 @@
 import copy
 import difflib
+import math
 import sys
 from collections import OrderedDict
 from inspect import currentframe, getframeinfo
@@ -7,6 +8,14 @@ from inspect import currentframe, getframeinfo
 import matplotlib
 import numpy as np
 import pandas as pd
+from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
+    QgsDistanceArea,
+    QgsGeometry,
+    QgsPointXY,
+    QgsProject,
+)
 from qgis.PyQt import QtCore, QtWidgets
 from shapely.geometry import LineString, MultiLineString
 from shapely.wkt import loads
@@ -1614,299 +1623,228 @@ class Movement:
                 "Could not find trajectory for movement at runway "
                 f"time '{self.getRunwayTime(as_str=True)}'."
             )
+            return trajectory
         elif self.getRunway() is None:
             logger.error(
                 "Could not find runway for movement at runway time "
                 f"'{self.getRunwayTime(as_str=True)}'."
             )
+            return trajectory
         elif not (self.getRunwayDirection() in self.getRunway().getDirections()):
             logger.error(
                 f"Could not find runway direction "
                 f"'{self.getRunwayDirection()}' (movement runway "
                 f"time='{self.getRunwayTime(as_str=True)}'."
             )
+            return trajectory
+
+        # Shift coordinates by touchdown offset (only for arrivals)
+        if offset_by_touchdown:
+            offset_by_touchdown = self.isArrival()
+
+        # Set the EPSG identifiers for the source and target projection
+        epsg_id_source = 3857
+        epsg_id_target = 4326
+        tr = QgsCoordinateTransform(
+            QgsCoordinateReferenceSystem(epsg_id_source),
+            QgsCoordinateReferenceSystem(epsg_id_target),
+            QgsProject.instance(),
+        )
+        # Create a measure object
+        source_crs = QgsCoordinateReferenceSystem(epsg_id_source)
+        d = QgsDistanceArea()
+        d.setSourceCrs(source_crs, QgsProject.instance().transformContext())
+        d.setEllipsoid(source_crs.ellipsoidAcronym())
+
+        runway_geom = QgsGeometry.fromWkt(self.getRunway().getGeometryText())
+        runway_points = runway_geom.get().points()
+
+        if len(runway_points) < 2:
+            logger.error("Did not find enough points for geometry '%s'", runway_geom)
+            return trajectory
+
+        runway_start_point = QgsPointXY(runway_points[0])
+        runway_end_point = QgsPointXY(runway_points[-1])
+        runway_directions = self.getRunway().getDirections()
+
+        if self.getRunwayDirection() == runway_directions[1]:
+            runway_backup_point = runway_start_point
+            runway_azimuth_deg = (
+                math.degrees(d.bearing(runway_start_point, runway_end_point)) + 360
+            ) % 360
+        elif self.getRunwayDirection() == runway_directions[0]:
+            runway_backup_point = runway_end_point
+            runway_azimuth_deg = (
+                math.degrees(d.bearing(runway_end_point, runway_start_point)) + 360
+            ) % 360
         else:
-
-            # Shift coordinates by touchdown offset (only for arrivals)
-            if offset_by_touchdown:
-                offset_by_touchdown = self.isArrival()
-
-            # Set the EPSG identifiers for the source and target projection
-            epsg_id_source = 3857
-            epsg_id_target = 4326
-
-            # Project geometry from 3857 to 4326
-            (runway_geometry_wkt, swap) = spatial.reproject_geometry(
-                self.getRunway().getGeometryText(), epsg_id_source, epsg_id_target
+            raise Exception(
+                f"Runway direction {self.getRunwayDirection()} was not found in {runway_directions}!"
             )
 
-            # Return tuple of points - runway ends
-            runway_points_tuple_list = spatial.getAllPoints(runway_geometry_wkt, swap)
+        taxi_geom = QgsGeometry.fromWkt(
+            self.getTaxiRoute().getSegmentsAsLineString().wkt
+        )
+        runway_intersection_projected = (
+            runway_geom.buffer(1, 10).intersection(taxi_geom).centroid()
+        )
 
-            if len(runway_points_tuple_list) >= 2:
+        if runway_intersection_projected.isNull():
+            # TODO OPENGIS.ch: in addition to just logging here,
+            # make sure the taxiway and the runway are intersecting, otherwise you cannot save the Movement
+            logger.error(
+                'No intersection point between runway "%s" and taxi route "%s"',
+                self.getRunwayDirection(),
+                self.getTaxiRoute().getName(),
+            )
+            runway_intersection_geographic = tr.transform(runway_backup_point)
+        else:
+            runway_intersection_geographic = tr.transform(
+                runway_intersection_projected.asPoint()
+            )
 
-                # assumes that runway is a straight line (i.e. earth is flat!)
-                start_point = runway_points_tuple_list[0]  # e.g. (lon, lat, alt)
-                end_point = runway_points_tuple_list[
-                    -1
-                ]  # e.g. (43.6157352579433, 1.38014783105964, 0.0)
+        if not self.has_track():
+            trajectory = AircraftTrajectory(
+                self.getTrajectory(),
+                skipPointInitialization=True,
+            )
+            trajectory.setIsCartesian(False)
 
-                # get the azimuth for the runway
-                # getInverseDistance(lat1, lon1, lat2, lon2, EPSG_id=4326)
-                # inverseDistance_dict = Spatial.getInverseDistance(start_point[0], start_point[1], end_point[0], end_point[1])
-                inverseDistance_dict = spatial.getInverseDistance(
-                    start_point[1], start_point[0], end_point[1], end_point[0]
+            for point in self.getTrajectory().getPoints():
+                # the target point is with cartesian coordinates, therefore we can calculate the distance with Pythagorian theorem
+                distance = math.sqrt(point.getX() ** 2 + point.getY() ** 2)
+
+                # get target point (calculation in 4326 projection)
+                target_point_geographic = d.computeSpheroidProject(
+                    runway_intersection_geographic,
+                    distance,
+                    math.radians(runway_azimuth_deg),
                 )
-                start_point_azimuth = inverseDistance_dict["azi1"]
-                end_point_azimuth = inverseDistance_dict["azi2"]
-
-                # ----------------------------------------------------------------------------------------------------------------
-                # get coordinate of runway threshold
-                # runway_point = (0.,0.,0.)
-                # runway_azimuth = 0.
-
-                # ToDo: FIXME touchdown offset
-                if offset_by_touchdown:
-                    self.getRunway().getTouchdownOffset()
-
-                # intersection = loads(self.getRunway().getGeometryText()).intersection(self.getTaxiRoute().getSegmentsAsLineString())
-                intersection = (
-                    self.getRunway()
-                    .getGeometry()
-                    .buffer(1)
-                    .intersection(self.getTaxiRoute().getSegmentsAsLineString())
+                target_point_geographic = d.computeSpheroidProject(
+                    runway_intersection_geographic,
+                    distance,
+                    math.radians(runway_azimuth_deg),
+                )
+                target_point_projected = tr.transform(
+                    target_point_geographic,
+                    QgsCoordinateTransform.ReverseTransform,
                 )
 
-                # osgeo.ogr.Geometry: Point(lat, lon)
-                # Direction is either first or last point (assume that runway naming list represents direction of points)
-
-                # Check if the direction of the runway needs to be reversed
-                if (
-                    self.getRunway().getDirections().index(self.getRunwayDirection())
-                    == 0
-                ):
-                    runway_point, runway_azimuth = start_point, start_point_azimuth
-                else:
-                    runway_point, runway_azimuth = end_point, end_point_azimuth
-                    runway_azimuth = (runway_azimuth + 180) % 360
-
-                try:
-                    (rwy_point, rwy_point_wkt) = spatial.reproject_Point(
-                        intersection.centroid.x,
-                        intersection.centroid.y,
-                        epsg_id_source,
-                        epsg_id_target,
-                    )
-                    runway_point = (rwy_point.GetY(), rwy_point.GetX())
-                except Exception:
-                    logger.warning(
-                        "No intersection point between runway '%s' and"
-                        " taxiroute '%s'"
-                        % (self.getRunwayDirection(), self.getTaxiRoute().getName())
-                    )
-
-                    # runway_point, runway_azimuth = start_point, start_point_azimuth
-                    # # runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
-                    # if self.getDepartureArrivalFlag() == "A":
-                    #     (rwy_point, rwy_point_wkt) = Spatial.reproject_Point(intersection.x, intersection.y,
-                    #                                                          epsg_id_source, epsg_id_target)
-                    #     runway_point = (rwy_point.GetY(), rwy_point.GetX())
-
-                    # if self.getDepartureArrivalFlag() == "D":
-                    #     runway_point, runway_azimuth = start_point, start_point_azimuth
-                    # else:
-                    #     runway_point, runway_azimuth = end_point, end_point_azimuth
-                    #     if not intersection.is_empty:
-                    #         (rwy_point, rwy_point_wkt) = Spatial.reproject_Point(intersection.x, intersection.y, epsg_id_source, epsg_id_target)
-                    #         runway_point = (rwy_point.GetY(), rwy_point.GetX())
-
-                # # # For ARR (only), take back azimuth (# Less than 180 degrees (< 3.141592 rad), then add 180 degrees):
-                # if self.getDepartureArrivalFlag() == "A":
-                #     runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
-
-                # DEP: construction starts with nearest point
-                # ARR: construction starts with point most far away
-
-                has_track = self.getTrack() is not None
-                if (
-                    has_track
-                    and self.getTaxiRoute().getRunway() != self.getTrack().getRunway()
-                ):
-                    logger.warning(
-                        "Paired taxi route '%s' and track '%s' do not share the same runway, reverting movement to default airplane profile"
-                        % (self.getTaxiRoute().getName(), self.getTrack().getName())
-                    )
-                    has_track = False
-                if (
-                    has_track
-                    and self.getDepartureArrivalFlag()
-                    != self.getTrack().getDepartureArrivalFlag()
-                ):
-                    logger.warning(
-                        "Track '%s' departure/arrival flag does not match movement, using default airplane profile instead"
-                        % (self.getTrack().getName())
-                    )
-                    has_track = False
-
-                if not has_track:
-                    # no track, create straight line from profile
-
-                    trajectory = AircraftTrajectory(
-                        self.getTrajectory(), skipPointInitialization=True
-                    )
-                    trajectory.setIsCartesian(False)
-
-                    for point in self.getTrajectory().getPoints():
-
-                        # aircraft trajectory point with from default_aircraft_profiles
-                        origin = (0.0, 0.0, 0.0)
-
-                        # target point with cartesian coordinates
-                        target_point = point.getCoordinates()
-                        target_point_distance = spatial.getDistanceXY(
-                            target_point[0],
-                            target_point[1],
-                            target_point[2],
-                            origin[0],
-                            origin[1],
-                            origin[2],
-                        )
-
-                        # if self.getDepartureArrivalFlag() == "A":
-                        #     target_point_distance = target_point_distance + self.getTrajectory().getPoints()[-1].getX()
-                        # if self.getDepartureArrivalFlag() == "A":
-                        #     if self.getRunway().getDirections().index(self.getRunwayDirection()):
-                        #         target_point_distance = target_point_distance - self.getTrajectory().getPoints()[-1].getX()
-                        #         if target_point == origin:
-                        #             # for ARR, when landing take forward azimuth
-                        #             runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
-                        #     else:
-                        #         target_point_distance = target_point_distance - self.getTrajectory().getPoints()[-1].getX()
-                        #         if target_point == origin:
-                        #             # for ARR, when landing take forward azimuth
-                        #             runway_azimuth = runway_azimuth + 180 if runway_azimuth < 180 else runway_azimuth - 180
-
-                        # get target point (calculation in 4326 projection)
-                        target_projected = spatial.getDistance(
-                            runway_point[1],
-                            runway_point[0],
-                            runway_azimuth,
-                            target_point_distance,
-                        )
-
-                        # target point (wkt) with coordinates in 4326
-                        target_projected_wkt = spatial.getPointGeometryText(
-                            target_projected["lon2"],
-                            target_projected["lat2"],
-                            0.0,
-                            swap,
-                        )
-
-                        # reproject target from 4326 to 3857
-                        (target_projected_wkt, swap_) = spatial.reproject_geometry(
-                            target_projected_wkt, epsg_id_target, epsg_id_source
-                        )
-
-                        # add target to list of points of the (shifted) trajectory
-                        for p in spatial.getAllPoints(target_projected_wkt):
-                            p_ = AircraftTrajectoryPoint(point)
-                            # Update x and y coordinates (z coordinate is not updated by distance calculation)
-                            p_.setCoordinates(p[0], p[1], target_point[2])
-                            p_.updateGeometryText()
-                            trajectory.addPoint(p_)
-                        trajectory.updateGeometryText()
-                else:
-                    # process track
-
-                    # build distance to point array from aircraft profile
-                    profile_points = self.getTrajectory().getPoints()
-                    profile_distances = []
-                    previous_point = (0.0, 0.0, 0.0)
-                    cumulative_distance = 0.0
-                    for point in profile_points:
-                        point = point.getCoordinates()
-                        distance = spatial.getDistanceBetweenPoints(
-                            point[0],
-                            point[1],
-                            point[2],
-                            previous_point[0],
-                            previous_point[1],
-                            previous_point[2],
-                        )
-                        cumulative_distance = cumulative_distance + distance
-                        profile_distances.append(cumulative_distance)
-                        previous_point = point
-
-                    difference = (
-                        self.getTrack()
-                        .getGeometry()
-                        .difference(self.getRunway().getGeometry().buffer(10))
-                    )
-                    track_line = difference
-                    max_length = 0.0
-                    # check if the track has been broken into multipe parts, pick the longest one
-                    if difference.geom_type == "MultiLineString":
-                        for line in list(difference.geoms):
-                            if line.length > max_length:
-                                max_length = line.length
-                                track_line = line
-
-                    track_line_points = list(track_line.coords)
-                    if self.getTrack().getDepartureArrivalFlag() == "A":
-                        # reverse arrival track so ordering begins at runway
-                        track_line_points.reverse()
-
-                    (point, point_wkt) = spatial.reproject_Point(
-                        runway_point[1], runway_point[0], epsg_id_target, epsg_id_source
-                    )
-                    track_line_points.insert(0, (point.GetX(), point.GetY(), 0))
-                    track_line = LineString(track_line_points)
-
-                    trajectory = AircraftTrajectory()
-                    trajectory.setIdentifier(self.getTrajectory().getIdentifier())
-                    trajectory.setStage(self.getTrajectory().getStage())
-                    trajectory.setSource(self.getTrajectory().getSource())
-                    trajectory.setDepartureArrivalFlag(
-                        self.getTrajectory().getDepartureArrivalFlag()
-                    )
-                    trajectory.setWeight(self.getTrajectory().getWeight())
-
-                    # match track points to closest point from the profile trajectory
-                    previous_point = list(track_line.coords)[0]
-                    cumulative_distance = 0.0
-                    for point in list(track_line.coords):
-                        distance = spatial.getDistanceBetweenPoints(
-                            point[0],
-                            point[1],
-                            point[2],
-                            previous_point[0],
-                            previous_point[1],
-                            previous_point[2],
-                        )
-                        cumulative_distance = cumulative_distance + distance
-
-                        closest_distance = profile_distances[-1]
-                        closest_idx = len(profile_distances) - 1
-                        for idx, d in enumerate(profile_distances):
-                            if abs(distance - d) < closest_distance:
-                                closest_distance = abs(distance - d)
-                                closest_idx = idx
-
-                        trajectory_point = AircraftTrajectoryPoint(
-                            profile_points[closest_idx]
-                        )
-                        trajectory_point.setCoordinates(point[0], point[1], point[2])
-                        trajectory_point.updateGeometryText()
-                        trajectory.addPoint(trajectory_point)
-                    trajectory.updateGeometryText()
-
-            else:
-                logger.error(
-                    "Did not find enough points for geometry '%s'"
-                    % (runway_geometry_wkt)
+                trajectory_point = AircraftTrajectoryPoint(point)
+                # Update x and y coordinates (z coordinate is not updated by distance calculation)
+                trajectory_point.setCoordinates(
+                    target_point_projected.x(),
+                    target_point_projected.y(),
+                    point.getZ(),
                 )
+                trajectory.addPoint(trajectory_point)
+        else:
+            # process track
+
+            # build distance to point array from aircraft profile
+            profile_points = self.getTrajectory().getPoints()
+            profile_distances = []
+            previous_point = (0.0, 0.0, 0.0)
+            cumulative_distance = 0.0
+            for point in profile_points:
+                point = point.getCoordinates()
+                distance = spatial.getDistanceBetweenPoints(
+                    point[0],
+                    point[1],
+                    point[2],
+                    previous_point[0],
+                    previous_point[1],
+                    previous_point[2],
+                )
+                cumulative_distance = cumulative_distance + distance
+                profile_distances.append(cumulative_distance)
+                previous_point = point
+
+            difference = (
+                self.getTrack()
+                .getGeometry()
+                .difference(self.getRunway().getGeometry().buffer(10))
+            )
+            track_line = difference
+            max_length = 0.0
+            # check if the track has been broken into multipe parts, pick the longest one
+            if difference.geom_type == "MultiLineString":
+                for line in list(difference.geoms):
+                    if line.length > max_length:
+                        max_length = line.length
+                        track_line = line
+
+            track_line_points = list(track_line.coords)
+            if self.getTrack().getDepartureArrivalFlag() == "A":
+                # reverse arrival track so ordering begins at runway
+                track_line_points.reverse()
+
+            (point, point_wkt) = spatial.reproject_Point(
+                runway_intersection_geographic.x(),
+                runway_intersection_geographic.y(),
+                epsg_id_target,
+                epsg_id_source,
+            )
+            track_line_points.insert(0, (point.GetX(), point.GetY(), 0))
+            track_line = LineString(track_line_points)
+
+            trajectory = AircraftTrajectory()
+            trajectory.setIdentifier(self.getTrajectory().getIdentifier())
+            trajectory.setStage(self.getTrajectory().getStage())
+            trajectory.setSource(self.getTrajectory().getSource())
+            trajectory.setDepartureArrivalFlag(
+                self.getTrajectory().getDepartureArrivalFlag()
+            )
+            trajectory.setWeight(self.getTrajectory().getWeight())
+
+            # match track points to closest point from the profile trajectory
+            previous_point = list(track_line.coords)[0]
+            cumulative_distance = 0.0
+            for point in list(track_line.coords):
+                distance = spatial.getDistanceBetweenPoints(
+                    point[0],
+                    point[1],
+                    point[2],
+                    previous_point[0],
+                    previous_point[1],
+                    previous_point[2],
+                )
+                cumulative_distance = cumulative_distance + distance
+
+                closest_distance = profile_distances[-1]
+                closest_idx = len(profile_distances) - 1
+                for idx, d in enumerate(profile_distances):
+                    if abs(distance - d) < closest_distance:
+                        closest_distance = abs(distance - d)
+                        closest_idx = idx
+
+                trajectory_point = AircraftTrajectoryPoint(profile_points[closest_idx])
+                trajectory_point.setCoordinates(point[0], point[1], point[2])
+                trajectory_point.updateGeometryText()
+                trajectory.addPoint(trajectory_point)
+            trajectory.updateGeometryText()
 
         return trajectory
+
+    def has_track(self) -> bool:
+        if self.getTrack() is None:
+            return None
+
+        if self.getTaxiRoute().getRunway() != self.getTrack().getRunway():
+            logger.warning(
+                "Paired taxi route '%s' and track '%s' do not share the same runway, reverting movement to default airplane profile"
+                % (self.getTaxiRoute().getName(), self.getTrack().getName())
+            )
+            return False
+
+        if self.getDepartureArrivalFlag() != self.getTrack().getDepartureArrivalFlag():
+            logger.warning(
+                "Track '%s' departure/arrival flag does not match movement, using default airplane profile instead"
+                % (self.getTrack().getName())
+            )
+            return False
+
+        return True
 
     def getRunway(self):
         return self._runway
@@ -2218,31 +2156,39 @@ class MovementStore(Store, metaclass=Singleton):
 
         taxi_route_store = self.getTaxiRouteStore()
         all_taxi_routes = taxi_route_store.getObjects().keys()
-        arrival_taxi_routes = [tr for tr in all_taxi_routes if "/A/" in tr]
-        departure_taxi_routes = [tr for tr in all_taxi_routes if "/D/" in tr]
+        [tr for tr in all_taxi_routes if "/A/" in tr]
+        [tr for tr in all_taxi_routes if "/D/" in tr]
         for txr in mdf["taxi_route"].unique():
             indices = mdf[mdf["taxi_route"] == txr].index
             if taxi_route_store.hasKey(txr):
                 eq_mdf.loc[indices, "taxi_route"] = txr
             else:
-                alt_routes = []
-                if "/D/" in txr:
-                    alt_routes = difflib.get_close_matches(txr, departure_taxi_routes)
-                elif "/A/" in txr:
-                    alt_routes = difflib.get_close_matches(txr, arrival_taxi_routes)
+                eq_mdf.loc[indices, "taxi_route"] = np.NaN
+                logger.warning(
+                    f'Taxiroute "{txr}" was not found in the taxi routes database!'
+                )
 
-                if len(alt_routes) > 0:
-                    eq_mdf.loc[indices, "taxi_route"] = alt_routes[0]
-                    logger.warning(
-                        "Taxiroute '%s' was replaced with '%s'", txr, alt_routes[0]
-                    )
-                else:
-                    logger.error(
-                        "No taxiroute found to replace '%s' "
-                        "which is not in the database",
-                        txr,
-                    )
-                    eq_mdf.loc[indices, "taxi_route"] = np.NaN
+            # TODO OPENGIS.ch: the alternitive taxi route finder below causes multiple taxi alternative taxi routes to be assigned to a movement
+            # The alternatives should be constraint only for taxi routes from this or nearby gate and should be only one alternative.
+            # else:
+            #     alt_routes = []
+            #     if "/D/" in txr:
+            #         alt_routes = difflib.get_close_matches(txr, departure_taxi_routes)
+            #     elif "/A/" in txr:
+            #         alt_routes = difflib.get_close_matches(txr, arrival_taxi_routes)
+
+            #     if len(alt_routes) > 0:
+            #         eq_mdf.loc[indices, "taxi_route"] = alt_routes[0]
+            #         logger.warning(
+            #             "Taxiroute '%s' was replaced with '%s'", txr, alt_routes[0]
+            #         )
+            #     else:
+            #         logger.error(
+            #             "No taxiroute found to replace '%s' "
+            #             "which is not in the database",
+            #             txr,
+            #         )
+            #         eq_mdf.loc[indices, "taxi_route"] = np.NaN
 
         # Check if track exist in the database
         stage_1.nextValue()

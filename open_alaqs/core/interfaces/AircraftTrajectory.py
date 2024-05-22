@@ -356,6 +356,8 @@ class TrajectoryPoint(object):
         self._y = y if not unit_in_feet else conversion.convertFeetToMeters(y)
         self._z = z if not unit_in_feet else conversion.convertFeetToMeters(z)
 
+        self.updateGeometryText()
+
     def setX(self, x, unit_in_feet=False):
         self._x = x if not unit_in_feet else conversion.convertFeetToMeters(x)
 
