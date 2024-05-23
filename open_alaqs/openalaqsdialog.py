@@ -2607,39 +2607,29 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             }
         )
 
-        # Modules
-        # module_name = str(self.ui.source_types.currentText())
-        module_name = self.ui.source_types.currentText()
-        module_names_ = (
-            EmissionSourceModuleRegistry().get_module_names()
-            if module_name.lower() == "all"
-            else [module_name]
+        em_config = self._emission_calculation_configuration_widget.getValues()
+        em_config["reference_altitude"] = ref_altitude
+        em_config[
+            "receptors"
+        ] = self._emission_calculation_configuration_widget._receptor_points
+
+        if (
+            em_config["Method"]["selected"] == "BFFM2"
+            and em_config["Apply NOx Corrections"]
+        ):
+            logger.warning(
+                "Not possible to use both 'BFFM2' " "and 'Apply NOx correction'"
+            )
+
+        selected_module_name = self.ui.source_types.currentText()
+        if selected_module_name.lower() == "all":
+            module_names = EmissionSourceModuleRegistry().get_module_names()
+        else:
+            module_names = [selected_module_name]
+
+        self._emission_calculation_.set_emission_source_module_names(
+            module_names, em_config
         )
-
-        # if module_name.lower()=="all" and not module_name is None:
-        # if not module_name is None :
-        #     module_names_ = [module_name]
-
-        for m_name_ in module_names_:
-            if m_name_ == "MovementSource":
-                em_config = self._emission_calculation_configuration_widget.getValues()
-                em_config["reference_altitude"] = ref_altitude
-                em_config[
-                    "receptors"
-                ] = self._emission_calculation_configuration_widget._receptor_points
-
-                # Check compatibility of methods (Not possible to have both
-                # 'BFFM2' and 'Apply NOx correction')
-                BFFM2_selected = em_config["Method"]["selected"] == "BFFM2"
-                NOx_corr_selected = em_config["Apply NOx Corrections"]
-                if BFFM2_selected and NOx_corr_selected:
-                    logger.warning(
-                        "Not possible to use both 'BFFM2' " "and 'Apply NOx correction'"
-                    )
-
-                self._emission_calculation_.addModule(m_name_, configuration=em_config)
-            else:
-                self._emission_calculation_.addModule(m_name_)
 
         # dispersion modules
         dm_conf_ = self.getDispersionModulesConfiguration()

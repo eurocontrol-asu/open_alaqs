@@ -111,11 +111,6 @@ class ModuleManager(metaclass=Singleton):
         return instances_
 
 
-class SourceModuleManager(ModuleManager, metaclass=Singleton):
-    def __init__(self):
-        ModuleManager.__init__(self, SourceModule)
-
-
 class OutputModuleManager(ModuleManager, metaclass=Singleton):
     def __init__(self):
         ModuleManager.__init__(self, OutputModule)

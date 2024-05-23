@@ -1,6 +1,6 @@
 import inspect
 from collections import OrderedDict
-from typing import List
+from typing import Any, List
 
 from qgis.PyQt import QtCore, QtWidgets
 
@@ -13,7 +13,6 @@ from open_alaqs.core.interfaces.DispersionModule import DispersionModule
 from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.InventoryTimeSeries import InventoryTimeSeriesStore
 from open_alaqs.core.interfaces.Source import Source
-from open_alaqs.core.interfaces.SourceModule import SourceModule
 from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleManager,
     EmissionSourceModuleRegistry,
@@ -46,7 +45,7 @@ class EmissionCalculation:
         )
         self._emissions = OrderedDict()
         self._module_manager = EmissionSourceModuleRegistry()
-        self._modules = OrderedDict()
+        self._emission_source_modules = OrderedDict()
         self._dispersion_modules = OrderedDict()
         self._dispersion_module_manager = DispersionModuleManager()
         self._ambient_conditions_store = AmbientConditionStore(self.getDatabasePath())
@@ -113,43 +112,22 @@ class EmissionCalculation:
         # ModuleManger is a Singleton
         return self._dispersion_module_manager
 
-    def addModule(
-        self, name, EmissionSourceModule=None, configuration=None, db_path=""
-    ):
-        if configuration is None:
-            configuration = {}
-        if EmissionSourceModule is None:
-            EmissionSourceModule = EmissionSourceModuleRegistry().get_module(name)
+    def set_emission_source_module_names(
+        self,
+        module_names: list[str],
+        module_config: dict[str, Any],
+    ) -> None:
+        for module_name in module_names:
+            EmissionSourceModule = EmissionSourceModuleRegistry().get_module(
+                module_name
+            )
 
-        # instantiate objects
-        if isinstance(EmissionSourceModule, SourceModule):
-            self._modules[name] = EmissionSourceModule
-            if db_path:
-                EmissionSourceModule.setDatabasePath(db_path)
-            return True
-
-        if inspect.isclass(EmissionSourceModule):
-            # ToDo: re-implement issubclass (it looks like instances of
-            #  generic types are no longer instances of type ???)
-            # if issubclass(obj, SourceModule):
-            # if issubclass(obj, (list, SourceModule)):
-            # logger.debug(issubclass(obj, (list, SourceModule)))
-            try:
-
-                config_ = {
-                    "database_path": db_path if db_path else self.getDatabasePath()
+            self._emission_source_modules[module_name] = EmissionSourceModule(
+                values_dict={
+                    "database_path": self._database_path,
+                    **module_config,
                 }
-
-                config_.update(configuration)
-
-                self._modules[name] = EmissionSourceModule(values_dict=config_)
-
-                return True
-            except Exception as e:
-                logger.error(f"Could not add {name} as a SourceModule. {e}")
-                return False
-
-        return False
+            )
 
     def addDispersionModule(self, name, obj=None, configuration=None):
         if configuration is None:
@@ -330,7 +308,7 @@ class EmissionCalculation:
             dispersion_mod_obj.endJob()
 
     def getModules(self):
-        return self._modules
+        return self._emission_source_modules
 
     def getDispersionModules(self):
         return self._dispersion_modules
