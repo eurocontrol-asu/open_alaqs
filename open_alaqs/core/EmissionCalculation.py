@@ -41,6 +41,7 @@ class EmissionCalculation:
         grid_config: GridConfig,
         start_time: str,
         end_time: str,
+        time_interval_mins: int,
     ) -> None:
         assert db_path
 
@@ -50,6 +51,7 @@ class EmissionCalculation:
         # Get the time series for this inventory
         self._start_incl = convertTimeToSeconds(start_time)
         self._end_incl = convertTimeToSeconds(end_time)
+        self._time_interval_mins = time_interval_mins
         self._inventoryTimeSeriesStore = InventoryTimeSeriesStore(self._database_path)
         self._emissions = {}
         self._source_modules = {}

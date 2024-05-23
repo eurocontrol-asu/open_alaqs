@@ -2205,6 +2205,14 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 "options": ["none", "default", "smooth & shift"],
             },
         },
+        "time_interval_mins": {
+            "label": "Time Interval (mins)",
+            "widget_type": QtWidgets.QComboBox,
+            "initial_value": "60",
+            "widget_config": {
+                "options": ["15", "30", "45", "60"],
+            },
+        },
         "vertical_limit_m": {
             "label": "Vertical Limit",
             "widget_type": QgsDoubleSpinBox,
@@ -2660,6 +2668,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             grid_config=grid_configuration,
             start_time=em_config["start_dt_inclusive"],
             end_time=em_config["end_dt_inclusive"],
+            time_interval_mins=conversion.convertToInt(em_config["time_interval_mins"]),
         )
 
         em_config = self._emission_calculation_configuration_widget.get_values()
