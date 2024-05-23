@@ -22,6 +22,7 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import geopandas as gpd
 from qgis.core import (
     Qgis,
     QgsApplication,
@@ -35,7 +36,7 @@ from qgis.core import (
     QgsVectorLayerUtils,
 )
 from qgis.core.additions.edit import edit
-from qgis.gui import QgsFileWidget
+from qgis.gui import QgsDoubleSpinBox, QgsFileWidget
 from qgis.PyQt import QtCore, QtGui, QtWidgets
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import QMessageBox
@@ -48,19 +49,17 @@ from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqsdblite import ProjectDatabase
 from open_alaqs.core.alaqslogging import get_logger, log_path
 from open_alaqs.core.EmissionCalculation import EmissionCalculation
-from open_alaqs.core.modules.ConcentrationVisualizationWidget import (
-    ConcentrationVisualizationWidget,
-)
-from open_alaqs.core.modules.EmissionCalculationConfigurationWidget import (
-    EmissionCalculationConfigurationWidget,
-)
+from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget2
 from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleManager,
     EmissionSourceModuleRegistry,
     OutputModuleManager,
 )
 from open_alaqs.core.tools import conversion, sql_interface
-from open_alaqs.core.tools.csv_interface import read_csv_to_dict
+from open_alaqs.core.tools.csv_interface import (
+    read_csv_to_dict,
+    read_csv_to_geodataframe,
+)
 from open_alaqs.core.utils.osm import download_osm_airport_data
 from open_alaqs.enums import AlaqsLayerType
 
@@ -2173,6 +2172,55 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
     This class provides a dialog for visualizing ALAQS results.
     """
 
+    settings_schema = {
+        "start_dt_inclusive": {
+            "label": "Start (incl.)",
+            "widget_type": QtWidgets.QDateTimeEdit,
+            "initial_value": "2000-01-01 00:00:00",
+        },
+        "end_dt_inclusive": {
+            "label": "End (incl.)",
+            "initial_value": "2000-01-02 00:00:00",
+            "widget_type": QtWidgets.QDateTimeEdit,
+        },
+        "method": {
+            "label": "Method",
+            "widget_type": QtWidgets.QComboBox,
+            "initial_value": None,
+            "widget_config": {
+                "options": [],
+            },
+        },
+        "should_apply_nox_corrections": {
+            "label": "Apply NOx Corrections",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": False,
+            "tooltip": "Only available when the method is set to 'bymode'.",
+        },
+        "source_dynamics": {
+            "label": "Source Dynamics",
+            "widget_type": QtWidgets.QComboBox,
+            "initial_value": "none",
+            "widget_config": {
+                "options": ["none", "default", "smooth & shift"],
+            },
+        },
+        "vertical_limit_m": {
+            "label": "Vertical Limit",
+            "widget_type": QgsDoubleSpinBox,
+            "initial_value": 914.4,
+            "widget_config": {"minimum": 0, "maximum": 999999.9, "suffix": "m"},
+        },
+        "receptor_points": {
+            "label": "Receptor Points",
+            "widget_type": QgsFileWidget,
+            "widget_config": {
+                "filter": "CSV (*.csv)",
+                "dialog_title": "Select CSV File with Receptor Points",
+            },
+        },
+    }
+
     def __init__(self, iface=None):
         main_window = iface.mainWindow() if iface is not None else None
         QtWidgets.QDialog.__init__(self, main_window)
@@ -2249,6 +2297,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             self.populate_source_types()
 
         self._return_values = {}
+        self._receptor_points = gpd.GeoDataFrame()
 
     def configuration_modules_list_current_row_changed(self, row):
         self.ui.configuration_stack.setCurrentIndex(row)
@@ -2274,8 +2323,15 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         else:
             available_methods = ["bymode"]
 
-        self.resetEmissionCalculationConfiguration(
-            config={"Method": {"available": available_methods, "selected": None}}
+        self._emission_calculation_configuration_widget.patch_schema(
+            {
+                "method": {
+                    "initial_value": None,
+                    "widget_config": {
+                        "options": available_methods,
+                    },
+                }
+            }
         )
 
     def resetEmissionCalculationConfiguration(self, config=None):
@@ -2283,14 +2339,22 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             config = {}
 
         if self._emission_calculation_configuration_widget is None:
+
+            def load_receptors_csv(path):
+                self._receptor_points = read_csv_to_geodataframe(path)
+
             self._emission_calculation_configuration_widget = (
-                EmissionCalculationConfigurationWidget(parent=None)
+                ModuleConfigurationWidget2(self.settings_schema)
             )
+            self._emission_calculation_configuration_widget.get_widget(
+                "receptor_points"
+            ).fileChanged.connect(load_receptors_csv)
+
             self.ui.configuration_stack.insertWidget(
                 0, self._emission_calculation_configuration_widget
             )
 
-        self._emission_calculation_configuration_widget.initValues(config)
+        self._emission_calculation_configuration_widget.init_values(config)
         self.update()
 
     def resetModuleConfiguration(self, module_names):
@@ -2327,14 +2391,14 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
     def getOutputModulesConfiguration(self):
         tab = self.ui.output_modules_tab_widget
         return {
-            tab.tabText(index): tab.widget(index).widget().getValues()
+            tab.tabText(index): tab.widget(index).widget().get_values()
             for index in range(0, tab.count())
         }
 
     def getDispersionModulesConfiguration(self):
         tab = self.ui.dispersion_modules_tab_widget
         return {
-            tab.tabText(index): tab.widget(index).widget().getValues()
+            tab.tabText(index): tab.widget(index).widget().get_values()
             for index in range(0, tab.count())
         }
 
@@ -2372,10 +2436,8 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         }
 
         # Configuration of the emissions calculation
-        em_configuration = self._emission_calculation_configuration_widget.getValues()
-        em_configuration[
-            "receptors"
-        ] = self._emission_calculation_configuration_widget._receptor_points
+        em_configuration = self._emission_calculation_configuration_widget.get_values()
+        em_configuration["receptors"] = self._receptor_points
         config.update(em_configuration)
 
         kwargs = {}
@@ -2454,7 +2516,10 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         # self.ui.end_dateTime.setMaximumDateTime(time_end_calc_)
 
         self.resetEmissionCalculationConfiguration(
-            config={"Start (incl.)": time_start_calc_, "End (incl.)": time_end_calc_}
+            config={
+                "start_dt_inclusive": time_start_calc_,
+                "end_dt_inclusive": time_end_calc_,
+            }
         )
         self.ui.source_types.clear()
         self.ui.source_names.clear()
@@ -2542,11 +2607,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         # instantiate module to get access to the sources
         em_config = {"database_path": inventory_path}
         if module_name == "MovementSource":
-            widget_values = self._emission_calculation_configuration_widget.getValues()
+            widget_values = self._emission_calculation_configuration_widget.get_values()
             em_config.update(widget_values)
-            em_config[
-                "receptors"
-            ] = self._emission_calculation_configuration_widget._receptor_points
+            em_config["receptors"] = self._receptor_points
 
         mod_ = EmissionSourceModule(em_config)
         mod_.loadSources()
@@ -2559,7 +2622,6 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
     def isOutputFile(self, path):
         return sql_interface.hasTable(path, "grid_3d_definition")
 
-    @catch_errors
     def update_emissions(self):
 
         inventory_path = self.ui.result_file_path.filePath()
@@ -2596,27 +2658,22 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             "reference_altitude": ref_altitude,
         }
 
-        em_config = self._emission_calculation_configuration_widget.getValues()
+        em_config = self._emission_calculation_configuration_widget.get_values()
 
         self._emission_calculation_ = EmissionCalculation(
             {
                 "database_path": inventory_path,
                 "grid_configuration": grid_configuration,
-                "Start (incl.)": em_config["Start (incl.)"],
-                "End (incl.)": em_config["End (incl.)"],
+                "start_dt_inclusive": em_config["start_dt_inclusive"],
+                "end_dt_inclusive": em_config["end_dt_inclusive"],
             }
         )
 
-        em_config = self._emission_calculation_configuration_widget.getValues()
+        em_config = self._emission_calculation_configuration_widget.get_values()
         em_config["reference_altitude"] = ref_altitude
-        em_config[
-            "receptors"
-        ] = self._emission_calculation_configuration_widget._receptor_points
+        em_config["receptors"] = self._receptor_points
 
-        if (
-            em_config["Method"]["selected"] == "BFFM2"
-            and em_config["Apply NOx Corrections"]
-        ):
+        if em_config["method"] == "BFFM2" and em_config["should_apply_nox_corrections"]:
             logger.warning(
                 "Not possible to use both 'BFFM2' " "and 'Apply NOx correction'"
             )
@@ -2644,9 +2701,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 "Enabled", dm_conf_[dm_name_].get("enable", False)
             ):
                 dm_config = dm_conf_[dm_name_]
-                dm_config[
-                    "receptors"
-                ] = self._emission_calculation_configuration_widget._receptor_points
+                dm_config["receptors"] = self._receptor_points
 
                 if self._emission_calculation_.get3DGrid():
                     dm_config.update({"grid": self._emission_calculation_.get3DGrid()})
@@ -2659,7 +2714,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         source_names = [source_name if source_name is not None else "all"]
         self._emission_calculation_.run(
             source_names=source_names,
-            vertical_limit_m=em_config["Vertical Limit"],
+            vertical_limit_m=em_config["vertical_limit_m"],
         )
         self._emission_calculation_.sortEmissionsByTime()
 
@@ -2675,6 +2730,45 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
     """
     This class provides a dialog that launches the Dispersion Analysis
     """
+
+    settings_schema = {
+        "start_dt_inclusive": {
+            "label": "Start (incl.)",
+            "widget_type": QtWidgets.QDateTimeEdit,
+            "initial_value": "2000-01-01 00:00:00",
+        },
+        "end_dt_inclusive": {
+            "label": "End (incl.)",
+            "widget_type": QtWidgets.QDateTimeEdit,
+            "initial_value": "2000-01-02 00:00:00",
+        },
+        "averaging": {
+            "label": "Averaging",
+            "widget_type": QtWidgets.QComboBox,
+            "initial_value": "annual mean",
+            "widget_config": {
+                "options": [
+                    "hourly",
+                    "8-hours mean",
+                    "daily mean",
+                    "annual mean",
+                ],
+            },
+        },
+        "pollutant": {
+            "label": "Pollutant",
+            "widget_type": QtWidgets.QComboBox,
+            "initial_value": None,
+            "widget_config": {
+                "options": ["CO2", "CO", "HC", "NOx", "SOx", "PM10"],
+            },
+        },
+        "is_uncertainty_enabled": {
+            "label": "Enable Uncertainty",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": False,
+        },
+    }
 
     def __init__(self, iface=None):
         """
@@ -2756,7 +2850,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
     def updateMinMaxGUI(self, db_path_=""):
         (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path_)
         self.resetConcentrationCalculationConfiguration(
-            config={"Start (incl.)": time_start_calc_, "End (incl.)": time_end_calc_}
+            config={
+                "start_dt_inclusive": time_start_calc_,
+                "end_dt_inclusive": time_end_calc_,
+            }
         )
 
     def getMinMaxTime(self, db_path=""):
@@ -2893,14 +2990,14 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             config = {}
 
         if self._concentration_visualization_widget is None:
-            self._concentration_visualization_widget = ConcentrationVisualizationWidget(
-                parent=None
+            self._concentration_visualization_widget = ModuleConfigurationWidget2(
+                self.settings_schema
             )
             self.ui.configuration_stack.insertWidget(
                 0, self._concentration_visualization_widget
             )
 
-        self._concentration_visualization_widget.initValues(config)
+        self._concentration_visualization_widget.init_values(config)
         self.update()
 
     def getOutputModulesConfiguration(self):
@@ -2930,34 +3027,15 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     # Configuration of the conc. calculation
                     # (from ConcentrationsQGISVectorLayerOutputModule)
                     conc_configuration = (
-                        self._concentration_visualization_widget.getValues()
+                        self._concentration_visualization_widget.get_values()
                     )
-                    pollutant_ = (
-                        conc_configuration["Pollutant"]["selected"]
-                        if "Pollutant" in conc_configuration
-                        else None
-                    )
-                    averaging_period_ = (
-                        conc_configuration["Averaging"]["selected"]
-                        if "Averaging" in conc_configuration
-                        else None
-                    )
-                    check_std = (
-                        conc_configuration["Enable Uncertainty"]
-                        if "Enable Uncertainty" in conc_configuration
-                        else False
-                    )
+                    pollutant_ = conc_configuration("pollutant", None)
+                    averaging_period_ = conc_configuration("averaging", None)
+                    check_std = conc_configuration.get("is_uncertainty_enabled", False)
 
-                    # ToDo: if not from within a current ALAQS simulation,
-                    #  request DatabasePath to read 3DGrid
-                    _polutant = (
-                        conc_configuration["Pollutant"]["selected"]
-                        if "Pollutant" in conc_configuration
-                        else None
-                    )
                     config = {
                         "parent": self,
-                        "pollutant": _polutant,
+                        "pollutant": pollutant_,
                         "title": "Mean concentration of '%s'" % pollutant_,
                         "ytitle": "%s" % pollutant_,
                         "grid": self._conc_calculation_.get3DGrid(),

@@ -1,10 +1,13 @@
 import sys
-from collections import OrderedDict
 
 from qgis.PyQt import QtWidgets
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
+from open_alaqs.core.modules.ModuleConfigurationWidget import (
+    ModuleConfigurationWidget,
+    ModuleConfigurationWidget2,
+    SettingsSchema,
+)
 
 sys.path.append("..")  # Adds higher directory to python modules path.
 logger = get_logger(__name__)
@@ -14,6 +17,8 @@ class DispersionModule:
     """
     Abstract interface to run dispersion models on calculated emissions
     """
+
+    settings_schema: SettingsSchema = {}
 
     @staticmethod
     def getModuleName():
@@ -29,27 +34,15 @@ class DispersionModule:
         self._name = values_dict.get("name")
         self._model = None
 
-        self._enable = values_dict.get("enable", False)
-        self._configuration_widget = None
-
-        self.setConfigurationWidget(
-            OrderedDict(
-                [
-                    (
-                        "Enable",
-                        QtWidgets.QCheckBox,
-                    )
-                ]
-            )
-        )
-
-        self.getConfigurationWidget().initValues({"Enable": False})
-
     def isEnabled(self):
         return self._enable
 
-    def getConfigurationWidget(self):
-        return self._configuration_widget
+    @classmethod
+    def getConfigurationWidget2(cls):
+        if not cls.settings_schema:
+            return None
+
+        return ModuleConfigurationWidget2(cls.settings_schema)
 
     def setConfigurationWidget(self, var):
         if isinstance(var, QtWidgets.QWidget):

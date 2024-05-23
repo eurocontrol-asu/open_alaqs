@@ -38,8 +38,8 @@ class EmissionCalculation:
             )
 
         # Get the time series for this inventory
-        self._start_incl = convertTimeToSeconds(values_dict.get("Start (incl.)"))
-        self._end_incl = convertTimeToSeconds(values_dict.get("End (incl.)"))
+        self._start_incl = convertTimeToSeconds(values_dict.get("start_dt_inclusive"))
+        self._end_incl = convertTimeToSeconds(values_dict.get("end_dt_inclusive"))
         self._inventoryTimeSeriesStore = InventoryTimeSeriesStore(
             self.getDatabasePath()
         )
