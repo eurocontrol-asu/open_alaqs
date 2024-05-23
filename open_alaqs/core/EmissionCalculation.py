@@ -16,7 +16,7 @@ from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SourceModule import SourceModule
 from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleManager,
-    SourceModuleManager,
+    EmissionSourceModuleRegistry,
 )
 from open_alaqs.core.tools import conversion
 from open_alaqs.core.tools.conversion import convertTimeToSeconds
@@ -45,7 +45,7 @@ class EmissionCalculation:
             self.getDatabasePath()
         )
         self._emissions = OrderedDict()
-        self._module_manager = SourceModuleManager()
+        self._module_manager = EmissionSourceModuleRegistry()
         self._modules = OrderedDict()
         self._dispersion_modules = OrderedDict()
         self._dispersion_module_manager = DispersionModuleManager()
@@ -113,29 +113,22 @@ class EmissionCalculation:
         # ModuleManger is a Singleton
         return self._dispersion_module_manager
 
-    def addModule(self, name, obj=None, configuration=None, db_path=""):
+    def addModule(
+        self, name, EmissionSourceModule=None, configuration=None, db_path=""
+    ):
         if configuration is None:
             configuration = {}
-        if obj is None:
-            found_ = self.getModuleManager().getModulesByName(name)
-            if len(found_) == 0:
-                logger.error("Did not find module with name '%s'" % name)
-                return False
-            elif len(found_) > 1:
-                logger.warning(
-                    "Found multiple matches for modules with name "
-                    "'%s'. Using only first match." % name
-                )
-            obj = found_[0][1]  # returns tuple (name, obj)
+        if EmissionSourceModule is None:
+            EmissionSourceModule = EmissionSourceModuleRegistry().get_module(name)
 
         # instantiate objects
-        if isinstance(obj, SourceModule):
-            self._modules[name] = obj
+        if isinstance(EmissionSourceModule, SourceModule):
+            self._modules[name] = EmissionSourceModule
             if db_path:
-                obj.setDatabasePath(db_path)
+                EmissionSourceModule.setDatabasePath(db_path)
             return True
 
-        if inspect.isclass(obj):
+        if inspect.isclass(EmissionSourceModule):
             # ToDo: re-implement issubclass (it looks like instances of
             #  generic types are no longer instances of type ???)
             # if issubclass(obj, SourceModule):
@@ -149,7 +142,7 @@ class EmissionCalculation:
 
                 config_.update(configuration)
 
-                self._modules[name] = obj(values_dict=config_)
+                self._modules[name] = EmissionSourceModule(values_dict=config_)
 
                 return True
             except Exception as e:

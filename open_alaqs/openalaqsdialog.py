@@ -56,8 +56,8 @@ from open_alaqs.core.modules.EmissionCalculationConfigurationWidget import (
 )
 from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleManager,
+    EmissionSourceModuleRegistry,
     OutputModuleManager,
-    SourceModuleManager,
 )
 from open_alaqs.core.tools import conversion, sql_interface
 from open_alaqs.core.tools.csv_interface import read_csv_to_dict
@@ -2481,10 +2481,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         """
         self.ui.source_types.clear()
         self.ui.source_types.addItem("all")
+        self.ui.source_types.addItems(EmissionSourceModuleRegistry().get_module_names())
         self.ui.source_names.clear()
         self.ui.source_names.addItem("all")
-        for source_type in SourceModuleManager().getModuleNames():
-            self.ui.source_types.addItem(source_type)
 
     @catch_errors
     def populate_pollutants(self):
@@ -2535,29 +2534,27 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         inventory_path = self.ui.result_file_path.filePath()
         module_name = self.ui.source_types.currentText()
 
-        for module_name_, module_obj_ in SourceModuleManager().getModulesByName(
-            module_name
-        ):
-            mod_ = None
+        EmissionSourceModule = EmissionSourceModuleRegistry().get_module(module_name)
 
-            # instantiate module to get access to the sources
-            em_config = {"database_path": inventory_path}
-            if module_name == "MovementSource":
-                widget_values = (
-                    self._emission_calculation_configuration_widget.getValues()
-                )
-                em_config.update(widget_values)
-                em_config[
-                    "receptors"
-                ] = self._emission_calculation_configuration_widget._receptor_points
+        if EmissionSourceModule is None:
+            return
 
-            mod_ = module_obj_(em_config)
-            mod_.loadSources()
+        # instantiate module to get access to the sources
+        em_config = {"database_path": inventory_path}
+        if module_name == "MovementSource":
+            widget_values = self._emission_calculation_configuration_widget.getValues()
+            em_config.update(widget_values)
+            em_config[
+                "receptors"
+            ] = self._emission_calculation_configuration_widget._receptor_points
 
-            self.ui.source_names.clear()
-            self.ui.source_names.addItem("all")
-            for source_name_ in mod_.getSourceNames():
-                self.ui.source_names.addItem(source_name_)
+        mod_ = EmissionSourceModule(em_config)
+        mod_.loadSources()
+
+        self.ui.source_names.clear()
+        self.ui.source_names.addItem("all")
+        for source_name_ in mod_.getSourceNames():
+            self.ui.source_names.addItem(source_name_)
 
     def isOutputFile(self, path):
         return sql_interface.hasTable(path, "grid_3d_definition")
@@ -2614,7 +2611,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         # module_name = str(self.ui.source_types.currentText())
         module_name = self.ui.source_types.currentText()
         module_names_ = (
-            SourceModuleManager().getModuleNames()
+            EmissionSourceModuleRegistry().get_module_names()
             if module_name.lower() == "all"
             else [module_name]
         )

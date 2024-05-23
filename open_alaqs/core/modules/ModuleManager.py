@@ -3,11 +3,21 @@ import importlib.util
 import inspect
 from collections import OrderedDict
 from pathlib import Path
+from typing import Type
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.DispersionModule import DispersionModule
 from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.interfaces.SourceModule import SourceModule
+from open_alaqs.core.modules.AreaSourceModule import AreaSourceWithTimeProfileModule
+from open_alaqs.core.modules.MovementSourceModule import MovementSourceModule
+from open_alaqs.core.modules.ParkingSourceModule import (
+    ParkingSourceWithTimeProfileModule,
+)
+from open_alaqs.core.modules.PointSourceModule import PointSourceWithTimeProfileModule
+from open_alaqs.core.modules.RoadwaySourceModule import (
+    RoadwaySourceWithTimeProfileModule,
+)
 from open_alaqs.core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
@@ -114,3 +124,35 @@ class OutputModuleManager(ModuleManager, metaclass=Singleton):
 class DispersionModuleManager(ModuleManager, metaclass=Singleton):
     def __init__(self):
         ModuleManager.__init__(self, DispersionModule)
+
+
+class ModuleRegistry(metaclass=Singleton):
+    _registry = {}
+
+    def register(self, source_module: Type[SourceModule]) -> None:
+        if not issubclass(source_module, SourceModule):
+            raise Exception(
+                f"The provided `{source_module=}` must be a subclass of `SourceModule`!"
+            )
+
+        module_name = source_module.getModuleName()
+
+        self._registry[module_name] = source_module
+
+    def get_module_names(self) -> list[str]:
+        return list(self._registry.keys())
+
+    def get_module(self, name: str) -> Type[SourceModule]:
+        return self._registry.get(name, None)
+
+
+class EmissionSourceModuleRegistry(ModuleRegistry):
+    pass
+
+
+emission_source_module_registry = EmissionSourceModuleRegistry()
+emission_source_module_registry.register(RoadwaySourceWithTimeProfileModule)
+emission_source_module_registry.register(MovementSourceModule)
+emission_source_module_registry.register(AreaSourceWithTimeProfileModule)
+emission_source_module_registry.register(ParkingSourceWithTimeProfileModule)
+emission_source_module_registry.register(PointSourceWithTimeProfileModule)
