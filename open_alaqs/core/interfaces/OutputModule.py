@@ -1,6 +1,6 @@
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.modules.ModuleConfigurationWidget import (
-    ModuleConfigurationWidget2,
+    ModuleConfigurationWidget,
     SettingsSchema,
 )
 
@@ -47,7 +47,7 @@ class OutputModule:
         if not cls.settings_schema:
             return None
 
-        return ModuleConfigurationWidget2(cls.settings_schema)
+        return ModuleConfigurationWidget(cls.settings_schema)
 
     def beginJob(self):
         return NotImplemented

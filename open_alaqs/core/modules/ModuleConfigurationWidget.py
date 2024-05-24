@@ -54,7 +54,7 @@ class SettingSchema(TypedDict):
 SettingsSchema = dict[str, SettingSchema]
 
 
-class ModuleConfigurationWidget2(QtWidgets.QWidget):
+class ModuleConfigurationWidget(QtWidgets.QWidget):
     def __init__(
         self, settings_schema: SettingsSchema, parent: QtWidgets.QWidget = None
     ) -> None:

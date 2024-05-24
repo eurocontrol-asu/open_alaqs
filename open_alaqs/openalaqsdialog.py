@@ -49,7 +49,7 @@ from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqsdblite import ProjectDatabase
 from open_alaqs.core.alaqslogging import get_logger, log_path
 from open_alaqs.core.EmissionCalculation import EmissionCalculation
-from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget2
+from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleRegistry,
     EmissionSourceModuleRegistry,
@@ -2343,8 +2343,8 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             def load_receptors_csv(path):
                 self._receptor_points = read_csv_to_geodataframe(path)
 
-            self._emission_calculation_configuration_widget = (
-                ModuleConfigurationWidget2(self.settings_schema)
+            self._emission_calculation_configuration_widget = ModuleConfigurationWidget(
+                self.settings_schema
             )
             self._emission_calculation_configuration_widget.get_widget(
                 "receptor_points"
@@ -2363,7 +2363,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         for module_name in DispersionModuleRegistry().get_module_names():
             module = DispersionModuleRegistry().get_module(module_name)
-            config_widget = module.getConfigurationWidget2()
+            config_widget = module.getConfigurationWidget()
 
             if config_widget is None:
                 continue
@@ -2986,7 +2986,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             config = {}
 
         if self._concentration_visualization_widget is None:
-            self._concentration_visualization_widget = ModuleConfigurationWidget2(
+            self._concentration_visualization_widget = ModuleConfigurationWidget(
                 self.settings_schema
             )
             self.ui.configuration_stack.insertWidget(
