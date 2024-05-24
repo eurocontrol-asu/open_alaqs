@@ -1,6 +1,5 @@
-import inspect
 from collections import OrderedDict
-from typing import List
+from typing import Any, List
 
 from qgis.PyQt import QtCore, QtWidgets
 
@@ -9,14 +8,12 @@ from open_alaqs.core.interfaces.AmbientCondition import (
     AmbientCondition,
     AmbientConditionStore,
 )
-from open_alaqs.core.interfaces.DispersionModule import DispersionModule
 from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.InventoryTimeSeries import InventoryTimeSeriesStore
 from open_alaqs.core.interfaces.Source import Source
-from open_alaqs.core.interfaces.SourceModule import SourceModule
 from open_alaqs.core.modules.ModuleManager import (
-    DispersionModuleManager,
-    SourceModuleManager,
+    DispersionModuleRegistry,
+    SourceModuleRegistry,
 )
 from open_alaqs.core.tools import conversion
 from open_alaqs.core.tools.conversion import convertTimeToSeconds
@@ -39,16 +36,14 @@ class EmissionCalculation:
             )
 
         # Get the time series for this inventory
-        self._start_incl = convertTimeToSeconds(values_dict.get("Start (incl.)"))
-        self._end_incl = convertTimeToSeconds(values_dict.get("End (incl.)"))
+        self._start_incl = convertTimeToSeconds(values_dict.get("start_dt_inclusive"))
+        self._end_incl = convertTimeToSeconds(values_dict.get("end_dt_inclusive"))
         self._inventoryTimeSeriesStore = InventoryTimeSeriesStore(
             self.getDatabasePath()
         )
         self._emissions = OrderedDict()
-        self._module_manager = SourceModuleManager()
-        self._modules = OrderedDict()
-        self._dispersion_modules = OrderedDict()
-        self._dispersion_module_manager = DispersionModuleManager()
+        self._source_modules = {}
+        self._dispersion_modules = {}
         self._ambient_conditions_store = AmbientConditionStore(self.getDatabasePath())
 
         self._3DGrid = Grid3D(
@@ -105,91 +100,29 @@ class EmissionCalculation:
         # Return the ambient condition closest to the provided date
         return min(ac_, key=lambda x: abs(t_ - x.getDate()))
 
-    def getModuleManager(self):
-        # ModuleManger is a Singleton
-        return self._module_manager
+    def add_source_module(
+        self, module_name: str, module_config: dict[str, Any]
+    ) -> None:
+        EmissionSourceModule = SourceModuleRegistry().get_module(module_name)
 
-    def getDispersionModuleManager(self):
-        # ModuleManger is a Singleton
-        return self._dispersion_module_manager
+        self._source_modules[module_name] = EmissionSourceModule(
+            values_dict={
+                "database_path": self._database_path,
+                **module_config,
+            }
+        )
 
-    def addModule(self, name, obj=None, configuration=None, db_path=""):
-        if configuration is None:
-            configuration = {}
-        if obj is None:
-            found_ = self.getModuleManager().getModulesByName(name)
-            if len(found_) == 0:
-                logger.error("Did not find module with name '%s'" % name)
-                return False
-            elif len(found_) > 1:
-                logger.warning(
-                    "Found multiple matches for modules with name "
-                    "'%s'. Using only first match." % name
-                )
-            obj = found_[0][1]  # returns tuple (name, obj)
+    def add_dispersion_modules(
+        self, module_name: list[str], module_config: dict[str, Any]
+    ):
+        DispersionSourceModule = DispersionModuleRegistry().get_module(module_name)
 
-        # instantiate objects
-        if isinstance(obj, SourceModule):
-            self._modules[name] = obj
-            if db_path:
-                obj.setDatabasePath(db_path)
-            return True
-
-        if inspect.isclass(obj):
-            # ToDo: re-implement issubclass (it looks like instances of
-            #  generic types are no longer instances of type ???)
-            # if issubclass(obj, SourceModule):
-            # if issubclass(obj, (list, SourceModule)):
-            # logger.debug(issubclass(obj, (list, SourceModule)))
-            try:
-
-                config_ = {
-                    "database_path": db_path if db_path else self.getDatabasePath()
-                }
-
-                config_.update(configuration)
-
-                self._modules[name] = obj(values_dict=config_)
-
-                return True
-            except Exception as e:
-                logger.error(f"Could not add {name} as a SourceModule. {e}")
-                return False
-
-        return False
-
-    def addDispersionModule(self, name, obj=None, configuration=None):
-        if configuration is None:
-            configuration = {}
-        if obj is None:
-            found_ = self.getDispersionModuleManager().getModulesByName(name)
-            if len(found_) == 0:
-                logger.error("Did not find dispersion module with name '%s'" % name)
-                return False
-            elif len(found_) > 1:
-                logger.warning(
-                    "Found multiple matches for dispersion modules "
-                    "with name '%s'. Using only first match." % (name)
-                )
-            obj = found_[0][1]  # returns tuple (name, obj)
-        # instantiate objects
-        if isinstance(obj, DispersionModule):
-            self._dispersion_modules[name] = obj
-            return True
-        else:
-            if inspect.isclass(obj):
-                try:
-                    # if issubclass(obj, DispersionModule):
-                    config_ = {}
-                    config_.update(configuration)
-                    self._dispersion_modules[name] = obj(values_dict=configuration)
-                    return True
-                except Exception:
-                    logger.error(
-                        "issubclass(obj, SourceModule) failed for " "DispersionModule"
-                    )
-                    return False
-        return False
+        self._dispersion_modules[module_name] = DispersionSourceModule(
+            values_dict={
+                "database_path": self._database_path,
+                **module_config,
+            }
+        )
 
     def run(self, source_names: List, vertical_limit_m: float):
         if source_names is None:
@@ -337,7 +270,7 @@ class EmissionCalculation:
             dispersion_mod_obj.endJob()
 
     def getModules(self):
-        return self._modules
+        return self._source_modules
 
     def getDispersionModules(self):
         return self._dispersion_modules

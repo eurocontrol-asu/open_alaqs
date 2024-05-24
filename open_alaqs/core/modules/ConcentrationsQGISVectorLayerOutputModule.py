@@ -25,6 +25,39 @@ class QGISVectorLayerDispersionModule(OutputModule):
      concentrations.
     """
 
+    settings_schema = {
+        "projection": {
+            "label": "Projection",
+            "widget_type": QtWidgets.QLabel,
+            "initial_value": "EPSG:3857",
+        },
+        "threshold": {
+            "label": "Threshold",
+            "widget_type": QgsDoubleSpinBox,
+            "initial_value": 0.0001,
+            "widget_config": {
+                "minimum": 0,
+                "maximum": 999.9999,
+                "decimals": 4,
+            },
+        },
+        "should_use_polygons": {
+            "label": "Use Polygons Instead of Points",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": True,
+        },
+        "should_add_labels": {
+            "label": "Add Labels with Values to Cell Boxes",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": False,
+        },
+        "should_add_title": {
+            "label": "Add Title",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": True,
+        },
+    }
+
     @staticmethod
     def getModuleName():
         return "QGISVectorLayerDispersionModule"
@@ -58,13 +91,13 @@ class QGISVectorLayerDispersionModule(OutputModule):
         )
 
         self._time_start = (
-            conversion.convertStringToDateTime(values_dict["Start (incl.)"])
-            if "Start (incl.)" in values_dict
+            conversion.convertStringToDateTime(values_dict["start_dt_inclusive"])
+            if "start_dt_inclusive" in values_dict
             else ""
         )
         self._time_end = (
-            conversion.convertStringToDateTime(values_dict["End (incl.)"])
-            if "End (incl.)" in values_dict
+            conversion.convertStringToDateTime(values_dict["end_dt_inclusive"])
+            if "end_dt_inclusive" in values_dict
             else ""
         )
         self._timeseries = (
@@ -81,14 +114,8 @@ class QGISVectorLayerDispersionModule(OutputModule):
         self._layer_name_suffix = (
             values_dict["name_suffix"] if "name_suffix" in values_dict else ""
         )
-        self._isPolygon = values_dict.get(
-            "Use Polygons Instead of Points",
-            values_dict.get("Shape of Marker: Polygons instead of Points", True),
-        )
-        self._enable_labels = values_dict.get(
-            "Add Labels with Values to Cell Boxes",
-            values_dict.get("Add labels with values to cell boxes", False),
-        )
+        self._isPolygon = values_dict.get("should_use_polygons", True)
+        self._enable_labels = values_dict.get("should_add_labels", False)
         self._3DVisualization = (
             values_dict["3DVisualization"]
             if "3DVisualization" in values_dict
@@ -98,36 +125,9 @@ class QGISVectorLayerDispersionModule(OutputModule):
         self._contour_layer = None
         self._total_concentration = 0.0
         self._threshold_to_create_a_data_point = conversion.convertToFloat(
-            values_dict.get("Threshold", values_dict.get("threshold", 0.0001))
+            values_dict.get("threshold", 0.0001)
         )
         self._grid = values_dict["grid"] if "grid" in values_dict else None
-
-        self.setConfigurationWidget(
-            OrderedDict(
-                [
-                    ("Projection", QtWidgets.QLabel),
-                    ("Threshold", QgsDoubleSpinBox),
-                    ("Use Polygons Instead of Points", QtWidgets.QCheckBox),
-                    ("Add Labels with Values to Cell Boxes", QtWidgets.QCheckBox),
-                    ("Add Title", QtWidgets.QCheckBox),
-                ]
-            )
-        )
-
-        widget = self._configuration_widget.getSettings()["Threshold"]
-        widget.setDecimals(4)
-        widget.setMinimum(0.0)
-        widget.setMaximum(999.9999)
-
-        self.getConfigurationWidget().initValues(
-            {
-                "Use Polygons Instead of Points": True,
-                "Add Labels with Values to Cell Boxes": False,
-                "Projection": "EPSG:3857",
-                "Threshold": 0.0001,
-                "Add Title": True,
-            }
-        )
 
         self._header = []
 

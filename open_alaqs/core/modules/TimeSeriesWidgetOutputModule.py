@@ -1,5 +1,4 @@
 import logging
-from collections import OrderedDict
 
 import matplotlib
 import pandas as pd
@@ -23,6 +22,27 @@ class TimeSeriesWidgetOutputModule(OutputModule):
     Module to plot a timeseries of the emission calculation
     """
 
+    settings_schema = {
+        "x_axis_title": {
+            "label": "X-Axis Title",
+            "widget_type": QtWidgets.QLineEdit,
+            "initial_value": "Time [hh:mm:ss]",
+        },
+        "marker": {
+            "label": "Marker",
+            "widget_type": QtWidgets.QLineEdit,
+            "initial_value": "x",
+        },
+        "receptor_point": {
+            "label": "Receptor Point",
+            "widget_type": QtWidgets.QTableWidget,
+            "initial_value": [(None, None, None, "4326")],
+            "widget_config": {
+                "table_headers": ("id", "longitude", "latitude", "epsg"),
+            },
+        },
+    }
+
     @staticmethod
     def getModuleName():
         return "TimeSeriesWidgetOutputModule"
@@ -42,12 +62,10 @@ class TimeSeriesWidgetOutputModule(OutputModule):
 
         # Plot configuration
         self._title = values_dict.get("title", "")
-        self._xtitle = values_dict.get("X-Axis Title", values_dict.get("xtitle", ""))
+        self._xtitle = values_dict.get("x_axis_title", "")
         self._ytitle = values_dict.get("ytitle", "")
-        self._marker = values_dict.get("Marker", values_dict.get("marker", ""))
-        self._receptor = values_dict.get(
-            "Receptor Point", values_dict.get("receptor point", {})
-        )
+        self._marker = values_dict.get("marker", "")
+        self._receptor = values_dict.get("receptor_point", "")
         self._grid = values_dict.get("grid")
 
         self._TableWidgetHeader = ("id", "longitude", "latitude", "epsg")
@@ -61,36 +79,16 @@ class TimeSeriesWidgetOutputModule(OutputModule):
 
         # Results analysis
         self._time_start = ""
-        if "Start (incl.)" in values_dict:
+        if "start_dt_inclusive" in values_dict:
             self._time_start = conversion.convertStringToDateTime(
-                values_dict["Start (incl.)"]
+                values_dict["start_dt_inclusive"]
             )
         self._time_end = (
-            conversion.convertStringToDateTime(values_dict["End (incl.)"])
-            if "End (incl.)" in values_dict
+            conversion.convertStringToDateTime(values_dict["end_dt_inclusive"])
+            if "end_dt_inclusive" in values_dict
             else ""
         )
         self._pollutant = values_dict.get("pollutant")
-
-        self.setConfigurationWidget(
-            OrderedDict(
-                [
-                    ("X-Axis Title", QtWidgets.QLineEdit),
-                    ("Marker", QtWidgets.QLineEdit),
-                    ("Receptor Point", QtWidgets.QTableWidget),
-                ]
-            )
-        )
-
-        self.getConfigurationWidget().initValues(
-            OrderedDict(
-                {
-                    "X-Axis Title": "Time [hh:mm:ss]",
-                    "Marker": "x",
-                    "Receptor Point": self._TableWidgetInputs,
-                }
-            )
-        )
 
     def beginJob(self):
 

@@ -22,6 +22,7 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import geopandas as gpd
 from qgis.core import (
     Qgis,
     QgsApplication,
@@ -35,7 +36,7 @@ from qgis.core import (
     QgsVectorLayerUtils,
 )
 from qgis.core.additions.edit import edit
-from qgis.gui import QgsFileWidget
+from qgis.gui import QgsDoubleSpinBox, QgsFileWidget
 from qgis.PyQt import QtCore, QtGui, QtWidgets
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import QMessageBox
@@ -48,19 +49,17 @@ from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqsdblite import ProjectDatabase
 from open_alaqs.core.alaqslogging import get_logger, log_path
 from open_alaqs.core.EmissionCalculation import EmissionCalculation
-from open_alaqs.core.modules.ConcentrationVisualizationWidget import (
-    ConcentrationVisualizationWidget,
-)
-from open_alaqs.core.modules.EmissionCalculationConfigurationWidget import (
-    EmissionCalculationConfigurationWidget,
-)
+from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.core.modules.ModuleManager import (
-    DispersionModuleManager,
-    OutputModuleManager,
-    SourceModuleManager,
+    DispersionModuleRegistry,
+    OutputModuleRegistry,
+    SourceModuleRegistry,
 )
 from open_alaqs.core.tools import conversion, sql_interface
-from open_alaqs.core.tools.csv_interface import read_csv_to_dict
+from open_alaqs.core.tools.csv_interface import (
+    read_csv_to_dict,
+    read_csv_to_geodataframe,
+)
 from open_alaqs.core.utils.osm import download_osm_airport_data
 from open_alaqs.enums import AlaqsLayerType
 
@@ -2173,6 +2172,55 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
     This class provides a dialog for visualizing ALAQS results.
     """
 
+    settings_schema = {
+        "start_dt_inclusive": {
+            "label": "Start (incl.)",
+            "widget_type": QtWidgets.QDateTimeEdit,
+            "initial_value": "2000-01-01 00:00:00",
+        },
+        "end_dt_inclusive": {
+            "label": "End (incl.)",
+            "initial_value": "2000-01-02 00:00:00",
+            "widget_type": QtWidgets.QDateTimeEdit,
+        },
+        "method": {
+            "label": "Method",
+            "widget_type": QtWidgets.QComboBox,
+            "initial_value": None,
+            "widget_config": {
+                "options": [],
+            },
+        },
+        "should_apply_nox_corrections": {
+            "label": "Apply NOx Corrections",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": False,
+            "tooltip": "Only available when the method is set to 'bymode'.",
+        },
+        "source_dynamics": {
+            "label": "Source Dynamics",
+            "widget_type": QtWidgets.QComboBox,
+            "initial_value": "none",
+            "widget_config": {
+                "options": ["none", "default", "smooth & shift"],
+            },
+        },
+        "vertical_limit_m": {
+            "label": "Vertical Limit",
+            "widget_type": QgsDoubleSpinBox,
+            "initial_value": 914.4,
+            "widget_config": {"minimum": 0, "maximum": 999999.9, "suffix": "m"},
+        },
+        "receptor_points": {
+            "label": "Receptor Points",
+            "widget_type": QgsFileWidget,
+            "widget_config": {
+                "filter": "CSV (*.csv)",
+                "dialog_title": "Select CSV File with Receptor Points",
+            },
+        },
+    }
+
     def __init__(self, iface=None):
         main_window = iface.mainWindow() if iface is not None else None
         QtWidgets.QDialog.__init__(self, main_window)
@@ -2249,6 +2297,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             self.populate_source_types()
 
         self._return_values = {}
+        self._receptor_points = gpd.GeoDataFrame()
 
     def configuration_modules_list_current_row_changed(self, row):
         self.ui.configuration_stack.setCurrentIndex(row)
@@ -2274,8 +2323,15 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         else:
             available_methods = ["bymode"]
 
-        self.resetEmissionCalculationConfiguration(
-            config={"Method": {"available": available_methods, "selected": None}}
+        self._emission_calculation_configuration_widget.patch_schema(
+            {
+                "method": {
+                    "initial_value": None,
+                    "widget_config": {
+                        "options": available_methods,
+                    },
+                }
+            }
         )
 
     def resetEmissionCalculationConfiguration(self, config=None):
@@ -2283,62 +2339,78 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             config = {}
 
         if self._emission_calculation_configuration_widget is None:
-            self._emission_calculation_configuration_widget = (
-                EmissionCalculationConfigurationWidget(parent=None)
+
+            def load_receptors_csv(path):
+                self._receptor_points = read_csv_to_geodataframe(path)
+
+            self._emission_calculation_configuration_widget = ModuleConfigurationWidget(
+                self.settings_schema
             )
+            self._emission_calculation_configuration_widget.get_widget(
+                "receptor_points"
+            ).fileChanged.connect(load_receptors_csv)
+
             self.ui.configuration_stack.insertWidget(
                 0, self._emission_calculation_configuration_widget
             )
 
-        self._emission_calculation_configuration_widget.initValues(config)
+        self._emission_calculation_configuration_widget.init_values(config)
         self.update()
 
     def resetModuleConfiguration(self, module_names):
+        self.ui.dispersion_modules_tab_widget.clear()
         self.ui.output_modules_tab_widget.clear()
-        for module_name_, module_instance_ in list(
-            DispersionModuleManager().getModuleInstances().items()
-        ):
-            if not module_names or module_name_ in module_names:
-                widget_ = module_instance_.getConfigurationWidget()
-                if widget_ is not None:
-                    scroll_widget = QtWidgets.QScrollArea(self)
-                    scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
-                    scroll_widget.setWidget(widget_)
-                    scroll_widget.setWidgetResizable(True)
-                    self.ui.dispersion_modules_tab_widget.addTab(
-                        scroll_widget, module_instance_.getModuleDisplayName()
-                    )
 
-        for module_name_, module_instance_ in list(
-            OutputModuleManager().getModuleInstances().items()
-        ):
-            if "Dispersion" not in module_name_:
-                if not module_names or module_name_ in module_names:
-                    widget_ = module_instance_.getConfigurationWidget()
-                    if widget_ is not None:
-                        scroll_widget = QtWidgets.QScrollArea(self)
-                        scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
-                        scroll_widget.setWidget(widget_)
-                        scroll_widget.setWidgetResizable(True)
-                        self.ui.output_modules_tab_widget.addTab(
-                            scroll_widget, module_instance_.getModuleDisplayName()
-                        )
+        for module_name in DispersionModuleRegistry().get_module_names():
+            module = DispersionModuleRegistry().get_module(module_name)
+            config_widget = module.getConfigurationWidget()
+
+            if config_widget is None:
+                continue
+
+            scroll_widget = QtWidgets.QScrollArea(self)
+            scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
+            scroll_widget.setWidget(config_widget)
+            scroll_widget.setWidgetResizable(True)
+            self.ui.dispersion_modules_tab_widget.addTab(
+                scroll_widget, module.getModuleDisplayName()
+            )
+
+        for module_name in OutputModuleRegistry().get_module_names():
+            module = OutputModuleRegistry().get_module(module_name)
+            config_widget = module.getConfigurationWidget2()
+
+            if config_widget is None:
+                continue
+
+            scroll_widget = QtWidgets.QScrollArea(self)
+            scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
+            scroll_widget.setWidget(config_widget)
+            scroll_widget.setWidgetResizable(True)
+            self.ui.output_modules_tab_widget.addTab(
+                scroll_widget, module.getModuleDisplayName()
+            )
 
     def getOutputModulesConfiguration(self):
         tab = self.ui.output_modules_tab_widget
         return {
-            tab.tabText(index): tab.widget(index).widget().getValues()
+            tab.tabText(index): tab.widget(index).widget().get_values()
             for index in range(0, tab.count())
         }
 
     def getDispersionModulesConfiguration(self):
         tab = self.ui.dispersion_modules_tab_widget
         return {
-            tab.tabText(index): tab.widget(index).widget().getValues()
+            tab.tabText(index): tab.widget(index).widget().get_values()
             for index in range(0, tab.count())
         }
 
-    def runOutputModule(self, name):
+    def runOutputModule(self, name: str) -> None:
+        OutputModule = OutputModuleRegistry().get_module(name)
+
+        if OutputModule is None:
+            logger.error("Did not find module '%s'", name)
+            return None
 
         # calculate all emissions
         logger.info("calculate all emissions...")
@@ -2372,81 +2444,66 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         }
 
         # Configuration of the emissions calculation
-        em_configuration = self._emission_calculation_configuration_widget.getValues()
-        em_configuration[
-            "receptors"
-        ] = self._emission_calculation_configuration_widget._receptor_points
+        em_configuration = self._emission_calculation_configuration_widget.get_values()
+        em_configuration["receptors"] = self._receptor_points
         config.update(em_configuration)
 
         kwargs = {}
-        if OutputModuleManager().hasModule(name):
-            # Get the OutputModule class
-            output_module_class = OutputModuleManager().getModuleByName(name)
+        # Get the configuration for the OutputModule
+        gui_modules_config_ = self.getOutputModulesConfiguration()
+        if OutputModule.getModuleDisplayName() in gui_modules_config_:
+            config.update(gui_modules_config_[OutputModule.getModuleDisplayName()])
 
-            # Get the configuration for the OutputModule
-            gui_modules_config_ = self.getOutputModulesConfiguration()
-            if output_module_class.getModuleDisplayName() in gui_modules_config_:
-                config.update(
-                    gui_modules_config_[output_module_class.getModuleDisplayName()]
-                )
+        # Configure and run the OutputModule
+        output_module = OutputModule(values_dict=config)
+        output_module.beginJob()
+        for timeval, rows in list(self._emission_calculation_.getEmissions().items()):
+            output_module.process(timeval, rows, **kwargs)
+        res = output_module.endJob()
 
-            # Configure and run the OutputModule
-            output_module_ = output_module_class(values_dict=config)
-            output_module_.beginJob()
-            for timeval, rows in list(
-                self._emission_calculation_.getEmissions().items()
-            ):
-                output_module_.process(timeval, rows, **kwargs)
-            res = output_module_.endJob()
+        if isinstance(res, QtWidgets.QDialog):
 
-            if isinstance(res, QtWidgets.QDialog):
+            res.show()
+        elif isinstance(res, QgsMapLayer):
+            # Replace existing layers with same name...
+            for layer in self._iface.mapCanvas().layers():
+                if layer.name() == res.name():
+                    QgsProject.instance().removeMapLayers([layer.id()])
 
-                res.show()
-            elif isinstance(res, QgsMapLayer):
-                # Replace existing layers with same name...
-                for layer in self._iface.mapCanvas().layers():
-                    if layer.name() == res.name():
-                        QgsProject.instance().removeMapLayers([layer.id()])
+            # and add the vector layer to the existing QGIS layers
+            QgsProject.instance().addMapLayers([res])
 
-                # and add the vector layer to the existing QGIS layers
-                QgsProject.instance().addMapLayers([res])
+            # automatically zoom to new layer
+            self._iface.mapCanvas().setExtent(res.extent())
 
-                # automatically zoom to new layer
-                self._iface.mapCanvas().setExtent(res.extent())
+            # add coordinate-references system
+            if res.crs() is not None:
+                # self._iface.mapCanvas().mapRenderer().setDestinationCrs(res.crs())
+                self._iface.mapCanvas().mapSettings().setDestinationCrs(res.crs())
 
-                # add coordinate-references system
-                if res.crs() is not None:
-                    # self._iface.mapCanvas().mapRenderer().setDestinationCrs(res.crs())
-                    self._iface.mapCanvas().mapSettings().setDestinationCrs(res.crs())
-
-                if name == "EmissionsQGISVectorLayerOutputModule":
-                    # add text to graphics renderer
-                    addTitleToLayer = gui_modules_config_.get("Add title", False)
-                    if addTitleToLayer:
-                        textItem = QgsTextAnnotation(self._iface.mapCanvas())
-                        textItem.setHasFixedMapPosition(False)
-                        text = QtGui.QTextDocument(
-                            "%s emissions (%.1f kg)\n%s - %s"
-                            % (
-                                str(output_module_.getPollutant()),
-                                round(output_module_.getTotalEmissions(), 1),
-                                str(output_module_.getTimeStart()),
-                                str(output_module_.getTimeEnd()),
-                            )
+            if name == "EmissionsQGISVectorLayerOutputModule":
+                # add text to graphics renderer
+                addTitleToLayer = gui_modules_config_.get("Add title", False)
+                if addTitleToLayer:
+                    textItem = QgsTextAnnotation(self._iface.mapCanvas())
+                    textItem.setHasFixedMapPosition(False)
+                    text = QtGui.QTextDocument(
+                        "%s emissions (%.1f kg)\n%s - %s"
+                        % (
+                            str(output_module.getPollutant()),
+                            round(output_module.getTotalEmissions(), 1),
+                            str(output_module.getTimeStart()),
+                            str(output_module.getTimeEnd()),
                         )
-                        text.setDefaultFont(QtGui.QFont("Arial", 12))
-                        textItem.setDocument(text)
-                        textItem.setFrameSize(QtCore.QSizeF(500, 48))
-                        textItem.setFrameOffsetFromReferencePoint(
-                            QtCore.QPointF(20, 75)
-                        )
-                        # textItem.setFrameBorderWidth(0.0)
-                        # textItem.setFrameColor(QColor("white"))
+                    )
+                    text.setDefaultFont(QtGui.QFont("Arial", 12))
+                    textItem.setDocument(text)
+                    textItem.setFrameSize(QtCore.QSizeF(500, 48))
+                    textItem.setFrameOffsetFromReferencePoint(QtCore.QPointF(20, 75))
+                    # textItem.setFrameBorderWidth(0.0)
+                    # textItem.setFrameColor(QColor("white"))
 
-                        self._iface.mapCanvas().scene().addItem(textItem)
-
-        else:
-            logger.error("Did not find module '%s'", name)
+                    self._iface.mapCanvas().scene().addItem(textItem)
 
     def updateMinMaxGUI(self, db_path_=""):
         (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path_)
@@ -2454,7 +2511,10 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         # self.ui.end_dateTime.setMaximumDateTime(time_end_calc_)
 
         self.resetEmissionCalculationConfiguration(
-            config={"Start (incl.)": time_start_calc_, "End (incl.)": time_end_calc_}
+            config={
+                "start_dt_inclusive": time_start_calc_,
+                "end_dt_inclusive": time_end_calc_,
+            }
         )
         self.ui.source_types.clear()
         self.ui.source_names.clear()
@@ -2481,10 +2541,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         """
         self.ui.source_types.clear()
         self.ui.source_types.addItem("all")
+        self.ui.source_types.addItems(SourceModuleRegistry().get_module_names())
         self.ui.source_names.clear()
         self.ui.source_names.addItem("all")
-        for source_type in SourceModuleManager().getModuleNames():
-            self.ui.source_types.addItem(source_type)
 
     @catch_errors
     def populate_pollutants(self):
@@ -2535,34 +2594,29 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         inventory_path = self.ui.result_file_path.filePath()
         module_name = self.ui.source_types.currentText()
 
-        for module_name_, module_obj_ in SourceModuleManager().getModulesByName(
-            module_name
-        ):
-            mod_ = None
+        EmissionSourceModule = SourceModuleRegistry().get_module(module_name)
 
-            # instantiate module to get access to the sources
-            em_config = {"database_path": inventory_path}
-            if module_name == "MovementSource":
-                widget_values = (
-                    self._emission_calculation_configuration_widget.getValues()
-                )
-                em_config.update(widget_values)
-                em_config[
-                    "receptors"
-                ] = self._emission_calculation_configuration_widget._receptor_points
+        if EmissionSourceModule is None:
+            return
 
-            mod_ = module_obj_(em_config)
-            mod_.loadSources()
+        # instantiate module to get access to the sources
+        em_config = {"database_path": inventory_path}
+        if module_name == "MovementSource":
+            widget_values = self._emission_calculation_configuration_widget.get_values()
+            em_config.update(widget_values)
+            em_config["receptors"] = self._receptor_points
 
-            self.ui.source_names.clear()
-            self.ui.source_names.addItem("all")
-            for source_name_ in mod_.getSourceNames():
-                self.ui.source_names.addItem(source_name_)
+        mod_ = EmissionSourceModule(em_config)
+        mod_.loadSources()
+
+        self.ui.source_names.clear()
+        self.ui.source_names.addItem("all")
+        for source_name_ in mod_.getSourceNames():
+            self.ui.source_names.addItem(source_name_)
 
     def isOutputFile(self, path):
         return sql_interface.hasTable(path, "grid_3d_definition")
 
-    @catch_errors
     def update_emissions(self):
 
         inventory_path = self.ui.result_file_path.filePath()
@@ -2599,80 +2653,63 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             "reference_altitude": ref_altitude,
         }
 
-        em_config = self._emission_calculation_configuration_widget.getValues()
+        em_config = self._emission_calculation_configuration_widget.get_values()
 
         self._emission_calculation_ = EmissionCalculation(
             {
                 "database_path": inventory_path,
                 "grid_configuration": grid_configuration,
-                "Start (incl.)": em_config["Start (incl.)"],
-                "End (incl.)": em_config["End (incl.)"],
+                "start_dt_inclusive": em_config["start_dt_inclusive"],
+                "end_dt_inclusive": em_config["end_dt_inclusive"],
             }
         )
 
-        # Modules
-        # module_name = str(self.ui.source_types.currentText())
-        module_name = self.ui.source_types.currentText()
-        module_names_ = (
-            SourceModuleManager().getModuleNames()
-            if module_name.lower() == "all"
-            else [module_name]
-        )
+        em_config = self._emission_calculation_configuration_widget.get_values()
+        em_config["reference_altitude"] = ref_altitude
+        em_config["receptors"] = self._receptor_points
 
-        # if module_name.lower()=="all" and not module_name is None:
-        # if not module_name is None :
-        #     module_names_ = [module_name]
+        if em_config["method"] == "BFFM2" and em_config["should_apply_nox_corrections"]:
+            logger.warning(
+                "Not possible to use both 'BFFM2' " "and 'Apply NOx correction'"
+            )
 
-        for m_name_ in module_names_:
-            if m_name_ == "MovementSource":
-                em_config = self._emission_calculation_configuration_widget.getValues()
-                em_config["reference_altitude"] = ref_altitude
-                em_config[
-                    "receptors"
-                ] = self._emission_calculation_configuration_widget._receptor_points
+        selected_module_name = self.ui.source_types.currentText()
+        if selected_module_name.lower() == "all":
+            module_names = SourceModuleRegistry().get_module_names()
+        else:
+            module_names = [selected_module_name]
 
-                # Check compatibility of methods (Not possible to have both
-                # 'BFFM2' and 'Apply NOx correction')
-                BFFM2_selected = em_config["Method"]["selected"] == "BFFM2"
-                NOx_corr_selected = em_config["Apply NOx Corrections"]
-                if BFFM2_selected and NOx_corr_selected:
-                    logger.warning(
-                        "Not possible to use both 'BFFM2' " "and 'Apply NOx correction'"
-                    )
-
-                self._emission_calculation_.addModule(m_name_, configuration=em_config)
-            else:
-                self._emission_calculation_.addModule(m_name_)
+        for module_name in module_names:
+            self._emission_calculation_.add_source_module(module_name, em_config)
 
         # dispersion modules
-        dm_conf_ = self.getDispersionModulesConfiguration()
+        dm_module_configs = self.getDispersionModulesConfiguration()
         pollutant = self.ui.pollutants_names.currentText()
 
         # dm_name_ should be AUSTAL2000OutputModule
-        for dm_name_ in dm_conf_:
-            dm_conf_[dm_name_].update({"pollutants_list": self._pollutants_list})
-            dm_conf_[dm_name_].update({"pollutant": pollutant})
+        for dm_module_name, dm_module_config in dm_module_configs.items():
+            if not dm_module_configs[dm_module_name].get("is_enabled", False):
+                continue
 
-            if dm_conf_[dm_name_].get(
-                "Enabled", dm_conf_[dm_name_].get("enable", False)
-            ):
-                dm_config = dm_conf_[dm_name_]
-                dm_config[
-                    "receptors"
-                ] = self._emission_calculation_configuration_widget._receptor_points
+            dm_module_config.update(
+                {
+                    "pollutants_list": self._pollutants_list,
+                    "pollutant": pollutant,
+                    "receptors": self._receptor_points,
+                    "grid": self._emission_calculation_.get3DGrid(),
+                }
+            )
 
-                if self._emission_calculation_.get3DGrid():
-                    dm_config.update({"grid": self._emission_calculation_.get3DGrid()})
-                    self._emission_calculation_.addDispersionModule(
-                        dm_name_, configuration=dm_config
-                    )
+            self._emission_calculation_.add_dispersion_modules(
+                [dm_module_name], dm_module_config
+            )
 
         # Sources
         source_name = self.ui.source_names.currentText()
         source_names = [source_name if source_name is not None else "all"]
         self._emission_calculation_.run(
             source_names=source_names,
-            vertical_limit_m=em_config["Vertical Limit"],
+            vertical_limit_m=em_config["vertical_limit_m"],
         )
         self._emission_calculation_.sortEmissionsByTime()
 
@@ -2688,6 +2725,45 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
     """
     This class provides a dialog that launches the Dispersion Analysis
     """
+
+    settings_schema = {
+        "start_dt_inclusive": {
+            "label": "Start (incl.)",
+            "widget_type": QtWidgets.QDateTimeEdit,
+            "initial_value": "2000-01-01 00:00:00",
+        },
+        "end_dt_inclusive": {
+            "label": "End (incl.)",
+            "widget_type": QtWidgets.QDateTimeEdit,
+            "initial_value": "2000-01-02 00:00:00",
+        },
+        "averaging": {
+            "label": "Averaging",
+            "widget_type": QtWidgets.QComboBox,
+            "initial_value": "annual mean",
+            "widget_config": {
+                "options": [
+                    "hourly",
+                    "8-hours mean",
+                    "daily mean",
+                    "annual mean",
+                ],
+            },
+        },
+        "pollutant": {
+            "label": "Pollutant",
+            "widget_type": QtWidgets.QComboBox,
+            "initial_value": None,
+            "widget_config": {
+                "options": ["CO2", "CO", "HC", "NOx", "SOx", "PM10"],
+            },
+        },
+        "is_uncertainty_enabled": {
+            "label": "Enable Uncertainty",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": False,
+        },
+    }
 
     def __init__(self, iface=None):
         """
@@ -2769,7 +2845,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
     def updateMinMaxGUI(self, db_path_=""):
         (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path_)
         self.resetConcentrationCalculationConfiguration(
-            config={"Start (incl.)": time_start_calc_, "End (incl.)": time_end_calc_}
+            config={
+                "start_dt_inclusive": time_start_calc_,
+                "end_dt_inclusive": time_end_calc_,
+            }
         )
 
     def getMinMaxTime(self, db_path=""):
@@ -2819,19 +2898,20 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
     def resetModuleConfiguration(self, module_names):
         self.ui.output_modules_tab_widget.clear()
 
-        for module_name_, module_instance_ in list(
-            OutputModuleManager().getModuleInstances().items()
-        ):
-            if not module_names or module_name_ in module_names:
-                widget_ = module_instance_.getConfigurationWidget()
-                if widget_ is not None:
-                    scroll_widget = QtWidgets.QScrollArea(self)
-                    scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
-                    scroll_widget.setWidget(widget_)
-                    scroll_widget.setWidgetResizable(True)
-                    self.ui.output_modules_tab_widget.addTab(
-                        scroll_widget, module_instance_.getModuleDisplayName()
-                    )
+        for module_name in OutputModuleRegistry().get_module_names():
+            module = OutputModuleRegistry().get_module(module_name)
+            config_widget = module.getConfigurationWidget2()
+
+            if config_widget is None:
+                continue
+
+            scroll_widget = QtWidgets.QScrollArea(self)
+            scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
+            scroll_widget.setWidget(config_widget)
+            scroll_widget.setWidgetResizable(True)
+            self.ui.output_modules_tab_widget.addTab(
+                scroll_widget, module.getModuleDisplayName()
+            )
 
     def a2k_executable_path_file_changed(self, path):
         """
@@ -2906,14 +2986,14 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             config = {}
 
         if self._concentration_visualization_widget is None:
-            self._concentration_visualization_widget = ConcentrationVisualizationWidget(
-                parent=None
+            self._concentration_visualization_widget = ModuleConfigurationWidget(
+                self.settings_schema
             )
             self.ui.configuration_stack.insertWidget(
                 0, self._concentration_visualization_widget
             )
 
-        self._concentration_visualization_widget.initValues(config)
+        self._concentration_visualization_widget.init_values(config)
         self.update()
 
     def getOutputModulesConfiguration(self):
@@ -2936,120 +3016,99 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 if self._conc_calculation_.get3DGrid() is None:
                     raise Exception("No 3DGrid found.")
 
-                if OutputModuleManager().hasModule(name):
+                OutputModule = OutputModuleRegistry().get_module(name)
+                if OutputModule is None:
+                    logger.error("Did not find module '%s'" % (name))
+                    return
 
-                    gui_modules_config_ = self.getOutputModulesConfiguration()
+                gui_modules_config_ = self.getOutputModulesConfiguration()
 
-                    # Configuration of the conc. calculation
-                    # (from ConcentrationsQGISVectorLayerOutputModule)
-                    conc_configuration = (
-                        self._concentration_visualization_widget.getValues()
-                    )
-                    pollutant_ = (
-                        conc_configuration["Pollutant"]["selected"]
-                        if "Pollutant" in conc_configuration
-                        else None
-                    )
-                    averaging_period_ = (
-                        conc_configuration["Averaging"]["selected"]
-                        if "Averaging" in conc_configuration
-                        else None
-                    )
-                    check_std = (
-                        conc_configuration["Enable Uncertainty"]
-                        if "Enable Uncertainty" in conc_configuration
-                        else False
-                    )
+                # Configuration of the conc. calculation
+                # (from ConcentrationsQGISVectorLayerOutputModule)
+                conc_configuration = (
+                    self._concentration_visualization_widget.get_values()
+                )
+                pollutant_ = conc_configuration("pollutant", None)
+                averaging_period_ = conc_configuration("averaging", None)
+                check_std = conc_configuration.get("is_uncertainty_enabled", False)
 
-                    # ToDo: if not from within a current ALAQS simulation,
-                    #  request DatabasePath to read 3DGrid
-                    _polutant = (
-                        conc_configuration["Pollutant"]["selected"]
-                        if "Pollutant" in conc_configuration
-                        else None
-                    )
-                    config = {
-                        "parent": self,
-                        "pollutant": _polutant,
-                        "title": "Mean concentration of '%s'" % pollutant_,
-                        "ytitle": "%s" % pollutant_,
-                        "grid": self._conc_calculation_.get3DGrid(),
-                        "database_path": self._conc_calculation_.getDatabasePath(),
-                        "concentration_path": concentration_path,
-                        "averaging_period": averaging_period_,
-                        "timeseries": self.getTimeSeries(
-                            self._conc_calculation_.getDatabasePath()
-                        ),
-                        "check_uncertainty": check_std,
-                    }
-                    config.update(conc_configuration)
+                config = {
+                    "parent": self,
+                    "pollutant": pollutant_,
+                    "title": "Mean concentration of '%s'" % pollutant_,
+                    "ytitle": "%s" % pollutant_,
+                    "grid": self._conc_calculation_.get3DGrid(),
+                    "database_path": self._conc_calculation_.getDatabasePath(),
+                    "concentration_path": concentration_path,
+                    "averaging_period": averaging_period_,
+                    "timeseries": self.getTimeSeries(
+                        self._conc_calculation_.getDatabasePath()
+                    ),
+                    "check_uncertainty": check_std,
+                }
+                config.update(conc_configuration)
 
-                    output_module_ = OutputModuleManager().getModuleByName(name)(
-                        values_dict=config
+                output_module = OutputModule(values_dict=config)
+
+                if output_module.getModuleDisplayName() in gui_modules_config_:
+                    config.update(
+                        gui_modules_config_[output_module.getModuleDisplayName()]
                     )
 
-                    if output_module_.getModuleDisplayName() in gui_modules_config_:
-                        config.update(
-                            gui_modules_config_[output_module_.getModuleDisplayName()]
+                # Execute the output module
+                output_module.beginJob()
+                output_module.process()
+                res = output_module.endJob()
+
+                if isinstance(res, QtWidgets.QDialog):
+                    res.show()
+                elif isinstance(res, QgsMapLayer):
+                    # Replace existing layers with same name...
+                    for layer in self._iface.mapCanvas().layers():
+                        if layer.name() == res.name():
+                            QgsProject.instance().removeMapLayers([layer.id()])
+                    # and add the vector layer to the existing QGIS layers
+                    QgsProject.instance().addMapLayers([res])
+                    # automatically zoom to new layer
+                    self._iface.mapCanvas().setExtent(res.extent())
+
+                    # add coordinate-references system
+                    if res.crs() is not None:
+                        self._iface.mapCanvas().mapSettings().setDestinationCrs(
+                            res.crs()
                         )
 
-                    # Execute the output module
-                    output_module_.beginJob()
-                    output_module_.process()
-                    res = output_module_.endJob()
+                    if name == "ConcentrationsQGISVectorLayerOutputModule":
+                        # add text to graphics renderer
+                        addTitleToLayer = gui_modules_config_.get("Add title", False)
 
-                    if isinstance(res, QtWidgets.QDialog):
-                        res.show()
-                    elif isinstance(res, QgsMapLayer):
-                        # Replace existing layers with same name...
-                        for layer in self._iface.mapCanvas().layers():
-                            if layer.name() == res.name():
-                                QgsProject.instance().removeMapLayers([layer.id()])
-                        # and add the vector layer to the existing QGIS layers
-                        QgsProject.instance().addMapLayers([res])
-                        # automatically zoom to new layer
-                        self._iface.mapCanvas().setExtent(res.extent())
+                        if addTitleToLayer:
+                            textItem = QgsTextAnnotation(self._iface.mapCanvas())
+                            textItem.setHasFixedMapPosition(False)
 
-                        # add coordinate-references system
-                        if res.crs() is not None:
-                            self._iface.mapCanvas().mapSettings().setDestinationCrs(
-                                res.crs()
+                            concentration = output_module.getTotalConcentration()
+
+                            text = QtGui.QTextDocument(
+                                "%s Concentration (%.1f kg)\n%s - %s"
+                                % (
+                                    str(output_module.getPollutant()),
+                                    round(concentration, 1),
+                                    str(output_module.getTimeStart()),
+                                    str(output_module.getTimeEnd()),
+                                )
                             )
 
-                        if name == "ConcentrationsQGISVectorLayerOutputModule":
-                            # add text to graphics renderer
-                            addTitleToLayer = gui_modules_config_.get(
-                                "Add title", False
+                            text.setDefaultFont(QtGui.QFont("Arial", 12))
+                            textItem.setDocument(text)
+                            textItem.setFrameSize(QtCore.QSizeF(500, 48))
+                            textItem.setFrameOffsetFromReferencePoint(
+                                QtCore.QPointF(20, 75)
                             )
+                            # textItem.setFrameBorderWidth(0.0)
+                            # textItem.setFrameColor(QColor("white"))
 
-                            if addTitleToLayer:
-                                textItem = QgsTextAnnotation(self._iface.mapCanvas())
-                                textItem.setHasFixedMapPosition(False)
+                            self._iface.mapCanvas().scene().addItem(textItem)
 
-                                concentration = output_module_.getTotalConcentration()
-
-                                text = QtGui.QTextDocument(
-                                    "%s Concentration (%.1f kg)\n%s - %s"
-                                    % (
-                                        str(output_module_.getPollutant()),
-                                        round(concentration, 1),
-                                        str(output_module_.getTimeStart()),
-                                        str(output_module_.getTimeEnd()),
-                                    )
-                                )
-
-                                text.setDefaultFont(QtGui.QFont("Arial", 12))
-                                textItem.setDocument(text)
-                                textItem.setFrameSize(QtCore.QSizeF(500, 48))
-                                textItem.setFrameOffsetFromReferencePoint(
-                                    QtCore.QPointF(20, 75)
-                                )
-                                # textItem.setFrameBorderWidth(0.0)
-                                # textItem.setFrameColor(QColor("white"))
-
-                                self._iface.mapCanvas().scene().addItem(textItem)
-                else:
-                    logger.error("Did not find module '%s'" % (name))
             else:
                 logger.error("Path not found <%s>" % (concentration_path))
 

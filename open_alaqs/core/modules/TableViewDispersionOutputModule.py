@@ -24,6 +24,19 @@ class TableViewDispersionModule(OutputModule):
     Module to plot results of emission calculation in a table
     """
 
+    settings_schema = {
+        "is_plotting_daily_max_enabled": {
+            "label": "Enable Plotting of Daily Maximum Values",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": False,
+        },
+        "is_csv_output_enabled": {
+            "label": "Enable CSV File Output",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": False,
+        },
+    }
+
     @staticmethod
     def getModuleName():
         return "TableViewDispersionModule"
@@ -42,51 +55,26 @@ class TableViewDispersionModule(OutputModule):
 
         # Results analysis
         self._time_start = (
-            conversion.convertStringToDateTime(values_dict["Start (incl.)"])
-            if "Start (incl.)" in values_dict
+            conversion.convertStringToDateTime(values_dict["start_dt_inclusive"])
+            if "start_dt_inclusive" in values_dict
             else ""
         )
         self._time_end = (
-            conversion.convertStringToDateTime(values_dict["End (incl.)"])
-            if "End (incl.)" in values_dict
+            conversion.convertStringToDateTime(values_dict["end_dt_inclusive"])
+            if "end_dt_inclusive" in values_dict
             else ""
         )
         self._pollutant_list = ["CO2", "CO", "HC", "NOx", "SOx", "PM"]
 
         self._widget = TableViewWidget(self._parent)
 
-        self._max_values = values_dict.get(
-            "Enable Plotting of Daily Maximum Values",
-            values_dict.get("max. values", False),
-        )
-        self._save_csv = values_dict.get(
-            "Enable CSV File Output", values_dict.get("csv output", False)
-        )
+        self._max_values = (values_dict.get("is_plotting_daily_max_enabled", False),)
+        self._save_csv = values_dict.get("is_csv_output_enabled", False)
 
         self._averaging_period = values_dict.get("averaging_period", "annual mean")
         self._check_uncertainty = values_dict.get("check_uncertainty", False)
         self._timeseries = values_dict.get("timeseries")
         self._concentration_database = values_dict.get("concentration_path")
-
-        WidgetParameters = OrderedDict(
-            {
-                "Enable Plotting of Daily Maximum Values": QtWidgets.QCheckBox,
-                "Enable CSV File Output": QtWidgets.QCheckBox,
-            }
-        )
-
-        self.setConfigurationWidget(
-            OrderedDict(sorted(list(WidgetParameters.items()), key=lambda t: len(t[0])))
-        )
-
-        self.getConfigurationWidget().initValues(
-            OrderedDict(
-                {
-                    "Enable Plotting of Daily Maximum Values": False,
-                    "Enable CSV File Output": False,
-                }
-            )
-        )
 
     def getWidget(self):
         return self._widget

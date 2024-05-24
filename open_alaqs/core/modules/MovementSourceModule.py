@@ -45,16 +45,9 @@ class MovementSourceModule(SourceModule):
 
         self._ambient_conditions = AmbientCondition()
 
-        if "Method" not in values_dict:
-            values_dict["Method"] = {}
-        self._method = {"name": values_dict["Method"].get("selected", "")}
-
-        self._nox_correction = values_dict.get("Apply NOx corrections", False)
-        self._smooth_and_shift = "None"
-        if ("Source Dynamics" in values_dict) and (
-            "selected" in values_dict["Source Dynamics"]
-        ):
-            self._smooth_and_shift = values_dict["Source Dynamics"]["selected"]
+        self._method = {"name": values_dict.get("method", "")}
+        self._nox_correction = values_dict.get("should_apply_nox_corrections", False)
+        self._smooth_and_shift = values_dict.get("source_dynamics", "none")
         self._reference_altitude = values_dict.get("reference_altitude", 0.0)
 
     def getMethod(self):

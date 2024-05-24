@@ -20,6 +20,20 @@ class TimeSeriesDispersionModule(OutputModule):
     Module to plot a timeseries of the emission calculation
     """
 
+    settings_schema = {
+        "x_axis_title": {
+            "label": "X-Axis Title",
+            "widget_type": QtWidgets.QLineEdit,
+            "initial_value": "Time [Y-m-d HH:MM]",
+        },
+        "is_daily_maximum_enabled": {
+            "label": "Enable Plotting of Daily Maximum Values",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": False,
+            "tooltip": "Enabled to plot daily max. instead of daily mean values for the whole grid",
+        },
+    }
+
     @staticmethod
     def getModuleName():
         return "TimeSeriesDispersionModule"
@@ -39,24 +53,21 @@ class TimeSeriesDispersionModule(OutputModule):
 
         # Plot configuration
         self._title = values_dict.get("title", "")
-        self._xtitle = values_dict.get("X-Axis Title", values_dict.get("xtitle", ""))
+        self._xtitle = values_dict.get("x_axis_title", "")
         self._ytitle = values_dict.get("ytitle", "")
         self._options = values_dict.get("options", "")
 
-        self._max_values = values_dict.get(
-            "Enable Plotting of Daily Maximum Values",
-            values_dict.get("max. values", False),
-        )
+        self._max_values = values_dict.get("is_daily_maximum_enabled", False)
 
         # Results analysis
         self._time_start = (
-            conversion.convertStringToDateTime(values_dict["Start (incl.)"])
-            if "Start (incl.)" in values_dict
+            conversion.convertStringToDateTime(values_dict["start_dt_inclusive"])
+            if "start_dt_inclusive" in values_dict
             else ""
         )
         self._time_end = (
-            conversion.convertStringToDateTime(values_dict["End (incl.)"])
-            if "End (incl.)" in values_dict
+            conversion.convertStringToDateTime(values_dict["end_dt_inclusive"])
+            if "end_dt_inclusive" in values_dict
             else ""
         )
 
@@ -66,34 +77,6 @@ class TimeSeriesDispersionModule(OutputModule):
         self._timeseries = values_dict.get("timeseries")
         self._concentration_database = values_dict.get("concentration_path", None)
         # self._total_concentration = 0.
-
-        widget_parameters = OrderedDict(
-            [
-                ("X-Axis Title", QtWidgets.QLineEdit),
-                ("Enable Plotting of Daily Maximum Values", QtWidgets.QCheckBox)
-                # "moving average": QtGui.QCheckBox
-                # "options" : QtGui.QLineEdit
-            ]
-        )
-        self.setConfigurationWidget(widget_parameters)
-
-        self.getConfigurationWidget().initValues(
-            OrderedDict(
-                {
-                    "X-Axis Title": "Time [Y-m-d HH:MM]",
-                    "Enable Plotting of Daily Maximum Values": False
-                    # "moving average": False,
-                    # "options" : "*"
-                }
-            )
-        )
-
-        self._configuration_widget.getSettings()[
-            "Enable Plotting of Daily Maximum Values"
-        ].setToolTip(
-            "Enabled to plot daily max. instead of daily mean values for the whole grid"
-        )
-        # self._configuration_widget.getSettings()["moving average"].setToolTip('n-8 for hourly values, n-5 for daily values')
 
     def assure_time_interval(self, output_data):
         try:  # convert t1, t2 to dates and check timedelta

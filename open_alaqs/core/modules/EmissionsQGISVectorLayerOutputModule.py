@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import pandas as pd
 from qgis.core import Qgis
 from qgis.gui import QgsDoubleSpinBox
@@ -22,6 +20,39 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
     Module to that returns a QGIS vector layer with representation of emissions.
     """
 
+    settings_schema = {
+        "projection": {
+            "label": "Projection",
+            "widget_type": QtWidgets.QLabel,
+            "initial_value": "EPSG:3857",
+        },
+        "threshold": {
+            "label": "Threshold",
+            "widget_type": QgsDoubleSpinBox,
+            "initial_value": 0.0001,
+            "widget_config": {
+                "minimum": 0,
+                "maximum": 999.9999,
+                "decimals": 4,
+            },
+        },
+        "should_use_polygons": {
+            "label": "Use Polygons Instead of Points",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": True,
+        },
+        "should_add_labels": {
+            "label": "Add Labels with Values to Cell Boxes",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": False,
+        },
+        "should_add_title": {
+            "label": "Add Title",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": True,
+        },
+    }
+
     @staticmethod
     def getModuleName():
         return "EmissionsQGISVectorLayerOutputModule"
@@ -38,13 +69,13 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
 
         # Results analysis
         self._time_start = (
-            conversion.convertStringToDateTime(values_dict["Start (incl.)"])
-            if "Start (incl.)" in values_dict
+            conversion.convertStringToDateTime(values_dict["start_dt_inclusive"])
+            if "start_dt_inclusive" in values_dict
             else ""
         )
         self._time_end = (
-            conversion.convertStringToDateTime(values_dict["End (incl.)"])
-            if "End (incl.)" in values_dict
+            conversion.convertStringToDateTime(values_dict["end_dt_inclusive"])
+            if "end_dt_inclusive" in values_dict
             else ""
         )
         self._pollutant = (
@@ -60,51 +91,18 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
             if "3DVisualization" in values_dict
             else False
         )
-        self._isPolygon = values_dict.get(
-            "Use Polygons Instead of Points",
-            values_dict.get("Shape of Marker: Polygons instead of Points", True),
-        )
-        self._enable_labels = values_dict.get(
-            "Add Labels with Values to Cell Boxes",
-            values_dict.get("Add labels with values to cell boxes", False),
-        )
+        self._isPolygon = values_dict.get("should_use_polygons", True)
+        self._enable_labels = values_dict.get("should_add_labels", False)
 
         self._total_emissions = 0.0
 
         self._threshold_to_create_a_data_point = conversion.convertToFloat(
-            values_dict.get("Threshold") or values_dict.get("threshold") or 0.0001
+            values_dict.get("threshold") or 0.0001
         )
 
         self._grid = (
             values_dict["grid"] if "grid" in values_dict else None
         )  # ec.get3DGrid()
-
-        self.setConfigurationWidget(
-            OrderedDict(
-                [
-                    ("Projection", QtWidgets.QLabel),
-                    ("Threshold", QgsDoubleSpinBox),
-                    ("Use Polygons Instead of Points", QtWidgets.QCheckBox),
-                    ("Add Labels with Values to Cell Boxes", QtWidgets.QCheckBox),
-                    ("Add Title", QtWidgets.QCheckBox),
-                ]
-            )
-        )
-
-        widget = self._configuration_widget.getSettings()["Threshold"]
-        widget.setDecimals(4)
-        widget.setMinimum(0.0)
-        widget.setMaximum(999.9999)
-
-        self.getConfigurationWidget().initValues(
-            {
-                "Use Polygons Instead of Points": True,
-                "Add Labels with Values to Cell Boxes": False,
-                "Projection": "EPSG:3857",
-                "Threshold": 0.0001,
-                "Add Title": True,
-            }
-        )
 
         self._header = []
 

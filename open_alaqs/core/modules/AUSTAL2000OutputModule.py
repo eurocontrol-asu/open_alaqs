@@ -43,6 +43,66 @@ class AUSTAL2000DispersionModule(DispersionModule):
     dispersion calculations.
     """
 
+    settings_schema = {
+        "roughness_length_m": {
+            "label": "Roughness Length",
+            "initial_value": 0.2,
+            "widget_type": QgsDoubleSpinBox,
+            "widget_config": {
+                "minimum": 0,
+                "maximum": 999999.9,
+                "suffix": "m",
+            },
+        },
+        "displacement_height_m": {
+            "label": "Displacement Height",
+            "initial_value": 1.2,
+            "widget_type": QgsDoubleSpinBox,
+            "widget_config": {
+                "minimum": 0,
+                "maximum": 999999.9,
+                "suffix": "m",
+            },
+        },
+        "anemometer_height_m": {
+            "label": "Anemometer Height",
+            "initial_value": 11.2,
+            "widget_type": QgsDoubleSpinBox,
+            "widget_config": {
+                "minimum": 0,
+                "maximum": 999999.9,
+                "suffix": "m",
+            },
+        },
+        "title": {
+            "label": "Title",
+            "initial_value": "",
+            "widget_type": QtWidgets.QLineEdit,
+        },
+        "quality_level": {
+            "label": "Quality Level",
+            "initial_value": 1,
+            "widget_type": QgsSpinBox,
+            "widget_config": {
+                "minimum": 1,
+                "maximum": 10,
+            },
+            "tooltip": "+1 doubles the number of simulation particles",
+        },
+        "is_enabled": {
+            "label": "Is Enabled",
+            "initial_value": False,
+            "widget_type": QtWidgets.QCheckBox,
+            "tooltip": "Enable to create AUSTAL2000 input files",
+        },
+        "options_string": {
+            "label": "Options String",
+            "initial_value": "NOSTANDARD;SCINOTAT;Kmax=1",
+            "widget_type": QtWidgets.QLineEdit,
+            "tooltip": "Options must be defined successively and separated by a semicolon",
+        },
+    }
+
     @staticmethod
     def getModuleName():
         return "AUSTAL2000"
@@ -76,57 +136,26 @@ class AUSTAL2000DispersionModule(DispersionModule):
         if self._pollutant:
             self._pollutants_list = [self._pollutant]
 
-        self._enable = values_dict.get("Enabled", False)
+        self._enable = values_dict.get("is_enabled", False)
         # "----------------- general parameters",
 
-        self._title = values_dict.get("Title", values_dict.get("add title"))
-        if not self._title:
-            self._title = "no title"
-
-        self._quality_level = values_dict.get(
-            "Quality Level", values_dict.get("quality level")
-        )
-        if not self._quality_level:
-            self._quality_level = 1
-
+        self._title = values_dict.get("title", "no title")
+        self._quality_level = values_dict.get("quality_level", 1)
         # for non-standard calculations
-        self._options = values_dict.get(
-            "Option String", values_dict.get("options string")
-        )
-
-        if not self._options:
-            self._options = "SCINOTAT"
+        self._options = values_dict.get("options_string", "SCINOTAT")
 
         # "----------------- meteorology",
         # ToDo: Modify AmbientCondition.py or derive z0, d0, and ha from main
         #  dialog (airport info)
         # "z\t0.2\t' roughness length (m)",
-        self._roughness_level = values_dict.get(
-            "Roughness Length", values_dict.get("roughness length (in m)")
-        )
-        self._roughness_level = (
-            0.2 if not self._roughness_level else float(self._roughness_level)
-        )
+        self._roughness_level = values_dict.get("roughness_length_m", 0.2)
         # d0: default 6z0    # "d0\t1.2\t' displacement height (m)",
         self._displacement_height = values_dict.get(
-            "Displacement Height",
-            values_dict.get(
-                "displacement height (in m)",
-            ),
-        )
-        self._displacement_height = (
-            6 * self._roughness_level
-            if not self._displacement_height
-            else float(self._displacement_height)
+            "displacement_height_m", 6 * self._roughness_level
         )
         # 10 m + d0 (6z0)  # "ha\t11.2\t' anemometer height (m)",
         self._anemometer_height = values_dict.get(
-            "Anemometer Height", values_dict.get("anemometer height (in m)")
-        )
-        self._anemometer_height = (
-            10 + 6 * self._roughness_level
-            if not self._anemometer_height
-            else float(self._anemometer_height)
+            "anemometer_height_m", 10 + 6 * self._roughness_level
         )
 
         self._reference_x = None
@@ -138,57 +167,6 @@ class AUSTAL2000DispersionModule(DispersionModule):
         # "----------------- concentration grid -----------------"
         self._x_left_border_calc_grid = None  # "x0\t-200\t' left border (m)",
         self._y_left_border_calc_grid = None  # "y0\t-200\t' lower border (m)",
-
-        # general parameters set from Widget
-        widget_parameters = OrderedDict(
-            [
-                ("Enabled", QtWidgets.QCheckBox),
-                ("Title", QtWidgets.QLineEdit),
-                ("Roughness Length", QgsDoubleSpinBox),
-                ("Anemometer Height", QgsDoubleSpinBox),
-                ("Displacement Height", QgsDoubleSpinBox),
-                ("Options String", QtWidgets.QLineEdit),
-                ("Quality Level", QgsSpinBox),
-            ]
-        )
-        self.setConfigurationWidget(widget_parameters)
-
-        # ToDo: QL Range between -4 and 4
-        widget = self._configuration_widget.getSettings()["Roughness Length"]
-        widget.setMinimum(0.0)
-        widget.setMaximum(999999.9)
-        widget.setSuffix(" m")
-        widget = self._configuration_widget.getSettings()["Anemometer Height"]
-        widget.setMinimum(0.0)
-        widget.setMaximum(999999.9)
-        widget.setSuffix(" m")
-        widget = self._configuration_widget.getSettings()["Displacement Height"]
-        widget.setMinimum(0.0)
-        widget.setMaximum(999999.9)
-        widget.setSuffix(" m")
-        widget = self._configuration_widget.getSettings()["Quality Level"]
-        widget.setMinimum(1)
-        widget.setMaximum(10)
-        widget.setToolTip("+1 doubles the number of simulation particles")
-
-        self._configuration_widget.getSettings()["Options String"].setToolTip(
-            "options must be defined successively and separated by a semicolon"
-        )
-        self._configuration_widget.getSettings()["Enabled"].setToolTip(
-            "Enable to create AUSTAL2000 input files"
-        )
-
-        self.getConfigurationWidget().initValues(
-            {
-                "Roughness Length": 0.2,
-                "Displacement Height": 1.2,
-                "Anemometer Height": 11.2,
-                "Title": "",
-                "Quality Level": 1,
-                "Enabled": False,
-                "Options String": "NOSTANDARD;SCINOTAT;Kmax=1",
-            }
-        )
 
     def isEnabled(self):
         return self._enable

@@ -1,5 +1,4 @@
 import os
-from collections import OrderedDict
 from datetime import datetime
 from typing import List, Tuple
 
@@ -28,19 +27,19 @@ class CSVOutputModule(OutputModule):
     def getModuleDisplayName():
         return "CSV"
 
+    settings_schema = {
+        "has_detailed_output": {
+            "label": "Detailed output",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": False,
+        },
+    }
+
     def __init__(self, values_dict=None):
         if values_dict is None:
             values_dict = {}
         OutputModule.__init__(self, values_dict)
-        self._isDetailedOutput = values_dict.get(
-            "Detailed Output", values_dict.get("detailed output", False)
-        )
-
-        self.setConfigurationWidget(
-            OrderedDict([("Detailed Output", QtWidgets.QCheckBox)])
-        )
-
-        self.getConfigurationWidget().initValues({"Detailed Output": False})
+        self._isDetailedOutput = values_dict.get("has_detailed_output", False)
 
         self._rows = []
         self._headers = []

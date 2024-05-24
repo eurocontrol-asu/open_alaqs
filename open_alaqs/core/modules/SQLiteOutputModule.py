@@ -17,6 +17,14 @@ class SQLiteOutputModule(OutputModule):
      source, total_emissions_)
     """
 
+    settings_schema = {
+        "has_detailed_output": {
+            "label": "Detailed output",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": False,
+        },
+    }
+
     @staticmethod
     def getModuleName():
         return "SQLiteOutputModule"
@@ -29,15 +37,7 @@ class SQLiteOutputModule(OutputModule):
         if values_dict is None:
             values_dict = {}
         OutputModule.__init__(self, values_dict)
-        self._isDetailedOutput = values_dict.get(
-            "Detailed Output", values_dict.get("detailed output", False)
-        )
-
-        self.setConfigurationWidget(
-            OrderedDict([("Detailed Output", QtWidgets.QCheckBox)])
-        )
-
-        self.getConfigurationWidget().initValues({"Detailed Output": False})
+        self._isDetailedOutput = values_dict.get("has_detailed_output", False)
 
     def beginJob(self):
         # initialize database connections

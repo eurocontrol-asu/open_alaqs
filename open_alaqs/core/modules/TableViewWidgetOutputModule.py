@@ -37,13 +37,13 @@ class TableViewWidgetOutputModule(OutputModule):
 
         # Results analysis
         self._time_start = ""
-        if "Start (incl.)" in values_dict:
+        if "start_dt_inclusive" in values_dict:
             self._time_start = conversion.convertStringToDateTime(
-                values_dict["Start (incl.)"]
+                values_dict["start_dt_inclusive"]
             )
         self._time_end = (
-            conversion.convertStringToDateTime(values_dict["End (incl.)"])
-            if "End (incl.)" in values_dict
+            conversion.convertStringToDateTime(values_dict["end_dt_inclusive"])
+            if "end_dt_inclusive" in values_dict
             else ""
         )
         self._pollutant = values_dict.get("pollutant")

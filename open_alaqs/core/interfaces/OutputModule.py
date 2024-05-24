@@ -1,7 +1,8 @@
-from qgis.PyQt import QtWidgets
-
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
+from open_alaqs.core.modules.ModuleConfigurationWidget import (
+    ModuleConfigurationWidget,
+    SettingsSchema,
+)
 
 logger = get_logger(__name__)
 
@@ -10,6 +11,8 @@ class OutputModule:
     """
     Abstract interface to handle calculation results (timestamp, source, emissions)
     """
+
+    settings_schema: SettingsSchema = {}
 
     @staticmethod
     def getModuleName():
@@ -26,7 +29,6 @@ class OutputModule:
         self._database_path = values_dict.get("database_path")
         self._output_path = values_dict.get("output_path")
         self._name = values_dict.get("name")
-        self._configuration_widget = None
 
     def setDatabasePath(self, val):
         self._database_path = val
@@ -40,14 +42,12 @@ class OutputModule:
     def getOutputPath(self):
         return self._output_path
 
-    def getConfigurationWidget(self):
-        return self._configuration_widget
+    @classmethod
+    def getConfigurationWidget2(cls):
+        if not cls.settings_schema:
+            return None
 
-    def setConfigurationWidget(self, var):
-        if isinstance(var, QtWidgets.QWidget):
-            self._configuration_widget = var
-        else:
-            self._configuration_widget = ModuleConfigurationWidget(var)
+        return ModuleConfigurationWidget(cls.settings_schema)
 
     def beginJob(self):
         return NotImplemented
