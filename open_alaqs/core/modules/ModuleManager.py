@@ -57,7 +57,7 @@ class ModuleRegistry(metaclass=Singleton):
         return self._registry.get(name, None)
 
 
-class EmissionSourceModuleRegistry(ModuleRegistry):
+class SourceModuleRegistry(ModuleRegistry):
     def register(self, module: SourceModule) -> None:
         if not issubclass(cast(type[SourceModule], module), SourceModule):
             raise Exception(
@@ -96,12 +96,12 @@ class DispersionModuleRegistry(ModuleRegistry):
         return cast(type[DispersionModule], super().get_module(name))
 
 
-emission_source_module_registry = EmissionSourceModuleRegistry()
-emission_source_module_registry.register(AreaSourceWithTimeProfileModule)
-emission_source_module_registry.register(MovementSourceModule)
-emission_source_module_registry.register(ParkingSourceWithTimeProfileModule)
-emission_source_module_registry.register(PointSourceWithTimeProfileModule)
-emission_source_module_registry.register(RoadwaySourceWithTimeProfileModule)
+source_module_registry = SourceModuleRegistry()
+source_module_registry.register(AreaSourceWithTimeProfileModule)
+source_module_registry.register(MovementSourceModule)
+source_module_registry.register(ParkingSourceWithTimeProfileModule)
+source_module_registry.register(PointSourceWithTimeProfileModule)
+source_module_registry.register(RoadwaySourceWithTimeProfileModule)
 
 
 output_module_registry = OutputModuleRegistry()

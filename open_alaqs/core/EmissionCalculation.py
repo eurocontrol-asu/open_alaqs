@@ -13,7 +13,7 @@ from open_alaqs.core.interfaces.InventoryTimeSeries import InventoryTimeSeriesSt
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleRegistry,
-    EmissionSourceModuleRegistry,
+    SourceModuleRegistry,
 )
 from open_alaqs.core.tools import conversion
 from open_alaqs.core.tools.conversion import convertTimeToSeconds
@@ -42,9 +42,8 @@ class EmissionCalculation:
             self.getDatabasePath()
         )
         self._emissions = OrderedDict()
-        self._module_manager = EmissionSourceModuleRegistry()
-        self._emission_source_modules = OrderedDict()
-        self._dispersion_modules = OrderedDict()
+        self._source_modules = {}
+        self._dispersion_modules = {}
         self._ambient_conditions_store = AmbientConditionStore(self.getDatabasePath())
 
         self._3DGrid = Grid3D(
@@ -104,9 +103,9 @@ class EmissionCalculation:
     def add_source_module(
         self, module_name: str, module_config: dict[str, Any]
     ) -> None:
-        EmissionSourceModule = EmissionSourceModuleRegistry().get_module(module_name)
+        EmissionSourceModule = SourceModuleRegistry().get_module(module_name)
 
-        self._emission_source_modules[module_name] = EmissionSourceModule(
+        self._source_modules[module_name] = EmissionSourceModule(
             values_dict={
                 "database_path": self._database_path,
                 **module_config,
@@ -271,7 +270,7 @@ class EmissionCalculation:
             dispersion_mod_obj.endJob()
 
     def getModules(self):
-        return self._emission_source_modules
+        return self._source_modules
 
     def getDispersionModules(self):
         return self._dispersion_modules

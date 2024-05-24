@@ -52,8 +52,8 @@ from open_alaqs.core.EmissionCalculation import EmissionCalculation
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleRegistry,
-    EmissionSourceModuleRegistry,
     OutputModuleRegistry,
+    SourceModuleRegistry,
 )
 from open_alaqs.core.tools import conversion, sql_interface
 from open_alaqs.core.tools.csv_interface import (
@@ -2541,7 +2541,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         """
         self.ui.source_types.clear()
         self.ui.source_types.addItem("all")
-        self.ui.source_types.addItems(EmissionSourceModuleRegistry().get_module_names())
+        self.ui.source_types.addItems(SourceModuleRegistry().get_module_names())
         self.ui.source_names.clear()
         self.ui.source_names.addItem("all")
 
@@ -2594,7 +2594,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         inventory_path = self.ui.result_file_path.filePath()
         module_name = self.ui.source_types.currentText()
 
-        EmissionSourceModule = EmissionSourceModuleRegistry().get_module(module_name)
+        EmissionSourceModule = SourceModuleRegistry().get_module(module_name)
 
         if EmissionSourceModule is None:
             return
@@ -2675,7 +2675,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         selected_module_name = self.ui.source_types.currentText()
         if selected_module_name.lower() == "all":
-            module_names = EmissionSourceModuleRegistry().get_module_names()
+            module_names = SourceModuleRegistry().get_module_names()
         else:
             module_names = [selected_module_name]
 
