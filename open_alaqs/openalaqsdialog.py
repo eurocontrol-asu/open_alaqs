@@ -51,7 +51,7 @@ from open_alaqs.core.alaqslogging import get_logger, log_path
 from open_alaqs.core.EmissionCalculation import EmissionCalculation
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget2
 from open_alaqs.core.modules.ModuleManager import (
-    DispersionModuleManager,
+    DispersionModuleRegistry,
     EmissionSourceModuleRegistry,
     OutputModuleRegistry,
 )
@@ -2358,20 +2358,23 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.update()
 
     def resetModuleConfiguration(self, module_names):
+        self.ui.dispersion_modules_tab_widget.clear()
         self.ui.output_modules_tab_widget.clear()
-        for module_name_, module_instance_ in list(
-            DispersionModuleManager().getModuleInstances().items()
-        ):
-            if not module_names or module_name_ in module_names:
-                widget_ = module_instance_.getConfigurationWidget()
-                if widget_ is not None:
-                    scroll_widget = QtWidgets.QScrollArea(self)
-                    scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
-                    scroll_widget.setWidget(widget_)
-                    scroll_widget.setWidgetResizable(True)
-                    self.ui.dispersion_modules_tab_widget.addTab(
-                        scroll_widget, module_instance_.getModuleDisplayName()
-                    )
+
+        for module_name in DispersionModuleRegistry().get_module_names():
+            module = DispersionModuleRegistry().get_module(module_name)
+            config_widget = module.getConfigurationWidget2()
+
+            if config_widget is None:
+                continue
+
+            scroll_widget = QtWidgets.QScrollArea(self)
+            scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
+            scroll_widget.setWidget(config_widget)
+            scroll_widget.setWidgetResizable(True)
+            self.ui.dispersion_modules_tab_widget.addTab(
+                scroll_widget, module.getModuleDisplayName()
+            )
 
         for module_name in OutputModuleRegistry().get_module_names():
             module = OutputModuleRegistry().get_module(module_name)
@@ -2676,30 +2679,29 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         else:
             module_names = [selected_module_name]
 
-        self._emission_calculation_.set_emission_source_module_names(
-            module_names, em_config
-        )
+        self._emission_calculation_.set_emission_source_modules(module_names, em_config)
 
         # dispersion modules
-        dm_conf_ = self.getDispersionModulesConfiguration()
+        dm_module_configs = self.getDispersionModulesConfiguration()
         pollutant = self.ui.pollutants_names.currentText()
 
         # dm_name_ should be AUSTAL2000OutputModule
-        for dm_name_ in dm_conf_:
-            dm_conf_[dm_name_].update({"pollutants_list": self._pollutants_list})
-            dm_conf_[dm_name_].update({"pollutant": pollutant})
+        for dm_module_name, dm_module_config in dm_module_configs.items():
+            if not dm_module_configs[dm_module_name].get("is_enabled", False):
+                continue
 
-            if dm_conf_[dm_name_].get(
-                "Enabled", dm_conf_[dm_name_].get("enable", False)
-            ):
-                dm_config = dm_conf_[dm_name_]
-                dm_config["receptors"] = self._receptor_points
+            dm_module_config.update(
+                {
+                    "pollutants_list": self._pollutants_list,
+                    "pollutant": pollutant,
+                    "receptors": self._receptor_points,
+                    "grid": self._emission_calculation_.get3DGrid(),
+                }
+            )
 
-                if self._emission_calculation_.get3DGrid():
-                    dm_config.update({"grid": self._emission_calculation_.get3DGrid()})
-                    self._emission_calculation_.addDispersionModule(
-                        dm_name_, configuration=dm_config
-                    )
+            self._emission_calculation_.add_dispersion_modules(
+                [dm_module_name], dm_module_config
+            )
 
         # Sources
         source_name = self.ui.source_names.currentText()
