@@ -1,8 +1,5 @@
-from qgis.PyQt import QtWidgets
-
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.modules.ModuleConfigurationWidget import (
-    ModuleConfigurationWidget,
     ModuleConfigurationWidget2,
     SettingsSchema,
 )
@@ -51,12 +48,6 @@ class OutputModule:
             return None
 
         return ModuleConfigurationWidget2(cls.settings_schema)
-
-    def setConfigurationWidget(self, var):
-        if isinstance(var, QtWidgets.QWidget):
-            self._configuration_widget = var
-        else:
-            self._configuration_widget = ModuleConfigurationWidget(var)
 
     def beginJob(self):
         return NotImplemented
