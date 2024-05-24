@@ -101,22 +101,17 @@ class EmissionCalculation:
         # Return the ambient condition closest to the provided date
         return min(ac_, key=lambda x: abs(t_ - x.getDate()))
 
-    def set_emission_source_modules(
-        self,
-        module_names: list[str],
-        module_config: dict[str, Any],
+    def add_source_module(
+        self, module_name: str, module_config: dict[str, Any]
     ) -> None:
-        for module_name in module_names:
-            EmissionSourceModule = EmissionSourceModuleRegistry().get_module(
-                module_name
-            )
+        EmissionSourceModule = EmissionSourceModuleRegistry().get_module(module_name)
 
-            self._emission_source_modules[module_name] = EmissionSourceModule(
-                values_dict={
-                    "database_path": self._database_path,
-                    **module_config,
-                }
-            )
+        self._emission_source_modules[module_name] = EmissionSourceModule(
+            values_dict={
+                "database_path": self._database_path,
+                **module_config,
+            }
+        )
 
     def add_dispersion_modules(
         self, module_name: list[str], module_config: dict[str, Any]

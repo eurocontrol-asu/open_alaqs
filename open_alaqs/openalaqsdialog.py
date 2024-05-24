@@ -2679,7 +2679,8 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         else:
             module_names = [selected_module_name]
 
-        self._emission_calculation_.set_emission_source_modules(module_names, em_config)
+        for module_name in module_names:
+            self._emission_calculation_.add_source_module(module_name, em_config)
 
         # dispersion modules
         dm_module_configs = self.getDispersionModulesConfiguration()
