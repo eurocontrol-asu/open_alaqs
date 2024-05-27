@@ -1,7 +1,7 @@
 import calendar
 import os
 from collections import OrderedDict
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
@@ -36,9 +36,6 @@ weekday_abbreviations = {
     7: "sun",
 }
 
-abbreviation_weekdays = {v: k for k, v in weekday_abbreviations.items()}
-abbreviation_months = {v: k for k, v in month_abbreviations.items()}
-
 
 class InventoryTime:
     def __init__(self, val=None):
@@ -57,58 +54,17 @@ class InventoryTime:
         self._weekday_id = int(val.get("weekday_id", 1))
         self._mix_height = float(val.get("mix_height", 914.4))
 
-    def getTimeID(self):
-        return self._time_id
-
-    def setTimeID(self, val):
-        self._time_id = int(val)
-
     def getTime(self):
+        """Returns the time as UNIX timestamp in seconds."""
         return self._time
-
-    def getTimeAsString(self):
-        return conversion.convertSecondsToTimeString(self._time, self._format)
-
-    def getTimeAsTimeTuple(self):
-        return conversion.convertSecondsToTime(self._time)
 
     def getTimeAsDateTime(self):
         return conversion.convertSecondsToDateTime(self._time, self._format)
-
-    def setTime(self, val):
-        self._time = conversion.convertTimeToSeconds(val, self._format)
-
-    def getYear(self):
-        return self._year
-
-    def setYear(self, val):
-        self._year = int(val)
 
     def getMonth(self):
         if self._month in month_abbreviations:
             return month_abbreviations[self._month]
         return None
-
-    def getMonthID(self):
-        return self._month
-
-    def setMonth(self, val):
-        if isinstance(val, str):
-            if val.lower() in abbreviation_months:
-                self._month = abbreviation_months[val.lower()]
-            else:
-                raise Exception(
-                    "Did not find index for month with name '%s'. "
-                    "Valid names are '%s'."
-                    % (val, ",".join(abbreviation_months.keys()))
-                )
-        elif isinstance(val, int) or isinstance(val, float):
-            self._month = int(val)
-        else:
-            raise Exception(
-                f"'{val}' is of type '{str(type(val))}', "
-                f"but 'str' or int' expected.'"
-            )
 
     def getDay(self):
         # Get the weekday (1-indexed)
@@ -117,38 +73,11 @@ class InventoryTime:
             return weekday_abbreviations[weekday]
         return None
 
-    def getDayID(self):
-        return self._day
-
-    def setDay(self, val):
-        if isinstance(val, str):
-            if val.lower() in abbreviation_weekdays:
-                self._day = abbreviation_weekdays[val.lower()]
-            else:
-                raise Exception(
-                    "Did not find index for month with name '%s'. "
-                    "Valid names are '%s'."
-                    % (val, ",".join(abbreviation_weekdays.keys()))
-                )
-        elif isinstance(val, (int, float)):
-            self._day = int(val)
-        else:
-            raise Exception(
-                f"'{val}' is of type '{str(type(val))}', "
-                f"but 'str' or int' expected.'"
-            )
-
     def getHour(self):
         return self._hour
 
-    def setHour(self, val):
-        self._hour = int(val)
-
     def getWeekdayID(self):
         return self._weekday_id
-
-    def setWeekdayID(self, val):
-        self._weekday_id = int(val)
 
     def getMixingHeight(self):
         return self._mix_height
@@ -156,31 +85,21 @@ class InventoryTime:
     def setMixingHeight(self, val):
         self._mix_height = float(val)
 
-    def getFormat(self):
-        return self._format
-
-    def setFormat(self, val):
-        self._format = val
-
     # TODO what happens if the time period includes both? This is unresolved in original ALAQS and here
     def getTotalHoursInYear(self):
-        if calendar.isleap(self.getYear()):
+        if calendar.isleap(self._year):
             return 8784.0
         else:
             return 8760.0
 
-    def offsetAsDateTime(self, **kwargs):
-        return self.getTimeAsDateTime() + timedelta(**kwargs)
-
-    def offsetAsString(self, **kwargs):
-        return datetime.strftime(self.offsetAsDateTime(**kwargs), self.getFormat())
-
     def __str__(self):
-        val = "\n Time id: %i" % (self.getTimeID())
-        val += "\n\t Time: %s" % (str(self.getTimeAsString()))
+        val = "\n Time id: %i" % (self._time_id)
+        val += "\n\t Time: %s" % (
+            str(conversion.convertSecondsToTimeString(self._time, self._format))
+        )
         val += "\n\t Year: %i" % (self.getYear())
-        val += "\n\t Month: %i" % (self.getMonthID())
-        val += "\n\t Day: %i" % (self.getDayID())
+        val += "\n\t Month: %i" % (self._month)
+        val += "\n\t Day: %i" % (self._day)
         val += "\n\t Hour: %i" % (self.getHour())
         val += "\n\t Weekday ID: %i" % (self.getWeekdayID())
         val += "\n\t Mixing Height: %f" % (self.getMixingHeight())
@@ -273,32 +192,3 @@ class InventoryTimeSeriesDatabase(SQLSerializable, metaclass=Singleton):
 
         if self._db_path:
             self.deserialize()
-
-
-# if __name__ == "__main__":
-#     # create a logger for this module
-#     #logging.basicConfig(level=logging.DEBUG)
-#
-#     # logger.setLevel(logging.DEBUG)
-#     # # create console handler and set level to debug
-#     # ch = logging.StreamHandler()
-#     # if loaded_color_logger:
-#     #     ch= RainbowLoggingHandler(sys.stderr, color_funcName=('black', 'yellow', True))
-#     #
-#     # ch.setLevel(logging.DEBUG)
-#     # # create formatter
-#     # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-#     # # add formatter to ch
-#     # ch.setFormatter(formatter)
-#     # # add ch to logger
-#     # logger.addHandler(ch)
-#
-#     path_to_database = os.path.join("..", "..", "example", "lfmn2_out.alaqs")
-#
-#     Timestore = InventoryTimeSeriesStore(path_to_database)
-#
-#     # for ts_id, ts in Timestore.getObjects().items():
-#     #     print ts
-#     #     print datetime(ts.getYear(), ts.getMonthID(), ts.getDayID()).weekday()
-#     #     print WEEKDAY_MAP[1 + datetime(ts.getYear(), ts.getMonthID(), ts.getDayID()).weekday()]
-#     #     # logger.debug(ts)
