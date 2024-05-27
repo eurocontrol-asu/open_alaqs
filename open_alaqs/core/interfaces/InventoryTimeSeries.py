@@ -170,11 +170,6 @@ class InventoryTimeSeriesDatabase(SQLSerializable, metaclass=Singleton):
                 [
                     ("time_id", "INTEGER PRIMARY KEY NOT NULL"),
                     ("time", "DATETIME"),
-                    ("year", "INT"),
-                    ("month", "INT"),
-                    ("day", "INT"),
-                    ("hour", "DATETIME"),
-                    ("weekday_id", "INT"),
                     ("mix_height", "DECIMAL"),
                 ]
             )

@@ -325,22 +325,15 @@ def inventory_update_tbl_inv_time(inventory_path, model_parameters):
     # Build a list of hours we need to model
     while current_hour <= end_time:
         interval_start = current_hour
-        year = interval_start.strftime("%Y")
-        month = interval_start.strftime("%m")
-        day = interval_start.strftime("%d")
-        hour = interval_start.strftime("%H")
-        weekday_id = interval_start.weekday()
         mix_height = "914.4"
 
-        time_list.append(
-            [interval_start, year, month, day, hour, weekday_id, mix_height]
-        )
+        time_list.append([interval_start, mix_height])
         current_hour = current_hour + hour_delta
 
     conn = sqlite.connect(inventory_path)
     cur = conn.cursor()
     cur.executemany(
-        "INSERT INTO tbl_InvTime (time, year, month, day, hour, weekday_id, mix_height) VALUES (?,?,?,?,?,?,?);",
+        "INSERT INTO tbl_InvTime (time, mix_height) VALUES (?,?);",
         time_list,
     )
     conn.commit()
