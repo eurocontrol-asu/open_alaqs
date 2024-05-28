@@ -10,6 +10,7 @@ from open_alaqs.core.interfaces.UserTimeProfiles import (
     UserHourProfileStore,
     UserMonthProfileStore,
 )
+from open_alaqs.core.utils.utils import get_hours_in_year
 
 sys.path.append("..")  # Adds higher directory to python modules path.
 
@@ -147,7 +148,7 @@ class SourceWithTimeProfileModule(SourceModule):
                 "Could not retrieve the month time profile '%s'." % (month_profile_name)
             )
 
-        hours_in_year = inventoryTimeSeries.getTotalHoursInYear()
+        hours_in_year = get_hours_in_year(inventoryTimeSeries.ts.year)
         operating_factor = float(annual_total_operating_hours) / hours_in_year
         hour_factor = float(hour_profile.getHours()[inventoryTimeSeries.ts.hour])
         weekday_factor = float(

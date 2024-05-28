@@ -54,16 +54,6 @@ class InventoryTime:
     def getMixingHeight(self) -> float:
         return self.mix_height
 
-    # TODO what happens if the time period includes both? This is unresolved in original ALAQS and here
-    def getTotalHoursInYear(self) -> int:
-        td = datetime(self.ts.year + 1, 1, 1, 0, 0, 0) - datetime(
-            self.ts.year, 1, 1, 0, 0, 0
-        )
-        return td.total_seconds() / 60 / 60
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__} #{self.ts_id}: {self.ts.isoformat()}, {self.mix_height}"
-
 
 class InventoryTimeSeriesStore(Store, metaclass=Singleton):
     """
