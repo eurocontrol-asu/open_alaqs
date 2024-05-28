@@ -15,7 +15,6 @@ from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleRegistry,
     SourceModuleRegistry,
 )
-from open_alaqs.core.tools import conversion
 from open_alaqs.core.tools.conversion import convertTimeToSeconds
 from open_alaqs.core.tools.Grid3D import Grid3D
 from open_alaqs.core.tools.iterator import pairwise
@@ -90,10 +89,7 @@ class EmissionCalculation:
         progressbar.show()
         return progressbar
 
-    def getAmbientCondition(self, timestamp_datetime):
-        # Get the time in seconds
-        t_ = conversion.convertTimeToSeconds(timestamp_datetime)
-
+    def getAmbientCondition(self, t_):
         # Get the ambient conditions
         ac_ = self._ambient_conditions_store.getAmbientConditions(scenario="")
 

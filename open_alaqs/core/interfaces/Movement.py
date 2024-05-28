@@ -475,9 +475,7 @@ class Movement:
         if method is None:
             method = {"name": "bymode", "config": {}}
         try:
-            total_taxiing_time = conversion.convertTimeToSeconds(
-                abs(self.getBlockTime() - self.getRunwayTime())
-            )
+            total_taxiing_time = abs(self.getBlockTime() - self.getRunwayTime())
         except Exception:
             total_taxiing_time = None
         # print("total_taxiing_time %s"%total_taxiing_time)

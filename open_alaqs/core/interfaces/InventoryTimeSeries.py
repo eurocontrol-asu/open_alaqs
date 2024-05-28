@@ -59,7 +59,7 @@ class InventoryTime:
         return self._time
 
     def getTimeAsDateTime(self):
-        return conversion.convertSecondsToDateTime(self._time, self._format)
+        return conversion.convertSecondsToDateTime(self._time)
 
     def getMonth(self):
         if self._month in month_abbreviations:
