@@ -18,9 +18,7 @@ class AmbientCondition:
         self._id = str(val["id"]) if "id" in val else None
         self._scenario = str(val["Scenario"]) if "Scenario" in val else "default"
         self._date = (
-            conversion.convertTimeToSeconds(
-                val["DateTime"], format_="%Y-%m-%d %H:%M:%S"
-            )
+            conversion.convertTimeToSeconds(val["DateTime"])
             if "DateTime" in val
             else ""
         )
@@ -86,9 +84,7 @@ class AmbientCondition:
         self._date = var
 
     def getDateAsString(self):
-        return conversion.convertSecondsToTimeString(
-            self.getDate(), format_="%Y-%m-%d %H:%M:%S"
-        )
+        return conversion.convertSecondsToTimeString(self.getDate())
 
     def getTemperature(self):
         return self._temperature_in_K

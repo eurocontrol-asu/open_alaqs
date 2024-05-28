@@ -2,6 +2,8 @@
 This class provides all of the calculation methods required to perform emissions
  calculations for roadways.
 """
+from datetime import datetime
+
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.RoadwaySources import RoadwaySourcesStore
@@ -45,7 +47,9 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
     def beginJob(self) -> None:
         SourceWithTimeProfileModule.beginJob(self)
 
-    def process(self, start_time, end_time, source_names=None, **kwargs):
+    def process(
+        self, start_dt: datetime, _end_dt: datetime, source_names=None, **kwargs
+    ):
         if source_names is None:
             source_names = []
         result_ = []
@@ -56,7 +60,7 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
 
             # Get the relative activity (percentage of total emissions) for this hour
             activity_multiplier = self.getRelativeActivityPerHour(
-                start_time,
+                start_dt,
                 source.getUnitsPerYear(),
                 source.getHourProfile(),
                 source.getDailyProfile(),
@@ -95,7 +99,7 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
             emissions.setGeometryText(source.getGeometryText())
 
             # Add to list of all emissions
-            result_.append((start_time.getTimeAsDateTime(), source, [emissions]))
+            result_.append((start_dt, source, [emissions]))
 
         # Return list of all emissions
         return result_

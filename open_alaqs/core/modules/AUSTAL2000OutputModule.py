@@ -17,7 +17,6 @@ from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.AmbientCondition import AmbientCondition
 from open_alaqs.core.interfaces.DispersionModule import DispersionModule
 from open_alaqs.core.interfaces.Emissions import Emission
-from open_alaqs.core.interfaces.InventoryTimeSeries import InventoryTime
 from open_alaqs.core.interfaces.Movement import Movement
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.tools import conversion, spatial, sql_interface
@@ -537,7 +536,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         return missed_hours
 
     @log_time
-    def set_normalized_date(self, start_time: InventoryTime, end_time: InventoryTime):
+    def set_normalized_date(self, start_dt: datetime, end_dt: datetime):
         """
         AUSTAL requires the calculation to start from yyyy-01-01.01.00.00.
          Therefore the dates should be normalized.
@@ -546,14 +545,11 @@ class AUSTAL2000DispersionModule(DispersionModule):
         :param end_time:
         """
 
-        # Convert to a datetime
-        t_start = start_time.getTimeAsDateTime()
-
         # Check if the date has already been set
         if self._first_start_time is None:
 
             # Determine the timedelta
-            t_delta = t_start - t_start.replace(
+            t_delta = start_dt - start_dt.replace(
                 month=1, day=1, hour=0, minute=0, second=0
             )
 
@@ -564,8 +560,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
             )
 
             # Set the timestamps for the current period
-            self._start_time = t_start - t_delta
-            self._end_time = end_time.getTimeAsDateTime() - t_delta
+            self._start_time = start_dt - t_delta
+            self._end_time = end_dt - t_delta
 
             # Set the first start time
             self._first_start_time = self._start_time
@@ -576,8 +572,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
             self._end_time += timedelta(hours=+1)
 
         # Add the timestamps to the dates
-        if t_start not in self._dates:
-            self._dates[t_start] = [self._start_time, self._end_time]
+        if start_dt not in self._dates:
+            self._dates[start_dt] = [self._start_time, self._end_time]
 
         return self._start_time, self._end_time
 
@@ -1013,8 +1009,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
     @log_time
     def process(
         self,
-        start_time: InventoryTime,
-        end_time: InventoryTime,
+        start_dt: datetime,
+        end_dt: datetime,
         result: List[Tuple[Union[Source, Movement], Emission]],
         ambient_conditions: AmbientCondition,
         **kwargs,
@@ -1046,7 +1042,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         self._hghb = f"{self._x_meshes} {self._y_meshes} {self._z_meshes}"
 
         # Make sure that the calculation starts from yyyy-01-01.01.00.00
-        _start_time, _end_time = self.set_normalized_date(start_time, end_time)
+        _start_time, _end_time = self.set_normalized_date(start_dt, end_dt)
         _end_time_string = _end_time.strftime("%Y-%m-%d.%H:%M:%S")
 
         # Set results and series for this period if it has not been set

@@ -1,4 +1,3 @@
-import calendar
 import time
 from datetime import datetime
 from typing import Any, Optional, Union
@@ -65,87 +64,44 @@ def convertStringToTime(value: str, format_="%Y-%m-%d %H:%M:%S") -> Union[tuple,
     return None
 
 
-def convertStringToDateTime(
-    value: str, format_="%Y-%m-%d %H:%M:%S"
-) -> Union[datetime, None]:
+def convertStringToDateTime(value: str) -> datetime:
     """
     Convert a timestamp as string to datetime object.
-
-    :param value:
-    :param format_:
-    :return:
     """
-    if not value:
-        return None
+    if not isinstance(value, str):
+        raise ValueError(f"Not supported value of type {type(value)}!")
 
-    if isinstance(value, str):
-        return datetime.strptime(value, format_)
-    return None
+    return datetime.fromisoformat(value)
 
 
-def convertTimeToSeconds(
-    value: Union[str, datetime, tuple], format_="%Y-%m-%d %H:%M:%S"
-) -> Union[float, None]:
+def convertTimeToSeconds(value: str) -> float:
     """
-    Convert a timestamp as string, datetime object, or time tuple to a timestamp
-    in seconds.
-
-    :param value:
-    :param format_:
-    :return:
+    Convert a timestamp as string to a timestamp in seconds.
     """
-    if not value:
-        return None
+    if not isinstance(value, str):
+        raise ValueError(f"Not supported value of type {type(value)}!")
 
-    if isinstance(value, str):
-        return calendar.timegm(convertStringToTime(value, format_))
-    if isinstance(value, datetime):
-        return calendar.timegm(value.timetuple())
-    if isinstance(value, time.struct_time):
-        return calendar.timegm(value)
-    if isinstance(value, (int, float)):
-        return value
-    return None
+    return datetime.fromisoformat(value).timestamp()
 
 
-def convertSecondsToDateTime(
-    value: Union[str, float], format_: str = "%Y-%m-%d %H:%M:%S"
-) -> Union[datetime, None]:
+def convertSecondsToDateTime(value: Union[int, float]) -> Union[datetime, None]:
     """
-    Converts a timestamp in seconds or as string to a DateTime instance.
-
-    :param value:
-    :param format_:
-    :return:
+    Converts a timestamp in seconds to a DateTime instance.
     """
-    if not value:
-        return None
+    if not isinstance(value, (int, float)):
+        raise ValueError(f"Not supported value of type {type(value)}!")
 
-    if isinstance(value, (int, float)):
-        return datetime.utcfromtimestamp(value)
-    if isinstance(value, str):
-        return datetime.utcfromtimestamp(convertTimeToSeconds(value, format_))
-    return None
+    return datetime.fromtimestamp(value)
 
 
-def convertSecondsToTimeString(
-    value: float, format_: str = "%Y-%m-%d %H:%M:%S"
-) -> Union[str, None]:
+def convertSecondsToTimeString(value: float) -> str:
     """
-    Converts a timestamp in seconds to a string using the provided format.
-
-    :param value:
-    :param format_:
-    :return:
+    Converts a timestamp in seconds to a timestamp as string.
     """
-    if not value:
-        return None
+    if not isinstance(value, (int, float)):
+        raise ValueError(f"Not supported value of type {type(value)}!")
 
-    if isinstance(value, time.struct_time):
-        return time.strftime(format_, value)
-    if isinstance(value, (int, float)):
-        return time.strftime(format_, convertSecondsToTime(value))
-    return None
+    return time.strftime("%Y-%m-%d %H:%M:%S", convertSecondsToTime(value))
 
 
 def convertMetersToFeet(value: float) -> float:

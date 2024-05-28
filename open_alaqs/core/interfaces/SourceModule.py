@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import datetime
 
 import pandas as pd
 
@@ -9,10 +10,36 @@ from open_alaqs.core.interfaces.UserTimeProfiles import (
     UserHourProfileStore,
     UserMonthProfileStore,
 )
+from open_alaqs.core.utils.utils import get_hours_in_year
 
 sys.path.append("..")  # Adds higher directory to python modules path.
 
 logger = get_logger(__name__)
+
+# Set the names of the month and days of the week to prevent locale issue
+month_abbreviations = {
+    1: "jan",
+    2: "feb",
+    3: "mar",
+    4: "apr",
+    5: "may",
+    6: "jun",
+    7: "jul",
+    8: "aug",
+    9: "sep",
+    10: "oct",
+    11: "nov",
+    12: "dec",
+}
+weekday_abbreviations = {
+    0: "mon",
+    1: "tue",
+    2: "wed",
+    3: "thu",
+    4: "fri",
+    5: "sat",
+    6: "sun",
+}
 
 
 class SourceModule:
@@ -117,7 +144,7 @@ class SourceWithTimeProfileModule(SourceModule):
 
     def getRelativeActivityPerHour(
         self,
-        inventoryTimeSeries,
+        inventory_dt: datetime,
         annual_total_operating_hours,
         hour_profile_name,
         daily_profile_name,
@@ -146,11 +173,15 @@ class SourceWithTimeProfileModule(SourceModule):
                 "Could not retrieve the month time profile '%s'." % (month_profile_name)
             )
 
-        hours_in_year = inventoryTimeSeries.getTotalHoursInYear()
+        hours_in_year = get_hours_in_year(inventory_dt.year)
         operating_factor = float(annual_total_operating_hours) / hours_in_year
-        hour_factor = float(hour_profile.getHours()[inventoryTimeSeries.getHour()])
-        weekday_factor = float(weekday_profile.getDays()[inventoryTimeSeries.getDay()])
-        month_factor = float(month_profile.getMonths()[inventoryTimeSeries.getMonth()])
+        hour_factor = float(hour_profile.getHours()[inventory_dt.hour])
+        weekday_factor = float(
+            weekday_profile.getDays()[weekday_abbreviations[inventory_dt.weekday()]]
+        )
+        month_factor = float(
+            month_profile.getMonths()[month_abbreviations[inventory_dt.month]]
+        )
 
         # debug output
         # for x in str(inventoryTimeSeries).split("\n"):

@@ -15,7 +15,6 @@ from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleRegistry,
     SourceModuleRegistry,
 )
-from open_alaqs.core.tools import conversion
 from open_alaqs.core.tools.conversion import convertTimeToSeconds
 from open_alaqs.core.tools.Grid3D import Grid3D
 from open_alaqs.core.tools.iterator import pairwise
@@ -90,10 +89,7 @@ class EmissionCalculation:
         progressbar.show()
         return progressbar
 
-    def getAmbientCondition(self, timestamp_datetime):
-        # Get the time in seconds
-        t_ = conversion.convertTimeToSeconds(timestamp_datetime)
-
+    def getAmbientCondition(self, t_):
         # Get the ambient conditions
         ac_ = self._ambient_conditions_store.getAmbientConditions(scenario="")
 
@@ -180,12 +176,8 @@ class EmissionCalculation:
             total_count_ = len(list(self.getTimeSeries())) - 1
 
             # loop on complete period
-            for (start_, end_) in pairwise(self.getTimeSeries()):
-
-                start_time = start_.getTimeAsDateTime()
-                end_time = end_.getTimeAsDateTime()
-
-                logger.debug(f"start {start_time}, end {end_time}")
+            for (start_dt, end_dt) in pairwise(self.getTimeSeries()):
+                logger.debug(f"start {start_dt}, end {end_dt}")
 
                 # update the progress bar
                 progressbar.setValue(int(100 * count_ / total_count_))
@@ -197,7 +189,7 @@ class EmissionCalculation:
                 # get the ambient condition
                 # ToDo: only run on (start_, end_) with emission sources?
                 try:
-                    ambient_condition = self.getAmbientCondition(start_.getTime())
+                    ambient_condition = self.getAmbientCondition(start_dt.timestamp())
                 except Exception as error:
                     logger.warning(
                         "Couldn't load the ambient condition, so "
@@ -215,8 +207,8 @@ class EmissionCalculation:
                     # process() returns a list of tuples for each specific
                     # time interval (start_, end_)
                     for (timestamp_, source_, emission_) in mod_obj.process(
-                        start_,
-                        end_,
+                        start_dt,
+                        end_dt,
                         source_names=source_names,
                         ambient_conditions=ambient_condition,
                         vertical_limit_m=vertical_limit_m,
@@ -239,9 +231,9 @@ class EmissionCalculation:
                     dispersion_mod_name,
                     dispersion_mod_obj,
                 ) in self.getDispersionModules().items():
-                    logger.debug(f"{dispersion_mod_name}: {start_time}")
+                    logger.debug(f"{dispersion_mod_name}: {start_dt}")
                     dispersion_mod_obj.process(
-                        start_, end_, period_emissions, ambient_condition
+                        start_dt, end_dt, period_emissions, ambient_condition
                     )
 
                 # add a generic (zero) emission if the list is empty
@@ -251,7 +243,7 @@ class EmissionCalculation:
                     )
 
                 # add the emissions to the dict
-                self._emissions[start_time] = period_emissions
+                self._emissions[start_dt] = period_emissions
 
         except StopIteration as e:
             logger.info("Iteration stopped. %s", e)
@@ -290,7 +282,7 @@ class EmissionCalculation:
     def getTimeSeries(self):
         for t in self._inventoryTimeSeriesStore.getTimeSeries():
             # TODO OPENGIS.ch: rewrite the condition with an `and`
-            if self._start_incl <= t.getTime() <= self._end_incl:
+            if self._start_incl <= t.timestamp() <= self._end_incl:
                 yield t
 
     def get3DGrid(self):

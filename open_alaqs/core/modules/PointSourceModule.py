@@ -2,6 +2,8 @@
 This class provides all of the calculation methods required to perform emissions
  calculations for stationary sources.
 """
+from datetime import datetime
+
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.PointSources import PointSourcesStore
@@ -39,7 +41,9 @@ class PointSourceWithTimeProfileModule(SourceWithTimeProfileModule):
         if self.getDatabasePath() is not None:
             self.setStore(PointSourcesStore(self.getDatabasePath()))
 
-    def process(self, start_time, end_time, source_names=None, **kwargs):
+    def process(
+        self, start_dt: datetime, _end_dt: datetime, source_names=None, **kwargs
+    ):
         if source_names is None:
             source_names = []
         result_ = []
@@ -56,7 +60,7 @@ class PointSourceWithTimeProfileModule(SourceWithTimeProfileModule):
             # logger.debug("Processing source with id '%s':" % source_id)
 
             activity_multiplier = self.getRelativeActivityPerHour(
-                start_time,
+                start_dt,
                 source.getOpsYear(),
                 source.getHourProfile(),
                 source.getDailyProfile(),
@@ -90,7 +94,7 @@ class PointSourceWithTimeProfileModule(SourceWithTimeProfileModule):
 
             emissions.setGeometryText(source.getGeometryText())
 
-            result_.append((start_time.getTimeAsDateTime(), source, [emissions]))
+            result_.append((start_dt, source, [emissions]))
         return result_
 
     def endJob(self):
