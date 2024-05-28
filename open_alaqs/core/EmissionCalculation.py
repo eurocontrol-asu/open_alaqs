@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, List, TypedDict
 
 from qgis.PyQt import QtCore, QtWidgets
@@ -272,10 +272,12 @@ class EmissionCalculation:
         return self._database_path
 
     def getTimeSeries(self):
-        for t in self._inventoryTimeSeriesStore.getTimeSeries():
-            # TODO OPENGIS.ch: rewrite the condition with an `and`
-            if self._start_dt <= t <= self._end_dt:
-                yield t
+        interval = timedelta(minutes=self._time_interval_mins)
+        dt = self._start_dt
+        while dt >= self._start_dt and dt <= self._end_dt:
+            yield dt
+
+            dt += interval
 
     def get3DGrid(self):
         return self._grid
