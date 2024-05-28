@@ -189,7 +189,7 @@ class EmissionCalculation:
                 # get the ambient condition
                 # ToDo: only run on (start_, end_) with emission sources?
                 try:
-                    ambient_condition = self.getAmbientCondition(start_.getTime())
+                    ambient_condition = self.getAmbientCondition(start_.ts.timestamp())
                 except Exception as error:
                     logger.warning(
                         "Couldn't load the ambient condition, so "
@@ -282,7 +282,7 @@ class EmissionCalculation:
     def getTimeSeries(self):
         for t in self._inventoryTimeSeriesStore.getTimeSeries():
             # TODO OPENGIS.ch: rewrite the condition with an `and`
-            if self._start_incl <= t.getTime() <= self._end_incl:
+            if self._start_incl <= t.ts.timestamp() <= self._end_incl:
                 yield t
 
     def get3DGrid(self):

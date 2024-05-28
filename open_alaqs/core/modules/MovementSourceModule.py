@@ -258,8 +258,8 @@ class MovementSourceModule(SourceModule):
         df = self.getDataframe()
 
         # Get the movements between start and end time of this period
-        relevant_movements = (df["RunwayTime"] >= start_time.getTime()) & (
-            df["RunwayTime"] < end_time.getTime()
+        relevant_movements = (df["RunwayTime"] >= start_time.ts.timestamp()) & (
+            df["RunwayTime"] < end_time.ts.timestamp()
         )
 
         # Return an empty list if there are no movements in this period
@@ -320,7 +320,9 @@ class MovementSourceModule(SourceModule):
                 continue
             # Fetch movements that use this runway for this time period
             if not (
-                start_time.getTime() <= movement.getRunwayTime() < end_time.getTime()
+                start_time.ts.timestamp()
+                <= movement.getRunwayTime()
+                < end_time.ts.timestamp()
             ):
                 continue
 
