@@ -2,6 +2,8 @@
 This class provides all of the calculation methods required to perform emissions
  calculations for stationary sources.
 """
+from datetime import datetime
+
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.ParkingSources import ParkingSourcesStore
@@ -44,7 +46,9 @@ class ParkingSourceWithTimeProfileModule(SourceWithTimeProfileModule):
     def beginJob(self):
         SourceWithTimeProfileModule.beginJob(self)
 
-    def process(self, start_time, end_time, source_names=None, **kwargs):
+    def process(
+        self, start_dt: datetime, _end_dt: datetime, source_names=None, **kwargs
+    ):
         if source_names is None:
             source_names = []
         result_ = []
@@ -58,7 +62,7 @@ class ParkingSourceWithTimeProfileModule(SourceWithTimeProfileModule):
                 continue
 
             activity_multiplier = self.getRelativeActivityPerHour(
-                start_time,
+                start_dt,
                 source.getUnitsPerYear(),
                 source.getHourProfile(),
                 source.getDailyProfile(),
@@ -96,7 +100,7 @@ class ParkingSourceWithTimeProfileModule(SourceWithTimeProfileModule):
 
             # logger.debug("\t %s" % (emissions))
 
-            result_.append((start_time.ts, source, [emissions]))
+            result_.append((start_dt, source, [emissions]))
         return result_
 
     def endJob(self):

@@ -10,11 +10,6 @@ from open_alaqs.core.tools.Singleton import Singleton
 logger = get_logger(__name__)
 
 
-class InventoryTime:
-    def __init__(self, ts: datetime) -> None:
-        self.ts = ts
-
-
 class InventoryTimeSeriesStore(Store, metaclass=Singleton):
     """
     Class to store instances of 'InventoryTimeSeries' objects
@@ -49,9 +44,7 @@ class InventoryTimeSeriesStore(Store, metaclass=Singleton):
         for timeseries_dict in entries.values():
             self.setObject(
                 timeseries_dict.get("time_id", -1),
-                InventoryTime(
-                    datetime.fromisoformat(timeseries_dict["time"]),
-                ),
+                datetime.fromisoformat(timeseries_dict["time"]),
             )
 
     def getInventoryTimeSeriesDatabase(self):

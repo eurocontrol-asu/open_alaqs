@@ -215,8 +215,8 @@ class MovementSourceModule(SourceModule):
 
     def process(
         self,
-        start_time,
-        end_time,
+        start_dt: datetime,
+        end_dt: datetime,
         source_names=None,
         runway_names=None,
         ambient_conditions=None,
@@ -237,7 +237,7 @@ class MovementSourceModule(SourceModule):
             self.getCalculationLimit()["max_height"] = vertical_limit_m
             logger.info(
                 "Taking default mixing height (3000ft) on %s",
-                start_time.ts,
+                start_dt,
             )
 
         limit_ = self.getCalculationLimit()
@@ -258,8 +258,8 @@ class MovementSourceModule(SourceModule):
         df = self.getDataframe()
 
         # Get the movements between start and end time of this period
-        relevant_movements = (df["RunwayTime"] >= start_time.ts.timestamp()) & (
-            df["RunwayTime"] < end_time.ts.timestamp()
+        relevant_movements = (df["RunwayTime"] >= start_dt.timestamp()) & (
+            df["RunwayTime"] < end_dt.timestamp()
         )
 
         # Return an empty list if there are no movements in this period
@@ -320,9 +320,7 @@ class MovementSourceModule(SourceModule):
                 continue
             # Fetch movements that use this runway for this time period
             if not (
-                start_time.ts.timestamp()
-                <= movement.getRunwayTime()
-                < end_time.ts.timestamp()
+                start_dt.timestamp() <= movement.getRunwayTime() < end_dt.timestamp()
             ):
                 continue
 
@@ -362,7 +360,7 @@ class MovementSourceModule(SourceModule):
                 # emissions_extended = [Emission(defaultValues=defaultEmissions)]
                 emissions_extended = None
 
-            result_.append((start_time.ts, movement, emissions_extended))
+            result_.append((start_dt, movement, emissions_extended))
 
         return result_
 

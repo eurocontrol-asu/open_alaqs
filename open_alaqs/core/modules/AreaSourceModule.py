@@ -30,7 +30,7 @@ class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
         # super(AreaSourceWithTimeProfileModule, self).beginJob()
         SourceWithTimeProfileModule.beginJob(self)
 
-    def process(self, start_time, end_time, source_names=None, **kwargs):
+    def process(self, start_dt, _end_dt, source_names=None, **kwargs):
         if source_names is None:
             source_names = []
 
@@ -45,7 +45,7 @@ class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
                 continue
 
             activity_multiplier = self.getRelativeActivityPerHour(
-                start_time,
+                start_dt,
                 source.getUnitsPerYear(),
                 source.getHourProfile(),
                 source.getDailyProfile(),
@@ -77,7 +77,7 @@ class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
             )
             emissions.setGeometryText(source.getGeometryText())
 
-            result_.append((start_time.ts, source, [emissions]))
+            result_.append((start_dt, source, [emissions]))
         return result_
 
     def endJob(self):
