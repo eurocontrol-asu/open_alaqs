@@ -546,14 +546,11 @@ class AUSTAL2000DispersionModule(DispersionModule):
         :param end_time:
         """
 
-        # Convert to a datetime
-        t_start = start_time.getTimeAsDateTime()
-
         # Check if the date has already been set
         if self._first_start_time is None:
 
             # Determine the timedelta
-            t_delta = t_start - t_start.replace(
+            t_delta = start_time.ts - start_time.ts.replace(
                 month=1, day=1, hour=0, minute=0, second=0
             )
 
@@ -564,8 +561,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
             )
 
             # Set the timestamps for the current period
-            self._start_time = t_start - t_delta
-            self._end_time = end_time.getTimeAsDateTime() - t_delta
+            self._start_time = start_time.ts - t_delta
+            self._end_time = end_time.ts - t_delta
 
             # Set the first start time
             self._first_start_time = self._start_time
@@ -576,8 +573,8 @@ class AUSTAL2000DispersionModule(DispersionModule):
             self._end_time += timedelta(hours=+1)
 
         # Add the timestamps to the dates
-        if t_start not in self._dates:
-            self._dates[t_start] = [self._start_time, self._end_time]
+        if start_time.ts not in self._dates:
+            self._dates[start_time.ts] = [self._start_time, self._end_time]
 
         return self._start_time, self._end_time
 

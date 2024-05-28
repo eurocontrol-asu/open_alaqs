@@ -237,7 +237,7 @@ class MovementSourceModule(SourceModule):
             self.getCalculationLimit()["max_height"] = vertical_limit_m
             logger.info(
                 "Taking default mixing height (3000ft) on %s",
-                start_time.getTimeAsDateTime(),
+                start_time.ts,
             )
 
         limit_ = self.getCalculationLimit()
@@ -360,9 +360,7 @@ class MovementSourceModule(SourceModule):
                 # emissions_extended = [Emission(defaultValues=defaultEmissions)]
                 emissions_extended = None
 
-            result_.append(
-                (start_time.getTimeAsDateTime(), movement, emissions_extended)
-            )
+            result_.append((start_time.ts, movement, emissions_extended))
 
         return result_
 

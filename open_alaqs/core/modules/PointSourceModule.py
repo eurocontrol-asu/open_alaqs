@@ -90,7 +90,7 @@ class PointSourceWithTimeProfileModule(SourceWithTimeProfileModule):
 
             emissions.setGeometryText(source.getGeometryText())
 
-            result_.append((start_time.getTimeAsDateTime(), source, [emissions]))
+            result_.append((start_time.ts, source, [emissions]))
         return result_
 
     def endJob(self):

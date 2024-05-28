@@ -148,9 +148,13 @@ class SourceWithTimeProfileModule(SourceModule):
 
         hours_in_year = inventoryTimeSeries.getTotalHoursInYear()
         operating_factor = float(annual_total_operating_hours) / hours_in_year
-        hour_factor = float(hour_profile.getHours()[inventoryTimeSeries.getHour()])
-        weekday_factor = float(weekday_profile.getDays()[inventoryTimeSeries.getDay()])
-        month_factor = float(month_profile.getMonths()[inventoryTimeSeries.getMonth()])
+        hour_factor = float(hour_profile.getHours()[inventoryTimeSeries.ts.hour])
+        weekday_factor = float(
+            weekday_profile.getDays()[inventoryTimeSeries.getWeekdayShortName()]
+        )
+        month_factor = float(
+            month_profile.getMonths()[inventoryTimeSeries.getMonthShortName()]
+        )
 
         # debug output
         # for x in str(inventoryTimeSeries).split("\n"):

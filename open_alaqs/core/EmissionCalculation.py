@@ -177,11 +177,7 @@ class EmissionCalculation:
 
             # loop on complete period
             for (start_, end_) in pairwise(self.getTimeSeries()):
-
-                start_time = start_.getTimeAsDateTime()
-                end_time = end_.getTimeAsDateTime()
-
-                logger.debug(f"start {start_time}, end {end_time}")
+                logger.debug(f"start {start_.ts}, end {end_.ts}")
 
                 # update the progress bar
                 progressbar.setValue(int(100 * count_ / total_count_))
@@ -235,7 +231,7 @@ class EmissionCalculation:
                     dispersion_mod_name,
                     dispersion_mod_obj,
                 ) in self.getDispersionModules().items():
-                    logger.debug(f"{dispersion_mod_name}: {start_time}")
+                    logger.debug(f"{dispersion_mod_name}: {start_.ts}")
                     dispersion_mod_obj.process(
                         start_, end_, period_emissions, ambient_condition
                     )
@@ -247,7 +243,7 @@ class EmissionCalculation:
                     )
 
                 # add the emissions to the dict
-                self._emissions[start_time] = period_emissions
+                self._emissions[start_.ts] = period_emissions
 
         except StopIteration as e:
             logger.info("Iteration stopped. %s", e)

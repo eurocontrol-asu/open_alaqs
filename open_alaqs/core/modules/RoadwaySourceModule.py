@@ -95,7 +95,7 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
             emissions.setGeometryText(source.getGeometryText())
 
             # Add to list of all emissions
-            result_.append((start_time.getTimeAsDateTime(), source, [emissions]))
+            result_.append((start_time.ts, source, [emissions]))
 
         # Return list of all emissions
         return result_
