@@ -1,4 +1,3 @@
-import calendar
 import os
 from collections import OrderedDict
 from datetime import datetime
@@ -6,7 +5,6 @@ from datetime import datetime
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.interfaces.Store import Store
-from open_alaqs.core.tools import conversion
 from open_alaqs.core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
@@ -38,73 +36,39 @@ weekday_abbreviations = {
 
 
 class InventoryTime:
-    def __init__(self, val=None):
-        if val is None:
-            val = {}
-        self._format = "%Y-%m-%d %H:%M:%S"
+    def __init__(self, ts_id: int, ts: datetime, mix_height: float) -> None:
+        self.ts_id = ts_id
+        self.ts = ts
+        self.mix_height = mix_height
 
-        self._time_id = int(val.get("time_id", -1))
-        self._time = conversion.convertTimeToSeconds(
-            str(val.get("time", "2000-01-01 00:00:00"))
-        )
-        self._year = int(val.get("year", 2015))
-        self._month = int(val.get("month", 1))
-        self._day = int(val.get("day", 1))
-        self._hour = int(val.get("hour", 1))
-        self._weekday_id = int(val.get("weekday_id", 1))
-        self._mix_height = float(val.get("mix_height", 914.4))
-
-    def getTime(self):
+    def getTime(self) -> float:
         """Returns the time as UNIX timestamp in seconds."""
-        return self._time
+        return self.ts.timestamp()
 
-    def getTimeAsDateTime(self):
-        return conversion.convertSecondsToDateTime(self._time)
+    def getTimeAsDateTime(self) -> str:
+        return self.ts
 
-    def getMonth(self):
-        if self._month in month_abbreviations:
-            return month_abbreviations[self._month]
-        return None
+    def getMonth(self) -> str:
+        return month_abbreviations[self.ts.month]
 
-    def getDay(self):
-        # Get the weekday (1-indexed)
-        weekday = datetime(self._year, self._month, self._day).weekday() + 1
-        if weekday in weekday_abbreviations:
-            return weekday_abbreviations[weekday]
-        return None
+    def getDay(self) -> str:
+        return weekday_abbreviations[self.ts.weekday() + 1]
 
-    def getHour(self):
-        return self._hour
+    def getHour(self) -> int:
+        return self.ts.hour
 
-    def getWeekdayID(self):
-        return self._weekday_id
-
-    def getMixingHeight(self):
-        return self._mix_height
-
-    def setMixingHeight(self, val):
-        self._mix_height = float(val)
+    def getMixingHeight(self) -> float:
+        return self.mix_height
 
     # TODO what happens if the time period includes both? This is unresolved in original ALAQS and here
-    def getTotalHoursInYear(self):
-        if calendar.isleap(self._year):
-            return 8784.0
-        else:
-            return 8760.0
-
-    def __str__(self):
-        val = "\n Time id: %i" % (self._time_id)
-        val += "\n\t Time: %s" % (
-            str(conversion.convertSecondsToTimeString(self._time))
+    def getTotalHoursInYear(self) -> int:
+        td = datetime(self.ts.year + 1, 1, 1, 0, 0, 0) - datetime(
+            self.ts.year, 1, 1, 0, 0, 0
         )
-        val += "\n\t Year: %i" % (self.getYear())
-        val += "\n\t Month: %i" % (self._month)
-        val += "\n\t Day: %i" % (self._day)
-        val += "\n\t Hour: %i" % (self.getHour())
-        val += "\n\t Weekday ID: %i" % (self.getWeekdayID())
-        val += "\n\t Mixing Height: %f" % (self.getMixingHeight())
+        return td.total_seconds() / 60 / 60
 
-        return val
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__} #{self.ts_id}: {self.ts.isoformat()}, {self.mix_height}"
 
 
 class InventoryTimeSeriesStore(Store, metaclass=Singleton):
@@ -138,9 +102,14 @@ class InventoryTimeSeriesStore(Store, metaclass=Singleton):
 
     def initInventoryTimes(self):
         entries = self.getInventoryTimeSeriesDatabase().getEntries()
-        for key, timeseries_dict in entries.items():
+        for timeseries_dict in entries.values():
             self.setObject(
-                timeseries_dict.get("time_id", -1), InventoryTime(timeseries_dict)
+                timeseries_dict.get("time_id", -1),
+                InventoryTime(
+                    timeseries_dict["time_id"],
+                    datetime.fromisoformat(timeseries_dict["time"]),
+                    timeseries_dict["mix_height"],
+                ),
             )
 
     def getInventoryTimeSeriesDatabase(self):
