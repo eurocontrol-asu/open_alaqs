@@ -2205,6 +2205,14 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 "options": ["none", "default", "smooth & shift"],
             },
         },
+        "time_interval_mins": {
+            "label": "Time Interval (mins)",
+            "widget_type": QtWidgets.QComboBox,
+            "initial_value": "60",
+            "widget_config": {
+                "options": ["15", "30", "45", "60"],
+            },
+        },
         "vertical_limit_m": {
             "label": "Vertical Limit",
             "widget_type": QgsDoubleSpinBox,
@@ -2656,12 +2664,11 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         em_config = self._emission_calculation_configuration_widget.get_values()
 
         self._emission_calculation_ = EmissionCalculation(
-            {
-                "database_path": inventory_path,
-                "grid_configuration": grid_configuration,
-                "start_dt_inclusive": em_config["start_dt_inclusive"],
-                "end_dt_inclusive": em_config["end_dt_inclusive"],
-            }
+            db_path=inventory_path,
+            grid_config=grid_configuration,
+            start_dt=datetime.fromisoformat(em_config["start_dt_inclusive"]),
+            end_dt=datetime.fromisoformat(em_config["end_dt_inclusive"]),
+            time_interval_mins=conversion.convertToInt(em_config["time_interval_mins"]),
         )
 
         em_config = self._emission_calculation_configuration_widget.get_values()
@@ -2945,7 +2952,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "reference_altitude": study_data.get("airport_elevation", 0.0),
             }
             self._conc_calculation_ = EmissionCalculation(
-                {"database_path": path, "grid_configuration": grid_configuration}
+                db_path=path,
+                grid_config=grid_configuration,
             )
         except Exception as e:
             QtWidgets.QMessageBox.warning(
