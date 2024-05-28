@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, List, TypedDict
 
 from qgis.PyQt import QtCore, QtWidgets
@@ -14,7 +15,6 @@ from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleRegistry,
     SourceModuleRegistry,
 )
-from open_alaqs.core.tools.conversion import convertTimeToSeconds
 from open_alaqs.core.tools.Grid3D import Grid3D
 from open_alaqs.core.tools.iterator import pairwise
 
@@ -38,8 +38,8 @@ class EmissionCalculation:
         self,
         db_path: str,
         grid_config: GridConfig,
-        start_time: str,
-        end_time: str,
+        start_dt: datetime,
+        end_dt: datetime,
         time_interval_mins: int,
     ) -> None:
         assert db_path
@@ -48,8 +48,8 @@ class EmissionCalculation:
         self._grid = Grid3D(self._database_path, grid_config)
 
         # Get the time series for this inventory
-        self._start_incl = convertTimeToSeconds(start_time)
-        self._end_incl = convertTimeToSeconds(end_time)
+        self._start_dt = start_dt
+        self._end_dt = end_dt
         self._time_interval_mins = time_interval_mins
         self._inventoryTimeSeriesStore = InventoryTimeSeriesStore(self._database_path)
         self._emissions = {}
@@ -274,7 +274,7 @@ class EmissionCalculation:
     def getTimeSeries(self):
         for t in self._inventoryTimeSeriesStore.getTimeSeries():
             # TODO OPENGIS.ch: rewrite the condition with an `and`
-            if self._start_incl <= t.timestamp() <= self._end_incl:
+            if self._start_dt <= t <= self._end_dt:
                 yield t
 
     def get3DGrid(self):
