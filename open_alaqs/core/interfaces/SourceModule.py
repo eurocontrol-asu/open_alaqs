@@ -16,6 +16,31 @@ sys.path.append("..")  # Adds higher directory to python modules path.
 
 logger = get_logger(__name__)
 
+# Set the names of the month and days of the week to prevent locale issue
+month_abbreviations = {
+    1: "jan",
+    2: "feb",
+    3: "mar",
+    4: "apr",
+    5: "may",
+    6: "jun",
+    7: "jul",
+    8: "aug",
+    9: "sep",
+    10: "oct",
+    11: "nov",
+    12: "dec",
+}
+weekday_abbreviations = {
+    0: "mon",
+    1: "tue",
+    2: "wed",
+    3: "thu",
+    4: "fri",
+    5: "sat",
+    6: "sun",
+}
+
 
 class SourceModule:
     """
@@ -152,10 +177,12 @@ class SourceWithTimeProfileModule(SourceModule):
         operating_factor = float(annual_total_operating_hours) / hours_in_year
         hour_factor = float(hour_profile.getHours()[inventoryTimeSeries.ts.hour])
         weekday_factor = float(
-            weekday_profile.getDays()[inventoryTimeSeries.get_weekday_short_name()]
+            weekday_profile.getDays()[
+                weekday_abbreviations[inventoryTimeSeries.ts.weekday()]
+            ]
         )
         month_factor = float(
-            month_profile.getMonths()[inventoryTimeSeries.get_month_short_name()]
+            month_profile.getMonths()[month_abbreviations[inventoryTimeSeries.ts.month]]
         )
 
         # debug output

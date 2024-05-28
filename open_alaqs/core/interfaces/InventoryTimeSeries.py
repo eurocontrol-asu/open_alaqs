@@ -9,50 +9,10 @@ from open_alaqs.core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
 
-# Set the names of the month and days of the week to prevent locale issue
-month_abbreviations = {
-    1: "jan",
-    2: "feb",
-    3: "mar",
-    4: "apr",
-    5: "may",
-    6: "jun",
-    7: "jul",
-    8: "aug",
-    9: "sep",
-    10: "oct",
-    11: "nov",
-    12: "dec",
-}
-weekday_abbreviations = {
-    1: "mon",
-    2: "tue",
-    3: "wed",
-    4: "thu",
-    5: "fri",
-    6: "sat",
-    7: "sun",
-}
-
 
 class InventoryTime:
-    def __init__(self, ts_id: int, ts: datetime, mix_height: float) -> None:
-        self.ts_id = ts_id
+    def __init__(self, ts: datetime) -> None:
         self.ts = ts
-        self.mix_height = mix_height
-
-    def getTime(self) -> float:
-        """Returns the time as UNIX timestamp in seconds."""
-        return self.ts.timestamp()
-
-    def get_weekday_short_name(self) -> str:
-        return weekday_abbreviations[self.ts.weekday() + 1]
-
-    def get_month_short_name(self) -> str:
-        return month_abbreviations[self.ts.month]
-
-    def getMixingHeight(self) -> float:
-        return self.mix_height
 
 
 class InventoryTimeSeriesStore(Store, metaclass=Singleton):
@@ -90,9 +50,7 @@ class InventoryTimeSeriesStore(Store, metaclass=Singleton):
             self.setObject(
                 timeseries_dict.get("time_id", -1),
                 InventoryTime(
-                    timeseries_dict["time_id"],
                     datetime.fromisoformat(timeseries_dict["time"]),
-                    timeseries_dict["mix_height"],
                 ),
             )
 
