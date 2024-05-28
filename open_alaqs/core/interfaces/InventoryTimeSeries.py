@@ -45,10 +45,10 @@ class InventoryTime:
         """Returns the time as UNIX timestamp in seconds."""
         return self.ts.timestamp()
 
-    def getWeekdayShortName(self) -> str:
+    def get_weekday_short_name(self) -> str:
         return weekday_abbreviations[self.ts.weekday() + 1]
 
-    def getMonthShortName(self) -> str:
+    def get_month_short_name(self) -> str:
         return month_abbreviations[self.ts.month]
 
     def getMixingHeight(self) -> float:

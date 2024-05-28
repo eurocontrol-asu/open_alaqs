@@ -4,6 +4,7 @@ import sys
 import pandas as pd
 
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.interfaces.InventoryTimeSeries import InventoryTime
 from open_alaqs.core.interfaces.UserTimeProfiles import (
     UserDayProfileStore,
     UserHourProfileStore,
@@ -117,7 +118,7 @@ class SourceWithTimeProfileModule(SourceModule):
 
     def getRelativeActivityPerHour(
         self,
-        inventoryTimeSeries,
+        inventoryTimeSeries: InventoryTime,
         annual_total_operating_hours,
         hour_profile_name,
         daily_profile_name,
@@ -150,10 +151,10 @@ class SourceWithTimeProfileModule(SourceModule):
         operating_factor = float(annual_total_operating_hours) / hours_in_year
         hour_factor = float(hour_profile.getHours()[inventoryTimeSeries.ts.hour])
         weekday_factor = float(
-            weekday_profile.getDays()[inventoryTimeSeries.getWeekdayShortName()]
+            weekday_profile.getDays()[inventoryTimeSeries.get_weekday_short_name()]
         )
         month_factor = float(
-            month_profile.getMonths()[inventoryTimeSeries.getMonthShortName()]
+            month_profile.getMonths()[inventoryTimeSeries.get_month_short_name()]
         )
 
         # debug output
