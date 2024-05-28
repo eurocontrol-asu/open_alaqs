@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, List, TypedDict
 
 from qgis.PyQt import QtCore, QtWidgets
