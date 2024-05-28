@@ -49,7 +49,6 @@ if __name__ == "__main__":
         "tbl_InvActivityProfileList",
         "tbl_InvLog",
         "tbl_InvMeteo",
-        "tbl_InvPeriod",
         "tbl_InvTime",
         "user_aircraft_movements",
         "user_stand_ef",

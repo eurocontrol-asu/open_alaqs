@@ -4,7 +4,6 @@ This class is used to create an ALAQS output file from an existing ALAQS study.
 import os
 import shutil
 import sqlite3 as sqlite
-from datetime import datetime, timedelta
 
 from open_alaqs.core import alaqsdblite, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
@@ -97,8 +96,6 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_p
     if result is False:
         pass
 
-    inventory_update_tbl_inv_period(inventory_path, model_parameters, study_setup)
-    inventory_update_tbl_inv_time(inventory_path, model_parameters)
     inventory_insert_movements(inventory_path, model_parameters)
     inventory_update_mixing_heights(inventory_path)
     inventory_copy_activity_profiles(inventory_path)
@@ -223,122 +220,6 @@ def inventory_copy_generic_table(inventory_path, table: str):
         conn.commit()
     conn.close()
     msg = f"[+] Copied the {table} table"
-    logger.info(msg)
-
-
-@catch_errors
-def inventory_update_tbl_inv_period(database_path, model_parameters, study_setup):
-    """
-    Add records to the study output that lists one-hour intervals for the whole of the user defined study duration
-    :param database_path: the path to the study output file
-    :param model_parameters: a list of model parameters used to generate an ALAQS output
-    """
-
-    try:
-        min_time = datetime.strptime(
-            model_parameters["study_start_date"], "%Y-%m-%d %H:%M:%S"
-        )
-        max_time = datetime.strptime(
-            model_parameters["study_end_date"], "%Y-%m-%d %H:%M:%S"
-        )
-    except Exception:
-        min_time = datetime.strftime(
-            model_parameters["study_start_date"], "%Y-%m-%d %H:%M:%S"
-        )
-        max_time = datetime.strftime(
-            model_parameters["study_end_date"], "%Y-%m-%d %H:%M:%S"
-        )
-
-    logger.info("Min time: %s" % min_time)
-    logger.info("Max time: %s" % max_time)
-
-    interval = 1 / 24
-    temp_isa = 273.16 + 15 + study_setup["airport_elevation"] / 1000 * -6.5
-    copert = 0
-    nox_corr = 0
-    ffm = 0
-    mix_height = 0
-    smsh = 0
-
-    if model_parameters["use_copert"] is True:
-        copert = 1
-    if model_parameters["use_nox_correction"] is True:
-        nox_corr = 1
-    if model_parameters["use_fuel_flow"] is True:
-        ffm = 1
-    if model_parameters["use_smooth_and_shift"] is True:
-        smsh = 1
-    if model_parameters["use_variable_mixing_height"] is True:
-        mix_height = 1
-
-    sql_interface.query_text(
-        database_path,
-        "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, vert_limit=%d, apt_elev=%d, "
-        'copert=%d, nox_corr=%d, ffm=%d, smsh=%d, mix_height=%d, min_time="%s", '
-        'max_time="%s";'
-        % (
-            interval,
-            temp_isa,
-            model_parameters["vertical_limit"],
-            study_setup["airport_elevation"],
-            copert,
-            nox_corr,
-            ffm,
-            smsh,
-            mix_height,
-            min_time,
-            max_time,
-        ),
-    )
-    msg = "[+] Updated the output inventory period"
-    logger.info(msg)
-
-
-@catch_errors
-def inventory_update_tbl_inv_time(inventory_path, model_parameters):
-    """
-    Update the invTime table with hourly intervals based on the user study definitions
-    :param inventory_path: a path to the alaqs study output file
-    :param model_parameters: a dict of user defined parameters for the current output
-    :return:
-    """
-    time_list = []
-    hour_delta = timedelta(hours=1)
-    try:
-        start_time = datetime.strptime(
-            model_parameters["study_start_date"], "%Y-%m-%d %H:%M:%S"
-        )
-        end_time = datetime.strptime(
-            model_parameters["study_end_date"], "%Y-%m-%d %H:%M:%S"
-        )
-    except Exception:
-        start_time = model_parameters["study_start_date"]
-        end_time = model_parameters["study_end_date"]
-
-    # Create a time stamp for the start of the first hour - kind of floor(start_time)
-    current_hour = start_time - timedelta(
-        minutes=start_time.minute % 60,
-        seconds=start_time.second,
-        microseconds=start_time.microsecond,
-    )
-
-    # Build a list of hours we need to model
-    while current_hour <= end_time:
-        interval_start = current_hour
-        mix_height = "914.4"
-
-        time_list.append([interval_start, mix_height])
-        current_hour = current_hour + hour_delta
-
-    conn = sqlite.connect(inventory_path)
-    cur = conn.cursor()
-    cur.executemany(
-        "INSERT INTO tbl_InvTime (time, mix_height) VALUES (?,?);",
-        time_list,
-    )
-    conn.commit()
-    conn.close()
-    msg = "[+] Updated the output time table"
     logger.info(msg)
 
 

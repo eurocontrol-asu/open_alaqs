@@ -9,7 +9,6 @@ from open_alaqs.core.interfaces.AmbientCondition import (
     AmbientConditionStore,
 )
 from open_alaqs.core.interfaces.Emissions import Emission
-from open_alaqs.core.interfaces.InventoryTimeSeries import InventoryTimeSeriesStore
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleRegistry,
@@ -51,7 +50,6 @@ class EmissionCalculation:
         self._start_dt = start_dt
         self._end_dt = end_dt
         self._time_interval_mins = time_interval_mins
-        self._inventoryTimeSeriesStore = InventoryTimeSeriesStore(self._database_path)
         self._emissions = {}
         self._source_modules = {}
         self._dispersion_modules = {}

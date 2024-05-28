@@ -183,10 +183,5 @@ class SourceWithTimeProfileModule(SourceModule):
             month_profile.getMonths()[month_abbreviations[inventory_dt.month]]
         )
 
-        # debug output
-        # for x in str(inventoryTimeSeries).split("\n"):
-        #     # print "%s" % (str(x))
-        #     logger.info("%s" % (str(x)))
-
         # Calculate the activity multiplier
         return operating_factor * hour_factor * weekday_factor * month_factor
