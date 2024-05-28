@@ -45,7 +45,7 @@ class InventoryTime:
 
         self._time_id = int(val.get("time_id", -1))
         self._time = conversion.convertTimeToSeconds(
-            str(val.get("time", "2000-01-01 00:00:00")), self._format
+            str(val.get("time", "2000-01-01 00:00:00"))
         )
         self._year = int(val.get("year", 2015))
         self._month = int(val.get("month", 1))
@@ -95,7 +95,7 @@ class InventoryTime:
     def __str__(self):
         val = "\n Time id: %i" % (self._time_id)
         val += "\n\t Time: %s" % (
-            str(conversion.convertSecondsToTimeString(self._time, self._format))
+            str(conversion.convertSecondsToTimeString(self._time))
         )
         val += "\n\t Year: %i" % (self.getYear())
         val += "\n\t Month: %i" % (self._month)
