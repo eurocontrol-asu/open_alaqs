@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Optional, Type, TypedDict, Union
+from typing import Any, Iterable, Optional, Type, TypedDict, Union
 
 from qgis.gui import QgsDoubleSpinBox, QgsFileWidget, QgsSpinBox
 from qgis.PyQt import QtCore, QtWidgets
@@ -11,11 +11,11 @@ logger = get_logger(__name__)
 
 
 class TableWidgetConfig(TypedDict):
-    table_headers: tuple[str]
+    table_headers: Iterable[str]
 
 
 class ComboBoxWidgetConfig(TypedDict):
-    options: tuple[str]
+    options: Iterable[str] | Iterable[tuple[str, str]]
 
 
 class QgsFileWidgetConfig(TypedDict):
@@ -104,7 +104,9 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
             widget.resizeColumnsToContents()
         elif isinstance(widget, QtWidgets.QComboBox):
             widget.clear()
-            widget.addItems(widget_config["options"])
+            options = self._normalize_combobox_values(widget_config["options"])
+            for option in options:
+                widget.addItem(option[1], option[0])
         elif isinstance(widget, QgsFileWidget):
             if widget_config.get("filter") is not None:
                 widget.setDialogTitle(widget_config["filter"])
@@ -149,17 +151,19 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
             elif isinstance(setting_widget, QtWidgets.QDateTimeEdit):
                 value = setting_widget.dateTime().toString(Qt.ISODate).replace("T", " ")
             elif isinstance(setting_widget, QtWidgets.QComboBox):
-                if setting_widget.currentIndex() == -1:
-                    options = self._settings_schema[setting_name]["widget_config"][
-                        "options"
-                    ]
+                options = self._normalize_combobox_values(
+                    self._settings_schema[setting_name]["widget_config"]["options"]
+                )
 
-                    if options:
-                        value = options[0]
-                    else:
-                        value = None
-                else:
-                    value = setting_widget.currentText()
+                if not options:
+                    value = None
+
+                current_index = setting_widget.currentIndex()
+
+                if current_index == -1:
+                    current_index = 0
+
+                value = options[current_index][0]
             elif isinstance(setting_widget, QtWidgets.QTableWidget):
                 value = {}
                 for col in range(setting_widget.columnCount()):
@@ -195,6 +199,7 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
 
         for setting_name, value in init_values.items():
             setting_widget = self._settings_widgets[setting_name]
+            setting_schema = self._settings_schema[setting_name]
 
             if isinstance(setting_widget, QtWidgets.QLabel):
                 setting_widget.setText(str(value))
@@ -203,7 +208,8 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
             elif isinstance(setting_widget, QtWidgets.QAbstractButton):
                 setting_widget.setChecked(value)
             elif isinstance(setting_widget, QtWidgets.QComboBox):
-                setting_widget.setCurrentText(value)
+                idx = self._get_combobox_index(setting_schema, value)
+                setting_widget.setCurrentIndex(idx)
             elif isinstance(setting_widget, QtWidgets.QTableWidget):
                 setting_widget.setRowCount(len(value))
 
@@ -255,3 +261,30 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
 
     def get_widget(self, setting_name: str) -> QtWidgets.QWidget:
         return self._settings_widgets[setting_name]
+
+    def _normalize_combobox_values(
+        self, options: Union[Iterable[str], Iterable[tuple[str, str]]]
+    ) -> list[tuple[str, str]]:
+        result = []
+
+        for option in options:
+            if isinstance(option, str):
+                result.append((option, option))
+            elif isinstance(option, tuple):
+                result.append(option)
+            else:
+                raise ValueError(
+                    "Expected options to be iterable of tuples or strings!"
+                )
+
+        return result
+
+    def _get_combobox_index(self, setting_schema: SettingSchema, value: str) -> int:
+        options = self._normalize_combobox_values(
+            setting_schema["widget_config"]["options"]
+        )
+        for idx, option in enumerate(options):
+            if option[0] == value:
+                return idx
+
+        return -1
