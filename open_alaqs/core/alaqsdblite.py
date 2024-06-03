@@ -9,7 +9,7 @@ from qgis.utils import spatialite_connect
 from open_alaqs.alaqs_config import ALAQS_ROOT_PATH, ALAQS_TEMPLATE_DB_FILENAME
 from open_alaqs.core import alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.tools.sql_interface import execute_sql
+from open_alaqs.core.tools.sql_interface import db_execute_sql
 
 logger = get_logger(__name__)
 
@@ -185,7 +185,7 @@ def create_project_database(alaqs_db_filename: str) -> None:
     logger.info("[+] Created a blank ALAQS study file in %s", alaqs_db_filename)
 
     # Update the study created date to now
-    execute_sql(
+    db_execute_sql(
         alaqs_db_filename,
         """
             UPDATE user_study_setup SET date_created = DATETIME('now')

@@ -142,7 +142,7 @@ class get_db_connection:
         return exc_type is None
 
 
-def execute_sql(
+def db_execute_sql(
     db_filename: str,
     sql: str,
     params: Optional[list] = None,
@@ -256,7 +256,7 @@ def update_table(
             WHERE {where_values_str}
         """
 
-    return execute_sql(db_filename, sql, values)
+    return db_execute_sql(db_filename, sql, values)
 
 
 def insert_into_table(
@@ -299,4 +299,4 @@ def insert_into_table(
         VALUES {rows_str}
     """
 
-    return execute_sql(db_filename, sql, values)
+    return db_execute_sql(db_filename, sql, values)

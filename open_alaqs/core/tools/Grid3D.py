@@ -127,7 +127,7 @@ class Grid3D:
             FROM "grid_3d_definition"
         """
 
-        result = sql_interface.execute_sql(self._db_path, query)
+        result = sql_interface.db_execute_sql(self._db_path, query)
 
         self._x_cells = result["x_cells"]
         self._y_cells = result["y_cells"]
@@ -166,7 +166,7 @@ class Grid3D:
                     )
                 ) AS x
         """
-        row = sql_interface.execute_sql(self._db_path, sql, [point_wkt, point_wkt])
+        row = sql_interface.db_execute_sql(self._db_path, sql, [point_wkt, point_wkt])
 
         # Calculate the coordinates of the bottom left of the grid
         origin_x = row["x"] - (self._x_cells / 2.0) * self._x_resolution

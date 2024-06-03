@@ -89,7 +89,7 @@ class SQLSerializable:
                 f'AsText({sql_interface.quote_identifier(column_def["column_name"])}) AS geometry'
             )
 
-        result = sql_interface.execute_sql(
+        result = sql_interface.db_execute_sql(
             self._db_path,
             f"""
                 SELECT {", ".join(columns)}
