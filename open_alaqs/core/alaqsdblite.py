@@ -501,52 +501,6 @@ def get_roadways():
 
 
 # #################################################
-# #########           TAXIWAYS         ############
-# #################################################
-
-
-def add_taxiway_dict(taxiway_dict):
-    try:
-        # Split out and validate taxiway properties
-        p0 = taxiway_dict["taxiway_id"]
-        p1 = taxiway_dict["taxiway_speed"]
-        p2 = taxiway_dict["taxiway_time"]
-        p3 = taxiway_dict["taxiway_instudy"]
-        p4 = taxiway_dict["taxiway_wkt"]
-
-        # Check if gate already exists
-        sql_text = "SELECT * FROM shapes_taxiways WHERE taxiway_id='%s';" % p0.replace(
-            "'", ""
-        )
-        result = query_string(sql_text)
-
-        if isinstance(result, str):
-            raise Exception("Problem saving taxiway: %s" % result)
-        elif result is None or result == []:
-            sql_text = (
-                "INSERT INTO shapes_taxiways (taxiway_id,speed,time,instudy,geometry) VALUES "
-                "('%s','%s','%s','%s',ST_Transform(GeomFromText('%s', 4326), 3857))"
-                % (p0, p1, p2, p3, p4)
-            )
-        else:
-            sql_text = (
-                "UPDATE shapes_taxiways SET taxiway_id='%s', speed='%s', time='%s', instudy='%s', "
-                "geometry=ST_Transform(GeomFromText('%s', 4326), ,3857) WHERE taxiway_id='%s';"
-                % (p0, p1, p2, p3, p4, p0)
-            )
-        result = query_string(sql_text)
-        if result is None or result == []:
-            return True
-        else:
-            raise Exception(result)
-    except Exception as e:
-        error = alaqsutils.print_error(
-            add_taxiway_dict.__name__, Exception, e, log=logger
-        )
-        return error
-
-
-# #################################################
 # #########       TAXIWAY ROUTES       ############
 # #################################################
 
@@ -642,42 +596,6 @@ def add_taxiway_route(taxiway_route):
         error = alaqsutils.print_error(
             add_taxiway_route.__name__, Exception, e, log=logger
         )
-        return error
-
-
-def get_taxiway(taxiway_id):
-    """
-    Return data on a specific taxiway based on the taxiway_id (name)
-    :param: taxiway_id: the name of the taxiway to return data for
-    """
-    try:
-        sql_text = (
-            "SELECT taxiway_id,speed,time,instudy,AsText(geometry) FROM shapes_taxiways "
-            'WHERE taxiway_id="%s";' % taxiway_id
-        )
-        result = query_string(sql_text)
-        return result
-    except Exception as e:
-        error = alaqsutils.print_error(get_taxiway.__name__, Exception, e, log=logger)
-        return error
-
-
-def get_taxiways():
-    """
-    Return data for all taxiways in the current study
-    """
-    try:
-        sql_text = "SELECT taxiway_id,speed,time,instudy,AsText(geometry) FROM shapes_taxiways ORDER BY taxiway_id COLLATE NOCASE;"
-        result = query_string(sql_text)
-        if len(result) > 0:
-            return result
-        else:
-            if result is []:
-                return None
-            else:
-                raise Exception(result)
-    except Exception as e:
-        error = alaqsutils.print_error(get_taxiways.__name__, Exception, e, log=logger)
         return error
 
 

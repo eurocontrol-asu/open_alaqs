@@ -217,45 +217,6 @@ def get_runways() -> list[dict[str, Any]]:
     )
 
 
-# ######################
-# ###### TAXIWAYS ######
-# ######################
-
-
-@catch_errors
-def add_taxiway_dict(taxiway_dict):
-    result = alaqsdblite.add_taxiway_dict(taxiway_dict)
-    if result is not True:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def get_taxiway(taxiway_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_taxiway(taxiway_id)
-    if isinstance(result, str):
-        raise Exception("Taxiway could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_taxiways():
-    """
-    Description
-    """
-    result = alaqsdblite.get_taxiways()
-    if isinstance(result, str):
-        raise Exception("Taxiways could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
 # ############################
 # ###### TAXIWAY ROUTES ######
 # ############################
