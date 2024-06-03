@@ -468,30 +468,6 @@ def get_monthly_profile(profile_name):
 
 
 @catch_errors
-def delete_hourly_profile(profile_name):
-    result = alaqsdblite.delete_hourly_profile(profile_name)
-    if result is not None:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def delete_daily_profile(profile_name):
-    result = alaqsdblite.delete_daily_profile(profile_name)
-    if result is not None:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def delete_monthly_profile(profile_name):
-    result = alaqsdblite.delete_monthly_profile(profile_name)
-    if result is not None:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
 def add_hourly_profile(properties):
     result = alaqsdblite.add_hourly_profile(properties)
     if result is not None:

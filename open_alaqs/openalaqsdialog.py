@@ -46,7 +46,7 @@ from qgis.utils import OverrideCursor
 from open_alaqs import openalaqsuitoolkit as oautk
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core import alaqs, alaqsutils
-from open_alaqs.core.alaqsdblite import ProjectDatabase
+from open_alaqs.core.alaqsdblite import ProjectDatabase, delete_records
 from open_alaqs.core.alaqslogging import get_logger, log_path
 from open_alaqs.core.EmissionCalculation import EmissionCalculation
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
@@ -595,93 +595,54 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             self.ui.lineEditMonthlyDec.setText(str(profile_data[0][13]))
             return None
 
-    def delete_hourly_profile(self):
-        """
-        This removes an hourly profile from the currently active ALAQS database.
-        """
-        reply = QtWidgets.QMessageBox.warning(
+    def confirm_profile_deletion(self):
+        result = QtWidgets.QMessageBox.warning(
             self,
             "Delete Profiles",
             "Are you sure you want to delete this profile?",
             QtWidgets.QMessageBox.Yes,
             QtWidgets.QMessageBox.No,
         )
-        if reply == QtWidgets.QMessageBox.Yes:
+        return result != QtWidgets.QMessageBox.Yes
 
-            profile_name = str(self.ui.comboBoxHourlyName.currentText()).strip()
-            QtWidgets.QMessageBox.information(
-                self, "Info", "Deleting '%s'" % str(profile_name)
-            )
-            result = alaqs.delete_hourly_profile(profile_name)
-            if result is None:
-                self.populate_hourly_profiles()
-                return None
-            else:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "Delete Profiles",
-                    "Profile %s could not be deleted: %s" % (profile_name, result),
-                )
-                return "The selected hourly profile could not be deleted."
+    def delete_hourly_profile(self):
+        """
+        This removes an hourly profile from the currently active ALAQS database.
+        """
+        if self.confirm_profile_deletion():
+            return
+
+        profile_name = self.ui.comboBoxHourlyName.currentText().strip()
+
+        delete_records("user_hour_profile", {"profile_name": profile_name})
+        self.populate_hourly_profiles()
 
     def delete_daily_profile(self):
         """
         This removes a daily profile from the currently active ALAQS database.
         """
-        result = QtWidgets.QMessageBox.warning(
-            self,
-            "Delete Profiles",
-            "Are you sure you want to delete this profile?",
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No,
-        )
-        if result == QtWidgets.QMessageBox.Yes:
-            profile_name = str(self.ui.comboBoxDailyName.currentText()).strip()
-            QtWidgets.QMessageBox.information(
-                self, "Info", "Deleting '%s'" % str(profile_name)
-            )
-            result = alaqs.delete_daily_profile(profile_name)
-            if result is None:
-                self.populate_daily_profiles()
-                return None
-            else:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "Delete Profiles",
-                    "Profile %s could not be deleted: %s" % (profile_name, result),
-                )
-                return "The selected daily profile could not be deleted"
+        if self.confirm_profile_deletion():
+            return
+
+        profile_name = self.ui.comboBoxDailyName.currentText().strip()
+
+        delete_records("user_day_profile", {"profile_name": profile_name})
+        self.populate_daily_profiles()
 
     def delete_monthly_profile(self):
         """
         This removes an monthly profile from the currently active ALAQS database.
         """
-        result = QtWidgets.QMessageBox.warning(
-            self,
-            "Delete Profiles",
-            "Are you sure you want to delete this profile?",
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No,
-        )
-        if result == QtWidgets.QMessageBox.Yes:
-            profile_name = str(self.ui.comboBoxMonthlyName.currentText()).strip()
-            QtWidgets.QMessageBox.information(
-                self, "Info", "Deleting '%s'" % str(profile_name)
-            )
-            result = alaqs.delete_monthly_profile(profile_name)
-            if result is None:
-                self.populate_monthly_profiles()
-                return None
-            else:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "Delete Profiles",
-                    "Profile %s could not be deleted: %s" % (profile_name, result),
-                )
-                return "The selected monthly profile could not be deleted"
+        if self.confirm_profile_deletion():
+            return
+
+        profile_name = self.ui.comboBoxMonthlyName.currentText().strip()
+
+        delete_records("user_month_profile", {"profile_name": profile_name})
+        self.populate_monthly_profiles()
 
     @catch_errors
-    def new_hourly_profile(self):
+    def new_hourly_profile(self, _checked: bool) -> None:
         """
         This adds a new blank hourly profile to the UI
         :return: None if successful; error message as a string if its
@@ -695,7 +656,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         return None
 
     @catch_errors
-    def new_daily_profile(self):
+    def new_daily_profile(self, _checked: bool) -> None:
         """
         This adds a new blank daily profile to the UI
         :return: None if successful; error message as a string if its
@@ -709,7 +670,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         return None
 
     @catch_errors
-    def new_monthly_profile(self):
+    def new_monthly_profile(self, _checked: bool) -> None:
         """
         Adds a new blank monthly profile to the UI
         :return: None if successful; error message as a string if its
@@ -720,7 +681,6 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         index = self.ui.comboBoxMonthlyName.count()
         self.ui.comboBoxMonthlyName.setCurrentIndex(index - 1)
         self.ui.comboBoxMonthlyName.setEditable(True)
-        return None
 
     @catch_errors
     def save_hourly_profile(self):
