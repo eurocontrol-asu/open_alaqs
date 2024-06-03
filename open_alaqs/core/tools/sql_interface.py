@@ -222,11 +222,7 @@ def build_where_sql(where_values: dict[str, Any]) -> tuple[str, list[Any]]:
 
         where_expression_pairs.append(f"{quote_identifier(attr_name)} = {expression}")
 
-    where_values_str = " AND ".join(where_expression_pairs)
-
-    sql = f"""
-        WHERE {where_values_str}
-    """
+    sql = " AND ".join(where_expression_pairs)
 
     return sql, params
 
@@ -266,7 +262,7 @@ def db_update_table(
     return db_execute_sql(db_filename, sql, values, False)
 
 
-def db_delete(
+def db_delete_records(
     db_filename: str,
     table_name: str,
     where_values: dict[str, Any],

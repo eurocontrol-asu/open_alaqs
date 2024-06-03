@@ -9,7 +9,11 @@ from qgis.utils import spatialite_connect
 from open_alaqs.alaqs_config import ALAQS_ROOT_PATH, ALAQS_TEMPLATE_DB_FILENAME
 from open_alaqs.core import alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.tools.sql_interface import db_execute_sql, db_update_table
+from open_alaqs.core.tools.sql_interface import (
+    db_delete_records,
+    db_execute_sql,
+    db_update_table,
+)
 
 logger = get_logger(__name__)
 
@@ -73,6 +77,17 @@ def update_table(
         ProjectDatabase().path,
         table_name,
         attribute_values,
+        where_values,
+    )
+
+
+def delete_records(
+    table_name: str,
+    where_values: dict[str, Any],
+) -> list[sqlite.Row]:
+    return db_delete_records(
+        ProjectDatabase().path,
+        table_name,
         where_values,
     )
 
