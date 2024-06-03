@@ -64,9 +64,6 @@ class Runway:
     def getName(self):
         return self._name
 
-    def setName(self, val):
-        self._name = val
-
     def getTouchdownOffset(self):
         return self._touchdown_offset
 

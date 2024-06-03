@@ -61,9 +61,6 @@ class RoadwaySources(Source):
     def getUnitsPerYear(self):
         return self._vehicle_year
 
-    def setUnitsPerYear(self, var):
-        self._vehicle_year = var
-
     def getDistance(self):
         return self._distance
 
@@ -123,7 +120,6 @@ class RoadwaySources(Source):
         val += "\n\t Month Profile: %s" % (self.getMonthProfile())
         val += "\n\t Emission Index: %s" % (self.getEmissionIndex())
         val += "\n\t Scenario: %s" % (self.getScenario())
-        val += "\n\t Instudy: %i" % (self.getInStudy())
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 

@@ -41,9 +41,6 @@ class TaxiwayRoute:
     def getName(self):
         return self._id
 
-    def setName(self, val):
-        self._id = val
-
     def getGate(self):
         return self._gate
 
@@ -84,9 +81,6 @@ class TaxiwayRoute:
     def isArrival(self):
         return self._departure_arrival.lower() == "a"
 
-    def setInStudy(self, val):
-        self._instudy = val
-
     def __str__(self):
         val = "\n TaxiwayRoute with id '%s'" % (self.getName())
         val += "\n\t Instance: %s" % (self.getInstance())
@@ -119,7 +113,6 @@ class TaxiwaySegment:
             else 0.0
         )
 
-        self._instudy = int(val["instudy"]) if "instudy" in val else 1
         self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
         self._geometry = (
             loads(str(val["geometry"]))
@@ -143,9 +136,6 @@ class TaxiwaySegment:
 
     def getName(self):
         return self._id
-
-    def setName(self, val):
-        self._id = val
 
     def getHeight(self):
         return self._height
@@ -180,19 +170,12 @@ class TaxiwaySegment:
     def getGeometry(self):
         return self._geometry
 
-    def getInStudy(self):
-        return self._instudy
-
-    def setInStudy(self, val):
-        self._instudy = val
-
     def __str__(self):
         val = "\n TaxiwaySegment with id '%s'" % (self.getName())
         val += "\n\t Height [m]: %s" % (self.getHeight())
         val += "\n\t Length [m]: %s" % (self.getLength())
         val += "\n\t Speed [m/s]: %s" % (self.getSpeed())
         val += "\n\t Time [s]: %f" % (self.getTime())
-        val += "\n\t Instudy: %i" % (self.getInStudy())
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 

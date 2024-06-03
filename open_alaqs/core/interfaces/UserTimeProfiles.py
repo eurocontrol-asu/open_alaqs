@@ -18,9 +18,6 @@ class UserProfile:
     def getName(self):
         return self._name
 
-    def setName(self, val):
-        self._name = str(val)
-
 
 class UserHourProfile(UserProfile):
     def __init__(self, val=None):

@@ -129,9 +129,6 @@ class Aircraft:
     def getName(self):
         return self._name
 
-    def setName(self, var):
-        self._name = var
-
     def getMTOW(self):
         return self._mtow
 

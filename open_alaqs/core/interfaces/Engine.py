@@ -583,9 +583,6 @@ class Engine:
     def getEmissionIndex(self):
         return self._emission_index
 
-    def setName(self, val):
-        self._name = val
-
     def getName(self):
         return self._name
 

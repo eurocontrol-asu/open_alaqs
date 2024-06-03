@@ -32,9 +32,6 @@ class Track:
     def getName(self):
         return self._name
 
-    def setName(self, val):
-        self._name = val
-
     def getRunway(self):
         return self._runway
 

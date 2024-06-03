@@ -67,7 +67,6 @@ class AreaSources(Source):
         val += "\n\t Daily Profile: %s" % (self.getDailyProfile())
         val += "\n\t Month Profile: %s" % (self.getMonthProfile())
         val += "\n\t Emission Index: %s" % (self.getEmissionIndex())
-        val += "\n\t Instudy: %i" % (self.getInStudy())
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 
