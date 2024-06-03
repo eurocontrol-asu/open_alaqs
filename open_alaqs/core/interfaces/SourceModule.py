@@ -5,12 +5,12 @@ from datetime import datetime
 import pandas as pd
 
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.UserTimeProfiles import (
     UserDayProfileStore,
     UserHourProfileStore,
     UserMonthProfileStore,
 )
-from open_alaqs.core.utils.utils import get_hours_in_year
 
 sys.path.append("..")  # Adds higher directory to python modules path.
 
@@ -68,7 +68,7 @@ class SourceModule:
     def setStore(self, val):
         self._store = val
 
-    def getSources(self):
+    def getSources(self) -> dict[str, Source]:
         return self._sources
 
     def setSource(self, key, value):
@@ -142,6 +142,27 @@ class SourceWithTimeProfileModule(SourceModule):
 
         self.loadSources()
 
+    def getEmissionsForTimePeriod(
+        self,
+        start_dt: datetime,
+        end_dt: datetime,
+        annual_total_operating_hours,
+        hour_profile_name,
+        daily_profile_name,
+        month_profile_name,
+    ):
+        time_period = end_dt - start_dt
+        emit_per_hour = self.getRelativeActivityPerHour(
+            start_dt,
+            annual_total_operating_hours,
+            hour_profile_name,
+            daily_profile_name,
+            month_profile_name,
+        )
+        emit_per_second = emit_per_hour / 60 / 60
+
+        return emit_per_second * time_period.seconds
+
     def getRelativeActivityPerHour(
         self,
         inventory_dt: datetime,
@@ -173,7 +194,10 @@ class SourceWithTimeProfileModule(SourceModule):
                 "Could not retrieve the month time profile '%s'." % (month_profile_name)
             )
 
-        hours_in_year = get_hours_in_year(inventory_dt.year)
+        year = inventory_dt.year
+        td = datetime(year + 1, 1, 1, 0, 0, 0) - datetime(year, 1, 1, 0, 0, 0)
+        hours_in_year = int(td.total_seconds() / 60 / 60)
+
         operating_factor = float(annual_total_operating_hours) / hours_in_year
         hour_factor = float(hour_profile.getHours()[inventory_dt.hour])
         weekday_factor = float(
