@@ -329,54 +329,6 @@ def get_point_types(category_number: int) -> list[dict[str, Any]]:
     )
 
 
-# #######################
-# ###### BUILDINGS ######
-# #######################
-
-
-@catch_errors
-def add_building(building_dict):
-    """ "
-    This function is used to add a new building to the currently active
-     database. This is used only when the tool is being used independently of
-     QGIS.
-
-    :param building_dict: a dictionary of building properties in format defined
-     by new_building()
-    :return: True if successful
-    """
-    result = alaqsdblite.add_building(building_dict)
-    if result is not True:
-        raise Exception(result)
-    return True
-
-
-@catch_errors
-def get_building(building_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_building(building_id)
-    if isinstance(result, str):
-        raise Exception("Building could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_buildings():
-    """
-    Description
-    """
-    result = alaqsdblite.get_buildings()
-    if isinstance(result, str):
-        raise Exception("Buildings could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
 @catch_errors
 def get_hourly_profiles():
     """
