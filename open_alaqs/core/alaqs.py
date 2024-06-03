@@ -280,103 +280,53 @@ def get_tracks():
     return result
 
 
-# ################################
-# ###### STATIONARY SOURCES ######
-# ################################
+def get_point_category(category_id: str) -> dict[str, Any]:
+    """Return the source category of a specific point source by category id."""
+    return execute_sql(
+        """
+            SELECT *
+            FROM default_stationary_category
+            WHERE category_name = ?
+        """,
+        [category_id],
+    )
 
 
-@catch_errors
-def add_point_source(point_source_dict):
-    """
-    This function is used to add a new point source to the currently active
-     database. This is used only when the tool is being used independently of
-     QGIS.
-
-    :param point_source_dict: a dictionary of stationary source properties
-    :return: Should be True if successful
-    """
-    result = alaqsdblite.add_point_source(point_source_dict)
-    if result is None:
-        raise Exception(result)
-    return True
+def get_point_categories() -> list[dict[str, Any]]:
+    """Return the source category of a specific point source by name"""
+    return execute_sql(
+        """
+            SELECT *
+            FROM default_stationary_category
+            ORDER BY category_name COLLATE NOCASE
+        """,
+        fetchone=False,
+    )
 
 
-@catch_errors
-def get_point_source(source_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_point_source(source_id)
-    if isinstance(result, str):
-        raise Exception("Stationary source could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
+def get_point_type(type_name: str) -> dict[str, Any]:
+    """Get the specific point type of a point source based on the type name"""
+    return execute_sql(
+        """
+            SELECT *
+            FROM default_stationary_ef
+            WHERE description = ?
+        """,
+        [type_name],
+    )
 
 
-@catch_errors
-def get_point_sources():
-    """
-    Description
-    """
-    result = alaqsdblite.get_point_sources()
-    if isinstance(result, str):
-        raise Exception("Sources could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_point_category(category_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_point_category(category_id)
-    if isinstance(result, str):
-        raise Exception("Stationary category could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_point_categories():
-    """
-    Description
-    """
-    result = alaqsdblite.get_point_categories()
-    if isinstance(result, str):
-        raise Exception("Source categories could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_point_type(type_name):
-    """
-    Description
-    """
-    result = alaqsdblite.get_point_type(type_name)
-    if isinstance(result, str):
-        raise Exception("Type details could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_point_types(category_number):
-    """
-    Description
-    """
-    result = alaqsdblite.get_point_types(category_number)
-    if isinstance(result, str):
-        raise Exception("Category types could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
+def get_point_types(category_number: int) -> list[dict[str, Any]]:
+    """Return all point types from the currently active study"""
+    return execute_sql(
+        """
+            SELECT *
+            FROM default_stationary_ef
+            WHERE category = ?
+        """,
+        [category_number],
+        fetchone=False,
+    )
 
 
 # #######################

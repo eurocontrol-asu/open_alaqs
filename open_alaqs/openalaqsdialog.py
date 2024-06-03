@@ -199,8 +199,8 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.iface = iface
 
         self.ui.comboBoxAirportCode.addItem("")
-        for code in alaqs.get_airport_codes():
-            self.ui.comboBoxAirportCode.addItem(code[0])
+        for airport in alaqs.get_airport_codes():
+            self.ui.comboBoxAirportCode.addItem(airport["airport_code"])
 
         # Define some of the variables that are used throughout the class
         self.project_name = None
@@ -230,7 +230,6 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             self.close
         )
 
-    @catch_errors
     def load_study_data(self):
         """
         This function loads an existing study from a Spatialite database into
