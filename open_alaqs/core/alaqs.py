@@ -377,35 +377,6 @@ def get_buildings():
     return result
 
 
-# ######################
-# ###### PROFILES ######
-# ######################
-
-
-@catch_errors
-def add_hourly_profile_dict(hourly_profile_dict):
-    result = alaqsdblite.add_hourly_profile_dict(hourly_profile_dict)
-    if result is not True:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def add_daily_profile_dict(daily_profile_dict):
-    result = alaqsdblite.add_daily_profile_dict(daily_profile_dict)
-    if result is None or result == []:
-        raise Exception(result)
-    return True
-
-
-@catch_errors
-def add_monthly_profile_dict(monthly_profile_dict):
-    result = alaqsdblite.add_monthly_profile_dict(monthly_profile_dict)
-    if result is None or result == []:
-        raise Exception(result)
-    return result
-
-
 @catch_errors
 def get_hourly_profiles():
     """
