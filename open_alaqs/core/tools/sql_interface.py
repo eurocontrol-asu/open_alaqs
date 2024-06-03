@@ -71,32 +71,6 @@ def query_text(database_path, sql_text):
             pass
 
 
-def pd_query_text(database_path, sql_text):
-    """
-    Execute a query against a given SQLite database using Pandas
-    :param database_path: the path to the database that is being queried
-    :param sql_text: the SQL text to be executed
-    :return data: the result of the query
-    :raise ValueError: if database returns a string (error) instead of list
-    """
-    import pandas as pd
-
-    try:
-        # Create a connection
-        conn = connect(database_path)
-        conn.text_factory = str
-        data = pd.read_sql(sql_text, conn)
-        if not data.empty:
-            return data
-        elif data.empty:
-            return True
-        else:
-            raise TypeError("Query returned an error: %s" % data)
-    except Exception as e:
-        logger.error("Query could not be completed: %s" % e)
-        return None
-
-
 def hasTable(database_path, table_name):
     """
     Check if a database at path
@@ -173,7 +147,18 @@ def execute_sql(
     sql: str,
     params: Optional[list] = None,
     fetchone: bool = True,
-):
+) -> Optional[Union[dict[str, Any], list[dict[str, Any]]]]:
+    """Executes SQL statement and returns the resulting row.
+
+    Args:
+        db_filename (str): filename of the database
+        sql (str): SQL query statement
+        params (Optional[list], optional): Optional list of parameters that will replace the `?` placeholders in the SQL. Defaults to None.
+        fetchone (bool, optional): Fetch only one row or all rows. Defaults to True.
+
+    Returns:
+        dict[str, Any] | list[dict[str, Any] | None: A single row as a dict, multiple rows if `fetchone=False`, or None if no rows available.
+    """
     params = params or []
 
     with get_db_connection(db_filename) as conn:
@@ -193,7 +178,7 @@ def execute_sql(
             else:
                 return dict(result)
         else:
-            return cur.fetchall()
+            return [dict(r) for r in cur.fetchall()]
 
 
 def perform_sql(
@@ -201,6 +186,13 @@ def perform_sql(
     sql: str,
     params: Optional[list] = None,
 ) -> None:
+    """Performs SQL statement and returns None.
+
+    Args:
+        db_filename (str): filename of the database
+        sql (str): SQL query statement
+        params (Optional[list], optional): Optional list of paramaeters that will replace the `?` placeholders in the SQL. Defaults to None.
+    """
     if not params:
         params = []
 
@@ -212,6 +204,7 @@ def perform_sql(
 
 
 def quote_identifier(identifier: str) -> str:
+    """Quotes identifiers, e.g. table or column names."""
     return f'''"{identifier.replace('"', '""')}"'''
 
 
