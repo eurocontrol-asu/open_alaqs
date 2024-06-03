@@ -203,6 +203,7 @@ def get_gates() -> list[dict[str, Any]]:
             FROM shapes_gates
             ORDER BY gate_id COLLATE NOCASE
         """,
+        fetchone=False,
     )
 
 
@@ -213,7 +214,8 @@ def get_runways() -> list[dict[str, Any]]:
             SELECT *, AsText(geometry) AS geometry
             FROM shapes_runways
             ORDER BY runway_id COLLATE NOCASE
-        """
+        """,
+        fetchone=False,
     )
 
 
