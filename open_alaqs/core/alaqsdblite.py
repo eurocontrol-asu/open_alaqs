@@ -426,50 +426,6 @@ def add_taxiway_route(taxiway_route):
 
 
 # #################################################
-# #########          TRACKS           #############
-# #################################################
-
-
-def get_track(track_id):
-    """
-    Return data on a specific track based on the track_id (name)
-    :param: track_id: the name of the track to look up
-    """
-    try:
-        sql_text = (
-            "SELECT track_id,runway,departure_arrival,points,AsText(geometry) FROM shapes_tracks WHERE "
-            'track_id="%s";' % track_id
-        )
-        result = query_string(sql_text)
-        return result
-    except Exception as e:
-        error = alaqsutils.print_error(get_track.__name__, Exception, e, log=logger)
-        return error
-
-
-def get_tracks():
-    """
-    Return data on all tracks in the current study
-    """
-    try:
-        sql_text = (
-            "SELECT track_id,runway,departure_arrival,points,AsText(geometry) FROM shapes_tracks "
-            "ORDER BY track_id COLLATE NOCASE;"
-        )
-        result = query_string(sql_text)
-        if len(result) > 0:
-            return result
-        else:
-            if result is []:
-                return None
-            else:
-                raise Exception(result)
-    except Exception as e:
-        error = alaqsutils.print_error(get_tracks.__name__, Exception, e, log=logger)
-        return error
-
-
-# #################################################
 # #########          PROFILES         #############
 # #################################################
 

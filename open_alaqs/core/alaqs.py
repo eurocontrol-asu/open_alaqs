@@ -249,37 +249,6 @@ def add_taxiway_route(taxiway_route):
     return None
 
 
-#  ####################
-#  ###### TRACKS ######
-#  ####################
-
-
-@catch_errors
-def get_track(track_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_track(track_id)
-    if isinstance(result, str):
-        raise Exception("Track could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_tracks():
-    """
-    Description
-    """
-    result = alaqsdblite.get_tracks()
-    if isinstance(result, str):
-        raise Exception("Tracks could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
 def get_point_category(category_id: str) -> dict[str, Any]:
     """Return the source category of a specific point source by category id."""
     return execute_sql(
