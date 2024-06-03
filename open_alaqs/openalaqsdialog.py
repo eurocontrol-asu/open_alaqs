@@ -61,6 +61,7 @@ from open_alaqs.core.tools.csv_interface import (
     read_csv_to_geodataframe,
 )
 from open_alaqs.core.utils.osm import download_osm_airport_data
+from open_alaqs.core.utils.qt import populate_combobox
 from open_alaqs.enums import AlaqsLayerType
 
 logger = get_logger(__name__)
@@ -255,50 +256,22 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             # TODO OPENGIS.ch: remove the Vertical limit from the form, use the one in the Emission Inventory Analysis only
             self.ui.spinBoxVerticalLimit.setValue(study_data["vertical_limit"])
 
-            roadway_methods = alaqs.get_roadway_methods()
-            if roadway_methods is not None:
-                self.ui.comboBoxRoadwayMethod.clear()
-                for method in roadway_methods:
-                    self.ui.comboBoxRoadwayMethod.addItem(method)
-                index = self.ui.comboBoxRoadwayMethod.findText(
-                    study_data["roadway_method"]
-                )
-                if index == -1:
-                    if self.ui.comboBoxRoadwayMethod.count():
-                        self.ui.comboBoxRoadwayMethod.setCurrentIndex(0)
-                if index != -1:
-                    self.ui.comboBoxRoadwayMethod.setCurrentIndex(index)
-
-            roadway_fleet_years = alaqs.get_roadway_fleet_years()
-            if roadway_fleet_years is not None:
-                self.ui.comboBoxRoadwayFleetYear.clear()
-                for year in roadway_fleet_years:
-                    self.ui.comboBoxRoadwayFleetYear.addItem(year)
-                fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText(
-                    str(study_data["roadway_fleet_year"])
-                )
-                if fleet_year_index == -1:
-                    fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText("2020")
-                if fleet_year_index != -1:
-                    self.ui.comboBoxRoadwayFleetYear.setCurrentIndex(fleet_year_index)
-
-            roadway_countries = alaqs.get_roadway_countries()
-            if roadway_countries is not None:
-                self.ui.comboBoxRoadwayCountry.clear()
-                for country in roadway_countries:
-                    self.ui.comboBoxRoadwayCountry.addItem(country)
-
-                roadway_country_index = self.ui.comboBoxRoadwayCountry.findText(
-                    study_data["roadway_country"]
-                )
-                if roadway_country_index == -1:
-                    roadway_country_index = self.ui.comboBoxRoadwayCountry.findText(
-                        "EU27"
-                    )
-                if roadway_country_index != -1:
-                    self.ui.comboBoxRoadwayCountry.setCurrentIndex(
-                        roadway_country_index
-                    )
+            populate_combobox(
+                self.ui.comboBoxRoadwayMethod,
+                alaqs.get_roadway_methods(),
+            )
+            populate_combobox(
+                self.ui.comboBoxRoadwayFleetYear,
+                (str(r["fleet_year"]) for r in alaqs.get_roadway_fleet_years()),
+                study_data["roadway_country"],
+                "2020",
+            )
+            populate_combobox(
+                self.ui.comboBoxRoadwayCountry,
+                (str(r["country"]) for r in alaqs.get_roadway_countries()),
+                study_data["roadway_country"],
+                "EU27",
+            )
 
             self.ui.textEditStudyInformation.setPlainText(study_data["study_info"])
 

@@ -143,45 +143,35 @@ def airport_lookup(icao_code: str) -> Optional[AirportDict]:
 # ######################
 
 
-@catch_errors
-def add_roadway_dict(roadway_dict):
-    result = alaqsdblite.add_roadway_dict(roadway_dict)
-    if result is not True:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def get_roadway_methods():
+def get_roadway_methods() -> tuple[str]:
     """
     Get a list of available roadway methods from the database
     """
-    result = alaqsdblite.get_roadway_methods()
-    if result is None:
-        raise Exception("No roadway methods were returned from this database")
-    return result
+    return ("COPERT 5",)
 
 
-@catch_errors
-def get_roadway_countries():
-    """
-    Get a list of countries available for roadway modelling
-    """
-    result = alaqsdblite.get_roadway_countries()
-    if result is None:
-        raise Exception("No roadway methods were returned from this database")
-    return result
+def get_roadway_countries() -> list[dict[str]]:
+    """Get a list of countries available for roadway modelling"""
+    return execute_sql(
+        """
+            SELECT DISTINCT(country)
+            FROM default_vehicle_fleet_euro_standards
+            ORDER BY country
+        """,
+        fetchone=False,
+    )
 
 
-@catch_errors
 def get_roadway_fleet_years():
-    """
-    Get a list of years available for roadway modelling
-    """
-    result = alaqsdblite.get_roadway_years()
-    if result is None:
-        raise Exception("No roadway fleet years were returned from this database")
-    return result
+    """Get a list of years available for roadway modelling"""
+    return execute_sql(
+        """
+            SELECT DISTINCT(fleet_year)
+            FROM default_vehicle_fleet_euro_standards
+            ORDER BY country
+        """,
+        fetchone=False,
+    )
 
 
 @catch_errors
@@ -207,7 +197,6 @@ def get_gates() -> list[dict[str, Any]]:
     )
 
 
-@catch_errors
 def get_runways() -> list[dict[str, Any]]:
     return execute_sql(
         """
