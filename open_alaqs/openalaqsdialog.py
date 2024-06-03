@@ -2676,7 +2676,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             grid_config=grid_configuration,
             start_dt=datetime.fromisoformat(em_config["start_dt_inclusive"]),
             end_dt=datetime.fromisoformat(em_config["end_dt_inclusive"]),
-            time_interval_mins=conversion.convertToInt(em_config["time_interval_mins"]),
+            time_interval=timedelta(minutes=int(em_config["time_interval_mins"])),
         )
 
         em_config = self._emission_calculation_configuration_widget.get_values()
