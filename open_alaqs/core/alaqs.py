@@ -206,43 +206,15 @@ def get_gates() -> list[dict[str, Any]]:
     )
 
 
-# #####################
-# ###### RUNWAYS ######
-# #####################
-
-
 @catch_errors
-def add_runway_dict(runway_dict):
-    result = alaqsdblite.add_runway_dict(runway_dict)
-    if result is not True:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def get_runway(runway_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_runway(runway_id)
-    if isinstance(result, str):
-        raise Exception("Runway could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_runways():
-    """
-    Description
-    """
-    result = alaqsdblite.get_runways()
-    if isinstance(result, str):
-        raise Exception("Runways could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
+def get_runways() -> list[dict[str, Any]]:
+    return execute_sql(
+        """
+            SELECT *, AsText(geometry) AS geometry
+            FROM shapes_runways
+            ORDER BY runway_id COLLATE NOCASE
+        """
+    )
 
 
 # ######################

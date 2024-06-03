@@ -501,96 +501,6 @@ def get_roadways():
 
 
 # #################################################
-# #########         RUNWAYS            ############
-# #################################################
-
-
-def add_runway_dict(runway_dict):
-    try:
-        # Split out and validate runway properties
-        p0 = runway_dict["runway_id"]
-        p1 = runway_dict["runway_capacity"]
-        p2 = runway_dict["runway_touchdown"]
-        p3 = runway_dict["runway_max_queue_speed"]
-        p4 = runway_dict["runway_peak_queue_time"]
-        p5 = runway_dict["runway_instudy"]
-        p6 = runway_dict["runway_wkt"]
-
-        # Check if gate already exists
-        sql_text = "SELECT * FROM shapes_runways WHERE runway_id='%s';" % p0.replace(
-            "'", ""
-        )
-        result = query_string(sql_text)
-
-        if isinstance(result, str):
-            raise Exception("Problem saving runway: %s" % result)
-        elif result is None or result == []:
-            sql_text = (
-                "INSERT INTO shapes_runways (runway_id, capacity, touchdown, max_queue_speed, peak_queue_time, "
-                "instudy, geometry) VALUES ('%s','%s','%s','%s','%s','%s',"
-                "ST_Transform(GeomFromText('%s', 4326), 3857))"
-                % (p0, p1, p2, p3, p4, p5, p6)
-            )
-            logger.info("Added runway %s to database" % p0)
-        else:
-            sql_text = (
-                "UPDATE shapes_runways SET runway_id='%s', capacity='%s', touchdown='%s', max_queue_speed='%s', "
-                "peak_queue_time='%s',instudy='%s', geometry=ST_Transform(GeomFromText('%s', 4326), 3857) "
-                "WHERE runway_id='%s';" % (p0, p2, p1, p3, p4, p5, p6, p0)
-            )
-            logger.info("Updated runway %s in database" % p0)
-
-        result = query_string(sql_text)
-        if result is None or result == []:
-            return True
-        else:
-            raise Exception(result)
-    except Exception as e:
-        error = alaqsutils.print_error(
-            add_runway_dict.__name__, Exception, e, log=logger
-        )
-        return error
-
-
-def get_runway(runway_id):
-    """
-    Return data on a specific runway based on the runway_id (name)
-    """
-    try:
-        sql_text = (
-            "SELECT runway_id, max_queue_speed, peak_queue_time, instudy, AsText(geometry) FROM "
-            'shapes_runways WHERE runway_id="%s";' % runway_id
-        )
-        result = query_string(sql_text)
-        return result
-    except Exception as e:
-        error = alaqsutils.print_error(get_roadway.__name__, Exception, e, log=logger)
-        return error
-
-
-def get_runways():
-    """
-    Return data on all runways in the current study
-    """
-    try:
-        sql_text = (
-            "SELECT runway_id, max_queue_speed, peak_queue_time, instudy, AsText(geometry) FROM "
-            "shapes_runways ORDER BY runway_id COLLATE NOCASE;"
-        )
-        result = query_string(sql_text)
-        if len(result) > 0:
-            return result
-        else:
-            if result is None or result == []:
-                return None
-            else:
-                raise Exception(result)
-    except Exception as e:
-        error = alaqsutils.print_error(get_runways.__name__, Exception, e, log=logger)
-        return error
-
-
-# #################################################
 # #########           TAXIWAYS         ############
 # #################################################
 
@@ -767,7 +677,7 @@ def get_taxiways():
             else:
                 raise Exception(result)
     except Exception as e:
-        error = alaqsutils.print_error(get_runways.__name__, Exception, e, log=logger)
+        error = alaqsutils.print_error(get_taxiways.__name__, Exception, e, log=logger)
         return error
 
 
