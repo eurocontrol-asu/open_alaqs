@@ -378,53 +378,6 @@ def get_buildings():
 
 
 # ######################
-# ###### PARKINGS ######
-# ######################
-
-
-@catch_errors
-def add_parking(parking_dict):
-    """ "
-    This function is used to add a new building to the currently active
-     database. This is used only when the tool is being used independently of
-     QGIS.
-    :param parking_dict: a dictionary of building properties in format defined
-     by new_building()
-    :return: True if successful
-    """
-    result = alaqsdblite.add_parking(parking_dict)
-    if result is not True:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def get_parking(parking_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_parking(parking_id)
-    if isinstance(result, str):
-        raise Exception("Parking could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_parkings():
-    """
-    Description
-    """
-    result = alaqsdblite.get_parkings()
-    if isinstance(result, str):
-        raise Exception("Parkings could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-# ######################
 # ###### PROFILES ######
 # ######################
 
