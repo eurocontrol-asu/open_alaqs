@@ -13,12 +13,12 @@ the database layer.
 @author: Dan Pearce (it@env-isa.com)
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 from open_alaqs.core import alaqsdblite, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools.create_output import create_alaqs_output
-from open_alaqs.core.tools.sql_interface import SqlExpression, update_table
+from open_alaqs.core.tools.sql_interface import SqlExpression, execute_sql, update_table
 from open_alaqs.typing import AirportDict, StudySetup
 
 logger = get_logger(__name__)
@@ -207,43 +207,16 @@ def get_roadway_euro_standards(country: str, fleet_year: str) -> dict:
     return result
 
 
-# ###################
-# ###### GATES ######
-# ###################
-
-
-@catch_errors
-def add_gate_dict(gate_dict):
-    result = alaqsdblite.add_gate_dict(gate_dict)
-    if result is not True:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def get_gate(gate_name):
-    """
-    Get data on a specific gate based on the gate name.
-    """
-    result = alaqsdblite.get_gate(gate_name)
-    if isinstance(result, str):
-        raise Exception("Gate could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_gates():
-    """
-    Return data on all gates defined in the currently active alaqs study
-    """
-    result = alaqsdblite.get_gates()
-    if isinstance(result, str):
-        raise Exception("Gates could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
+def get_gates() -> list[dict[str, Any]]:
+    """Return data on all gates defined in the currently active alaqs study"""
+    return execute_sql(
+        alaqsdblite.ProjectDatabase().path,
+        """
+            SELECT *
+            FROM shapes_gates
+            ORDER BY gate_id COLLATE NOCASE
+        """,
+    )
 
 
 # #####################
