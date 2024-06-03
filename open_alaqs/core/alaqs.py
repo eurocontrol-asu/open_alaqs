@@ -515,16 +515,6 @@ def add_monthly_profile(properties):
     return result
 
 
-@catch_errors
-def get_lasport_scenarios():
-    result = alaqsdblite.get_lasport_scenarios()
-    if isinstance(result, str):
-        raise Exception("Lasport scenarios could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
 # #############################
 # ###### BUILD INVENTORY ######
 # #############################

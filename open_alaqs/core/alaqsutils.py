@@ -11,7 +11,6 @@ import sys
 import traceback
 
 from qgis.core import Qgis, QgsMessageLog
-from qgis.utils import spatialite_connect
 
 from open_alaqs.core import alaqsdblite
 from open_alaqs.core.alaqslogging import get_logger
@@ -476,34 +475,6 @@ def dict_gate_profile(gate_data):
     except Exception as e:
         error = print_error(dict_gate_profile.__name__, Exception, e)
         return error
-
-
-def get_linestring_length(database_path, table_name, feature_id, feature_name):
-    """
-    Calculates the length of a linear feature in meters
-
-    :param table_name: the name of the table containing the shape's geometry
-    :param feature_name: the name of the feature whose length is required
-    :return: length: in meters
-    :rtype: float
-    """
-    try:
-        conn = spatialite_connect(database_path)
-        curs = conn.cursor()
-        sql = 'SELECT GLength(geometry) FROM %s WHERE %s="%s";' % (
-            table_name,
-            feature_id,
-            feature_name,
-        )
-        curs.execute(sql)
-        # print
-        data = curs.fetchall()
-        conn.close()
-        length = float(data[0][0]) / 1000
-        return length
-    except Exception as e:
-        print_error(get_linestring_length.__name__, Exception, e)
-        return None
 
 
 def inventory_time_series(inventory_path):
