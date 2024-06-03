@@ -8,12 +8,17 @@ def populate_combobox(
     values: Iterable[str],
     value: Optional[str] = None,
     fallback_value: Optional[str] = None,
+    add_empty: bool = False,
 ):
     combobox.clear()
 
     values = list(values)
 
+    if add_empty:
+        combobox.addItem(None)
+
     if not values:
+        combobox.setCurrentIndex(0)
         return
 
     if fallback_value is not None and fallback_value not in values:
