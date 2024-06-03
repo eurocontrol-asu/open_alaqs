@@ -1683,11 +1683,15 @@ class Movement:
         taxi_geom = QgsGeometry.fromWkt(
             self.getTaxiRoute().getSegmentsAsLineString().wkt
         )
-        runway_intersection_projected = (
-            runway_geom.buffer(1, 10).intersection(taxi_geom).centroid()
+        # NOTE QGIS 3.34.2 is returning and empty geometry and newer QGIS is returning a null geometry
+        runway_intersection_projected = runway_geom.buffer(1, 10).intersection(
+            taxi_geom
         )
 
-        if runway_intersection_projected.isNull():
+        if (
+            runway_intersection_projected.isNull()
+            or runway_intersection_projected.isEmpty()
+        ):
             # TODO OPENGIS.ch: in addition to just logging here,
             # make sure the taxiway and the runway are intersecting, otherwise you cannot save the Movement
             logger.error(
@@ -1698,7 +1702,7 @@ class Movement:
             runway_intersection_geographic = tr.transform(runway_backup_point)
         else:
             runway_intersection_geographic = tr.transform(
-                runway_intersection_projected.asPoint()
+                runway_intersection_projected.centroid().asPoint()
             )
 
         if not self.has_track():
