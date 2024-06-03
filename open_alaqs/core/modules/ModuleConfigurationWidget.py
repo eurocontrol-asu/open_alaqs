@@ -172,6 +172,8 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                 setting_widget, QgsSpinBox
             ):
                 value = setting_widget.value()
+            elif isinstance(setting_widget, QgsFileWidget):
+                value = setting_widget.filePath()
             elif isinstance(
                 setting_widget, (QtWidgets.QHBoxLayout, QtWidgets.QVBoxLayout)
             ):
@@ -230,6 +232,8 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                 setting_widget.setValue(float(value))
             elif isinstance(setting_widget, QgsSpinBox):
                 setting_widget.setValue(int(value))
+            elif isinstance(setting_widget, QgsFileWidget):
+                setting_widget.setFilePath(value)
             else:
                 logger.error(
                     "Did not find method to set values to widget of type '%s'!",
