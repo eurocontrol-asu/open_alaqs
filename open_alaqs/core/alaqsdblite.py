@@ -10,7 +10,7 @@ from qgis.utils import spatialite_connect
 from open_alaqs.alaqs_config import ALAQS_ROOT_PATH, ALAQS_TEMPLATE_DB_FILENAME
 from open_alaqs.core import alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.tools.sql_interface import db_execute_sql
+from open_alaqs.core.tools.sql_interface import db_execute_sql, db_update_table
 
 logger = get_logger(__name__)
 
@@ -63,6 +63,19 @@ def execute_sql(
         dict[str, Any] | list[dict[str, Any] | None: A single row as a dict, multiple rows if `fetchone=False`, or None if no rows available.
     """
     return db_execute_sql(ProjectDatabase().path, sql, params, fetchone)
+
+
+def update_table(
+    table_name: str,
+    attribute_values: dict[str, Any],
+    where_values: dict[str, Any],
+) -> list[sqlite.Row]:
+    return db_update_table(
+        ProjectDatabase().path,
+        table_name,
+        attribute_values,
+        where_values,
+    )
 
 
 def connectToDatabase(database_path):

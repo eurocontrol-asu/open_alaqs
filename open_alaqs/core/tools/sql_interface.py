@@ -208,12 +208,12 @@ def quote_identifier(identifier: str) -> str:
     return f'''"{identifier.replace('"', '""')}"'''
 
 
-def update_table(
+def db_update_table(
     db_filename: str,
     table_name: str,
     attribute_values: dict[str, Any],
     where_values: dict[str, Any],
-) -> list[sqlite.Row]:
+) -> list[dict[str, Any]]:
     attribute_expression_pairs = []
     values = []
 
@@ -256,7 +256,7 @@ def update_table(
             WHERE {where_values_str}
         """
 
-    return db_execute_sql(db_filename, sql, values)
+    return db_execute_sql(db_filename, sql, values, False)
 
 
 def insert_into_table(

@@ -16,10 +16,10 @@ the database layer.
 from typing import Any, Optional
 
 from open_alaqs.core import alaqsdblite, alaqsutils
-from open_alaqs.core.alaqsdblite import execute_sql
+from open_alaqs.core.alaqsdblite import execute_sql, update_table
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools.create_output import create_alaqs_output
-from open_alaqs.core.tools.sql_interface import SqlExpression, update_table
+from open_alaqs.core.tools.sql_interface import SqlExpression
 from open_alaqs.typing import AirportDict, StudySetup
 
 logger = get_logger(__name__)
@@ -93,7 +93,6 @@ def save_study_setup(study_setup: StudySetup) -> None:
             raise Exception("Study setup parameters cannot be blank")
 
     update_table(
-        alaqsdblite.ProjectDatabase().path,
         "user_study_setup",
         {
             **study_setup,
