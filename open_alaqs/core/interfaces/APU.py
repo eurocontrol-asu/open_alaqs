@@ -86,9 +86,6 @@ class APU:
     def getName(self):
         return self._apu_id
 
-    def setName(self, val):
-        self._apu_id = val
-
     def getModes(self):
         return list(self._emissions.keys())
 

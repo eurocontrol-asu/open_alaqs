@@ -22,7 +22,6 @@ class Gate:
             else 0.0
         )
 
-        self._instudy = int(val["instudy"]) if "instudy" in val else 1
         self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
 
         if self._geometry_text and self._height is not None:
@@ -34,9 +33,6 @@ class Gate:
 
     def getName(self):
         return self._id
-
-    def setName(self, val):
-        self._id = val
 
     def getEmissionProfiles(self):
         return self._emission_profiles
@@ -132,12 +128,6 @@ class Gate:
     def setGeometryText(self, val):
         self._geometry_text = val
 
-    def getInStudy(self):
-        return self._instudy
-
-    def setInStudy(self, val):
-        self._instudy = val
-
     def __str__(self):
         val = "\n Gate with id '%s'" % (self.getName())
         val += "\n\t Type: %s" % (self.getType())
@@ -147,7 +137,6 @@ class Gate:
                 [str(x).replace("\n", "\n\t\t") for x in self.getEmissionProfiles()]
             )
         )
-        val += "\n\t Instudy: %i" % (self.getInStudy())
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 
