@@ -16,13 +16,10 @@ the database layer.
 from typing import Any, Optional
 
 from open_alaqs.core import alaqsdblite, alaqsutils
+from open_alaqs.core.alaqsdblite import execute_sql
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools.create_output import create_alaqs_output
-from open_alaqs.core.tools.sql_interface import (
-    SqlExpression,
-    db_execute_sql,
-    update_table,
-)
+from open_alaqs.core.tools.sql_interface import SqlExpression, update_table
 from open_alaqs.typing import AirportDict, StudySetup
 
 logger = get_logger(__name__)
@@ -71,18 +68,8 @@ def create_project(database_name):
 
 @catch_errors
 def load_study_setup() -> StudySetup:
-    """Load project data for the current ALAQS study.
-
-    Returns:
-        sqlite3.Row - resulting user study setup
-    """
-    return alaqsdblite.db_execute_sql(
-        alaqsdblite.ProjectDatabase().path,
-        """
-            SELECT *
-            FROM user_study_setup
-        """,
-    )
+    """Load project data for the current ALAQS study."""
+    return execute_sql("SELECT * FROM user_study_setup")
 
 
 @catch_errors
@@ -121,8 +108,7 @@ def save_study_setup(study_setup: StudySetup) -> None:
 @catch_errors
 def get_airport_codes() -> list[str]:
     """Return a list of airport ICAO codes"""
-    return alaqsdblite.db_execute_sql(
-        alaqsdblite.ProjectDatabase().path,
+    return execute_sql(
         """
             SELECT airport_code
             FROM default_airports
@@ -142,8 +128,7 @@ def airport_lookup(icao_code: str) -> Optional[AirportDict]:
     Returns:
         AirportDict | None: airport data
     """
-    return alaqsdblite.db_execute_sql(
-        alaqsdblite.ProjectDatabase().path,
+    return execute_sql(
         """
             SELECT *
             FROM default_airports
@@ -213,8 +198,7 @@ def get_roadway_euro_standards(country: str, fleet_year: str) -> dict:
 
 def get_gates() -> list[dict[str, Any]]:
     """Return data on all gates defined in the currently active alaqs study"""
-    return db_execute_sql(
-        alaqsdblite.ProjectDatabase().path,
+    return execute_sql(
         """
             SELECT *
             FROM shapes_gates

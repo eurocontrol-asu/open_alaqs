@@ -2,6 +2,7 @@ import datetime
 import shutil
 import sqlite3 as sqlite
 from pathlib import Path
+from typing import Any, Optional, Union
 
 import pandas as pd
 from qgis.utils import spatialite_connect
@@ -44,6 +45,24 @@ class Singleton(type):
 
 class ProjectDatabase(metaclass=Singleton):
     path: str
+
+
+def execute_sql(
+    sql: str,
+    params: Optional[list] = None,
+    fetchone: bool = True,
+) -> Optional[Union[dict[str, Any], list[dict[str, Any]]]]:
+    """Executes SQL statement and returns the resulting row on the currently opened project.
+
+    Args:
+        sql (str): SQL query statement
+        params (Optional[list], optional): Optional list of parameters that will replace the `?` placeholders in the SQL. Defaults to None.
+        fetchone (bool, optional): Fetch only one row or all rows. Defaults to True.
+
+    Returns:
+        dict[str, Any] | list[dict[str, Any] | None: A single row as a dict, multiple rows if `fetchone=False`, or None if no rows available.
+    """
+    return db_execute_sql(ProjectDatabase().path, sql, params, fetchone)
 
 
 def connectToDatabase(database_path):
@@ -185,8 +204,7 @@ def create_project_database(alaqs_db_filename: str) -> None:
     logger.info("[+] Created a blank ALAQS study file in %s", alaqs_db_filename)
 
     # Update the study created date to now
-    db_execute_sql(
-        alaqs_db_filename,
+    execute_sql(
         """
             UPDATE user_study_setup SET date_created = DATETIME('now')
         """,
