@@ -2205,12 +2205,20 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 "options": ["none", "default", "smooth & shift"],
             },
         },
-        "time_interval_mins": {
-            "label": "Time Interval (mins)",
+        "time_interval": {
+            "label": "Time Interval",
             "widget_type": QtWidgets.QComboBox,
-            "initial_value": "60",
+            "initial_value": "3600",
             "widget_config": {
-                "options": ["15", "30", "45", "60"],
+                "options": [
+                    ("60", "1 minute"),
+                    ("300", "5 minutes"),
+                    ("600", "10 minutes"),
+                    ("900", "15 minutes"),
+                    ("1200", "20 minutes"),
+                    ("1800", "30 minutes"),
+                    ("3600", "1 hour"),
+                ],
             },
         },
         "vertical_limit_m": {
@@ -2668,7 +2676,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             grid_config=grid_configuration,
             start_dt=datetime.fromisoformat(em_config["start_dt_inclusive"]),
             end_dt=datetime.fromisoformat(em_config["end_dt_inclusive"]),
-            time_interval_mins=conversion.convertToInt(em_config["time_interval_mins"]),
+            time_interval=timedelta(seconds=int(em_config["time_interval"])),
         )
 
         em_config = self._emission_calculation_configuration_widget.get_values()

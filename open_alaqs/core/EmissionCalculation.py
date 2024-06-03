@@ -40,7 +40,7 @@ class EmissionCalculation:
         grid_config: GridConfig,
         start_dt: datetime,
         end_dt: datetime,
-        time_interval_mins: int,
+        time_interval: timedelta,
     ) -> None:
         assert db_path
 
@@ -50,7 +50,7 @@ class EmissionCalculation:
         # Get the time series for this inventory
         self._start_dt = start_dt
         self._end_dt = end_dt
-        self._time_interval_mins = time_interval_mins
+        self._time_interval = time_interval
         self._inventoryTimeSeriesStore = InventoryTimeSeriesStore(self._database_path)
         self._emissions = {}
         self._source_modules = {}
@@ -272,12 +272,11 @@ class EmissionCalculation:
         return self._database_path
 
     def getTimeSeries(self):
-        interval = timedelta(minutes=self._time_interval_mins)
         dt = self._start_dt
         while dt >= self._start_dt and dt <= self._end_dt:
             yield dt
 
-            dt += interval
+            dt += self._time_interval
 
     def get3DGrid(self):
         return self._grid

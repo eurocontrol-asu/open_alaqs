@@ -3,6 +3,8 @@ This class provides all of the calculation methods required to perform
 emissions calculations for area sources.
 """
 
+import datetime
+
 from open_alaqs.core.interfaces.AreaSources import AreaSourcesStore
 from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.SourceModule import SourceWithTimeProfileModule
@@ -30,13 +32,19 @@ class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
         # super(AreaSourceWithTimeProfileModule, self).beginJob()
         SourceWithTimeProfileModule.beginJob(self)
 
-    def process(self, start_dt, _end_dt, source_names=None, **kwargs):
+    def process(
+        self,
+        start_dt: datetime,
+        end_dt: datetime,
+        source_names: list[str] = None,
+        **kwargs
+    ):
         if source_names is None:
             source_names = []
 
         result_ = []
 
-        for source_id, source in list(self.getSources().items()):
+        for source_id, source in self.getSources().items():
             if (
                 source_names
                 and ("all" not in source_names)
@@ -44,8 +52,9 @@ class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
             ):
                 continue
 
-            activity_multiplier = self.getRelativeActivityPerHour(
+            activity_multiplier = self.getEmissionsForTimePeriod(
                 start_dt,
+                end_dt,
                 source.getUnitsPerYear(),
                 source.getHourProfile(),
                 source.getDailyProfile(),
