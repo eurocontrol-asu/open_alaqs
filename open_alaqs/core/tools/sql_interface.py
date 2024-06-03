@@ -208,6 +208,29 @@ def quote_identifier(identifier: str) -> str:
     return f'''"{identifier.replace('"', '""')}"'''
 
 
+def build_where_sql(where_values: dict[str, Any]) -> tuple[str, list[Any]]:
+    where_expression_pairs = []
+    params = []
+
+    for attr_name, attr_value in where_values.items():
+        if isinstance(attr_value, SqlExpression):
+            expression = attr_value.expression
+            params += attr_value.values
+        else:
+            expression = "?"
+            params.append(attr_value)
+
+        where_expression_pairs.append(f"{quote_identifier(attr_name)} = {expression}")
+
+    where_values_str = " AND ".join(where_expression_pairs)
+
+    sql = f"""
+        WHERE {where_values_str}
+    """
+
+    return sql, params
+
+
 def db_update_table(
     db_filename: str,
     table_name: str,
@@ -236,27 +259,28 @@ def db_update_table(
     """
 
     if where_values:
-        where_expression_pairs = []
-
-        for attr_name, attr_value in where_values.items():
-            if isinstance(attr_value, SqlExpression):
-                expression = attr_value.expression
-                values += attr_value.values
-            else:
-                expression = "?"
-                values.append(attr_value)
-
-            where_expression_pairs.append(
-                f"{quote_identifier(attr_name)} = {expression}"
-            )
-
-        where_values_str = " AND ".join(where_expression_pairs)
-
-        sql += f"""
-            WHERE {where_values_str}
-        """
+        where_sql, where_params = build_where_sql(where_values)
+        sql += where_sql
+        values += where_params
 
     return db_execute_sql(db_filename, sql, values, False)
+
+
+def db_delete(
+    db_filename: str,
+    table_name: str,
+    where_values: dict[str, Any],
+) -> None:
+    assert where_values, "Cannot call delete without `where_values`"
+
+    where_sql, where_params = build_where_sql(where_values)
+
+    sql = f"""
+        DELETE FROM {quote_identifier(table_name)}
+        WHERE {where_sql}
+    """
+
+    return db_execute_sql(db_filename, sql, where_params, False)
 
 
 def insert_into_table(
