@@ -2,6 +2,7 @@ from qgis.PyQt import QtWidgets
 
 from open_alaqs.core import alaqs
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.utils.qt import populate_combobox
 
 logger = get_logger(__name__)
 
@@ -119,7 +120,7 @@ def form_open(form, layer, feature):
 @run_once
 def populate_combo_boxes(fields: dict):
     # Populate the arrival/departure field
-    populate_field(field=fields["arrdep_field"], options=["Arrival", "Departure"])
+    populate_combobox(fields["arrdep_field"], ["Arrival", "Departure"])
 
     runways = alaqs.get_runways()
     if runways is None or runways == []:
@@ -133,31 +134,11 @@ def populate_combo_boxes(fields: dict):
         runway_options = []
 
         for runway in runways:
-            directions = runway[0].split("/")
+            directions = runway["runway_id"].split("/")
             for direction in directions:
                 runway_options.append(direction.strip())
 
-        populate_field(field=fields["runway_field"], options=runway_options)
-
-
-def populate_field(field, options: list):
-    """
-    Populate the field.
-    """
-
-    # Make sure the field is empty
-    field.clear()
-    field.addItem(None)
-
-    # Set the options
-    for option in options:
-        field.addItem(option)
-
-    # Set the default option to 0
-    field.setCurrentIndex(0)
-
-    # Make the list un-editable
-    field.setEditable(False)
+        populate_combobox(fields["runway_field"], runway_options, add_empty=True)
 
 
 def validate(fields: dict):

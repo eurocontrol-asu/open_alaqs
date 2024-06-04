@@ -114,7 +114,6 @@ def form_open(form, layer, feature):
 
 
 @run_once
-@catch_errors
 def populate_categories_once(field):
     """
     Populate the categories fields only once
@@ -133,7 +132,7 @@ def populate_categories_once(field):
 
     # Add all categories to the list
     for category in categories:
-        field.addItem(category[2])
+        field.addItem(category["category_name"])
 
     # Set the default category to 0
     field.setCurrentIndex(0)
@@ -154,7 +153,7 @@ def change_category_field(fields: dict, category: str):
     if category_name == "Other":
         # Edit the form fields
         fields["type"].clear()
-        fields["type"].addItem("NA")
+        fields["type"].addItem("")
 
         fields["height"].setEnabled(True)
         fields["substance"].setEnabled(True)
@@ -175,31 +174,13 @@ def change_category_field(fields: dict, category: str):
 
         return
 
-    # Get the data for the selected category
-    category_data = alaqs.get_point_category(category_name)
-
-    if isinstance(category_data, str):
-        raise Exception(
-            "No data was found for the supplied category: %s" % category_data
-        )
-
-    if (category_data is None) or (category_data == []):
-        raise Exception("The selected category returned no data: %s" % category_data)
-
-    # Get the category types
-    category_num = category_data[0][1]
-    category_types = alaqs.get_point_types(category_num)
-
-    if isinstance(category_types, str):
-        raise Exception("Category types could not be returned: %s" % category_types)
-
-    if (category_types == []) or (category_types is None):
-        raise Exception("No category types were returned.")
+    category = alaqs.get_point_category(category_name)
+    category_types = alaqs.get_point_types(category["category"])
 
     # Add all category types to the list
     fields["type"].clear()
     for category_type in category_types:
-        fields["type"].addItem(category_type[7])
+        fields["type"].addItem(category_type["description"])
 
 
 @catch_errors
@@ -221,53 +202,31 @@ def change_type_field(fields: dict, type_name: str):
 
         return None
 
-    # Get the data for the selected category type
-    type_data = alaqs.get_point_type(type_name)
-
-    if isinstance(type_data, str):
-        raise Exception("Could not return category type data: %s" % type_data)
-
-    elif (type_data is None) or (type_data == []):
-        raise Exception("No data could be found for this category.")
-
     # Extract the data
-    data = type_data[0]
-    temperature = data[3]
-    diameter = data[4]
-    velocity = data[5]
-    height = data[6]
-    # description = data[7]
-    co_kg_k = data[8]
-    hc_kg_k = data[9]
-    nox_kg_k = data[10]
-    sox_kg_k = data[11]
-    pm10_kg_k = data[12]
-    p1_kg_k = data[13]
-    p2_kg_k = data[14]
-    substance = data[15]
+    data = alaqs.get_point_type(type_name)
 
     # Edit the form fields
-    fields["height"].setText(str(height))
-    fields["temperature"].setText(str(temperature))
-    fields["diameter"].setText(str(diameter))
-    fields["velocity"].setText(str(velocity))
+    fields["height"].setText(str(data["z"]))
+    fields["temperature"].setText(str(data["temperature"]))
+    fields["diameter"].setText(str(data["diameter"]))
+    fields["velocity"].setText(str(data["velocity"]))
 
-    if substance == 1:
+    if data["SUBSTANCE"] == 1:
         fields["substance"].setText("Solid")
-    elif substance == 2:
+    elif data["SUBSTANCE"] == 2:
         fields["substance"].setText("Liquid")
-    elif substance == 3:
+    elif data["SUBSTANCE"] == 3:
         fields["substance"].setText("Gas")
     else:
         raise Exception("Substance could not be identified for this point type.")
 
-    fields["co_kg_k"].setText(str(co_kg_k))
-    fields["hc_kg_k"].setText(str(hc_kg_k))
-    fields["nox_kg_k"].setText(str(nox_kg_k))
-    fields["sox_kg_k"].setText(str(sox_kg_k))
-    fields["pm10_kg_k"].setText(str(pm10_kg_k))
-    fields["p1_kg_k"].setText(str(p1_kg_k))
-    fields["p2_kg_k"].setText(str(p2_kg_k))
+    fields["co_kg_k"].setText(str(data["co_kg_k"]))
+    fields["hc_kg_k"].setText(str(data["hc_kg_k"]))
+    fields["nox_kg_k"].setText(str(data["nox_kg_k"]))
+    fields["sox_kg_k"].setText(str(data["sox_kg_k"]))
+    fields["pm10_kg_k"].setText(str(data["particulate_kg_k"]))
+    fields["p1_kg_k"].setText(str(data["p1_kg_k"]))
+    fields["p2_kg_k"].setText(str(data["p2_kg_k"]))
 
 
 @catch_errors

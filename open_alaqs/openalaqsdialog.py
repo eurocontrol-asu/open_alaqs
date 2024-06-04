@@ -46,7 +46,7 @@ from qgis.utils import OverrideCursor
 from open_alaqs import openalaqsuitoolkit as oautk
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core import alaqs, alaqsutils
-from open_alaqs.core.alaqsdblite import ProjectDatabase
+from open_alaqs.core.alaqsdblite import ProjectDatabase, delete_records
 from open_alaqs.core.alaqslogging import get_logger, log_path
 from open_alaqs.core.EmissionCalculation import EmissionCalculation
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
@@ -61,6 +61,7 @@ from open_alaqs.core.tools.csv_interface import (
     read_csv_to_geodataframe,
 )
 from open_alaqs.core.utils.osm import download_osm_airport_data
+from open_alaqs.core.utils.qt import populate_combobox
 from open_alaqs.enums import AlaqsLayerType
 
 logger = get_logger(__name__)
@@ -198,8 +199,8 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.iface = iface
 
         self.ui.comboBoxAirportCode.addItem("")
-        for code in alaqs.get_airport_codes():
-            self.ui.comboBoxAirportCode.addItem(code[0])
+        for airport in alaqs.get_airport_codes():
+            self.ui.comboBoxAirportCode.addItem(airport["airport_code"])
 
         # Define some of the variables that are used throughout the class
         self.project_name = None
@@ -229,7 +230,6 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             self.close
         )
 
-    @catch_errors
     def load_study_data(self):
         """
         This function loads an existing study from a Spatialite database into
@@ -255,50 +255,22 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             # TODO OPENGIS.ch: remove the Vertical limit from the form, use the one in the Emission Inventory Analysis only
             self.ui.spinBoxVerticalLimit.setValue(study_data["vertical_limit"])
 
-            roadway_methods = alaqs.get_roadway_methods()
-            if roadway_methods is not None:
-                self.ui.comboBoxRoadwayMethod.clear()
-                for method in roadway_methods:
-                    self.ui.comboBoxRoadwayMethod.addItem(method)
-                index = self.ui.comboBoxRoadwayMethod.findText(
-                    study_data["roadway_method"]
-                )
-                if index == -1:
-                    if self.ui.comboBoxRoadwayMethod.count():
-                        self.ui.comboBoxRoadwayMethod.setCurrentIndex(0)
-                if index != -1:
-                    self.ui.comboBoxRoadwayMethod.setCurrentIndex(index)
-
-            roadway_fleet_years = alaqs.get_roadway_fleet_years()
-            if roadway_fleet_years is not None:
-                self.ui.comboBoxRoadwayFleetYear.clear()
-                for year in roadway_fleet_years:
-                    self.ui.comboBoxRoadwayFleetYear.addItem(year)
-                fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText(
-                    str(study_data["roadway_fleet_year"])
-                )
-                if fleet_year_index == -1:
-                    fleet_year_index = self.ui.comboBoxRoadwayFleetYear.findText("2020")
-                if fleet_year_index != -1:
-                    self.ui.comboBoxRoadwayFleetYear.setCurrentIndex(fleet_year_index)
-
-            roadway_countries = alaqs.get_roadway_countries()
-            if roadway_countries is not None:
-                self.ui.comboBoxRoadwayCountry.clear()
-                for country in roadway_countries:
-                    self.ui.comboBoxRoadwayCountry.addItem(country)
-
-                roadway_country_index = self.ui.comboBoxRoadwayCountry.findText(
-                    study_data["roadway_country"]
-                )
-                if roadway_country_index == -1:
-                    roadway_country_index = self.ui.comboBoxRoadwayCountry.findText(
-                        "EU27"
-                    )
-                if roadway_country_index != -1:
-                    self.ui.comboBoxRoadwayCountry.setCurrentIndex(
-                        roadway_country_index
-                    )
+            populate_combobox(
+                self.ui.comboBoxRoadwayMethod,
+                alaqs.get_roadway_methods(),
+            )
+            populate_combobox(
+                self.ui.comboBoxRoadwayFleetYear,
+                (str(r["fleet_year"]) for r in alaqs.get_roadway_fleet_years()),
+                study_data["roadway_country"],
+                "2020",
+            )
+            populate_combobox(
+                self.ui.comboBoxRoadwayCountry,
+                (str(r["country"]) for r in alaqs.get_roadway_countries()),
+                study_data["roadway_country"],
+                "EU27",
+            )
 
             self.ui.textEditStudyInformation.setPlainText(study_data["study_info"])
 
@@ -623,93 +595,54 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             self.ui.lineEditMonthlyDec.setText(str(profile_data[0][13]))
             return None
 
-    def delete_hourly_profile(self):
-        """
-        This removes an hourly profile from the currently active ALAQS database.
-        """
-        reply = QtWidgets.QMessageBox.warning(
+    def confirm_profile_deletion(self):
+        result = QtWidgets.QMessageBox.warning(
             self,
             "Delete Profiles",
             "Are you sure you want to delete this profile?",
             QtWidgets.QMessageBox.Yes,
             QtWidgets.QMessageBox.No,
         )
-        if reply == QtWidgets.QMessageBox.Yes:
+        return result != QtWidgets.QMessageBox.Yes
 
-            profile_name = str(self.ui.comboBoxHourlyName.currentText()).strip()
-            QtWidgets.QMessageBox.information(
-                self, "Info", "Deleting '%s'" % str(profile_name)
-            )
-            result = alaqs.delete_hourly_profile(profile_name)
-            if result is None:
-                self.populate_hourly_profiles()
-                return None
-            else:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "Delete Profiles",
-                    "Profile %s could not be deleted: %s" % (profile_name, result),
-                )
-                return "The selected hourly profile could not be deleted."
+    def delete_hourly_profile(self):
+        """
+        This removes an hourly profile from the currently active ALAQS database.
+        """
+        if self.confirm_profile_deletion():
+            return
+
+        profile_name = self.ui.comboBoxHourlyName.currentText().strip()
+
+        delete_records("user_hour_profile", {"profile_name": profile_name})
+        self.populate_hourly_profiles()
 
     def delete_daily_profile(self):
         """
         This removes a daily profile from the currently active ALAQS database.
         """
-        result = QtWidgets.QMessageBox.warning(
-            self,
-            "Delete Profiles",
-            "Are you sure you want to delete this profile?",
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No,
-        )
-        if result == QtWidgets.QMessageBox.Yes:
-            profile_name = str(self.ui.comboBoxDailyName.currentText()).strip()
-            QtWidgets.QMessageBox.information(
-                self, "Info", "Deleting '%s'" % str(profile_name)
-            )
-            result = alaqs.delete_daily_profile(profile_name)
-            if result is None:
-                self.populate_daily_profiles()
-                return None
-            else:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "Delete Profiles",
-                    "Profile %s could not be deleted: %s" % (profile_name, result),
-                )
-                return "The selected daily profile could not be deleted"
+        if self.confirm_profile_deletion():
+            return
+
+        profile_name = self.ui.comboBoxDailyName.currentText().strip()
+
+        delete_records("user_day_profile", {"profile_name": profile_name})
+        self.populate_daily_profiles()
 
     def delete_monthly_profile(self):
         """
         This removes an monthly profile from the currently active ALAQS database.
         """
-        result = QtWidgets.QMessageBox.warning(
-            self,
-            "Delete Profiles",
-            "Are you sure you want to delete this profile?",
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No,
-        )
-        if result == QtWidgets.QMessageBox.Yes:
-            profile_name = str(self.ui.comboBoxMonthlyName.currentText()).strip()
-            QtWidgets.QMessageBox.information(
-                self, "Info", "Deleting '%s'" % str(profile_name)
-            )
-            result = alaqs.delete_monthly_profile(profile_name)
-            if result is None:
-                self.populate_monthly_profiles()
-                return None
-            else:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "Delete Profiles",
-                    "Profile %s could not be deleted: %s" % (profile_name, result),
-                )
-                return "The selected monthly profile could not be deleted"
+        if self.confirm_profile_deletion():
+            return
+
+        profile_name = self.ui.comboBoxMonthlyName.currentText().strip()
+
+        delete_records("user_month_profile", {"profile_name": profile_name})
+        self.populate_monthly_profiles()
 
     @catch_errors
-    def new_hourly_profile(self):
+    def new_hourly_profile(self, _checked: bool) -> None:
         """
         This adds a new blank hourly profile to the UI
         :return: None if successful; error message as a string if its
@@ -723,7 +656,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         return None
 
     @catch_errors
-    def new_daily_profile(self):
+    def new_daily_profile(self, _checked: bool) -> None:
         """
         This adds a new blank daily profile to the UI
         :return: None if successful; error message as a string if its
@@ -737,7 +670,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         return None
 
     @catch_errors
-    def new_monthly_profile(self):
+    def new_monthly_profile(self, _checked: bool) -> None:
         """
         Adds a new blank monthly profile to the UI
         :return: None if successful; error message as a string if its
@@ -748,7 +681,6 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         index = self.ui.comboBoxMonthlyName.count()
         self.ui.comboBoxMonthlyName.setCurrentIndex(index - 1)
         self.ui.comboBoxMonthlyName.setEditable(True)
-        return None
 
     @catch_errors
     def save_hourly_profile(self):

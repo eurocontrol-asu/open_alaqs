@@ -13,12 +13,13 @@ the database layer.
 @author: Dan Pearce (it@env-isa.com)
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 from open_alaqs.core import alaqsdblite, alaqsutils
+from open_alaqs.core.alaqsdblite import execute_sql, update_table
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools.create_output import create_alaqs_output
-from open_alaqs.core.tools.sql_interface import SqlExpression, update_table
+from open_alaqs.core.tools.sql_interface import SqlExpression
 from open_alaqs.typing import AirportDict, StudySetup
 
 logger = get_logger(__name__)
@@ -67,18 +68,8 @@ def create_project(database_name):
 
 @catch_errors
 def load_study_setup() -> StudySetup:
-    """Load project data for the current ALAQS study.
-
-    Returns:
-        sqlite3.Row - resulting user study setup
-    """
-    return alaqsdblite.execute_sql(
-        alaqsdblite.ProjectDatabase().path,
-        """
-            SELECT *
-            FROM user_study_setup
-        """,
-    )
+    """Load project data for the current ALAQS study."""
+    return execute_sql("SELECT * FROM user_study_setup")
 
 
 @catch_errors
@@ -102,7 +93,6 @@ def save_study_setup(study_setup: StudySetup) -> None:
             raise Exception("Study setup parameters cannot be blank")
 
     update_table(
-        alaqsdblite.ProjectDatabase().path,
         "user_study_setup",
         {
             **study_setup,
@@ -117,8 +107,7 @@ def save_study_setup(study_setup: StudySetup) -> None:
 @catch_errors
 def get_airport_codes() -> list[str]:
     """Return a list of airport ICAO codes"""
-    return alaqsdblite.execute_sql(
-        alaqsdblite.ProjectDatabase().path,
+    return execute_sql(
         """
             SELECT airport_code
             FROM default_airports
@@ -138,8 +127,7 @@ def airport_lookup(icao_code: str) -> Optional[AirportDict]:
     Returns:
         AirportDict | None: airport data
     """
-    return alaqsdblite.execute_sql(
-        alaqsdblite.ProjectDatabase().path,
+    return execute_sql(
         """
             SELECT *
             FROM default_airports
@@ -155,45 +143,35 @@ def airport_lookup(icao_code: str) -> Optional[AirportDict]:
 # ######################
 
 
-@catch_errors
-def add_roadway_dict(roadway_dict):
-    result = alaqsdblite.add_roadway_dict(roadway_dict)
-    if result is not True:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def get_roadway_methods():
+def get_roadway_methods() -> tuple[str]:
     """
     Get a list of available roadway methods from the database
     """
-    result = alaqsdblite.get_roadway_methods()
-    if result is None:
-        raise Exception("No roadway methods were returned from this database")
-    return result
+    return ("COPERT 5",)
 
 
-@catch_errors
-def get_roadway_countries():
-    """
-    Get a list of countries available for roadway modelling
-    """
-    result = alaqsdblite.get_roadway_countries()
-    if result is None:
-        raise Exception("No roadway methods were returned from this database")
-    return result
+def get_roadway_countries() -> list[dict[str]]:
+    """Get a list of countries available for roadway modelling"""
+    return execute_sql(
+        """
+            SELECT DISTINCT(country)
+            FROM default_vehicle_fleet_euro_standards
+            ORDER BY country
+        """,
+        fetchone=False,
+    )
 
 
-@catch_errors
 def get_roadway_fleet_years():
-    """
-    Get a list of years available for roadway modelling
-    """
-    result = alaqsdblite.get_roadway_years()
-    if result is None:
-        raise Exception("No roadway fleet years were returned from this database")
-    return result
+    """Get a list of years available for roadway modelling"""
+    return execute_sql(
+        """
+            SELECT DISTINCT(fleet_year)
+            FROM default_vehicle_fleet_euro_standards
+            ORDER BY country
+        """,
+        fetchone=False,
+    )
 
 
 @catch_errors
@@ -207,121 +185,27 @@ def get_roadway_euro_standards(country: str, fleet_year: str) -> dict:
     return result
 
 
-# ###################
-# ###### GATES ######
-# ###################
+def get_gates() -> list[dict[str, Any]]:
+    """Return data on all gates defined in the currently active alaqs study"""
+    return execute_sql(
+        """
+            SELECT *
+            FROM shapes_gates
+            ORDER BY gate_id COLLATE NOCASE
+        """,
+        fetchone=False,
+    )
 
 
-@catch_errors
-def add_gate_dict(gate_dict):
-    result = alaqsdblite.add_gate_dict(gate_dict)
-    if result is not True:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def get_gate(gate_name):
-    """
-    Get data on a specific gate based on the gate name.
-    """
-    result = alaqsdblite.get_gate(gate_name)
-    if isinstance(result, str):
-        raise Exception("Gate could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_gates():
-    """
-    Return data on all gates defined in the currently active alaqs study
-    """
-    result = alaqsdblite.get_gates()
-    if isinstance(result, str):
-        raise Exception("Gates could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-# #####################
-# ###### RUNWAYS ######
-# #####################
-
-
-@catch_errors
-def add_runway_dict(runway_dict):
-    result = alaqsdblite.add_runway_dict(runway_dict)
-    if result is not True:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def get_runway(runway_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_runway(runway_id)
-    if isinstance(result, str):
-        raise Exception("Runway could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_runways():
-    """
-    Description
-    """
-    result = alaqsdblite.get_runways()
-    if isinstance(result, str):
-        raise Exception("Runways could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-# ######################
-# ###### TAXIWAYS ######
-# ######################
-
-
-@catch_errors
-def add_taxiway_dict(taxiway_dict):
-    result = alaqsdblite.add_taxiway_dict(taxiway_dict)
-    if result is not True:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def get_taxiway(taxiway_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_taxiway(taxiway_id)
-    if isinstance(result, str):
-        raise Exception("Taxiway could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_taxiways():
-    """
-    Description
-    """
-    result = alaqsdblite.get_taxiways()
-    if isinstance(result, str):
-        raise Exception("Taxiways could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
+def get_runways() -> list[dict[str, Any]]:
+    return execute_sql(
+        """
+            SELECT *, AsText(geometry) AS geometry
+            FROM shapes_runways
+            ORDER BY runway_id COLLATE NOCASE
+        """,
+        fetchone=False,
+    )
 
 
 # ############################
@@ -365,258 +249,53 @@ def add_taxiway_route(taxiway_route):
     return None
 
 
-#  ####################
-#  ###### TRACKS ######
-#  ####################
+def get_point_category(category_id: str) -> dict[str, Any]:
+    """Return the source category of a specific point source by category id."""
+    return execute_sql(
+        """
+            SELECT *
+            FROM default_stationary_category
+            WHERE category_name = ?
+        """,
+        [category_id],
+    )
 
 
-@catch_errors
-def get_track(track_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_track(track_id)
-    if isinstance(result, str):
-        raise Exception("Track could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
+def get_point_categories() -> list[dict[str, Any]]:
+    """Return the source category of a specific point source by name"""
+    return execute_sql(
+        """
+            SELECT *
+            FROM default_stationary_category
+            ORDER BY category_name COLLATE NOCASE
+        """,
+        fetchone=False,
+    )
 
 
-@catch_errors
-def get_tracks():
-    """
-    Description
-    """
-    result = alaqsdblite.get_tracks()
-    if isinstance(result, str):
-        raise Exception("Tracks could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
+def get_point_type(type_name: str) -> dict[str, Any]:
+    """Get the specific point type of a point source based on the type name"""
+    return execute_sql(
+        """
+            SELECT *
+            FROM default_stationary_ef
+            WHERE description = ?
+        """,
+        [type_name],
+    )
 
 
-# ################################
-# ###### STATIONARY SOURCES ######
-# ################################
-
-
-@catch_errors
-def add_point_source(point_source_dict):
-    """
-    This function is used to add a new point source to the currently active
-     database. This is used only when the tool is being used independently of
-     QGIS.
-
-    :param point_source_dict: a dictionary of stationary source properties
-    :return: Should be True if successful
-    """
-    result = alaqsdblite.add_point_source(point_source_dict)
-    if result is None:
-        raise Exception(result)
-    return True
-
-
-@catch_errors
-def get_point_source(source_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_point_source(source_id)
-    if isinstance(result, str):
-        raise Exception("Stationary source could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_point_sources():
-    """
-    Description
-    """
-    result = alaqsdblite.get_point_sources()
-    if isinstance(result, str):
-        raise Exception("Sources could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_point_category(category_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_point_category(category_id)
-    if isinstance(result, str):
-        raise Exception("Stationary category could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_point_categories():
-    """
-    Description
-    """
-    result = alaqsdblite.get_point_categories()
-    if isinstance(result, str):
-        raise Exception("Source categories could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_point_type(type_name):
-    """
-    Description
-    """
-    result = alaqsdblite.get_point_type(type_name)
-    if isinstance(result, str):
-        raise Exception("Type details could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_point_types(category_number):
-    """
-    Description
-    """
-    result = alaqsdblite.get_point_types(category_number)
-    if isinstance(result, str):
-        raise Exception("Category types could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-# #######################
-# ###### BUILDINGS ######
-# #######################
-
-
-@catch_errors
-def add_building(building_dict):
-    """ "
-    This function is used to add a new building to the currently active
-     database. This is used only when the tool is being used independently of
-     QGIS.
-
-    :param building_dict: a dictionary of building properties in format defined
-     by new_building()
-    :return: True if successful
-    """
-    result = alaqsdblite.add_building(building_dict)
-    if result is not True:
-        raise Exception(result)
-    return True
-
-
-@catch_errors
-def get_building(building_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_building(building_id)
-    if isinstance(result, str):
-        raise Exception("Building could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_buildings():
-    """
-    Description
-    """
-    result = alaqsdblite.get_buildings()
-    if isinstance(result, str):
-        raise Exception("Buildings could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-# ######################
-# ###### PARKINGS ######
-# ######################
-
-
-@catch_errors
-def add_parking(parking_dict):
-    """ "
-    This function is used to add a new building to the currently active
-     database. This is used only when the tool is being used independently of
-     QGIS.
-    :param parking_dict: a dictionary of building properties in format defined
-     by new_building()
-    :return: True if successful
-    """
-    result = alaqsdblite.add_parking(parking_dict)
-    if result is not True:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def get_parking(parking_id):
-    """
-    Description
-    """
-    result = alaqsdblite.get_parking(parking_id)
-    if isinstance(result, str):
-        raise Exception("Parking could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-@catch_errors
-def get_parkings():
-    """
-    Description
-    """
-    result = alaqsdblite.get_parkings()
-    if isinstance(result, str):
-        raise Exception("Parkings could not be returned: %s" % result)
-    if (result == []) or (result is None):
-        return None
-    return result
-
-
-# ######################
-# ###### PROFILES ######
-# ######################
-
-
-@catch_errors
-def add_hourly_profile_dict(hourly_profile_dict):
-    result = alaqsdblite.add_hourly_profile_dict(hourly_profile_dict)
-    if result is not True:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def add_daily_profile_dict(daily_profile_dict):
-    result = alaqsdblite.add_daily_profile_dict(daily_profile_dict)
-    if result is None or result == []:
-        raise Exception(result)
-    return True
-
-
-@catch_errors
-def add_monthly_profile_dict(monthly_profile_dict):
-    result = alaqsdblite.add_monthly_profile_dict(monthly_profile_dict)
-    if result is None or result == []:
-        raise Exception(result)
-    return result
+def get_point_types(category_number: int) -> list[dict[str, Any]]:
+    """Return all point types from the currently active study"""
+    return execute_sql(
+        """
+            SELECT *
+            FROM default_stationary_ef
+            WHERE category = ?
+        """,
+        [category_number],
+        fetchone=False,
+    )
 
 
 @catch_errors
@@ -710,30 +389,6 @@ def get_monthly_profile(profile_name):
 
 
 @catch_errors
-def delete_hourly_profile(profile_name):
-    result = alaqsdblite.delete_hourly_profile(profile_name)
-    if result is not None:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def delete_daily_profile(profile_name):
-    result = alaqsdblite.delete_daily_profile(profile_name)
-    if result is not None:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
-def delete_monthly_profile(profile_name):
-    result = alaqsdblite.delete_monthly_profile(profile_name)
-    if result is not None:
-        raise Exception(result)
-    return result
-
-
-@catch_errors
 def add_hourly_profile(properties):
     result = alaqsdblite.add_hourly_profile(properties)
     if result is not None:
@@ -754,16 +409,6 @@ def add_monthly_profile(properties):
     result = alaqsdblite.add_monthly_profile(properties)
     if result is not None:
         raise Exception(result)
-    return result
-
-
-@catch_errors
-def get_lasport_scenarios():
-    result = alaqsdblite.get_lasport_scenarios()
-    if isinstance(result, str):
-        raise Exception("Lasport scenarios could not be found: %s" % result)
-    if (result == []) or (result is None):
-        return None
     return result
 
 

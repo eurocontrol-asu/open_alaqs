@@ -71,32 +71,6 @@ def query_text(database_path, sql_text):
             pass
 
 
-def pd_query_text(database_path, sql_text):
-    """
-    Execute a query against a given SQLite database using Pandas
-    :param database_path: the path to the database that is being queried
-    :param sql_text: the SQL text to be executed
-    :return data: the result of the query
-    :raise ValueError: if database returns a string (error) instead of list
-    """
-    import pandas as pd
-
-    try:
-        # Create a connection
-        conn = connect(database_path)
-        conn.text_factory = str
-        data = pd.read_sql(sql_text, conn)
-        if not data.empty:
-            return data
-        elif data.empty:
-            return True
-        else:
-            raise TypeError("Query returned an error: %s" % data)
-    except Exception as e:
-        logger.error("Query could not be completed: %s" % e)
-        return None
-
-
 def hasTable(database_path, table_name):
     """
     Check if a database at path
@@ -168,12 +142,23 @@ class get_db_connection:
         return exc_type is None
 
 
-def execute_sql(
+def db_execute_sql(
     db_filename: str,
     sql: str,
     params: Optional[list] = None,
     fetchone: bool = True,
-):
+) -> Optional[Union[dict[str, Any], list[dict[str, Any]]]]:
+    """Executes SQL statement and returns the resulting row.
+
+    Args:
+        db_filename (str): filename of the database
+        sql (str): SQL query statement
+        params (Optional[list], optional): Optional list of parameters that will replace the `?` placeholders in the SQL. Defaults to None.
+        fetchone (bool, optional): Fetch only one row or all rows. Defaults to True.
+
+    Returns:
+        dict[str, Any] | list[dict[str, Any] | None: A single row as a dict, multiple rows if `fetchone=False`, or None if no rows available.
+    """
     params = params or []
 
     with get_db_connection(db_filename) as conn:
@@ -193,7 +178,7 @@ def execute_sql(
             else:
                 return dict(result)
         else:
-            return cur.fetchall()
+            return [dict(r) for r in cur.fetchall()]
 
 
 def perform_sql(
@@ -201,6 +186,13 @@ def perform_sql(
     sql: str,
     params: Optional[list] = None,
 ) -> None:
+    """Performs SQL statement and returns None.
+
+    Args:
+        db_filename (str): filename of the database
+        sql (str): SQL query statement
+        params (Optional[list], optional): Optional list of paramaeters that will replace the `?` placeholders in the SQL. Defaults to None.
+    """
     if not params:
         params = []
 
@@ -212,15 +204,35 @@ def perform_sql(
 
 
 def quote_identifier(identifier: str) -> str:
+    """Quotes identifiers, e.g. table or column names."""
     return f'''"{identifier.replace('"', '""')}"'''
 
 
-def update_table(
+def build_where_sql(where_values: dict[str, Any]) -> tuple[str, list[Any]]:
+    where_expression_pairs = []
+    params = []
+
+    for attr_name, attr_value in where_values.items():
+        if isinstance(attr_value, SqlExpression):
+            expression = attr_value.expression
+            params += attr_value.values
+        else:
+            expression = "?"
+            params.append(attr_value)
+
+        where_expression_pairs.append(f"{quote_identifier(attr_name)} = {expression}")
+
+    sql = " AND ".join(where_expression_pairs)
+
+    return sql, params
+
+
+def db_update_table(
     db_filename: str,
     table_name: str,
     attribute_values: dict[str, Any],
     where_values: dict[str, Any],
-) -> list[sqlite.Row]:
+) -> list[dict[str, Any]]:
     attribute_expression_pairs = []
     values = []
 
@@ -243,27 +255,28 @@ def update_table(
     """
 
     if where_values:
-        where_expression_pairs = []
+        where_sql, where_params = build_where_sql(where_values)
+        sql += where_sql
+        values += where_params
 
-        for attr_name, attr_value in where_values.items():
-            if isinstance(attr_value, SqlExpression):
-                expression = attr_value.expression
-                values += attr_value.values
-            else:
-                expression = "?"
-                values.append(attr_value)
+    return db_execute_sql(db_filename, sql, values, False)
 
-            where_expression_pairs.append(
-                f"{quote_identifier(attr_name)} = {expression}"
-            )
 
-        where_values_str = " AND ".join(where_expression_pairs)
+def db_delete_records(
+    db_filename: str,
+    table_name: str,
+    where_values: dict[str, Any],
+) -> None:
+    assert where_values, "Cannot call delete without `where_values`"
 
-        sql += f"""
-            WHERE {where_values_str}
-        """
+    where_sql, where_params = build_where_sql(where_values)
 
-    return execute_sql(db_filename, sql, values)
+    sql = f"""
+        DELETE FROM {quote_identifier(table_name)}
+        WHERE {where_sql}
+    """
+
+    return db_execute_sql(db_filename, sql, where_params, False)
 
 
 def insert_into_table(
@@ -306,4 +319,4 @@ def insert_into_table(
         VALUES {rows_str}
     """
 
-    return execute_sql(db_filename, sql, values)
+    return db_execute_sql(db_filename, sql, values)
