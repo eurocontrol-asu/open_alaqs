@@ -1,14 +1,12 @@
 import os
-from datetime import datetime
-from typing import List, Tuple
+from typing import Any, Optional
 
 from qgis.PyQt import QtWidgets
+from qgis.PyQt.QtWidgets import QTableWidgetItem
 from qgis.PyQt.uic import loadUiType
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.Emissions import Emission
-from open_alaqs.core.interfaces.OutputModule import OutputModule
-from open_alaqs.core.interfaces.Source import Source
+from open_alaqs.core.modules.TabularOutputModule import TabularOutputModule
 
 Ui_TableViewDialog, _ = loadUiType(
     os.path.join(os.path.dirname(__file__), "..", "..", "ui", "ui_table_view_dialog.ui")
@@ -17,10 +15,26 @@ Ui_TableViewDialog, _ = loadUiType(
 logger = get_logger(__name__)
 
 
-class TableViewWidgetOutputModule(OutputModule):
+class TableViewWidgetOutputModule(TabularOutputModule):
     """
     Module to plot results of emission calculation in a table
     """
+
+    table_fields = [
+        "timestamp",
+        "co_kg",
+        "co2_kg",
+        "hc_kg",
+        "nox_kg",
+        "sox_kg",
+        "pmtotal_kg",
+        "pm01_kg",
+        "pm25_kg",
+        "pmsul_kg",
+        "pmvolatile_kg",
+        "pmnonvolatile_kg",
+        "pmnonvolatile_number",
+    ]
 
     @staticmethod
     def getModuleName():
@@ -30,133 +44,58 @@ class TableViewWidgetOutputModule(OutputModule):
     def getModuleDisplayName():
         return "Emissions table"
 
-    def __init__(self, values_dict=None):
-        if values_dict is None:
-            values_dict = {}
-        OutputModule.__init__(self, values_dict)
+    def __init__(self, values_dict: dict[str, Any]) -> None:
+        super().__init__(values_dict)
 
-        # Widget configuration
-        self._parent = values_dict["parent"] if "parent" in values_dict else None
+        self.start_dt = values_dict["start_dt_inclusive"]
+        self.end_dt = values_dict["end_dt_inclusive"]
 
-        self._time_start = values_dict["start_dt_inclusive"]
-        self._time_end = values_dict["end_dt_inclusive"]
+        self.widget = EmissionsTableViewDialog(values_dict["parent"])
 
-        self._widget = TableViewWidget(self._parent)
+    def endJob(self) -> QtWidgets.QDialog:
+        headers = [self.fields[k] for k in self.table_fields]
+        self.widget.set_headers(headers)
 
-    def getWidget(self):
-        return self._widget
+        for row in self.rows:
+            formatted_row = []
 
-    def beginJob(self):
-        self._widget.setDataTableHeaders(
-            [
-                "Time",
-                "CO [kg]",
-                "CO2 [kg]",
-                "HC [kg]",
-                "NOx [kg]",
-                "SOx [kg]",
-                "PMTotal [kg]",
-                "PM01 [kg]",
-                "PM25 [kg]",
-                "PMSul [kg]",
-                "PMVolatile [kg]",
-                "PMNonVolatile [kg]",
-                "PMNonVolatileNumber [-]",
-            ]
-        )
+            for table_field in self.table_fields:
+                value = row[table_field]
 
-    def process(
-        self, timeval: datetime, result: List[Tuple[Source, Emission]], **kwargs
-    ):
+                if value is None:
+                    formatted_value = "-"
+                elif isinstance(value, float):
+                    formatted_value = f"{value:.5g}"
+                else:
+                    formatted_value = str(value)
 
-        # filter by configured time
-        if self._time_start and self._time_end:
-            if not (self._time_start <= timeval < self._time_end):
-                return True
+                formatted_row.append(formatted_value)
 
-        # Calculate the total emissions
-        total_emissions_ = sum(sum(emissions_) for (_, emissions_) in result)
+            self.widget.add_row(formatted_row)
 
-        # Get the current row count
-        current_row_count = self._widget.getTable().rowCount()
-
-        # Add a new row to the table
-        self._widget.getTable().setRowCount(current_row_count + 1)
-
-        # Get the new row index
-        new_row_index = current_row_count
-
-        # Write cells
-        for index_col_, val_ in enumerate(
-            [
-                (timeval, ""),
-                total_emissions_.getCO(unit="kg"),
-                total_emissions_.getCO2(unit="kg"),
-                total_emissions_.getHC(unit="kg"),
-                total_emissions_.getNOx(unit="kg"),
-                total_emissions_.getSOx(unit="kg"),
-                total_emissions_.getPM10(unit="kg"),
-                total_emissions_.getPM1(unit="kg"),
-                total_emissions_.getPM2(unit="kg"),
-                total_emissions_.getPM10Sul(unit="kg"),
-                total_emissions_.getPM10Organic(unit="kg"),
-                total_emissions_.getnvPM(unit="kg"),
-                total_emissions_.getnvPMnumber(),
-            ]
-        ):
-
-            # Format the cell values
-            if val_[0] is None:
-                rval_ = ""
-            elif isinstance(val_[0], float):
-                rval_ = str(round(val_[0], 5))
-            else:
-                rval_ = str(val_[0])
-
-            # Update the cells
-            self._widget.getTable().setItem(
-                new_row_index, index_col_, QtWidgets.QTableWidgetItem(rval_)
-            )
-
-    def endJob(self):
-        self._widget.resizeToContent()
-        return self._widget
+        return self.widget
 
 
-class TableViewWidget(QtWidgets.QDialog):
-    """
-    This class provides a dialog for visualizing ALAQS results.
-    """
+class EmissionsTableViewDialog(QtWidgets.QDialog):
+    """This class provides a dialog for visualizing ALAQS results."""
 
-    def __init__(self, parent=None):
-        super(TableViewWidget, self).__init__(parent)
-
-        self._parent = parent
+    def __init__(self, parent: Optional[QtWidgets.QWidget] = None) -> None:
+        super().__init__(parent)
 
         self.ui = Ui_TableViewDialog()
         self.ui.setupUi(self)
 
-        self._data_table_headers = []
+    def set_headers(self, headers: list[str]) -> None:
+        self.ui.data_table.setColumnCount(len(headers))
+        self.ui.data_table.setHorizontalHeaderLabels(headers)
+        self.ui.data_table.verticalHeader().setVisible(False)
 
-        self.initTable()
+    def add_row(self, columns: list[str]) -> None:
+        row_idx = self.ui.data_table.rowCount()
+        self.ui.data_table.setRowCount(self.ui.data_table.rowCount() + 1)
 
-    def initTable(self):
-        self.getTable().setColumnCount(len(self._data_table_headers))
-        self.getTable().setHorizontalHeaderLabels(self._data_table_headers)
-        self.getTable().verticalHeader().setVisible(False)
+        for col_idx, column in enumerate(columns):
+            self.ui.data_table.setItem(row_idx, col_idx, QTableWidgetItem(column))
 
-    def resizeToContent(self):
-        self.getTable().resizeColumnsToContents()
-        self.getTable().resizeRowsToContents()
-
-    def getTable(self):
-        return self.ui.data_table
-
-    def resetTable(self):
-        self.getTable().clear()
-        self.getTable().setHorizontalHeaderLabels(self._data_table_headers)
-        self.getTable().setRowCount(0)
-
-    def setDataTableHeaders(self, headers):
-        self._data_table_headers = headers
-        self.initTable()
+        self.ui.data_table.resizeColumnsToContents()
+        self.ui.data_table.resizeRowsToContents()
