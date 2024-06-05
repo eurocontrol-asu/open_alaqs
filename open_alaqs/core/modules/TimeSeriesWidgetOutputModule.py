@@ -9,7 +9,6 @@ from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, P
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.plotting.MatplotlibQtDialog import MatplotlibQtDialog
-from open_alaqs.core.tools import conversion
 
 logging.getLogger("matplotlib").setLevel(logging.ERROR)
 matplotlib.use("Qt5Agg")
@@ -78,16 +77,9 @@ class TimeSeriesWidgetOutputModule(OutputModule):
         }
 
         # Results analysis
-        self._time_start = ""
-        if "start_dt_inclusive" in values_dict:
-            self._time_start = conversion.convertStringToDateTime(
-                values_dict["start_dt_inclusive"]
-            )
-        self._time_end = (
-            conversion.convertStringToDateTime(values_dict["end_dt_inclusive"])
-            if "end_dt_inclusive" in values_dict
-            else ""
-        )
+        self._time_start = values_dict["start_dt_inclusive"]
+        self._time_end = values_dict["end_dt_inclusive"]
+
         self._pollutant = values_dict.get("pollutant")
 
     def beginJob(self):

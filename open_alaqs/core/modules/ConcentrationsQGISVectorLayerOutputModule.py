@@ -89,16 +89,9 @@ class QGISVectorLayerDispersionModule(OutputModule):
             else False
         )
 
-        self._time_start = (
-            conversion.convertStringToDateTime(values_dict["start_dt_inclusive"])
-            if "start_dt_inclusive" in values_dict
-            else ""
-        )
-        self._time_end = (
-            conversion.convertStringToDateTime(values_dict["end_dt_inclusive"])
-            if "end_dt_inclusive" in values_dict
-            else ""
-        )
+        self._time_start = values_dict["start_dt_inclusive"]
+        self._time_end = values_dict["end_dt_inclusive"]
+
         self._timeseries = (
             values_dict["timeseries"] if "timeseries" in values_dict else None
         )

@@ -2395,6 +2395,13 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         # Configuration of the emissions calculation
         em_configuration = self._emission_calculation_configuration_widget.get_values()
         em_configuration["receptors"] = self._receptor_points
+        em_configuration["start_dt_inclusive"] = datetime.fromisoformat(
+            em_configuration["start_dt_inclusive"]
+        )
+        em_configuration["end_dt_inclusive"] = datetime.fromisoformat(
+            em_configuration["end_dt_inclusive"]
+        )
+
         config.update(em_configuration)
 
         kwargs = {}
