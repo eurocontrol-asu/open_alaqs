@@ -447,7 +447,7 @@ class Grid3D:
         self, bbox: dict, z_as_list: bool = False
     ) -> list:
         matched_cells = []
-        for (x, y, z) in self.matchBoundingBoxToXYZindices(bbox, z_as_list):
+        for x, y, z in self.matchBoundingBoxToXYZindices(bbox, z_as_list):
             if not z_as_list:
                 matched_cells.append(self.convertXYZIndicesToCellHash(x, y, z))
             else:

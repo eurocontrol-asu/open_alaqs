@@ -89,7 +89,6 @@ class EngineModeDatabase(SQLSerializable, metaclass=Singleton):
 
 
 class HelicopterEngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
-
     """
     Class that grants access to aircraft-engine-emission indices
     """
@@ -167,9 +166,9 @@ class HelicopterEngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singlet
 
     def addEngineEmissionIndex(self, icaoIdentifier, ei_dict):
         if icaoIdentifier not in self._heli_emission_indices:
-            self._heli_emission_indices[
-                icaoIdentifier
-            ] = HelicopterEngineEmissionIndex()
+            self._heli_emission_indices[icaoIdentifier] = (
+                HelicopterEngineEmissionIndex()
+            )
         for mode in self.getModes():
             self._heli_emission_indices[icaoIdentifier].setObject(mode, ei_dict)
 

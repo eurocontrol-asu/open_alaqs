@@ -23,32 +23,36 @@ class EmissionDynamics:
         self._emission_dynamics = {}
 
         self._emission_dynamics["sas"] = {
-            "horizontal_shift": val["horizontal_shift_m_sas"]
-            if "horizontal_shift_m_sas" in val
-            else 0.0,
-            "horizontal_extension": val["horizontal_extent_m_sas"]
-            if "horizontal_extent_m_sas" in val
-            else 0.0,
-            "vertical_shift": val["vertical_shift_m_sas"]
-            if "vertical_shift_m_sas" in val
-            else 0.0,
-            "vertical_extension": val["vertical_extent_m_sas"]
-            if "vertical_extent_m_sas" in val
-            else 0.0,
+            "horizontal_shift": (
+                val["horizontal_shift_m_sas"]
+                if "horizontal_shift_m_sas" in val
+                else 0.0
+            ),
+            "horizontal_extension": (
+                val["horizontal_extent_m_sas"]
+                if "horizontal_extent_m_sas" in val
+                else 0.0
+            ),
+            "vertical_shift": (
+                val["vertical_shift_m_sas"] if "vertical_shift_m_sas" in val else 0.0
+            ),
+            "vertical_extension": (
+                val["vertical_extent_m_sas"] if "vertical_extent_m_sas" in val else 0.0
+            ),
         }
         self._emission_dynamics["default"] = {
-            "horizontal_shift": val["horizontal_shift_m"]
-            if "horizontal_shift_m" in val
-            else 0.0,
-            "horizontal_extension": val["horizontal_extent_m"]
-            if "horizontal_extent_m" in val
-            else 0.0,
-            "vertical_shift": val["vertical_shift_m"]
-            if "vertical_shift_m" in val
-            else 0.0,
-            "vertical_extension": val["vertical_extent_m"]
-            if "vertical_extent_m" in val
-            else 0.0,
+            "horizontal_shift": (
+                val["horizontal_shift_m"] if "horizontal_shift_m" in val else 0.0
+            ),
+            "horizontal_extension": (
+                val["horizontal_extent_m"] if "horizontal_extent_m" in val else 0.0
+            ),
+            "vertical_shift": (
+                val["vertical_shift_m"] if "vertical_shift_m" in val else 0.0
+            ),
+            "vertical_extension": (
+                val["vertical_extent_m"] if "vertical_extent_m" in val else 0.0
+            ),
         }
 
     def getDynamicsGroup(self):

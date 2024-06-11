@@ -167,7 +167,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
         else:
             self._data_x.append(timeval)
 
-            for (source, emissions) in result:
+            for source, emissions in result:
                 for em_ in emissions:
 
                     EmissionValue = em_.getValue(self._pollutant, unit="kg")[0]
@@ -210,9 +210,9 @@ class TimeSeriesWidgetOutputModule(OutputModule):
                                 / geom.length
                             )
                         elif isPoint_element_:
-                            matched_cells_2D.loc[
-                                matched_cells_2D.index, "Emission"
-                            ] = EmissionValue / len(matched_cells_2D)
+                            matched_cells_2D.loc[matched_cells_2D.index, "Emission"] = (
+                                EmissionValue / len(matched_cells_2D)
+                            )
                         elif isPolygon_element_ or isMultiPolygon_element_:
                             matched_cells_2D.loc[matched_cells_2D.index, "Emission"] = (
                                 EmissionValue

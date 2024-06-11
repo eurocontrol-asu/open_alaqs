@@ -82,7 +82,7 @@ class SQLiteOutputModule(OutputModule):
                 }
             )
         else:
-            for (source, emissions_) in result:
+            for source, emissions_ in result:
                 rows_.append(
                     {
                         "time": timeval,

@@ -56,7 +56,7 @@ class AircraftTrajectory:
 
     def getGeometryTextByMode(self, mode=""):
         geometry_text_list = []
-        for (startPoint, endPoint) in self.getPointPairs(mode):
+        for startPoint, endPoint in self.getPointPairs(mode):
             geometry_text_list.append(
                 "(%s, %s)"
                 % (startPoint.getCoordinatesString(), endPoint.getCoordinatesString())
@@ -103,7 +103,7 @@ class AircraftTrajectory:
 
     def getDistance(self, mode="", dimension="space"):
         d_ = 0.0
-        for (startPoint, endPoint) in self.getPointPairs(mode):
+        for startPoint, endPoint in self.getPointPairs(mode):
             d_ += self.calculateDistanceBetweenPoints(startPoint, endPoint, dimension)
         return d_
 
@@ -513,9 +513,11 @@ class AircraftTrajectoryStore(Store, metaclass=Singleton):
                         trajectory_dict.get("tas_metres")
                     ),
                     "power": conversion.convertToFloat(trajectory_dict.get("power")),
-                    "mode": str(trajectory_dict["mode"])
-                    if "mode" in trajectory_dict
-                    else None,
+                    "mode": (
+                        str(trajectory_dict["mode"])
+                        if "mode" in trajectory_dict
+                        else None
+                    ),
                 }
             )
 

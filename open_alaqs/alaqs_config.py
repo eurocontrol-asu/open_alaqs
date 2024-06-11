@@ -3,7 +3,6 @@ This is a file that contains some of the variables that can be changed to change
 the appearance of a study created within ALAQS.
 """
 
-
 from pathlib import Path
 from typing import Optional, TypedDict
 

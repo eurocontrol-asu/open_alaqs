@@ -1,6 +1,7 @@
 """
 This class is used to create an ALAQS output file from an existing ALAQS study.
 """
+
 import os
 import shutil
 import sqlite3 as sqlite

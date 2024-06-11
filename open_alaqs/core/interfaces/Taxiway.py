@@ -268,9 +268,11 @@ class TaxiwaySegmentsStore(Store, metaclass=Singleton):
             else:
                 taxiway = TaxiwaySegment(taxiway_dict)
                 self.setObject(
-                    taxiway_dict["taxiway_id"]
-                    if "taxiway_id" in taxiway_dict
-                    else "unknown",
+                    (
+                        taxiway_dict["taxiway_id"]
+                        if "taxiway_id" in taxiway_dict
+                        else "unknown"
+                    ),
                     taxiway,
                 )
 

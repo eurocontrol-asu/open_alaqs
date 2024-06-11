@@ -9,6 +9,7 @@ logger = get_logger(__name__)
 
 # In cases where meteorological data is missing for some time interval the meteorological correction will not be applied for those time intervals.
 
+
 # The NOx correction is applied after the NOx emissions for take-off and climb-out have been calculated with the simple method.
 # The correction factor is stored in a separate field in the inventory combined emission events table (tbl_InvEmisEvent, f4 field)
 def nox_correction_for_ambient_conditions(init_nox_ei, elevation, tow_ratio, ac=None):

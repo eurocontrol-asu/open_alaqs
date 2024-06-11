@@ -376,9 +376,9 @@ if __name__ == "__main__":
     emissions_df["source"] = "EEDB"
 
     # Remark, coolant, combustion_technology and technology_age columns are empty
-    emissions_df[
-        ["remark", "coolant", "combustion_technology", "technology_age"]
-    ] = None
+    emissions_df[["remark", "coolant", "combustion_technology", "technology_age"]] = (
+        None
+    )
 
     # Doc 9889 defines SOX EI as 1 g per kg of fuel burnt for all jet engines
     emissions_df["SOX_EI"] = 1

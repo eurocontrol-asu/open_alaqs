@@ -145,9 +145,11 @@ class UserHourProfileStore(Store, metaclass=Singleton):
         ):
             # add engine to store
             self.setObject(
-                values_dict["profile_name"]
-                if "profile_name" in values_dict
-                else "unknown",
+                (
+                    values_dict["profile_name"]
+                    if "profile_name" in values_dict
+                    else "unknown"
+                ),
                 UserHourProfile(values_dict),
             )
 
@@ -190,9 +192,11 @@ class UserDayProfileStore(Store, metaclass=Singleton):
         ):
             # add engine to store
             self.setObject(
-                values_dict["profile_name"]
-                if "profile_name" in values_dict
-                else "unknown",
+                (
+                    values_dict["profile_name"]
+                    if "profile_name" in values_dict
+                    else "unknown"
+                ),
                 UserDayProfile(values_dict),
             )
 
@@ -235,9 +239,11 @@ class UserMonthProfileStore(Store, metaclass=Singleton):
         ):
             # add engine to store
             self.setObject(
-                values_dict["profile_name"]
-                if "profile_name" in values_dict
-                else "unknown",
+                (
+                    values_dict["profile_name"]
+                    if "profile_name" in values_dict
+                    else "unknown"
+                ),
                 UserMonthProfile(values_dict),
             )
 

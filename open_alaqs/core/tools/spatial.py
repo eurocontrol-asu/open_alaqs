@@ -82,7 +82,7 @@ def getDistanceOfLineStringXY(
     res = 0.0
 
     # calculate length pairwise and sum the result
-    for (start_point_, end_point_) in pairwise(points_tuple_list):
+    for start_point_, end_point_ in pairwise(points_tuple_list):
         res_ = getInverseDistance(
             start_point_[0], start_point_[1], end_point_[0], end_point_[1]
         )

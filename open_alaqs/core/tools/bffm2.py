@@ -109,7 +109,7 @@ def calculate_emission_index(  # noqa: C901
         "temperature_in_Kelvin": 288.15,  # ISA conditions
         "pressure_in_Pa": 1013.25 * 100.0,  # ISA conditions
         "relative_humidity": 0.6,  # normal day at ISA conditions
-        "mach_number": 0.0  # ground or laboratory
+        "mach_number": 0.0,  # ground or laboratory
         # "humidity_ratio_in_kg_water_per_kg_dry_air": 0.00634 #ISA default
     }
 

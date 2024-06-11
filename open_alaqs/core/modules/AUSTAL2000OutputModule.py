@@ -914,9 +914,11 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
             for dt in sorted_results:
                 iqs = [
-                    sorted_results[dt][iq]["timeID"]
-                    if iq in list(sorted_results[dt].keys())
-                    else 1
+                    (
+                        sorted_results[dt][iq]["timeID"]
+                        if iq in list(sorted_results[dt].keys())
+                        else 1
+                    )
                     for iq in list(self._total_sources.keys())
                 ]
                 emission_rates = []
@@ -1071,7 +1073,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         total_emissions_per_cell_list = []
 
         # Get the grid
-        for (source_, emissions__) in result:
+        for source_, emissions__ in result:
 
             self._source_height = 0
             if hasattr(source_, "getHeight") and source_.getHeight() > 0:
@@ -1213,9 +1215,11 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
             # Get the emissions for this pollutant in kg
             _pollutant_emissions_kg = _pollutant_emissions[
-                _column_name[:-1] + "kg"
-                if _column_name.endswith("_g")
-                else _column_name
+                (
+                    _column_name[:-1] + "kg"
+                    if _column_name.endswith("_g")
+                    else _column_name
+                )
             ]
 
             # Get the total emissions in kg

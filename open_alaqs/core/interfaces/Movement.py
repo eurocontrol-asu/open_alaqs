@@ -957,7 +957,7 @@ class Movement:
         if self.getAircraft().getGroup() != "HELICOPTER":
             # get all individual segments (pairs  of points) for the particular
             # mode
-            for (startPoint_, endPoint_) in traj.getPointPairs(mode):
+            for startPoint_, endPoint_ in traj.getPointPairs(mode):
                 emissions_dict_ = self.calculateEmissionsPerSegment(
                     startPoint_,
                     endPoint_,
@@ -984,7 +984,7 @@ class Movement:
 
             # get all individual segments (pairs  of points) for the geometry
             emissions_geo = []
-            for (startPoint_, endPoint_) in traj.getPointPairs(mode):
+            for startPoint_, endPoint_ in traj.getPointPairs(mode):
                 emissions_geo.append(
                     loads(
                         spatial.getLineGeometryText(
