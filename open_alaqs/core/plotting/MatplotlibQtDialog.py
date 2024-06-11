@@ -15,6 +15,9 @@ class MatplotlibQtDialog(QtWidgets.QDialog):
         super(MatplotlibQtDialog, self).__init__(parent)
         # QtGui.QWidget.__init__(self,parent)
 
+        # NOTE we need to turn off the interactive mode, so `matplotlib` does not show it's own popup, we will manage this within the current `QDialog`
+        plt.ioff()
+
         self._figure = plt.figure()
         self._axes = self._figure.add_subplot(111)
         self._plot = None
