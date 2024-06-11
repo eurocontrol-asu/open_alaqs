@@ -37,7 +37,12 @@ class TimeSeriesWidgetOutputModule(OutputModule):
             "widget_type": QtWidgets.QTableWidget,
             "initial_value": [(None, None, None, "4326")],
             "widget_config": {
-                "table_headers": ("id", "longitude", "latitude", "epsg"),
+                "table_headers": [
+                    ("id", "ID"),
+                    ("longitude", "Longitude"),
+                    ("latitude", "Latitude"),
+                    ("epsg", "EPSG"),
+                ],
             },
         },
     }
