@@ -1,4 +1,4 @@
-from typing import Type, TypeVar, cast
+from typing import TypeVar, cast
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.DispersionModule import DispersionModule
@@ -41,56 +41,52 @@ logger = get_logger(__name__)
 
 class ModuleRegistry(metaclass=Singleton):
     ModuleType = TypeVar("ModuleType")
+    module_class = object
 
     def __init__(self) -> None:
         self._registry: dict[str, ModuleRegistry.ModuleType] = {}
 
-    def register(self, source_module: Type[ModuleType]) -> None:
-        module_name = source_module.getModuleName()
+    def register(self, module: ModuleType) -> None:
+        if not issubclass(module, self.module_class):
+            raise Exception(
+                f"The provided `{module=}` must be a subclass of `{self.module_class.__name__}`!"
+            )
 
-        self._registry[module_name] = source_module
+        module_name = module.getModuleName()
+
+        self._registry[module_name] = module
 
     def get_module_names(self) -> list[str]:
         return list(self._registry.keys())
 
-    def get_module(self, name: str) -> Type[ModuleType]:
+    def get_module(self, name: str) -> ModuleType:
         return self._registry.get(name, None)
 
 
 class SourceModuleRegistry(ModuleRegistry):
-    def register(self, module: SourceModule) -> None:
-        if not issubclass(cast(type[SourceModule], module), SourceModule):
-            raise Exception(
-                f"The provided `{module=}` must be a subclass of `SourceModule`!"
-            )
-
-        super().register(module)
+    module_type = SourceModule
 
     def get_module(self, name: str) -> type[SourceModule]:
         return cast(type[SourceModule], super().get_module(name))
 
 
 class OutputModuleRegistry(ModuleRegistry):
-    def register(self, module: ModuleRegistry.ModuleType) -> None:
-        if not issubclass(cast(type[OutputModule], module), OutputModule):
-            raise Exception(
-                f"The provided `{module=}` must be a subclass of `OutputModule`!"
-            )
-
-        super().register(module)
+    module_type = OutputModule
 
     def get_module(self, name: str) -> type[OutputModule]:
         return cast(type[OutputModule], super().get_module(name))
 
 
-class DispersionModuleRegistry(ModuleRegistry):
-    def register(self, module: ModuleRegistry.ModuleType) -> None:
-        if not issubclass(cast(type[DispersionModule], module), DispersionModule):
-            raise Exception(
-                f"The provided `{module=}` must be a subclass of `DispersionModule`!"
-            )
+class OutputAnalysisModuleRegistry(ModuleRegistry):
+    pass
 
-        super().register(module)
+
+class OutputDispersionModuleRegistry(ModuleRegistry):
+    pass
+
+
+class DispersionModuleRegistry(ModuleRegistry):
+    module_type = OutputModule
 
     def get_module(self, name: str) -> type[DispersionModule]:
         return cast(type[DispersionModule], super().get_module(name))
@@ -104,15 +100,17 @@ source_module_registry.register(PointSourceWithTimeProfileModule)
 source_module_registry.register(RoadwaySourceWithTimeProfileModule)
 
 
-output_module_registry = OutputModuleRegistry()
-output_module_registry.register(CSVOutputModule)
-output_module_registry.register(EmissionsQGISVectorLayerOutputModule)
-output_module_registry.register(QGISVectorLayerDispersionModule)
-output_module_registry.register(SQLiteOutputModule)
-output_module_registry.register(TableViewDispersionModule)
-output_module_registry.register(TableViewWidgetOutputModule)
-output_module_registry.register(TimeSeriesDispersionModule)
-output_module_registry.register(TimeSeriesWidgetOutputModule)
+output_analysis_module_registry = OutputAnalysisModuleRegistry()
+output_analysis_module_registry.register(TableViewWidgetOutputModule)
+output_analysis_module_registry.register(TimeSeriesWidgetOutputModule)
+output_analysis_module_registry.register(EmissionsQGISVectorLayerOutputModule)
+output_analysis_module_registry.register(CSVOutputModule)
+output_analysis_module_registry.register(SQLiteOutputModule)
+
+output_dispersion_module_registry = OutputDispersionModuleRegistry()
+output_dispersion_module_registry.register(QGISVectorLayerDispersionModule)
+output_dispersion_module_registry.register(TableViewDispersionModule)
+output_dispersion_module_registry.register(TimeSeriesDispersionModule)
 
 dispersion_module_registry = DispersionModuleRegistry()
 dispersion_module_registry.register(AUSTAL2000DispersionModule)

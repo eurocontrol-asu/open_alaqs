@@ -52,6 +52,8 @@ from open_alaqs.core.EmissionCalculation import EmissionCalculation
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleRegistry,
+    OutputAnalysisModuleRegistry,
+    OutputDispersionModuleRegistry,
     OutputModuleRegistry,
     SourceModuleRegistry,
 )
@@ -2324,8 +2326,8 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 scroll_widget, module.getModuleDisplayName()
             )
 
-        for module_name in OutputModuleRegistry().get_module_names():
-            module = OutputModuleRegistry().get_module(module_name)
+        for module_name in OutputAnalysisModuleRegistry().get_module_names():
+            module = OutputAnalysisModuleRegistry().get_module(module_name)
             config_widget = module.getConfigurationWidget2()
 
             if config_widget is None:
@@ -2845,8 +2847,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
     def resetModuleConfiguration(self, module_names):
         self.ui.output_modules_tab_widget.clear()
 
-        for module_name in OutputModuleRegistry().get_module_names():
-            module = OutputModuleRegistry().get_module(module_name)
+        for module_name in OutputDispersionModuleRegistry().get_module_names():
+            module = OutputDispersionModuleRegistry().get_module(module_name)
             config_widget = module.getConfigurationWidget2()
 
             if config_widget is None:
