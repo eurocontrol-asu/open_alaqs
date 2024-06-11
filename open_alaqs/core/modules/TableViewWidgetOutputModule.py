@@ -27,6 +27,10 @@ class TableViewWidgetOutputModule(OutputModule):
     def getModuleName():
         return "TableViewWidgetOutputModule"
 
+    @staticmethod
+    def getModuleDisplayName():
+        return "Emissions table"
+
     def __init__(self, values_dict=None):
         if values_dict is None:
             values_dict = {}
