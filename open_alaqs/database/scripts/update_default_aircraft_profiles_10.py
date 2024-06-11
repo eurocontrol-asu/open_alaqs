@@ -103,9 +103,9 @@ if __name__ == "__main__":
             profile_id = profile_ids[
                 f"{'DEP' if type_of_operation == 'DEPARTURE' else 'DES'}_PROFILE_ID"
             ]
-        profile[
-            "profile_id"
-        ] = f'{op["ICAO_CODE"]}-{profile_id}-{op["OP_TYPE"]}-{op["STAGE_LENGTH"]}'
+        profile["profile_id"] = (
+            f'{op["ICAO_CODE"]}-{profile_id}-{op["OP_TYPE"]}-{op["STAGE_LENGTH"]}'
+        )
 
         # Get the ANP aircraft
         anp_aircraft = acft.loc[op["ANP_TYPE"]]

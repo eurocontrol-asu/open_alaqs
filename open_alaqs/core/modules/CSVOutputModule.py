@@ -115,7 +115,7 @@ class CSVOutputModule(OutputModule):
                 ]
             )
         else:
-            for (source, emissions_) in result:
+            for source, emissions_ in result:
                 self._rows.append(
                     [
                         timeval,

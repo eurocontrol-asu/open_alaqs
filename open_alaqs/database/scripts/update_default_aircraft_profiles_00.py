@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
     traffic_rows = []
     for acft_id in acft_ids:
-        for (op_type, profile_id, stage_length) in profiles:
+        for op_type, profile_id, stage_length in profiles:
             if (acft_id in ("C170", "C500", "C510", "FA20")) and (stage_length > 1):
                 continue
             else:

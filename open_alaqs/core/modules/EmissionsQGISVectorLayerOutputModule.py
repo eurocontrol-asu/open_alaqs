@@ -204,7 +204,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         self._all_matched_cells = []
 
         # loop over all emissions and append one data point for every grid cell
-        for (source_, emissions__) in result:
+        for source_, emissions__ in result:
             for emissions_ in emissions__:
 
                 if emissions_.getGeometryText() is None:

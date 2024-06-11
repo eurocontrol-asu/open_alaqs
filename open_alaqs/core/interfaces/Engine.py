@@ -104,9 +104,9 @@ class HelicopterEngineEmissionIndex(Store):
             "emission_index": EmissionIndex(initValues=ei_val, defaultValues=defaultEI),
             "source": val["source"] if "source" in val else "",
             "coolant": val["coolant"] if "coolant" in val else "",
-            "combustion_technology": val["combustion_technology"]
-            if "combustion_technology" in val
-            else "",
+            "combustion_technology": (
+                val["combustion_technology"] if "combustion_technology" in val else ""
+            ),
             "technology_age": val["technology_age"] if "technology_age" in val else "",
         }
 
@@ -433,9 +433,11 @@ class EngineEmissionIndex(Store):
                         "pressure_in_Pa": method["config"][
                             "ambient_conditions"
                         ].getPressure(),
-                        "mach_number": method["config"]["mach_number"]
-                        if "mach_number" in list(method["config"].keys())
-                        else 0.00,
+                        "mach_number": (
+                            method["config"]["mach_number"]
+                            if "mach_number" in list(method["config"].keys())
+                            else 0.00
+                        ),
                         "relative_humidity": method["config"][
                             "ambient_conditions"
                         ].getRelativeHumidity(),

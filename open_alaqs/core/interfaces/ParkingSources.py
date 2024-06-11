@@ -147,9 +147,11 @@ class ParkingSourcesStore(Store, metaclass=Singleton):
         ):
             # add engine to store
             self.setObject(
-                parking_dict["parking_id"]
-                if "parking_id" in parking_dict
-                else "unknown",
+                (
+                    parking_dict["parking_id"]
+                    if "parking_id" in parking_dict
+                    else "unknown"
+                ),
                 ParkingSources(parking_dict),
             )
 

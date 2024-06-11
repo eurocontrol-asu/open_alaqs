@@ -141,9 +141,11 @@ class EmissionCalculation:
         logger.debug("Selected source modules: %s", ", ".join(self.getModules().keys()))
         logger.debug(
             "Selected dispersion modules: %s",
-            ", ".join(self.getDispersionModules().keys())
-            if dispersion_enabled
-            else None,
+            (
+                ", ".join(self.getDispersionModules().keys())
+                if dispersion_enabled
+                else None
+            ),
         )
 
         # execute beginJob(..) of SourceModules
@@ -168,7 +170,7 @@ class EmissionCalculation:
             total_count_ = len(list(self.getTimeSeries())) - 1
 
             # loop on complete period
-            for (start_dt, end_dt) in pairwise(self.getTimeSeries()):
+            for start_dt, end_dt in pairwise(self.getTimeSeries()):
                 logger.debug(f"start {start_dt}, end {end_dt}")
 
                 # update the progress bar
@@ -198,7 +200,7 @@ class EmissionCalculation:
 
                     # process() returns a list of tuples for each specific
                     # time interval (start_, end_)
-                    for (timestamp_, source_, emission_) in mod_obj.process(
+                    for timestamp_, source_, emission_ in mod_obj.process(
                         start_dt,
                         end_dt,
                         source_names=source_names,

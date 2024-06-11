@@ -2,6 +2,7 @@
 This class provides all of the calculation methods required to perform emissions
  calculations for stationary sources.
 """
+
 from datetime import datetime
 
 from open_alaqs.core.alaqslogging import get_logger

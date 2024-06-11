@@ -1,6 +1,7 @@
 """
 This class provides the module to calculate emissions of movements.
 """
+
 from datetime import datetime
 from typing import List, Tuple
 
