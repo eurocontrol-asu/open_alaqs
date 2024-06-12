@@ -26,22 +26,6 @@ class TableViewWidgetOutputModule(OutputModule):
     Module to plot results of emission calculation in a table and export the results to CSV or SQLite
     """
 
-    table_fields = [
-        "timestamp",
-        "co_kg",
-        "co2_kg",
-        "hc_kg",
-        "nox_kg",
-        "sox_kg",
-        "pmtotal_kg",
-        "pm01_kg",
-        "pm25_kg",
-        "pmsul_kg",
-        "pmvolatile_kg",
-        "pmnonvolatile_kg",
-        "pmnonvolatile_number",
-    ]
-
     settings_schema = {
         "has_detailed_output": {
             "label": "Detailed output",
@@ -121,13 +105,13 @@ class TableViewWidgetOutputModule(OutputModule):
             self.rows.append(self._format_row(timestamp, emissions_total, None))
 
     def endJob(self) -> QtWidgets.QDialog:
-        headers = [self.fields[k] for k in self.table_fields]
+        headers = list(self.fields.values())
         self.widget.set_headers(headers)
 
         for row in self.rows:
             formatted_row = []
 
-            for table_field in self.table_fields:
+            for table_field in self.fields.keys():
                 value = row[table_field]
 
                 if value is None:
