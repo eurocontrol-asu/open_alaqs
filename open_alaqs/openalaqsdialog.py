@@ -2217,12 +2217,6 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             self.source_type_changed
         )
 
-        self.ui.toDBButton.clicked.connect(
-            lambda: self.runOutputModule("SQLiteOutputModule")
-        )
-        self.ui.toCSVButton.clicked.connect(
-            lambda: self.runOutputModule("CSVOutputModule")
-        )
         self.ui.ResultsTableButton.clicked.connect(
             lambda: self.runOutputModule("TableViewWidgetOutputModule")
         )

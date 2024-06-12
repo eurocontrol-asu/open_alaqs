@@ -336,20 +336,6 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QPushButton" name="toCSVButton">
-        <property name="text">
-         <string>Export to CSV</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="toDBButton">
-        <property name="text">
-         <string>Export to SQLite</string>
-        </property>
-       </widget>
-      </item>
      </layout>
     </item>
   </layout>

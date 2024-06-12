@@ -100,7 +100,7 @@ class TableViewWidgetOutputModule(TabularOutputModule):
 
         if os.path.isfile(filename):
             QtWidgets.QMessageBox.information(
-                None, "CSVOutputModule", f"Results saved as CSV file at `{filename}`"
+                None, "Export CSV", f"Results saved as CSV file at `{filename}`"
             )
 
     def _on_export_sqlite_clicked(self):
@@ -151,7 +151,7 @@ class TableViewWidgetOutputModule(TabularOutputModule):
         if os.path.isfile(filename):
             QtWidgets.QMessageBox.information(
                 None,
-                "SQLiteOutputModule",
+                "Export SQLite",
                 f"Results saved as SQLite file at `{filename}`",
             )
 
