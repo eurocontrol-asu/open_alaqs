@@ -49,11 +49,11 @@ class OutputModule:
         return ModuleConfigurationWidget(cls.settings_schema)
 
     def beginJob(self):
-        raise NotImplementedError()
+        return None
 
     def process(self, timeval, result, **kwargs):
         # result is of format [(Source, Emission)]
         raise NotImplementedError()
 
     def endJob(self):
-        raise NotImplementedError()
+        return None
