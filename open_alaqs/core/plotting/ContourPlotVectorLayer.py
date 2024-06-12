@@ -1,8 +1,9 @@
-from typing import Iterable, Literal, Union, cast
+from typing import Iterable, cast
 
 import pandas as pd
 from qgis.core import (
     Qgis,
+    QgsCentroidFillSymbolLayer,
     QgsClassificationJenks,
     QgsCoordinateReferenceSystem,
     QgsField,
@@ -35,28 +36,17 @@ class ContourPlotVectorLayer:
         self,
         layer_name: str,
         field_name: str,
-        geometry_type: Union[
-            Literal[Qgis.GeometryType.Polygon],
-            Literal[Qgis.GeometryType.Point],  # type:ignore
-        ],
         enable_labels: bool,
+        use_centroid_symbol: bool,
     ) -> None:
         self.field_name = field_name
         self.enable_labels = enable_labels
+        self.use_centroid_symbol = use_centroid_symbol
 
         if field_name:
             layer_name = f"{field_name} {layer_name}"
 
-        if geometry_type == Qgis.GeometryType.Point:
-            self.layer = QgsVectorLayer("Point", layer_name, "memory")
-        elif geometry_type == Qgis.GeometryType.Polygon:
-            self.layer = QgsVectorLayer("Polygon", layer_name, "memory")
-        else:
-            raise NotImplementedError(
-                "Layer geometry type '{geometry_type}' is not supported yet!"
-            )
-
-        # set coordinate reference system
+        self.layer = QgsVectorLayer("Polygon", layer_name, "memory")
         self.layer.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
 
     def setColorGradientRenderer(
@@ -78,6 +68,10 @@ class ContourPlotVectorLayer:
         )
 
         symbol = cast(QgsSymbol, QgsSymbol.defaultSymbol(self.layer.geometryType()))
+
+        if self.use_centroid_symbol:
+            symbol.changeSymbolLayer(0, QgsCentroidFillSymbolLayer())
+
         symbol.symbolLayer(0).setStrokeColor(Qt.GlobalColor.transparent)
         transparent_symbol = QgsFillSymbol()
         transparent_symbol.symbolLayer(0).setStrokeColor(Qt.GlobalColor.transparent)
