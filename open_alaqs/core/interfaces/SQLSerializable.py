@@ -1,9 +1,16 @@
-from typing import Any, Optional
+from typing import Any, Literal, Optional, TypedDict, cast
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools import sql_interface
 
 logger = get_logger(__name__)
+
+
+class GeometryColumn(TypedDict):
+    column_name: str
+    SRID: int
+    geometry_type: Literal["POLYGON"]
+    geometry_type_dimension: Literal[2, 3]
 
 
 class SQLSerializable:
@@ -18,12 +25,13 @@ class SQLSerializable:
         table_name_string: str,
         table_columns_type_dict: dict[str, str],
         primary_key: str = "",
-        geometry_columns: list[Optional[str]] = None,
+        geometry_columns: Optional[list[GeometryColumn]] = None,
     ) -> None:
 
         self._db_path = db_path_string
         self._table_name = table_name_string
         self._table_columns = table_columns_type_dict
+        # TODO OPENGIS.ch: make the geometry_columns argument a regular member of "table_columns_type_dict"
         self._geometry_columns = geometry_columns or []
         self._entries = {}
 
@@ -89,13 +97,16 @@ class SQLSerializable:
                 f'AsText({sql_interface.quote_identifier(column_def["column_name"])}) AS geometry'
             )
 
-        result = sql_interface.db_execute_sql(
-            self._db_path,
-            f"""
-                SELECT {", ".join(columns)}
-                FROM {sql_interface.quote_identifier(self._table_name)}
-            """,
-            fetchone=False,
+        result = cast(
+            list,
+            sql_interface.db_execute_sql(
+                self._db_path,
+                f"""
+                    SELECT {", ".join(columns)}
+                    FROM {sql_interface.quote_identifier(self._table_name)}
+                """,
+                fetchone=False,
+            ),
         )
 
         for row in result:
@@ -154,13 +165,13 @@ class SQLSerializable:
                 """
                 SELECT AddGeometryColumn(?, ?, ?, ?, ?)
                 """,
-                (
+                [
                     self._table_name,
                     geom_col_definition["column_name"],
                     geom_col_definition["SRID"],
                     geom_col_definition["geometry_type"],
                     geom_col_definition["geometry_type_dimension"],
-                ),
+                ],
             )
 
         logger.debug("Table '%s' created", (self._table_name))
