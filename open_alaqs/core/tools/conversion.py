@@ -64,16 +64,6 @@ def convertStringToTime(value: str, format_="%Y-%m-%d %H:%M:%S") -> Union[tuple,
     return None
 
 
-def convertStringToDateTime(value: str) -> datetime:
-    """
-    Convert a timestamp as string to datetime object.
-    """
-    if not isinstance(value, str):
-        raise ValueError(f"Not supported value of type {type(value)}!")
-
-    return datetime.fromisoformat(value)
-
-
 def convertTimeToSeconds(value: str) -> float:
     """
     Convert a timestamp as string to a timestamp in seconds.
