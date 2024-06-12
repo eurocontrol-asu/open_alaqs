@@ -54,7 +54,6 @@ from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleRegistry,
     OutputAnalysisModuleRegistry,
     OutputDispersionModuleRegistry,
-    OutputModuleRegistry,
     SourceModuleRegistry,
 )
 from open_alaqs.core.tools import conversion, sql_interface
@@ -2356,7 +2355,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         }
 
     def runOutputModule(self, name: str) -> None:
-        OutputModule = OutputModuleRegistry().get_module(name)
+        OutputModule = OutputAnalysisModuleRegistry().get_module(name)
 
         if OutputModule is None:
             logger.error("Did not find module '%s'", name)
@@ -2966,7 +2965,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 if self._conc_calculation_.get3DGrid() is None:
                     raise Exception("No 3DGrid found.")
 
-                OutputModule = OutputModuleRegistry().get_module(name)
+                OutputModule = OutputDispersionModuleRegistry().get_module(name)
                 if OutputModule is None:
                     logger.error("Did not find module '%s'" % (name))
                     return
