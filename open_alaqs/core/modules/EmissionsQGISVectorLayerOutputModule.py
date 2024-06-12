@@ -1,14 +1,18 @@
+from datetime import datetime
+from typing import Any, Optional
+
 import pandas as pd
-from qgis.core import Qgis
-from qgis.gui import QgsDoubleSpinBox
+from qgis.core import Qgis, QgsVectorLayer
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import QVariant
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.OutputModule import OutputModule
+from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.plotting.ContourPlotVectorLayer import ContourPlotVectorLayer
-from open_alaqs.core.tools import conversion, spatial
+from open_alaqs.core.tools.conversion import convertStringToDateTime
 
 pd.set_option("chained_assignment", None)
 
@@ -25,16 +29,6 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
             "label": "Projection",
             "widget_type": QtWidgets.QLabel,
             "initial_value": "EPSG:3857",
-        },
-        "threshold": {
-            "label": "Threshold",
-            "widget_type": QgsDoubleSpinBox,
-            "initial_value": 0.0001,
-            "widget_config": {
-                "minimum": 0,
-                "maximum": 999.9999,
-                "decimals": 4,
-            },
         },
         "should_use_polygons": {
             "label": "Use Polygons Instead of Points",
@@ -61,80 +55,23 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
     def getModuleDisplayName():
         return "Vector Layer"
 
-    def __init__(self, values_dict={}):
+    def __init__(self, values_dict: dict[str, Any]):
         OutputModule.__init__(self, values_dict)
 
-        # Layer configuration
-        self._options = values_dict["options"] if "options" in values_dict else ""
-
         # Results analysis
-        self._time_start = (
-            conversion.convertStringToDateTime(values_dict["start_dt_inclusive"])
-            if "start_dt_inclusive" in values_dict
-            else ""
-        )
-        self._time_end = (
-            conversion.convertStringToDateTime(values_dict["end_dt_inclusive"])
-            if "end_dt_inclusive" in values_dict
-            else ""
-        )
-        self._pollutant = (
-            values_dict["pollutant"] if "pollutant" in values_dict else None
-        )
+        self._time_start = convertStringToDateTime(values_dict["start_dt_inclusive"])
+        self._time_end = convertStringToDateTime(values_dict["end_dt_inclusive"])
+        self._pollutant = values_dict["pollutant"]
 
         self._layer_name = ContourPlotVectorLayer.LAYER_NAME
-        self._layer_name_suffix = (
-            values_dict["name_suffix"] if "name_suffix" in values_dict else ""
-        )
-        self._3DVisualization = (
-            values_dict["3DVisualization"]
-            if "3DVisualization" in values_dict
-            else False
-        )
-        self._isPolygon = values_dict.get("should_use_polygons", True)
-        self._enable_labels = values_dict.get("should_add_labels", False)
+        self._should_use_polygons = values_dict["should_use_polygons"]
+        self._enable_labels = values_dict["should_add_labels"]
 
         self._total_emissions = 0.0
 
-        self._threshold_to_create_a_data_point = conversion.convertToFloat(
-            values_dict.get("threshold") or 0.0001
-        )
-
-        self._grid = (
-            values_dict["grid"] if "grid" in values_dict else None
-        )  # ec.get3DGrid()
+        self._grid = values_dict["grid"]
 
         self._header = []
-
-    def getGrid(self):
-        return self._grid
-
-    def setGrid(self, var):
-        self._grid = var
-
-    def getMinHeight(self):
-        return self._min_height_in_m
-
-    def setMinHeight(self, var, inFeet=False):
-        if inFeet:
-            self._min_height_in_m = conversion.convertFeetToMeters(var)
-        else:
-            self._min_height_in_m = var
-
-    def getMaxHeight(self):
-        return self._max_height_in_m
-
-    def setMaxHeight(self, var, inFeet=False):
-        if inFeet:
-            self._max_height_in_m = conversion.convertFeetToMeters(var)
-        else:
-            self._max_height_in_m = var
-
-    def getThresholdToCreateDataPoint(self):
-        return self._threshold_to_create_a_data_point
-
-    def setThresholdToCreateDataPoint(self, var):
-        self._threshold_to_create_a_data_point = var
 
     def getTimeStart(self):
         return self._time_start
@@ -148,41 +85,6 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
     def getTotalEmissions(self):
         return self._total_emissions
 
-    def addToTotalEmissions(self, var):
-        self._total_emissions += var
-
-    def getDataPoint(self, x_, y_, z_, isPolygon, grid_):
-        data_point_ = {"coordinates": {"x": x_, "y": y_, "z": z_}}
-        if isPolygon:
-            data_point_.update(
-                {
-                    "coordinates": {
-                        "x_min": x_ - grid_.getResolutionX() / 2.0,
-                        "x_max": x_ + grid_.getResolutionX() / 2.0,
-                        "y_min": y_ - grid_.getResolutionY() / 2.0,
-                        "y_max": y_ + grid_.getResolutionY() / 2.0,
-                        "z_min": z_ - grid_.getResolutionZ() / 2.0,
-                        "z_max": z_ + grid_.getResolutionZ() / 2.0,
-                    }
-                }
-            )
-        return data_point_
-
-    def getBoundingBox(self, geometry_wkt):
-        bbox = spatial.getBoundingBox(geometry_wkt)
-        return bbox
-
-    def getCellBox(self, x_, y_, z_, grid_):
-        cell_bbox = {
-            "x_min": x_ - grid_.getResolutionX() / 2.0,
-            "x_max": x_ + grid_.getResolutionX() / 2.0,
-            "y_min": y_ - grid_.getResolutionY() / 2.0,
-            "y_max": y_ + grid_.getResolutionY() / 2.0,
-            "z_min": z_ - grid_.getResolutionZ() / 2.0,
-            "z_max": z_ + grid_.getResolutionZ() / 2.0,
-        }
-        return cell_bbox
-
     def beginJob(self):
         # prepare the attributes of each point of the vector layer
         self._total_emissions = 0.0
@@ -190,15 +92,20 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         self._data = self._grid.get_df_from_2d_grid_cells()
         self._data = self._data.assign(Q=pd.Series(0, index=self._data.index))
 
-    def process(self, timeval, result, **kwargs):
+    def process(
+        self,
+        timestamp: datetime,
+        result: list[tuple[Source, Emission]],
+        **kwargs: Any,
+    ):
         # result is of format [(Source, Emission)]
 
-        if self.getGrid() is None:
+        if self._grid is None:
             raise Exception("No 3DGrid found.")
 
         # filter by configured time
         if self._time_start and self._time_end:
-            if not (timeval >= self._time_start and timeval < self._time_end):
+            if not (timestamp >= self._time_start and timestamp < self._time_end):
                 return True
 
         self._all_matched_cells = []
@@ -251,15 +158,17 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
                     logger.error(exc_)
                     continue
 
-    def endJob(self) -> None:
+    def endJob(self) -> Optional[QgsVectorLayer]:
         if self._data.empty:
             return None
 
         geometry_type = (
-            Qgis.GeometryType.Polygon if self._isPolygon else Qgis.GeometryType.Point
+            Qgis.GeometryType.Polygon
+            if self._should_use_polygons
+            else Qgis.GeometryType.Point
         )
         layer_wrapper = ContourPlotVectorLayer(
-            layer_name=self._layer_name + self._layer_name_suffix,
+            layer_name=self._layer_name,
             geometry_type=geometry_type,
             enable_labels=self._enable_labels,
             field_name=self._pollutant,
