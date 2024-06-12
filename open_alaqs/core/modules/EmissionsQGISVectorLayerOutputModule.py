@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 import pandas as pd
-from qgis.core import Qgis, QgsVectorLayer
+from qgis.core import QgsVectorLayer
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import QVariant
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
@@ -30,10 +30,10 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
             "widget_type": QtWidgets.QLabel,
             "initial_value": "EPSG:3857",
         },
-        "should_use_polygons": {
-            "label": "Use Polygons Instead of Points",
+        "use_centroid_symbol": {
+            "label": "Show Centroid Symbols Instead of Polygons",
             "widget_type": QtWidgets.QCheckBox,
-            "initial_value": True,
+            "initial_value": False,
         },
         "should_add_labels": {
             "label": "Add Labels with Values to Cell Boxes",
@@ -64,7 +64,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         self._pollutant = values_dict["pollutant"]
 
         self._layer_name = ContourPlotVectorLayer.LAYER_NAME
-        self._should_use_polygons = values_dict["should_use_polygons"]
+        self._use_centroid_symbol = values_dict["use_centroid_symbol"]
         self._enable_labels = values_dict["should_add_labels"]
 
         self._total_emissions = 0.0
@@ -162,16 +162,11 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         if self._data.empty:
             return None
 
-        geometry_type = (
-            Qgis.GeometryType.Polygon
-            if self._should_use_polygons
-            else Qgis.GeometryType.Point
-        )
         layer_wrapper = ContourPlotVectorLayer(
             layer_name=self._layer_name,
-            geometry_type=geometry_type,
             enable_labels=self._enable_labels,
             field_name=self._pollutant,
+            use_centroid_symbol=self._use_centroid_symbol,
         )
         layer_wrapper.addHeader(self._header)
         # TODO pre-OPENGIS.ch: replace with data from grid3D, `contour_layer.addData(self._grid3D[self._grid3D.Emission>0])``
