@@ -36,7 +36,8 @@ class ContourPlotVectorLayer:
         layer_name: str,
         field_name: str,
         geometry_type: Union[
-            Literal[Qgis.GeometryType.Polygon], Literal[Qgis.GeometryType.Point]
+            Literal[Qgis.GeometryType.Polygon],
+            Literal[Qgis.GeometryType.Point],  # type:ignore
         ],
         enable_labels: bool,
     ) -> None:
@@ -135,11 +136,13 @@ class ContourPlotVectorLayer:
                         ]
                     ]
                 )
-            elif self.layer.geometryType() == Qgis.GeometryType.Polygon:
+            elif self.layer.geometryType() == Qgis.GeometryType.Point:
                 shapely_point = row["geometry"].centroid
                 geom = QgsGeometry.fromPointXY(
                     QgsPointXY(shapely_point.x, shapely_point.y)
                 )
+            else:
+                raise NotImplementedError()
 
             attr_index = fields.indexFromName(self.field_name)
             attrs = {
@@ -153,10 +156,17 @@ class ContourPlotVectorLayer:
                 )
 
             if not self.layer.addFeature(f):
+                data_provider = self.layer.dataProvider()
+
+                if data_provider is None:
+                    errors = ["Missing dataprovider!"]
+                else:
+                    errors = data_provider.errors()
+
                 raise Exception(
                     'Unable to add new feature to layer "{}": {}'.format(
                         self.layer.name(),
-                        "".join(self.layer.dataProvider().errors()),
+                        "".join(errors),
                     ),
                 )
 
