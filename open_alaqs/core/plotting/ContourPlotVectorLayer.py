@@ -1,4 +1,4 @@
-from typing import Iterable, Literal, Union
+from typing import Iterable, Literal, Union, cast
 
 import pandas as pd
 from qgis.core import (
@@ -76,9 +76,10 @@ class ContourPlotVectorLayer:
             gradient_color1, gradient_color2, False, gradient_stops
         )
 
-        symbol = QgsSymbol.defaultSymbol(self.layer.geometryType())
-        symbol.symbolLayer(0).setStrokeColor(Qt.transparent)
-        transparent_symbol = QgsFillSymbol(symbol)
+        symbol = cast(QgsSymbol, QgsSymbol.defaultSymbol(self.layer.geometryType()))
+        symbol.symbolLayer(0).setStrokeColor(Qt.GlobalColor.transparent)
+        transparent_symbol = QgsFillSymbol()
+        transparent_symbol.symbolLayer(0).setStrokeColor(Qt.GlobalColor.transparent)
         transparent_symbol.setColor(QColor("transparent"))
 
         # Create and configure the renderer
