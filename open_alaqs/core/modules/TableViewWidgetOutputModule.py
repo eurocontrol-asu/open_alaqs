@@ -1,3 +1,4 @@
+import csv
 import os
 from typing import Any, Optional
 
@@ -6,7 +7,9 @@ from qgis.PyQt.QtWidgets import QTableWidgetItem
 from qgis.PyQt.uic import loadUiType
 
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.modules.TabularOutputModule import TabularOutputModule
+from open_alaqs.core.tools.sql_interface import insert_into_table
 
 Ui_TableViewDialog, _ = loadUiType(
     os.path.join(os.path.dirname(__file__), "..", "..", "ui", "ui_table_view_dialog.ui")
@@ -52,6 +55,13 @@ class TableViewWidgetOutputModule(TabularOutputModule):
 
         self.widget = EmissionsTableViewDialog(values_dict["parent"])
 
+        self.widget.ui.exportCsvBtn.clicked.connect(
+            lambda: self._on_export_csv_clicked()
+        )
+        self.widget.ui.exportSqliteBtn.clicked.connect(
+            lambda: self._on_export_sqlite_clicked()
+        )
+
     def endJob(self) -> QtWidgets.QDialog:
         headers = [self.fields[k] for k in self.table_fields]
         self.widget.set_headers(headers)
@@ -74,6 +84,76 @@ class TableViewWidgetOutputModule(TabularOutputModule):
             self.widget.add_row(formatted_row)
 
         return self.widget
+
+    def _on_export_csv_clicked(self):
+        filename, handler_ = QtWidgets.QFileDialog.getSaveFileName(
+            None, "Save results as CSV file", ".", "CSV (*.csv)"
+        )
+
+        if not filename:
+            return
+
+        with open(filename, "w") as f:
+            writer = csv.DictWriter(f, list(self.fields.keys()))
+            writer.writeheader()
+            writer.writerows(self.rows)
+
+        if os.path.isfile(filename):
+            QtWidgets.QMessageBox.information(
+                None, "CSVOutputModule", f"Results saved as CSV file at `{filename}`"
+            )
+
+    def _on_export_sqlite_clicked(self):
+        filename, handler_ = QtWidgets.QFileDialog.getSaveFileName(
+            None, "Save results as SQLite file", ".", "'SQLite (*.db)'"
+        )
+
+        if not filename:
+            return
+
+        table_name = "emission_calculation_result"
+        serializer = SQLSerializable(
+            filename,
+            table_name,
+            {
+                "timestamp": "DATETIME",
+                "source_type": "TEXT",
+                "source_name": "TEXT",
+                "co_kg": "DECIMAL",
+                "co2_kg": "DECIMAL",
+                "hc_kg": "DECIMAL",
+                "nox_kg": "DECIMAL",
+                "sox_kg": "DECIMAL",
+                "pmtotal_kg": "DECIMAL",
+                "pm01_kg": "DECIMAL",
+                "pm25_kg": "DECIMAL",
+                "pmsul_kg": "DECIMAL",
+                "pmvolatile_kg": "DECIMAL",
+                "pmnonvolatile_kg": "DECIMAL",
+                "pmnonvolatile_number": "DECIMAL",
+                "source_wkt": "TEXT",
+            },
+            primary_key="timestamp",
+            # TODO OPENGIS.ch: add the geometry column
+            # geometry_columns=[
+            #     {
+            #         "column_name": "source_geometry",
+            #         "SRID": 3857,
+            #         "geometry_type": "POLYGON",
+            #         "geometry_type_dimension": 2,
+            #     },
+            # ],
+        )
+        serializer._recreate_table(filename)
+
+        insert_into_table(filename, table_name, self.rows)
+
+        if os.path.isfile(filename):
+            QtWidgets.QMessageBox.information(
+                None,
+                "SQLiteOutputModule",
+                f"Results saved as SQLite file at `{filename}`",
+            )
 
 
 class EmissionsTableViewDialog(QtWidgets.QDialog):
