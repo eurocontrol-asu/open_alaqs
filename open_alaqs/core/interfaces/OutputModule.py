@@ -1,6 +1,12 @@
-from typing import Any, Optional
+from datetime import datetime
+from typing import Any, Optional, Union
+
+from qgis.core import QgsMapLayer
+from qgis.PyQt.QtWidgets import QWidget
 
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.interfaces.Emissions import Emission
+from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.modules.ModuleConfigurationWidget import (
     ModuleConfigurationWidget,
     SettingsSchema,
@@ -51,9 +57,13 @@ class OutputModule:
     def beginJob(self):
         return None
 
-    def process(self, timeval, result, **kwargs):
-        # result is of format [(Source, Emission)]
+    def process(
+        self,
+        timestamp: datetime,
+        result: list[tuple[Source, Emission]],
+        **kwargs: Any,
+    ):
         raise NotImplementedError()
 
-    def endJob(self):
+    def endJob(self) -> Union[QWidget, QgsMapLayer, None]:
         return None
