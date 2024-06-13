@@ -46,6 +46,7 @@ class PollutantType(str, Enum):
 
 class PollutantUnit(str, Enum):
     KG_HOUR = "kg_hour"
+    GRAM = "g"
 
 
 class EmissionIndex(Store):
@@ -345,44 +346,59 @@ class Emission(Store):
     def addFuel(self, val_in_kgrams):
         return self.addValue("fuel_kg", val_in_kgrams)
 
+    def add_value(
+        self,
+        pollutant_type: PollutantType,
+        unit: PollutantUnit,
+        value: float,
+    ) -> None:
+        key = f"{pollutant_type.value}_{unit.value}"
+        self._objects[key] += value
+
     def addCO(self, val_in_grams):
-        return self.addValue("co_g", val_in_grams)
+        return self.add_value(PollutantType.CO, PollutantUnit.GRAM, val_in_grams)
 
     def addCO2(self, val_in_grams):
-        return self.addValue("co2_g", val_in_grams)
+        return self.add_value(PollutantType.CO2, PollutantUnit.GRAM, val_in_grams)
 
     def addHC(self, val_in_grams):
-        return self.addValue("hc_g", val_in_grams)
+        return self.add_value(PollutantType.HC, PollutantUnit.GRAM, val_in_grams)
 
     def addNOx(self, val_in_grams):
-        return self.addValue("nox_g", val_in_grams)
+        return self.add_value(PollutantType.NOx, PollutantUnit.GRAM, val_in_grams)
 
     def addSOx(self, val_in_grams):
-        return self.addValue("sox_g", val_in_grams)
+        return self.add_value(PollutantType.SOx, PollutantUnit.GRAM, val_in_grams)
 
     def addPM10(self, val_in_grams):
-        return self.addValue("pm10_g", val_in_grams)
+        return self.add_value(PollutantType.PM10, PollutantUnit.GRAM, val_in_grams)
 
     def addPM1(self, val_in_grams):
-        return self.addValue("pm1_g", val_in_grams)
+        return self.add_value(PollutantType.PM1, PollutantUnit.GRAM, val_in_grams)
 
     def addPM2(self, val_in_grams):
-        return self.addValue("pm2_g", val_in_grams)
+        return self.add_value(PollutantType.PM2, PollutantUnit.GRAM, val_in_grams)
 
     def addPM10Prefoa3(self, val_in_grams):
-        return self.addValue("pm10_prefoa3_g", val_in_grams)
+        return self.add_value(
+            PollutantType.PM10Prefoa3, PollutantUnit.GRAM, val_in_grams
+        )
 
     def addPM10Nonvol(self, val_in_grams):
-        return self.addValue("pm10_nonvol_g", val_in_grams)
+        return self.add_value(
+            PollutantType.PM10Nonvol, PollutantUnit.GRAM, val_in_grams
+        )
 
     def addPM10Sul(self, val_in_grams):
-        return self.addValue("pm10_sul_g", val_in_grams)
+        return self.add_value(PollutantType.PM10Sul, PollutantUnit.GRAM, val_in_grams)
 
     def addPM10Organic(self, val_in_grams):
-        return self.addValue("pm10_organic_g", val_in_grams)
+        return self.add_value(
+            PollutantType.PM10Organic, PollutantUnit.GRAM, val_in_grams
+        )
 
     def addnvPM(self, val_in_grams):
-        return self.addValue("nvpm_g", val_in_grams)
+        return self.add_value(PollutantType.nvPM, PollutantUnit.GRAM, val_in_grams)
 
     def addnvPMnumber(self, val):
         return self.addValue("nvpm_number", val)
