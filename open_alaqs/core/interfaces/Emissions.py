@@ -1,4 +1,5 @@
-from typing import Tuple
+from enum import Enum
+from typing import Tuple, cast
 
 from shapely.geometry import GeometryCollection
 from shapely.wkt import loads
@@ -25,6 +26,26 @@ defValues = {
     "nvpm_g": 0.0,
     "nvpm_number": 0.0,
 }
+
+
+class PollutantType(str, Enum):
+    CO = "co"
+    CO2 = "co2"
+    HC = "hc"
+    NOx = "nox"
+    SOx = "sox"
+    PM10 = "pm10"
+    PM1 = "p1"
+    PM2 = "p2"
+    PM10Organic = "pm10_organic"
+    PM10Prefoa3 = "pm10_prefoa3"
+    PM10Nonvol = "pm10_nonvol"
+    PM10Sul = "pm10_sul"
+    nvPM = "nvpm"
+
+
+class PollutantUnit(str, Enum):
+    KG_HOUR = "kg_hour"
 
 
 class EmissionIndex(Store):
@@ -270,46 +291,49 @@ class Emission(Store):
         return self.getObject("fuel_%s" % unit), "kg"
 
     def getCO(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("co_%s" % unit), "g"
+        return self.get_emission(PollutantType.CO, unit)
 
     def getCO2(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("co2_%s" % unit), "g"
+        return self.get_emission(PollutantType.CO2, unit)
 
     def getHC(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("hc_%s" % unit), "g"
+        return self.get_emission(PollutantType.HC, unit)
 
     def getNOx(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("nox_%s" % unit), "g"
+        return self.get_emission(PollutantType.NOx, unit)
 
     def getSOx(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("sox_%s" % unit), "g"
+        return self.get_emission(PollutantType.SOx, unit)
 
     def getPM10(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm10_%s" % unit), "g"
+        return self.get_emission(PollutantType.PM10, unit)
 
     def getPM1(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm1_%s" % unit), "g"
+        return self.get_emission(PollutantType.PM1, unit)
 
     def getPM2(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm2_%s" % unit), "g"
+        return self.get_emission(PollutantType.PM2, unit)
 
     def getPM10Prefoa3(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm10_prefoa3_%s" % unit), "g"
+        return self.get_emission(PollutantType.PM10Prefoa3, unit)
 
     def getPM10Nonvol(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm10_nonvol_%s" % unit), "g"
+        return self.get_emission(PollutantType.PM10Nonvol, unit)
 
     def getPM10Sul(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm10_sul_%s" % unit), "g"
+        return self.get_emission(PollutantType.PM10Sul, unit)
 
     def getPM10Organic(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm10_organic_%s" % unit), "g"
+        return self.get_emission(PollutantType.PM10Organic, unit)
 
     def getnvPM(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("nvpm_%s" % unit), "g"
+        return self.get_emission(PollutantType.nvPM, unit)
 
     def getnvPMnumber(self) -> Tuple[float, str]:
         return self.getObject("nvpm_number"), ""
+
+    def get_emission(self, polutant_type: PollutantType, unit="g") -> Tuple[float, str]:
+        return cast(float, self.getObject(f"{polutant_type.value}_{unit}")), unit
 
     def addValue(self, key, val) -> bool:
         if self.hasKey(key):
