@@ -1,3 +1,5 @@
+from typing import Optional
+
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import EmissionIndex
 from open_alaqs.core.interfaces.Store import Store
@@ -115,7 +117,7 @@ class HelicopterEngineEmissionIndex(Store):
         # if "power_setting" in val:
         #     self.setModePowerSetting(mode, val["%s_power_setting"%(mode.lower())])
 
-    def getEmissionIndexByMode(self, mode):
+    def getEmissionIndexByMode(self, mode) -> Optional[EmissionIndex]:
         emission_index = None
         if self.hasKey(mode):
             emission_index = self.getObject(mode)
@@ -182,7 +184,7 @@ class EngineEmissionIndex(Store):
             "Approach": "AP",
         }
 
-    def getEmissionIndexByMode(self, mode):
+    def getEmissionIndexByMode(self, mode) -> Optional[EmissionIndex]:
         emission_index = None
 
         # fix naming conventions
@@ -582,7 +584,7 @@ class Engine:
     def setEmissionIndex(self, ei):
         self._emission_index = ei
 
-    def getEmissionIndex(self):
+    def getEmissionIndex(self) -> Optional[EmissionIndex]:
         return self._emission_index
 
     def getName(self):
