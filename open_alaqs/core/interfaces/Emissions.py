@@ -45,7 +45,7 @@ class PollutantType(str, Enum):
 
 
 class PollutantUnit(str, Enum):
-    KG_HOUR = "kg_hour"
+    KG = "kg"
     GRAM = "g"
 
 
@@ -354,6 +354,10 @@ class Emission(Store):
     ) -> None:
         key = f"{pollutant_type.value}_{unit.value}"
         self._objects[key] += value
+
+    def get_value(self, pollutant_type: PollutantType, unit: PollutantUnit) -> float:
+        key = f"{pollutant_type.value}_{unit.value}"
+        return self._objects[key]
 
     def __str__(self):
         val = "Emissions:"
