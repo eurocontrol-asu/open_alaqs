@@ -355,21 +355,6 @@ class Emission(Store):
         key = f"{pollutant_type.value}_{unit.value}"
         self._objects[key] += value
 
-    def addCO(self, val_in_grams):
-        return self.add_value(PollutantType.CO, PollutantUnit.GRAM, val_in_grams)
-
-    def addHC(self, val_in_grams):
-        return self.add_value(PollutantType.HC, PollutantUnit.GRAM, val_in_grams)
-
-    def addNOx(self, val_in_grams):
-        return self.add_value(PollutantType.NOx, PollutantUnit.GRAM, val_in_grams)
-
-    def addSOx(self, val_in_grams):
-        return self.add_value(PollutantType.SOx, PollutantUnit.GRAM, val_in_grams)
-
-    def addPM10(self, val_in_grams):
-        return self.add_value(PollutantType.PM10, PollutantUnit.GRAM, val_in_grams)
-
     def __str__(self):
         val = "Emissions:"
         val += "\n Geometry wkt: '%s'" % (str(self.getGeometryText()))
