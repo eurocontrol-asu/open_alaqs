@@ -62,26 +62,26 @@ class EmissionIndex(Store):
         if "fuel" in name:
             return self.getFuel()
         elif "co2" in name:
-            return self.getCO2()
+            return self.get_value(PollutantType.CO2, "g_kg"), "g"
         elif "co" in name:
-            return self.getCO()
+            return self.get_value(PollutantType.CO, "g_kg"), "g"
         elif "nox" in name or "no" in name:
-            return self.getNOx()
+            return self.get_value(PollutantType.NOx, "g_kg"), "g"
         # elif "sox" in name:
         elif "sox" in name or "so" in name:
-            return self.getSOx()
+            return self.get_value(PollutantType.SOx, "g_kg"), "g"
         elif "hc" in name:
-            return self.getHC()
+            return self.get_value(PollutantType.HC, "g_kg"), "g"
         elif "pm10" in name or "p10" in name:
-            return self.getPM10()
+            return self.get_value(PollutantType.PM10, "g_kg"), "g"
         elif "pm1" in name or "p1" in name:
-            return self.getPM1()
+            return self.get_value(PollutantType.PM1, "g_kg"), "g"
         elif "pm2" in name or "p2" in name:
-            return self.getPM2()
+            return self.get_value(PollutantType.PM2, "g_kg"), "g"
         elif "nvpm_number" in name:
-            return self.getnvPMnumber()
+            return (cast(float, self.getObject("nvpm_number")), "g")
         elif "nvpm" in name:
-            return self.getnvPM()
+            return self.get_value(PollutantType.nvPM, "g_kg"), "g"
         else:
             logger.error("Did not find key that matches name '%s'" % (name))
 
@@ -90,14 +90,8 @@ class EmissionIndex(Store):
     def getFuel(self, unit="kg_sec"):
         return (self.getObject("fuel_%s" % unit), "kg")
 
-    def getCO(self, unit="g_kg"):
-        return (self.getObject("co_%s" % (unit)), "g")
-
     def getCO2(self, unit="g_kg"):
         return (self.getObject("co2_%s" % (unit)), "g")
-
-    def getHC(self, unit="g_kg"):
-        return (self.getObject("hc_%s" % (unit)), "g")
 
     def getNOx(self, unit="g_kg"):
         return (self.getObject("nox_%s" % (unit)), "g")
@@ -107,30 +101,6 @@ class EmissionIndex(Store):
 
     def getPM10(self, unit="g_kg"):
         return (self.getObject("pm10_%s" % (unit)), "g")
-
-    def getPM1(self, unit="g_kg"):
-        return (self.getObject("pm1_%s" % (unit)), "g")
-
-    def getPM2(self, unit="g_kg"):
-        return (self.getObject("pm2_%s" % (unit)), "g")
-
-    def getPM10Prefoa3(self, unit="g_kg"):
-        return (self.getObject("pm10_prefoa3_%s" % (unit)), "g")
-
-    def getPM10Nonvol(self, unit="g_kg"):
-        return (self.getObject("pm10_nonvol_%s" % (unit)), "g")
-
-    def getPM10Sul(self, unit="g_kg"):
-        return (self.getObject("pm10_sul_%s" % (unit)), "g")
-
-    def getPM10Organic(self, unit="g_kg"):
-        return (self.getObject("pm10_organic_%s" % (unit)), "g")
-
-    def getnvPM(self, unit="g_kg") -> Tuple[float, str]:
-        return (self.getObject("nvpm_%s" % (unit)), "g")
-
-    def getnvPMnumber(self, unit="") -> Tuple[float, str]:
-        return (self.getObject("nvpm_number"), "g")
 
     def get_value(
         self, pollutant_type: PollutantType, unit: Literal["kg_hour", "g_kg"]
@@ -262,34 +232,34 @@ class Emission(Store):
         if "fuel" in name:
             return self.getFuel(unit=unit)
         elif "co2" in name:
-            return self.getCO2(unit=unit)
+            return self.get_emission(PollutantType.CO2, unit)
         elif "co" in name:
-            return self.getCO(unit=unit)
+            return self.get_emission(PollutantType.CO, unit)
         elif "nox" in name or "no" in name:
-            return self.getNOx(unit=unit)
+            return self.get_emission(PollutantType.NOx, unit)
         elif "sox" in name:
-            return self.getSOx(unit=unit)
+            return self.get_emission(PollutantType.SOx, unit)
         elif "hc" in name:
-            return self.getHC(unit=unit)
+            return self.get_emission(PollutantType.HC, unit)
         elif "pm10" in name:
             if "prefoa3" in name:
-                return self.getPM10Prefoa3(unit=unit)
+                return self.get_emission(PollutantType.PM10Prefoa3, unit)
             elif "nonvol" in name:
-                return self.getPM10Nonvol(unit=unit)
+                return self.get_emission(PollutantType.PM10Nonvol, unit)
             elif "sul" in name:
-                return self.getPM10Sul(unit=unit)
+                return self.get_emission(PollutantType.PM10Sul, unit)
             elif "organic" in name:
-                return self.getPM10Organic(unit=unit)
+                return self.get_emission(PollutantType.PM10Organic, unit)
             else:
-                return self.getPM10(unit=unit)
+                return self.get_emission(PollutantType.PM10, unit)
         elif "pm1" in name or "p1" in name:
-            return self.getPM1(unit=unit)
+            return self.get_emission(PollutantType.PM1, unit)
         elif "pm2" in name or "p2" in name:
-            return self.getPM2(unit=unit)
+            return self.get_emission(PollutantType.PM2, unit)
         elif "nvpm_number" in name:
-            return self.getnvPMnumber()
+            return cast(float, self.getObject("nvpm_number")), ""
         elif "nvpm" in name:
-            return self.getnvPM(unit=unit)
+            return self.get_emission(PollutantType.nvPM, unit)
 
         logger.error("Did not find key that matches name '%s'" % name)
         return None, None
@@ -297,14 +267,8 @@ class Emission(Store):
     def getFuel(self, unit: str = "kg") -> Tuple[float, str]:
         return self.getObject("fuel_%s" % unit), "kg"
 
-    def getCO(self, unit: str = "g") -> Tuple[float, str]:
-        return self.get_emission(PollutantType.CO, unit)
-
     def getCO2(self, unit: str = "g") -> Tuple[float, str]:
         return self.get_emission(PollutantType.CO2, unit)
-
-    def getHC(self, unit: str = "g") -> Tuple[float, str]:
-        return self.get_emission(PollutantType.HC, unit)
 
     def getNOx(self, unit: str = "g") -> Tuple[float, str]:
         return self.get_emission(PollutantType.NOx, unit)
@@ -314,27 +278,6 @@ class Emission(Store):
 
     def getPM10(self, unit: str = "g") -> Tuple[float, str]:
         return self.get_emission(PollutantType.PM10, unit)
-
-    def getPM1(self, unit: str = "g") -> Tuple[float, str]:
-        return self.get_emission(PollutantType.PM1, unit)
-
-    def getPM2(self, unit: str = "g") -> Tuple[float, str]:
-        return self.get_emission(PollutantType.PM2, unit)
-
-    def getPM10Prefoa3(self, unit: str = "g") -> Tuple[float, str]:
-        return self.get_emission(PollutantType.PM10Prefoa3, unit)
-
-    def getPM10Nonvol(self, unit: str = "g") -> Tuple[float, str]:
-        return self.get_emission(PollutantType.PM10Nonvol, unit)
-
-    def getPM10Sul(self, unit: str = "g") -> Tuple[float, str]:
-        return self.get_emission(PollutantType.PM10Sul, unit)
-
-    def getPM10Organic(self, unit: str = "g") -> Tuple[float, str]:
-        return self.get_emission(PollutantType.PM10Organic, unit)
-
-    def getnvPM(self, unit: str = "g") -> Tuple[float, str]:
-        return self.get_emission(PollutantType.nvPM, unit)
 
     def getnvPMnumber(self) -> Tuple[float, str]:
         return self.getObject("nvpm_number"), ""
