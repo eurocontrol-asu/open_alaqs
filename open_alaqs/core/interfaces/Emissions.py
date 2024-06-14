@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Literal, Tuple, cast
+from typing import Literal, Tuple
 
 from shapely.geometry import GeometryCollection
 from shapely.wkt import loads
@@ -58,36 +58,6 @@ class EmissionIndex(Store):
         if defaultValues is None:
             defaultValues = {}
         Store.__init__(self, initValues, defaultValues)
-
-    def getValue(self, name):
-        name = name.lower()
-        if "fuel" in name:
-            return self.getFuel()
-        elif "co2" in name:
-            return self.get_value(PollutantType.CO2, "g_kg"), "g"
-        elif "co" in name:
-            return self.get_value(PollutantType.CO, "g_kg"), "g"
-        elif "nox" in name or "no" in name:
-            return self.get_value(PollutantType.NOx, "g_kg"), "g"
-        # elif "sox" in name:
-        elif "sox" in name or "so" in name:
-            return self.get_value(PollutantType.SOx, "g_kg"), "g"
-        elif "hc" in name:
-            return self.get_value(PollutantType.HC, "g_kg"), "g"
-        elif "pm10" in name or "p10" in name:
-            return self.get_value(PollutantType.PM10, "g_kg"), "g"
-        elif "pm1" in name or "p1" in name:
-            return self.get_value(PollutantType.PM1, "g_kg"), "g"
-        elif "pm2" in name or "p2" in name:
-            return self.get_value(PollutantType.PM2, "g_kg"), "g"
-        elif "nvpm_number" in name:
-            return (cast(float, self.getObject("nvpm_number")), "g")
-        elif "nvpm" in name:
-            return self.get_value(PollutantType.nvPM, "g_kg"), "g"
-        else:
-            logger.error("Did not find key that matches name '%s'" % (name))
-
-            return (None, None)
 
     def getFuel(self, unit="kg_sec"):
         return (self.getObject("fuel_%s" % unit), "kg")
@@ -201,51 +171,8 @@ class Emission(Store):
                 emission_index_.getObject("%s" % key) * factor,
             )
 
-    def getValue(self, name: str, unit: str = "kg") -> Tuple[float, str]:
-        name = name.lower()
-        if "fuel" in name:
-            return self.getFuel(unit=unit)
-        elif "co2" in name:
-            return self.get_emission(PollutantType.CO2, unit)
-        elif "co" in name:
-            return self.get_emission(PollutantType.CO, unit)
-        elif "nox" in name or "no" in name:
-            return self.get_emission(PollutantType.NOx, unit)
-        elif "sox" in name:
-            return self.get_emission(PollutantType.SOx, unit)
-        elif "hc" in name:
-            return self.get_emission(PollutantType.HC, unit)
-        elif "pm10" in name:
-            if "prefoa3" in name:
-                return self.get_emission(PollutantType.PM10Prefoa3, unit)
-            elif "nonvol" in name:
-                return self.get_emission(PollutantType.PM10Nonvol, unit)
-            elif "sul" in name:
-                return self.get_emission(PollutantType.PM10Sul, unit)
-            elif "organic" in name:
-                return self.get_emission(PollutantType.PM10Organic, unit)
-            else:
-                return self.get_emission(PollutantType.PM10, unit)
-        elif "pm1" in name or "p1" in name:
-            return self.get_emission(PollutantType.PM1, unit)
-        elif "pm2" in name or "p2" in name:
-            return self.get_emission(PollutantType.PM2, unit)
-        elif "nvpm_number" in name:
-            return cast(float, self.getObject("nvpm_number")), ""
-        elif "nvpm" in name:
-            return self.get_emission(PollutantType.nvPM, unit)
-
-        logger.error("Did not find key that matches name '%s'" % name)
-        return None, None
-
     def getFuel(self, unit: str = "kg") -> Tuple[float, str]:
         return self.getObject("fuel_%s" % unit), "kg"
-
-    def getnvPMnumber(self) -> Tuple[float, str]:
-        return self.getObject("nvpm_number"), ""
-
-    def get_emission(self, polutant_type: PollutantType, unit="g") -> Tuple[float, str]:
-        return cast(float, self.getObject(f"{polutant_type.value}_{unit}")), unit
 
     def addValue(self, key, val) -> bool:
         if self.hasKey(key):
