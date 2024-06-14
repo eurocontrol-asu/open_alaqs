@@ -42,9 +42,11 @@ class PollutantType(str, Enum):
     PM10Nonvol = "pm10_nonvol"
     PM10Sul = "pm10_sul"
     nvPM = "nvpm"
+    nvPMnumber = "nvpm_number"
 
 
 class PollutantUnit(str, Enum):
+    NONE = ""
     KG = "kg"
     GRAM = "g"
 
@@ -185,28 +187,12 @@ class Emission(Store):
         fuel_burned = emission_index_.getObject("fuel_kg_sec") * time_s_in_mode
         self.addValue("fuel_kg", fuel_burned)
 
-        # Set the pollutant keys ({pollutant}_{unit}) dependent on fuel burned
-        pollutants = [
-            "co_g",
-            "co2_g",
-            "hc_g",
-            "nox_g",
-            "sox_g",
-            "pm10_g",
-            "p1_g",
-            "p2_g",
-            "pm10_prefoa3_g",
-            "pm10_nonvol_g",
-            "pm10_sul_g",
-            "pm10_organic_g",
-            "nvpm_g",
-            "nvpm_number",
-        ]
-
         # Determine the total emissions for each pollutant
-        for pollutant in pollutants:
-            pollutant_ei = emission_index_.getObject(f"{pollutant}_kg")
-            self.addValue(pollutant, pollutant_ei * fuel_burned)
+        for pollutant_type in PollutantType:
+            pollutant_ei = emission_index_.get_value(pollutant_type, "g_kg")
+            self.add_value(
+                pollutant_type, PollutantUnit.GRAM, pollutant_ei * fuel_burned
+            )
 
     def addGeneric(self, emission_index_, factor, unit, new_unit=""):
         for key in list(emission_index_.getObjects().keys()):

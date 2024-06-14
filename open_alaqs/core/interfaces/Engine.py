@@ -1,7 +1,7 @@
 from typing import Optional
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.Emissions import EmissionIndex
+from open_alaqs.core.interfaces.Emissions import EmissionIndex, PollutantType
 from open_alaqs.core.interfaces.Store import Store
 from open_alaqs.core.tools.bffm2 import calculate_emission_index
 from open_alaqs.core.tools.twin_quadratic_fit_method import (
@@ -205,7 +205,7 @@ class EngineEmissionIndex(Store):
         return emission_index
 
     def getICAOEngineEmissionsDB(self, index1_power=False, id2=None, format=""):
-        icao_eedb = {}
+        icao_eedb: dict[float, EmissionIndex] = {}
         for mode_, obj_ in list(self.getObjects().items()):
             emission_index_ = (
                 obj_["emission_index"] if "emission_index" in obj_ else None
@@ -240,11 +240,13 @@ class EngineEmissionIndex(Store):
                 "C/O": "Climbout",
                 "TX": "Idle",
             }
-            for p in ["NOx", "CO", "HC"]:
-                icao_eedb_bffm2[p] = {}
+            for p in [PollutantType.NOx, PollutantType.CO, PollutantType.HC]:
+                icao_eedb_bffm2[p.value] = {}
                 for m in icao_eedb:
-                    icao_eedb_bffm2[p][map_names_[m] if m in map_names_ else m] = {
-                        icao_eedb[m].getFuel()[0]: icao_eedb[m].getValue(p)[0]
+                    icao_eedb_bffm2[p.value][
+                        map_names_[m] if m in map_names_ else m
+                    ] = {
+                        icao_eedb[m].getFuel()[0]: icao_eedb[m].get_value(p, "g_kg")[0]
                     }  # units: kg, g/kg
 
             return icao_eedb_bffm2

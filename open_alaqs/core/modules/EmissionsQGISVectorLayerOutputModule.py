@@ -8,7 +8,7 @@ from qgis.PyQt.QtCore import QVariant
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.Emissions import Emission
+from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
 from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.plotting.ContourPlotVectorLayer import ContourPlotVectorLayer
@@ -60,7 +60,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         # Results analysis
         self._time_start = values_dict["start_dt_inclusive"]
         self._time_end = values_dict["end_dt_inclusive"]
-        self._pollutant = values_dict["pollutant"]
+        self.pollutant_type = PollutantType(values_dict["pollutant"].lower())
 
         self._layer_name = ContourPlotVectorLayer.LAYER_NAME
         self._use_centroid_symbol = values_dict["use_centroid_symbol"]
@@ -78,8 +78,8 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
     def getTimeEnd(self):
         return self._time_end
 
-    def getPollutant(self):
-        return self._pollutant
+    def getPollutant(self) -> str:
+        return self.pollutant_type.value
 
     def getTotalEmissions(self):
         return self._total_emissions
@@ -87,7 +87,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
     def beginJob(self):
         # prepare the attributes of each point of the vector layer
         self._total_emissions = 0.0
-        self._header = [(self._pollutant, QVariant.Double)]
+        self._header = [(self.pollutant_type, QVariant.Double)]
         self._data = self._grid.get_df_from_2d_grid_cells()
         self._data = self._data.assign(Q=pd.Series(0, index=self._data.index))
 
@@ -120,7 +120,9 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
                     )
                     continue
 
-                EmissionValue = emissions_.getValue(self._pollutant, unit="kg")[0]
+                EmissionValue = emissions_.get_value(
+                    self.pollutant_type, PollutantUnit.KG
+                )
                 if EmissionValue == 0:
                     continue
 
@@ -164,7 +166,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         layer_wrapper = ContourPlotVectorLayer(
             layer_name=self._layer_name,
             enable_labels=self._enable_labels,
-            field_name=self._pollutant,
+            field_name=self.pollutant_type.value,
             use_centroid_symbol=self._use_centroid_symbol,
         )
         layer_wrapper.addHeader(self._header)

@@ -166,7 +166,9 @@ class TableViewWidgetOutputModule(OutputModule):
             "pmnonvolatile_kg": emissions.get_value(
                 PollutantType.nvPM, PollutantUnit.KG
             ),
-            "pmnonvolatile_number": emissions.getnvPMnumber()[0],
+            "pmnonvolatile_number": emissions.get_value(
+                PollutantType.nvPMnumber, PollutantUnit.NONE
+            ),
         }
 
     def _on_export_csv_clicked(self):
