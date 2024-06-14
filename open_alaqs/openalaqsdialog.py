@@ -49,6 +49,7 @@ from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqsdblite import ProjectDatabase, delete_records
 from open_alaqs.core.alaqslogging import get_logger, log_path
 from open_alaqs.core.EmissionCalculation import EmissionCalculation
+from open_alaqs.core.interfaces.Emissions import PollutantType
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleRegistry,
@@ -2704,7 +2705,17 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             "widget_type": QtWidgets.QComboBox,
             "initial_value": None,
             "widget_config": {
-                "options": ["CO2", "CO", "HC", "NOx", "SOx", "PM10"],
+                "options": list(
+                    p.value
+                    for p in (
+                        PollutantType.CO2,
+                        PollutantType.CO,
+                        PollutantType.HC,
+                        PollutantType.NOx,
+                        PollutantType.SOx,
+                        PollutantType.PM10,
+                    )
+                ),
             },
         },
         "is_uncertainty_enabled": {
