@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime
+from typing import Any, TypedDict
 
 import matplotlib
 import pandas as pd
@@ -7,14 +9,22 @@ from qgis.PyQt import QtWidgets
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.OutputModule import OutputModule
+from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.plotting.MatplotlibQtDialog import MatplotlibQtDialog
-from open_alaqs.core.tools import conversion
 
 logging.getLogger("matplotlib").setLevel(logging.ERROR)
 matplotlib.use("Qt5Agg")
 
 logger = get_logger(__name__)
+
+
+class ReceptorPointRow(TypedDict):
+    id: str
+    latitude: str
+    longitude: str
+    epsg: str
 
 
 class TimeSeriesWidgetOutputModule(OutputModule):
@@ -38,23 +48,26 @@ class TimeSeriesWidgetOutputModule(OutputModule):
             "widget_type": QtWidgets.QTableWidget,
             "initial_value": [(None, None, None, "4326")],
             "widget_config": {
-                "table_headers": ("id", "longitude", "latitude", "epsg"),
+                "table_headers": [
+                    ("id", "ID"),
+                    ("longitude", "Longitude"),
+                    ("latitude", "Latitude"),
+                    ("epsg", "EPSG"),
+                ],
             },
         },
     }
 
     @staticmethod
-    def getModuleName():
+    def getModuleName() -> str:
         return "TimeSeriesWidgetOutputModule"
 
     @staticmethod
-    def getModuleDisplayName():
+    def getModuleDisplayName() -> str:
         return "Time Series"
 
-    def __init__(self, values_dict=None):
-        if values_dict is None:
-            values_dict = {}
-        OutputModule.__init__(self, values_dict)
+    def __init__(self, values_dict: dict[str, Any]) -> None:
+        super().__init__(values_dict)
 
         # Widget configuration
         self._parent = values_dict.get("parent")
@@ -65,65 +78,35 @@ class TimeSeriesWidgetOutputModule(OutputModule):
         self._xtitle = values_dict.get("x_axis_title", "")
         self._ytitle = values_dict.get("ytitle", "")
         self._marker = values_dict.get("marker", "")
-        self._receptor = values_dict.get("receptor_point", "")
+        # TODO OPENGIS.ch: the `_receptor` should be empty, otherwise it fails later with `_epsg` attribute error
+        self._receptor = values_dict.get("receptor_point", {})
+        self.receptor_points: list[Point] = self.configuration_to_receptor_points(
+            values_dict.get("receptor_point", {})
+        )
+
         self._grid = values_dict.get("grid")
 
-        self._TableWidgetHeader = ("id", "longitude", "latitude", "epsg")
-        self._TableWidgetRows = values_dict.get("rows", 1)
-        self._TableWidgetCols = values_dict.get("columns", len(self._TableWidgetHeader))
-        self._TableWidgetInputs = {
-            "rows": self._TableWidgetRows,
-            "columns": self._TableWidgetCols,
-            "header": self._TableWidgetHeader,
-        }
-
         # Results analysis
-        self._time_start = ""
-        if "start_dt_inclusive" in values_dict:
-            self._time_start = conversion.convertStringToDateTime(
-                values_dict["start_dt_inclusive"]
-            )
-        self._time_end = (
-            conversion.convertStringToDateTime(values_dict["end_dt_inclusive"])
-            if "end_dt_inclusive" in values_dict
-            else ""
-        )
-        self._pollutant = values_dict.get("pollutant")
+        self._time_start = values_dict["start_dt_inclusive"]
+        self._time_end = values_dict["end_dt_inclusive"]
+
+        self.pollutant_name = values_dict.get("pollutant")
+
+    def configuration_to_receptor_points(
+        self, receptor_point_rows: list[ReceptorPointRow]
+    ) -> list[Point]:
+        points = []
+        for row in receptor_point_rows:
+            if row["latitude"] and row["longitude"]:
+                points.append(Point(row["latitude"], row["longitude"]))
+            else:
+                logger.info(f'Skipping row {row["id"]}...')
+
+        return points
 
     def beginJob(self):
-
         self._data_x = []
         self._data_y = []
-        self._receptor_df = pd.DataFrame()
-        self._receptor_geom = Point()
-
-        try:
-            self._receptor_df = pd.DataFrame(
-                columns=[hdr for hdr in self._TableWidgetHeader],  # Fill columnets
-                index=range(self._TableWidgetRows),  # Fill rows
-            )
-            for i in range(self._TableWidgetRows):
-                for j in range(self._TableWidgetCols):
-                    self._receptor_df.iloc[i, j] = self._receptor[(i, j)]
-
-                if (
-                    not self._receptor_df.dropna(how="any").empty
-                    and "longitude" in self._receptor_df.keys()
-                    and "latitude" in self._receptor_df.keys()
-                ):
-                    self._lon = self._receptor_df["longitude"].astype(float).values[0]
-                    self._lat = self._receptor_df["latitude"].astype(float).values[0]
-                    self._id = self._receptor_df["id"].astype(str).values[0]
-                    self._epsg = self._receptor_df["epsg"].astype(str).values[0]
-                    self._receptor_geom = Point(self._lon, self._lat)
-                    logger.info(
-                        "Timeseries will be generated for the point: %s"
-                        % self._receptor_geom.to_wkt()
-                    )
-                    self._title += "\n(at %s)" % str(self._receptor_geom)
-
-        except Exception as exc_:
-            logger.error(exc_)
 
         self._griddata = self._grid.get_df_from_2d_grid_cells()
         self._griddata = self._griddata.assign(
@@ -131,46 +114,34 @@ class TimeSeriesWidgetOutputModule(OutputModule):
         )
         self._griddata.crs = "epsg:3857"
 
-        if self._receptor_df.dropna(how="any").empty:
-            logger.info(
-                "No receptor point found. Timeseries will be generated for the entire domain."
-            )
-
-    def process(self, timeval, result, **kwargs):
-        # result is of format [(Source, Emission)]s
-        # filter by configured time
+    def process(
+        self,
+        timestamp: datetime,
+        result: list[tuple[Source, Emission]],
+        **kwargs: Any,
+    ) -> None:
         if self._time_start and self._time_end:
-            if not (timeval >= self._time_start and timeval < self._time_end):
-                return True
+            if not (timestamp >= self._time_start and timestamp < self._time_end):
+                return None
 
-        if self._receptor_df.dropna(how="any").empty:
+        if len(self.receptor_points) == 0:
             total_emissions_ = sum(
-                [
-                    _f
-                    for _f in [
-                        sum([_f for _f in emissions_ if _f])
-                        for (source, emissions_) in result
-                    ]
-                    if _f
-                ]
+                [sum(emissions_) for (_, emissions_) in result if emissions_]
             )
 
             if total_emissions_:
-                self._data_x.append(timeval)
+                self._data_x.append(timestamp)
+                self._data_y.append(
+                    total_emissions_.getValue(self.pollutant_name, unit="kg")[0]
+                )
 
-                if self._pollutant is not None:
-                    self._data_y.append(
-                        total_emissions_.getValue(self._pollutant, unit="kg")[0]
-                    )
-                else:
-                    self._data_y.append(None)
         else:
-            self._data_x.append(timeval)
+            self._data_x.append(timestamp)
 
-            for source, emissions in result:
+            for _source, emissions in result:
                 for em_ in emissions:
 
-                    EmissionValue = em_.getValue(self._pollutant, unit="kg")[0]
+                    EmissionValue = em_.getValue(self.pollutant_name, unit="kg")[0]
                     if EmissionValue == 0:
                         continue
 
@@ -233,16 +204,21 @@ class TimeSeriesWidgetOutputModule(OutputModule):
                         print(exc_)
                         continue
 
-            receptor_cell = self._griddata[
-                self._griddata.to_crs({"init": "epsg:%s" % self._epsg}).intersects(
-                    self._receptor_geom
-                )
-                == True  # noqa: E712
-            ]
-            if not receptor_cell.empty:
-                self._data_y.append(receptor_cell["Emission"].sum())
-            else:
+            # FIXME OPENGIS.ch: most probably we should make it support more than 1 `receptor_point` in the future
+            receptor_point_row = self.receptor_points[0]
+            intersection = self._griddata.to_crs(
+                {
+                    "init": f"epsg:{receptor_point_row["epsg"]}",
+                }
+            ).intersects(
+                Point(receptor_point_row["longitude"], receptor_point_row["latitude"])
+            )
+            receptor_cell = self._griddata[intersection == True]  # noqa: E712
+
+            if receptor_cell.empty:
                 self._data_y.append(0)
+            else:
+                self._data_y.append(receptor_cell["Emission"].sum())
 
     def endJob(self):
         # show widget

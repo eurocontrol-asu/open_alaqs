@@ -60,16 +60,8 @@ class TimeSeriesDispersionModule(OutputModule):
         self._max_values = values_dict.get("is_daily_maximum_enabled", False)
 
         # Results analysis
-        self._time_start = (
-            conversion.convertStringToDateTime(values_dict["start_dt_inclusive"])
-            if "start_dt_inclusive" in values_dict
-            else ""
-        )
-        self._time_end = (
-            conversion.convertStringToDateTime(values_dict["end_dt_inclusive"])
-            if "end_dt_inclusive" in values_dict
-            else ""
-        )
+        self._time_start = values_dict["start_dt_inclusive"]
+        self._time_end = values_dict["end_dt_inclusive"]
 
         self._averaging_period = values_dict.get("averaging_period", "annual mean")
         self._pollutant = values_dict.get("pollutant")

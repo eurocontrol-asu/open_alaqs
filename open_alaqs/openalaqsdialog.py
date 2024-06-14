@@ -1451,7 +1451,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
     def route_changed(self, *args, **kwargs):
         """
         Automatically updates the UI when the selected route is changed so that
-         the appropriate data is displayed in
+        the appropriate data is displayed in
         the UI.
         """
         new_route_name = self.ui.routes.currentText()
@@ -1703,10 +1703,10 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui.vert_limit_m.setValue(914.4)
         self.ui.x_resolution.setValue(250)
         self.ui.y_resolution.setValue(250)
-        self.ui.z_resolution.setValue(250)
-        self.ui.x_cells.setValue(40)
-        self.ui.y_cells.setValue(40)
-        self.ui.z_cells.setValue(40)
+        self.ui.z_resolution.setValue(50)
+        self.ui.x_cells.setValue(50)
+        self.ui.y_cells.setValue(50)
+        self.ui.z_cells.setValue(20)
 
     def movement_table_path_changed(self, path):
         try:
@@ -2217,12 +2217,6 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             self.source_type_changed
         )
 
-        self.ui.toDBButton.clicked.connect(
-            lambda: self.runOutputModule("SQLiteOutputModule")
-        )
-        self.ui.toCSVButton.clicked.connect(
-            lambda: self.runOutputModule("CSVOutputModule")
-        )
         self.ui.ResultsTableButton.clicked.connect(
             lambda: self.runOutputModule("TableViewWidgetOutputModule")
         )
@@ -2395,6 +2389,13 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         # Configuration of the emissions calculation
         em_configuration = self._emission_calculation_configuration_widget.get_values()
         em_configuration["receptors"] = self._receptor_points
+        em_configuration["start_dt_inclusive"] = datetime.fromisoformat(
+            em_configuration["start_dt_inclusive"]
+        )
+        em_configuration["end_dt_inclusive"] = datetime.fromisoformat(
+            em_configuration["end_dt_inclusive"]
+        )
+
         config.update(em_configuration)
 
         kwargs = {}

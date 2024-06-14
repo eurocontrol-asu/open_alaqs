@@ -1,4 +1,5 @@
-from typing import TypedDict
+import sys
+from typing import Any, TypedDict
 
 
 class StudySetup(TypedDict):
@@ -27,3 +28,12 @@ class AirportDict(TypedDict):
     airport_latitude: float
     airport_longitude: float
     airport_elevation: int
+
+
+if sys.version_info < (3, 11):
+    try:
+        from typing_extensions import NotRequired
+    except Exception:
+        NotRequired = Any
+else:
+    from typing import NotRequired  # noqa

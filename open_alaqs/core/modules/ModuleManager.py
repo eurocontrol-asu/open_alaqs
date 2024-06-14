@@ -9,7 +9,6 @@ from open_alaqs.core.modules.AUSTAL2000OutputModule import AUSTAL2000DispersionM
 from open_alaqs.core.modules.ConcentrationsQGISVectorLayerOutputModule import (
     QGISVectorLayerDispersionModule,
 )
-from open_alaqs.core.modules.CSVOutputModule import CSVOutputModule
 from open_alaqs.core.modules.EmissionsQGISVectorLayerOutputModule import (
     EmissionsQGISVectorLayerOutputModule,
 )
@@ -21,7 +20,6 @@ from open_alaqs.core.modules.PointSourceModule import PointSourceWithTimeProfile
 from open_alaqs.core.modules.RoadwaySourceModule import (
     RoadwaySourceWithTimeProfileModule,
 )
-from open_alaqs.core.modules.SQLiteOutputModule import SQLiteOutputModule
 from open_alaqs.core.modules.TableViewDispersionOutputModule import (
     TableViewDispersionModule,
 )
@@ -104,8 +102,6 @@ output_analysis_module_registry = OutputAnalysisModuleRegistry()
 output_analysis_module_registry.register(TableViewWidgetOutputModule)
 output_analysis_module_registry.register(TimeSeriesWidgetOutputModule)
 output_analysis_module_registry.register(EmissionsQGISVectorLayerOutputModule)
-output_analysis_module_registry.register(CSVOutputModule)
-output_analysis_module_registry.register(SQLiteOutputModule)
 
 output_dispersion_module_registry = OutputDispersionModuleRegistry()
 output_dispersion_module_registry.register(QGISVectorLayerDispersionModule)

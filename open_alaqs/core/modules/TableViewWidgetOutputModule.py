@@ -1,15 +1,18 @@
+import csv
 import os
 from datetime import datetime
-from typing import List, Tuple
+from typing import Any, Optional
 
 from qgis.PyQt import QtWidgets
+from qgis.PyQt.QtWidgets import QTableWidgetItem
 from qgis.PyQt.uic import loadUiType
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.interfaces.Source import Source
-from open_alaqs.core.tools import conversion
+from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
+from open_alaqs.core.tools.sql_interface import insert_into_table
 
 Ui_TableViewDialog, _ = loadUiType(
     os.path.join(os.path.dirname(__file__), "..", "..", "ui", "ui_table_view_dialog.ui")
@@ -20,8 +23,35 @@ logger = get_logger(__name__)
 
 class TableViewWidgetOutputModule(OutputModule):
     """
-    Module to plot results of emission calculation in a table
+    Module to plot results of emission calculation in a table and export the results to CSV or SQLite
     """
+
+    settings_schema = {
+        "has_detailed_output": {
+            "label": "Detailed output",
+            "widget_type": QtWidgets.QCheckBox,
+            "initial_value": False,
+        },
+    }
+
+    fields = {
+        "timestamp": "Timestamp",
+        "source_type": "Source Type",
+        "source_name": "Source Name",
+        "co_kg": "CO [kg]",
+        "co2_kg": "CO2 [kg]",
+        "hc_kg": "HC [kg]",
+        "nox_kg": "NOX [kg]",
+        "sox_kg": "SOX [kg]",
+        "pmtotal_kg": "PMTotal [kg]",
+        "pm01_kg": "PM01 [kg]",
+        "pm25_kg": "PM25 [kg]",
+        "pmsul_kg": "PMSUL [kg]",
+        "pmvolatile_kg": "PMVolatile [kg]",
+        "pmnonvolatile_kg": "PMNonVolatile [kg]",
+        "pmnonvolatile_number": "PMNonVolatileNumber [er]",
+        "source_wkt": "Source WKT",
+    }
 
     @staticmethod
     def getModuleName():
@@ -31,143 +61,201 @@ class TableViewWidgetOutputModule(OutputModule):
     def getModuleDisplayName():
         return "Emissions table"
 
-    def __init__(self, values_dict=None):
-        if values_dict is None:
-            values_dict = {}
-        OutputModule.__init__(self, values_dict)
+    def __init__(self, values_dict: dict[str, Any]) -> None:
+        super().__init__(values_dict)
 
-        # Widget configuration
-        self._parent = values_dict["parent"] if "parent" in values_dict else None
+        self._start_dt = values_dict["start_dt_inclusive"]
+        self._end_dt = values_dict["end_dt_inclusive"]
+        self._has_detailed_output = values_dict["has_detailed_output"]
 
-        # Results analysis
-        self._time_start = ""
-        if "start_dt_inclusive" in values_dict:
-            self._time_start = conversion.convertStringToDateTime(
-                values_dict["start_dt_inclusive"]
-            )
-        self._time_end = (
-            conversion.convertStringToDateTime(values_dict["end_dt_inclusive"])
-            if "end_dt_inclusive" in values_dict
-            else ""
+        # Output rows
+        self.rows: list[dict[str, Any]] = []
+
+        # Output UI
+        self.widget = EmissionsTableViewDialog(values_dict["parent"])
+        self.widget.ui.exportCsvBtn.clicked.connect(
+            lambda: self._on_export_csv_clicked()
         )
-        self._pollutant = values_dict.get("pollutant")
-
-        self._widget = TableViewWidget(self._parent)
-
-    def getWidget(self):
-        return self._widget
-
-    def beginJob(self):
-        self._widget.setDataTableHeaders(
-            [
-                "Time",
-                "CO [kg]",
-                "CO2 [kg]",
-                "HC [kg]",
-                "NOx [kg]",
-                "SOx [kg]",
-                "PMTotal [kg]",
-                "PM01 [kg]",
-                "PM25 [kg]",
-                "PMSul [kg]",
-                "PMVolatile [kg]",
-                "PMNonVolatile [kg]",
-                "PMNonVolatileNumber [-]",
-            ]
+        self.widget.ui.exportSqliteBtn.clicked.connect(
+            lambda: self._on_export_sqlite_clicked()
         )
 
     def process(
-        self, timeval: datetime, result: List[Tuple[Source, Emission]], **kwargs
-    ):
+        self,
+        timestamp: datetime,
+        result: list[tuple[Source, Emission]],
+        **kwargs: Any,
+    ) -> None:
+        """
+        Process the results and create the records of the csv
+        """
+        if self._start_dt and self._end_dt:
+            if not (self._start_dt <= timestamp < self._end_dt):
+                return None
 
-        # filter by configured time
-        if self._time_start and self._time_end:
-            if not (self._time_start <= timeval < self._time_end):
-                return True
-
-        # Calculate the total emissions
-        total_emissions_ = sum(sum(emissions_) for (_, emissions_) in result)
-
-        # Get the current row count
-        current_row_count = self._widget.getTable().rowCount()
-
-        # Add a new row to the table
-        self._widget.getTable().setRowCount(current_row_count + 1)
-
-        # Get the new row index
-        new_row_index = current_row_count
-
-        # Write cells
-        for index_col_, val_ in enumerate(
-            [
-                (timeval, ""),
-                total_emissions_.getCO(unit="kg"),
-                total_emissions_.getCO2(unit="kg"),
-                total_emissions_.getHC(unit="kg"),
-                total_emissions_.getNOx(unit="kg"),
-                total_emissions_.getSOx(unit="kg"),
-                total_emissions_.getPM10(unit="kg"),
-                total_emissions_.getPM1(unit="kg"),
-                total_emissions_.getPM2(unit="kg"),
-                total_emissions_.getPM10Sul(unit="kg"),
-                total_emissions_.getPM10Organic(unit="kg"),
-                total_emissions_.getnvPM(unit="kg"),
-                total_emissions_.getnvPMnumber(),
-            ]
-        ):
-
-            # Format the cell values
-            if val_[0] is None:
-                rval_ = ""
-            elif isinstance(val_[0], float):
-                rval_ = str(round(val_[0], 5))
-            else:
-                rval_ = str(val_[0])
-
-            # Update the cells
-            self._widget.getTable().setItem(
-                new_row_index, index_col_, QtWidgets.QTableWidgetItem(rval_)
+        if self._has_detailed_output:
+            for source, emissions in result:
+                emissions_sum = sum(emissions)
+                self.rows.append(self._format_row(timestamp, emissions_sum, source))
+        else:
+            emissions_total = sum(
+                [sum(emissions_) for (_, emissions_) in result if emissions_]
             )
 
-    def endJob(self):
-        self._widget.resizeToContent()
-        return self._widget
+            self.rows.append(self._format_row(timestamp, emissions_total, None))
+
+    def endJob(self) -> QtWidgets.QDialog:
+        headers = list(self.fields.values())
+        self.widget.set_headers(headers)
+
+        for row in self.rows:
+            formatted_row = []
+
+            for table_field in self.fields.keys():
+                value = row[table_field]
+
+                if value is None:
+                    formatted_value = "-"
+                elif isinstance(value, float):
+                    formatted_value = f"{value:.5g}"
+                else:
+                    formatted_value = str(value)
+
+                formatted_row.append(formatted_value)
+
+            self.widget.add_row(formatted_row)
+
+        return self.widget
+
+    def _format_row(
+        self,
+        timestamp: datetime,
+        emissions: Emission,
+        source: Optional[Source],
+    ) -> dict[str, Any]:
+        if source is None:
+            source_type = "total"
+            source_name = "total"
+            source_wkt = None
+        else:
+            source_type = source.__class__.__name__
+            source_name = source.getName()
+
+            if hasattr(source, "getGeometryText"):
+                source_wkt = source.getGeometryText()
+            else:
+                source_wkt = None
+
+        return {
+            "timestamp": timestamp.isoformat(),
+            "source_wkt": source_wkt,
+            "source_type": source_type,
+            "source_name": source_name,
+            "co_kg": emissions.getCO(unit="kg")[0],
+            "co2_kg": emissions.getCO2(unit="kg")[0],
+            "hc_kg": emissions.getHC(unit="kg")[0],
+            "nox_kg": emissions.getNOx(unit="kg")[0],
+            "sox_kg": emissions.getSOx(unit="kg")[0],
+            "pmtotal_kg": emissions.getPM10(unit="kg")[0],
+            "pm01_kg": emissions.getPM1(unit="kg")[0],
+            "pm25_kg": emissions.getPM2(unit="kg")[0],
+            "pmsul_kg": emissions.getPM10Sul(unit="kg")[0],
+            "pmvolatile_kg": emissions.getPM10Organic(unit="kg")[0],
+            "pmnonvolatile_kg": emissions.getnvPM(unit="kg")[0],
+            "pmnonvolatile_number": emissions.getnvPMnumber()[0],
+        }
+
+    def _on_export_csv_clicked(self):
+        filename, handler_ = QtWidgets.QFileDialog.getSaveFileName(
+            None, "Save results as CSV file", ".", "CSV (*.csv)"
+        )
+
+        if not filename:
+            return
+
+        with open(filename, "w") as f:
+            writer = csv.DictWriter(f, list(self.fields.keys()))
+            writer.writeheader()
+            writer.writerows(self.rows)
+
+        if os.path.isfile(filename):
+            QtWidgets.QMessageBox.information(
+                None, "Export CSV", f"Results saved as CSV file at `{filename}`"
+            )
+
+    def _on_export_sqlite_clicked(self):
+        filename, handler_ = QtWidgets.QFileDialog.getSaveFileName(
+            None, "Save results as SQLite file", ".", "'SQLite (*.db)'"
+        )
+
+        if not filename:
+            return
+
+        table_name = "emission_calculation_result"
+        serializer = SQLSerializable(
+            filename,
+            table_name,
+            {
+                "timestamp": "DATETIME",
+                "source_type": "TEXT",
+                "source_name": "TEXT",
+                "co_kg": "DECIMAL",
+                "co2_kg": "DECIMAL",
+                "hc_kg": "DECIMAL",
+                "nox_kg": "DECIMAL",
+                "sox_kg": "DECIMAL",
+                "pmtotal_kg": "DECIMAL",
+                "pm01_kg": "DECIMAL",
+                "pm25_kg": "DECIMAL",
+                "pmsul_kg": "DECIMAL",
+                "pmvolatile_kg": "DECIMAL",
+                "pmnonvolatile_kg": "DECIMAL",
+                "pmnonvolatile_number": "DECIMAL",
+                "source_wkt": "TEXT",
+            },
+            primary_key="timestamp",
+            # TODO OPENGIS.ch: add the geometry column
+            # geometry_columns=[
+            #     {
+            #         "column_name": "source_geometry",
+            #         "SRID": 3857,
+            #         "geometry_type": "POLYGON",
+            #         "geometry_type_dimension": 2,
+            #     },
+            # ],
+        )
+        serializer._recreate_table(filename)
+
+        insert_into_table(filename, table_name, self.rows)
+
+        if os.path.isfile(filename):
+            QtWidgets.QMessageBox.information(
+                None,
+                "Export SQLite",
+                f"Results saved as SQLite file at `{filename}`",
+            )
 
 
-class TableViewWidget(QtWidgets.QDialog):
-    """
-    This class provides a dialog for visualizing ALAQS results.
-    """
+class EmissionsTableViewDialog(QtWidgets.QDialog):
+    """This class provides a dialog for visualizing ALAQS results."""
 
-    def __init__(self, parent=None):
-        super(TableViewWidget, self).__init__(parent)
-
-        self._parent = parent
+    def __init__(self, parent: Optional[QtWidgets.QWidget] = None) -> None:
+        super().__init__(parent)
 
         self.ui = Ui_TableViewDialog()
         self.ui.setupUi(self)
 
-        self._data_table_headers = []
+    def set_headers(self, headers: list[str]) -> None:
+        self.ui.data_table.setColumnCount(len(headers))
+        self.ui.data_table.setHorizontalHeaderLabels(headers)
+        self.ui.data_table.verticalHeader().setVisible(False)
 
-        self.initTable()
+    def add_row(self, columns: list[str]) -> None:
+        row_idx = self.ui.data_table.rowCount()
+        self.ui.data_table.setRowCount(self.ui.data_table.rowCount() + 1)
 
-    def initTable(self):
-        self.getTable().setColumnCount(len(self._data_table_headers))
-        self.getTable().setHorizontalHeaderLabels(self._data_table_headers)
-        self.getTable().verticalHeader().setVisible(False)
+        for col_idx, column in enumerate(columns):
+            self.ui.data_table.setItem(row_idx, col_idx, QTableWidgetItem(column))
 
-    def resizeToContent(self):
-        self.getTable().resizeColumnsToContents()
-        self.getTable().resizeRowsToContents()
-
-    def getTable(self):
-        return self.ui.data_table
-
-    def resetTable(self):
-        self.getTable().clear()
-        self.getTable().setHorizontalHeaderLabels(self._data_table_headers)
-        self.getTable().setRowCount(0)
-
-    def setDataTableHeaders(self, headers):
-        self._data_table_headers = headers
-        self.initTable()
+        self.ui.data_table.resizeColumnsToContents()
+        self.ui.data_table.resizeRowsToContents()

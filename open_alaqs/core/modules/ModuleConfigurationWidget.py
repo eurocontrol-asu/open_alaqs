@@ -1,54 +1,56 @@
 from datetime import datetime
-from typing import Any, Iterable, Optional, Type, TypedDict, Union
+from typing import Any, Iterable, Optional, Type, TypedDict, Union, cast
 
 from qgis.gui import QgsDoubleSpinBox, QgsFileWidget, QgsSpinBox
 from qgis.PyQt import QtCore, QtWidgets
 from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtWidgets import QFormLayout
 
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.typing import NotRequired
 
 logger = get_logger(__name__)
 
 
 class TableWidgetConfig(TypedDict):
-    table_headers: Iterable[str]
+    table_headers: list[tuple[str, str]]
 
 
 class ComboBoxWidgetConfig(TypedDict):
     options: Iterable[str] | Iterable[tuple[str, str]]
 
 
-class QgsFileWidgetConfig(TypedDict):
+class FileWidgetConfig(TypedDict):
     filter: str
     dialog_title: str
 
 
-class QgsSpinBoxWidgetConfig(TypedDict):
+class SpinBoxWidgetConfig(TypedDict):
     minimum: int
     maximum: int
 
 
-class QgsDoubleSpinBoxWidgetConfig(TypedDict):
+class DoubleSpinBoxWidgetConfig(TypedDict):
     minimum: float
     maximum: float
     decimals: float
-    suffix: Optional[str]
+    suffix: NotRequired[str]
 
 
 class SettingSchema(TypedDict):
-    label: Optional[str]
+    label: str
     widget_type: Type[QtWidgets.QWidget]
     initial_value: Any
-    widget_config: Optional[
+    widget_config: NotRequired[
         Union[
             TableWidgetConfig,
             ComboBoxWidgetConfig,
-            QgsFileWidgetConfig,
-            QgsSpinBoxWidgetConfig,
-            QgsDoubleSpinBoxWidgetConfig,
+            FileWidgetConfig,
+            SpinBoxWidgetConfig,
+            DoubleSpinBoxWidgetConfig,
         ]
     ]
-    tooltip: Optional[str]
+    tooltip: NotRequired[str]
 
 
 SettingsSchema = dict[str, SettingSchema]
@@ -56,7 +58,9 @@ SettingsSchema = dict[str, SettingSchema]
 
 class ModuleConfigurationWidget(QtWidgets.QWidget):
     def __init__(
-        self, settings_schema: SettingsSchema, parent: QtWidgets.QWidget = None
+        self,
+        settings_schema: SettingsSchema,
+        parent: Optional[QtWidgets.QWidget] = None,
     ) -> None:
         super().__init__(parent)
 
@@ -73,7 +77,7 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
 
     def _add_setting(self, name: str, setting_schema: SettingSchema) -> None:
         WidgetType = setting_schema["widget_type"]
-        widget_config = setting_schema.get("widget_config", {})
+        widget_config = setting_schema.get("widget_config", {}) or {}
 
         widget = WidgetType()
         label = QtWidgets.QLabel(setting_schema["label"])
@@ -84,6 +88,8 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
             widget.setText(setting_schema["label"])
             label = None
         elif isinstance(widget, QgsDoubleSpinBox):
+            widget_config = cast(DoubleSpinBoxWidgetConfig, widget_config)
+
             if widget_config.get("minimum") is not None:
                 widget.setMinimum(widget_config["minimum"])
 
@@ -94,20 +100,26 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                 widget.setDecimals(widget_config["decimals"])
 
             if widget_config.get("suffix") is not None:
-                widget.setSuffix(widget_config["suffix"])
+                widget.setSuffix(widget_config.get("suffix", ""))
         elif isinstance(widget, QtWidgets.QTableWidget):
-            assert isinstance(setting_schema["initial_value"], (tuple, list))
+            widget_config = cast(TableWidgetConfig, widget_config)
 
             widget.setRowCount(len(setting_schema["initial_value"]))
             widget.setColumnCount(len(widget_config["table_headers"]))
-            widget.setHorizontalHeaderLabels(widget_config["table_headers"])
+            widget.setHorizontalHeaderLabels(
+                [p[1] for p in widget_config["table_headers"]]
+            )
             widget.resizeColumnsToContents()
         elif isinstance(widget, QtWidgets.QComboBox):
+            widget_config = cast(ComboBoxWidgetConfig, widget_config)
+
             widget.clear()
             options = self._normalize_combobox_values(widget_config["options"])
             for option in options:
                 widget.addItem(option[1], option[0])
         elif isinstance(widget, QgsFileWidget):
+            widget_config = cast(FileWidgetConfig, widget_config)
+
             if widget_config.get("filter") is not None:
                 widget.setDialogTitle(widget_config["filter"])
 
@@ -115,6 +127,9 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                 widget.setDialogTitle(widget_config["dialog_title"])
 
         widget.setToolTip(setting_schema.get("tooltip", ""))
+        parent_layout = self.layout()
+
+        assert isinstance(parent_layout, QFormLayout)
 
         if name in self._settings_widgets:
             old_widget = self._settings_widgets[name]
@@ -125,14 +140,14 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
             # the old label might be None, e.g. for checkboxes
             if old_label is not None:
                 old_label.deleteLater()
-                self.layout().replaceWidget(old_label, label)
+                parent_layout.replaceWidget(old_label, label)
 
-            self.layout().replaceWidget(old_widget, widget)
+            parent_layout.replaceWidget(old_widget, widget)
         else:
             if label:
-                self.layout().insertRow(-1, label, widget)
+                parent_layout.insertRow(-1, label, widget)
             else:
-                self.layout().insertRow(-1, widget)
+                parent_layout.insertRow(-1, widget)
 
             self._settings_widgets[name] = widget
             self._settings_labels[name] = label
@@ -149,11 +164,18 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
             elif isinstance(setting_widget, QtWidgets.QAbstractButton):
                 value = setting_widget.isChecked()
             elif isinstance(setting_widget, QtWidgets.QDateTimeEdit):
-                value = setting_widget.dateTime().toString(Qt.ISODate).replace("T", " ")
-            elif isinstance(setting_widget, QtWidgets.QComboBox):
-                options = self._normalize_combobox_values(
-                    self._settings_schema[setting_name]["widget_config"]["options"]
+                value = (
+                    setting_widget.dateTime()
+                    .toString(Qt.DateFormat.ISODate)
+                    .replace("T", " ")
                 )
+            elif isinstance(setting_widget, QtWidgets.QComboBox):
+                widget_config = cast(
+                    ComboBoxWidgetConfig,
+                    self._settings_schema[setting_name].get("widget_config", {}),
+                )
+
+                options = self._normalize_combobox_values(widget_config["options"])
 
                 if not options:
                     value = None
@@ -165,13 +187,26 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
 
                 value = options[current_index][0]
             elif isinstance(setting_widget, QtWidgets.QTableWidget):
-                value = {}
-                for col in range(setting_widget.columnCount()):
-                    for row in range(setting_widget.rowCount()):
-                        if setting_widget.item(row, col) is not None:
-                            value[row, col] = setting_widget.item(row, col).text()
+                widget_config = cast(
+                    TableWidgetConfig,
+                    self._settings_schema[setting_name].get("widget_config", {}),
+                )
+
+                value = []
+                headers = widget_config["table_headers"]
+
+                for row_idx in range(setting_widget.rowCount()):
+                    value.append({})
+
+                    for col_idx in range(setting_widget.columnCount()):
+                        if setting_widget.item(row_idx, col_idx) is not None:
+                            raw_value = setting_widget.item(row_idx, col_idx).text()
                         else:
-                            value[row, col]
+                            raw_value = None
+
+                        column_name = headers[col_idx][0]
+                        value[row_idx][column_name] = raw_value
+
             elif isinstance(setting_widget, QgsDoubleSpinBox) or isinstance(
                 setting_widget, QgsSpinBox
             ):
@@ -210,7 +245,7 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
             elif isinstance(setting_widget, QtWidgets.QAbstractButton):
                 setting_widget.setChecked(value)
             elif isinstance(setting_widget, QtWidgets.QComboBox):
-                idx = self._get_combobox_index(setting_schema, value)
+                idx = self._get_combobox_index(setting_name, value)
                 setting_widget.setCurrentIndex(idx)
             elif isinstance(setting_widget, QtWidgets.QTableWidget):
                 setting_widget.setRowCount(len(value))
@@ -251,20 +286,46 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
     def patch_schema(self, schema: SettingsSchema) -> None:
         for setting_name, new_schema in schema.items():
             old_schema = self._settings_schema[setting_name]
-            patched_setting_schema = {
-                **old_schema,
-                **new_schema,
-                "widget_config": {
-                    **old_schema.get("widget_config", {}),
-                    **new_schema.get("widget_config", {}),
+            patched_setting_schema = cast(
+                SettingSchema,
+                {
+                    **old_schema,
+                    **new_schema,
+                    "widget_config": {
+                        **(old_schema.get("widget_config", {}) or {}),
+                        **(new_schema.get("widget_config", {}) or {}),
+                    },
                 },
-            }
+            )
             self._settings_schema[setting_name] = patched_setting_schema
             self._add_setting(setting_name, patched_setting_schema)
             self.init_values({setting_name: patched_setting_schema["initial_value"]})
 
     def get_widget(self, setting_name: str) -> QtWidgets.QWidget:
         return self._settings_widgets[setting_name]
+
+    def get_table_value(self, setting_name: str) -> list[dict[str, Any]]:
+        widget_config = cast(
+            TableWidgetConfig,
+            self._settings_schema[setting_name].get("widget_config", {}),
+        )
+        headers = widget_config["table_headers"]
+        raw_values = self.get_values()[setting_name]
+
+        values = []
+
+        for keys, raw_value in raw_values.items():
+            row_idx, col_idx = keys
+
+            try:
+                values[row_idx]
+            except IndexError:
+                values[row_idx] = {}
+
+            column_name = headers[col_idx]
+            values[row_idx][column_name] = raw_value
+
+        return values
 
     def _normalize_combobox_values(
         self, options: Union[Iterable[str], Iterable[tuple[str, str]]]
@@ -283,10 +344,13 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
 
         return result
 
-    def _get_combobox_index(self, setting_schema: SettingSchema, value: str) -> int:
-        options = self._normalize_combobox_values(
-            setting_schema["widget_config"]["options"]
+    def _get_combobox_index(self, setting_name: str, value: str) -> int:
+        widget_config = cast(
+            ComboBoxWidgetConfig,
+            self._settings_schema[setting_name].get("widget_config", {}),
         )
+        options = self._normalize_combobox_values(widget_config["options"])
+
         for idx, option in enumerate(options):
             if option[0] == value:
                 return idx

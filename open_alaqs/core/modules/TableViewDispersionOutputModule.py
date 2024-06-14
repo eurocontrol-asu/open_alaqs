@@ -54,16 +54,8 @@ class TableViewDispersionModule(OutputModule):
         self._parent = values_dict.get("parent")
 
         # Results analysis
-        self._time_start = (
-            conversion.convertStringToDateTime(values_dict["start_dt_inclusive"])
-            if "start_dt_inclusive" in values_dict
-            else ""
-        )
-        self._time_end = (
-            conversion.convertStringToDateTime(values_dict["end_dt_inclusive"])
-            if "end_dt_inclusive" in values_dict
-            else ""
-        )
+        self._time_start = values_dict["start_dt_inclusive"]
+        self._time_end = values_dict["end_dt_inclusive"]
         self._pollutant_list = ["CO2", "CO", "HC", "NOx", "SOx", "PM"]
 
         self._widget = TableViewWidget(self._parent)

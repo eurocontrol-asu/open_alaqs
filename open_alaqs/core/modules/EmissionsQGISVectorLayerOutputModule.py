@@ -12,7 +12,6 @@ from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.plotting.ContourPlotVectorLayer import ContourPlotVectorLayer
-from open_alaqs.core.tools.conversion import convertStringToDateTime
 
 pd.set_option("chained_assignment", None)
 
@@ -59,8 +58,8 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
         OutputModule.__init__(self, values_dict)
 
         # Results analysis
-        self._time_start = convertStringToDateTime(values_dict["start_dt_inclusive"])
-        self._time_end = convertStringToDateTime(values_dict["end_dt_inclusive"])
+        self._time_start = values_dict["start_dt_inclusive"]
+        self._time_end = values_dict["end_dt_inclusive"]
         self._pollutant = values_dict["pollutant"]
 
         self._layer_name = ContourPlotVectorLayer.LAYER_NAME
