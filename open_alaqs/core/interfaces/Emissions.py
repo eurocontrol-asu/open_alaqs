@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Tuple, cast
+from typing import Literal, Tuple, cast
 
 from shapely.geometry import GeometryCollection
 from shapely.wkt import loads
@@ -131,6 +131,12 @@ class EmissionIndex(Store):
 
     def getnvPMnumber(self, unit="") -> Tuple[float, str]:
         return (self.getObject("nvpm_number"), "g")
+
+    def get_value(
+        self, pollutant_type: PollutantType, unit: Literal["kg_hour", "g_kg"]
+    ) -> float:
+        key = f"{pollutant_type.value}_{unit}"
+        return self._objects[key]
 
     def __str__(self):
         val = "\n\t Emissions indices:"

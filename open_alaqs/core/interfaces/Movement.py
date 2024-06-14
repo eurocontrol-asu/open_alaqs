@@ -289,15 +289,19 @@ class Movement:
             gpu_emission_index = self.getGate().getEmissionIndexGPU(
                 ac_group_GPU, self._departure_arrival
             )
+            pollutants = (
+                PollutantType.CO,
+                PollutantType.HC,
+                PollutantType.NOx,
+                PollutantType.SOx,
+                PollutantType.PM10,
+            )
+
             if gpu_emission_index is not None:
-                emissions_by_pollutant = {
-                    PollutantType.CO: gpu_emission_index.getCO("kg_hour")[0],
-                    PollutantType.HC: gpu_emission_index.getHC("kg_hour")[0],
-                    PollutantType.NOx: gpu_emission_index.getNOx("kg_hour")[0],
-                    PollutantType.SOx: gpu_emission_index.getSOx("kg_hour")[0],
-                    PollutantType.PM10: gpu_emission_index.getPM10("kg_hour")[0],
-                }
-                for pollutant_type, value_kg_hour in emissions_by_pollutant.items():
+                for pollutant_type in pollutants:
+                    value_kg_hour = gpu_emission_index.get_value(
+                        pollutant_type, "kg_hour"
+                    )
                     gpu_emissions.add_value(
                         pollutant_type,
                         PollutantUnit.GRAM,
@@ -320,14 +324,10 @@ class Movement:
                 ac_group_GSE, self._departure_arrival
             )
             if gse_emission_index is not None:
-                emissions_by_pollutant = {
-                    PollutantType.CO: gse_emission_index.getCO("kg_hour")[0],
-                    PollutantType.HC: gse_emission_index.getHC("kg_hour")[0],
-                    PollutantType.NOx: gse_emission_index.getNOx("kg_hour")[0],
-                    PollutantType.SOx: gse_emission_index.getSOx("kg_hour")[0],
-                    PollutantType.PM10: gse_emission_index.getPM10("kg_hour")[0],
-                }
-                for pollutant_type, value_kg_hour in emissions_by_pollutant.items():
+                for pollutant_type in pollutants:
+                    value_kg_hour = gse_emission_index.get_value(
+                        pollutant_type, "kg_hour"
+                    )
                     gpu_emissions.add_value(
                         pollutant_type,
                         PollutantUnit.GRAM,
