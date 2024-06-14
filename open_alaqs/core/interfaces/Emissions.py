@@ -90,18 +90,6 @@ class EmissionIndex(Store):
     def getFuel(self, unit="kg_sec"):
         return (self.getObject("fuel_%s" % unit), "kg")
 
-    def getCO2(self, unit="g_kg"):
-        return (self.getObject("co2_%s" % (unit)), "g")
-
-    def getNOx(self, unit="g_kg"):
-        return (self.getObject("nox_%s" % (unit)), "g")
-
-    def getSOx(self, unit="g_kg"):
-        return (self.getObject("sox_%s" % (unit)), "g")
-
-    def getPM10(self, unit="g_kg"):
-        return (self.getObject("pm10_%s" % (unit)), "g")
-
     def get_value(
         self, pollutant_type: PollutantType, unit: Literal["kg_hour", "g_kg"]
     ) -> float:
@@ -266,18 +254,6 @@ class Emission(Store):
 
     def getFuel(self, unit: str = "kg") -> Tuple[float, str]:
         return self.getObject("fuel_%s" % unit), "kg"
-
-    def getCO2(self, unit: str = "g") -> Tuple[float, str]:
-        return self.get_emission(PollutantType.CO2, unit)
-
-    def getNOx(self, unit: str = "g") -> Tuple[float, str]:
-        return self.get_emission(PollutantType.NOx, unit)
-
-    def getSOx(self, unit: str = "g") -> Tuple[float, str]:
-        return self.get_emission(PollutantType.SOx, unit)
-
-    def getPM10(self, unit: str = "g") -> Tuple[float, str]:
-        return self.get_emission(PollutantType.PM10, unit)
 
     def getnvPMnumber(self) -> Tuple[float, str]:
         return self.getObject("nvpm_number"), ""

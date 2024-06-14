@@ -1405,7 +1405,7 @@ class Movement:
                 if method["config"]["apply_nox_corrections"]:
                     logger.info("Applying NOx Correction for Ambient Conditions")
                     corr_nox_ei = nox_correction_for_ambient_conditions(
-                        emission_index_.getNOx(),
+                        emission_index_.get_value(PollutantType.NOx, "g_kg"),
                         method["config"]["airport_altitude"],
                         self.getTakeoffWeightRatio(),
                         ac=method["config"]["ambient_conditions"],
@@ -1438,7 +1438,7 @@ class Movement:
                             self.getAircraftEngine()
                             .getEmissionIndex()
                             .getEmissionIndexByMode(startPoint_.getMode())
-                            .getPM10()
+                            .get_value(PollutantType.PM10, "g_kg")
                         )
                         try:
                             copy_emission_index_.setObject("pm10_g_kg", pm10_g_kg[0])
@@ -1452,7 +1452,7 @@ class Movement:
                             self.getAircraftEngine()
                             .getEmissionIndex()
                             .getEmissionIndexByMode(startPoint_.getMode())
-                            .getSOx()
+                            .get_value(PollutantType.SOx, "g_kg")
                         )
                         try:
                             copy_emission_index_.setObject("sox_g_kg", sox_g_kg[0])
@@ -1470,7 +1470,7 @@ class Movement:
                             self.getAircraftEngine()
                             .getEmissionIndex()
                             .getEmissionIndexByMode(startPoint_.getMode())
-                            .getNOx()
+                            .get_value(PollutantType.NOx, "g_kg")
                         )
                         corr_nox_ei = nox_correction_for_ambient_conditions(
                             nox_g_kg,
