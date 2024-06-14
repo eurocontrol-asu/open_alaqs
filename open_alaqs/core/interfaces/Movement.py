@@ -27,7 +27,7 @@ from open_alaqs.core.interfaces.AircraftTrajectory import (
     AircraftTrajectoryPoint,
     AircraftTrajectoryStore,
 )
-from open_alaqs.core.interfaces.Emissions import Emission
+from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
 from open_alaqs.core.interfaces.EngineStore import EngineStore, HeliEngineStore
 from open_alaqs.core.interfaces.Gate import GateStore
 from open_alaqs.core.interfaces.Runway import RunwayStore
@@ -680,17 +680,41 @@ class Movement:
                             if "fuel_kg_sec" in apu_em:
                                 em_.addFuel(apu_em["fuel_kg_sec"] * apu_time)
                             if "co2_g_s" in apu_em:
-                                em_.addCO2(apu_em["co2_g_s"] * apu_time)
+                                em_.add_value(
+                                    PollutantType.CO2,
+                                    PollutantUnit.GRAM,
+                                    apu_em["co2_g_s"] * apu_time,
+                                )
                             if "co_g_s" in apu_em:
-                                em_.addCO(apu_em["co_g_s"] * apu_time)
+                                em_.add_value(
+                                    PollutantType.CO,
+                                    PollutantUnit.GRAM,
+                                    apu_em["co_g_s"] * apu_time,
+                                )
                             if "hc_g_s" in apu_em:
-                                em_.addHC(apu_em["hc_g_s"] * apu_time)
+                                em_.add_value(
+                                    PollutantType.HC,
+                                    PollutantUnit.GRAM,
+                                    apu_em["hc_g_s"] * apu_time,
+                                )
                             if "nox_g_s" in apu_em:
-                                em_.addNOx(apu_em["nox_g_s"] * apu_time)
+                                em_.add_value(
+                                    PollutantType.NOx,
+                                    PollutantUnit.GRAM,
+                                    apu_em["nox_g_s"] * apu_time,
+                                )
                             if "sox_g_s" in apu_em:
-                                em_.addSOx(apu_em["sox_g_s"] * apu_time)
+                                em_.add_value(
+                                    PollutantType.SOx,
+                                    PollutantUnit.GRAM,
+                                    apu_em["sox_g_s"] * apu_time,
+                                )
                             if "pm10_g_s" in apu_em:
-                                em_.addPM10(apu_em["pm10_g_s"] * apu_time)
+                                em_.add_value(
+                                    PollutantType.PM10,
+                                    PollutantUnit.GRAM,
+                                    apu_em["pm10_g_s"] * apu_time,
+                                )
 
                         # else:
                         #     print("No APU or wrong APU code for mov %s (%s, %s)"%(self.getName(),
