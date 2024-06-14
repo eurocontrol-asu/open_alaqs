@@ -290,36 +290,21 @@ class Movement:
                 ac_group_GPU, self._departure_arrival
             )
             if gpu_emission_index is not None:
-                gpu_emissions.addCO(
-                    gpu_emission_index.getCO("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GPU
-                    / 60.0
-                )
-                gpu_emissions.addHC(
-                    gpu_emission_index.getHC("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GPU
-                    / 60.0
-                )
-                gpu_emissions.addNOx(
-                    gpu_emission_index.getNOx("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GPU
-                    / 60.0
-                )
-                gpu_emissions.addSOx(
-                    gpu_emission_index.getSOx("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GPU
-                    / 60.0
-                )
-                gpu_emissions.addPM10(
-                    gpu_emission_index.getPM10("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GPU
-                    / 60.0
-                )
+                emissions_by_pollutant = {
+                    PollutantType.CO: gpu_emission_index.getCO("kg_hour")[0],
+                    PollutantType.HC: gpu_emission_index.getHC("kg_hour")[0],
+                    PollutantType.NOx: gpu_emission_index.getNOx("kg_hour")[0],
+                    PollutantType.SOx: gpu_emission_index.getSOx("kg_hour")[0],
+                    PollutantType.PM10: gpu_emission_index.getPM10("kg_hour")[0],
+                }
+                for pollutant_type, value_kg_hour in emissions_by_pollutant.items():
+                    gpu_emissions.add_value(
+                        pollutant_type,
+                        PollutantUnit.GRAM,
+                        # TODO OPENGIS.ch: move the kg_hour conversion within the `Emission.add_value` method
+                        (value_kg_hour * 1000.0 * occupancy_in_min_GPU / 60.0),
+                    )
+
                 gpu_emissions.setGeometryText(self.getGate().getGeometryText())
                 emissions.append(
                     {
@@ -335,36 +320,21 @@ class Movement:
                 ac_group_GSE, self._departure_arrival
             )
             if gse_emission_index is not None:
-                gse_emissions.addCO(
-                    gse_emission_index.getCO("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GSE
-                    / 60.0
-                )
-                gse_emissions.addHC(
-                    gse_emission_index.getHC("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GSE
-                    / 60.0
-                )
-                gse_emissions.addNOx(
-                    gse_emission_index.getNOx("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GSE
-                    / 60.0
-                )
-                gse_emissions.addSOx(
-                    gse_emission_index.getSOx("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GSE
-                    / 60.0
-                )
-                gse_emissions.addPM10(
-                    gse_emission_index.getPM10("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GSE
-                    / 60.0
-                )
+                emissions_by_pollutant = {
+                    PollutantType.CO: gse_emission_index.getCO("kg_hour")[0],
+                    PollutantType.HC: gse_emission_index.getHC("kg_hour")[0],
+                    PollutantType.NOx: gse_emission_index.getNOx("kg_hour")[0],
+                    PollutantType.SOx: gse_emission_index.getSOx("kg_hour")[0],
+                    PollutantType.PM10: gse_emission_index.getPM10("kg_hour")[0],
+                }
+                for pollutant_type, value_kg_hour in emissions_by_pollutant.items():
+                    gpu_emissions.add_value(
+                        pollutant_type,
+                        PollutantUnit.GRAM,
+                        # TODO OPENGIS.ch: move the kg_hour conversion within the `Emission.add_value` method
+                        (value_kg_hour * 1000.0 * occupancy_in_min_GSE / 60.0),
+                    )
+
                 gse_emissions.setGeometryText(self.getGate().getGeometryText())
                 emissions.append(
                     {
@@ -843,8 +813,10 @@ class Movement:
                                     self.getAircraft().getMTOW() is not None
                                     and self.getAircraft().getMTOW() > 18632
                                 ):  # in kg:
-                                    em_.addPM10(
-                                        self.getAircraft().getMTOW() * 0.000476 - 8.74
+                                    em_.add_value(
+                                        PollutantType.PM10,
+                                        PollutantUnit.GRAM,
+                                        self.getAircraft().getMTOW() * 0.000476 - 8.74,
                                     )
 
                             if self.getTaxiEngineCount() is not None:
