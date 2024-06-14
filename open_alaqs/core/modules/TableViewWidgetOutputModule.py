@@ -8,7 +8,7 @@ from qgis.PyQt.QtWidgets import QTableWidgetItem
 from qgis.PyQt.uic import loadUiType
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.Emissions import Emission
+from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
 from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
@@ -151,17 +151,21 @@ class TableViewWidgetOutputModule(OutputModule):
             "source_wkt": source_wkt,
             "source_type": source_type,
             "source_name": source_name,
-            "co_kg": emissions.getCO(unit="kg")[0],
-            "co2_kg": emissions.getCO2(unit="kg")[0],
-            "hc_kg": emissions.getHC(unit="kg")[0],
-            "nox_kg": emissions.getNOx(unit="kg")[0],
-            "sox_kg": emissions.getSOx(unit="kg")[0],
-            "pmtotal_kg": emissions.getPM10(unit="kg")[0],
-            "pm01_kg": emissions.getPM1(unit="kg")[0],
-            "pm25_kg": emissions.getPM2(unit="kg")[0],
-            "pmsul_kg": emissions.getPM10Sul(unit="kg")[0],
-            "pmvolatile_kg": emissions.getPM10Organic(unit="kg")[0],
-            "pmnonvolatile_kg": emissions.getnvPM(unit="kg")[0],
+            "co_kg": emissions.get_value(PollutantType.CO, PollutantUnit.KG),
+            "co2_kg": emissions.get_value(PollutantType.CO2, PollutantUnit.KG),
+            "hc_kg": emissions.get_value(PollutantType.HC, PollutantUnit.KG),
+            "nox_kg": emissions.get_value(PollutantType.NOx, PollutantUnit.KG),
+            "sox_kg": emissions.get_value(PollutantType.SOx, PollutantUnit.KG),
+            "pmtotal_kg": emissions.get_value(PollutantType.PM10, PollutantUnit.KG),
+            "pm01_kg": emissions.get_value(PollutantType.PM1, PollutantUnit.KG),
+            "pm25_kg": emissions.get_value(PollutantType.PM2, PollutantUnit.KG),
+            "pmsul_kg": emissions.get_value(PollutantType.PM10Sul, PollutantUnit.KG),
+            "pmvolatile_kg": emissions.get_value(
+                PollutantType.PM10Organic, PollutantUnit.KG
+            ),
+            "pmnonvolatile_kg": emissions.get_value(
+                PollutantType.nvPM, PollutantUnit.KG
+            ),
             "pmnonvolatile_number": emissions.getnvPMnumber()[0],
         }
 
