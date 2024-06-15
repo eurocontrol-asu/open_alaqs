@@ -48,8 +48,8 @@ class TableViewWidgetOutputModule(OutputModule):
         "p2_kg": "PM25 [kg]",
         "pmsul_kg": "PMSUL [kg]",
         "pmvolatile_kg": "PMVolatile [kg]",
-        "nvpm_kg": "PMNonVolatile [kg]",
-        "nvpm_number": "PMNonVolatileNumber [er]",
+        # "nvpm_kg": "PMNonVolatile [kg]",
+        # "nvpm_number": "PMNonVolatileNumber [er]",
         "source_wkt": "Source WKT",
     }
 
@@ -163,10 +163,10 @@ class TableViewWidgetOutputModule(OutputModule):
             "pmvolatile_kg": emissions.get_value(
                 PollutantType.PM10Organic, PollutantUnit.KG
             ),
-            "nvpm_kg": emissions.get_value(PollutantType.nvPM, PollutantUnit.KG),
-            "nvpm_number": emissions.get_value(
-                PollutantType.nvPMnumber, PollutantUnit.NONE
-            ),
+            # "nvpm_kg": emissions.get_value(PollutantType.nvPM, PollutantUnit.KG),
+            # "nvpm_number": emissions.get_value(
+            #     PollutantType.nvPMnumber, PollutantUnit.NONE
+            # ),
         }
 
     def _on_export_csv_clicked(self):
@@ -213,8 +213,8 @@ class TableViewWidgetOutputModule(OutputModule):
                 "p2_kg": "DECIMAL",
                 "pmsul_kg": "DECIMAL",
                 "pmvolatile_kg": "DECIMAL",
-                "nvpm_kg": "DECIMAL",
-                "nvpm_number": "DECIMAL",
+                # "nvpm_kg": "DECIMAL",
+                # "nvpm_number": "DECIMAL",
                 "source_wkt": "TEXT",
             },
             primary_key="timestamp",
