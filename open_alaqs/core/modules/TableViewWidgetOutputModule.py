@@ -83,7 +83,7 @@ class TableViewWidgetOutputModule(OutputModule):
     def process(
         self,
         timestamp: datetime,
-        result: list[tuple[Source, Emission]],
+        result: list[tuple[Source, list[Emission]]],
         **kwargs: Any,
     ) -> None:
         """
@@ -163,9 +163,7 @@ class TableViewWidgetOutputModule(OutputModule):
             "pmvolatile_kg": emissions.get_value(
                 PollutantType.PM10Organic, PollutantUnit.KG
             ),
-            "nvpm_kg": emissions.get_value(
-                PollutantType.nvPM, PollutantUnit.KG
-            ),
+            "nvpm_kg": emissions.get_value(PollutantType.nvPM, PollutantUnit.KG),
             "nvpm_number": emissions.get_value(
                 PollutantType.nvPMnumber, PollutantUnit.NONE
             ),

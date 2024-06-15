@@ -60,7 +60,7 @@ class OutputModule:
     def process(
         self,
         timestamp: datetime,
-        result: list[tuple[Source, Emission]],
+        result: list[tuple[Source, list[Emission]]],
         **kwargs: Any,
     ):
         raise NotImplementedError()

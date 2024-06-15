@@ -117,7 +117,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
     def process(
         self,
         timestamp: datetime,
-        result: list[tuple[Source, Emission]],
+        result: list[tuple[Source, list[Emission]]],
         **kwargs: Any,
     ) -> None:
         if self._time_start and self._time_end:

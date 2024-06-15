@@ -94,7 +94,7 @@ class EmissionsQGISVectorLayerOutputModule(OutputModule):
     def process(
         self,
         timestamp: datetime,
-        result: list[tuple[Source, Emission]],
+        result: list[tuple[Source, list[Emission]]],
         **kwargs: Any,
     ):
         # result is of format [(Source, Emission)]
