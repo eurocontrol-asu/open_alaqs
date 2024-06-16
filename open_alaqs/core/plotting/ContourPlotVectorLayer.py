@@ -2,7 +2,6 @@ from typing import Iterable, cast
 
 import pandas as pd
 from qgis.core import (
-    Qgis,
     QgsCentroidFillSymbolLayer,
     QgsClassificationJenks,
     QgsCoordinateReferenceSystem,
@@ -118,25 +117,17 @@ class ContourPlotVectorLayer:
             if not row["geometry"]:
                 continue
 
-            if self.layer.geometryType() == Qgis.GeometryType.Polygon:
-                cell_bounds = row["geometry"].bounds
-                geom = QgsGeometry.fromPolygonXY(
+            cell_bounds = row["geometry"].bounds
+            geom = QgsGeometry.fromPolygonXY(
+                [
                     [
-                        [
-                            QgsPointXY(cell_bounds[0], cell_bounds[1]),
-                            QgsPointXY(cell_bounds[0], cell_bounds[3]),
-                            QgsPointXY(cell_bounds[2], cell_bounds[3]),
-                            QgsPointXY(cell_bounds[2], cell_bounds[1]),
-                        ]
+                        QgsPointXY(cell_bounds[0], cell_bounds[1]),
+                        QgsPointXY(cell_bounds[0], cell_bounds[3]),
+                        QgsPointXY(cell_bounds[2], cell_bounds[3]),
+                        QgsPointXY(cell_bounds[2], cell_bounds[1]),
                     ]
-                )
-            elif self.layer.geometryType() == Qgis.GeometryType.Point:
-                shapely_point = row["geometry"].centroid
-                geom = QgsGeometry.fromPointXY(
-                    QgsPointXY(shapely_point.x, shapely_point.y)
-                )
-            else:
-                raise NotImplementedError()
+                ]
+            )
 
             attr_index = fields.indexFromName(self.field_name)
             attrs = {
