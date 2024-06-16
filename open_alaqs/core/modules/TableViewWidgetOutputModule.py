@@ -49,24 +49,7 @@ class TableViewWidgetOutputModule(OutputModule):
         },
     }
 
-    fields = {
-        "timestamp": "Timestamp",
-        "source_type": "Source Type",
-        "source_name": "Source Name",
-        "co_kg": "CO [kg]",
-        "co2_kg": "CO2 [kg]",
-        "hc_kg": "HC [kg]",
-        "nox_kg": "NOX [kg]",
-        "sox_kg": "SOX [kg]",
-        "pm10_kg": "PMTotal [kg]",
-        "p1_kg": "PM01 [kg]",
-        "p2_kg": "PM25 [kg]",
-        "pm10_sul_kg": "PMSUL [kg]",
-        "pm10_organic_kg": "PMVolatile [kg]",
-        # "nvpm_kg": "PMNonVolatile [kg]",
-        # "nvpm_number": "PMNonVolatileNumber [er]",
-        "wkt": "Source WKT",
-    }
+    pollutant_unit = PollutantUnit.KG
 
     @staticmethod
     def getModuleName():
@@ -83,6 +66,8 @@ class TableViewWidgetOutputModule(OutputModule):
         self._end_dt = values_dict["end_dt_inclusive"]
         self._view_type: ViewType = values_dict["view_type"]
         self._grid: Grid3D = values_dict["grid"]
+
+        self.fields = self._prepare_fields()
 
         # Output rows
         self.rows: list[dict[str, Any]] = []
@@ -152,6 +137,26 @@ class TableViewWidgetOutputModule(OutputModule):
 
         return self.widget
 
+    def _prepare_fields(self) -> dict[str, str]:
+        fields = {
+            "timestamp": "Timestamp",
+            "source_type": "Source Type",
+            "source_name": "Source Name",
+            # "nvpm_kg": "PMNonVolatile [kg]",
+            # "nvpm_number": "PMNonVolatileNumber [er]",
+        }
+
+        for pollutant_type in PollutantType:
+            column_name = f"{pollutant_type.value}_{self.pollutant_unit.value}"
+            fields[column_name] = (
+                f"{pollutant_type.name} [{self.pollutant_unit.value.upper()}]"
+            )
+
+        # NOTE we add the WKT column in the end, so it does not break the readability of the table
+        fields["wkt"] = "WKT"
+
+        return fields
+
     def _format_values(self, values: Union[dict[str, Any], pd.Series]) -> list[Any]:
         formatted_row = []
 
@@ -170,22 +175,18 @@ class TableViewWidgetOutputModule(OutputModule):
         return formatted_row
 
     def _prepare_grid_row(self, df_row: pd.Series) -> dict[str, Any]:
-        return {
+        row = {
             "timestamp": None,
             "wkt": df_row["geometry"].wkt,
             "source_type": None,
             "source_name": None,
-            "co_kg": df_row["co_kg"],
-            "co2_kg": df_row["co2_kg"],
-            "hc_kg": df_row["hc_kg"],
-            "nox_kg": df_row["nox_kg"],
-            "sox_kg": df_row["sox_kg"],
-            "pm10_kg": df_row["pm10_kg"],
-            "p1_kg": df_row["p1_kg"],
-            "p2_kg": df_row["p2_kg"],
-            "pm10_sul_kg": df_row["pm10_sul_kg"],
-            "pm10_organic_kg": df_row["pm10_organic_kg"],
         }
+
+        for pollutant_type in PollutantType:
+            column_name = f"{pollutant_type.value}_{self.pollutant_unit.value}"
+            row[column_name] = df_row[column_name]
+
+        return row
 
     def _prepare_source_row(
         self,
@@ -206,28 +207,21 @@ class TableViewWidgetOutputModule(OutputModule):
             else:
                 wkt = None
 
-        return {
+        row = {
             "timestamp": timestamp.isoformat(),
             "wkt": wkt,
             "source_type": source_type,
             "source_name": source_name,
-            "co_kg": emissions.get_value(PollutantType.CO, PollutantUnit.KG),
-            "co2_kg": emissions.get_value(PollutantType.CO2, PollutantUnit.KG),
-            "hc_kg": emissions.get_value(PollutantType.HC, PollutantUnit.KG),
-            "nox_kg": emissions.get_value(PollutantType.NOx, PollutantUnit.KG),
-            "sox_kg": emissions.get_value(PollutantType.SOx, PollutantUnit.KG),
-            "p1_kg": emissions.get_value(PollutantType.PM1, PollutantUnit.KG),
-            "p2_kg": emissions.get_value(PollutantType.PM2, PollutantUnit.KG),
-            "pm10_kg": emissions.get_value(PollutantType.PM10, PollutantUnit.KG),
-            "pm10_sul_kg": emissions.get_value(PollutantType.PM10Sul, PollutantUnit.KG),
-            "pm10_organic_kg": emissions.get_value(
-                PollutantType.PM10Organic, PollutantUnit.KG
-            ),
             # "nvpm_kg": emissions.get_value(PollutantType.nvPM, PollutantUnit.KG),
             # "nvpm_number": emissions.get_value(
             #     PollutantType.nvPMnumber, PollutantUnit.NONE
             # ),
         }
+        for pollutant_type in PollutantType:
+            column_name = f"{pollutant_type.value}_{self.pollutant_unit.value}"
+            row[column_name] = emissions.get_value(pollutant_type, self.pollutant_unit)
+
+        return row
 
     def _on_export_csv_clicked(self):
         filename, handler_ = QtWidgets.QFileDialog.getSaveFileName(
@@ -255,28 +249,22 @@ class TableViewWidgetOutputModule(OutputModule):
         if not filename:
             return
 
+        columns = {
+            "timestamp": "DATETIME",
+            "source_type": "TEXT",
+            "source_name": "TEXT",
+            "wkt": "TEXT",
+        }
+
+        for pollutant_type in PollutantType:
+            column_name = f"{pollutant_type.value}_{self.pollutant_unit.value}"
+            columns[column_name] = "DECIMAL"
+
         table_name = "emission_calculation_result"
         serializer = SQLSerializable(
             filename,
             table_name,
-            {
-                "timestamp": "DATETIME",
-                "source_type": "TEXT",
-                "source_name": "TEXT",
-                "co_kg": "DECIMAL",
-                "co2_kg": "DECIMAL",
-                "hc_kg": "DECIMAL",
-                "nox_kg": "DECIMAL",
-                "sox_kg": "DECIMAL",
-                "pm10_kg": "DECIMAL",
-                "p1_kg": "DECIMAL",
-                "p2_kg": "DECIMAL",
-                "pm10_sul_kg": "DECIMAL",
-                "pm10_organic_kg": "DECIMAL",
-                # "nvpm_kg": "DECIMAL",
-                # "nvpm_number": "DECIMAL",
-                "wkt": "TEXT",
-            },
+            columns,
             primary_key="timestamp",
             # TODO OPENGIS.ch: add the geometry column
             # geometry_columns=[
