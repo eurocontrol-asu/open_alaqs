@@ -363,9 +363,6 @@ def foo(source: Source, emission: Emission, grid_df: gpd.GeoDataFrame):
         )
 
     for pollutant_type in PollutantType:
-        if pollutant_type == PollutantType.nvPM:
-            continue
-
         emission_value = emission.get_value(pollutant_type, PollutantUnit.KG)
         key = f"{pollutant_type.value}_kg"
         value = factor * emission_value
