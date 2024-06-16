@@ -42,7 +42,6 @@ class PollutantType(str, Enum):
     PM10Nonvol = "pm10_nonvol"
     PM10Sul = "pm10_sul"
     nvPM = "nvpm"
-    nvPMnumber = "nvpm_number"
 
 
 class PollutantUnit(str, Enum):
