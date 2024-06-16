@@ -1,11 +1,12 @@
 from collections import OrderedDict
-from typing import Any
+from typing import Any, cast
 
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Polygon
 
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.interfaces.Emissions import PollutantType
 from open_alaqs.core.tools import conversion, sql_interface
 from open_alaqs.core.tools.SizeLimitedDict import SizeLimitedDict
 
@@ -174,7 +175,7 @@ class Grid3D:
 
         return origin_x, origin_y
 
-    def get_df_from_2d_grid_cells(self):
+    def get_df_from_2d_grid_cells(self) -> gpd.GeoDataFrame:
         grid_cells_df = pd.DataFrame(
             list(self.get_3d_grid_cells()),
             columns=["hash", "xmin", "xmax", "ymin", "ymax", "zmin", "zmax"],
@@ -183,6 +184,14 @@ class Grid3D:
         polys = grid_cells_2d.apply(_polygonise_2Dcells, axis=1)
         gdf = gpd.GeoDataFrame(grid_cells_2d, columns=["hash", "geometry"])
         gdf.loc[:, "geometry"] = polys
+
+        pollutant_cols = {}
+        for pollutant_type in PollutantType:
+            key = f"{pollutant_type.value}_kg"
+            pollutant_cols[key] = pd.Series(0, index=gdf.index)
+
+        gdf = cast(gpd.GeoDataFrame, gdf.assign(**pollutant_cols))
+
         return gdf
 
     def get_df_from_3d_grid_cells(self):
