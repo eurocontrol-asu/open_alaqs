@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Iterable, Optional, Type, TypedDict, Union, cast
+from typing import Any, Callable, Iterable, Optional, Type, TypedDict, Union, cast
 
 from qgis.gui import QgsDoubleSpinBox, QgsFileWidget, QgsSpinBox
 from qgis.PyQt import QtCore, QtWidgets
@@ -51,6 +51,7 @@ class SettingSchema(TypedDict):
         ]
     ]
     tooltip: NotRequired[str]
+    coerce: Callable
 
 
 SettingsSchema = dict[str, SettingSchema]
