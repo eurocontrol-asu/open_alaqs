@@ -1,7 +1,7 @@
 import csv
 import os
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtWidgets import QTableWidgetItem
@@ -95,11 +95,12 @@ class TableViewWidgetOutputModule(OutputModule):
 
         if self._has_detailed_output:
             for source, emissions in result:
-                emissions_sum = sum(emissions)
+                emissions_sum = cast(Emission, sum(emissions))
                 self.rows.append(self._format_row(timestamp, emissions_sum, source))
         else:
-            emissions_total = sum(
-                [sum(emissions_) for (_, emissions_) in result if emissions_]
+            emissions_total = cast(
+                Emission,
+                sum([sum(emissions_) for (_, emissions_) in result if emissions_]),
             )
 
             self.rows.append(self._format_row(timestamp, emissions_total, None))
