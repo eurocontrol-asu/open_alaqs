@@ -4,7 +4,7 @@ from collections import OrderedDict
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.APU import APUStore
 from open_alaqs.core.interfaces.EmissionDynamics import EmissionDynamicsStore
-from open_alaqs.core.interfaces.Emissions import Emission
+from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
 from open_alaqs.core.interfaces.EngineDatabases import (
     EngineEmissionFactorsStartDatabase,
 )
@@ -297,13 +297,42 @@ class AircraftStore(Store, metaclass=Singleton):
                             .values()
                         ):
                             if value["aircraft_group"] == ac_group:
-                                start_ei.addCO(value["co"])
-                                start_ei.addHC(value["hc"])
-                                start_ei.addNOx(value["nox"])
-                                start_ei.addSOx(value["sox"])
-                                start_ei.addPM10(value["pm10"])
-                                start_ei.addPM1(value["p1"])
-                                start_ei.addPM2(value["p2"])
+                                start_ei.add_value(
+                                    PollutantType.CO,
+                                    PollutantUnit.GRAM,
+                                    value["co"],
+                                )
+                                start_ei.add_value(
+                                    PollutantType.HC,
+                                    PollutantUnit.GRAM,
+                                    value["hc"],
+                                )
+                                start_ei.add_value(
+                                    PollutantType.NOx,
+                                    PollutantUnit.GRAM,
+                                    value["nox"],
+                                )
+                                start_ei.add_value(
+                                    PollutantType.SOx,
+                                    PollutantUnit.GRAM,
+                                    value["sox"],
+                                )
+                                start_ei.add_value(
+                                    PollutantType.PM10,
+                                    PollutantUnit.GRAM,
+                                    value["pm10"],
+                                )
+                                start_ei.add_value(
+                                    PollutantType.PM1,
+                                    PollutantUnit.GRAM,
+                                    value["p1"],
+                                )
+                                start_ei.add_value(
+                                    PollutantType.PM2,
+                                    PollutantUnit.GRAM,
+                                    value["p2"],
+                                )
+
                         ac.getDefaultEngine().setStartEmissions(
                             start_ei
                         )  # association of start ef by aircraft group!

@@ -1,5 +1,7 @@
+from typing import Optional
+
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.Emissions import EmissionIndex
+from open_alaqs.core.interfaces.Emissions import EmissionIndex, PollutantType
 from open_alaqs.core.interfaces.Store import Store
 from open_alaqs.core.tools.bffm2 import calculate_emission_index
 from open_alaqs.core.tools.twin_quadratic_fit_method import (
@@ -115,7 +117,7 @@ class HelicopterEngineEmissionIndex(Store):
         # if "power_setting" in val:
         #     self.setModePowerSetting(mode, val["%s_power_setting"%(mode.lower())])
 
-    def getEmissionIndexByMode(self, mode):
+    def getEmissionIndexByMode(self, mode) -> Optional[EmissionIndex]:
         emission_index = None
         if self.hasKey(mode):
             emission_index = self.getObject(mode)
@@ -182,7 +184,7 @@ class EngineEmissionIndex(Store):
             "Approach": "AP",
         }
 
-    def getEmissionIndexByMode(self, mode):
+    def getEmissionIndexByMode(self, mode) -> Optional[EmissionIndex]:
         emission_index = None
 
         # fix naming conventions
@@ -203,7 +205,7 @@ class EngineEmissionIndex(Store):
         return emission_index
 
     def getICAOEngineEmissionsDB(self, index1_power=False, id2=None, format=""):
-        icao_eedb = {}
+        icao_eedb: dict[float, EmissionIndex] = {}
         for mode_, obj_ in list(self.getObjects().items()):
             emission_index_ = (
                 obj_["emission_index"] if "emission_index" in obj_ else None
@@ -238,11 +240,13 @@ class EngineEmissionIndex(Store):
                 "C/O": "Climbout",
                 "TX": "Idle",
             }
-            for p in ["NOx", "CO", "HC"]:
-                icao_eedb_bffm2[p] = {}
+            for p in [PollutantType.NOx, PollutantType.CO, PollutantType.HC]:
+                icao_eedb_bffm2[p.value] = {}
                 for m in icao_eedb:
-                    icao_eedb_bffm2[p][map_names_[m] if m in map_names_ else m] = {
-                        icao_eedb[m].getFuel()[0]: icao_eedb[m].getValue(p)[0]
+                    icao_eedb_bffm2[p.value][
+                        map_names_[m] if m in map_names_ else m
+                    ] = {
+                        icao_eedb[m].getFuel()[0]: icao_eedb[m].get_value(p, "g_kg")[0]
                     }  # units: kg, g/kg
 
             return icao_eedb_bffm2
@@ -582,7 +586,7 @@ class Engine:
     def setEmissionIndex(self, ei):
         self._emission_index = ei
 
-    def getEmissionIndex(self):
+    def getEmissionIndex(self) -> Optional[EmissionIndex]:
         return self._emission_index
 
     def getName(self):

@@ -1,4 +1,5 @@
-from typing import Tuple
+from enum import Enum
+from typing import Literal, Tuple
 
 from shapely.geometry import GeometryCollection
 from shapely.wkt import loads
@@ -27,6 +28,28 @@ defValues = {
 }
 
 
+class PollutantType(str, Enum):
+    CO = "co"
+    CO2 = "co2"
+    HC = "hc"
+    NOx = "nox"
+    SOx = "sox"
+    PM10 = "pm10"
+    PM1 = "p1"
+    PM2 = "p2"
+    PM10Organic = "pm10_organic"
+    PM10Prefoa3 = "pm10_prefoa3"
+    PM10Nonvol = "pm10_nonvol"
+    PM10Sul = "pm10_sul"
+    nvPM = "nvpm"
+
+
+class PollutantUnit(str, Enum):
+    NONE = ""
+    KG = "kg"
+    GRAM = "g"
+
+
 class EmissionIndex(Store):
     def __init__(self, initValues=None, defaultValues=None):
         if initValues is None:
@@ -35,80 +58,14 @@ class EmissionIndex(Store):
             defaultValues = {}
         Store.__init__(self, initValues, defaultValues)
 
-    def getValue(self, name):
-        name = name.lower()
-        if "fuel" in name:
-            return self.getFuel()
-        elif "co2" in name:
-            return self.getCO2()
-        elif "co" in name:
-            return self.getCO()
-        elif "nox" in name or "no" in name:
-            return self.getNOx()
-        # elif "sox" in name:
-        elif "sox" in name or "so" in name:
-            return self.getSOx()
-        elif "hc" in name:
-            return self.getHC()
-        elif "pm10" in name or "p10" in name:
-            return self.getPM10()
-        elif "pm1" in name or "p1" in name:
-            return self.getPM1()
-        elif "pm2" in name or "p2" in name:
-            return self.getPM2()
-        elif "nvpm_number" in name:
-            return self.getnvPMnumber()
-        elif "nvpm" in name:
-            return self.getnvPM()
-        else:
-            logger.error("Did not find key that matches name '%s'" % (name))
-
-            return (None, None)
-
     def getFuel(self, unit="kg_sec"):
         return (self.getObject("fuel_%s" % unit), "kg")
 
-    def getCO(self, unit="g_kg"):
-        return (self.getObject("co_%s" % (unit)), "g")
-
-    def getCO2(self, unit="g_kg"):
-        return (self.getObject("co2_%s" % (unit)), "g")
-
-    def getHC(self, unit="g_kg"):
-        return (self.getObject("hc_%s" % (unit)), "g")
-
-    def getNOx(self, unit="g_kg"):
-        return (self.getObject("nox_%s" % (unit)), "g")
-
-    def getSOx(self, unit="g_kg"):
-        return (self.getObject("sox_%s" % (unit)), "g")
-
-    def getPM10(self, unit="g_kg"):
-        return (self.getObject("pm10_%s" % (unit)), "g")
-
-    def getPM1(self, unit="g_kg"):
-        return (self.getObject("pm1_%s" % (unit)), "g")
-
-    def getPM2(self, unit="g_kg"):
-        return (self.getObject("pm2_%s" % (unit)), "g")
-
-    def getPM10Prefoa3(self, unit="g_kg"):
-        return (self.getObject("pm10_prefoa3_%s" % (unit)), "g")
-
-    def getPM10Nonvol(self, unit="g_kg"):
-        return (self.getObject("pm10_nonvol_%s" % (unit)), "g")
-
-    def getPM10Sul(self, unit="g_kg"):
-        return (self.getObject("pm10_sul_%s" % (unit)), "g")
-
-    def getPM10Organic(self, unit="g_kg"):
-        return (self.getObject("pm10_organic_%s" % (unit)), "g")
-
-    def getnvPM(self, unit="g_kg") -> Tuple[float, str]:
-        return (self.getObject("nvpm_%s" % (unit)), "g")
-
-    def getnvPMnumber(self, unit="") -> Tuple[float, str]:
-        return (self.getObject("nvpm_number"), "g")
+    def get_value(
+        self, pollutant_type: PollutantType, unit: Literal["kg_hour", "g_kg"]
+    ) -> float:
+        key = f"{pollutant_type.value}_{unit}"
+        return self._objects[key]
 
     def __str__(self):
         val = "\n\t Emissions indices:"
@@ -199,28 +156,12 @@ class Emission(Store):
         fuel_burned = emission_index_.getObject("fuel_kg_sec") * time_s_in_mode
         self.addValue("fuel_kg", fuel_burned)
 
-        # Set the pollutant keys ({pollutant}_{unit}) dependent on fuel burned
-        pollutants = [
-            "co_g",
-            "co2_g",
-            "hc_g",
-            "nox_g",
-            "sox_g",
-            "pm10_g",
-            "p1_g",
-            "p2_g",
-            "pm10_prefoa3_g",
-            "pm10_nonvol_g",
-            "pm10_sul_g",
-            "pm10_organic_g",
-            "nvpm_g",
-            "nvpm_number",
-        ]
-
         # Determine the total emissions for each pollutant
-        for pollutant in pollutants:
-            pollutant_ei = emission_index_.getObject(f"{pollutant}_kg")
-            self.addValue(pollutant, pollutant_ei * fuel_burned)
+        for pollutant_type in PollutantType:
+            pollutant_ei = emission_index_.get_value(pollutant_type, "g_kg")
+            self.add_value(
+                pollutant_type, PollutantUnit.GRAM, pollutant_ei * fuel_burned
+            )
 
     def addGeneric(self, emission_index_, factor, unit, new_unit=""):
         for key in list(emission_index_.getObjects().keys()):
@@ -229,87 +170,8 @@ class Emission(Store):
                 emission_index_.getObject("%s" % key) * factor,
             )
 
-    def getValue(self, name: str, unit: str = "kg") -> Tuple[float, str]:
-        name = name.lower()
-        if "fuel" in name:
-            return self.getFuel(unit=unit)
-        elif "co2" in name:
-            return self.getCO2(unit=unit)
-        elif "co" in name:
-            return self.getCO(unit=unit)
-        elif "nox" in name or "no" in name:
-            return self.getNOx(unit=unit)
-        elif "sox" in name:
-            return self.getSOx(unit=unit)
-        elif "hc" in name:
-            return self.getHC(unit=unit)
-        elif "pm10" in name:
-            if "prefoa3" in name:
-                return self.getPM10Prefoa3(unit=unit)
-            elif "nonvol" in name:
-                return self.getPM10Nonvol(unit=unit)
-            elif "sul" in name:
-                return self.getPM10Sul(unit=unit)
-            elif "organic" in name:
-                return self.getPM10Organic(unit=unit)
-            else:
-                return self.getPM10(unit=unit)
-        elif "pm1" in name or "p1" in name:
-            return self.getPM1(unit=unit)
-        elif "pm2" in name or "p2" in name:
-            return self.getPM2(unit=unit)
-        elif "nvpm_number" in name:
-            return self.getnvPMnumber()
-        elif "nvpm" in name:
-            return self.getnvPM(unit=unit)
-
-        logger.error("Did not find key that matches name '%s'" % name)
-        return None, None
-
     def getFuel(self, unit: str = "kg") -> Tuple[float, str]:
         return self.getObject("fuel_%s" % unit), "kg"
-
-    def getCO(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("co_%s" % unit), "g"
-
-    def getCO2(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("co2_%s" % unit), "g"
-
-    def getHC(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("hc_%s" % unit), "g"
-
-    def getNOx(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("nox_%s" % unit), "g"
-
-    def getSOx(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("sox_%s" % unit), "g"
-
-    def getPM10(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm10_%s" % unit), "g"
-
-    def getPM1(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm1_%s" % unit), "g"
-
-    def getPM2(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm2_%s" % unit), "g"
-
-    def getPM10Prefoa3(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm10_prefoa3_%s" % unit), "g"
-
-    def getPM10Nonvol(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm10_nonvol_%s" % unit), "g"
-
-    def getPM10Sul(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm10_sul_%s" % unit), "g"
-
-    def getPM10Organic(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("pm10_organic_%s" % unit), "g"
-
-    def getnvPM(self, unit: str = "g") -> Tuple[float, str]:
-        return self.getObject("nvpm_%s" % unit), "g"
-
-    def getnvPMnumber(self) -> Tuple[float, str]:
-        return self.getObject("nvpm_number"), ""
 
     def addValue(self, key, val) -> bool:
         if self.hasKey(key):
@@ -321,47 +183,18 @@ class Emission(Store):
     def addFuel(self, val_in_kgrams):
         return self.addValue("fuel_kg", val_in_kgrams)
 
-    def addCO(self, val_in_grams):
-        return self.addValue("co_g", val_in_grams)
+    def add_value(
+        self,
+        pollutant_type: PollutantType,
+        unit: PollutantUnit,
+        value: float,
+    ) -> None:
+        key = f"{pollutant_type.value}_{unit.value}"
+        self._objects[key] += value
 
-    def addCO2(self, val_in_grams):
-        return self.addValue("co2_g", val_in_grams)
-
-    def addHC(self, val_in_grams):
-        return self.addValue("hc_g", val_in_grams)
-
-    def addNOx(self, val_in_grams):
-        return self.addValue("nox_g", val_in_grams)
-
-    def addSOx(self, val_in_grams):
-        return self.addValue("sox_g", val_in_grams)
-
-    def addPM10(self, val_in_grams):
-        return self.addValue("pm10_g", val_in_grams)
-
-    def addPM1(self, val_in_grams):
-        return self.addValue("pm1_g", val_in_grams)
-
-    def addPM2(self, val_in_grams):
-        return self.addValue("pm2_g", val_in_grams)
-
-    def addPM10Prefoa3(self, val_in_grams):
-        return self.addValue("pm10_prefoa3_g", val_in_grams)
-
-    def addPM10Nonvol(self, val_in_grams):
-        return self.addValue("pm10_nonvol_g", val_in_grams)
-
-    def addPM10Sul(self, val_in_grams):
-        return self.addValue("pm10_sul_g", val_in_grams)
-
-    def addPM10Organic(self, val_in_grams):
-        return self.addValue("pm10_organic_g", val_in_grams)
-
-    def addnvPM(self, val_in_grams):
-        return self.addValue("nvpm_g", val_in_grams)
-
-    def addnvPMnumber(self, val):
-        return self.addValue("nvpm_number", val)
+    def get_value(self, pollutant_type: PollutantType, unit: PollutantUnit) -> float:
+        key = f"{pollutant_type.value}_{unit.value}"
+        return self._objects[key]
 
     def __str__(self):
         val = "Emissions:"

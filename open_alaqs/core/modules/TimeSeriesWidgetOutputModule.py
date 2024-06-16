@@ -9,7 +9,7 @@ from qgis.PyQt import QtWidgets
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.Emissions import Emission
+from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
 from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.plotting.MatplotlibQtDialog import MatplotlibQtDialog
@@ -90,7 +90,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
         self._time_start = values_dict["start_dt_inclusive"]
         self._time_end = values_dict["end_dt_inclusive"]
 
-        self.pollutant_name = values_dict.get("pollutant")
+        self.pollutant_type = PollutantType(values_dict["pollutant"].lower())
 
     def configuration_to_receptor_points(
         self, receptor_point_rows: list[ReceptorPointRow]
@@ -117,7 +117,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
     def process(
         self,
         timestamp: datetime,
-        result: list[tuple[Source, Emission]],
+        result: list[tuple[Source, list[Emission]]],
         **kwargs: Any,
     ) -> None:
         if self._time_start and self._time_end:
@@ -132,7 +132,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
             if total_emissions_:
                 self._data_x.append(timestamp)
                 self._data_y.append(
-                    total_emissions_.getValue(self.pollutant_name, unit="kg")[0]
+                    total_emissions_.get_value(self.pollutant_type, PollutantUnit.KG)
                 )
 
         else:
@@ -141,7 +141,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
             for _source, emissions in result:
                 for em_ in emissions:
 
-                    EmissionValue = em_.getValue(self.pollutant_name, unit="kg")[0]
+                    EmissionValue = em_.get_value(self.pollutant_type, PollutantUnit.KG)
                     if EmissionValue == 0:
                         continue
 

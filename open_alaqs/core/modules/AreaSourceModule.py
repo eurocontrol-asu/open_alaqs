@@ -3,7 +3,7 @@ This class provides all of the calculation methods required to perform
 emissions calculations for area sources.
 """
 
-import datetime
+from datetime import datetime
 
 from open_alaqs.core.interfaces.AreaSources import AreaSourcesStore
 from open_alaqs.core.interfaces.Emissions import Emission

@@ -156,6 +156,7 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
         values = {}
 
         for setting_name, setting_widget in self._settings_widgets.items():
+            setting_schema = self._settings_schema[setting_name]
             value = None
             if isinstance(setting_widget, QtWidgets.QLabel):
                 value = setting_widget.text()
@@ -171,8 +172,7 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                 )
             elif isinstance(setting_widget, QtWidgets.QComboBox):
                 widget_config = cast(
-                    ComboBoxWidgetConfig,
-                    self._settings_schema[setting_name].get("widget_config", {}),
+                    ComboBoxWidgetConfig, setting_schema.get("widget_config", {})
                 )
 
                 options = self._normalize_combobox_values(widget_config["options"])
@@ -222,6 +222,9 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                     "Did not find method to read values from widget of type '%s'!",
                     type(setting_widget),
                 )
+
+            if "coerce" in setting_schema:
+                value = setting_schema["coerce"](value)
 
             values[setting_name] = value
 

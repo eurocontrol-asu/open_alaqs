@@ -27,7 +27,7 @@ from open_alaqs.core.interfaces.AircraftTrajectory import (
     AircraftTrajectoryPoint,
     AircraftTrajectoryStore,
 )
-from open_alaqs.core.interfaces.Emissions import Emission
+from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
 from open_alaqs.core.interfaces.EngineStore import EngineStore, HeliEngineStore
 from open_alaqs.core.interfaces.Gate import GateStore
 from open_alaqs.core.interfaces.Runway import RunwayStore
@@ -289,37 +289,26 @@ class Movement:
             gpu_emission_index = self.getGate().getEmissionIndexGPU(
                 ac_group_GPU, self._departure_arrival
             )
+            pollutants = (
+                PollutantType.CO,
+                PollutantType.HC,
+                PollutantType.NOx,
+                PollutantType.SOx,
+                PollutantType.PM10,
+            )
+
             if gpu_emission_index is not None:
-                gpu_emissions.addCO(
-                    gpu_emission_index.getCO("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GPU
-                    / 60.0
-                )
-                gpu_emissions.addHC(
-                    gpu_emission_index.getHC("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GPU
-                    / 60.0
-                )
-                gpu_emissions.addNOx(
-                    gpu_emission_index.getNOx("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GPU
-                    / 60.0
-                )
-                gpu_emissions.addSOx(
-                    gpu_emission_index.getSOx("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GPU
-                    / 60.0
-                )
-                gpu_emissions.addPM10(
-                    gpu_emission_index.getPM10("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GPU
-                    / 60.0
-                )
+                for pollutant_type in pollutants:
+                    value_kg_hour = gpu_emission_index.get_value(
+                        pollutant_type, "kg_hour"
+                    )
+                    gpu_emissions.add_value(
+                        pollutant_type,
+                        PollutantUnit.GRAM,
+                        # TODO OPENGIS.ch: move the kg_hour conversion within the `Emission.add_value` method
+                        (value_kg_hour * 1000.0 * occupancy_in_min_GPU / 60.0),
+                    )
+
                 gpu_emissions.setGeometryText(self.getGate().getGeometryText())
                 emissions.append(
                     {
@@ -335,36 +324,17 @@ class Movement:
                 ac_group_GSE, self._departure_arrival
             )
             if gse_emission_index is not None:
-                gse_emissions.addCO(
-                    gse_emission_index.getCO("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GSE
-                    / 60.0
-                )
-                gse_emissions.addHC(
-                    gse_emission_index.getHC("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GSE
-                    / 60.0
-                )
-                gse_emissions.addNOx(
-                    gse_emission_index.getNOx("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GSE
-                    / 60.0
-                )
-                gse_emissions.addSOx(
-                    gse_emission_index.getSOx("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GSE
-                    / 60.0
-                )
-                gse_emissions.addPM10(
-                    gse_emission_index.getPM10("kg_hour")[0]
-                    * 1000.0
-                    * occupancy_in_min_GSE
-                    / 60.0
-                )
+                for pollutant_type in pollutants:
+                    value_kg_hour = gse_emission_index.get_value(
+                        pollutant_type, "kg_hour"
+                    )
+                    gpu_emissions.add_value(
+                        pollutant_type,
+                        PollutantUnit.GRAM,
+                        # TODO OPENGIS.ch: move the kg_hour conversion within the `Emission.add_value` method
+                        (value_kg_hour * 1000.0 * occupancy_in_min_GSE / 60.0),
+                    )
+
                 gse_emissions.setGeometryText(self.getGate().getGeometryText())
                 emissions.append(
                     {
@@ -680,17 +650,41 @@ class Movement:
                             if "fuel_kg_sec" in apu_em:
                                 em_.addFuel(apu_em["fuel_kg_sec"] * apu_time)
                             if "co2_g_s" in apu_em:
-                                em_.addCO2(apu_em["co2_g_s"] * apu_time)
+                                em_.add_value(
+                                    PollutantType.CO2,
+                                    PollutantUnit.GRAM,
+                                    apu_em["co2_g_s"] * apu_time,
+                                )
                             if "co_g_s" in apu_em:
-                                em_.addCO(apu_em["co_g_s"] * apu_time)
+                                em_.add_value(
+                                    PollutantType.CO,
+                                    PollutantUnit.GRAM,
+                                    apu_em["co_g_s"] * apu_time,
+                                )
                             if "hc_g_s" in apu_em:
-                                em_.addHC(apu_em["hc_g_s"] * apu_time)
+                                em_.add_value(
+                                    PollutantType.HC,
+                                    PollutantUnit.GRAM,
+                                    apu_em["hc_g_s"] * apu_time,
+                                )
                             if "nox_g_s" in apu_em:
-                                em_.addNOx(apu_em["nox_g_s"] * apu_time)
+                                em_.add_value(
+                                    PollutantType.NOx,
+                                    PollutantUnit.GRAM,
+                                    apu_em["nox_g_s"] * apu_time,
+                                )
                             if "sox_g_s" in apu_em:
-                                em_.addSOx(apu_em["sox_g_s"] * apu_time)
+                                em_.add_value(
+                                    PollutantType.SOx,
+                                    PollutantUnit.GRAM,
+                                    apu_em["sox_g_s"] * apu_time,
+                                )
                             if "pm10_g_s" in apu_em:
-                                em_.addPM10(apu_em["pm10_g_s"] * apu_time)
+                                em_.add_value(
+                                    PollutantType.PM10,
+                                    PollutantUnit.GRAM,
+                                    apu_em["pm10_g_s"] * apu_time,
+                                )
 
                         # else:
                         #     print("No APU or wrong APU code for mov %s (%s, %s)"%(self.getName(),
@@ -819,8 +813,10 @@ class Movement:
                                     self.getAircraft().getMTOW() is not None
                                     and self.getAircraft().getMTOW() > 18632
                                 ):  # in kg:
-                                    em_.addPM10(
-                                        self.getAircraft().getMTOW() * 0.000476 - 8.74
+                                    em_.add_value(
+                                        PollutantType.PM10,
+                                        PollutantUnit.GRAM,
+                                        self.getAircraft().getMTOW() * 0.000476 - 8.74,
                                     )
 
                             if self.getTaxiEngineCount() is not None:
@@ -1409,7 +1405,7 @@ class Movement:
                 if method["config"]["apply_nox_corrections"]:
                     logger.info("Applying NOx Correction for Ambient Conditions")
                     corr_nox_ei = nox_correction_for_ambient_conditions(
-                        emission_index_.getNOx(),
+                        emission_index_.get_value(PollutantType.NOx, "g_kg"),
                         method["config"]["airport_altitude"],
                         self.getTakeoffWeightRatio(),
                         ac=method["config"]["ambient_conditions"],
@@ -1442,7 +1438,7 @@ class Movement:
                             self.getAircraftEngine()
                             .getEmissionIndex()
                             .getEmissionIndexByMode(startPoint_.getMode())
-                            .getPM10()
+                            .get_value(PollutantType.PM10, "g_kg")
                         )
                         try:
                             copy_emission_index_.setObject("pm10_g_kg", pm10_g_kg[0])
@@ -1456,7 +1452,7 @@ class Movement:
                             self.getAircraftEngine()
                             .getEmissionIndex()
                             .getEmissionIndexByMode(startPoint_.getMode())
-                            .getSOx()
+                            .get_value(PollutantType.SOx, "g_kg")
                         )
                         try:
                             copy_emission_index_.setObject("sox_g_kg", sox_g_kg[0])
@@ -1474,7 +1470,7 @@ class Movement:
                             self.getAircraftEngine()
                             .getEmissionIndex()
                             .getEmissionIndexByMode(startPoint_.getMode())
-                            .getNOx()
+                            .get_value(PollutantType.NOx, "g_kg")
                         )
                         corr_nox_ei = nox_correction_for_ambient_conditions(
                             nox_g_kg,
@@ -2468,269 +2464,3 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
 
         if self._db_path and deserialize:
             self.deserialize()
-
-
-#
-# if __name__ == "__main__":
-#     # print("--- %s seconds ---" % (time.time() - start_time))
-#
-#     # from qgis.PyQt import QtGui
-#     # from python_qt_binding import QtGui, QtCore  # new imports
-#     # app = QtWidgets.QApplication(sys.argv)
-#     app = QtWidgets.QApplication.instance()
-#     if app is None:
-#         app = QtWidgets.QApplication(sys.argv)
-#         print('QApplication instance created: %s' % str(app))
-#     else:
-#         app.processEvents()
-#         app.closeAllWindows()
-#         print('QApplication instance already exists: %s' % str(app))
-#     # from . import __init__
-#     # import alaqslogging
-#
-#     import matplotlib
-#     matplotlib.use('Qt5Agg')
-#     import matplotlib.pyplot as plt
-#     plt.ion()    # logging.getLogger('matplotlib.font_manager').disabled = True
-#     # from shapely.wkt import loads
-#
-#
-#     # path_to_database = os.path.join("..","..","example/", "CAEPport", "CAEPport_out.alaqs")
-#     # path_to_database = os.path.join("..","..","example/", "CAEPport", "CAEPport_out_noAPU.alaqs")
-#     path_to_database = os.path.join("..", "..", "example/", "CAEPport_training", "caepport_out.alaqs")
-#
-#
-#     if not os.path.isfile(path_to_database):
-#         # fix_print_with_import
-#         print("Database %s not found"%path_to_database)
-#
-#     store = MovementStore(path_to_database, debug=False)
-#     # for key, movement_dict in  store.getMovementDatabase().getEntries().iteritems():
-#     #     print(key, movement_dict)
-#     #     #gate
-#     #     if "gate" in movement_dict:
-#     #         if store.getGateStore().hasKey(movement_dict["gate"]):
-#     #             print store.getGateStore().getObject(movement_dict["gate"])
-#     #                 self.getGateStore().getObject(mov_df.iloc[0]["gate"])
-#     #         else:
-#     #             print("Could not find gate with name '%s'." % (movement_dict["gate"]))
-#
-#     # print("--- %s seconds ---" % (time.time() - start_time))
-#     # print("Number of Movements: %s"%len(store.getMovementDatabase().getEntries()))
-#
-# #     # then run calculateEmissionsPerSegment only once / unique mov and store result
-# #     plot_ei = False
-#
-#     movements = []
-#     for movement_name, movement in store.getObjects().items():
-#         movements.append(movement)
-#
-#     limit = {
-#         "max_height": 914.4,
-#         "height_unit_in_feet":False
-#     }
-#     # max_limit = limit["max_height"] if limit['height_unit_in_feet'] is False else conversion.convertMetersToFeet(limit["max_height"])
-#
-#     installation_corrections = {
-#                         "Takeoff":1.010,    # 100%
-#                         "Climbout":1.012,   # 85%
-#                         "Approach":1.020,   # 30%
-#                         "Idle":1.100        # 7%
-#     }
-#
-#     # ambient_conditions = {}
-#     # try:
-#     #     from .AmbientCondition import AmbientCondition, AmbientConditionStore
-#     # except Exception:
-#     #     from AmbientCondition import AmbientCondition, AmbientConditionStore
-#     ambient_conditions = AmbientCondition()
-#
-#     method={
-#         "name":"bymode",
-#         "config":{
-#             "apply_smooth_and_shift": 'none',
-#             # "apply_smooth_and_shift": 'default',
-#             # "apply_smooth_and_shift": 'smooth & shift',
-#             "apply_nox_corrections": False,
-#             "airport_altitude": 0.,
-#             "installation_corrections": installation_corrections,
-#             "ambient_conditions": ambient_conditions
-#         }
-#     }
-#
-#     # for mov in movements[::-1]:
-#     results_df = pd.DataFrame(index=range(0, len(movements)),
-#                               columns=['name','gate','fuel_kg', 'co2_kg', 'co_g', 'hc_g', 'nox_g', 'sox_g', 'pm10_g'])
-#     cnt = 0
-#     for mov in movements:
-#
-#         print(mov.getName(), mov.getRunwayDirection(), mov.getAircraft().getName(),mov.getAircraftEngine().getName(), mov.getTrajectory().getIdentifier())
-#
-#         emissions_list = mov.calculateEmissions(method=method, limit=limit)
-#         emissions = sum(em_["emissions"] for em_ in emissions_list)
-#         try:
-#             # fix_print_with_import
-#             print("Fuel:",emissions.getFuel()[0],"\t CO2(kg):",emissions.getCO2()[0]/1000.,
-#                   "\t CO(g):",emissions.getValue("CO", "g")[0], "\t NOx(g):",emissions.getValue("NOx", "g")[0])
-#             # print mov.getAircraft().getType(), mov.getAircraftEngine().getName(), \
-#             #     conversion.convertTimeToSeconds(abs(mov.getBlockTime() - mov.getRunwayTime())), \
-#             #     mov.getDepartureArrivalFlag(), prof_id, mov.getGate().getName(), mov.getGate().getType(), \
-#             #     emissions.getFuel()[0], emissions.getValue("CO2", "g")[0], emissions.getValue("CO", "g")[0], \
-#             #     emissions.getValue("NOx", "g")[0], emissions.getValue("SOx", "g")[0], emissions.getValue("HC", "g")[0], \
-#             #     emissions.getValue("PM10", "g")[0]
-#         except Exception:
-#             # fix_print_with_import
-#             print("----------------------------------")
-#             # fix_print_with_import
-#             print("Error for movement: %s"%mov.getName())
-#             # fix_print_with_import
-#             print("----------------------------------")
-#
-#         # fig, ax = plt.subplots()
-#         # for em_ in emissions_list:
-#         #     geom = em_["emissions"].getGeometry()
-#         #     ax.set_title(mov.getName())
-#         #     gpd.GeoSeries(geom).plot(ax=ax, color='r', alpha=0.25)
-#
-#         # gdf = gpd.GeoDataFrame(index=range(0, len(emissions_list)), columns=["CO", "geometry", "source", "L"])
-#         # geoms = []
-#         # cntgdf = 0
-#         # for em_ in emissions_list:
-#         #     try:
-#         #         gdf.loc[cntgdf, "geometry"] = em_['emissions'].getGeometry()
-#         #     except Exception:
-#         #         gdf.loc[cntgdf, "geometry"] = LineString()
-#         #     # geoms.append(em_['emissions'].getGeometry())
-#         #     gdf.loc[cntgdf, "CO"] = em_['emissions'].getValue('CO','g')[0]/1000
-#         #     gdf.loc[cntgdf, "source"] = mov.getName()
-#         #     gdf.loc[cntgdf, "L"] = em_['emissions'].getGeometry().length  # emissions_.getGeometry()
-#         #     cntgdf += +1
-#         #
-#         # # gdf.loc[:, "geometry"] = geoms
-#         # fig, ax = plt.subplots()
-#         # ax.plot(mov.getRunway().getGeometry().xy[0], mov.getRunway().getGeometry().xy[1], linewidth=3, alpha=0.5, color="k")
-#         # gdf[gdf.L>0].plot(ax=ax, column="L", legend=False, categorical=True, cmap='Set2')
-#         # ax.set_title(mov.getName()+" / "+mov.getRunwayDirection())
-#         # plt.show()
-#         # break
-#
-#         # try:
-#         #     results_df.loc[cnt, "name"] = mov.getName()
-#         #     results_df.loc[cnt, "gate"] = mov.getGate().getName()
-#         #     results_df.loc[cnt, "fuel_kg"] = emissions.getFuel()[0]
-#         #     results_df.loc[cnt, "co2_kg"] = emissions.getCO2()[0]/1000.
-#         #     results_df.loc[cnt, "co_g"] = emissions.getValue("CO", "g")[0]
-#         #     results_df.loc[cnt, "hc_g"] = emissions.getValue("HC", "g")[0]
-#         #     results_df.loc[cnt, "nox_g"] = emissions.getValue("NOx", "g")[0]
-#         #     results_df.loc[cnt, "sox_g"] = emissions.getValue("SOx", "g")[0]
-#         #     results_df.loc[cnt, "pm10_g"] = emissions.getValue("PM10", "g")[0]
-#         # except Exception:
-#         #     results_df.loc[cnt, "name"] = mov.getName()
-#         #     results_df.loc[cnt, "gate"] = mov.getGate().getName()
-#         #     results_df.loc[cnt, "fuel_kg"] = np.nan
-#         #     results_df.loc[cnt, "co2_kg"] = np.nan
-#         #     results_df.loc[cnt, "co_g"] = np.nan
-#         #     results_df.loc[cnt, "hc_g"] = np.nan
-#         #     results_df.loc[cnt, "nox_g"] = np.nan
-#         #     results_df.loc[cnt, "sox_g"] = np.nan
-#         #     results_df.loc[cnt, "pm10_g"] = np.nan
-#         #     # break
-#         # cnt += +1
-#
-#     # results_df.to_excel("emissions_%s.xlsx"%(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")), index=False)
-#
-#     # # gdf.dropna(how='all').to_csv(emissions_CO_%s.csv"%(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")),index=False)
-#     # gdf.dropna(how='all').plot(ax=ax, column="CO2", legend=True, categorical=True, cmap='jet')
-#     # plt.show()
-#     # # mplleaflet.show(fig=ax.figure, crs={'init': 'epsg:3857'}, tiles="cartodb_positron",
-#     # #         path=os.path.join("..","..","example/", "CAEPport_training", "emissions_CO_%s.html"%(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))))
-#     # # plt.savefig(emissions_CO_%s.png"%(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")), dpi=300, bbox_inches="tight")
-#
-#     # sys.exit(app.exec_())
-#     app.quit()
-#
-# # CAEPport
-# # if index_segment_ == 0 :
-# # apu_time = None
-# # if self.isArrival():
-# #     if self.getAircraft().getGroup() == "JET LARGE" or self.getAircraft().getGroup() == "JET MEDIUM":
-# #         apu_time = 0 if self.getGate().getType() == "PIER" else 30
-# #     elif self.getAircraft().getGroup() == "JET REGIONAL" or self.getAircraft().getGroup() == "JET SMALL":
-# #         apu_time = 0 if self.getGate().getType() == "PIER" else 15
-# #
-# # elif self.isDeparture():
-# #     if self.getAircraft().getGroup() == "JET LARGE" or self.getAircraft().getGroup() == "JET MEDIUM":
-# #         apu_time = 5 if self.getGate().getType() == "PIER" else 45
-# #     elif self.getAircraft().getGroup() == "JET REGIONAL" or self.getAircraft().getGroup() == "JET SMALL":
-# #         apu_time = 5 if self.getGate().getType() == "PIER" else 30
-#
-# # if not apu_time is None:
-# #     apu_emiss_ = self.getAircraft().getApu().getEmissions("NR")
-# #
-# #     if "fuel_kg_sec" in apu_emiss_:
-# #         em_.addFuel(apu_emiss_["fuel_kg_sec"] * apu_time)
-# #     if "co_g_s" in apu_emiss_:
-# #         em_.addCO(apu_emiss_["co_g_s"] * apu_time)
-# #     if "co2_g_s" in apu_emiss_:
-# #         em_.addCO2(apu_emiss_["co2_g_s"] * apu_time)
-# #     if "hc_g_s" in apu_emiss_:
-# #         em_.addHC(apu_emiss_["hc_g_s"] * apu_time)
-# #     if "nox_g_s" in apu_emiss_:
-# #         em_.addNOx(apu_emiss_["nox_g_s"] * apu_time)
-#
-#
-# # if total APU time (theoretical) is greater than total taxiing time
-# # if apu_time > abs(self.getBlockTime()-self.getRunwayTime()):
-#
-# #
-# #     # 1: stand and taxiway
-# #     elif self.getAPUCode()==1:
-# #
-# #     # 2: stand, taxiing and take-off/climb-out or approach/landing
-# #     elif self.getAPUCode()==1:
-# #
-# #     else:
-# #         logger.error("Wrong APU Code for movement %s"%(mov.getName()))
-# #
-# # else:
-# #     apu_time = abs(self.getBlockTime()-self.getRunwayTime())
-#
-# # if index_segment_ == 0 and (self.isDeparture() or (self.isArrival() and self.getAPUCode()==1)):
-# # add apu emissions to the first segment
-# # apu_time = abs(self.getBlockTime()-self.getRunwayTime())
-#
-# # if not self.getAircraft().getApu() is None:
-# #     apu_emiss_ = self.getAircraft().getApu().getEmissions("NL")
-# #     if "fuel_kg_sec" in apu_emiss_:
-# #         em_.addFuel(apu_emiss_["fuel_kg_sec"] * apu_time)
-# #     if "co_g_s"  in apu_emiss_:
-# #         em_.addCO(apu_emiss_["co_g_s"] * apu_time)
-# #     if "co2_g_s"  in apu_emiss_:
-# #         em_.addCO2(apu_emiss_["co2_g_s"] * apu_time)
-# #     if "hc_g_s"  in apu_emiss_:
-# #         em_.addHC(apu_emiss_["hc_g_s"] * apu_time)
-# #     if "nox_g_s"  in apu_emiss_:
-# #         em_.addNOx(apu_emiss_["nox_g_s"] * apu_time)
-#
-# # if not self.getAPUCode() is None and self.getAPUCode()>0:
-# #     apu_time = self.getAircraft().getApuTimes()["arr_s"] if self.isArrival() else self.getAircraft().getApuTimes()["dep_s"]
-# #     print(apu_time, self.getName())
-#
-# # apu_time = new_taxiway_segment_time
-# # if not self.getAircraft().getApu() is None:
-# #     apu_emiss_ = self.getAircraft().getApu().getEmissions("NR")
-# #
-# #     if "fuel_kg_sec" in apu_emiss_:
-# #         em_.addFuel(apu_emiss_["fuel_kg_sec"] * apu_time)
-# #     if "co_g_s"  in apu_emiss_:
-# #         em_.addCO(apu_emiss_["co_g_s"] * apu_time)
-# #     if "co2_g_s"  in apu_emiss_:
-# #         em_.addCO2(apu_emiss_["co2_g_s"] * apu_time)
-# #     if "hc_g_s"  in apu_emiss_:
-# #         em_.addHC(apu_emiss_["hc_g_s"] * apu_time)
-# #     if "nox_g_s"  in apu_emiss_:
-# #         em_.addNOx(apu_emiss_["nox_g_s"] * apu_time)
-# #         # em_.setCategory("APU")
-#
-# # Remaining emissions are queueing emissions.
-# # These emissions are added to the last segment of the taxiway route for both departures and arrivals

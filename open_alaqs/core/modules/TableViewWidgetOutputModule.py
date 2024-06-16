@@ -8,7 +8,7 @@ from qgis.PyQt.QtWidgets import QTableWidgetItem
 from qgis.PyQt.uic import loadUiType
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.Emissions import Emission
+from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
 from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
@@ -44,12 +44,12 @@ class TableViewWidgetOutputModule(OutputModule):
         "nox_kg": "NOX [kg]",
         "sox_kg": "SOX [kg]",
         "pmtotal_kg": "PMTotal [kg]",
-        "pm01_kg": "PM01 [kg]",
-        "pm25_kg": "PM25 [kg]",
+        "p1_kg": "PM01 [kg]",
+        "p2_kg": "PM25 [kg]",
         "pmsul_kg": "PMSUL [kg]",
         "pmvolatile_kg": "PMVolatile [kg]",
-        "pmnonvolatile_kg": "PMNonVolatile [kg]",
-        "pmnonvolatile_number": "PMNonVolatileNumber [er]",
+        # "nvpm_kg": "PMNonVolatile [kg]",
+        # "nvpm_number": "PMNonVolatileNumber [er]",
         "source_wkt": "Source WKT",
     }
 
@@ -83,7 +83,7 @@ class TableViewWidgetOutputModule(OutputModule):
     def process(
         self,
         timestamp: datetime,
-        result: list[tuple[Source, Emission]],
+        result: list[tuple[Source, list[Emission]]],
         **kwargs: Any,
     ) -> None:
         """
@@ -151,18 +151,22 @@ class TableViewWidgetOutputModule(OutputModule):
             "source_wkt": source_wkt,
             "source_type": source_type,
             "source_name": source_name,
-            "co_kg": emissions.getCO(unit="kg")[0],
-            "co2_kg": emissions.getCO2(unit="kg")[0],
-            "hc_kg": emissions.getHC(unit="kg")[0],
-            "nox_kg": emissions.getNOx(unit="kg")[0],
-            "sox_kg": emissions.getSOx(unit="kg")[0],
-            "pmtotal_kg": emissions.getPM10(unit="kg")[0],
-            "pm01_kg": emissions.getPM1(unit="kg")[0],
-            "pm25_kg": emissions.getPM2(unit="kg")[0],
-            "pmsul_kg": emissions.getPM10Sul(unit="kg")[0],
-            "pmvolatile_kg": emissions.getPM10Organic(unit="kg")[0],
-            "pmnonvolatile_kg": emissions.getnvPM(unit="kg")[0],
-            "pmnonvolatile_number": emissions.getnvPMnumber()[0],
+            "co_kg": emissions.get_value(PollutantType.CO, PollutantUnit.KG),
+            "co2_kg": emissions.get_value(PollutantType.CO2, PollutantUnit.KG),
+            "hc_kg": emissions.get_value(PollutantType.HC, PollutantUnit.KG),
+            "nox_kg": emissions.get_value(PollutantType.NOx, PollutantUnit.KG),
+            "sox_kg": emissions.get_value(PollutantType.SOx, PollutantUnit.KG),
+            "pmtotal_kg": emissions.get_value(PollutantType.PM10, PollutantUnit.KG),
+            "p1_kg": emissions.get_value(PollutantType.PM1, PollutantUnit.KG),
+            "p2_kg": emissions.get_value(PollutantType.PM2, PollutantUnit.KG),
+            "pmsul_kg": emissions.get_value(PollutantType.PM10Sul, PollutantUnit.KG),
+            "pmvolatile_kg": emissions.get_value(
+                PollutantType.PM10Organic, PollutantUnit.KG
+            ),
+            # "nvpm_kg": emissions.get_value(PollutantType.nvPM, PollutantUnit.KG),
+            # "nvpm_number": emissions.get_value(
+            #     PollutantType.nvPMnumber, PollutantUnit.NONE
+            # ),
         }
 
     def _on_export_csv_clicked(self):
@@ -205,12 +209,12 @@ class TableViewWidgetOutputModule(OutputModule):
                 "nox_kg": "DECIMAL",
                 "sox_kg": "DECIMAL",
                 "pmtotal_kg": "DECIMAL",
-                "pm01_kg": "DECIMAL",
-                "pm25_kg": "DECIMAL",
+                "p1_kg": "DECIMAL",
+                "p2_kg": "DECIMAL",
                 "pmsul_kg": "DECIMAL",
                 "pmvolatile_kg": "DECIMAL",
-                "pmnonvolatile_kg": "DECIMAL",
-                "pmnonvolatile_number": "DECIMAL",
+                # "nvpm_kg": "DECIMAL",
+                # "nvpm_number": "DECIMAL",
                 "source_wkt": "TEXT",
             },
             primary_key="timestamp",
