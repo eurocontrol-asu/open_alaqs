@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 from qgis.gui import QgsDoubleSpinBox
 from qgis.PyQt import QtWidgets
-from qgis.PyQt.QtCore import QVariant
 from shapely.geometry import Point, Polygon
 
 from open_alaqs.core.alaqslogging import get_logger
@@ -120,8 +119,6 @@ class QGISVectorLayerDispersionModule(OutputModule):
             values_dict.get("threshold", 0.0001)
         )
         self._grid = values_dict["grid"] if "grid" in values_dict else None
-
-        self._header = []
 
     def getGrid(self):
         return self._grid
@@ -554,8 +551,6 @@ class QGISVectorLayerDispersionModule(OutputModule):
 
             output_data, index_, concentration_matrix = self.getA2KData()
 
-            self._header = [(self._pollutant, QVariant.Double)]
-
             self._xmin = (
                 conversion.convertToFloat(output_data["xmin"][0])
                 if ("xmin" in output_data and len(output_data["xmin"]) > 0)
@@ -723,7 +718,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
         # create the layer
         # if self._header and self._data:
         # if self._header and not self._data.empty:
-        if self._header and not self._data_cells.empty:
+        if not self._data_cells.empty:
             # create a new instance of a ContourPlotLayer
             contour_layer = ContourPlotVectorLayer(
                 layer_name="Concentration [in {}] {}".format(
@@ -733,7 +728,6 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 field_name=self._pollutant,
                 use_centroid_symbol=self._use_centroid_symbol,
             )
-            contour_layer.addHeader(self._header)
             contour_layer.addData(self._data_cells)
             contour_layer.setColorGradientRenderer(classes_count=7)
 
