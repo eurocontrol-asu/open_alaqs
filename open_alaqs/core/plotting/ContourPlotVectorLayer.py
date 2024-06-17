@@ -1,4 +1,4 @@
-from typing import Iterable, cast
+from typing import cast
 
 import pandas as pd
 from qgis.core import (
@@ -21,7 +21,6 @@ from qgis.PyQt.QtCore import Qt, QVariant
 from qgis.PyQt.QtGui import QColor
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.tools import conversion
 
 logger = get_logger(__name__)
 
@@ -47,6 +46,8 @@ class ContourPlotVectorLayer:
 
         self.layer = QgsVectorLayer("Polygon", layer_name, "memory")
         self.layer.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
+
+        self._add_field(self.field_name)
 
     def setColorGradientRenderer(
         self,
@@ -74,7 +75,7 @@ class ContourPlotVectorLayer:
         symbol.symbolLayer(0).setStrokeColor(Qt.GlobalColor.transparent)
         transparent_symbol = QgsFillSymbol()
         transparent_symbol.symbolLayer(0).setStrokeColor(Qt.GlobalColor.transparent)
-        transparent_symbol.setColor(QColor("transparent"))
+        transparent_symbol.setColor(Qt.GlobalColor.transparent)
 
         # Create and configure the renderer
         renderer = QgsGraduatedSymbolRenderer(self.field_name)
@@ -87,16 +88,11 @@ class ContourPlotVectorLayer:
 
         self.layer.setRenderer(renderer)
 
-    def addHeader(self, headers: Iterable[tuple[str, QVariant.Type]]) -> None:
-        """Adds header to QgsVectorLayer"""
-
+    def _add_field(self, field_name: str) -> None:
         self.layer.startEditing()
 
-        for field_name, field_type in headers:
-            if not self.layer.addAttribute(QgsField(field_name, field_type)):
-                raise Exception(
-                    f'Could not add field "{field_name}" with {field_type=}!'
-                )
+        if not self.layer.addAttribute(QgsField(field_name, QVariant.Double)):
+            raise Exception(f'Could not add field "{field_name}"!')
 
         self.layer.updateFields()
         self.layer.commitChanges()
@@ -129,9 +125,11 @@ class ContourPlotVectorLayer:
                 ]
             )
 
+            # TODO OPENGIS.ch: find a smarter way to add the "_kg" suffix
+            attr_df_name = f"{self.field_name}_kg"
             attr_index = fields.indexFromName(self.field_name)
             attrs = {
-                attr_index: conversion.convertToFloat(row["Q"]),
+                attr_index: row[attr_df_name],
             }
             f = QgsVectorLayerUtils.createFeature(self.layer, geom, attrs)
 
