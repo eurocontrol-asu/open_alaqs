@@ -4,16 +4,14 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional, Union, cast
 
-import geopandas as gpd
 import pandas as pd
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtWidgets import QTableWidgetItem
 from qgis.PyQt.uic import loadUiType
-from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
-from open_alaqs.core.interfaces.OutputModule import OutputModule
+from open_alaqs.core.interfaces.OutputModule import GridOutputModule
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.tools.Grid3D import Grid3D
@@ -32,7 +30,7 @@ class ViewType(str, Enum):
     BY_GRID_CELL = "by grid cell"
 
 
-class TableViewWidgetOutputModule(OutputModule):
+class TableViewWidgetOutputModule(GridOutputModule):
     """
     Module to plot results of emission calculation in a table and export the results to CSV or SQLite
     """
@@ -116,7 +114,7 @@ class TableViewWidgetOutputModule(OutputModule):
         elif self._view_type == ViewType.BY_GRID_CELL:
             for source, emissions in result:
                 for emission in emissions:
-                    self.grid_df = foo(source, emission, self.grid_df)
+                    self.grid_df = self._process_grid(source, emission, self.grid_df)
         else:
             raise NotImplementedError()
 
@@ -323,39 +321,3 @@ class EmissionsTableViewDialog(QtWidgets.QDialog):
 
         self.ui.data_table.resizeColumnsToContents()
         self.ui.data_table.resizeRowsToContents()
-
-
-def foo(source: Source, emission: Emission, grid_df: gpd.GeoDataFrame):
-    if emission.getGeometryText() is None:
-        logger.error(
-            "Did not find geometry for emissions '%s'. Skipping an emission of source '%s'",
-            str(emission),
-            str(source.getName()),
-        )
-        return grid_df
-
-    geom = emission.getGeometry()
-    intersecting_df = grid_df[grid_df.intersects(geom) == True]  # noqa: E712
-    intersecting_df = cast(gpd.GeoDataFrame, intersecting_df)
-
-    # Calculate Emissions' horizontal distribution
-    if isinstance(geom, Point):
-        factor = 1 / len(intersecting_df)
-    elif isinstance(geom, (LineString, MultiLineString)):
-        factor = intersecting_df.intersection(geom).length / geom.length
-    elif isinstance(geom, (Polygon, MultiPolygon)):
-        factor = intersecting_df.intersection(geom).area / geom.area
-    else:
-        raise NotImplementedError(
-            "Usupported geometry type: {}".format(geom.__class__.name)
-        )
-
-    for pollutant_type in PollutantType:
-        emission_value = emission.get_value(pollutant_type, PollutantUnit.KG)
-        key = f"{pollutant_type.value}_kg"
-        value = factor * emission_value
-
-        intersecting_df.loc[intersecting_df.index, key] = value
-        grid_df.loc[intersecting_df.index, key] += intersecting_df[key]
-
-    return grid_df
