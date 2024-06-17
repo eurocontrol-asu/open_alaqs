@@ -120,7 +120,6 @@ class EmissionsQGISVectorLayerOutputModule(GridOutputModule):
             field_name=self.pollutant_type.value,
             use_centroid_symbol=self._use_centroid_symbol,
         )
-        # TODO pre-OPENGIS.ch: replace with data from grid3D, `contour_layer.addData(self._grid3D[self._grid3D.Emission>0])``
         layer_wrapper.addData(self._grid_df)
         layer_wrapper.setColorGradientRenderer(
             classes_count=7,
