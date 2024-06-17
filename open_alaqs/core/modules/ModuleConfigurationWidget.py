@@ -51,7 +51,7 @@ class SettingSchema(TypedDict):
         ]
     ]
     tooltip: NotRequired[str]
-    coerce: Callable
+    coerce: NotRequired[Callable]
 
 
 SettingsSchema = dict[str, SettingSchema]
