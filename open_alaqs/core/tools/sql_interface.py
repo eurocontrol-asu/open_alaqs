@@ -256,6 +256,7 @@ def db_update_table(
 
     if where_values:
         where_sql, where_params = build_where_sql(where_values)
+        sql += " WHERE "
         sql += where_sql
         values += where_params
 
