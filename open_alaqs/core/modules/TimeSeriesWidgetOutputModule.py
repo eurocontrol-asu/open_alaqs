@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
 import matplotlib
 import pandas as pd
@@ -84,7 +84,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
             values_dict.get("receptor_point", {})
         )
 
-        self._grid = values_dict.get("grid")
+        self._grid = values_dict["grid"]
 
         # Results analysis
         self._time_start = values_dict["start_dt_inclusive"]
@@ -125,8 +125,9 @@ class TimeSeriesWidgetOutputModule(OutputModule):
                 return None
 
         if len(self.receptor_points) == 0:
-            total_emissions_ = sum(
-                [sum(emissions_) for (_, emissions_) in result if emissions_]
+            total_emissions_ = cast(
+                Emission,
+                sum([sum(emissions_) for (_, emissions_) in result if emissions_]),
             )
 
             if total_emissions_:
