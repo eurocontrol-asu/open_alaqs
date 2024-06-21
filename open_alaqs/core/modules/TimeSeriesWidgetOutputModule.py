@@ -208,7 +208,7 @@ class TimeSeriesWidgetOutputModule(OutputModule):
             receptor_point_row = self.receptor_points[0]
             intersection = self._griddata.to_crs(
                 {
-                    "init": f"epsg:{receptor_point_row["epsg"]}",
+                    "init": f"epsg:{receptor_point_row['epsg']}",
                 }
             ).intersects(
                 Point(receptor_point_row["longitude"], receptor_point_row["latitude"])
