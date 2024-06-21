@@ -17,7 +17,7 @@ class TableWidgetConfig(TypedDict):
 
 
 class ComboBoxWidgetConfig(TypedDict):
-    options: Iterable[str] | Iterable[tuple[str, str]]
+    options: Union[Iterable[str], Iterable[tuple[str, str]]]
 
 
 class FileWidgetConfig(TypedDict):
