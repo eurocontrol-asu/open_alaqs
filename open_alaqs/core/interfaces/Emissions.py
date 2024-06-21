@@ -193,7 +193,19 @@ class Emission(Store):
 
     def get_value(self, pollutant_type: PollutantType, unit: PollutantUnit) -> float:
         key = f"{pollutant_type.value}_{unit.value}"
-        return self._objects[key]
+        multiplier = 1
+
+        # TODO OPENGIS.ch: the conversion should not happen like this: if one value is not present, look for the other.
+        # It should actually always happen on the fly, as all values should be stored in the same unit across ALAQS.
+        if key not in self._objects:
+            if unit == PollutantUnit.GRAM:
+                key = f"{pollutant_type.value}_{PollutantUnit.KG.value}"
+                multiplier = 0.001
+            elif unit == PollutantUnit.KG:
+                key = f"{pollutant_type.value}_{PollutantUnit.GRAM.value}"
+                multiplier = 1000
+
+        return self._objects[key] * multiplier
 
     def __str__(self):
         val = "Emissions:"
