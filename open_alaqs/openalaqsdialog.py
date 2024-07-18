@@ -1121,9 +1121,8 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         if (gates is None) or (gates is []):
             return None
         else:
-            for gt in gates:
-                # QtGui.QMessageBox.warning(self, "Gates", gate[1])
-                self.ui.gate.addItem(gt[1])
+            for gate in gates:
+                self.ui.gate.addItem(gate["gate_id"])
             self.ui.gate.setEditable(False)
 
     @catch_errors
@@ -1139,8 +1138,8 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         if (runways is None) or (runways is []):
             logger.warning("Taxiway Routes Tool: No runways found")
         else:
-            for rws in runways:
-                data = rws[0].split("/")
+            for runway in runways:
+                data = runway["runway_id"].split("/")
                 for rw in data:
                     self.ui.runway.addItem(rw)
             self.ui.runway.setEditable(False)
