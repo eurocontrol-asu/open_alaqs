@@ -19,7 +19,7 @@ from qgis.core import (
     QgsSingleSymbolRenderer,
     QgsVectorLayer,
 )
-from qgis.gui import QgsMapCanvas
+from qgis.gui import QgsFileWidget, QgsMapCanvas
 from qgis.PyQt import QtWidgets
 
 from open_alaqs.alaqs_config import LAYERS_CONFIG
@@ -43,6 +43,13 @@ def validate_field(ui_element, var_type):
         value = ui_element.text()
     elif isinstance(ui_element, QtWidgets.QComboBox):
         value = ui_element.currentText()
+    elif isinstance(ui_element, QgsFileWidget):
+        value = ui_element.filePath()
+    else:
+        raise NotImplementedError(
+            f"UI elements of type {type(ui_element)} are not supported for validation!"
+        )
+
     value = value.strip()
 
     if value == "":
