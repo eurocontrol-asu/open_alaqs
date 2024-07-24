@@ -12,7 +12,7 @@ from qgis.core import (
     QgsGeometry,
     QgsLineSymbol,
     QgsMarkerSymbol,
-    QgsPoint,
+    QgsPointXY,
     QgsProject,
     QgsRasterLayer,
     QgsRectangle,
@@ -278,7 +278,7 @@ def set_default_zoom(canvas: QgsMapCanvas, lat: float, lon: float) -> None:
     crs_src = QgsCoordinateReferenceSystem("EPSG:4326")
     crs_tranform = QgsCoordinateTransform(crs_src, project.crs(), project)
 
-    geom = QgsGeometry.fromPoint(QgsPoint(lon, lat))
+    geom = QgsGeometry.fromPointXY(QgsPointXY(lon, lat))
     geom.transform(crs_tranform)
     transformed_point = geom.asPoint()
 
