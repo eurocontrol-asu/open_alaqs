@@ -231,19 +231,21 @@ class Grid3D:
                     )
         return cell_coordinates
 
-    def serialize(self, database_path: str) -> bool:
+    def serialize(self, db_path: str = "") -> bool:
         """
         Create a new table to hold the definition of the Grid3D Object
 
-        :param database_path: the path to the database being written to
+        :param db_path: the path to the database being written to
         :return: bool
         """
+        if not db_path:
+            db_path = self._db_path
 
         try:
             logger.debug("Droping the existing 3D grid definition table...")
 
             sql_interface.perform_sql(
-                database_path,
+                db_path,
                 """
                     DROP TABLE IF EXISTS "grid_3d_definition"
                 """,
@@ -252,7 +254,7 @@ class Grid3D:
             logger.debug("Creating a new 3D grid definition table...")
 
             sql_interface.perform_sql(
-                database_path,
+                db_path,
                 """
                     CREATE TABLE "grid_3d_definition"
                     (
@@ -272,7 +274,7 @@ class Grid3D:
             logger.debug("Populating the newly created 3D grid definition table...")
 
             sql_interface.insert_into_table(
-                database_path,
+                db_path,
                 "grid_3d_definition",
                 {
                     "table_name_cell_coordinates": "grid_3d_cell_coordinates",
