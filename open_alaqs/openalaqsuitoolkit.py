@@ -43,6 +43,8 @@ def validate_field(ui_element, var_type):
         value = ui_element.text()
     elif isinstance(ui_element, QtWidgets.QComboBox):
         value = ui_element.currentText()
+    elif isinstance(ui_element, QtWidgets.QDateTimeEdit):
+        value = ui_element.dateTime().toString("yyyy-MM-dd HH:mm:ss")
     elif isinstance(ui_element, QgsFileWidget):
         value = ui_element.filePath()
     else:
