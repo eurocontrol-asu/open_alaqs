@@ -138,6 +138,7 @@ def load_spatialite_layer(
             "Info",
             "That is not a valid layer...",
         )
+        return
 
     set_layer_style(layer, alaqs_layer)
 
