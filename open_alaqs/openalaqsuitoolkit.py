@@ -116,6 +116,13 @@ def load_spatialite_layer(
     geom_column = "geometry"
     uri.setDataSource(schema, layer_config["table_name"], geom_column)
     layer = QgsVectorLayer(uri.uri(), layer_config["name"], "spatialite")
+    if not layer.isValid():
+        QtWidgets.QMessageBox.information(
+            iface.mainWindow() if iface and iface.mainWindow() else None,
+            "Info",
+            "That is not a valid layer...",
+        )
+        return
 
     lconfig = layer.editFormConfig()
     lconfig.setInitCodeSource(QgsEditFormConfig.PythonInitCodeSource.CodeSourceFile)
@@ -131,14 +138,6 @@ def load_spatialite_layer(
             "ValueMap", {"map": {"1": 1, "0": 0}}
         )
         layer.setEditorWidgetSetup(instudy_idx, editor_widget_setup)
-
-    if not layer.isValid():
-        QtWidgets.QMessageBox.information(
-            iface.mainWindow() if iface and iface.mainWindow() else None,
-            "Info",
-            "That is not a valid layer...",
-        )
-        return
 
     set_layer_style(layer, alaqs_layer)
 
