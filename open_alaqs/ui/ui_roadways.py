@@ -29,6 +29,13 @@ def catch_errors(f):
 
 
 def form_open(form, layer, feature):
+    # avoid trigger error becasue called under widget are availales yet
+    # This form have to be used when creating a new feature of showing the form in attribute table.
+    # The follwoing lines avoid trigger error when opening form from editing tools because the
+    # dialog is not yet visible and can deal to Non values when findChild
+    if not form.isVisible():
+        return
+
     fields = dict(
         name_field=form.findChild(QtWidgets.QLineEdit, "roadway_id"),
         vehicle_year_field=form.findChild(QtWidgets.QLineEdit, "vehicle_year"),
