@@ -22,10 +22,6 @@ def form_open(form, layer, feature):
     # Hide the instudy field
     fields["instudy"].setHidden(True)
 
-    # height not used in this ALAQS version
-    fields["height_field"].setText("0")
-    fields["height_field"].setEnabled(False)
-
     # Add input validation to text fields in the form
     for key, value in fields.items():
         if isinstance(value, QtWidgets.QLineEdit):

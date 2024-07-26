@@ -78,8 +78,6 @@ def form_open(form, layer, feature):
     # Disable various fields
     fields["method_field"].setText("Open-ALAQS")
     fields["method_field"].setEnabled(False)
-    fields["height_field"].setText("0")
-    fields["height_field"].setEnabled(False)
     fields["park_time_field"].setText("0")
     fields["park_time_field"].setEnabled(False)
 
