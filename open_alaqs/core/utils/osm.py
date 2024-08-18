@@ -1,6 +1,6 @@
 import json
-from typing import Optional, TypedDict
 import sys
+from typing import Optional, TypedDict
 
 from qgis import processing, utils
 from qgis.core import (
@@ -171,8 +171,8 @@ def download_osm_airport_data(
     # activate processing plugin if not active othewise would trigger error like
     # Error: Algorithm qgis:checkvalidity not found when importing OSM data
     if "processing" not in utils.plugins:
-        package = sys.modules['processing']
-        utils.plugins['processing'] = package.classFactory(utils.iface)
+        package = sys.modules["processing"]
+        utils.plugins["processing"] = package.classFactory(utils.iface)
 
     osm_result = processing.run(
         "quickosm:downloadosmdatarawquery",
