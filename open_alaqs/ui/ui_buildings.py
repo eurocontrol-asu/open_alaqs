@@ -11,13 +11,6 @@ def form_open(form, layer, feature):
     logger.debug(f"Attributes of fields: {feature.fields().names()}")
     logger.debug(f"Attributes of feature: {feature.attributes()}")
 
-    # avoid trigger error becasue called under widget are availales yet
-    # This form have to be used when creating a new feature of showing the form in attribute table.
-    # The follwoing lines avoid trigger error when opening form from editing tools because the
-    # dialog is not yet visible and can deal to Non values when findChild
-    if not form.isVisible():
-        return
-
     # Get all the fields from the form
     fields = dict(
         name_field=form.findChild(QtWidgets.QLineEdit, "building_id"),
