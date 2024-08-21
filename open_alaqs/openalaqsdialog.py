@@ -2948,8 +2948,14 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         output, err = p.communicate()
         if p.returncode == 0:
+            QtWidgets.QMessageBox.info(
+                self, "Success", "Dispersion simulation completed successfully"
+            )
             logger.info("Dispersion simulation completed successfully")
         else:
+            QtWidgets.QMessageBox.critical(
+                self, "Error", "AUSTAL execution failed. See log for details"
+            )
             logger.error(
                 "AUSTAL execution failed with the following output: %s" % output
             )
