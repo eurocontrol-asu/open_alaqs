@@ -120,7 +120,7 @@ def load_spatialite_layer(
         QtWidgets.QMessageBox.information(
             iface.mainWindow() if iface and iface.mainWindow() else None,
             "Info",
-            "That is not a valid layer...",
+            f'Layer "{layer.name()}" is not valid! Error: {layer.error()}',
         )
         return
 
