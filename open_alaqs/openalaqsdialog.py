@@ -2825,7 +2825,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             datetime.strptime("2000-01-02 00:00:00", "%Y-%m-%d %H:%M:%S"),
         )
 
-    def getTimeSeries(self, db_path=""):
+    def getTimeSeries(self, db_path="") -> list[datetime]:
         from datetime import timedelta
 
         from dateutil import rrule
@@ -2887,8 +2887,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
          ALAQS output file
         """
         try:
-            if os.path.exists(path):
-                self.updateMinMaxGUI(path)
+            self.updateMinMaxGUI(path)
+            time_series = self.getTimeSeries(path)
 
             study_data = alaqs.load_study_setup()
 
@@ -2903,10 +2903,23 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "reference_longitude": study_data.get("airport_longitude", 0.0),
                 "reference_altitude": study_data.get("airport_elevation", 0.0),
             }
+
+            # get values from GUI settings
+            em_config = self._concentration_visualization_widget.get_values()
+
+            start_dt = datetime.fromisoformat(em_config["start_dt_inclusive"])
+            end_dt = datetime.fromisoformat(em_config["end_dt_inclusive"])
+            assert len(time_series) > 1
+            time_interval = time_series[1] - time_series[0]
+
             self._conc_calculation_ = EmissionCalculation(
                 db_path=path,
                 grid_config=grid_configuration,
+                start_dt=start_dt,
+                end_dt=end_dt,
+                time_interval=time_interval,
             )
+
         except Exception as e:
             QtWidgets.QMessageBox.warning(
                 self, "Error", "Could not open database file:  %s." % e
