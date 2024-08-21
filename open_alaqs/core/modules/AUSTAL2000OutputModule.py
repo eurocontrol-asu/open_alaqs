@@ -440,7 +440,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             list(self.getSortedResults().keys()) == list(self.getSortedSeries().keys())
         ):
             logger.debug(
-                "AUSTAL2000 Error: Contradictory data for series.dmna and austal.txt files"
+                "AUSTAL2000 Error: Contradictory data for series.dmna and austal2000.txt files"
             )
             return False
         else:
@@ -778,7 +778,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         """
 
         # Get the file path
-        file_path = self.getOutputPathAsPath() / "austal.txt"
+        file_path = self.getOutputPathAsPath() / "austal2000.txt"
 
         if file_path.exists():
             raise FileExistsError(file_path)
@@ -1348,7 +1348,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 try:
                     self.writeInputFile()
                 except Exception as e:
-                    logger.error("AUSTAL2000: Cannot write 'austal.txt' : %s" % e)
+                    logger.error("AUSTAL2000: Cannot write 'austal2000.txt' : %s" % e)
                     return False
 
                 self.checkHoursinResults()
