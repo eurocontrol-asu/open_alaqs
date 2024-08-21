@@ -440,7 +440,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             list(self.getSortedResults().keys()) == list(self.getSortedSeries().keys())
         ):
             logger.debug(
-                "AUSTAL2000 Error: Contradictory data for series.dmna and austal2000.txt files"
+                "AUSTAL2000 Error: Contradictory data for series.dmna and austal.txt files"
             )
             return False
         else:
@@ -778,7 +778,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         """
 
         # Get the file path
-        file_path = self.getOutputPathAsPath() / "austal2000.txt"
+        file_path = self.getOutputPathAsPath() / "austal.txt"
 
         if file_path.exists():
             raise FileExistsError(file_path)
@@ -969,7 +969,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 self._z_meshes = self._grid._z_cells
 
                 # AUSTAL2000 cannot take non square grid cells, choose finer
-                # resolution (dd) for austal2000.txt
+                # resolution (dd) for austal.txt
                 self._mesh_width = min(
                     self._grid.getResolutionX(), self._grid.getResolutionY()
                 )
@@ -1021,7 +1021,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         todo: rename result
         todo: add Source type
 
-        Here we define the rest of the parameters for the austal2000.txt file
+        Here we define the rest of the parameters for the austal.txt file
         (iq, xq, yq, hq, emission_rate). Moreover, we define the parameters for
         the grid source file (e????.dmna).
 
@@ -1348,7 +1348,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 try:
                     self.writeInputFile()
                 except Exception as e:
-                    logger.error("AUSTAL2000: Cannot write 'austal2000.txt' : %s" % e)
+                    logger.error("AUSTAL2000: Cannot write 'austal.txt' : %s" % e)
                     return False
 
                 self.checkHoursinResults()
