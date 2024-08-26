@@ -2948,7 +2948,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         output, err = p.communicate()
         if p.returncode == 0:
-            QtWidgets.QMessageBox.info(
+            QtWidgets.QMessageBox.information(
                 self, "Success", "Dispersion simulation completed successfully"
             )
             logger.info("Dispersion simulation completed successfully")
