@@ -8,6 +8,7 @@ from qgis.core import (
     QgsVectorLayer,
 )
 from qgis.PyQt.QtCore import QUrl
+from qgis.PyQt.QtWidgets import QMessageBox
 from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
 
 from open_alaqs.alaqs_config import LAYERS_CONFIG
@@ -170,9 +171,14 @@ def download_osm_airport_data(
     # exception if processing plugin if not active othewise would trigger error like
     # Error: Algorithm qgis:checkvalidity not found when importing OSM data
     if "processing" not in utils.plugins:
-        raise Exception(
-            "Failed OSM dependency: Please activate Processing plugin in Plugin Manager"
+        message = "Please activate Processing plugin in Plugin Manager"
+        title = "Failed OSM dependency"
+        QMessageBox.critical(
+            utils.iface.mainWindow() if utils.iface and utils.iface.mainWindow() else None,
+            title,
+            message
         )
+        return (QgsVectorLayer(), QgsVectorLayer(), QgsVectorLayer())
 
     osm_result = processing.run(
         "quickosm:downloadosmdatarawquery",
