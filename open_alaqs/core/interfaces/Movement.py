@@ -21,7 +21,7 @@ from shapely.geometry import LineString, MultiLineString
 from shapely.wkt import loads
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.Aircraft import AircraftStore
+from open_alaqs.core.interfaces.Aircraft import Aircraft, AircraftStore
 from open_alaqs.core.interfaces.AircraftTrajectory import (
     AircraftTrajectory,
     AircraftTrajectoryPoint,
@@ -121,6 +121,7 @@ class Movement:
         )
         # self._apu_code = 0 #(stand only), 1 (stand and taxiway) or 2 ()stand, taxiing and take - off / climb - out or approach / landing
 
+        self._oid = val.get("oid", None)
         self._domestic = str(val.get("domestic", ""))
         self._departure_arrival = str(val.get("departure_arrival", ""))
         self._profile_id = str(val.get("profile_id", ""))
@@ -174,7 +175,7 @@ class Movement:
             val.get("number_of_stop_and_gos", 0)
         )
 
-        self._aircraft = None
+        self._aircraft: Aircraft = None
         self._aircraftengine = None
         self._runway = None
         self._trajectory_cartesian = None
@@ -239,7 +240,8 @@ class Movement:
         # if self.getAircraft() and self.getAircraft().getRegistration():
         #     return self.getAircraft().getRegistration()
         # else:
-        return "%s-%s-%s-%s" % (
+        return "id %s: %s-%s-%s-%s" % (
+            self.getOid(),
             self.getAircraft().getICAOIdentifier(),
             self.getDepartureArrivalFlag(),
             self.getRunwayTime(as_str=True),
@@ -1577,10 +1579,13 @@ class Movement:
         #             occupancy_in_min  = profile_.getOccupancy() * 0.6
         return occupancy_in_min
 
-    def getAircraft(self):
+    def getAircraft(self) -> Aircraft:
         return self._aircraft
 
-    def setAircraft(self, var):
+    def getOid(self) -> int:
+        return self._oid
+
+    def setAircraft(self, var: Aircraft):
         self._aircraft = var
 
     def setAircraftEngine(self, var):
@@ -2153,9 +2158,9 @@ class MovementStore(Store, metaclass=Singleton):
         )
 
         taxi_route_store = self.getTaxiRouteStore()
-        all_taxi_routes = taxi_route_store.getObjects().keys()
-        [tr for tr in all_taxi_routes if "/A/" in tr]
-        [tr for tr in all_taxi_routes if "/D/" in tr]
+        # all_taxi_routes = taxi_route_store.getObjects().keys()
+        # [tr for tr in all_taxi_routes if "/A/" in tr]
+        # [tr for tr in all_taxi_routes if "/D/" in tr]
         for txr in mdf["taxi_route"].unique():
             indices = mdf[mdf["taxi_route"] == txr].index
             if taxi_route_store.hasKey(txr):
@@ -2274,52 +2279,67 @@ class MovementStore(Store, metaclass=Singleton):
             # Get the indices
             inds = mov_df.index
 
-            # Create a proxy movement
-            proxy_mov = Movement(
-                {
-                    "runway_time": mdf["runway_time"].iloc[0],
-                    "block_time": mdf["block_time"].iloc[0],
-                }
-            )
-
             # Set the departure/arrival flag
-            proxy_mov.setDepartureArrivalFlag("D" if "/D/" in tx_route else "A")
+            # TODO OPENGIS.ch: remove commented code
+            # NOTE: used the original departure_arrival mdf column isntead of infer
+            #       values from taxy_route
+            # proxy_mov.setDepartureArrivalFlag("D" if "/D/" in tx_route else "A")
 
-            # Get the first movement from the group's dataframe
-            fm = mov_df.iloc[0]
-            fm_gate = gate_store.getObject(fm["gate"])
-            fm_aircraft = aircraft_store.getObject(fm["aircraft"])
-            fm_runway = runway_store.getObject(fm["runway"])
-            fm_taxi_route = taxi_route_store.getObject(fm["taxi_route"])
-            fm_trajectory = trajectory_store.getObject(fm["profile_id"])
-            fm_track = track_store.getObject(fm["track_id"])
-            fm_engine = None
-            if engine_store.hasKey(fm["engine_name"]):
-                fm_engine = engine_store.getObject(fm["engine_name"])
-            elif heli_engine_store.hasKey(fm["engine_name"]):
-                fm_engine = heli_engine_store.getObject(fm["engine_name"])
+            # loop over all mov_df to set the correct aircraft, gate and departure flag
+            # e.g. for all particular value that are not equal due to gropu by
+            # NOTE: this decision make the group by less efficient
+            for eq_mdf_index in inds:
 
-            # Set the parameters of the proxy movement
-            proxy_mov.setGate(fm_gate)
-            proxy_mov.setAircraft(fm_aircraft)
-            proxy_mov.setAircraftEngine(fm_engine)
-            proxy_mov.setRunway(fm_runway)
-            proxy_mov.setRunwayDirection(fm["runway_direction"])
-            proxy_mov.setTrack(fm_track)
-            proxy_mov.setTaxiRoute(fm_taxi_route)
-            proxy_mov.setTrajectory(fm_trajectory)
-            proxy_mov.updateTrajectoryAtRunway()
+                # Create a proxy movement
+                proxy_mov = Movement(
+                    # TODO OPENGIS.ch: remove commented code
+                    # {
+                    #     "runway_time": mdf["runway_time"].iloc[0],
+                    #     "block_time": mdf["block_time"].iloc[0],
+                    # }
+                )
 
-            # Update the dataframe
-            eq_mdf.loc[inds, "runway"] = proxy_mov.getRunway()
-            eq_mdf.loc[inds, "taxi_route"] = proxy_mov.getTaxiRoute()
-            eq_mdf.loc[inds, "track"] = proxy_mov.getTrack()
-            eq_mdf.loc[inds, "trajectory"] = proxy_mov.getTrajectory()
-            eq_mdf.loc[inds, "runway_trajectory"] = proxy_mov.getTrajectoryAtRunway()
+                fm = eq_mdf.loc[eq_mdf_index]
+                fm_gate = gate_store.getObject(fm["gate"])
+                fm_aircraft = aircraft_store.getObject(fm["aircraft"])
+                fm_runway = runway_store.getObject(fm["runway"])
+                fm_taxi_route = taxi_route_store.getObject(fm["taxi_route"])
+                fm_trajectory = trajectory_store.getObject(fm["profile_id"])
+                fm_track = track_store.getObject(fm["track_id"])
+                fm_engine = None
+                if engine_store.hasKey(fm["engine_name"]):
+                    fm_engine = engine_store.getObject(fm["engine_name"])
+                elif heli_engine_store.hasKey(fm["engine_name"]):
+                    fm_engine = heli_engine_store.getObject(fm["engine_name"])
+                fm_departure_arrival = mdf.loc[eq_mdf_index]["departure_arrival"]
 
-            eq_mdf.loc[inds, "gate_obj"] = proxy_mov.getGate()
-            eq_mdf.loc[inds, "aircraft_obj"] = proxy_mov.getAircraft()
-            eq_mdf.loc[inds, "engine_obj"] = proxy_mov.getAircraftEngine()
+                # Set the parameters of the proxy movement
+                proxy_mov.setGate(fm_gate)
+                proxy_mov.setAircraft(fm_aircraft)
+                proxy_mov.setAircraftEngine(fm_engine)
+                proxy_mov.setRunway(fm_runway)
+                proxy_mov.setRunwayDirection(fm["runway_direction"])
+                proxy_mov.setTrack(fm_track)
+                proxy_mov.setTaxiRoute(fm_taxi_route)
+                proxy_mov.setTrajectory(fm_trajectory)
+                proxy_mov.updateTrajectoryAtRunway()
+                proxy_mov.setDepartureArrivalFlag(fm_departure_arrival)
+
+                # Update the dataframe
+                eq_mdf.loc[eq_mdf_index, "runway"] = proxy_mov.getRunway()
+                eq_mdf.loc[eq_mdf_index, "taxi_route"] = proxy_mov.getTaxiRoute()
+                eq_mdf.loc[eq_mdf_index, "track"] = proxy_mov.getTrack()
+                eq_mdf.loc[eq_mdf_index, "trajectory"] = proxy_mov.getTrajectory()
+                eq_mdf.loc[eq_mdf_index, "runway_trajectory"] = (
+                    proxy_mov.getTrajectoryAtRunway()
+                )
+                eq_mdf.loc[eq_mdf_index, "departure_arrival"] = (
+                    proxy_mov.getDepartureArrivalFlag()
+                )
+
+                eq_mdf.loc[eq_mdf_index, "gate_obj"] = proxy_mov.getGate()
+                eq_mdf.loc[eq_mdf_index, "aircraft_obj"] = proxy_mov.getAircraft()
+                eq_mdf.loc[eq_mdf_index, "engine_obj"] = proxy_mov.getAircraftEngine()
 
             stage_2.nextValue()
 
