@@ -2285,9 +2285,9 @@ class MovementStore(Store, metaclass=Singleton):
             #       values from taxy_route
             # proxy_mov.setDepartureArrivalFlag("D" if "/D/" in tx_route else "A")
 
-            # loop over all mov_df to set the correct aircraft, gate and departure flag
-            # e.g. for all particular value that are not equal due to gropu by
-            # NOTE: this decision make the group by less efficient
+            # Loop over all `mov_df` to set the correct aircraft, gate and departure flag
+            # e.g. for all particular value that are not equal due to group by
+            # NOTE: this implementation makes the group by less efficient, but ensures the correct values
             for eq_mdf_index in inds:
 
                 # Create a proxy movement
