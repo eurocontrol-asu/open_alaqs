@@ -2306,11 +2306,14 @@ class MovementStore(Store, metaclass=Singleton):
                 fm_taxi_route = taxi_route_store.getObject(fm["taxi_route"])
                 fm_trajectory = trajectory_store.getObject(fm["profile_id"])
                 fm_track = track_store.getObject(fm["track_id"])
-                fm_engine = None
+
                 if engine_store.hasKey(fm["engine_name"]):
                     fm_engine = engine_store.getObject(fm["engine_name"])
                 elif heli_engine_store.hasKey(fm["engine_name"]):
                     fm_engine = heli_engine_store.getObject(fm["engine_name"])
+                else:
+                    fm_engine = None
+
                 fm_departure_arrival = mdf.loc[eq_mdf_index]["departure_arrival"]
 
                 # Set the parameters of the proxy movement
