@@ -2158,9 +2158,6 @@ class MovementStore(Store, metaclass=Singleton):
         )
 
         taxi_route_store = self.getTaxiRouteStore()
-        # all_taxi_routes = taxi_route_store.getObjects().keys()
-        # [tr for tr in all_taxi_routes if "/A/" in tr]
-        # [tr for tr in all_taxi_routes if "/D/" in tr]
         for txr in mdf["taxi_route"].unique():
             indices = mdf[mdf["taxi_route"] == txr].index
             if taxi_route_store.hasKey(txr):
