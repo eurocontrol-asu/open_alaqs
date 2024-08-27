@@ -1585,7 +1585,7 @@ class Movement:
     def getOid(self) -> int:
         return self._oid
 
-    def setAircraft(self, var: Aircraft):
+    def setAircraft(self, var: Aircraft) -> None:
         self._aircraft = var
 
     def setAircraftEngine(self, var):
