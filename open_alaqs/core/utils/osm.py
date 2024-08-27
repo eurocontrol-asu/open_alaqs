@@ -8,8 +8,8 @@ from qgis.core import (
     QgsVectorLayer,
 )
 from qgis.PyQt.QtCore import QUrl
-from qgis.PyQt.QtWidgets import QMessageBox
 from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
+from qgis.PyQt.QtWidgets import QMessageBox
 
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.enums import AlaqsLayerType
@@ -174,9 +174,13 @@ def download_osm_airport_data(
         message = "Please activate Processing plugin in Plugin Manager"
         title = "Failed OSM dependency"
         QMessageBox.critical(
-            utils.iface.mainWindow() if utils.iface and utils.iface.mainWindow() else None,
+            (
+                utils.iface.mainWindow()
+                if utils.iface and utils.iface.mainWindow()
+                else None
+            ),
             title,
-            message
+            message,
         )
         return (QgsVectorLayer(), QgsVectorLayer(), QgsVectorLayer())
 
