@@ -2279,25 +2279,13 @@ class MovementStore(Store, metaclass=Singleton):
             # Get the indices
             inds = mov_df.index
 
-            # Set the departure/arrival flag
-            # TODO OPENGIS.ch: remove commented code
-            # NOTE: used the original departure_arrival mdf column isntead of infer
-            #       values from taxy_route
-            # proxy_mov.setDepartureArrivalFlag("D" if "/D/" in tx_route else "A")
-
             # Loop over all `mov_df` to set the correct aircraft, gate and departure flag
             # e.g. for all particular value that are not equal due to group by
             # NOTE: this implementation makes the group by less efficient, but ensures the correct values
             for eq_mdf_index in inds:
 
                 # Create a proxy movement
-                proxy_mov = Movement(
-                    # TODO OPENGIS.ch: remove commented code
-                    # {
-                    #     "runway_time": mdf["runway_time"].iloc[0],
-                    #     "block_time": mdf["block_time"].iloc[0],
-                    # }
-                )
+                proxy_mov = Movement()
 
                 fm = eq_mdf.loc[eq_mdf_index]
                 fm_gate = gate_store.getObject(fm["gate"])
