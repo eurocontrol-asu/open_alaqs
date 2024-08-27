@@ -40,11 +40,6 @@ def form_open(form, layer, feature):
     # Hide the instudy field
     fields["instudy"].setHidden(True)
 
-    # Disable the height field
-    fields["height_field"].setToolTip("Not implemented")
-    fields["height_field"].setText("0")
-    fields["height_field"].setEnabled(False)
-
     # Seed the combo boxes only once
     populate_combo_boxes(fields)
 
