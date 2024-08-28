@@ -11,6 +11,7 @@ from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, Pollut
 from open_alaqs.core.interfaces.OutputModule import GridOutputModule, OutputModule
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.plotting.ContourPlotVectorLayer import ContourPlotVectorLayer
+from open_alaqs.core.tools import Grid3D
 
 pd.set_option("chained_assignment", None)
 
@@ -67,7 +68,7 @@ class EmissionsQGISVectorLayerOutputModule(GridOutputModule):
 
         self._total_emissions = 0.0
 
-        self._grid = values_dict["grid"]
+        self._grid: Grid3D = values_dict["grid"]
 
     def getTimeStart(self):
         return self._time_start
