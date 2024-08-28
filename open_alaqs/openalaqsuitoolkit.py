@@ -12,7 +12,7 @@ from qgis.core import (
     QgsGeometry,
     QgsLineSymbol,
     QgsMarkerSymbol,
-    QgsPoint,
+    QgsPointXY,
     QgsProject,
     QgsRasterLayer,
     QgsRectangle,
@@ -116,6 +116,13 @@ def load_spatialite_layer(
     geom_column = "geometry"
     uri.setDataSource(schema, layer_config["table_name"], geom_column)
     layer = QgsVectorLayer(uri.uri(), layer_config["name"], "spatialite")
+    if not layer.isValid():
+        QtWidgets.QMessageBox.information(
+            iface.mainWindow() if iface and iface.mainWindow() else None,
+            "Info",
+            f'Layer "{layer.name()}" is not valid! Error: {layer.error()}',
+        )
+        return
 
     lconfig = layer.editFormConfig()
     lconfig.setInitCodeSource(QgsEditFormConfig.PythonInitCodeSource.CodeSourceFile)
@@ -131,13 +138,6 @@ def load_spatialite_layer(
             "ValueMap", {"map": {"1": 1, "0": 0}}
         )
         layer.setEditorWidgetSetup(instudy_idx, editor_widget_setup)
-
-    if not layer.isValid():
-        QtWidgets.QMessageBox.information(
-            iface.mainWindow() if iface and iface.mainWindow() else None,
-            "Info",
-            "That is not a valid layer...",
-        )
 
     set_layer_style(layer, alaqs_layer)
 
@@ -278,7 +278,7 @@ def set_default_zoom(canvas: QgsMapCanvas, lat: float, lon: float) -> None:
     crs_src = QgsCoordinateReferenceSystem("EPSG:4326")
     crs_tranform = QgsCoordinateTransform(crs_src, project.crs(), project)
 
-    geom = QgsGeometry.fromPoint(QgsPoint(lon, lat))
+    geom = QgsGeometry.fromPointXY(QgsPointXY(lon, lat))
     geom.transform(crs_tranform)
     transformed_point = geom.asPoint()
 

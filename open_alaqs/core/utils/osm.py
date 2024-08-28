@@ -1,7 +1,7 @@
 import json
 from typing import Optional, TypedDict
 
-from qgis import processing
+from qgis import processing, utils
 from qgis.core import (
     QgsCoordinateReferenceSystem,
     QgsNetworkAccessManager,
@@ -9,6 +9,7 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QUrl
 from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
+from qgis.PyQt.QtWidgets import QMessageBox
 
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.enums import AlaqsLayerType
@@ -166,6 +167,22 @@ def download_osm_airport_data(
         (._;>;);
         out body;
     """
+
+    # exception if processing plugin if not active othewise would trigger error like
+    # Error: Algorithm qgis:checkvalidity not found when importing OSM data
+    if "processing" not in utils.plugins:
+        message = "Please activate Processing plugin in Plugin Manager"
+        title = "Failed OSM dependency"
+        QMessageBox.critical(
+            (
+                utils.iface.mainWindow()
+                if utils.iface and utils.iface.mainWindow()
+                else None
+            ),
+            title,
+            message,
+        )
+        return (QgsVectorLayer(), QgsVectorLayer(), QgsVectorLayer())
 
     osm_result = processing.run(
         "quickosm:downloadosmdatarawquery",

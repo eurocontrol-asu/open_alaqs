@@ -969,7 +969,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 self._z_meshes = self._grid._z_cells
 
                 # AUSTAL2000 cannot take non square grid cells, choose finer
-                # resolution (dd) for austal2000.txt
+                # resolution (dd) for austal.txt
                 self._mesh_width = min(
                     self._grid.getResolutionX(), self._grid.getResolutionY()
                 )
@@ -1021,7 +1021,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         todo: rename result
         todo: add Source type
 
-        Here we define the rest of the parameters for the austal2000.txt file
+        Here we define the rest of the parameters for the austal.txt file
         (iq, xq, yq, hq, emission_rate). Moreover, we define the parameters for
         the grid source file (e????.dmna).
 

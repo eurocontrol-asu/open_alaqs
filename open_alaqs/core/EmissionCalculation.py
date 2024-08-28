@@ -101,16 +101,17 @@ class EmissionCalculation:
         )
 
     def add_dispersion_modules(
-        self, module_name: list[str], module_config: dict[str, Any]
+        self, module_names: list[str], module_config: dict[str, Any]
     ):
-        DispersionSourceModule = DispersionModuleRegistry().get_module(module_name)
+        for module_name in module_names:
+            DispersionSourceModule = DispersionModuleRegistry().get_module(module_name)
 
-        self._dispersion_modules[module_name] = DispersionSourceModule(
-            values_dict={
-                "database_path": self._database_path,
-                **module_config,
-            }
-        )
+            self._dispersion_modules[module_name] = DispersionSourceModule(
+                values_dict={
+                    "database_path": self._database_path,
+                    **module_config,
+                }
+            )
 
     def run(self, source_names: List, vertical_limit_m: float):
         if source_names is None:

@@ -29,6 +29,11 @@ def catch_errors(f):
 
 
 def form_open(form, layer, feature):
+    logger.debug("This is the modified simple form")
+    logger.debug(f"Layer {layer} and feature {feature}")
+    logger.debug(f"Attributes of fields: {feature.fields().names()}")
+    logger.debug(f"Attributes of feature: {feature.attributes()}")
+
     fields = dict(
         name_field=form.findChild(QtWidgets.QLineEdit, "parking_id"),
         vehicle_year_field=form.findChild(QtWidgets.QLineEdit, "vehicle_year"),
@@ -78,8 +83,6 @@ def form_open(form, layer, feature):
     # Disable various fields
     fields["method_field"].setText("Open-ALAQS")
     fields["method_field"].setEnabled(False)
-    fields["height_field"].setText("0")
-    fields["height_field"].setEnabled(False)
     fields["park_time_field"].setText("0")
     fields["park_time_field"].setEnabled(False)
 
