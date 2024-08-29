@@ -3,18 +3,32 @@ This class provides the module to calculate emissions of movements.
 """
 
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Tuple, TypedDict
 
 import pandas as pd
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.AmbientCondition import AmbientCondition
 from open_alaqs.core.interfaces.Emissions import Emission
-from open_alaqs.core.interfaces.Movement import MovementStore
+from open_alaqs.core.interfaces.Movement import EmissionsDict, MovementStore
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SourceModule import SourceModule
 
 logger = get_logger(__name__)
+
+
+class CalcMethodConfigDict(TypedDict):
+    apply_smooth_and_shift: str
+    apply_nox_corrections: bool
+    airport_altitude: float
+    installation_corrections: dict[str, float]
+    ambient_conditions: AmbientCondition
+
+
+class CalcMethodDict(TypedDict):
+
+    name: str
+    config: CalcMethodConfigDict
 
 
 class MovementSourceModule(SourceModule):
@@ -96,7 +110,13 @@ class MovementSourceModule(SourceModule):
     # def getMovements(self):
     #     return pd.DataFrame.from_dict(self.getStore().getMovementDatabase().getEntries(), orient='index')
 
-    def FetchGateEmissions(self, group, method, source_names, runway_names):
+    def FetchGateEmissions(
+        self,
+        group: pd.DataFrame,
+        method: CalcMethodDict,
+        source_names: list[str],
+        runway_names: list[str],
+    ) -> list[EmissionsDict]:
 
         movement = group["Sources"].iloc[0]
         # movement_name = movement.getName()
@@ -243,7 +263,7 @@ class MovementSourceModule(SourceModule):
         limit_ = self.getCalculationLimit()
         limit_["height_unit_in_feet"] = False
 
-        calc_method = {
+        calc_method: CalcMethodDict = {
             "name": self.getMethod()["name"],
             "config": {
                 "apply_smooth_and_shift": self.getApplySmoothAndShift(),
