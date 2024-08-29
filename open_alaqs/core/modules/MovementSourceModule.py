@@ -103,15 +103,14 @@ class MovementSourceModule(SourceModule):
 
         # process only movements of the runway under study
         if runway_names and not (movement.getRunway().getName() in runway_names):
-            return pd.Index([], dtype="int64"), None
-            # continue
+            return []
+
         if (
             source_names
             and not ("all" in source_names)
             and not (movement.getName() in source_names)
         ):
-            return pd.Index([], dtype="int64"), None
-            # continue
+            return []
 
         gate_emissions = movement.calculateGateEmissions(
             sas=method["config"]["apply_smooth_and_shift"]
