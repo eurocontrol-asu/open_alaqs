@@ -128,6 +128,7 @@ class MovementSourceModule(SourceModule):
         if (
             source_names
             and not ("all" in source_names)
+            # to be sure not getting a movement beloging to another source_name
             and not (movement.getName() in source_names)
         ):
             return []
@@ -277,10 +278,23 @@ class MovementSourceModule(SourceModule):
         # Load movements from DataFrame
         df = self.getDataframe()
 
-        # Get the movements between start and end time of this period
-        relevant_movements = (df["RunwayTime"] >= start_dt.timestamp()) & (
-            df["RunwayTime"] < end_dt.timestamp()
-        )
+        # Get the movements that are:
+        #   - between start and end time of this period
+        #   - belong to the selected source_names
+        if not source_names or "all" in source_names:
+            relevant_movements = (df["RunwayTime"] >= start_dt.timestamp()) & (
+                df["RunwayTime"] < end_dt.timestamp()
+            )
+        else:
+
+            def is_relevant(row):
+                return (
+                    (row["Sources"].getName() in source_names)
+                    & (row["RunwayTime"] >= start_dt.timestamp())
+                    & (row["RunwayTime"] < end_dt.timestamp())
+                )
+
+            relevant_movements = df.apply(lambda row: is_relevant(row), axis=1)
 
         # Return an empty list if there are no movements in this period
         if df[relevant_movements].empty:

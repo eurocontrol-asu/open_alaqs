@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Any, cast
 
 import geopandas as gpd
@@ -92,8 +91,6 @@ class Grid3D:
         self._grid_origin_z = 0.0
         self._grid_origin_x, self._grid_origin_y = self._calculate_origin_xy()
 
-        self._elements = OrderedDict()
-
         # Restrict this list to a certain length, can give memory buffer
         # overflow otherwise
         self._hash_coordinates_map = SizeLimitedDict(size=1000)
@@ -109,9 +106,6 @@ class Grid3D:
 
     def getAirportAltitude(self):
         return self._reference_altitude
-
-    def getSortedElements(self):
-        return OrderedDict(sorted(list(self._elements.items()), key=lambda t: t[0]))
 
     def deserialize(self):
         query = """
