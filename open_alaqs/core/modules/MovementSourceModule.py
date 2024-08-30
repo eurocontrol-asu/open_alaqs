@@ -229,10 +229,26 @@ class MovementSourceModule(SourceModule):
         # Update the DataFrame
         self._dataframe = df.astype("object")
 
+    def _getMovementsIndicesBySourceNames(
+        self, df: pd.DataFrame, source_names: list[str]
+    ) -> pd.Series:
+        cache_key = tuple(sorted(source_names))
+
+        if cache_key not in self._cachedMovementIndexBySourceNames:
+            self._cachedMovementIndexBySourceNames[cache_key] = df.apply(
+                lambda r: r["Sources"].getName() in source_names,
+                axis=1,
+            )
+
+        return self._cachedMovementIndexBySourceNames[cache_key]
+
     def beginJob(self):
         self.loadSources()
         self.convertSourcesToDataFrame()
         self.addAdditionalColumnsToDataFrame()
+
+        # reset the movement index cache
+        self._cachedMovementIndexBySourceNames: dict[tuple[str, ...], pd.Series] = {}
 
     def process(
         self,
@@ -278,23 +294,14 @@ class MovementSourceModule(SourceModule):
         # Load movements from DataFrame
         df = self.getDataframe()
 
-        # Get the movements that are:
-        #   - between start and end time of this period
-        #   - belong to the selected source_names
-        if not source_names or "all" in source_names:
-            relevant_movements = (df["RunwayTime"] >= start_dt.timestamp()) & (
-                df["RunwayTime"] < end_dt.timestamp()
-            )
-        else:
+        # Get the movements that match the source names
+        if source_names and "all" not in source_names:
+            df = df[self._getMovementsIndicesBySourceNames(df, source_names)]
 
-            def is_relevant(row):
-                return (
-                    (row["Sources"].getName() in source_names)
-                    & (row["RunwayTime"] >= start_dt.timestamp())
-                    & (row["RunwayTime"] < end_dt.timestamp())
-                )
-
-            relevant_movements = df.apply(lambda row: is_relevant(row), axis=1)
+        # Get the movements between start and end time of this period
+        relevant_movements = (df["RunwayTime"] >= start_dt.timestamp()) & (
+            df["RunwayTime"] < end_dt.timestamp()
+        )
 
         # Return an empty list if there are no movements in this period
         if df[relevant_movements].empty:
@@ -306,7 +313,7 @@ class MovementSourceModule(SourceModule):
 
         # Perform the gate calculation once for each group
         gate_columns = ["gate", "ac_group", "departure_arrival"]
-        for name, group in df[relevant_movements].groupby(gate_columns):
+        for _name, group in df[relevant_movements].groupby(gate_columns):
 
             # Calculate the gate emissions
             gate_emissions = self.FetchGateEmissions(
