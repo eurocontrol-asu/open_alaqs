@@ -4,6 +4,7 @@ import math
 import sys
 from collections import OrderedDict
 from inspect import currentframe, getframeinfo
+from typing import TypedDict
 
 import matplotlib
 import numpy as np
@@ -85,6 +86,12 @@ defaultEI = {
     "nvpm_g_kg": 0.0,
     "nvpm_number": 0.0,
 }
+
+
+class EmissionsDict(TypedDict):
+    distance_space: float
+    distance_time: float
+    emissions: list[Emission]
 
 
 class Movement:
@@ -254,7 +261,7 @@ class Movement:
     def setEngineThrustLevelTaxiing(self, var):
         self._engine_thrust_level_taxiing = var
 
-    def calculateGateEmissions(self, sas="none"):
+    def calculateGateEmissions(self, sas="none") -> list[EmissionsDict]:
         """Calculate gate emissions for a specific source based on the source
          name and time period. The method for calculating emissions from gates
          requires establishing the sum of three types of emissions:
@@ -264,7 +271,7 @@ class Movement:
         3. Emissions from APU
         4. Emissions from Main Engine Start-up
         """
-        emissions = []
+        emissions: list[EmissionsDict] = []
         # calculate emissions for ground equipment (i.e. GPU and GSE)
         if (
             self.getGate() is not None
@@ -1508,7 +1515,7 @@ class Movement:
             limit = {}
         if method is None:
             method = {"name": "bymode", "config": {}}
-        emissions = []
+        emissions: list[EmissionsDict] = []
 
         # add emissions on flight trajectory (incl. runway)
         emissions.extend(self.calculateFlightEmissions(atRunway, method, mode, limit))
