@@ -139,17 +139,25 @@ class MovementSourceModule(SourceModule):
         return gate_emissions
 
     def FetchFlightEmissions(
-        self, group, method, mode, limit, source_names, runway_names, atRunway=True
-    ):
+        self,
+        group: pd.DataFrame,
+        method: CalcMethodDict,
+        mode: str,
+        limit: dict,
+        source_names: list[str],
+        runway_names: list[str],
+        atRunway: bool = True,
+    ) -> list[EmissionsDict]:
 
         movement = group["Sources"].iloc[0]
 
         if (
             source_names
             and not ("all" in source_names)
+            # to be sure not getting a movement beloging to another source_name
             and not (movement.getName() in source_names)
         ):
-            return pd.Index([], dtype="int64"), None
+            return []
             # continue
         flight_emissions = movement.calculateFlightEmissions(
             atRunway, method, mode, limit
