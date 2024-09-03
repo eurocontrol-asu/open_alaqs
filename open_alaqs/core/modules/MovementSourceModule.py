@@ -266,7 +266,7 @@ class MovementSourceModule(SourceModule):
         runway_names=None,
         ambient_conditions=None,
         vertical_limit_m: float = 914.4,
-        **kwargs
+        **kwargs,
     ) -> List[Tuple[datetime, Source, Emission]]:
         if runway_names is None:
             runway_names = []
@@ -328,6 +328,16 @@ class MovementSourceModule(SourceModule):
                 group, calc_method, source_names, runway_names
             )
 
+            to_remove = []
+            for index, em_ in enumerate(gate_emissions):
+                if em_["emissions"].isZero():
+                    logger.warning(
+                        f"Skip zero value emissions for Gate: {_name[0]}, AC Group: {_name[1]} and arr/dep: {_name[2]} - index {index}"
+                    )
+                    to_remove.append(index)
+            for index in reversed(to_remove):
+                gate_emissions.pop(index)
+
             # Update the gate emissions
             for ix in group.index:
                 df.at[ix, "GateEmissions"] = gate_emissions
@@ -341,12 +351,22 @@ class MovementSourceModule(SourceModule):
 
         # flight_columns=["aircraft","engine","profile_id", "departure_arrival"]
         flight_columns = ["engine", "profile_id"]
-        for name, group in df[relevant_movements].groupby(flight_columns):
+        for _name, group in df[relevant_movements].groupby(flight_columns):
 
             # Determine the flight emissions
             flight_emissions = self.FetchFlightEmissions(
                 group, calc_method, mode_, limit_, source_names, runway_names
             )
+
+            to_remove = []
+            for index, em_ in enumerate(flight_emissions):
+                if em_["emissions"].isZero():
+                    logger.warning(
+                        f"Skip zero value emissions for Engine: {_name[0]} and Profile id: {_name[1]}"
+                    )
+                    to_remove.append(index)
+            for index in reversed(to_remove):
+                flight_emissions.pop(index)
 
             # Update the flight emissions
             for ix in group.index:
@@ -355,7 +375,6 @@ class MovementSourceModule(SourceModule):
         """
         Calculate Taxiing Emissions
         """
-        # emissions_extended = []
         for movement_name, movement in self.getSources().items():
 
             # process only movements of the runway under study
@@ -378,6 +397,16 @@ class MovementSourceModule(SourceModule):
                 sas=calc_method["config"]["apply_smooth_and_shift"]
             )
 
+            to_remove = []
+            for index, em_ in enumerate(te):
+                if em_["emissions"].isZero():
+                    logger.warning(
+                        f"Skip zero value emissions for Taxiing with index {index}"
+                    )
+                    to_remove.append(index)
+            for index in reversed(to_remove):
+                te.pop(index)
+
             # add Gate Emissions
             ge = df[df["Sources"] == movement]["GateEmissions"].iloc[0]
 
@@ -396,12 +425,7 @@ class MovementSourceModule(SourceModule):
                 emissions_ = []
                 for em_ in emissions_extended:
                     if "emissions" in em_ and em_["emissions"] is not None:
-                        if not em_["emissions"].isZero():
-                            emissions_.append(em_["emissions"].transposeToKilograms())
-
-                            # gdf.loc[cnt, "NOx"] = em_["emissions"].transposeToKilograms().getValue("NOx", unit="kg")[0]
-                            # gdf.loc[cnt, "geometry"] = em_["emissions"].getGeometry()
-                            # cnt += +1
+                        emissions_.append(em_["emissions"].transposeToKilograms())
 
                 emissions_extended = emissions_
             else:
