@@ -102,7 +102,8 @@ class Movement:
         self._time = None
         _col = "runway_time"
         if _col not in val:
-            logger.error("'%s' not set, but necessary input" % (_col))
+            if len(val):
+                logger.error("'%s' not set, but necessary input" % (_col))
         else:
             self._time = conversion.convertTimeToSeconds(val[_col])
             if self._time is None:
@@ -113,7 +114,8 @@ class Movement:
         self._block_time = None
         _col = "block_time"
         if _col not in val:
-            logger.error("'%s' not set, but necessary input" % (_col))
+            if len(val):
+                logger.error("'%s' not set, but necessary input" % (_col))
         else:
             self._block_time = conversion.convertTimeToSeconds(val[_col])
             if self._block_time is None:
