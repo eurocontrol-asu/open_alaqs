@@ -335,6 +335,10 @@ class MovementSourceModule(SourceModule):
                         f"Skip zero value emissions for Gate: {_name[0]}, AC Group: {_name[1]} and arr/dep: {_name[2]} - index {index}"
                     )
                     to_remove.append(index)
+            if to_remove:
+                logger.warning(
+                    f"Removed: {len(to_remove)} over {len(gate_emissions)} gate emissions because zero value"
+                )
             for index in reversed(to_remove):
                 gate_emissions.pop(index)
 
@@ -365,6 +369,10 @@ class MovementSourceModule(SourceModule):
                         f"Skip zero value emissions for Engine: {_name[0]} and Profile id: {_name[1]}"
                     )
                     to_remove.append(index)
+            if to_remove:
+                logger.warning(
+                    f"Removed: {len(to_remove)} over {len(flight_emissions)} flight emissions because zero value"
+                )
             for index in reversed(to_remove):
                 flight_emissions.pop(index)
 
@@ -404,6 +412,10 @@ class MovementSourceModule(SourceModule):
                         f"Skip zero value emissions for Taxiing with index {index}"
                     )
                     to_remove.append(index)
+            if to_remove:
+                logger.warning(
+                    f"Removed: {len(to_remove)} over {len(te)} taxiing emissions because zero value"
+                )
             for index in reversed(to_remove):
                 te.pop(index)
 
