@@ -102,24 +102,24 @@ class Movement:
         self._time = None
         _col = "runway_time"
         if _col not in val:
-            logger.error("'%s' not set, but necessary input" % (_col))
+            if len(val):
+                logger.error(f"'{_col}' not set, but necessary input")
         else:
             self._time = conversion.convertTimeToSeconds(val[_col])
             if self._time is None:
                 logger.error(
-                    "Could not convert '%s', which is of type '%s', to a valid time format."
-                    % (str(val[_col]), str(type(val[_col])))
+                    f"Could not convert '{str(val[_col])}', which is of type '{str(type(val[_col]))}', to a valid time format."
                 )
         self._block_time = None
         _col = "block_time"
         if _col not in val:
-            logger.error("'%s' not set, but necessary input" % (_col))
+            if len(val):
+                logger.error(f"{_col}' not set, but necessary input")
         else:
             self._block_time = conversion.convertTimeToSeconds(val[_col])
             if self._block_time is None:
                 logger.error(
-                    "Could not convert '%s', which is of type '%s', to a valid time format."
-                    % (str(val[_col]), str(type(val[_col])))
+                    f"Could not convert '{str(val[_col])}', which is of type '{str(type(val[_col]))}', to a valid time format."
                 )
 
         self._engine_name = str(val.get("engine_name", ""))
