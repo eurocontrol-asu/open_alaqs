@@ -510,7 +510,7 @@ class EngineEmissionIndex(Store):
         for ei_val_key, val_key in key_mapping.items():
 
             # Set the values with not update values with empty strings
-            if val_key in val and isinstance(val.get(val_key), float):
+            if val_key in val and isinstance(val.get(val_key), (int, float)):
                 ei_val[ei_val_key] = val[val_key]
 
         # Create the emission index
