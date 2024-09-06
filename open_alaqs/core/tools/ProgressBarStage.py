@@ -40,7 +40,10 @@ class ProgressBarStage:
             )
 
         # Determine the progress as a percentage
-        perc = 1 - (self._max - val) / (self._max - self._min)
+        if self._max - self._min:
+            perc = 1 - (self._max - val) / (self._max - self._min)
+        else:
+            perc = 1
 
         # Determine the progress
         p = self._start + perc * (self._end - self._start)

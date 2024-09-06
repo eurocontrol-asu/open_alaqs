@@ -2080,7 +2080,7 @@ class MovementStore(Store, metaclass=Singleton):
                 acf if store_has_key else np.nan
             )
             if not store_has_key:
-                logger.error("Aircraft %s wasn't found in the DB" % acf)
+                logger.error(f"Aircraft '{acf}' wasn't found in the DB")
 
         # Check if engines exist in the database
         stage_1.nextValue()
@@ -2142,7 +2142,7 @@ class MovementStore(Store, metaclass=Singleton):
 
             else:
                 eq_mdf.loc[indices, "runway"] = np.nan
-                logger.warning(f"Runway {rwy} wasn't found in the DB")
+                logger.warning(f"Runway '{rwy}' wasn't found in the DB")
 
         # Check if gates exist in the database
         stage_1.nextValue()
@@ -2152,7 +2152,7 @@ class MovementStore(Store, metaclass=Singleton):
             store_has_key = gate_store.hasKey(gte)
             eq_mdf.loc[mdf["gate"] == gte, "gate"] = gte if store_has_key else np.nan
             if not store_has_key:
-                logger.warning("Gate %s wasn't found in the DB" % gte)
+                logger.warning(f"Gate '{gte}' wasn't found in the DB")
 
         # Check if taxi routes exist in the database
         stage_1.nextValue()
@@ -2205,49 +2205,47 @@ class MovementStore(Store, metaclass=Singleton):
             store_has_key = track_store.hasKey(trk)
             eq_mdf.loc[mdf.track_id == trk, "track_id"] = trk if store_has_key else ""
             if not store_has_key:
-                logger.warning("Track %s wasn't found in the DB" % trk)
+                logger.warning(f"Track '{trk}' wasn't found in the DB")
 
         # Check if profiles exist in the database
         stage_1.nextValue()
-
-        # Check if there are any profiles unspecified
-        profile_isna_any = mdf["profile_id"].isna().any()
 
         # Get the unique profiles
         profile_unique = mdf["profile_id"].astype(str).unique()
 
         # Check if the profiles exist in the store
         trajectory_store = self.getAircraftTrajectoryStore()
-        profile_haskey_all = np.all(
-            list(trajectory_store.hasKey(prf) for prf in profile_unique)
-        )
 
-        # Add a default profile
-        if profile_isna_any and not profile_haskey_all:
-            for ag, airgroup in mdf.groupby(["aircraft", "departure_arrival"]):
-                ij_ = airgroup.index
-                _ac = airgroup["aircraft"].iloc[0]
-                _aircraft = aircraft_store.getObject(_ac)
-                if _aircraft is not None:
-                    _ad = airgroup["departure_arrival"].iloc[0]
-                    if _ad == "A":
-                        profile_id = _aircraft.getDefaultArrivalProfileName()
-                    elif _ad == "D":
-                        profile_id = _aircraft.getDefaultDepartureProfileName()
-                    else:
-                        logger.debug(
-                            "%s for AC %s is not recognised as either "
-                            "and arrival or departure",
-                            _ad,
-                            _ac,
-                        )
-                        continue
-                    eq_mdf.loc[ij_, "profile_id"] = profile_id
+        # Add a default profile to the eq_mdf
+        for _, airgroup in mdf.groupby(["aircraft", "departure_arrival"]):
+            ij_ = airgroup.index
+            _ac = airgroup["aircraft"].iloc[0]
+            _aircraft = aircraft_store.getObject(_ac)
+            if _aircraft is not None:
+                _ad = airgroup["departure_arrival"].iloc[0]
+                if _ad == "A":
+                    profile_id = _aircraft.getDefaultArrivalProfileName()
+                elif _ad == "D":
+                    profile_id = _aircraft.getDefaultDepartureProfileName()
                 else:
-                    logger.debug("AC %s not in AircraftStore", _ac)
-                    continue
+                    logger.debug(
+                        "%s for AC %s is not recognised as either "
+                        "and arrival or departure",
+                        _ad,
+                        _ac,
+                    )
 
-        # Add nones if it matches the conditions
+                    # setting to none, e.g. means not possible to set a default value
+                    eq_mdf.loc[ij_, "profile_id"] = None
+
+                    continue
+                eq_mdf.loc[ij_, "profile_id"] = profile_id
+            else:
+                logger.debug("AC %s not in AircraftStore", _ac)
+                continue
+
+        # Add nones if it matches the conditions, e.g. set original profile
+        # if it is among available profiles in trajectory_store
         for prf in profile_unique:
             indices = mdf[mdf["profile_id"] == prf].index
             if (
@@ -2257,6 +2255,24 @@ class MovementStore(Store, metaclass=Singleton):
                 and trajectory_store.hasKey(prf)
             ):
                 eq_mdf.loc[indices, "profile_id"] = prf
+            else:
+                logger.warning(
+                    f"Lack of profile_id: '{prf}' using default value: '{eq_mdf.loc[indices[0], 'profile_id']}' "
+                    f"for movements: {mdf.loc[indices]['oid'].values}"
+                )
+
+        # now if remained a profile_id as None in eq_mdf means that:
+        # A) profile_id in original mdf is None or
+        # B) was not possible to get a default value
+        # NOTE: that leaving None value to profile_id make it retained later
+        # NOTE: not dropped elements from eq_mdf to maintain index parity with
+        # original mdf
+        none_profile_ids = eq_mdf["profile_id"].isna()
+        mdf[none_profile_ids].apply(
+            lambda row: logger.warning(
+                f"Skip movement {row['oid']} due to nor profile {row['profile_id']} nor default value"
+            )
+        )
 
         # Get unique combinations of eq_mdf
         u_columns = [
@@ -2270,16 +2286,18 @@ class MovementStore(Store, metaclass=Singleton):
         engine_store = self.getEngineStore()
 
         # Start the next stage
-        stage_2 = stage_1.nextStage(duration=10, maximum=len(eq_mdf.groupby(u_columns)))
+        stage_2 = stage_1.nextStage(
+            duration=10, maximum=len(eq_mdf[~none_profile_ids].groupby(u_columns))
+        )
         logger.debug(
             f"finished stage 1 "
             f"(n={stage_1._max - stage_1._min}) "
             f"in {stage_1._end_time - stage_1._start_time}"
         )
 
-        for (rwy, rwy_dir, tx_route, prf_id, trk_id), mov_df in eq_mdf.groupby(
-            u_columns
-        ):
+        for (rwy, rwy_dir, tx_route, prf_id, trk_id), mov_df in eq_mdf[
+            ~none_profile_ids
+        ].groupby(u_columns):
             # Get the indices
             inds = mov_df.index
 
@@ -2339,6 +2357,7 @@ class MovementStore(Store, metaclass=Singleton):
             stage_2.nextValue()
 
         # Get the movements to retain
+        # NOTE: not available or not default configurable profiles would have "profile_id" as None
         mdf_retained = eq_mdf[~eq_mdf[df_cols].isna().any(axis=1)]
         logger.info("Number of movements retained: %s" % mdf_retained.shape[0])
 
