@@ -2268,11 +2268,10 @@ class MovementStore(Store, metaclass=Singleton):
         # NOTE: not dropped elements from eq_mdf to maintain index parity with
         # original mdf
         none_profile_ids = eq_mdf["profile_id"].isna()
-        mdf[none_profile_ids].apply(
-            lambda row: logger.warning(
-                f"Skip movement {row['oid']} due to nor profile {row['profile_id']} nor default value"
+        for row in mdf[none_profile_ids].itertuples():
+            logger.warning(
+                f'Skip movement "{row.oid}" due to neither a profile "{row.profile_id}" in "default_aircraft_profiles" table, nor a default value for that aircraft!'
             )
-        )
 
         # Get unique combinations of eq_mdf
         u_columns = [
