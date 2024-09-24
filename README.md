@@ -249,7 +249,7 @@ Copy-pastable way to generate the template databases:
 
 ```
 pipenv run pip install -r dev_requirements.txt
-pipenv run python -m open_alaqs.database.generate_templates
+pipenv run python -m open_alaqs.database.generate_templates --full-recreate
 ```
 
 To generate the CAEP examples, run the following command in the Python console in QGIS:
