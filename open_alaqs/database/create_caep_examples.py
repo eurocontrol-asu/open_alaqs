@@ -175,7 +175,7 @@ def create_caep_case_1():
             "departure_arrival",
             "runway",
             "engine_name",
-            "prof_id",
+            "profile_id",
             "track_id",
             "taxi_route",
             "tow_ratio",
@@ -331,7 +331,7 @@ def create_caep_case_2():
             "departure_arrival",
             "runway",
             "engine_name",
-            "prof_id",
+            "profile_id",
             "track_id",
             "taxi_route",
             "tow_ratio",
@@ -514,7 +514,7 @@ def create_caep_case_3():
         "departure_arrival": "D",
         "runway": "27",
         "engine_name": "10IA012",
-        "prof_id": "A319-131-D-C",
+        "profile_id": "A319-131-D-C",
         "track_id": None,
         "taxi_route": "caep_gate/27/D/1",
         "tow_ratio": None,
@@ -576,7 +576,7 @@ def create_caep_case_3():
     case_3_profile.to_sql(
         "default_aircraft_profiles", con, index=False, if_exists="append"
     )
-    logging.info("Added custom profile %s to database" % movement_dict["prof_id"])
+    logging.info("Added custom profile %s to database" % movement_dict["profile_id"])
 
     # Execute the sql query
     try:

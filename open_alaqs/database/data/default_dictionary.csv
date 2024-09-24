@@ -337,10 +337,10 @@ oid,table_key,table_name,field_number,field_key,field_name,unit,description
 336, 'MOVEMENTS_TABLE', 'tbl_AcMovement',6, 'xxxDep_Arr', 'dep_arr', NULL," 'Departure/Arrival 1 letter code i.e. ""A"" or ""D""'"
 337, 'MOVEMENTS_TABLE', 'tbl_AcMovement',7, 'xxxRunway', 'runway', NULL, 'Runway end'
 338, 'MOVEMENTS_TABLE', 'tbl_AcMovement',8, 'xxxEngineID', 'eng_name', NULL, 'Engine identifier (optional)'
-339, 'MOVEMENTS_TABLE', 'tbl_AcMovement',9, 'xxxProfileID', 'prof_id', NULL, 'Vertical profile identifier (optional)'
+339, 'MOVEMENTS_TABLE', 'tbl_AcMovement',9, 'xxxProfileID', 'profile_id', NULL, 'Vertical profile identifier (optional)'
 340, 'MOVEMENTS_TABLE', 'tbl_AcMovement',10, 'xxxTrackID', 'track_id', NULL, 'Horizontal track indetifier (optional)'
 341, 'MOVEMENTS_TABLE', 'tbl_AcMovement',11, 'xxxTaxiRoute', 'taxi_route', NULL, 'Taxi route instance for gate/runway/arrival-departure status combination (optional)'
-342, 'AIRCRAFT_PROFILE', 'tbl_AcProfile',1, 'xxxProfileID', 'prof_id', NULL, 'EDMS profile identifier'
+342, 'AIRCRAFT_PROFILE', 'tbl_AcProfile',1, 'xxxProfileID', 'profile_id', NULL, 'EDMS profile identifier'
 343, 'AIRCRAFT_PROFILE', 'tbl_AcProfile',3, 'xxxHorizontal', 'horiz_m', 'metre', 'Horizontal distance'
 344, 'AIRCRAFT_PROFILE', 'tbl_AcProfile',4, 'xxxVertical', 'vert_m', 'metre', 'Elevation above runway (m)'
 345, 'AIRCRAFT_PROFILE', 'tbl_AcProfile',5, 'xxxSpeed', 'tas_ms', 'm/s', 'True air speed (m/s)'

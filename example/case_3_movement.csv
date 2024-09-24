@@ -1,4 +1,4 @@
-runway_time;block_time;aircraft_registration;aircraft;gate;departure_arrival;runway;engine_name;prof_id;track_id;taxi_route;tow_ratio;apu_code;taxi_engine_count;set_time_of_main_engine_start_after_block_off_in_s;set_time_of_main_engine_start_before_takeoff_in_s;set_time_of_main_engine_off_after_runway_exit_in_s;engine_thrust_level_for_taxiing;taxi_fuel_ratio;number_of_stop_and_gos;domestic
+runway_time;block_time;aircraft_registration;aircraft;gate;departure_arrival;runway;engine_name;profile_id;track_id;taxi_route;tow_ratio;apu_code;taxi_engine_count;set_time_of_main_engine_start_after_block_off_in_s;set_time_of_main_engine_start_before_takeoff_in_s;set_time_of_main_engine_off_after_runway_exit_in_s;engine_thrust_level_for_taxiing;taxi_fuel_ratio;number_of_stop_and_gos;domestic
 2015-01-01 00:30:00;2015-01-01 00:27:30;;A319;caep_gate;D;27;10IA012;A319-131-D-C;;caep_gate/27/D/1;;;1;;;;;0.07;1;
 2015-01-01 01:42:37;2015-01-01 01:40:07;;A319;caep_gate;D;27;10IA012;A319-131-D-C;;caep_gate/27/D/1;;;1;;;;;0.07;1;
 2015-01-01 02:55:15;2015-01-01 02:52:45;;A319;caep_gate;D;27;10IA012;A319-131-D-C;;caep_gate/27/D/1;;;1;;;;;0.07;1;
