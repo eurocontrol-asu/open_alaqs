@@ -352,7 +352,7 @@ class AircraftStore(Store, metaclass=Singleton):
                     apu = fuzzy_match(ac._apu_id, apu_val_list)
                     if apu:
                         apu_val_emissions = [
-                            v._emissions()
+                            v._emissions
                             for v in self.getAPUStore().getObjects().values()
                         ]
                         ac.setApu(apu)
