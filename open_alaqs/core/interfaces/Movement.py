@@ -2205,7 +2205,10 @@ class MovementStore(Store, metaclass=Singleton):
             store_has_key = track_store.hasKey(trk)
             eq_mdf.loc[mdf.track_id == trk, "track_id"] = trk if store_has_key else ""
             if not store_has_key:
-                logger.warning(f"Track '{trk}' wasn't found in the DB")
+                if not trk:
+                    logger.warning("Track has empty name and will be skipped!")
+                else:
+                    logger.warning(f"Track '{trk}' wasn't found in the DB")
 
         # Check if profiles exist in the database
         stage_1.nextValue()
