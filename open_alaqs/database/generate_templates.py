@@ -69,6 +69,14 @@ def apply_sql(conn: sqlite3.Connection, sql_paths, file_type):
             if len(sql_query) == 0:
                 continue
 
+            # for inventory we should not run insert statements!
+            if (
+                file_type == "inventory"
+                and sql_path.name.startswith("user_")
+                and sql_query.upper().startswith("INSERT INTO")
+            ):
+                continue
+
             conn.execute(sql_query)
 
     conn.commit()
