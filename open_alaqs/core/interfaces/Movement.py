@@ -2134,7 +2134,7 @@ class MovementStore(Store, metaclass=Singleton):
                 rwy_used = [
                     key for key in list(runway_store.getObjects().keys()) if rwy in key
                 ]
-                if len(rwy_used) > 0:
+                if len(rwy_used) > 1:
                     logger.warning(
                         f"Runway {rwy} was found in the DB multiple " "times."
                     )
