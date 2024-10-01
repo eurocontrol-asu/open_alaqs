@@ -39,206 +39,154 @@ I use [**Shields IO**](https://shields.io/) for making badges. It is a simple an
 
 ![Tweet](https://img.shields.io/twitter/url?style=flat-square&logo=twitter&url=https%3A%2F%2Fnavendu.me%2Fnsfw-filter%2Findex.html): This is not essential but it is a cool way to let others know about your project! Clicking this button automatically opens twitter and writes a tweet about your project and link to it. All the user has to do is to click tweet. Isn't that neat? -->
 
-# Demo-Preview
+![logo.jpg](./open_alaqs/assets/logo.jpg)
 
-<!-- Add a demo for your project -->
 
-<!-- After you have written about your project, it is a good idea to have a demo/preview(**video/gif/screenshots** are good options) of your project so that people can know what to expect in your project. You could also add the demo in the previous section with the product description.
-
-Here is a random GIF as a placeholder.
-
-![Random GIF](https://media.giphy.com/media/ZVik7pBtu9dNS/giphy.gif) -->
-
-# Table of contents
-
-<!-- After you have introduced your project, it is a good idea to add a **Table of contents** or **TOC** as **cool** people say it. This would make it easier for people to navigate through your README and find exactly what they are looking for.
-
-Here is a sample TOC(*wow! such cool!*) that is actually the TOC for this README. -->
+## Table of contents
 
 - [Project Title](#project-title)
-- [Demo-Preview](#demo-preview)
-- [Table of contents](#table-of-contents)
-- [Installation](#installation)
+  - [Table of contents](#table-of-contents)
+  - [Installation](#installation)
     - [Install QGIS](#install-qgis)
-    - [Install Open-ALAQS](#install-open-alaqs)
-- [Usage](#usage)
-- [Development](#development)
+    - [Install dependencies](#install-dependencies)
+    - [Install OpenALAQS](#install-openalaqs)
+  - [Quick start](#quick-start)
+  - [Development](#development)
     - [Debugging](#debugging)
-    - [Updating the UI](#updating-the-ui)
-    - [Updating the Open-ALAQS database templates](#updating-the-open-alaqs-database-templates)
-- [Contribute](#contribute)
-    - [Sponsor](#sponsor)
-    - [Adding new features or fixing bugs](#adding-new-features-or-fixing-bugs)
-- [License](#license)
+    - [Updating the OpenALAQS database templates](#updating-the-openalaqs-database-templates)
+  - [Contribute](#contribute)
+  - [License](#license)
 - [Footer](#footer)
 
-# Installation
+
+## Installation
+
 [(Back to top)](#table-of-contents)
 
-<!-- *You might have noticed the **Back to top** button(if not, please notice, it's right there!). This is a good idea because it makes your README **easy to navigate.***
+To use OpenALAQS you need to install QGIS, as well as a couple of Python libraries for the proper functioning of the plugin.
 
-The first one should be how to install(how to generally use your project or set-up for editing in their machine).
 
-This should give the users a concrete idea with instructions on how they can use your project repo with all the steps.
+### Install QGIS
 
-Following this steps, **they should be able to run this in their device.**
+Download and install QGIS on your operating system following the official [QGIS documentation](https://qgis.org/download/).
 
-A method I use is after completing the README, I go through the instructions from scratch and check if it is working. -->
+If you are running on Windows, you should install via [OSGeo4W installer](https://qgis.org/resources/installation-guide/#osgeo4w-installer) following the `Advanced Install` route.
 
-<!-- Here is a sample instruction:
 
-To use this project, first clone the repo on your device using the command below:
+### Install dependencies
 
-```git init```
+OpenALAQS is built on top of QGIS and a few external libraries that require separate installation.
 
-```git clone https://github.com/navendu-pottekkat/nsfw-filter.git``` -->
+You can find the list of libraries in the file `requirments.txt`.
 
-Open-ALAQS is a QGIS plugin, so to install Open-ALAQS, QGIS needs to be installed.
-After QGIS is installed, Open-ALAQS can be installed.
+You can either `pip install` them in the Python environment used by QGIS, or if you are using OSGeo4W installation,
+please find the packages in the "Select Packages".
 
-## Install QGIS
-
-The simplest way to do this is via the OSGeo4W Network Installer.
-You can find the OSGeo4W Network Installer on the QGIS website:
-
-https://qgis.org/en/site/forusers/download.html
-
-Once downloaded, run setup through the `Advanced Install` route.
-
-In the `Select Packages` screen there are multiple packages that need installing:
-
-- qgis-ltr-full (3.22.16-1)
-- python3-geopandas (0.11.1-3)
-- python3-shapely (1.8.5.post1-1)
-- python3-geographiclib (1.50-1)
-- python3-pandas (1.1.3-1)
-- python3-matplotlib (3.5.1-1)
-- spatialite (5.0.1-10)
-
-To find these packages, search for them in the search bar, and find them under the 'Libs' sub-menu and select them such that they are not to be skipped in the installation (previously installed packages are shown as 'Keep' in the 'New' column). For QGIS you should select the latest version in the Desktop and Libs sub-menus.
 
 Now finish the setup by accepting the unmet dependencies and accepting the license agreements.
 
-> Running an old version of QGIS?
-> If originally installed using the OSGeo4W Network Installer, the installer can also be used to upgrade to a newer version of QGIS.
 > If not installed using the OSGeo4W Network Installer, please uninstall the old version and install the new version using the OSGeo4W Network Installer or follow the installation guide from QGIS.
 
-## Install Open-ALAQS
+<details>
+<summary>OSGeo4W installation</summary>
 
-First, the Open-ALAQS repository needs to be installed in the plugins folder of QGIS.
+Find and install those packages:
 
-Depending on how you installed QGIS, you might find it in one of the following locations:
+- `qgis-ltr-full` (3.34.x or newer)
+- `python3-geopandas` (2.x.x)
+- `python3-geographiclib`
+- `python3-pandas`
+- `python3-matplotlib`
+- `spatialite` (5.x.x)
 
-```
-# If QGIS installed for all users, you can find the plugins folder here:
-YOUR_QGIS_PLUGINS_PATH = C:\users\{YOUR_USER_NAME}\.qgis\python\plugins
 
-# If installed for only yourself the plugins directory can be found here:
-YOUR_QGIS_PLUGINS_PATH = C:\users\{YOUR_USER_NAME}\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins
+Search for them in the search bar, and find them under the "Libs" sub-menu and select them such that they are not to be skipped in the installation (previously installed packages are shown as "Keep" in the "New" column). For QGIS you should select the latest version in the "Desktop" and "Libs" sub-menus.
 
-# If filepaths specified above don't exist, the repository can also be placed in:
-YOUR_QGIS_PLUGINS_PATH = {YOUR_QGIS_PATH}\apps\qgis\python\plugins
-```
+</details>
 
-Now clone the repository in the plugins folder:
 
-```
-# Go to the plugins folder
-cd {YOUR_QGIS_PLUGINS_PATH}
+### Install OpenALAQS
 
-# Clone the repository
-git clone git@gitlab.aerlabs.nl:eurocontrol/open_alaqs.git
-```
+You can download OpenALAQS [latest release from GitHub](https://github.com/opengisch/open_alaqs/releases/latest), or browse [previous releases](https://github.com/opengisch/open_alaqs/releases/tag/v4.0.0).
 
-The line above uses a git command.
-However, it is also possible to get the source code as zip file and extract it in this location.
+Once you download the `.zip` file, go to QGIS, open the "Plugins", then "Manage and Install Plugins...".
+In the newly opened window, select the "Install from ZIP" on the left sidebar.
+Then select the recently downloaded `.zip` file and click "Install Plugin".
 
-> Make sure that the Open-ALAQS plugin is located in the folder `{YOUR_QGIS_PLUGINS_PATH}/open_alaqs`, otherwise QGIS might have trouble finding the plugin!
+QGIS will automatically install your plugin in the appropriate location.
 
-Then start QGIS desktop and find the 'Plugins' button and select 'Manage and Install Plugins', here the Open-ALAQS plugin should be visible and can be activated.
+At this point the OpenALAQS toolbar is visible below the default QGIS toolbars.
+If this is the case then the installation has been successful.
 
-At this point the Open-ALAQS toolbar is visible below the default QGIS toolbars. If this is the case then the installation has been successful.
+![img.png](./open_alaqs/assets/screenshot.png)
 
-![img.png](img.png)
 
-# Usage
+## Quick start
+
 [(Back to top)](#table-of-contents)
 
-<!-- This is optional and it is used to give the user info on how to use the project after installation. This could be added in the Installation section also. -->
+Find an example study in the `example/LSZH` folder.
 
-Find a case in the `example\CAEPport` folder.
+Here you can find the following files and directories:
 
-Load an OpenALAQS project using `example\CAEPport\CAEPport.alaqs`.
+- `./LSZH.alaqs` - the main ALAQS database, containing spatial and statistical information for a study in Zurich airport.
+- `./LSZH_out.alaqs` - the processed ALAQS database, containing spatial and statistical information for a study in Zurich airport.
+- `./LSZH_movements.csv` - the movements data in the study, used to generate `./LSZH_out.alaqs`.
+- `./LSZH_meteo.csv` - the meteorological data in the study, used to generate `./LSZH_out.alaqs`.
+- `./LSZH_AUSTAL/*` - a directory containing all files generated using OpenALAQS to be used as ALAQS input files.
+- `./LSZH_AUSTAL/austal.txt` - TODO
+- `./LSZH_AUSTAL/series.dmna` - TODO
+- `./LSZH_AUSTAL/e0001.dmna` - TODO
 
-# Development
+For more detailed information on how to use ALAQS, the project files and expected outputs, read the [official documentation](TODO).
+
+
+## Development
+
 [(Back to top)](#table-of-contents)
 
-<!-- This is the place where you give instructions to developers on how to modify the code.
+1. Clone this repository.
+2. Optionally, create a soft link between the local checkout and the QGIS plugin directory for easier developepment. (Linux instructions: `ln -s ${PWD} ${HOME}/.local/share/QGIS/QGIS3/profiles/default/python/plugins/open_alaqs/`).
+3. Install [`pre-commit`](https://pre-commit.com).
+4. Develop a new feature.
+5. Open a PR.
+6. Wait for the CI to succeed.
+7. Ensure you have a PR approval from another reviewer.
+8. Merge the PR.
 
-You could give **instructions in depth** of **how the code works** and how everything is put together.
 
-You could also give specific instructions to how they can setup their development environment.
+### Debugging
 
-Ideally, you should keep the README simple. If you need to add more complex explanations, use a wiki. Check out [this wiki](https://github.com/navendu-pottekkat/nsfw-filter/wiki) for inspiration. -->
+Deugging can be done via [QGIS VSCode Debug plugin](https://plugins.qgis.org/plugins/debug_vs/) and [VSCode](https://code.visualstudio.com).
 
-## Debugging
+Sample `launch.json`:
 
-During debugging, it's sometimes hard to understand when certain calls are made.
-The following code sample can help to better understand where and when code is executed.
-
-```python
-from inspect import getframeinfo, currentframe
-
-from open_alaqs.core.alaqslogging import get_logger
-
-logger = get_logger(__name__)
-
-# The line below is printed in the logs and informs you about the location of the code
-logger.debug(f"{getframeinfo(currentframe())}")
+```
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Remote Attach",
+            "type": "python",
+            "request": "attach",
+            "port": 5678,
+            "host": "localhost",
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/open_alaqs",
+                    "remoteRoot": "${HOME}/.local/share/QGIS/QGIS3/profiles/default/python/plugins/open_alaqs/"
+                }
+            ]
+        }
+    ]
+}
 ```
 
-In addition, the following wrapper can be used to track what's going in functions.
-It can easily be extended to track the execution time of functions as well.
 
-```python
-from open_alaqs.core.alaqslogging import get_logger
-
-logger = get_logger(__name__)
-
-def log_activity(f):
-    """
-    Decorator to log activity
-
-    :param f: function to execute
-    :return:
-    """
-
-    def wrapper(*args, **kwargs):
-        logger.debug(f"{f.__name__}(*args, **kwargs) with")
-        logger.debug(f"\targs={args}")
-        logger.debug(f"\tkwargs={kwargs}")
-        return f(*args, **kwargs)
-
-    return wrapper
-
-@log_activity
-def log_activity_of_this_function(random, argument, with_defaults='also supported'):
-    pass
-```
-
-## Updating the UI
-
-If you want to edit the UI, install [pyqt-tools](https://github.com/altendky/pyqt-tools) using `pip install pyqt5-tools~=5.15` and start the designer using `pyqt5-tools designer`.
-After making changes to any `ui/ui_*.ui` files, you should update the matching `ui/ui_*.py` file by executing the pyuic5 command.
-For example, the following command should be used to update the about widget:
-
-```shell
-pyuic5 -o ui/ui_about.py --from-imports ui/ui_about.ui
-```
-
-> Pro tip: if you want to view the interface without running QGIS, you can use the following command: `pyuic5 --preview ui/ui_about.ui`
-
-## Updating the Open-ALAQS database templates
+### Updating the OpenALAQS database templates
 
 The plugin produced `.alaqs` files are cloned from a template databases, that are in `./open_alaqs/core/templates/*.alaqs`.
 The template databases are generated from SQL and CSV files in the `./open_alaqs/database` directory.
@@ -248,7 +196,7 @@ Other scripts and files supporting the creation of the SQL and CSV files are loc
 Copy-pastable way to generate the template databases:
 
 ```
-pipenv run pip install -r dev_requirements.txt
+pipenv run pip install -r requirements.txt
 pipenv run python -m open_alaqs.database.generate_templates --full-recreate
 ```
 
@@ -259,53 +207,22 @@ from open_alaqs.database.create_caep_examples import create_caep_examples
 create_caep_examples()
 ```
 
-# Contribute
+## Contribute
+
 [(Back to top)](#table-of-contents)
 
-<!-- This is where you can let people know how they can **contribute** to your project. Some of the ways are given below.
+OpenALAQS welcomes all contributions - code or documentation wise.
 
-Also this shows how you can add subsections within a section. -->
 
-### Sponsor
+## License
+
 [(Back to top)](#table-of-contents)
 
-<!-- Your project is gaining traction and it is being used by thousands of people(***with this README there will be even more***). Now it would be a good time to look for people or organisations to sponsor your project. This could be because you are not generating any revenue from your project and you require money for keeping the project alive.
+This software is published under European Union Public Licence v. 1.2. Read the [`LICENSE.md`](LICENCE.md).
 
-You could add how people can sponsor your project in this section. Add your patreon or GitHub sponsor link here for easy access.
-
-A good idea is to also display the sponsors with their organisation logos or badges to show them your love!(*Someday I will get a sponsor and I can show my love*) -->
-
-### Adding new features or fixing bugs
-[(Back to top)](#table-of-contents)
-
-<!-- This is to give people an idea how they can raise issues or feature requests in your projects.
-
-You could also give guidelines for submitting and issue or a pull request to your project.
-
-Personally and by standard, you should use a [issue template](https://github.com/navendu-pottekkat/nsfw-filter/blob/master/ISSUE_TEMPLATE.md) and a [pull request template](https://github.com/navendu-pottekkat/nsfw-filter/blob/master/PULL_REQ_TEMPLATE.md)(click for examples) so that when a user opens a new issue they could easily format it as per your project guidelines.
-
-You could also add contact details for people to get in touch with you regarding your project. -->
-
-# License
-[(Back to top)](#table-of-contents)
-
-<!-- Adding the license to README is a good practice so that people can easily refer to it.
-
-Make sure you have added a LICENSE file in your project folder. **Shortcut:** Click add new file in your root of your repo in GitHub > Set file name to LICENSE > GitHub shows LICENSE templates > Choose the one that best suits your project!
-
-I personally add the name of the license and provide a link to it like below. -->
-
-[GNU General Public License version 3](https://opensource.org/licenses/GPL-3.0)
 
 # Footer
+
 [(Back to top)](#table-of-contents)
 
-<!-- Let's also add a footer because I love footers and also you **can** use this to convey important info.
-
-Let's make it an image because by now you have realised that multimedia in images == cool(*please notice the subtle programming joke). -->
-
 Leave a star in GitHub, give a clap in Medium and share this guide if you found this helpful.
-
-<!-- Add the footer here -->
-
-<!-- ![Footer](https://github.com/navendu-pottekkat/awesome-readme/blob/master/fooooooter.png) -->
