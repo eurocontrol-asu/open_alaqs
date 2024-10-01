@@ -1,6 +1,4 @@
-<!-- Add banner here -->
-
-# Project Title
+# OpenALAQS
 
 <!-- Add buttons here -->
 
@@ -136,7 +134,7 @@ Here you can find the following files and directories:
 - `./LSZH_AUSTAL/*` - a directory containing all files generated using OpenALAQS to be used as ALAQS input files.
 - `./LSZH_AUSTAL/austal.txt` - TODO
 - `./LSZH_AUSTAL/series.dmna` - TODO
-- `./LSZH_AUSTAL/e0001.dmna` - TODO
+- `./LSZH_AUSTAL/01/e0001.dmna` - TODO
 
 For more detailed information on how to use ALAQS, the project files and expected outputs, read the [official documentation](TODO).
 
