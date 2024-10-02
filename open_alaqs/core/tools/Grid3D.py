@@ -342,6 +342,7 @@ class Grid3D:
                         )
 
                 val[_hash] = self._hash_coordinates_map[_hash]
+
         return val
 
     def convertXYZIndicesToCellHash(self, x_idx, y_idx, z_idx):
@@ -406,6 +407,7 @@ class Grid3D:
 
     def matchBoundingBoxToXYZindices(self, bbox, z_as_list=False):
         keys_ = ["x_min", "y_min", "z_min", "x_max", "y_max", "z_max"]
+        # TODO OPENGIS.ch: rewrite with set(keys_) == set(bbox.keys())
         for e in keys_:
             if e not in bbox:
                 logger.error(
