@@ -1265,7 +1265,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 # Get the non-zero emissions
                 nz_emissions_kg = _pollutant_emissions_kg[_pollutant_emissions_kg > 0]
 
-                for hash, hash_value in nz_emissions_kg.iteritems():
+                for hash, hash_value in nz_emissions_kg.items():
 
                     # Get the XYZ indices
                     vvv = self._grid.convertCellHashToXYZIndices(hash)
