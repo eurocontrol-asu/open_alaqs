@@ -153,13 +153,13 @@ class Grid3D:
                         ST_PointFromText(?, 4326),
                         3857
                     )
-                ) AS y,
+                ) AS x,
                 Y(
                     ST_Transform(
                         ST_PointFromText(?, 4326),
                         3857
                     )
-                ) AS x
+                ) AS y
         """
         row = sql_interface.db_execute_sql(self._db_path, sql, [point_wkt, point_wkt])
 
