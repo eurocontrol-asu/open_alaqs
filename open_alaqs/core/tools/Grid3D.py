@@ -153,13 +153,13 @@ class Grid3D:
                         ST_PointFromText(?, 4326),
                         3857
                     )
-                ) AS y,
+                ) AS x,
                 Y(
                     ST_Transform(
                         ST_PointFromText(?, 4326),
                         3857
                     )
-                ) AS x
+                ) AS y
         """
         row = sql_interface.db_execute_sql(self._db_path, sql, [point_wkt, point_wkt])
 
@@ -342,6 +342,7 @@ class Grid3D:
                         )
 
                 val[_hash] = self._hash_coordinates_map[_hash]
+
         return val
 
     def convertXYZIndicesToCellHash(self, x_idx, y_idx, z_idx):
@@ -406,6 +407,7 @@ class Grid3D:
 
     def matchBoundingBoxToXYZindices(self, bbox, z_as_list=False):
         keys_ = ["x_min", "y_min", "z_min", "x_max", "y_max", "z_max"]
+        # TODO OPENGIS.ch: rewrite with set(keys_) == set(bbox.keys())
         for e in keys_:
             if e not in bbox:
                 logger.error(
