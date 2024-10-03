@@ -1,4 +1,4 @@
-# Project Name: Open-ALAQS User Guide
+# Open-ALAQS User Guide
 
 ## Table of Contents
 - [Introduction](#introduction)
