@@ -1,30 +1,40 @@
 # Open-ALAQS User Guide
 
 ## Table of Contents
-- [Introduction](#introduction)
-  - [General Information](#oa-geninfo)
-  - [Installation](#installation-instructions)
-- [The Open-ALAQS Toolbar](#the-open-alaqs-toolbar)
-- [Creating a Study](#creating-a-study)
-- [Opening a Study](#opening-a-study)
-- [Generating Emission Inventory](#generating-emission-inventory)
-- [Visualization of Results](#visualization-of-results)
-- [AUSTAL](#austal)
+- [Project Title](#project-title)
+  - [Table of contents](#table-of-contents)
+  - [Introduction](#introduction)
+    - [General Information](#oa-geninfo)
+    - [Installation](#installation-instructions)
+  - [The Open-ALAQS Toolbar](#the-open-alaqs-toolbar)
+  - [Creating a Study](#creating-a-study)
+  - [Opening a Study](#opening-a-study)
+  - [Generating Emission Inventory](#generating-emission-inventory)
+  - [Visualization of Results](#visualization-of-results)
+  - [AUSTAL](#austal)
 - [FAQs](#faqs)
 - [Contact](#contact)
 
 ## Introduction
+[(Back to top)](#table-of-contents)
+
 Welcome to the **Open-ALAQS** user guide. This document will help you navigate the key features of the software, including setting up a study, emissions & dispersion calculations and exporting results in various formats.
 
 ### General Information
+[(Back to top)](#table-of-contents)
+
 Open-ALAQS is a [EUROCONTROL](https://www.eurocontrol.int/) open-source tool designed to model and analyze emissions from aircraft operations and various airport sources. It can calculate emission inventories, visualize data, and perform dispersion modeling with the help of [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview).
 
 It is developed as a plugin for the open-source geographic information system [QGIS](https://qgis.org/), simplifying the definition of various airport elements (such as runways, taxiways, and buildings) and enabling the visualization of the spatial distribution of emissions and concentrations. It is fully based on an open architecture, making it easily adaptable to other GIS platforms and databases.
 
 ### Installation
+[(Back to top)](#table-of-contents)
+
 TODO: add link to installation instructions
 
 ## The Open-ALAQS Toolbar
+[(Back to top)](#table-of-contents)
+
 The toolbar consists of the following functions:
 
 - **About**: General information about the current Open-ALAQS version.
