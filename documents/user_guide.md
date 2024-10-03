@@ -74,8 +74,8 @@ After creating a project, the **ALAQS Project Properties** window opens automati
 The second tab (**Roadways**) contains the settings for calculating road traffic emissions with [COPERT](#copert). Users are required to specify the average fleet year (values range from 1990 to 2030 in steps of 5) and select a country for country-specific emissions factors(or alternatively EU27). It should be noted that the average fleet year should be viewed as a proxy between the average fleet age and the Euro 1, Euro 2, Euro 3, Euro 4, Euro 5, and Euro 6 vehicle emission standards.
 
 <p align="center">
-  <img src="./../open_alaqs/assets/alaqs-project-properties.PNG" alt="Project Properties 1" width="50%" />
-  <img src="./../open_alaqs/assets/alaqs-project-properties2.PNG" alt="Project Properties 2" width="40%" />
+  <img src="./../open_alaqs/assets/alaqs-project-properties.PNG" alt="Project Properties 1" width="45%" />
+  <img src="./../open_alaqs/assets/alaqs-project-properties2.PNG" alt="Project Properties 2" width="45%" />
 </p>
 
 The **ALAQS Project Properties** window, can also be accessed by clicking on the **Setup** button in the Open-ALAQS toolbar.
@@ -91,8 +91,8 @@ An additional functionality is added to Open-ALAQS to facilitate the creation of
 Using Nominatim, a search engine that uses the data from OpenStreetMap to provide geocoding (address to coordinates), directly from the Open-ALAQS toolbar the user can select and import airport related geographical data to the study. 
 
 <p align="center">
-  <img src="./../open_alaqs/assets/import-osm-data.PNG" alt="Project Properties 1" width="45%" />
-  <img src="./../open_alaqs/assets/import-osm-data-ex.PNG" alt="Project Properties 2" width="45%" />
+  <img src="./../open_alaqs/assets/import-osm-data.PNG" alt="Project Properties 1" width="50%" />
+  <img src="./../open_alaqs/assets/import-osm-data-ex.PNG" alt="Project Properties 2" width="40%" />
 </p>
 
 ## AUSTAL
