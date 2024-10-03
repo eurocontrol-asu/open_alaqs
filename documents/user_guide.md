@@ -35,7 +35,7 @@ TODO: add link to installation instructions
 ## The Open-ALAQS Toolbar
 [(Back to top)](#table-of-contents)
 
-![toolbar.png](./../open_alaqs/assets/toolbar.png)
+![toolbar.PNG](./../open_alaqs/assets/toolbar.PNG)
 
 The toolbar consists of the following functions:
 
