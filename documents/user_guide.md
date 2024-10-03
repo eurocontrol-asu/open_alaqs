@@ -106,6 +106,22 @@ Using Nominatim, a search engine that uses the data from OpenStreetMap to provid
   <img src="./../open_alaqs/assets/import-osm-data-ex2.PNG" alt="Import OSM Data" />
 </p>
 
+## Define emission sources
+
+### Add Features
+
+### Edit Features
+
+### Delete Features
+
+### Visualize and Edit Attribute Values
+
+### Activity Profiles
+
+### Aircraft related Sources
+
+### Stationary (Non-Aircraft) Sources
+
 ## AUSTAL
 [(Back to top)](#table-of-contents)
 
