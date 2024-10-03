@@ -1,0 +1,7 @@
+fiona
+geopandas
+matplotlib
+numpy==1.26.4
+SQLAlchemy==2.0.28
+pandas==2.2.1
+geographiclib
