@@ -30,7 +30,7 @@ It is developed as a plugin for the open-source geographic information system [Q
 ### Installation
 [(Back to top)](#table-of-contents)
 
-TODO: add link to installation instructions
+For installation instructions, check the [Installation Instructions](../README.md#installation).
 
 ## The Open-ALAQS Toolbar
 [(Back to top)](#table-of-contents)
@@ -52,7 +52,7 @@ The toolbar consists of the following functions:
 - **Calculate Dispersion**: Handles the dispersion calculation module.
 - **Review Logs**: Opens the log file containing useful information about code execution.
 
-We note that the order of the toolbar buttons generally follows the sequence of steps needed to conduct a study using Open-ALAQS.
+The order of the toolbar buttons generally follows the sequence of steps needed to conduct a study using Open-ALAQS.
 
 ## AUSTAL
 [(Back to top)](#table-of-contents)
