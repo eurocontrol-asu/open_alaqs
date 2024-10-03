@@ -66,14 +66,16 @@ This section describes the initial steps required to create an Open-ALAQS study.
 To create a new project, click on the **CREATE** button in the Open-ALAQS toolbar. This action opens a pop-up window named **Create an Open ALAQS project file**, where the user is required to
 select a **File name** for saving the new study (**.alaqs**).
 
+After creating a project, the **ALAQS Project Properties** window opens automatically. In this window, the user must provide a project name and at least the ICAO code of the airport. The remaining fields (airport name, country, latitude, longitude, etc.) will be automatically filled based on the information in the internal database (see **default_airports.csv**). However, the user can manually edit this default information if needed.
+
+The **ALAQS Project Properties**, can also be accessed by clicking on the **Setup** button in the Open-ALAQS toolbar.
+
 ### Open an existing study
 
 To open a previously created project, click on the **OPEN** button in the Open-ALAQS toolbar. This action opens a pop-up window (**Open an ALAQS database file**), allowing you to select an existing Open-ALAQS database (**.alaqs**) file. 
 
 ### Import OpenStreetMap data
 
-## Import Basemaps
-[(Back to top)](#table-of-contents)
 
 ## AUSTAL
 [(Back to top)](#table-of-contents)
