@@ -26,6 +26,8 @@ It is developed as a plugin for the open-source geographic information system [Q
 
 ### The Open-ALAQS Toolbar
 
+![img.png](./open_alaqs/assets/screenshot.png)
+
 The toolbar consists of the following functions:
 
 - **About**: General information about the current Open-ALAQS version.
@@ -42,7 +44,6 @@ The toolbar consists of the following functions:
 - **Review Logs**: Opens the log file containing useful information about code execution.
 
 We note that the order of the toolbar buttons generally follows the sequence of steps needed to conduct a study using Open-ALAQS.
-
 
 ## AUSTAL
 The dispersion model [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview) is the reference implementation to Annex 2 of the German Environment Agency’s Technical Instructions on Air Quality Control (TA Luft) and implements the specifications and requirements given therein. 
