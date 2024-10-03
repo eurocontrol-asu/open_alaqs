@@ -60,7 +60,12 @@ The order of the toolbar buttons generally follows the sequence of steps needed 
 ## Creating a Study
 [(Back to top)](#table-of-contents)
 
+This section describes the initial steps required to create an Open-ALAQS study.
+
 ### Setup a new study
+
+To begin creating a new project, click on the **Create** button in the Open-ALAQS toolbar. This action opens a pop-up window named **Create new ALAQS database**, where the user is required to
+select a **File name** for saving the new study (**.alaqs**).
 
 ### Import OpenStreetMap data
 
