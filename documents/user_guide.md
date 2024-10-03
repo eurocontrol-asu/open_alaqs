@@ -94,7 +94,9 @@ An additional functionality is added to Open-ALAQS to facilitate the creation of
 
 Using Nominatim, a search engine that uses the data from OpenStreetMap to provide geocoding (address to coordinates), directly from the Open-ALAQS toolbar the user can select and import airport related geographical data to the study. 
 
-![import-osm-data.PNG](./../open_alaqs/assets/import-osm-data-ex2.PNG)
+<p align="center">
+  <img src="./../open_alaqs/assets/import-osm-data-ex2.PNG" alt="Import OSM Data" />
+</p>
 
 ## AUSTAL
 [(Back to top)](#table-of-contents)
