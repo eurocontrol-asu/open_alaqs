@@ -10,8 +10,8 @@
   - [Creating a Study](#creating-a-study)
     - [Setup a new study](#setup-new-study)
     - [Import OpenStreetMap data](#import-osm-data)
-  - [Import Basemaps](#import-basemap)
   - [Opening a Study](#opening-a-study)
+  - [Import Basemaps](#import-basemap)
   - [Generating Emission Inventory](#generating-emission-inventory)
   - [Visualization of Results](#visualization-of-results)
   - [AUSTAL](#austal)
@@ -56,6 +56,19 @@ The toolbar consists of the following functions:
 - **Review Logs**: Opens the log file containing useful information about code execution.
 
 The order of the toolbar buttons generally follows the sequence of steps needed to conduct a study using Open-ALAQS.
+
+## Creating a Study
+[(Back to top)](#table-of-contents)
+
+### Setup a new study
+
+### Import OpenStreetMap data
+
+## Opening a Study
+[(Back to top)](#table-of-contents)
+
+## Import Basemaps
+[(Back to top)](#table-of-contents)
 
 ## AUSTAL
 [(Back to top)](#table-of-contents)
