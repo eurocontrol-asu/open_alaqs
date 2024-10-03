@@ -25,7 +25,6 @@ It is developed as a plugin for the open-source geographic information system [Q
 (link to installation instructions)
 
 ### The Open-ALAQS Toolbar
-
 The toolbar consists of the following functions:
 
 - **About**: General information about the current Open-ALAQS version.
