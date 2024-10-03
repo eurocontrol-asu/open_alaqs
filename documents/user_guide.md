@@ -94,7 +94,7 @@ To open a previously created project, click on the **OPEN** button in the Open-A
 
 ### Import OpenStreetMap data
 
-An additional functionality is added to Open-ALAQS to facilitate the creation of emission sources based on the geographic data (roads, buildings, points of interest, and more) provided by OpenStreetMap. 
+An additional functionality is added to Open-ALAQS to facilitate the creation of emission sources based on the geographic data (roads, buildings, points of interest, and more) provided by OpenStreetMap.
 
 <p align="center">
   <img src="./../open_alaqs/assets/import-osm-data.PNG" alt="Import OSM Data" />
