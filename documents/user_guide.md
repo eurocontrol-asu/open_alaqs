@@ -68,7 +68,9 @@ select a **File name** for saving the new study (**.alaqs**).
 
 After creating a project, the **ALAQS Project Properties** window opens automatically. In this window, the user must provide a project name and at least the ICAO code of the airport. The remaining fields (airport name, country, latitude, longitude, etc.) will be automatically filled based on the information in the internal database (see **default_airports.csv**). However, the user can manually edit this default information if needed.
 
-The **ALAQS Project Properties**, can also be accessed by clicking on the **Setup** button in the Open-ALAQS toolbar.
+![alaqs-project-properties.PNG](./../open_alaqs/assets/alaqs-project-properties.PNG)
+
+The **ALAQS Project Properties** window, can also be accessed by clicking on the **Setup** button in the Open-ALAQS toolbar.
 
 ### Open an existing study
 
