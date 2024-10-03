@@ -365,12 +365,12 @@ class MovementSourceModule(SourceModule):
             to_remove = []
             for index, em_ in enumerate(flight_emissions):
                 if em_["emissions"].isZero():
-                    logger.warning(
+                    logger.debug(
                         f"Skip zero value emissions for Engine: {_name[0]} and Profile id: {_name[1]}"
                     )
                     to_remove.append(index)
             if to_remove:
-                logger.warning(
+                logger.debug(
                     f"Removed: {len(to_remove)} over {len(flight_emissions)} flight emissions because zero value"
                 )
             for index in reversed(to_remove):
