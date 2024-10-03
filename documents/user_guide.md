@@ -7,11 +7,10 @@
     - [General Information](#oa-geninfo)
     - [Installation](#installation-instructions)
   - [The Open-ALAQS Toolbar](#the-open-alaqs-toolbar)
-  - [Creating a Study](#creating-a-study)
+  - [Starting a Study](#starting-a-study)
     - [Setup a new study](#setup-new-study)
+    - [Open an existing study](#open-study)
     - [Import OpenStreetMap data](#import-osm-data)
-  - [Opening a Study](#opening-a-study)
-  - [Import Basemaps](#import-basemap)
   - [Generating Emission Inventory](#generating-emission-inventory)
   - [Visualization of Results](#visualization-of-results)
   - [AUSTAL](#austal)
@@ -64,13 +63,14 @@ This section describes the initial steps required to create an Open-ALAQS study.
 
 ### Setup a new study
 
-To begin creating a new project, click on the **Create** button in the Open-ALAQS toolbar. This action opens a pop-up window named **Create new ALAQS database**, where the user is required to
+To create a new project, click on the **CREATE** button in the Open-ALAQS toolbar. This action opens a pop-up window named **Create an Open ALAQS project file**, where the user is required to
 select a **File name** for saving the new study (**.alaqs**).
 
-### Import OpenStreetMap data
+### Open an existing study
 
-## Opening a Study
-[(Back to top)](#table-of-contents)
+To open a previously created project, click on the **OPEN** button in the Open-ALAQS toolbar. This action opens a pop-up window (**Open an ALAQS database file**), allowing you to select an existing Open-ALAQS database (**.alaqs**) file. 
+
+### Import OpenStreetMap data
 
 ## Import Basemaps
 [(Back to top)](#table-of-contents)
