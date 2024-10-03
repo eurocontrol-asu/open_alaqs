@@ -34,9 +34,9 @@
         <enum>Qt::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
-       <size>
-        <width>40</width>
-        <height>20</height>
+        <size>
+         <width>40</width>
+         <height>20</height>
         </size>
        </property>
       </spacer>
@@ -59,7 +59,7 @@
         <string/>
        </property>
        <property name="pixmap">
-        <pixmap resource="alaqs_resources.qrc">:/logo/eurocontrol_logo.png</pixmap>
+        <pixmap>eurocontrol_logo.png</pixmap>
        </property>
        <property name="scaledContents">
         <bool>true</bool>
@@ -72,9 +72,9 @@
         <enum>Qt::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
-       <size>
-        <width>40</width>
-        <height>20</height>
+        <size>
+         <width>40</width>
+         <height>20</height>
         </size>
        </property>
       </spacer>
@@ -89,11 +89,14 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="text">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Open ALAQS: Airport Local Air Quality Studies&lt;/span&gt;&lt;br/&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;This is a beta version of the ALAQS local air quality software released for review and testing only.&lt;br/&gt;It should therefore not be used for commerical studies and is released without guarantee.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Released under &lt;a href=&quot;https://github.com/opengisch/open_alaqs/blob/main/LICENCE.md&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;European Union Public Licence v. 1.2 License&lt;/span&gt;&lt;/a&gt;. For more information, contact &lt;a href=&quot;mailto:open-alaqs@eurocontrol.int&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;open-alaqs@eurocontrol.int&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="wordWrap">
       <bool>true</bool>
      </property>
-     <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Open ALAQS: Airport Local Air Quality Studies&lt;/span&gt;&lt;br/&gt;Version 3.1.1 (March 2023)&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;This is a beta version of the ALAQS local air quality software released for review and testing only.&lt;br/&gt;It should therefore not be used for commerical studies and is released without guarantee.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Released under xxx License. For more information, contact open-alaqs@eurocontrol.int&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <property name="openExternalLinks">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -103,17 +106,14 @@
       <enum>Qt::Vertical</enum>
      </property>
      <property name="sizeHint" stdset="0">
-     <size>
-      <width>40</width>
-      <height>20</height>
+      <size>
+       <width>40</width>
+       <height>20</height>
       </size>
      </property>
     </spacer>
    </item>
   </layout>
  </widget>
- <resources>
-  <include location="alaqs_resources.qrc"/>
- </resources>
  <connections/>
 </ui>
