@@ -14,6 +14,8 @@
   - [Generating Emission Inventory](#generating-emission-inventory)
   - [Visualization of Results](#visualization-of-results)
   - [AUSTAL](#austal)
+  - [COPERT](#copert)
+  - [ANP](#anp-db)
 - [FAQs](#faqs)
 - [Contact](#contact)
 
@@ -68,13 +70,17 @@ select a **File name** for saving the new study (**.alaqs**).
 
 After creating a project, the **ALAQS Project Properties** window opens automatically. In this window, the user must provide a project name and at least the ICAO code of the airport. The remaining fields (airport name, country, latitude, longitude, etc.) will be automatically filled based on the information in the internal database (see **default_airports.csv**). However, the user can manually edit this default information if needed.
 
+The second tab in the ALAQS Project Properties window contains the necessary fields for calculating road traffic emissions. Users are required to specify the average fleet year (values range from 1990 to 2030 in steps of 5) and select a specific country (or alternatively EU27). It should be noted that the average fleet year should be viewed as a proxy between the average fleet age and the Euro 1, Euro 2, Euro 3, Euro 4, Euro 5, and Euro 6 vehicle emission standards. The country selection allows users to apply country-specific emissions factors. More information on the methodology used can be found in 
+[(COPERT)](#copert).
+
 ![alaqs-project-properties.PNG](./../open_alaqs/assets/alaqs-project-properties.PNG)
+![alaqs-project-properties2.PNG](./../open_alaqs/assets/alaqs-project-properties2.PNG)
 
 The **ALAQS Project Properties** window, can also be accessed by clicking on the **Setup** button in the Open-ALAQS toolbar.
 
 ### Open an existing study
 
-To open a previously created project, click on the **OPEN** button in the Open-ALAQS toolbar. This action opens a pop-up window (**Open an ALAQS database file**), allowing you to select an existing Open-ALAQS database (**.alaqs**) file. 
+To open a previously created project, click on the **OPEN** button in the Open-ALAQS toolbar. This action opens a pop-up window (**Open an ALAQS database file**), allowing you to select an existing Open-ALAQS database (**.alaqs**) file.
 
 ### Import OpenStreetMap data
 
