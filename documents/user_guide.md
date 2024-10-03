@@ -126,5 +126,3 @@ No installation is needed for use with Open-ALAQS as the executables are already
 
 ## Open-ALAQS Database
 [(Back to top)](#table-of-contents)
-
-
