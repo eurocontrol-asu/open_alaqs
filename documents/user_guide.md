@@ -69,9 +69,9 @@ This section describes the initial steps required to create an Open-ALAQS study.
 To create a new project, click on the **CREATE** button in the Open-ALAQS toolbar. This action opens a pop-up window named **Create an Open ALAQS project file**, where the user is required to
 select a **File name** for saving the new study (**.alaqs**).
 
-After creating a project, the **ALAQS Project Properties** window opens automatically. In this window, the user must provide a project name and at least the ICAO code of the airport. The remaining fields (airport name, country, latitude, longitude, etc.) will be automatically filled based on the information in the internal database (see **default_airports.csv**). However, the user can manually edit this default information if needed.
+After creating a project, the **ALAQS Project Properties** window opens automatically. In this window (tab **Airport**), the user must provide a project name and at least the ICAO code of the airport. The remaining fields (airport name, country, latitude, longitude, etc.) will be automatically filled based on the information in the internal database (see **default_airports.csv**). However, the user can manually edit this default information if needed.
 
-The _second tab_ contains the settings for calculating road traffic emissions with [COPERT](#copert). Users are required to specify the average fleet year (values range from 1990 to 2030 in steps of 5) and select a country for country-specific emissions factors(or alternatively EU27). It should be noted that the average fleet year should be viewed as a proxy between the average fleet age and the Euro 1, Euro 2, Euro 3, Euro 4, Euro 5, and Euro 6 vehicle emission standards.
+The second tab (**Roadways**) contains the settings for calculating road traffic emissions with [COPERT](#copert). Users are required to specify the average fleet year (values range from 1990 to 2030 in steps of 5) and select a country for country-specific emissions factors(or alternatively EU27). It should be noted that the average fleet year should be viewed as a proxy between the average fleet age and the Euro 1, Euro 2, Euro 3, Euro 4, Euro 5, and Euro 6 vehicle emission standards.
 
 <p align="center">
   <img src="./../open_alaqs/assets/alaqs-project-properties.PNG" alt="Project Properties 1" width="45%" />
@@ -86,6 +86,14 @@ To open a previously created project, click on the **OPEN** button in the Open-A
 
 ### Import OpenStreetMap data
 
+An additional functionality is added to Open-ALAQS to facilitate the creation of emission sources based on the geographic data (roads, buildings, points of interest, and more) provided by OpenStreetMap. 
+
+Using Nominatim, a search engine that uses the data from OpenStreetMap to provide geocoding (address to coordinates), directly from the Open-ALAQS toolbar the user can select and import airport related geographical data to the study. 
+
+<p align="center">
+  <img src="./../open_alaqs/assets/import-osm-data.PNG" alt="Project Properties 1" width="45%" />
+  <img src="./../open_alaqs/assets/import-osm-data-ex.PNG" alt="Project Properties 2" width="45%" />
+</p>
 
 ## AUSTAL
 [(Back to top)](#table-of-contents)
