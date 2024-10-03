@@ -132,7 +132,7 @@ Here you can find the following files and directories:
 - `./LSZH_movements.csv` - the movements data in the study, used to generate `./LSZH_out.alaqs`.
 - `./LSZH_meteo.csv` - the meteorological data in the study, used to generate `./LSZH_out.alaqs`.
 - `./LSZH_AUSTAL/*` - a directory containing all files generated using OpenALAQS to be used as ALAQS input files.
-- `./LSZH_AUSTAL/austal.txt` - the file containing all main input parameters except for time-dependent parameters 
+- `./LSZH_AUSTAL/austal.txt` - the file containing all main input parameters except for time-dependent parameters
 - `./LSZH_AUSTAL/series.dmna` - the file containing all time-dependent parameters
 - `./LSZH_AUSTAL/01/e0001.dmna` - input grid file, with information on the user-defined grid and on the corresponding data
 
