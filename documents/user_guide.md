@@ -53,6 +53,8 @@ The toolbar consists of the following functions:
 We note that the order of the toolbar buttons generally follows the sequence of steps needed to conduct a study using Open-ALAQS.
 
 ## AUSTAL
+[(Back to top)](#table-of-contents)
+
 The dispersion model [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview) is the reference implementation to Annex 2 of the German Environment Agency’s Technical Instructions on Air Quality Control (TA Luft) and implements the specifications and requirements given therein.
 
 The program is the successor of AUSTAL2000 (which was previously used with Open-ALAQS), the reference implementation to Annex 3 of the TA Luft 2002. AUSTAL and AUSTAL2000 were developed by Janicke Consulting on behalf of the German Environment Agency and are freely available and widely used internationally.
