@@ -115,15 +115,20 @@ New objects can be added using the **Digitizing** toolbar.
 
 ![digitizing-toolbar.PNG](./../open_alaqs/assets/digitizing-toolbar.PNG)
 
-More information on how to use this toolbar is provided in the [QGIS User Manual](https://docs.qgis.org/3.34/en/docs/user_manual/working_with_vector/editing_geometry_attributes.html#digitizing-an-existing-layer)
+More information on how to use this toolbar is provided in the [QGIS User Manual](https://docs.qgis.org/3.34/en/docs/user_manual/working_with_vector/editing_geometry_attributes.html#digitizing-an-existing-layer).
 
-To create a new emission source, select the desired layer (e.g., taxiway or runway) to activate it and click **Toggle Editing** in the **Digitizing** toolbar. Then click **Add Feature** to start designing the new Feature. Once finished, right click and fill the attribute fields in the pop-up window. 
+To create a new emission source, select the desired layer (e.g., taxiway or runway) to activate it and click **Toggle Editing** in the **Digitizing** toolbar. Then click **Add Feature** to start designing the new feature. Once finished, right click and fill the attribute fields in the pop-up window. 
 
 ![layers.PNG](./../open_alaqs/assets/layers.PNG)
 
 ### Edit Features
 
+Using the **Digitizing** toolbar in editing mode (**Toggle Editing**), it is possible to employ the **Vertex Tool** to edit objects.
+
 ### Delete Features
+
+To delete one or more features, first select the geometry using the **Selection** toolbar (_Select Features by area or single click_). and use the **Delete Selected** tool to delete
+the feature(s). Multiple selected features can be deleted at once. Selection can also be done from the Attributes table.
 
 ### Visualize and Edit Attribute Values
 
