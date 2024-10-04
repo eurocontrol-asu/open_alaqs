@@ -111,13 +111,13 @@ Using Nominatim, a search engine that uses the data from OpenStreetMap to provid
 
 ### Add Features
 
-New objects can be added using the **Digitizing** toolbar. 
+New objects can be added using the **Digitizing** toolbar.
 
 ![digitizing-toolbar.PNG](./../open_alaqs/assets/digitizing-toolbar.PNG)
 
 More information on how to use this toolbar is provided in the [QGIS User Manual](https://docs.qgis.org/3.34/en/docs/user_manual/working_with_vector/editing_geometry_attributes.html#digitizing-an-existing-layer).
 
-To create a new emission source, select the desired layer (e.g., taxiway or runway) to activate it and click **Toggle Editing** in the **Digitizing** toolbar. Then click **Add Feature** to start designing the new feature. Once finished, right click and fill the attribute fields in the pop-up window. 
+To create a new emission source, select the desired layer (e.g., taxiway or runway) to activate it and click **Toggle Editing** in the **Digitizing** toolbar. Then click **Add Feature** to start designing the new feature. Once finished, right click and fill the attribute fields in the pop-up window.
 
 ![layers.PNG](./../open_alaqs/assets/layers.PNG)
 
@@ -131,6 +131,12 @@ To delete one or more features, first select the geometry using the **Selection*
 the feature(s). Multiple selected features can be deleted at once. Selection can also be done from the Attributes table.
 
 ### Visualize and Edit Attribute Values
+
+Attribute values can also be modified after an object's creation via the **Attribute Table**.
+
+![attributes.PNG](./../open_alaqs/assets/attributes.PNG)
+
+The **Open Attribute Table** functionality can be accessed through the **Layers** panel (by right-clicking on the appropriate layer) or via the **Attributes** toolbar.
 
 ### Activity Profiles
 
