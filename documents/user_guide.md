@@ -107,8 +107,19 @@ Using Nominatim, a search engine that uses the data from OpenStreetMap to provid
 </p>
 
 ## Define emission sources
+[(Back to top)](#table-of-contents)
 
 ### Add Features
+
+New objects can be added using the **Digitizing** toolbar. 
+
+![digitizing-toolbar.PNG](./../open_alaqs/assets/digitizing-toolbar.PNG)
+
+More information on how to use this toolbar is provided in the [QGIS User Manual](https://docs.qgis.org/3.34/en/docs/user_manual/working_with_vector/editing_geometry_attributes.html#digitizing-an-existing-layer)
+
+To create a new emission source, select the desired layer (e.g., taxiway or runway) to activate it and click **Toggle Editing** in the **Digitizing** toolbar. Then click **Add Feature** to start designing the new Feature. Once finished, right click and fill the attribute fields in the pop-up window. 
+
+![layers.PNG](./../open_alaqs/assets/layers.PNG)
 
 ### Edit Features
 
