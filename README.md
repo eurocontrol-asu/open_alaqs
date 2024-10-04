@@ -42,7 +42,7 @@ I use [**Shields IO**](https://shields.io/) for making badges. It is a simple an
 
 ## Table of contents
 
-- [Project Title](#project-title)
+- [OpenALAQS](#openalaqs)
   - [Table of contents](#table-of-contents)
   - [Installation](#installation)
     - [Install QGIS](#install-qgis)
@@ -105,7 +105,7 @@ Search for them in the search bar, and find them under the "Libs" sub-menu and s
 
 ### Install OpenALAQS
 
-You can download OpenALAQS [latest release from GitHub](https://github.com/opengisch/open_alaqs/releases/latest), or browse [previous releases](https://github.com/opengisch/open_alaqs/releases/tag/v4.0.0).
+You can download OpenALAQS [latest release from GitHub](https://github.com/eurocontrol-asu/open_alaqs/releases/latest), or browse [previous releases](https://github.com/eurocontrol-asu/open_alaqs/releases/tag/v4.0.0).
 
 Once you download the `.zip` file, go to QGIS, open the "Plugins", then "Manage and Install Plugins...".
 In the newly opened window, select the "Install from ZIP" on the left sidebar.
