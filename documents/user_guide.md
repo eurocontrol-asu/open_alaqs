@@ -135,7 +135,7 @@ Attribute values can also be modified after an object's creation via the **Attri
 
 ![attributes.PNG](./../open_alaqs/assets/attributes.PNG)
 
-The **Open Attribute Table** functionality can be accessed through the **Layers** panel (by right-clicking on the appropriate layer) or via the **Attributes** toolbar.
+The **Open Attribute Table** functionality can be accessed through the **Attributes** toolbar or via the **Layers** panel (by right-clicking on the appropriate layer).
 
 ### Activity Profiles
 
