@@ -144,7 +144,25 @@ An airport gate refers to a designated location at an airport where aircraft par
 In Open-ALAQS, gates are represented as polygons. Each gate can encompass several aircraft stands. The more stands grouped together within a single gate area, the less data preparation is needed (e.g., fewer
 taxi routes to define). However, if the gate area is too large, it might no longer accurately represent the location of the emissions.
 
-Calculating gate emissions requires establishing the sum of four emission sources: GSE (Ground Support Equipment), GPU (Ground Power Unit), APU (Auxiliary Power Unit) and MES (Main Engine Start). 
+Calculating gate emissions requires establishing the sum of four emission sources: GSE (Ground Support Equipment), GPU (Ground Power Unit), APU (Auxiliary Power Unit) and MES (Main Engine Start).
+
+![gates.PNG](./../open_alaqs/assets/gates.PNG)
+
+When adding a gate, the following information is required:
++ Gate type (PIER, REMOTE or CARGO)
++ Gate height _not yet fully implemented_
+
+In Open-ALAQS, GSE and GPU emissions factors, expressed in terms of grams of pollutant per hour, is assigned to each gate as a function of:
++ The gate type (PIER, REMOTE or CARGO)
++ The aircraft category (JET BUSINESS/REGIONAL/SMALL/MEDIUM/LARGE,TURBOPROPS,PISTON)
++ The operation type (Arrival or Departure)
+
+The corresponding GSE/GPU emission factors and activity time are included in the Open-ALAQS database (see _open_alaqs\database\data\default_gate_profiles.csv_).
+
+APU emissions are calculated separately as a function of the APU model (apu_id) indicated for each aircraft (if available) in the database (see _open_alaqs\database\data\default_aircraft.csv_).
+The default APU emission factors and operating times are given in the database files: _default_aircraft_apu_ef_ and _default_apu_times_ respectively.
+
+Default MES emission factors per aircraft group are given in the table _default_aircraft_start_ef_.
 
 ### Stationary (Non-Aircraft) Sources
 
