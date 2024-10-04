@@ -96,15 +96,11 @@ To open a previously created project, click on the **OPEN** button in the Open-A
 
 An additional functionality is added to Open-ALAQS to facilitate the creation of emission sources based on the geographic data (roads, buildings, points of interest, and more) provided by OpenStreetMap.
 
-<p align="center">
-  <img src="./../open_alaqs/assets/import-osm-data.PNG" alt="Import OSM Data" />
-</p>
+![import-osm-data.PNG](./../open_alaqs/assets/import-osm-data.PNG)
 
 Using Nominatim, a search engine that uses the data from OpenStreetMap to provide geocoding (address to coordinates), directly from the Open-ALAQS toolbar the user can select and import airport related geographical data to the study. The image below illustrates the information that can be collected from OpenStreetMap.
 
-<p align="center">
-  <img src="./../open_alaqs/assets/import-osm-data-ex2.PNG" alt="Import OSM Data" />
-</p>
+![import-osm-data-ex2.PNG](./../open_alaqs/assets/import-osm-data-ex2.PNG)
 
 ## Define emission sources
 [(Back to top)](#table-of-contents)
