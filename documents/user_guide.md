@@ -140,7 +140,7 @@ The **Open Attribute Table** functionality can be accessed through the **Attribu
 ## Activity Profiles
 [(Back to top)](#table-of-contents)
 
-Activity Profiles are used to describe the relative hourly/daily/monthly operational mode for each airport emission source. The **Activity Profile Editor** in the Open-ALAQS toolbar can be used to review, edit, and create custom profiles.
+Activity Profiles are used to describe the relative hourly/daily/monthly operational mode for each airport emission source. The **Activity Profiles Editor** in the Open-ALAQS toolbar can be used to review, edit, and create custom profiles.
 
 ![activity-profiles.PNG](./../open_alaqs/assets/activity-profiles.PNG)
 
