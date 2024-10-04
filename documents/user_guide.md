@@ -158,7 +158,7 @@ In Open-ALAQS, GSE and GPU emissions factors, expressed in terms of grams of pol
 + The operation type (Arrival or Departure)
 
 The corresponding GSE/GPU emission factors and activity time are included in the Open-ALAQS database (see _open_alaqs\database\data\default_gate_profiles.csv_).
-[Link to CSV file](./../database/data/default_gate_profiles.csv)
+[_default_gate_profiles_](./../open_alaqs/database/data/default_gate_profiles.csv)
 
 APU emissions are calculated separately as a function of the APU model (apu_id) indicated for each aircraft (if available) in the database (see _open_alaqs\database\data\default_aircraft.csv_).
 The default APU emission factors and operating times are given in the database files: _default_aircraft_apu_ef_ and _default_apu_times_ respectively.
