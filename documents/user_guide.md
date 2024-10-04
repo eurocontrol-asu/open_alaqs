@@ -16,9 +16,9 @@
     - [Edit Features](#edit-features)
     - [Delete Features](#del-features)
     - [Visualize and Edit Attribute Values](#visu-features)
-    - [Activity Profiles](#activity-profiles)
     - [Aircraft related Sources](#aircraft-sources)
     - [Stationary (Non-Aircraft) Sources](#non-aircraft-sources)
+  - [Activity Profiles](#activity-profiles)
   - [Generating Emission Inventory](#generating-emission-inventory)
   - [Visualization of Results](#visualization-of-results)
   - [AUSTAL](#austal)
@@ -137,11 +137,12 @@ Attribute values can also be modified after an object's creation via the **Attri
 
 The **Open Attribute Table** functionality can be accessed through the **Attributes** toolbar or via the **Layers** panel (by right-clicking on the appropriate layer).
 
-### Activity Profiles
-
 ### Aircraft related Sources
 
 ### Stationary (Non-Aircraft) Sources
+
+## Activity Profiles
+[(Back to top)](#table-of-contents)
 
 ## AUSTAL
 [(Back to top)](#table-of-contents)
