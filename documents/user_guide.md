@@ -144,6 +144,12 @@ The **Open Attribute Table** functionality can be accessed through the **Attribu
 ## Activity Profiles
 [(Back to top)](#table-of-contents)
 
+Activity Profiles are used to describe the relative hourly/daily/monthly operational mode for each airport emission source. The **Activity Profile Editor** in the Open-ALAQS toolbar can be used to review, edit, and create custom profiles.
+
+![activity-profiles.PNG](./../open_alaqs/assets/activity-profiles.PNG)
+
+Each activity multiplier is a decimal number, between 0 and 1. The default profile values are 1 (i.e., 100%) meaning the emission source is fully active. On the other hand, if, the emission source is deactivated during a specific time interval (e.g., during night-time curfew) the user can modify accordingly the activity profile by setting the corresponding multiplier to 0 for this specific period (hour, day, or month).
+
 ## AUSTAL
 [(Back to top)](#table-of-contents)
 
