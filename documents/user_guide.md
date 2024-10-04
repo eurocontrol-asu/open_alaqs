@@ -135,6 +135,17 @@ The **Open Attribute Table** functionality can be accessed through the **Attribu
 
 ### Aircraft related Sources
 
+Calculating aircraft emissions requires the definition of three distinct layers: runways, taxiways, gates. For each of these features, the user must provide the required attributes. Defining Tracks (i.e., aircraft trajectories) is also possible; however, this functionnality is not yet fully implemented.
+
+#### Gates
+
+An airport gate refers to a designated location at an airport where aircraft park for boarding and disembarking passengers, loading/unloading cargo, and receiving services like refuelling, catering, and maintenance.
+
+In Open-ALAQS, gates are represented as polygons. Each gate can encompass several aircraft stands. The more stands grouped together within a single gate area, the less data preparation is needed (e.g., fewer
+taxi routes to define). However, if the gate area is too large, it might no longer accurately represent the location of the emissions.
+
+Calculating gate emissions requires establishing the sum of four emission sources: GSE (Ground Support Equipment), GPU (Ground Power Unit), APU (Auxiliary Power Unit) and MES (Main Engine Start). 
+
 ### Stationary (Non-Aircraft) Sources
 
 ## Activity Profiles
