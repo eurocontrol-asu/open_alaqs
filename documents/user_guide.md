@@ -174,10 +174,10 @@ Default MES emission factors per aircraft group are given in the table [default_
 Runways are linear features that define the vertical plane where approach, landing, take-off, and climb-out operations occur. Each end of the runway is designated as a specific runway, depending on the direction of movement.
 
 When adding a taxiway, the following information is required:
-+ Capacity (departures/hour)
-+ Touchdown offset (meters)
-+ Maximum queue speed (km/h)
-+ Peak queue time (minutes)
++ Capacity (departures/hour) _not yet fully implemented_
++ Touchdown offset (meters) _not yet fully implemented_
++ Maximum queue speed (km/h) _not yet fully implemented_
++ Peak queue time (minutes) _not yet fully implemented_
 
 ![runways-layer.PNG](./../open_alaqs/assets/runways-layer.PNG)
 
@@ -186,6 +186,8 @@ runway aligned with 10 degrees is labeled as "01" while one aligned with 190 deg
 
 Since runways can be used in both directions, each end has a different number, differing by 18 (180 degrees). For example, a runway labeled "01" on one end will be "19" on the opposite
 end. If an airport has parallel runways, they may be further differentiated by letters like "L" (Left), "C"(Center), or "R" (Right).
+
+The runway emissions are calculated based on the aircraft trajectories (profiles) provided in the [ANP](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data). For more information, see [ANP](#anp-db).
 
 #### Taxiways
 
@@ -199,7 +201,7 @@ The length of each taxiway is calculated automatically from its geometry and the
 
 It is important to distinguish between taxiways and taxi-routes. Taxi-routes describe the operational path that will be followed by an aircraft for a runway / stand / movement type (arrival or departure) combination. Taxi-routes are defined as a series of taxiway segments in Open-ALAQS. It greatly facilitates the capturing of taxi-route details (such as curved turns) since when defining taxi routes, multiple taxiway segments can be combined. 
 
-The process of defining taxi routes is detailed in the [(Test Case Study)](#test-case-study) section.
+The process of defining taxi routes is detailed in the [Test Case Study](#test-case-study) section.
 
 #### Tracks
 
@@ -242,4 +244,7 @@ No installation is needed for use with Open-ALAQS as the executables are already
 [(Back to top)](#table-of-contents)
 
 ## Open-ALAQS Database
+[(Back to top)](#table-of-contents)
+
+# Test Case Study
 [(Back to top)](#table-of-contents)
