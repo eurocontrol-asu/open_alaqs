@@ -126,7 +126,6 @@ Using the **Digitizing** toolbar in editing mode (**Toggle Editing**), it is pos
 To delete one or more features, first select the geometry using the **Selection** toolbar (_Select Features by area or single click_) and use the **Delete Selected** tool to delete the feature(s). Multiple selected features can be deleted at once. Selection can also be done from the Attributes table.
 
 ### [Visualize and Edit Attribute Values](#visu-features)
-
 Attribute values can also be modified after an object's creation via the **Attributes** toolbar.
 
 ![attributes.PNG](./../open_alaqs/assets/attributes.PNG)
@@ -134,11 +133,9 @@ Attribute values can also be modified after an object's creation via the **Attri
 The **Open Attribute Table** functionality can be accessed through the **Attributes** toolbar or via the **Layers** panel (by right-clicking on the appropriate layer).
 
 ### [Aircraft related Sources](#aircraft-sources)
-
 Calculating aircraft emissions requires the definition of three distinct layers: runways, taxiways, gates. For each of these features, the user must provide the required attributes. Defining Tracks (i.e., aircraft trajectories) is also possible; however, this functionnality is not yet fully implemented.
 
 #### [Gates](#gates-layer)
-
 An airport gate refers to a designated location at an airport where aircraft park for boarding and disembarking passengers, loading/unloading cargo, and receiving services like refuelling, catering, and maintenance.
 
 In Open-ALAQS, gates are represented as polygons. Each gate can encompass several aircraft stands. The more stands grouped together within a single gate area, the less data preparation is needed (e.g., fewer taxi routes to define). However, if the gate area is too large, it might no longer accurately represent the location of the emissions.
