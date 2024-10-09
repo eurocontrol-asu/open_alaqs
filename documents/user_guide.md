@@ -166,7 +166,7 @@ APU emissions are calculated separately as a function of the APU model (apu_id) 
 
 The default APU emission factors and operating times are given in the database files: [_default_aircraft_apu_ef_](./../open_alaqs/database/data/default_aircraft_apu_ef.csv) and [_default_apu_times_](./../open_alaqs/database/data/default_apu_times.csv) respectively.
 
-Default MES emission factors per aircraft group are given in the table [_default_aircraft_start_ef_](./../open_alaqs/database/data/default_aircraft_start_ef.csv).
+Default MES emission factors per aircraft group are given in the table ['default_aircraft_start_ef'](./../open_alaqs/database/data/default_aircraft_start_ef.csv).
 
 ### Stationary (Non-Aircraft) Sources
 
