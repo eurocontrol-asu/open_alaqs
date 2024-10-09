@@ -30,8 +30,8 @@
   - [ANP](#anp-db)
   - [Open-ALAQS Database](#oa-database)
 - [Test Case Study](#test-case-study)
-- [FAQs](#faqs)
-- [Contact](#contact)
+<!-- [FAQs](#faqs) -->
+<!-- [Contact](#contact) -->
 
 ## Introduction
 [(Back to top)](#table-of-contents)
@@ -146,8 +146,7 @@ Calculating aircraft emissions requires the definition of three distinct layers:
 
 An airport gate refers to a designated location at an airport where aircraft park for boarding and disembarking passengers, loading/unloading cargo, and receiving services like refuelling, catering, and maintenance.
 
-In Open-ALAQS, gates are represented as polygons. Each gate can encompass several aircraft stands. The more stands grouped together within a single gate area, the less data preparation is needed (e.g., fewer
-taxi routes to define). However, if the gate area is too large, it might no longer accurately represent the location of the emissions.
+In Open-ALAQS, gates are represented as polygons. Each gate can encompass several aircraft stands. The more stands grouped together within a single gate area, the less data preparation is needed (e.g., fewer taxi routes to define). However, if the gate area is too large, it might no longer accurately represent the location of the emissions.
 
 Calculating gate emissions requires establishing the sum of four emission sources: GSE (Ground Support Equipment), GPU (Ground Power Unit), APU (Auxiliary Power Unit) and MES (Main Engine Start).
 
@@ -256,5 +255,7 @@ No installation is needed for use with Open-ALAQS as the executables are already
 ## Open-ALAQS Database
 [(Back to top)](#table-of-contents)
 
-## Test Case Study
+# Test Case Study
 [(Back to top)](#table-of-contents)
+
+In this section a test case study is presented. The purpose of this training exercise is to guide the first-time user throughout the main steps of an Open-ALAQS project. This test case is based on theoretical data only. All the necessary input files are provided in the [example](./../open_alaqs/example/) directory of the Open-ALAQS plugin.
