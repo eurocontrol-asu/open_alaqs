@@ -79,7 +79,6 @@ The order of the toolbar buttons generally follows the sequence of steps needed 
 This section describes the initial steps required to create an Open-ALAQS study.
 
 ### [Setup a new study](#setup-new-study)
-
 To create a new project, click on the **CREATE** button in the Open-ALAQS toolbar. This action opens a pop-up window named **Create an Open ALAQS project file**, where the user is required to
 select a **File name** for saving the new study (**.alaqs**).
 
@@ -95,11 +94,9 @@ The second tab (**Roadways**) contains the settings for calculating road traffic
 The **ALAQS Project Properties** window, can also be accessed by clicking on the **Setup** button in the Open-ALAQS toolbar.
 
 ### [Open an existing study](#open-study)
-
 To open a previously created project, click on the **OPEN** button in the Open-ALAQS toolbar. This action opens a pop-up window (**Open an ALAQS database file**), allowing you to select an existing Open-ALAQS database (**.alaqs**) file.
 
 ### [Import OpenStreetMap data](#import-osm-data)
-
 An additional functionality is added to Open-ALAQS to facilitate the creation of emission sources based on the geographic data (roads, buildings, points of interest, and more) provided by OpenStreetMap.
 
 ![import-osm-data.PNG](./../open_alaqs/assets/import-osm-data.PNG)
@@ -112,7 +109,6 @@ Using Nominatim, a search engine that uses the data from OpenStreetMap to provid
 [(Back to top)](#table-of-contents)
 
 ### [Add Features](#add-features)
-
 New objects can be added using the **Digitizing** toolbar.
 
 ![digitizing-toolbar.PNG](./../open_alaqs/assets/digitizing-toolbar.PNG)
@@ -124,7 +120,6 @@ To create a new emission source, select the desired layer (e.g., taxiway or runw
 ![layers.PNG](./../open_alaqs/assets/layers.PNG)
 
 ### [Edit Features](#edit-features)
-
 Using the **Digitizing** toolbar in editing mode (**Toggle Editing**), it is possible to employ the **Vertex Tool** to edit objects.
 
 ### [Delete Features](#del-features)
