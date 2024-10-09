@@ -258,4 +258,4 @@ No installation is needed for use with Open-ALAQS as the executables are already
 # Test Case Study
 [(Back to top)](#table-of-contents)
 
-In this section a test case study is presented. The purpose of this training exercise is to guide the first-time user throughout the main steps of an Open-ALAQS project. This test case is based on theoretical data only. All the necessary input files are provided in the [example](./../open_alaqs/example/) directory of the Open-ALAQS plugin.
+In this section a test case study is presented. The purpose of this training exercise is to guide the first-time user throughout the main steps of an Open-ALAQS project. This test case is based on theoretical data only. All the necessary input files are provided in the [example](./../example/) directory of the Open-ALAQS plugin.
