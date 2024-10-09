@@ -1,7 +1,7 @@
 # Open-ALAQS User Guide
 
 ## Table of Contents
-- [Project Title](#project-title)
+- [User Guide](#project-title)
   - [Table of contents](#table-of-contents)
   - [Introduction](#introduction)
     - [General Information](#oa-geninfo)
@@ -24,10 +24,11 @@
   - [Activity Profiles](#activity-profiles)
   - [Generating Emission Inventory](#generating-emission-inventory)
   - [Visualization of Results](#visualization-of-results)
-- [AUSTAL](#austal)
-- [COPERT](#copert)
-- [ANP](#anp-db)
-- [Open-ALAQS Database](#oa-database)
+- [Auxiliary Material](#aux-material)
+  - [AUSTAL](#austal)
+  - [COPERT](#copert)
+  - [ANP](#anp-db)
+  - [Open-ALAQS Database](#oa-database)
 - [Test Case Study](#test-case-study)
 - [FAQs](#faqs)
 - [Contact](#contact)
@@ -225,6 +226,15 @@ Activity Profiles are used to describe the relative hourly/daily/monthly operati
 
 Each activity multiplier is a decimal number, between 0 and 1. The default profile values are 1 (i.e., 100%) meaning the emission source is fully active. On the other hand, if, the emission source is deactivated during a specific time interval (e.g., during night-time curfew) the user can modify accordingly the activity profile by setting the corresponding multiplier to 0 for this specific period (hour, day, or month).
 
+## Generating Emission Inventory
+[(Back to top)](#table-of-contents)
+
+## Visualization of Results
+[(Back to top)](#table-of-contents)
+
+# Auxiliary Material
+[(Back to top)](#table-of-contents)
+
 ## AUSTAL
 [(Back to top)](#table-of-contents)
 
@@ -246,5 +256,5 @@ No installation is needed for use with Open-ALAQS as the executables are already
 ## Open-ALAQS Database
 [(Back to top)](#table-of-contents)
 
-# Test Case Study
+## Test Case Study
 [(Back to top)](#table-of-contents)
