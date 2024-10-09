@@ -169,17 +169,6 @@ The default APU emission factors and operating times are given in the database f
 
 Default MES emission factors per aircraft group are given in the table [default_aircraft_start_ef](./../open_alaqs/database/data/default_aircraft_start_ef.csv).
 
-### Stationary (Non-Aircraft) Sources
-
-## Activity Profiles
-[(Back to top)](#table-of-contents)
-
-Activity Profiles are used to describe the relative hourly/daily/monthly operational mode for each airport emission source. The **Activity Profiles Editor** in the Open-ALAQS toolbar can be used to review, edit, and create custom profiles.
-
-![activity-profiles.PNG](./../open_alaqs/assets/activity-profiles.PNG)
-
-Each activity multiplier is a decimal number, between 0 and 1. The default profile values are 1 (i.e., 100%) meaning the emission source is fully active. On the other hand, if, the emission source is deactivated during a specific time interval (e.g., during night-time curfew) the user can modify accordingly the activity profile by setting the corresponding multiplier to 0 for this specific period (hour, day, or month).
-
 #### Runways
 
 Runways are linear features that define the vertical plane where approach, landing, take-off, and climb-out operations occur. Each end of the runway is designated as a specific runway, depending on the direction of movement.
@@ -222,6 +211,17 @@ Aircraft tracks can be designed to indicate the aircraft trajectory. When adding
 ![tracks-layer.PNG](./../open_alaqs/assets/tracks-layer.PNG)
 
 We note that this functionality is **not yet fully implemented** in Open-ALAQS. The default [ANP](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) profiles are used to indicate the aircraft trajectories.
+
+### Stationary (Non-Aircraft) Sources
+
+## Activity Profiles
+[(Back to top)](#table-of-contents)
+
+Activity Profiles are used to describe the relative hourly/daily/monthly operational mode for each airport emission source. The **Activity Profiles Editor** in the Open-ALAQS toolbar can be used to review, edit, and create custom profiles.
+
+![activity-profiles.PNG](./../open_alaqs/assets/activity-profiles.PNG)
+
+Each activity multiplier is a decimal number, between 0 and 1. The default profile values are 1 (i.e., 100%) meaning the emission source is fully active. On the other hand, if, the emission source is deactivated during a specific time interval (e.g., during night-time curfew) the user can modify accordingly the activity profile by setting the corresponding multiplier to 0 for this specific period (hour, day, or month).
 
 ## AUSTAL
 [(Back to top)](#table-of-contents)
