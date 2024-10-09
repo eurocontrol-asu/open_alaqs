@@ -234,6 +234,12 @@ Each activity multiplier is a decimal number, between 0 and 1. The default profi
 # Auxiliary Material
 [(Back to top)](#table-of-contents)
 
+## Open-ALAQS Database
+[(Back to top)](#table-of-contents)
+
+## ANP
+[(Back to top)](#table-of-contents)
+
 ## AUSTAL
 [(Back to top)](#table-of-contents)
 
@@ -247,12 +253,6 @@ of the German Environment Agency.
 No installation is needed for use with Open-ALAQS as the executables are already included in the Open-ALAQS package.
 
 ## COPERT
-[(Back to top)](#table-of-contents)
-
-## ANP
-[(Back to top)](#table-of-contents)
-
-## Open-ALAQS Database
 [(Back to top)](#table-of-contents)
 
 # Test Case Study
