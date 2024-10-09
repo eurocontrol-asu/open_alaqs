@@ -22,13 +22,13 @@
       - [Taxiways](#taxiways-layer)
     - [Stationary (Non-Aircraft) Sources](#non-aircraft-sources)
   - [Activity Profiles](#activity-profiles)
-  - [Generating Emission Inventory](#generating-emission-inventory)
+  - [Generate Emissions Inventory](#generate-emissions-inventory)
   - [Visualization of Results](#visualization-of-results)
 - [Auxiliary Material](#aux-material)
-  - [AUSTAL](#austal)
-  - [COPERT](#copert)
   - [ANP](#anp-db)
   - [Open-ALAQS Database](#oa-database)
+  - [AUSTAL](#austal)
+  - [COPERT](#copert)
 - [Test Case Study](#test-case-study)
 <!-- [FAQs](#faqs) -->
 <!-- [Contact](#contact) -->
@@ -225,7 +225,7 @@ Activity Profiles are used to describe the relative hourly/daily/monthly operati
 
 Each activity multiplier is a decimal number, between 0 and 1. The default profile values are 1 (i.e., 100%) meaning the emission source is fully active. On the other hand, if, the emission source is deactivated during a specific time interval (e.g., during night-time curfew) the user can modify accordingly the activity profile by setting the corresponding multiplier to 0 for this specific period (hour, day, or month).
 
-## Generating Emission Inventory
+## Generate Emissions Inventory
 [(Back to top)](#table-of-contents)
 
 ## Visualization of Results
