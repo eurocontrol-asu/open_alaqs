@@ -199,7 +199,7 @@ An airport taxiway is a designated path that connects runways with terminals, ga
 
 The length of each taxiway is calculated automatically from its geometry and the time spent on it is calculated from the indicated speed and length. Recommended taxiing speeds vary in relation to ambient conditions, traffic, aircraft position on the taxi route etc. Typical taxiing speeds lie between 10 and 40 km/h (~5 and ~25 kts).
 
-It is important to distinguish between taxiways and taxi-routes. Taxi-routes describe the operational path that will be followed by an aircraft for a runway / stand / movement type (arrival or departure) combination. Taxi-routes are defined as a series of taxiway segments in Open-ALAQS. It greatly facilitates the capturing of taxi-route details (such as curved turns) since when defining taxi routes, multiple taxiway segments can be combined. 
+It is important to distinguish between taxiways and taxi-routes. Taxi-routes describe the operational path that will be followed by an aircraft for a runway / stand / movement type (arrival or departure) combination. Taxi-routes are defined as a series of taxiway segments in Open-ALAQS. It greatly facilitates the capturing of taxi-route details (such as curved turns) since when defining taxi routes, multiple taxiway segments can be combined.
 
 The process of defining taxi routes is detailed in the [Test Case Study](#test-case-study) section.
 
