@@ -34,24 +34,24 @@
 <!-- [FAQs](#faqs) -->
 <!-- [Contact](#contact) -->
 
-## Introduction
+## [Introduction](#introduction)
 [(Back to top)](#table-of-contents)
 
 Welcome to the **Open-ALAQS** user guide. This document will help you navigate the key features of the software, including setting up a study, emissions & dispersion calculations and exporting results in various formats.
 
-### General Information
+### [General Information](#oa-geninfo)
 [(Back to top)](#table-of-contents)
 
 Open-ALAQS is a [EUROCONTROL](https://www.eurocontrol.int/) open-source tool designed to model and analyze emissions from aircraft operations and various airport sources. It can calculate emission inventories, visualize data, and perform dispersion modeling with the help of [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview).
 
 It is developed as a plugin for the open-source geographic information system [QGIS](https://qgis.org/), simplifying the definition of various airport elements (such as runways, taxiways, and buildings) and enabling the visualization of the spatial distribution of emissions and concentrations. It is fully based on an open architecture, making it easily adaptable to other GIS platforms and databases.
 
-### Installation
+### [Installation](#installation-instructions)
 [(Back to top)](#table-of-contents)
 
 For installation instructions, check the [Installation Instructions](../README.md#installation).
 
-## The Open-ALAQS Toolbar
+## [The Open-ALAQS Toolbar](#the-open-alaqs-toolbar)
 [(Back to top)](#table-of-contents)
 
 ![toolbar.PNG](./../open_alaqs/assets/toolbar.PNG)
@@ -73,12 +73,12 @@ The toolbar consists of the following functions:
 
 The order of the toolbar buttons generally follows the sequence of steps needed to conduct a study using Open-ALAQS.
 
-## Creating a Study
+## [Starting a Study](#starting-a-study)
 [(Back to top)](#table-of-contents)
 
 This section describes the initial steps required to create an Open-ALAQS study.
 
-### Setup a new study
+### [Setup a new study](#setup-new-study)
 
 To create a new project, click on the **CREATE** button in the Open-ALAQS toolbar. This action opens a pop-up window named **Create an Open ALAQS project file**, where the user is required to
 select a **File name** for saving the new study (**.alaqs**).
@@ -94,11 +94,11 @@ The second tab (**Roadways**) contains the settings for calculating road traffic
 
 The **ALAQS Project Properties** window, can also be accessed by clicking on the **Setup** button in the Open-ALAQS toolbar.
 
-### Open an existing study
+### [Open an existing study](#open-study)
 
 To open a previously created project, click on the **OPEN** button in the Open-ALAQS toolbar. This action opens a pop-up window (**Open an ALAQS database file**), allowing you to select an existing Open-ALAQS database (**.alaqs**) file.
 
-### Import OpenStreetMap data
+### [Import OpenStreetMap data](#import-osm-data)
 
 An additional functionality is added to Open-ALAQS to facilitate the creation of emission sources based on the geographic data (roads, buildings, points of interest, and more) provided by OpenStreetMap.
 
@@ -108,10 +108,10 @@ Using Nominatim, a search engine that uses the data from OpenStreetMap to provid
 
 ![import-osm-data-ex2.PNG](./../open_alaqs/assets/import-osm-data-ex2.PNG)
 
-## Define emission sources
+## [Define emission sources](#define-em-sources)
 [(Back to top)](#table-of-contents)
 
-### Add Features
+### [Add Features](#add-features)
 
 New objects can be added using the **Digitizing** toolbar.
 
@@ -123,15 +123,15 @@ To create a new emission source, select the desired layer (e.g., taxiway or runw
 
 ![layers.PNG](./../open_alaqs/assets/layers.PNG)
 
-### Edit Features
+### [Edit Features](#edit-features)
 
 Using the **Digitizing** toolbar in editing mode (**Toggle Editing**), it is possible to employ the **Vertex Tool** to edit objects.
 
-### Delete Features
+### [Delete Features](#del-features)
 
 To delete one or more features, first select the geometry using the **Selection** toolbar (_Select Features by area or single click_) and use the **Delete Selected** tool to delete the feature(s). Multiple selected features can be deleted at once. Selection can also be done from the Attributes table.
 
-### Visualize and Edit Attribute Values
+### [Visualize and Edit Attribute Values](#visu-features)
 
 Attribute values can also be modified after an object's creation via the **Attributes** toolbar.
 
@@ -139,7 +139,7 @@ Attribute values can also be modified after an object's creation via the **Attri
 
 The **Open Attribute Table** functionality can be accessed through the **Attributes** toolbar or via the **Layers** panel (by right-clicking on the appropriate layer).
 
-### Aircraft related Sources
+### [Aircraft related Sources](#aircraft-sources)
 
 Calculating aircraft emissions requires the definition of three distinct layers: runways, taxiways, gates. For each of these features, the user must provide the required attributes. Defining Tracks (i.e., aircraft trajectories) is also possible; however, this functionnality is not yet fully implemented.
 
