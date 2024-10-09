@@ -1,7 +1,7 @@
 # Open-ALAQS User Guide
 
 ## Table of Contents
-- [User Guide](#project-title)
+- [Open-ALAQS User Guide](#project-title)
   - [Table of contents](#table-of-contents)
   - [Introduction](#introduction)
     - [General Information](#oa-geninfo)
@@ -142,7 +142,7 @@ The **Open Attribute Table** functionality can be accessed through the **Attribu
 
 Calculating aircraft emissions requires the definition of three distinct layers: runways, taxiways, gates. For each of these features, the user must provide the required attributes. Defining Tracks (i.e., aircraft trajectories) is also possible; however, this functionnality is not yet fully implemented.
 
-#### Gates
+#### Gates {#gates-layer}
 
 An airport gate refers to a designated location at an airport where aircraft park for boarding and disembarking passengers, loading/unloading cargo, and receiving services like refuelling, catering, and maintenance.
 
