@@ -28,6 +28,7 @@
   - [COPERT](#copert)
   - [ANP](#anp-db)
   - [Open-ALAQS Database](#oa-database)
+- [Test Case Study](#test-case-study)
 - [FAQs](#faqs)
 - [Contact](#contact)
 
@@ -178,6 +179,49 @@ Activity Profiles are used to describe the relative hourly/daily/monthly operati
 ![activity-profiles.PNG](./../open_alaqs/assets/activity-profiles.PNG)
 
 Each activity multiplier is a decimal number, between 0 and 1. The default profile values are 1 (i.e., 100%) meaning the emission source is fully active. On the other hand, if, the emission source is deactivated during a specific time interval (e.g., during night-time curfew) the user can modify accordingly the activity profile by setting the corresponding multiplier to 0 for this specific period (hour, day, or month).
+
+#### Runways
+
+Runways are linear features that define the vertical plane where approach, landing, take-off, and climb-out operations occur. Each end of the runway is designated as a specific runway, depending on the direction of movement.
+
+When adding a taxiway, the following information is required:
++ Capacity (departures/hour)
++ Touchdown offset (meters)
++ Maximum queue speed (km/h)
++ Peak queue time (minutes)
+
+![runways-layer.PNG](./../open_alaqs/assets/runways-layer.PNG)
+
+Airport runways are named based on their compass heading, rounded to the nearest 10 degrees. The runway number corresponds to the first two digits of its compass direction. For example, a
+runway aligned with 10 degrees is labeled as "01" while one aligned with 190 degrees is labeled "19".
+
+Since runways can be used in both directions, each end has a different number, differing by 18 (180 degrees). For example, a runway labeled "01" on one end will be "19" on the opposite
+end. If an airport has parallel runways, they may be further differentiated by letters like "L" (Left), "C"(Center), or "R" (Right).
+
+#### Taxiways
+
+An airport taxiway is a designated path that connects runways with terminals, gates, runways or other parts of the airport. When adding a taxiway in an Open-ALAQS study, the following information is mandatory:
++ Name
++ Speed (km/h)
+
+![taxiways-layer.PNG](./../open_alaqs/assets/taxiways-layer.PNG)
+
+The length of each taxiway is calculated automatically from its geometry and the time spent on it is calculated from the indicated speed and length. Recommended taxiing speeds vary in relation to ambient conditions, traffic, aircraft position on the taxi route etc. Typical taxiing speeds lie between 10 and 40 km/h (~5 and ~25 kts).
+
+It is important to distinguish between taxiways and taxi-routes. Taxi-routes describe the operational path that will be followed by an aircraft for a runway / stand / movement type (arrival or departure) combination. Taxi-routes are defined as a series of taxiway segments in Open-ALAQS. It greatly facilitates the capturing of taxi-route details (such as curved turns) since when defining taxi routes, multiple taxiway segments can be combined. 
+
+The process of defining taxi routes is detailed in the [(Test Case Study)](#test-case-study) section.
+
+#### Tracks
+
+Aircraft tracks can be designed to indicate the aircraft trajectory. When adding aircraft tracks, the following information is mandatory:
++ Track Name
++ Runway (from the list of previously defined runways)
++ Operation Type (Arrival or Departure)
+
+![tracks-layer.PNG](./../open_alaqs/assets/tracks-layer.PNG)
+
+We note that this functionality is **not yet fully implemented** in Open-ALAQS. The default [ANP](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) profiles are used to indicate the aircraft trajectories.
 
 ## AUSTAL
 [(Back to top)](#table-of-contents)
