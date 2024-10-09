@@ -174,10 +174,10 @@ Default MES emission factors per aircraft group are given in the table [default_
 Runways are linear features that define the vertical plane where approach, landing, take-off, and climb-out operations occur. Each end of the runway is designated as a specific runway, depending on the direction of movement.
 
 When adding a taxiway, the following information is required:
-+ Capacity (departures/hour) _not yet fully implemented_
-+ Touchdown offset (meters) _not yet fully implemented_
-+ Maximum queue speed (km/h) _not yet fully implemented_
-+ Peak queue time (minutes) _not yet fully implemented_
++ Capacity (departures/hour) - _not yet fully implemented_
++ Touchdown offset (meters) - _not yet fully implemented_
++ Maximum queue speed (km/h) - _not yet fully implemented_
++ Peak queue time (minutes) - _not yet fully implemented_
 
 ![runways-layer.PNG](./../open_alaqs/assets/runways-layer.PNG)
 
@@ -187,7 +187,7 @@ runway aligned with 10 degrees is labeled as "01" while one aligned with 190 deg
 Since runways can be used in both directions, each end has a different number, differing by 18 (180 degrees). For example, a runway labeled "01" on one end will be "19" on the opposite
 end. If an airport has parallel runways, they may be further differentiated by letters like "L" (Left), "C"(Center), or "R" (Right).
 
-The runway emissions are calculated based on the aircraft trajectories (profiles) provided in the [ANP](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data). For more information, see [ANP](#anp-db).
+The runway emissions are calculated based on the aircraft trajectories (profiles) provided in the [Aircraft Noise and Performance (ANP)](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) database. For more information, see [ANP](#anp-db).
 
 #### Taxiways
 
