@@ -20,6 +20,7 @@
       - [Gates](#gates-layer)
       - [Runways](#runways-layer)
       - [Taxiways](#taxiways-layer)
+      - [Tracks](#tracks-layer)
     - [Stationary (Non-Aircraft) Sources](#non-aircraft-sources)
   - [Activity Profiles](#activity-profiles)
   - [Generate Emissions Inventory](#generate-emissions-inventory)
@@ -214,9 +215,9 @@ Aircraft tracks can be designed to indicate the aircraft trajectory. When adding
 
 We note that this functionality is **not yet fully implemented** in Open-ALAQS. The default [ANP](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) profiles are used to indicate the aircraft trajectories.
 
-### Stationary (Non-Aircraft) Sources
+### Stationary (Non-Aircraft) Sources {#non-aircraft-sources}
 
-## Activity Profiles
+## Activity Profiles {#activity-profiles}
 [(Back to top)](#table-of-contents)
 
 Activity Profiles are used to describe the relative hourly/daily/monthly operational mode for each airport emission source. The **Activity Profiles Editor** in the Open-ALAQS toolbar can be used to review, edit, and create custom profiles.
@@ -225,22 +226,22 @@ Activity Profiles are used to describe the relative hourly/daily/monthly operati
 
 Each activity multiplier is a decimal number, between 0 and 1. The default profile values are 1 (i.e., 100%) meaning the emission source is fully active. On the other hand, if, the emission source is deactivated during a specific time interval (e.g., during night-time curfew) the user can modify accordingly the activity profile by setting the corresponding multiplier to 0 for this specific period (hour, day, or month).
 
-## Generate Emissions Inventory
+## Generate Emissions Inventory {#generate-emissions-inventory}
 [(Back to top)](#table-of-contents)
 
-## Visualization of Results
+## Visualization of Results {#visualization-of-results}
 [(Back to top)](#table-of-contents)
 
-# Auxiliary Material
+# Auxiliary Material {#aux-material}
 [(Back to top)](#table-of-contents)
 
-## Open-ALAQS Database
+## Open-ALAQS Database {#oa-database}
 [(Back to top)](#table-of-contents)
 
-## ANP
+## ANP {#anp-db}
 [(Back to top)](#table-of-contents)
 
-## AUSTAL
+## AUSTAL {#austal}
 [(Back to top)](#table-of-contents)
 
 The dispersion model [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview) is the reference implementation to Annex 2 of the German Environment Agency’s Technical Instructions on Air Quality Control (TA Luft) and implements the specifications and requirements given therein.
@@ -252,10 +253,10 @@ of the German Environment Agency.
 
 No installation is needed for use with Open-ALAQS as the executables are already included in the Open-ALAQS package.
 
-## COPERT
+## COPERT {#copert}
 [(Back to top)](#table-of-contents)
 
-# Test Case Study
+# Test Case Study {#test-case-study}
 [(Back to top)](#table-of-contents)
 
 In this section a test case study is presented. The purpose of this training exercise is to guide the first-time user throughout the main steps of an Open-ALAQS project. This test case is based on theoretical data only. All the necessary input files are provided in the [example](./../example/) directory of the Open-ALAQS plugin.
