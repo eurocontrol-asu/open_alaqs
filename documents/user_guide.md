@@ -123,7 +123,6 @@ To create a new emission source, select the desired layer (e.g., taxiway or runw
 Using the **Digitizing** toolbar in editing mode (**Toggle Editing**), it is possible to employ the **Vertex Tool** to edit objects.
 
 ### [Delete Features](#del-features)
-
 To delete one or more features, first select the geometry using the **Selection** toolbar (_Select Features by area or single click_) and use the **Delete Selected** tool to delete the feature(s). Multiple selected features can be deleted at once. Selection can also be done from the Attributes table.
 
 ### [Visualize and Edit Attribute Values](#visu-features)
