@@ -411,7 +411,28 @@ The rest of the parameters are not mandatory and can be left empty. They will on
 + **number_of_stop_and_gos**: number of stop and go points during taxing _not yet fully implemented_
 + **domestic**: domestic/international flight (Y or N) _not yet fully implemented_
 
+An example is given in [ZRH_movements.csv](./../example/ZRH_movements.csv).
+
 ### [Meteorology](#meteorology)
+
+Open-ALAQS requires certain meteorological data in order to accurately calculate emissions using advanced methods (e.g. BFFM2 method, correction of NOx for ambient conditions) but also for the dispersion calculation.
+
+The required meteorological parameters are:
+
++ **Scenario**: simulation name identifier
++ **DateTime** (in YYYY-MM-DD HH:MM:SS)
++ **Temperature** (in K)
++ **Humidity** (in kg water/kg dry air)
++ **RelativeHumidity** (in %)
++ **SeaLevelPressure** (in Pa)        
++ **WindSpeed** (in m/s)
++ **WindDirection** (in degrees)
++ **ObukhovLength** (in m)
++ **MixingHeight** (in m)
+
+Input data may come from local or national data providers (e.g. METAR, SYNOP) or reanalysis data. The compilation of the meteorological data file for Open-ALAQS/AUSTAL2000 is left to the user. Otherwise, default ISA conditions values are considered for all necessary meteorological parameters.
+
+An example is given in [ZRH_meteo.csv](./../example/ZRH_meteo.csv).
 
 ## [Calculate emissions and query results](#calculate-emissions-and-query-results)
 [(Back to top)](#table-of-contents)
