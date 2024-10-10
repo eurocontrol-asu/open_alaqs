@@ -432,13 +432,7 @@ Input data may come from local or national data providers (e.g. METAR, SYNOP) or
 ## [Calculate emissions and query results](#calculate-emissions-and-query-results)
 [(Back to top)](#table-of-contents)
 
-To calculate emissions and visualize the results, click the **Visualize Emission Calculation** button in the Open-ALAQS toolbar. A new window will appear, allowing you to browse all source types and names (whether stationary or aircraft-related). Select the pollutant and the source name (in cases where there are multiple sources of the same type).
-
-![emissions-calculation.PNG](./../open_alaqs/assets/emissions-calculation.PNG)
-
-![emissions-calculation-2.PNG](./../open_alaqs/assets/emissions-calculation-2.PNG)
-
-Emissions from aircraft related sources (gates, taxiways and runways) are grouped together under the name **MovementSource**.
+To calculate emissions and visualize the results, click the **Visualize Emission Calculation** button in the Open-ALAQS toolbar. A new window will appear, allowing you to browse all source types and names (whether stationary or aircraft-related). Select the pollutant and the source name (in cases where there are multiple sources of the same type). Emissions from aircraft related sources (gates, taxiways and runways) are grouped together under the name **MovementSource**.
 
 In the settings panel on the bottom left of the main window, the user can configure the calculation settings, the output formats and the settings for the dispersion model.
 
@@ -451,6 +445,8 @@ In the **Configuration** tab, the user can specify the general settings for the 
 + **Time Interval**: Set the time interval for the calculation (_set to 1 hour by default_)
 + **Vertical Limit**: Specify the vertical limit in meters (_set to 914.40m by default_)
 + **Receptor Points**: Specify receptor points using a .csv file (_optional_)
+
+![emissions-calculation.PNG](./../open_alaqs/assets/emissions-calculation.PNG)
 
 In the **Output Formats** tab, the user can specify the general settings for the visualisation of the results:
 + **Emissions table**: Specify the output view type (_by aggregation, by source or by grid cell_)
@@ -467,6 +463,8 @@ In the **Dispersion Models** tab, the user can specify the general settings for 
 + **Options String**: Define advanced AUSTAL settings
 
 More information on the AUSTAL settings is provided in section [AUSTAL](#austal).
+
+![emissions-calculation-2.PNG](./../open_alaqs/assets/emissions-calculation-2.PNG)
 
 Finally, there are three different ways to visualize the calculated emissions:
 + View the results in a table format (**View Emissions Table**)
