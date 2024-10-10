@@ -239,14 +239,14 @@ When adding an airport parking lot, the following information is required:
 + **Profiles**
   + Hourly, Daily or Monthly activity profiles
 + **Fleet mix**
-  + **PC** (Petrol) [in %]: Passenger Cars (Petrol)
-  + **PC** (Diesel) [in %]: Passenger Cars (Diesel)
-  + **LDV** (Petrol) [in %]: Light Duty Vehicles (Petrol)
-  + **LDV** (Diesel) [in %]: Light Duty Vehicles (Diesel)
-  + **HDV** (Petrol) [in %]: Heavy Duty Vehicles (Petrol)
-  + **HDV** (Diesel) [in %]: Heavy Duty Vehicles (Diesel)
-  + **Motorcycles** [in %]
-  + **Buses** [in %]
+  + **PC (Petrol) [in %]**: Passenger Cars (Petrol)
+  + **PC (Diesel) [in %]**: Passenger Cars (Diesel)
+  + **LDV (Petrol) [in %]**: Light Duty Vehicles (Petrol)
+  + **LDV (Diesel) [in %]**: Light Duty Vehicles (Diesel)
+  + **HDV (Petrol) [in %]**: Heavy Duty Vehicles (Petrol)
+  + **HDV (Diesel) [in %]**: Heavy Duty Vehicles (Diesel)
+  + **Motorcycles [in %]**
+  + **Buses [in %]**
 
 <p align="center">
   <img src="./../open_alaqs/assets/parkings-layer.PNG" alt="Parking Layer" width="33%" />
@@ -264,20 +264,20 @@ Airside or landside emissions are calculated using the same [COPERT](#copert) me
 
 When adding a roadway, the following (mandatory) information is required:
 + **Parameters**
-  + Movements per year: Number of annual movements
-  + Height: Height at which emissions are released (in meters) _not yet fully implemented_
-  + Speed: Vehicles speed in roadway (in km/h)
+  + **Movements per year**: Number of annual movements
+  + **Height**: Height at which emissions are released (in meters) _not yet fully implemented_
+  + **Speed**: Vehicles speed in roadway (in km/h)
 + **Profiles**:
   + Hourly, Daily or Monthly activity profiles
 + **Fleet mix**
-  + **PC** (Petrol) [in %]: Passenger Cars (Petrol)
-  + **PC** (Diesel) [in %]: Passenger Cars (Diesel)
-  + **LDV** (Petrol) [in %]: Light Duty Vehicles (Petrol)
-  + **LDV** (Diesel) [in %]: Light Duty Vehicles (Diesel)
-  + **HDV** (Petrol) [in %]: Heavy Duty Vehicles (Petrol)
-  + **HDV** (Diesel) [in %]: Heavy Duty Vehicles (Diesel)
-  + **Motorcycles** [in %]
-  + **Buses** [in %]
+  + **PC (Petrol) [in %]**: Passenger Cars (Petrol)
+  + **PC (Diesel) [in %]**: Passenger Cars (Diesel)
+  + **LDV (Petrol) [in %]**: Light Duty Vehicles (Petrol)
+  + **LDV (Diesel) [in %]**: Light Duty Vehicles (Diesel)
+  + **HDV (Petrol) [in %]**: Heavy Duty Vehicles (Petrol)
+  + **HDV (Diesel) [in %]**: Heavy Duty Vehicles (Diesel)
+  + **Motorcycles [in %]**
+  + **Buses [in %]**
 
 ![roadways-layer.PNG](./../open_alaqs/assets/roadways-layer.PNG)
 
