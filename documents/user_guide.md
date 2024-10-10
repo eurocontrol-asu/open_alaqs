@@ -36,6 +36,10 @@
   - [Calculate emissions and query results](#calculate-emissions-and-query-results)
     - [Calculate emissions](#calculate-emissions)
     - [Query and visualize results](#query-and-visualize-results)
+  - [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal)
+    - [Input data preparation](#input-data-preparation)
+    - [Running AUSTAL](#running-austal)
+    - [Visualize results](#visualize-results)   
 - [Auxiliary Material](#auxiliary-material)
   - [Open-ALAQS Database](#open-alaqs-database)
   - [ANP](#anp)
@@ -253,6 +257,14 @@ Each activity multiplier is a decimal number, between 0 and 1. The default profi
 ### [Calculate emissions](#calculate-emissions)
 
 ### [Query and visualize results](#query-and-visualize-results)
+
+## [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal)
+
+### [Input data preparation](#input-data-preparation)
+
+### [Running AUSTAL](#running-austal)
+
+### [Visualize results](#visualize-results)   
 
 # [Auxiliary Material](#auxiliary-material)
 [(Back to top)](#table-of-contents)
