@@ -31,7 +31,7 @@
   - [Generate Emissions Inventory](#generate-emissions-inventory)
     - [Taxi routes](#taxi-routes)
     - [Create output file](#create-output-file)
-    - [Movements-table](#movements-table)
+    - [Movements table](#movements-table)
     - [Meteorology](#meteorology)
   - [Calculate emissions and query results](#calculate-emissions-and-query-results)
     - [Calculate emissions](#calculate-emissions)
@@ -247,7 +247,7 @@ Each activity multiplier is a decimal number, between 0 and 1. The default profi
 
 ### [Create output file](#create-output-file)
 
-### [Movements-table](#movements-table)
+### [Movements table](#movements-table)
 
 ### [Meteorology](#meteorology)
 
