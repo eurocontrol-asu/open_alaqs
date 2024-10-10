@@ -234,9 +234,9 @@ This layer allows users to include emissions from custom, user-defined sources n
 
 When adding an area source, the following information is required:
 + Parameters:
-++ Units per year: Number of operating hours per year      
-++ Height: Height at which emissions are released (in meters) – _not yet fully implemented_
-++ Heat Flux: Heat flux (in Megawatts) – _not yet fully implemented_
+  + Units per year: Number of operating hours per year      
+  + Height: Height at which emissions are released (in meters) – _not yet fully implemented_
+  + Heat Flux: Heat flux (in Megawatts) – _not yet fully implemented_
 + Emissions: Emission factors for CO, HC, NOX, SOX, PM10 (in kg/unit)
 + Profiles: Hourly, Daily or Monthly activity profiles (default or custom)
   
