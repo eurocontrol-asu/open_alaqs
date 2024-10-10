@@ -462,7 +462,7 @@ In the **Dispersion Models** tab, the user can specify the general settings for 
 + **Is Enabled**: Enable or disable dispersion module (checkbox)
 + **Options String**: Define advanced AUSTAL settings
 
-More information on the AUSTAL settings is provided in section [AUSTAL](#austal).
+More information on the AUSTAL settings is provided in section [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal).
 
 ![emissions-calculation-2.PNG](./../open_alaqs/assets/emissions-calculation-2.PNG)
 
@@ -474,7 +474,15 @@ Finally, there are three different ways to visualize the calculated emissions:
 ## [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal)
 [(Back to top)](#table-of-contents)
 
+The connection of Open-ALAQS with AUSTAL was realized based on the existing architecture of the Open-ALAQS code. In order to retain the flexibility of Open-ALAQS, two new modules were developed: one for producing the input files for the dispersion model and a second for running AUSTAL and exploring the calculated concentrations. As a result, Open-ALAQS remains independent of the dispersion model and other similar modules can be added in the future.
+
 ### [Input data preparation](#input-data-preparation)
+
+The process to prepare the input files for AUSTAL is described in the previous section (see [Movements table](#movements-table)).
+
+The dispersion module, along with the preparation of input files for AUSTAL, will only be activated if the corresponding checkbox (**Is Enabled**) is checked. By default, this checkbox is unchecked. Once enabled, the user must select one of the output modules (**View Emissions Table**, **Plot Time Series**, or **Plot Vector Layer**). This procedure saves time, as emissions will be calculated first using the chosen output module. The user can then explore the calculated emissions or proceed to a simulation with AUSTAL.
+
+The user is referred to the AUSTAL2000 documentation for a detailed description of the above parameters.
 
 ### [Running AUSTAL](#running-austal)
 
