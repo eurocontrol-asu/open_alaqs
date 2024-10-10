@@ -24,9 +24,18 @@
     - [Stationary Sources](#stationary-sources)
       - [Parking Lots](#parking-lots)
       - [Roadways](#roadways)
+      - [Point sources](#point-sources)
+      - [Area sources](#area-sources)
+      - [Buildings](#buildings)
   - [Activity Profiles](#activity-profiles)
   - [Generate Emissions Inventory](#generate-emissions-inventory)
-  - [Visualization of Results](#visualization-of-results)
+    - [Taxi routes](#taxi-routes)
+    - [Create output file](#create-output-file)
+    - [Movements-table](#movements-table)
+    - [Meteorology](#meteorology)   
+  - [Calculate emissions and query results](#calculate-emissions-and-query-results)
+    - [Calculate emissions](#calculate-emissions)
+    - [Query and visualize results](#query-and-visualize-results)
 - [Auxiliary Material](#auxiliary-material)
   - [Open-ALAQS Database](#open-alaqs-database)
   - [ANP](#anp)
@@ -208,6 +217,16 @@ We note that this functionality is **not yet fully implemented** in Open-ALAQS. 
 
 ### [Stationary Sources](#stationary-sources)
 
+#### [Parking Lots](#parking-lots)
+
+#### [Roadways](#roadways)
+
+#### [Point sources](#point-sources)
+      
+#### [Area sources](#area-sources)
+
+#### [Buildings](#buildings)
+
 ## [Activity Profiles](#activity-profiles)
 [(Back to top)](#table-of-contents)
 
@@ -220,8 +239,20 @@ Each activity multiplier is a decimal number, between 0 and 1. The default profi
 ## [Generate Emissions Inventory](#generate-emissions-inventory)
 [(Back to top)](#table-of-contents)
 
-## [Visualization of Results](#visualization-of-results)
+### [Taxi routes](#taxi-routes)
+
+### [Create output file](#create-output-file)
+
+### [Movements-table](#movements-table)
+
+### [Meteorology](#meteorology)   
+
+## [Calculate emissions and query results](#calculate-emissions-and-query-results)
 [(Back to top)](#table-of-contents)
+
+### [Calculate emissions](#calculate-emissions)
+
+### [Query and visualize results](#query-and-visualize-results)
 
 # [Auxiliary Material](#auxiliary-material)
 [(Back to top)](#table-of-contents)
