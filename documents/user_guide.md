@@ -224,9 +224,23 @@ We note that this functionality is **not yet fully implemented** in Open-ALAQS. 
 
 #### [Parking Lots](#parking-lots)
 
+<p align="center">
+  <img src="./../open_alaqs/assets/parkings-layer.PNG" alt="Parking Layer" width="45%" />
+  <img src="./../open_alaqs/assets/parkings-layer-1.PNG" alt="Parking Layer 1" width="45%" />
+</p>
+
+<p align="center">
+  <img src="./../open_alaqs/assets/parkings-layer-2.PNG" alt="Parking Layer 2" width="45%" />
+  <img src="./../open_alaqs/assets/parkings-layer-3.PNG" alt="Parking Layer 3" width="45%" />
+</p>
+
 #### [Roadways](#roadways)
 
+![roadways-layer.PNG](./../open_alaqs/assets/roadways-layer.PNG)
+
 #### [Point sources](#point-sources)
+
+![tracks-layer.PNG](./../open_alaqs/assets/tracks-layer.PNG)
 
 #### [Area sources](#area-sources)
 
@@ -239,6 +253,8 @@ When adding an area source, the following information is required:
   + Heat Flux: Heat flux (in Megawatts) – _not yet fully implemented_
 + Emissions: Emission factors for CO, HC, NOX, SOX, PM10 (in kg/unit)
 + Profiles: Hourly, Daily or Monthly activity profiles (default or custom)
+
+![area-sources-layer.PNG](./../open_alaqs/assets/area-sources-layer.PNG)
   
 The emissions calculation is based on the operating hours per year (Units per year) and the corresponding emission factor (in kg/unit). For example, if the number of Units per year is 8760, which is the number of hours in a year, and the emission factor is equal to 1 kg/unit, the emissions of a single hour will be equal to 1kg.
 
@@ -250,6 +266,8 @@ Buildings are not currently considered emission sources. However, they can signi
 
 When adding a building, the following detail is required:
 + Building height (Height of building above ground, in meters) – _not yet fully implemented_
+
+![buildings-layer.PNG](./../open_alaqs/assets/buildings-layer.PNG)
 
 ## [Activity Profiles](#activity-profiles)
 [(Back to top)](#table-of-contents)
