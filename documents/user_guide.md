@@ -348,8 +348,8 @@ As explained in the section [Taxiways](#taxiways), taxi-routes describe the oper
 Taxi-routes can be defined using the Taxiway Routes Editor.
 
 <p align="center">
-  <img src="./../open_alaqs/assets/taxiroutes-editor-1.PNG" alt="Taxiroutes Editor" width="40%" />
-  <img src="./../open_alaqs/assets/taxiroutes-editor-2.PNG" alt="Taxiroutes Editor 2" width="40%" />
+  <img src="./../open_alaqs/assets/taxiroutes-editor-1.PNG" alt="Taxiroutes Editor" width="45%" />
+  <img src="./../open_alaqs/assets/taxiroutes-editor-2.PNG" alt="Taxiroutes Editor 2" width="45%" />
 </p>
 
 To define a taxi route in Open-ALAQS, the user has to first create the taxi-route by selecting the gate, runway and operation type (arrival or departure). More than one taxi-routes can be defined for the same combination of gate, runway and operation type, using a different instance number. Once defined, the corresponding taxiway segments have to be selected together with the aircraft groups that can make use of the specific taxi-route.
