@@ -159,7 +159,7 @@ Calculating gate emissions requires establishing the sum of four emission source
 
 When adding a gate, the following information is required:
 + Gate type (PIER, REMOTE or CARGO)
-+ Gate height (_not yet fully implemented_)
++ Gate height _not yet fully implemented_
 
 In Open-ALAQS, GSE and GPU emissions factors, expressed in terms of grams of pollutant per hour, is assigned to each gate as a function of:
 + The gate type (PIER, REMOTE or CARGO)
@@ -217,7 +217,7 @@ Aircraft tracks can be designed to indicate the aircraft trajectory. When adding
 
 ![tracks-layer.PNG](./../open_alaqs/assets/tracks-layer.PNG)
 
-We note that this functionality is **not yet fully implemented** in Open-ALAQS. The default [ANP](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) profiles are used to indicate the aircraft trajectories.
+We note that this functionality is _not yet fully implemented_ in Open-ALAQS. The default [ANP](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) profiles are used to indicate the aircraft trajectories.
 
 ### [Stationary Sources](#stationary-sources)
 [(Back to top)](#table-of-contents)
@@ -307,8 +307,8 @@ This layer allows users to include emissions from custom, user-defined sources n
 When adding an area source, the following information is required:
 + Parameters:
   + Units per year: Number of operating hours per year
-  + Height: Height at which emissions are released (in meters) – _not yet fully implemented_
-  + Heat Flux: Heat flux (in Megawatts) – _not yet fully implemented_
+  + Height: Height at which emissions are released (in meters) _not yet fully implemented_
+  + Heat Flux: Heat flux (in Megawatts) _not yet fully implemented_
 + Emissions: Emission factors for CO, HC, NOX, SOX, PM10 (in kg/unit)
 + Profiles: Hourly, Daily or Monthly activity profiles (default or custom)
 
@@ -323,7 +323,7 @@ We note that beyond the standard pollutants, two additional pollutants, P1 and P
 Buildings are not currently considered emission sources. However, they can significantly impact dispersion modelling by affecting wind patterns and turbulence. While this functionality is _not yet fully implemented_, it is included in the layers list for future use.
 
 When adding a building, the following detail is required:
-+ Building height (Height of building above ground, in meters) – _not yet fully implemented_
++ Building height (Height of building above ground, in meters) _not yet fully implemented_
 
 ![buildings-layer.PNG](./../open_alaqs/assets/buildings-layer.PNG)
 
