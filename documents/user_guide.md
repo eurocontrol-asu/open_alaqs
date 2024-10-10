@@ -159,7 +159,7 @@ Calculating gate emissions requires establishing the sum of four emission source
 
 When adding a gate, the following information is required:
 + Gate type (PIER, REMOTE or CARGO)
-+ Gate height _not yet fully implemented_
++ Gate height (_not yet fully implemented_)
 
 In Open-ALAQS, GSE and GPU emissions factors, expressed in terms of grams of pollutant per hour, is assigned to each gate as a function of:
 + The gate type (PIER, REMOTE or CARGO)
