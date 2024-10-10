@@ -294,7 +294,7 @@ When adding a point, the following information is required:
 + **Profiles**:
   + Hourly, Daily or Monthly activity profiles
 
-![tracks-layer.PNG](./../open_alaqs/assets/tracks-layer.PNG)
+![points-layer.PNG](./../open_alaqs/assets/points-layer.PNG)
 
 The internal Open-ALAQS database contains default emission factors for each category and type (see [default_stationary_ef](./../open_alaqs/database/data/default_stationary_ef.csv)).
 
