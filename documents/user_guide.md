@@ -478,11 +478,11 @@ The connection of Open-ALAQS with AUSTAL was realized based on the existing arch
 
 ### [Input data preparation](#input-data-preparation)
 
-The process to prepare the input files for AUSTAL is described in the previous section (see [Movements table](#movements-table)).
+The process to prepare the input files for AUSTAL is described in the previous section (see [Calculate emissions and query results](#calculate-emissions-and-query-results)).
 
 The dispersion module, along with the preparation of input files for AUSTAL, will only be activated if the corresponding checkbox (**Is Enabled**) is checked. By default, this checkbox is unchecked. Once enabled, the user must select one of the output modules (**View Emissions Table**, **Plot Time Series**, or **Plot Vector Layer**). This procedure saves time, as emissions will be calculated first using the chosen output module. The user can then explore the calculated emissions or proceed to a simulation with AUSTAL.
 
-The user is referred to the AUSTAL2000 documentation for a detailed description of the above parameters.
+The user is referred to the AUSTAL documentation for a detailed description of the above parameters.
 
 ### [Running AUSTAL](#running-austal)
 
