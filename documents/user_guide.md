@@ -22,6 +22,8 @@
       - [Taxiways](#taxiways)
       - [Tracks](#tracks)
     - [Stationary Sources](#stationary-sources)
+      - [Parking Lots](#parking-lots)
+      - [Roadways](#roadways)
   - [Activity Profiles](#activity-profiles)
   - [Generate Emissions Inventory](#generate-emissions-inventory)
   - [Visualization of Results](#visualization-of-results)
