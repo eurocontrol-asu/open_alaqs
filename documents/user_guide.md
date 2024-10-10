@@ -285,6 +285,21 @@ When adding a roadway, the following (mandatory) information is required:
 
 ![tracks-layer.PNG](./../open_alaqs/assets/tracks-layer.PNG)
 
+Stationary or infrastructure-related emissions from airport facilities, such as power and heating plants, incinerators, training fires, and fuel storage tanks, are accounted for and represented as point sources in Open-ALAQS.
+
+When adding a point, the following information is required:
++ **Parameters**
+  + **Category**: Source category (Tank, Incinerator, Other, Power/Heat plant, Solvent degreaser, Surface coating)
+  + **Type**: Category specific type (Oil or diesel, Automobile gasoline, Aviation gasoline, JP4, JP5, JET A)
+  + **Height**: Height at which emissions are released (in meters) _not yet fully implemented_
+  + **Units per year**: Operating hours per year
++ **Profiles**:
+  + Hourly, Daily or Monthly activity profiles
+
+The internal Open-ALAQS database contains default emission factors for each category and type (see [default_stationary_ef](./../open_alaqs/database/data/default_stationary_ef.csv)).
+
+The emissions calculation is based on the operating hours per year (Units per year) and the corresponding emission factor (in kg/unit). For example, if the number of Units per year is 8760, which is the number of hours in a year, and the emission factor is equal to 1 kg/unit, the emissions of a single hour will be equal to 1kg.
+
 #### [Area sources](#area-sources)
 
 This layer allows users to include emissions from custom, user-defined sources not covered by the standard Open-ALAQS sources, as long as they have the relevant emission factor information.
