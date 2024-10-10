@@ -224,6 +224,8 @@ We note that this functionality is **not yet fully implemented** in Open-ALAQS. 
 
 #### [Parking Lots](#parking-lots)
 
+Emissions from parking areas for vehicles are estimated based on the [COPERT](#copert) methodology.
+
 <p align="center">
   <img src="./../open_alaqs/assets/parkings-layer.PNG" alt="Parking Layer" width="45%" />
   <img src="./../open_alaqs/assets/parkings-layer-1.PNG" alt="Parking Layer 1" width="45%" />
@@ -248,7 +250,7 @@ This layer allows users to include emissions from custom, user-defined sources n
 
 When adding an area source, the following information is required:
 + Parameters:
-  + Units per year: Number of operating hours per year      
+  + Units per year: Number of operating hours per year
   + Height: Height at which emissions are released (in meters) – _not yet fully implemented_
   + Heat Flux: Heat flux (in Megawatts) – _not yet fully implemented_
 + Emissions: Emission factors for CO, HC, NOX, SOX, PM10 (in kg/unit)
