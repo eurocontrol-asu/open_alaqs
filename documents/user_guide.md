@@ -227,8 +227,8 @@ We note that this functionality is **not yet fully implemented** in Open-ALAQS. 
 Emissions from parking areas for vehicles are estimated based on the [COPERT](#copert) methodology.
 
 <p align="center">
-  <img src="./../open_alaqs/assets/parkings-layer.PNG" alt="Parking Layer" width="40%" />
-  <img src="./../open_alaqs/assets/parkings-layer-1.PNG" alt="Parking Layer 1" width="40%" />
+  <img src="./../open_alaqs/assets/parkings-layer.PNG" alt="Parking Layer" width="35%" />
+  <img src="./../open_alaqs/assets/parkings-layer-1.PNG" alt="Parking Layer 1" width="35%" />
 </p>
 
 <p align="center">
