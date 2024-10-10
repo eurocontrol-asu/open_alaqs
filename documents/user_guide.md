@@ -411,8 +411,6 @@ The rest of the parameters are not mandatory and can be left empty. They will on
 + **number_of_stop_and_gos**: number of stop and go points during taxing _not yet fully implemented_
 + **domestic**: domestic/international flight (Y or N) _not yet fully implemented_
 
-<!-- An example is given in [ZRH_movements.csv](./../example/ZRH_movements.csv). -->
-
 ### [Meteorology](#meteorology)
 
 Open-ALAQS requires certain meteorological data in order to accurately calculate emissions using advanced methods (e.g. BFFM2 method, correction of NOx for ambient conditions) but also for the dispersion calculation.
@@ -432,8 +430,6 @@ The required meteorological parameters are:
 
 Input data may come from local or national data providers (e.g. METAR, SYNOP) or reanalysis data. The compilation of the meteorological data file for Open-ALAQS/AUSTAL2000 is left to the user. Otherwise, default ISA conditions values are considered for all necessary meteorological parameters.
 
-<!-- An example is given in [ZRH_meteo.csv](./../example/ZRH_meteo.csv). -->
-
 ## [Calculate emissions and query results](#calculate-emissions-and-query-results)
 [(Back to top)](#table-of-contents)
 
@@ -446,8 +442,8 @@ There are two different ways to query the calculated emissions:
 + Export the results as a .csv file (**Export to CS**) or SQL file (**Export to DB**)
 
 <p align="center">
-  <img src="./../open_alaqs/assets/emissions-calculation.PNG" alt="Taxiroutes Editor" width="40%" />
-  <img src="./../open_alaqs/assets/emissions-calculation-2.PNG" alt="Taxiroutes Editor 2" width="40%" />
+  <img src="./../open_alaqs/assets/emissions-calculation.PNG" alt="Taxiroutes Editor" width="45%" />
+  <img src="./../open_alaqs/assets/emissions-calculation-2.PNG" alt="Taxiroutes Editor 2" width="45%" />
 </p>
 
 This can be done from the **Output Modules** tab. Additionally, the **Emissions Calculation** tab allows you to select the preferred calculation method, define the time interval, and set the vertical limit (height).
