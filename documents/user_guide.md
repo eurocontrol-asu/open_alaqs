@@ -439,9 +439,16 @@ Input data may come from local or national data providers (e.g. METAR, SYNOP) or
 
 To calculate emissions and visualize the results, click the **Visualize Emission Calculation** button in the Open-ALAQS toolbar. A new window will appear, allowing you to browse all source types and names (whether stationary or aircraft-related). Select the pollutant and the source name (in cases where there are multiple sources of the same type) to view the corresponding emissions.
 
+Emissions from aircraft related sources (at gates, taxiways and runways) are grouped together under the name **MovementSource**.
+
 There are two different ways to query the calculated emissions:
 + View the results in a table format (**Results table**)
 + Export the results as a .csv file (**Export to CS**) or SQL file (**Export to DB**)
+
+<p align="center">
+  <img src="./../open_alaqs/assets/emissions-calculation.PNG" alt="Taxiroutes Editor" width="40%" />
+  <img src="./../open_alaqs/assets/emissions-calculation-2.PNG" alt="Taxiroutes Editor 2" width="40%" />
+</p>
 
 This can be done from the **Output Modules** tab. Additionally, the **Emissions Calculation** tab allows you to select the preferred calculation method, define the time interval, and set the vertical limit (height).
 
