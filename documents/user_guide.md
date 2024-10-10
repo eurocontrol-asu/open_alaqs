@@ -260,7 +260,7 @@ Custom activity profiles can also be defined for each parking area (see [Activit
 
 #### [Roadways](#roadways)
 
-Airside or landside emissions are calculated using the same [COPERT](#copert) methodology.
+Airside or landside emissions are calculated using the same methodology as described above.
 
 When adding a roadway, the following (mandatory) information is required:
 + **Parameters**
