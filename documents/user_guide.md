@@ -433,19 +433,46 @@ Input data may come from local or national data providers (e.g. METAR, SYNOP) or
 ## [Calculate emissions and query results](#calculate-emissions-and-query-results)
 [(Back to top)](#table-of-contents)
 
-To calculate emissions and visualize the results, click the **Visualize Emission Calculation** button in the Open-ALAQS toolbar. A new window will appear, allowing you to browse all source types and names (whether stationary or aircraft-related). Select the pollutant and the source name (in cases where there are multiple sources of the same type) to view the corresponding emissions.
-
-Emissions from aircraft related sources (at gates, taxiways and runways) are grouped together under the name **MovementSource**.
-
-There are two different ways to query the calculated emissions:
-+ View the results in a table format (**Results table**)
-+ Export the results as a .csv file (**Export to CS**) or SQL file (**Export to DB**)
+To calculate emissions and visualize the results, click the **Visualize Emission Calculation** button in the Open-ALAQS toolbar. A new window will appear, allowing you to browse all source types and names (whether stationary or aircraft-related). Select the pollutant and the source name (in cases where there are multiple sources of the same type).
 
 ![emissions-calculation.PNG](./../open_alaqs/assets/emissions-calculation.PNG)
 
 ![emissions-calculation-2.PNG](./../open_alaqs/assets/emissions-calculation-2.PNG)
 
-This can be done from the **Output Modules** tab. Additionally, the **Emissions Calculation** tab allows you to select the preferred calculation method, define the time interval, and set the vertical limit (height).
+Emissions from aircraft related sources (gates, taxiways and runways) are grouped together under the name **MovementSource**.
+
+In the settings panel on the bottom left of the main window, the user can configure the calculation settings, the output formats and the settings for the dispersion model.
+
+In the **Configuration** tab, the user can specify the general settings for the emissions calculation:
++ **Start (incl.)**: Define the start date and time of the emission calculation period (_optional_)
++ **End (incl.)**: Define the end date and time of the emission calculation period (_optional_)
++ **Method**: Select the calculation method (**bymode** or **BFFM2**)
++ **Apply NOX Corrections**: A checkbox to apply nitrogen oxide corrections if needed (_optional_)
++ **Source Dynamics**: Select source dynamics method (_set to "none" by default_)
++ **Time Interval**: Set the time interval for the calculation (_set to 1 hour by default_)
++ **Vertical Limit**: Specify the vertical limit in meters (_set to 914.40m by default_)
++ **Receptor Points**: Specify receptor points using a .csv file (_optional_)
+
+In the **Output Formats** tab, the user can specify the general settings for the visualisation of the results:
++ **Emissions table**: Specify the output view type (_by aggregation, by source or by grid cell_)
++ **Time Series**: Define x-axis title, marker and receptor points (_manually_)
++ **Vector Layer**: Specify settings for visualisation of the results on a grid
+
+In the **Dispersion Models** tab, the user can specify the general settings for the dispersion model:
++ **Roughness Length**:
++ **Displacement Height**:
++ **Anemometer Height**:
++ **Title**:
++ **Quality Level**:
++ **Is Enabled**:
++ **Options String**:
+
+More information on the AUSTAL settings is provided in section [AUSTAL](#austal).
+
+Finally, there are three different ways to visualize the calculated emissions:
++ View the results in a table format (**View Emissions Table**)
++ View the results as a timeseries (**Plot Time Series**)
++ Visualise the results on a grid (**Plot Vector Layer**)
 
 ### [Calculate emissions](#calculate-emissions)
 
