@@ -376,11 +376,10 @@ The corresponding interface allows the user to set the path for saving the outpu
   + **Method**: The emission calculation method, currently set to "ALAQS". _not yet fully implemented_
   + **Towing Speed**: A field specifying towing speed, set to 10.00 km/h. _not yet fully implemented_
   + **Vertical Limit**: The vertical extent of the domain, set by default to 914.40 meters, or approximately 3000 feet.
- 
+
 ![generate-emissions-inventory.PNG](./../open_alaqs/assets/generate-emissions-inventory.PNG)
 
-The user must provide a comma-delimited .csv file containing aircraft operations (see Movements Table). An automatic check is performed to ensure that all fields in the movements and meteorology files are in the correct format (e.g., dates should follow the format YYYY-MM-DD HH:MM:SS). The meteorology file is optional; if it is missing or contains invalid data, default values based on ISA conditions will be used
-for all necessary meteorological parameters.
+The user must provide a comma-delimited .csv file containing aircraft operations (see Movements Table). An automatic check is performed to ensure that all fields in the movements and meteorology files are in the correct format (e.g., dates should follow the format YYYY-MM-DD HH:MM:SS). The meteorology file is optional; if it is missing or contains invalid data, default values based on ISA conditions will be used for all necessary meteorological parameters.
 
 We note that the computation time for emissions calculations depends on the size and resolution of the modeled domain.
 
