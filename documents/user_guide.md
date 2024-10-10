@@ -226,6 +226,22 @@ We note that this functionality is **not yet fully implemented** in Open-ALAQS. 
 
 Emissions from parking areas for vehicles are estimated based on the [COPERT](#copert) methodology.
 
+When adding an airport parking lot, the following information is required:
++ **Parameters**
+  + Number per year:  Total number of vehicles per year
+  + Height: Height at which emissions are released (in meters) _not yet fully implemented_
+  + Speed: Average travel speed in parking (in km/h)
+  + Travel distance: Average travel distance in parking (in meters)
+  + Idle time: Vehicle average idling time between entry and exit (in minutes)
+  + Average parking time: Average time a vehicle remains on parking (in minutes)
++ **Profiles**: Hourly, Daily or Monthly activity profiles
++ **Fleet mix**
+  + PC (Petrol) [in %]: Passenger Cars
+  + LDV (Light Duty Vehicles)
+  + HDV (Heavy Duty Vehicles)
+  + Motorcycles
+  + Buses
+
 <p align="center">
   <img src="./../open_alaqs/assets/parkings-layer.PNG" alt="Parking Layer" width="33%" />
   <img src="./../open_alaqs/assets/parkings-layer-2.PNG" alt="Parking Layer 2" width="33%" />
