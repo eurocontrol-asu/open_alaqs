@@ -379,11 +379,37 @@ The corresponding interface allows the user to set the path for saving the outpu
 
 ![generate-emissions-inventory.PNG](./../open_alaqs/assets/generate-emissions-inventory.PNG)
 
-The user must provide a comma-delimited .csv file containing aircraft operations (see Movements Table). An automatic check is performed to ensure that all fields in the movements and meteorology files are in the correct format (e.g., dates should follow the format YYYY-MM-DD HH:MM:SS). The meteorology file is optional; if it is missing or contains invalid data, default values based on ISA conditions will be used for all necessary meteorological parameters.
+The user must provide a comma-delimited _.csv_ file containing aircraft operations (see [Movements table](#movements-table)). An automatic check is performed to ensure that all fields in the movements and meteorology files are in the correct format (e.g., dates should follow the format YYYY-MM-DD HH:MM:SS). The meteorology file is optional; if it is missing or contains invalid data, default values based on ISA conditions will be used for all necessary meteorological parameters.
 
 We note that the computation time for emissions calculations depends on the size and resolution of the modeled domain.
 
 ### [Movements table](#movements-table)
+
+This table contains all the aircraft movements occurring at the airport during a certain period. It must include the following information:
++ **runway_time**: Date and time of arrival at the airport runway (YYYY-MM-DD HH:MM:SS)
++ **block_time**: Date and time of arrival at the gate (YYYY-MM-DD HH:MM:SS)
++ **aircraft**: The ICAO aircraft type
++ **gate**: The stand used for the aircraft operation
++ **departure_arrival**: The type of operation (arrival or departure)
++ **runway**: The name of the runway used for the aircraft operation
++ **taxi_route**: the name of the taxi route used for the aircraft operation
++ **apu_code**: code defining APU usage away from gate/stand (0: APU used at gate only, 1: APU on while taxiing, 2: APU on during taxiing, take-off, climb or approach)
+
+The rest of the parameters are not mandatory and can be left empty. They will only be used if the user provides specific values. Otherwise, the default values from the internal database will be used.
+
++ **aircraft_registration**: aircraft registration number _not yet fully implemented_
++ **engine_name**: engine name identifier (from the internal database)
++ **profile_id**: performance profile identifier (from the internal database)
++ **track_id**: aircraft trajectory identifier _not yet fully implemented_
++ **tow_ratio**: take-off gross weight divided by maximum take-off weight (float, <=1) _not yet fully implemented_
++ **taxi_engine_count**: number of engines used during taxing (integer)
++ **set_time_of_main_engine_start_after_block_off_in_s**: time spent for MES after leaving the gate (in seconds) _not yet fully implemented_
++ **set_time_of_main_engine_start_before_takeoff_in_s**: time spent for MES before take-off (in seconds) _not yet fully implemented_
++ **set_time_of_main_engine_off_after_runway_exit_in_s**: time spent for MES after leaving the runway exit (in seconds) _not yet fully implemented_
++ **engine_thrust_level_for_taxiing**: taxing thrust level setting (ICAO default: 7%) _not yet fully implemented_
++ **taxi_fuel_ratio**: ratio between actual fuel flow and fuel for the idle mode (float) _not yet fully implemented_
++ **number_of_stop_and_gos**: number of stop and go points during taxing _not yet fully implemented_
++ **domestic**: domestic/international flight (Y or N) _not yet fully implemented_
 
 ### [Meteorology](#meteorology)
 
