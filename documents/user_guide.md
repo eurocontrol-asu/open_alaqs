@@ -459,13 +459,13 @@ In the **Output Formats** tab, the user can specify the general settings for the
 + **Vector Layer**: Specify settings for visualisation of the results on a grid
 
 In the **Dispersion Models** tab, the user can specify the general settings for the dispersion model:
-+ **Roughness Length**:
-+ **Displacement Height**:
-+ **Anemometer Height**:
-+ **Title**:
-+ **Quality Level**:
-+ **Is Enabled**:
-+ **Options String**:
++ **Roughness Length**: Define roughness length (_set to 0.2m by default_)
++ **Displacement Height**: Define displacement height (_set to 1.2m by default_)
++ **Anemometer Height**: Define anemometer height (_set to 11.2m by default_)
++ **Title**: Define simulation name
++ **Quality Level**:(_set to 1 by default_)
++ **Is Enabled**: Enable or disable dispersion module (checkbox)
++ **Options String**: Define advanced AUSTAL settings
 
 More information on the AUSTAL settings is provided in section [AUSTAL](#austal).
 
