@@ -252,7 +252,7 @@ When adding an airport parking lot, the following information is required:
   <img src="./../open_alaqs/assets/parkings-layer-3.PNG" alt="Parking Layer 3" width="33%" />
 </p>
 
-The user should ensure that the fleet mix totals 100% (see the **Fleet Mix** tab). Custom emission factors are calculated for each parking area using COPERT version 5.4.52, based on the parameters indicated above, as well as the average fleet year and country specified at the beginning of the study setup.
+The user should ensure that the fleet mix totals 100% (see the **Fleet Mix** tab). Custom emission factors are calculated (using the **Recalculate** button in the **Emissions** tab) for each parking area using COPERT version 5.4.52, based on the parameters indicated above, as well as the average fleet year and country specified at the beginning of the study setup.
 
 #### [Roadways](#roadways)
 
