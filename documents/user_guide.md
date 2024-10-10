@@ -222,6 +222,8 @@ We note that this functionality is **not yet fully implemented** in Open-ALAQS. 
 ### [Stationary Sources](#stationary-sources)
 [(Back to top)](#table-of-contents)
 
+For non-aircraft emissions four additional emission sources can be considered: point sources, roadways and parking lots, area sources, buildings. For each feature, the user must input the required attributes.
+
 #### [Parking Lots](#parking-lots)
 
 Emissions from parking areas for vehicles are estimated based on the [COPERT](#copert) methodology.
