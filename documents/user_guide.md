@@ -437,6 +437,14 @@ Input data may come from local or national data providers (e.g. METAR, SYNOP) or
 ## [Calculate emissions and query results](#calculate-emissions-and-query-results)
 [(Back to top)](#table-of-contents)
 
+To calculate emissions and visualize the results, click the **Visualize Emission Calculation** button in the Open-ALAQS toolbar. A new window will appear, allowing you to browse all source types and names (whether stationary or aircraft-related). Select the pollutant and the source name (in cases where there are multiple sources of the same type) to view the corresponding emissions.
+
+There are two different ways to query the calculated emissions:
++ View the results in a table format (**Results table**)
++ Export the results as a .csv file (**Export to CS**) or SQL file (**Export to DB**)
+
+This can be done from the **Output Modules** tab. Additionally, the **Emissions Calculation** tab allows you to select the preferred calculation method, define the time interval, and set the vertical limit (height).
+
 ### [Calculate emissions](#calculate-emissions)
 
 ### [Query and visualize results](#query-and-visualize-results)
