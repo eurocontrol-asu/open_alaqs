@@ -220,13 +220,14 @@ Aircraft tracks can be designed to indicate the aircraft trajectory. When adding
 We note that this functionality is **not yet fully implemented** in Open-ALAQS. The default [ANP](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) profiles are used to indicate the aircraft trajectories.
 
 ### [Stationary Sources](#stationary-sources)
+[(Back to top)](#table-of-contents)
 
 #### [Parking Lots](#parking-lots)
 
 #### [Roadways](#roadways)
 
 #### [Point sources](#point-sources)
-      
+
 #### [Area sources](#area-sources)
 
 #### [Buildings](#buildings)
@@ -259,6 +260,7 @@ Each activity multiplier is a decimal number, between 0 and 1. The default profi
 ### [Query and visualize results](#query-and-visualize-results)
 
 ## [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal)
+[(Back to top)](#table-of-contents)
 
 ### [Input data preparation](#input-data-preparation)
 
