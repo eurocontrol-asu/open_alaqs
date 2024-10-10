@@ -6,7 +6,7 @@ from open_alaqs.core.interfaces.Emissions import EmissionIndex
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.interfaces.Store import Store
-from open_alaqs.core.tools import spatial
+from open_alaqs.core.tools import conversion, spatial
 from open_alaqs.core.tools.Singleton import Singleton
 
 loaded_color_logger = False
@@ -31,9 +31,9 @@ class ParkingSources(Source):
         self._idle_time = float(val.get("idle_time", 0))
         self._speed = float(val.get("speed", 0))
         self._fleet_mix = {
-            "vehicle_light": float(val.get("vehicle_light", 0)),
-            "vehicle_medium": float(val.get("vehicle_medium", 0)),
-            "vehicle_heavy": float(val.get("vehicle_heavy", 0)),
+            "vehicle_light": conversion.convertToFloat(val["vehicle_light"], 0),
+            "vehicle_medium": conversion.convertToFloat(val["vehicle_medium"], 0),
+            "vehicle_heavy": conversion.convertToFloat(val["vehicle_heavy"], 0),
         }
 
         if self._geometry_text and self._height is not None:
