@@ -411,7 +411,7 @@ The rest of the parameters are not mandatory and can be left empty. They will on
 + **number_of_stop_and_gos**: number of stop and go points during taxing _not yet fully implemented_
 + **domestic**: domestic/international flight (Y or N) _not yet fully implemented_
 
-An example is given in [ZRH_movements.csv](./../example/ZRH_movements.csv).
+<!-- An example is given in [ZRH_movements.csv](./../example/ZRH_movements.csv). -->
 
 ### [Meteorology](#meteorology)
 
