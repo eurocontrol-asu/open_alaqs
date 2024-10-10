@@ -283,8 +283,6 @@ When adding a roadway, the following (mandatory) information is required:
 
 #### [Point sources](#point-sources)
 
-![tracks-layer.PNG](./../open_alaqs/assets/tracks-layer.PNG)
-
 Stationary or infrastructure-related emissions from airport facilities, such as power and heating plants, incinerators, training fires, and fuel storage tanks, are accounted for and represented as point sources in Open-ALAQS.
 
 When adding a point, the following information is required:
@@ -295,6 +293,8 @@ When adding a point, the following information is required:
   + **Units per year**: Operating hours per year
 + **Profiles**:
   + Hourly, Daily or Monthly activity profiles
+
+![tracks-layer.PNG](./../open_alaqs/assets/tracks-layer.PNG)
 
 The internal Open-ALAQS database contains default emission factors for each category and type (see [default_stationary_ef](./../open_alaqs/database/data/default_stationary_ef.csv)).
 
