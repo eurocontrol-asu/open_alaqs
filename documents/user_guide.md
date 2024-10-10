@@ -441,10 +441,9 @@ There are two different ways to query the calculated emissions:
 + View the results in a table format (**Results table**)
 + Export the results as a .csv file (**Export to CS**) or SQL file (**Export to DB**)
 
-<p align="center">
-  <img src="./../open_alaqs/assets/emissions-calculation.PNG" alt="Taxiroutes Editor" width="45%" />
-  <img src="./../open_alaqs/assets/emissions-calculation-2.PNG" alt="Taxiroutes Editor 2" width="45%" />
-</p>
+![emissions-calculation.PNG](./../open_alaqs/assets/emissions-calculation.PNG)
+
+![emissions-calculation-2.PNG](./../open_alaqs/assets/emissions-calculation-2.PNG)
 
 This can be done from the **Output Modules** tab. Additionally, the **Emissions Calculation** tab allows you to select the preferred calculation method, define the time interval, and set the vertical limit (height).
 
