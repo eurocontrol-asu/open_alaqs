@@ -41,14 +41,11 @@ Welcome to the **Open-ALAQS** user guide. This document will help you navigate t
 
 ### [General Information](#oa-geninfo)
 
-<!-- [(Back to top)](#table-of-contents)-->
-
 Open-ALAQS is a [EUROCONTROL](https://www.eurocontrol.int/) open-source tool designed to model and analyze emissions from aircraft operations and various airport sources. It can calculate emission inventories, visualize data, and perform dispersion modeling with the help of [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview).
 
 It is developed as a plugin for the open-source geographic information system [QGIS](https://qgis.org/), simplifying the definition of various airport elements (such as runways, taxiways, and buildings) and enabling the visualization of the spatial distribution of emissions and concentrations. It is fully based on an open architecture, making it easily adaptable to other GIS platforms and databases.
 
 ### [Installation](#installation-instructions)
-[(Back to top)](#table-of-contents)
 
 For installation instructions, check the [Installation Instructions](../README.md#installation).
 
