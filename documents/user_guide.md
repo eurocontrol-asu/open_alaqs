@@ -249,7 +249,7 @@ Each activity multiplier is a decimal number, between 0 and 1. The default profi
 
 ### [Movements-table](#movements-table)
 
-### [Meteorology](#meteorology)   
+### [Meteorology](#meteorology)
 
 ## [Calculate emissions and query results](#calculate-emissions-and-query-results)
 [(Back to top)](#table-of-contents)
@@ -264,7 +264,7 @@ Each activity multiplier is a decimal number, between 0 and 1. The default profi
 
 ### [Running AUSTAL](#running-austal)
 
-### [Visualize results](#visualize-results)   
+### [Visualize results](#visualize-results)
 
 # [Auxiliary Material](#auxiliary-material)
 [(Back to top)](#table-of-contents)
