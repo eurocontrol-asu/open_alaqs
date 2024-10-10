@@ -179,10 +179,10 @@ Default MES emission factors per aircraft group are given in the table [default_
 Runways are linear features that define the vertical plane where approach, landing, take-off, and climb-out operations occur. Each end of the runway is designated as a specific runway, depending on the direction of movement.
 
 When adding a taxiway, the following information is required:
-+ Capacity (departures/hour) - _not yet fully implemented_
-+ Touchdown offset (meters) - _not yet fully implemented_
-+ Maximum queue speed (km/h) - _not yet fully implemented_
-+ Peak queue time (minutes) - _not yet fully implemented_
++ Capacity (departures/hour) _not yet fully implemented_
++ Touchdown offset (meters) _not yet fully implemented_
++ Maximum queue speed (km/h) _not yet fully implemented_
++ Peak queue time (minutes) _not yet fully implemented_
 
 ![runways-layer.PNG](./../open_alaqs/assets/runways-layer.PNG)
 
@@ -259,6 +259,25 @@ The user should ensure that the fleet mix totals 100% (see the **Fleet Mix** tab
 Custom activity profiles can also be defined for each parking area (see [Activity Profiles](#activity-profiles)).
 
 #### [Roadways](#roadways)
+
+Airside or landside emissions are calculated using the same [COPERT](#copert) methodology.
+
+When adding a roadway, the following (mandatory) information is required:
++ **Parameters**
+  + Movements per year: Number of annual movements
+  + Height: Height at which emissions are released (in meters) _not yet fully implemented_
+  + Speed: Vehicles speed in roadway (in km/h)
++ **Profiles**:
+  + Hourly, Daily or Monthly activity profiles
++ **Fleet mix**
+  + **PC** (Petrol) [in %]: Passenger Cars (Petrol)
+  + **PC** (Diesel) [in %]: Passenger Cars (Diesel)
+  + **LDV** (Petrol) [in %]: Light Duty Vehicles (Petrol)
+  + **LDV** (Diesel) [in %]: Light Duty Vehicles (Diesel)
+  + **HDV** (Petrol) [in %]: Heavy Duty Vehicles (Petrol)
+  + **HDV** (Diesel) [in %]: Heavy Duty Vehicles (Diesel)
+  + **Motorcycles** [in %]
+  + **Buses** [in %]
 
 ![roadways-layer.PNG](./../open_alaqs/assets/roadways-layer.PNG)
 
