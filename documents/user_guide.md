@@ -432,7 +432,7 @@ The required meteorological parameters are:
 
 Input data may come from local or national data providers (e.g. METAR, SYNOP) or reanalysis data. The compilation of the meteorological data file for Open-ALAQS/AUSTAL2000 is left to the user. Otherwise, default ISA conditions values are considered for all necessary meteorological parameters.
 
-An example is given in [ZRH_meteo.csv](./../example/ZRH_meteo.csv).
+<!-- An example is given in [ZRH_meteo.csv](./../example/ZRH_meteo.csv). -->
 
 ## [Calculate emissions and query results](#calculate-emissions-and-query-results)
 [(Back to top)](#table-of-contents)
