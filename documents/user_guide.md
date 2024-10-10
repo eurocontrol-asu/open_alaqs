@@ -262,7 +262,7 @@ Custom activity profiles can also be defined for each parking area (see [Activit
 
 Airside or landside emissions are calculated using the same methodology as described above.
 
-When adding a roadway, the following (mandatory) information is required:
+When adding a roadway, the following information is required:
 + **Parameters**
   + **Movements per year**: Number of annual movements
   + **Height**: Height at which emissions are released (in meters) _not yet fully implemented_
