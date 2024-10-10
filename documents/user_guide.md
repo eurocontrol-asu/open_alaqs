@@ -356,6 +356,34 @@ To define a taxi route in Open-ALAQS, the user has to first create the taxi-rout
 
 ### [Create output file](#create-output-file)
 
+Before calculating emissions, the user must generate an Open-ALAQS file that includes all user-defined elements of the study (e.g., emission sources) and the default internal database (e.g., emission factors).
+
+The corresponding interface allows the user to set the path for saving the output file, select movements and meteorological data, set time filters, define the domain and its spatial resolution and configure other advanced settings:
++ **Emission Inventory Output**:
+  + **Directory**: The path (directory) to the output file
+  + **File Name**: The name of the output file to be generated
++ **Movement Data**:
+  + **Movements Table**: A placeholder to select the table containing data about aircraft movements
+  + **Filter Start Date**: A date selector to filter the movement data by a specific start date
+  + **Filter End Date**: A date selector to filter the movement data by a specific end date
++ **Meteorological Data**:
+  + **Meteorological Table**: A placeholder for importing meteorological data
++ **Modeled Domain**:
+  + **X Resolution**: The spatial resolution in the X-axis, set by default to 250 meters and split into 50 cells.
+  + **Y Resolution**: The spatial resolution in the Y-axis, also set by default to 250 meters with 50 cells.
+  + **Z Resolution**: The vertical spatial resolution, set by default to 50 meters with 20 cells.
++ **Advanced Options**:
+  + **Method**: The emission calculation method, currently set to "ALAQS". _not yet fully implemented_
+  + **Towing Speed**: A field specifying towing speed, set to 10.00 km/h. _not yet fully implemented_
+  + **Vertical Limit**: The vertical extent of the domain, set by default to 914.40 meters, or approximately 3000 feet.
+ 
+![generate-emissions-inventory.PNG](./../open_alaqs/assets/generate-emissions-inventory.PNG)
+
+The user must provide a comma-delimited .csv file containing aircraft operations (see Movements Table). An automatic check is performed to ensure that all fields in the movements and meteorology files are in the correct format (e.g., dates should follow the format YYYY-MM-DD HH:MM:SS). The meteorology file is optional; if it is missing or contains invalid data, default values based on ISA conditions will be used
+for all necessary meteorological parameters.
+
+We note that the computation time for emissions calculations depends on the size and resolution of the modeled domain.
+
 ### [Movements table](#movements-table)
 
 ### [Meteorology](#meteorology)
