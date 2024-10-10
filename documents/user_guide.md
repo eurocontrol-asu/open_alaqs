@@ -314,7 +314,7 @@ When adding an area source, the following information is required:
 
 ![area-sources-layer.PNG](./../open_alaqs/assets/area-sources-layer.PNG)
 
-The emissions calculation is based on the operating hours per year (Units per year) and the corresponding emission factor (in kg/unit). For example, if the number of Units per year is 8760, which is the number of hours in a year, and the emission factor is equal to 1 kg/unit, the emissions of a single hour will be equal to 1kg.
+The emissions calculation is based on the operating hours per year (Units per year) and the corresponding emission factor (in kg/unit). For example, if the number of Units per year is 1 (hour), and the emission factor is equal to 1 kg/unit, the emissions of a single hour will be equal to 1/8760 kg, assuming 8760 hours in a non-leap year (365 days).
 
 We note that beyond the standard pollutants, two additional pollutants, P1 and P2, can be defined by the user. Emission factors for these pollutants have to be provided by the user.
 
