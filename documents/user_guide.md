@@ -34,8 +34,6 @@
     - [Movements table](#movements-table)
     - [Meteorology](#meteorology)
   - [Calculate emissions and query results](#calculate-emissions-and-query-results)
-    - [Calculate emissions](#calculate-emissions)
-    - [Query and visualize results](#query-and-visualize-results)
   - [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal)
     - [Input data preparation](#input-data-preparation)
     - [Running AUSTAL](#running-austal)
@@ -45,6 +43,7 @@
   - [ANP](#anp)
   - [AUSTAL](#austal)
   - [COPERT](#copert)
+  - [Smooth and Shift](smooth-and-shift)
 - [Test Case Study](#test-case-study)
 <!-- [FAQs](#faqs) -->
 <!-- [Contact](#contact) -->
@@ -474,10 +473,6 @@ Finally, there are three different ways to visualize the calculated emissions:
 + View the results as a timeseries (**Plot Time Series**)
 + Visualise the results on a grid (**Plot Vector Layer**)
 
-### [Calculate emissions](#calculate-emissions)
-
-### [Query and visualize results](#query-and-visualize-results)
-
 ## [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal)
 [(Back to top)](#table-of-contents)
 
@@ -509,6 +504,9 @@ of the German Environment Agency.
 No installation is needed for use with Open-ALAQS as the executables are already included in the Open-ALAQS package.
 
 ## [COPERT](#copert)
+[(Back to top)](#table-of-contents)
+
+## [Smooth and Shift](smooth-and-shift)
 [(Back to top)](#table-of-contents)
 
 # [Test Case Study](#test-case-study)
