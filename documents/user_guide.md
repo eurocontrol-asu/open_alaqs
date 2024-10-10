@@ -34,18 +34,18 @@
 <!-- [FAQs](#faqs) -->
 <!-- [Contact](#contact) -->
 
-## [Introduction]
+## [Introduction](#introduction)
 [(Back to top)](#table-of-contents)
 
 Welcome to the **Open-ALAQS** user guide. This document will help you navigate the key features of the software, including setting up a study, emissions & dispersion calculations and exporting results in various formats.
 
-### [General Information]
+### [General Information](#general-information)
 
 Open-ALAQS is a [EUROCONTROL](https://www.eurocontrol.int/) open-source tool designed to model and analyze emissions from aircraft operations and various airport sources. It can calculate emission inventories, visualize data, and perform dispersion modeling with the help of [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview).
 
 It is developed as a plugin for the open-source geographic information system [QGIS](https://qgis.org/), simplifying the definition of various airport elements (such as runways, taxiways, and buildings) and enabling the visualization of the spatial distribution of emissions and concentrations. It is fully based on an open architecture, making it easily adaptable to other GIS platforms and databases.
 
-### [Installation](#installation-instructions)
+### [Installation](#installation)
 
 For installation instructions, check the [Installation Instructions](../README.md#installation).
 
@@ -76,7 +76,7 @@ The order of the toolbar buttons generally follows the sequence of steps needed 
 
 This section describes the initial steps required to create an Open-ALAQS study.
 
-### [Setup a new study](#setup-new-study)
+### [Setup a new study](#setup-a-new-study)
 To create a new project, click on the **CREATE** button in the Open-ALAQS toolbar. This action opens a pop-up window named **Create an Open ALAQS project file**, where the user is required to
 select a **File name** for saving the new study (**.alaqs**).
 
@@ -91,10 +91,10 @@ The second tab (**Roadways**) contains the settings for calculating road traffic
 
 The **ALAQS Project Properties** window, can also be accessed by clicking on the **Setup** button in the Open-ALAQS toolbar.
 
-### [Open an existing study](#open-study)
+### [Open an existing study](#open-an-existing-study)
 To open a previously created project, click on the **OPEN** button in the Open-ALAQS toolbar. This action opens a pop-up window (**Open an ALAQS database file**), allowing you to select an existing Open-ALAQS database (**.alaqs**) file.
 
-### [Import OpenStreetMap data](#import-osm-data)
+### [Import OpenStreetMap data](#import-openstreetmap-data)
 An additional functionality is added to Open-ALAQS to facilitate the creation of emission sources based on the geographic data (roads, buildings, points of interest, and more) provided by OpenStreetMap.
 
 ![import-osm-data.PNG](./../open_alaqs/assets/import-osm-data.PNG)
@@ -103,7 +103,7 @@ Using Nominatim, a search engine that uses the data from OpenStreetMap to provid
 
 ![import-osm-data-ex2.PNG](./../open_alaqs/assets/import-osm-data-ex2.PNG)
 
-## [Define emission sources](#define-em-sources)
+## [Define emission sources](#define-emission-sources)
 [(Back to top)](#table-of-contents)
 
 ### [Add Features](#add-features)
@@ -120,20 +120,20 @@ To create a new emission source, select the desired layer (e.g., taxiway or runw
 ### [Edit Features](#edit-features)
 Using the **Digitizing** toolbar in editing mode (**Toggle Editing**), it is possible to employ the **Vertex Tool** to edit objects.
 
-### [Delete Features](#del-features)
+### [Delete Features](#delete-features)
 To delete one or more features, first select the geometry using the **Selection** toolbar (_Select Features by area or single click_) and use the **Delete Selected** tool to delete the feature(s). Multiple selected features can be deleted at once. Selection can also be done from the Attributes table.
 
-### [Visualize and Edit Attribute Values](#visu-features)
+### [Visualize and Edit Attribute Values](#visualise-and-edit-attrubute-features)
 Attribute values can also be modified after an object's creation via the **Attributes** toolbar.
 
 ![attributes.PNG](./../open_alaqs/assets/attributes.PNG)
 
 The **Open Attribute Table** functionality can be accessed through the **Attributes** toolbar or via the **Layers** panel (by right-clicking on the appropriate layer).
 
-### [Aircraft related Sources](#aircraft-sources)
+### [Aircraft related Sources](#aircraft-related-sources)
 Calculating aircraft emissions requires the definition of three distinct layers: runways, taxiways, gates. For each of these features, the user must provide the required attributes. Defining Tracks (i.e., aircraft trajectories) is also possible; however, this functionnality is not yet fully implemented.
 
-#### [Gates](#gates-layer)
+#### [Gates](#gates)
 An airport gate refers to a designated location at an airport where aircraft park for boarding and disembarking passengers, loading/unloading cargo, and receiving services like refuelling, catering, and maintenance.
 
 In Open-ALAQS, gates are represented as polygons. Each gate can encompass several aircraft stands. The more stands grouped together within a single gate area, the less data preparation is needed (e.g., fewer taxi routes to define). However, if the gate area is too large, it might no longer accurately represent the location of the emissions.
@@ -159,7 +159,7 @@ The default APU emission factors and operating times are given in the database f
 
 Default MES emission factors per aircraft group are given in the table [default_aircraft_start_ef](./../open_alaqs/database/data/default_aircraft_start_ef.csv).
 
-#### [Runways](#runways-layer)
+#### [Runways](#runways)
 
 Runways are linear features that define the vertical plane where approach, landing, take-off, and climb-out operations occur. Each end of the runway is designated as a specific runway, depending on the direction of movement.
 
@@ -179,7 +179,7 @@ end. If an airport has parallel runways, they may be further differentiated by l
 
 The runway emissions are calculated based on the aircraft trajectories (profiles) provided in the [Aircraft Noise and Performance (ANP)](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) database. For more information, see the [ANP](#anp-db) section.
 
-#### [Taxiways](#taxiways-layer)
+#### [Taxiways](#taxiways)
 
 An airport taxiway is a designated path that connects runways with terminals, gates, runways or other parts of the airport. When adding a taxiway in an Open-ALAQS study, the following information is mandatory:
 + Name
@@ -193,7 +193,7 @@ It is important to distinguish between taxiways and taxi-routes. Taxi-routes des
 
 The process of defining taxi routes is detailed in the [Test Case Study](#test-case-study) section.
 
-#### [Tracks](#tracks-layer)
+#### [Tracks](#tracks)
 
 Aircraft tracks can be designed to indicate the aircraft trajectory. When adding aircraft tracks, the following information is mandatory:
 + Track Name
@@ -204,7 +204,7 @@ Aircraft tracks can be designed to indicate the aircraft trajectory. When adding
 
 We note that this functionality is **not yet fully implemented** in Open-ALAQS. The default [ANP](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) profiles are used to indicate the aircraft trajectories.
 
-### [Stationary (Non-Aircraft) Sources](#non-aircraft-sources)
+### [Stationary Sources](#stationary-sources)
 
 ## [Activity Profiles](#activity-profiles)
 [(Back to top)](#table-of-contents)
@@ -221,13 +221,13 @@ Each activity multiplier is a decimal number, between 0 and 1. The default profi
 ## [Visualization of Results](#visualization-of-results)
 [(Back to top)](#table-of-contents)
 
-# [Auxiliary Material](#aux-material)
+# [Auxiliary Material](#auxiliary-material)
 [(Back to top)](#table-of-contents)
 
-## [Open-ALAQS Database](#oa-database)
+## [Open-ALAQS Database](#open-alaqs-database)
 [(Back to top)](#table-of-contents)
 
-## [ANP](#anp-db)
+## [ANP](#anp)
 [(Back to top)](#table-of-contents)
 
 ## [AUSTAL](#austal)
