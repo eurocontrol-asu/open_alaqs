@@ -298,8 +298,7 @@ When adding a point, the following information is required:
 
 The internal Open-ALAQS database contains default emission factors for each category and type. These values can be modified if more up-to-date information is available to the user (see [default_stationary_ef](./../open_alaqs/database/data/default_stationary_ef.csv)).
 
-The emissions calculation is based on the operating hours per year (**Units per year**) and the corresponding emission factor (in kg/unit). For example, if the number of Units per year is 1 (hour), and the 
-emission factor is equal to 1 kg/unit, the emissions of a single hour will be equal to 1/8760 kg, assuming 8760 hours in a non-leap year (365 days).
+The emissions calculation is based on the operating hours per year (**Units per year**) and the corresponding emission factor (in kg/unit). For example, if the number of Units per year is 1 (hour), and the emission factor is equal to 1 kg/unit, the emissions of a single hour will be equal to 1/8760 kg, assuming 8760 hours in a non-leap year (365 days).
 
 #### [Area sources](#area-sources)
 
@@ -310,7 +309,7 @@ When adding an area source, the following information is required:
   + Units per year: Number of operating hours per year
   + Height: Height at which emissions are released (in meters) _not yet fully implemented_
   + Heat Flux: Heat flux (in Megawatts) _not yet fully implemented_
-+ Emissions: Emission factors for CO, HC, NO<sub>x</sub>, SO<sub>X</sub>, PM<sub>10</sub> (in kg/unit)
++ Emissions: Emission factors for CO, HC, NOX, SOX, PM10 (in kg/unit)
 + Profiles: Hourly, Daily or Monthly activity profiles (default or custom)
 
 ![area-sources-layer.PNG](./../open_alaqs/assets/area-sources-layer.PNG)
