@@ -402,9 +402,9 @@ The rest of the parameters are not mandatory and can be left empty. They will on
 + **track_id**: aircraft trajectory identifier _not yet fully implemented_
 + **tow_ratio**: take-off gross weight divided by maximum take-off weight (float, <=1) _not yet fully implemented_
 + **taxi_engine_count**: number of engines used during taxing (integer)
-+ **set_time_of_main_engine_start_after_block_off_in_s**: time spent for MES after leaving the gate (in seconds) _not yet fully implemented_
-+ **set_time_of_main_engine_start_before_takeoff_in_s**: time spent for MES before take-off (in seconds) _not yet fully implemented_
-+ **set_time_of_main_engine_off_after_runway_exit_in_s**: time spent for MES after leaving the runway exit (in seconds) _not yet fully implemented_
++ **set_time_of_main_engine_start_after_block_off_in_s**: time spent for MES after leaving the gate (in seconds)
++ **set_time_of_main_engine_start_before_takeoff_in_s**: time spent for MES before take-off (in seconds)
++ **set_time_of_main_engine_off_after_runway_exit_in_s**: time spent for MES after leaving the runway exit (in seconds)
 + **engine_thrust_level_for_taxiing**: taxing thrust level setting (ICAO default: 7%) _not yet fully implemented_
 + **taxi_fuel_ratio**: ratio between actual fuel flow and fuel for the idle mode (float) _not yet fully implemented_
 + **number_of_stop_and_gos**: number of stop and go points during taxing _not yet fully implemented_
