@@ -483,13 +483,14 @@ The process to prepare the input files for AUSTAL is described in the previous s
 The dispersion module, along with the preparation of input files for AUSTAL, will only be activated if the corresponding checkbox (**Is Enabled**) is checked. By default, this checkbox is unchecked. Once enabled, the user must select one of the output modules (**View Emissions Table**, **Plot Time Series**, or **Plot Vector Layer**). This procedure saves time, as emissions will be calculated first using the chosen output module. The user can then explore the calculated emissions or proceed to a simulation with AUSTAL.
 
 The following parameters need to be defined:
-+ **Roughness Length**: Define roughness length (_set to 0.2m by default_)
-+ **Displacement Height**: Define displacement height (_set to 1.2m by default_)
-+ **Anemometer Height**: Define anemometer height (_set to 11.2m by default_)
-+ **Title**: Define simulation name
-+ **Quality Level**:(_set to 1 by default_)
-+ **Is Enabled**: Enable or disable dispersion module (checkbox)
-+ **Options String**: Define advanced AUSTAL settings
++ **Roughness Length**: This is a parameter used in atmospheric dispersion modeling to describe the roughness of the surface over which air flows. It represents the height above ground where the wind speed theoretically becomes zero. Roughness length is critical for calculating wind speed profiles and depends on the type of terrain (e.g., forests, urban areas, flat fields). Larger roughness lengths indicate rougher surfaces.
++ **Displacement Height**: Displacement height is the height at which the wind profile starts to be affected by obstacles on the ground, such as buildings or trees. It’s a measure of the "effective" ground level when calculating wind speeds in environments with tall structures or dense vegetation. For example, if buildings or trees occupy a large part of the surface, the wind profile behaves as if the ground is elevated by the displacement height.
++ **Anemometer Height**: This is the height at which wind speed measurements are taken using an anemometer (a device for measuring wind speed). The value of anemometer height is crucial in dispersion models because wind speed profiles vary with height. In the absence of specific measurements, a default height of 10 meters is often used in calculations.
++ **Quality Level**: The quality level determines the number of simulation particles used in dispersion calculations in the AUSTAL model. Increasing the quality level reduces the statistical uncertainty of the results by increasing the number of simulation particles, but it also increases the computational effort and time. The level can range from -4 (lower accuracy, faster computation) to +4 (higher accuracy, slower computation).
++ **Options String**:
+  + **NOSTANDARD**: This option in AUSTAL allows the user to deviate from standard settings or procedures. It is used for non-standard calculations, which might involve custom or experimental configurations that differ from the default setup. For example, parameters or methods that require special consideration or testing (e.g., modified wind field models, custom roughness lengths) are activated using this option.
+  + **SCINOTAT**: This option forces the output values from the dispersion calculations to be written in scientific notation (exponential format) with four  significant decimal places. This format is especially useful when dealing with very large or very small values, providing more precision and clarity in the results.
+  + **Kmax=1**: This parameter sets the maximum number of vertical grid cells (layers) to 1 in the dispersion calculation grid. The **Kmax** option limits the number of vertical layers considered in the simulation, which simplifies the model to near-ground (surface-level) calculations. In practical terms, it restricts the dispersion calculations to focus on ground-level effects without accounting for different vertical layers in the atmosphere.
 
 The user is referred to the [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download) documentation for a detailed description of the above parameters.
 
