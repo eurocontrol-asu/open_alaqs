@@ -494,6 +494,11 @@ The following parameters need to be defined:
 
 The user is referred to the [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download) documentation for more information on the above parameters.
 
+The necessary input files for a simulation with AUSTAL are:
++ **austal.txt**: The main input parameters, except for time series, are specified in this  text file. Each line contains a parameter definition in the form **name** \t **value** where name is the parameter name (usually two characters, case-sensitive) and **value** is the parameter value, separated by at least one space. The order of parameters is arbitrary. 
++ **series.dmna**:
++ **grid file (eXXXX.dmna)**: 
+
 ### [Running AUSTAL](#running-austal)
 
 To launch a simulation with AUSTAL, click **Calculate Dispersion** in the Open-ALAQS toolbar. In the new window that appears, specify the path to the AUSTAL executable and the project directory (**Work Directory**) where all output files will be written. Click **Run AUSTAL** to start the dispersion calculation.
