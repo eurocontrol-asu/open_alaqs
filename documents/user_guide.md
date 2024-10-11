@@ -495,9 +495,9 @@ The following parameters need to be defined:
 The user is referred to the [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download) documentation for more information on the above parameters.
 
 The necessary input files for a simulation with AUSTAL are:
-+ **austal.txt**: The main input parameters, except for time series, are specified in this  text file. Each line contains a parameter definition in the form **name** \t **value** where name is the parameter name (usually two characters, case-sensitive) and **value** is the parameter value, separated by at least one space. The order of parameters is arbitrary. 
-+ **series.dmna**:
-+ **grid file (eXXXX.dmna)**: 
++ **austal.txt**: Contains all main input parameters, except for time series. Parameters are explained in detail in the program manual. The order of parameters is arbitrary.
++ **series.dmna**: All time-dependent parameter values are specified in this file. It must contain at least the time series of the meteorological parameters wind direction (in degrees against north clockwise), wind speed (in m/s), and Obukhov length (in m) in form of subsequent hourly means for an integer number of days.
++ **grid file (e****.dmna)**: Contains the model's output data for specific grid points, storing values like pollutant concentration or deposition over a calculated area.
 
 ### [Running AUSTAL](#running-austal)
 
