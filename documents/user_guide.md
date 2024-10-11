@@ -486,6 +486,10 @@ The user is referred to the [AUSTAL](https://www.umweltbundesamt.de/en/topics/ai
 
 ### [Running AUSTAL](#running-austal)
 
+![running-austal.PNG](./../open_alaqs/assets/running-austal.PNG)
+
+![running-austal-2.PNG](./../open_alaqs/assets/running-austal-2.PNG)
+
 ### [Visualize results](#visualize-results)
 
 # [Auxiliary Material](#auxiliary-material)
