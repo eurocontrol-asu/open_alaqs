@@ -492,9 +492,13 @@ The following parameters need to be defined:
   + **SCINOTAT**: This option forces the output values from the dispersion calculations to be written in scientific notation (exponential format) with four  significant decimal places. This format is especially useful when dealing with very large or very small values, providing more precision and clarity in the results.
   + **Kmax=1**: This parameter sets the maximum number of vertical grid cells (layers) to 1 in the dispersion calculation grid. The **Kmax** option limits the number of vertical layers considered in the simulation, which simplifies the model to near-ground (surface-level) calculations. In practical terms, it restricts the dispersion calculations to focus on ground-level effects without accounting for different vertical layers in the atmosphere.
 
-The user is referred to the [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download) documentation for a detailed description of the above parameters.
+The user is referred to the [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download) documentation for more information on the above parameters.
 
 ### [Running AUSTAL](#running-austal)
+
+To launch a simulation with AUSTAL, click **Calculate Dispersion** in the Open-ALAQS toolbar. In the new window that appears, specify the path to the AUSTAL executable and the work directory where all output files will be written. By default, a file named **austal.txt** is generated at the end of the dispersion calculation. If the user enables the option **Erase Log File at the Start of the Calculation**, any existing austal.txt file in the specified directory will be overwritten.
+
+AUSTAL can also be run independently outside Open-ALAQS. 
 
 ![running-austal.PNG](./../open_alaqs/assets/running-austal.PNG)
 
