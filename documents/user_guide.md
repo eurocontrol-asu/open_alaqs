@@ -496,11 +496,13 @@ The user is referred to the [AUSTAL](https://www.umweltbundesamt.de/en/topics/ai
 
 ### [Running AUSTAL](#running-austal)
 
-To launch a simulation with AUSTAL, click **Calculate Dispersion** in the Open-ALAQS toolbar. In the new window that appears, specify the path to the AUSTAL executable and the project directory (**Work Directory**) where all output files will be written. The project directory contains as well **.dmna** files with the concentration distributions near ground for the various characteristic concentration values (annual mean, short-time values). All files are simple text files, their contents can be processed further with any suitable text editor.
+To launch a simulation with AUSTAL, click **Calculate Dispersion** in the Open-ALAQS toolbar. In the new window that appears, specify the path to the AUSTAL executable and the project directory (**Work Directory**) where all output files will be written. Click **Run AUSTAL** to start the dispersion calculation.
+
+![running-austal.PNG](./../open_alaqs/assets/running-austal.PNG)
 
 By default, a file named **austal.log** is generated at the end of the dispersion calculation with information on the program, the program run, the applied input data of file **austal.txt**, and a list with the main results of the dispersion calculation. Option **Erase Log File at the Start of the Calculation**, deletes any existing log file in the specified directory before the calculation, otherwise log information is appended to the file.
 
-![running-austal.PNG](./../open_alaqs/assets/running-austal.PNG)
+The project directory contains as well **.dmna** files with the concentration distributions near ground for the various characteristic concentration values (annual mean, short-time values). All files are simple text files, their contents can be processed further with any suitable text editor.
 
 We note that AUSTAL can also be run independently outside Open-ALAQS.
 
