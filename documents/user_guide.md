@@ -492,12 +492,12 @@ The following parameters need to be defined:
   + **SCINOTAT**: This option forces the output values from the dispersion calculations to be written in scientific notation (exponential format) with four  significant decimal places. This format is especially useful when dealing with very large or very small values, providing more precision and clarity in the results.
   + **Kmax=1**: This parameter sets the maximum number of vertical grid cells (layers) to 1 in the dispersion calculation grid. The **Kmax** option limits the number of vertical layers considered in the simulation, which simplifies the model to near-ground (surface-level) calculations. In practical terms, it restricts the dispersion calculations to focus on ground-level effects without accounting for different vertical layers in the atmosphere.
 
-The user is referred to the [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download) documentation for more information on the above parameters.
-
 The necessary input files for a simulation with AUSTAL are:
 + **austal.txt**: Contains all main input parameters, except for time series. Parameters are explained in detail in the program manual. The order of parameters is arbitrary.
 + **series.dmna**: All time-dependent parameter values are specified in this file. It must contain at least the time series of the meteorological parameters wind direction (in degrees against north clockwise), wind speed (in m/s), and Obukhov length (in m) in form of subsequent hourly means for an integer number of days.
 + **grid file** (e*\*\*\*.dmna): Contains the emission data speciﬁed on a three-dimensional grid.
+
+The user is referred to the [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download) documentation for more information on the input parameters and data files.
 
 ### [Running AUSTAL](#running-austal)
 
