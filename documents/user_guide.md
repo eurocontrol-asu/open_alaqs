@@ -514,13 +514,13 @@ The project directory contains as well **.dmna** files with the concentration di
 
 ### [Output data](#output-data)
 
-AUSTAL calculates the substance-specific annual means and possibly daily or hourly means with a given number of exceedings. More precisely, the annual mean is the mean over the time period defined by the provided file **series.dmna**. In a first step, only the annual mean should be considered. The corresponding file for the pollutant HC for example is hc-y00a.dmna ('00' refers to the grid and will play a role only for nested grids, 'a' refers to additional load). 
+AUSTAL calculates the substance-specific annual means and possibly daily or hourly means with a given number of exceedings. More precisely, the annual mean is the mean over the time period defined by the provided file **series.dmna**. In a first step, only the annual mean should be considered. 
+
+The corresponding file for the pollutant HC for example is hc-y00a.dmna ('00' refers to the grid and will play a role only for nested grids, 'a' refers to additional load).  The statistical uncertainty of every concentration value is provided in the corresponding file, for example hc-y00s.dmna.
 
 The file contains the annual mean concentration for each grid cell of the calculation grid (see **austal.txt**) in microgramm per cubic metre (see file header). The output files can be inspected with any text editor. Importing and creating graphical visualizations using Excel or a GIS system is also straightforward, as the data is organized in a north-oriented matrix.
 
 By default, the concentration file only contains the ground layer (K=1). Using the **NOSTANDARD** option, more layers can be written out (e.g. with the additional input line **NOSTANDARD;Kmax=3** in austal.txt).
-
-The statistical uncertainty of every concentration value is provided in the corresponding file, for example **hc-y00s.dmna**.
 
 ### [Visualize results](#visualize-results)
 
