@@ -15,7 +15,7 @@
     - [Add Features](#add-features)
     - [Edit Features](#edit-features)
     - [Delete Features](#delete-features)
-    - [Visualize and Edit Attribute Values](#visualise-and-edit-attribute-features)
+    - [Visualize and Edit Attribute Values](#visualize-and-edit-attribute-features)
     - [Aircraft related Sources](#aircraft-related-sources)
       - [Gates](#gates)
       - [Runways](#runways)
