@@ -35,8 +35,9 @@
     - [Meteorology](#meteorology)
   - [Calculate emissions and query results](#calculate-emissions-and-query-results)
   - [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal)
-    - [Input data preparation](#input-data-preparation)
+    - [Input data](#input-data)
     - [Running AUSTAL](#running-austal)
+    - [Output data](#output-data)
     - [Visualize results](#visualize-results)
 - [Auxiliary Material](#auxiliary-material)
   - [Open-ALAQS Database](#open-alaqs-database)
@@ -476,7 +477,7 @@ Finally, there are three different ways to visualize the calculated emissions:
 
 The connection of Open-ALAQS with AUSTAL was realized based on the existing architecture of the Open-ALAQS code. In order to retain the flexibility of Open-ALAQS, two new modules were developed: one for producing the input files for the dispersion model and a second for running AUSTAL and exploring the calculated concentrations. As a result, Open-ALAQS remains independent of the dispersion model and other similar modules can be added in the future.
 
-### [Input data preparation](#input-data-preparation)
+### [Input data](#input-data)
 
 The process to prepare the input files for AUSTAL is described in the previous section (see [Calculate emissions and query results](#calculate-emissions-and-query-results)).
 
@@ -510,6 +511,8 @@ We note that AUSTAL can also be run independently outside Open-ALAQS.
 By default, a file named **austal.log** is generated at the end of the dispersion calculation with information on the program, the program run, the applied input data of file **austal.txt**, and a list with the main results of the dispersion calculation. Option **Erase Log File at the Start of the Calculation** deletes any existing log file in the specified directory before the calculation, otherwise log information is appended to the file.
 
 The project directory contains as well **.dmna** files with the concentration distributions near ground for the various characteristic concentration values (annual mean, short-time values). All files are simple text files, their contents can be processed further with any suitable text editor.
+
+### [Output data](#output-data)
 
 ### [Visualize results](#visualize-results)
 
