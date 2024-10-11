@@ -514,6 +514,14 @@ The project directory contains as well **.dmna** files with the concentration di
 
 ### [Output data](#output-data)
 
+AUSTAL calculates the substance-specific annual means and possibly daily or hourly means with a given number of exceedings. More precisely, the annual mean is the mean over the time period defined by the provided file series.dmna. In a first step, only the annual mean should be considered. The according file for HC for example is hc-y00a.dmna ('00' refers to the grid and will play a role only for nested grids, 'a' refers to additional load). 
+
+The file contains the annual mean concentration for each grid cell of the calculation grid (see austal.txt) in microgramm per cubic metre (see the file header). The data part is by default in text form and north-oriented (see the index sequence).
+
+The statistical uncertainty of every concentration value is provided in the according ﬁle, here **co-y00s.dmna**.
+
+By default, the concentration file only contains the ground layer (K=1). Using the **NOSTANDARD** option, more layers can be written out (e.g. with the additional input line **NOSTANDARD;Kmax=3** in austal.txt).
+
 ### [Visualize results](#visualize-results)
 
 To explore the results of a simulation, the user must select the Open-ALAQS file used for the calculation (to ensure the exact grid and date are applied), and then choose one of the output modules:
