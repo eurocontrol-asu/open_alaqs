@@ -501,7 +501,7 @@ To launch a simulation with AUSTAL, click **Calculate Dispersion** in the Open-A
 By default, a file named **austal.log** is generated at the end of the dispersion calculation with information on the program, the program run, the applied input data of file **austal.txt**, and a list
 with the main results of the dispersion calculation. Option **Erase Log File at the Start of the Calculation**, deletes any existing log file in the specified directory before the calculation, otherwise log information is appended to the file. 
 
-AUSTAL can also be run independently outside Open-ALAQS. 
+AUSTAL can also be run independently outside Open-ALAQS.
 
 ![running-austal.PNG](./../open_alaqs/assets/running-austal.PNG)
 
