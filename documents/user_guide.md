@@ -15,7 +15,7 @@
     - [Add Features](#add-features)
     - [Edit Features](#edit-features)
     - [Delete Features](#delete-features)
-    - [Visualize and Edit Attribute Values](#visualise-and-edit-attrubute-features)
+    - [Visualize and Edit Attribute Values](#visualise-and-edit-attribute-features)
     - [Aircraft related Sources](#aircraft-related-sources)
       - [Gates](#gates)
       - [Runways](#runways)
@@ -482,7 +482,7 @@ The process to prepare the input files for AUSTAL is described in the previous s
 
 The dispersion module, along with the preparation of input files for AUSTAL, will only be activated if the corresponding checkbox (**Is Enabled**) is checked. By default, this checkbox is unchecked. Once enabled, the user must select one of the output modules (**View Emissions Table**, **Plot Time Series**, or **Plot Vector Layer**). This procedure saves time, as emissions will be calculated first using the chosen output module. The user can then explore the calculated emissions or proceed to a simulation with AUSTAL.
 
-The user is referred to the [AUSTAL documentation](#https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download) for a detailed description of the above parameters.
+The user is referred to the [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download) documentation for a detailed description of the above parameters.
 
 ### [Running AUSTAL](#running-austal)
 
