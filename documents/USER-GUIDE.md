@@ -521,6 +521,7 @@ To explore the results of a simulation, the user must select the Open-ALAQS file
 + **Visualise Results** as a vector layer
 + **Plot Time Series** to display results as a time series
 + **Results Table** to view results in table format
+
 The user can specify the general settings for the visualisation of the results from the **Output Formats** tab of the main window.
 
 ![running-austal-2.PNG](./../open_alaqs/assets/running-austal-2.PNG)
