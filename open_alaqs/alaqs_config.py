@@ -9,21 +9,21 @@ from typing import Optional, TypedDict
 from open_alaqs.enums import AlaqsLayerType
 
 
-class OsmFilter(TypedDict):
+class OsmFilter(TypedDict, total=False):
     within_aerodrome: bool
     search_radius_m: int
-    tags: list[dict[str, str]]
+    tags: dict[str, str]
 
 
-class ALAQSLayerConfig(TypedDict):
+class ALAQSLayerConfig(TypedDict, total=False):
     name: str
     table_name: str
     ui_filename: str
     py_filename: str
     fill_color: Optional[str]
     border_color: Optional[str]
-    line_width: Optional[int]
-    line_color: Optional[int]
+    line_color: Optional[str]
+    line_width: Optional[float]
     label_enabled: bool
     label_position: int
     label_font_family: str
@@ -191,7 +191,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "fill_color": None,
         "border_color": None,
         "line_color": "255,255,0",
-        "line_width": "0.75",
+        "line_width": 0.75,
         "label_enabled": False,
         "label_position": 1,
         "label_font_family": "Arial",
@@ -245,7 +245,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "fill_color": None,
         "border_color": None,
         "line_color": "46,255,53",
-        "line_width": "0.5",
+        "line_width": 0.5,
         "label_enabled": False,
         "label_position": 1,
         "label_font_family": "Arial",
