@@ -1,12 +1,12 @@
 # Open-ALAQS User Guide - Auxiliary Material
 
 ## [Table of Contents](#table-of-contents)
-+ [Open-ALAQS Database](#open-alaqs-database)
-+ [ANP](#anp)
-+ [AUSTAL](#austal)
-+ [COPERT](#copert)
-+ [Smooth and Shift](smooth-and-shift)
- 
+- [Open-ALAQS Database](#open-alaqs-database)
+- [ANP](#anp)
+- [AUSTAL](#austal)
+- [COPERT](#copert)
+- [Smooth and Shift](smooth-and-shift)
+
 ## [Open-ALAQS Database](#open-alaqs-database)
 [(Back to top)](#table-of-contents)
 
