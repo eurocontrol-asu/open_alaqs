@@ -37,4 +37,8 @@ This approach has been used to connect the emission grid provided by Open-ALAQS'
 
 Since 2005, the LASPORT parameter values used to describe the source dynamics of main engines have been updated. The following describes the new parameters based on LASPORT version 2.2. Finally, it is worth noting that the "Smooth & Shift" parameters are transparently derived and easy to modify. They have been implemented for all airport-related sources, including aircraft, GSE, and GPU. APU emissions are incorporated into aircraft movements.
 
+The figure below illustrates the change in the geometry of taxiing emissions after applying the "Smooth & Shift" parametrization. Each linestring segment of the taxiway (black line) is expanded into a polygon to account for source dynamics.
+
+![smooth-and-shift.PNG](./../open_alaqs/assets/smooth-and-shift.PNG)
+
 The default values used in Open-ALAQS are available in [default_emission_dynamics](./../open_alaqs/database/data/default_emission_dynamics.csv).
