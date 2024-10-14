@@ -5,7 +5,7 @@
 - [ANP](#anp)
 - [AUSTAL](#austal)
 - [COPERT](#copert)
-- [Smooth and Shift](smooth-and-shift)
+- [Smooth and Shift](#smooth-and-shift)
 
 ## [Open-ALAQS Database](#open-alaqs-database)
 [(Back to top)](#table-of-contents)
