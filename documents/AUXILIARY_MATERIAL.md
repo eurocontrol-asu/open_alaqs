@@ -33,8 +33,6 @@ No installation is needed for use with Open-ALAQS as the executables are already
 
 Open-ALAQS calculates three-dimensional emission distributions for source groups associated with an airport. To apply this output to dispersion models, it is necessary to account for source dynamics such as turbulence, exhaust momentum from aircraft engines, and thermal plume rise.
 
-To simplify the application of emission outputs to a dispersion model—without the need to address each individual source's dynamics or specific model details—the effects of source dynamics can be included in an approximate manner within the spatial emission distribution. This is achieved through the "Smooth & Shift" approach, which involves smoothing and shifting the initial source extent.
-
 This approach has been used to connect the emission grid provided by Open-ALAQS' precursor model, ALAQS-AV, to dispersion models. The details  are outlined in the report [EEC/SEE/2005/016](038_Derivation_of_Smooth_and_Shift_Parameters_for_ALAQS-AV.pdf) by EUROCONTROL. The "Smooth & Shift" parameters were originally derived from [LASPORT](https://www.janicke.de/en/lasport.html) (version 1.6), which handles source dynamics in a detailed and time-dependent manner.
 
 Since 2005, the LASPORT parameter values used to describe the source dynamics of main engines have been updated. The following describes the new parameters based on LASPORT version 2.2. Finally, it is worth noting that the "Smooth & Shift" parameters are transparently derived and easy to modify. They have been implemented for all airport-related sources, including aircraft, GSE, and GPU. APU emissions are incorporated into aircraft movements.
