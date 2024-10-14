@@ -32,7 +32,7 @@ The estimation of roadway traffic emissions (landside, airside and parking lots)
 
 COPERT contains emission factors for more than 450 individual vehicle types (e.g. PC, LDV, HDV) considering various factors such as vehicle type, age, mileage, and driving conditions and operation modes to provide accurate emissions estimates for a specific country or region. Its methodology comprises the road transport chapters in the [EMEP/EEA Air Emissions Inventory Guidebook](https://www.eea.europa.eu/publications/emep-eea-guidebook-2023) and is consistent with the 2006 IPCC Guidelines for the calculation of greenhouse gas emissions.
 
-The implementation of the COPERT methodology in Open-ALAQS preserves the core information from the original model, albeit with some simplification tailored to the scope of Open-ALAQS's application.
+The implementation of the COPERT methodology in Open-ALAQS preserves the core information from the original model, albeit with some simplification tailored to the scope of Open-ALAQS's application. It generates averaged emission factors for roadway segments or parking areas based on parameters such as fleet year, country, fleet mix, temperature, speed (all set via the study setup UI) and roadway geometry (length).
 
 The vehicle categories that are examined are Passenger Cars (PCs), Light Commercial Vehicles (LCVs), Heavy Duty Trucks (HDTs), buses and motorcycles which are commonly operating within and around the airports. Only petrol and diesel engines are included in the database. Emission factors are provided for 37 countries: EU27 Member States, EU27 aggregated, UK, Iceland, Norway, Switzerland, Liechtenstein, North Macedonia, Turkey, Albania, Serbia and Montenegro.
 
