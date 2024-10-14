@@ -13,7 +13,7 @@
 ## [Open-ALAQS Database](#open-alaqs-database)
 [(Back to top)](#table-of-contents)
 
-[DB Browser for SQLite](https://sqlitebrowser.org/)
+Open-ALAQS files can be easily viewed and edited with [DB Browser for SQLite](https://sqlitebrowser.org/) an open source tool designed for people who want to create, search, and edit SQLite or SQLCipher database files.
 
 ### [Emissions factors](#emission-factors)
 
