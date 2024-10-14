@@ -30,6 +30,7 @@ class ALAQSLayerConfig(TypedDict, total=False):
     label_font_size: int
     osm_filters: list[OsmFilter]
     osm_attribute_mapping: dict[str, str]
+    osm_import_default_values: dict[str, str]
 
 
 LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
@@ -168,6 +169,11 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "osm_attribute_mapping": {
             "parking_id": "full_id",
         },
+        "osm_import_default_values": {
+            "hour_profile": "default",
+            "daily_profile": "default",
+            "month_profile": "default",
+        },
     },
     AlaqsLayerType.POINT_SOURCE: {
         "name": "Point Sources",
@@ -236,6 +242,11 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "osm_attribute_mapping": {
             "ref": "roadway_id",
         },
+        "osm_import_default_values": {
+            "hour_profile": "default",
+            "daily_profile": "default",
+            "month_profile": "default",
+        },
     },
     AlaqsLayerType.TAXIWAY: {
         "name": "Taxiways",
@@ -284,7 +295,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "fill_color": None,
         "border_color": None,
         "line_color": "235,235,235",
-        "line_width": "2",
+        "line_width": 2,
         "label_enabled": False,
         "label_position": 1,
         "label_font_family": "Arial",
