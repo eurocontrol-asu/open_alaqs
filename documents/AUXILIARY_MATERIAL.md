@@ -39,6 +39,6 @@ Since 2005, the LASPORT parameter values used to describe the source dynamics of
 
 The figure below illustrates the change in the geometry of taxiing emissions after applying the "Smooth & Shift" parametrization. Each linestring segment of the taxiway (black line) is expanded into a polygon to account for source dynamics.
 
-![smooth-and-shift.png](./../open_alaqs/assets/smooth-and-shift.png)
+<img src="./../open_alaqs/assets/smooth-and-shift.png" alt="smooth and shift" width="50%">
 
 The default values used in Open-ALAQS are available in [default_emission_dynamics](./../open_alaqs/database/data/default_emission_dynamics.csv).
