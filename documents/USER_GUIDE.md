@@ -95,7 +95,7 @@ After creating a project, the **ALAQS Project Properties** window opens automati
   <img src="./../open_alaqs/assets/alaqs-project-properties2.PNG" alt="Project Properties 2" width="45%" />
 </p>
 
-The second tab (**Roadways**) contains the settings for calculating road traffic emissions with [COPERT](AUXILIARY_MATERIAL.md#copert). Users are required to specify the average fleet year (values range from 1990 to 2030 in steps of 5) and select a country for country-specific emissions factors(or alternatively EU27). It should be noted that the average fleet year should be viewed as a proxy between the average fleet age and the Euro 1, Euro 2, Euro 3, Euro 4, Euro 5, and Euro 6 vehicle emission standards.
+The second tab (**Roadways**) contains the settings for calculating road traffic emissions with [COPERT](https://copert.emisia.com/). Users are required to specify the average fleet year (values range from 1990 to 2030 in steps of 5) and select a country for country-specific emissions factors(or alternatively EU27). It should be noted that the average fleet year should be viewed as a proxy between the average fleet age and the Euro 1, Euro 2, Euro 3, Euro 4, Euro 5, and Euro 6 vehicle emission standards.
 
 The **ALAQS Project Properties** window, can also be accessed by clicking on the **Setup** button in the Open-ALAQS toolbar.
 
@@ -185,7 +185,7 @@ runway aligned with 10 degrees is labeled as "01" while one aligned with 190 deg
 Since runways can be used in both directions, each end has a different number, differing by 18 (180 degrees). For example, a runway labeled "01" on one end will be "19" on the opposite
 end. If an airport has parallel runways, they may be further differentiated by letters like "L" (Left), "C"(Center), or "R" (Right).
 
-The runway emissions are calculated based on the aircraft trajectories (profiles) provided in the [Aircraft Noise and Performance (ANP)](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) database. For more information, see the [ANP](#anp) section.
+The runway emissions are calculated based on the aircraft trajectories (profiles) provided in the [Aircraft Noise and Performance (ANP)](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) database. For more information, see the [ANP](AUXILIARY_MATERIAL.md#anp) section.
 
 #### [Taxiways](#taxiways)
 
@@ -247,7 +247,7 @@ When adding an airport parking lot, the following information is required:
   <img src="./../open_alaqs/assets/parkings-layer-3.PNG" alt="Parking Layer 3" width="33%" />
 </p>
 
-The user should ensure that the fleet mix totals 100% (see the **Fleet Mix** tab). Custom emission factors are calculated (using the **Recalculate** button in the **Emissions** tab) for each parking area using [COPERT](https://copert.emisia.com/) version 5.4.52, based on the parameters indicated above, as well as the average fleet year and country specified at the beginning of the study setup.
+The user should ensure that the fleet mix totals 100% (see the **Fleet Mix** tab). Custom emission factors are calculated (using the **Recalculate** button in the **Emissions** tab) for each parking area using [COPERT](AUXILIARY_MATERIAL.md#copert) version 5.4.52, based on the parameters indicated above, as well as the average fleet year and country specified at the beginning of the study setup.
 
 Custom activity profiles can also be defined for each parking area (see [Activity Profiles](#activity-profiles)).
 
