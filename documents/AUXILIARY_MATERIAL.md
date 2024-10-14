@@ -24,6 +24,8 @@
 
 ### [Performance profiles](#performance-profiles)
 
+<img src="./../open_alaqs/assets/anp_dep_profile_example.png" alt="smooth and shift" width="50%">
+
 ## [AUSTAL](#austal)
 [(Back to top)](#table-of-contents)
 
