@@ -39,13 +39,6 @@
     - [Running AUSTAL](#running-austal)
     - [Output data](#output-data)
     - [Visualize results](#visualize-results)
-- [Auxiliary Material](#auxiliary-material)
-  - [Open-ALAQS Database](#open-alaqs-database)
-  - [ANP](#anp)
-  - [AUSTAL](#austal)
-  - [COPERT](#copert)
-  - [Smooth and Shift](smooth-and-shift)
-- [Test Case Study](#test-case-study)
 <!-- [FAQs](#faqs) -->
 <!-- [Contact](#contact) -->
 
@@ -532,35 +525,3 @@ To explore the results of a simulation, the user must select the Open-ALAQS file
 The user can specify the general settings for the visualisation of the results from the **Output Formats** tab of the main window.
 
 ![running-austal-2.PNG](./../open_alaqs/assets/running-austal-2.PNG)
-
-# [Auxiliary Material](#auxiliary-material)
-[(Back to top)](#table-of-contents)
-
-## [Open-ALAQS Database](#open-alaqs-database)
-[(Back to top)](#table-of-contents)
-
-## [ANP](#anp)
-[(Back to top)](#table-of-contents)
-
-## [AUSTAL](#austal)
-[(Back to top)](#table-of-contents)
-
-The dispersion model [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview) is the reference implementation to Annex 2 of the German Environment Agency’s Technical Instructions on Air Quality Control (TA Luft) and implements the specifications and requirements given therein.
-
-The program is the successor of AUSTAL2000 (which was previously used with Open-ALAQS), the reference implementation to Annex 3 of the TA Luft 2002. AUSTAL and AUSTAL2000 were developed by Janicke Consulting on behalf of the German Environment Agency and are freely available and widely used internationally.
-
-AUSTAL 3.3.0 (released on 22.03.2024) has been developed and tested under Windows and Linux. It is exclusively provided, free of charge under the GNU Public Licence, from the dedicated webpage
-of the German Environment Agency.
-
-No installation is needed for use with Open-ALAQS as the executables are already included in the Open-ALAQS package.
-
-## [COPERT](#copert)
-[(Back to top)](#table-of-contents)
-
-## [Smooth and Shift](smooth-and-shift)
-[(Back to top)](#table-of-contents)
-
-# [Test Case Study](#test-case-study)
-[(Back to top)](#table-of-contents)
-
-In this section a test case study is presented. The purpose of this training exercise is to guide the first-time user throughout the main steps of an Open-ALAQS project. This case study is based on fictional data and doesn't represent any actual real-world scenario. All the necessary input files are provided in the [example](./../example/) directory of the Open-ALAQS plugin.
