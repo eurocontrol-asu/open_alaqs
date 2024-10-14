@@ -28,7 +28,7 @@ We note that in the context of EASA having a legal mandate to collect and verify
 
 In Open-ALAQS, the ANP fixed-point profiles (see [default_aircraft_profiles](open_alaqs/database/data/default_aircraft_profiles.csv)) are used to calculate aircraft emissions. 
 
-<img src="./../open_alaqs/assets/anp_profiles_example.png" alt="Aircraft trajectories" width="50%">
+<img src="./../open_alaqs/assets/anp_profiles_example.png" alt="Aircraft trajectories" width="60%">
 
 ### [Performance profiles](#performance-profiles)
 
