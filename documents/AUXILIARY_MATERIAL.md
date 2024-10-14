@@ -1,23 +1,19 @@
-# Open-ALAQS User Guide
+# Open-ALAQS User Guide - Auxiliary Material
 
-## Table of Contents
-- [Auxiliary Material](#auxiliary-material)
-  - [Open-ALAQS Database](#open-alaqs-database)
-  - [ANP](#anp)
-  - [AUSTAL](#austal)
-  - [COPERT](#copert)
-  - [Smooth and Shift](smooth-and-shift)
-  - 
-## [Auxiliary Material](#auxiliary-material)
+## [Table of Contents](#table-of-contents)
++ [Open-ALAQS Database](#open-alaqs-database)
++ [ANP](#anp)
++ [AUSTAL](#austal)
++ [COPERT](#copert)
++ [Smooth and Shift](smooth-and-shift)
+ 
+## [Open-ALAQS Database](#open-alaqs-database)
 [(Back to top)](#table-of-contents)
 
-### [Open-ALAQS Database](#open-alaqs-database)
+## [ANP](#anp)
 [(Back to top)](#table-of-contents)
 
-### [ANP](#anp)
-[(Back to top)](#table-of-contents)
-
-### [AUSTAL](#austal)
+## [AUSTAL](#austal)
 [(Back to top)](#table-of-contents)
 
 The dispersion model [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview) is the reference implementation to Annex 2 of the German Environment Agency’s Technical Instructions on Air Quality Control (TA Luft) and implements the specifications and requirements given therein.
@@ -29,8 +25,8 @@ of the German Environment Agency.
 
 No installation is needed for use with Open-ALAQS as the executables are already included in the Open-ALAQS package.
 
-### [COPERT](#copert)
+## [COPERT](#copert)
 [(Back to top)](#table-of-contents)
 
-### [Smooth and Shift](smooth-and-shift)
+## [Smooth and Shift](smooth-and-shift)
 [(Back to top)](#table-of-contents)
