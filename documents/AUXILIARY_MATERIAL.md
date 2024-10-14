@@ -13,12 +13,16 @@
 ## [Open-ALAQS Database](#open-alaqs-database)
 [(Back to top)](#table-of-contents)
 
-Open-ALAQS files can be easily viewed and edited with [DB Browser for SQLite](https://sqlitebrowser.org/) an open source tool designed for people who want to create, search, and edit SQLite or SQLCipher database files.
+Open-ALAQS files can be easily viewed and edited with [DB Browser for SQLite](https://sqlitebrowser.org/) an open source tool designed for manipulating SQLite database files.
 
 ### [Emissions factors](#emission-factors)
 
 ## [ANP](#anp)
 [(Back to top)](#table-of-contents)
+
+The [Aircraft Noise and Performance (ANP)](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) database contains a standardized dataset with information related to aircraft flight performance under various conditions. This includes engine performance characteristics, such as the thrust or power settings (e.g., corrected net thrust) and how they vary with altitude and airspeed. The ANP database contains flight profiles for a wide variety of aircraft types, including standard departure and approach procedures. This data allows models to accurately simulate different segments of flight, like takeoff ground roll, climb, descent, and landing.
+
+We note that in the context of EASA having a legal mandate to collect and verify the ANP data since Reg. (EU) 598/2014 has entered into force, the management and hosting of the ANP legacy data (version 2.3 and prior versions) have been transferred from EUROCONTROL to EASA in order to establish a single ANP data source.
 
 ### [Aircraft trajectories](#aircraft-trajectories)
 
