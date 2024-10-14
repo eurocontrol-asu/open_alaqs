@@ -24,7 +24,10 @@
 
 ### [Performance profiles](#performance-profiles)
 
-The ratio of thrust to distance is used to define the cut-off between take-off and climb-out. During take-off, full take-off thrust is required to accelerate the aircraft, and as the aircraft reaches a certain distance and speed, thrust is reduced to a level appropriate for climb. The transition involves reducing thrust from maximum take-off to maximum climb thrust after a set distance, which can be around 1000 feet of ground distance. This cut-off point is used in Open-ALAQS to separate the 2 modes. The following figure illustrates this approach.
+The ratio of thrust to distance is used to define the cut-off between take-off and climb-out. During take-off, full thrust is required to accelerate the aircraft. As the aircraft reaches a certain distance and speed, thrust is reduced to a level appropriate for climb. This transition involves reducing thrust from maximum take-off to maximum climb thrust after a set distance, typically around 1000 feet of ground distance. This cut-off point is used in Open-ALAQS to separate the two 
+modes.
+
+The following figure illustrates this approach.
 
 <img src="./../open_alaqs/assets/anp_dep_profile_example.png" alt="smooth and shift" width="50%">
 
