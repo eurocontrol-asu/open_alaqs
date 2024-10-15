@@ -126,20 +126,20 @@ To create a new emission source, select the desired layer (e.g., taxiway or runw
 ![layers.PNG](./../open_alaqs/assets/layers.PNG)
 
 ### [Edit Features](#edit-features)
-Using the **Digitizing** toolbar in editing mode (**Toggle Editing**), it is possible to employ the **Vertex Tool** to edit objects.
+Using the `Digitizing` toolbar in editing mode (`Toggle Editing`), it is possible to employ the `Vertex Tool` to edit objects.
 
 ### [Delete Features](#delete-features)
-To delete one or more features, first select the geometry using the **Selection** toolbar (_Select Features by area or single click_) and use the **Delete Selected** tool to delete the feature(s). Multiple selected features can be deleted at once. Selection can also be done from the Attributes table.
+To delete one or more features, first select the geometry using the `Selection` toolbar (_Select Features by area or single click_) and use the `Delete Selected` tool to delete the feature(s). Multiple selected features can be deleted at once. Selection can also be done from the Attributes table.
 
 ### [Visualize and Edit Attribute Values](#visualize-and-edit-attribute-values)
-Attribute values can also be modified after an object's creation via the **Attributes** toolbar.
+Attribute values can also be modified after an object's creation via the `Attributes` toolbar.
 
 ![attributes.PNG](./../open_alaqs/assets/attributes.PNG)
 
 The `Open Attribute Table` functionality can be accessed through the `Attributes` toolbar or via the `Layers` panel (by right-clicking on the appropriate layer).
 
 ### [Aircraft related Sources](#aircraft-related-sources)
-Calculating aircraft emissions requires the definition of three distinct layers: runways, taxiways, gates. For each of these features, the user must provide the required attributes. Defining Tracks (i.e., aircraft trajectories) is also possible; however, this functionnality is not yet fully implemented.
+Calculating aircraft emissions requires the definition of three distinct layers: runways, taxiways, gates. For each of these features, the user must provide the required attributes. Defining Tracks (i.e., aircraft trajectories) is also possible; however, this functionnality is `not yet fully implemented`.
 
 #### [Gates](#gates)
 An airport gate refers to a designated location at an airport where aircraft park for boarding and disembarking passengers, loading/unloading cargo, and receiving services like refuelling, catering, and maintenance.
