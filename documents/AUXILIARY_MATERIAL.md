@@ -4,7 +4,7 @@
 - [Open-ALAQS Database](#open-alaqs-database)
   - [Emissions factors](#emission-factors)
     - [Aircraft emissions](#aicraft-emissions)
-    - [Non-aircraft emissions](#non-aircraft-emissions)   
+    - [Non-aircraft emissions](#non-aircraft-emissions)
 - [ANP](#anp)
   - [Aircraft trajectories](#aircraft-trajectories)
   - [Performance profiles](#performance-profiles)
