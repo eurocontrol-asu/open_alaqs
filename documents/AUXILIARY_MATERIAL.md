@@ -13,6 +13,8 @@
 ## [Open-ALAQS Database](#open-alaqs-database)
 [(Back to top)](#table-of-contents)
 
+The internal [Open-ALAQS database](./../open_alaqs/database/data/) contains default emission factors for all airport sources. When the user creates a new study, these files are copied to the new **.alaqs** file. 
+
 Open-ALAQS files can be easily viewed and edited with [DB Browser for SQLite](https://sqlitebrowser.org/) an open source tool designed for manipulating SQLite database files.
 
 ### [Emissions factors](#emission-factors)
