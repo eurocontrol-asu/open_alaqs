@@ -35,3 +35,5 @@
     - [Output data](#output-data)
     - [Visualize results](#visualize-results)
  
+## [Starting a Study](#starting-a-study)
+[(Back to top)](#table-of-contents)
