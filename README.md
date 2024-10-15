@@ -221,6 +221,6 @@ This software is published under European Union Public Licence v. 1.2. Read the 
 
 [(Back to top)](#table-of-contents)
 
-We'd love to hear from you!
+We'd love to hear from you! If you have any questions, feedback, or inquiries about OpenALAQS, feel free to reach out to us: [open-alaqs@eurocontrol.int](mailto:open-alaqs@eurocontrol.int)
 
-If you have any questions, feedback, or inquiries about OpenALAQS, feel free to reach out to us: [open-alaqs@eurocontrol.int](mailto:open-alaqs@eurocontrol.int)
+Alternatively, you can visit our [website](https://www.eurocontrol.int/online-tool/airport-local-air-quality-studies) for more information or to fill out our contact form.
