@@ -221,4 +221,4 @@ This software is published under European Union Public Licence v. 1.2. Read the 
 
 [(Back to top)](#table-of-contents)
 
-We'd love to hear from you! If you have any questions, feedback, or inquiries, feel free to reach out to us: [open-alaqs@eurocontrol.int](mailto:open-alaqs@eurocontrol.int)
+We'd love to hear from you! If you have any questions, feedback, or inquiries about `OpenALAQS`, feel free to reach out to us: [open-alaqs@eurocontrol.int](mailto:open-alaqs@eurocontrol.int)
