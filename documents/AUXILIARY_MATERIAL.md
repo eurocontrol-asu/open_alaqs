@@ -35,6 +35,8 @@ Default MES emission factors per aircraft group are given in the table [default_
 
 The corresponding GSE/GPU emission factors and activity time are included in the Open-ALAQS database (see [default_gate_profiles](./../open_alaqs/database/data/default_gate_profiles.csv)).
 
+The internal Open-ALAQS database also contains default emission factors for stationary sources. These values can be modified if more up-to-date information is available to the user (see [default_stationary_ef](./../open_alaqs/database/data/default_stationary_ef.csv)).
+
 ## [ANP](#anp)
 [(Back to top)](#table-of-contents)
 
