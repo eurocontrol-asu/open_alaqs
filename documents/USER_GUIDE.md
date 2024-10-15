@@ -159,13 +159,7 @@ In Open-ALAQS, GSE and GPU emissions factors, expressed in terms of grams of pol
 + The aircraft category (JET BUSINESS/REGIONAL/SMALL/MEDIUM/LARGE,TURBOPROPS,PISTON)
 + The operation type (Arrival or Departure)
 
-The corresponding GSE/GPU emission factors and activity time are included in the Open-ALAQS database (see [default_gate_profiles](./../open_alaqs/database/data/default_gate_profiles.csv)).
-
-APU emissions are calculated separately as a function of the APU model (apu_id) indicated for each aircraft (if available) in the database (see [default_aircraft](./../open_alaqs/database/data/default_aircraft.csv)).
-
-The default APU emission factors and operating times are given in the database files: [default_aircraft_apu_ef](./../open_alaqs/database/data/default_aircraft_apu_ef.csv) and [default_apu_times](./../open_alaqs/database/data/default_apu_times.csv) respectively.
-
-Default MES emission factors per aircraft group are given in the table [default_aircraft_start_ef](./../open_alaqs/database/data/default_aircraft_start_ef.csv).
+More information on the corresponding GSE/GPU, APU and MES emission factors and activity time is available in [Open-ALAQS database](AUXILIARY_MATERIAL.md#open-alaqs-database).
 
 #### [Runways](#runways)
 
