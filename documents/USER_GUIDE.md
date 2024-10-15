@@ -1,12 +1,12 @@
-# Open-ALAQS User Guide
+# OpenALAQS User Guide
 
 ## Table of Contents
-- [Open-ALAQS User Guide](#open-alaqs-user-guide)
+- [OpenALAQS User Guide](#OpenALAQS-user-guide)
   - [Table of contents](#table-of-contents)
   - [Introduction](#introduction)
     - [General Information](#general-information)
     - [Installation](#installation)
-  - [The Open-ALAQS Toolbar](#the-open-alaqs-toolbar)
+  - [The OpenALAQS Toolbar](#the-OpenALAQS-toolbar)
   - [Starting a Study](#starting-a-study)
     - [Setup a new study](#setup-a-new-study)
     - [Open an existing study](#open-an-existing-study)
@@ -45,11 +45,11 @@
 ## [Introduction](#introduction)
 [(Back to top)](#table-of-contents)
 
-Welcome to the `Open-ALAQS` user guide. This document will help you navigate the key features of the software, including setting up a study, emissions & dispersion calculations and exporting results in various formats.
+Welcome to the `OpenALAQS` user guide. This document will help you navigate the key features of the software, including setting up a study, emissions & dispersion calculations and exporting results in various formats.
 
 ### [General Information](#general-information)
 
-Open-ALAQS is a [`EUROCONTROL`](https://www.eurocontrol.int/) open-source tool designed to model and analyze emissions from aircraft operations and various airport sources. It can calculate emission inventories, visualize data, and perform dispersion modeling with the help of [`AUSTAL`](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview).
+OpenALAQS is a [`EUROCONTROL`](https://www.eurocontrol.int/) open-source tool designed to model and analyze emissions from aircraft operations and various airport sources. It can calculate emission inventories, visualize data, and perform dispersion modeling with the help of [`AUSTAL`](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview).
 
 It is developed as a plugin for the open-source geographic information system [`QGIS`](https://qgis.org/), simplifying the definition of various airport elements (such as runways, taxiways, and buildings) and enabling the visualization of the spatial distribution of emissions and concentrations. It is fully based on an open architecture, making it easily adaptable to other GIS platforms and databases.
 
@@ -57,35 +57,35 @@ It is developed as a plugin for the open-source geographic information system [`
 
 For installation instructions, check the [`Installation Instructions`](../README.md#installation).
 
-## [The Open-ALAQS Toolbar](#the-open-alaqs-toolbar)
+## [The OpenALAQS Toolbar](#the-OpenALAQS-toolbar)
 [(Back to top)](#table-of-contents)
 
 ![toolbar.PNG](./../open_alaqs/assets/toolbar.PNG)
 
 The toolbar consists of the following functions:
 
-- **About**: General information about the current Open-ALAQS version.
-- **Create Study**: Create a new Open-ALAQS project.
-- **Open Study**: Open an existing Open-ALAQS project.
+- **About**: General information about the current OpenALAQS version.
+- **Create Study**: Create a new OpenALAQS project.
+- **Open Study**: Open an existing OpenALAQS project.
 - **Close Study**: Close the current project.
 - **Study Setup**: Contains general information about the study.
 - **Import OSM Data**: Download and import data from OpenStreetMap (OSM).
 - **Profile Editor**: Create activity profiles (hourly, daily, monthly).
 - **Routes Editor**: Create taxi routes based on user-defined airport elements (gates, runways, taxiways).
-- **Generate Emission Inventory**: Prepares the Open-ALAQS output file containing all study data.
+- **Generate Emission Inventory**: Prepares the OpenALAQS output file containing all study data.
 - **Visualize Emissions Calculation**: Manages the emissions calculation, visualization, and export modules.
 - **Calculate Dispersion**: Handles the dispersion calculation module.
 - **Review Logs**: Opens the log file containing useful information about code execution.
 
-The order of the toolbar buttons generally follows the sequence of steps needed to conduct a study using Open-ALAQS.
+The order of the toolbar buttons generally follows the sequence of steps needed to conduct a study using OpenALAQS.
 
 ## [Starting a Study](#starting-a-study)
 [(Back to top)](#table-of-contents)
 
-This section describes the initial steps required to create an Open-ALAQS study.
+This section describes the initial steps required to create an OpenALAQS study.
 
 ### [Setup a new study](#setup-a-new-study)
-To create a new project, click on the `CREATE` button in the Open-ALAQS toolbar. This action opens a pop-up window named `Create an Open ALAQS project file`, where the user is required to
+To create a new project, click on the `CREATE` button in the OpenALAQS toolbar. This action opens a pop-up window named `Create an Open ALAQS project file`, where the user is required to
 select a `File name` for saving the new study (`.alaqs`).
 
 After creating a project, the `ALAQS Project Properties` window opens automatically. In this window (tab `Airport`), the user must provide a project name and at least the ICAO code of the airport. The remaining fields (airport name, country, latitude, longitude, etc.) will be automatically filled based on the information in the internal database (see `default_airports.csv`). However, the user can manually edit this default information if needed.
@@ -97,17 +97,17 @@ After creating a project, the `ALAQS Project Properties` window opens automatica
 
 The second tab (`Roadways`) contains the settings for calculating road traffic emissions with [`COPERT`](https://copert.emisia.com/). Users are required to specify the average fleet year (values range from 1990 to 2030 in steps of 5) and select a country for country-specific emissions factors(or alternatively EU27). It should be noted that the average fleet year should be viewed as a proxy between the average fleet age and the Euro 1, Euro 2, Euro 3, Euro 4, Euro 5, and Euro 6 vehicle emission standards.
 
-The `ALAQS Project Properties` window, can also be accessed by clicking on the `Setup` button in the Open-ALAQS toolbar.
+The `ALAQS Project Properties` window, can also be accessed by clicking on the `Setup` button in the OpenALAQS toolbar.
 
 ### [Open an existing study](#open-an-existing-study)
-To open a previously created project, click on the `OPEN` button in the Open-ALAQS toolbar. This action opens a pop-up window (`Open an ALAQS database file`), allowing you to select an existing Open-ALAQS database (`.alaqs`) file.
+To open a previously created project, click on the `OPEN` button in the OpenALAQS toolbar. This action opens a pop-up window (`Open an ALAQS database file`), allowing you to select an existing OpenALAQS database (`.alaqs`) file.
 
 ### [Import OpenStreetMap data](#import-openstreetmap-data)
-An additional functionality is added to Open-ALAQS to facilitate the creation of emission sources based on the geographic data (roads, buildings, points of interest, and more) provided by OpenStreetMap.
+An additional functionality is added to OpenALAQS to facilitate the creation of emission sources based on the geographic data (roads, buildings, points of interest, and more) provided by OpenStreetMap.
 
 ![import-osm-data.PNG](./../open_alaqs/assets/import-osm-data.PNG)
 
-Using Nominatim, a search engine that uses the data from OpenStreetMap to provide geocoding (address to coordinates), directly from the Open-ALAQS toolbar the user can select and import airport related geographical data to the study. The image below illustrates the information that can be collected from OpenStreetMap.
+Using Nominatim, a search engine that uses the data from OpenStreetMap to provide geocoding (address to coordinates), directly from the OpenALAQS toolbar the user can select and import airport related geographical data to the study. The image below illustrates the information that can be collected from OpenStreetMap.
 
 ![import-osm-data-ex2.PNG](./../open_alaqs/assets/import-osm-data-ex2.PNG)
 
@@ -144,7 +144,7 @@ Calculating aircraft emissions requires the definition of three distinct layers:
 #### [Gates](#gates)
 An airport gate refers to a designated location at an airport where aircraft park for boarding and disembarking passengers, loading/unloading cargo, and receiving services like refuelling, catering, and maintenance.
 
-In Open-ALAQS, gates are represented as polygons. Each gate can encompass several aircraft stands. The more stands grouped together within a single gate area, the less data preparation is needed (e.g., fewer taxi routes to define). However, if the gate area is too large, it might no longer accurately represent the location of the emissions.
+In OpenALAQS, gates are represented as polygons. Each gate can encompass several aircraft stands. The more stands grouped together within a single gate area, the less data preparation is needed (e.g., fewer taxi routes to define). However, if the gate area is too large, it might no longer accurately represent the location of the emissions.
 
 Calculating gate emissions requires establishing the sum of four emission sources: GSE (Ground Support Equipment), GPU (Ground Power Unit), APU (Auxiliary Power Unit) and MES (Main Engine Start).
 
@@ -154,12 +154,12 @@ When adding a gate, the following information is required:
 + Gate type (PIER, REMOTE or CARGO)
 + Gate height `not yet fully implemented`
 
-In Open-ALAQS, GSE and GPU emissions factors, expressed in terms of grams of pollutant per hour, is assigned to each gate as a function of:
+In OpenALAQS, GSE and GPU emissions factors, expressed in terms of grams of pollutant per hour, is assigned to each gate as a function of:
 + The gate type (PIER, REMOTE or CARGO)
 + The aircraft category (JET BUSINESS/REGIONAL/SMALL/MEDIUM/LARGE,TURBOPROPS,PISTON)
 + The operation type (Arrival or Departure)
 
-More information on the corresponding GSE/GPU, APU and MES emission factors and activity time is available in [`Open-ALAQS database`](AUXILIARY_MATERIAL.md#open-alaqs-database).
+More information on the corresponding GSE/GPU, APU and MES emission factors and activity time is available in [`OpenALAQS database`](AUXILIARY_MATERIAL.md#OpenALAQS-database).
 
 #### [Runways](#runways)
 
@@ -183,7 +183,7 @@ The runway emissions are calculated based on the aircraft trajectories (profiles
 
 #### [Taxiways](#taxiways)
 
-An airport taxiway is a designated path that connects runways with terminals, gates, runways or other parts of the airport. When adding a taxiway in an Open-ALAQS study, the following information is mandatory:
+An airport taxiway is a designated path that connects runways with terminals, gates, runways or other parts of the airport. When adding a taxiway in an OpenALAQS study, the following information is mandatory:
 + Name
 + Speed (km/h)
 
@@ -191,7 +191,7 @@ An airport taxiway is a designated path that connects runways with terminals, ga
 
 The length of each taxiway is calculated automatically from its geometry and the time spent on it is calculated from the indicated speed and length. Recommended taxiing speeds vary in relation to ambient conditions, traffic, aircraft position on the taxi route etc. Typical taxiing speeds lie between 10 and 40 km/h (~5 and ~25 kts).
 
-It is important to distinguish between taxiways and taxi-routes. Taxi-routes describe the operational path that will be followed by an aircraft for a runway / stand / movement type (arrival or departure) combination. Taxi-routes are defined as a series of taxiway segments in Open-ALAQS. It greatly facilitates the capturing of taxi-route details (such as curved turns) since when defining taxi routes, multiple taxiway segments can be combined.
+It is important to distinguish between taxiways and taxi-routes. Taxi-routes describe the operational path that will be followed by an aircraft for a runway / stand / movement type (arrival or departure) combination. Taxi-routes are defined as a series of taxiway segments in OpenALAQS. It greatly facilitates the capturing of taxi-route details (such as curved turns) since when defining taxi routes, multiple taxiway segments can be combined.
 
 The process of defining taxi routes is detailed in the [`Test Case Study`](TEST_CASE_STUDY.md#taxi-routes).
 
@@ -204,7 +204,7 @@ Aircraft tracks can be designed to indicate the aircraft trajectory. When adding
 
 ![tracks-layer.PNG](./../open_alaqs/assets/tracks-layer.PNG)
 
-We note that this functionality is `not yet fully implemented` in Open-ALAQS. The default [`ANP`](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) profiles are used to indicate the aircraft trajectories.
+We note that this functionality is `not yet fully implemented` in OpenALAQS. The default [`ANP`](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) profiles are used to indicate the aircraft trajectories.
 
 ### [Stationary Sources](#stationary-sources)
 [(Back to top)](#table-of-contents)
@@ -270,7 +270,7 @@ When adding a roadway, the following information is required:
 
 #### [Point sources](#point-sources)
 
-Stationary or infrastructure-related emissions from airport facilities, such as power and heating plants, incinerators, training fires, and fuel storage tanks, are accounted for and represented as point sources in Open-ALAQS.
+Stationary or infrastructure-related emissions from airport facilities, such as power and heating plants, incinerators, training fires, and fuel storage tanks, are accounted for and represented as point sources in OpenALAQS.
 
 When adding a point, the following information is required:
 + **Parameters**
@@ -283,13 +283,13 @@ When adding a point, the following information is required:
 
 ![points-layer.PNG](./../open_alaqs/assets/points-layer.PNG)
 
-The internal Open-ALAQS database contains default emission factors for each category and type. These values can be modified if more up-to-date information is available to the user (see [`default_stationary_ef`](./../open_alaqs/database/data/default_stationary_ef.csv)).
+The internal OpenALAQS database contains default emission factors for each category and type. These values can be modified if more up-to-date information is available to the user (see [`default_stationary_ef`](./../open_alaqs/database/data/default_stationary_ef.csv)).
 
 The emissions calculation is based on the operating hours per year (`Units per year`) and the corresponding emission factor (in kg/unit). For example, if the number of Units per year is 1 (hour), and the emission factor is equal to 1 kg/unit, the emissions of a single hour will be equal to 1/8760 kg, assuming 8760 hours in a non-leap year (365 days).
 
 #### [Area sources](#area-sources)
 
-This layer allows users to include emissions from custom, user-defined sources not covered by the standard Open-ALAQS sources, as long as they have the relevant emission factor information.
+This layer allows users to include emissions from custom, user-defined sources not covered by the standard OpenALAQS sources, as long as they have the relevant emission factor information.
 
 When adding an area source, the following information is required:
 + Parameters:
@@ -317,7 +317,7 @@ When adding a building, the following detail is required:
 ## [Activity Profiles](#activity-profiles)
 [(Back to top)](#table-of-contents)
 
-Activity Profiles are used to describe the relative hourly/daily/monthly operational mode for each airport emission source. The `Activity Profiles Editor` in the Open-ALAQS toolbar can be used to review, edit, and create custom profiles.
+Activity Profiles are used to describe the relative hourly/daily/monthly operational mode for each airport emission source. The `Activity Profiles Editor` in the OpenALAQS toolbar can be used to review, edit, and create custom profiles.
 
 ![activity-profiles.PNG](./../open_alaqs/assets/activity-profiles.PNG)
 
@@ -326,7 +326,7 @@ Each activity multiplier is a decimal number, between 0 and 1. The default profi
 ## [Generate Emissions Inventory](#generate-emissions-inventory)
 [(Back to top)](#table-of-contents)
 
-This section covers all the necessary steps for preparing an emission inventory using Open-ALAQS.
+This section covers all the necessary steps for preparing an emission inventory using OpenALAQS.
 
 ### [Taxi routes](#taxi-routes)
 
@@ -339,11 +339,11 @@ Taxi-routes can be defined using the Taxiway Routes Editor.
   <img src="./../open_alaqs/assets/taxiroutes-editor-2.PNG" alt="Taxiroutes Editor 2" width="45%" />
 </p>
 
-To define a taxi route in Open-ALAQS, the user has to first create the taxi-route by selecting the gate, runway and operation type (arrival or departure). More than one taxi-routes can be defined for the same combination of gate, runway and operation type, using a different instance number. Once defined, the corresponding taxiway segments have to be selected together with the aircraft groups that can make use of the specific taxi-route.
+To define a taxi route in OpenALAQS, the user has to first create the taxi-route by selecting the gate, runway and operation type (arrival or departure). More than one taxi-routes can be defined for the same combination of gate, runway and operation type, using a different instance number. Once defined, the corresponding taxiway segments have to be selected together with the aircraft groups that can make use of the specific taxi-route.
 
 ### [Create output file](#create-output-file)
 
-Before calculating emissions, the user must generate an Open-ALAQS file that includes all user-defined elements of the study (e.g., emission sources) and the default internal database (e.g., emission factors).
+Before calculating emissions, the user must generate an OpenALAQS file that includes all user-defined elements of the study (e.g., emission sources) and the default internal database (e.g., emission factors).
 
 The corresponding interface allows the user to set the path for saving the output file, select movements and meteorological data, set time filters, define the domain and its spatial resolution and configure other advanced settings:
 + **Emission Inventory Output**:
@@ -400,7 +400,7 @@ The rest of the parameters are not mandatory and can be left empty. They will on
 
 ### [Meteorology](#meteorology)
 
-Open-ALAQS requires certain meteorological data in order to accurately calculate emissions using advanced methods (e.g. BFFM2 method, correction of NOx for ambient conditions) but also for the dispersion calculation.
+OpenALAQS requires certain meteorological data in order to accurately calculate emissions using advanced methods (e.g. BFFM2 method, correction of NOx for ambient conditions) but also for the dispersion calculation.
 
 The required meteorological parameters are:
 
@@ -415,12 +415,12 @@ The required meteorological parameters are:
 + **ObukhovLength** (in m)
 + **MixingHeight** (in m)
 
-Input data may come from local or national data providers (e.g. METAR, SYNOP) or reanalysis data. The compilation of the meteorological data file for Open-ALAQS/AUSTAL2000 is left to the user. Otherwise, default ISA conditions values are considered for all necessary meteorological parameters.
+Input data may come from local or national data providers (e.g. METAR, SYNOP) or reanalysis data. The compilation of the meteorological data file for OpenALAQS/AUSTAL2000 is left to the user. Otherwise, default ISA conditions values are considered for all necessary meteorological parameters.
 
 ## [Calculate emissions and query results](#calculate-emissions-and-query-results)
 [(Back to top)](#table-of-contents)
 
-To calculate emissions and visualize the results, click the `Visualize Emission Calculation` button in the Open-ALAQS toolbar. A new window will appear, allowing you to browse all source types and names (whether stationary or aircraft-related). Select the pollutant and the source name (in cases where there are multiple sources of the same type). Emissions from aircraft related sources (gates, taxiways and runways) are grouped together under the name `MovementSource`.
+To calculate emissions and visualize the results, click the `Visualize Emission Calculation` button in the OpenALAQS toolbar. A new window will appear, allowing you to browse all source types and names (whether stationary or aircraft-related). Select the pollutant and the source name (in cases where there are multiple sources of the same type). Emissions from aircraft related sources (gates, taxiways and runways) are grouped together under the name `MovementSource`.
 
 In the settings panel on the bottom left of the main window, the user can configure the calculation settings, the output formats and the settings for the dispersion model.
 
@@ -462,7 +462,7 @@ Finally, there are three different ways to visualize the calculated emissions:
 ## [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal)
 [(Back to top)](#table-of-contents)
 
-The connection of Open-ALAQS with AUSTAL was realized based on the existing architecture of the Open-ALAQS code. In order to retain the flexibility of Open-ALAQS, two new modules were developed: one for producing the input files for the dispersion model and a second for running AUSTAL and exploring the calculated concentrations. As a result, Open-ALAQS remains independent of the dispersion model and other similar modules can be added in the future.
+The connection of OpenALAQS with AUSTAL was realized based on the existing architecture of the OpenALAQS code. In order to retain the flexibility of OpenALAQS, two new modules were developed: one for producing the input files for the dispersion model and a second for running AUSTAL and exploring the calculated concentrations. As a result, OpenALAQS remains independent of the dispersion model and other similar modules can be added in the future.
 
 ### [Input data](#input-data)
 
@@ -489,9 +489,9 @@ The user is referred to the [`AUSTAL`](https://www.umweltbundesamt.de/en/topics/
 
 ### [Running AUSTAL](#running-austal)
 
-To launch a simulation with AUSTAL, click `Calculate Dispersion` in the Open-ALAQS toolbar. In the new window that appears, specify the path to the AUSTAL executable and the project directory (`Work Directory`) where all output files will be written. Click `Run AUSTAL` to start the dispersion calculation.
+To launch a simulation with AUSTAL, click `Calculate Dispersion` in the OpenALAQS toolbar. In the new window that appears, specify the path to the AUSTAL executable and the project directory (`Work Directory`) where all output files will be written. Click `Run AUSTAL` to start the dispersion calculation.
 
-We note that AUSTAL can also be run independently outside Open-ALAQS.
+We note that AUSTAL can also be run independently outside OpenALAQS.
 
 ![running-austal.PNG](./../open_alaqs/assets/running-austal.PNG)
 
@@ -511,7 +511,7 @@ By default, the concentration file only contains the ground layer (K=1). Using t
 
 ### [Visualize results](#visualize-results)
 
-To explore the results of a simulation, the user must select the Open-ALAQS file used for the calculation (to ensure the exact grid and date are applied), and then choose one of the output modules:
+To explore the results of a simulation, the user must select the OpenALAQS file used for the calculation (to ensure the exact grid and date are applied), and then choose one of the output modules:
 + **Visualise Results** as a vector layer
 + **Plot Time Series** to display results as a time series
 + **Results Table** to view results in table format
