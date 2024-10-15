@@ -27,6 +27,8 @@ A list of airports is also available (see [default_airports](./../open_alaqs/dat
 
 #### Aircraft emissions
 
+Aircraft emissions are calculated based on the recommendations of [ICAO Doc. 9889](https://www.icao.int/publications/documents/9889_cons_en.pdf).
+
 APU emissions are calculated separately as a function of the APU model (apu_id) indicated for each aircraft (if available) in the database (see [default_aircraft](./../open_alaqs/database/data/default_aircraft.csv)).
 
 The default APU emission factors and operating times are given in the database files: [default_aircraft_apu_ef](./../open_alaqs/database/data/default_aircraft_apu_ef.csv) and [default_apu_times](./../open_alaqs/database/data/default_apu_times.csv) respectively.
