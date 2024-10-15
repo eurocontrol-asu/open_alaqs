@@ -193,7 +193,7 @@ The length of each taxiway is calculated automatically from its geometry and the
 
 It is important to distinguish between taxiways and taxi-routes. Taxi-routes describe the operational path that will be followed by an aircraft for a runway / stand / movement type (arrival or departure) combination. Taxi-routes are defined as a series of taxiway segments in Open-ALAQS. It greatly facilitates the capturing of taxi-route details (such as curved turns) since when defining taxi routes, multiple taxiway segments can be combined.
 
-The process of defining taxi routes is detailed in the [`Test Case Study`](TEST_CASE_STUDY.md#taxi-routes) section.
+The process of defining taxi routes is detailed in the [`Test Case Study`](TEST_CASE_STUDY.md#taxi-routes).
 
 #### [Tracks](#tracks)
 
@@ -317,7 +317,7 @@ When adding a building, the following detail is required:
 ## [Activity Profiles](#activity-profiles)
 [(Back to top)](#table-of-contents)
 
-Activity Profiles are used to describe the relative hourly/daily/monthly operational mode for each airport emission source. The **Activity Profiles Editor** in the Open-ALAQS toolbar can be used to review, edit, and create custom profiles.
+Activity Profiles are used to describe the relative hourly/daily/monthly operational mode for each airport emission source. The `Activity Profiles Editor` in the Open-ALAQS toolbar can be used to review, edit, and create custom profiles.
 
 ![activity-profiles.PNG](./../open_alaqs/assets/activity-profiles.PNG)
 
@@ -330,7 +330,7 @@ This section covers all the necessary steps for preparing an emission inventory 
 
 ### [Taxi routes](#taxi-routes)
 
-As explained in the section [Taxiways](#taxiways), taxi-routes describe the operational path of an aircraft between the runway and the gate (or vice versa).
+As explained in the section [`Taxiways`](#taxiways), taxi-routes describe the operational path of an aircraft between the runway and the gate (or vice versa).
 
 Taxi-routes can be defined using the Taxiway Routes Editor.
 
@@ -366,7 +366,7 @@ The corresponding interface allows the user to set the path for saving the outpu
 
 ![generate-emissions-inventory.PNG](./../open_alaqs/assets/generate-emissions-inventory.PNG)
 
-The user must provide a comma-delimited _.csv_ file containing aircraft operations (see [Movements table](#movements-table)). An automatic check is performed to ensure that all fields in the movements and meteorology files are in the correct format (e.g., dates should follow the format YYYY-MM-DD HH:MM:SS). The meteorology file is optional; if it is missing or contains invalid data, default values based on ISA conditions will be used for all necessary meteorological parameters.
+The user must provide a comma-delimited _.csv_ file containing aircraft operations (see [`Movements table`](#movements-table)). An automatic check is performed to ensure that all fields in the movements and meteorology files are in the correct format (e.g., dates should follow the format YYYY-MM-DD HH:MM:SS). The meteorology file is optional; if it is missing or contains invalid data, default values based on ISA conditions will be used for all necessary meteorological parameters.
 
 We note that the computation time for emissions calculations depends on the size and resolution of the modeled domain.
 
@@ -420,14 +420,14 @@ Input data may come from local or national data providers (e.g. METAR, SYNOP) or
 ## [Calculate emissions and query results](#calculate-emissions-and-query-results)
 [(Back to top)](#table-of-contents)
 
-To calculate emissions and visualize the results, click the **Visualize Emission Calculation** button in the Open-ALAQS toolbar. A new window will appear, allowing you to browse all source types and names (whether stationary or aircraft-related). Select the pollutant and the source name (in cases where there are multiple sources of the same type). Emissions from aircraft related sources (gates, taxiways and runways) are grouped together under the name **MovementSource**.
+To calculate emissions and visualize the results, click the `Visualize Emission Calculation` button in the Open-ALAQS toolbar. A new window will appear, allowing you to browse all source types and names (whether stationary or aircraft-related). Select the pollutant and the source name (in cases where there are multiple sources of the same type). Emissions from aircraft related sources (gates, taxiways and runways) are grouped together under the name `MovementSource`.
 
 In the settings panel on the bottom left of the main window, the user can configure the calculation settings, the output formats and the settings for the dispersion model.
 
 In the **Configuration** tab, the user can specify the general settings for the emissions calculation:
 + **Start (incl.)**: Define the start date and time of the emission calculation period (_optional_)
 + **End (incl.)**: Define the end date and time of the emission calculation period (_optional_)
-+ **Method**: Select the calculation method (**bymode** or **BFFM2**)
++ **Method**: Select the calculation method (`ByMode` or `BFFM2`)
 + **Apply NOX Corrections**: A checkbox to apply nitrogen oxide corrections if needed (_optional_)
 + **Source Dynamics**: Select source dynamics method (_set to "none" by default_)
 + **Time Interval**: Set the time interval for the calculation (_set to 1 hour by default_)
@@ -450,14 +450,14 @@ In the **Dispersion Models** tab, the user can specify the general settings for 
 + **Is Enabled**: Enable or disable dispersion module (checkbox)
 + **Options String**: Define advanced AUSTAL settings
 
-More information on the AUSTAL settings is provided in section [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal).
+More information on the AUSTAL settings is provided in section [`Dispersion modeling with AUSTAL`](#dispersion-modeling-with-austal).
 
 ![emissions-calculation-2.PNG](./../open_alaqs/assets/emissions-calculation-2.PNG)
 
 Finally, there are three different ways to visualize the calculated emissions:
-+ View the results in a table format (**View Emissions Table**)
-+ View the results as a timeseries (**Plot Time Series**)
-+ Visualise the results on a grid (**Plot Vector Layer**)
++ View the results in a table format (`View Emissions Table`)
++ View the results as a timeseries (`Plot Time Series`)
++ Visualise the results on a grid (`Plot Vector Layer`)
 
 ## [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal)
 [(Back to top)](#table-of-contents)
@@ -466,9 +466,9 @@ The connection of Open-ALAQS with AUSTAL was realized based on the existing arch
 
 ### [Input data](#input-data)
 
-The process to prepare the input files for AUSTAL is described in the previous section (see [Calculate emissions and query results](#calculate-emissions-and-query-results)).
+The process to prepare the input files for AUSTAL is described in the previous section (see [`Calculate emissions and query results`](#calculate-emissions-and-query-results)).
 
-The dispersion module, along with the preparation of input files for AUSTAL, will only be activated if the corresponding checkbox (**Is Enabled**) is checked. By default, this checkbox is unchecked. Once enabled, the user must select one of the output modules (**View Emissions Table**, **Plot Time Series**, or **Plot Vector Layer**). This procedure saves time, as emissions will be calculated first using the chosen output module. The user can then explore the calculated emissions or proceed to a simulation with AUSTAL.
+The dispersion module, along with the preparation of input files for AUSTAL, will only be activated if the corresponding checkbox (`Is Enabled`) is checked. By default, this checkbox is unchecked. Once enabled, the user must select one of the output modules (`View Emissions Table`, `Plot Time Series`, or `Plot Vector Layer`). This procedure saves time, as emissions will be calculated first using the chosen output module. The user can then explore the calculated emissions or proceed to a simulation with AUSTAL.
 
 The following parameters need to be defined:
 + **Roughness Length**: This is a parameter used in atmospheric dispersion modeling to describe the roughness of the surface over which air flows. It represents the height above ground where the wind speed theoretically becomes zero. Roughness length is critical for calculating wind speed profiles and depends on the type of terrain (e.g., forests, urban areas, flat fields). Larger roughness lengths indicate rougher surfaces.
@@ -485,29 +485,29 @@ The necessary input files for a simulation with AUSTAL are:
 + **series.dmna**: All time-dependent parameter values are specified in this file. It must contain at least the time series of the meteorological parameters wind direction (in degrees against north clockwise), wind speed (in m/s), and Obukhov length (in m) in form of subsequent hourly means for an integer number of days.
 + **grid file** (e*\*\*\*.dmna): Contains the emission data speciﬁed on a three-dimensional grid.
 
-The user is referred to the [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download) documentation for more information on the input parameters and data files.
+The user is referred to the [`AUSTAL`](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download) documentation for more information on the input parameters and data files.
 
 ### [Running AUSTAL](#running-austal)
 
-To launch a simulation with AUSTAL, click **Calculate Dispersion** in the Open-ALAQS toolbar. In the new window that appears, specify the path to the AUSTAL executable and the project directory (**Work Directory**) where all output files will be written. Click **Run AUSTAL** to start the dispersion calculation.
+To launch a simulation with AUSTAL, click `Calculate Dispersion` in the Open-ALAQS toolbar. In the new window that appears, specify the path to the AUSTAL executable and the project directory (`Work Directory`) where all output files will be written. Click `Run AUSTAL` to start the dispersion calculation.
 
 We note that AUSTAL can also be run independently outside Open-ALAQS.
 
 ![running-austal.PNG](./../open_alaqs/assets/running-austal.PNG)
 
-By default, a file named **austal.log** is generated at the end of the dispersion calculation with information on the program, the program run, the applied input data of file **austal.txt**, and a list with the main results of the dispersion calculation. Option **Erase Log File at the Start of the Calculation** deletes any existing log file in the specified directory before the calculation, otherwise log information is appended to the file.
+By default, a file named `austal.log` is generated at the end of the dispersion calculation with information on the program, the program run, the applied input data of file `austal.txt`, and a list with the main results of the dispersion calculation. Option `Erase Log File at the Start of the Calculation` deletes any existing log file in the specified directory before the calculation, otherwise log information is appended to the file.
 
-The project directory contains as well **.dmna** files with the concentration distributions near ground for the various characteristic concentration values (annual mean, short-time values). All files are simple text files, their contents can be processed further with any suitable text editor.
+The project directory contains as well `.dmna` files with the concentration distributions near ground for the various characteristic concentration values (annual mean, short-time values). All files are simple text files, their contents can be processed further with any suitable text editor.
 
 ### [Output data](#output-data)
 
-AUSTAL calculates the substance-specific annual means and possibly daily or hourly means with a given number of exceedings. More precisely, the annual mean is the mean over the time period defined by the provided file **series.dmna**. In a first step, only the annual mean should be considered.
+AUSTAL calculates the substance-specific annual means and possibly daily or hourly means with a given number of exceedings. More precisely, the annual mean is the mean over the time period defined by the provided file `series.dmna`. In a first step, only the annual mean should be considered.
 
-The corresponding file for the pollutant HC for example is hc-y00a.dmna ('00' refers to the grid and will play a role only for nested grids, 'a' refers to additional load).  The statistical uncertainty of every concentration value is provided in the corresponding file, for example hc-y00s.dmna.
+The corresponding file for the pollutant HC for example is `hc-y00a.dmna` ('00' refers to the grid and will play a role only for nested grids, 'a' refers to additional load).  The statistical uncertainty of every concentration value is provided in the corresponding file, for example `hc-y00s.dmna`.
 
-The file contains the annual mean concentration for each grid cell of the calculation grid (see **austal.txt**) in microgramm per cubic metre (see file header). The output files can be inspected with any text editor. Importing and creating graphical visualizations using Excel or a GIS system is also straightforward, as the data is organized in a north-oriented matrix.
+The file contains the annual mean concentration for each grid cell of the calculation grid (see `austal.txt`) in microgramm per cubic metre (see file header). The output files can be inspected with any text editor. Importing and creating graphical visualizations using Excel or a GIS system is also straightforward, as the data is organized in a north-oriented matrix.
 
-By default, the concentration file only contains the ground layer (K=1). Using the **NOSTANDARD** option, more layers can be written out (e.g. with the additional input line **NOSTANDARD;Kmax=3** in austal.txt).
+By default, the concentration file only contains the ground layer (K=1). Using the `NOSTANDARD` option, more layers can be written out (e.g. with the additional input line `NOSTANDARD;Kmax=3` in `austal.txt`).
 
 ### [Visualize results](#visualize-results)
 
@@ -516,6 +516,6 @@ To explore the results of a simulation, the user must select the Open-ALAQS file
 + **Plot Time Series** to display results as a time series
 + **Results Table** to view results in table format
 
-The user can specify the general settings for the visualisation of the results from the **Output Formats** tab of the main window.
+The user can specify the general settings for the visualisation of the results from the `Output Formats` tab of the main window.
 
 ![running-austal-2.PNG](./../open_alaqs/assets/running-austal-2.PNG)
