@@ -34,6 +34,9 @@
     - [Running AUSTAL](#running-austal)
     - [Output data](#output-data)
     - [Visualize results](#visualize-results)
- 
-## [Starting a Study](#starting-a-study)
+
+## [Test Case Study](#test-case-study)
+[(Back to top)](#table-of-contents)
+
+### [Starting a Study](#starting-a-study)
 [(Back to top)](#table-of-contents)
