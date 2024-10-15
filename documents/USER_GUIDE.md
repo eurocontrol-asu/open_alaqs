@@ -45,17 +45,17 @@
 ## [Introduction](#introduction)
 [(Back to top)](#table-of-contents)
 
-Welcome to the **Open-ALAQS** user guide. This document will help you navigate the key features of the software, including setting up a study, emissions & dispersion calculations and exporting results in various formats.
+Welcome to the `Open-ALAQS` user guide. This document will help you navigate the key features of the software, including setting up a study, emissions & dispersion calculations and exporting results in various formats.
 
 ### [General Information](#general-information)
 
-Open-ALAQS is a [EUROCONTROL](https://www.eurocontrol.int/) open-source tool designed to model and analyze emissions from aircraft operations and various airport sources. It can calculate emission inventories, visualize data, and perform dispersion modeling with the help of [AUSTAL](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview).
+Open-ALAQS is a [`EUROCONTROL`](https://www.eurocontrol.int/) open-source tool designed to model and analyze emissions from aircraft operations and various airport sources. It can calculate emission inventories, visualize data, and perform dispersion modeling with the help of [`AUSTAL`](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview).
 
-It is developed as a plugin for the open-source geographic information system [QGIS](https://qgis.org/), simplifying the definition of various airport elements (such as runways, taxiways, and buildings) and enabling the visualization of the spatial distribution of emissions and concentrations. It is fully based on an open architecture, making it easily adaptable to other GIS platforms and databases.
+It is developed as a plugin for the open-source geographic information system [`QGIS`](https://qgis.org/), simplifying the definition of various airport elements (such as runways, taxiways, and buildings) and enabling the visualization of the spatial distribution of emissions and concentrations. It is fully based on an open architecture, making it easily adaptable to other GIS platforms and databases.
 
 ### [Installation](#installation)
 
-For installation instructions, check the [Installation Instructions](../README.md#installation).
+For installation instructions, check the [`Installation Instructions`](../README.md#installation).
 
 ## [The Open-ALAQS Toolbar](#the-open-alaqs-toolbar)
 [(Back to top)](#table-of-contents)
@@ -85,22 +85,22 @@ The order of the toolbar buttons generally follows the sequence of steps needed 
 This section describes the initial steps required to create an Open-ALAQS study.
 
 ### [Setup a new study](#setup-a-new-study)
-To create a new project, click on the **CREATE** button in the Open-ALAQS toolbar. This action opens a pop-up window named **Create an Open ALAQS project file**, where the user is required to
-select a **File name** for saving the new study (**.alaqs**).
+To create a new project, click on the `CREATE` button in the Open-ALAQS toolbar. This action opens a pop-up window named `Create an Open ALAQS project file`, where the user is required to
+select a `File name` for saving the new study (`.alaqs`).
 
-After creating a project, the **ALAQS Project Properties** window opens automatically. In this window (tab **Airport**), the user must provide a project name and at least the ICAO code of the airport. The remaining fields (airport name, country, latitude, longitude, etc.) will be automatically filled based on the information in the internal database (see **default_airports.csv**). However, the user can manually edit this default information if needed.
+After creating a project, the `ALAQS Project Properties` window opens automatically. In this window (tab `Airport`), the user must provide a project name and at least the ICAO code of the airport. The remaining fields (airport name, country, latitude, longitude, etc.) will be automatically filled based on the information in the internal database (see `default_airports.csv`). However, the user can manually edit this default information if needed.
 
 <p align="center">
   <img src="./../open_alaqs/assets/alaqs-project-properties.PNG" alt="Project Properties 1" width="45%" />
   <img src="./../open_alaqs/assets/alaqs-project-properties2.PNG" alt="Project Properties 2" width="45%" />
 </p>
 
-The second tab (**Roadways**) contains the settings for calculating road traffic emissions with [COPERT](https://copert.emisia.com/). Users are required to specify the average fleet year (values range from 1990 to 2030 in steps of 5) and select a country for country-specific emissions factors(or alternatively EU27). It should be noted that the average fleet year should be viewed as a proxy between the average fleet age and the Euro 1, Euro 2, Euro 3, Euro 4, Euro 5, and Euro 6 vehicle emission standards.
+The second tab (`Roadways`) contains the settings for calculating road traffic emissions with [`COPERT`](https://copert.emisia.com/). Users are required to specify the average fleet year (values range from 1990 to 2030 in steps of 5) and select a country for country-specific emissions factors(or alternatively EU27). It should be noted that the average fleet year should be viewed as a proxy between the average fleet age and the Euro 1, Euro 2, Euro 3, Euro 4, Euro 5, and Euro 6 vehicle emission standards.
 
-The **ALAQS Project Properties** window, can also be accessed by clicking on the **Setup** button in the Open-ALAQS toolbar.
+The `ALAQS Project Properties` window, can also be accessed by clicking on the `Setup` button in the Open-ALAQS toolbar.
 
 ### [Open an existing study](#open-an-existing-study)
-To open a previously created project, click on the **OPEN** button in the Open-ALAQS toolbar. This action opens a pop-up window (**Open an ALAQS database file**), allowing you to select an existing Open-ALAQS database (**.alaqs**) file.
+To open a previously created project, click on the `OPEN` button in the Open-ALAQS toolbar. This action opens a pop-up window (`Open an ALAQS database file`), allowing you to select an existing Open-ALAQS database (`.alaqs`) file.
 
 ### [Import OpenStreetMap data](#import-openstreetmap-data)
 An additional functionality is added to Open-ALAQS to facilitate the creation of emission sources based on the geographic data (roads, buildings, points of interest, and more) provided by OpenStreetMap.
@@ -115,13 +115,13 @@ Using Nominatim, a search engine that uses the data from OpenStreetMap to provid
 [(Back to top)](#table-of-contents)
 
 ### [Add Features](#add-features)
-New objects can be added using the **Digitizing** toolbar.
+New objects can be added using the `Digitizing` toolbar.
 
 ![digitizing-toolbar.PNG](./../open_alaqs/assets/digitizing-toolbar.PNG)
 
-More information on how to use this toolbar is provided in the [QGIS User Manual](https://docs.qgis.org/3.34/en/docs/user_manual/working_with_vector/editing_geometry_attributes.html#digitizing-an-existing-layer).
+More information on how to use this toolbar is provided in the [`QGIS User Manual`](https://docs.qgis.org/3.34/en/docs/user_manual/working_with_vector/editing_geometry_attributes.html#digitizing-an-existing-layer).
 
-To create a new emission source, select the desired layer (e.g., taxiway or runway) to activate it and click **Toggle Editing** in the **Digitizing** toolbar. Then click **Add Feature** to start designing the new feature. Once finished, right click and fill the attribute fields in the pop-up window.
+To create a new emission source, select the desired layer (e.g., taxiway or runway) to activate it and click `Toggle Editing` in the `Digitizing` toolbar. Then click `Add Feature` to start designing the new feature. Once finished, right click and fill the attribute fields in the pop-up window.
 
 ![layers.PNG](./../open_alaqs/assets/layers.PNG)
 
@@ -136,7 +136,7 @@ Attribute values can also be modified after an object's creation via the **Attri
 
 ![attributes.PNG](./../open_alaqs/assets/attributes.PNG)
 
-The **Open Attribute Table** functionality can be accessed through the **Attributes** toolbar or via the **Layers** panel (by right-clicking on the appropriate layer).
+The `Open Attribute Table` functionality can be accessed through the `Attributes` toolbar or via the `Layers` panel (by right-clicking on the appropriate layer).
 
 ### [Aircraft related Sources](#aircraft-related-sources)
 Calculating aircraft emissions requires the definition of three distinct layers: runways, taxiways, gates. For each of these features, the user must provide the required attributes. Defining Tracks (i.e., aircraft trajectories) is also possible; however, this functionnality is not yet fully implemented.
@@ -152,24 +152,24 @@ Calculating gate emissions requires establishing the sum of four emission source
 
 When adding a gate, the following information is required:
 + Gate type (PIER, REMOTE or CARGO)
-+ Gate height _not yet fully implemented_
++ Gate height `not yet fully implemented`
 
 In Open-ALAQS, GSE and GPU emissions factors, expressed in terms of grams of pollutant per hour, is assigned to each gate as a function of:
 + The gate type (PIER, REMOTE or CARGO)
 + The aircraft category (JET BUSINESS/REGIONAL/SMALL/MEDIUM/LARGE,TURBOPROPS,PISTON)
 + The operation type (Arrival or Departure)
 
-More information on the corresponding GSE/GPU, APU and MES emission factors and activity time is available in [Open-ALAQS database](AUXILIARY_MATERIAL.md#open-alaqs-database).
+More information on the corresponding GSE/GPU, APU and MES emission factors and activity time is available in [`Open-ALAQS database`](AUXILIARY_MATERIAL.md#open-alaqs-database).
 
 #### [Runways](#runways)
 
 Runways are linear features that define the vertical plane where approach, landing, take-off, and climb-out operations occur. Each end of the runway is designated as a specific runway, depending on the direction of movement.
 
 When adding a taxiway, the following information is required:
-+ Capacity (departures/hour) _not yet fully implemented_
-+ Touchdown offset (meters) _not yet fully implemented_
-+ Maximum queue speed (km/h) _not yet fully implemented_
-+ Peak queue time (minutes) _not yet fully implemented_
++ Capacity (departures/hour) `not yet fully implemented`
++ Touchdown offset (meters) `not yet fully implemented`
++ Maximum queue speed (km/h) `not yet fully implemented`
++ Peak queue time (minutes) `not yet fully implemented`
 
 ![runways-layer.PNG](./../open_alaqs/assets/runways-layer.PNG)
 
@@ -179,7 +179,7 @@ runway aligned with 10 degrees is labeled as "01" while one aligned with 190 deg
 Since runways can be used in both directions, each end has a different number, differing by 18 (180 degrees). For example, a runway labeled "01" on one end will be "19" on the opposite
 end. If an airport has parallel runways, they may be further differentiated by letters like "L" (Left), "C"(Center), or "R" (Right).
 
-The runway emissions are calculated based on the aircraft trajectories (profiles) provided in the [Aircraft Noise and Performance (ANP)](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) database. For more information, see the [ANP](AUXILIARY_MATERIAL.md#anp) section.
+The runway emissions are calculated based on the aircraft trajectories (profiles) provided in the [`Aircraft Noise and Performance`](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) (ANP) database. For more information, see the [`ANP`](AUXILIARY_MATERIAL.md#anp) section.
 
 #### [Taxiways](#taxiways)
 
@@ -193,7 +193,7 @@ The length of each taxiway is calculated automatically from its geometry and the
 
 It is important to distinguish between taxiways and taxi-routes. Taxi-routes describe the operational path that will be followed by an aircraft for a runway / stand / movement type (arrival or departure) combination. Taxi-routes are defined as a series of taxiway segments in Open-ALAQS. It greatly facilitates the capturing of taxi-route details (such as curved turns) since when defining taxi routes, multiple taxiway segments can be combined.
 
-The process of defining taxi routes is detailed in the [Test Case Study](#test-case-study) section.
+The process of defining taxi routes is detailed in the [`Test Case Study`](TEST_CASE_STUDY.md) section.
 
 #### [Tracks](#tracks)
 
@@ -204,7 +204,7 @@ Aircraft tracks can be designed to indicate the aircraft trajectory. When adding
 
 ![tracks-layer.PNG](./../open_alaqs/assets/tracks-layer.PNG)
 
-We note that this functionality is _not yet fully implemented_ in Open-ALAQS. The default [ANP](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) profiles are used to indicate the aircraft trajectories.
+We note that this functionality is `not yet fully implemented` in Open-ALAQS. The default [`ANP`](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) profiles are used to indicate the aircraft trajectories.
 
 ### [Stationary Sources](#stationary-sources)
 [(Back to top)](#table-of-contents)
@@ -213,12 +213,12 @@ For non-aircraft emissions four additional emission sources can be considered: p
 
 #### [Parking Lots](#parking-lots)
 
-Emissions from parking areas for vehicles are estimated based on the [COPERT](AUXILIARY_MATERIAL.md#copert) methodology.
+Emissions from parking areas for vehicles are estimated based on the [`COPERT`](AUXILIARY_MATERIAL.md#copert) methodology.
 
 When adding an airport parking lot, the following information is required:
 + **Parameters**
   + **Number per year**:  Total number of vehicles per year
-  + **Height**: Height at which emissions are released (in meters) _not yet fully implemented_
+  + **Height**: Height at which emissions are released (in meters) `not yet fully implemented`
   + **Speed**: Average travel speed in parking (in km/h)
   + **Travel distance**: Average travel distance in parking (in meters)
   + **Idle time**: Vehicle average idling time between entry and exit (in minutes)
@@ -241,9 +241,9 @@ When adding an airport parking lot, the following information is required:
   <img src="./../open_alaqs/assets/parkings-layer-3.PNG" alt="Parking Layer 3" width="33%" />
 </p>
 
-The user should ensure that the fleet mix totals 100% (see the **Fleet Mix** tab). Custom emission factors are calculated (using the **Recalculate** button in the **Emissions** tab) for each parking area using [COPERT](AUXILIARY_MATERIAL.md#copert) version 5.4.52, based on the parameters indicated above, as well as the average fleet year and country specified at the beginning of the study setup.
+The user should ensure that the fleet mix totals 100% (see the `Fleet Mix` tab). Custom emission factors are calculated (using the `Recalculate` button in the `Emissions` tab) for each parking area using [`COPERT`](AUXILIARY_MATERIAL.md#copert) version 5.4.52, based on the parameters indicated above, as well as the average fleet year and country specified at the beginning of the study setup.
 
-Custom activity profiles can also be defined for each parking area (see [Activity Profiles](#activity-profiles)).
+Custom activity profiles can also be defined for each parking area (see [`Activity Profiles`](#activity-profiles)).
 
 #### [Roadways](#roadways)
 
@@ -252,7 +252,7 @@ Airside or landside emissions are calculated using the same methodology as descr
 When adding a roadway, the following information is required:
 + **Parameters**
   + **Movements per year**: Number of annual movements
-  + **Height**: Height at which emissions are released (in meters) _not yet fully implemented_
+  + **Height**: Height at which emissions are released (in meters) `not yet fully implemented`
   + **Speed**: Vehicles speed in roadway (in km/h)
 + **Profiles**:
   + Hourly, Daily or Monthly activity profiles
@@ -276,16 +276,16 @@ When adding a point, the following information is required:
 + **Parameters**
   + **Category**: Source category (Tank, Incinerator, Other, Power/Heat plant, Solvent degreaser, Surface coating)
   + **Type**: Category specific type (Oil or diesel, Automobile gasoline, Aviation gasoline, JP4, JP5, JET A)
-  + **Height**: Height at which emissions are released (in meters) _not yet fully implemented_
+  + **Height**: Height at which emissions are released (in meters) `not yet fully implemented`
   + **Units per year**: Operating hours per year
 + **Profiles**:
   + Hourly, Daily or Monthly activity profiles
 
 ![points-layer.PNG](./../open_alaqs/assets/points-layer.PNG)
 
-The internal Open-ALAQS database contains default emission factors for each category and type. These values can be modified if more up-to-date information is available to the user (see [default_stationary_ef](./../open_alaqs/database/data/default_stationary_ef.csv)).
+The internal Open-ALAQS database contains default emission factors for each category and type. These values can be modified if more up-to-date information is available to the user (see [`default_stationary_ef`](./../open_alaqs/database/data/default_stationary_ef.csv)).
 
-The emissions calculation is based on the operating hours per year (**Units per year**) and the corresponding emission factor (in kg/unit). For example, if the number of Units per year is 1 (hour), and the emission factor is equal to 1 kg/unit, the emissions of a single hour will be equal to 1/8760 kg, assuming 8760 hours in a non-leap year (365 days).
+The emissions calculation is based on the operating hours per year (`Units per year`) and the corresponding emission factor (in kg/unit). For example, if the number of Units per year is 1 (hour), and the emission factor is equal to 1 kg/unit, the emissions of a single hour will be equal to 1/8760 kg, assuming 8760 hours in a non-leap year (365 days).
 
 #### [Area sources](#area-sources)
 
@@ -294,23 +294,23 @@ This layer allows users to include emissions from custom, user-defined sources n
 When adding an area source, the following information is required:
 + Parameters:
   + Units per year: Number of operating hours per year
-  + Height: Height at which emissions are released (in meters) _not yet fully implemented_
-  + Heat Flux: Heat flux (in Megawatts) _not yet fully implemented_
+  + Height: Height at which emissions are released (in meters) `not yet fully implemented`
+  + Heat Flux: Heat flux (in Megawatts) `not yet fully implemented`
 + Emissions: Emission factors for CO, HC, NOX, SOX, PM10 (in kg/unit)
 + Profiles: Hourly, Daily or Monthly activity profiles (default or custom)
 
 ![area-sources-layer.PNG](./../open_alaqs/assets/area-sources-layer.PNG)
 
-The emissions calculation is based on the operating hours per year (**Units per year**) and the corresponding emission factor (in kg/unit). For example, if the number of Units per year is 1 (hour), and the emission factor is equal to 1 kg/unit, the emissions of a single hour will be equal to 1/8760 kg, assuming 8760 hours in a non-leap year (365 days).
+The emissions calculation is based on the operating hours per year (`Units per year`) and the corresponding emission factor (in kg/unit). For example, if the number of Units per year is 1 (hour), and the emission factor is equal to 1 kg/unit, the emissions of a single hour will be equal to 1/8760 kg, assuming 8760 hours in a non-leap year (365 days).
 
 We note that beyond the standard pollutants, two additional pollutants, P1 and P2, can be defined by the user. Emission factors for these pollutants have to be provided by the user.
 
 #### [Buildings](#buildings)
 
-Buildings are not currently considered emission sources. However, they can significantly impact dispersion modelling by affecting wind patterns and turbulence. While this functionality is _not yet fully implemented_, it is included in the layers list for future use.
+Buildings are not currently considered emission sources. However, they can significantly impact dispersion modelling by affecting wind patterns and turbulence. While this functionality is `not yet fully implemented`, it is included in the layers list for future use.
 
 When adding a building, the following detail is required:
-+ Building height (Height of building above ground, in meters) _not yet fully implemented_
++ Building height (Height of building above ground, in meters) `not yet fully implemented`
 
 ![buildings-layer.PNG](./../open_alaqs/assets/buildings-layer.PNG)
 
@@ -360,8 +360,8 @@ The corresponding interface allows the user to set the path for saving the outpu
   + **Y Resolution**: The spatial resolution in the Y-axis, also set by default to 250 meters with 50 cells.
   + **Z Resolution**: The vertical spatial resolution, set by default to 50 meters with 20 cells.
 + **Advanced Options**:
-  + **Method**: The emission calculation method, currently set to "ALAQS". _not yet fully implemented_
-  + **Towing Speed**: A field specifying towing speed, set to 10.00 km/h. _not yet fully implemented_
+  + **Method**: The emission calculation method, currently set to "ALAQS". `not yet fully implemented`
+  + **Towing Speed**: A field specifying towing speed, set to 10.00 km/h. `not yet fully implemented`
   + **Vertical Limit**: The vertical extent of the domain, set by default to 914.40 meters, or approximately 3000 feet.
 
 ![generate-emissions-inventory.PNG](./../open_alaqs/assets/generate-emissions-inventory.PNG)
@@ -384,19 +384,19 @@ This table contains all the aircraft movements occurring at the airport during a
 
 The rest of the parameters are not mandatory and can be left empty. They will only be used if the user provides specific values. Otherwise, the default values from the internal database will be used.
 
-+ **aircraft_registration**: aircraft registration number _not yet fully implemented_
++ **aircraft_registration**: aircraft registration number `not yet fully implemented`
 + **engine_name**: engine name identifier (from the internal database)
 + **profile_id**: performance profile identifier (from the internal database)
-+ **track_id**: aircraft trajectory identifier _not yet fully implemented_
-+ **tow_ratio**: take-off gross weight divided by maximum take-off weight (float, <=1) _not yet fully implemented_
++ **track_id**: aircraft trajectory identifier `not yet fully implemented`
++ **tow_ratio**: take-off gross weight divided by maximum take-off weight (float, <=1) `not yet fully implemented`
 + **taxi_engine_count**: number of engines used during taxing (integer)
 + **set_time_of_main_engine_start_after_block_off_in_s**: time spent for MES after leaving the gate (in seconds)
 + **set_time_of_main_engine_start_before_takeoff_in_s**: time spent for MES before take-off (in seconds)
 + **set_time_of_main_engine_off_after_runway_exit_in_s**: time spent for MES after leaving the runway exit (in seconds)
-+ **engine_thrust_level_for_taxiing**: taxing thrust level setting (ICAO default: 7%) _not yet fully implemented_
-+ **taxi_fuel_ratio**: ratio between actual fuel flow and fuel for the idle mode (float) _not yet fully implemented_
-+ **number_of_stop_and_gos**: number of stop and go points during taxing _not yet fully implemented_
-+ **domestic**: domestic/international flight (Y or N) _not yet fully implemented_
++ **engine_thrust_level_for_taxiing**: taxing thrust level setting (ICAO default: 7%) `not yet fully implemented`
++ **taxi_fuel_ratio**: ratio between actual fuel flow and fuel for the idle mode (float) `not yet fully implemented`
++ **number_of_stop_and_gos**: number of stop and go points during taxing `not yet fully implemented`
++ **domestic**: domestic/international flight (Y or N) `not yet fully implemented`
 
 ### [Meteorology](#meteorology)
 
