@@ -54,7 +54,7 @@ I use [**Shields IO**](https://shields.io/) for making badges. It is a simple an
     - [Updating the OpenALAQS database templates](#updating-the-openalaqs-database-templates)
   - [Contribute](#contribute)
   - [License](#license)
-- [Contact](#contact)
+  - [Contact](#contact)
 
 ## Installation
 
@@ -217,7 +217,7 @@ OpenALAQS welcomes all contributions - code or documentation wise.
 
 This software is published under European Union Public Licence v. 1.2. Read the [`LICENSE.md`](LICENCE.md).
 
-# Contact
+## Contact
 
 [(Back to top)](#table-of-contents)
 
