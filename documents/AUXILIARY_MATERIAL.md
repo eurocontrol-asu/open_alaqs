@@ -2,6 +2,7 @@
 
 ## [Table of Contents](#table-of-contents)
 - [Open-ALAQS Database](#open-alaqs-database)
+  - [Aircraft and airport data](#aircraft-and-airport-data)
   - [Emissions factors](#emission-factors)
     - [Aircraft emissions](#aicraft-emissions)
     - [Non-aircraft emissions](#non-aircraft-emissions)
@@ -18,6 +19,8 @@
 The internal [Open-ALAQS database](./../open_alaqs/database/data/) contains default emission factors for all airport sources. When the user creates a new study, these files are copied to the new **.alaqs** file. If the user has access to more up-to-date information, they can update the default data as described in the [README](./../README.md#updating-the-openalaqs-database-templates) file.
 
 Alternatively, Open-ALAQS files can be easily viewed and edited with [DB Browser for SQLite](https://sqlitebrowser.org/) an open source tool designed for manipulating SQLite database files.
+
+### [Aircraft and airport data](#aircraft-and-airport-data)
 
 The internal database also contains an extenstive list of aircraft (see [default_aircraft](./../open_alaqs/database/data/default_aircraft.csv)) along with information on the most representative engine, APU, departure/arrival profiles and other characteristics.
 
