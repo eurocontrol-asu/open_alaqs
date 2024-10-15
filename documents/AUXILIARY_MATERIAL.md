@@ -1,7 +1,7 @@
-# Open-ALAQS User Guide - Auxiliary Material
+# OpenALAQS User Guide - Auxiliary Material
 
 ## [Table of Contents](#table-of-contents)
-- [Open-ALAQS Database](#open-alaqs-database)
+- [OpenALAQS Database](#OpenALAQS-database)
   - [Aircraft and airport data](#aircraft-and-airport-data)
   - [Emissions factors](#emission-factors)
     - [Aircraft emissions](#aicraft-emissions)
@@ -13,12 +13,12 @@
 - [COPERT](#copert)
 - [Smooth and Shift](#smooth-and-shift)
 
-## [Open-ALAQS Database](#open-alaqs-database)
+## [OpenALAQS Database](#OpenALAQS-database)
 [(Back to top)](#table-of-contents)
 
-The internal [`Open-ALAQS database`](./../open_alaqs/database/data/) contains default emission factors for all airport sources. When the user creates a new study, these files are copied to the new `.alaqs` file. If the user has access to more up-to-date information, they can update the default data as described in the [`README`](./../README.md#updating-the-openalaqs-database-templates) file.
+The internal [`OpenALAQS database`](./../open_alaqs/database/data/) contains default emission factors for all airport sources. When the user creates a new study, these files are copied to the new `.alaqs` file. If the user has access to more up-to-date information, they can update the default data as described in the [`README`](./../README.md#updating-the-openalaqs-database-templates) file.
 
-Alternatively, Open-ALAQS files can be easily viewed and edited with [`DB Browser for SQLite`](https://sqlitebrowser.org/) an open source tool designed for manipulating SQLite database files.
+Alternatively, OpenALAQS files can be easily viewed and edited with [`DB Browser for SQLite`](https://sqlitebrowser.org/) an open source tool designed for manipulating SQLite database files.
 
 ### [Aircraft and airport data](#aircraft-and-airport-data)
 
@@ -40,9 +40,9 @@ Default MES emission factors per aircraft group are given in the table [`default
 
 #### Non-aircraft emissions
 
-The corresponding GSE/GPU emission factors and activity time are included in the Open-ALAQS database (see [`default_gate_profiles`](./../open_alaqs/database/data/default_gate_profiles.csv)).
+The corresponding GSE/GPU emission factors and activity time are included in the OpenALAQS database (see [`default_gate_profiles`](./../open_alaqs/database/data/default_gate_profiles.csv)).
 
-The internal Open-ALAQS database also contains default emission factors for stationary sources. These values can be modified if more up-to-date information is available to the user (see [`default_stationary_ef`](./../open_alaqs/database/data/default_stationary_ef.csv)).
+The internal OpenALAQS database also contains default emission factors for stationary sources. These values can be modified if more up-to-date information is available to the user (see [`default_stationary_ef`](./../open_alaqs/database/data/default_stationary_ef.csv)).
 
 ## [ANP](#anp)
 [(Back to top)](#table-of-contents)
@@ -53,13 +53,13 @@ We note that in the context of EASA having a legal mandate to collect and verify
 
 ### [Aircraft trajectories](#aircraft-trajectories)
 
-In Open-ALAQS, the ANP fixed-point profiles (see [`default_aircraft_profiles`](open_alaqs/database/data/default_aircraft_profiles.csv)) are used to calculate aircraft emissions. The ANP fixed-point profiles contain information on the relative 2D trajectory of the aircraft (horizontal versus vertical distance) on the runway. These points are converted into an aircraft trajectory for a given runway based on its geographic coordinates. Currently, only straight-line trajectories are possible in Open-ALAQS.
+In OpenALAQS, the ANP fixed-point profiles (see [`default_aircraft_profiles`](open_alaqs/database/data/default_aircraft_profiles.csv)) are used to calculate aircraft emissions. The ANP fixed-point profiles contain information on the relative 2D trajectory of the aircraft (horizontal versus vertical distance) on the runway. These points are converted into an aircraft trajectory for a given runway based on its geographic coordinates. Currently, only straight-line trajectories are possible in OpenALAQS.
 
 <img src="./../open_alaqs/assets/anp_profiles_example.png" alt="Aircraft trajectories" width="70%">
 
 ### [Performance profiles](#performance-profiles)
 
-The ratio of thrust to distance is used to define the cut-off between take-off and climb-out. During take-off, full thrust is required to accelerate the aircraft. As the aircraft reaches a certain distance and speed, thrust is reduced to a level appropriate for climb. This transition involves reducing thrust from maximum take-off to maximum climb thrust after a set distance, typically around 1000 feet of ground distance. This cut-off point is used in Open-ALAQS to separate the two modes.
+The ratio of thrust to distance is used to define the cut-off between take-off and climb-out. During take-off, full thrust is required to accelerate the aircraft. As the aircraft reaches a certain distance and speed, thrust is reduced to a level appropriate for climb. This transition involves reducing thrust from maximum take-off to maximum climb thrust after a set distance, typically around 1000 feet of ground distance. This cut-off point is used in OpenALAQS to separate the two modes.
 
 The following figure illustrates this approach. For more information the user is referred to [`ECAC.CEAC Doc 29, Volume 2, Appendix B`](https://www.ecac-ceac.org/images/documents/ECAC-Doc_29_4th_edition_Dec_2016_Volume_2.pdf).
 
@@ -70,21 +70,21 @@ The following figure illustrates this approach. For more information the user is
 
 The dispersion model [`AUSTAL`](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview) is the reference implementation to Annex 2 of the German Environment Agency’s Technical Instructions on Air Quality Control (TA Luft) and implements the specifications and requirements given therein.
 
-The program is the successor of AUSTAL2000 (which was previously used with Open-ALAQS), the reference implementation to Annex 3 of the TA Luft 2002. AUSTAL and AUSTAL2000 were developed by Janicke Consulting on behalf of the German Environment Agency and are freely available and widely used internationally.
+The program is the successor of AUSTAL2000 (which was previously used with OpenALAQS), the reference implementation to Annex 3 of the TA Luft 2002. AUSTAL and AUSTAL2000 were developed by Janicke Consulting on behalf of the German Environment Agency and are freely available and widely used internationally.
 
 AUSTAL 3.3.0 (released on 22.03.2024) has been developed and tested under Windows and Linux. It is exclusively provided, free of charge under the GNU Public Licence, from the dedicated webpage
 of the German Environment Agency.
 
-No installation is needed for use with Open-ALAQS as the executables are already included in the Open-ALAQS package.
+No installation is needed for use with OpenALAQS as the executables are already included in the OpenALAQS package.
 
 ## [COPERT](#copert)
 [(Back to top)](#table-of-contents)
 
-The estimation of roadway traffic emissions (landside, airside and parking lots) in Open-ALAQS is based on COPERT Emission Factors (EF) (version 5.4.52), the EU standard vehicle emissions calculator, developed by [`EMISIA`](https://www.emisia.com/utilities/copert/) for the European Environment Agency (EEA) for calculating emissions associated with road transportation.
+The estimation of roadway traffic emissions (landside, airside and parking lots) in OpenALAQS is based on COPERT Emission Factors (EF) (version 5.4.52), the EU standard vehicle emissions calculator, developed by [`EMISIA`](https://www.emisia.com/utilities/copert/) for the European Environment Agency (EEA) for calculating emissions associated with road transportation.
 
 COPERT contains emission factors for more than 450 individual vehicle types (e.g. PC, LDV, HDV) considering various factors such as vehicle type, age, mileage, and driving conditions and operation modes to provide accurate emissions estimates for a specific country or region. Its methodology comprises the road transport chapters in the [`EMEP/EEA Air Emissions Inventory Guidebook`](https://www.eea.europa.eu/publications/emep-eea-guidebook-2023) and is consistent with the 2006 IPCC Guidelines for the calculation of greenhouse gas emissions.
 
-The implementation (see [`copert5.py`](./../open_alaqs/core/tools/copert5.py)) of the COPERT methodology in Open-ALAQS preserves the core information from the original model, albeit with some simplification tailored to the scope of Open-ALAQS. It generates typical emission factors for roadway segments or parking areas based on parameters such as fleet year (as a proxy for Euro standard), country, fleet mix and total number of vehicles, temperature, average speed (all set via the study setup UI) and roadway segment length (taken from segment geometry).
+The implementation (see [`copert5.py`](./../open_alaqs/core/tools/copert5.py)) of the COPERT methodology in OpenALAQS preserves the core information from the original model, albeit with some simplification tailored to the scope of OpenALAQS. It generates typical emission factors for roadway segments or parking areas based on parameters such as fleet year (as a proxy for Euro standard), country, fleet mix and total number of vehicles, temperature, average speed (all set via the study setup UI) and roadway segment length (taken from segment geometry).
 
 The vehicle categories that are examined are Passenger Cars (PCs), Light Commercial Vehicles (LCVs), Heavy Duty Trucks (HDTs), buses and motorcycles which are commonly operating within and around the airports. Only petrol and diesel engines are included in the database. Emission factors are provided for 37 countries: EU27 Member States, EU27 aggregated, UK, Iceland, Norway, Switzerland, Liechtenstein, North Macedonia, Turkey, Albania, Serbia and Montenegro.
 
@@ -96,14 +96,14 @@ The vehicle categories that are examined are Passenger Cars (PCs), Light Commerc
 - Information on vehicle age is included in the Euro standard technology information
 - The EF include information for idling, since they are developed based on both real-world driving and on lab tests, both of which include indling periods in the respective real-world driving and driving cycles
 
-The EF values used in Open-ALAQS are available in [`default_vehicle_ef_copert5`](./../open_alaqs/database/data/default_vehicle_ef_copert5.csv).
+The EF values used in OpenALAQS are available in [`default_vehicle_ef_copert5`](./../open_alaqs/database/data/default_vehicle_ef_copert5.csv).
 
 ## [Smooth and Shift](smooth-and-shift)
 [(Back to top)](#table-of-contents)
 
-Open-ALAQS calculates three-dimensional emission distributions for source groups associated with an airport. To apply this output to dispersion models, it is necessary to account for source dynamics such as turbulence, exhaust momentum from aircraft engines, and thermal plume rise. To simplify the application of emission outputs to a dispersion model—without the need to address each individual source's dynamics or specific model details—the effects of source dynamics can be included in an approximate manner within the spatial emission distribution. This is achieved through the "Smooth & Shift" approach, which involves smoothing and shifting the initial source extent.
+OpenALAQS calculates three-dimensional emission distributions for source groups associated with an airport. To apply this output to dispersion models, it is necessary to account for source dynamics such as turbulence, exhaust momentum from aircraft engines, and thermal plume rise. To simplify the application of emission outputs to a dispersion model—without the need to address each individual source's dynamics or specific model details—the effects of source dynamics can be included in an approximate manner within the spatial emission distribution. This is achieved through the "Smooth & Shift" approach, which involves smoothing and shifting the initial source extent.
 
-This approach has been used to connect the emission grid provided by Open-ALAQS' precursor model, ALAQS-AV, to dispersion models. The details  are outlined in the report [`EEC/SEE/2005/016`](038_Derivation_of_Smooth_and_Shift_Parameters_for_ALAQS-AV.pdf) by EUROCONTROL. The "Smooth & Shift" parameters were originally derived from [`LASPORT`](https://www.janicke.de/en/lasport.html) (version 1.6), which handles source dynamics in a detailed and time-dependent manner.
+This approach has been used to connect the emission grid provided by OpenALAQS' precursor model, ALAQS-AV, to dispersion models. The details  are outlined in the report [`EEC/SEE/2005/016`](038_Derivation_of_Smooth_and_Shift_Parameters_for_ALAQS-AV.pdf) by EUROCONTROL. The "Smooth & Shift" parameters were originally derived from [`LASPORT`](https://www.janicke.de/en/lasport.html) (version 1.6), which handles source dynamics in a detailed and time-dependent manner.
 
 Since 2005, the LASPORT parameter values used to describe the source dynamics of main engines have been updated. The following describes the new parameters based on LASPORT version 2.2. Finally, it is worth noting that the "Smooth & Shift" parameters are transparently derived and easy to modify. They have been implemented for all airport-related sources, including aircraft, GSE, and GPU. APU emissions are incorporated into aircraft movements.
 
@@ -111,4 +111,4 @@ The figure below illustrates the change in the geometry of taxiing emissions aft
 
 <img src="./../open_alaqs/assets/smooth-and-shift.png" alt="smooth and shift" width="50%">
 
-The default values used in Open-ALAQS are available in [`default_emission_dynamics`](./../open_alaqs/database/data/default_emission_dynamics.csv).
+The default values used in OpenALAQS are available in [`default_emission_dynamics`](./../open_alaqs/database/data/default_emission_dynamics.csv).
