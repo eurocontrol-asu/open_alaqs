@@ -193,7 +193,7 @@ The length of each taxiway is calculated automatically from its geometry and the
 
 It is important to distinguish between taxiways and taxi-routes. Taxi-routes describe the operational path that will be followed by an aircraft for a runway / stand / movement type (arrival or departure) combination. Taxi-routes are defined as a series of taxiway segments in Open-ALAQS. It greatly facilitates the capturing of taxi-route details (such as curved turns) since when defining taxi routes, multiple taxiway segments can be combined.
 
-The process of defining taxi routes is detailed in the [`Test Case Study`](TEST_CASE_STUDY.md) section.
+The process of defining taxi routes is detailed in the [`Test Case Study`](TEST_CASE_STUDY.md#taxi-routes) section.
 
 #### [Tracks](#tracks)
 
