@@ -24,11 +24,6 @@ class RoadwaySources(Source):
         _distance = val.get("distance", 0)
         self._distance = 0.0 if _distance is None else float(_distance)
         self._speed = float(val.get("speed", 0))
-        self._fleet_mix = {
-            "vehicle_light": float(val.get("vehicle_light", 0)),
-            "vehicle_medium": float(val.get("vehicle_medium", 0)),
-            "vehicle_heavy": float(val.get("vehicle_heavy", 0)),
-        }
 
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
@@ -73,12 +68,6 @@ class RoadwaySources(Source):
     def setSpeed(self, var):
         self._speed = var
 
-    def getFleetMix(self):
-        return self._fleet_mix
-
-    def setFleetMix(self, var):
-        self._fleet_mix = var
-
     def getScenario(self):
         return self._scenario
 
@@ -107,14 +96,6 @@ class RoadwaySources(Source):
         val += "\n\t Height: %f" % (self.getHeight())
         val += "\n\t Distance: %s" % (self.getDistance())
         val += "\n\t Speed: %s" % (self.getSpeed())
-        val += "\n\t Fleet Mix: %s" % (
-            ", ".join(
-                [
-                    "%s:%f" % (key_, self.getFleetMix()[key_])
-                    for key_ in sorted(self.getFleetMix().keys())
-                ]
-            )
-        )
         val += "\n\t Hour Profile: %s" % (self.getHourProfile())
         val += "\n\t Daily Profile: %s" % (self.getDailyProfile())
         val += "\n\t Month Profile: %s" % (self.getMonthProfile())
@@ -194,9 +175,14 @@ class RoadwaySourcesDatabase(SQLSerializable, metaclass=Singleton):
                     ("height", "DECIMAL"),
                     ("distance", "DECIMAL"),
                     ("speed", "DECIMAL"),
-                    ("vehicle_light", "DECIMAL"),
-                    ("vehicle_medium", "DECIMAL"),
-                    ("vehicle_heavy", "DECIMAL"),
+                    ("pc_p_percentage", "DECIMAL"),
+                    ("pc_d_percentage", "DECIMAL"),
+                    ("lcv_p_percentage", "DECIMAL"),
+                    ("lcv_d_percentage", "DECIMAL"),
+                    ("hdt_p_percentage", "DECIMAL"),
+                    ("hdt_d_percentage", "DECIMAL"),
+                    ("motorcycle_p_percentage", "DECIMAL"),
+                    ("bus_d_percentage", "DECIMAL"),
                     ("hour_profile", "TEXT"),
                     ("daily_profile", "TEXT"),
                     ("month_profile", "TEXT"),

@@ -6,7 +6,7 @@ from open_alaqs.core.interfaces.Emissions import EmissionIndex
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.interfaces.Store import Store
-from open_alaqs.core.tools import conversion, spatial
+from open_alaqs.core.tools import spatial
 from open_alaqs.core.tools.Singleton import Singleton
 
 loaded_color_logger = False
@@ -29,11 +29,6 @@ class ParkingSources(Source):
         self._distance = float(val.get("distance", 0))
         self._idle_time = float(val.get("idle_time", 0))
         self._speed = float(val.get("speed", 0))
-        self._fleet_mix = {
-            "vehicle_light": conversion.convertToFloat(val["vehicle_light"], 0),
-            "vehicle_medium": conversion.convertToFloat(val["vehicle_medium"], 0),
-            "vehicle_heavy": conversion.convertToFloat(val["vehicle_heavy"], 0),
-        }
 
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
@@ -78,12 +73,6 @@ class ParkingSources(Source):
     def setSpeed(self, var):
         self._speed = var
 
-    def getFleetMix(self):
-        return self._fleet_mix
-
-    def setFleetMix(self, var):
-        self._fleet_mix = var
-
     def __str__(self):
         val = "\n ParkingSources with id '%s'" % (self.getName())
         val += "\n\t Vehicle hours per Year: %f" % (self.getUnitsPerYear())
@@ -91,14 +80,6 @@ class ParkingSources(Source):
         val += "\n\t Distance: %s" % (self.getDistance())
         val += "\n\t Idle Time: %s" % (self.getIdleTime())
         val += "\n\t Speed: %s" % (self.getSpeed())
-        val += "\n\t Fleet Mix: %s" % (
-            ", ".join(
-                [
-                    "%s:%f" % (key_, self.getFleetMix()[key_])
-                    for key_ in sorted(self.getFleetMix().keys())
-                ]
-            )
-        )
         val += "\n\t Hour Profile: %s" % (self.getHourProfile())
         val += "\n\t Daily Profile: %s" % (self.getDailyProfile())
         val += "\n\t Month Profile: %s" % (self.getMonthProfile())
@@ -172,9 +153,14 @@ class ParkingSourcesDatabase(SQLSerializable, metaclass=Singleton):
                     ("height", "DECIMAL"),
                     ("distance", "DECIMAL"),
                     ("idle_time", "DECIMAL"),
-                    ("vehicle_light", "DECIMAL"),
-                    ("vehicle_medium", "DECIMAL"),
-                    ("vehicle_heavy", "DECIMAL"),
+                    ("pc_p_percentage", "DECIMAL"),
+                    ("pc_d_percentage", "DECIMAL"),
+                    ("lcv_p_percentage", "DECIMAL"),
+                    ("lcv_d_percentage", "DECIMAL"),
+                    ("hdt_p_percentage", "DECIMAL"),
+                    ("hdt_d_percentage", "DECIMAL"),
+                    ("motorcycle_p_percentage", "DECIMAL"),
+                    ("bus_d_percentage", "DECIMAL"),
                     ("vehicle_year", "DECIMAL"),
                     ("speed", "DECIMAL"),
                     ("hour_profile", "TEXT"),
