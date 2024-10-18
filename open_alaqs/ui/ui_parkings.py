@@ -272,7 +272,6 @@ def populate_hourly_profiles(field):
 
     # Set the default category to 0 and make the list un-editable
     field.setCurrentIndex(0)
-    field.setEditable(False)
 
 
 @catch_errors
@@ -297,7 +296,6 @@ def populate_daily_profiles(field):
 
     # Set the default category to 0 and make the list un-editable
     field.setCurrentIndex(0)
-    field.setEditable(False)
 
 
 @catch_errors
@@ -322,7 +320,6 @@ def populate_monthly_profiles(field):
 
     # Set the default category to 0 and make the list un-editable
     field.setCurrentIndex(0)
-    field.setEditable(False)
 
 
 def validate(fields: dict):
