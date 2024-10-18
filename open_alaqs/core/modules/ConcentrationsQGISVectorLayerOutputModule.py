@@ -213,7 +213,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
             result = sql_interface.query_text(self._grid._db_path, sql_text)
             if result is None:
                 raise Exception(
-                    "AUSTAL2000: Could not reset reference point as coordinates could not be transformed. The query was\n'%s'"
+                    "AUSTAL: Could not reset reference point as coordinates could not be transformed. The query was\n'%s'"
                     % (sql_text)
                 )
                 return None
