@@ -2635,7 +2635,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         dm_module_configs = self.getDispersionModulesConfiguration()
         pollutant = self.ui.pollutants_names.currentText()
 
-        # dm_name_ should be AUSTAL2000OutputModule
+        # dm_name_ should be AUSTALOutputModule
         for dm_module_name, dm_module_config in dm_module_configs.items():
             if not dm_module_configs[dm_module_name].get("is_enabled", False):
                 continue
@@ -2735,10 +2735,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self._iface = iface
 
         # Setup the user interface from Designer
-        Ui_DialogRunAUSTAL2000, _ = loadUiType(
-            os.path.join(os.path.dirname(__file__), "ui", "ui_run_austal2000.ui")
+        Ui_DialogRunAUSTAL, _ = loadUiType(
+            os.path.join(os.path.dirname(__file__), "ui", "ui_run_austal.ui")
         )
-        self.ui = Ui_DialogRunAUSTAL2000()
+        self.ui = Ui_DialogRunAUSTAL()
         self.ui.setupUi(self)
         self.ui.configuration_splitter.setSizes([80, 200])
 

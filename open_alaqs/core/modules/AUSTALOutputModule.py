@@ -36,9 +36,9 @@ def log_time(func):
     return inner
 
 
-class AUSTAL2000DispersionModule(DispersionModule):
+class AUSTALDispersionModule(DispersionModule):
     """
-    Module for the preparation of the input files needed for AUSTAL2000
+    Module for the preparation of the input files needed for AUSTAL
     dispersion calculations.
     """
 
@@ -92,7 +92,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             "label": "Is Enabled",
             "initial_value": False,
             "widget_type": QtWidgets.QCheckBox,
-            "tooltip": "Enable to create AUSTAL2000 input files",
+            "tooltip": "Enable to create AUSTAL input files",
         },
         "options_string": {
             "label": "Options String",
@@ -104,11 +104,11 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
     @staticmethod
     def getModuleName():
-        return "AUSTAL2000"
+        return "AUSTAL"
 
     @staticmethod
     def getModuleDisplayName():
-        return "AUSTAL2000"
+        return "AUSTAL"
 
     def __init__(self, values_dict=None):
         if values_dict is None:
@@ -116,7 +116,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         DispersionModule.__init__(self, values_dict)
 
         self._name = values_dict.get("name", "")
-        self._model = "AUSTAL2000"
+        self._model = "AUSTAL"
         self._pollutant = values_dict.get("pollutant", "NOx")
         self._receptors = values_dict.get("receptors", gpd.GeoDataFrame())
         self._output_path = values_dict.get("output_path")
@@ -179,7 +179,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
     def getSequ(self) -> str:
         """
         Index sequence in which the data values are listed (comma separated)
-        (from AUSTAL2000 grid source example)
+        (from AUSTAL grid source example)
 
         :return:
         """
@@ -286,7 +286,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 self._grid._reference_longitude,
                 self._grid._reference_latitude,
             )
-            logger.info("AUSTAL2000: Grid reference point: %s" % reference_point_wkt)
+            logger.info("AUSTAL: Grid reference point: %s" % reference_point_wkt)
 
             # Convert the ARP into EPSG 3857
             sql_text = (
@@ -296,7 +296,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             result = sql_interface.query_text(self._grid._db_path, sql_text)
             if result is None:
                 raise Exception(
-                    "AUSTAL2000: Could not reset reference point as coordinates could not be transformed. The query was\n'%s'"
+                    "AUSTAL: Could not reset reference point as coordinates could not be transformed. The query was\n'%s'"
                     % (sql_text)
                 )
 
@@ -351,8 +351,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
         except Exception as e:
             logger.error(
-                "AUSTAL2000: Could not reset 3D grid origin from reference point: %s"
-                % e
+                "AUSTAL: Could not reset 3D grid origin from reference point: %s" % e
             )
             return False
 
@@ -440,7 +439,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             list(self.getSortedResults().keys()) == list(self.getSortedSeries().keys())
         ):
             logger.debug(
-                "AUSTAL2000 Error: Contradictory data for series.dmna and austal.txt files"
+                "AUSTAL Error: Contradictory data for series.dmna and austal.txt files"
             )
             return False
         else:
@@ -474,7 +473,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
         # Check if the study starts at time 01
         if start_date.hour != 1 or start_date_series.hour != 1:
             logger.warning(
-                "AUSTAL2000 Warning: The time series must start at "
+                "AUSTAL Warning: The time series must start at "
                 "time 01 (found %s)" % first_key
             )
 
@@ -954,7 +953,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             if self._grid is None:
                 raise Exception(
                     "No 3DGrid found. Use parameter 'grid' to configure one on "
-                    "AUSTAL2000OutputModule initialization (e.g. from "
+                    "AUSTALOutputModule initialization (e.g. from "
                     "instantiated EmissionCalculation."
                 )
             else:
@@ -968,7 +967,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 self._y_meshes = self._grid._y_cells
                 self._z_meshes = self._grid._z_cells
 
-                # AUSTAL2000 cannot take non square grid cells, choose finer
+                # AUSTAL cannot take non square grid cells, choose finer
                 # resolution (dd) for austal.txt
                 self._mesh_width = min(
                     self._grid.getResolutionX(), self._grid.getResolutionY()
@@ -981,7 +980,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
                     # Ask for an output path
                     output_path = QtWidgets.QFileDialog.getExistingDirectory(
-                        None, "AUSTAL2000: Select Output directory"
+                        None, "AUSTAL: Select Output directory"
                     )
 
                     # Set the output path
@@ -989,7 +988,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
 
                     if not self.getOutputPathAsPath().is_dir():
                         raise Exception(
-                            "AUSTAL2000: Not a valid path for grid "
+                            "AUSTAL: Not a valid path for grid "
                             "source file %s'" % output_path
                         )
                     else:
@@ -1084,7 +1083,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                 # Get the geometry text
                 if emissions_.getGeometryText() is None:
                     logger.warning(
-                        f"AUSTAL2000: Did not find geometry for "
+                        f"AUSTAL: Did not find geometry for "
                         f"source: {source_.getName()}"
                     )
                     continue
@@ -1276,7 +1275,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
                         or (vvv[1] >= self._y_meshes)
                         or (vvv[2] >= self._z_meshes)
                     ):
-                        # logger.debug("AUSTAL2000 Error: Grid needs to be
+                        # logger.debug("AUSTAL Error: Grid needs to be
                         # enlarged. Hash '%s' out of grid. Source:'%s'"%(hash,
                         # source_.getName()))
                         continue
@@ -1307,7 +1306,7 @@ class AUSTAL2000DispersionModule(DispersionModule):
             else:
                 self._timeID_per_source.update({source_id: 1})
 
-            # Emission rate in AUSTAL2000 is in g/s (kg x 1000/3600),
+            # Emission rate in AUSTAL is in g/s (kg x 1000/3600),
             # hashed_emissions are given in kg/h
             fill_results.setdefault(source_id, {})
 
@@ -1343,12 +1342,12 @@ class AUSTAL2000DispersionModule(DispersionModule):
         if self.isEnabled():
             try:
                 if not self.checkTimeIntervalinResults():
-                    raise Exception("AUSTAL2000: Time Interval Error")
+                    raise Exception("AUSTAL: Time Interval Error")
 
                 try:
                     self.writeInputFile()
                 except Exception as e:
-                    logger.error("AUSTAL2000: Cannot write 'austal.txt' : %s" % e)
+                    logger.error("AUSTAL: Cannot write 'austal.txt' : %s" % e)
                     return False
 
                 self.checkHoursinResults()
@@ -1357,14 +1356,14 @@ class AUSTAL2000DispersionModule(DispersionModule):
                     self.writeTimeSeriesFile()
                     return True
                 except Exception as e:
-                    logger.error("AUSTAL2000: Cannot write 'Series.dmna' %s", e)
+                    logger.error("AUSTAL: Cannot write 'Series.dmna' %s", e)
                     return False
 
             except Exception as e:
-                logger.error("AUSTAL2000: Cannot endJob: %s" % e)
+                logger.error("AUSTAL: Cannot endJob: %s" % e)
                 return False
 
-    # Available Substances in AUSTAL2000
+    # Available Substances in AUSTAL
     # so2: Sulphur dioxide, SO2
     # no: Nitrogen monoxide, NO
     # no2: Nitrogen dioxide, NO2

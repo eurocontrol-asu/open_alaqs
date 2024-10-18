@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>DialogRunAUSTAL2000</class>
- <widget class="QDialog" name="DialogRunAUSTAL2000">
+ <class>DialogRunAUSTAL</class>
+ <widget class="QDialog" name="DialogRunAUSTAL">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>AUSTAL2000 Dispersion Analysis</string>
+   <string>AUSTAL Dispersion Analysis</string>
   </property>
   <property name="modal">
    <bool>true</bool>
@@ -35,13 +35,13 @@
    <item>
     <widget class="QGroupBox" name="outputGroupBox">
      <property name="title">
-      <string>AUSTAL2000 Input</string>
+      <string>AUSTAL Input</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
       <item row="0" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
-         <string>AUSTAL2000 Executable:</string>
+         <string>AUSTAL Executable:</string>
         </property>
        </widget>
       </item>
@@ -88,7 +88,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Run AUSTAL2000</string>
+         <string>Run AUSTAL</string>
         </property>
        </widget>
       </item>
