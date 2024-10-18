@@ -6,7 +6,6 @@ CREATE TABLE "shapes_parking" (
   "height" DECIMAL,
   "distance" DECIMAL,
   "idle_time" DECIMAL,
-  "park_time" DECIMAL,
   "vehicle_light" DECIMAL,
   "vehicle_medium" DECIMAL,
   "vehicle_heavy" DECIMAL,

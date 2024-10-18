@@ -159,7 +159,6 @@ oid,table_key,table_name,field_number,field_key,field_name,unit,description
 158, 'PARKINGS', 'shp_Parklots',2, 'tbxHeight', 'height', 'metre', 'Height above or below airport elevation (m)'
 159, 'PARKINGS', 'shp_Parklots',3, 'tbxTravelDistance', 'distance', 'metre', 'Average distance travelled per vehicle (m)'
 160, 'PARKINGS', 'shp_Parklots',4, 'tbxIdleTime', 'idle_time', 'minute', 'Average idle time in lot per vehicle (minutes)'
-161, 'PARKINGS', 'shp_Parklots',5, 'tbxParkTime', 'park_time', 'minute', 'Average park time in lot per vehicle (minutes)'
 162, 'PARKINGS', 'shp_Parklots',6, 'cbxParkingSpeed', 'speed', 'kilometre/hour', 'Average speed in lot (km/h)'
 163, 'PARKINGS', 'shp_Parklots',7, 'tbxLightPercent', 'veh_light', '', 'Percentage light vehicles (%) e.g. cars'
 164, 'PARKINGS', 'shp_Parklots',8, 'tbxMediumPercent', 'veh_medium', '', 'Percentage medium vehicles (%) e.g. delivery vehicles'
