@@ -3282,13 +3282,13 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
             osm_features = osm_layer.getFeatures(QgsFeatureRequest(expression))
             alaqs_features = []
 
-            for osm_f in osm_features:
+            for osm_f in osm_features:  # type: ignore
                 alaqs_f_attrs = {}
                 alaqs_fields = alaqs_layer.fields()
 
-                for osm_attr_name, alaqs_attr_name in layer_config[
-                    "osm_attribute_mapping"
-                ].items():
+                for osm_attr_name, alaqs_attr_name in layer_config.get(
+                    "osm_attribute_mapping", {}
+                ).items():
                     value = osm_f.attributeMap().get(osm_attr_name)
 
                     if value is None:
@@ -3296,6 +3296,14 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
 
                     alaqs_attr_idx = alaqs_fields.indexFromName(alaqs_attr_name)
                     alaqs_f_attrs[alaqs_attr_idx] = value
+
+                for alaqs_attr_name, alaqs_attr_value in layer_config.get(
+                    "osm_import_default_values", {}
+                ).items():
+                    alaqs_attr_idx = alaqs_fields.indexFromName(alaqs_attr_name)
+
+                    if alaqs_f_attrs.get(alaqs_attr_idx) is None:
+                        alaqs_f_attrs[alaqs_attr_idx] = alaqs_attr_value
 
                 alaqs_f = QgsVectorLayerUtils.createFeature(
                     alaqs_layer,

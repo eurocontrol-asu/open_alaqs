@@ -9,27 +9,28 @@ from typing import Optional, TypedDict
 from open_alaqs.enums import AlaqsLayerType
 
 
-class OsmFilter(TypedDict):
+class OsmFilter(TypedDict, total=False):
     within_aerodrome: bool
     search_radius_m: int
-    tags: list[dict[str, str]]
+    tags: dict[str, str]
 
 
-class ALAQSLayerConfig(TypedDict):
+class ALAQSLayerConfig(TypedDict, total=False):
     name: str
     table_name: str
     ui_filename: str
     py_filename: str
     fill_color: Optional[str]
     border_color: Optional[str]
-    line_width: Optional[int]
-    line_color: Optional[int]
+    line_color: Optional[str]
+    line_width: Optional[float]
     label_enabled: bool
     label_position: int
     label_font_family: str
     label_font_size: int
     osm_filters: list[OsmFilter]
     osm_attribute_mapping: dict[str, str]
+    osm_import_default_values: dict[str, str]
 
 
 LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
@@ -120,6 +121,9 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
             "building_id": "full_id",
             "height": "height",
         },
+        "osm_import_default_values": {
+            "instudy": 1,
+        },
     },
     AlaqsLayerType.GATE: {
         "name": "Gates",
@@ -143,6 +147,9 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
             }
         ],
         "osm_attribute_mapping": {"gate_id": "ref"},
+        "osm_import_default_values": {
+            "instudy": 1,
+        },
     },
     AlaqsLayerType.PARKING: {
         "name": "Parkings",
@@ -168,6 +175,12 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "osm_attribute_mapping": {
             "parking_id": "full_id",
         },
+        "osm_import_default_values": {
+            "hour_profile": "default",
+            "daily_profile": "default",
+            "month_profile": "default",
+            "instudy": 1,
+        },
     },
     AlaqsLayerType.POINT_SOURCE: {
         "name": "Point Sources",
@@ -191,7 +204,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "fill_color": None,
         "border_color": None,
         "line_color": "255,255,0",
-        "line_width": "0.75",
+        "line_width": 0.75,
         "label_enabled": False,
         "label_position": 1,
         "label_font_family": "Arial",
@@ -236,6 +249,12 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "osm_attribute_mapping": {
             "ref": "roadway_id",
         },
+        "osm_import_default_values": {
+            "hour_profile": "default",
+            "daily_profile": "default",
+            "month_profile": "default",
+            "instudy": 1,
+        },
     },
     AlaqsLayerType.TAXIWAY: {
         "name": "Taxiways",
@@ -245,7 +264,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "fill_color": None,
         "border_color": None,
         "line_color": "46,255,53",
-        "line_width": "0.5",
+        "line_width": 0.5,
         "label_enabled": False,
         "label_position": 1,
         "label_font_family": "Arial",
@@ -260,6 +279,9 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         ],
         "osm_attribute_mapping": {
             "ref": "taxiway_id",
+        },
+        "osm_import_default_values": {
+            "instudy": 1,
         },
     },
     AlaqsLayerType.TRACK: {
@@ -284,7 +306,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "fill_color": None,
         "border_color": None,
         "line_color": "235,235,235",
-        "line_width": "2",
+        "line_width": 2,
         "label_enabled": False,
         "label_position": 1,
         "label_font_family": "Arial",
@@ -300,6 +322,9 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         ],
         "osm_attribute_mapping": {
             "ref": "runway_id",
+        },
+        "osm_import_default_values": {
+            "instudy": 1,
         },
     },
 }
