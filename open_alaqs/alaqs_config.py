@@ -121,6 +121,9 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
             "building_id": "full_id",
             "height": "height",
         },
+        "osm_import_default_values": {
+            "instudy": 1,
+        },
     },
     AlaqsLayerType.GATE: {
         "name": "Gates",
@@ -144,6 +147,9 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
             }
         ],
         "osm_attribute_mapping": {"gate_id": "ref"},
+        "osm_import_default_values": {
+            "instudy": 1,
+        },
     },
     AlaqsLayerType.PARKING: {
         "name": "Parkings",
@@ -173,6 +179,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
             "hour_profile": "default",
             "daily_profile": "default",
             "month_profile": "default",
+            "instudy": 1,
         },
     },
     AlaqsLayerType.POINT_SOURCE: {
@@ -246,6 +253,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
             "hour_profile": "default",
             "daily_profile": "default",
             "month_profile": "default",
+            "instudy": 1,
         },
     },
     AlaqsLayerType.TAXIWAY: {
@@ -271,6 +279,9 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         ],
         "osm_attribute_mapping": {
             "ref": "taxiway_id",
+        },
+        "osm_import_default_values": {
+            "instudy": 1,
         },
     },
     AlaqsLayerType.TRACK: {
@@ -311,6 +322,9 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         ],
         "osm_attribute_mapping": {
             "ref": "runway_id",
+        },
+        "osm_import_default_values": {
+            "instudy": 1,
         },
     },
 }
