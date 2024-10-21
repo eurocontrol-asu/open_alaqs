@@ -2,6 +2,7 @@ from qgis.PyQt import QtWidgets
 
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.utils.qt import color_ui_background
 
 logger = get_logger(__name__)
 
@@ -348,7 +349,7 @@ def validate_field(ui_element, var_type):
                 ui_element.setToolTip("This value should be a string")
                 return False
             else:
-                color_ui_background(ui_element, "white")
+                color_ui_background(ui_element, None)
                 return value
 
         elif var_type == "int":
@@ -360,7 +361,7 @@ def validate_field(ui_element, var_type):
                 if value == "" or value is None:
                     raise Exception()
                 value = int(value)
-                color_ui_background(ui_element, "white")
+                color_ui_background(ui_element, None)
                 return value
             except Exception:
                 color_ui_background(ui_element, "red")
@@ -376,7 +377,7 @@ def validate_field(ui_element, var_type):
                 if value == "" or value is None:
                     raise Exception()
                 value = float(value)
-                color_ui_background(ui_element, "white")
+                color_ui_background(ui_element, None)
                 return value
             except Exception:
                 color_ui_background(ui_element, "red")
@@ -384,15 +385,3 @@ def validate_field(ui_element, var_type):
                 return False
     except Exception:
         return False
-
-
-def color_ui_background(ui_element, color):
-    if color == "red":
-        ui_element.setStyleSheet("background-color: rgba(255, 107, 107, 150);")
-    elif color == "white":
-        ui_element.setStyleSheet("background-color: rgba(255, 255, 255, 255);")
-    elif color == "green":
-        ui_element.setStyleSheet("background-color: rgba(0,255,0,0.3);")
-    else:
-        # ui_element.setStyleSheet("background-color: rgba(192,192,192,0.3);")
-        pass
