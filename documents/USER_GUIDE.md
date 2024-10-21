@@ -60,7 +60,7 @@ For installation instructions, check the [`Installation Instructions`](../README
 ## [The OpenALAQS Toolbar](#the-OpenALAQS-toolbar)
 [(Back to top)](#table-of-contents)
 
-![toolbar.PNG](./../open_alaqs/assets/toolbar.PNG)
+![toolbar.png](./../open_alaqs/assets/toolbar.png)
 
 The toolbar consists of the following functions:
 
@@ -91,8 +91,8 @@ select a `File name` for saving the new study (`.alaqs`).
 After creating a project, the `ALAQS Project Properties` window opens automatically. In this window (tab `Airport`), the user must provide a project name and at least the ICAO code of the airport. The remaining fields (airport name, country, latitude, longitude, etc.) will be automatically filled based on the information in the internal database (see `default_airports.csv`). However, the user can manually edit this default information if needed.
 
 <p align="center">
-  <img src="./../open_alaqs/assets/alaqs-project-properties.PNG" alt="Project Properties 1" width="45%" />
-  <img src="./../open_alaqs/assets/alaqs-project-properties2.PNG" alt="Project Properties 2" width="45%" />
+  <img src="./../open_alaqs/assets/alaqs-project-properties.png" alt="Project Properties 1" width="45%" />
+  <img src="./../open_alaqs/assets/alaqs-project-properties2.png" alt="Project Properties 2" width="45%" />
 </p>
 
 The second tab (`Roadways`) contains the settings for calculating road traffic emissions with [`COPERT`](https://copert.emisia.com/). Users are required to specify the average fleet year (values range from 1990 to 2030 in steps of 5) and select a country for country-specific emissions factors(or alternatively EU27). It should be noted that the average fleet year should be viewed as a proxy between the average fleet age and the Euro 1, Euro 2, Euro 3, Euro 4, Euro 5, and Euro 6 vehicle emission standards.
@@ -105,11 +105,11 @@ To open a previously created project, click on the `OPEN` button in the OpenALAQ
 ### [Import OpenStreetMap data](#import-openstreetmap-data)
 An additional functionality is added to OpenALAQS to facilitate the creation of emission sources based on the geographic data (roads, buildings, points of interest, and more) provided by OpenStreetMap.
 
-![import-osm-data.PNG](./../open_alaqs/assets/import-osm-data.PNG)
+![import-osm-data.png](./../open_alaqs/assets/import-osm-data.png)
 
 Using Nominatim, a search engine that uses the data from OpenStreetMap to provide geocoding (address to coordinates), directly from the OpenALAQS toolbar the user can select and import airport related geographical data to the study. The image below illustrates the information that can be collected from OpenStreetMap.
 
-![import-osm-data-ex2.PNG](./../open_alaqs/assets/import-osm-data-ex2.PNG)
+![import-osm-data-ex2.png](./../open_alaqs/assets/import-osm-data-ex2.png)
 
 ## [Define emission sources](#define-emission-sources)
 [(Back to top)](#table-of-contents)
@@ -117,13 +117,13 @@ Using Nominatim, a search engine that uses the data from OpenStreetMap to provid
 ### [Add Features](#add-features)
 New objects can be added using the `Digitizing` toolbar.
 
-![digitizing-toolbar.PNG](./../open_alaqs/assets/digitizing-toolbar.PNG)
+![digitizing-toolbar.png](./../open_alaqs/assets/digitizing-toolbar.png)
 
 More information on how to use this toolbar is provided in the [`QGIS User Manual`](https://docs.qgis.org/3.34/en/docs/user_manual/working_with_vector/editing_geometry_attributes.html#digitizing-an-existing-layer).
 
 To create a new emission source, select the desired layer (e.g., taxiway or runway) to activate it and click `Toggle Editing` in the `Digitizing` toolbar. Then click `Add Feature` to start designing the new feature. Once finished, right click and fill the attribute fields in the pop-up window.
 
-![layers.PNG](./../open_alaqs/assets/layers.PNG)
+![layers.png](./../open_alaqs/assets/layers.png)
 
 ### [Edit Features](#edit-features)
 Using the `Digitizing` toolbar in editing mode (`Toggle Editing`), it is possible to employ the `Vertex Tool` to edit objects.
@@ -134,7 +134,7 @@ To delete one or more features, first select the geometry using the `Selection` 
 ### [Visualize and Edit Attribute Values](#visualize-and-edit-attribute-values)
 Attribute values can also be modified after an object's creation via the `Attributes` toolbar.
 
-![attributes.PNG](./../open_alaqs/assets/attributes.PNG)
+![attributes.png](./../open_alaqs/assets/attributes.png)
 
 The `Open Attribute Table` functionality can be accessed through the `Attributes` toolbar or via the `Layers` panel (by right-clicking on the appropriate layer).
 
@@ -148,7 +148,7 @@ In OpenALAQS, gates are represented as polygons. Each gate can encompass several
 
 Calculating gate emissions requires establishing the sum of four emission sources: GSE (Ground Support Equipment), GPU (Ground Power Unit), APU (Auxiliary Power Unit) and MES (Main Engine Start).
 
-![gates.PNG](./../open_alaqs/assets/gates.PNG)
+![gates.png](./../open_alaqs/assets/gates.png)
 
 When adding a gate, the following information is required:
 + Gate type (PIER, REMOTE or CARGO)
@@ -171,7 +171,7 @@ When adding a taxiway, the following information is required:
 + Maximum queue speed (km/h) `not yet fully implemented`
 + Peak queue time (minutes) `not yet fully implemented`
 
-![runways-layer.PNG](./../open_alaqs/assets/runways-layer.PNG)
+![runways-layer.png](./../open_alaqs/assets/runways-layer.png)
 
 Airport runways are named based on their compass heading, rounded to the nearest 10 degrees. The runway number corresponds to the first two digits of its compass direction. For example, a
 runway aligned with 10 degrees is labeled as "01" while one aligned with 190 degrees is labeled "19".
@@ -187,7 +187,7 @@ An airport taxiway is a designated path that connects runways with terminals, ga
 + Name
 + Speed (km/h)
 
-![taxiways-layer.PNG](./../open_alaqs/assets/taxiways-layer.PNG)
+![taxiways-layer.png](./../open_alaqs/assets/taxiways-layer.png)
 
 The length of each taxiway is calculated automatically from its geometry and the time spent on it is calculated from the indicated speed and length. Recommended taxiing speeds vary in relation to ambient conditions, traffic, aircraft position on the taxi route etc. Typical taxiing speeds lie between 10 and 40 km/h (~5 and ~25 kts).
 
@@ -202,7 +202,7 @@ Aircraft tracks can be designed to indicate the aircraft trajectory. When adding
 + Runway (from the list of previously defined runways)
 + Operation Type (Arrival or Departure)
 
-![tracks-layer.PNG](./../open_alaqs/assets/tracks-layer.PNG)
+![tracks-layer.png](./../open_alaqs/assets/tracks-layer.png)
 
 We note that this functionality is `not yet fully implemented` in OpenALAQS. The default [`ANP`](https://www.easa.europa.eu/en/domains/environment/policy-support-and-research/aircraft-noise-and-performance-anp-data) profiles are used to indicate the aircraft trajectories.
 
@@ -236,9 +236,9 @@ When adding an airport parking lot, the following information is required:
   + **Buses [in %]**
 
 <p align="center">
-  <img src="./../open_alaqs/assets/parkings-layer.PNG" alt="Parking Layer" width="33%" />
-  <img src="./../open_alaqs/assets/parkings-layer-2.PNG" alt="Parking Layer 2" width="33%" />
-  <img src="./../open_alaqs/assets/parkings-layer-3.PNG" alt="Parking Layer 3" width="33%" />
+  <img src="./../open_alaqs/assets/parkings-layer.png" alt="Parking Layer" width="33%" />
+  <img src="./../open_alaqs/assets/parkings-layer-2.png" alt="Parking Layer 2" width="33%" />
+  <img src="./../open_alaqs/assets/parkings-layer-3.png" alt="Parking Layer 3" width="33%" />
 </p>
 
 The user should ensure that the fleet mix totals 100% (see the `Fleet Mix` tab). Custom emission factors are calculated (using the `Recalculate` button in the `Emissions` tab) for each parking area using [`COPERT`](AUXILIARY_MATERIAL.md#copert) version 5.4.52, based on the parameters indicated above, as well as the average fleet year and country specified at the beginning of the study setup.
@@ -266,7 +266,7 @@ When adding a roadway, the following information is required:
   + **Motorcycles [in %]**
   + **Buses [in %]**
 
-![roadways-layer.PNG](./../open_alaqs/assets/roadways-layer.PNG)
+![roadways-layer.png](./../open_alaqs/assets/roadways-layer.png)
 
 #### [Point sources](#point-sources)
 
@@ -281,7 +281,7 @@ When adding a point, the following information is required:
 + **Profiles**:
   + Hourly, Daily or Monthly activity profiles
 
-![points-layer.PNG](./../open_alaqs/assets/points-layer.PNG)
+![points-layer.png](./../open_alaqs/assets/points-layer.png)
 
 The internal OpenALAQS database contains default emission factors for each category and type. These values can be modified if more up-to-date information is available to the user (see [`default_stationary_ef`](./../open_alaqs/database/data/default_stationary_ef.csv)).
 
@@ -299,7 +299,7 @@ When adding an area source, the following information is required:
 + Emissions: Emission factors for CO, HC, NOX, SOX, PM10 (in kg/unit)
 + Profiles: Hourly, Daily or Monthly activity profiles (default or custom)
 
-![area-sources-layer.PNG](./../open_alaqs/assets/area-sources-layer.PNG)
+![area-sources-layer.png](./../open_alaqs/assets/area-sources-layer.png)
 
 The emissions calculation is based on the operating hours per year (`Units per year`) and the corresponding emission factor (in kg/unit). For example, if the number of Units per year is 1 (hour), and the emission factor is equal to 1 kg/unit, the emissions of a single hour will be equal to 1/8760 kg, assuming 8760 hours in a non-leap year (365 days).
 
@@ -312,14 +312,14 @@ Buildings are not currently considered emission sources. However, they can signi
 When adding a building, the following detail is required:
 + Building height (Height of building above ground, in meters) `not yet fully implemented`
 
-![buildings-layer.PNG](./../open_alaqs/assets/buildings-layer.PNG)
+![buildings-layer.png](./../open_alaqs/assets/buildings-layer.png)
 
 ## [Activity Profiles](#activity-profiles)
 [(Back to top)](#table-of-contents)
 
 Activity Profiles are used to describe the relative hourly/daily/monthly operational mode for each airport emission source. The `Activity Profiles Editor` in the OpenALAQS toolbar can be used to review, edit, and create custom profiles.
 
-![activity-profiles.PNG](./../open_alaqs/assets/activity-profiles.PNG)
+![activity-profiles.png](./../open_alaqs/assets/activity-profiles.png)
 
 Each activity multiplier is a decimal number, between 0 and 1. The default profile values are 1 (i.e., 100%) meaning the emission source is fully active. On the other hand, if, the emission source is deactivated during a specific time interval (e.g., during night-time curfew) the user can modify accordingly the activity profile by setting the corresponding multiplier to 0 for this specific period (hour, day, or month).
 
@@ -335,8 +335,8 @@ As explained in the section [`Taxiways`](#taxiways), taxi-routes describe the op
 Taxi-routes can be defined using the Taxiway Routes Editor.
 
 <p align="center">
-  <img src="./../open_alaqs/assets/taxiroutes-editor-1.PNG" alt="Taxiroutes Editor" width="45%" />
-  <img src="./../open_alaqs/assets/taxiroutes-editor-2.PNG" alt="Taxiroutes Editor 2" width="45%" />
+  <img src="./../open_alaqs/assets/taxiroutes-editor-1.png" alt="Taxiroutes Editor" width="45%" />
+  <img src="./../open_alaqs/assets/taxiroutes-editor-2.png" alt="Taxiroutes Editor 2" width="45%" />
 </p>
 
 To define a taxi route in OpenALAQS, the user has to first create the taxi-route by selecting the gate, runway and operation type (arrival or departure). More than one taxi-routes can be defined for the same combination of gate, runway and operation type, using a different instance number. Once defined, the corresponding taxiway segments have to be selected together with the aircraft groups that can make use of the specific taxi-route.
@@ -364,7 +364,7 @@ The corresponding interface allows the user to set the path for saving the outpu
   + **Towing Speed**: A field specifying towing speed, set to 10.00 km/h. `not yet fully implemented`
   + **Vertical Limit**: The vertical extent of the domain, set by default to 914.40 meters, or approximately 3000 feet.
 
-![generate-emissions-inventory.PNG](./../open_alaqs/assets/generate-emissions-inventory.PNG)
+![generate-emissions-inventory.png](./../open_alaqs/assets/generate-emissions-inventory.png)
 
 The user must provide a comma-delimited _.csv_ file containing aircraft operations (see [`Movements table`](#movements-table)). An automatic check is performed to ensure that all fields in the movements and meteorology files are in the correct format (e.g., dates should follow the format YYYY-MM-DD HH:MM:SS). The meteorology file is optional; if it is missing or contains invalid data, default values based on ISA conditions will be used for all necessary meteorological parameters.
 
@@ -434,7 +434,7 @@ In the **Configuration** tab, the user can specify the general settings for the 
 + **Vertical Limit**: Specify the vertical limit in meters (_set to 914.40m by default_)
 + **Receptor Points**: Specify receptor points using a .csv file (_optional_)
 
-![emissions-calculation.PNG](./../open_alaqs/assets/emissions-calculation.PNG)
+![emissions-calculation.png](./../open_alaqs/assets/emissions-calculation.png)
 
 In the **Output Formats** tab, the user can specify the general settings for the visualisation of the results:
 + **Emissions table**: Specify the output view type (_by aggregation, by source or by grid cell_)
@@ -452,7 +452,7 @@ In the **Dispersion Models** tab, the user can specify the general settings for 
 
 More information on the AUSTAL settings is provided in section [`Dispersion modeling with AUSTAL`](#dispersion-modeling-with-austal).
 
-![emissions-calculation-2.PNG](./../open_alaqs/assets/emissions-calculation-2.PNG)
+![emissions-calculation-2.png](./../open_alaqs/assets/emissions-calculation-2.png)
 
 Finally, there are three different ways to visualize the calculated emissions:
 + View the results in a table format (`View Emissions Table`)
@@ -493,7 +493,7 @@ To launch a simulation with AUSTAL, click `Calculate Dispersion` in the OpenALAQ
 
 We note that AUSTAL can also be run independently outside OpenALAQS.
 
-![running-austal.PNG](./../open_alaqs/assets/running-austal.PNG)
+![running-austal.png](./../open_alaqs/assets/running-austal.png)
 
 By default, a file named `austal.log` is generated at the end of the dispersion calculation with information on the program, the program run, the applied input data of file `austal.txt`, and a list with the main results of the dispersion calculation. Option `Erase Log File at the Start of the Calculation` deletes any existing log file in the specified directory before the calculation, otherwise log information is appended to the file.
 
@@ -518,4 +518,4 @@ To explore the results of a simulation, the user must select the OpenALAQS file 
 
 The user can specify the general settings for the visualisation of the results from the `Output Formats` tab of the main window.
 
-![running-austal-2.PNG](./../open_alaqs/assets/running-austal-2.PNG)
+![running-austal-2.png](./../open_alaqs/assets/running-austal-2.png)
