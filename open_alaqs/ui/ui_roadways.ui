@@ -469,6 +469,8 @@
   <tabstop>roadway_id</tabstop>
   <tabstop>vehicle_year</tabstop>
   <tabstop>height</tabstop>
+  <tabstop>speed</tabstop>
+  <tabstop>scenario</tabstop>
   <tabstop>hour_profile</tabstop>
   <tabstop>daily_profile</tabstop>
   <tabstop>month_profile</tabstop>
