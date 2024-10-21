@@ -41,7 +41,6 @@ def form_open(form, layer, feature):
         height_field=form.findChild(QtWidgets.QLineEdit, "height"),
         distance_field=form.findChild(QtWidgets.QLineEdit, "distance"),
         idle_time_field=form.findChild(QtWidgets.QLineEdit, "idle_time"),
-        park_time_field=form.findChild(QtWidgets.QLineEdit, "park_time"),
         speed_field=form.findChild(QtWidgets.QLineEdit, "speed"),
         # The fleet mix fields
         pc_petrol=form.findChild(QtWidgets.QLineEdit, "pc_petrol_percentage"),
@@ -84,8 +83,6 @@ def form_open(form, layer, feature):
     # Disable various fields
     fields["method_field"].setText("Open-ALAQS")
     fields["method_field"].setEnabled(False)
-    fields["park_time_field"].setText("0")
-    fields["park_time_field"].setEnabled(False)
 
     # Connect the comboboxes to validation
     fields["hour_profile_field"].currentTextChanged.connect(lambda: validate(fields))
@@ -138,7 +135,6 @@ def recalculate_emissions(fields: dict, form):
             "speed_field": "float",
             "distance_field": "float",
             "idle_time_field": "float",
-            "park_time_field": "float",
         }
         for f in fleet_percentage_fields:
             field_types[f] = "float"
@@ -188,7 +184,6 @@ def recalculate_emissions(fields: dict, form):
         speed = valid_fields["speed_field"]
         travel_distance = valid_fields["distance_field"]
         idle_time = valid_fields["idle_time_field"]
-        park_time = valid_fields["park_time_field"]
 
         # Prepare the input for the roadway emission factors calculation method
         form_data = {
@@ -197,7 +192,6 @@ def recalculate_emissions(fields: dict, form):
             "height": height,
             "speed": speed,
             "idle_time": float(idle_time),
-            "park_time": float(park_time),
             "travel_distance": float(travel_distance),
             "parking": True,
         }
@@ -348,7 +342,6 @@ def validate(fields: dict):
         validate_field(fields["speed_field"], "float"),
         validate_field(fields["distance_field"], "float"),
         validate_field(fields["idle_time_field"], "float"),
-        validate_field(fields["park_time_field"], "float"),
         validate_field(fields["pc_petrol"], "float"),
         validate_field(fields["pc_diesel"], "float"),
         validate_field(fields["lcv_petrol"], "float"),

@@ -145,7 +145,6 @@ def dict_parking_data(parking_data):
         dict_data["height"] = conversion.convertToFloat(parking_data[2], 0.0)
         dict_data["distance"] = conversion.convertToFloat(parking_data[3], 0.0)
         dict_data["idle_time"] = conversion.convertToFloat(parking_data[4], 0.0)
-        dict_data["park_time"] = conversion.convertToFloat(parking_data[5], 0.0)
         dict_data["vehicle_light"] = conversion.convertToFloat(parking_data[6], 0.0)
         dict_data["vehicle_medium"] = conversion.convertToFloat(parking_data[7], 0.0)
         dict_data["vehicle_heavy"] = conversion.convertToFloat(parking_data[8], 0.0)

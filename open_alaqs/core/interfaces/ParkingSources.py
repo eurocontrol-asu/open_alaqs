@@ -27,7 +27,6 @@ class ParkingSources(Source):
         self._id = str(val["parking_id"]) if "parking_id" in val else None
         self._vehicle_year = float(val.get("vehicle_year", 0))
         self._distance = float(val.get("distance", 0))
-        self._park_time = float(val.get("park_time", 0))
         self._idle_time = float(val.get("idle_time", 0))
         self._speed = float(val.get("speed", 0))
         self._fleet_mix = {
@@ -73,12 +72,6 @@ class ParkingSources(Source):
     def setIdleTime(self, var):
         self._idle_time = var
 
-    def getParkTime(self):
-        return self._park_time
-
-    def setParkTime(self, var):
-        self._park_time = var
-
     def getSpeed(self):
         return self._speed
 
@@ -97,7 +90,6 @@ class ParkingSources(Source):
         val += "\n\t Height: %f" % (self.getHeight())
         val += "\n\t Distance: %s" % (self.getDistance())
         val += "\n\t Idle Time: %s" % (self.getIdleTime())
-        val += "\n\t Park Time: %s" % (self.getParkTime())
         val += "\n\t Speed: %s" % (self.getSpeed())
         val += "\n\t Fleet Mix: %s" % (
             ", ".join(
@@ -180,7 +172,6 @@ class ParkingSourcesDatabase(SQLSerializable, metaclass=Singleton):
                     ("height", "DECIMAL"),
                     ("distance", "DECIMAL"),
                     ("idle_time", "DECIMAL"),
-                    ("park_time", "DECIMAL"),
                     ("vehicle_light", "DECIMAL"),
                     ("vehicle_medium", "DECIMAL"),
                     ("vehicle_heavy", "DECIMAL"),
