@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>246</width>
-    <height>135</height>
+    <width>294</width>
+    <height>148</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -25,57 +25,18 @@
   <property name="windowTitle">
    <string>Building Editor</string>
   </property>
+  <property name="toolTip">
+   <string>Enable to include the source in the study</string>
+  </property>
   <layout class="QFormLayout" name="formLayout">
-   <property name="sizeConstraint">
-    <enum>QLayout::SetFixedSize</enum>
-   </property>
-   <property name="fieldGrowthPolicy">
-    <enum>QFormLayout::FieldsStayAtSizeHint</enum>
-   </property>
-   <item row="0" column="1">
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="instudy">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="layoutDirection">
-        <enum>Qt::RightToLeft</enum>
-       </property>
-       <property name="text">
-        <string>In Study</string>
-       </property>
-       <property name="checked">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="2" column="0">
+   <item row="1" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
       <string>Building Name</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
+   <item row="1" column="1">
     <widget class="QLineEdit" name="building_id">
      <property name="toolTip">
       <string>Enter a unique name for your gate</string>
@@ -89,26 +50,6 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="1">
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QLineEdit" name="height">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="toolTip">
-        <string>Enter a height for this building</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
    <item row="5" column="0" colspan="2">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
@@ -116,6 +57,45 @@
      </property>
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QLineEdit" name="height">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="toolTip">
+      <string>Enter a height for this building</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="2" column="1">
+    <widget class="QCheckBox" name="instudy">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string>In Study</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
      </property>
     </widget>
    </item>

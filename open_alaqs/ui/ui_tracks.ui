@@ -7,24 +7,40 @@
     <x>0</x>
     <y>0</y>
     <width>292</width>
-    <height>153</height>
+    <height>183</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Track Editor</string>
   </property>
   <layout class="QFormLayout" name="formLayout">
-   <item row="2" column="0">
+   <item row="1" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Name</string>
+      <string>Track Name</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QLineEdit" name="track_id">
+     <property name="toolTip">
+      <string>Enter a unique name for your track</string>
      </property>
     </widget>
    </item>
    <item row="2" column="1">
-    <widget class="QLineEdit" name="track_id">
+    <widget class="QCheckBox" name="instudy">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="toolTip">
-      <string>Enter a unique name for your track</string>
+      <string>Enable to include the source in the study</string>
+     </property>
+     <property name="text">
+      <string>In Study</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -56,7 +72,7 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="0" colspan="2">
+   <item row="6" column="0" colspan="2">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -66,38 +82,18 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="1">
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <property name="topMargin">
-      <number>0</number>
+   <item row="5" column="1">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
      </property>
-     <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="instudy">
-       <property name="layoutDirection">
-        <enum>Qt::RightToLeft</enum>
-       </property>
-       <property name="text">
-        <string>In Study</string>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>
