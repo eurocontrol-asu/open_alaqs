@@ -6,7 +6,7 @@ from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools import copert5
 from open_alaqs.core.tools.copert5_utils import VEHICLE_CATEGORIES
-from open_alaqs.core.utils.qt import color_ui_background
+from open_alaqs.openalaqsuitoolkit import validate_field
 
 logger = get_logger("open_alaqs.ui.ui_roadways")
 
@@ -358,60 +358,3 @@ def validate(fields: dict):
 
     # Block signals if any of the fields is invalid
     button_box.button(button_box.Ok).blockSignals("False" in str(results))
-
-
-def validate_field(ui_element, var_type):
-    if ui_element is None:
-        return False
-    try:
-        value = str(ui_element.currentText()).strip()
-    except Exception:
-        value = str(ui_element.text()).strip()
-    try:
-        if var_type == "str":
-            # try:
-            #     value = str(ui_element.currentText()).strip()
-            # except Exception:
-            #     value = str(ui_element.text()).strip()
-            if value == "" or value is None:
-                color_ui_background(ui_element, "red")
-                ui_element.setToolTip("This value should be a string")
-                return False
-            else:
-                color_ui_background(ui_element, None)
-                return value
-
-        elif var_type == "int":
-            # try:
-            #     value = str(ui_element.currentText()).strip()
-            # except Exception:
-            #     value = str(ui_element.text()).strip()
-            try:
-                if value == "" or value is None:
-                    color_ui_background(ui_element, "red")
-                value = int(value)
-                color_ui_background(ui_element, None)
-                return value
-            except Exception:
-                color_ui_background(ui_element, "red")
-                ui_element.setToolTip("This value should be an integer")
-                return False
-
-        elif var_type == "float":
-            # try:
-            #     value = str(ui_element.currentText()).strip()
-            # except Exception:
-            #     value = str(ui_element.text()).strip()
-            try:
-                if value == "" or value is None:
-                    color_ui_background(ui_element, "red")
-                    # raise Exception()
-                value = float(value)
-                color_ui_background(ui_element, None)
-                return value
-            except Exception:
-                color_ui_background(ui_element, "red")
-                ui_element.setToolTip("This value should be a float")
-                return False
-    except Exception:
-        return False
