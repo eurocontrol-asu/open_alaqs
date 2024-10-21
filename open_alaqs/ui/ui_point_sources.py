@@ -2,6 +2,7 @@ from qgis.PyQt import QtWidgets
 
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.openalaqsuitoolkit import validate_field
 
 logger = get_logger(__name__)
 
@@ -334,65 +335,3 @@ def validate(fields: dict):
 
     # Block signals if any of the fields is invalid
     button_box.button(button_box.Ok).blockSignals("False" in str(results))
-
-
-def validate_field(ui_element, var_type):
-    try:
-        if var_type == "str":
-            try:
-                value = str(ui_element.currentText()).strip()
-            except Exception:
-                value = str(ui_element.text()).strip()
-            if value == "":
-                color_ui_background(ui_element, "red")
-                ui_element.setToolTip("This value should be a string")
-                return False
-            else:
-                color_ui_background(ui_element, "white")
-                return value
-
-        elif var_type == "int":
-            try:
-                value = str(ui_element.currentText()).strip()
-            except Exception:
-                value = str(ui_element.text()).strip()
-            try:
-                if value == "" or value is None:
-                    raise Exception()
-                value = int(value)
-                color_ui_background(ui_element, "white")
-                return value
-            except Exception:
-                color_ui_background(ui_element, "red")
-                ui_element.setToolTip("This value should be an integer")
-                return False
-
-        elif var_type == "float":
-            try:
-                value = str(ui_element.currentText()).strip()
-            except Exception:
-                value = str(ui_element.text()).strip()
-            try:
-                if value == "" or value is None:
-                    raise Exception()
-                value = float(value)
-                color_ui_background(ui_element, "white")
-                return value
-            except Exception:
-                color_ui_background(ui_element, "red")
-                ui_element.setToolTip("This value should be a float")
-                return False
-    except Exception:
-        return False
-
-
-def color_ui_background(ui_element, color):
-    if color == "red":
-        ui_element.setStyleSheet("background-color: rgba(255, 107, 107, 150);")
-    elif color == "white":
-        ui_element.setStyleSheet("background-color: rgba(255, 255, 255, 255);")
-    elif color == "green":
-        ui_element.setStyleSheet("background-color: rgba(0,255,0,0.3);")
-    else:
-        # ui_element.setStyleSheet("background-color: rgba(192,192,192,0.3);")
-        pass

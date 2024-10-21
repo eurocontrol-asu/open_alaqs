@@ -24,6 +24,7 @@ from qgis.PyQt import QtWidgets
 
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.utils.qt import color_ui_background
 from open_alaqs.enums import AlaqsLayerType
 
 logger = get_logger(__name__)
@@ -68,29 +69,13 @@ def validate_field(ui_element, var_type):
         elif var_type == "float":
             value = float(value)
 
-        color_ui_background(ui_element, "white")
+        color_ui_background(ui_element, None)
 
         return value
     except Exception:
         color_ui_background(ui_element, "red")
         ui_element.setToolTip("This value should be a float")
         return False
-
-
-def color_ui_background(ui_element, color):
-    """
-    This function changes the background color of a UI object. This is used to
-    alert users to incorrect values.
-
-    :param ui_element:
-    :param color:
-    """
-    if color == "red":
-        ui_element.setStyleSheet("background-color: rgba(255, 107, 107, 150);")
-    elif color == "white":
-        ui_element.setStyleSheet("background-color: rgba(255, 255, 255, 255);")
-    else:
-        pass
 
 
 def load_spatialite_layer(
