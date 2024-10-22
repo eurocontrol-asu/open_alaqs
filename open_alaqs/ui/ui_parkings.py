@@ -43,16 +43,16 @@ def form_open(form, layer, feature):
         idle_time_field=form.findChild(QtWidgets.QLineEdit, "idle_time"),
         speed_field=form.findChild(QtWidgets.QLineEdit, "speed"),
         # The fleet mix fields
-        pc_petrol=form.findChild(QtWidgets.QLineEdit, "pc_petrol_percentage"),
-        pc_diesel=form.findChild(QtWidgets.QLineEdit, "pc_diesel_percentage"),
-        lcv_petrol=form.findChild(QtWidgets.QLineEdit, "lcv_petrol_percentage"),
-        lcv_diesel=form.findChild(QtWidgets.QLineEdit, "lcv_diesel_percentage"),
-        hdt_petrol=form.findChild(QtWidgets.QLineEdit, "hdt_petrol_percentage"),
-        hdt_diesel=form.findChild(QtWidgets.QLineEdit, "hdt_diesel_percentage"),
-        motorcycle_petrol=form.findChild(
-            QtWidgets.QLineEdit, "motorcycle_petrol_percentage"
+        pc_p_percentage=form.findChild(QtWidgets.QLineEdit, "pc_p_percentage"),
+        pc_d_percentage=form.findChild(QtWidgets.QLineEdit, "pc_d_percentage"),
+        lcv_p_percentage=form.findChild(QtWidgets.QLineEdit, "lcv_p_percentage"),
+        lcv_d_percentage=form.findChild(QtWidgets.QLineEdit, "lcv_d_percentage"),
+        hdt_p_percentage=form.findChild(QtWidgets.QLineEdit, "hdt_p_percentage"),
+        hdt_d_percentage=form.findChild(QtWidgets.QLineEdit, "hdt_d_percentage"),
+        motorcycle_p_percentage=form.findChild(
+            QtWidgets.QLineEdit, "motorcycle_p_percentage"
         ),
-        bus_diesel=form.findChild(QtWidgets.QLineEdit, "bus_diesel_percentage"),
+        bus_d_percentage=form.findChild(QtWidgets.QLineEdit, "bus_d_percentage"),
         hour_profile_field=form.findChild(QtWidgets.QComboBox, "hour_profile"),
         daily_profile_field=form.findChild(QtWidgets.QComboBox, "daily_profile"),
         month_profile_field=form.findChild(QtWidgets.QComboBox, "month_profile"),
@@ -117,14 +117,14 @@ def recalculate_emissions(fields: dict, form):
 
         # Set the fleet mix percentages
         fleet_percentage_fields = [
-            "pc_petrol",
-            "pc_diesel",
-            "lcv_petrol",
-            "lcv_diesel",
-            "hdt_petrol",
-            "hdt_diesel",
-            "motorcycle_petrol",
-            "bus_diesel",
+            "pc_p_percentage",
+            "pc_d_percentage",
+            "lcv_p_percentage",
+            "lcv_d_percentage",
+            "hdt_p_percentage",
+            "hdt_d_percentage",
+            "motorcycle_p_percentage",
+            "bus_d_percentage",
         ]
 
         # Set the types per field (for validation)
@@ -136,8 +136,8 @@ def recalculate_emissions(fields: dict, form):
             "distance_field": "float",
             "idle_time_field": "float",
         }
-        for f in fleet_percentage_fields:
-            field_types[f] = "float"
+        for field_name in fleet_percentage_fields:
+            field_types[field_name] = "float"
 
         # Validate the input
         valid_fields = {}
@@ -195,8 +195,8 @@ def recalculate_emissions(fields: dict, form):
             "travel_distance": float(travel_distance),
             "parking": True,
         }
-        for f in fleet_percentage_fields:
-            form_data[f + "_percentage"] = float(fields[f].text())
+        for field_name in fleet_percentage_fields:
+            form_data[field_name] = float(fields[field_name].text())
 
         # Get the study data for additional information needed
         study_data = alaqs.load_study_setup()
@@ -242,6 +242,8 @@ def recalculate_emissions(fields: dict, form):
         fields["p2_gm_vh_field"].setText(str(emission_profile["p2_ef"]))
 
     except Exception as e:
+        logger.error(str(e), exc_info=e)
+
         msg_box = QtWidgets.QMessageBox()
         msg_box.setText("Emissions could not be calculated: %s" % e)
         msg_box.exec_()
@@ -270,7 +272,6 @@ def populate_hourly_profiles(field):
 
     # Set the default category to 0 and make the list un-editable
     field.setCurrentIndex(0)
-    field.setEditable(False)
 
 
 @catch_errors
@@ -295,7 +296,6 @@ def populate_daily_profiles(field):
 
     # Set the default category to 0 and make the list un-editable
     field.setCurrentIndex(0)
-    field.setEditable(False)
 
 
 @catch_errors
@@ -320,7 +320,6 @@ def populate_monthly_profiles(field):
 
     # Set the default category to 0 and make the list un-editable
     field.setCurrentIndex(0)
-    field.setEditable(False)
 
 
 def validate(fields: dict):
@@ -342,14 +341,14 @@ def validate(fields: dict):
         validate_field(fields["speed_field"], "float"),
         validate_field(fields["distance_field"], "float"),
         validate_field(fields["idle_time_field"], "float"),
-        validate_field(fields["pc_petrol"], "float"),
-        validate_field(fields["pc_diesel"], "float"),
-        validate_field(fields["lcv_petrol"], "float"),
-        validate_field(fields["lcv_diesel"], "float"),
-        validate_field(fields["hdt_petrol"], "float"),
-        validate_field(fields["hdt_diesel"], "float"),
-        validate_field(fields["motorcycle_petrol"], "float"),
-        validate_field(fields["bus_diesel"], "float"),
+        validate_field(fields["pc_p_percentage"], "float"),
+        validate_field(fields["pc_d_percentage"], "float"),
+        validate_field(fields["lcv_p_percentage"], "float"),
+        validate_field(fields["lcv_d_percentage"], "float"),
+        validate_field(fields["hdt_p_percentage"], "float"),
+        validate_field(fields["hdt_d_percentage"], "float"),
+        validate_field(fields["motorcycle_p_percentage"], "float"),
+        validate_field(fields["bus_d_percentage"], "float"),
         validate_field(fields["hour_profile_field"], "str"),
         validate_field(fields["daily_profile_field"], "str"),
         validate_field(fields["month_profile_field"], "str"),
