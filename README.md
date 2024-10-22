@@ -134,8 +134,7 @@ Here you can find the following files and directories:
 - `./LSZH_AUSTAL/series.dmna` - the file containing all time-dependent parameters
 - `./LSZH_AUSTAL/01/e0001.dmna` - input grid file, with information on the user-defined grid and on the corresponding data
 
-For more detailed information on how to use ALAQS, the project files and expected outputs, read the [official documentation](TODO).
-
+For more detailed information on how to use ALAQS, the project files and expected outputs, read the [official documentation](./documents/USER_GUIDE.md).
 
 ## Development
 
