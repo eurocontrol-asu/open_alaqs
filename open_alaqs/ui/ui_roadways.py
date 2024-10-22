@@ -43,7 +43,7 @@ def form_open(form, layer, feature):
         # The fleet mix fields
         pc_p_percentage=form.findChild(QtWidgets.QLineEdit, "pc_p_percentage"),
         pc_d_percentage=form.findChild(QtWidgets.QLineEdit, "pc_d_percentage"),
-        lcv_p_percentage=form.findChild(QtWidgets.QLineEdit, "lcv_d_percentage"),
+        lcv_p_percentage=form.findChild(QtWidgets.QLineEdit, "lcv_p_percentage"),
         lcv_d_percentage=form.findChild(QtWidgets.QLineEdit, "lcv_d_percentage"),
         hdt_p_percentage=form.findChild(QtWidgets.QLineEdit, "hdt_p_percentage"),
         hdt_d_percentage=form.findChild(QtWidgets.QLineEdit, "hdt_d_percentage"),
