@@ -92,7 +92,7 @@ The vehicle categories that are examined are Passenger Cars (PCs), Light Commerc
 - HDTs petrol: only “Conventional” Euro standard option is available
 - Motorcycles: only “Petrol” fuel option is available
 - Buses: only “Diesel” fuel option is available
-- Evaporative emissions: only VOC pollutant is available
+- Evaporative emissions: available only for HC pollutant (based on `idle time`)
 - Information on vehicle age is included in the Euro standard technology information
 - The EF include information for idling, since they are developed based on both real-world driving and on lab tests, both of which include indling periods in the respective real-world driving and driving cycles
 
