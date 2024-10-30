@@ -700,8 +700,7 @@ class Movement:
                         #                                                           self.getAircraft().getGroup(), self.getGate().getType()))
 
                         # cnt_apu_time += apu_time
-                        # CAEPPORT
-                        self.setTaxiEngineCount(self.getAircraft().getEngineCount())
+                        # CAEPPORT: self.setTaxiEngineCount(self.getAircraft().getEngineCount())
 
                         if self.isDeparture():
 
@@ -864,7 +863,7 @@ class Movement:
                             # add emissions due to stop & go's
                             if (
                                 self.getNumberOfStops() is not None
-                                or self.getNumberOfStops() == 0.0
+                                or self.getNumberOfStops() > 0.0
                             ):
                                 average_duration_of_stop_and_gos_in_s = 9.0
                                 em_.add(
