@@ -2978,7 +2978,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
     def getOutputModulesConfiguration(self):
         tab = self.ui.output_modules_tab_widget
         return {
-            tab.tabText(index): tab.widget(index).widget().getValues()
+            tab.tabText(index): tab.widget(index).widget().get_values()
             for index in range(0, tab.count())
         }
 
