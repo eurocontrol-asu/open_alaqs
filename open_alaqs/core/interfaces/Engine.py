@@ -246,7 +246,7 @@ class EngineEmissionIndex(Store):
                     icao_eedb_bffm2[p.value][
                         map_names_[m] if m in map_names_ else m
                     ] = {
-                        icao_eedb[m].getFuel()[0]: icao_eedb[m].get_value(p, "g_kg")[0]
+                        icao_eedb[m].getFuel()[0]: icao_eedb[m].get_value(p, "g_kg")
                     }  # units: kg, g/kg
 
             return icao_eedb_bffm2
