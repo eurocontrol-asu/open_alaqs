@@ -7,7 +7,7 @@ from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import QFormLayout
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.typing import NotRequired
+from open_alaqs.openalaqs_typing import NotRequired
 
 logger = get_logger(__name__)
 
