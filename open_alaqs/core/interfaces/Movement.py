@@ -700,7 +700,6 @@ class Movement:
                         #                                                           self.getAircraft().getGroup(), self.getGate().getType()))
 
                         # cnt_apu_time += apu_time
-                        # CAEPPORT: self.setTaxiEngineCount(self.getAircraft().getEngineCount())
 
                         if self.isDeparture():
 
