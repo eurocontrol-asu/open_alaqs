@@ -132,26 +132,32 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
 
         assert isinstance(parent_layout, QFormLayout)
 
+        # if the setting widget is already present, most probably called by `patch_schema`
         if name in self._settings_widgets:
             old_widget = self._settings_widgets[name]
             old_label = self._settings_labels[name]
 
-            old_widget.deleteLater()
-
             # the old label might be None, e.g. for checkboxes
             if old_label is not None:
-                old_label.deleteLater()
                 parent_layout.replaceWidget(old_label, label)
+                old_label.deleteLater()
+                old_label.setParent(None)
+                old_label.setHidden(True)
 
             parent_layout.replaceWidget(old_widget, widget)
+            old_widget.deleteLater()
+            old_widget.setParent(None)
+            old_widget.setHidden(True)
+
+            parent_layout.update()
         else:
             if label:
                 parent_layout.insertRow(-1, label, widget)
             else:
                 parent_layout.insertRow(-1, widget)
 
-            self._settings_widgets[name] = widget
-            self._settings_labels[name] = label
+        self._settings_widgets[name] = widget
+        self._settings_labels[name] = label
 
     def get_values(self) -> dict[str, Any]:
         values = {}
