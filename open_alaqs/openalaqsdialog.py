@@ -2269,7 +2269,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self._emission_calculation_configuration_widget.patch_schema(
             {
                 "method": {
-                    "initial_value": None,
+                    "initial_value": available_methods[0],
                     "widget_config": {
                         "options": available_methods,
                     },
