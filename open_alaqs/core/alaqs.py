@@ -20,7 +20,7 @@ from open_alaqs.core.alaqsdblite import execute_sql, update_table
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools.create_output import create_alaqs_output
 from open_alaqs.core.tools.sql_interface import SqlExpression
-from open_alaqs.typing import AirportDict, StudySetup
+from open_alaqs.openalaqs_typing import AirportDict, StudySetup
 
 logger = get_logger(__name__)
 
