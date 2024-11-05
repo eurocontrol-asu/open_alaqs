@@ -7,7 +7,7 @@ import numpy as np
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.interfaces.Store import Store
-from open_alaqs.core.tools import conversion, spatial
+from open_alaqs.core.tools import conversion
 from open_alaqs.core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
@@ -62,50 +62,6 @@ class AircraftTrajectory:
                 % (startPoint.getCoordinatesString(), endPoint.getCoordinatesString())
             )
         return "MULTILINESTRINGZ(%s)" % (",".join(geometry_text_list))
-
-    def calculateDistanceBetweenPoints(self, point1, point2, dimension="space"):
-        if dimension.lower() == "space":
-            return abs(
-                self.calculateSpaceDistance(
-                    point1.getCoordinates(), point2.getCoordinates()
-                )
-            )
-        elif dimension.lower() == "time":
-            return self.calculateTimeDistance(point1, point2)
-
-    def calculateTimeDistance(self, point1, point2, avgSpeed=True):
-        speed = 1.0
-        if avgSpeed:
-            speed = (point2.getTrueAirspeed() + point1.getTrueAirspeed()) / 2.0
-        else:
-            speed = point1.getTrueAirspeed()
-        distance = self.calculateDistanceBetweenPoints(point1, point2, "space")
-        if speed > 0:
-            return abs(float(distance) / float(speed))
-        else:
-            return 0
-
-    def calculateSpaceDistance(self, xxx_todo_changeme, xxx_todo_changeme1):
-        (x1, y1, z1) = xxx_todo_changeme
-        (x2, y2, z2) = xxx_todo_changeme1
-        if self.isCartesian():
-            return ((x2 - x1) ** 2.0 + (y2 - y1) ** 2.0 + (z2 - z1) ** 2.0) ** 0.5
-        else:
-            return spatial.getDistanceOfLineStringXYZ(
-                spatial.getLine(
-                    spatial.getPoint("", x1, y1, z1), spatial.getPoint("", x2, y2, z2)
-                ),
-                abs(z2 - z1),
-            )
-
-    def getTimeInMode(self, mode):
-        return self.getDistance(mode, "time")
-
-    def getDistance(self, mode="", dimension="space"):
-        d_ = 0.0
-        for startPoint, endPoint in self.getPointPairs(mode):
-            d_ += self.calculateDistanceBetweenPoints(startPoint, endPoint, dimension)
-        return d_
 
     def getGeometryText(self):
         return self._geometry_text
@@ -254,21 +210,6 @@ class AircraftTrajectory:
         val += "\n\t Departure/Arrival Flag: '%s'" % (
             str(self.getDepartureArrivalFlag())
         )
-        val += "\n\t Total distance [m]: %f" % (
-            float(self.getDistance(dimension="space"))
-        )
-        val += "\n\t Total distance [s]: %f" % (
-            float(self.getDistance(dimension="time"))
-        )
-        for m_ in self.getPointModes():
-            val += "\n\t\t In mode '%s': %f m" % (
-                str(m_),
-                float(self.getDistance(m_, dimension="space")),
-            )
-            val += "\n\t\t In mode '%s': %f s" % (
-                str(m_),
-                float(self.getDistance(m_, dimension="time")),
-            )
         val += "\n\t Geometry (WKT): '%s'" % (str(self.getGeometryText()))
         val += "\n\t Points:"
         for p in self.getPoints():
