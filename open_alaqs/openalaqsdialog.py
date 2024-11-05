@@ -2269,7 +2269,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self._emission_calculation_configuration_widget.patch_schema(
             {
                 "method": {
-                    "initial_value": None,
+                    "initial_value": available_methods[0],
                     "widget_config": {
                         "options": available_methods,
                     },
@@ -3097,22 +3097,6 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "Error",
                 "Could not execute runOutputModule: %s (error: %s)" % (name, e),
             )
-
-    @catch_errors
-    def choose_averaging_period(self):
-        available_methods = ["hourly", "8-hours mean", "daily mean", "annual mean"]
-        self.resetEmissionCalculationConfiguration(
-            config={
-                "Averaging Period": {"available": available_methods, "selected": None}
-            }
-        )
-
-    @catch_errors
-    def choose_pollutant(self):
-        available_pollutants = ["CO2", "CO", "HC", "NOx", "SOx", "PM10", "P1", "P2"]
-        self.resetEmissionCalculationConfiguration(
-            config={"Pollutant": {"available": available_pollutants, "selected": None}}
-        )
 
 
 class OpenAlaqsEnabledMacros(QtWidgets.QDialog):

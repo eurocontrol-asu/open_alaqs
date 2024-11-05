@@ -241,12 +241,10 @@ class EngineEmissionIndex(Store):
                 "TX": "Idle",
             }
             for p in [PollutantType.NOx, PollutantType.CO, PollutantType.HC]:
-                icao_eedb_bffm2[p.value] = {}
+                icao_eedb_bffm2[p] = {}
                 for m in icao_eedb:
-                    icao_eedb_bffm2[p.value][
-                        map_names_[m] if m in map_names_ else m
-                    ] = {
-                        icao_eedb[m].getFuel()[0]: icao_eedb[m].get_value(p, "g_kg")[0]
+                    icao_eedb_bffm2[p][map_names_[m] if m in map_names_ else m] = {
+                        icao_eedb[m].getFuel()[0]: icao_eedb[m].get_value(p, "g_kg")
                     }  # units: kg, g/kg
 
             return icao_eedb_bffm2
@@ -404,8 +402,6 @@ class EngineEmissionIndex(Store):
         emission_index = EmissionIndex(initValues={}, defaultValues=defaultEI)
 
         if method["name"] == "BFFM2":
-            bffm2_keys = ["NOx", "CO", "HC"]
-
             # Installation effects
             installation_corrections = {}
             if (
@@ -453,6 +449,8 @@ class EngineEmissionIndex(Store):
             # Non-adjusted reference from EEDB at ISA conditions
             # maps fuel flow and emission indices
             icao_eedb_bffm2 = self.getICAOEngineEmissionsDB(format="BFFM2")
+            # TODO OPENGIS.ch: this list is defined twice, once here and once in `getICAOEngineEmissionsDB`
+            bffm2_keys = [PollutantType.NOx, PollutantType.CO, PollutantType.HC]
 
             # Do the calculation
             emission_index.setObject("fuel_kg_sec", fuel_flow)
