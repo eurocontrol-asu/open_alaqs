@@ -1043,8 +1043,8 @@ class Movement:
             mach_value = {"mach_number": 0.0}
         method["config"].update(mach_value)
 
-        time_in_segment_ = 0.0
-        space_in_segment_ = 0.0
+        time_in_segment_s = 0.0
+        space_in_segment_m = 0.0
 
         # Apply limits
         if "max_height" in limit:
@@ -1063,8 +1063,8 @@ class Movement:
                 emissions.setGeometryText(None)
                 return {
                     "emissions": emissions,
-                    "distance_time": float(time_in_segment_),
-                    "distance_space": float(space_in_segment_),
+                    "distance_time": float(time_in_segment_s),
+                    "distance_space": float(space_in_segment_m),
                 }
 
             elif (
@@ -1390,14 +1390,22 @@ class Movement:
 
         # emissions calculation
         traj = self.getTrajectory() if not atRunway else self.getTrajectoryAtRunway()
+
         if traj is not None:
-            # time spent in segment
-            time_in_segment_ = traj.calculateDistanceBetweenPoints(
-                startPoint_, endPoint_, "time"
-            )
-            # distance in segment
-            space_in_segment_ = traj.calculateDistanceBetweenPoints(
-                startPoint_, endPoint_, "space"
+            source_epsg = QgsCoordinateReferenceSystem(EPSG_id_source)
+            qgs_d = QgsDistanceArea()
+
+            qgs_d.setSourceCrs(source_epsg, QgsProject.instance().transformContext())
+            qgs_d.setEllipsoid(source_epsg.ellipsoidAcronym())
+
+            qgs_start_point = QgsPointXY(startPoint_.getX(), startPoint_.getY())
+            qgs_end_point = QgsPointXY(endPoint_.getX(), endPoint_.getY())
+
+            # Ellipsoidal (2D) distance in meters
+            space_in_segment_m = qgs_d.measureLine(qgs_start_point, qgs_end_point)
+            # Time in seconds
+            time_in_segment_s = (2 * space_in_segment_m) / (
+                endPoint_.getTrueAirspeed() + startPoint_.getTrueAirspeed()
             )
 
             emission_index_ = None
@@ -1495,15 +1503,15 @@ class Movement:
 
             # Calculate the effective time (s)
             effective_time_s = (
-                float(time_in_segment_) * self.getAircraft().getEngineCount()
+                float(time_in_segment_s) * self.getAircraft().getEngineCount()
             )
 
             emissions.add(copy_emission_index_, effective_time_s)
 
         return {
             "emissions": emissions,
-            "distance_time": float(time_in_segment_),
-            "distance_space": float(space_in_segment_),
+            "distance_time": float(time_in_segment_s),
+            "distance_space": float(space_in_segment_m),
         }
 
     def calculateEmissions(self, atRunway=True, method=None, mode="", limit=None):
