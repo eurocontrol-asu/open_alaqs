@@ -99,8 +99,6 @@ class EmissionsQGISVectorLayerOutputModule(GridOutputModule):
             if not (timestamp >= self._time_start and timestamp < self._time_end):
                 return None
 
-        self._all_matched_cells = []
-
         # loop over all emissions and append one data point for every grid cell
         for source, emissions in result:
             for emission in emissions:
