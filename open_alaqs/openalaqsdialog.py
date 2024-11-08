@@ -19,8 +19,10 @@
  ***************************************************************************/
 """
 import os
+import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any, cast
 
 import geopandas as gpd
 from qgis.core import (
@@ -48,7 +50,7 @@ from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqsdblite import ProjectDatabase, delete_records
 from open_alaqs.core.alaqslogging import get_logger, log_path
-from open_alaqs.core.EmissionCalculation import EmissionCalculation
+from open_alaqs.core.EmissionCalculation import EmissionCalculation, GridConfig
 from open_alaqs.core.interfaces.Emissions import PollutantType
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.core.modules.ModuleManager import (
@@ -67,6 +69,13 @@ from open_alaqs.core.utils.qt import populate_combobox
 from open_alaqs.enums import AlaqsLayerType
 
 logger = get_logger(__name__)
+
+
+INVENTORY_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+class Austal2000RunError(Exception):
+    pass
 
 
 def catch_errors(f):
@@ -102,6 +111,43 @@ def log_activity(f):
         return f(*args, **kwargs)
 
     return wrapper
+
+
+def get_inventory_timestamps(db_path: str) -> list[datetime]:
+    time_series: list[datetime] = []
+
+    if db_path:
+        inventory_time_series = cast(
+            list[dict[str, Any]],
+            sql_interface.db_execute_sql(
+                db_path,
+                """
+                    SELECT * FROM tbl_InvTime
+                """,
+                fetchone=False,
+            ),
+        )
+
+        for t in inventory_time_series:
+            time_series.append(datetime.strptime(t["time"], INVENTORY_DATE_FORMAT))
+
+        time_series.sort()
+
+    return time_series
+
+
+def get_min_max_timestamps(db_path: str) -> tuple[datetime, datetime]:
+    time_series = get_inventory_timestamps(db_path)
+
+    if len(time_series) < 2:
+        time_series.append(
+            datetime.strptime("2000-01-01 00:00:00", INVENTORY_DATE_FORMAT)
+        )
+        time_series.append(
+            datetime.strptime("2000-01-02 00:00:00", INVENTORY_DATE_FORMAT)
+        )
+
+    return (time_series[0], time_series[-1])
 
 
 class OpenAlaqsAbout(QtWidgets.QDialog):
@@ -2456,7 +2502,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                     self._iface.mapCanvas().scene().addItem(textItem)
 
     def updateMinMaxGUI(self, db_path_=""):
-        (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path_)
+        (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path_)
         # self.ui.start_dateTime.setMinimumDateTime(time_start_calc_)
         # self.ui.end_dateTime.setMaximumDateTime(time_end_calc_)
 
@@ -2468,21 +2514,6 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         )
         self.ui.source_types.clear()
         self.ui.source_names.clear()
-
-    def getMinMaxTime(self, db_path=""):
-        if db_path:
-            time_series_ = [
-                datetime.strptime(t_[1], "%Y-%m-%d %H:%M:%S")
-                for t_ in alaqsutils.inventory_time_series(db_path)
-            ]
-            time_series_.sort()
-            if len(time_series_) >= 2:
-                return (time_series_[0], time_series_[-1])
-
-        return (
-            datetime.strptime("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
-            datetime.strptime("2000-01-02 00:00:00", "%Y-%m-%d %H:%M:%S"),
-        )
 
     @catch_errors
     def populate_source_types(self):
@@ -2802,7 +2833,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.configuration_modules_list.setCurrentRow(index)
 
     def updateMinMaxGUI(self, db_path_=""):
-        (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path_)
+        (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path_)
         self.resetConcentrationCalculationConfiguration(
             config={
                 "start_dt_inclusive": time_start_calc_,
@@ -2810,49 +2841,36 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             }
         )
 
-    def getMinMaxTime(self, db_path=""):
-        if db_path:
-            time_series_ = [
-                datetime.strptime(t_[1], "%Y-%m-%d %H:%M:%S")
-                for t_ in alaqsutils.inventory_time_series(db_path)
-            ]
-            time_series_.sort()
-            if len(time_series_) >= 2:
-                return (time_series_[0], time_series_[-1])
-
-        return (
-            datetime.strptime("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
-            datetime.strptime("2000-01-02 00:00:00", "%Y-%m-%d %H:%M:%S"),
-        )
-
     def getTimeSeries(self, db_path="") -> list[datetime]:
         from datetime import timedelta
 
         from dateutil import rrule
 
-        if db_path:
-            try:
-                time_series_ = [
-                    datetime.strptime(t_[1], "%Y-%m-%d %H:%M:%S")
-                    for t_ in alaqsutils.inventory_time_series(db_path)
-                ]
-                time_series_.sort()
+        if not db_path:
+            return []
 
-            except Exception as e:
-                logger.warning("Database error: '%s'" % (e))
-                (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path)
-                time_series_ = []
-                for _day_ in rrule.rrule(
-                    rrule.DAILY, dtstart=time_start_calc_, until=time_end_calc_
+        try:
+            time_series_ = get_inventory_timestamps(db_path)
+        except Exception as e:
+            logger.warning("Database error: '%s'" % (e))
+
+            # TODO OPENGIS.ch: not very sure if this `except` block makes much sense,
+            # since if `get_inventory_timestamp` fails, there is no point for `get_min_max_timestamps` to pass.
+            # I would consider to remove this and simplify the function.
+            (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path)
+            time_series_ = []
+            for _day_ in rrule.rrule(
+                rrule.DAILY, dtstart=time_start_calc_, until=time_end_calc_
+            ):
+                for hour_ in rrule.rrule(
+                    rrule.HOURLY,
+                    dtstart=_day_,
+                    until=_day_ + timedelta(days=+1, hours=-1),
                 ):
-                    for hour_ in rrule.rrule(
-                        rrule.HOURLY,
-                        dtstart=_day_,
-                        until=_day_ + timedelta(days=+1, hours=-1),
-                    ):
-                        time_series_.append(hour_.strftime("%Y-%m-%d %H:%M:%S"))
-                time_series_.sort()
-            return time_series_
+                    time_series_.append(hour_.strftime(INVENTORY_DATE_FORMAT))
+            time_series_.sort()
+
+        return time_series_
 
     def resetModuleConfiguration(self, module_names):
         self.ui.output_modules_tab_widget.clear()
@@ -2888,11 +2906,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         """
         try:
             self.updateMinMaxGUI(path)
-            time_series = self.getTimeSeries(path)
+
+            project_database = ProjectDatabase()
+            project_database.path = path
 
             study_data = alaqs.load_study_setup()
 
-            grid_configuration = {
+            grid_configuration: GridConfig = {
                 "x_cells": 100,
                 "y_cells": 100,
                 "z_cells": 1,
@@ -2909,7 +2929,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
             start_dt = datetime.fromisoformat(em_config["start_dt_inclusive"])
             end_dt = datetime.fromisoformat(em_config["end_dt_inclusive"])
+
+            time_series = self.getTimeSeries(path)
+
             assert len(time_series) > 1
+
             time_interval = time_series[1] - time_series[0]
 
             self._conc_calculation_ = EmissionCalculation(
@@ -2919,46 +2943,55 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 end_dt=end_dt,
                 time_interval=time_interval,
             )
-
-        except Exception as e:
+        except sqlite3.OperationalError as err:
             QtWidgets.QMessageBox.warning(
-                self, "Error", "Could not open database file:  %s." % e
+                self, "Error", "Could not open database file:  %s." % err
             )
-            self.close()
 
     @catch_errors
     def run_austal(self, *args, **kwargs):
         from subprocess import PIPE, Popen
 
-        austal_ = str(self.ui.a2k_executable_path.filePath())
-        logger.info("AUSTAL directory:%s" % austal_)
-        work_dir = str(self.ui.work_directory_path.filePath())
-        logger.info("AUSTAL input files directory:%s" % work_dir)
+        try:
+            austal_ = str(self.ui.a2k_executable_path.filePath())
+            logger.info("AUSTAL directory:%s" % austal_)
+            work_dir = str(self.ui.work_directory_path.filePath())
+            logger.info("AUSTAL input files directory:%s" % work_dir)
 
-        if self.ui.erase_log.isChecked():
-            opt_ = "D"
-            logger.info(
-                "Running AUSTAL with -D option. Log file will be re-written"
-                " at the start of the calculation."
-            )
-            cmd = [austal_, "-%s" % (opt_), work_dir]
-        else:
-            cmd = [austal_, work_dir]
+            if self.ui.erase_log.isChecked():
+                opt_ = "D"
+                logger.info(
+                    "Running AUSTAL with -D option. Log file will be re-written"
+                    " at the start of the calculation."
+                )
+                cmd = [austal_, "-%s" % (opt_), work_dir]
+            else:
+                cmd = [austal_, work_dir]
 
-        p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        output, err = p.communicate()
-        if p.returncode == 0:
+            p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            output, err = p.communicate()
+
+            if p.returncode != 0:
+                raise Austal2000RunError(output)
+
             QtWidgets.QMessageBox.information(
                 self, "Success", "Dispersion simulation completed successfully"
             )
             logger.info("Dispersion simulation completed successfully")
-        else:
+        except Exception as exception:
             QtWidgets.QMessageBox.critical(
-                self, "Error", "AUSTAL execution failed. See log for details"
+                self, "Error", "AUSTAL execution failed! See the log for details."
             )
-            logger.error(
-                "AUSTAL execution failed with the following output: %s" % output
-            )
+
+            if isinstance(exception, Austal2000RunError):
+                logger.error(
+                    f"AUSTAL execution failed with the following output:\n{exception}"
+                )
+            else:
+                logger.error(
+                    f"AUSTAL execution failed with the following error: {exception}",
+                    exc_info=exception,
+                )
 
     def resetConcentrationCalculationConfiguration(self, config=None):
         if config is None:

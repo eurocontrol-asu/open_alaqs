@@ -13,7 +13,6 @@ import traceback
 
 from qgis.core import Qgis, QgsMessageLog
 
-from open_alaqs.core import alaqsdblite
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools import conversion
 
@@ -118,7 +117,3 @@ def dict_movement(movement_data):
             )
 
     return movement_dict
-
-
-def inventory_time_series(inventory_path):
-    return alaqsdblite.inventory_time_series(inventory_path)

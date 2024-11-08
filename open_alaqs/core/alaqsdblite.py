@@ -92,65 +92,6 @@ def delete_records(
     )
 
 
-def connectToDatabase(database_path):
-    """
-    Creates a connection to a SQLite database
-    :param database_path:
-    :type database_path: str
-    :return curs: a cursor object for the database provided
-    :rtype: object
-    """
-    try:
-        conn = sqlite.connect(database_path)
-        # logger.info("Connection to database '%s' created" %(database_path))
-        return conn
-    except Exception as e:
-        msg = "Connection could not be established: %s" % e
-        logger.error(msg)
-        return msg
-
-
-def query_text(database_path, sql_text):
-    """
-    Execute a query against a given SQLite database
-    :param database_path: the path to the database that is being queried
-    :param sql_text: the SQL text to be executed
-    :return data: the result of the query
-    :raise ValueError: if database returns a string (error) instead of list
-    """
-
-    # Create a blank connection object
-    conn = None
-
-    try:
-        # Create a connection
-        conn = connectToDatabase(database_path)
-        curs = conn.cursor()
-        # Execute the query
-        curs.execute(sql_text)
-        # Collect the result
-        data = curs.fetchall()
-        # Process the result
-        if isinstance(data, str):
-            raise TypeError("Query returned an error: %s" % data)
-        elif data is None or data == []:
-            return None
-        else:
-            return data
-    except Exception as e:
-        logger.error("Query could not be completed: %s" % (str(e)))
-        return "Query could not be completed: %s" % (str(e))
-    finally:
-        # Commit any changes the query performed and close the connection. This
-        #  is in a try-except block in case there was no connection established
-        #  and no query to commit. Without this, an error will be raised
-        try:
-            conn.commit()
-            conn.close()
-        except Exception:
-            pass
-
-
 def connect():
     """
     Establish a database connection to a supplied database. Requires a minimum
@@ -803,7 +744,3 @@ def add_monthly_profile(properties):
 # #################################################
 # #########       CALCULATIONS        #############
 # #################################################
-
-
-def inventory_time_series(inventory_path):
-    return query_text(inventory_path, "SELECT * FROM tbl_InvTime;")
