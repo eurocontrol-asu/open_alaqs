@@ -74,6 +74,10 @@ logger = get_logger(__name__)
 INVENTORY_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
+class Austal2000RunError(Exception):
+    pass
+
+
 def catch_errors(f):
     """
     Decorator to catch all errors when executing the function.
@@ -2948,35 +2952,46 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
     def run_austal(self, *args, **kwargs):
         from subprocess import PIPE, Popen
 
-        austal_ = str(self.ui.a2k_executable_path.filePath())
-        logger.info("AUSTAL directory:%s" % austal_)
-        work_dir = str(self.ui.work_directory_path.filePath())
-        logger.info("AUSTAL input files directory:%s" % work_dir)
+        try:
+            austal_ = str(self.ui.a2k_executable_path.filePath())
+            logger.info("AUSTAL directory:%s" % austal_)
+            work_dir = str(self.ui.work_directory_path.filePath())
+            logger.info("AUSTAL input files directory:%s" % work_dir)
 
-        if self.ui.erase_log.isChecked():
-            opt_ = "D"
-            logger.info(
-                "Running AUSTAL with -D option. Log file will be re-written"
-                " at the start of the calculation."
-            )
-            cmd = [austal_, "-%s" % (opt_), work_dir]
-        else:
-            cmd = [austal_, work_dir]
+            if self.ui.erase_log.isChecked():
+                opt_ = "D"
+                logger.info(
+                    "Running AUSTAL with -D option. Log file will be re-written"
+                    " at the start of the calculation."
+                )
+                cmd = [austal_, "-%s" % (opt_), work_dir]
+            else:
+                cmd = [austal_, work_dir]
 
-        p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        output, err = p.communicate()
-        if p.returncode == 0:
+            p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            output, err = p.communicate()
+
+            if p.returncode != 0:
+                raise Austal2000RunError(output)
+
             QtWidgets.QMessageBox.information(
                 self, "Success", "Dispersion simulation completed successfully"
             )
             logger.info("Dispersion simulation completed successfully")
-        else:
+        except Exception as exception:
             QtWidgets.QMessageBox.critical(
-                self, "Error", "AUSTAL execution failed. See log for details"
+                self, "Error", "AUSTAL execution failed! See the log for details."
             )
-            logger.error(
-                "AUSTAL execution failed with the following output: %s" % output
-            )
+
+            if isinstance(exception, Austal2000RunError):
+                logger.error(
+                    f"AUSTAL execution failed with the following output:\n{exception}"
+                )
+            else:
+                logger.error(
+                    f"AUSTAL execution failed with the following error: {exception}",
+                    exc_info=exception,
+                )
 
     def resetConcentrationCalculationConfiguration(self, config=None):
         if config is None:
