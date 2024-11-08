@@ -19,6 +19,7 @@
  ***************************************************************************/
 """
 import os
+import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
@@ -49,7 +50,7 @@ from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqsdblite import ProjectDatabase, delete_records
 from open_alaqs.core.alaqslogging import get_logger, log_path
-from open_alaqs.core.EmissionCalculation import EmissionCalculation
+from open_alaqs.core.EmissionCalculation import EmissionCalculation, GridConfig
 from open_alaqs.core.interfaces.Emissions import PollutantType
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.core.modules.ModuleManager import (
@@ -2899,11 +2900,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         """
         try:
             self.updateMinMaxGUI(path)
-            time_series = self.getTimeSeries(path)
+
+            project_database = ProjectDatabase()
+            project_database.path = path
 
             study_data = alaqs.load_study_setup()
 
-            grid_configuration = {
+            grid_configuration: GridConfig = {
                 "x_cells": 100,
                 "y_cells": 100,
                 "z_cells": 1,
@@ -2920,7 +2923,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
             start_dt = datetime.fromisoformat(em_config["start_dt_inclusive"])
             end_dt = datetime.fromisoformat(em_config["end_dt_inclusive"])
+
+            time_series = self.getTimeSeries(path)
+
             assert len(time_series) > 1
+
             time_interval = time_series[1] - time_series[0]
 
             self._conc_calculation_ = EmissionCalculation(
@@ -2930,12 +2937,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 end_dt=end_dt,
                 time_interval=time_interval,
             )
-
-        except Exception as e:
+        except sqlite3.OperationalError as err:
             QtWidgets.QMessageBox.warning(
-                self, "Error", "Could not open database file:  %s." % e
+                self, "Error", "Could not open database file:  %s." % err
             )
-            self.close()
 
     @catch_errors
     def run_austal(self, *args, **kwargs):
