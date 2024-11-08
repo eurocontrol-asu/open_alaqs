@@ -21,6 +21,7 @@
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any, cast
 
 import geopandas as gpd
 from qgis.core import (
@@ -69,6 +70,9 @@ from open_alaqs.enums import AlaqsLayerType
 logger = get_logger(__name__)
 
 
+INVENTORY_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
 def catch_errors(f):
     """
     Decorator to catch all errors when executing the function.
@@ -102,6 +106,43 @@ def log_activity(f):
         return f(*args, **kwargs)
 
     return wrapper
+
+
+def get_inventory_timestamps(db_path: str) -> list[datetime]:
+    time_series: list[datetime] = []
+
+    if db_path:
+        inventory_time_series = cast(
+            list[dict[str, Any]],
+            sql_interface.db_execute_sql(
+                db_path,
+                """
+                    SELECT * FROM tbl_InvTime
+                """,
+                fetchone=False,
+            ),
+        )
+
+        for t in inventory_time_series:
+            time_series.append(datetime.strptime(t["time"], INVENTORY_DATE_FORMAT))
+
+        time_series.sort()
+
+    return time_series
+
+
+def get_min_max_timestamps(db_path: str) -> tuple[datetime, datetime]:
+    time_series = get_inventory_timestamps(db_path)
+
+    if len(time_series) < 2:
+        time_series.append(
+            datetime.strptime("2000-01-01 00:00:00", INVENTORY_DATE_FORMAT)
+        )
+        time_series.append(
+            datetime.strptime("2000-01-02 00:00:00", INVENTORY_DATE_FORMAT)
+        )
+
+    return (time_series[0], time_series[-1])
 
 
 class OpenAlaqsAbout(QtWidgets.QDialog):
@@ -2456,7 +2497,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                     self._iface.mapCanvas().scene().addItem(textItem)
 
     def updateMinMaxGUI(self, db_path_=""):
-        (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path_)
+        (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path_)
         # self.ui.start_dateTime.setMinimumDateTime(time_start_calc_)
         # self.ui.end_dateTime.setMaximumDateTime(time_end_calc_)
 
@@ -2468,21 +2509,6 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         )
         self.ui.source_types.clear()
         self.ui.source_names.clear()
-
-    def getMinMaxTime(self, db_path=""):
-        if db_path:
-            time_series_ = [
-                datetime.strptime(t_[1], "%Y-%m-%d %H:%M:%S")
-                for t_ in alaqsutils.inventory_time_series(db_path)
-            ]
-            time_series_.sort()
-            if len(time_series_) >= 2:
-                return (time_series_[0], time_series_[-1])
-
-        return (
-            datetime.strptime("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
-            datetime.strptime("2000-01-02 00:00:00", "%Y-%m-%d %H:%M:%S"),
-        )
 
     @catch_errors
     def populate_source_types(self):
@@ -2802,27 +2828,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.configuration_modules_list.setCurrentRow(index)
 
     def updateMinMaxGUI(self, db_path_=""):
-        (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path_)
+        (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path_)
         self.resetConcentrationCalculationConfiguration(
             config={
                 "start_dt_inclusive": time_start_calc_,
                 "end_dt_inclusive": time_end_calc_,
             }
-        )
-
-    def getMinMaxTime(self, db_path=""):
-        if db_path:
-            time_series_ = [
-                datetime.strptime(t_[1], "%Y-%m-%d %H:%M:%S")
-                for t_ in alaqsutils.inventory_time_series(db_path)
-            ]
-            time_series_.sort()
-            if len(time_series_) >= 2:
-                return (time_series_[0], time_series_[-1])
-
-        return (
-            datetime.strptime("2000-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
-            datetime.strptime("2000-01-02 00:00:00", "%Y-%m-%d %H:%M:%S"),
         )
 
     def getTimeSeries(self, db_path="") -> list[datetime]:
@@ -2840,7 +2851,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
             except Exception as e:
                 logger.warning("Database error: '%s'" % (e))
-                (time_start_calc_, time_end_calc_) = self.getMinMaxTime(db_path)
+                (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path)
                 time_series_ = []
                 for _day_ in rrule.rrule(
                     rrule.DAILY, dtstart=time_start_calc_, until=time_end_calc_
