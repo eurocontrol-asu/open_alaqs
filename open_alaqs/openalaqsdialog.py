@@ -2844,12 +2844,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         if db_path:
             try:
-                time_series_ = [
-                    datetime.strptime(t_[1], "%Y-%m-%d %H:%M:%S")
-                    for t_ in alaqsutils.inventory_time_series(db_path)
-                ]
-                time_series_.sort()
-
+                time_series_ = get_inventory_timestamps(db_path)
             except Exception as e:
                 logger.warning("Database error: '%s'" % (e))
                 (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path)
@@ -2864,6 +2859,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     ):
                         time_series_.append(hour_.strftime("%Y-%m-%d %H:%M:%S"))
                 time_series_.sort()
+
             return time_series_
 
     def resetModuleConfiguration(self, module_names):
