@@ -2842,25 +2842,31 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         from dateutil import rrule
 
-        if db_path:
-            try:
-                time_series_ = get_inventory_timestamps(db_path)
-            except Exception as e:
-                logger.warning("Database error: '%s'" % (e))
-                (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path)
-                time_series_ = []
-                for _day_ in rrule.rrule(
-                    rrule.DAILY, dtstart=time_start_calc_, until=time_end_calc_
-                ):
-                    for hour_ in rrule.rrule(
-                        rrule.HOURLY,
-                        dtstart=_day_,
-                        until=_day_ + timedelta(days=+1, hours=-1),
-                    ):
-                        time_series_.append(hour_.strftime("%Y-%m-%d %H:%M:%S"))
-                time_series_.sort()
+        if not db_path:
+            return []
 
-            return time_series_
+        try:
+            time_series_ = get_inventory_timestamps(db_path)
+        except Exception as e:
+            logger.warning("Database error: '%s'" % (e))
+
+            # TODO OPENGIS.ch: not very sure if this `except` block makes much sense,
+            # since if `get_inventory_timestamp` fails, there is no point for `get_min_max_timestamps` to pass.
+            # I would consider to remove this and simplify the function.
+            (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path)
+            time_series_ = []
+            for _day_ in rrule.rrule(
+                rrule.DAILY, dtstart=time_start_calc_, until=time_end_calc_
+            ):
+                for hour_ in rrule.rrule(
+                    rrule.HOURLY,
+                    dtstart=_day_,
+                    until=_day_ + timedelta(days=+1, hours=-1),
+                ):
+                    time_series_.append(hour_.strftime(INVENTORY_DATE_FORMAT))
+            time_series_.sort()
+
+        return time_series_
 
     def resetModuleConfiguration(self, module_names):
         self.ui.output_modules_tab_widget.clear()
