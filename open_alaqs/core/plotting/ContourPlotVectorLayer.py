@@ -45,7 +45,7 @@ class ContourPlotVectorLayer:
             layer_name = f"{field_name} {layer_name}"
 
         self.layer = QgsVectorLayer("Polygon", layer_name, "memory")
-        self.layer.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
+        self.layer.setCrs(QgsCoordinateReferenceSystem.fromEpsgId(3857))
 
         self._add_field(self.field_name)
 

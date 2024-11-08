@@ -115,7 +115,7 @@ def load_spatialite_layer(
     lconfig.setInitFilePath(os.path.join(plugin_dir, "ui", layer_config["py_filename"]))
     lconfig.setInitFunction("form_open")
     layer.setEditFormConfig(lconfig)
-    layer.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
+    layer.setCrs(QgsCoordinateReferenceSystem.fromEpsgId(3857))
 
     instudy_idx = layer.fields().indexFromName("instudy")
     if instudy_idx != -1:
@@ -260,7 +260,7 @@ def set_default_zoom(canvas: QgsMapCanvas, lat: float, lon: float) -> None:
     MAP_SCALE = 5000
 
     project = QgsProject.instance()
-    crs_src = QgsCoordinateReferenceSystem("EPSG:4326")
+    crs_src = QgsCoordinateReferenceSystem.fromEpsgId(4326)
     crs_tranform = QgsCoordinateTransform(crs_src, project.crs(), project)
 
     geom = QgsGeometry.fromPointXY(QgsPointXY(lon, lat))

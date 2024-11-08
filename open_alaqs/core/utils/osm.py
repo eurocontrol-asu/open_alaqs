@@ -218,7 +218,7 @@ def reproject_layer(layer: QgsVectorLayer) -> QgsVectorLayer:
         "native:reprojectlayer",
         {
             "INPUT": layer,
-            "TARGET_CRS": QgsCoordinateReferenceSystem("EPSG:3857"),
+            "TARGET_CRS": QgsCoordinateReferenceSystem.fromEpsgId(3857),
             "CONVERT_CURVED_GEOMETRIES": False,
             "OUTPUT": "TEMPORARY_OUTPUT",
         },
