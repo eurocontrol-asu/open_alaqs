@@ -355,7 +355,16 @@ class MovementSourceModule(SourceModule):
 
         # flight_columns=["aircraft","engine","profile_id", "departure_arrival"]
         flight_columns = ["engine", "profile_id"]
-        for _name, group in df[relevant_movements].groupby(flight_columns):
+        flight_columns = [
+            "engine",
+            "profile_id",
+            # The profile and engine will calculate the pollutant emissions correctly, but the Emissions geometry will be incorrect.
+            # This is because the Profile shows the path of the airplane ignoring the azimuth of the Runway
+            # and it's geometry is stored precalculated with the Runway in the resulting FlightEmissions object.
+            # However, the geometry needs to be rotated to match the respective Runway of each Movement.
+            lambda idx: df.iloc[idx]["Sources"].getRunway().getName(),
+        ]
+        for grouped_values, group in df[relevant_movements].groupby(flight_columns):
 
             # Determine the flight emissions
             flight_emissions = self.FetchFlightEmissions(
@@ -366,7 +375,7 @@ class MovementSourceModule(SourceModule):
             for index, em_ in enumerate(flight_emissions):
                 if em_["emissions"].isZero():
                     logger.debug(
-                        f"Skip zero value emissions for Engine: {_name[0]} and Profile id: {_name[1]}"
+                        f"Skip zero value emissions for Engine: {grouped_values[0]}, profile id: {grouped_values[1]}"
                     )
                     to_remove.append(index)
             if to_remove:
