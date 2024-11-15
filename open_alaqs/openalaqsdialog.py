@@ -1394,6 +1394,13 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         # Clear the selected aircraft groups table
         self.update_selected_ac_groups([])
 
+        # open the "Edit route" tab
+        self.ui.createEditTaxiRouteTabWidget.setCurrentWidget(
+            self.ui.createEditTaxiRouteTabWidget.findChild(
+                QtWidgets.QWidget, "editRouteTab"
+            )
+        )
+
     def update_selected_ac_groups(self, values_list):
         # Clear the selected aircraft groups table
         self.ui.selected_ac_groups.clear()
