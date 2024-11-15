@@ -1259,6 +1259,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
             "JET BUSINESS",
             "JET REGIONAL",
             "TURBOPROP",
+            "PROPELLER",
         ]
         self.ui.available_ac_groups.clear()
         self.ui.available_ac_groups.setColumnCount(1)
