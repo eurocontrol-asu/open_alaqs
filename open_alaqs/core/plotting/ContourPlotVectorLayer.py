@@ -17,7 +17,7 @@ from qgis.core import (
     QgsVectorLayer,
     QgsVectorLayerUtils,
 )
-from qgis.PyQt.QtCore import Qt, QVariant
+from qgis.PyQt.QtCore import QMetaType, Qt
 from qgis.PyQt.QtGui import QColor
 
 from open_alaqs.core.alaqslogging import get_logger
@@ -45,7 +45,7 @@ class ContourPlotVectorLayer:
             layer_name = f"{field_name} {layer_name}"
 
         self.layer = QgsVectorLayer("Polygon", layer_name, "memory")
-        self.layer.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
+        self.layer.setCrs(QgsCoordinateReferenceSystem.fromEpsgId(3857))
 
         self._add_field(self.field_name)
 
@@ -91,7 +91,7 @@ class ContourPlotVectorLayer:
     def _add_field(self, field_name: str) -> None:
         self.layer.startEditing()
 
-        if not self.layer.addAttribute(QgsField(field_name, QVariant.Double)):
+        if not self.layer.addAttribute(QgsField(field_name, QMetaType.Type.Double)):
             raise Exception(f'Could not add field "{field_name}"!')
 
         self.layer.updateFields()

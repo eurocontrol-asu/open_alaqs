@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Optional, Union
 
 
@@ -47,7 +47,7 @@ def convertSecondsToTime(value: float) -> Union[time.struct_time, None]:
     """
     if value is None:
         return None
-    return datetime.utcfromtimestamp(int(value)).utctimetuple()
+    return datetime.fromtimestamp(int(value), UTC).utctimetuple()
 
 
 def convertStringToTime(value: str, format_="%Y-%m-%d %H:%M:%S") -> Union[tuple, None]:

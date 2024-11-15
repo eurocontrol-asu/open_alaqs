@@ -1392,7 +1392,7 @@ class Movement:
         traj = self.getTrajectory() if not atRunway else self.getTrajectoryAtRunway()
 
         if traj is not None:
-            source_epsg = QgsCoordinateReferenceSystem(EPSG_id_source)
+            source_epsg = QgsCoordinateReferenceSystem.fromEpsgId(EPSG_id_source)
             qgs_d = QgsDistanceArea()
 
             qgs_d.setSourceCrs(source_epsg, QgsProject.instance().transformContext())
@@ -1658,12 +1658,12 @@ class Movement:
         epsg_id_source = 3857
         epsg_id_target = 4326
         tr = QgsCoordinateTransform(
-            QgsCoordinateReferenceSystem(epsg_id_source),
-            QgsCoordinateReferenceSystem(epsg_id_target),
+            QgsCoordinateReferenceSystem.fromEpsgId(epsg_id_source),
+            QgsCoordinateReferenceSystem.fromEpsgId(epsg_id_target),
             QgsProject.instance(),
         )
         # Create a measure object
-        source_crs = QgsCoordinateReferenceSystem(epsg_id_source)
+        source_crs = QgsCoordinateReferenceSystem.fromEpsgId(epsg_id_source)
         d = QgsDistanceArea()
         d.setSourceCrs(source_crs, QgsProject.instance().transformContext())
         d.setEllipsoid(source_crs.ellipsoidAcronym())

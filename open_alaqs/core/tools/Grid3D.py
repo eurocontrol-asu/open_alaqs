@@ -182,7 +182,7 @@ class Grid3D:
         pollutant_cols = {}
         for pollutant_type in PollutantType:
             key = f"{pollutant_type.value}_kg"
-            pollutant_cols[key] = pd.Series(0, index=gdf.index)
+            pollutant_cols[key] = pd.Series(0, index=gdf.index, dtype="float64")
 
         gdf = cast(gpd.GeoDataFrame, gdf.assign(**pollutant_cols))
 
