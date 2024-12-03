@@ -362,7 +362,7 @@ class MovementSourceModule(SourceModule):
             # This is because the Profile shows the path of the airplane ignoring the azimuth of the Runway
             # and it's geometry is stored precalculated with the Runway in the resulting FlightEmissions object.
             # However, the geometry needs to be rotated to match the respective Runway of each Movement.
-            lambda idx: df.iloc[idx]["Sources"].getRunway().getName(),
+            lambda idx: df.loc[idx]["Sources"].getRunway().getName(),
         ]
         for grouped_values, group in df[relevant_movements].groupby(flight_columns):
 
