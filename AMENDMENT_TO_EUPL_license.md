@@ -14,7 +14,7 @@ $\color{red}{\text{Licensee processes the personal data it receives from Licenso
 
 $\color{red}{\text{Licensor processes the personal data it receives from the Licensee under the Licence for the sole purpose of distributing or communicates the }}$ $\color{red}{\text{Work under the Licence. Licensee processes the personal data in accordance with the data protection laws applicable to Licensee.}}$
 
-$\color{red}{\text{To protect the personal data, the Licensee and Licensor shall implement appropriate organisational, technical and physical measures}}$ $\color{red}{\text{ which shall be kept up to date in accordance with generally accepted standards.}}$ 
+$\color{red}{\text{To protect the personal data, the Licensee and Licensor shall implement appropriate organisational, technical and physical measures}}$ $\color{red}{\text{ which shall be kept up to date in accordance with generally accepted standards.}}$
 
 ## 14. Jurisdiction
 Without prejudice to specific agreement between parties, any litigation arising between other parties and resulting from the interpretation of this License, will be subject to the exclusive jurisdiction of the competent courts of $\color{red}{\text{Belgium}}$.
