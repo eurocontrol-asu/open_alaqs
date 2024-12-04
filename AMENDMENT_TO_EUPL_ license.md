@@ -1,6 +1,6 @@
 ## 1. Definitions
 
-* *The Licensor*:the natural or legal person that distributes or communicates the Work under the Licence $\color{red}{\text{(“EUROCONTROL”, the European Organisation for the Safety of Air Navigation)}}$.
+**The Licensor**:the natural or legal person that distributes or communicates the Work under the Licence $\color{red}{\text{(“EUROCONTROL”, the European Organisation for the Safety of Air Navigation)}}$.
 
 ## 5. Obligations of the Licensee
 
