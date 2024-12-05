@@ -96,7 +96,7 @@ class GridOutputModule(OutputModule):
             factor = intersecting_df.intersection(geom).area / geom.area
         else:
             raise NotImplementedError(
-                "Usupported geometry type: {}".format(geom.__class__.name)
+                "Usupported geometry type: {}".format(type(geom).__name__)
             )
 
         for pollutant_type in PollutantType:

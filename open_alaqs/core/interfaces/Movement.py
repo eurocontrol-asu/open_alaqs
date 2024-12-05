@@ -1147,11 +1147,7 @@ class Movement:
             #     self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getY(),
             #     self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getZ(),
             # )
-            z2_ = (
-                self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getX(),
-                self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getY(),
-                self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getZ(),
-            )
+            z2_ = self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getZ()
 
             x_shift = self.getTrajectory().get_sas_point(
                 abs(ver_shift), self.isDeparture()
