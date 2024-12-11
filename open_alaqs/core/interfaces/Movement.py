@@ -10,10 +10,13 @@ import matplotlib
 import numpy as np
 import pandas as pd
 from qgis.core import (
+    Qgis,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsDistanceArea,
     QgsGeometry,
+    QgsLineString,
+    QgsPoint,
     QgsPointXY,
     QgsProject,
 )
@@ -381,6 +384,51 @@ class Movement:
 
         return emissions
 
+    def _calculate_sas_geom(self, wkt: str, horizontal_extent: float) -> QgsGeometry:
+        geom = QgsGeometry.fromWkt(wkt)
+
+        if geom.wkbType() == Qgis.WkbType.LineString:
+            raise NotImplementedError(f"Unsupported geometry type {geom.type()}!")
+
+        ogr_multipolygon = spatial.ogr.Geometry(spatial.ogr.wkbMultiPolygon)
+
+        line = geom.constGet()
+        points = [line.pointN(i) for i in range(line.numPoints())]
+
+        for p1, p2 in zip(points, points[1:]):
+            # skip when the two points are exactly equal, which produces invalid polygon
+            if p1 == p2:
+                continue
+
+            line = QgsLineString(p1, p2)
+
+            # TODO OPENGIS.ch: this should be converted to proper QGIS method, but currently we copy/paste the implementation that was used before
+            ogr_left_line, ogr_right_line = self.CalculateParallels(
+                line.asWkt(), horizontal_extent, 0, 0, 3857, 4326
+            )
+
+            # TODO OPENGIS.ch: this should be converted to proper QGIS method, but currently we copy/paste the implementation that was used before
+            ogr_poly_geom = spatial.getRectangleXYZFromBoundingBox(
+                ogr_left_line, ogr_right_line, 3857, 4326
+            )
+
+            # TODO OPENGIS.ch: ideally this should be done with `QgsGeometry.addPart` into a multipolygon.
+            # However, it was crashing QGIS and therefore we use the OGR implementation to add parts to a multipolygon.
+            ogr_multipolygon.AddGeometry(ogr_poly_geom)
+            # Crashing implementation:
+            # 1) we create the multipolygon (should be outside the for-loop)
+            # result_multipolygon = QgsGeometry.fromWkt("MULTIPOLYGON Z EMPTY")
+            # 2) Add the geometry part
+            # polygon = QgsGeometry.fromWkt(ogr_poly_geom.ExportToWkt()).get()
+            # add_part_result = result_multipolygon.addPart(polygon) # BOOM!
+            # 3) check if adding was successful
+            # if add_part_result != Qgis.GeometryOperationResult.Success:
+            #     raise Exception(
+            #         f"Failed to add part to multipolygon: {add_part_result}"
+            #     )
+
+        return QgsGeometry.fromWkt(ogr_multipolygon.ExportToWkt())
+
     def CalculateParallels(
         self, geometry_wkt_init, width, height, shift, EPSG_source, EPSG_target
     ):
@@ -562,40 +610,10 @@ class Movement:
                                 {"z_min": 0.0 + ver_shift, "z_max": ver_ext + ver_shift}
                             )
 
-                            # ToDo: add height
-                            multipolygon = spatial.ogr.Geometry(
-                                spatial.ogr.wkbMultiPolygon
+                            qgs_multipolygon = self._calculate_sas_geom(
+                                taxiway_segment_.getGeometryText(), hor_ext
                             )
-                            all_points = spatial.getAllPoints(
-                                taxiway_segment_.getGeometryText()
-                            )
-                            for p_, point_ in enumerate(all_points):
-                                # point_ example (802522.928722, 5412293.034699, 0.0)
-                                if p_ + 1 < len(all_points):
-                                    # break
-                                    geometry_wkt_i = (
-                                        "LINESTRING Z(%s %s %s, %s %s %s)"
-                                        % (
-                                            all_points[p_][0],
-                                            all_points[p_][1],
-                                            all_points[p_][2],
-                                            all_points[p_ + 1][0],
-                                            all_points[p_ + 1][1],
-                                            all_points[p_ + 1][2],
-                                        )
-                                    )
-                                    leftline, rightline = self.CalculateParallels(
-                                        geometry_wkt_i, hor_ext, 0, 0, 3857, 4326
-                                    )  # in lon / lat !
-                                    poly_geo = spatial.getRectangleXYZFromBoundingBox(
-                                        leftline, rightline, 3857, 4326
-                                    )
-                                    multipolygon.AddGeometry(poly_geo)
-                                    em_.setGeometryText(multipolygon.ExportToWkt())
-                            # except Exception:
-                            #     logger.warning("Error while retrieving Smooth & Shift parameters. Switching to normal method.")
-                            #     em_.setGeometryText(taxiway_segment_.getGeometryText())
-
+                            em_.setGeometryText(qgs_multipolygon.asWkt())
                         else:
                             # logger.info("Calculate taxiing emissions WITHOUT Smooth & Shift Approach.")
                             em_.setGeometryText(taxiway_segment_.getGeometryText())
@@ -1137,9 +1155,7 @@ class Movement:
             #     .getZ(),
             # )
             z1_ = (
-                self.getTrajectory()
-                .getPoints()[startPoint_.getIdentifier() - 1]
-                .getZ(),
+                self.getTrajectory().getPoints()[startPoint_.getIdentifier() - 1].getZ()
             )
 
             # x2_, y2_, z2_ = (
@@ -1348,33 +1364,15 @@ class Movement:
                     }
                 )
 
-            multipolygon = spatial.ogr.Geometry(spatial.ogr.wkbMultiPolygon)
-            all_points = spatial.getAllPoints(
-                spatial.getLineGeometryText(
-                    startPoint_copy.getGeometryText(), endPoint_copy.getGeometryText()
-                )
+            qgs_start_point = QgsPoint(
+                startPoint_copy.getX(), startPoint_copy.getY(), startPoint_copy.getZ()
             )
-            for p_, point_ in enumerate(all_points):
-                # point_ example (802522.928722, 5412293.034699, 0.0)
-                if p_ + 1 == len(all_points):
-                    break
-                geometry_wkt_i = "LINESTRING Z(%s %s %s, %s %s %s)" % (
-                    all_points[p_][0],
-                    all_points[p_][1],
-                    all_points[p_][2],
-                    all_points[p_ + 1][0],
-                    all_points[p_ + 1][1],
-                    all_points[p_ + 1][2],
-                )
-                leftline, rightline = self.CalculateParallels(
-                    geometry_wkt_i, hor_ext, 0, 0, 3857, 4326
-                )  # in lon / lat !
-                poly_geo = spatial.getRectangleXYZFromBoundingBox(
-                    leftline, rightline, 3857, 4326
-                )
-                multipolygon.AddGeometry(poly_geo)
-                emissions.setGeometryText(multipolygon.ExportToWkt())
-
+            qgs_end_point = QgsPoint(
+                endPoint_copy.getX(), endPoint_copy.getY(), endPoint_copy.getZ()
+            )
+            qgs_line = QgsGeometry(QgsLineString(qgs_start_point, qgs_end_point))
+            qgs_polygon = self._calculate_sas_geom(qgs_line.asWkt(), hor_ext)
+            emissions.setGeometryText(qgs_polygon.asWkt())
         else:
             # logger.debug("Calculate RWY emissions WITHOUT Smooth & Shift Approach.")
             emissions.setVerticalExtent({"z_min": 0, "z_max": 0})

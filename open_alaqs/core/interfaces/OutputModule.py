@@ -5,6 +5,7 @@ import geopandas as gpd
 from qgis.core import QgsMapLayer
 from qgis.PyQt.QtWidgets import QWidget
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
+from shapely.validation import make_valid
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
@@ -83,7 +84,8 @@ class GridOutputModule(OutputModule):
             )
             return grid_df
 
-        geom = emission.getGeometry()
+        # ensure geometry validity, otherwise the intersects operations might fail. Ideally the invalid geometries should be prevented.
+        geom = make_valid(emission.getGeometry())
         intersecting_df = grid_df[grid_df.intersects(geom) == True]  # noqa: E712
         intersecting_df = cast(gpd.GeoDataFrame, intersecting_df)
 
