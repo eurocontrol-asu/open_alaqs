@@ -3,7 +3,10 @@ from collections import OrderedDict
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.APU import APUStore
-from open_alaqs.core.interfaces.EmissionDynamics import EmissionDynamicsStore
+from open_alaqs.core.interfaces.EmissionDynamics import (
+    EmissionDynamicsStore,
+    FlightStage,
+)
 from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
 from open_alaqs.core.interfaces.EngineDatabases import (
     EngineEmissionFactorsStartDatabase,
@@ -114,7 +117,7 @@ class Aircraft:
     def setManufacturer(self, var):
         self._manufacturer = var
 
-    def getGroup(self):
+    def getGroup(self) -> str:
         return self._ac_group
 
     def setGroup(self, var):
@@ -231,178 +234,155 @@ class AircraftStore(Store, metaclass=Singleton):
         # unmatched_engines = []
         # ToDo: initiate only AC types in the study ?
         for key_, ac_dict in self.getAircraftDatabase().getEntries().items():
+            # add aircraft to store
+            ac = Aircraft(ac_dict)
 
-            try:
-                # add aircraft to store
-                ac = Aircraft(ac_dict)
+            engine = (
+                self.getEngineStore().getObject(ac_dict["engine"])
+                or self.getEngineStore().getObject(ac_dict["engine_name"])
+                or self.getHeliEngineStore().getObject(ac_dict["engine"])
+                or self.getHeliEngineStore().getObject(ac_dict["engine_name"])
+            )
 
-                engine = (
-                    self.getEngineStore().getObject(ac_dict["engine"])
-                    or self.getEngineStore().getObject(ac_dict["engine_name"])
-                    or self.getHeliEngineStore().getObject(ac_dict["engine"])
-                    or self.getHeliEngineStore().getObject(ac_dict["engine_name"])
+            # If engine not found in the DB, the aircraft is ignored
+            if not engine:
+                logger.warning(
+                    'Could not find engine with id "%s" for aircraft "%s"',
+                    ac_dict["engine"],
+                    ac.getICAOIdentifier(),
                 )
 
-                # If engine not found in the DB, the aircraft is ignored
-                if not engine:
-                    logger.warning(
-                        'Could not find engine with id "%s" for aircraft "%s"',
-                        ac_dict["engine"],
-                        ac.getICAOIdentifier(),
-                    )
+                continue
 
-                    continue
+            ac.setDefaultEngine(engine)
 
-                ac.setDefaultEngine(engine)
-
-                if ac.getDefaultEngine() is not None:
-                    #   Main-engine-start-emission factors
-                    ac_group = fuzzy_match(
-                        ac.getGroup(),
-                        (
-                            v["aircraft_group"]
-                            for v in self.getEngineStartEmissionFactorsDatabase()
-                            .getEntries()
-                            .values()
-                        ),
-                    )
-
-                    start_ei = Emission(
-                        defaultValues={
-                            "fuel_kg": 0.0,
-                            "co_g": 0.0,
-                            "co2_g": 0.0,
-                            "hc_g": 0.0,
-                            "nox_g": 0.0,
-                            "sox_g": 0.0,
-                            "pm10_g": 0.0,
-                            "p1_g": 0.0,
-                            "p2_g": 0.0,
-                            "pm10_prefoa3_g": 0.0,
-                            "pm10_nonvol_g": 0.0,
-                            "pm10_sul_g": 0.0,
-                            "pm10_organic_g": 0.0,
-                        }
-                    )
-                    start_ei.setVerticalExtent({"z_min": 0, "z_max": 5})
-
-                    if ac_group is None:
-                        ac.getDefaultEngine().setStartEmissions(
-                            start_ei
-                        )  # association of start ef by aircraft group!
-                    else:
-                        for value in (
-                            self.getEngineStartEmissionFactorsDatabase()
-                            .getEntries()
-                            .values()
-                        ):
-                            if value["aircraft_group"] == ac_group:
-                                start_ei.add_value(
-                                    PollutantType.CO,
-                                    PollutantUnit.GRAM,
-                                    value["co"],
-                                )
-                                start_ei.add_value(
-                                    PollutantType.HC,
-                                    PollutantUnit.GRAM,
-                                    value["hc"],
-                                )
-                                start_ei.add_value(
-                                    PollutantType.NOx,
-                                    PollutantUnit.GRAM,
-                                    value["nox"],
-                                )
-                                start_ei.add_value(
-                                    PollutantType.SOx,
-                                    PollutantUnit.GRAM,
-                                    value["sox"],
-                                )
-                                start_ei.add_value(
-                                    PollutantType.PM10,
-                                    PollutantUnit.GRAM,
-                                    value["pm10"],
-                                )
-                                start_ei.add_value(
-                                    PollutantType.PM1,
-                                    PollutantUnit.GRAM,
-                                    value["p1"],
-                                )
-                                start_ei.add_value(
-                                    PollutantType.PM2,
-                                    PollutantUnit.GRAM,
-                                    value["p2"],
-                                )
-
-                        ac.getDefaultEngine().setStartEmissions(
-                            start_ei
-                        )  # association of start ef by aircraft group!
-
-                    if ac.getGroup():
-                        apu_times_ = self.getAPUStore().get_apu_times(ac.getGroup())
-
-                    ac.setApuTimes(apu_times_)
-
-                    # emission factors
-                    ac.setApu(None)
-                    ac.setApuEmissions(None)
-
-                    apu_val_list = [
-                        v.getName() for v in self.getAPUStore().getObjects().values()
-                    ]
-                    apu = fuzzy_match(ac._apu_id, apu_val_list)
-                    if apu:
-                        apu_val_emissions = [
-                            v._emissions
-                            for v in self.getAPUStore().getObjects().values()
-                        ]
-                        ac.setApu(apu)
-                        ac.setApuEmissions(apu_val_emissions[apu_val_list.index(apu)])
-
-                # TODO OPENGIS.ch: Why do we rename the group from the `default_aircraft` - "HELICOPTER LIGHT", "HELICOPTER HEAVY", etc, to "HELI SMALL" and "HELI LARGE" as in `default_emission_dynamics`?
-                # Ideally I would recommend all these values to be added to `default_emission_dynamics` and remove the renaming.
-                # If really needed, this should be a method of the `Aircraft` class.
-                if (ac.getGroup() == "HELICOPTER") or (
-                    ac.getGroup() == "HELICOPTER LIGHT"
-                ):
-                    dynamic_group = "HELI SMALL"
-                elif (
-                    (ac.getGroup() == "HELICOPTER HEAVY")
-                    or (ac.getGroup() == "HELICOPTER LARGE")
-                    or (ac.getGroup() == "HELICOPTER MEDIUM")
-                ):
-                    dynamic_group = "HELI LARGE"
-                else:
-                    dynamic_group = ac.getGroup()
-
-                # Smooth and Shift factors
-                dynamic_group = fuzzy_match(
-                    dynamic_group,
+            if ac.getDefaultEngine() is not None:
+                #   Main-engine-start-emission factors
+                ac_group = fuzzy_match(
+                    ac.getGroup(),
                     (
-                        v.getDynamicsGroup()
-                        for v in self.getEmissionDynamicsStore().getObjects().values()
+                        v["aircraft_group"]
+                        for v in self.getEngineStartEmissionFactorsDatabase()
+                        .getEntries()
+                        .values()
                     ),
                 )
-                if dynamic_group:
-                    for sas in self.getEmissionDynamicsStore().getObjects().values():
-                        if dynamic_group not in sas.getDynamicsGroup():
-                            continue
 
-                        if "TX" in sas.getDynamicsGroup():
-                            ac.setEmissionDynamicsByMode("TX", sas)
-                        elif "CL" in sas.getDynamicsGroup():
-                            ac.setEmissionDynamicsByMode("CL", sas)
-                        if "TO" in sas.getDynamicsGroup():
-                            ac.setEmissionDynamicsByMode("TO", sas)
-                        elif "AP" in sas.getDynamicsGroup():
-                            ac.setEmissionDynamicsByMode("AP", sas)
-
-                self.setObject(ac.getICAOIdentifier(), ac)
-
-            except Exception as error:
-                logger.error(
-                    "Error whil initializing aircraft: %s", error, exc_info=error
+                start_ei = Emission(
+                    defaultValues={
+                        "fuel_kg": 0.0,
+                        "co_g": 0.0,
+                        "co2_g": 0.0,
+                        "hc_g": 0.0,
+                        "nox_g": 0.0,
+                        "sox_g": 0.0,
+                        "pm10_g": 0.0,
+                        "p1_g": 0.0,
+                        "p2_g": 0.0,
+                        "pm10_prefoa3_g": 0.0,
+                        "pm10_nonvol_g": 0.0,
+                        "pm10_sul_g": 0.0,
+                        "pm10_organic_g": 0.0,
+                    }
                 )
-                continue
+                start_ei.setVerticalExtent({"z_min": 0, "z_max": 5})
+
+                if ac_group is None:
+                    ac.getDefaultEngine().setStartEmissions(
+                        start_ei
+                    )  # association of start ef by aircraft group!
+                else:
+                    for value in (
+                        self.getEngineStartEmissionFactorsDatabase()
+                        .getEntries()
+                        .values()
+                    ):
+                        if value["aircraft_group"] == ac_group:
+                            start_ei.add_value(
+                                PollutantType.CO,
+                                PollutantUnit.GRAM,
+                                value["co"],
+                            )
+                            start_ei.add_value(
+                                PollutantType.HC,
+                                PollutantUnit.GRAM,
+                                value["hc"],
+                            )
+                            start_ei.add_value(
+                                PollutantType.NOx,
+                                PollutantUnit.GRAM,
+                                value["nox"],
+                            )
+                            start_ei.add_value(
+                                PollutantType.SOx,
+                                PollutantUnit.GRAM,
+                                value["sox"],
+                            )
+                            start_ei.add_value(
+                                PollutantType.PM10,
+                                PollutantUnit.GRAM,
+                                value["pm10"],
+                            )
+                            start_ei.add_value(
+                                PollutantType.PM1,
+                                PollutantUnit.GRAM,
+                                value["p1"],
+                            )
+                            start_ei.add_value(
+                                PollutantType.PM2,
+                                PollutantUnit.GRAM,
+                                value["p2"],
+                            )
+
+                    ac.getDefaultEngine().setStartEmissions(
+                        start_ei
+                    )  # association of start ef by aircraft group!
+
+                if ac.getGroup():
+                    apu_times_ = self.getAPUStore().get_apu_times(ac.getGroup())
+
+                ac.setApuTimes(apu_times_)
+
+                # emission factors
+                ac.setApu(None)
+                ac.setApuEmissions(None)
+
+                apu_val_list = [
+                    v.getName() for v in self.getAPUStore().getObjects().values()
+                ]
+                apu = fuzzy_match(ac._apu_id, apu_val_list)
+                if apu:
+                    apu_val_emissions = [
+                        v._emissions for v in self.getAPUStore().getObjects().values()
+                    ]
+                    ac.setApu(apu)
+                    ac.setApuEmissions(apu_val_emissions[apu_val_list.index(apu)])
+
+            # TODO OPENGIS.ch: Why do we rename the group from the `default_aircraft` - "HELICOPTER LIGHT", "HELICOPTER HEAVY", etc, to "HELI SMALL" and "HELI LARGE" as in `default_emission_dynamics`?
+            # Ideally I would recommend all these values to be added to `default_emission_dynamics` and remove the renaming.
+            # If really needed, this should be a method of the `Aircraft` class.
+            if (ac.getGroup() == "HELICOPTER") or (ac.getGroup() == "HELICOPTER LIGHT"):
+                dynamic_group = "HELI SMALL"
+            elif (
+                (ac.getGroup() == "HELICOPTER HEAVY")
+                or (ac.getGroup() == "HELICOPTER LARGE")
+                or (ac.getGroup() == "HELICOPTER MEDIUM")
+            ):
+                dynamic_group = "HELI LARGE"
+            else:
+                dynamic_group = ac.getGroup()
+
+            emission_dynamics_map = (
+                self.getEmissionDynamicsStore().get_emissions_dynamics()
+            )
+
+            for flight_stage in FlightStage:
+                ac.setEmissionDynamicsByMode(
+                    flight_stage.value,
+                    emission_dynamics_map[dynamic_group][flight_stage],
+                )
+
+            self.setObject(ac.getICAOIdentifier(), ac)
 
     def getAircraftDatabase(self):
         return self._aircraft_db

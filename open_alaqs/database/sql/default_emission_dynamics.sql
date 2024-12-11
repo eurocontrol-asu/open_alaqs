@@ -4,6 +4,8 @@ CREATE TABLE "default_emission_dynamics" (
   "oid" INTEGER PRIMARY KEY,
   "dynamics_id" INTEGER DEFAULT 0,
   "dynamics_name" VARCHAR(20),
+  "ac_group" VARCHAR(20),
+  "flight_stage" VARCHAR(20),
   "horizontal_extent_m" DECIMAL NULL DEFAULT 0,
   "vertical_extent_m" DECIMAL NULL DEFAULT 0,
   "exit_velocity_m_per_s" DECIMAL NULL DEFAULT 0,

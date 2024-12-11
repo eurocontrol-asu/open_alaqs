@@ -1,4 +1,6 @@
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
+from enum import StrEnum
+from typing import TypedDict, cast
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
@@ -15,51 +17,51 @@ defaultEDs = {
 }
 
 
-class EmissionDynamics:
-    def __init__(self, val=None):
-        if val is None:
-            val = {}
-        self._dynamics_name = str(val.get("dynamics_name", ""))
-        self._emission_dynamics = {}
+class FlightStage(StrEnum):
+    TX = "TX"
+    AP = "AP"
+    TO = "TO"
+    CL = "CL"
 
+
+class EmissionsDynamicsRow(TypedDict):
+    oid: int
+    dynamics_id: int
+    dynamics_name: str
+    ac_group: str
+    flight_stage: FlightStage
+    horizontal_extent_m: float
+    vertical_extent_m: float
+    exit_velocity_m_per_s: float
+    decay_time_s: float
+    horizontal_shift_m: float
+    vertical_shift_m: float
+    horizontal_extent_m_sas: float
+    vertical_extent_m_sas: float
+    vertical_shift_m_sas: float
+
+
+class EmissionDynamics:
+    def __init__(self, db_row: EmissionsDynamicsRow):
+        self.name = db_row["dynamics_name"]
+        self.flight_stage = db_row["flight_stage"]
+        self.ac_group = db_row["ac_group"]
+
+        self._emission_dynamics = {}
         self._emission_dynamics["sas"] = {
-            "horizontal_shift": (
-                val["horizontal_shift_m_sas"]
-                if "horizontal_shift_m_sas" in val
-                else 0.0
-            ),
-            "horizontal_extension": (
-                val["horizontal_extent_m_sas"]
-                if "horizontal_extent_m_sas" in val
-                else 0.0
-            ),
-            "vertical_shift": (
-                val["vertical_shift_m_sas"] if "vertical_shift_m_sas" in val else 0.0
-            ),
-            "vertical_extension": (
-                val["vertical_extent_m_sas"] if "vertical_extent_m_sas" in val else 0.0
-            ),
+            # TODO OPENGIS.ch: it seems the column `horizontal_shift_m_sas` does not exist in the `default_emission_dynamics` table. We put 0 by default as it used to work before.
+            # "horizontal_shift": (db_row["horizontal_shift_m_sas"] or 0),
+            "horizontal_shift": 0,
+            "horizontal_extension": (db_row["horizontal_extent_m_sas"] or 0),
+            "vertical_shift": (db_row["vertical_shift_m_sas"] or 0),
+            "vertical_extension": (db_row["vertical_extent_m_sas"] or 0),
         }
         self._emission_dynamics["default"] = {
-            "horizontal_shift": (
-                val["horizontal_shift_m"] if "horizontal_shift_m" in val else 0.0
-            ),
-            "horizontal_extension": (
-                val["horizontal_extent_m"] if "horizontal_extent_m" in val else 0.0
-            ),
-            "vertical_shift": (
-                val["vertical_shift_m"] if "vertical_shift_m" in val else 0.0
-            ),
-            "vertical_extension": (
-                val["vertical_extent_m"] if "vertical_extent_m" in val else 0.0
-            ),
+            "horizontal_shift": (db_row["horizontal_shift_m"] or 0),
+            "horizontal_extension": (db_row["horizontal_extent_m"] or 0),
+            "vertical_shift": (db_row["vertical_shift_m"] or 0),
+            "vertical_extension": (db_row["vertical_extent_m"] or 0),
         }
-
-    def getDynamicsGroup(self):
-        return self._dynamics_name
-
-    def setDynamicsGroup(self, val):
-        self._dynamics_name = val
 
     def getModes(self):
         return list(self._emission_dynamics.keys())
@@ -70,9 +72,7 @@ class EmissionDynamics:
         return {}
 
     def __str__(self):
-        val = "\n Emission Dynamics for source category '%s'" % (
-            self.getDynamicsGroup()
-        )
+        val = "\n Emission Dynamics for source category '%s'" % (self.name)
         for mode in self.getModes():
             val += "\n\t Emissions in mode '%s':" % (mode)
             for key, value in list(self.getEmissionDynamics(mode).items()):
@@ -109,14 +109,21 @@ class EmissionDynamicsStore(Store, metaclass=Singleton):
     def getEmissionDynamicsDatabase(self):
         return self._db
 
-    # def getMaxVerticalValues(self):
-    #     max_sas = list(
-    #         set([abs(values.getEmissionDynamics('sas')['vertical_shift']) for key, values in self.getObjects().items()]))
-    #     max_default = list(set(
-    #         [abs(values.getEmissionDynamics('default')['vertical_shift']) for key, values in self.getObjects().items()]))
-    #     max_values = list(set(max_default + max_sas))
-    #     max_values.sort()
-    #     return max_values
+    def get_emissions_dynamics(self) -> dict[str, dict[FlightStage, EmissionDynamics]]:
+        result: dict[str, dict[FlightStage, EmissionDynamics]] = defaultdict(dict)
+
+        for row in self.getObjects().values():
+            if not row.ac_group or not row.flight_stage:
+                continue
+
+            row = cast(EmissionDynamics, row)
+
+            assert row.flight_stage not in result[row.ac_group]
+            assert row.flight_stage in FlightStage
+
+            result[row.ac_group][row.flight_stage] = row
+
+        return result
 
 
 class EmissionDynamicsDatabase(SQLSerializable, metaclass=Singleton):
@@ -133,13 +140,14 @@ class EmissionDynamicsDatabase(SQLSerializable, metaclass=Singleton):
         geometry_columns=None,
         deserialize=True,
     ):
-
         if table_columns_type_dict is None:
             table_columns_type_dict = OrderedDict(
                 [
                     ("oid", "INTEGER PRIMARY KEY NOT NULL"),
                     ("dynamics_id", "INTEGER"),
                     ("dynamics_name", "TEXT"),
+                    ("ac_group", "TEXT"),
+                    ("flight_stage", "TEXT"),
                     ("horizontal_extent_m", "DECIMAL"),
                     ("vertical_extent_m", "DECIMAL"),
                     ("exit_velocity_m_per_s", "DECIMAL"),
