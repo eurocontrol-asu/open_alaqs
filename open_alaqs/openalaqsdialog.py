@@ -2907,16 +2907,28 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             settings = QgsSettings()
             settings.setValue("open_alaqs/a2k_executable_path", path)
 
-    def load_alaqs_source_file(self, path):
+    def set_feedback(self, feedback: str, is_success: bool) -> None:
+        self.ui.alaqs_file_path_feedback.setText(feedback)
+
+        self.ui.VisualiseResults.setEnabled(is_success)
+        self.ui.ResultsTable.setEnabled(is_success)
+        self.ui.PlotTimeSeries.setEnabled(is_success)
+
+    def load_alaqs_source_file(self, filename):
         """
         Open a file browse window for the user to be able to locate and load an
          ALAQS output file
         """
+        path = Path(filename)
+        if not filename or not path.is_file() or path.suffix != ".alaqs":
+            self.set_feedback("Please select an existing *_out.alaqs file", False)
+            return
+
         try:
-            self.updateMinMaxGUI(path)
+            self.updateMinMaxGUI(filename)
 
             project_database = ProjectDatabase()
-            project_database.path = path
+            project_database.path = filename
 
             study_data = alaqs.load_study_setup()
 
@@ -2938,23 +2950,23 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             start_dt = datetime.fromisoformat(em_config["start_dt_inclusive"])
             end_dt = datetime.fromisoformat(em_config["end_dt_inclusive"])
 
-            time_series = self.getTimeSeries(path)
+            time_series = self.getTimeSeries(filename)
 
             assert len(time_series) > 1
 
             time_interval = time_series[1] - time_series[0]
 
             self._conc_calculation_ = EmissionCalculation(
-                db_path=path,
+                db_path=filename,
                 grid_config=grid_configuration,
                 start_dt=start_dt,
                 end_dt=end_dt,
                 time_interval=time_interval,
             )
+
+            self.set_feedback("Valid ALAQS file selected", True)
         except sqlite3.OperationalError as err:
-            QtWidgets.QMessageBox.warning(
-                self, "Error", "Could not open database file:  %s." % err
-            )
+            self.set_feedback(f"Could not open database file: {err}.", False)
 
     @catch_errors
     def run_austal(self, *args, **kwargs):
