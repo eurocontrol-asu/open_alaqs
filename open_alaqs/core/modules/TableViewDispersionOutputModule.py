@@ -177,6 +177,8 @@ class TableViewDispersionModule(OutputModule):
         self._rows = []
         self._headers = ["Time"]
 
+        self._data_y = []
+        self._data_y_max = []
         self._data_x = []
         self._data = OrderedDict()
 
@@ -187,6 +189,7 @@ class TableViewDispersionModule(OutputModule):
                     None, "Error", "Cannot create time-series plot for annual mean"
                 )
 
+                return
             else:
                 OrderedDict()
 

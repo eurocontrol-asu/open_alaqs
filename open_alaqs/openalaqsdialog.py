@@ -3152,6 +3152,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "Error",
                 "Could not execute runOutputModule: %s (error: %s)" % (name, e),
             )
+            raise e
 
 
 class OpenAlaqsEnabledMacros(QtWidgets.QDialog):
