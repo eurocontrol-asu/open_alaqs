@@ -3060,8 +3060,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 conc_configuration = (
                     self._concentration_visualization_widget.get_values()
                 )
-                pollutant_ = conc_configuration("pollutant", None)
-                averaging_period_ = conc_configuration("averaging", None)
+                pollutant_ = conc_configuration.get("pollutant", None)
+                averaging_period_ = conc_configuration.get("averaging", None)
                 check_std = conc_configuration.get("is_uncertainty_enabled", False)
 
                 config = {
@@ -3076,16 +3076,18 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     "timeseries": self.getTimeSeries(
                         self._conc_calculation_.getDatabasePath()
                     ),
+                    # "use_centroid_symbol": False,
                     "check_uncertainty": check_std,
                 }
+
                 config.update(conc_configuration)
 
-                output_module = OutputModule(values_dict=config)
-
-                if output_module.getModuleDisplayName() in gui_modules_config_:
+                if OutputModule.getModuleDisplayName() in gui_modules_config_:
                     config.update(
-                        gui_modules_config_[output_module.getModuleDisplayName()]
+                        gui_modules_config_[OutputModule.getModuleDisplayName()]
                     )
+
+                output_module = OutputModule(values_dict=config)
 
                 # Execute the output module
                 output_module.beginJob()
