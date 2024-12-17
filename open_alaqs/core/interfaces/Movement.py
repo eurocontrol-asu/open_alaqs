@@ -880,7 +880,7 @@ class Movement:
                             # add emissions due to stop & go's
                             if (
                                 self.getNumberOfStops() is not None
-                                or self.getNumberOfStops() > 0.0
+                                and self.getNumberOfStops() > 0.0
                             ):
                                 average_duration_of_stop_and_gos_in_s = 9.0
                                 em_.add(
