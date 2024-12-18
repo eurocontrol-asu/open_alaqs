@@ -183,6 +183,8 @@ class TableViewDispersionModule(OutputModule):
         self._data = OrderedDict()
 
     def process(self):
+        pollutant_list = []
+
         try:
             if self._averaging_period == "annual mean":
                 QtWidgets.QMessageBox.information(
@@ -204,7 +206,6 @@ class TableViewDispersionModule(OutputModule):
                         )
                     ]
 
-                    pollutant_list = []
                     for pollutant_ in self._pollutant_list:
                         self._data_y = []
                         self._data_y_max = []
