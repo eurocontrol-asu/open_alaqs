@@ -2796,9 +2796,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.configuration_stack_current_changed
         )
 
-        settings = QgsSettings()
+        s = QgsSettings()
+        last_alaqs_file_path = s.value("OpenALAQS/last_alaqs_file_path", "")
         self.ui.a2k_executable_path.setFilePath(
-            settings.value("open_alaqs/a2k_executable_path", "")
+            s.value("open_alaqs/a2k_executable_path", "")
         )
         self.ui.a2k_executable_path.setFilter("AUSTAL Executable (austal.exe austal)")
         self.ui.a2k_executable_path.setDialogTitle("Select AUSTAL Executable File")
@@ -2811,7 +2812,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         )
         self.ui.alaqs_file_path.setFilter("ALAQS (*.alaqs)")
         self.ui.alaqs_file_path.setDialogTitle("Select ALAQS Output File")
+        self.ui.alaqs_file_path.setFilePath(last_alaqs_file_path)
         self.ui.alaqs_file_path.fileChanged.connect(self.load_alaqs_source_file)
+
+        if os.path.isfile(last_alaqs_file_path):
+            self.load_alaqs_source_file(last_alaqs_file_path)
 
         self.ui.RunA2K.clicked.connect(self.run_austal)
 
@@ -2963,6 +2968,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 end_dt=end_dt,
                 time_interval=time_interval,
             )
+
+            s = QgsSettings()
+            s.setValue("OpenALAQS/last_alaqs_file_path", filename)
 
             self.set_feedback("Valid ALAQS file selected", True)
         except sqlite3.OperationalError as err:
