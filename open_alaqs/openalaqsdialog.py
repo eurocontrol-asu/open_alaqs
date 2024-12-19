@@ -2798,6 +2798,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         s = QgsSettings()
         last_alaqs_file_path = s.value("OpenALAQS/last_alaqs_file_path", "")
+        last_work_directory_path = s.value("OpenALAQS/last_work_directory_path", "")
         self.ui.a2k_executable_path.setFilePath(
             s.value("open_alaqs/a2k_executable_path", "")
         )
@@ -2809,6 +2810,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.work_directory_path.setStorageMode(QgsFileWidget.GetDirectory)
         self.ui.work_directory_path.setDialogTitle(
             "Select AUSTAL Input Files (.txt, .dmna, etc.) Directory"
+        )
+        self.ui.work_directory_path.setFilePath(last_work_directory_path)
+        self.ui.work_directory_path.fileChanged.connect(
+            self._on_work_directory_path_changed
         )
         self.ui.alaqs_file_path.setFilter("ALAQS (*.alaqs)")
         self.ui.alaqs_file_path.setDialogTitle("Select ALAQS Output File")
@@ -2975,6 +2980,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.set_feedback("Valid ALAQS file selected", True)
         except sqlite3.OperationalError as err:
             self.set_feedback(f"Could not open database file: {err}.", False)
+
+    def _on_work_directory_path_changed(self, dirname: str) -> None:
+        s = QgsSettings()
+
+        if os.path.isdir(dirname):
+            s.setValue("OpenALAQS/last_work_directory_path", dirname)
 
     @catch_errors
     def run_austal(self, *args, **kwargs):
