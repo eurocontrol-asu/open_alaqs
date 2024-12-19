@@ -538,7 +538,6 @@ class TableViewDispersionModule(OutputModule):
 
         return True
 
-    @property
     def endJob(self):
         self._widget.resizeToContent()
         if self._max_values:
