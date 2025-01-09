@@ -480,7 +480,7 @@ def inventory_copy_emission_dynamics(inventory_path):
         "SELECT * FROM default_emission_dynamics;"
     )
     cur.executemany(
-        "INSERT INTO default_emission_dynamics VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO default_emission_dynamics VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         emission_dynamics,
     )
     conn.commit()
@@ -562,7 +562,7 @@ def inventory_copy_vector_layers(inventory_path):
         try:
             parking = alaqsdblite.query_string("SELECT * FROM shapes_parking;")
             curs.executemany(
-                "INSERT INTO shapes_parking VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO shapes_parking VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 parking,
             )
             conn.commit()
@@ -602,7 +602,7 @@ def inventory_copy_vector_layers(inventory_path):
         try:
             roadways = alaqsdblite.query_string("SELECT * FROM shapes_roadways;")
             curs.executemany(
-                "INSERT INTO shapes_roadways VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO shapes_roadways VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 roadways,
             )
             conn.commit()
