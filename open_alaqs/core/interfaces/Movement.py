@@ -1676,14 +1676,10 @@ class Movement:
         
         if self.getRunwayDirection() == runway_directions[1]:
             runway_backup_point = runway_start_point
-            runway_azimuth_deg = (
-                math.degrees(d.bearing(runway_start_point, runway_end_point)) + rot_angle
-            ) % 360
+            runway_azimuth_deg = (math.degrees(d.bearing(runway_start_point, runway_end_point)) + rot_angle) % 360
         elif self.getRunwayDirection() == runway_directions[0]:
             runway_backup_point = runway_end_point
-            runway_azimuth_deg = (
-                math.degrees(d.bearing(runway_end_point, runway_start_point)) + rot_angle
-            ) % 360
+            runway_azimuth_deg = (math.degrees(d.bearing(runway_end_point, runway_start_point)) + rot_angle) % 360
         else:
             raise Exception(
                 f"Runway direction {self.getRunwayDirection()} was not found in {runway_directions}!"
