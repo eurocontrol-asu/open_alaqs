@@ -1685,7 +1685,7 @@ class Movement:
         elif self.getRunwayDirection() == runway_directions[0]:
             runway_backup_point = runway_end_point
             runway_azimuth_deg = (
-                math.degrees(d.bearing(runway_end_point, runway_start_point)) 
+                math.degrees(d.bearing(runway_end_point, runway_start_point))
                 + rot_angle
             ) % 360
         else:
