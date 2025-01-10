@@ -880,7 +880,7 @@ class Movement:
                             # add emissions due to stop & go's
                             if (
                                 self.getNumberOfStops() is not None
-                                or self.getNumberOfStops() > 0.0
+                                and self.getNumberOfStops() > 0.0
                             ):
                                 average_duration_of_stop_and_gos_in_s = 9.0
                                 em_.add(
@@ -1672,18 +1672,23 @@ class Movement:
         runway_start_point = QgsPointXY(runway_points[0])
         runway_end_point = QgsPointXY(runway_points[-1])
         runway_directions = self.getRunway().getDirections()
-        rot_angle = 180 if self.getTrajectory().getDepartureArrivalFlag()=='D' else 360
         
-        if self.getRunwayDirection() == runway_directions[1]:
-            runway_backup_point = runway_start_point
-            runway_azimuth_deg = (math.degrees(d.bearing(runway_start_point, runway_end_point)) + rot_angle) % 360
+        rot_angle = 180 if self.getTrajectory().getDepartureArrivalFlag()=='D' else 360
+
+        if self.getRunwayDirection() == runway_directions[1]:
+            runway_backup_point = runway_start_point
+            runway_azimuth_deg = (
+                math.degrees(d.bearing(runway_start_point, runway_end_point)) + rot_angle
+            ) % 360
         elif self.getRunwayDirection() == runway_directions[0]:
-            runway_backup_point = runway_end_point
-            runway_azimuth_deg = (math.degrees(d.bearing(runway_end_point, runway_start_point)) + rot_angle) % 360
-        else:
-            raise Exception(
-                f"Runway direction {self.getRunwayDirection()} was not found in {runway_directions}!"
-        )
+            runway_backup_point = runway_end_point
+            runway_azimuth_deg = (
+                math.degrees(d.bearing(runway_end_point, runway_start_point)) + rot_angle
+            ) % 360
+        else:
+            raise Exception(
+                f"Runway direction {self.getRunwayDirection()} was not found in {runway_directions}!"
+            )
 
         taxi_geom = QgsGeometry.fromWkt(
             self.getTaxiRoute().getSegmentsAsLineString().wkt
@@ -2359,7 +2364,7 @@ class MovementStore(Store, metaclass=Singleton):
         # NOTE: not available or not default configurable profiles would have "profile_id" as None
         mdf_retained = eq_mdf[~eq_mdf[df_cols].isna().any(axis=1)]
         logger.info("Number of movements retained: %s" % mdf_retained.shape[0])
-
+        
         # Start the final stage
         stage_3 = stage_2.finalStage(maximum=mdf.shape[0])
         logger.debug(
