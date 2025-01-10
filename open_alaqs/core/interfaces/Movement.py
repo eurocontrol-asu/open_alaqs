@@ -1672,20 +1672,17 @@ class Movement:
         runway_start_point = QgsPointXY(runway_points[0])
         runway_end_point = QgsPointXY(runway_points[-1])
         runway_directions = self.getRunway().getDirections()
-
+        rot_angle = 180 if self.getTrajectory().getDepartureArrivalFlag()=='D' else 360
+        
         if self.getRunwayDirection() == runway_directions[1]:
             runway_backup_point = runway_start_point
             runway_azimuth_deg = (
-                math.degrees(d.bearing(runway_start_point, runway_end_point)) + 180
-            ) % 360 if self.getTrajectory().getDepartureArrivalFlag()=='D' else (
-                math.degrees(d.bearing(runway_start_point, runway_end_point)) + 360
+                math.degrees(d.bearing(runway_start_point, runway_end_point)) + rot_angle
             ) % 360
-        elif self.getRunwayDirection() == runway_directions[0]:
+        elif self.getRunwayDirection() == runway_directions[0]:
             runway_backup_point = runway_end_point
             runway_azimuth_deg = (
-                math.degrees(d.bearing(runway_end_point, runway_start_point)) + 180
-            ) % 360 if self.getTrajectory().getDepartureArrivalFlag()=='D' else (
-                math.degrees(d.bearing(runway_end_point, runway_start_point)) + 360
+                math.degrees(d.bearing(runway_end_point, runway_start_point)) + rot_angle
             ) % 360
         else:
             raise Exception(
