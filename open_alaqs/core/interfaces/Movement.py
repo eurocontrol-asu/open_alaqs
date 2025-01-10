@@ -1672,21 +1672,22 @@ class Movement:
         runway_start_point = QgsPointXY(runway_points[0])
         runway_end_point = QgsPointXY(runway_points[-1])
         runway_directions = self.getRunway().getDirections()
-
-        if self.getRunwayDirection() == runway_directions[1]:
-            runway_backup_point = runway_start_point
-            runway_azimuth_deg = (
-                math.degrees(d.bearing(runway_start_point, runway_end_point)) + 360
-            ) % 360
+        rot_angle = 180 if self.getTrajectory().getDepartureArrivalFlag()=='D' else 360
+        
+        if self.getRunwayDirection() == runway_directions[1]:
+            runway_backup_point = runway_start_point
+            runway_azimuth_deg = (
+                math.degrees(d.bearing(runway_start_point, runway_end_point)) + rot_angle
+            ) % 360
         elif self.getRunwayDirection() == runway_directions[0]:
-            runway_backup_point = runway_end_point
-            runway_azimuth_deg = (
-                math.degrees(d.bearing(runway_end_point, runway_start_point)) + 360
-            ) % 360
-        else:
-            raise Exception(
-                f"Runway direction {self.getRunwayDirection()} was not found in {runway_directions}!"
-            )
+            runway_backup_point = runway_end_point
+            runway_azimuth_deg = (
+                math.degrees(d.bearing(runway_end_point, runway_start_point)) + rot_angle
+            ) % 360
+        else:
+            raise Exception(
+                f"Runway direction {self.getRunwayDirection()} was not found in {runway_directions}!"
+        )
 
         taxi_geom = QgsGeometry.fromWkt(
             self.getTaxiRoute().getSegmentsAsLineString().wkt
