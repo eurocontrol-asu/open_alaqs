@@ -1672,7 +1672,9 @@ class Movement:
         runway_start_point = QgsPointXY(runway_points[0])
         runway_end_point = QgsPointXY(runway_points[-1])
         runway_directions = self.getRunway().getDirections()
-        rot_angle = 180 if self.getTrajectory().getDepartureArrivalFlag()=='D' else 360
+        rot_angle = (
+            180 if self.getTrajectory().getDepartureArrivalFlag()=='D' else 360
+        )
 
         if self.getRunwayDirection() == runway_directions[1]:
             runway_backup_point = runway_start_point
