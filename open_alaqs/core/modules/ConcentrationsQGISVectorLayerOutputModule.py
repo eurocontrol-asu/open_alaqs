@@ -535,108 +535,97 @@ class QGISVectorLayerDispersionModule(OutputModule):
             logger.error("A2K OutputModule: Cannot fetch data: %s" % e)
 
     def beginJob(self):
-        try:
-            if self._pollutant.startswith("PM"):
-                self._pollutant = "PM"
+        if self._pollutant.startswith("PM"):
+            self._pollutant = "PM"
 
-            # prepare the attributes of each point of the vector layer
-            self._data = {}
-            # ToDO: self._grid.get_df_from_3d_grid_cells() ?
-            self._data_cells = self._grid.get_df_from_2d_grid_cells()
-            self._data_cells = self._data_cells.assign(
-                Q=pd.Series(0, index=self._data_cells.index)
+        # prepare the attributes of each point of the vector layer
+        self._data = {}
+        # ToDO: self._grid.get_df_from_3d_grid_cells() ?
+        self._data_cells = self._grid.get_df_from_2d_grid_cells()
+        self._data_cells = self._data_cells.assign(
+            Q=pd.Series(0, index=self._data_cells.index)
+        )
+
+        self._total_concentration = 0.0
+
+        output_data, index_, concentration_matrix = self.getA2KData()
+
+        self._xmin = (
+            conversion.convertToFloat(output_data["xmin"][0])
+            if ("xmin" in output_data and len(output_data["xmin"]) > 0)
+            else None
+        )
+        self._ymin = (
+            conversion.convertToFloat(output_data["ymin"][0])
+            if ("ymin" in output_data and len(output_data["ymin"]) > 0)
+            else None
+        )
+        self._delta = (
+            conversion.convertToFloat(output_data["delta"][0])
+            if ("delta" in output_data and len(output_data["delta"]) > 0)
+            else None
+        )
+        self._sk = (
+            output_data["sk"]
+            if ("sk" in output_data and len(output_data["sk"]) > 0)
+            else None
+        )
+
+        # self._units = output_data['unit'][0].decode('latin-1') if ('unit' in output_data and len(output_data['unit']) > 0) else None
+        self._units = (
+            output_data["unit"][0]
+            if ("unit" in output_data and len(output_data["unit"]) > 0)
+            else None
+        )
+
+        self._index_i = (
+            conversion.convertToInt(output_data["hghb"][0])
+            if ("hghb" in output_data and len(output_data["hghb"]) > 0)
+            else None
+        )  # columns
+        self._index_j = (
+            conversion.convertToInt(output_data["hghb"][1])
+            if ("hghb" in output_data and len(output_data["hghb"]) > 0)
+            else None
+        )  # rows
+        self._index_k = (
+            conversion.convertToInt(output_data["hghb"][2])
+            if ("hghb" in output_data and len(output_data["hghb"]) > 0)
+            else None
+        )  # z
+
+        if not (
+            self._index_k
+            and self._index_i
+            and self._index_j
+            and len(concentration_matrix) > 0
+        ):
+            raise Exception(
+                "Error in reshaping concentration matrix: (%s, %s, %s)"
+                % (self._index_k, self._index_i, self._index_j)
             )
 
-            self._total_concentration = 0.0
+        concentration_matrix_reshaped = np.reshape(
+            concentration_matrix, (self._index_k, self._index_j, self._index_i)
+        )
 
-            output_data, index_, concentration_matrix = self.getA2KData()
+        # By default, show the height interval 0m to 3m (the lowest layer)
+        # The result files contain the layers k=1...Kmax
+        if self._check_uncertainty:  # take only first level for uncertainty
+            self._concentration_matrix = concentration_matrix_reshaped[
+                0, :, :
+            ].squeeze()
+        else:
+            # take the concentration up tp Kmax: <c> = c1*H1/(H1+H2+H3+...) + c2*H2/(H1+H2+H3+...) + c3*H3/(H1+H2+H3+...) + ...
+            total_column_concentration = np.zeros(shape=(self._index_j, self._index_i))
+            for z_ in range(1, self._index_k + 1):
+                total_column_concentration += (
+                    conversion.convertToFloat(output_data["sk"][z_])
+                    * concentration_matrix_reshaped[z_ - 1, :, :].squeeze()
+                ) / conversion.convertToFloat(output_data["sk"][self._index_k])
+            self._concentration_matrix = total_column_concentration
 
-            self._xmin = (
-                conversion.convertToFloat(output_data["xmin"][0])
-                if ("xmin" in output_data and len(output_data["xmin"]) > 0)
-                else None
-            )
-            self._ymin = (
-                conversion.convertToFloat(output_data["ymin"][0])
-                if ("ymin" in output_data and len(output_data["ymin"]) > 0)
-                else None
-            )
-            self._delta = (
-                conversion.convertToFloat(output_data["delta"][0])
-                if ("delta" in output_data and len(output_data["delta"]) > 0)
-                else None
-            )
-            self._sk = (
-                output_data["sk"]
-                if ("sk" in output_data and len(output_data["sk"]) > 0)
-                else None
-            )
-
-            # self._units = output_data['unit'][0].decode('latin-1') if ('unit' in output_data and len(output_data['unit']) > 0) else None
-            self._units = (
-                output_data["unit"][0]
-                if ("unit" in output_data and len(output_data["unit"]) > 0)
-                else None
-            )
-
-            self._index_i = (
-                conversion.convertToInt(output_data["hghb"][0])
-                if ("hghb" in output_data and len(output_data["hghb"]) > 0)
-                else None
-            )  # columns
-            self._index_j = (
-                conversion.convertToInt(output_data["hghb"][1])
-                if ("hghb" in output_data and len(output_data["hghb"]) > 0)
-                else None
-            )  # rows
-            self._index_k = (
-                conversion.convertToInt(output_data["hghb"][2])
-                if ("hghb" in output_data and len(output_data["hghb"]) > 0)
-                else None
-            )  # z
-
-            if not (
-                self._index_k
-                and self._index_i
-                and self._index_j
-                and len(concentration_matrix) > 0
-            ):
-                logger.error(
-                    "Error in reshaping concentration matrix: (%s, %s, %s)"
-                    % (self._index_k, self._index_i, self._index_j)
-                )
-                return False
-
-            concentration_matrix_reshaped = np.reshape(
-                concentration_matrix, (self._index_k, self._index_j, self._index_i)
-            )
-
-            # By default, show the height interval 0m to 3m (the lowest layer)
-            # The result files contain the layers k=1...Kmax
-            if self._check_uncertainty:  # take only first level for uncertainty
-                self._concentration_matrix = concentration_matrix_reshaped[
-                    0, :, :
-                ].squeeze()
-            else:
-                # take the concentration up tp Kmax: <c> = c1*H1/(H1+H2+H3+...) + c2*H2/(H1+H2+H3+...) + c3*H3/(H1+H2+H3+...) + ...
-                total_column_concentration = np.zeros(
-                    shape=(self._index_j, self._index_i)
-                )
-                for z_ in range(1, self._index_k + 1):
-                    total_column_concentration += (
-                        conversion.convertToFloat(output_data["sk"][z_])
-                        * concentration_matrix_reshaped[z_ - 1, :, :].squeeze()
-                    ) / conversion.convertToFloat(output_data["sk"][self._index_k])
-                self._concentration_matrix = total_column_concentration
-
-            return True
-
-        except Exception as e:
-            logger.error(
-                "ConcentrationsQGISVectorLayerOutputModule: Cannot complete beginJob: %s"
-                % e
-            )
-            return False
+        return True
 
     def process(self, **kwargs):
         # Details of the projection

@@ -177,16 +177,21 @@ class TableViewDispersionModule(OutputModule):
         self._rows = []
         self._headers = ["Time"]
 
+        self._data_y = []
+        self._data_y_max = []
         self._data_x = []
         self._data = OrderedDict()
 
     def process(self):
+        pollutant_list = []
+
         try:
             if self._averaging_period == "annual mean":
                 QtWidgets.QMessageBox.information(
                     None, "Error", "Cannot create time-series plot for annual mean"
                 )
 
+                return
             else:
                 OrderedDict()
 
@@ -201,7 +206,6 @@ class TableViewDispersionModule(OutputModule):
                         )
                     ]
 
-                    pollutant_list = []
                     for pollutant_ in self._pollutant_list:
                         self._data_y = []
                         self._data_y_max = []
@@ -534,7 +538,6 @@ class TableViewDispersionModule(OutputModule):
 
         return True
 
-    @property
     def endJob(self):
         self._widget.resizeToContent()
         if self._max_values:

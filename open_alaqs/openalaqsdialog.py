@@ -2796,9 +2796,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.configuration_stack_current_changed
         )
 
-        settings = QgsSettings()
+        s = QgsSettings()
+        last_alaqs_file_path = s.value("OpenALAQS/last_alaqs_file_path", "")
+        last_work_directory_path = s.value("OpenALAQS/last_work_directory_path", "")
         self.ui.a2k_executable_path.setFilePath(
-            settings.value("open_alaqs/a2k_executable_path", "")
+            s.value("open_alaqs/a2k_executable_path", "")
         )
         self.ui.a2k_executable_path.setFilter("AUSTAL Executable (austal.exe austal)")
         self.ui.a2k_executable_path.setDialogTitle("Select AUSTAL Executable File")
@@ -2809,9 +2811,17 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.work_directory_path.setDialogTitle(
             "Select AUSTAL Input Files (.txt, .dmna, etc.) Directory"
         )
+        self.ui.work_directory_path.setFilePath(last_work_directory_path)
+        self.ui.work_directory_path.fileChanged.connect(
+            self._on_work_directory_path_changed
+        )
         self.ui.alaqs_file_path.setFilter("ALAQS (*.alaqs)")
         self.ui.alaqs_file_path.setDialogTitle("Select ALAQS Output File")
+        self.ui.alaqs_file_path.setFilePath(last_alaqs_file_path)
         self.ui.alaqs_file_path.fileChanged.connect(self.load_alaqs_source_file)
+
+        if os.path.isfile(last_alaqs_file_path):
+            self.load_alaqs_source_file(last_alaqs_file_path)
 
         self.ui.RunA2K.clicked.connect(self.run_austal)
 
@@ -2907,16 +2917,28 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             settings = QgsSettings()
             settings.setValue("open_alaqs/a2k_executable_path", path)
 
-    def load_alaqs_source_file(self, path):
+    def set_feedback(self, feedback: str, is_success: bool) -> None:
+        self.ui.alaqs_file_path_feedback.setText(feedback)
+
+        self.ui.VisualiseResults.setEnabled(is_success)
+        self.ui.ResultsTable.setEnabled(is_success)
+        self.ui.PlotTimeSeries.setEnabled(is_success)
+
+    def load_alaqs_source_file(self, filename):
         """
         Open a file browse window for the user to be able to locate and load an
          ALAQS output file
         """
+        path = Path(filename)
+        if not filename or not path.is_file() or path.suffix != ".alaqs":
+            self.set_feedback("Please select an existing *_out.alaqs file", False)
+            return
+
         try:
-            self.updateMinMaxGUI(path)
+            self.updateMinMaxGUI(filename)
 
             project_database = ProjectDatabase()
-            project_database.path = path
+            project_database.path = filename
 
             study_data = alaqs.load_study_setup()
 
@@ -2938,23 +2960,32 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             start_dt = datetime.fromisoformat(em_config["start_dt_inclusive"])
             end_dt = datetime.fromisoformat(em_config["end_dt_inclusive"])
 
-            time_series = self.getTimeSeries(path)
+            time_series = self.getTimeSeries(filename)
 
             assert len(time_series) > 1
 
             time_interval = time_series[1] - time_series[0]
 
             self._conc_calculation_ = EmissionCalculation(
-                db_path=path,
+                db_path=filename,
                 grid_config=grid_configuration,
                 start_dt=start_dt,
                 end_dt=end_dt,
                 time_interval=time_interval,
             )
+
+            s = QgsSettings()
+            s.setValue("OpenALAQS/last_alaqs_file_path", filename)
+
+            self.set_feedback("Valid ALAQS file selected", True)
         except sqlite3.OperationalError as err:
-            QtWidgets.QMessageBox.warning(
-                self, "Error", "Could not open database file:  %s." % err
-            )
+            self.set_feedback(f"Could not open database file: {err}.", False)
+
+    def _on_work_directory_path_changed(self, dirname: str) -> None:
+        s = QgsSettings()
+
+        if os.path.isdir(dirname):
+            s.setValue("OpenALAQS/last_work_directory_path", dirname)
 
     @catch_errors
     def run_austal(self, *args, **kwargs):
@@ -3048,8 +3079,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 conc_configuration = (
                     self._concentration_visualization_widget.get_values()
                 )
-                pollutant_ = conc_configuration("pollutant", None)
-                averaging_period_ = conc_configuration("averaging", None)
+                pollutant_ = conc_configuration.get("pollutant", None)
+                averaging_period_ = conc_configuration.get("averaging", None)
                 check_std = conc_configuration.get("is_uncertainty_enabled", False)
 
                 config = {
@@ -3064,16 +3095,18 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     "timeseries": self.getTimeSeries(
                         self._conc_calculation_.getDatabasePath()
                     ),
+                    # "use_centroid_symbol": False,
                     "check_uncertainty": check_std,
                 }
+
                 config.update(conc_configuration)
 
-                output_module = OutputModule(values_dict=config)
-
-                if output_module.getModuleDisplayName() in gui_modules_config_:
+                if OutputModule.getModuleDisplayName() in gui_modules_config_:
                     config.update(
-                        gui_modules_config_[output_module.getModuleDisplayName()]
+                        gui_modules_config_[OutputModule.getModuleDisplayName()]
                     )
+
+                output_module = OutputModule(values_dict=config)
 
                 # Execute the output module
                 output_module.beginJob()
@@ -3138,6 +3171,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "Error",
                 "Could not execute runOutputModule: %s (error: %s)" % (name, e),
             )
+            raise e
 
 
 class OpenAlaqsEnabledMacros(QtWidgets.QDialog):
