@@ -36,7 +36,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
             "widget_config": {
                 "minimum": 0,
                 "maximum": 999.9999,
-                "decimals": 4,
+                "decimals": 10,
             },
         },
         "use_centroid_symbol": {
@@ -78,7 +78,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
             if "averaging_period" in values_dict
             else "annual mean"
         )
-        self._pollutant = (
+        self._pollutant: str | None = (
             values_dict["pollutant"] if "pollutant" in values_dict else None
         )
 
@@ -694,7 +694,9 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 # Calculate horizontal distribution
                 # matched_cells_2D.loc[matched_cells_2D.index, "Concentration"] = \
                 #     conc_value * matched_cells_2D.intersection(geom).area / geom.area
-                self._data_cells.loc[matched_cells_2D.index, "Q"] += conc_value
+                self._data_cells.loc[
+                    matched_cells_2D.index, f"{self._pollutant}_kg"
+                ] += conc_value
 
         if round(conc_value_counter, 3) < round(self._total_concentration, 3):
             logger.warning(
@@ -717,6 +719,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 field_name=self._pollutant,
                 use_centroid_symbol=self._use_centroid_symbol,
             )
+
             contour_layer.addData(self._data_cells)
             contour_layer.setColorGradientRenderer(classes_count=7)
 
