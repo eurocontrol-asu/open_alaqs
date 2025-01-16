@@ -9,6 +9,7 @@ from qgis.gui import QgsDoubleSpinBox
 from qgis.PyQt import QtWidgets
 from shapely.geometry import Point, Polygon
 
+from open_alaqs.alaqs_config import DEFAULT_CONCENTRATION_GRID_FACTOR
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.plotting.ContourPlotVectorLayer import ContourPlotVectorLayer
@@ -230,15 +231,12 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 float(self._grid._y_cells) / 2.0
             ) * float(self._grid._y_resolution)
 
-            user_set_factor = (
-                1.0  # ToDo: Enlarge Calculation Grid by Factor set by the user
-            )
-            self._x_left_border_grid = float(grid_origin_x) - user_set_factor * float(
-                self._grid._x_resolution
-            )
-            self._y_left_border_grid = float(grid_origin_y) - user_set_factor * float(
-                self._grid._y_resolution
-            )
+            self._x_left_border_grid = float(
+                grid_origin_x
+            ) - DEFAULT_CONCENTRATION_GRID_FACTOR * float(self._grid._x_resolution)
+            self._y_left_border_grid = float(
+                grid_origin_y
+            ) - DEFAULT_CONCENTRATION_GRID_FACTOR * float(self._grid._y_resolution)
 
             return True
         except Exception as e:

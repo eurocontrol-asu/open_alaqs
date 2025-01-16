@@ -8,6 +8,9 @@ from typing import Optional, TypedDict
 
 from open_alaqs.enums import AlaqsLayerType
 
+# TODO OPENGIS.ch: Expose this as a user setting in the Generate Emissions Inventory -> Modelled Domain input group as a "Concentration Grid Factor" int field in the range [1, 100]
+DEFAULT_CONCENTRATION_GRID_FACTOR = 2
+
 
 class OsmFilter(TypedDict, total=False):
     within_aerodrome: bool
