@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>450</width>
-    <height>380</height>
+    <width>431</width>
+    <height>329</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -90,7 +90,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Open ALAQS: Airport Local Air Quality Studies&lt;/span&gt;&lt;br/&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;This is a beta version of the ALAQS local air quality software released for review and testing only.&lt;br/&gt;It should therefore not be used for commerical studies and is released without guarantee.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Released under &lt;a href=&quot;https://github.com/opengisch/open_alaqs/blob/main/LICENCE.md&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;European Union Public Licence v. 1.2 License&lt;/span&gt;&lt;/a&gt;. For more information, contact &lt;a href=&quot;mailto:open-alaqs@eurocontrol.int&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;open-alaqs@eurocontrol.int&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Open ALAQS: Airport Local Air Quality Studies&lt;/span&gt;&lt;br/&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Released under &lt;a href=&quot;https://github.com/opengisch/open_alaqs/blob/main/LICENCE.md&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;European Union Public Licence v. 1.2 License&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;For more information, contact &lt;a href=&quot;mailto:open-alaqs@eurocontrol.int&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;open-alaqs@eurocontrol.int&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -115,5 +115,6 @@
    </item>
   </layout>
  </widget>
+ <resources/>
  <connections/>
 </ui>
