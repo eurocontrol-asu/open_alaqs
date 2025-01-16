@@ -13,6 +13,7 @@ from qgis.gui import QgsDoubleSpinBox, QgsSpinBox
 from qgis.PyQt import QtWidgets
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 
+from open_alaqs.alaqs_config import DEFAULT_CONCENTRATION_GRID_FACTOR
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.AmbientCondition import AmbientCondition
 from open_alaqs.core.interfaces.DispersionModule import DispersionModule
@@ -314,16 +315,12 @@ class AUSTALDispersionModule(DispersionModule):
             ) * float(self._grid._y_resolution)
             # logger.info("getGridXYFromReferencePoint: bottom left of the EMIS grid: x0=%.0f, y0=%.0f" % (grid_origin_x, grid_origin_y))
 
-            # conc grid
-            user_set_factor = (
-                2.0  # ToDo: Enlarge Calculation Grid by Factor set by the user?
-            )
             self._x_left_border_calc_grid = float(
                 grid_origin_x
-            ) - user_set_factor * float(self._grid._x_resolution)
+            ) - DEFAULT_CONCENTRATION_GRID_FACTOR * float(self._grid._x_resolution)
             self._y_left_border_calc_grid = float(
                 grid_origin_y
-            ) - user_set_factor * float(self._grid._y_resolution)
+            ) - DEFAULT_CONCENTRATION_GRID_FACTOR * float(self._grid._y_resolution)
             # logger.info("getGridXYFromReferencePoint: bottom left of the CONC grid: xq=%.0f, yq=%.0f" % (self._x_left_border_calc_grid, self._y_left_border_calc_grid))
 
             # emissions grid == coordinates of the bottom left of the grid
