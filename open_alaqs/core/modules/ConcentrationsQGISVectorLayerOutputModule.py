@@ -36,7 +36,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
             "widget_config": {
                 "minimum": 0,
                 "maximum": 999.9999,
-                "decimals": 4,
+                "decimals": 10,
             },
         },
         "use_centroid_symbol": {
