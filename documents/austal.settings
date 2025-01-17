@@ -1,0 +1,396 @@
+# Settings for AUSTAL
+#
+# history:
+#
+# 2021-08-05 uj  information on rated odorants added
+# 2024-01-17 uj  slight revision of decimal places
+#                parameter cadd
+#
+
+#############################################################################
+#                                                                           #
+# Diese Datei darf nicht ver�ndert werden, es sei denn, Sie wissen genau,   #
+# was Sie tun.                                                              #
+#                                                                           #
+# Do not modify this file unless you know exactly what you are doing.       #
+#                                                                           #
+#############################################################################
+
+[.system]
+# deposition parameters for 5 aerosol groups:
+#       -1     -2     -3     -4     -5(u)
+VdVec   0.001  0.010  0.050  0.200  0.070        # m/s
+VsVec   0.000  0.000  0.040  0.150  0.060        # m/s
+WfVec   3.0e-5 1.5e-4 4.4e-4 4.4e-4 4.4e-4       # 1/s
+WeVec   0.8    0.8    0.8    0.8    0.8          # 1
+
+[.astl]
+# standard species properties:
+grps "0-0"      # aerosol groups
+cadd "0-2"      # added for concentration
+unit "g"        # unit of emission
+fc   1.0        # factor for concentration
+uc   "g/m3"     # unit of concentration
+ry   1.0        # reference value (yearly)
+dy   -1         # number of decimals (yearly)
+nd   -1         # number exceedances (daily)
+rd   0.0        # reference value (daily)
+dd   -1         # number of decimals (daily)
+nh   -1         # number exceedances (hourly)
+rh   0.0        # reference value (hourly)
+dh   -1         # number of decimals (hourly)
+                # deposition settings
+vd   0.0        # deposition velocity (m/s)
+wf   0.0        # washout factor Lambda (1/s)
+we   1.0        # washout exponent Kappa
+fn   86400      # factor for deposition
+un   "g/(m2*d)" # unit of deposition
+rn   0.0        # reference value for deposition
+dn   -1         # number of decimals for deposition
+
+# conversion times NO->NO2 for K/M I ... V in h
+NOxTimes  2.9  2.5  1.9  1.3  0.9  0.3
+
+# assessment threshold for odor hours in OU/m3
+OdorThreshold  0.25
+
+###################### gaeous substances #######################
+[SOX]
+grps "0-0"      # aerosol groups
+unit   "g"      # unit of emission
+fc     1.e6     # factor for concentration
+uc  "ug/m3"     # unit of concentration
+ry     50       # reference value (yearly)
+dy      1       # number of decimals (yearly)
+nd      3       # number exceedances (daily)
+rd   125.0      # reference value (daily)
+dd      0       # number of decimals (daily)
+nh     24       # number exceedances (hourly)
+rh   350.0      # reference value (hourly)
+dh      0       # number of decimals (hourly)
+
+[HC]
+grps "0-0"      # aerosol groups
+unit   "g"      # unit of emission
+fc     1.e6     # factor for concentration
+uc  "ug/m3"     # unit of concentration
+ry    10.0      # reference value (yearly)
+dy      2       # number of decimals (yearly)
+
+[CO2]
+grps "0-0"      # aerosol groups
+unit   "g"      # unit of emission
+fc     1.e3     # factor for concentration
+uc  "mg/m3"     # unit of concentration
+ry    10.0      # reference value (yearly)
+dy      3       # number of decimals (yearly)
+
+[CO]
+grps "0-0"      # aerosol groups
+unit   "g"      # unit of emission
+fc     1.e6     # factor for concentration
+uc  "ug/m3"     # unit of concentration
+ry    10.0      # reference value (yearly)
+dy      3       # number of decimals (yearly)
+
+[SO2]
+grps  "0-0"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+fn    3.1536e8     # factor for deposition
+un    "kg/(ha*a)"  # unit of deposition
+ry    50           # reference value (yearly)
+dy    1            # number of decimals (yearly)
+nd    3            # number exceedances (daily)
+rd    125          # reference value (daily)
+dd    1            # number of decimals (daily)
+nh    24           # number exceedances (hourly)
+rh    350          # reference value (hourly)
+dh    1            # number of decimals (hourly)
+                   # deposition settings
+vd    0.010        # deposition velocity (m/s)
+wf    2.0e-5       # washout factor Lambda (1/s)
+we    1.0          # washout exponent Kappa
+rn    1            # reference value for deposition
+dn    4            # number of decimals for deposition
+
+[NOX]
+grps  "0-0"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+ry    30           # reference value (yearly)
+dy    1            # number of decimals (yearly)
+
+[NO2]
+grps  "0-0"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+fn    3.1536e8     # factor for deposition
+un    "kg/(ha*a)"  # unit of deposition
+ry    40           # reference value (yearly)
+dy    1            # number of decimals (yearly)
+nh    18           # number exceedances (hourly)
+rh    200          # reference value (hourly)
+dh    1            # number of decimals (hourly)
+                   # deposition settings
+vd    0.003        # deposition velocity (m/s)
+wf    1.0e-7       # washout factor Lambda (1/s)
+we    1.0          # washout exponent Kappa
+rn    1            # reference value for deposition
+dn    4            # number of decimals for deposition
+
+[NO]
+grps  "0-0"        # aerosol groups
+unit  "g"          # unit of emission
+fn    3.1536e8     # factor for deposition
+un    "kg/(ha*a)"  # unit of deposition
+ry    0.0          # reference value (yearly)
+                   # deposition settings
+vd    0.0005       # deposition velocity (m/s)
+rn    1            # reference value for deposition
+dn    4            # number of decimals for deposition
+
+[NH3]
+grps  "0-0"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+fn    3.1536e8     # factor for deposition
+un    "kg/(ha*a)"  # unit of deposition
+ry    3            # reference value (yearly)
+dy    2            # number of decimals (yearly)
+                   # deposition settings
+vd    0.01         # deposition velocity (m/s)
+wf    1.2e-4       # washout factor Lambda (1/s)
+we    0.6          # washout exponent Kappa
+rn    1            # reference value for deposition
+dn    4            # number of decimals for deposition
+
+[HG0]
+grps  "0-0"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+ry    0            # reference value (yearly)
+                   # deposition settings
+vd    0.0003       # deposition velocity (m/s)
+fn    8.64e10      # factor for deposition
+un    "ug/(m2*d)"  # unit of deposition
+rn    1            # reference value for deposition
+dn    3            # number of decimals for deposition
+
+[BZL]
+grps  "0-0"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+ry    5            # reference value (yearly)
+dy    2            # number of decimals (yearly)
+
+[F]
+grps  "0-0"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+ry    0.4          # reference value (yearly)
+dy    3            # number of decimals (yearly)
+
+[TCE]
+grps  "0-0"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+ry    10           # reference value (yearly)
+dy    2            # number of decimals (yearly)
+
+##################### gaeous/pm substances #####################
+
+[PM]
+grps  "1-5"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+fn    86400        # factor for deposition
+un    "g/(m2*d)"   # unit of deposition
+ry    40           # reference value (yearly)
+dy    1            # number of decimals (yearly)
+nd    35           # number exceedances (daily)
+rd    50           # reference value (daily)
+dd    1            # number of decimals (daily)
+rn    0.35         # reference value for deposition
+dn    4            # number of decimals for deposition
+
+[PM25]
+grps  "1-1"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+ry    25           # reference value (yearly)
+dy    1            # number of decimals (yearly)
+
+[PB]
+grps  "1-5"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+fn    8.64e10      # factor for deposition
+un    "ug/(m2*d)"  # unit of deposition
+ry    0.5          # reference value (yearly)
+dy    3            # number of decimals (yearly)
+rn    100          # reference value for deposition
+dn    2            # number of decimals for deposition
+
+[AS]
+grps  "1-5"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+fn    8.64e10      # factor for deposition
+un    "ug/(m2*d)"  # unit of deposition
+ry    0            # reference value (yearly)
+rn    4            # reference value for deposition
+dn    2            # number of decimals for deposition
+
+[CD]
+grps  "1-5"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+fn    8.64e10      # factor for deposition
+un    "ug/(m2*d)"  # unit of deposition
+ry    0.02         # reference value (yearly)
+dy    4            # number of decimals (yearly)
+rn    2            # reference value for deposition
+dn    2            # number of decimals for deposition
+
+[NI]
+grps  "1-5"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+fn    8.64e10      # factor for deposition
+un    "ug/(m2*d)"  # unit of deposition
+ry    0            # reference value (yearly)
+rn    15           # reference value for deposition
+dn    2            # number of decimals for deposition
+
+[HG]
+grps  "0-5"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+fn    8.64e10      # factor for deposition
+un    "ug/(m2*d)"  # unit of deposition
+ry    0            # reference value (yearly)
+rn    1            # reference value for deposition
+dn    2            # number of decimals for deposition
+                   # deposition settings for gaseous component
+vd    0.005        # deposition velocity (m/s)
+wf    1.0e-4       # washout factor Lambda (1/s)
+we    0.7          # washout exponent Kappa
+
+[TL]
+grps  "1-5"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+fn    8.64e10      # factor for deposition
+un    "ug/(m2*d)"  # unit of deposition
+ry    0            # reference value (yearly)
+rn    2            # reference value for deposition
+dn    2            # number of decimals for deposition
+
+[BAP]
+grps  "1-5"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e6         # factor for concentration
+uc    "ug/m3"      # unit of concentration
+fn    8.64e10      # factor for deposition
+un    "ug/(m2*d)"  # unit of deposition
+ry    0            # reference value (yearly)
+rn    0.5          # reference value for deposition
+dn    3            # number of decimals for deposition
+
+[DX]
+grps  "1-5"        # aerosol groups
+unit  "g"          # unit of emission
+fc    1.e12        # factor for concentration
+uc    "pg/m3"      # unit of concentration
+fn    8.64e16      # factor for deposition
+un    "pg/(m2*d)"  # unit of deposition
+ry    0            # reference value (yearly)
+rn    9            # reference value for deposition
+dn    2            # number of decimals for deposition
+
+[BAE]
+grps  "1-5"        # aerosol groups
+cadd  "1-5"        # added for concentration
+unit  "1"          # unit of emission
+fc    1            # factor for concentration
+uc    "1/m3"       # unit of concentration
+fn    1            # factor for deposition
+un    "1/(m2*s)"   # unit of deposition
+ry    1            # reference value (yearly)
+dy    -1           # number of decimals (yearly)
+rn    0.01         # reference value for deposition
+dn    -1           # number of decimals for deposition
+
+[XX]
+grps  "0-5"        # aerosol groups
+unit  "g"          # unit of emission
+ry    1            # reference value (yearly)
+rn    1            # reference value for deposition
+
+########################### odorants ###########################
+###                                                          ###
+### The rated odorants must be specified directly after      ###
+### [ODOR] with increasing rating factor.                    ###
+###                                                          ###
+################################################################
+
+[ODOR]
+unit  "OU"         # unit of emission
+fc    100.0        # factor for odor hour
+uc    "%"          # unit of odor hour
+ry    10           # reference value (yearly)
+dy    1            # number of decimals (yearly)
+
+[ODOR_050]
+unit  "OU"         # unit of emission
+fc    100.0        # factor for odor hour
+uc    "%"          # unit of odor hour
+ry    10           # reference value (yearly)
+dy    1            # number of decimals (yearly)
+
+[ODOR_065]
+unit  "OU"         # unit of emission
+fc    100.0        # factor for odor hour
+uc    "%"          # unit of odor hour
+ry    10           # reference value (yearly)
+dy    1            # number of decimals (yearly)
+
+[ODOR_075]
+unit  "OU"         # unit of emission
+fc    100.0        # factor for odor hour
+uc    "%"          # unit of odor hour
+ry    10           # reference value (yearly)
+dy    1            # number of decimals (yearly)
+
+[ODOR_100]
+unit  "OU"         # unit of emission
+fc    100.0        # factor for odor hour
+uc    "%"          # unit of odor hour
+ry    10           # reference value (yearly)
+dy    1            # number of decimals (yearly)
+
+[ODOR_150]
+unit  "OU"         # unit of emission
+fc    100.0        # factor for odor hour
+uc    "%"          # unit of odor hour
+ry    10           # reference value (yearly)
+dy    1            # number of decimals (yearly)
+
+### end of file
