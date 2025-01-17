@@ -5,7 +5,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    permissions: write-all
     env:
       OSGEO_USERNAME: ${{ secrets.OSGEO_USERNAME }}
       OSGEO_PASSWORD: ${{ secrets.OSGEO_PASSWORD }}
