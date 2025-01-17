@@ -27,6 +27,6 @@ jobs:
           RELEASE_TAG=${GITHUB_REF##*/}
           qgis-plugin-ci release ${VERSION} \
           --release-tag ${RELEASE_TAG} \
-          --github-token ${{ secrets.GITHUB_TOKEN }} \
-          --osgeo-username ${OSGEO_USERNAME} \
-          --osgeo-password ${OSGEO_PASSWORD}
+          --github-token ${{ secrets.GITHUB_TOKEN }} # \
+          # --osgeo-username ${OSGEO_USERNAME} \
+          # --osgeo-password ${OSGEO_PASSWORD}
