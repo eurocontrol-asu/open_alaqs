@@ -90,7 +90,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Open ALAQS: Airport Local Air Quality Studies&lt;/span&gt;&lt;br/&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Released under &lt;a href=&quot;https://github.com/opengisch/open_alaqs/blob/main/LICENCE.md&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;European Union Public Licence v. 1.2 License&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;For more information, contact &lt;a href=&quot;mailto:open-alaqs@eurocontrol.int&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;open-alaqs@eurocontrol.int&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;Open ALAQS: Airport Local Air Quality Studies&lt;/span&gt;&lt;br/&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;Released under &lt;a href=&quot;https://github.com/eurocontrol-asu/open_alaqs/blob/main/LICENCE.md&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;European Union Public Licence v. 1.2 License&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;For more information, contact &lt;a href=&quot;mailto:open-alaqs@eurocontrol.int&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;open-alaqs@eurocontrol.int&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
