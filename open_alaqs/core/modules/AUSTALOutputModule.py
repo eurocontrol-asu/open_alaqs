@@ -1101,7 +1101,7 @@ class AUSTALDispersionModule(DispersionModule):
                 if is_multi_polygon_element_ or is_multi_line_element_:
 
                     # Add the emissions for each geometry
-                    for g in geom:
+                    for g in geom.geoms:
                         # Determine the emissions for this geometry based on
                         # area/length (depending on geometry type)
                         if isinstance(g, Polygon):
