@@ -180,7 +180,7 @@ Sample `launch.json`:
 }
 ```
 
-
+<!--
 ### Updating the OpenALAQS database templates
 
 The plugin produced `.alaqs` files are cloned from a template databases, that are in `./open_alaqs/core/templates/*.alaqs`.
@@ -201,6 +201,7 @@ To generate the CAEP examples, run the following command in the Python console i
 from open_alaqs.database.create_caep_examples import create_caep_examples
 create_caep_examples()
 ```
+-->
 
 ## Contribute
 
@@ -213,7 +214,7 @@ OpenALAQS welcomes all contributions - code or documentation wise.
 
 [(Back to top)](#table-of-contents)
 
-This software is published under European Union Public Licence v. 1.2. ([`LICENSE.md`](LICENCE.md)) with certain amendments described in the [`AMENDMENT_TO_EUPL_license.md`](AMENDMENT_TO_EUPL_license.md) file, reflecting EUROCONTROL's status as an international organisation.
+This software is published under European Union Public Licence v. 1.2. [`LICENSE`](LICENSE) with certain amendments described in the [`AMENDMENT_TO_EUPL_license.md`](AMENDMENT_TO_EUPL_license.md) file, reflecting EUROCONTROL's status as an international organisation.
 
 ## Contact
 
