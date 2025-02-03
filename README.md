@@ -214,7 +214,7 @@ OpenALAQS welcomes all contributions - code or documentation wise.
 
 [(Back to top)](#table-of-contents)
 
-This software is published under European Union Public Licence v. 1.2. [`LICENSE`](LICENCE) with certain amendments described in the [`AMENDMENT_TO_EUPL_license.md`](AMENDMENT_TO_EUPL_license.md) file, reflecting EUROCONTROL's status as an international organisation.
+This software is published under European Union Public Licence v. 1.2. [`LICENSE`](LICENSE) with certain amendments described in the [`AMENDMENT_TO_EUPL_license.md`](AMENDMENT_TO_EUPL_license.md) file, reflecting EUROCONTROL's status as an international organisation.
 
 ## Contact
 
