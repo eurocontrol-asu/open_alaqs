@@ -431,7 +431,6 @@ class Movement:
         ver_shift = s_v
         hor_ext = d_h / 2  # half width
         
-        # Get original coordinates
         if lto_mode == "TX":
             start_coords = [Point_1.x(), Point_1.y(), 0]
             end_coords = [Point_2.x(), Point_2.y(), 0]
@@ -465,7 +464,6 @@ class Movement:
             z_upper_start = z_shifted_start
             z_upper_end = z_shifted_end
             hor_ext = 0
-        
         # Create 3D vertices using QgsPoint
         vertices = [
             # Lower face vertices
