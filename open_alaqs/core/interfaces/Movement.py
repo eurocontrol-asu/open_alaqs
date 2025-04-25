@@ -430,7 +430,6 @@ class Movement:
             )
         ver_shift = s_v
         hor_ext = d_h / 2  # half width
-        
         if lto_mode == "TX":
             start_coords = [Point_1.x(), Point_1.y(), 0]
             end_coords = [Point_2.x(), Point_2.y(), 0]
