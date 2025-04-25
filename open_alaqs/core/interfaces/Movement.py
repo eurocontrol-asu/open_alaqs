@@ -1590,15 +1590,16 @@ class Movement:
             [
                 "".join(filter(str.isdigit, str(d)))
                 for d in self.getRunway().getDirections()
-            ], key=lambda x: int(x),
+            ], 
+            key=lambda x: int(x),
         )
         
         # Ensure geometry aligns with [lower to higher] direction (e.g., 10 to 28)
         start_to_end_azimuth = (
             math.degrees(d.bearing(runway_start_point, runway_end_point)) % 360
         )
-        start_to_end_dir = (
-            str(int(round(start_to_end_azimuth / 10)))
+        start_to_end_dir = str(
+            int(round(start_to_end_azimuth / 10))
         ) # Approximate runway number
 
         if (
