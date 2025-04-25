@@ -3,7 +3,7 @@ import difflib
 import math
 import sys
 from collections import OrderedDict
-from inspect import currentframe, getframeinfo
+# from inspect import currentframe, getframeinfo
 from typing import TypedDict
 
 import matplotlib
@@ -17,9 +17,8 @@ from qgis.core import (
     QgsGeometry,
     QgsLineString,
     QgsPoint,
-    QgsPolygon,
-    QgsMultiPolygon,
     QgsPointXY,
+    QgsPolygon,
     QgsProject,
 )
 from qgis.PyQt import QtCore, QtWidgets
@@ -389,11 +388,11 @@ class Movement:
     # Create polygon faces using QgsPolygon
     def create_polygon_3d(self, sas_method, lto_mode, Point_1, Point_2):
         
-        if lto_mode == 'TX':
-            z1_ = 0
+        if lto_mode == "TX":
+            # z1_ = 0
             z2_ = 0
         else:
-            z1_ = Point_1.getZ()
+            # z1_ = Point_1.getZ()
             z2_ = Point_2.getZ()
 
         if lto_mode == "TO" and z2_ > 0:
@@ -407,7 +406,6 @@ class Movement:
             .getEmissionDynamicsByMode()[lto_mode]
             .getEmissionDynamics(sas_method)["vertical_extension"]
         )
-
         d_h = (
             self.getAircraft()
             .getEmissionDynamicsByMode()[lto_mode]
@@ -434,9 +432,8 @@ class Movement:
             )
         ver_shift = s_v
         hor_ext = d_h / 2  # half width
-
         # Get original coordinates
-        if lto_mode == 'TX' :
+        if lto_mode == "TX" :
             start_coords = [Point_1.x(), Point_1.y(), 0]
             end_coords = [Point_2.x(), Point_2.y(), 0]
         else:
@@ -493,7 +490,6 @@ class Movement:
                     end_coords[1] + hor_ext * perp_y,
                     max(0, z_shifted_end),
                 ),
-                
                 # Upper face vertices
                 QgsPoint(
                     start_coords[0] + hor_ext * perp_x,
@@ -536,7 +532,6 @@ class Movement:
                 line_string.addVertex(vertices[i])
             # Close the ring by adding first vertex again
             line_string.addVertex(vertices[face[0]])
-            
             # Create polygon geometry
             polygon = QgsPolygon()
             polygon.setExteriorRing(line_string)
@@ -745,24 +740,20 @@ class Movement:
                             taxiway_segment_.getGeometryText()
                         )
                         seg_points = tx_geom.asPolyline()
-                        
                         if sas == "default" or sas == "smooth & shift":
                             sas_method = "default" if sas == "default" else "sas"
                             lto_mode = "TX"
-                            
                             all_tx_polygons = []
                             # Loop through each pair of adjacent points
                             for i in range(len(seg_points) - 1):
                                 startPoint_ = seg_points[i]
                                 endPoint_ = seg_points[i + 1]
-                                
                                 if (
                                     startPoint_.x() == endPoint_.x()
                                     and startPoint_.y() == endPoint_.y()
                                 ):
                                     # logger.warning(f"Skipping zero-length segment at index {i}.")
                                     continue  # Jump to next iteration
-
                                 (
                                     qgs_multipolygon,
                                     zsh_start,
@@ -773,11 +764,10 @@ class Movement:
                                     sas_method, lto_mode, startPoint_, endPoint_
                                 )
                                 all_tx_polygons.append(qgs_multipolygon)
-                            
                             # Combine all polygons into a single MultiPolygon
                             combined_polygon = (
                                 QgsGeometry.collectGeometry(all_tx_polygons)
-                                if all_tx_polygons 
+                                if all_tx_polygons
                                 else None
                             )
                             if combined_polygon:
@@ -787,7 +777,7 @@ class Movement:
                                         "z_min": min(zsh_start, zsh_end),
                                         "z_max": max(zup_start, zup_end),
                                     }
-                                )    
+                                )
                             else:
                                 logger.warning(
                                     "Could not apply exhaust dynamics to taxiing emissions"
@@ -1226,8 +1216,8 @@ class Movement:
             method = {"name": "", "config": {}}
         emissions = Emission(defaultValues=defaultEmissions)
         EPSG_id_source = 3857
-        EPSG_id_target = 4326
-
+        # EPSG_id_target = 4326
+        
         # ToDo : Permanent definition
         try:
             T = method["config"]["ambient_conditions"].getTemperature()
@@ -1312,7 +1302,6 @@ class Movement:
             emissions.setVerticalExtent(
                 {"z_min": min(zsh_start, zsh_end), "z_max": max(zup_start, zup_end)}
             )
-            
         else:
             # logger.debug("Calculate RWY emissions WITHOUT Smooth & Shift Approach.")
             emissions.setVerticalExtent({"z_min": 0, "z_max": 0})
