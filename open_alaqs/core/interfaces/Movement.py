@@ -1568,26 +1568,42 @@ class Movement:
 
         # runway_directions = self.getRunway().getDirections()
         # Strip suffixes (e.g., "10L" to "10") for numeric comparison
-        runway_directions_numeric = sorted([''.join(filter(str.isdigit, str(d))) for d in self.getRunway().getDirections()], key=lambda x: int(x))
+        runway_directions_numeric = sorted(
+            ["".join(filter(str.isdigit, str(d))) 
+            for d in self.getRunway().getDirections()], key=lambda x: int(x)
+        )
         
         # Ensure geometry aligns with [lower to higher] direction (e.g., 10 to 28)
-        start_to_end_azimuth = math.degrees(d.bearing(runway_start_point, runway_end_point)) % 360
-        start_to_end_dir = str(int(round(start_to_end_azimuth / 10)))  # Approximate runway number
+        start_to_end_azimuth = (
+            math.degrees(d.bearing(runway_start_point, runway_end_point)) % 360
+        )
+        start_to_end_dir = (
+            str(int(round(start_to_end_azimuth / 10)))  # Approximate runway number
+        )
 
-        if ''.join(filter(str.isdigit, str(start_to_end_dir))) != runway_directions_numeric[0]:
+        if (
+            "".join(filter(str.isdigit, str(start_to_end_dir))) 
+            != runway_directions_numeric[0]
+        ):
             runway_start_point, runway_end_point = runway_end_point, runway_start_point
 
         # Get the active runway direction (with suffix, e.g., "28R")
         active_direction = self.getRunwayDirection()
-        active_direction_numeric = ''.join(filter(str.isdigit, str(active_direction)))
+        active_direction_numeric = "".join(filter(str.isdigit, str(active_direction)))
 
         # Calculate base azimuth (ignore suffix)
         if active_direction_numeric == runway_directions_numeric[1]:  # e.g., "28"
-            runway_azimuth_deg = math.degrees(d.bearing(runway_start_point, runway_end_point)) % 360
+            runway_azimuth_deg = (
+                math.degrees(d.bearing(runway_start_point, runway_end_point)) % 360
+            )
         elif active_direction_numeric == runway_directions_numeric[0]:  # e.g., "10"
-            runway_azimuth_deg = math.degrees(d.bearing(runway_end_point, runway_start_point)) % 360
+            runway_azimuth_deg = (
+                math.degrees(d.bearing(runway_end_point, runway_start_point)) % 360
+            )
         else:
-            raise Exception(f"Runway direction {active_direction} not in {runway_directions}!")
+            raise Exception(
+                f"Runway direction {active_direction} not in {runway_directions}!"
+            )
 
         # Adjust for arrival (reverse direction)
         if self.getTrajectory().getDepartureArrivalFlag() != "D":  # Arrival ("A")
