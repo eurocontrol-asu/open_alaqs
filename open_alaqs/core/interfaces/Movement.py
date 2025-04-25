@@ -3,9 +3,7 @@ import difflib
 import math
 import sys
 from collections import OrderedDict
-# from inspect import currentframe, getframeinfo
 from typing import TypedDict
-
 import matplotlib
 import numpy as np
 import pandas as pd
@@ -24,7 +22,6 @@ from qgis.core import (
 from qgis.PyQt import QtCore, QtWidgets
 from shapely.geometry import LineString, MultiLineString
 from shapely.wkt import loads
-
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft, AircraftStore
 from open_alaqs.core.interfaces.AircraftTrajectory import (
@@ -433,7 +430,7 @@ class Movement:
         ver_shift = s_v
         hor_ext = d_h / 2  # half width
         # Get original coordinates
-        if lto_mode == "TX" :
+        if lto_mode == "TX":
             start_coords = [Point_1.x(), Point_1.y(), 0]
             end_coords = [Point_2.x(), Point_2.y(), 0]
         else:
@@ -469,49 +466,49 @@ class Movement:
             
         # Create 3D vertices using QgsPoint
         vertices = [
-                # Lower face vertices
-                QgsPoint(
-                    start_coords[0] + hor_ext * perp_x,
-                    start_coords[1] + hor_ext * perp_y,
-                    max(0, z_shifted_start),
-                ),
-                QgsPoint(
-                    start_coords[0] - hor_ext * perp_x,
-                    start_coords[1] - hor_ext * perp_y,
-                    max(0, z_shifted_start),
-                ),
-                QgsPoint(
-                    end_coords[0] - hor_ext * perp_x,
-                    end_coords[1] - hor_ext * perp_y,
-                    max(0, z_shifted_end),
-                ),
-                QgsPoint(
-                    end_coords[0] + hor_ext * perp_x,
-                    end_coords[1] + hor_ext * perp_y,
-                    max(0, z_shifted_end),
-                ),
-                # Upper face vertices
-                QgsPoint(
-                    start_coords[0] + hor_ext * perp_x,
-                    start_coords[1] + hor_ext * perp_y,
-                    max(0, z_upper_start),
-                ),
-                QgsPoint(
-                    start_coords[0] - hor_ext * perp_x,
-                    start_coords[1] - hor_ext * perp_y,
-                    max(0, z_upper_start),
-                ),
-                QgsPoint(
-                    end_coords[0] - hor_ext * perp_x,
-                    end_coords[1] - hor_ext * perp_y,
-                    max(0, z_upper_end),
-                ),
-                QgsPoint(
-                    end_coords[0] + hor_ext * perp_x,
-                    end_coords[1] + hor_ext * perp_y,
-                    max(0, z_upper_end),
-                )
-            ]
+            # Lower face vertices
+            QgsPoint(
+                start_coords[0] + hor_ext * perp_x,
+                start_coords[1] + hor_ext * perp_y,
+                max(0, z_shifted_start),
+            ),
+            QgsPoint(
+                start_coords[0] - hor_ext * perp_x,
+                start_coords[1] - hor_ext * perp_y,
+                max(0, z_shifted_start),
+            ),
+            QgsPoint(
+                end_coords[0] - hor_ext * perp_x,
+                end_coords[1] - hor_ext * perp_y,
+                max(0, z_shifted_end),
+            ),
+            QgsPoint(
+                end_coords[0] + hor_ext * perp_x,
+                end_coords[1] + hor_ext * perp_y,
+                max(0, z_shifted_end),
+            ),
+            # Upper face vertices
+            QgsPoint(
+                start_coords[0] + hor_ext * perp_x,
+                start_coords[1] + hor_ext * perp_y,
+                max(0, z_upper_start),
+            ),
+            QgsPoint(
+                start_coords[0] - hor_ext * perp_x,
+                start_coords[1] - hor_ext * perp_y,
+                max(0, z_upper_start),
+            ),
+            QgsPoint(
+                end_coords[0] - hor_ext * perp_x,
+                end_coords[1] - hor_ext * perp_y,
+                max(0, z_upper_end),
+            ),
+            QgsPoint(
+                end_coords[0] + hor_ext * perp_x,
+                end_coords[1] + hor_ext * perp_y,
+                max(0, z_upper_end),
+            )
+        ]
 
         # Define face indices (same as original)
         face_indices = [
@@ -1217,7 +1214,6 @@ class Movement:
         emissions = Emission(defaultValues=defaultEmissions)
         EPSG_id_source = 3857
         # EPSG_id_target = 4326
-        
         # ToDo : Permanent definition
         try:
             T = method["config"]["ambient_conditions"].getTemperature()
@@ -1610,7 +1606,6 @@ class Movement:
             ],
             key=lambda x: int(x),
         )
-        
         # Ensure geometry aligns with [lower to higher] direction (e.g., 10 to 28)
         start_to_end_azimuth = (
             math.degrees(d.bearing(runway_start_point, runway_end_point)) % 360
@@ -1618,7 +1613,6 @@ class Movement:
         start_to_end_dir = str(
             int(round(start_to_end_azimuth / 10))
         )  # Approximate runway number
-        
         if (
             "".join(filter(str.isdigit, str(start_to_end_dir)))
             != runway_directions_numeric[0]
