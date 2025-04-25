@@ -397,8 +397,7 @@ class Movement:
             lto_mode = "CL"
 
         # Define hor_ext, ver_ext and ver_shift
-
-        ## take the default vertical extension
+        # take the default vertical extension
         d_v = (
             self.getAircraft()
             .getEmissionDynamicsByMode()[lto_mode]
@@ -1271,10 +1270,9 @@ class Movement:
                 startPoint_.getGeometryText(), endPoint_.getGeometryText()
             )
         )
-
-        startPoint_copy, endPoint_copy = copy.deepcopy(startPoint_), copy.deepcopy(
-            endPoint_
-        )
+        # startPoint_copy, endPoint_copy = copy.deepcopy(startPoint_), copy.deepcopy(
+        #     endPoint_
+        # )
         # Smooth & Shift Approach
         sas = (
             method["config"]["apply_smooth_and_shift"]
@@ -1624,16 +1622,18 @@ class Movement:
 
         # Calculate base azimuth (ignore suffix)
         if active_direction_numeric == runway_directions_numeric[1]:  # e.g., "28"
+            runway_backup_point = runway_start_point
             runway_azimuth_deg = (
                 math.degrees(d.bearing(runway_start_point, runway_end_point)) % 360
             )
         elif active_direction_numeric == runway_directions_numeric[0]:  # e.g., "10"
+            runway_backup_point = runway_end_point
             runway_azimuth_deg = (
                 math.degrees(d.bearing(runway_end_point, runway_start_point)) % 360
             )
         else:
             raise Exception(
-                f"Runway direction {active_direction} not in {runway_directions}!"
+                f"Runway direction {active_direction} not in {runway_directions_numeric}!"
             )
 
         # Adjust for arrival (reverse direction)
