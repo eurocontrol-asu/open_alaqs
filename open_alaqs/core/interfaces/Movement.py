@@ -4,6 +4,7 @@ import math
 import sys
 from collections import OrderedDict
 from typing import TypedDict
+
 import matplotlib
 import numpy as np
 import pandas as pd
@@ -22,6 +23,7 @@ from qgis.core import (
 from qgis.PyQt import QtCore, QtWidgets
 from shapely.geometry import LineString, MultiLineString
 from shapely.wkt import loads
+
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft, AircraftStore
 from open_alaqs.core.interfaces.AircraftTrajectory import (
@@ -384,7 +386,6 @@ class Movement:
 
     # Create polygon faces using QgsPolygon
     def create_polygon_3d(self, sas_method, lto_mode, Point_1, Point_2):
-        
         if lto_mode == "TX":
             # z1_ = 0
             z2_ = 0
@@ -429,6 +430,7 @@ class Movement:
             )
         ver_shift = s_v
         hor_ext = d_h / 2  # half width
+        
         # Get original coordinates
         if lto_mode == "TX":
             start_coords = [Point_1.x(), Point_1.y(), 0]
@@ -463,7 +465,7 @@ class Movement:
             z_upper_start = z_shifted_start
             z_upper_end = z_shifted_end
             hor_ext = 0
-            
+        
         # Create 3D vertices using QgsPoint
         vertices = [
             # Lower face vertices
@@ -507,7 +509,7 @@ class Movement:
                 end_coords[0] + hor_ext * perp_x,
                 end_coords[1] + hor_ext * perp_y,
                 max(0, z_upper_end),
-            )
+            ),
         ]
 
         # Define face indices (same as original)
