@@ -17,6 +17,8 @@ from qgis.core import (
     QgsGeometry,
     QgsLineString,
     QgsPoint,
+    QgsPolygon,
+    QgsMultiPolygon,
     QgsPointXY,
     QgsProject,
 )
@@ -384,6 +386,149 @@ class Movement:
 
         return emissions
 
+    # Create polygon faces using QgsPolygon
+    def create_polygon_3d(self, sas_method, lto_mode, Point_1, Point_2):
+        
+        if lto_mode == 'TX':
+            z1_ = 0
+            z2_ = 0
+        else:
+            z1_ = Point_1.getZ()
+            z2_ = Point_2.getZ()
+
+        if lto_mode=='TO' and z2_ > 0:
+            lto_mode = 'CL'
+
+        # Define hor_ext, ver_ext and ver_shift
+
+        ## take the default vertical extension
+        d_v = (
+            self.getAircraft()
+            .getEmissionDynamicsByMode()[lto_mode]
+            .getEmissionDynamics(sas_method)["vertical_extension"]
+        )
+
+        d_h = (
+            self.getAircraft()
+            .getEmissionDynamicsByMode()[lto_mode]
+            .getEmissionDynamics(sas_method)["horizontal_extension"]
+        )
+        s_v = (
+            self.getAircraft()
+            .getEmissionDynamicsByMode()[lto_mode]
+            .getEmissionDynamics(sas_method)["vertical_shift"]
+        )
+
+        # define the horizontal and vertical extent and vertical shift
+        if lto_mode == 'TX' or lto_mode=='TO':
+            ver_ext = (
+                self.getAircraft()
+                .getEmissionDynamicsByMode()[lto_mode]
+                .getEmissionDynamics(sas_method)["vertical_extension"]
+            )
+        else:
+            ver_ext = (
+                self.getAircraft()
+                .getEmissionDynamicsByMode()[lto_mode]
+                .getEmissionDynamics("default")["vertical_extension"]
+            )
+        ver_shift = s_v
+        hor_ext = d_h / 2  # half width
+
+        # Get original coordinates
+        if lto_mode == 'TX' :
+            start_coords = [
+                Point_1.x(),
+                Point_1.y(),
+                0
+            ]
+            end_coords = [
+                Point_2.x(),
+                Point_2.y(),
+                0
+            ]
+        else:
+
+            start_coords = [
+                Point_1.getX(),
+                Point_1.getY(),
+                Point_1.getZ()
+            ]
+            end_coords = [
+                Point_2.getX(),
+                Point_2.getY(),
+                Point_2.getZ()
+            ]
+
+        # Calculate perpendicular vector
+        dx = end_coords[0] - start_coords[0]
+        dy = end_coords[1] - start_coords[1]
+        length = (dx**2 + dy**2)**0.5
+        perp_x = -dy/length
+        perp_y = dx/length
+
+        # Apply vertical shift
+        if sas_method == "default":
+            z_shifted_start = start_coords[2] + ver_shift
+            z_shifted_end = end_coords[2] + ver_shift
+            z_upper_start = z_shifted_start + ver_ext
+            z_upper_end = z_shifted_end + ver_ext
+
+        elif sas_method == "sas":
+            z_shifted_start = start_coords[2] - (ver_ext + d_v)/2
+            z_shifted_end = end_coords[2] - (ver_ext + d_v)/2
+            z_upper_start = start_coords[2] + ver_ext
+            z_upper_end = end_coords[2] + ver_ext
+
+        else:
+            z_shifted_start = start_coords[2]
+            z_shifted_end = end_coords[2]
+            z_upper_start = z_shifted_start
+            z_upper_end = z_shifted_end
+            hor_ext = 0                   
+
+        # Create 3D vertices using QgsPoint
+        vertices = [
+                # Lower face vertices
+                QgsPoint(start_coords[0] + hor_ext * perp_x, start_coords[1] + hor_ext * perp_y, max(0, z_shifted_start)),
+                QgsPoint(start_coords[0] - hor_ext * perp_x, start_coords[1] - hor_ext * perp_y, max(0, z_shifted_start)),
+                QgsPoint(end_coords[0] - hor_ext * perp_x, end_coords[1] - hor_ext * perp_y, max(0, z_shifted_end)),
+                QgsPoint(end_coords[0] + hor_ext * perp_x, end_coords[1] + hor_ext * perp_y, max(0, z_shifted_end)),
+                
+                # Upper face vertices
+                QgsPoint(start_coords[0] + hor_ext * perp_x, start_coords[1] + hor_ext * perp_y, max(0, z_upper_start)),
+                QgsPoint(start_coords[0] - hor_ext * perp_x, start_coords[1] - hor_ext * perp_y, max(0, z_upper_start)),
+                QgsPoint(end_coords[0] - hor_ext * perp_x, end_coords[1] - hor_ext * perp_y, max(0, z_upper_end)),
+                QgsPoint(end_coords[0] + hor_ext * perp_x, end_coords[1] + hor_ext * perp_y, max(0, z_upper_end))
+            ]
+
+        # Define face indices (same as original)
+        face_indices = [
+            [0, 1, 2, 3], [4, 5, 6, 7],  # Bottom and top
+            [0, 1, 5, 4], [1, 2, 6, 5],   # Sides
+            [2, 3, 7, 6], [3, 0, 4, 7]
+        ]
+
+        # Create QGIS polygons for each face
+        polygons = []
+        for face in face_indices:
+            # Create a linestring for each face
+            line_string = QgsLineString()
+            for i in face:
+                line_string.addVertex(vertices[i])
+            # Close the ring by adding first vertex again
+            line_string.addVertex(vertices[face[0]])
+            
+            # Create polygon geometry
+            polygon = QgsPolygon()
+            polygon.setExteriorRing(line_string)
+            polygons.append(QgsGeometry(polygon))
+
+        # Create a multi-polygon geometry
+        volume_geometry = QgsGeometry.collectGeometry(polygons)
+
+        return volume_geometry, z_shifted_start, z_shifted_end, z_upper_start, z_upper_end
+
     def _calculate_sas_geom(self, wkt: str, horizontal_extent: float) -> QgsGeometry:
         geom = QgsGeometry.fromWkt(wkt)
 
@@ -505,7 +650,6 @@ class Movement:
             total_taxiing_time = abs(self.getBlockTime() - self.getRunwayTime())
         except Exception:
             total_taxiing_time = None
-        # print("total_taxiing_time %s"%total_taxiing_time)
         emissions = []
 
         if self.getTaxiRoute() is not None:
@@ -521,8 +665,6 @@ class Movement:
                     init_taxiing_time_from_segments += taxiway_segment_.getTime()
                     # taxiway_segment_.getLength()/taxiway_segment_.getSpeed() # getLength in m, getSpeed in m/s
                     # taxiway_segment_.setSpeed(10) #setSpeed is in m/s, in Open-ALAQS km/h, default value is 30 km/h or ~8 m/s
-                # print("init_taxiing_time_from_segments %s"%init_taxiing_time_from_segments)
-                # print("taxiing_length %s"%taxiing_length)
 
                 if total_taxiing_time is None:
                     total_taxiing_time = init_taxiing_time_from_segments
@@ -534,7 +676,6 @@ class Movement:
                     taxiing_average_speed = conversion.convertToFloat(
                         taxiing_length
                     ) / conversion.convertToFloat(total_taxiing_time)
-                # print("taxiing_average_speed %s"%taxiing_average_speed)
 
                 # Total taxiing time for calculating taxiing emissions is taken from the Movements Table
                 # Queuing emissions are added when taxiing time (traffic log) is greater than user defined taxiroute info (speed, time, etc)
@@ -543,7 +684,6 @@ class Movement:
                     if total_taxiing_time > init_taxiing_time_from_segments
                     else 0
                 )
-                # print("queuing_time %s"%queuing_time)
 
                 emission_index_ = None
                 # ToDo: Only bymode method for now ..
@@ -577,43 +717,38 @@ class Movement:
                     ):
                         em_ = Emission(defaultValues=defaultEmissions)
 
+                        tx_geom = QgsGeometry.fromWkt(taxiway_segment_.getGeometryText())
+                        seg_points = tx_geom.asPolyline()            
+
                         if sas == "default" or sas == "smooth & shift":
                             sas_method = "default" if sas == "default" else "sas"
+                            lto_mode = 'TX'
 
-                            # try:
-                            hor_ext = (
-                                self.getAircraft()
-                                .getEmissionDynamicsByMode()["TX"]
-                                .getEmissionDynamics(sas_method)["horizontal_extension"]
-                            )
-                            ver_ext = (
-                                self.getAircraft()
-                                .getEmissionDynamicsByMode()["TX"]
-                                .getEmissionDynamics(sas_method)["vertical_extension"]
-                            )
-                            ver_shift = (
-                                self.getAircraft()
-                                .getEmissionDynamicsByMode()["TX"]
-                                .getEmissionDynamics(sas_method)["vertical_shift"]
-                            )
-                            logger.debug(f"{getframeinfo(currentframe())}")
-                            logger.debug("ver_shift: %s", ver_shift)
-                            logger.debug("ver_ext: %s", ver_ext)
-                            logger.debug("hor_ext: %s", hor_ext)
-                            # print(hor_ext, ver_ext, ver_shift)
+                            all_tx_polygons = []
+                            # Loop through each pair of adjacent points
+                            for i in range(len(seg_points) - 1):
+                                startPoint_ = seg_points[i]
+                                endPoint_ = seg_points[i + 1]
+                                
+                                if startPoint_.x() == endPoint_.x() and startPoint_.y() == endPoint_.y():
+                                    #logger.warning(f"Skipping zero-length segment at index {i}.")
+                                    continue  # Jump to next iteration
 
-                            em_.setVerticalExtent(
-                                {"z_min": 0.0 + ver_shift, "z_max": ver_ext + ver_shift}
-                            )
+                                qgs_multipolygon, zsh_start, zsh_end, zup_start, zup_end  = self.create_polygon_3d(sas_method, lto_mode, startPoint_, endPoint_)
+                                all_tx_polygons.append(qgs_multipolygon)
+                            
+                            # Combine all polygons into a single MultiPolygon
+                            combined_polygon = QgsGeometry.collectGeometry(all_tx_polygons) if all_tx_polygons else None
+                            if combined_polygon:
+                                em_.setGeometryText(combined_polygon.asWkt())
+                                em_.setVerticalExtent({
+                                    "z_min": min(zsh_start, zsh_end),
+                                    "z_max": max(zup_start, zup_end)
+                                    })    
+                            else:
+                                logger.warning("Could not apply exhaust dynamics to taxiing emissions")
+                                em_.setGeometryText(taxiway_segment_.getGeometryText())   
 
-                            logger.debug(
-                                {"z_min": 0.0 + ver_shift, "z_max": ver_ext + ver_shift}
-                            )
-
-                            qgs_multipolygon = self._calculate_sas_geom(
-                                taxiway_segment_.getGeometryText(), hor_ext
-                            )
-                            em_.setGeometryText(qgs_multipolygon.asWkt())
                         else:
                             # logger.info("Calculate taxiing emissions WITHOUT Smooth & Shift Approach.")
                             em_.setGeometryText(taxiway_segment_.getGeometryText())
@@ -1071,7 +1206,7 @@ class Movement:
             if "height_unit_in_feet" in limit and limit["height_unit_in_feet"]:
                 unit_in_feet = limit["height_unit_in_feet"]  # True
 
-            # TODO OPENGIS.ch: if the height of the emission is above the "sacred number" of 914.14 meters, we ignore all the following emissions,
+            # TODO OPENGIS.ch: if the height of the emission is above the "ICAO threshold" of 914.14 meters, we ignore all the following emissions,
             # as assumed they are getting higher and higher than this point
             if (
                 startPoint_.getZ(unit_in_feet) >= limit["max_height"]
@@ -1121,258 +1256,17 @@ class Movement:
             # logger.debug("Calculate RWY emissions with Smooth & Shift Approach: '%s'" % (sas))
 
             sas_method = "default" if sas == "default" else "sas"
-            # try:
-            hor_ext = (
-                self.getAircraft()
-                .getEmissionDynamicsByMode()[startPoint_.getMode()]
-                .getEmissionDynamics(sas_method)["horizontal_extension"]
-            )
-            ver_ext = (
-                self.getAircraft()
-                .getEmissionDynamicsByMode()[startPoint_.getMode()]
-                .getEmissionDynamics(sas_method)["vertical_extension"]
-            )
-            ver_shift = (
-                self.getAircraft()
-                .getEmissionDynamicsByMode()[startPoint_.getMode()]
-                .getEmissionDynamics(sas_method)["vertical_shift"]
-            )
-            hor_shift = (
-                self.getAircraft()
-                .getEmissionDynamicsByMode()[startPoint_.getMode()]
-                .getEmissionDynamics("default")["horizontal_shift"]
-            )
+            lto_mode = startPoint_.getMode()
 
-            # x1_, y1_, z1_ = (
-            #     self.getTrajectory()
-            #     .getPoints()[startPoint_.getIdentifier() - 1]
-            #     .getX(),
-            #     self.getTrajectory()
-            #     .getPoints()[startPoint_.getIdentifier() - 1]
-            #     .getY(),
-            #     self.getTrajectory()
-            #     .getPoints()[startPoint_.getIdentifier() - 1]
-            #     .getZ(),
-            # )
-            z1_ = (
-                self.getTrajectory().getPoints()[startPoint_.getIdentifier() - 1].getZ()
-            )
+            multi_polygon_geom, zsh_start, zsh_end, zup_start, zup_end  = self.create_polygon_3d(sas_method, lto_mode, startPoint_, endPoint_)
 
-            # x2_, y2_, z2_ = (
-            #     self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getX(),
-            #     self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getY(),
-            #     self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getZ(),
-            # )
-            z2_ = self.getTrajectory().getPoints()[endPoint_.getIdentifier() - 1].getZ()
+            # Set the emissions geometry
+            emissions.setGeometryText(multi_polygon_geom.asWkt())
+            emissions.setVerticalExtent({
+                "z_min": min(zsh_start, zsh_end),
+                "z_max": max(zup_start, zup_end)
+            })            
 
-            x_shift = self.getTrajectory().get_sas_point(
-                abs(ver_shift), self.isDeparture()
-            )
-
-            emissions.setVerticalExtent(
-                {"z_min": startPoint_.getZ(), "z_max": ver_ext + startPoint_.getZ()}
-            )
-
-            if startPoint_.getMode() == "AP":
-                # until here apply ver_shift
-                if abs(z1_) - abs(ver_shift) > abs(ver_shift) and abs(z2_) - abs(
-                    ver_shift
-                ) > abs(ver_shift):
-                    # Update Z values
-                    startPoint_copy.setZ(max(0, startPoint_.getZ() + ver_shift))
-                    startPoint_copy.updateGeometryText()
-                    endPoint_copy.setZ(
-                        max(endPoint_.getZ() + ver_shift, abs(ver_shift))
-                    )
-                    endPoint_copy.updateGeometryText()
-
-                # break in two segments now
-                elif abs(z1_) - abs(ver_shift) > abs(ver_shift) and abs(z2_) - abs(
-                    ver_shift
-                ) <= abs(ver_shift):
-
-                    (segment_geometry_wkt, swap) = spatial.reproject_geometry(
-                        spatial.getLineGeometryText(
-                            startPoint_.getGeometryText(), endPoint_.getGeometryText()
-                        ),
-                        EPSG_id_source,
-                        EPSG_id_target,
-                    )
-
-                    start_point = spatial.getAllPoints(segment_geometry_wkt, swap)[0]
-                    end_point = spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
-                    inverse_distance_segment = spatial.getInverseDistance(
-                        start_point[0], start_point[1], end_point[0], end_point[1]
-                    )
-
-                    start_point_azimuth = inverse_distance_segment["azi1"]
-                    target_point_distance = abs(
-                        abs(
-                            self.getTrajectory()
-                            .getPoints()[startPoint_.getIdentifier() - 1]
-                            .getX()
-                        )
-                        - abs(x_shift)
-                    )
-                    target_projected = spatial.getDistance(
-                        start_point[0],
-                        start_point[1],
-                        start_point_azimuth,
-                        target_point_distance,
-                    )
-                    target_projected_wkt = spatial.getPointGeometryText(
-                        target_projected["lat2"], target_projected["lon2"], 0.0, swap
-                    )
-                    (target_projected_wkt, swap_) = spatial.reproject_geometry(
-                        target_projected_wkt, EPSG_id_target, EPSG_id_source
-                    )
-
-                    self.getTrajectory().setTouchdownPoint(
-                        spatial.CreateGeometryFromWkt(target_projected_wkt)
-                    )
-
-                    # geometry_text_list = []
-                    startPoint_copy.setZ(max(0, startPoint_.getZ() + ver_shift))
-                    startPoint_copy.updateGeometryText()
-                    endPoint_copy.setX(spatial.getAllPoints(target_projected_wkt)[0][0])
-                    endPoint_copy.setY(spatial.getAllPoints(target_projected_wkt)[0][1])
-                    endPoint_copy.setZ(0)
-                    endPoint_copy.updateGeometryText()
-
-                else:
-                    (segment_geometry_wkt, swap) = spatial.reproject_geometry(
-                        spatial.getLineGeometryText(
-                            startPoint_.getGeometryText(),
-                            self.getTrajectory().getTouchdownPoint(),
-                        ),
-                        EPSG_id_source,
-                        EPSG_id_target,
-                    )
-                    start_point, end_point = (
-                        spatial.getAllPoints(segment_geometry_wkt, swap)[0],
-                        spatial.getAllPoints(segment_geometry_wkt, swap)[-1],
-                    )
-                    dist_startPoint_sasPoint = spatial.getInverseDistance(
-                        start_point[0], start_point[1], end_point[0], end_point[1]
-                    )["s12"]
-
-                    (segment_geometry_wkt, swap) = spatial.reproject_geometry(
-                        spatial.getLineGeometryText(
-                            self.getTrajectory().getTouchdownPoint(),
-                            endPoint_.getGeometryText(),
-                        ),
-                        EPSG_id_source,
-                        EPSG_id_target,
-                    )
-                    start_point, end_point = (
-                        spatial.getAllPoints(segment_geometry_wkt, swap)[0],
-                        spatial.getAllPoints(segment_geometry_wkt, swap)[-1],
-                    )
-                    dist_sasPoint_endPoint = spatial.getInverseDistance(
-                        start_point[0], start_point[1], end_point[0], end_point[1]
-                    )["s12"]
-
-                    if dist_startPoint_sasPoint > dist_sasPoint_endPoint:
-                        startPoint_copy.setX(
-                            spatial.getAllPoints(
-                                self.getTrajectory().getTouchdownPoint()
-                            )[0][0]
-                        )
-                        startPoint_copy.setY(
-                            spatial.getAllPoints(
-                                self.getTrajectory().getTouchdownPoint()
-                            )[0][1]
-                        )
-                    startPoint_copy.setZ(0)
-                    startPoint_copy.updateGeometryText()
-                    endPoint_copy.setZ(0)
-                    endPoint_copy.updateGeometryText()
-
-            elif startPoint_.getMode() == "TO" or startPoint_.getMode() == "CL":
-                if z2_ > 0:
-                    hor_ext = (
-                        self.getAircraft()
-                        .getEmissionDynamicsByMode()["CL"]
-                        .getEmissionDynamics(sas_method)["horizontal_extension"]
-                    )
-                    ver_ext = (
-                        self.getAircraft()
-                        .getEmissionDynamicsByMode()["CL"]
-                        .getEmissionDynamics(sas_method)["vertical_extension"]
-                    )
-                    ver_shift = (
-                        self.getAircraft()
-                        .getEmissionDynamicsByMode()["CL"]
-                        .getEmissionDynamics(sas_method)["vertical_shift"]
-                    )
-                    hor_shift = (
-                        self.getAircraft()
-                        .getEmissionDynamicsByMode()["CL"]
-                        .getEmissionDynamics("default")["horizontal_shift"]
-                    )
-
-                (segment_geometry_wkt, swap) = spatial.reproject_geometry(
-                    spatial.getLineGeometryText(
-                        startPoint_.getGeometryText(), endPoint_.getGeometryText()
-                    ),
-                    EPSG_id_source,
-                    EPSG_id_target,
-                )
-
-                start_point = spatial.getAllPoints(segment_geometry_wkt, swap)[0]
-                end_point = spatial.getAllPoints(segment_geometry_wkt, swap)[-1]
-                inverse_distance_segment = spatial.getInverseDistance(
-                    start_point[0], start_point[1], end_point[0], end_point[1]
-                )
-                start_point_azimuth, end_point_azimuth = (
-                    inverse_distance_segment["azi1"],
-                    inverse_distance_segment["azi2"],
-                )
-
-                target_projected = spatial.getDistance(
-                    start_point[0], start_point[1], start_point_azimuth, -hor_shift
-                )
-                target_projected_wkt = spatial.getPointGeometryText(
-                    target_projected["lat2"], target_projected["lon2"], 0.0, swap
-                )
-                (target_projected_wkt, swap_) = spatial.reproject_geometry(
-                    target_projected_wkt, EPSG_id_target, EPSG_id_source
-                )
-                startPoint_copy.setX(spatial.getAllPoints(target_projected_wkt)[0][0])
-                startPoint_copy.setY(spatial.getAllPoints(target_projected_wkt)[0][1])
-                startPoint_copy.setZ(max(0, startPoint_.getZ() + ver_shift))
-                startPoint_copy.updateGeometryText()
-
-                target_projected = spatial.getDistance(
-                    end_point[0], end_point[1], end_point_azimuth, -hor_shift
-                )
-                target_projected_wkt = spatial.getPointGeometryText(
-                    target_projected["lat2"], target_projected["lon2"], 0.0, swap
-                )
-                (target_projected_wkt, swap_) = spatial.reproject_geometry(
-                    target_projected_wkt, EPSG_id_target, EPSG_id_source
-                )
-                endPoint_copy.setX(spatial.getAllPoints(target_projected_wkt)[0][0])
-                endPoint_copy.setY(spatial.getAllPoints(target_projected_wkt)[0][1])
-                endPoint_copy.setZ(max(0, endPoint_.getZ() + ver_shift))
-                endPoint_copy.updateGeometryText()
-
-                emissions.setVerticalExtent(
-                    {
-                        "z_min": startPoint_copy.getZ(),
-                        "z_max": ver_ext + startPoint_copy.getZ(),
-                    }
-                )
-
-            qgs_start_point = QgsPoint(
-                startPoint_copy.getX(), startPoint_copy.getY(), startPoint_copy.getZ()
-            )
-            qgs_end_point = QgsPoint(
-                endPoint_copy.getX(), endPoint_copy.getY(), endPoint_copy.getZ()
-            )
-            qgs_line = QgsGeometry(QgsLineString(qgs_start_point, qgs_end_point))
-            qgs_polygon = self._calculate_sas_geom(qgs_line.asWkt(), hor_ext)
-            emissions.setGeometryText(qgs_polygon.asWkt())
         else:
             # logger.debug("Calculate RWY emissions WITHOUT Smooth & Shift Approach.")
             emissions.setVerticalExtent({"z_min": 0, "z_max": 0})
@@ -1671,27 +1565,33 @@ class Movement:
 
         runway_start_point = QgsPointXY(runway_points[0])
         runway_end_point = QgsPointXY(runway_points[-1])
-        runway_directions = self.getRunway().getDirections()
-        rot_angle = (
-            180 if self.getTrajectory().getDepartureArrivalFlag() == "D" else 360
-        )
 
-        if self.getRunwayDirection() == runway_directions[1]:
-            runway_backup_point = runway_start_point
-            runway_azimuth_deg = (
-                math.degrees(d.bearing(runway_start_point, runway_end_point))
-                + rot_angle
-            ) % 360
-        elif self.getRunwayDirection() == runway_directions[0]:
-            runway_backup_point = runway_end_point
-            runway_azimuth_deg = (
-                math.degrees(d.bearing(runway_end_point, runway_start_point))
-                + rot_angle
-            ) % 360
+        # runway_directions = self.getRunway().getDirections()
+        # Strip suffixes (e.g., "10L" to "10") for numeric comparison
+        runway_directions_numeric = sorted([''.join(filter(str.isdigit, str(d))) for d in self.getRunway().getDirections()], key=lambda x: int(x))
+        
+        # Ensure geometry aligns with [lower to higher] direction (e.g., 10 to 28)
+        start_to_end_azimuth = math.degrees(d.bearing(runway_start_point, runway_end_point)) % 360
+        start_to_end_dir = str(int(round(start_to_end_azimuth / 10)))  # Approximate runway number
+
+        if ''.join(filter(str.isdigit, str(start_to_end_dir))) != runway_directions_numeric[0]:
+            runway_start_point, runway_end_point = runway_end_point, runway_start_point
+
+        # Get the active runway direction (with suffix, e.g., "28R")
+        active_direction = self.getRunwayDirection()
+        active_direction_numeric = ''.join(filter(str.isdigit, str(active_direction)))
+
+        # Calculate base azimuth (ignore suffix)
+        if active_direction_numeric == runway_directions_numeric[1]:  # e.g., "28"
+            runway_azimuth_deg = math.degrees(d.bearing(runway_start_point, runway_end_point)) % 360
+        elif active_direction_numeric == runway_directions_numeric[0]:  # e.g., "10"
+            runway_azimuth_deg = math.degrees(d.bearing(runway_end_point, runway_start_point)) % 360
         else:
-            raise Exception(
-                f"Runway direction {self.getRunwayDirection()} was not found in {runway_directions}!"
-            )
+            raise Exception(f"Runway direction {active_direction} not in {runway_directions}!")
+
+        # Adjust for arrival (reverse direction)
+        if self.getTrajectory().getDepartureArrivalFlag() != "D":  # Arrival ("A")
+            runway_azimuth_deg = (runway_azimuth_deg + 360) % 360
 
         taxi_geom = QgsGeometry.fromWkt(
             self.getTaxiRoute().getSegmentsAsLineString().wkt
