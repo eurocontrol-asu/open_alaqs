@@ -717,37 +717,54 @@ class Movement:
                     ):
                         em_ = Emission(defaultValues=defaultEmissions)
 
-                        tx_geom = QgsGeometry.fromWkt(taxiway_segment_.getGeometryText())
-                        seg_points = tx_geom.asPolyline()            
-
+                        tx_geom = QgsGeometry.fromWkt(
+                            taxiway_segment_.getGeometryText()
+                        )
+                        seg_points = tx_geom.asPolyline()
+                        
                         if sas == "default" or sas == "smooth & shift":
                             sas_method = "default" if sas == "default" else "sas"
-                            lto_mode = 'TX'
-
+                            lto_mode = "TX"
+                            
                             all_tx_polygons = []
                             # Loop through each pair of adjacent points
                             for i in range(len(seg_points) - 1):
                                 startPoint_ = seg_points[i]
                                 endPoint_ = seg_points[i + 1]
                                 
-                                if startPoint_.x() == endPoint_.x() and startPoint_.y() == endPoint_.y():
+                                if (
+                                    startPoint_.x() == endPoint_.x()
+                                    and startPoint_.y() == endPoint_.y()
+                                ):
                                     #logger.warning(f"Skipping zero-length segment at index {i}.")
                                     continue  # Jump to next iteration
 
-                                qgs_multipolygon, zsh_start, zsh_end, zup_start, zup_end  = self.create_polygon_3d(sas_method, lto_mode, startPoint_, endPoint_)
+                                (
+                                    qgs_multipolygon, 
+                                    zsh_start, 
+                                    zsh_end, 
+                                    zup_start, 
+                                    zup_end,
+                                ) = self.create_polygon_3d(
+                                    sas_method, lto_mode, startPoint_, endPoint_
+                                )
                                 all_tx_polygons.append(qgs_multipolygon)
                             
                             # Combine all polygons into a single MultiPolygon
-                            combined_polygon = QgsGeometry.collectGeometry(all_tx_polygons) if all_tx_polygons else None
+                            combined_polygon = (
+                                QgsGeometry.collectGeometry(all_tx_polygons)
+                                if all_tx_polygons else None
+                            )
                             if combined_polygon:
                                 em_.setGeometryText(combined_polygon.asWkt())
-                                em_.setVerticalExtent({
-                                    "z_min": min(zsh_start, zsh_end),
-                                    "z_max": max(zup_start, zup_end)
-                                    })    
+                                em_.setVerticalExtent(
+                                    {"z_min": min(zsh_start, zsh_end), "z_max": max(zup_start, zup_end),}
+                                )    
                             else:
-                                logger.warning("Could not apply exhaust dynamics to taxiing emissions")
-                                em_.setGeometryText(taxiway_segment_.getGeometryText())   
+                                logger.warning(
+                                    "Could not apply exhaust dynamics to taxiing emissions"
+                                )
+                                em_.setGeometryText(taxiway_segment_.getGeometryText())
 
                         else:
                             # logger.info("Calculate taxiing emissions WITHOUT Smooth & Shift Approach.")
@@ -1258,15 +1275,16 @@ class Movement:
             sas_method = "default" if sas == "default" else "sas"
             lto_mode = startPoint_.getMode()
 
-            multi_polygon_geom, zsh_start, zsh_end, zup_start, zup_end  = self.create_polygon_3d(sas_method, lto_mode, startPoint_, endPoint_)
+            multi_polygon_geom, zsh_start, zsh_end, zup_start, zup_end  = (
+                self.create_polygon_3d(sas_method, lto_mode, startPoint_, endPoint_)
+            )
 
             # Set the emissions geometry
             emissions.setGeometryText(multi_polygon_geom.asWkt())
-            emissions.setVerticalExtent({
-                "z_min": min(zsh_start, zsh_end),
-                "z_max": max(zup_start, zup_end)
-            })            
-
+            emissions.setVerticalExtent(
+                {"z_min": min(zsh_start, zsh_end), "z_max": max(zup_start, zup_end)}
+            )
+            
         else:
             # logger.debug("Calculate RWY emissions WITHOUT Smooth & Shift Approach.")
             emissions.setVerticalExtent({"z_min": 0, "z_max": 0})
@@ -1569,8 +1587,10 @@ class Movement:
         # runway_directions = self.getRunway().getDirections()
         # Strip suffixes (e.g., "10L" to "10") for numeric comparison
         runway_directions_numeric = sorted(
-            ["".join(filter(str.isdigit, str(d))) 
-            for d in self.getRunway().getDirections()], key=lambda x: int(x)
+            [
+                "".join(filter(str.isdigit, str(d)))
+                for d in self.getRunway().getDirections()
+            ], key=lambda x: int(x),
         )
         
         # Ensure geometry aligns with [lower to higher] direction (e.g., 10 to 28)
@@ -1578,11 +1598,11 @@ class Movement:
             math.degrees(d.bearing(runway_start_point, runway_end_point)) % 360
         )
         start_to_end_dir = (
-            str(int(round(start_to_end_azimuth / 10)))  # Approximate runway number
-        )
+            str(int(round(start_to_end_azimuth / 10)))
+        ) # Approximate runway number
 
         if (
-            "".join(filter(str.isdigit, str(start_to_end_dir))) 
+            "".join(filter(str.isdigit, str(start_to_end_dir)))
             != runway_directions_numeric[0]
         ):
             runway_start_point, runway_end_point = runway_end_point, runway_start_point
