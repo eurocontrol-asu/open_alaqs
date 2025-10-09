@@ -1,0 +1,28 @@
+type,description,power,load,fuel,Stage,time,deterioration_factor
+GPU,400 Hz Ground Power Unit,142.0,0.5,Diesel,Stage I,1.0,1.0
+GSE,Baggage Belt loader,33.0,0.25,Petrol,Stage I,1.0,1.0
+GSE,Baggage Cart Tractor,0.0,0.0,Electric,Stage I,1.0,1.0
+GSE,Cabin Cleaning Truck,132.0,0.1,Diesel,Stage I,1.0,1.0
+GSE,Cabin Cleaning Van,61.0,0.1,Petrol,Stage I,1.0,1.0
+GSE,Cabin Cleaning Vehicle,48.0,0.1,Petrol,Stage I,1.0,1.0
+GSE,Cargo Delivery,33.0,0.25,Diesel,Stage I,1.0,1.0
+GSE,Cargo Loader,62.0,0.25,Diesel,Stage I,1.0,1.0
+GSE,Cargo Loader large (B747 Main Deck),59.0,0.25,Diesel,Stage I,1.0,1.0
+GSE,Cars   BZRA/B,50.0,0.2,Petrol,Stage I,1.0,1.0
+GSE,Catering Truck,110.0,0.25,Diesel,Stage I,1.0,1.0
+GSE,Cleaning Generator large,3.5,0.8,Petrol,Stage I,1.0,1.0
+GSE,Cleaning Generator small,2.2,0.8,Petrol,Stage I,1.0,1.0
+GSE,Fork Lift,66.0,0.25,Diesel,Stage I,1.0,1.0
+GSE,Gear mounted push-back tractor,60.0,0.25,Diesel,Stage I,1.0,1.0
+GSE,GSE/GA Fuel Truck,90.0,0.1,Diesel,Stage I,1.0,1.0
+GSE,Large Fork Lift,75.0,0.25,Diesel,Stage I,1.0,1.0
+GSE,Lavatory Truck,110.0,0.25,Diesel,Stage I,1.0,1.0
+GSE,Line Maintenance Truck,95.0,0.25,Diesel,Stage I,1.0,1.0
+GSE,Mobile Air Starter / Air Climate Unit,150.0,0.5,Diesel,Stage I,1.0,1.0
+GSE,Narrowbody Towbarless aircraft tug,275.0,0.25,Diesel,Stage I,1.0,1.0
+GSE,Passenger Stairs,57.0,0.25,Petrol,Stage I,1.0,1.0
+GSE,Refuelling Dispenser Truck,90.0,0.1,Diesel,Stage I,1.0,1.0
+GSE,Refuelling Tanker Truck,200.0,0.1,Diesel,Stage I,1.0,1.0
+GSE,Water Truck,110.0,0.25,Diesel,Stage I,1.0,1.0
+GSE,Widebody towbarless aircraft tug,450.0,0.25,Diesel,Stage I,1.0,1.0
+GPU,Description,0.0,1.0,Diesel,Stage IIIA,0.0,1.0

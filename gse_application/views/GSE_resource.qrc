@@ -1,0 +1,13 @@
+<RCC>
+  <qresource prefix="icons">
+    <file>icons/about.png</file>
+    <file>icons/arrow_down.png</file>
+    <file>icons/document_add.png</file>
+    <file>icons/calculator.png</file>
+    <file>icons/save_icon.png</file>
+    <file>icons/close-app.png</file>
+    <file>icons/flight-status-icon.png</file>
+    <file>icons/full-screen.png</file>
+    <file>icons/open-data.png</file>
+  </qresource>
+</RCC>
