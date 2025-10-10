@@ -120,6 +120,7 @@ class EmissionResult:
     HC_g_per_h: float
     NOx_g_per_h: float
     PM_g_per_h: float
+    SOx_g_per_h: float
     kWh: float
 
     @staticmethod
@@ -135,6 +136,7 @@ class EmissionResult:
                 HC_g_per_h=float(d.get('HC_g_per_h', 0)),
                 NOx_g_per_h=float(d.get('NOx_g_per_h', 0)),
                 PM_g_per_h=float(d.get('PM_g_per_h', 0)),
+                SOx_g_per_h=float(d.get('SOx_g_per_h', 0)),
                 kWh=float(d.get('kWh', 0)),
             )
 

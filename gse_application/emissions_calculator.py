@@ -198,7 +198,7 @@ class EmissionsCalculatorDialog(QDialog):
             gse_accum = {
                 "ac_group": ac_group, "gate_type": gate_type, "gse_type": "GSE",
                 "A_min": 0.0, "D_min": 0.0,
-                "CO_g_per_h": 0.0, "HC_g_per_h": 0.0, "NOx_g_per_h": 0.0, "PM_g_per_h": 0.0, "kWh": 0.0
+                "CO_g_per_h": 0.0, "HC_g_per_h": 0.0, "NOx_g_per_h": 0.0, "PM_g_per_h": 0.0, "SOx_g_per_h": 0.0, "kWh": 0.0
             }
             gpu_rows = {}
 
@@ -244,6 +244,7 @@ class EmissionsCalculatorDialog(QDialog):
                 hc = float(ef_row.get("HC_g_per_kWh", 0)) * power * hours * count * load_factor * deter_factor
                 nox = float(ef_row.get("NOx_g_per_kWh", 0)) * power * hours * count * load_factor * deter_factor
                 pm = float(ef_row.get("PM_g_per_kWh", 0)) * power * hours * count * load_factor * deter_factor
+                sox = float(ef_row.get("SOx_g_per_kWh", 0)) * power * hours * count * load_factor * deter_factor
                 kwh = power * hours * count
                 if gse_type == "GPU":
                     key = (ac_group, gate_type, description)
@@ -251,7 +252,7 @@ class EmissionsCalculatorDialog(QDialog):
                         gpu_rows[key] = {
                             "ac_group": ac_group, "gate_type": gate_type, "gse_type": gse_type,
                             "A_min": 0.0, "D_min": 0.0,
-                            "CO_g_per_h": 0.0, "HC_g_per_h": 0.0, "NOx_g_per_h": 0.0, "PM_g_per_h": 0.0, "kWh": 0.0
+                            "CO_g_per_h": 0.0, "HC_g_per_h": 0.0, "NOx_g_per_h": 0.0, "PM_g_per_h": 0.0, "SOx_g_per_h": 0.0, "kWh": 0.0
                         }
                     gpu_rows[key]["A_min"] += A_min
                     gpu_rows[key]["D_min"] += D_min
@@ -259,6 +260,7 @@ class EmissionsCalculatorDialog(QDialog):
                     gpu_rows[key]["HC_g_per_h"] += hc
                     gpu_rows[key]["NOx_g_per_h"] += nox
                     gpu_rows[key]["PM_g_per_h"] += pm
+                    gpu_rows[key]["SOx_g_per_h"] += sox
                     gpu_rows[key]["kWh"] += kwh
                 else:
                     gse_accum["A_min"] += A_min
@@ -267,6 +269,7 @@ class EmissionsCalculatorDialog(QDialog):
                     gse_accum["HC_g_per_h"] += hc
                     gse_accum["NOx_g_per_h"] += nox
                     gse_accum["PM_g_per_h"] += pm
+                    gse_accum["SOx_g_per_h"] += sox
                     gse_accum["kWh"] += kwh
             # Save rows
             if gse_accum["A_min"] > 0 or gse_accum["D_min"] > 0:
@@ -287,6 +290,7 @@ class EmissionsCalculatorDialog(QDialog):
                 "co": round(v["CO_g_per_h"], 2),
                 "hc": round(v["HC_g_per_h"], 2),
                 "nox": round(v["NOx_g_per_h"], 2),
+                "sox": round(v.get("SOx_g_per_h", 0.0), 2),
                 "pm10": round(v["PM_g_per_h"], 2),
                 #"kWh": round(v["kWh"], 2) # kWh still calculated but not included in the output_list
             })
@@ -314,7 +318,7 @@ class EmissionsCalculatorDialog(QDialog):
             idx = 0
 
             for entry in emissions: 
-                
+                print(entry)
                 # First dict based on arrival time
                 dict1 = { 
                     "oid": int(idx + 1),
@@ -328,7 +332,7 @@ class EmissionsCalculatorDialog(QDialog):
                     "co": entry["co"],
                     "hc": entry["hc"],
                     "nox": entry["nox"],
-                    "sox": float(0),
+                    "sox": entry["sox"],
                     "pm10": entry["pm10"],
                     "source": str("GSE Application")
                 }
@@ -346,7 +350,7 @@ class EmissionsCalculatorDialog(QDialog):
                     "co": entry["co"],
                     "hc": entry["hc"],
                     "nox": entry["nox"],
-                    "sox": float(0),
+                    "sox": entry["sox"],
                     "pm10": entry["pm10"],
                     "source": str("GSE Application")
                 }
