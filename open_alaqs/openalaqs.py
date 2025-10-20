@@ -350,19 +350,29 @@ class OpenALAQS:
         associated layers from the UI, cleaning up the tool bar and disabling
         some features until a new project is created or loaded.
         """
-        self.actions["profiles_edit"].setEnabled(False)
+        if "profiles_edit" in self.actions:
+            self.actions["profiles_edit"].setEnabled(False)
         openalaqsuitoolkit.delete_alaqs_layers(self.iface)
 
-        self.actions["project_close"].setEnabled(False)
-        self.actions["study_setup"].setEnabled(False)
-        self.actions["osm_import"].setEnabled(False)
-        self.actions["profiles_edit"].setEnabled(False)
-        self.actions["taxi_routes"].setEnabled(False)
-        self.actions["build_inventory"].setEnabled(False)
-        self.actions["calculate_dispersion"].setEnabled(False)
+        if "project_close" in self.actions:
+            self.actions["project_close"].setEnabled(False)
+        if "study_setup" in self.actions:
+            self.actions["study_setup"].setEnabled(False)
+        if "osm_import" in self.actions:
+            self.actions["osm_import"].setEnabled(False)
+        if "profiles_edit" in self.actions:
+            self.actions["profiles_edit"].setEnabled(False)
+        if "taxi_routes" in self.actions:
+            self.actions["taxi_routes"].setEnabled(False)
+        if "build_inventory" in self.actions:
+            self.actions["build_inventory"].setEnabled(False)
+        if "calculate_dispersion" in self.actions:
+            self.actions["calculate_dispersion"].setEnabled(False)
 
-        self.actions["project_create"].setEnabled(True)
-        self.actions["project_load"].setEnabled(True)
+        if "project_create" in self.actions:
+            self.actions["project_create"].setEnabled(True)
+        if "project_load" in self.actions:
+            self.actions["project_load"].setEnabled(True)
 
     def run_study_setup(self, save_before_show=False):
         """
