@@ -73,7 +73,7 @@ If you are running on Windows, you should install via [OSGeo4W installer](https:
 
 OpenALAQS is built on top of QGIS and a few external libraries that require separate installation.
 
-You can find the list of libraries in the file `requirments.txt`.
+You can find the list of libraries in the file `requirements.txt`.
 
 You can either `pip install` them in the Python environment used by QGIS, or if you are using OSGeo4W installation,
 please find the packages in the "Select Packages".
@@ -150,11 +150,22 @@ For more detailed information on how to use ALAQS, the project files and expecte
 8. Merge the PR.
 
 
+### Code style
+
+Use pre-commit:
+
+```
+pip install pre-commit
+pre-commit install
+```
+
+
 ### Debugging
 
-Deugging can be done via [QGIS VSCode Debug plugin](https://plugins.qgis.org/plugins/debug_vs/) and [VSCode](https://code.visualstudio.com).
+Debugging can be done via [QGIS VSCode Debug plugin](https://plugins.qgis.org/plugins/debug_vs/) and [VSCode](https://code.visualstudio.com).
 
-Sample `launch.json`:
+<details>
+<summary>Sample `launch.json`</summary>
 
 ```
 {
@@ -179,6 +190,7 @@ Sample `launch.json`:
     ]
 }
 ```
+</details>
 
 <!--
 ### Updating the OpenALAQS database templates
@@ -202,6 +214,18 @@ from open_alaqs.database.create_caep_examples import create_caep_examples
 create_caep_examples()
 ```
 -->
+
+### Unit tests
+
+To run the tests inside the same environment as they are executed on GitHub,
+you need a [Docker](https://www.docker.com) installation.
+
+Once you've installed Docker, go the root of the local repo and run the following commands, which will remove all containers after running the tests:
+
+````
+export QGIS_TEST_VERSION=3.40.11 # See https://hub.docker.com/r/qgis/qgis/tags/
+docker run --rm -e PYTHONPATH=/usr/share/qgis/python/plugins -v $PWD:/usr/src -w /usr/src qgis/qgis:${QGIS_TEST_VERSION} sh -c 'pip3 install -r requirements.txt || pip3 install -r requirements.txt --break-system-packages;xvfb-run pytest'
+````
 
 ## Contribute
 
