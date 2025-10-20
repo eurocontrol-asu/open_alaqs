@@ -1,0 +1,31 @@
+name: 🧪️ Run Tests
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        qgis_version: [latest, 3.40.11] # Latest and LTR
+    env:
+      QGIS_TEST_VERSION: ${{ matrix.qgis_version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unit tests
+        run:
+          >-
+          docker run
+          -e PYTHONPATH=/usr/share/qgis/python/plugins:/usr/share/qgis/python
+          -v $(pwd):/usr/src
+          -w /usr/src qgis/qgis:${QGIS_TEST_VERSION}
+          sh -c 'pip3 install -r requirements.txt || pip3 install -r requirements.txt --break-system-packages;xvfb-run pytest'
