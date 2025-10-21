@@ -40,7 +40,7 @@ def connect(p: Path, init_spatialite: bool = False) -> sqlite3.Connection:
     conn.enable_load_extension(False)
 
     if init_spatialite:
-        conn.execute("SELECT InitSpatialMetaData()")
+        conn.execute("SELECT InitSpatialMetaData()")  # Takes a while (>30s)
 
     return conn
 
