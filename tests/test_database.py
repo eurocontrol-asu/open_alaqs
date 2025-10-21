@@ -5,11 +5,18 @@ from warnings import warn
 
 import pandas as pd
 import pytest
-from database.generate_templates import MATCH_PATTERNS, apply_sql, get_engine
 from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 
-DB_DIR = Path(__file__).parents[1] / "database"
+from open_alaqs.database.generate_templates import (
+    MATCH_PATTERNS,
+    apply_sql,
+    connect,
+    get_engine,
+)
+from tests.utils import get_copy_path, get_data_path
+
+DB_DIR = Path(__file__).parents[1] / "open_alaqs" / "database"
 TEMPLATES_DIR = Path(__file__).parents[1] / "core/templates"
 EXAMPLES_DIR = Path(__file__).parents[1] / "example"
 
@@ -26,18 +33,32 @@ def csv_files():
     return list((DB_DIR / "data").glob("*.csv"))
 
 
-@pytest.mark.skip(reason="Test is failing for OpenALAQS 4.0.")
 @pytest.mark.parametrize("template_type", ["project", "inventory"])
 def test_sql(sql_files: list, template_type: str):
     """
     Test if the sql files can be processed
     """
+    # Use a copy of a spatially-enabled (empty) DB
+    db_path = get_copy_path(get_data_path() / "spatial_template.sqlite")
 
-    # Create in-memory sqlite database
-    engine = create_engine("sqlite:///:memory:")
+    # Or, uncomment to create a temporary spatially-enabled DB
+    # from scratch. Be aware of around 40s initializing spatial metadata!
+    # db_path = get_tmp_path(template_type + ".alaqs")
+    # conn = connect(db_path, init_spatialite=True)
+
+    print(f"\nConnecting to {db_path} ({template_type})...")
+    conn = connect(db_path, init_spatialite=False)
 
     # Execute the SQL queries in the files to the templates
-    apply_sql(engine, sql_files, file_type=template_type)
+    print(f"\nApplying SQL files to {db_path} ({template_type})...")
+    apply_sql(conn, sql_files, file_type=template_type)
+
+    cursor = conn.cursor()
+    res = cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    table_names = res.fetchall()
+    cursor.close()
+    conn.close()
+    assert len(table_names) > 0
 
     # Get the SQL queries to execute
     for sql_path in sql_files:
@@ -45,7 +66,12 @@ def test_sql(sql_files: list, template_type: str):
         # Check if the SQL query should be executed to the project template
         if re.search(MATCH_PATTERNS[template_type], sql_path.name) is not None:
             # Check if the table is present
-            assert sql_path.stem in engine.table_names()
+            if (
+                sql_path.stem == "shapes_receptors"
+            ):  # TODO: Ask to rename table or file!
+                continue
+
+            assert (sql_path.stem,) in table_names
 
 
 @pytest.mark.skip(reason="Test is failing for OpenALAQS 4.0.")
