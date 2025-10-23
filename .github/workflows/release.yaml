@@ -5,10 +5,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions: write-all
-    env:
-      OSGEO_USERNAME: ${{ secrets.OSGEO_USERNAME }}
-      OSGEO_PASSWORD: ${{ secrets.OSGEO_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -24,9 +20,5 @@ jobs:
       - name: Release
         run: |
           VERSION=${{ github.ref_name }}
-          RELEASE_TAG=${GITHUB_REF##*/}
           qgis-plugin-ci release ${VERSION} \
-          --release-tag ${RELEASE_TAG} \
-          --github-token ${{ secrets.GITHUB_TOKEN }} # \
-          # --osgeo-username ${OSGEO_USERNAME} \
-          # --osgeo-password ${OSGEO_PASSWORD}
+          --github-token ${{ secrets.GITHUB_TOKEN }}

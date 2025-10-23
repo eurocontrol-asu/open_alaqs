@@ -134,7 +134,8 @@ Here you can find the following files and directories:
 - `./LSZH_AUSTAL/series.dmna` - the file containing all time-dependent parameters
 - `./LSZH_AUSTAL/01/e0001.dmna` - input grid file, with information on the user-defined grid and on the corresponding data
 
-For more detailed information on how to use ALAQS, the project files and expected outputs, read the [official documentation](./documents/USER_GUIDE.md).
+For more detailed information on how to use ALAQS, the project files and expected outputs, read the [official documentation](TODO).
+
 
 ## Development
 
@@ -180,7 +181,7 @@ Sample `launch.json`:
 }
 ```
 
-<!--
+
 ### Updating the OpenALAQS database templates
 
 The plugin produced `.alaqs` files are cloned from a template databases, that are in `./open_alaqs/core/templates/*.alaqs`.
@@ -201,7 +202,6 @@ To generate the CAEP examples, run the following command in the Python console i
 from open_alaqs.database.create_caep_examples import create_caep_examples
 create_caep_examples()
 ```
--->
 
 ## Contribute
 
@@ -214,7 +214,7 @@ OpenALAQS welcomes all contributions - code or documentation wise.
 
 [(Back to top)](#table-of-contents)
 
-This software is published under European Union Public Licence v. 1.2. [`LICENSE`](LICENSE) with certain amendments described in the [`AMENDMENT_TO_EUPL_license.md`](AMENDMENT_TO_EUPL_license.md) file, reflecting EUROCONTROL's status as an international organisation.
+This software is published under European Union Public Licence v. 1.2. Read the [`LICENSE.md`](LICENCE.md).
 
 ## Contact
 

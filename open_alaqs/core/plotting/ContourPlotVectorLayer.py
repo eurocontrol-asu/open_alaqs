@@ -108,6 +108,9 @@ class ContourPlotVectorLayer:
             raise Exception(f'Failed to start editing on layer "{self.layer.name()}"!')
 
         fields = self.layer.fields()
+        
+        attr_df_name = f"{self.field_name}_kg"
+        df = df[df[attr_df_name]>0].copy()
 
         for _idx, row in df.iterrows():
             if not row["geometry"]:
@@ -126,11 +129,12 @@ class ContourPlotVectorLayer:
             )
 
             # TODO OPENGIS.ch: find a smarter way to add the "_kg" suffix
-            attr_df_name = f"{self.field_name}_kg"
+            # attr_df_name = f"{self.field_name}_kg"
             attr_index = fields.indexFromName(self.field_name)
             attrs = {
                 attr_index: row[attr_df_name],
             }
+
             f = QgsVectorLayerUtils.createFeature(self.layer, geom, attrs)
 
             if not f.isValid():

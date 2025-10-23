@@ -2,7 +2,6 @@ import itertools
 import os
 from collections import OrderedDict
 from datetime import datetime, timedelta
-
 import numpy as np
 import pandas as pd
 from qgis.gui import QgsDoubleSpinBox
@@ -333,7 +332,9 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 "File '%s' not found. Choose another pollutant ? " % (datapath),
             )
         try:
-            with open(datapath, encoding="utf8", errors="ignore") as f:
+            # latin-1 read the units ug/m3, utf-8 reads u/g
+            # with open(datapath, encoding="utf-8", errors="ignore") as f:
+            with open(datapath, encoding="latin-1", errors="ignore") as f:
                 raw_output_data = [
                     x.rstrip("\n").lstrip().replace('"', "") for x in f.readlines()
                 ]

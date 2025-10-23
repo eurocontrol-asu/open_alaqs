@@ -759,7 +759,7 @@ def inventory_copy_aircraft_profiles(inventory_path):
     cur = conn.cursor()
     profiles = alaqsdblite.query_string("SELECT * FROM default_aircraft_profiles;")
     cur.executemany(
-        "INSERT INTO default_aircraft_profiles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO default_aircraft_profiles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         profiles,
     )
     conn.commit()
