@@ -2702,6 +2702,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         # Sources
         source_name = self.ui.source_names.currentText()
         source_names = [source_name if source_name is not None else "all"]
+        # Calculate emissions
         self._emission_calculation_.run(
             source_names=source_names,
             vertical_limit_m=em_config["vertical_limit_m"],

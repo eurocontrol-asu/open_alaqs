@@ -226,6 +226,22 @@ class MovementSourceModule(SourceModule):
 
         # Add the profile id
         df.loc[:, "profile_id"] = df["Sources"].apply(self.getDefaultProfileName)
+        # Then update with _profile_id where available
+        for i, mov in enumerate(df["Sources"]):
+            if hasattr(mov, '_profile_id') and mov._profile_id:
+                df.at[i, "profile_id"] = mov._profile_id
+
+        # try:
+        #     default_profiles = df["Sources"].apply(self.getDefaultProfileName)
+        #     profile_ids = [getattr(mov, '_profile_id', None) for mov in df["Sources"]]
+        #     # Use _profile_id where it exists, otherwise keep default
+        #     df.loc[:, "profile_id"] = [pid if pid is not None else default 
+        #                       for pid, default in zip(profile_ids, default_profiles)]
+        #     df.loc[:, "profile_id"] = [mov._profile_id for mov in df["Sources"]]
+        # except Exception as e:
+        #     # Fallback to just default profiles if anything goes wrong
+        #     df.loc[:, "profile_id"] = df["Sources"].apply(self.getDefaultProfileName)
+        #     logger.error(f"Error processing profile IDs: {e}")
 
         # Add default gate and flight emissions
         empty_series = pd.Series(index=df.index, dtype=object)
@@ -301,7 +317,6 @@ class MovementSourceModule(SourceModule):
 
         # Load movements from DataFrame
         df = self.getDataframe()
-
         # Get the movements that match the source names
         if source_names and "all" not in source_names:
             df = df[self._getMovementsIndicesBySourceNames(df, source_names)]
@@ -354,7 +369,7 @@ class MovementSourceModule(SourceModule):
         mode_ = ""
 
         # flight_columns=["aircraft","engine","profile_id", "departure_arrival"]
-        flight_columns = ["engine", "profile_id"]
+        # flight_columns = ["engine", "profile_id"]
         flight_columns = [
             "engine",
             "profile_id",
@@ -436,12 +451,6 @@ class MovementSourceModule(SourceModule):
 
             emissions_extended = te + ge + fe
 
-            # import geopandas as gpd
-            # import matplotlib.pyplot as plt
-            # import mplleaflet
-            # import datetime
-            # gdf = gpd.GeoDataFrame(index=range(0, len(emissions_extended)), columns=["NOx", "geometry"])
-            # cnt = 0
             if emissions_extended:
                 emissions_ = []
                 for em_ in emissions_extended:

@@ -1,0 +1,89 @@
+# Python Console
+# Use iface to access QGIS API interface or type '?' for more info
+# Security warning: typing commands from an untrusted source can harm your computer
+exec(compile(Path('C:/Users/sstromat/AppData/Local/Temp/1/tmpu54og7df').read_text(), 'Untitled-0', 'exec'))
+Successfully installed debugpy
+0.02s - Debugger warning: It seems that frozen modules are being used, which may
+0.01s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+0.00s - to python to disable frozen modules.
+0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+
+Invalid Data Source: C:\WINDOWS\system32\e36e48e1b967928828c648fb135a015a435b187b968cac03477087050fdf8fde is not a valid or recognized data source.
+Invalid Data Source: C:\WINDOWS\system32\--server-access-token is not a valid or recognized data source.
+
+
+>>> subprocess.run(['python', '-m', 'pip', 'install', '--force-reinstall', r'C:\Users\sstromat\Downloads\debugpy-1.8.7-cp312-cp312-win_amd64.whl'])
+Defaulting to user installation because normal site-packages is not writeable
+Processing c:\users\sstromat\downloads\debugpy-1.8.7-cp312-cp312-win_amd64.whl
+Installing collected packages: debugpy
+  Attempting uninstall: debugpy
+    Found existing installation: debugpy 1.8.7
+    Uninstalling debugpy-1.8.7:
+      Successfully uninstalled debugpy-1.8.7
+  WARNING: The script debugpy.exe is installed in 'C:\Users\sstromat\AppData\Roaming\Python\Python312\Scripts' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+Successfully installed debugpy-1.8.7
+CompletedProcess(args=['python', '-m', 'pip', 'install', '--force-reinstall', 'C:\\Users\\sstromat\\Downloads\\debugpy-1.8.7-cp312-cp312-win_amd64.whl'], returncode=0)
+
+
+https://code.visualstudio.com/docs/python/debugging
+https://github.com/microsoft/vscode-python?tab=readme-ov-file
+https://gispofinland.medium.com/cooking-with-gispo-qgis-plugin-development-in-vs-code-19f95efb1977
+https://gispofinland.medium.com/cooking-with-gispo-qgis-plugin-development-in-vs-code-19f95efb1977
+https://gist.github.com/NicolaiLolansen/acfd8723720c4761aefef3cdfc2aa55a?utm_source=pocket_saves
+
+2024-10-24T14:42:12     WARNING    Traceback (most recent call last):
+              File "C:\Users\sstromat\AppData\Roaming\Python\Python312\site-packages\debugpy\server\api.py", line 237, in listen
+              sock, _ = endpoints_listener.accept()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              File "C:\PROGRA~1\QGIS33~2.3\apps\Python312\Lib\socket.py", line 295, in accept
+              fd, addr = self._accept()
+              ^^^^^^^^^^^^^^
+             TimeoutError: timed out
+             
+             During handling of the above exception, another exception occurred:
+             
+             Traceback (most recent call last):
+              File "C:\Users\sstromat\dev\qgis\profiles\default/python/plugins\debug_vs\__init__.py", line 134, in enable
+              t_, self.port = self.debugpy.listen((self.host, self.port))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              File "C:\Users\sstromat\AppData\Roaming\Python\Python312\site-packages\debugpy\public_api.py", line 31, in wrapper
+              return wrapped(*args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+              File "C:\Users\sstromat\AppData\Roaming\Python\Python312\site-packages\debugpy\server\api.py", line 143, in debug
+              log.reraise_exception("{0}() failed:", func.__name__, level="info")
+              File "C:\Users\sstromat\AppData\Roaming\Python\Python312\site-packages\debugpy\server\api.py", line 141, in debug
+              return func(address, settrace_kwargs, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              File "C:\Users\sstromat\AppData\Roaming\Python\Python312\site-packages\debugpy\server\api.py", line 251, in listen
+              raise RuntimeError("timed out waiting for adapter to connect")
+             RuntimeError: timed out waiting for adapter to connect
+             
+			 
+			 C:\Program Files\QGIS 3.38.3\bin
+			 C:\Program Files\QGIS 3.38.3\apps\qgis\bin
+			 C:\Program Files\QGIS 3.38.3\apps\Python312
+			 C:\Program Files\QGIS 3.38.3\apps\Python312\Scripts
+			 C:\Program Files\QGIS 3.38.3\apps\Qt5\bin
+			 C:\Program Files\QGIS 3.38.3\bin
+			 C:\Windows\System32\wbem
+			 C:\Windows\System32
+			 C:\Windows
+			 C:\Program Files\QGIS 3.38.3\apps\Python312\Lib\site-packages\pywin32_system32
+			 C:\Program Files\QGIS 3.38.3\apps\Python312\Lib\site-packages\numpy.libs
+			 
+			 
+"PATH": 
+"C:\\Program Files\\Git\\cmd;
+C:\\Users\\{{INSERT_YOUR_USER}}\\AppData\\Local\\GitHubDesktop\\bin;
+C:\\OSGEO4~1\\apps\\qgis\\bin;
+C:\\OSGEO4~1\\apps\\Python37;
+C:\\OSGEO4~1\\apps\\Python37\\Scripts;
+C:\\OSGEO4~1\\apps\\qt5\\bin;
+C:\\OSGEO4~1\\apps\\Python27\\Scripts;
+C:\\OSGEO4~1\\bin;
+C:\\WINDOWS\\system32;
+C:\\WINDOWS;
+C:\\WINDOWS\\system32\\WBem;
+C:\\OSGEO4~1\\apps\\Python37\\lib\\site-packages\\pywin32_system32;
+C:\\OSGEO4~1\\apps\\Python37\\lib\\site-packages\\numpy\\.libs",

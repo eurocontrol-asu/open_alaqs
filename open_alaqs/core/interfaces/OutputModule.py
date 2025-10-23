@@ -6,6 +6,7 @@ from qgis.core import QgsMapLayer
 from qgis.PyQt.QtWidgets import QWidget
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 from shapely.validation import make_valid
+from datetime import datetime
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
@@ -76,17 +77,18 @@ class GridOutputModule(OutputModule):
     def _process_grid(
         self, source: Source, emission: Emission, grid_df: gpd.GeoDataFrame
     ) -> gpd.GeoDataFrame:
+
         if emission.getGeometryText() is None:
             logger.error(
-                "Did not find geometry for emissions '%s'. Skipping an emission of source '%s'",
+                "Did not find geometry for '%s'. Skipping an emission of source '%s'",
                 str(emission),
-                str(source.getName()),
+                str(source.getName())
             )
             return grid_df
 
         # ensure geometry validity, otherwise the intersects operations might fail. Ideally the invalid geometries should be prevented.
         geom = make_valid(emission.getGeometry())
-        intersecting_df = grid_df[grid_df.intersects(geom) == True]  # noqa: E712
+        intersecting_df = grid_df[grid_df.intersects(geom) == True].copy()  # noqa: E712
         intersecting_df = cast(gpd.GeoDataFrame, intersecting_df)
 
         # Calculate Emissions' horizontal distribution
