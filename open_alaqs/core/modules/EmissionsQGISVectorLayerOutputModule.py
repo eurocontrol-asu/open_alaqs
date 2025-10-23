@@ -13,6 +13,8 @@ from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.plotting.ContourPlotVectorLayer import ContourPlotVectorLayer
 from open_alaqs.core.tools import Grid3D
 
+from datetime import datetime
+
 pd.set_option("chained_assignment", None)
 
 logger = get_logger(__name__)
@@ -102,7 +104,7 @@ class EmissionsQGISVectorLayerOutputModule(GridOutputModule):
         # loop over all emissions and append one data point for every grid cell
         for source, emissions in result:
             for emission in emissions:
-                self._grid_df = self._process_grid(source, emission, self._grid_df)
+                self._grid_df = self._process_grid(source, emission, self._grid_df)      
 
     def endJob(self) -> Optional[QgsVectorLayer]:
         if self._grid_df.empty:
@@ -120,6 +122,7 @@ class EmissionsQGISVectorLayerOutputModule(GridOutputModule):
             use_centroid_symbol=self._use_centroid_symbol,
         )
         layer_wrapper.addData(self._grid_df)
+
         layer_wrapper.setColorGradientRenderer(
             classes_count=7,
         )

@@ -12,6 +12,7 @@ from dateutil import rrule
 from qgis.gui import QgsDoubleSpinBox, QgsSpinBox
 from qgis.PyQt import QtWidgets
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
+from shapely import wkt
 
 from open_alaqs.alaqs_config import DEFAULT_CONCENTRATION_GRID_FACTOR
 from open_alaqs.core.alaqslogging import get_logger
@@ -44,6 +45,23 @@ class AUSTALDispersionModule(DispersionModule):
     """
 
     settings_schema = {
+        "is_enabled": {
+            "label": "Is Enabled",
+            "initial_value": False,
+            "widget_type": QtWidgets.QCheckBox,
+            "tooltip": "Enable to create AUSTAL input files",
+        },        
+        "title": {
+            "label": "Title",
+            "initial_value": "",
+            "widget_type": QtWidgets.QLineEdit,
+        },        
+        "mixing_height_enabled": {
+            "label": "Include Mixing Height",
+            "initial_value": False,
+            "widget_type": QtWidgets.QCheckBox,
+            "tooltip": "Enable to include mixing height in AUSTAL input files",
+        },               
         "roughness_length_m": {
             "label": "Roughness Length",
             "initial_value": 0.2,
@@ -73,12 +91,7 @@ class AUSTALDispersionModule(DispersionModule):
                 "maximum": 999999.9,
                 "suffix": "m",
             },
-        },
-        "title": {
-            "label": "Title",
-            "initial_value": "",
-            "widget_type": QtWidgets.QLineEdit,
-        },
+        },     
         "quality_level": {
             "label": "Quality Level",
             "initial_value": 1,
@@ -88,13 +101,7 @@ class AUSTALDispersionModule(DispersionModule):
                 "maximum": 10,
             },
             "tooltip": "+1 doubles the number of simulation particles",
-        },
-        "is_enabled": {
-            "label": "Is Enabled",
-            "initial_value": False,
-            "widget_type": QtWidgets.QCheckBox,
-            "tooltip": "Enable to create AUSTAL input files",
-        },
+        },  
         "options_string": {
             "label": "Options String",
             "initial_value": "NOSTANDARD;SCINOTAT;Kmax=1",
@@ -138,6 +145,7 @@ class AUSTALDispersionModule(DispersionModule):
 
         self._enable = values_dict.get("is_enabled", False)
         # "----------------- general parameters",
+        self._mixing_height = values_dict.get("mixing_height_enabled", False)
 
         self._title = values_dict.get("title", "no title")
         self._quality_level = values_dict.get("quality_level", 1)
@@ -170,6 +178,9 @@ class AUSTALDispersionModule(DispersionModule):
 
     def isEnabled(self):
         return self._enable
+
+    def MixingHeightIncluded(self):
+        return self._mixing_height
 
     def getModel(self):
         return self._model
@@ -516,6 +527,7 @@ class AUSTALDispersionModule(DispersionModule):
                             "WindSpeed": 0.7,
                             # ambient_conditions.getObukhovLength()
                             "ObukhovLength": 99999.0,
+                            "MixingHeight": 914.4
                         }
                     )
                     self._results[hour_str].update(
@@ -891,7 +903,12 @@ class AUSTALDispersionModule(DispersionModule):
         # Get the sorted results
         sorted_results = self.getSortedResults()
 
-        form_line = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"']
+        if self.MixingHeightIncluded():
+            form_line = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"', '"hm%7.1f"']
+        else:
+            form_line = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"']
+
+
         with file_path.open("w") as text_file:
 
             for iq_ in list(self._total_sources.keys()):
@@ -930,17 +947,32 @@ class AUSTALDispersionModule(DispersionModule):
                         else:
                             emission_rates.append("{:10.3e}".format(0))
 
-                text_file.write(
-                    "%s\t%5.0f\t%5.1f\t%7.1f\t%s\t%s\n"
-                    % (
-                        dt,
-                        self._series[dt]["WindDirection"],
-                        self._series[dt]["WindSpeed"],
-                        self._series[dt]["ObukhovLength"],
-                        ("\t").join(["%3.0f" % (iq) for iq in iqs]),
-                        ("\t").join([er for er in emission_rates]),
+                if self.MixingHeightIncluded():
+                    text_file.write(
+                        "%s\t%5.0f\t%5.1f\t%7.1f\t%5.1f\t%s\t%s\n"
+                        % (
+                            dt,
+                            self._series[dt]["WindDirection"],
+                            self._series[dt]["WindSpeed"],
+                            self._series[dt]["ObukhovLength"],
+                            self._series[dt]["MixingHeight"],
+                            ("\t").join(["%3.0f" % (iq) for iq in iqs]),
+                            ("\t").join([er for er in emission_rates]),
+                        )
                     )
-                )
+                else:
+                    text_file.write(
+                        "%s\t%5.0f\t%5.1f\t%7.1f\t%s\t%s\n"
+                        % (
+                            dt,
+                            self._series[dt]["WindDirection"],
+                            self._series[dt]["WindSpeed"],
+                            self._series[dt]["ObukhovLength"],
+                            ("\t").join(["%3.0f" % (iq) for iq in iqs]),
+                            ("\t").join([er for er in emission_rates]),
+                        )
+                    )
+                    
             text_file.write("\n")
             text_file.write("***\n")
 
@@ -1053,6 +1085,7 @@ class AUSTALDispersionModule(DispersionModule):
                 "WindDirection": ambient_conditions.getWindDirection(),
                 "WindSpeed": ambient_conditions.getWindSpeed(),
                 "ObukhovLength": ambient_conditions.getObukhovLength(),
+                "MixingHeight": ambient_conditions.getMixingHeight(),
             }
         )
 
@@ -1101,6 +1134,7 @@ class AUSTALDispersionModule(DispersionModule):
                 if is_multi_polygon_element_ or is_multi_line_element_:
 
                     # Add the emissions for each geometry
+                    # for g in geom:
                     for g in geom.geoms:
                         # Determine the emissions for this geometry based on
                         # area/length (depending on geometry type)

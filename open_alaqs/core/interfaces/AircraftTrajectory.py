@@ -33,7 +33,7 @@ class AircraftTrajectory:
         else:
             self._id = str(val["profile_id"]) if "profile_id" in val else ""
             self._stage = int(val["stage"]) if "stage" in val else None
-            self._source = str(val["source"]) if "source" in val else ""
+            self._course = str(val["course"]) if "course" in val else ""
             self._departure_arrival = (
                 str(val["arrival_departure"]) if "arrival_departure" in val else None
             )
@@ -94,10 +94,10 @@ class AircraftTrajectory:
         self._stage = val
 
     def getSource(self):
-        return self._source
+        return self._course
 
     def setSource(self, val):
-        self._source = val
+        self._course = val
 
     def setTouchdownPoint(self, val):
         self._touchdown = val
@@ -228,6 +228,7 @@ class TrajectoryPoint(object):
             val_["x"] = val.getX()
             val_["y"] = val.getY()
             val_["z"] = val.getZ()
+            val_["course"] = val.getCourse()
             val = val_
 
         self._id = int(val["id"]) if "id" in val else None
@@ -245,6 +246,12 @@ class TrajectoryPoint(object):
 
     def setIdentifier(self, var):
         self._id = var
+
+    def getCourse(self):
+        return self._course
+
+    def setCourse(self, var):
+        self._course = var
 
     def updateGeometryText(self):
         self.setGeometryText(
@@ -344,6 +351,7 @@ class AircraftTrajectoryPoint(TrajectoryPoint):
             self.setPower(val.getPower())
             self.setWeight(val.getWeight())
             self.setMode(val.getMode())
+            self.setCourse(val.getCourse())
         else:
             TrajectoryPoint.__init__(self, val)
             # properties
@@ -353,6 +361,7 @@ class AircraftTrajectoryPoint(TrajectoryPoint):
             self._weight = (
                 conversion.convertToFloat(val["weight"]) if "weight" in val else ""
             )
+            self._course = str(val.get("course", ""))
 
     def getIdentifier(self):
         return self._id
@@ -365,6 +374,12 @@ class AircraftTrajectoryPoint(TrajectoryPoint):
 
     def getMode(self):
         return self._mode
+
+    def setCourse(self, val):
+        self._course = val
+
+    def getCourse(self):
+        return self._course
 
     def getEngineThrust(self):
         return self._engine_thrust
@@ -444,12 +459,20 @@ class AircraftTrajectoryStore(Store, metaclass=Singleton):
             trajectory_point_ = AircraftTrajectoryPoint(
                 {
                     "x": conversion.convertToFloat(
-                        trajectory_dict.get("horizontal_metres", 0)
+                        trajectory_dict.get("x_m", 0)
+                        # trajectory_dict.get("horizontal_metres", 0)
                     ),
-                    "y": 0.0,
+                    "y": conversion.convertToFloat(
+                        trajectory_dict.get("y_m", 0)
+                        # trajectory_dict.get("horizontal_metres", 0)
+                    ),
+                    # "y": 0.0,
                     "z": conversion.convertToFloat(
-                        trajectory_dict.get("vertical_metres", 0)
-                    ),
+                        trajectory_dict.get("z_m", 0)
+                    ),                    
+                    # "z": conversion.convertToFloat(
+                    #     trajectory_dict.get("vertical_metres", 0)
+                    # ),
                     "tas_metres": conversion.convertToFloat(
                         trajectory_dict.get("tas_metres")
                     ),
@@ -457,6 +480,11 @@ class AircraftTrajectoryStore(Store, metaclass=Singleton):
                     "mode": (
                         str(trajectory_dict["mode"])
                         if "mode" in trajectory_dict
+                        else None
+                    ),
+                    "course": (
+                        str(trajectory_dict["course"])
+                        if "course" in trajectory_dict
                         else None
                     ),
                 }
@@ -503,13 +531,16 @@ class AircraftTrajectoryDatabase(SQLSerializable, metaclass=Singleton):
                     ("arrival_departure", "VARCHAR(1)"),
                     ("stage", "INTEGER"),
                     ("point", "INTEGER"),
-                    ("weight_lbs", "DECIMAL NULL"),
-                    ("horizontal_feet", "DECIMAL NULL"),
-                    ("vertical_feet", "DECIMAL NULL"),
-                    ("tas_knots", "DECIMAL NULL"),
+                    # ("weight_lbs", "DECIMAL NULL"),
+                    # ("horizontal_feet", "DECIMAL NULL"),
+                    # ("vertical_feet", "DECIMAL NULL"),
+                    # ("tas_knots", "DECIMAL NULL"),
                     ("weight_kgs", "DECIMAL NULL"),
-                    ("horizontal_metres", "DECIMAL NULL DEFAULT 0"),
-                    ("vertical_metres", "DECIMAL NULL DEFAULT 0"),
+                    ("x_m", "DECIMAL NULL DEFAULT 0"),
+                    ("y_m", "DECIMAL NULL DEFAULT 0"),
+                    ("z_m", "DECIMAL NULL DEFAULT 0"),
+                    # ("horizontal_metres", "DECIMAL NULL DEFAULT 0"),
+                    # ("vertical_metres", "DECIMAL NULL DEFAULT 0"),
                     ("tas_metres", "DECIMAL NULL"),
                     ("power", "DECIMAL NULL"),
                     ("mode", "VARCHAR(5)"),
