@@ -114,6 +114,7 @@ def log_activity(f):
 
 
 def get_inventory_timestamps(db_path: str) -> list[datetime]:
+    # TODO: Move from GUI to core/alaqsdblite.py
     time_series: list[datetime] = []
 
     if db_path:
@@ -137,6 +138,7 @@ def get_inventory_timestamps(db_path: str) -> list[datetime]:
 
 
 def get_min_max_timestamps(db_path: str) -> tuple[datetime, datetime]:
+    # TODO: Move from GUI to core/alaqsdblite.py
     time_series = get_inventory_timestamps(db_path)
 
     if len(time_series) < 2:
@@ -2272,13 +2274,13 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         )
 
         self.ui.ResultsTableButton.clicked.connect(
-            lambda: self.runOutputModule("TableViewWidgetOutputModule")
+            lambda: self.outputModuleRequested("TableViewWidgetOutputModule")
         )
         self.ui.plot_time_series_vs_emissions.clicked.connect(
-            lambda: self.runOutputModule("TimeSeriesWidgetOutputModule")
+            lambda: self.outputModuleRequested("TimeSeriesWidgetOutputModule")
         )
         self.ui.add_contour.clicked.connect(
-            lambda: self.runOutputModule("EmissionsQGISVectorLayerOutputModule")
+            lambda: self.outputModuleRequested("EmissionsQGISVectorLayerOutputModule")
         )
 
         s = QgsSettings()
@@ -2402,13 +2404,17 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             for index in range(0, tab.count())
         }
 
-    def runOutputModule(self, name: str) -> None:
+    def outputModuleRequested(self, name: str) -> None:
         OutputModule = OutputAnalysisModuleRegistry().get_module(name)
 
         if OutputModule is None:
             logger.error("Did not find module '%s'", name)
             return None
 
+        output_module, res = self.runOutputModule(OutputModule)
+        self.handleOutputModuleResult(output_module, res)
+
+    def runOutputModule(self, OutputModule: Any) -> tuple[Any, Any]:
         # calculate all emissions
         logger.info("calculate all emissions...")
         self._emission_calculation_ = None
@@ -2463,10 +2469,10 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         output_module.beginJob()
         for timeval, rows in list(self._emission_calculation_.getEmissions().items()):
             output_module.process(timeval, rows, **kwargs)
-        res = output_module.endJob()
+        return output_module, output_module.endJob()
 
+    def handleOutputModuleResult(self, output_module: Any, res: Any) -> None:
         if isinstance(res, QtWidgets.QDialog):
-
             res.show()
         elif isinstance(res, QgsMapLayer):
             # Replace existing layers with same name...
@@ -2485,8 +2491,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 # self._iface.mapCanvas().mapRenderer().setDestinationCrs(res.crs())
                 self._iface.mapCanvas().mapSettings().setDestinationCrs(res.crs())
 
-            if name == "EmissionsQGISVectorLayerOutputModule":
+            if output_module.getModuleName() == "EmissionsQGISVectorLayerOutputModule":
                 # add text to graphics renderer
+                gui_modules_config_ = self.getOutputModulesConfiguration()
                 addTitleToLayer = gui_modules_config_.get("Add title", False)
                 if addTitleToLayer:
                     textItem = QgsTextAnnotation(self._iface.mapCanvas())
