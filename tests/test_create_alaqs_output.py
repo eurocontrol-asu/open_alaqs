@@ -1,4 +1,3 @@
-import datetime
 import sqlite3 as sqlite
 from pathlib import Path
 
@@ -38,8 +37,8 @@ def datasets_to_test():
             "met_csv_path": str(get_data_path("EHRD") / "EHRD_meteo.csv"),
             "model_parameters": {
                 "movement_path": str(get_data_path("EHRD") / "EHRD_movements.csv"),
-                "study_start_date": datetime.datetime(2025, 12, 1, 6, 0),
-                "study_end_date": datetime.datetime(2025, 12, 1, 7, 0),
+                "study_start_date": "2025-12-01 06:00:00",
+                "study_end_date": "2025-12-01 07:00:00",
                 "towing_speed": 10.0,
                 "vertical_limit": 914.4,
                 "x_resolution": 250,

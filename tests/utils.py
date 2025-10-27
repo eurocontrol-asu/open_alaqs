@@ -31,3 +31,18 @@ def get_tmp_path(file_name: str) -> Path:
         + "_"
         + file_name
     )
+
+
+def get_vector_layer_path(relative_path: str, layer_name: Optional[str]) -> Path:
+    """
+    Returns the complete path to a (copied) layer source.
+    The given relative_path should be relative to the data path.
+    If layer_name is provided, a 'layername' param is added to the path,
+    which is useful fo some layer sources like GeoPackage.
+    """
+    base_source_path = get_copy_path(get_data_path() / relative_path)
+    return (
+        Path(str(base_source_path) + f"|layername={layer_name}")
+        if layer_name
+        else base_source_path
+    )
