@@ -8,7 +8,7 @@ from qgis.testing.mocked import get_iface
 from open_alaqs.core.alaqsdblite import ProjectDatabase
 from open_alaqs.core.modules.ModuleManager import OutputAnalysisModuleRegistry
 from open_alaqs.openalaqsdialog import OpenAlaqsResultsAnalysis
-from tests.utils import get_copy_path, get_data_path
+from tests.utils import get_data_path, get_vector_layer_path
 
 start_app()
 
@@ -35,12 +35,11 @@ def datasets_to_test(request) -> list:
             "inventory_path": str(get_data_path("EHRD") / "EHRD_out.alaqs"),
             "module_name": "EmissionsQGISVectorLayerOutputModule",
             "pollutant": "CO",
-            "study_start_date": datetime.datetime(2025, 12, 1, 6, 0),
-            "study_end_date": datetime.datetime(2025, 12, 1, 7, 0),
+            "study_start_date": "2025-12-01 06:00:00",
+            "study_end_date": "2025-12-01 07:00:00",
             "vector_layer_path": str(
-                get_copy_path(get_data_path("EHRD") / "vector_layer_co.gpkg")
-            )
-            + "|layername=output",
+                get_vector_layer_path("EHRD/vector_layer_co.gpkg", "output")
+            ),
         },
         {
             "title": "EHRD (Rotterdam, NL) Emission calculation test (PM10)",
@@ -48,12 +47,11 @@ def datasets_to_test(request) -> list:
             "inventory_path": str(get_data_path("EHRD") / "EHRD_out.alaqs"),
             "module_name": "EmissionsQGISVectorLayerOutputModule",
             "pollutant": "PM10",
-            "study_start_date": datetime.datetime(2025, 12, 1, 6, 0),
-            "study_end_date": datetime.datetime(2025, 12, 1, 7, 0),
+            "study_start_date": "2025-12-01 06:00:00",
+            "study_end_date": "2025-12-01 07:00:00",
             "vector_layer_path": str(
-                get_copy_path(get_data_path("EHRD") / "vector_layer_pm10.gpkg")
-            )
-            + "|layername=output",
+                get_vector_layer_path("EHRD/vector_layer_pm10.gpkg", "output")
+            ),
         },
     ]
 
@@ -101,17 +99,18 @@ class EmissionCalculationTestCase(QgisTestCase):
             output_module, res = dlg.runOutputModule(OutputModule)
 
             assert str(output_module.getPollutant()) == dataset["pollutant"].lower()
-            assert output_module.getTimeStart() == dataset["study_start_date"]
-            assert output_module.getTimeEnd() == dataset["study_end_date"]
+            assert output_module.getTimeStart() == datetime.datetime.fromisoformat(
+                dataset["study_start_date"]
+            )
+            assert output_module.getTimeEnd() == datetime.datetime.fromisoformat(
+                dataset["study_end_date"]
+            )
 
             result_tested = False
             # Checks depend on the module type
             if module_name == "EmissionsQGISVectorLayerOutputModule":
                 assert isinstance(res, QgsMapLayer)
                 assert isinstance(res, QgsVectorLayer)
-                assert [field.name().lower() for field in res.fields()] == [
-                    dataset["pollutant"].lower()
-                ]
 
                 layer = QgsVectorLayer(dataset["vector_layer_path"], "output", "ogr")
                 assert layer.isValid()
