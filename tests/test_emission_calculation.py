@@ -2,7 +2,7 @@ import datetime
 
 import pytest
 from qgis.core import QgsMapLayer, QgsVectorLayer
-from qgis.testing import start_app
+from qgis.testing import QgisTestCase, start_app
 from qgis.testing.mocked import get_iface
 
 from open_alaqs.core.alaqsdblite import ProjectDatabase
@@ -13,22 +13,22 @@ from tests.utils import get_copy_path, get_data_path
 start_app()
 
 
-@pytest.fixture(scope="module")
-def plugin_instance():
+@pytest.fixture(scope="class")
+def plugin_instance(request):
     print("\nINFO: Get plugin instance")
     from open_alaqs.openalaqs import OpenALAQS
 
-    plugin = OpenALAQS(get_iface())
-    yield plugin
+    request.cls.plugin = OpenALAQS(get_iface())
+    yield request.cls.plugin
 
     print(" [INFO] Tearing down plugin instance")
-    plugin.unload()
+    request.cls.plugin.unload()
 
 
-@pytest.fixture(scope="module")
-def datasets_to_test():
+@pytest.fixture(scope="class")
+def datasets_to_test(request) -> list:
     print("\nINFO: Get datasets to test...")
-    return [
+    request.cls.datasets = [
         {
             "title": "EHRD (Rotterdam, NL) Emission calculation test (CO)",
             "db_path": str(get_data_path("EHRD") / "EHRD.alaqs"),
@@ -58,62 +58,78 @@ def datasets_to_test():
     ]
 
 
-def test_emission_calculation(plugin_instance, datasets_to_test):
-    print(" [INFO] Validating Emission Calculation...")
+@pytest.mark.usefixtures("plugin_instance", "datasets_to_test")
+class EmissionCalculationTestCase(QgisTestCase):
+    """
+    Subclass QgisTestCase to use checkLayersEqual()
+    """
 
-    for dataset in datasets_to_test:
-        # Check parameter completeness
-        assert list(dataset.keys()) == [
-            "title",
-            "db_path",
-            "inventory_path",
-            "module_name",
-            "pollutant",
-            "study_start_date",
-            "study_end_date",
-            "vector_layer_path",
-        ]
-        print(f" [INFO] Testing {dataset["title"]}...")
-
-        # Store the database in-memory for future use
-        project_database = ProjectDatabase()
-        project_database.path = dataset["db_path"]
-
-        inventory_path = dataset["inventory_path"]
-        module_name = dataset["module_name"]
-
-        OutputModule = OutputAnalysisModuleRegistry().get_module(module_name)
-        assert OutputModule is not None
-
-        # For now, we test from the dialog itself, but it
-        # should be changed to a core implementation when it's done
-        dlg = OpenAlaqsResultsAnalysis(plugin_instance.iface)
-        dlg.result_file_path_changed(inventory_path)
-        dlg.ui.result_file_path.setFilePath(inventory_path)
-        dlg.ui.pollutants_names.setCurrentIndex(
-            dlg.ui.pollutants_names.findText(dataset["pollutant"])
-        )
-        output_module, res = dlg.runOutputModule(OutputModule)
-
-        assert str(output_module.getPollutant()) == dataset["pollutant"].lower()
-        assert output_module.getTimeStart() == dataset["study_start_date"]
-        assert output_module.getTimeEnd() == dataset["study_end_date"]
-
-        result_tested = False
-        if module_name == "EmissionsQGISVectorLayerOutputModule":
-            assert isinstance(res, QgsMapLayer)
-            assert isinstance(res, QgsVectorLayer)
-            assert [field.name().lower() for field in res.fields()] == [
-                dataset["pollutant"].lower()
+    def test_emission_calculation(self):
+        print(" [INFO] Validating Emission Calculation...")
+        for dataset in self.datasets:
+            # Check parameter completeness
+            assert list(dataset.keys()) == [
+                "title",
+                "db_path",
+                "inventory_path",
+                "module_name",
+                "pollutant",
+                "study_start_date",
+                "study_end_date",
+                "vector_layer_path",
             ]
+            print(f" [INFO] Testing {dataset["title"]}...")
 
-            layer = QgsVectorLayer(dataset["vector_layer_path"], "output", "ogr")
-            assert layer.isValid()
-            assert res.featureCount() == layer.featureCount()
+            # Store the database in-memory for future use
+            project_database = ProjectDatabase()
+            project_database.path = dataset["db_path"]
 
-            idx = layer.fields().indexOf(dataset["pollutant"].lower())
-            assert res.maximumValue(0) == layer.maximumValue(idx)
-            assert res.minimumValue(0) == layer.minimumValue(idx)
-            result_tested = True
+            inventory_path = dataset["inventory_path"]
+            module_name = dataset["module_name"]
 
-        assert result_tested
+            OutputModule = OutputAnalysisModuleRegistry().get_module(module_name)
+            assert OutputModule is not None
+
+            # For now, we test from the dialog itself, but it
+            # should be changed to a core implementation when it's ready
+            dlg = OpenAlaqsResultsAnalysis(self.plugin.iface)
+            dlg.result_file_path_changed(inventory_path)
+            dlg.ui.result_file_path.setFilePath(inventory_path)
+            dlg.ui.pollutants_names.setCurrentIndex(
+                dlg.ui.pollutants_names.findText(dataset["pollutant"])
+            )
+            output_module, res = dlg.runOutputModule(OutputModule)
+
+            assert str(output_module.getPollutant()) == dataset["pollutant"].lower()
+            assert output_module.getTimeStart() == dataset["study_start_date"]
+            assert output_module.getTimeEnd() == dataset["study_end_date"]
+
+            result_tested = False
+            # Checks depend on the module type
+            if module_name == "EmissionsQGISVectorLayerOutputModule":
+                assert isinstance(res, QgsMapLayer)
+                assert isinstance(res, QgsVectorLayer)
+                assert [field.name().lower() for field in res.fields()] == [
+                    dataset["pollutant"].lower()
+                ]
+
+                layer = QgsVectorLayer(dataset["vector_layer_path"], "output", "ogr")
+                assert layer.isValid()
+
+                assert self.checkLayersEqual(
+                    layer,
+                    res,
+                    use_asserts=True,  # Better for debugging in case of errors
+                    compare={
+                        "ignore_crs_check": True,  # Wrongly returns 4326 for the res layer, we'll check CRS later
+                        "fields": {
+                            "fid": "skip"
+                        },  # Expected layer has a fid field that we can ignore
+                        "unordered": True,  # Since no id, check that all values match, regardless of the ordering
+                    },
+                )
+                assert layer.crs() == res.crs()
+
+                result_tested = True
+
+            assert result_tested
