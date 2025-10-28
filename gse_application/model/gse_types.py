@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class GSE:
     type: str
@@ -10,6 +11,7 @@ class GSE:
     Stage: str
     time: float
     deterioration_factor: float
+
 
 @dataclass
 class EmissionFactor:
@@ -23,6 +25,7 @@ class EmissionFactor:
     PM_g_per_kWh: float
     SOx_g_per_kWh: float
 
+
 @dataclass
 class Movement:
     gate_type: str
@@ -30,4 +33,3 @@ class Movement:
     gse_type: str
     count: int
     time: float
-

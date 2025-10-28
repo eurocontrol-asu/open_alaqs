@@ -3,7 +3,6 @@ import difflib
 import math
 import sys
 from collections import OrderedDict
-from inspect import currentframe, getframeinfo
 from typing import TypedDict
 
 import matplotlib
@@ -17,9 +16,8 @@ from qgis.core import (
     QgsGeometry,
     QgsLineString,
     QgsPoint,
-    QgsPolygon,
-    QgsMultiPolygon,
     QgsPointXY,
+    QgsPolygon,
     QgsProject,
 )
 from qgis.PyQt import QtCore, QtWidgets
@@ -388,20 +386,19 @@ class Movement:
 
     # Create polygon faces using QgsPolygon
     def create_polygon_3d(self, sas_method, lto_mode, Point_1, Point_2):
-        
-        if lto_mode == 'TX':
-            z1_ = 0
+
+        if lto_mode == "TX":
             z2_ = 0
         else:
-            z1_ = Point_1.getZ()
+            Point_1.getZ()
             z2_ = Point_2.getZ()
 
-        if lto_mode=='TO' and z2_ > 0:
-            lto_mode = 'CL'
+        if lto_mode == "TO" and z2_ > 0:
+            lto_mode = "CL"
 
         # Define hor_ext, ver_ext and ver_shift
 
-        ## take the default vertical extension
+        # take the default vertical extension
         d_v = (
             self.getAircraft()
             .getEmissionDynamicsByMode()[lto_mode]
@@ -420,7 +417,7 @@ class Movement:
         )
 
         # define the horizontal and vertical extent and vertical shift
-        if lto_mode == 'TX' or lto_mode=='TO':
+        if lto_mode == "TX" or lto_mode == "TO":
             ver_ext = (
                 self.getAircraft()
                 .getEmissionDynamicsByMode()[lto_mode]
@@ -436,36 +433,20 @@ class Movement:
         hor_ext = d_h / 2  # half width
 
         # Get original coordinates
-        if lto_mode == 'TX' :
-            start_coords = [
-                Point_1.x(),
-                Point_1.y(),
-                0
-            ]
-            end_coords = [
-                Point_2.x(),
-                Point_2.y(),
-                0
-            ]
+        if lto_mode == "TX":
+            start_coords = [Point_1.x(), Point_1.y(), 0]
+            end_coords = [Point_2.x(), Point_2.y(), 0]
         else:
 
-            start_coords = [
-                Point_1.getX(),
-                Point_1.getY(),
-                Point_1.getZ()
-            ]
-            end_coords = [
-                Point_2.getX(),
-                Point_2.getY(),
-                Point_2.getZ()
-            ]
+            start_coords = [Point_1.getX(), Point_1.getY(), Point_1.getZ()]
+            end_coords = [Point_2.getX(), Point_2.getY(), Point_2.getZ()]
 
         # Calculate perpendicular vector
         dx = end_coords[0] - start_coords[0]
         dy = end_coords[1] - start_coords[1]
-        length = (dx**2 + dy**2)**0.5
-        perp_x = -dy/length
-        perp_y = dx/length
+        length = (dx**2 + dy**2) ** 0.5
+        perp_x = -dy / length
+        perp_y = dx / length
 
         # Apply vertical shift
         if sas_method == "default":
@@ -475,8 +456,8 @@ class Movement:
             z_upper_end = z_shifted_end + ver_ext
 
         elif sas_method == "sas":
-            z_shifted_start = start_coords[2] - (ver_ext + d_v)/2
-            z_shifted_end = end_coords[2] - (ver_ext + d_v)/2
+            z_shifted_start = start_coords[2] - (ver_ext + d_v) / 2
+            z_shifted_end = end_coords[2] - (ver_ext + d_v) / 2
             z_upper_start = start_coords[2] + ver_ext
             z_upper_end = end_coords[2] + ver_ext
 
@@ -485,28 +466,62 @@ class Movement:
             z_shifted_end = end_coords[2]
             z_upper_start = z_shifted_start
             z_upper_end = z_shifted_end
-            hor_ext = 0                   
+            hor_ext = 0
 
         # Create 3D vertices using QgsPoint
         vertices = [
-                # Lower face vertices
-                QgsPoint(start_coords[0] + hor_ext * perp_x, start_coords[1] + hor_ext * perp_y, max(0, z_shifted_start)),
-                QgsPoint(start_coords[0] - hor_ext * perp_x, start_coords[1] - hor_ext * perp_y, max(0, z_shifted_start)),
-                QgsPoint(end_coords[0] - hor_ext * perp_x, end_coords[1] - hor_ext * perp_y, max(0, z_shifted_end)),
-                QgsPoint(end_coords[0] + hor_ext * perp_x, end_coords[1] + hor_ext * perp_y, max(0, z_shifted_end)),
-                
-                # Upper face vertices
-                QgsPoint(start_coords[0] + hor_ext * perp_x, start_coords[1] + hor_ext * perp_y, max(0, z_upper_start)),
-                QgsPoint(start_coords[0] - hor_ext * perp_x, start_coords[1] - hor_ext * perp_y, max(0, z_upper_start)),
-                QgsPoint(end_coords[0] - hor_ext * perp_x, end_coords[1] - hor_ext * perp_y, max(0, z_upper_end)),
-                QgsPoint(end_coords[0] + hor_ext * perp_x, end_coords[1] + hor_ext * perp_y, max(0, z_upper_end))
-            ]
+            # Lower face vertices
+            QgsPoint(
+                start_coords[0] + hor_ext * perp_x,
+                start_coords[1] + hor_ext * perp_y,
+                max(0, z_shifted_start),
+            ),
+            QgsPoint(
+                start_coords[0] - hor_ext * perp_x,
+                start_coords[1] - hor_ext * perp_y,
+                max(0, z_shifted_start),
+            ),
+            QgsPoint(
+                end_coords[0] - hor_ext * perp_x,
+                end_coords[1] - hor_ext * perp_y,
+                max(0, z_shifted_end),
+            ),
+            QgsPoint(
+                end_coords[0] + hor_ext * perp_x,
+                end_coords[1] + hor_ext * perp_y,
+                max(0, z_shifted_end),
+            ),
+            # Upper face vertices
+            QgsPoint(
+                start_coords[0] + hor_ext * perp_x,
+                start_coords[1] + hor_ext * perp_y,
+                max(0, z_upper_start),
+            ),
+            QgsPoint(
+                start_coords[0] - hor_ext * perp_x,
+                start_coords[1] - hor_ext * perp_y,
+                max(0, z_upper_start),
+            ),
+            QgsPoint(
+                end_coords[0] - hor_ext * perp_x,
+                end_coords[1] - hor_ext * perp_y,
+                max(0, z_upper_end),
+            ),
+            QgsPoint(
+                end_coords[0] + hor_ext * perp_x,
+                end_coords[1] + hor_ext * perp_y,
+                max(0, z_upper_end),
+            ),
+        ]
 
         # Define face indices (same as original)
         face_indices = [
-            [0, 1, 2, 3], [4, 5, 6, 7],  # Bottom and top
-            [0, 1, 5, 4], [1, 2, 6, 5],   # Sides
-            [2, 3, 7, 6], [3, 0, 4, 7]
+            [0, 1, 2, 3],
+            [4, 5, 6, 7],  # Bottom and top
+            [0, 1, 5, 4],
+            [1, 2, 6, 5],  # Sides
+            [2, 3, 7, 6],
+            [3, 0, 4, 7],
         ]
 
         # Create QGIS polygons for each face
@@ -518,7 +533,7 @@ class Movement:
                 line_string.addVertex(vertices[i])
             # Close the ring by adding first vertex again
             line_string.addVertex(vertices[face[0]])
-            
+
             # Create polygon geometry
             polygon = QgsPolygon()
             polygon.setExteriorRing(line_string)
@@ -527,8 +542,13 @@ class Movement:
         # Create a multi-polygon geometry
         volume_geometry = QgsGeometry.collectGeometry(polygons)
 
-        return volume_geometry, z_shifted_start, z_shifted_end, z_upper_start, z_upper_end
-
+        return (
+            volume_geometry,
+            z_shifted_start,
+            z_shifted_end,
+            z_upper_start,
+            z_upper_end,
+        )
 
     def get_runway_dir_azimuth(self, rwy_geom, d_):
 
@@ -537,17 +557,23 @@ class Movement:
         # Step 1: Geometry endpoints
         pt1, pt2 = QgsPointXY(runway_points[0]), QgsPointXY(runway_points[-1])
         # Parse runway directions
-        dirs = [int(''.join(filter(str.isdigit, d))) for d in self.getRunway().getDirections()]
+        dirs = [
+            int("".join(filter(str.isdigit, d)))
+            for d in self.getRunway().getDirections()
+        ]
         if len(dirs) != 2:
             raise Exception(f"Expected 2 runway directions, got {dirs}")
         # Parse active direction
-        active = int(''.join(filter(str.isdigit, self.getRunwayDirection())))
+        active = int("".join(filter(str.isdigit, self.getRunwayDirection())))
         if active not in dirs:
             raise Exception(f"Active direction {active} not in {dirs}")
         # Compute geometry azimuth
         azimuth = math.degrees(d_.bearing(pt1, pt2)) % 360
         expected = {d: (d * 10) % 360 for d in dirs}
-        diffs = {d: min(abs(azimuth - hdg), 360 - abs(azimuth - hdg)) for d, hdg in expected.items()}
+        diffs = {
+            d: min(abs(azimuth - hdg), 360 - abs(azimuth - hdg))
+            for d, hdg in expected.items()
+        }
 
         # Assign direction labels to geometry points
         start_dir = min(diffs, key=diffs.get)
@@ -753,37 +779,58 @@ class Movement:
                     ):
                         em_ = Emission(defaultValues=defaultEmissions)
 
-                        tx_geom = QgsGeometry.fromWkt(taxiway_segment_.getGeometryText())
-                        seg_points = tx_geom.asPolyline()            
+                        tx_geom = QgsGeometry.fromWkt(
+                            taxiway_segment_.getGeometryText()
+                        )
+                        seg_points = tx_geom.asPolyline()
 
                         if sas == "default" or sas == "smooth & shift":
                             sas_method = "default" if sas == "default" else "sas"
-                            lto_mode = 'TX'
+                            lto_mode = "TX"
 
                             all_tx_polygons = []
                             # Loop through each pair of adjacent points
                             for i in range(len(seg_points) - 1):
                                 startPoint_ = seg_points[i]
                                 endPoint_ = seg_points[i + 1]
-                                
-                                if startPoint_.x() == endPoint_.x() and startPoint_.y() == endPoint_.y():
-                                    #logger.warning(f"Skipping zero-length segment at index {i}.")
+
+                                if (
+                                    startPoint_.x() == endPoint_.x()
+                                    and startPoint_.y() == endPoint_.y()
+                                ):
+                                    # logger.warning(f"Skipping zero-length segment at index {i}.")
                                     continue  # Jump to next iteration
 
-                                qgs_multipolygon, zsh_start, zsh_end, zup_start, zup_end  = self.create_polygon_3d(sas_method, lto_mode, startPoint_, endPoint_)
+                                (
+                                    qgs_multipolygon,
+                                    zsh_start,
+                                    zsh_end,
+                                    zup_start,
+                                    zup_end,
+                                ) = self.create_polygon_3d(
+                                    sas_method, lto_mode, startPoint_, endPoint_
+                                )
                                 all_tx_polygons.append(qgs_multipolygon)
-                            
+
                             # Combine all polygons into a single MultiPolygon
-                            combined_polygon = QgsGeometry.collectGeometry(all_tx_polygons) if all_tx_polygons else None
+                            combined_polygon = (
+                                QgsGeometry.collectGeometry(all_tx_polygons)
+                                if all_tx_polygons
+                                else None
+                            )
                             if combined_polygon:
                                 em_.setGeometryText(combined_polygon.asWkt())
-                                em_.setVerticalExtent({
-                                    "z_min": min(zsh_start, zsh_end),
-                                    "z_max": max(zup_start, zup_end)
-                                    })    
+                                em_.setVerticalExtent(
+                                    {
+                                        "z_min": min(zsh_start, zsh_end),
+                                        "z_max": max(zup_start, zup_end),
+                                    }
+                                )
                             else:
-                                logger.warning("Could not apply exhaust dynamics to taxiing emissions")
-                                em_.setGeometryText(taxiway_segment_.getGeometryText())   
+                                logger.warning(
+                                    "Could not apply exhaust dynamics to taxiing emissions"
+                                )
+                                em_.setGeometryText(taxiway_segment_.getGeometryText())
 
                         else:
                             # logger.info("Calculate taxiing emissions WITHOUT Smooth & Shift Approach.")
@@ -1217,7 +1264,6 @@ class Movement:
             method = {"name": "", "config": {}}
         emissions = Emission(defaultValues=defaultEmissions)
         EPSG_id_source = 3857
-        EPSG_id_target = 4326
 
         # ToDo : Permanent definition
         try:
@@ -1278,9 +1324,9 @@ class Movement:
             )
         )
 
-        startPoint_copy, endPoint_copy = copy.deepcopy(startPoint_), copy.deepcopy(
-            endPoint_
-        )
+        # startPoint_copy, endPoint_copy = copy.deepcopy(startPoint_), copy.deepcopy(
+        #    endPoint_
+        # )
         # Smooth & Shift Approach
         sas = (
             method["config"]["apply_smooth_and_shift"]
@@ -1294,14 +1340,15 @@ class Movement:
             sas_method = "default" if sas == "default" else "sas"
             lto_mode = startPoint_.getMode()
 
-            multi_polygon_geom, zsh_start, zsh_end, zup_start, zup_end  = self.create_polygon_3d(sas_method, lto_mode, startPoint_, endPoint_)
+            multi_polygon_geom, zsh_start, zsh_end, zup_start, zup_end = (
+                self.create_polygon_3d(sas_method, lto_mode, startPoint_, endPoint_)
+            )
 
             # Set the emissions geometry
             emissions.setGeometryText(multi_polygon_geom.asWkt())
-            emissions.setVerticalExtent({
-                "z_min": min(zsh_start, zsh_end),
-                "z_max": max(zup_start, zup_end)
-            })            
+            emissions.setVerticalExtent(
+                {"z_min": min(zsh_start, zsh_end), "z_max": max(zup_start, zup_end)}
+            )
 
         else:
             # logger.debug("Calculate RWY emissions WITHOUT Smooth & Shift Approach.")
@@ -1595,7 +1642,9 @@ class Movement:
         d.setEllipsoid(source_crs.ellipsoidAcronym())
 
         runway_geom = QgsGeometry.fromWkt(self.getRunway().getGeometryText())
-        runway_backup_point, runway_azimuth_deg = self.get_runway_dir_azimuth(runway_geom, d)
+        runway_backup_point, runway_azimuth_deg = self.get_runway_dir_azimuth(
+            runway_geom, d
+        )
 
         # Azimuths in radians
         runway_azimuth_rad = math.radians(runway_azimuth_deg)
@@ -1637,15 +1686,17 @@ class Movement:
             )
             trajectory.setIsCartesian(False)
 
-            reversed_runway_azimuth_rad = (runway_azimuth_rad + math.pi) % (2 * math.pi)
+            (runway_azimuth_rad + math.pi) % (2 * math.pi)
 
             for point in self.getTrajectory().getPoints():
 
                 # ToDo: if NEEDED ... then
-                if point._course == 'CUSTOM':
+                if point._course == "CUSTOM":
 
                     x_offset = point.getX()  # Along the runway
-                    y_offset = point.getY()  # Perpendicular to the runway (e.g. lateral deviation)
+                    y_offset = (
+                        point.getY()
+                    )  # Perpendicular to the runway (e.g. lateral deviation)
 
                     # Step 1: Move EAST by x_offset meters (azimuth=90°)
                     lon_east, lat_east = d.computeSpheroidProject(
@@ -1653,17 +1704,17 @@ class Movement:
                         x_offset,
                         math.radians(90),  # Azimuth: 90° = East
                     )
-                    
+
                     # Step 2: Move NORTH by y_offset meters (azimuth=0°)
                     lon_new, lat_new = d.computeSpheroidProject(
                         QgsPointXY(lon_east, lat_east),
                         y_offset,
-                        math.radians(0),   # Azimuth: 0° = North
+                        math.radians(0),  # Azimuth: 0° = North
                     )
-                    
+
                     # Create geographic point (EPSG:4326)
                     target_point_geographic = QgsPointXY(lon_new, lat_new)
-                
+
                 else:
 
                     # the target point is with cartesian coordinates, therefore we can calculate the distance with Pythagorian theorem

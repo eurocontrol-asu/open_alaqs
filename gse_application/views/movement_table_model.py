@@ -1,7 +1,7 @@
 # views/movement_table_model.py
 
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
-from model.types import Movement
+
 
 class MovementTableModel(QAbstractTableModel):
     HEADERS = ["Gate type", "Aircraft group", "GSE type", "Count", "Time"]

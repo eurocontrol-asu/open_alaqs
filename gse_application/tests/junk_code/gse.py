@@ -1,43 +1,49 @@
-import sys
 import os
-import pandas as pd
 import sqlite3
+import sys
 
-from PyQt5.QtCore import Qt, QAbstractTableModel, QVariant
-from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QTabWidget, QTableView, QMessageBox, QFileDialog
-)
-from PyQt5.QtGui import QFont
-from views.ui_main import Ui_MainWindow
-from model.database import GSEDatabase
-from views.gse_table_model import GSETableModel
-from views.emission_factor_table_model import EmissionFactorTableModel
-from movement_editor import MovementEditor
+import pandas as pd
 from emissions_calculator import EmissionsCalculatorDialog
+from model.database import GSEDatabase
+from movement_editor import MovementEditor
+from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
+from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QMainWindow,
+    QMessageBox,
+    QTableView,
+    QTabWidget,
+)
+from views.emission_factor_table_model import EmissionFactorTableModel
+from views.gse_table_model import GSETableModel
+from views.ui_main import Ui_MainWindow
 
 MOVEMENTS_HEADERS = [
-    'runway_time',
-    'block_time',
-    'aircraft_registration',
-    'aircraft',
-    'gate',
-    'departure_arrival',
-    'runway',
-    'engine_name',
-    'profile_id',
-    'track_id',
-    'taxi_route',
-    'tow_ratio',
-    'apu_code',
-    'taxi_engine_count',
-    'set_time_of_main_engine_start_after_block_off_in_s',
-    'set_time_of_main_engine_start_before_takeoff_in_s',
-    'set_time_of_main_engine_off_after_runway_exit_in_s',
-    'engine_thrust_level_for_taxiing',
-    'taxi_fuel_ratio',
-    'number_of_stop_and_gos',
-    'domestic'
+    "runway_time",
+    "block_time",
+    "aircraft_registration",
+    "aircraft",
+    "gate",
+    "departure_arrival",
+    "runway",
+    "engine_name",
+    "profile_id",
+    "track_id",
+    "taxi_route",
+    "tow_ratio",
+    "apu_code",
+    "taxi_engine_count",
+    "set_time_of_main_engine_start_after_block_off_in_s",
+    "set_time_of_main_engine_start_before_takeoff_in_s",
+    "set_time_of_main_engine_off_after_runway_exit_in_s",
+    "engine_thrust_level_for_taxiing",
+    "taxi_fuel_ratio",
+    "number_of_stop_and_gos",
+    "domestic",
 ]
+
 
 class PandasModel(QAbstractTableModel):
     def __init__(self, df):
@@ -62,6 +68,7 @@ class PandasModel(QAbstractTableModel):
             return str(self._df.columns[section])
         else:
             return str(section)
+
 
 tab_stylesheet = """
 QTabWidget::pane {
@@ -118,8 +125,9 @@ QTableCornerButton::section {
 }
 """
 
+
 class MainController(QMainWindow):
-    def __init__(self, db_source, backend='csv'):
+    def __init__(self, db_source, backend="csv"):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -150,7 +158,7 @@ class MainController(QMainWindow):
         self.ui.actionDefine_Movements.triggered.connect(self.open_movement_editor)
 
         self.ui.actionCalculate_Emissions.setEnabled(True)
-        self.ui.actionCalculate_Emissions.triggered.connect(self.on_calculate_emissions)        
+        self.ui.actionCalculate_Emissions.triggered.connect(self.on_calculate_emissions)
 
         # Initial state
         self.db_source = db_source
@@ -159,7 +167,7 @@ class MainController(QMainWindow):
             self.icao_to_group = self.load_ac_mapping(db_folder)
         except Exception as e:
             QMessageBox.warning(self, "Aircraft Mapping Error", str(e))
-            self.icao_to_group = {}        
+            self.icao_to_group = {}
 
         self.backend = backend
         self.db = None
@@ -182,9 +190,9 @@ class MainController(QMainWindow):
         except Exception:
             df = pd.read_csv(csv_path)
         # Defensive: lower-case and strip for robustness
-        df['icao'] = df['icao'].astype(str).str.strip()
-        df['ac_group'] = df['ac_group'].astype(str).str.strip()
-        return dict(zip(df['icao'], df['ac_group']))
+        df["icao"] = df["icao"].astype(str).str.strip()
+        df["ac_group"] = df["ac_group"].astype(str).str.strip()
+        return dict(zip(df["icao"], df["ac_group"]))
 
     # --- Separate loading for each tab ---
     def load_movements_tab(self):
@@ -205,15 +213,25 @@ class MainController(QMainWindow):
                     df = pd.read_csv(found_csv, delimiter=";")
                     missing = [h for h in MOVEMENTS_HEADERS if h not in df.columns]
                     if missing:
-                        QMessageBox.warning(self, "Movements CSV Error",
-                            f"Missing required columns in {os.path.basename(found_csv)}:\n{', '.join(missing)}")
+                        QMessageBox.warning(
+                            self,
+                            "Movements CSV Error",
+                            f"Missing required columns in {os.path.basename(found_csv)}:\n{', '.join(missing)}",
+                        )
                     elif df.empty:
-                        QMessageBox.warning(self, "Movements CSV Error", f"{os.path.basename(found_csv)} is empty!")
+                        QMessageBox.warning(
+                            self,
+                            "Movements CSV Error",
+                            f"{os.path.basename(found_csv)} is empty!",
+                        )
                     else:
                         self.movements_df = df[MOVEMENTS_HEADERS]
                 except Exception as e:
-                    QMessageBox.critical(self, "Movements Load Error",
-                                        f"Error loading {os.path.basename(found_csv)}: {e}")
+                    QMessageBox.critical(
+                        self,
+                        "Movements Load Error",
+                        f"Error loading {os.path.basename(found_csv)}: {e}",
+                    )
             # # --- Gate mapping from CSV ---
             # mapping_csv = os.path.join(os.path.dirname(self.db_source), "gate_mapping.csv")
             # if os.path.exists(mapping_csv):
@@ -229,48 +247,77 @@ class MainController(QMainWindow):
             try:
                 conn = sqlite3.connect(self.db_source)
                 tables = pd.read_sql_query(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name='user_aircraft_movements';", conn)
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='user_aircraft_movements';",
+                    conn,
+                )
                 if tables.empty:
-                    QMessageBox.warning(self, "Movements Table Error",
-                        "SQLite database does not contain 'user_aircraft_movements' table.")
+                    QMessageBox.warning(
+                        self,
+                        "Movements Table Error",
+                        "SQLite database does not contain 'user_aircraft_movements' table.",
+                    )
                 else:
-                    df = pd.read_sql_query("SELECT * FROM user_aircraft_movements", conn)
+                    df = pd.read_sql_query(
+                        "SELECT * FROM user_aircraft_movements", conn
+                    )
                     missing = [h for h in MOVEMENTS_HEADERS if h not in df.columns]
                     if missing:
-                        QMessageBox.warning(self, "Movements Table Error",
-                            f"Table 'user_aircraft_movements' missing columns:\n{', '.join(missing)}")
+                        QMessageBox.warning(
+                            self,
+                            "Movements Table Error",
+                            f"Table 'user_aircraft_movements' missing columns:\n{', '.join(missing)}",
+                        )
                     elif df.empty:
-                        QMessageBox.warning(self, "Movements Table Error",
-                            "Table 'user_aircraft_movements' is empty!")
+                        QMessageBox.warning(
+                            self,
+                            "Movements Table Error",
+                            "Table 'user_aircraft_movements' is empty!",
+                        )
                     else:
                         self.movements_df = df[MOVEMENTS_HEADERS]
 
                 # --- Gate mapping from shapes_gates table ---
                 try:
-                    gate_df = pd.read_sql_query("SELECT gate_id, gate_type FROM shapes_gates", conn)
-                    gate_mapping = dict(zip(gate_df['gate_id'], gate_df['gate_type']))
+                    gate_df = pd.read_sql_query(
+                        "SELECT gate_id, gate_type FROM shapes_gates", conn
+                    )
+                    gate_mapping = dict(zip(gate_df["gate_id"], gate_df["gate_type"]))
                 except Exception as e:
-                    QMessageBox.warning(self, "Gate Mapping Error", f"Could not read shapes_gates table: {e}")
+                    QMessageBox.warning(
+                        self,
+                        "Gate Mapping Error",
+                        f"Could not read shapes_gates table: {e}",
+                    )
                 conn.close()
             except Exception as e:
-                QMessageBox.critical(self, "Movements Load Error", f"Error loading from SQLite: {e}")
+                QMessageBox.critical(
+                    self, "Movements Load Error", f"Error loading from SQLite: {e}"
+                )
 
         # --- Apply gate mapping (add gate_type column) ---
         if not self.movements_df.empty:
-            self.movements_df["gate_type"] = self.movements_df["gate"].map(gate_mapping).fillna("UNKNOWN")
+            self.movements_df["gate_type"] = (
+                self.movements_df["gate"].map(gate_mapping).fillna("UNKNOWN")
+            )
             # Warn about any gates that could not be mapped
-            missing_gates = set(self.movements_df.loc[self.movements_df["gate_type"] == "UNKNOWN", "gate"])
+            missing_gates = set(
+                self.movements_df.loc[
+                    self.movements_df["gate_type"] == "UNKNOWN", "gate"
+                ]
+            )
             if missing_gates:
-                QMessageBox.warning(self, "Gate Mapping Warning",
-                    f"The following gates could not be mapped to a type and will be set as UNKNOWN:\n" +
-                    ", ".join(sorted(missing_gates)))
+                QMessageBox.warning(
+                    self,
+                    "Gate Mapping Warning",
+                    "The following gates could not be mapped to a type and will be set as UNKNOWN:\n"
+                    + ", ".join(sorted(missing_gates)),
+                )
 
         model = PandasModel(self.movements_df)
         self.movementTableView.setModel(model)
         self.movementTableView.horizontalHeader().setStyleSheet(header_stylesheet)
         self.movementTableView.horizontalHeader().setStretchLastSection(True)
         self.movementTableView.verticalHeader().setVisible(False)
-
 
     def load_gse_tab(self):
         try:
@@ -279,7 +326,9 @@ class MainController(QMainWindow):
             self.gseTableView.setModel(gse_model)
             self.gseTableView.setStyleSheet(header_stylesheet)
             self.gseTableView.verticalHeader().setVisible(False)
-            self.gseTableView.horizontalHeader().setDefaultAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            self.gseTableView.horizontalHeader().setDefaultAlignment(
+                Qt.AlignLeft | Qt.AlignVCenter
+            )
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load GSE: {e}")
 
@@ -288,11 +337,17 @@ class MainController(QMainWindow):
             ef_list = self.db.emission_factors
             ef_model = EmissionFactorTableModel(ef_list)
             self.emissionFactorTableView.setModel(ef_model)
-            self.emissionFactorTableView.horizontalHeader().setStyleSheet(header_stylesheet)
+            self.emissionFactorTableView.horizontalHeader().setStyleSheet(
+                header_stylesheet
+            )
             self.emissionFactorTableView.verticalHeader().setVisible(False)
-            self.emissionFactorTableView.horizontalHeader().setDefaultAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            self.emissionFactorTableView.horizontalHeader().setDefaultAlignment(
+                Qt.AlignLeft | Qt.AlignVCenter
+            )
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to load Emission Standards: {e}")
+            QMessageBox.critical(
+                self, "Error", f"Failed to load Emission Standards: {e}"
+            )
 
     def load_all_tabs(self):
         # (Re-)open DB before loading tabs
@@ -300,7 +355,9 @@ class MainController(QMainWindow):
             self.db = GSEDatabase(self.db_source, backend=self.backend)
             self.db.open()
         except Exception as e:
-            QMessageBox.critical(self, "Database Error", f"Failed to open database: {e}")
+            QMessageBox.critical(
+                self, "Database Error", f"Failed to open database: {e}"
+            )
             return
         self.load_gse_tab()
         self.load_emission_tab()
@@ -308,8 +365,10 @@ class MainController(QMainWindow):
 
     def open_database_dialog(self):
         file_or_folder, _ = QFileDialog.getOpenFileName(
-            self, "Select Database File or Folder", os.path.dirname(self.db_source),
-            "SQLite Database (*.alaqs *.db);;CSV File (*.csv);;All Files (*)"
+            self,
+            "Select Database File or Folder",
+            os.path.dirname(self.db_source),
+            "SQLite Database (*.alaqs *.db);;CSV File (*.csv);;All Files (*)",
         )
         if not file_or_folder:
             return
@@ -320,17 +379,22 @@ class MainController(QMainWindow):
             self.db_source = file_or_folder
             self.backend = "csv"
         else:
-            QMessageBox.critical(self, "Error", "No .alaqs/.db database file or movements.csv found.")
+            QMessageBox.critical(
+                self, "Error", "No .alaqs/.db database file or movements.csv found."
+            )
             return
         self.load_movements_tab()
 
     def on_tab_changed(self, idx):
         tab_text = self.tabWidget.tabText(idx)
-        if tab_text == "Movements" and (self.movements_df is None or self.movements_df.empty):
+        if tab_text == "Movements" and (
+            self.movements_df is None or self.movements_df.empty
+        ):
             QMessageBox.warning(
-                self, "No Movements Data",
+                self,
+                "No Movements Data",
                 "No valid user_aircraft_movements table or movements.csv file found, or it is empty or invalid.\n"
-                "You must import a valid movements table or CSV using the Open Database button."
+                "You must import a valid movements table or CSV using the Open Database button.",
             )
 
     def open_movement_editor(self):
@@ -367,14 +431,18 @@ class MainController(QMainWindow):
             icao_to_group=self.icao_to_group,
             parent=self,
             existing_assignments=None if reset_assignments else existing_assignments,
-            gse_list=getattr(self.db, "gse", None)   # <<<<< FIXED: Pass loaded GSE list!
+            gse_list=getattr(
+                self.db, "gse", None
+            ),  # <<<<< FIXED: Pass loaded GSE list!
         )
 
         if dlg.exec_():
             new_assignments = dlg.get_assignments()
             if not reset_assignments and existing_assignments:
                 # Merge new assignments into ALL previous
-                self.movement_assignments = self.merge_assignment_dicts(existing_assignments, new_assignments)
+                self.movement_assignments = self.merge_assignment_dicts(
+                    existing_assignments, new_assignments
+                )
             else:
                 self.movement_assignments = new_assignments
 
@@ -387,10 +455,13 @@ class MainController(QMainWindow):
                 self, "Assignments Saved", f"{total_assigned} GSE assignments recorded."
             )
 
-
     def on_calculate_emissions(self):
         if not self.movement_assignments:
-            QMessageBox.warning(self, "Missing Data", "Please assign GSE to movements before calculating emissions.")
+            QMessageBox.warning(
+                self,
+                "Missing Data",
+                "Please assign GSE to movements before calculating emissions.",
+            )
             return
         ef_list = getattr(self.db, "emission_factors", [])
         dlg = EmissionsCalculatorDialog(
@@ -398,7 +469,7 @@ class MainController(QMainWindow):
             assignments=self.movement_assignments,
             movements_df=self.movements_df,
             ef_list=ef_list,
-            parent=self
+            parent=self,
         )
         dlg.exec_()
 
@@ -412,6 +483,7 @@ class MainController(QMainWindow):
         merged = dict(old)
         for code, new_gse_list in new.items():
             existing = merged.get(code, [])
+
             # Map by unique GSE key (by 'oid' if available, else type+desc)
             def gse_key(a):
                 g = getattr(a, "gse_obj", None)
@@ -423,6 +495,7 @@ class MainController(QMainWindow):
                     return g.get("oid") or (g.get("type", ""), g.get("description", ""))
                 else:
                     return id(g)
+
             exist_map = {gse_key(a): a for a in existing if gse_key(a) is not None}
             for a in new_gse_list:
                 k = gse_key(a)
@@ -431,13 +504,13 @@ class MainController(QMainWindow):
                     exist_map[k].assigned = getattr(a, "assigned", False)
                     exist_map[k].time = getattr(a, "time", 10.0)
                     exist_map[k].count = getattr(a, "count", 1)
-                    exist_map[k].deterioration_factor = getattr(a, "deterioration_factor", 1.0)
+                    exist_map[k].deterioration_factor = getattr(
+                        a, "deterioration_factor", 1.0
+                    )
                 else:
                     existing.append(a)
             merged[code] = existing
         return merged
-
-
 
 
 def main():
@@ -445,10 +518,11 @@ def main():
     app.setFont(QFont("Segoe UI", 10))
     dbdir = os.path.join(os.path.dirname(__file__), "model", "database")
     db_source = os.path.join(dbdir, "default_gse.csv")
-    backend = 'csv'
+    backend = "csv"
     controller = MainController(db_source, backend)
     controller.show()
     sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
     main()

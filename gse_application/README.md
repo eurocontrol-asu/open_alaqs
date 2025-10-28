@@ -43,7 +43,7 @@ It is developed as a plugin for the open-source geographic information system [`
 
    The project relies on PyQt5 and pandas among other packages (see `requirements.txt`).
 
-2. Or install directly the required python dependencies: 
+2. Or install directly the required python dependencies:
 
    ```powershell
    pip install -r requirements.txt
@@ -115,5 +115,3 @@ Below are short descriptions for each main tab/section in the application and wh
 [(Back to the top)](#table-of-contents)
 
 This code is part of OpenALAQS. See top-level `LICENSE` and `AMENDMENT_TO_EUPL_license.md` for licensing information.
-
-

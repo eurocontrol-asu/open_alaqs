@@ -57,7 +57,7 @@ class EmissionDynamics:
             "vertical_extension": (db_row["vertical_extent_m_sas"] or 0),
         }
         self._emission_dynamics["default"] = {
-            "horizontal_shift": 0, #(db_row["horizontal_shift_m"] or 0),
+            "horizontal_shift": 0,  # (db_row["horizontal_shift_m"] or 0),
             "horizontal_extension": (db_row["horizontal_extent_m"] or 0),
             "vertical_shift": (db_row["vertical_shift_m"] or 0),
             "vertical_extension": (db_row["vertical_extent_m"] or 0),

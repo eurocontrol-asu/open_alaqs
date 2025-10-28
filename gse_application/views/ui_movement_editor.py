@@ -17,7 +17,11 @@ class Ui_MovementDialog(object):
         MovementDialog.setWindowModality(QtCore.Qt.NonModal)
         MovementDialog.resize(900, 640)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/icons/flight-status-icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(
+            QtGui.QPixmap(":/icons/icons/flight-status-icon.png"),
+            QtGui.QIcon.Normal,
+            QtGui.QIcon.Off,
+        )
         MovementDialog.setWindowIcon(icon)
         MovementDialog.setLayoutDirection(QtCore.Qt.RightToLeft)
         MovementDialog.setModal(True)
@@ -26,35 +30,49 @@ class Ui_MovementDialog(object):
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.groupBox = QtWidgets.QGroupBox(MovementDialog)
-        self.groupBox.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.groupBox.setAlignment(
+            QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter
+        )
         self.groupBox.setFlat(False)
         self.groupBox.setObjectName("groupBox")
         self.gridLayout = QtWidgets.QGridLayout(self.groupBox)
         self.gridLayout.setObjectName("gridLayout")
         self.lineEditGate_Type = QtWidgets.QLineEdit(self.groupBox)
         self.lineEditGate_Type.setEnabled(False)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.lineEditGate_Type.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.lineEditGate_Type.sizePolicy().hasHeightForWidth()
+        )
         self.lineEditGate_Type.setSizePolicy(sizePolicy)
         self.lineEditGate_Type.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.lineEditGate_Type.setObjectName("lineEditGate_Type")
         self.gridLayout.addWidget(self.lineEditGate_Type, 1, 1, 1, 1)
         self.comboBoxAircraft_Movement = QtWidgets.QComboBox(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.comboBoxAircraft_Movement.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.comboBoxAircraft_Movement.sizePolicy().hasHeightForWidth()
+        )
         self.comboBoxAircraft_Movement.setSizePolicy(sizePolicy)
         self.comboBoxAircraft_Movement.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.comboBoxAircraft_Movement.setObjectName("comboBoxAircraft_Movement")
         self.gridLayout.addWidget(self.comboBoxAircraft_Movement, 1, 4, 1, 1)
         self.labelAircraft_Group = QtWidgets.QLabel(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.labelAircraft_Group.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.labelAircraft_Group.sizePolicy().hasHeightForWidth()
+        )
         self.labelAircraft_Group.setSizePolicy(sizePolicy)
         self.labelAircraft_Group.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.labelAircraft_Group.setObjectName("labelAircraft_Group")
@@ -65,16 +83,22 @@ class Ui_MovementDialog(object):
         self.gridLayout.addWidget(self.labelMovement, 0, 4, 1, 1)
         self.lineEditAircraft_Group = QtWidgets.QLineEdit(self.groupBox)
         self.lineEditAircraft_Group.setEnabled(False)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.lineEditAircraft_Group.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.lineEditAircraft_Group.sizePolicy().hasHeightForWidth()
+        )
         self.lineEditAircraft_Group.setSizePolicy(sizePolicy)
         self.lineEditAircraft_Group.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.lineEditAircraft_Group.setObjectName("lineEditAircraft_Group")
         self.gridLayout.addWidget(self.lineEditAircraft_Group, 1, 3, 1, 1)
         self.label = QtWidgets.QLabel(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
@@ -84,19 +108,27 @@ class Ui_MovementDialog(object):
         self.gridLayout.addWidget(self.label, 0, 1, 1, 1)
         self.lineEditDeparture_Arrival = QtWidgets.QLineEdit(self.groupBox)
         self.lineEditDeparture_Arrival.setEnabled(False)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.lineEditDeparture_Arrival.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.lineEditDeparture_Arrival.sizePolicy().hasHeightForWidth()
+        )
         self.lineEditDeparture_Arrival.setSizePolicy(sizePolicy)
         self.lineEditDeparture_Arrival.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.lineEditDeparture_Arrival.setObjectName("lineEditDeparture_Arrival")
         self.gridLayout.addWidget(self.lineEditDeparture_Arrival, 1, 0, 1, 1)
         self.labelDeparture_Arrival = QtWidgets.QLabel(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.labelDeparture_Arrival.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.labelDeparture_Arrival.sizePolicy().hasHeightForWidth()
+        )
         self.labelDeparture_Arrival.setSizePolicy(sizePolicy)
         self.labelDeparture_Arrival.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.labelDeparture_Arrival.setObjectName("labelDeparture_Arrival")
@@ -110,23 +142,33 @@ class Ui_MovementDialog(object):
         self.verticalLayout_5.setSpacing(6)
         self.verticalLayout_5.setObjectName("verticalLayout_5")
         self.labelEditable = QtWidgets.QLabel(MovementDialog)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.labelEditable.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.labelEditable.sizePolicy().hasHeightForWidth()
+        )
         self.labelEditable.setSizePolicy(sizePolicy)
         self.labelEditable.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.labelEditable.setObjectName("labelEditable")
         self.verticalLayout_5.addWidget(self.labelEditable)
         self.tableWidgetEditable = QtWidgets.QTableWidget(MovementDialog)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.tableWidgetEditable.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.tableWidgetEditable.sizePolicy().hasHeightForWidth()
+        )
         self.tableWidgetEditable.setSizePolicy(sizePolicy)
         self.tableWidgetEditable.setMaximumSize(QtCore.QSize(140, 16777215))
         self.tableWidgetEditable.setLayoutDirection(QtCore.Qt.LeftToRight)
-        self.tableWidgetEditable.setEditTriggers(QtWidgets.QAbstractItemView.AllEditTriggers)
+        self.tableWidgetEditable.setEditTriggers(
+            QtWidgets.QAbstractItemView.AllEditTriggers
+        )
         self.tableWidgetEditable.setObjectName("tableWidgetEditable")
         self.tableWidgetEditable.setColumnCount(0)
         self.tableWidgetEditable.setRowCount(0)
@@ -142,8 +184,12 @@ class Ui_MovementDialog(object):
         self.verticalLayout_4.addWidget(self.labelSelected_GSE)
         self.tableWidgetSelected = QtWidgets.QTableWidget(MovementDialog)
         self.tableWidgetSelected.setLayoutDirection(QtCore.Qt.LeftToRight)
-        self.tableWidgetSelected.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        self.tableWidgetSelected.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.tableWidgetSelected.setEditTriggers(
+            QtWidgets.QAbstractItemView.NoEditTriggers
+        )
+        self.tableWidgetSelected.setSelectionBehavior(
+            QtWidgets.QAbstractItemView.SelectRows
+        )
         self.tableWidgetSelected.setObjectName("tableWidgetSelected")
         self.tableWidgetSelected.setColumnCount(0)
         self.tableWidgetSelected.setRowCount(0)
@@ -153,27 +199,39 @@ class Ui_MovementDialog(object):
         self.horizontalLayout.addLayout(self.verticalLayout_4)
         self.verticalLayout_2 = QtWidgets.QVBoxLayout()
         self.verticalLayout_2.setObjectName("verticalLayout_2")
-        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        spacerItem = QtWidgets.QSpacerItem(
+            20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding
+        )
         self.verticalLayout_2.addItem(spacerItem)
         self.pushButtonAdd = QtWidgets.QPushButton(MovementDialog)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButtonAdd.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.pushButtonAdd.sizePolicy().hasHeightForWidth()
+        )
         self.pushButtonAdd.setSizePolicy(sizePolicy)
         self.pushButtonAdd.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.pushButtonAdd.setObjectName("pushButtonAdd")
         self.verticalLayout_2.addWidget(self.pushButtonAdd)
         self.pushButtonRemove = QtWidgets.QPushButton(MovementDialog)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButtonRemove.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.pushButtonRemove.sizePolicy().hasHeightForWidth()
+        )
         self.pushButtonRemove.setSizePolicy(sizePolicy)
         self.pushButtonRemove.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.pushButtonRemove.setObjectName("pushButtonRemove")
         self.verticalLayout_2.addWidget(self.pushButtonRemove)
-        spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        spacerItem1 = QtWidgets.QSpacerItem(
+            20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding
+        )
         self.verticalLayout_2.addItem(spacerItem1)
         self.horizontalLayout.addLayout(self.verticalLayout_2)
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
@@ -184,8 +242,12 @@ class Ui_MovementDialog(object):
         self.verticalLayout_3.addWidget(self.labelAvailable_GSE)
         self.tableWidgetAvailable = QtWidgets.QTableWidget(MovementDialog)
         self.tableWidgetAvailable.setLayoutDirection(QtCore.Qt.LeftToRight)
-        self.tableWidgetAvailable.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        self.tableWidgetAvailable.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.tableWidgetAvailable.setEditTriggers(
+            QtWidgets.QAbstractItemView.NoEditTriggers
+        )
+        self.tableWidgetAvailable.setSelectionBehavior(
+            QtWidgets.QAbstractItemView.SelectRows
+        )
         self.tableWidgetAvailable.setObjectName("tableWidgetAvailable")
         self.tableWidgetAvailable.setColumnCount(0)
         self.tableWidgetAvailable.setRowCount(0)
@@ -195,20 +257,28 @@ class Ui_MovementDialog(object):
         self.horizontalLayout.addLayout(self.verticalLayout_3)
         self.verticalLayout_6.addLayout(self.horizontalLayout)
         self.groupBox_2 = QtWidgets.QGroupBox(MovementDialog)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.groupBox_2.sizePolicy().hasHeightForWidth())
         self.groupBox_2.setSizePolicy(sizePolicy)
-        self.groupBox_2.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.groupBox_2.setAlignment(
+            QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter
+        )
         self.groupBox_2.setObjectName("groupBox_2")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.groupBox_2)
         self.verticalLayout.setObjectName("verticalLayout")
         self.tableWidgetGSE = QtWidgets.QTableWidget(self.groupBox_2)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.tableWidgetGSE.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.tableWidgetGSE.sizePolicy().hasHeightForWidth()
+        )
         self.tableWidgetGSE.setSizePolicy(sizePolicy)
         self.tableWidgetGSE.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.tableWidgetGSE.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
@@ -224,12 +294,14 @@ class Ui_MovementDialog(object):
         self.pushButtonClose = QtWidgets.QPushButton(MovementDialog)
         self.pushButtonClose.setObjectName("pushButtonClose")
         self.horizontalLayout_3.addWidget(self.pushButtonClose)
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem2 = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.horizontalLayout_3.addItem(spacerItem2)
         self.verticalLayout_6.addLayout(self.horizontalLayout_3)
 
         self.retranslateUi(MovementDialog)
-        self.pushButtonClose.clicked.connect(MovementDialog.close) # type: ignore
+        self.pushButtonClose.clicked.connect(MovementDialog.close)  # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MovementDialog)
 
     def retranslateUi(self, MovementDialog):
@@ -239,12 +311,19 @@ class Ui_MovementDialog(object):
         self.labelAircraft_Group.setText(_translate("MovementDialog", "Aircraft Group"))
         self.labelMovement.setText(_translate("MovementDialog", "Movement"))
         self.label.setText(_translate("MovementDialog", "Gate Type"))
-        self.labelDeparture_Arrival.setText(_translate("MovementDialog", "Departure / Arrival"))
-        self.labelEditable.setText(_translate("MovementDialog", "GSE service time & count"))
-        self.labelSelected_GSE.setText(_translate("MovementDialog", "Selected GSE / GPU"))
+        self.labelDeparture_Arrival.setText(
+            _translate("MovementDialog", "Departure / Arrival")
+        )
+        self.labelEditable.setText(
+            _translate("MovementDialog", "GSE service time & count")
+        )
+        self.labelSelected_GSE.setText(
+            _translate("MovementDialog", "Selected GSE / GPU")
+        )
         self.pushButtonAdd.setText(_translate("MovementDialog", ">"))
         self.pushButtonRemove.setText(_translate("MovementDialog", "<"))
-        self.labelAvailable_GSE.setText(_translate("MovementDialog", "Available GSE / GPU"))
+        self.labelAvailable_GSE.setText(
+            _translate("MovementDialog", "Available GSE / GPU")
+        )
         self.groupBox_2.setTitle(_translate("MovementDialog", "GSE Table"))
         self.pushButtonClose.setText(_translate("MovementDialog", "Save and Close"))
-import GSE_resource_rc

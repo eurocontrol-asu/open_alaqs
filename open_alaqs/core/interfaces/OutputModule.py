@@ -6,7 +6,6 @@ from qgis.core import QgsMapLayer
 from qgis.PyQt.QtWidgets import QWidget
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 from shapely.validation import make_valid
-from datetime import datetime
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
@@ -82,7 +81,7 @@ class GridOutputModule(OutputModule):
             logger.error(
                 "Did not find geometry for '%s'. Skipping an emission of source '%s'",
                 str(emission),
-                str(source.getName())
+                str(source.getName()),
             )
             return grid_df
 

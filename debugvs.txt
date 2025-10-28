@@ -40,9 +40,9 @@ https://gist.github.com/NicolaiLolansen/acfd8723720c4761aefef3cdfc2aa55a?utm_sou
               fd, addr = self._accept()
               ^^^^^^^^^^^^^^
              TimeoutError: timed out
-             
+
              During handling of the above exception, another exception occurred:
-             
+
              Traceback (most recent call last):
               File "C:\Users\sstromat\dev\qgis\profiles\default/python/plugins\debug_vs\__init__.py", line 134, in enable
               t_, self.port = self.debugpy.listen((self.host, self.port))
@@ -58,8 +58,8 @@ https://gist.github.com/NicolaiLolansen/acfd8723720c4761aefef3cdfc2aa55a?utm_sou
               File "C:\Users\sstromat\AppData\Roaming\Python\Python312\site-packages\debugpy\server\api.py", line 251, in listen
               raise RuntimeError("timed out waiting for adapter to connect")
              RuntimeError: timed out waiting for adapter to connect
-             
-			 
+
+
 			 C:\Program Files\QGIS 3.38.3\bin
 			 C:\Program Files\QGIS 3.38.3\apps\qgis\bin
 			 C:\Program Files\QGIS 3.38.3\apps\Python312
@@ -71,9 +71,9 @@ https://gist.github.com/NicolaiLolansen/acfd8723720c4761aefef3cdfc2aa55a?utm_sou
 			 C:\Windows
 			 C:\Program Files\QGIS 3.38.3\apps\Python312\Lib\site-packages\pywin32_system32
 			 C:\Program Files\QGIS 3.38.3\apps\Python312\Lib\site-packages\numpy.libs
-			 
-			 
-"PATH": 
+
+
+"PATH":
 "C:\\Program Files\\Git\\cmd;
 C:\\Users\\{{INSERT_YOUR_USER}}\\AppData\\Local\\GitHubDesktop\\bin;
 C:\\OSGEO4~1\\apps\\qgis\\bin;

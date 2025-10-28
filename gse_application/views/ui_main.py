@@ -18,10 +18,14 @@ class Ui_MainWindow(object):
         MainWindow.setMinimumSize(QtCore.QSize(600, 350))
         MainWindow.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.centralwidget.sizePolicy().hasHeightForWidth()
+        )
         self.centralwidget.setSizePolicy(sizePolicy)
         self.centralwidget.setMaximumSize(QtCore.QSize(16777215, 16777215))
         self.centralwidget.setObjectName("centralwidget")
@@ -55,7 +59,9 @@ class Ui_MainWindow(object):
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
         self.toolBar = QtWidgets.QToolBar(MainWindow)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.toolBar.sizePolicy().hasHeightForWidth())
@@ -67,35 +73,59 @@ class Ui_MainWindow(object):
         self.actionOpen.setCheckable(False)
         self.actionOpen.setEnabled(True)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/icons/open-data.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(
+            QtGui.QPixmap(":/icons/icons/open-data.png"),
+            QtGui.QIcon.Normal,
+            QtGui.QIcon.Off,
+        )
         self.actionOpen.setIcon(icon)
         self.actionOpen.setVisible(True)
         self.actionOpen.setObjectName("actionOpen")
         self.actionExit = QtWidgets.QAction(MainWindow)
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(":/icons/icons/close-app.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(
+            QtGui.QPixmap(":/icons/icons/close-app.png"),
+            QtGui.QIcon.Normal,
+            QtGui.QIcon.Off,
+        )
         self.actionExit.setIcon(icon1)
         self.actionExit.setObjectName("actionExit")
         self.actionFull_Screen = QtWidgets.QAction(MainWindow)
         icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(":/icons/icons/full-screen.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon2.addPixmap(
+            QtGui.QPixmap(":/icons/icons/full-screen.png"),
+            QtGui.QIcon.Normal,
+            QtGui.QIcon.Off,
+        )
         self.actionFull_Screen.setIcon(icon2)
         self.actionFull_Screen.setObjectName("actionFull_Screen")
         self.actionAbout = QtWidgets.QAction(MainWindow)
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/icons/icons/about.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon3.addPixmap(
+            QtGui.QPixmap(":/icons/icons/about.png"),
+            QtGui.QIcon.Normal,
+            QtGui.QIcon.Off,
+        )
         self.actionAbout.setIcon(icon3)
         self.actionAbout.setObjectName("actionAbout")
         self.actionDefine_Movements = QtWidgets.QAction(MainWindow)
         self.actionDefine_Movements.setEnabled(True)
         icon4 = QtGui.QIcon()
-        icon4.addPixmap(QtGui.QPixmap(":/icons/icons/flight-status-icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon4.addPixmap(
+            QtGui.QPixmap(":/icons/icons/flight-status-icon.png"),
+            QtGui.QIcon.Normal,
+            QtGui.QIcon.Off,
+        )
         self.actionDefine_Movements.setIcon(icon4)
         self.actionDefine_Movements.setObjectName("actionDefine_Movements")
         self.actionCalculate_Emissions = QtWidgets.QAction(MainWindow)
         self.actionCalculate_Emissions.setEnabled(True)
         icon5 = QtGui.QIcon()
-        icon5.addPixmap(QtGui.QPixmap(":/icons/icons/calculator.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon5.addPixmap(
+            QtGui.QPixmap(":/icons/icons/calculator.png"),
+            QtGui.QIcon.Normal,
+            QtGui.QIcon.Off,
+        )
         self.actionCalculate_Emissions.setIcon(icon5)
         self.actionCalculate_Emissions.setObjectName("actionCalculate_Emissions")
         self.menuFile.addAction(self.actionOpen)
@@ -117,8 +147,8 @@ class Ui_MainWindow(object):
         self.toolBar.addAction(self.actionExit)
 
         self.retranslateUi(MainWindow)
-        self.actionFull_Screen.triggered.connect(MainWindow.showMaximized) # type: ignore
-        self.actionExit.triggered.connect(MainWindow.close) # type: ignore
+        self.actionFull_Screen.triggered.connect(MainWindow.showMaximized)  # type: ignore
+        self.actionExit.triggered.connect(MainWindow.close)  # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -139,6 +169,7 @@ class Ui_MainWindow(object):
         self.actionAbout.setShortcut(_translate("MainWindow", "Ctrl+A"))
         self.actionDefine_Movements.setText(_translate("MainWindow", "Select GSE"))
         self.actionDefine_Movements.setShortcut(_translate("MainWindow", "Ctrl+M"))
-        self.actionCalculate_Emissions.setText(_translate("MainWindow", "Calculate Emissions"))
+        self.actionCalculate_Emissions.setText(
+            _translate("MainWindow", "Calculate Emissions")
+        )
         self.actionCalculate_Emissions.setShortcut(_translate("MainWindow", "Ctrl+E"))
-from . import GSE_resource_rc
