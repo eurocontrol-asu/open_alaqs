@@ -1,14 +1,33 @@
-from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
-    QPushButton, QFileDialog, QMessageBox, QApplication
-)
-from PyQt5.QtCore import Qt
 import csv
 import re
 import sqlite3
 
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QApplication,
+    QDialog,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+)
+
+
 class EmissionsCalculatorDialog(QDialog):
-    def __init__(self, db, assignments, movements_df, ef_list, backend, path, parent=None,):
+    def __init__(
+        self,
+        db,
+        assignments,
+        movements_df,
+        ef_list,
+        backend,
+        path,
+        parent=None,
+    ):
         super().__init__(parent)
         self.setWindowTitle("Emissions Calculator")
         self.resize(1100, 650)
@@ -77,37 +96,41 @@ class EmissionsCalculatorDialog(QDialog):
         # Only show prompt if there are calculated emissions to save and they were not saved before
         if self.emissions_output and not self.export_completed:
             reply = QMessageBox.question(
-                self, 
+                self,
                 "Warning",
                 "You have calculated emission results. Would you like to export them before closing?",
                 QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
-                QMessageBox.Yes
+                QMessageBox.Yes,
             )
-            
+
             if reply == QMessageBox.Yes:
                 # Show export format choice dialog
                 format_choice = QMessageBox()
                 format_choice.setWindowTitle("Choose Export Format")
                 format_choice.setText("Which export format would you like to use?")
-                
-                csv_button = format_choice.addButton("CSV Format", QMessageBox.ActionRole)
-                alaqs_button = format_choice.addButton("Update OpenALAQS database", QMessageBox.ActionRole)
+
+                csv_button = format_choice.addButton(
+                    "CSV Format", QMessageBox.ActionRole
+                )
+                alaqs_button = format_choice.addButton(
+                    "Update OpenALAQS database", QMessageBox.ActionRole
+                )
                 _ = format_choice.addButton("Cancel", QMessageBox.RejectRole)
-                
+
                 format_choice.setDefaultButton(csv_button)
                 format_choice.exec_()
-                
+
                 if format_choice.clickedButton() == csv_button:
                     self.export_emissions_table_csv()
                     # Only close if export was successful (user didn't cancel file dialog)
-                    if hasattr(self, '_export_completed') and self.export_completed:
+                    if hasattr(self, "_export_completed") and self.export_completed:
                         event.accept()  # Close dialog
                     else:
                         event.ignore()  # Keep dialog open if export was cancelled
                 elif format_choice.clickedButton() == alaqs_button:
                     self.export_emissions_table_alaqs()
                     # Only close if export was successful (user didn't cancel file dialog)
-                    if hasattr(self, '_export_completed') and self.export_completed:
+                    if hasattr(self, "_export_completed") and self.export_completed:
                         event.accept()  # Close dialog
                     else:
                         event.ignore()  # Keep dialog open if export was cancelled
@@ -127,18 +150,20 @@ class EmissionsCalculatorDialog(QDialog):
             for assign in gse_list:
                 if not getattr(assign, "assigned", False):
                     continue  # Only show assigned
-                row = {'movement_code': movement_code}
+                row = {"movement_code": movement_code}
 
-                gse_obj = getattr(assign, 'gse_obj', None)
+                gse_obj = getattr(assign, "gse_obj", None)
                 if gse_obj is not None:
                     if isinstance(gse_obj, dict):
                         row.update(gse_obj)
                     else:
-                        for attr in ['type', 'description', 'power', 'load', 'fuel']:
+                        for attr in ["type", "description", "power", "load", "fuel"]:
                             row[attr] = getattr(gse_obj, attr, "")
-                row['time'] = getattr(assign, 'time', "")
-                row['count'] = getattr(assign, 'count', "")
-                row['deterioration_factor'] = getattr(assign, 'deterioration_factor', 1.0)
+                row["time"] = getattr(assign, "time", "")
+                row["count"] = getattr(assign, "count", "")
+                row["deterioration_factor"] = getattr(
+                    assign, "deterioration_factor", 1.0
+                )
                 rows.append(row)
         if not rows:
             self.table_gse.setRowCount(0)
@@ -154,8 +179,6 @@ class EmissionsCalculatorDialog(QDialog):
             for j, col in enumerate(headers):
                 self.table_gse.setItem(i, j, QTableWidgetItem(str(row.get(col, ""))))
         self.table_gse.resizeColumnsToContents()
-
-
 
     def fill_output_table(self):
         QApplication.setOverrideCursor(Qt.WaitCursor)
@@ -175,30 +198,43 @@ class EmissionsCalculatorDialog(QDialog):
             self.table_output.setRowCount(len(emissions))
             for i, row in enumerate(emissions):
                 for j, col in enumerate(headers):
-                    self.table_output.setItem(i, j, QTableWidgetItem(str(row.get(col, ""))))
+                    self.table_output.setItem(
+                        i, j, QTableWidgetItem(str(row.get(col, "")))
+                    )
             self.table_output.resizeColumnsToContents()
             self.emissions_output = emissions
 
-            # Change events for the export buttons to be pressable    
+            # Change events for the export buttons to be pressable
             self.btn_export_csv.setEnabled(True)
             self.btn_export_alaqs.setEnabled(True)
-        
+
         except Exception as err:
             QMessageBox.critical(self, "Calculation Error", str(err))
         finally:
             QApplication.restoreOverrideCursor()
 
     def calculate_emissions_from_assignments(self):
-        ef_table = [ef.__dict__ if hasattr(ef, '__dict__') else dict(ef) for ef in self.ef_list]
+        ef_table = [
+            ef.__dict__ if hasattr(ef, "__dict__") else dict(ef) for ef in self.ef_list
+        ]
         output_rows = {}
 
         for movement_code, gse_list in self.assignments.items():
-            if not gse_list: continue
+            if not gse_list:
+                continue
             ac_group, gate_type, dep_arr = movement_code.split("/")
             gse_accum = {
-                "ac_group": ac_group, "gate_type": gate_type, "gse_type": "GSE",
-                "A_min": 0.0, "D_min": 0.0,
-                "CO_g_per_h": 0.0, "HC_g_per_h": 0.0, "NOx_g_per_h": 0.0, "PM_g_per_h": 0.0, "SOx_g_per_h": 0.0, "kWh": 0.0
+                "ac_group": ac_group,
+                "gate_type": gate_type,
+                "gse_type": "GSE",
+                "A_min": 0.0,
+                "D_min": 0.0,
+                "CO_g_per_h": 0.0,
+                "HC_g_per_h": 0.0,
+                "NOx_g_per_h": 0.0,
+                "PM_g_per_h": 0.0,
+                "SOx_g_per_h": 0.0,
+                "kWh": 0.0,
             }
             gpu_rows = {}
 
@@ -233,26 +269,71 @@ class EmissionsCalculatorDialog(QDialog):
                 # Find emission factors row
                 ef_row = None
                 for ef in ef_table:
-                    if ef.get('stage') == stage and self.in_power_range(power, ef.get('power_range', '')):
+                    if ef.get("stage") == stage and self.in_power_range(
+                        power, ef.get("power_range", "")
+                    ):
                         ef_row = ef
                         break
                 if not ef_row:
                     continue  # skip if no factor found (could log)
                 minutes = A_min + D_min
                 hours = minutes / 60.0
-                co = float(ef_row.get("CO_g_per_kWh", 0)) * power * hours * count * load_factor * deter_factor
-                hc = float(ef_row.get("HC_g_per_kWh", 0)) * power * hours * count * load_factor * deter_factor
-                nox = float(ef_row.get("NOx_g_per_kWh", 0)) * power * hours * count * load_factor * deter_factor
-                pm = float(ef_row.get("PM_g_per_kWh", 0)) * power * hours * count * load_factor * deter_factor
-                sox = float(ef_row.get("SOx_g_per_kWh", 0)) * power * hours * count * load_factor * deter_factor
+                co = (
+                    float(ef_row.get("CO_g_per_kWh", 0))
+                    * power
+                    * hours
+                    * count
+                    * load_factor
+                    * deter_factor
+                )
+                hc = (
+                    float(ef_row.get("HC_g_per_kWh", 0))
+                    * power
+                    * hours
+                    * count
+                    * load_factor
+                    * deter_factor
+                )
+                nox = (
+                    float(ef_row.get("NOx_g_per_kWh", 0))
+                    * power
+                    * hours
+                    * count
+                    * load_factor
+                    * deter_factor
+                )
+                pm = (
+                    float(ef_row.get("PM_g_per_kWh", 0))
+                    * power
+                    * hours
+                    * count
+                    * load_factor
+                    * deter_factor
+                )
+                sox = (
+                    float(ef_row.get("SOx_g_per_kWh", 0))
+                    * power
+                    * hours
+                    * count
+                    * load_factor
+                    * deter_factor
+                )
                 kwh = power * hours * count
                 if gse_type == "GPU":
                     key = (ac_group, gate_type, description)
                     if key not in gpu_rows:
                         gpu_rows[key] = {
-                            "ac_group": ac_group, "gate_type": gate_type, "gse_type": gse_type,
-                            "A_min": 0.0, "D_min": 0.0,
-                            "CO_g_per_h": 0.0, "HC_g_per_h": 0.0, "NOx_g_per_h": 0.0, "PM_g_per_h": 0.0, "SOx_g_per_h": 0.0, "kWh": 0.0
+                            "ac_group": ac_group,
+                            "gate_type": gate_type,
+                            "gse_type": gse_type,
+                            "A_min": 0.0,
+                            "D_min": 0.0,
+                            "CO_g_per_h": 0.0,
+                            "HC_g_per_h": 0.0,
+                            "NOx_g_per_h": 0.0,
+                            "PM_g_per_h": 0.0,
+                            "SOx_g_per_h": 0.0,
+                            "kWh": 0.0,
                         }
                     gpu_rows[key]["A_min"] += A_min
                     gpu_rows[key]["D_min"] += D_min
@@ -281,19 +362,21 @@ class EmissionsCalculatorDialog(QDialog):
         # Convert to list for output (with desired columns)
         output_list = []
         for v in output_rows.values():
-            output_list.append({
-                "gate_type": v["gate_type"],
-                "ac_group": v["ac_group"],
-                "emis_type": v.get("gse_type", ""),
-                "A_min": round(v["A_min"], 2),
-                "D_min": round(v["D_min"], 2),
-                "co": round(v["CO_g_per_h"], 2),
-                "hc": round(v["HC_g_per_h"], 2),
-                "nox": round(v["NOx_g_per_h"], 2),
-                "sox": round(v.get("SOx_g_per_h", 0.0), 2),
-                "pm10": round(v["PM_g_per_h"], 2),
-                #"kWh": round(v["kWh"], 2) # kWh still calculated but not included in the output_list
-            })
+            output_list.append(
+                {
+                    "gate_type": v["gate_type"],
+                    "ac_group": v["ac_group"],
+                    "emis_type": v.get("gse_type", ""),
+                    "A_min": round(v["A_min"], 2),
+                    "D_min": round(v["D_min"], 2),
+                    "co": round(v["CO_g_per_h"], 2),
+                    "hc": round(v["HC_g_per_h"], 2),
+                    "nox": round(v["NOx_g_per_h"], 2),
+                    "sox": round(v.get("SOx_g_per_h", 0.0), 2),
+                    "pm10": round(v["PM_g_per_h"], 2),
+                    # "kWh": round(v["kWh"], 2) # kWh still calculated but not included in the output_list
+                }
+            )
         return output_list
 
     def in_power_range(self, power, power_range_str):
@@ -312,15 +395,15 @@ class EmissionsCalculatorDialog(QDialog):
         try:
             # Get the default emissions dict from the calculator
             emissions = self.calculate_emissions_from_assignments()
-            
+
             # Adapt the emissions dict to match the OpenALAQS format
             reconfigured_emissions = []
             idx = 0
 
-            for entry in emissions: 
+            for entry in emissions:
                 print(entry)
                 # First dict based on arrival time
-                dict1 = { 
+                dict1 = {
                     "oid": int(idx + 1),
                     "gate_type": entry["gate_type"],
                     "ac_group": entry["ac_group"],
@@ -334,11 +417,11 @@ class EmissionsCalculatorDialog(QDialog):
                     "nox": entry["nox"],
                     "sox": entry["sox"],
                     "pm10": entry["pm10"],
-                    "source": str("GSE Application")
+                    "source": str("GSE Application"),
                 }
 
                 # Second dict based on departure time
-                dict2 = { 
+                dict2 = {
                     "oid": int(idx + 2),
                     "gate_type": entry["gate_type"],
                     "ac_group": entry["ac_group"],
@@ -352,7 +435,7 @@ class EmissionsCalculatorDialog(QDialog):
                     "nox": entry["nox"],
                     "sox": entry["sox"],
                     "pm10": entry["pm10"],
-                    "source": str("GSE Application")
+                    "source": str("GSE Application"),
                 }
 
                 # Update the index counter
@@ -368,7 +451,11 @@ class EmissionsCalculatorDialog(QDialog):
     def export_emissions_table_alaqs(self):
         # Export to OpenALAQS format only if the database imported is in that format
         if self.backend != "sqlite":
-            QMessageBox.critical(self, "Cannot save in OpenALAQS Format", "Either import a valid .alaqs file or save as .csv")
+            QMessageBox.critical(
+                self,
+                "Cannot save in OpenALAQS Format",
+                "Either import a valid .alaqs file or save as .csv",
+            )
         else:
             try:
                 # Get the emissions data in OpenALAQS format
@@ -382,7 +469,8 @@ class EmissionsCalculatorDialog(QDialog):
                 cursor = conn.cursor()
 
                 # Check if the table exists, create if not
-                cursor.execute("""
+                cursor.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS default_gate_profiles (
                         oid INTEGER PRIMARY KEY,
                         gate_type TEXT,
@@ -399,7 +487,8 @@ class EmissionsCalculatorDialog(QDialog):
                         pm10 REAL,
                         source TEXT
                     )
-                """)    
+                """
+                )
 
                 # Optional: Clear existing data (if you want to overwrite)
                 cursor.execute("DELETE FROM default_gate_profiles")
@@ -415,45 +504,79 @@ class EmissionsCalculatorDialog(QDialog):
 
                 # Insert emissions data
                 for entry in emissions:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         INSERT INTO default_gate_profiles (
                             oid, gate_type, ac_group, emis_type, time_unit, op_type, time, emis_unit,
                             co, hc, nox, sox, pm10, source
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (
-                        entry["oid"], entry["gate_type"], entry["ac_group"], entry["emis_type"],
-                        entry["time_unit"], entry["op_type"], entry["time"], entry["emis_unit"],
-                        entry["co"], entry["hc"], entry["nox"], entry["sox"], entry["pm10"], entry["source"]
-                    ))
+                    """,
+                        (
+                            entry["oid"],
+                            entry["gate_type"],
+                            entry["ac_group"],
+                            entry["emis_type"],
+                            entry["time_unit"],
+                            entry["op_type"],
+                            entry["time"],
+                            entry["emis_unit"],
+                            entry["co"],
+                            entry["hc"],
+                            entry["nox"],
+                            entry["sox"],
+                            entry["pm10"],
+                            entry["source"],
+                        ),
+                    )
 
                 conn.commit()
                 conn.close()
-                QMessageBox.information(self, "Update Successful", "Emissions table was successfully updated in the database.")
+                QMessageBox.information(
+                    self,
+                    "Update Successful",
+                    "Emissions table was successfully updated in the database.",
+                )
                 self.export_completed = True
 
-                self.close() # Close the window
+                self.close()  # Close the window
 
             except Exception as e:
                 QMessageBox.critical(self, "Update Failed", str(e))
                 self.export_completed = False
 
     def export_emissions_table_csv(self):
-        filename, _ = QFileDialog.getSaveFileName(self, "Export Emissions Table", "", "CSV Files (*.csv)")
+        filename, _ = QFileDialog.getSaveFileName(
+            self, "Export Emissions Table", "", "CSV Files (*.csv)"
+        )
         if not filename:
             self.export_completed = False
             return
         try:
-            with open(filename, "w", newline='') as csvfile:
+            with open(filename, "w", newline="") as csvfile:
                 writer = csv.writer(csvfile)
                 # Get data from output table
-                headers = [self.table_output.horizontalHeaderItem(i).text() for i in range(self.table_output.columnCount())]
+                headers = [
+                    self.table_output.horizontalHeaderItem(i).text()
+                    for i in range(self.table_output.columnCount())
+                ]
                 writer.writerow(headers)
                 for row in range(self.table_output.rowCount()):
-                    writer.writerow([self.table_output.item(row, col).text() if self.table_output.item(row, col) else "" for col in range(self.table_output.columnCount())])
-            QMessageBox.information(self, "Export Successful", "Emissions table was successfully exported.")
+                    writer.writerow(
+                        [
+                            (
+                                self.table_output.item(row, col).text()
+                                if self.table_output.item(row, col)
+                                else ""
+                            )
+                            for col in range(self.table_output.columnCount())
+                        ]
+                    )
+            QMessageBox.information(
+                self, "Export Successful", "Emissions table was successfully exported."
+            )
             self.export_completed = True
 
-            self.close() # Close the window
+            self.close()  # Close the window
         except Exception as e:
             QMessageBox.critical(self, "Export Failed", str(e))
             self.export_completed = False

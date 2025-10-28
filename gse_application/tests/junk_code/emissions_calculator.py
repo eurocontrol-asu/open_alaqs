@@ -1,10 +1,20 @@
-from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
-    QPushButton, QFileDialog, QMessageBox, QApplication
-)
-from PyQt5.QtCore import Qt
 import csv
 import re
+
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QApplication,
+    QDialog,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+)
+
 
 class EmissionsCalculatorDialog(QDialog):
     def __init__(self, db, assignments, movements_df, ef_list, parent=None):
@@ -59,18 +69,20 @@ class EmissionsCalculatorDialog(QDialog):
             for assign in gse_list:
                 if not getattr(assign, "assigned", False):
                     continue  # Only show assigned
-                row = {'movement_code': movement_code}
+                row = {"movement_code": movement_code}
 
-                gse_obj = getattr(assign, 'gse_obj', None)
+                gse_obj = getattr(assign, "gse_obj", None)
                 if gse_obj is not None:
                     if isinstance(gse_obj, dict):
                         row.update(gse_obj)
                     else:
-                        for attr in ['type', 'description', 'power', 'load', 'fuel']:
+                        for attr in ["type", "description", "power", "load", "fuel"]:
                             row[attr] = getattr(gse_obj, attr, "")
-                row['time'] = getattr(assign, 'time', "")
-                row['count'] = getattr(assign, 'count', "")
-                row['deterioration_factor'] = getattr(assign, 'deterioration_factor', 1.0)
+                row["time"] = getattr(assign, "time", "")
+                row["count"] = getattr(assign, "count", "")
+                row["deterioration_factor"] = getattr(
+                    assign, "deterioration_factor", 1.0
+                )
                 rows.append(row)
         if not rows:
             self.table_gse.setRowCount(0)
@@ -87,8 +99,6 @@ class EmissionsCalculatorDialog(QDialog):
                 self.table_gse.setItem(i, j, QTableWidgetItem(str(row.get(col, ""))))
         self.table_gse.resizeColumnsToContents()
 
-
-
     def fill_output_table(self):
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
@@ -104,7 +114,9 @@ class EmissionsCalculatorDialog(QDialog):
             self.table_output.setRowCount(len(emissions))
             for i, row in enumerate(emissions):
                 for j, col in enumerate(headers):
-                    self.table_output.setItem(i, j, QTableWidgetItem(str(row.get(col, ""))))
+                    self.table_output.setItem(
+                        i, j, QTableWidgetItem(str(row.get(col, "")))
+                    )
             self.table_output.resizeColumnsToContents()
             self.emissions_output = emissions
             self.btn_export.setEnabled(True)
@@ -114,16 +126,26 @@ class EmissionsCalculatorDialog(QDialog):
             QApplication.restoreOverrideCursor()
 
     def calculate_emissions_from_assignments(self):
-        ef_table = [ef.__dict__ if hasattr(ef, '__dict__') else dict(ef) for ef in self.ef_list]
+        ef_table = [
+            ef.__dict__ if hasattr(ef, "__dict__") else dict(ef) for ef in self.ef_list
+        ]
         output_rows = {}
 
         for movement_code, gse_list in self.assignments.items():
-            if not gse_list: continue
+            if not gse_list:
+                continue
             ac_group, gate_type, dep_arr = movement_code.split("/")
             gse_accum = {
-                "ac_group": ac_group, "gate_type": gate_type, "gse_type": "GSE",
-                "A_min": 0.0, "D_min": 0.0,
-                "CO_g_per_h": 0.0, "HC_g_per_h": 0.0, "NOx_g_per_h": 0.0, "PM_g_per_h": 0.0, "kWh": 0.0
+                "ac_group": ac_group,
+                "gate_type": gate_type,
+                "gse_type": "GSE",
+                "A_min": 0.0,
+                "D_min": 0.0,
+                "CO_g_per_h": 0.0,
+                "HC_g_per_h": 0.0,
+                "NOx_g_per_h": 0.0,
+                "PM_g_per_h": 0.0,
+                "kWh": 0.0,
             }
             gpu_rows = {}
 
@@ -158,25 +180,62 @@ class EmissionsCalculatorDialog(QDialog):
                 # Find emission factors row
                 ef_row = None
                 for ef in ef_table:
-                    if ef.get('stage') == stage and self.in_power_range(power, ef.get('power_range', '')):
+                    if ef.get("stage") == stage and self.in_power_range(
+                        power, ef.get("power_range", "")
+                    ):
                         ef_row = ef
                         break
                 if not ef_row:
                     continue  # skip if no factor found (could log)
                 minutes = A_min + D_min
                 hours = minutes / 60.0
-                co = float(ef_row.get("CO_g_per_kWh", 0)) * power * hours * count * load_factor * deter_factor
-                hc = float(ef_row.get("HC_g_per_kWh", 0)) * power * hours * count * load_factor * deter_factor
-                nox = float(ef_row.get("NOx_g_per_kWh", 0)) * power * hours * count * load_factor * deter_factor
-                pm = float(ef_row.get("PM_g_per_kWh", 0)) * power * hours * count * load_factor * deter_factor
+                co = (
+                    float(ef_row.get("CO_g_per_kWh", 0))
+                    * power
+                    * hours
+                    * count
+                    * load_factor
+                    * deter_factor
+                )
+                hc = (
+                    float(ef_row.get("HC_g_per_kWh", 0))
+                    * power
+                    * hours
+                    * count
+                    * load_factor
+                    * deter_factor
+                )
+                nox = (
+                    float(ef_row.get("NOx_g_per_kWh", 0))
+                    * power
+                    * hours
+                    * count
+                    * load_factor
+                    * deter_factor
+                )
+                pm = (
+                    float(ef_row.get("PM_g_per_kWh", 0))
+                    * power
+                    * hours
+                    * count
+                    * load_factor
+                    * deter_factor
+                )
                 kwh = power * hours * count
                 if gse_type == "GPU":
                     key = (ac_group, gate_type, description)
                     if key not in gpu_rows:
                         gpu_rows[key] = {
-                            "ac_group": ac_group, "gate_type": gate_type, "gse_type": gse_type,
-                            "A_min": 0.0, "D_min": 0.0,
-                            "CO_g_per_h": 0.0, "HC_g_per_h": 0.0, "NOx_g_per_h": 0.0, "PM_g_per_h": 0.0, "kWh": 0.0
+                            "ac_group": ac_group,
+                            "gate_type": gate_type,
+                            "gse_type": gse_type,
+                            "A_min": 0.0,
+                            "D_min": 0.0,
+                            "CO_g_per_h": 0.0,
+                            "HC_g_per_h": 0.0,
+                            "NOx_g_per_h": 0.0,
+                            "PM_g_per_h": 0.0,
+                            "kWh": 0.0,
                         }
                     gpu_rows[key]["A_min"] += A_min
                     gpu_rows[key]["D_min"] += D_min
@@ -203,18 +262,20 @@ class EmissionsCalculatorDialog(QDialog):
         # Convert to list for output (with desired columns)
         output_list = []
         for v in output_rows.values():
-            output_list.append({
-                "ac_group": v["ac_group"],
-                "gate_type": v["gate_type"],
-                "gse_type": v.get("gse_type", ""),
-                "A_min": round(v["A_min"], 2),
-                "D_min": round(v["D_min"], 2),
-                "CO_g_per_h": round(v["CO_g_per_h"], 2),
-                "HC_g_per_h": round(v["HC_g_per_h"], 2),
-                "NOx_g_per_h": round(v["NOx_g_per_h"], 2),
-                "PM_g_per_h": round(v["PM_g_per_h"], 2),
-                "kWh": round(v["kWh"], 2)
-            })
+            output_list.append(
+                {
+                    "ac_group": v["ac_group"],
+                    "gate_type": v["gate_type"],
+                    "gse_type": v.get("gse_type", ""),
+                    "A_min": round(v["A_min"], 2),
+                    "D_min": round(v["D_min"], 2),
+                    "CO_g_per_h": round(v["CO_g_per_h"], 2),
+                    "HC_g_per_h": round(v["HC_g_per_h"], 2),
+                    "NOx_g_per_h": round(v["NOx_g_per_h"], 2),
+                    "PM_g_per_h": round(v["PM_g_per_h"], 2),
+                    "kWh": round(v["kWh"], 2),
+                }
+            )
         return output_list
 
     def in_power_range(self, power, power_range_str):
@@ -230,17 +291,33 @@ class EmissionsCalculatorDialog(QDialog):
         return False
 
     def export_emissions_table(self):
-        filename, _ = QFileDialog.getSaveFileName(self, "Export Emissions Table", "", "CSV Files (*.csv)")
+        filename, _ = QFileDialog.getSaveFileName(
+            self, "Export Emissions Table", "", "CSV Files (*.csv)"
+        )
         if not filename:
             return
         try:
-            with open(filename, "w", newline='') as csvfile:
+            with open(filename, "w", newline="") as csvfile:
                 writer = csv.writer(csvfile)
                 # Get data from output table
-                headers = [self.table_output.horizontalHeaderItem(i).text() for i in range(self.table_output.columnCount())]
+                headers = [
+                    self.table_output.horizontalHeaderItem(i).text()
+                    for i in range(self.table_output.columnCount())
+                ]
                 writer.writerow(headers)
                 for row in range(self.table_output.rowCount()):
-                    writer.writerow([self.table_output.item(row, col).text() if self.table_output.item(row, col) else "" for col in range(self.table_output.columnCount())])
-            QMessageBox.information(self, "Export Successful", "Emissions table was successfully exported.")
+                    writer.writerow(
+                        [
+                            (
+                                self.table_output.item(row, col).text()
+                                if self.table_output.item(row, col)
+                                else ""
+                            )
+                            for col in range(self.table_output.columnCount())
+                        ]
+                    )
+            QMessageBox.information(
+                self, "Export Successful", "Emissions table was successfully exported."
+            )
         except Exception as e:
             QMessageBox.critical(self, "Export Failed", str(e))

@@ -1,9 +1,12 @@
 import logging
-import pandas as pd
 from typing import List
-from .gse_types import GroundSupportEquipment, EmissionFactor
+
+import pandas as pd
+
+from .gse_types import EmissionFactor, GroundSupportEquipment
 
 logger = logging.getLogger(__name__)
+
 
 class GSEModel:
     def __init__(self, gse_csv: str, factors_csv: str):

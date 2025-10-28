@@ -228,14 +228,14 @@ class MovementSourceModule(SourceModule):
         df.loc[:, "profile_id"] = df["Sources"].apply(self.getDefaultProfileName)
         # Then update with _profile_id where available
         for i, mov in enumerate(df["Sources"]):
-            if hasattr(mov, '_profile_id') and mov._profile_id:
+            if hasattr(mov, "_profile_id") and mov._profile_id:
                 df.at[i, "profile_id"] = mov._profile_id
 
         # try:
         #     default_profiles = df["Sources"].apply(self.getDefaultProfileName)
         #     profile_ids = [getattr(mov, '_profile_id', None) for mov in df["Sources"]]
         #     # Use _profile_id where it exists, otherwise keep default
-        #     df.loc[:, "profile_id"] = [pid if pid is not None else default 
+        #     df.loc[:, "profile_id"] = [pid if pid is not None else default
         #                       for pid, default in zip(profile_ids, default_profiles)]
         #     df.loc[:, "profile_id"] = [mov._profile_id for mov in df["Sources"]]
         # except Exception as e:

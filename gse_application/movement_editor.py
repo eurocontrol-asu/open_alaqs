@@ -1,10 +1,22 @@
-from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QTableWidget,
-    QTableWidgetItem, QCheckBox, QPushButton, QMessageBox, QSpinBox, QDoubleSpinBox
-)
-from PyQt5.QtCore import Qt
 from dataclasses import dataclass
 from functools import partial
+
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDoubleSpinBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+)
+
 
 @dataclass
 class GSEAssignment:
@@ -14,31 +26,44 @@ class GSEAssignment:
     count: int = 1
     deterioration_factor: float = 1.0
 
+
 class MovementEditor(QDialog):
     def __init__(
-        self, db, movements_df, icao_to_group, parent=None,
-        existing_assignments=None, gse_list=None, reset_mode="reset"
+        self,
+        db,
+        movements_df,
+        icao_to_group,
+        parent=None,
+        existing_assignments=None,
+        gse_list=None,
+        reset_mode="reset",
     ):
         super().__init__(parent)
-        self.resize(1000, 700)          # Wider and taller
-        self.setMinimumSize(900, 600)   # Reasonable minimum
+        self.resize(1000, 700)  # Wider and taller
+        self.setMinimumSize(900, 600)  # Reasonable minimum
 
         self.db = db
         self.movements_df = movements_df.copy()
         self.icao_to_group = icao_to_group or {}
         self.gse_list = gse_list or []
-        self.gse_columns = ['type', 'description', 'power', 'load', 'fuel', 'Stage']
+        self.gse_columns = ["type", "description", "power", "load", "fuel", "Stage"]
 
         # --- Aircraft group mapping (use existing mapping!) ---
         if "ac_group" not in self.movements_df.columns:
             if "aircraft" in self.movements_df.columns and self.icao_to_group:
-                self.movements_df["ac_group"] = self.movements_df["aircraft"].map(self.icao_to_group).fillna("UNKNOWN")
+                self.movements_df["ac_group"] = (
+                    self.movements_df["aircraft"]
+                    .map(self.icao_to_group)
+                    .fillna("UNKNOWN")
+                )
             else:
                 self.movements_df["ac_group"] = "UNKNOWN"
 
         self.movement_codes = self.get_movement_codes()
         if not self.movement_codes:
-            QMessageBox.critical(self, "Error", "No valid movements found in movements file!")
+            QMessageBox.critical(
+                self, "Error", "No valid movements found in movements file!"
+            )
             self.reject()
             return
 
@@ -52,7 +77,11 @@ class MovementEditor(QDialog):
         req_cols = ["ac_group", "gate_type", "departure_arrival"]
         missing = [c for c in req_cols if c not in self.movements_df.columns]
         if missing:
-            QMessageBox.critical(self, "Missing Columns", f"Movements CSV is missing: {', '.join(missing)}")
+            QMessageBox.critical(
+                self,
+                "Missing Columns",
+                f"Movements CSV is missing: {', '.join(missing)}",
+            )
             return []
         # Drop duplicates on those three fields
         unique = self.movements_df.drop_duplicates(subset=req_cols)
@@ -75,13 +104,17 @@ class MovementEditor(QDialog):
         # GSE Table
         self.table = QTableWidget()
         self.table.setColumnCount(1 + len(self.gse_columns) + 2)
-        self.table.setHorizontalHeaderLabels(["Assigned"] + self.gse_columns + ["Time", "Count", "Deterioration Factor"])
+        self.table.setHorizontalHeaderLabels(
+            ["Assigned"] + self.gse_columns + ["Time", "Count", "Deterioration Factor"]
+        )
         layout.addWidget(self.table)
 
         # Summary Table
         self.summary_table = QTableWidget()
         self.summary_table.setColumnCount(len(self.gse_columns) + 2)
-        self.summary_table.setHorizontalHeaderLabels(self.gse_columns + ["Time", "Count", "Deterioration Factor"])
+        self.summary_table.setHorizontalHeaderLabels(
+            self.gse_columns + ["Time", "Count", "Deterioration Factor"]
+        )
         layout.addWidget(QLabel("Summary:"))
         layout.addWidget(self.summary_table)
 
@@ -99,31 +132,43 @@ class MovementEditor(QDialog):
 
     def setup_assignments(self, existing_assignments, reset_mode):
         self.assignments = {}
-        
+
         if reset_mode == "modify" and existing_assignments:
             for code in self.movement_codes:
                 # Start with existing assignments for this code
                 prev_assigns = existing_assignments.get(code, [])
-                
+
                 # Get set of GSE types already assigned
                 assigned_types = set()
                 for a in prev_assigns:
-                    gse_obj = a.gse_obj if hasattr(a, 'gse_obj') else a.get('gse_obj', None)
+                    gse_obj = (
+                        a.gse_obj if hasattr(a, "gse_obj") else a.get("gse_obj", None)
+                    )
                     if gse_obj:
-                        gse_type = gse_obj.get('type', '') if isinstance(gse_obj, dict) else getattr(gse_obj, 'type', '')
+                        gse_type = (
+                            gse_obj.get("type", "")
+                            if isinstance(gse_obj, dict)
+                            else getattr(gse_obj, "type", "")
+                        )
                         assigned_types.add(gse_type)
-                
+
                 # Add any GSE from gse_list that wasn't already assigned
                 for g in self.gse_list:
-                    gse_type = g.get('type', '') if isinstance(g, dict) else getattr(g, 'type', '')
+                    gse_type = (
+                        g.get("type", "")
+                        if isinstance(g, dict)
+                        else getattr(g, "type", "")
+                    )
                     if gse_type not in assigned_types:
                         prev_assigns.append(GSEAssignment(False, g, 10.0, 1, 1.0))
-                
+
                 self.assignments[code] = prev_assigns
         else:
             # Reset mode - create new assignments with defaults
             for code in self.movement_codes:
-                self.assignments[code] = [GSEAssignment(False, g, 10.0, 1, 1.0) for g in self.gse_list]
+                self.assignments[code] = [
+                    GSEAssignment(False, g, 10.0, 1, 1.0) for g in self.gse_list
+                ]
 
     def on_movement_change(self, idx):
         if 0 <= idx < len(self.movement_codes):
@@ -160,7 +205,9 @@ class MovementEditor(QDialog):
             # GSE columns (read-only)
             for j, col in enumerate(self.gse_columns):
                 gse = assign.gse_obj
-                val = gse.get(col, "") if isinstance(gse, dict) else getattr(gse, col, "")
+                val = (
+                    gse.get(col, "") if isinstance(gse, dict) else getattr(gse, col, "")
+                )
                 item = QTableWidgetItem(str(val))
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.table.setItem(i, 1 + j, item)
@@ -187,7 +234,7 @@ class MovementEditor(QDialog):
             det_spin.setDecimals(2)
             det_spin.setMinimum(0.5)
             det_spin.setMaximum(5.0)
-            det_spin.setValue(float(getattr(assign, 'deterioration_factor', 1.0)))
+            det_spin.setValue(float(getattr(assign, "deterioration_factor", 1.0)))
             det_spin.valueChanged.connect(partial(self.update_deterioration, i))
             self.table.setCellWidget(i, 3 + len(self.gse_columns), det_spin)
 
@@ -200,46 +247,72 @@ class MovementEditor(QDialog):
             for a in assigns:
                 if getattr(a, "assigned", False):
                     gse = a.gse_obj
-                    gse_type = gse.get("type", "") if isinstance(gse, dict) else getattr(gse, "type", "")
+                    gse_type = (
+                        gse.get("type", "")
+                        if isinstance(gse, dict)
+                        else getattr(gse, "type", "")
+                    )
                     parts = code.split("/")
                     ac_group = parts[0] if len(parts) > 0 else ""
                     gate_type = parts[1] if len(parts) > 1 else ""
                     dep_arr = parts[2] if len(parts) > 2 else ""
-                    gse_desc = gse.get("description", "") if isinstance(gse, dict) else getattr(gse, "description", "")
-                    power = gse.get("power", "") if isinstance(gse, dict) else getattr(gse, "power", "")
-                    
+                    gse_desc = (
+                        gse.get("description", "")
+                        if isinstance(gse, dict)
+                        else getattr(gse, "description", "")
+                    )
+                    power = (
+                        gse.get("power", "")
+                        if isinstance(gse, dict)
+                        else getattr(gse, "power", "")
+                    )
+
                     # Create unique key for each assignment
                     assignment_key = f"{ac_group}|{gate_type}|{dep_arr}|{gse_type}|{gse_desc}|{power}"
-                    
-                    rows.append([
-                        ac_group, gate_type, dep_arr, gse_type, gse_desc, power,
-                        a.time, a.count, getattr(a, "deterioration_factor", 1.0),
-                        assignment_key  # Hidden unique identifier
-                    ])
-        
+
+                    rows.append(
+                        [
+                            ac_group,
+                            gate_type,
+                            dep_arr,
+                            gse_type,
+                            gse_desc,
+                            power,
+                            a.time,
+                            a.count,
+                            getattr(a, "deterioration_factor", 1.0),
+                            assignment_key,  # Hidden unique identifier
+                        ]
+                    )
+
         headers = [
-            "Aircraft Group", "Gate Type", "Arr/Dep",
-            "GSE Type", "Description", "Power", "Time", "Count", "Deterioration"
+            "Aircraft Group",
+            "Gate Type",
+            "Arr/Dep",
+            "GSE Type",
+            "Description",
+            "Power",
+            "Time",
+            "Count",
+            "Deterioration",
         ]
-        
+
         self.summary_table.setRowCount(len(rows))
         self.summary_table.setColumnCount(len(headers))
         self.summary_table.setHorizontalHeaderLabels(headers)
-        
+
         for i, row in enumerate(rows):
             for j, val in enumerate(row[:-1]):  # Skip the hidden key
                 item = QTableWidgetItem(str(val))
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.summary_table.setItem(i, j, item)
-        
+
         self.summary_table.resizeColumnsToContents()
-
-
-
 
     def toggle_assigned(self, row, state):
         idx = self.movement_combo.currentIndex()
-        if idx < 0: return
+        if idx < 0:
+            return
         code = self.movement_codes[idx]
         assign = self.assignments[code][row]
         assign.assigned = bool(state)

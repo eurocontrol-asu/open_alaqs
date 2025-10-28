@@ -12,7 +12,6 @@ from dateutil import rrule
 from qgis.gui import QgsDoubleSpinBox, QgsSpinBox
 from qgis.PyQt import QtWidgets
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
-from shapely import wkt
 
 from open_alaqs.alaqs_config import DEFAULT_CONCENTRATION_GRID_FACTOR
 from open_alaqs.core.alaqslogging import get_logger
@@ -50,18 +49,18 @@ class AUSTALDispersionModule(DispersionModule):
             "initial_value": False,
             "widget_type": QtWidgets.QCheckBox,
             "tooltip": "Enable to create AUSTAL input files",
-        },        
+        },
         "title": {
             "label": "Title",
             "initial_value": "",
             "widget_type": QtWidgets.QLineEdit,
-        },        
+        },
         "mixing_height_enabled": {
             "label": "Include Mixing Height",
             "initial_value": False,
             "widget_type": QtWidgets.QCheckBox,
             "tooltip": "Enable to include mixing height in AUSTAL input files",
-        },               
+        },
         "roughness_length_m": {
             "label": "Roughness Length",
             "initial_value": 0.2,
@@ -91,7 +90,7 @@ class AUSTALDispersionModule(DispersionModule):
                 "maximum": 999999.9,
                 "suffix": "m",
             },
-        },     
+        },
         "quality_level": {
             "label": "Quality Level",
             "initial_value": 1,
@@ -101,7 +100,7 @@ class AUSTALDispersionModule(DispersionModule):
                 "maximum": 10,
             },
             "tooltip": "+1 doubles the number of simulation particles",
-        },  
+        },
         "options_string": {
             "label": "Options String",
             "initial_value": "NOSTANDARD;SCINOTAT;Kmax=1",
@@ -527,7 +526,7 @@ class AUSTALDispersionModule(DispersionModule):
                             "WindSpeed": 0.7,
                             # ambient_conditions.getObukhovLength()
                             "ObukhovLength": 99999.0,
-                            "MixingHeight": 914.4
+                            "MixingHeight": 914.4,
                         }
                     )
                     self._results[hour_str].update(
@@ -904,10 +903,15 @@ class AUSTALDispersionModule(DispersionModule):
         sorted_results = self.getSortedResults()
 
         if self.MixingHeightIncluded():
-            form_line = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"', '"hm%7.1f"']
+            form_line = [
+                '"te%20lt"',
+                '"ra%5.0f"',
+                '"ua%5.1f"',
+                '"lm%7.1f"',
+                '"hm%7.1f"',
+            ]
         else:
             form_line = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"']
-
 
         with file_path.open("w") as text_file:
 
@@ -972,7 +976,7 @@ class AUSTALDispersionModule(DispersionModule):
                             ("\t").join([er for er in emission_rates]),
                         )
                     )
-                    
+
             text_file.write("\n")
             text_file.write("***\n")
 

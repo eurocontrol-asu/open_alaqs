@@ -108,9 +108,9 @@ class ContourPlotVectorLayer:
             raise Exception(f'Failed to start editing on layer "{self.layer.name()}"!')
 
         fields = self.layer.fields()
-        
+
         attr_df_name = f"{self.field_name}_kg"
-        df = df[df[attr_df_name]>0].copy()
+        df = df[df[attr_df_name] > 0].copy()
 
         for _idx, row in df.iterrows():
             if not row["geometry"]:

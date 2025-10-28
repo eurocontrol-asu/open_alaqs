@@ -467,9 +467,7 @@ class AircraftTrajectoryStore(Store, metaclass=Singleton):
                         # trajectory_dict.get("horizontal_metres", 0)
                     ),
                     # "y": 0.0,
-                    "z": conversion.convertToFloat(
-                        trajectory_dict.get("z_m", 0)
-                    ),                    
+                    "z": conversion.convertToFloat(trajectory_dict.get("z_m", 0)),
                     # "z": conversion.convertToFloat(
                     #     trajectory_dict.get("vertical_metres", 0)
                     # ),

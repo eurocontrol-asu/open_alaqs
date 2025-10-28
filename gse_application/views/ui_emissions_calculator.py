@@ -16,13 +16,19 @@ class Ui_EmissionsDialog(object):
         EmissionsDialog.setObjectName("EmissionsDialog")
         EmissionsDialog.resize(820, 600)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/icons/calculator.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(
+            QtGui.QPixmap(":/icons/icons/calculator.png"),
+            QtGui.QIcon.Normal,
+            QtGui.QIcon.Off,
+        )
         EmissionsDialog.setWindowIcon(icon)
         EmissionsDialog.setModal(True)
         self.verticalLayout = QtWidgets.QVBoxLayout(EmissionsDialog)
         self.verticalLayout.setObjectName("verticalLayout")
         self.groupBox = QtWidgets.QGroupBox(EmissionsDialog)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.groupBox.sizePolicy().hasHeightForWidth())
@@ -31,14 +37,22 @@ class Ui_EmissionsDialog(object):
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.groupBox)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.tableWidgetMovements = QtWidgets.QTableWidget(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.tableWidgetMovements.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.tableWidgetMovements.sizePolicy().hasHeightForWidth()
+        )
         self.tableWidgetMovements.setSizePolicy(sizePolicy)
         self.tableWidgetMovements.setLayoutDirection(QtCore.Qt.LeftToRight)
-        self.tableWidgetMovements.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        self.tableWidgetMovements.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.tableWidgetMovements.setEditTriggers(
+            QtWidgets.QAbstractItemView.NoEditTriggers
+        )
+        self.tableWidgetMovements.setSelectionBehavior(
+            QtWidgets.QAbstractItemView.SelectRows
+        )
         self.tableWidgetMovements.setObjectName("tableWidgetMovements")
         self.tableWidgetMovements.setColumnCount(0)
         self.tableWidgetMovements.setRowCount(0)
@@ -49,16 +63,24 @@ class Ui_EmissionsDialog(object):
         self.verticalLayout.addWidget(self.groupBox)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.horizontalLayout.addItem(spacerItem)
         self.pushButtonCalculate_Emissions = QtWidgets.QPushButton(EmissionsDialog)
-        self.pushButtonCalculate_Emissions.setObjectName("pushButtonCalculate_Emissions")
+        self.pushButtonCalculate_Emissions.setObjectName(
+            "pushButtonCalculate_Emissions"
+        )
         self.horizontalLayout.addWidget(self.pushButtonCalculate_Emissions)
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem1 = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.horizontalLayout.addItem(spacerItem1)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.groupBox_2 = QtWidgets.QGroupBox(EmissionsDialog)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.groupBox_2.sizePolicy().hasHeightForWidth())
@@ -67,14 +89,22 @@ class Ui_EmissionsDialog(object):
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.groupBox_2)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.tableWidgetOutput = QtWidgets.QTableWidget(self.groupBox_2)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.tableWidgetOutput.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.tableWidgetOutput.sizePolicy().hasHeightForWidth()
+        )
         self.tableWidgetOutput.setSizePolicy(sizePolicy)
         self.tableWidgetOutput.setLayoutDirection(QtCore.Qt.LeftToRight)
-        self.tableWidgetOutput.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        self.tableWidgetOutput.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.tableWidgetOutput.setEditTriggers(
+            QtWidgets.QAbstractItemView.NoEditTriggers
+        )
+        self.tableWidgetOutput.setSelectionBehavior(
+            QtWidgets.QAbstractItemView.SelectRows
+        )
         self.tableWidgetOutput.setObjectName("tableWidgetOutput")
         self.tableWidgetOutput.setColumnCount(0)
         self.tableWidgetOutput.setRowCount(0)
@@ -85,7 +115,9 @@ class Ui_EmissionsDialog(object):
         self.verticalLayout.addWidget(self.groupBox_2)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem2 = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.horizontalLayout_2.addItem(spacerItem2)
         self.pushButtonExport_Table = QtWidgets.QPushButton(EmissionsDialog)
         self.pushButtonExport_Table.setEnabled(False)
@@ -98,9 +130,14 @@ class Ui_EmissionsDialog(object):
 
     def retranslateUi(self, EmissionsDialog):
         _translate = QtCore.QCoreApplication.translate
-        EmissionsDialog.setWindowTitle(_translate("EmissionsDialog", "Emissions Calculator"))
+        EmissionsDialog.setWindowTitle(
+            _translate("EmissionsDialog", "Emissions Calculator")
+        )
         self.groupBox.setTitle(_translate("EmissionsDialog", "GSE List by Movement"))
-        self.pushButtonCalculate_Emissions.setText(_translate("EmissionsDialog", "Calculate Emissions"))
+        self.pushButtonCalculate_Emissions.setText(
+            _translate("EmissionsDialog", "Calculate Emissions")
+        )
         self.groupBox_2.setTitle(_translate("EmissionsDialog", "Output Emissions"))
-        self.pushButtonExport_Table.setText(_translate("EmissionsDialog", "Export table to CSV"))
-import GSE_resource_rc
+        self.pushButtonExport_Table.setText(
+            _translate("EmissionsDialog", "Export table to CSV")
+        )

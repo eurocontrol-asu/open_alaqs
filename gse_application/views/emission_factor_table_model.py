@@ -1,13 +1,19 @@
 # views/emission_factor_table_model.py
 
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
-from model.gse_types import EmissionFactor
+
 
 class EmissionFactorTableModel(QAbstractTableModel):
     HEADERS = [
-        "stage", "category", "power_range", "valid_as_of",
-        "CO_g_per_kWh", "HC_g_per_kWh", "NOx_g_per_kWh",
-        "PM_g_per_kWh", "SOx_g_per_kWh"
+        "stage",
+        "category",
+        "power_range",
+        "valid_as_of",
+        "CO_g_per_kWh",
+        "HC_g_per_kWh",
+        "NOx_g_per_kWh",
+        "PM_g_per_kWh",
+        "SOx_g_per_kWh",
     ]
 
     def __init__(self, factors):
