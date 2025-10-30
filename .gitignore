@@ -5,3 +5,4 @@ __pycache__/
 example/
 Pipfile*
 .idea/
+debugvs.txt
