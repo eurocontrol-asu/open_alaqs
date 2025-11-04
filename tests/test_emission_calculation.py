@@ -7,8 +7,14 @@ from qgis.testing.mocked import get_iface
 
 from open_alaqs.core.alaqsdblite import ProjectDatabase
 from open_alaqs.core.modules.ModuleManager import OutputAnalysisModuleRegistry
+from open_alaqs.core.modules.TableViewWidgetOutputModule import ViewType
 from open_alaqs.openalaqsdialog import OpenAlaqsResultsAnalysis
-from tests.utils import get_data_path, get_vector_layer_path
+from tests.utils import (
+    compare_text_files,
+    get_data_path,
+    get_tmp_path,
+    get_vector_layer_path,
+)
 
 start_app()
 
@@ -30,27 +36,52 @@ def datasets_to_test(request) -> list:
     print("\nINFO: Get datasets to test...")
     request.cls.datasets = [
         {
-            "title": "EHRD (Rotterdam, NL) Emission calculation test (CO)",
+            "title": "EHRD (Rotterdam, NL) Emission calculation test (CO), vector layer",
             "db_path": str(get_data_path("EHRD") / "EHRD.alaqs"),
             "inventory_path": str(get_data_path("EHRD") / "EHRD_out.alaqs"),
             "module_name": "EmissionsQGISVectorLayerOutputModule",
             "pollutant": "CO",
             "study_start_date": "2025-12-01 06:00:00",
             "study_end_date": "2025-12-01 07:00:00",
-            "vector_layer_path": str(
+            "expected_file_path": str(
                 get_vector_layer_path("EHRD/vector_layer_co.gpkg", "output")
             ),
         },
         {
-            "title": "EHRD (Rotterdam, NL) Emission calculation test (PM10)",
+            "title": "EHRD (Rotterdam, NL) Emission calculation test (PM10), vector layer",
             "db_path": str(get_data_path("EHRD") / "EHRD.alaqs"),
             "inventory_path": str(get_data_path("EHRD") / "EHRD_out.alaqs"),
             "module_name": "EmissionsQGISVectorLayerOutputModule",
             "pollutant": "PM10",
             "study_start_date": "2025-12-01 06:00:00",
             "study_end_date": "2025-12-01 07:00:00",
-            "vector_layer_path": str(
+            "expected_file_path": str(
                 get_vector_layer_path("EHRD/vector_layer_pm10.gpkg", "output")
+            ),
+        },
+        {
+            "title": "EHRD (Rotterdam, NL) Emission calculation test (CO), Emissions Table by Aggregation (CSV)",
+            "db_path": str(get_data_path("EHRD") / "EHRD.alaqs"),
+            "inventory_path": str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            "module_name": "TableViewWidgetOutputModule",
+            "pollutant": "CO",
+            "study_start_date": "2025-12-01 06:00:00",
+            "study_end_date": "2025-12-01 07:00:00",
+            "expected_file_path": str(
+                get_data_path("EHRD/EHRD_emissions_table_by_aggregation_co.csv")
+            ),
+        },
+        {
+            "title": "EHRD (Rotterdam, NL) Emission calculation test (PM10), Emissions Table by Grid Cell (CSV)",
+            "db_path": str(get_data_path("EHRD") / "EHRD.alaqs"),
+            "inventory_path": str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            "module_name": "TableViewWidgetOutputModule",
+            "pollutant": "PM10",
+            "table_view_type": ViewType.BY_GRID_CELL,
+            "study_start_date": "2025-12-01 06:00:00",
+            "study_end_date": "2025-12-01 07:00:00",
+            "expected_file_path": str(
+                get_data_path("EHRD/EHRD_emissions_table_by_grid_cell_pm10.csv")
             ),
         },
     ]
@@ -66,7 +97,7 @@ class EmissionCalculationTestCase(QgisTestCase):
         print(" [INFO] Validating Emission Calculation...")
         for dataset in self.datasets:
             # Check parameter completeness
-            assert list(dataset.keys()) == [
+            expected_parameters = [
                 "title",
                 "db_path",
                 "inventory_path",
@@ -74,8 +105,9 @@ class EmissionCalculationTestCase(QgisTestCase):
                 "pollutant",
                 "study_start_date",
                 "study_end_date",
-                "vector_layer_path",
+                "expected_file_path",
             ]
+            assert set(expected_parameters) - set(dataset.keys()) == set()
             print(f" [INFO] Testing {dataset["title"]}...")
 
             # Store the database in-memory for future use
@@ -94,25 +126,45 @@ class EmissionCalculationTestCase(QgisTestCase):
             dlg.result_file_path_changed(inventory_path)
             dlg.ui.result_file_path.setFilePath(inventory_path)
             dlg.ui.pollutants_names.setCurrentIndex(
-                dlg.ui.pollutants_names.findText(dataset["pollutant"])
+                dlg.ui.pollutants_names.findText(dataset["pollutant"])  # Set pollutant
             )
-            output_module, res = dlg.runOutputModule(OutputModule)
+            if (
+                module_name == "TableViewWidgetOutputModule"
+                and "table_view_type" in dataset
+            ):
+                # Set view type
+                # (Ugly! But no alternative until a proper core implementation is done)
+                tab_bar = dlg.ui.output_modules_tab_widget.tabBar()
+                for i in range(dlg.ui.output_modules_tab_widget.count()):
+                    if tab_bar.tabText(i) == "Emissions table":
+                        module_config_widget = dlg.ui.output_modules_tab_widget.widget(
+                            i
+                        ).widget()
+                        combobox = module_config_widget.get_widget("view_type")
+                        idx = combobox.findText(dataset["table_view_type"].value)
+                        combobox.setCurrentIndex(idx)
+                        print(
+                            f"[INFO] Emissions table view type set to {combobox.currentText()}"
+                        )
+                        break
 
-            assert str(output_module.getPollutant()) == dataset["pollutant"].lower()
-            assert output_module.getTimeStart() == datetime.datetime.fromisoformat(
-                dataset["study_start_date"]
-            )
-            assert output_module.getTimeEnd() == datetime.datetime.fromisoformat(
-                dataset["study_end_date"]
-            )
+            output_module, res = dlg.runOutputModule(OutputModule)
 
             result_tested = False
             # Checks depend on the module type
             if module_name == "EmissionsQGISVectorLayerOutputModule":
+                assert str(output_module.getPollutant()) == dataset["pollutant"].lower()
+                assert output_module.getTimeStart() == datetime.datetime.fromisoformat(
+                    dataset["study_start_date"]
+                )
+                assert output_module.getTimeEnd() == datetime.datetime.fromisoformat(
+                    dataset["study_end_date"]
+                )
+
                 assert isinstance(res, QgsMapLayer)
                 assert isinstance(res, QgsVectorLayer)
 
-                layer = QgsVectorLayer(dataset["vector_layer_path"], "output", "ogr")
+                layer = QgsVectorLayer(dataset["expected_file_path"], "output", "ogr")
                 assert layer.isValid()
 
                 assert self.checkLayersEqual(
@@ -128,6 +180,17 @@ class EmissionCalculationTestCase(QgisTestCase):
                     },
                 )
                 assert layer.crs() == res.crs()
+
+                result_tested = True
+
+            elif module_name == "TableViewWidgetOutputModule":
+                csv_path = get_tmp_path("emission_calculation_output.csv")
+                assert not csv_path.exists()
+
+                output_module.export_to_csv(csv_path)
+
+                assert csv_path.exists()
+                compare_text_files(dataset["expected_file_path"], str(csv_path))
 
                 result_tested = True
 
