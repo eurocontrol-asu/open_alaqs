@@ -221,11 +221,7 @@ class TableViewWidgetOutputModule(GridOutputModule):
 
         return row
 
-    def _on_export_csv_clicked(self):
-        filename, handler_ = QtWidgets.QFileDialog.getSaveFileName(
-            None, "Save results as CSV file", ".", "CSV (*.csv)"
-        )
-
+    def export_to_csv(self, filename: str) -> None:
         if not filename:
             return
 
@@ -233,6 +229,13 @@ class TableViewWidgetOutputModule(GridOutputModule):
             writer = csv.DictWriter(f, list(self.fields.keys()))
             writer.writeheader()
             writer.writerows(self.rows)
+
+    def _on_export_csv_clicked(self):
+        filename, handler_ = QtWidgets.QFileDialog.getSaveFileName(
+            None, "Save results as CSV file", ".", "CSV (*.csv)"
+        )
+
+        self.export_to_csv(filename)
 
         if os.path.isfile(filename):
             QtWidgets.QMessageBox.information(
