@@ -1,5 +1,6 @@
 import shutil
 from datetime import datetime
+from difflib import unified_diff
 from pathlib import Path
 from tempfile import gettempdir
 from typing import Optional
@@ -46,3 +47,13 @@ def get_vector_layer_path(relative_path: str, layer_name: Optional[str]) -> Path
         if layer_name
         else base_source_path
     )
+
+
+def compare_text_files(expected_file_path: str, obtained_file_path: str):
+    with open(expected_file_path, "r") as f:
+        expected_lines = f.readlines()
+    with open(obtained_file_path, "r") as f:
+        actual_lines = f.readlines()
+
+    diff = list(unified_diff(expected_lines, actual_lines))
+    assert diff == [], "Unexpected file contents:\n" + "".join(diff)
