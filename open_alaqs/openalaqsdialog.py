@@ -2291,6 +2291,24 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.ui.result_file_path.setFilePath(last_result_file_path)
         self.ui.result_file_path.fileChanged.connect(self.result_file_path_changed)
 
+        # Validate file before loading
+        if os.path.isfile(last_result_file_path):
+            try:
+                # Check if this is a valid results/inventory database
+                if not self.isOutputFile(last_result_file_path):
+                    logger.warning(
+                        f"File {last_result_file_path} is not a valid results file. "
+                        f"Must contain grid_3d_definition table."
+                    )
+                    # Clear the invalid path from settings
+                    s.setValue("OpenALAQS/last_result_file_path", "")
+                else:
+                    self.updateMinMaxGUI(last_result_file_path)
+                    self.populate_source_types()
+            except Exception as e:
+                logger.error(f"Error loading results file: {e}")
+                s.setValue("OpenALAQS/last_result_file_path", "")
+
         if os.path.isfile(last_result_file_path):
             self.updateMinMaxGUI(last_result_file_path)
             self.populate_source_types()
