@@ -38,7 +38,7 @@ from qgis.core import (
     QgsVectorLayerUtils,
 )
 from qgis.core.additions.edit import edit
-from qgis.gui import QgsDoubleSpinBox, QgsFileWidget
+from qgis.gui import QgsDoubleSpinBox, QgsFileWidget, QgsMessageBar
 from qgis.PyQt import QtCore, QtGui, QtWidgets
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import QMessageBox
@@ -117,7 +117,8 @@ def get_inventory_timestamps(db_path: str) -> list[datetime]:
     # TODO: Move from GUI to core/alaqsdblite.py
     time_series: list[datetime] = []
 
-    if db_path:
+    # Check if the path exist and if it is a valid one for an output file
+    if db_path and sql_interface.hasTable(db_path, "grid_3d_definition"):
         inventory_time_series = cast(
             list[dict[str, Any]],
             sql_interface.db_execute_sql(
@@ -2241,6 +2242,19 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.ui.setupUi(self)
         self.ui.configuration_splitter.setSizes([80, 200])
 
+        # Create and add a message bar in the QGIS interface
+        self.message_bar = QgsMessageBar()
+        self.message_bar.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+
+        # Insert message bar at the top of the main layout
+        # Find the main layout of the dialog
+        main_layout = self.layout()
+        if main_layout is not None:
+            # Insert the message bar at position 0 (top)
+            main_layout.insertWidget(0, self.message_bar)
+        else:
+            logger.warning("Could not find main layout to insert message bar")
+
         # initialize calculation
         self._emission_calculation_ = None
         self._emission_calculation_configuration_widget = None
@@ -2288,9 +2302,10 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         self.ui.result_file_path.setFilter("ALAQS (*.alaqs)")
         self.ui.result_file_path.setDialogTitle("Open Emission Inventory Data")
-        self.ui.result_file_path.setFilePath(last_result_file_path)
+        
         self.ui.result_file_path.fileChanged.connect(self.result_file_path_changed)
-
+        self.ui.result_file_path.setFilePath(last_result_file_path)
+        
         # Validate file before loading
         if os.path.isfile(last_result_file_path):
             try:
@@ -2423,6 +2438,37 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         }
 
     def outputModuleRequested(self, name: str) -> None:
+
+        # Check if there is a valid output file at the beginning
+        inventory_path = self.ui.result_file_path.filePath()
+        
+        if not inventory_path or not os.path.isfile(inventory_path):
+            
+            # Get a log warning
+            logger.warning("Please select a valid output database file first.")
+            
+            # Get a message warning
+            self.message_bar.pushWarning(
+                "No File Selected",
+                "Please select a valid ALAQS output database file first."
+            )
+            return None
+        
+        if not self.isOutputFile(inventory_path):
+            
+            # Get a log warning
+            logger.warning(
+                f"File {inventory_path} is not a valid results file. "
+                f"Must contain grid_3d_definition table."
+            )
+
+            # Get a message warning
+            self.message_bar.pushWarning(
+                "Invalid Results File",
+                f"Selected file is not a valid ALAQS output database."
+            )
+            return None
+
         OutputModule = OutputAnalysisModuleRegistry().get_module(name)
 
         if OutputModule is None:
@@ -2579,7 +2625,31 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         ALAQS output file
         """
         if not os.path.isfile(path):
-            raise Exception("File '%s' does not exist." % path)
+
+            # Get a log warning
+            logger.warning(f"File {path} does not exist.")
+            
+            # Show the message in the UI
+            self.message_bar.pushWarning(
+                "Invalid File",
+                f"File does not exist: {path}"
+            )
+            return
+        
+        # Check if the path is a valid output file before proceeding
+        if not self.isOutputFile(path):
+            
+            # Get a log warning
+            logger.warning(
+            f"File {path} is not a valid output file.")
+            
+            # Show the message in the UI
+            self.message_bar.pushWarning(
+                "Invalid Results File",
+                "File is not a valid output database. "
+            )
+        
+            return
 
         # Fill in the UI
         self.ui.source_names.clear()
