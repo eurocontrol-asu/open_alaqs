@@ -2244,12 +2244,13 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         # Create and add a message bar in the QGIS interface
         self.message_bar = QgsMessageBar()
-        self.message_bar.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        self.message_bar.setSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed
+        )
 
-        
         # Find the main layout of the dialog
         main_layout = self.layout()
-        
+
         if main_layout is not None:
             # Insert the message bar at the top
             main_layout.insertWidget(0, self.message_bar)
@@ -2304,10 +2305,10 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         self.ui.result_file_path.setFilter("ALAQS (*.alaqs)")
         self.ui.result_file_path.setDialogTitle("Open Emission Inventory Data")
-        
+
         self.ui.result_file_path.fileChanged.connect(self.result_file_path_changed)
         self.ui.result_file_path.setFilePath(last_result_file_path)
-        
+
         # Validate file before loading
         if os.path.isfile(last_result_file_path):
             try:
@@ -2323,7 +2324,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 else:
                     self.updateMinMaxGUI(last_result_file_path)
                     self.populate_source_types()
-                    
+
             except Exception as e:
                 logger.error(f"Error loading results file: {e}")
                 s.setValue("OpenALAQS/last_result_file_path", "")
@@ -2445,30 +2446,26 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         # Check if there is a valid output file at the beginning
         inventory_path = self.ui.result_file_path.filePath()
-        
+
         if not inventory_path or not os.path.isfile(inventory_path):
-            
+
             # Get a log warning
             logger.warning("Please select a valid output database file first.")
-            
-            # Get a message warning
-            self.message_bar.pushWarning(
-                "No File Selected",
-                "Please select a valid output database file first."
-            )
-            return None
-        
-        if not self.isOutputFile(inventory_path):
-            
-            # Get a log warning
-            logger.warning(
-                f"File {inventory_path} is not a valid output database."
-            )
 
             # Get a message warning
             self.message_bar.pushWarning(
-                "Invalid Results File",
-                "File is not a valid output database."
+                "No File Selected", "Please select a valid output database file first."
+            )
+            return None
+
+        if not self.isOutputFile(inventory_path):
+
+            # Get a log warning
+            logger.warning(f"File {inventory_path} is not a valid output database.")
+
+            # Get a message warning
+            self.message_bar.pushWarning(
+                "Invalid Results File", "File is not a valid output database."
             )
             return None
 
@@ -2631,27 +2628,22 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
             # Get a log warning
             logger.warning(f"File {path} does not exist.")
-            
+
             # Show the message in the UI
-            self.message_bar.pushWarning(
-                "Invalid File",
-                f"File does not exist: {path}"
-            )
+            self.message_bar.pushWarning("Invalid File", f"File does not exist: {path}")
             return None
-        
+
         # Check if the path is a valid output file before proceeding
         if not self.isOutputFile(path):
-            
+
             # Get a log warning
-            logger.warning(
-            f"File {path} is not a valid output database.")
-            
+            logger.warning(f"File {path} is not a valid output database.")
+
             # Show the message in the UI
             self.message_bar.pushWarning(
-                "Invalid Results File",
-                "File is not a valid output database."
+                "Invalid Results File", "File is not a valid output database."
             )
-        
+
             return None
 
         # Fill in the UI
