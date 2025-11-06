@@ -13,6 +13,7 @@ from open_alaqs.core.tools.sql_interface import (
     db_delete_records,
     db_execute_sql,
     db_update_table,
+    has_table,
 )
 
 logger = get_logger(__name__)
@@ -739,6 +740,14 @@ def add_monthly_profile(properties):
             add_monthly_profile.__name__, Exception, e, log=logger
         )
         return error
+
+
+def is_output_db_file(db_path):
+    """
+    Returns whether the DB located at db_path is a proper inventory DB,
+    also known as output DB.
+    """
+    return has_table(db_path, "grid_3d_definition")
 
 
 # #################################################

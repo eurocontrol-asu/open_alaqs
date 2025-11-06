@@ -48,7 +48,11 @@ from qgis.utils import OverrideCursor
 from open_alaqs import openalaqsuitoolkit as oautk
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core import alaqs, alaqsutils
-from open_alaqs.core.alaqsdblite import ProjectDatabase, delete_records
+from open_alaqs.core.alaqsdblite import (
+    ProjectDatabase,
+    delete_records,
+    is_output_db_file,
+)
 from open_alaqs.core.alaqslogging import get_logger, log_path
 from open_alaqs.core.EmissionCalculation import EmissionCalculation, GridConfig
 from open_alaqs.core.interfaces.Emissions import PollutantType
@@ -117,8 +121,8 @@ def get_inventory_timestamps(db_path: str) -> list[datetime]:
     # TODO: Move from GUI to core/alaqsdblite.py
     time_series: list[datetime] = []
 
-    # Check if the path exist and if it is a valid one for an output file
-    if db_path and sql_interface.hasTable(db_path, "grid_3d_definition"):
+    # Check if the path exists and if it is a valid one for an output file
+    if db_path and is_output_db_file(db_path):
         inventory_time_series = cast(
             list[dict[str, Any]],
             sql_interface.db_execute_sql(
@@ -2305,29 +2309,8 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         self.ui.result_file_path.setFilter("ALAQS (*.alaqs)")
         self.ui.result_file_path.setDialogTitle("Open Emission Inventory Data")
-
         self.ui.result_file_path.fileChanged.connect(self.result_file_path_changed)
         self.ui.result_file_path.setFilePath(last_result_file_path)
-
-        # Validate file before loading
-        if os.path.isfile(last_result_file_path):
-            try:
-
-                # Check if this is a valid results/inventory database
-                if not self.isOutputFile(last_result_file_path):
-                    logger.warning(
-                        f"File {last_result_file_path} is not a valid results file."
-                    )
-
-                    # Clear the invalid path from settings
-                    s.setValue("OpenALAQS/last_result_file_path", "")
-                else:
-                    self.updateMinMaxGUI(last_result_file_path)
-                    self.populate_source_types()
-
-            except Exception as e:
-                logger.error(f"Error loading results file: {e}")
-                s.setValue("OpenALAQS/last_result_file_path", "")
 
         if os.path.isfile(last_result_file_path):
             self.updateMinMaxGUI(last_result_file_path)
@@ -2443,12 +2426,10 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         }
 
     def outputModuleRequested(self, name: str) -> None:
-
         # Check if there is a valid output file at the beginning
         inventory_path = self.ui.result_file_path.filePath()
 
         if not inventory_path or not os.path.isfile(inventory_path):
-
             # Get a log warning
             logger.warning("Please select a valid output database file first.")
 
@@ -2458,8 +2439,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             )
             return None
 
-        if not self.isOutputFile(inventory_path):
-
+        if not is_output_db_file(inventory_path):
             # Get a log warning
             logger.warning(f"File {inventory_path} is not a valid output database.")
 
@@ -2624,18 +2604,20 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         Open a file browse window for the user to be able to locate and load an
         ALAQS output file
         """
-        if not os.path.isfile(path):
+        # Fill in the UI
+        self.ui.source_names.clear()
+        self.ui.source_types.clear()
 
+        if not os.path.isfile(path):
             # Get a log warning
             logger.warning(f"File {path} does not exist.")
 
             # Show the message in the UI
             self.message_bar.pushWarning("Invalid File", f"File does not exist: {path}")
-            return None
+            return
 
         # Check if the path is a valid output file before proceeding
-        if not self.isOutputFile(path):
-
+        if not is_output_db_file(path):
             # Get a log warning
             logger.warning(f"File {path} is not a valid output database.")
 
@@ -2644,11 +2626,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 "Invalid Results File", "File is not a valid output database."
             )
 
-            return None
-
-        # Fill in the UI
-        self.ui.source_names.clear()
-        self.ui.source_types.clear()
+            return
 
         s = QgsSettings()
         s.setValue("OpenALAQS/last_result_file_path", path)
@@ -2692,9 +2670,6 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.ui.source_names.addItem("all")
         for source_name_ in mod_.getSourceNames():
             self.ui.source_names.addItem(source_name_)
-
-    def isOutputFile(self, path):
-        return sql_interface.hasTable(path, "grid_3d_definition")
 
     def update_emissions(self):
 
