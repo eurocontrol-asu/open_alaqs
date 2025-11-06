@@ -1,7 +1,8 @@
 import shutil
 import sqlite3 as sqlite
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, cast
 
 import pandas as pd
 from qgis.utils import spatialite_connect
@@ -17,6 +18,8 @@ from open_alaqs.core.tools.sql_interface import (
 )
 
 logger = get_logger(__name__)
+
+INVENTORY_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def catch_errors(f):
@@ -748,6 +751,44 @@ def is_output_db_file(db_path):
     also known as output DB.
     """
     return has_table(db_path, "grid_3d_definition")
+
+
+def get_inventory_timestamps(db_path: str) -> list[datetime]:
+    time_series: list[datetime] = []
+
+    # Check if the path exists and if it is a valid one for an output file
+    if db_path and is_output_db_file(db_path):
+        inventory_time_series = cast(
+            list[dict[str, Any]],
+            db_execute_sql(
+                db_path,
+                """
+                    SELECT * FROM tbl_InvTime
+                """,
+                fetchone=False,
+            ),
+        )
+
+        for t in inventory_time_series:
+            time_series.append(datetime.strptime(t["time"], INVENTORY_DATE_FORMAT))
+
+        time_series.sort()
+
+    return time_series
+
+
+def get_min_max_timestamps(db_path: str) -> tuple[datetime, datetime]:
+    time_series = get_inventory_timestamps(db_path)
+
+    if len(time_series) < 2:
+        time_series.append(
+            datetime.strptime("2000-01-01 00:00:00", INVENTORY_DATE_FORMAT)
+        )
+        time_series.append(
+            datetime.strptime("2000-01-02 00:00:00", INVENTORY_DATE_FORMAT)
+        )
+
+    return (time_series[0], time_series[-1])
 
 
 # #################################################

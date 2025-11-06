@@ -22,7 +22,7 @@ import os
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import geopandas as gpd
 from qgis.core import (
@@ -51,6 +51,8 @@ from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqsdblite import (
     ProjectDatabase,
     delete_records,
+    get_inventory_timestamps,
+    get_min_max_timestamps,
     is_output_db_file,
 )
 from open_alaqs.core.alaqslogging import get_logger, log_path
@@ -63,7 +65,7 @@ from open_alaqs.core.modules.ModuleManager import (
     OutputDispersionModuleRegistry,
     SourceModuleRegistry,
 )
-from open_alaqs.core.tools import conversion, sql_interface
+from open_alaqs.core.tools import conversion
 from open_alaqs.core.tools.csv_interface import (
     read_csv_to_dict,
     read_csv_to_geodataframe,
@@ -73,9 +75,6 @@ from open_alaqs.core.utils.qt import populate_combobox
 from open_alaqs.enums import AlaqsLayerType
 
 logger = get_logger(__name__)
-
-
-INVENTORY_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 class Austal2000RunError(Exception):
@@ -115,46 +114,6 @@ def log_activity(f):
         return f(*args, **kwargs)
 
     return wrapper
-
-
-def get_inventory_timestamps(db_path: str) -> list[datetime]:
-    # TODO: Move from GUI to core/alaqsdblite.py
-    time_series: list[datetime] = []
-
-    # Check if the path exists and if it is a valid one for an output file
-    if db_path and is_output_db_file(db_path):
-        inventory_time_series = cast(
-            list[dict[str, Any]],
-            sql_interface.db_execute_sql(
-                db_path,
-                """
-                    SELECT * FROM tbl_InvTime
-                """,
-                fetchone=False,
-            ),
-        )
-
-        for t in inventory_time_series:
-            time_series.append(datetime.strptime(t["time"], INVENTORY_DATE_FORMAT))
-
-        time_series.sort()
-
-    return time_series
-
-
-def get_min_max_timestamps(db_path: str) -> tuple[datetime, datetime]:
-    # TODO: Move from GUI to core/alaqsdblite.py
-    time_series = get_inventory_timestamps(db_path)
-
-    if len(time_series) < 2:
-        time_series.append(
-            datetime.strptime("2000-01-01 00:00:00", INVENTORY_DATE_FORMAT)
-        )
-        time_series.append(
-            datetime.strptime("2000-01-02 00:00:00", INVENTORY_DATE_FORMAT)
-        )
-
-    return (time_series[0], time_series[-1])
 
 
 class OpenAlaqsAbout(QtWidgets.QDialog):
@@ -2926,34 +2885,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         )
 
     def getTimeSeries(self, db_path="") -> list[datetime]:
-        from datetime import timedelta
-
-        from dateutil import rrule
-
-        if not db_path:
-            return []
-
-        try:
-            time_series_ = get_inventory_timestamps(db_path)
-        except Exception as e:
-            logger.warning("Database error: '%s'" % (e))
-
-            # TODO OPENGIS.ch: not very sure if this `except` block makes much sense,
-            # since if `get_inventory_timestamp` fails, there is no point for `get_min_max_timestamps` to pass.
-            # I would consider to remove this and simplify the function.
-            (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path)
-            time_series_ = []
-            for _day_ in rrule.rrule(
-                rrule.DAILY, dtstart=time_start_calc_, until=time_end_calc_
-            ):
-                for hour_ in rrule.rrule(
-                    rrule.HOURLY,
-                    dtstart=_day_,
-                    until=_day_ + timedelta(days=+1, hours=-1),
-                ):
-                    time_series_.append(hour_.strftime(INVENTORY_DATE_FORMAT))
-            time_series_.sort()
-
+        time_series_ = get_inventory_timestamps(db_path)
         return time_series_
 
     def resetModuleConfiguration(self, module_names):

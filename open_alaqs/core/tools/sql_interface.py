@@ -73,7 +73,10 @@ def query_text(database_path, sql_text):
 
 def has_table(database_path, table_name):
     """
-    Check if a database at path
+    Check if a database at database_path contains the table_name.
+    Note that this method will not throw exceptions. Instead, it
+    will return False on any edge case, like unexistent database_path.
+
     :param database_path: the path to the database that is being queried
     :param table_name: the table name that is searched for
     :return bool: table found or not
