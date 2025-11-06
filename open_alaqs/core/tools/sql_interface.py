@@ -71,8 +71,7 @@ def query_text(database_path, sql_text):
             pass
 
 
-# TODO: Remove, not being used.
-def hasTable(database_path, table_name):
+def has_table(database_path, table_name):
     """
     Check if a database at path
     :param database_path: the path to the database that is being queried
