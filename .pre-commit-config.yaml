@@ -38,3 +38,7 @@ repos:
     rev: "7.0.0"
     hooks:
       - id: flake8
+
+ci:
+  autofix_prs: false  # Allows us to apply fixes by hand (via GitHub comment: pre-commit.ci autofix)
+  autoupdate_schedule: quarterly  # Cannot be disabled, so choose the less frequent option
