@@ -153,12 +153,20 @@ For more detailed information on how to use ALAQS, the project files and expecte
 
 ### Code style
 
-Use pre-commit:
+Use pre-commit locally:
 
 ```
 pip install pre-commit
 pre-commit install
 ```
+
+Use pre-commit-ci autofix in a Pull Request (if the pre-commit-ci check detected some issues):
+
+  + Add the following comment to the PR:
+
+        pre-commit.ci autofix
+
+    Which will create a commit with formatting fixes by pre-commit-ci.
 
 
 ### Debugging
