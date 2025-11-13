@@ -48,6 +48,8 @@ I use [**Shields IO**](https://shields.io/) for making badges. It is a simple an
     - [Install dependencies](#install-dependencies)
     - [Install OpenALAQS](#install-openalaqs)
   - [Quick start](#quick-start)
+  - [GSE Application](#gse-application)
+
   - [Development](#development)
     - [Debugging](#debugging)
     - [Updating the OpenALAQS database templates](#updating-the-openalaqs-database-templates)
@@ -68,6 +70,8 @@ Download and install QGIS on your operating system following the official [QGIS 
 
 If you are running on Windows, you should install via [OSGeo4W installer](https://qgis.org/resources/installation-guide/#osgeo4w-installer) following the `Advanced Install` route.
 
+> **Note:** If not installed using the OSGeo4W Network Installer, please uninstall the old version and install the new version using the OSGeo4W Network Installer or follow the installation guide from QGIS. During the installation process, accept the unmet dependencies and license agreements.
+
 
 ### Install dependencies
 
@@ -75,26 +79,28 @@ OpenALAQS is built on top of QGIS and a few external libraries that require sepa
 
 You can find the list of libraries in the file `requirements.txt`.
 
-You can either `pip install` them in the Python environment used by QGIS, or if you are using OSGeo4W installation,
-please find the packages in the "Select Packages".
+**Primary method:** Use QPIP (pip Dependencies Manager for QGIS Plugins) to check and install the required dependencies directly in the QGIS UI.
 
+**Alternative method:** Install the libraries manually using `pip install` in the Python environment used by QGIS:
 
-Now finish the setup by accepting the unmet dependencies and accepting the license agreements.
-
-> If not installed using the OSGeo4W Network Installer, please uninstall the old version and install the new version using the OSGeo4W Network Installer or follow the installation guide from QGIS.
+```bash
+pip install -r requirements.txt
+```
 
 <details>
-<summary>OSGeo4W installation</summary>
+<summary>OSGeo4W manual installation</summary>
 
 Find and install those packages:
 
 - `qgis-ltr-full` (3.34.x or newer)
+- `python3-fiona`
 - `python3-geopandas` (2.x.x)
 - `python3-geographiclib`
-- `python3-pandas`
+- `python3-pandas` (2.2.1)
 - `python3-matplotlib`
+- `python3-numpy` (1.26.4)
+- `python3-sqlalchemy` (2.0.28)
 - `spatialite` (5.x.x)
-
 
 Search for them in the search bar, and find them under the "Libs" sub-menu and select them such that they are not to be skipped in the installation (previously installed packages are shown as "Keep" in the "New" column). For QGIS you should select the latest version in the "Desktop" and "Libs" sub-menus.
 
@@ -134,11 +140,29 @@ Here you can find the following files and directories:
 - `./LSZH_AUSTAL/series.dmna` - the file containing all time-dependent parameters
 - `./LSZH_AUSTAL/01/e0001.dmna` - input grid file, with information on the user-defined grid and on the corresponding data
 
-For more detailed information on how to use ALAQS, the project files and expected outputs, read the [official documentation](TODO).
+For more detailed information on how to use OpenALAQS, the project files and expected outputs, read the [official documentation](TODO).
+
+
+## GSE Application
+
+[(Back to top)](#table-of-contents)
+
+The **GSE (Ground Support Equipment) Application** is a standalone desktop tool for assigning GSE to aircraft movements and calculating emissions. Results can be exported as CSV files or saved back to OpenALAQS database files (.alaqs).
+
+
+
+### Running the GSE Application
+
+From the `gse_application` directory, run:
+
+```bash
+python gse.py
+```
+
+For detailed information on installation, usage, and features, see the [GSE Application README](gse_application/README.md).
 
 
 ## Development
-
 [(Back to top)](#table-of-contents)
 
 1. Clone this repository.
