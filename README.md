@@ -48,6 +48,8 @@ I use [**Shields IO**](https://shields.io/) for making badges. It is a simple an
     - [Install dependencies](#install-dependencies)
     - [Install OpenALAQS](#install-openalaqs)
   - [Quick start](#quick-start)
+    - [Example Files](#example-files)
+    - [EHRD Example Study](#ehrd-example-study)
   - [GSE Application](#gse-application)
 
   - [Development](#development)
@@ -127,20 +129,29 @@ If this is the case then the installation has been successful.
 
 [(Back to top)](#table-of-contents)
 
-Find an example study in the `example/LSZH` folder.
+### Example Files
+
+Example study files are provided to help you get started with OpenALAQS:
+
+- **For OpenALAQS v4.0.0:** Use the training example from `documents/Example-Training.zip`
+- **For OpenALAQS v4.0.1+:** Use the example files from the `example/EHRD` folder, which includes 3D aircraft profiles support
+
+### EHRD Example Study
+
+Find an example study in the `example/EHRD` folder.
 
 Here you can find the following files and directories:
 
-- `./LSZH.alaqs` - the main ALAQS database, containing spatial and statistical information for a study in Zurich airport.
-- `./LSZH_out.alaqs` - the processed ALAQS database, containing spatial and statistical information for a study in Zurich airport.
-- `./LSZH_movements.csv` - the movements data in the study, used to generate `./LSZH_out.alaqs`.
-- `./LSZH_meteo.csv` - the meteorological data in the study, used to generate `./LSZH_out.alaqs`.
-- `./LSZH_AUSTAL/*` - a directory containing all files generated using OpenALAQS to be used as ALAQS input files.
-- `./LSZH_AUSTAL/austal.txt` - the file containing all main input parameters except for time-dependent parameters
-- `./LSZH_AUSTAL/series.dmna` - the file containing all time-dependent parameters
-- `./LSZH_AUSTAL/01/e0001.dmna` - input grid file, with information on the user-defined grid and on the corresponding data
+- `./EHRD.alaqs` - the main ALAQS database, containing spatial and statistical information for a study of the Rotterdam The Hague airport.
+- `./EHRD_out.alaqs` - the processed ALAQS database, containing spatial and statistical information for a study of the Rotterdam The Hague airport.
+- `./EHRD_movements.csv` - the movements data in the study, used to generate `./EHRD_out.alaqs`.
+- `./EHRD_meteo.csv` - the meteorological data in the study, used to generate `./EHRD_out.alaqs`.
+- `./EHRD_AUSTAL/*` - a directory containing all files generated using OpenALAQS to be used as ALAQS input files.
+- `./EHRD_AUSTAL/austal.txt` - the file containing all main input parameters except for time-dependent parameters.
+- `./EHRD_AUSTAL/series.dmna` - the file containing all time-dependent parameters.
+- `./EHRD_AUSTAL/01/e0001.dmna` - input grid file, with information on the user-defined grid and on the corresponding data.
 
-For more detailed information on how to use OpenALAQS, the project files and expected outputs, read the [official documentation](TODO).
+For more detailed information on how to use OpenALAQS, the project files and expected outputs, read the [User Guide](documents/USER_GUIDE.md).
 
 
 ## GSE Application
