@@ -84,6 +84,21 @@ def datasets_to_test(request) -> list:
                 get_data_path("EHRD/EHRD_emissions_table_by_grid_cell_pm10.csv")
             ),
         },
+        {
+            "title": "EHRD (Rotterdam, NL) Emission calculation test for Movement Source (CO), vector layer",
+            "db_path": str(get_data_path("EHRD") / "EHRD.alaqs"),
+            "inventory_path": str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            "module_name": "EmissionsQGISVectorLayerOutputModule",
+            "source_type": "MovementSource",
+            "pollutant": "CO",
+            "study_start_date": "2025-12-01 06:00:00",
+            "study_end_date": "2025-12-01 07:00:00",
+            "expected_file_path": str(
+                get_vector_layer_path(
+                    "EHRD/vector_layer_co_movement_source_centroids.gpkg", "output"
+                )
+            ),
+        },
     ]
 
 
@@ -125,6 +140,15 @@ class EmissionCalculationTestCase(QgisTestCase):
             dlg = OpenAlaqsResultsAnalysis(self.plugin.iface)
             dlg.result_file_path_changed(inventory_path)
             dlg.ui.result_file_path.setFilePath(inventory_path)
+
+            if "source_type" in dataset:
+                idx = dlg.ui.source_types.findText(dataset["source_type"])
+                if idx != -1:
+                    dlg.ui.source_types.setCurrentIndex(idx)
+                    print(
+                        f"[INFO] Emissions source type set to {dataset["source_type"]}"
+                    )
+
             dlg.ui.pollutants_names.setCurrentIndex(
                 dlg.ui.pollutants_names.findText(dataset["pollutant"])  # Set pollutant
             )
