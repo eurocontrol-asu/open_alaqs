@@ -81,7 +81,7 @@ OpenALAQS is built on top of QGIS and a few external libraries that require sepa
 
 You can find the list of libraries in the file `requirements.txt`.
 
-**Primary method:** Use QPIP (pip Dependencies Manager for QGIS Plugins) to check and install the required dependencies directly in the QGIS UI.
+**Primary method:** Use QPIP (Python Dependency Manager for QGIS Plugins) to check and install the required dependencies directly in the QGIS UI. See the **Install OpenALAQS** section for details.
 
 **Alternative method:** Install the libraries manually using `pip install` in the Python environment used by QGIS:
 
@@ -117,7 +117,17 @@ Once you download the `.zip` file, go to QGIS, open the "Plugins", then "Manage 
 In the newly opened window, select the "Install from ZIP" on the left sidebar.
 Then select the recently downloaded `.zip` file and click "Install Plugin".
 
-QGIS will automatically install your plugin in the appropriate location.
+While installing OpenALAQS:
+
+  + QGIS will first ask you to install its plugin dependency, called QPIP. Click `OK`.
+
+    ![img.png](./open_alaqs/assets/install_plugin_dependencies.png)
+
+  + Once QPIP is installed, QPIP asks to install the Python dependencies of OpenALAQS. If there is any conflicted dependency (marked in yellow), make sure you select a proper `Action` that allows OpenALAQS to find the required dependency version, like in the image below. Then click `OK`.
+
+    ![img.png](./open_alaqs/assets/install_dependencies_via_qpip.png)
+
+After that, QGIS will automatically install OpenALAQS in the appropriate location.
 
 At this point the OpenALAQS toolbar is visible below the default QGIS toolbars.
 If this is the case then the installation has been successful.
