@@ -75,7 +75,7 @@ The program is the successor of AUSTAL2000 (which was previously used with OpenA
 AUSTAL 3.3.0 (released on 22.03.2024) has been developed and tested under Windows and Linux. It is exclusively provided, free of charge under the GNU Public Licence, from the dedicated webpage
 of the German Environment Agency.
 
-No installation is needed for use with OpenALAQS as the executables are already included in the OpenALAQS package.
+AUSTAL must be installed separately. For more information and links, see the [AUSTAL README](../documents/austal/AUSTAL.md)
 
 ## [COPERT](#copert)
 [(Back to top)](#table-of-contents)

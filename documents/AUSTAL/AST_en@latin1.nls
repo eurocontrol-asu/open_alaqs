@@ -1,0 +1,700 @@
+# language definitions "nls/en/AST_en@latin1"
+# 3.0.3
+**** austal
+0000 Dispersion model AUSTAL, version %s
+0001 version
+0002 Please enter the working directory for this dispersion calculation:
+0003    Dispersion model AUSTAL, version %s\n
+0004 MSGALLOC: %s - %s/%s bytes\n
+0005 TMNCOUNT: %d arrays, %d bytes, %d particles\n
+0006 Server done
+0007 AUSTAL terminated because of an error.
+0008 AUSTAL terminated because of invalid input.
+0009 AUSTAL finished.
+0010 Press [Return]!\n
+0011 AUSTAL aborted.
+0012    Copyright (c) Umweltbundesamt, Dessau-Roßlau, 2002-2019
+0013    Copyright (c) Janicke Consulting, Überlingen, 1989-2019
+0014    Working directory: %s \n
+0015 Can't use the given working directory!
+0016 Program created at %s\n
+0017 The program is running on host \"%s\".\n\n
+0018 A library of wind fields is created for complex terrain only!
+0019 >>> The program VDISP has terminated with the following message:
+0020 >>> A plume rise value of 0 is substituted.
+0021 >>> %d more cases of this kind!\n
+0022 Evaluation of results:\n
+0023 ======================\n\n
+0025      DRY: Yearly average of dry deposition\n
+0026      WET: Yearly average of wet deposition\n
+0027      Y00: Yearly average of concentration/frequency of odour hours\n
+0028      Dnn: Highest daily average of concentration with nn exceedances\n
+0029      Hnn: Highest hourly average of concentration with nn exceedances\n\n
+0030 =====================================================================\n\n
+0031 WARNING: One or more sources are lower than 10 m.\n
+0032          Therefore, the listed maximum values are possibly\n
+0033          not relevant for an assessment!\n\n
+0034 Main done
+0035 Main finished
+0036 >>> Note: A dispersion calculation with AUSTAL is in general not compliant with TA Luft.
+0037 >>> Deviation from the standard (program call option -x)!\n
+0038 >>> Deviation from the standard (existing DEF files in subdirectory work are used)!\n
+**** TalInp
+0000 BLM option requires NOSTANDARD!
+0001 No BLM options allowed if BLM version is explicitly set!
+0002 Options SPREAD and PRFMOD can not be applied at the same time!
+0003 Internal error!
+0004 *** Invalid name \"%s\" *** (TalInp.getCmpIndex)\n
+0005 To this parameter no value is assigned!
+0006 To this parameter too many values are assigned!
+0007 The value string is too long!
+0008 Unknown parameter name!
+0009 The values are not valid representations of numbers!
+0010 This parameter can not be time-dependent!
+0011 Number of expected values: %d, found: %d!
+0012 Can't read file \"%s\"!
+0013 =============================== Start of input ==============================\n
+0014 Error in input line %d: %s\n%s
+0015 ================================ End of input ===============================\n
+0016 Buffer overflow at input line %d!
+0017 Standard register %s (%08x) is used.\n
+0018 Non-standard register %s (%08x) is used.
+0019 Z0: ggcs=%s, delta=%1.1f
+0020 %10.1lf <= x <= %10.1lf\n%10.1lf <= y <= %10.1lf
+0021 Z0: section for source %02d (x=%1.1lf,y=%1.1lf,h=%1.1lf):
+0022 xll=%1.1lf,yll=%1.1lf\n%s-> z0=%1.4lf
+0023 Z0: Representation in zone %d: source %02d (%1.0lf, %1.0lf) -> (%1.0lf, %1.0lf)\n
+0024 The maximum steepness of the surface
+0025  in grid %d
+0026  is %1.2lf (%1.2lf).\n
+0027 The surface definition file \"%s\" is missing!
+0028 Improper structure of file \"%s\"!
+0029 Missing grid parameters in file \"%s\"!
+0030 Inconsistent grid parameters in file \"%s\"!
+0031 >>> The height of the source %d is less than 1.2 times the height of the building %d.
+0032 >>> The height of the source %d is less than 1.2 times the height of the building at i=%2d, j=%2d.
+0033 >>> %d additional cases.
+0034 The surface definition file \"%s\" can not be read!
+0035 The surface profile \"%s\" can not be written!
+0036 Computational area and surface profile are not defined\n in the same coordinate system and zone!
+0037 Computational area: %7.0lf < x < %7.0lf,  %7.0lf < y < %7.0lf\n
+0038 Surface profile: %7.0lf < x < %7.0lf,  %7.0lf < y < %7.0lf\n
+0039 The computational area is not completely within the digitized area!
+0040 Missing grid definition!
+0041 Grids must have increasing mesh size!
+0042 The increase in mesh size is not a factor 2!
+0043 Left border (x0) must be given!
+0044 Lower border (y0) must be given!
+0045 The left border (x0) of grid %d is not appropriate!
+0046 The lower border (y0) of grid %d is not appopriate!
+0047 Invalid number of intervals in x-direction (nx) in grid %d!
+0048 An even number of intervals in x-direction (nx) is required in grid %d!
+0049 The right border (x3) of grid %d is not appropriate!
+0050 Invalid value of the right border (x3) of grid %d!
+0051 Number of intervals in x-direction (nx) is missing!
+0052 Left inner border (x1) of grid %d is not appropriate!
+0053 Right inner border (x2) of grid %d is not appropriate!
+0054 Invalid number of intervals in y-direction (ny) in grid %d!
+0055 Even number of intervals in y-direction (ny) is required in grid %d!
+0056 Upper border (y3) of grid %d not appropriate!
+0057 Invalid value of the upper border (y3) of grid %d!
+0058 Number of intervals in y-direction (ny) is missing!
+0059 Lower inner border (y1) of grid %d is not appropriate!
+0060 Upper inner border (y2) of grid %d is not appropriate!
+0061 There must be only one grid with the largest mesh size!
+0062 Grid %d is not contained by a grid with larger mesh size!
+0063 Inner areas of grids with equal mesh size (%d und %d) should not overlap!
+0064 Number of intervals in x-direction of grid %d is larger than %d!
+0065 Number of intervals in y-direction of grid %d is larger than %d!
+0066 The parameter \"%s\" requires option NOSTANDARD!
+0067 The parameter \"%s\" is not set time-dependent and therefore ignored!
+0068 The mixing layer height can not be defined in combination with a AKS!
+0073 Precipitation (wet deposition) can not be used in combination with a AKS!
+0074 There can not both Gauss/Krueger coordinates (gx,gy)\nand UTM coordinates (ux,uy) be used!
+0075 Incomplete definition of Gauss/Krueger or UTM coordinates!
+0076 If neither Gauss/Krueger nor UTM coordinates are given,\nthe roughness length z0 must be given!
+0077 The roughness length z0 has an invalid value!
+0078 The quality level qs has an invalid value!
+0079 There are no sources defined!
+0080 There are no stack heights hq defined!
+0081 The height hq of source %d has an invalid value (>500m)!
+0082 The height hq of source %d is less than 10 m.
+0083 The extension aq of source %d has an invalid value!
+0084 The extension bq of source %d has an invalid value!
+0085 The extension cq of source %d has an invalid value (>500m)!
+0086 The diameter dq of source %d has an invalid value!
+0087 The exhaust velocity vq of source %d has an invalid value!
+0089 The angle of rotation wq of source %d has an invalid value!
+0090 The grid source index %02d.iq is not an integer value!
+0091 The grid source file '%s' is missing!
+0092 The grid source directory '%s' is missing!
+0093 The length of building %d has an invalid value (<0)!
+0094 Building %d: For bb<0 (cooling tower) the value ab=0 is required!
+0095 The height of builing %d has an invalid value (<0)!
+0096 The maximum height of the buildings is %1.1f m.
+0097 The quality rank qb has an invalid value!
+0098 There are no vertical intervals defined!
+0099 The vertical grid must start at h=0!
+0100 The values of the vertical grid must be monotonously increasing!
+0101 The given vertical grid hh is ignored!
+0102 Definition of the vertical grid:\n%s
+0103 Definition of the computational grid:\n
+0104 Source %d outside of the computational area!
+0105 The value of z0 could not be determined. Cause:
+0106 File \"%s\" not found or invalid.
+0107 File \"%s\": Left border (xmin) undefined.
+0108 File \"%s\": Lower border (ymin) undefined.
+0109 File \"%s\": Mesh size (delta) undefined.
+0110 File \"%s\": Coordinate system (ggcs) undefined\nor invalid (allowed values: UTM or GK).
+0111 File \"%s\": The data array must be 2-dimensional (dims 2).
+0112 File \"%s\": the lower bound (lowb) of index j is not equals 1.
+0113 File \"%s\": the lower and upper bounds (lowb, hghb) of index i are not identical.
+0114 File \"%s\": The sequence parameter (sequ) is undefined.
+0115 File \"%s\": The sequence parameter (sequ) is not \"j-,i+\".\nThe data must be stored from North to South. Each row (x-direction)\nconsists of a sequence of digits between 0 und 9. Index j denotes\nthe y-direction, index i runs formally from 0 to 0.
+0116 File \"%s\": The coordiante system (%s) is not the required one (%s).
+0117 The source center (%1.1lf,%1.1lf) could not be transformed to\nGauss/Krueger zone %d.
+0118 The source center (%1.1lf,%1.1lf) is outside of the region\ncovered by file \"%s\".
+0119 Allowed values are: %10.1lf <= x <= %10.1lf\n                      %10.1lf <= y <= %10.1lf
+0120 An error occured in the check of the data of file \"%s\".\nCheck if the values are correctly stored!\n(rows with integers between 0 and 9 without blanks).
+0121 Unspecified error
+0122 The average value of z0 determined from the register is %1.3lf m.\n
+0123 The value of z0 is rounded to %2.2lf m.
+0124 The parameter d0 has an invalid value!
+0125 Source strength for substance \"odor\" ignored.
+0126 There are no emitted substances given!
+0127 The monitor point %02d is outside of the computational area!.
+0128 The monitor points must be given with x- und y-coordinate!
+0129 The monitor point %02d is above the computational grid!
+0130 The creation of a time series file requires a meteorological\ntime series (AKTerm, parameter az)!
+0131 No time series found and neither AKTerm nor AKS are given!
+0132 The input file contains time dependent parameters, but there is no file \n%s\ncontaining their time dependent values!
+0133 The parameter \"%s\" depends on the meteorological situation, but there is no file\n%s\ncontaining the values!
+0134 Please note further hints in the log-file!
+0135 The file \"%s\" has improper structure!.
+0136 The time series file \"%s\" could not be read.
+0137 The time series file \"%s\" is used.
+0138 The time series comprises more than one year.\nOnly %d intervals are allowed!
+0139 WARNING: no valid values of HM found in %s!
+0140 Values of HM found in %s ignored.
+0141 No valid values folund for \"ri\" (%s)!
+0142 Precipitation rate \"ri\" must be declated as time-dependent!
+0143 Time series of \"ri\" is ignored (%s).
+0144 The anemometer height ha=%1.1lf m is used.
+0145 The parameter \"az %s\" is ignored.
+0146 The parameter \"as %s\" is ignored.
+0147 The AKTerm series comprises more than one year.\nOnly %d intervals are allowed!
+0148 Availability of AKTerm data %4.1f %%.
+0149 Time series file \"%s\" written.
+0150 AKTerm not written as time series \"%s\"!
+0151 Improper structure of time series \"%s\"!
+0152 Missing element \"%s\" in time series!
+0153 Wrong position of element \"%s\" within the time series!
+0154 The data type of parameter \"%s\" of the time series is not the required one!
+0155 Missing parameter \"%s\" in the time series!
+0156 The parameter \"%s\" in the time series must be given as FLOAT number!
+0157 The length of interval %d of the time series is not %d seconds!
+0158 The surface profile for grid %d can not be used!
+0159 The surface profile for grid %d could not be created!
+0160 Incomplete set of surface profiles!
+0161 There exist errors in the definition of the computational grid!
+0162 For complex terrain the position of the anemometer must be given!
+0163 The position of the anemometer is outside of the computational area!
+0164 The value of parameter \"%s\" must not be given using absolute coordinates!
+0165 At most 20 monitor points are accepted!
+0166 The value of parameter \"lc\" must be either \"C\" or \"german\"!
+0167 The set of parameters for DMKp must be given in the form DMKp={a1;a2;a3;a4;a5;da;fk;fs;hs}!
+0168 Buildings must be defined EITHER directly OR as grid pattern in a separate file!
+0169 The grid pattern file \"%s\" can not be read!
+0170 Format of the grid pattern file: The dimension (dims) is unequal 2 or the element size (size) is unequal 4!
+0171 Format of the grid pattern file: The data format must be of type integer (e.g.. \"form  %%2d\")!
+0172 Format of the grid pattern file: The parameter \"dz\" is undefined or less than 1!
+0173 Format of the grid pattern file: One of the parameters \"x0\", \"y0\" or \"dd\" is undefined or invalid!
+0174 The vertical grid can not be created (more than 100 points)!
+0175 The vertical grid must extend at least to twice the height of the heighest building!
+0176 The given value of \"nz\" is larger than the actual number of vertical intervals!
+0177 A coarser grid must not have a smaller value of \"nz\"!
+0178 The finest grid must extend at least to twice the height of the heighest building!
+0179 All grids except of the finest one must have the same vertical extension!
+0180 Existing wind field library is used.
+0181 Wind field library has been created.
+0182 There are no time variable parameters given!
+0183 The working directory \"%s\" could not be created!
+0184 The content of directory \"%s\" could not be deleted!
+0185 No surface profiles have been found!
+0186 The existing wind field library could not been cleared!
+0187 The directory for the wind field library could not be created!
+0188 The wind field library could not be created (error %d)!
+0189 The program \"taldia\" could not be executed!
+0190 Path name too long!
+0191 A time interval other than 3600 requires the file \"series.dmna\"!
+0192 The work files could not be created!
+0193 Check sum
+0194 >>> Deviation from the standard (option NOSTANDARD)!\n
+0195 >>> Deviation from the standard (modified settings file %s.settings)!\n
+0196 Existing terrain file zg00.dmna is used.
+0197 Existing terrain files zg0*.dmna are used.
+0198 Precipitation file %s read in [%d,%d].
+0199 g/m³
+0200 µg/m³
+0201 mg/m³
+0202 pg/m³
+0203 1/m³
+0204 g/(m²*d)
+0205 mg/(m²*d)
+0206 µg/(m²*d)
+0207 pg/(m²*d)
+0208 1/(m²*s)
+0209 kg/(ha*a)
+0210 %
+**** IBJstd
+0000 Can't write log-file \"%s\"!
+0001 Argument file \"%s\" not found!
+0002 Error while handling option \"%s\"!
+0003 *** Native language version \"%s\" required!
+0004 *** Error during installation of native language support \"%s\"!
+0005 Problems with native language support \"%s\"
+0006 Internal error!
+0007 Internal error (%s)!
+0008 Invalid operation (%s)!
+0009 File \"%s\" not found!
+0010 Directory \"%s\" not found!
+0011 Can't read file \"%s\"!
+0012 Can't write file \"%s\"!
+0013 Can't allocate %d bytes!
+0014 \"%s\" is not available!
+0015 Index error (%d)!
+0016 Index error (%d, %d)!
+0017 Index error (%d, %d, %d)!
+0018 Index error (%d, %d, %d, %d)!
+0019 Invalid value (%s%d)!
+0020 Invalid value (%s%e)!
+0021 Interrupted
+0022 Segmentation violation
+0023 Termination request
+0024 Abnormal termination
+0025 Unknown signal
+0026 \nABORT, SIGNAL %d\n
+**** TalHlp
+0000 Usage : austal  [-D] <path> <option> ...
+0001 -D         : Create new log file
+0002 <path>     : Directory with input file \"austal.txt\"
+0003 option: -a : Renew evaluation of calculation results
+0004         -l : Create wind field library only
+0005         -z : Create file \"series.dmna\" only
+0006         -h : List calling parameters
+0007         -help : List input parameters in file \"austal.txt\"
+0008         --language=<ln> : Use language file from subdirectory nls/<ln>
+0009 
+0010 Input parameters in file \"austal.txt\":
+0011   
+0012 ------ General declarations ----------------------------------------------
+0013 ti Title of the project
+0014 gx Geographical x-value of the reference point (Gauss/Krueger, m)
+0015 gy Geographical y-value of the reference point (Gauss/Krueger, m)
+0016 os Options separated by \";\"
+0017     ([NESTING] [-NESTING] [SCINOTAT] [LOGPLURIS] [NOSTANDARD], with NOSTANDARD also
+0018      [BS] [PRFMOD] [SORRELAX] [SPECTRUM] [NOSTDW] [NOSHEAR])
+0019 qb Quality level for representation of buildings (-3..1)
+0020 qs Quality level for dispersion calculation (-4..4)
+0021 sd Start value of random number generator
+0022 ux Geographical x-value of the reference point (UTM, m)
+0023 uy Geographical y-value of the reference point (UTM, m)
+0024 ------ Computational grid (optional) -------------------------------------
+0025 gh Name of file with surface heights 
+0026 hh Vertical grid (m) (usually set by the program)
+0027 -- In case of grid nesting for each grid:
+0028 dd Horizontal mesh width (m)
+0029 nx Number of grid cells in x-direction
+0030 ny Number of grid cells in y-direction
+0031 nz Number of grid cells in z-direction (usually set by the program)
+0032 x0 X-coordinate of lower left corner (m)
+0033 y0 Y-coordinate of lower left corner (m)
+0034 ------ Monitor points (optional) -----------------------------------------
+0035 hp height above ground (m)
+0036 xp X-coordinate (m)
+0037 yp Y-coordinate (m)
+0038 ------ Meteorology -------------------------------------------------------
+0039 as File name of the AKS (alternative to az)
+0040 az File name of the AKTerm (alternative to as)
+0041 ha Anemometer height (m)
+0042 xa X-coordinate of the anemometer position (m)
+0043 ya Y-coordinate of the anemometer position (m)
+0044 d0 Displacement height (m)
+0045 z0 Roughness length (m)
+0046 ri Precipitation rate (mm/h, must be declared as time-dependent)
+0047 ------ Position and extension of the emitting sources --------------------
+0048 xq X-coordinate of lower left corner (m)
+0049 yq Y-coordinate of lower left corner (m)
+0050 hq Installation height of the source (m)
+0051 aq Extension in x-direction (m)
+0052 bq Extension in y-direction (m)
+0053 cq Extension in z-direction (m)
+0054 wq Angle of rotation (degree counterclockwise)
+0055 iq File index for grid sources
+0056 ------ Plume rise parameters ---------------------------------------------
+0057 dq Diameter of the exhaust port (m)
+0058 ts Explicit time scale of plume rise, alternative to dq and tq (s)
+0059 tq Exhaust temperature, (deg C)
+0060 vq Exhaust velocity (m/s)
+0061 --
+0062 lq Liquid water content of the plume (kg/kg)
+0063 rq Relative humidity of the plume (%)
+0064 sq Specific huminidty of the plume (kg/kg)
+0065 zq Water load of the plume (jg/kg dry)
+0066 ------ Buildings ---------------------------------------------------------
+0067 ab Extension in x-direction (m)
+0068 bb Extension in y-direction (m)
+0069 cb Extension in z-direction (m)
+0070 wb Angle of rotation (degree counterclockwise)
+0071 xb X-coordinate of lower left corner (m)
+0072 yb Y-coordinate of lower left corner (m)
+0073 -- alternative:
+0074 rb Name of the file with buildings defined as grid pattern 
+0075 ------ Source strengths for gases ----------------------------------------
+0076 bzl  Benzene
+0077 f    Hydrogen fluoride, given as F
+0078 hg   Mercury, Hg
+0079 hg0  Elemental mercury, Hg(0)
+0080 nh3  Ammonia, NH3
+0081 no   Nitrogen monoxide, NO
+0082 no2  Nitrogen dioxide, NO2
+0083 nox  Nitrogen oxides, NOx, given as NO2
+0084 odor Odorant      
+0085 odor_nnn Rated odorant with rating factor nnn/1000
+0086 so2  Sulfur dioxide, SO2
+0087 tce  Tetrachlorethene
+0088 xx   Unspecified gas
+0089 ------ Source strengths for dust, suffix -1, -2, -3, -4, -u --------------
+0090 as   Arsenic, As
+0093 cd   Cadmium, Cd
+0095 hg   Mercury, Hg
+0096 ni   Nickel, Ni
+0097 pb   Lead, Pb
+0098 pm   Dust in general (PM10 is the sum of pm-1 and pm-2)
+0099 tl   Thallium, Tl
+0100 pm25 Dust as PM2.5
+0101 xx   Unspecified dust
+0102 ------ End of listing ----------------------------------------------------
+**** TalMtm
+0000 TMT: File \"%s\" written.
+0001 Invalid value of \"Kref\"!
+0002 Internal error!
+0003 Inconsistent data structure!
+0004 Improper array structure!
+0005 Can't create array!
+0006 Missing results for substance \"%s\"!
+0007 Parameter \"groups\" not found in file header!
+0008 TMT: Allowed exceedances changed to %d.
+0009 Can't write array!
+0010 TalEval: Unknown option \"%s\" 
+0011 TMT: Evaluation of results for substance \"%s\"
+0012 TMT: %ld daily averages (thereof invalid: %d)
+0013 Can't read file \"%s\"!
+0014 Only %ld files out of %ld found!
+0015 Error in calculation of the maximum value!
+0016 Error in writing the result!
+0017 TMT: Files created by %s.
+**** TalQtl
+0000 TalQuantil version %s %s
+0001 Calculation of highest hourly averages, percentiles or\n        exceedance frequencies
+0002 Aufruf: TalQuantil  <path>  <option> ... 
+0003 Option: -i<input>         File containig the distribution function
+0004         -g<grid>          Grid tag for output file
+0005         -o<output>        Name of the output file
+0006         -K<ident>         Identifier for output header
+0007         -s<substance>     Selected substance
+0008         -m<number>        Number of accepted exceedances
+0009 or if the flag +QTL is set in param.def:
+0010         -p<percentile>    Percentile to be calculated
+0011         -f<value>         Exceedance frequency of <value>
+0012 TQL: Calculation of short time averages for \"%s\"
+0013 TQL: Accepted number of exceedances changed to %d.
+0014 TQL: File \"%s\" written.
+0015 File \"%s\" is not a distribution table!
+0016 Internal error!
+0017 Internal error at %d,%d,%d,%d
+0018 Can't write file \"%s\"!
+0019 Can't calculate selected quantity from histogram!
+0020 Can't calculate selected quantity from list of maxima!
+0021 Only exceedances 0 to %d available!
+0022 Parameter \"name\" not found!
+0023 Substance \"%s\" not found!
+0024 Missing specification of quantity to be calculated!
+**** TalDef
+0000 Internal error!
+0001 Can't read surface profile \"%s\"!
+0002 File \"%s\" can not be written!
+0003 Use either option Blm=.. or option(s) NOSHEAR|SPREAD!
+0004 The time series \"%s\" could not be written!
+0005 The time series must start at time 0 (found \"%s\")!
+0006 Total precipitation %1.0f mm in %1.0f h.
+0007 The grid source file '%s' is missing!
+**** TalAKS
+0000 %s: Class %d mit %6.4f
+0001 %s: Sum = %6.4f
+0002 Statistics \"%s\" with sum=%1.4f normalized.\n
+0003 Can't convert \"%s\" to \"%s\"!
+0004 In class %d: sum=%4.0f\n
+0005 File incomplete!
+0006 Can't read file \"%s\"!
+0007 Unexpected end of file \"%s\" at line %d!
+0008 INPUT: %s
+0009 Unexpected end of file \"%s\" at line %d (%d,%d,%d)!
+0011 Can't allocate array!
+0012 Invalid number of non-standard velocity groups!
+0013 Invalid structure of AKS!
+0014 AKS contains invalid formatted data!
+0015 File \"%s\" written.
+0016 Can't open output file \"%s\"!
+0017 %s (%1.1f mm/h), class: %1.1f, unit: %s\n\n
+0018 Wr\\Wg:
+0019      Sum\n-----+
+0020 Sum:
+0021 Average: %1.2f\n\n
+0022 - Created by %s (TalAKS %s)\n- AKS %s\n
+0023 Can't write file \"%s\"!
+0024 Either option Blm=.. or option(s) NOSHEAR|SPREAD!
+0025 Internal error!
+0026 - Created by %s (TalAKS %s): Statistics \"%s\"\n
+0027 - Formal time series for creating a wind field library\n
+0028 %d non-standard velocity groups
+0029 TalAKS %s: Conversion of AKS
+0030 Dispersion calculation will use %d situations
+0031 Only %d input files possible!
+0032 Invalid structure of option \"%s\"!
+0033 Invalid class index %d!
+0034 Unknown format >>>%s<<<!
+0035 Error reading \"%s\"!
+0036 Sum of weights = %5.5f != 1.000!
+0037 Invalid number of velocity values!
+0038 Error creating input files!
+0040 Total precipitation %1.0f mm.
+**** TalAKT
+0000 Can't read file \"%s\"!\n
+0001 Unknown row format (short line).\n
+0002 Unknown row format (new DWD format).\n
+0003 File structured according to DWD after 1998-04-01.\n
+0004 Unknown row format (old DWD format).\n
+0005 File structured according to DWD before 1998-04-01.\n
+0006 Invalid definition of anemometer height!
+0007 Insufficient number of anemometer heights!
+0008 Can't read anemometer height!
+0009 AKTerm has improper row format!
+0010 \nAKTerm \"%s\" with %d rows, format %d\n
+0011 Insufficient number of data in AKTerm!
+0012 Insufficient number of elements (<9) in line %d.
+0013 Insufficient number of elements (<15) in line %d!
+0014 Insufficient number of elements (<17) in line %d!
+0015 Invalid sequence of data %d <%s>!
+0016 EXPECTED: %d %04d-%02d-%02d.%02d:00:00
+0017 FOUND:    %d %04d-%02d-%02d.%02d:00:00
+0018 Allocation error!
+0019 Usage:  TalAKTerm <path> [<option>]\n
+0020 Option:  -a<xa>,<ya>,<ha>   Anemometer position (m)\n
+0021          -B<WindLib> Name (including path) of wind field library\n
+0022          -f<AKTerm>  Name of AKTerm\n
+0023          -l<l>       Create file WETLIB.DEF\n
+0024                      <l>= number of wind directions (2 or 36)\n
+0025          -m<month>   Time series for <month> \n
+0026          -s<seed>    Start value of random number generator\n
+0027          -u<umin>    Minimum value of wind speed, standard: %1.1f m/s\n
+0028          -z<z0>,<d0> Z0 and D0 (m), standard: %1.1f, %1.1f\n
+0029 \nWarnung: %d lines with ua=0/ra>0 or ua>0/ra=0 (ua=0 required for calms)\n\n
+**** TalBlm
+0030 Seasonal mixing height skipped.
+0031 Hm array set to %6.1f  %6.1f  %6.1f  %6.1f  %6.1f  %6.1f
+0032 Hm above ground %6.1f  %6.1f  %6.1f  %6.1f  %6.1f  %6.1f
+0033 Seasonal Hm (month %d) %1.1f -> %1.1f
+0034 Hm above ground for L=%1.1f smaller 400m: Hm=%1.1f, ground=%1.1f!
+**** TalMon
+0000 Internal error!
+0001 Can't read file \"%s\"!
+0002 Inconsistent data structure!
+0003 Can't write file \"%s\"!
+0004 Evaluation for monitor points:
+0005 ==============================
+0006  Total load
+0007 ===========
+0008  Additional load
+0009 ================
+0010 POINT   
+0011 File \"%s\" has inconsistent dimensions!
+0012 Time series \"%s\" has incompatible structure (%d)!
+0013 TMO: No concentration values for \"%s\" found!
+0014 TMO: Time series at monitor points for \"%s\"
+0015 TMO: File \"%s%s\" written.
+0016 Error in calculation of time series!
+0017 Error in writing the time series!
+**** TalPrf
+0000 Internal error!
+0001 Improper dimensions!
+0002 Incomplete header!
+0003 Improper grid!
+0004 Found: zp(%d,%d,%d)=%12.6e, expected: %12.6e
+0005 Invalid wind field!
+0006 Missing wind field library!
+0007 No wind velocity in \"%s\"!
+0008 Base fields %s and %s not suited for superposition (f1=%1.1f, f2=%1.1f)!
+0009 Can't read file\"%s\"!
+0010 Improper grid in file \"%s\"!
+0011 Missing wind field \"w%sa%d%d\"!
+0012 Missing diffusion field \"k%sa%d%d\"!
+0013 Missing diffusion field \"k%sd%d%d\"!
+0014 Missing turbulence field \"v%sa%d%d\"!
+0015 Missing turbulence field \"v%sd%d%d\"!
+0016 Missing wind field \"vx%sa%d%d\"!
+0017 Missing wind field \"vy%sa%d%d\"!
+0018 File \"zg%d%d\" not found!
+0019 File \"zp%d%d\" not found!
+0020 Library fields \"new K\" used
+0021 Library fields \"additional K\" used
+0022  (Grids 
+0023 Library fields \"new Sigmas\" used
+0024 Library fields \"additional Sigmas\" used
+0025 Wind field in library \"%s\" not found!
+0026 Invalid library name \"%s\"!
+0027 Unregistered library file \"%s\"!
+0028 Library \"%s\" contains no usable wind fields!
+0029 Library \"%s\" misses %d required fields!
+0030 Library \"%s\" contains no wind fields!
+0031 File \"%s\" not found!
+0032 Improper structure of file \"%s\"!
+0033 Anemometer position (%1.1f,%1.1f) outside of all grids!
+0034 Anemometer above top layer of wind field!
+0035 Improper wind field %s (Va=%4.2lf)!
+0036 Field \"%s\" not associated with known grids!
+0037 \"%s\" undefined!
+0038 File \"%s\": element size is %d, should be %d!
+0039 File \"%s\": rank is %d, should be 3!
+0040 File \"%s\": i-range is %d..%d, should be %d..%d!
+0041 File \"%s\": j-range is %d..%d, should be %d..%d!
+0042 File \"%s\": k-range is %d..%d, should be %d..%d!
+0043 File \"%s\": Xmin is %10.6e, should be %10.6e!
+0044 File \"%s\": Ymin is %10.6e, should be %10.6e!
+0045 File \"%s\": Zscl is %10.6e, should be %10.6e!
+0046 File \"%s\": Delta (Dd) is %10.6e, should be %10.6e!
+0047 File \"%s\": number of Sk-values less than %d!
+0048 File \"%s\": Sk[%d] is %10.6e, should be %10.6e!
+0049 File \"%s\": Sscl is %10.6e, should be %10.6e!
+0050 Can't create profile array!
+0051 Invalid profile mode (%d)!
+0052 Can't allocate header!
+0053 Wind field \"%s\" not available!
+0054 Wind field \"%s\" inconsistent!
+0055 Improper wind field (|Vs| > %4.1lf)!
+0056 Field \"%s\" inconsistent!
+0057 Can't read VALDEF from header!
+0058 PRF-server not initialized!
+0059 Undefined profile!
+0060 Can't get grid parameter!
+0061 Can't get grid array!
+0062 Can't get boundary layer parameter!
+0063 Can't get boundary layer array!
+0064 Can't allocate buffer!
+0065 Can't calculate profile array!
+0066 Can't clear old profile array!
+0067 Net type %d not implemented!
+0068 Can't create array header!
+0069 Can't detach table!
+0070 Can't update \"%s\" from [%s,%s] to [%s,%s]!
+0071 Can't attach \"%s\"!
+0072 Can't get data for printing!
+0073 Writing superposition factors to log file
+0074 Applying superposition factors from file \"%s\"
+0075 Can't read file \"%s\" with superposition factors!
+0076 Invalid number of items in SFC line (expected 9, found %d)!
+0077 No SFC line with required start time found!
+0078 SFC line does not match (expected: %s %s %1.3f %1.0f %d, found: %s %s %1.3f %1.0f %d)!
+0079 Using Hw=%1.2f instead of Ha=%1.2f for base field superposition
+0080 insufficient or missing base fields for stability class index %d
+**** TalUti
+0000 Incomprehensible file name \"%s\"
+0001 Can't read file \"%s\"!
+0002 Invalid number of dimensions for data in file \"%s\"!
+0003 Evaluation for monitor points: Additional load\n
+0004 ==============================================\n
+0005 POINT   
+0006 Error in evaluation of odour frequencies
+0007 Maximum values, 
+0008 ================
+0009 Concentration
+0010 =============
+0011 at
+0012  at z=%1.1f m
+0013 ===========
+0014 Deposition
+0015 ==========
+0016 \nMaximum odour hour frequency 
+0017 =============================
+0018   BORDER AREA!
+0019   n.a.
+**** TalUtl
+0000 All files in \"%s\" will be deleted. Continue? (y/n): 
+0001 yY
+**** TalWrk
+0002 Data for source not available!
+0003 Can't calculate plume rise!
+0004 LOC=(%d,%d,%d)/(%d,%d), A=(%5.3f,%5.3f,%5.3f)
+0005 Can't locate particle!
+0006 Can't shift particle out of body!
+0007 No memory available!
+0008 No particle handle available!
+0009 \nCurrent time interval: [%ld, %ld]\n
+0010 Forgotten particle!
+0011 Invalid particle position!
+0012 Can't interpolate fields!
+0013 Can't calculate plume rise!
+0014 No transfer data!
+0015 Index error (%d,%d,%d)!
+0016 Index error (%d,%d)!
+0017 Invalid source count %d!
+0018 Particle created inside body.\n    (position x=%1.3f, y=%1.3f, z=%1.3f)\n    Overlap of sources and buildings must be avoided!\n
+0019 Particle moved inside body!
+0020 Progress: %5.1f %%\r
+0021 Can't get grid data!
+0022 Can't get vertical grid!
+0023 Can't get general parameters!
+0024 Can't get model field %s!
+0025 Can't get particle parameter %s!
+0026 Can't get deposition probability %s!
+0027 Invalid profile mode = %d!
+0028 Improper structure of model field %s!
+0029 Improper structure of %s!
+0030 Can't get transfer array %s!
+0031 Improper structure of transfer array %s!
+0032 Can't get plume rise array!
+0033 Can't get dose array %s!
+0034 Dose array %s at [%s,%s], but parameter at [%s,%s]!
+0035 Invalid simulation interval [%s,%s]!
+0036 Can't get array of boundaries!
+0037 Reflection at z=%1.0f, but zmax(%d,%d)=%1.0f !
+0038 Zscl and Sscl must be 0!
+0039 Can't detach array!
+0040 Can't attach array!
+0041 Can't define creator for %s!
+0042 Can't initialize other server!
+0043 Moving particles for %s [%s,%s]
+0044 No data specified!
+0045 No time specified!
+0046 Can't change creator for %s!
+0047 Invalid times in %s [%s,%s]!
+0048 Particle array %s not available!
+0049 Can't define parameters!
+0050 Can't build %s [%s,%s]!
+0051 Can't update particle array %s at [%s,%s]!
+0052 Chemical reactions too fast for this time step!
+**** TalCfg
+0000 en
+0002 dry
+0003 wet
+0004 d
+0005 i
+0006 a
+0007 s
+0008 y
+0009 h
+0010 tmpa
+0011 tmpp
+0012 tmps
+0013 series
+0014 precipitation
