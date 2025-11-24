@@ -2860,6 +2860,15 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             lambda: self.runOutputModule("TimeSeriesDispersionModule")
         )
 
+        # Add AUSTAL Help Button
+        self.ui.austal_help_button = QtWidgets.QPushButton("AUSTAL Help")
+        self.ui.austal_help_button.clicked.connect(self.show_austal_help)
+        
+        # Find the layout containing the a2k_executable_path and add button next to it
+        layout = self.ui.a2k_executable_path.layout()
+        if layout is not None:
+            layout.addWidget(self.ui.austal_help_button)
+
         self.resetModuleConfiguration(
             module_names=[
                 "CSVDispersionModule",
@@ -2984,6 +2993,46 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         if os.path.isdir(dirname):
             s.setValue("OpenALAQS/last_work_directory_path", dirname)
+    
+    # Display the text when the user presses the AUSTAL HELP buttton
+    def show_austal_help(self):
+        """
+        Display AUSTAL setup instructions in a dialog
+        """
+        help_text = """
+        <b>AUSTAL Setup Instructions</b><br><br>
+        
+        <b>Download AUSTAL:</b><br>
+        Visit: <a href="https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download">
+        AUSTAL Download Page</a><br><br>
+        
+        <b>Available Versions:</b><br>
+        • Windows: AUSTAL_3.3.0.zip<br>
+        • Linux: AUSTAL_3.3.0.zip<br><br>
+        
+        <b>Installation Steps:</b><br>
+        1. Download the AUSTAL base package for your OS<br>
+        2. Extract the package to your desired location<br>
+        3. Replace austal.settings with the one provided here: <a href="https://github.com/eurocontrol-asu/open_alaqs/tree/main/documents/AUSTAL/austal.settings"> austal.settings </a> <br>
+        4. Ensure the AUSTAL executable is in your system PATH<br>
+        5. Select the austal.exe (or austal) file above<br><br>
+        
+        <b>Configuration Files:</b><br>
+        • <a href="https://github.com/eurocontrol-asu/open_alaqs/tree/main/documents/AUSTAL/austal.settings">
+        austal.settings</a> - Main AUSTAL configuration file<br>
+        • AST_en and DIA_en - English language files (included in AUSTAL distribution)<br><br>
+        
+        <b>For More Information:</b><br>
+        See <a href="https://github.com/eurocontrol-asu/open_alaqs/tree/main/documents/AUSTAL//AUSTAL.md">
+        AUSTAL.md</a> in the OpenALAQS documentation folder.
+        """
+        
+        msg_box = QtWidgets.QMessageBox(self)
+        msg_box.setWindowTitle("AUSTAL Setup Help")
+        msg_box.setText(help_text)
+        msg_box.setTextFormat(QtCore.Qt.RichText)
+        msg_box.setIcon(QtWidgets.QMessageBox.Information)
+        msg_box.exec()
 
     @catch_errors
     def run_austal(self, *args, **kwargs):
