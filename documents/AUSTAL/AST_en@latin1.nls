@@ -284,9 +284,9 @@
 0006         -h : List calling parameters
 0007         -help : List input parameters in file \"austal.txt\"
 0008         --language=<ln> : Use language file from subdirectory nls/<ln>
-0009 
+0009
 0010 Input parameters in file \"austal.txt\":
-0011   
+0011
 0012 ------ General declarations ----------------------------------------------
 0013 ti Title of the project
 0014 gx Geographical x-value of the reference point (Gauss/Krueger, m)
@@ -300,7 +300,7 @@
 0022 ux Geographical x-value of the reference point (UTM, m)
 0023 uy Geographical y-value of the reference point (UTM, m)
 0024 ------ Computational grid (optional) -------------------------------------
-0025 gh Name of file with surface heights 
+0025 gh Name of file with surface heights
 0026 hh Vertical grid (m) (usually set by the program)
 0027 -- In case of grid nesting for each grid:
 0028 dd Horizontal mesh width (m)
@@ -349,7 +349,7 @@
 0071 xb X-coordinate of lower left corner (m)
 0072 yb Y-coordinate of lower left corner (m)
 0073 -- alternative:
-0074 rb Name of the file with buildings defined as grid pattern 
+0074 rb Name of the file with buildings defined as grid pattern
 0075 ------ Source strengths for gases ----------------------------------------
 0076 bzl  Benzene
 0077 f    Hydrogen fluoride, given as F
@@ -359,7 +359,7 @@
 0081 no   Nitrogen monoxide, NO
 0082 no2  Nitrogen dioxide, NO2
 0083 nox  Nitrogen oxides, NOx, given as NO2
-0084 odor Odorant      
+0084 odor Odorant
 0085 odor_nnn Rated odorant with rating factor nnn/1000
 0086 so2  Sulfur dioxide, SO2
 0087 tce  Tetrachlorethene
@@ -386,7 +386,7 @@
 0007 Parameter \"groups\" not found in file header!
 0008 TMT: Allowed exceedances changed to %d.
 0009 Can't write array!
-0010 TalEval: Unknown option \"%s\" 
+0010 TalEval: Unknown option \"%s\"
 0011 TMT: Evaluation of results for substance \"%s\"
 0012 TMT: %ld daily averages (thereof invalid: %d)
 0013 Can't read file \"%s\"!
@@ -397,7 +397,7 @@
 **** TalQtl
 0000 TalQuantil version %s %s
 0001 Calculation of highest hourly averages, percentiles or\n        exceedance frequencies
-0002 Aufruf: TalQuantil  <path>  <option> ... 
+0002 Aufruf: TalQuantil  <path>  <option> ...
 0003 Option: -i<input>         File containig the distribution function
 0004         -g<grid>          Grid tag for output file
 0005         -o<output>        Name of the output file
@@ -517,7 +517,7 @@
 0007 ===========
 0008  Additional load
 0009 ================
-0010 POINT   
+0010 POINT
 0011 File \"%s\" has inconsistent dimensions!
 0012 Time series \"%s\" has incompatible structure (%d)!
 0013 TMO: No concentration values for \"%s\" found!
@@ -548,7 +548,7 @@
 0019 File \"zp%d%d\" not found!
 0020 Library fields \"new K\" used
 0021 Library fields \"additional K\" used
-0022  (Grids 
+0022  (Grids
 0023 Library fields \"new Sigmas\" used
 0024 Library fields \"additional Sigmas\" used
 0025 Wind field in library \"%s\" not found!
@@ -613,9 +613,9 @@
 0002 Invalid number of dimensions for data in file \"%s\"!
 0003 Evaluation for monitor points: Additional load\n
 0004 ==============================================\n
-0005 POINT   
+0005 POINT
 0006 Error in evaluation of odour frequencies
-0007 Maximum values, 
+0007 Maximum values,
 0008 ================
 0009 Concentration
 0010 =============
@@ -624,12 +624,12 @@
 0013 ===========
 0014 Deposition
 0015 ==========
-0016 \nMaximum odour hour frequency 
+0016 \nMaximum odour hour frequency
 0017 =============================
 0018   BORDER AREA!
 0019   n.a.
 **** TalUtl
-0000 All files in \"%s\" will be deleted. Continue? (y/n): 
+0000 All files in \"%s\" will be deleted. Continue? (y/n):
 0001 yY
 **** TalWrk
 0002 Data for source not available!

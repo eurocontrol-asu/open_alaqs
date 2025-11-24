@@ -40,8 +40,8 @@
 0036 WND: *** %d iterations not sufficient for grid (%d,%d) step %d!
 0037 WND: %d iterations
 0038 No convergence for grid (%d,%d) step (%d)!
-0039 @Remaining divergence = %5.3f (%d %d%d)  
-0040 @Remaining divergence = %5.3f (%d)  
+0039 @Remaining divergence = %5.3f (%d %d%d)
+0040 @Remaining divergence = %5.3f (%d)
 0041 Can't get wind field %s!
 0042 The remaining divergence is clearly too large (>%1.1f)!\nThe program will be terminated because the created wind field\nis not suited for a dispersion calculation.\n
 0043 Can't get wind field!
@@ -50,7 +50,7 @@
 0046 Can't write file \"%s\"!
 0047 Error preparing bodies!
 0048 Improper grid: a grid cell of a building touches the border at i=%d, j=%d, k=%d\n    (see file \"%s\").\n    At least one free grid cell is required between building and border!
-0049 WND: Grid:(%d,%d),  Ground: H=%1.1f m  L=%1.1f m,  Ceiling:%s 
+0049 WND: Grid:(%d,%d),  Ground: H=%1.1f m  L=%1.1f m,  Ceiling:%s
 0050 WND: \"%s\" found and used.
 0051 WND: \"%s\" written
 0052 Grid undefined!
@@ -434,7 +434,7 @@
 0027 Can't allocate memory.
 0028 Invalid mean building height
 **** TalUtl
-0000 All files in \"%s\" will be deleted. Continue? (y/n): 
+0000 All files in \"%s\" will be deleted. Continue? (y/n):
 0001 yY
 **** TalCfg
 0000 en
