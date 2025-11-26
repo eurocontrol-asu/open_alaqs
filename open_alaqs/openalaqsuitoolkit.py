@@ -137,8 +137,8 @@ def load_basemap_layers(project: QgsProject = QgsProject.instance()) -> None:
     xyz_layer_definitions = {
         "Google Satellite": "https://mt1.google.com/vt/lyrs%3Ds%26x%3D{x}%26y%3D{y}%26z%3D{z}",
         "Google Maps": "https://mt1.google.com/vt/lyrs%3Dm%26x%3D{x}%26y%3D{y}%26z%3D{z}",
-        "OpenStreetMap Standard": "http://tile.openstreetmap.org/%7Bz%7D/%7Bx%7D/%7By%7D.png",
-        "Esri Gray (light)": "http://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/%7Bz%7D/%7By%7D/%7Bx%7D",
+        "OpenStreetMap Standard": "https://tile.openstreetmap.org/%7Bz%7D/%7Bx%7D/%7By%7D.png",
+        "Esri Gray (light)": "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/%7Bz%7D/%7By%7D/%7Bx%7D",
         "Esri Imagery": "https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/%7Bz%7D/%7By%7D/%7Bx%7D",
     }
 
