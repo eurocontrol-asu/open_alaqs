@@ -11,7 +11,7 @@ def get_data_path(subfolder: Optional[str] = "") -> Path:
     Returns the path of the "data" dir for tests.
     If subfolder is given, the returned path includes the subfolder.
     """
-    return Path.cwd() / "tests" / "data" / subfolder
+    return Path(__file__).parent / "data" / subfolder
 
 
 def get_copy_path(file_path: Path) -> Path:
