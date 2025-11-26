@@ -387,7 +387,7 @@ def get_hourly_profiles():
         if len(result) > 0:
             return result
         else:
-            if result is []:
+            if result == []:
                 return None
             else:
                 raise Exception(result)
@@ -410,7 +410,7 @@ def get_daily_profiles():
         if len(result) > 0:
             return result
         else:
-            if result is []:
+            if result == []:
                 return None
             else:
                 raise Exception(result)
@@ -433,7 +433,7 @@ def get_monthly_profiles():
         if len(result) > 0:
             return result
         else:
-            if result is []:
+            if result == []:
                 return None
             else:
                 raise Exception(result)
@@ -457,7 +457,7 @@ def get_hourly_profile(profile_name):
         if len(result) > 0:
             return result
         else:
-            if result is []:
+            if result == []:
                 return None
             else:
                 raise Exception(result)
@@ -481,7 +481,7 @@ def get_daily_profile(profile_name):
         if len(result) > 0:
             return result
         else:
-            if result is []:
+            if result == []:
                 return None
             else:
                 raise Exception(result)
@@ -505,7 +505,7 @@ def get_monthly_profile(profile_name):
         if len(result) > 0:
             return result
         else:
-            if result is []:
+            if result == []:
                 return None
             else:
                 raise Exception(result)
@@ -560,7 +560,7 @@ def add_hourly_profile(properties):
         if isinstance(result, str):
             raise Exception("Problem saving profile: %s" % result)
 
-        # if result is [] or result is "" or result is None:
+        # if result == [] or result == "" or result is None:
         if len(result) == 0:
             sql_text = (
                 "INSERT INTO user_hour_profile (profile_name,h01,h02,h03,h04,h05,h06,h07,h08,h09,h10,h11,"
