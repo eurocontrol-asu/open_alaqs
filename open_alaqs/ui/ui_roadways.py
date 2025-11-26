@@ -243,6 +243,8 @@ def recalculate_emissions(fields: dict):
         msg_box.exec_()
         raise e
 
+    return True
+
 
 @catch_errors
 def populate_hourly_profiles(field):

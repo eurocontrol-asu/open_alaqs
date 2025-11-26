@@ -73,7 +73,7 @@ class TaxiwayRoute:
         return self._groups
 
     def setAircraftGroups(self, var):
-        self.__groups = var
+        self._groups = var
 
     def isDeparture(self):
         return self._departure_arrival.lower() == "d"

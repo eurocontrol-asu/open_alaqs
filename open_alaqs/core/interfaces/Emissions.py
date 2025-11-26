@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Literal, Tuple
+from typing import Literal, Optional, Tuple
 
 from shapely.geometry import GeometryCollection
 from shapely.wkt import loads
@@ -113,7 +113,7 @@ class Emission(Store):
             return loads(GeometryCollection().wkt)
         # return Spatial.ogr.CreateGeometryFromWkt(self._geometry_wkt)
 
-    def setGeometryText(self, var: str):
+    def setGeometryText(self, var: Optional[str]):
         self._geometry_wkt = var
 
     # Added for Smooth & Shift
