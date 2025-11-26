@@ -250,9 +250,9 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         the QGIS environment.
         """
         result = alaqs.load_study_setup()
-        if (result is not None) and (result is not []):
+        if (result is not None) and (result != []):
             # try and load stuff into the UI
-            study_data = alaqs.load_study_setup()
+            study_data = result
 
             self.ui.lineEditProjectName.setText(study_data["project_name"])
             self.ui.lineEditAirportName.setText(study_data["airport_name"])
@@ -468,7 +468,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         """
         profiles = alaqs.get_hourly_profiles()
         self.ui.comboBoxHourlyName.clear()
-        if (profiles is None) or (profiles is []):
+        if (profiles is None) or (profiles == []):
             return None
         else:
             for profile in profiles:
@@ -484,7 +484,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         """
         profiles = alaqs.get_daily_profiles()
         self.ui.comboBoxDailyName.clear()
-        if (profiles is None) or (profiles is []):
+        if (profiles is None) or (profiles == []):
             return None
         else:
             for profile in profiles:
@@ -499,7 +499,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         """
         profiles = alaqs.get_monthly_profiles()
         self.ui.comboBoxMonthlyName.clear()
-        if (profiles is None) or (profiles is []):
+        if (profiles is None) or (profiles == []):
             return None
         else:
             for profile in profiles:
@@ -1053,7 +1053,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         self.ui.setupUi(self)
 
         self.iface = iface
-        self.canvas = self.iface.mapCanvas()
+        self.canvas = None if iface is None else self.iface.mapCanvas()
 
         self.populate_arr_dep()
         self.populate_runways()
@@ -1130,7 +1130,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         """
         gates = alaqs.get_gates()
         self.ui.gate.clear()
-        if (gates is None) or (gates is []):
+        if (gates is None) or (gates == []):
             return None
         else:
             for gate in gates:
@@ -1147,7 +1147,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         """
         runways = alaqs.get_runways()
         self.ui.runway.clear()
-        if (runways is None) or (runways is []):
+        if (runways is None) or (runways == []):
             logger.warning("Taxiway Routes Tool: No runways found")
         else:
             for runway in runways:
@@ -1406,9 +1406,6 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
                 to_select.append(feature.id())
 
         if to_select:
-            # QGIS2
-            # layer.setSelectedFeatures(to_select)
-            # QGIS3
             layer.selectByIds([s for s in to_select])
 
         self.canvas.blockSignals(False)

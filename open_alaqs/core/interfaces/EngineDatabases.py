@@ -198,11 +198,8 @@ class HelicopterEngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singlet
                         icaoIdentifier
                     ].getEmissionIndexByMode(mode)
 
-        if not defaultIfNotFound:
-            return None
-        else:
-            # ToDo: default
-            return None
+        # ToDo: default
+        return None
 
 
 class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
@@ -315,11 +312,8 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
                         icaoIdentifier
                     ].getEmissionIndexByMode(mode)
 
-        if not defaultIfNotFound:
-            return None
-        else:
-            # ToDo: default
-            return None
+        # ToDo: default
+        return None
 
 
 # if __name__ == "__main__":
