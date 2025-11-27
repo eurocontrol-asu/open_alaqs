@@ -6,4 +6,3 @@ example/
 Pipfile*
 .idea/
 debugvs.txt
-tests/pytest.ini
