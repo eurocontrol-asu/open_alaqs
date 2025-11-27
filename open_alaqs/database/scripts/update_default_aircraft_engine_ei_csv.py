@@ -2,9 +2,10 @@ import logging
 import math
 from pathlib import Path
 
-from open_alaqs.database.scripts import constants as c
 import numpy as np
 import pandas as pd
+
+from open_alaqs.database.scripts import constants as c
 
 logging.getLogger().setLevel(logging.INFO)
 
