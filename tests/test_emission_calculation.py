@@ -35,7 +35,6 @@ def plugin_instance(request):
 def datasets_to_test(request) -> list:
     print("\nINFO: Get datasets to test...")
     request.cls.datasets = [
-
         ##################################
         # Test dataset using EHRD_out.alaqs
         ##################################
@@ -103,12 +102,9 @@ def datasets_to_test(request) -> list:
                 )
             ),
         },
-
         ##################################
         # Test dataset using ANP_out.alaqs
         ##################################
-
-
         # Pollutants
         {
             "title": "ANP - CO emissions, vector layer",
@@ -182,7 +178,6 @@ def datasets_to_test(request) -> list:
                 get_vector_layer_path("ANP/ANP_vector_layer_co2.gpkg", "output")
             ),
         },
-
         # TODO: Fix this test becuase it doesnt work
         # TableViewWidgetOutputModule
         # {
@@ -198,7 +193,6 @@ def datasets_to_test(request) -> list:
         #         get_data_path("ANP/ANP_emissions_table_by_aggregation_co.csv")
         #     ),
         # },
-
         # Source types
         {
             "title": "ANP - MovementSource, CO emissions",
@@ -210,7 +204,9 @@ def datasets_to_test(request) -> list:
             "study_start_date": "2023-03-01 06:00:00",
             "study_end_date": "2023-03-01 22:00:00",
             "expected_file_path": str(
-                get_vector_layer_path("ANP/ANP_vector_layer_co_movement_source.gpkg", "output")
+                get_vector_layer_path(
+                    "ANP/ANP_vector_layer_co_movement_source.gpkg", "output"
+                )
             ),
         },
         {
@@ -223,7 +219,9 @@ def datasets_to_test(request) -> list:
             "study_start_date": "2023-03-01 06:00:00",
             "study_end_date": "2023-03-01 22:00:00",
             "expected_file_path": str(
-                get_vector_layer_path("ANP/ANP_vector_layer_co_area_source.gpkg", "output")
+                get_vector_layer_path(
+                    "ANP/ANP_vector_layer_co_area_source.gpkg", "output"
+                )
             ),
         },
         {
@@ -236,7 +234,9 @@ def datasets_to_test(request) -> list:
             "study_start_date": "2023-03-01 06:00:00",
             "study_end_date": "2023-03-01 22:00:00",
             "expected_file_path": str(
-                get_vector_layer_path("ANP/ANP_vector_layer_co_parking_source.gpkg", "output")
+                get_vector_layer_path(
+                    "ANP/ANP_vector_layer_co_parking_source.gpkg", "output"
+                )
             ),
         },
         {
@@ -249,7 +249,9 @@ def datasets_to_test(request) -> list:
             "study_start_date": "2023-03-01 06:00:00",
             "study_end_date": "2023-03-01 22:00:00",
             "expected_file_path": str(
-                get_vector_layer_path("ANP/ANP_vector_layer_co_point_source.gpkg", "output")
+                get_vector_layer_path(
+                    "ANP/ANP_vector_layer_co_point_source.gpkg", "output"
+                )
             ),
         },
         {
@@ -262,7 +264,9 @@ def datasets_to_test(request) -> list:
             "study_start_date": "2023-03-01 06:00:00",
             "study_end_date": "2023-03-01 22:00:00",
             "expected_file_path": str(
-                get_vector_layer_path("ANP/ANP_vector_layer_co_roadway_source.gpkg", "output")
+                get_vector_layer_path(
+                    "ANP/ANP_vector_layer_co_roadway_source.gpkg", "output"
+                )
             ),
         },
     ]

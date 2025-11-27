@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from tempfile import gettempdir
 from typing import Optional
+
 import pandas as pd
 
 
@@ -49,7 +50,9 @@ def get_vector_layer_path(relative_path: str, layer_name: Optional[str]) -> Path
     )
 
 
-def compare_text_files(expected_file_path: str, obtained_file_path: str, rel_tol: float = 1e-7):
+def compare_text_files(
+    expected_file_path: str, obtained_file_path: str, rel_tol: float = 1e-7
+):
     """
     Compare two CSV files, allowing for floating-point tolerance in numeric values.
     """
