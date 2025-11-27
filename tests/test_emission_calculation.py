@@ -35,6 +35,10 @@ def plugin_instance(request):
 def datasets_to_test(request) -> list:
     print("\nINFO: Get datasets to test...")
     request.cls.datasets = [
+
+        ##################################
+        # Test dataset using EHRD_out.alaqs
+        ##################################
         {
             "title": "EHRD (Rotterdam, NL) Emission calculation test (CO), vector layer",
             "db_path": str(get_data_path("EHRD") / "EHRD.alaqs"),
@@ -97,6 +101,168 @@ def datasets_to_test(request) -> list:
                 get_vector_layer_path(
                     "EHRD/vector_layer_co_movement_source_centroids.gpkg", "output"
                 )
+            ),
+        },
+
+        ##################################
+        # Test dataset using ANP_out.alaqs
+        ##################################
+
+
+        # Pollutants
+        {
+            "title": "ANP - CO emissions, vector layer",
+            "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
+            "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
+            "module_name": "EmissionsQGISVectorLayerOutputModule",
+            "pollutant": "CO",
+            "study_start_date": "2023-03-01 06:00:00",
+            "study_end_date": "2023-03-01 22:00:00",
+            "expected_file_path": str(
+                get_vector_layer_path("ANP/ANP_vector_layer_co.gpkg", "output")
+            ),
+        },
+        {
+            "title": "ANP - PM10 emissions, vector layer",
+            "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
+            "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
+            "module_name": "EmissionsQGISVectorLayerOutputModule",
+            "pollutant": "PM10",
+            "study_start_date": "2023-03-01 06:00:00",
+            "study_end_date": "2023-03-01 22:00:00",
+            "expected_file_path": str(
+                get_vector_layer_path("ANP/ANP_vector_layer_pm10.gpkg", "output")
+            ),
+        },
+        {
+            "title": "ANP - NOx emissions, vector layer",
+            "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
+            "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
+            "module_name": "EmissionsQGISVectorLayerOutputModule",
+            "pollutant": "NOx",
+            "study_start_date": "2023-03-01 06:00:00",
+            "study_end_date": "2023-03-01 22:00:00",
+            "expected_file_path": str(
+                get_vector_layer_path("ANP/ANP_vector_layer_nox.gpkg", "output")
+            ),
+        },
+        {
+            "title": "ANP - HC emissions, vector layer",
+            "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
+            "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
+            "module_name": "EmissionsQGISVectorLayerOutputModule",
+            "pollutant": "HC",
+            "study_start_date": "2023-03-01 06:00:00",
+            "study_end_date": "2023-03-01 22:00:00",
+            "expected_file_path": str(
+                get_vector_layer_path("ANP/ANP_vector_layer_hc.gpkg", "output")
+            ),
+        },
+        {
+            "title": "ANP - SOx emissions, vector layer",
+            "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
+            "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
+            "module_name": "EmissionsQGISVectorLayerOutputModule",
+            "pollutant": "SOx",
+            "study_start_date": "2023-03-01 06:00:00",
+            "study_end_date": "2023-03-01 22:00:00",
+            "expected_file_path": str(
+                get_vector_layer_path("ANP/ANP_vector_layer_sox.gpkg", "output")
+            ),
+        },
+        {
+            "title": "ANP - CO2 emissions, vector layer",
+            "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
+            "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
+            "module_name": "EmissionsQGISVectorLayerOutputModule",
+            "pollutant": "CO2",
+            "study_start_date": "2023-03-01 06:00:00",
+            "study_end_date": "2023-03-01 22:00:00",
+            "expected_file_path": str(
+                get_vector_layer_path("ANP/ANP_vector_layer_co2.gpkg", "output")
+            ),
+        },
+
+        # TODO: Fix this test becuase it doesnt work
+        # TableViewWidgetOutputModule
+        # {
+        #     "title": "ANP - CO emissions, Emissions Table by Aggregation (CSV)",
+        #     "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
+        #     "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
+        #     "module_name": "TableViewWidgetOutputModule",
+        #     "source_type": "all",
+        #     "pollutant": "CO",
+        #     "study_start_date": "2023-03-01 06:00:00",
+        #     "study_end_date": "2023-03-01 22:00:00",
+        #     "expected_file_path": str(
+        #         get_data_path("ANP/ANP_emissions_table_by_aggregation_co.csv")
+        #     ),
+        # },
+
+        # Source types
+        {
+            "title": "ANP - MovementSource, CO emissions",
+            "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
+            "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
+            "module_name": "EmissionsQGISVectorLayerOutputModule",
+            "source_type": "MovementSource",
+            "pollutant": "CO",
+            "study_start_date": "2023-03-01 06:00:00",
+            "study_end_date": "2023-03-01 22:00:00",
+            "expected_file_path": str(
+                get_vector_layer_path("ANP/ANP_vector_layer_co_movement_source.gpkg", "output")
+            ),
+        },
+        {
+            "title": "ANP - AreaSource, CO emissions",
+            "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
+            "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
+            "module_name": "EmissionsQGISVectorLayerOutputModule",
+            "source_type": "AreaSourceWithTimeProfileModule",
+            "pollutant": "CO",
+            "study_start_date": "2023-03-01 06:00:00",
+            "study_end_date": "2023-03-01 22:00:00",
+            "expected_file_path": str(
+                get_vector_layer_path("ANP/ANP_vector_layer_co_area_source.gpkg", "output")
+            ),
+        },
+        {
+            "title": "ANP - ParkingSource, CO emissions",
+            "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
+            "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
+            "module_name": "EmissionsQGISVectorLayerOutputModule",
+            "source_type": "ParkingSourceWithTimeProfileModule",
+            "pollutant": "CO",
+            "study_start_date": "2023-03-01 06:00:00",
+            "study_end_date": "2023-03-01 22:00:00",
+            "expected_file_path": str(
+                get_vector_layer_path("ANP/ANP_vector_layer_co_parking_source.gpkg", "output")
+            ),
+        },
+        {
+            "title": "ANP - PointSource, CO emissions",
+            "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
+            "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
+            "module_name": "EmissionsQGISVectorLayerOutputModule",
+            "source_type": "PointSourceWithTimeProfileModule",
+            "pollutant": "CO",
+            "study_start_date": "2023-03-01 06:00:00",
+            "study_end_date": "2023-03-01 22:00:00",
+            "expected_file_path": str(
+                get_vector_layer_path("ANP/ANP_vector_layer_co_point_source.gpkg", "output")
+            ),
+        },
+        {
+            "title": "ANP - RoadwaySource, CO emissions",
+            "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
+            "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
+            "module_name": "EmissionsQGISVectorLayerOutputModule",
+            "source_type": "RoadwaySourceWithTimeProfileModule",
+            "pollutant": "CO",
+            "study_start_date": "2023-03-01 06:00:00",
+            "study_end_date": "2023-03-01 22:00:00",
+            "expected_file_path": str(
+                get_vector_layer_path("ANP/ANP_vector_layer_co_roadway_source.gpkg", "output")
             ),
         },
     ]

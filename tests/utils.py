@@ -1,9 +1,9 @@
 import shutil
 from datetime import datetime
-from difflib import unified_diff
 from pathlib import Path
 from tempfile import gettempdir
 from typing import Optional
+import pandas as pd
 
 
 def get_data_path(subfolder: Optional[str] = "") -> Path:
@@ -49,11 +49,16 @@ def get_vector_layer_path(relative_path: str, layer_name: Optional[str]) -> Path
     )
 
 
-def compare_text_files(expected_file_path: str, obtained_file_path: str):
-    with open(expected_file_path, "r") as f:
-        expected_lines = f.readlines()
-    with open(obtained_file_path, "r") as f:
-        actual_lines = f.readlines()
+def compare_text_files(expected_file_path: str, obtained_file_path: str, rel_tol: float = 1e-7):
+    """
+    Compare two CSV files, allowing for floating-point tolerance in numeric values.
+    """
+    df_expected = pd.read_csv(expected_file_path)
+    df_obtained = pd.read_csv(obtained_file_path)
 
-    diff = list(unified_diff(expected_lines, actual_lines))
-    assert diff == [], "Unexpected file contents:\n" + "".join(diff)
+    pd.testing.assert_frame_equal(
+        df_expected,
+        df_obtained,
+        check_exact=False,
+        rtol=rel_tol,
+    )
