@@ -63,9 +63,7 @@ class TestGuiConfigurationValues:
 
         # Verify default values
         assert em_config["vertical_limit_m"] == 914.4
-        assert (
-            em_config["should_apply_nox_corrections"] == False
-        )  # default is set to false/off
+        assert not em_config["should_apply_nox_corrections"]  # default is set to False/off
         assert em_config["time_interval"] == "3600"  # TODO: check why this is a string
 
     # Check output modules configuration structure
