@@ -42,47 +42,30 @@ class Grid3D:
 
         self._db_path = db_path
 
-        # Definition of the grid
-        # number of cells in x,y,z dimensions
-        self._x_cells = grid_config.get("x_cells", 1)
-        self._y_cells = grid_config.get("y_cells", 1)
-        self._z_cells = grid_config.get("z_cells", 1)
-
-        # resolution of each cells in x,y,z dimensions
-        self._x_resolution = grid_config.get("x_resolution", 1)
-        self._y_resolution = grid_config.get("y_resolution", 1)
-        self._z_resolution = grid_config.get("z_resolution", 1)
-
-        # center of the grid
-        self._reference_latitude = conversion.convertToFloat(
-            grid_config.get("reference_latitude", 0.0)
-        )
-        self._reference_longitude = conversion.convertToFloat(
-            grid_config.get("reference_longitude", 0.0)
-        )
-        self._reference_altitude = conversion.convertToFloat(
-            grid_config.get("reference_altitude", 0.0)
-        )
-
+        # Check if the db path and deserialize arguments exists and are True
         if self._db_path and deserialize:
-            self.deserialize()
+            self._deserialize()
+        
+        # Else extract directly the properties from the given grid config
+        else:
+            # Definition of the grid
+            # number of cells in x,y,z dimensions
+            self._x_cells = grid_config.get("x_cells", 1)
+            self._y_cells = grid_config.get("y_cells", 1)
+            self._z_cells = grid_config.get("z_cells", 1)
 
-        logger.info("3D Grid Definition:")
-        logger.info("\t Number of cells in x-direction: %i", self._x_cells)
-        logger.info("\t Number of cells in y-direction: %i", self._y_cells)
-        logger.info("\t Number of cells in z-direction: %i", self._z_cells)
-        logger.info("\t Resolution in x-direction: %i", self._x_resolution)
-        logger.info("\t Resolution in y-direction: %i", self._y_resolution)
-        logger.info("\t Resolution in z-direction: %i", self._x_resolution)
-        logger.info(
-            "\t Reference latitude (center of grid): %.5f", self._reference_latitude
-        )
-        logger.info(
-            "\t Reference longitude (center of grid): %.5f", self._reference_longitude
-        )
-        logger.info(
-            "\t Reference altitude (center of grid): %.5f", self._reference_altitude
-        )
+            # resolution of each cells in x,y,z dimensions
+            self._x_resolution = grid_config.get("x_resolution", 1)
+            self._y_resolution = grid_config.get("y_resolution", 1)
+            self._z_resolution = grid_config.get("z_resolution", 1)
+
+            # center of the grid
+            self._reference_latitude = conversion.convertToFloat(
+                grid_config.get("reference_latitude", 0.0)
+            )
+            self._reference_longitude = conversion.convertToFloat(
+                grid_config.get("reference_longitude", 0.0)
+            )
 
         # calculate the grid origin from reference coordinates, which is the
         # bottom left
@@ -104,10 +87,11 @@ class Grid3D:
     def getResolutionZ(self) -> float:
         return self._z_resolution
 
+    # Not used
     def getAirportAltitude(self):
         return self._reference_altitude
 
-    def deserialize(self):
+    def _deserialize(self):
         query = """
             SELECT
                 table_name_cell_coordinates,
@@ -135,7 +119,23 @@ class Grid3D:
         self._reference_latitude = result["reference_latitude"]
         self._reference_longitude = result["reference_longitude"]
 
+        # Log the path of the file from where the grid was extracted
         logger.info("Deserialized Grid3D definition from db '%s' ", self._db_path)
+        
+        # Log the grid properties
+        logger.info("3D Grid Definition:")
+        logger.info("\t Number of cells in x-direction: %i", self._x_cells)
+        logger.info("\t Number of cells in y-direction: %i", self._y_cells)
+        logger.info("\t Number of cells in z-direction: %i", self._z_cells)
+        logger.info("\t Resolution in x-direction: %i", self._x_resolution)
+        logger.info("\t Resolution in y-direction: %i", self._y_resolution)
+        logger.info("\t Resolution in z-direction: %i", self._x_resolution)
+        logger.info(
+            "\t Reference latitude (center of grid): %.5f", self._reference_latitude
+        )
+        logger.info(
+            "\t Reference longitude (center of grid): %.5f", self._reference_longitude
+        )
 
     def _calculate_origin_xy(self) -> tuple[float, float]:
         """
