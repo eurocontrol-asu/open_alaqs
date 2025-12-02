@@ -1,5 +1,4 @@
 import copy
-import difflib
 import math
 import sys
 from collections import OrderedDict
@@ -263,126 +262,6 @@ class Movement:
 
     def setEngineThrustLevelTaxiing(self, var):
         self._engine_thrust_level_taxiing = var
-
-    def calculateGateEmissions(self, sas="none") -> list[EmissionsDict]:
-        """Calculate gate emissions for a specific source based on the source
-         name and time period. The method for calculating emissions from gates
-         requires establishing the sum of three types of emissions:
-
-        1. Emissions from GSE - Data comes from default_gate
-        2. Emissions from GPU
-        3. Emissions from APU
-        4. Emissions from Main Engine Start-up
-        """
-        emissions: list[EmissionsDict] = []
-        # calculate emissions for ground equipment (i.e. GPU and GSE)
-        if (
-            self.getGate() is not None
-            and not self.getAircraft().getGroup() == "HELICOPTER"
-        ):
-            # GPU emissions
-            gpu_emissions = Emission(defaultValues=defaultEmissions)
-            # GPU, lower edge: 0m, upper edge: 5m
-            if sas == "default" or sas == "smooth & shift":
-                gpu_emissions.setVerticalExtent({"z_min": 0, "z_max": 5})
-            # GSE emissions
-            gse_emissions = Emission(defaultValues=defaultEmissions)
-            # GSE, lower edge: 0m, upper edge: 5m
-            if sas == "default" or sas == "smooth & shift":
-                gse_emissions.setVerticalExtent({"z_min": 0, "z_max": 5})
-
-            ac_group_GSE = self.getAircraftGroupMatch("gse")  # e.g. 'JET SMALL'
-            ac_group_GPU = self.getAircraftGroupMatch("gpu")  # e.g. 'JET SMALL'
-
-            # if ac_group_GSE is None:
-            occupancy_in_min_GSE = self.getGateOccupancy(ac_group_GSE, "gse")
-            occupancy_in_min_GPU = self.getGateOccupancy(ac_group_GPU, "gpu")
-
-            gpu_emission_index = self.getGate().getEmissionIndexGPU(
-                ac_group_GPU, self._departure_arrival
-            )
-            pollutants = (
-                PollutantType.CO,
-                PollutantType.HC,
-                PollutantType.NOx,
-                PollutantType.SOx,
-                PollutantType.PM10,
-            )
-
-            if gpu_emission_index is not None:
-                for pollutant_type in pollutants:
-                    value_kg_hour = gpu_emission_index.get_value(
-                        pollutant_type, "kg_hour"
-                    )
-                    gpu_emissions.add_value(
-                        pollutant_type,
-                        PollutantUnit.GRAM,
-                        # TODO OPENGIS.ch: move the kg_hour conversion within the `Emission.add_value` method
-                        (value_kg_hour * 1000.0 * occupancy_in_min_GPU / 60.0),
-                    )
-
-                gpu_emissions.setGeometryText(self.getGate().getGeometryText())
-                emissions.append(
-                    {
-                        "distance_space": 0.0,
-                        "distance_time": 0.0,
-                        "emissions": gpu_emissions,
-                    }
-                )
-            # else:
-            #     logger.warning("No GPU emissions for %s"%self.getName())
-
-            gse_emission_index = self.getGate().getEmissionIndexGSE(
-                ac_group_GSE, self._departure_arrival
-            )
-            if gse_emission_index is not None:
-                for pollutant_type in pollutants:
-                    value_kg_hour = gse_emission_index.get_value(
-                        pollutant_type, "kg_hour"
-                    )
-                    gpu_emissions.add_value(
-                        pollutant_type,
-                        PollutantUnit.GRAM,
-                        # TODO OPENGIS.ch: move the kg_hour conversion within the `Emission.add_value` method
-                        (value_kg_hour * 1000.0 * occupancy_in_min_GSE / 60.0),
-                    )
-
-                gse_emissions.setGeometryText(self.getGate().getGeometryText())
-                emissions.append(
-                    {
-                        "distance_space": 0.0,
-                        "distance_time": 0.0,
-                        "emissions": gse_emissions,
-                    }
-                )
-            # else:
-            #     logger.warning("No GSE emissions for %s"%self.getName())
-
-        else:
-            if not self.getAircraft().getGroup() == "HELICOPTER":
-                logger.warning(
-                    "Did not find a gate for movement '%s'" % (self.getName())
-                )
-            else:
-                logger.warning(
-                    "Zero GPU/GSE emissions will be added for %s" % (self.getName())
-                )
-                if self.getGate() is not None:
-                    # GSE emissions
-                    gse_emissions = Emission(defaultValues=defaultEmissions)
-                    # GSE, lower edge: 0m, upper edge: 5m
-                    if sas == "default" or sas == "smooth & shift":
-                        gse_emissions.setVerticalExtent({"z_min": 0, "z_max": 5})
-                    gse_emissions.setGeometryText(self.getGate().getGeometryText())
-                    emissions.append(
-                        {
-                            "distance_space": 0.0,
-                            "distance_time": 0.0,
-                            "emissions": gse_emissions,
-                        }
-                    )
-
-        return emissions
 
     # Create polygon faces using QgsPolygon
     def create_polygon_3d(self, sas_method, lto_mode, Point_1, Point_2):
@@ -1521,49 +1400,6 @@ class Movement:
         #                 bbox_inches="tight")
 
         return emissions
-
-    def getAircraftGroupMatch(self, source_type):
-        ac_group = None
-        if ac_group in self.getGate().getEmissionProfileGroups():
-            ac_group = self.getAircraft().getGroup()
-        else:
-            matched = difflib.get_close_matches(
-                self.getAircraft().getGroup(),
-                self.getGate().getEmissionProfileGroups(source_type=source_type),
-            )
-            if matched:
-                ac_group = matched[0]
-                if not ac_group.lower() == self.getAircraft().getGroup().lower():
-                    logger.warning(
-                        "Did not find a gate emission profile for source type '%s' and aircraft group '%s', "
-                        "but matched to '%s'. Probably update the table 'default_gate_profiles'."
-                        % (source_type, ac_group, self.getAircraft().getGroup())
-                    )
-        # if ac_group is None:
-        #     logger.error("Unknown aircraft group identifier for source type '%s'. Aircraft is '%s'. Update default association in default_aircraft." % (source_type, self.getAircraft().getName()))
-
-        return ac_group
-
-    def getGateOccupancy(self, ac_group, source_type):
-        occupancy_in_min = 0.0
-        profile_ = self.getGate().getEmissionProfile(
-            ac_group, self._departure_arrival, source_type
-        )
-        if profile_ is not None:
-            occupancy_in_min = profile_.getOccupancy()
-        # ToDo: Default time in no information ?
-        # if not profile_ is None:
-        #     if self.isDeparture():
-        #         #40% of the emission index corresponds to departures
-        #         if not profile_ is None:
-        #             # occupancy_in_min  = profile_.getDepartureOccupancy() * 0.4
-        #             occupancy_in_min  = profile_.getOccupancy() * 0.4
-        #     else:
-        #         #60% of the emission index corresponds to arrivals
-        #         if not profile_ is None:
-        #             # occupancy_in_min  = profile_.getArrivalOccupancy() * 0.6
-        #             occupancy_in_min  = profile_.getOccupancy() * 0.6
-        return occupancy_in_min
 
     def getAircraft(self) -> Aircraft:
         return self._aircraft

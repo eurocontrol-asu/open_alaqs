@@ -2,6 +2,7 @@
 This class provides the module to calculate emissions of movements.
 """
 
+import difflib
 from datetime import datetime
 from typing import List, Tuple, TypedDict
 
@@ -9,8 +10,12 @@ import pandas as pd
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.AmbientCondition import AmbientCondition
-from open_alaqs.core.interfaces.Emissions import Emission
-from open_alaqs.core.interfaces.Movement import EmissionsDict, MovementStore
+from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
+from open_alaqs.core.interfaces.Movement import (
+    EmissionsDict,
+    MovementStore,
+    defaultEmissions,
+)
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SourceModule import SourceModule
 
@@ -77,11 +82,15 @@ class MovementSourceModule(SourceModule):
     def setApplyNOxCorrection(self, var):
         self._nox_correction = var
 
-    def getApplySmoothAndShift(self):
+    def getApplySmoothAndShift(self) -> str:
         return self._smooth_and_shift
 
     def setApplySmoothAndShift(self, var):
         self._smooth_and_shift = var
+
+    def applySmoothAndShift(self) -> bool:
+        sas = self.getApplySmoothAndShift()
+        return sas == "default" or sas == "smooth & shift"
 
     def getAirportAltitude(self):
         return self._reference_altitude
@@ -109,34 +118,6 @@ class MovementSourceModule(SourceModule):
 
     # def getMovements(self):
     #     return pd.DataFrame.from_dict(self.getStore().getMovementDatabase().getEntries(), orient='index')
-
-    def FetchGateEmissions(
-        self,
-        group: pd.DataFrame,
-        method: CalcMethodDict,
-        source_names: list[str],
-        runway_names: list[str],
-    ) -> list[EmissionsDict]:
-
-        movement = group["Sources"].iloc[0]
-        # movement_name = movement.getName()
-
-        # process only movements of the runway under study
-        if runway_names and not (movement.getRunway().getName() in runway_names):
-            return []
-
-        if (
-            source_names
-            and not ("all" in source_names)
-            # to be sure not getting a movement beloging to another source_name
-            and not (movement.getName() in source_names)
-        ):
-            return []
-
-        gate_emissions = movement.calculateGateEmissions(
-            sas=method["config"]["apply_smooth_and_shift"]
-        )
-        return gate_emissions
 
     def FetchFlightEmissions(
         self,
@@ -338,24 +319,30 @@ class MovementSourceModule(SourceModule):
         gate_columns = ["gate", "ac_group", "departure_arrival"]
         for _name, group in df[relevant_movements].groupby(gate_columns):
 
-            # Calculate the gate emissions
-            gate_emissions = self.FetchGateEmissions(
-                group, calc_method, source_names, runway_names
+            movement = group["Sources"].iloc[0]
+            if runway_names and movement.getRunway().getName() not in runway_names:
+                continue
+
+            gate = movement.getGate()
+            if gate is None:
+                logger.warning(
+                    "Did not find a gate for movement '%s'" % (movement.getName())
+                )
+                continue
+
+            gate_emission_calculator = GateEmissionCalculator(
+                gate, movement.getAircraft(), movement.getDepartureArrivalFlag()
+            )
+            gate_emissions = gate_emission_calculator.calculate_gate_emissions()
+
+            MovementSourceModule.drop_zero_value_emissions(
+                gate_emissions,
+                f"Gate: {_name[0]}, AC Group: {_name[1]} and arr/dep: {_name[2]}",
             )
 
-            to_remove = []
-            for index, em_ in enumerate(gate_emissions):
-                if em_["emissions"].isZero():
-                    logger.warning(
-                        f"Skip zero value emissions for Gate: {_name[0]}, AC Group: {_name[1]} and arr/dep: {_name[2]} - index {index}"
-                    )
-                    to_remove.append(index)
-            if to_remove:
-                logger.warning(
-                    f"Removed: {len(to_remove)} over {len(gate_emissions)} gate emissions because zero value"
-                )
-            for index in reversed(to_remove):
-                gate_emissions.pop(index)
+            # Apply GeoTransformation, changes are applied in-place
+            if self.applySmoothAndShift():
+                VerticalExtentTransformer().transform(gate_emissions)
 
             # Update the gate emissions
             for ix in group.index:
@@ -469,3 +456,147 @@ class MovementSourceModule(SourceModule):
 
     def endJob(self):
         SourceModule.endJob(self)
+
+    @staticmethod
+    def drop_zero_value_emissions(emissions, source):
+        to_remove = []
+        for index, em_ in enumerate(emissions):
+            if em_["emissions"].isZero():
+                logger.warning(
+                    f"Skip zero value emissions for {source} - index {index}"
+                )
+                to_remove.append(index)
+        if to_remove:
+            logger.warning(
+                f"Removed: {len(to_remove)} over {len(emissions)} emissions because zero value"
+            )
+        for index in reversed(to_remove):
+            emissions.pop(index)
+
+
+class GeoTransformation:
+    def __init__(self):
+        pass
+
+
+class VerticalExtentTransformer(GeoTransformation):
+    def __init__(self):
+        GeoTransformation.__init__(self)
+        self._lower_edge = 0
+        self.upper_edge = 5
+
+    def transform(self, emissions_dict_list: list[EmissionsDict]):
+        for emissions_dict in emissions_dict_list:
+            for emission in emissions_dict["emissions"]:
+                emission.setVerticalExtent(
+                    {"z_min": self._lower_edge, "z_max": self._upper_edge}
+                )
+
+
+class GateEmissionCalculator:
+
+    def __init__(self, gate, aircraft, departure_arrival):
+        self._gate = gate
+        self._aircraft = aircraft
+        self._departure_arrival = departure_arrival
+
+    def _calculate_ground_equipment_emissions(self, source_type):
+        emissions = Emission(defaultValues=defaultEmissions)
+        ac_group = self._get_aircraft_group_match(source_type)  # e.g. 'JET SMALL'
+        occupancy_in_min = self._get_gate_occupancy(ac_group, source_type)
+
+        emission_index = self._gate.getEmissionIndex(
+            ac_group, self._departure_arrival, source_type
+        )
+        pollutants = (
+            PollutantType.CO,
+            PollutantType.HC,
+            PollutantType.NOx,
+            PollutantType.SOx,
+            PollutantType.PM10,
+        )
+
+        if emission_index is not None:
+            for pollutant_type in pollutants:
+                value_kg_hour = emission_index.get_value(pollutant_type, "kg_hour")
+                emissions.add_value(
+                    pollutant_type,
+                    PollutantUnit.GRAM,
+                    # TODO OPENGIS.ch: move the kg_hour conversion within the `Emission.add_value` method
+                    (value_kg_hour * 1000.0 * occupancy_in_min / 60.0),
+                )
+
+            emissions.setGeometryText(self._gate.getGeometryText())
+            return {
+                "distance_space": 0.0,
+                "distance_time": 0.0,
+                "emissions": emissions,
+            }
+
+        return {}
+
+    def calculate_gate_emissions(self) -> list[EmissionsDict]:
+        """Calculate gate emissions for a specific source based on the source
+         name and time period. The method for calculating emissions from gates
+         requires establishing the sum of three types of emissions:
+
+        1. Emissions from GSE - Data comes from default_gate
+        2. Emissions from GPU
+        3. Emissions from APU
+        4. Emissions from Main Engine Start-up
+        """
+        emissions: list[EmissionsDict] = []
+
+        # Calculate emissions for ground equipment (i.e. GSE and GPU)
+        if self._aircraft.getGroup() != "HELICOPTER":
+            gse_emissions = self._calculate_ground_equipment_emissions("gse")
+            if gse_emissions:
+                emissions.append(gse_emissions)
+
+            gpu_emissions = self._calculate_ground_equipment_emissions("gpu")
+            if gpu_emissions:
+                emissions.append(gpu_emissions)
+
+        # QUESTION: Should we add zero emissions here? We're removing zero emissions in line 338!
+        # else:
+        #     gse_emissions = Emission(defaultValues=defaultEmissions)
+        #     gse_emissions.setGeometryText(self._gate.getGeometryText())
+        #     emissions.append(
+        #         {
+        #             "distance_space": 0.0,
+        #             "distance_time": 0.0,
+        #             "emissions": gse_emissions,
+        #         }
+        #     )
+
+        return emissions
+
+    def _get_aircraft_group_match(self, source_type):
+        ac_group = None
+        if ac_group in self._gate.getEmissionProfileGroups():
+            ac_group = self._aircraft.getGroup()
+        else:
+            matched = difflib.get_close_matches(
+                self._aircraft.getGroup(),
+                self._gate.getEmissionProfileGroups(source_type=source_type),
+            )
+            if matched:
+                ac_group = matched[0]
+                if not ac_group.lower() == self._aircraft.getGroup().lower():
+                    logger.warning(
+                        "Did not find a gate emission profile for source type '%s' and aircraft group '%s', "
+                        "but matched to '%s'. Probably update the table 'default_gate_profiles'."
+                        % (source_type, ac_group, self._aircraft.getGroup())
+                    )
+
+        return ac_group
+
+    def _get_gate_occupancy(self, ac_group, source_type):
+        occupancy_in_min = 0.0
+        profile_ = self._gate.getEmissionProfile(
+            ac_group, self._departure_arrival, source_type
+        )
+        if profile_ is not None:
+            occupancy_in_min = profile_.getOccupancy()
+
+        return occupancy_in_min
