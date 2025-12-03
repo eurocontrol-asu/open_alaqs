@@ -2,22 +2,27 @@
 This class provides the module to calculate emissions of movements.
 """
 
+import abc
 import difflib
 from datetime import datetime
-from typing import List, Tuple, TypedDict
+from typing import Any, Optional, Tuple, TypedDict
 
 import pandas as pd
+from qgis.core import QgsGeometry, QgsLineString, QgsPoint, QgsPolygon
 
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.interfaces.Aircraft import Aircraft
 from open_alaqs.core.interfaces.AmbientCondition import AmbientCondition
 from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
 from open_alaqs.core.interfaces.Movement import (
     EmissionsDict,
+    Movement,
     MovementStore,
     defaultEmissions,
 )
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SourceModule import SourceModule
+from open_alaqs.core.tools import conversion
 
 logger = get_logger(__name__)
 
@@ -88,7 +93,7 @@ class MovementSourceModule(SourceModule):
     def setApplySmoothAndShift(self, var):
         self._smooth_and_shift = var
 
-    def applySmoothAndShift(self) -> bool:
+    def smoothAndShiftEnabled(self) -> bool:
         sas = self.getApplySmoothAndShift()
         return sas == "default" or sas == "smooth & shift"
 
@@ -264,7 +269,7 @@ class MovementSourceModule(SourceModule):
         ambient_conditions=None,
         vertical_limit_m: float = 914.4,
         **kwargs,
-    ) -> List[Tuple[datetime, Source, Emission]]:
+    ) -> list[Tuple[datetime, Source, Emission]]:
         if runway_names is None:
             runway_names = []
         if source_names is None:
@@ -333,7 +338,7 @@ class MovementSourceModule(SourceModule):
             gate_emission_calculator = GateEmissionCalculator(
                 gate, movement.getAircraft(), movement.getDepartureArrivalFlag()
             )
-            gate_emissions = gate_emission_calculator.calculate_gate_emissions()
+            gate_emissions = gate_emission_calculator.calculate_emissions()
 
             MovementSourceModule.drop_zero_value_emissions(
                 gate_emissions,
@@ -341,8 +346,8 @@ class MovementSourceModule(SourceModule):
             )
 
             # Apply GeoTransformation, changes are applied in-place
-            if self.applySmoothAndShift():
-                VerticalExtentTransformer().transform(gate_emissions)
+            if self.smoothAndShiftEnabled():
+                VerticalExtentTransformer().transform_emissions(gate_emissions)
 
             # Update the gate emissions
             for ix in group.index:
@@ -411,24 +416,24 @@ class MovementSourceModule(SourceModule):
             ):
                 continue
 
-            # add Taxiing Emissions
-            te = movement.calculateTaxiingEmissions(
-                sas=calc_method["config"]["apply_smooth_and_shift"]
-            )
-
-            to_remove = []
-            for index, em_ in enumerate(te):
-                if em_["emissions"].isZero():
-                    logger.warning(
-                        f"Skip zero value emissions for Taxiing with index {index}"
-                    )
-                    to_remove.append(index)
-            if to_remove:
-                logger.warning(
-                    f"Removed: {len(to_remove)} over {len(te)} taxiing emissions because zero value"
+            # Add Taxiing Emissions
+            if movement.getTaxiRoute() is None:
+                te = []
+                logger.error(
+                    "Did not find a taxi route for movement '%s'. Cannot calculate taxiing emissions.",
+                    movement.getName(),
                 )
-            for index in reversed(to_remove):
-                te.pop(index)
+            else:
+                taxiing_emission_calculator = TaxiingEmissionCalculator(movement)
+                te = taxiing_emission_calculator.calculate_emissions()
+
+                MovementSourceModule.drop_zero_value_emissions(te, "Taxiing")
+
+                # Apply GeoTransformation, changes are applied in-place
+                if self.smoothAndShiftEnabled():
+                    SmoothAndShiftTransformer(
+                        movement.getAircraft(), self.getApplySmoothAndShift()
+                    ).transform_emissions(te)
 
             # add Gate Emissions
             ge = df[df["Sources"] == movement]["GateEmissions"].iloc[0]
@@ -474,31 +479,274 @@ class MovementSourceModule(SourceModule):
             emissions.pop(index)
 
 
-class GeoTransformation:
+class GeoTransformation(abc.ABC):
     def __init__(self):
         pass
 
+    @abc.abstractmethod
+    def transform_emissions(self, emissions_dict_list: list[EmissionsDict]):
+        """
+        Applies a GeoTransformation to a list of EmissionsDict in-place.
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    def create_polygon_3d(aircraft, sas_method, lto_mode, point_1, point_2):
+        """
+        Create polygon faces using QgsPolygon.
+        """
+        if lto_mode == "TX":
+            z2_ = 0
+        else:
+            point_1.getZ()
+            z2_ = point_2.getZ()
+
+        if lto_mode == "TO" and z2_ > 0:
+            lto_mode = "CL"
+
+        # Define hor_ext, ver_ext and ver_shift
+
+        # take the default vertical extension
+        d_v = aircraft.getEmissionDynamicsByMode()[lto_mode].getEmissionDynamics(
+            sas_method
+        )["vertical_extension"]
+
+        d_h = aircraft.getEmissionDynamicsByMode()[lto_mode].getEmissionDynamics(
+            sas_method
+        )["horizontal_extension"]
+        s_v = aircraft.getEmissionDynamicsByMode()[lto_mode].getEmissionDynamics(
+            sas_method
+        )["vertical_shift"]
+
+        # define the horizontal and vertical extent and vertical shift
+        if lto_mode == "TX" or lto_mode == "TO":
+            ver_ext = aircraft.getEmissionDynamicsByMode()[
+                lto_mode
+            ].getEmissionDynamics(sas_method)["vertical_extension"]
+        else:
+            ver_ext = aircraft.getEmissionDynamicsByMode()[
+                lto_mode
+            ].getEmissionDynamics("default")["vertical_extension"]
+        ver_shift = s_v
+        hor_ext = d_h / 2  # half width
+
+        # Get original coordinates
+        if lto_mode == "TX":
+            start_coords = [point_1.x(), point_1.y(), 0]
+            end_coords = [point_2.x(), point_2.y(), 0]
+        else:
+            start_coords = [point_1.getX(), point_1.getY(), point_1.getZ()]
+            end_coords = [point_2.getX(), point_2.getY(), point_2.getZ()]
+
+        # Calculate perpendicular vector
+        dx = end_coords[0] - start_coords[0]
+        dy = end_coords[1] - start_coords[1]
+        length = (dx**2 + dy**2) ** 0.5
+        perp_x = -dy / length
+        perp_y = dx / length
+
+        # Apply vertical shift
+        if sas_method == "default":
+            z_shifted_start = start_coords[2] + ver_shift
+            z_shifted_end = end_coords[2] + ver_shift
+            z_upper_start = z_shifted_start + ver_ext
+            z_upper_end = z_shifted_end + ver_ext
+
+        elif sas_method == "sas":
+            z_shifted_start = start_coords[2] - (ver_ext + d_v) / 2
+            z_shifted_end = end_coords[2] - (ver_ext + d_v) / 2
+            z_upper_start = start_coords[2] + ver_ext
+            z_upper_end = end_coords[2] + ver_ext
+
+        else:
+            z_shifted_start = start_coords[2]
+            z_shifted_end = end_coords[2]
+            z_upper_start = z_shifted_start
+            z_upper_end = z_shifted_end
+            hor_ext = 0
+
+        # Create 3D vertices using QgsPoint
+        vertices = [
+            # Lower face vertices
+            QgsPoint(
+                start_coords[0] + hor_ext * perp_x,
+                start_coords[1] + hor_ext * perp_y,
+                max(0, z_shifted_start),
+            ),
+            QgsPoint(
+                start_coords[0] - hor_ext * perp_x,
+                start_coords[1] - hor_ext * perp_y,
+                max(0, z_shifted_start),
+            ),
+            QgsPoint(
+                end_coords[0] - hor_ext * perp_x,
+                end_coords[1] - hor_ext * perp_y,
+                max(0, z_shifted_end),
+            ),
+            QgsPoint(
+                end_coords[0] + hor_ext * perp_x,
+                end_coords[1] + hor_ext * perp_y,
+                max(0, z_shifted_end),
+            ),
+            # Upper face vertices
+            QgsPoint(
+                start_coords[0] + hor_ext * perp_x,
+                start_coords[1] + hor_ext * perp_y,
+                max(0, z_upper_start),
+            ),
+            QgsPoint(
+                start_coords[0] - hor_ext * perp_x,
+                start_coords[1] - hor_ext * perp_y,
+                max(0, z_upper_start),
+            ),
+            QgsPoint(
+                end_coords[0] - hor_ext * perp_x,
+                end_coords[1] - hor_ext * perp_y,
+                max(0, z_upper_end),
+            ),
+            QgsPoint(
+                end_coords[0] + hor_ext * perp_x,
+                end_coords[1] + hor_ext * perp_y,
+                max(0, z_upper_end),
+            ),
+        ]
+
+        # Define face indices (same as original)
+        face_indices = [
+            [0, 1, 2, 3],
+            [4, 5, 6, 7],  # Bottom and top
+            [0, 1, 5, 4],
+            [1, 2, 6, 5],  # Sides
+            [2, 3, 7, 6],
+            [3, 0, 4, 7],
+        ]
+
+        # Create QGIS polygons for each face
+        polygons = []
+        for face in face_indices:
+            # Create a linestring for each face
+            line_string = QgsLineString()
+            for i in face:
+                line_string.addVertex(vertices[i])
+            # Close the ring by adding first vertex again
+            line_string.addVertex(vertices[face[0]])
+
+            # Create polygon geometry
+            polygon = QgsPolygon()
+            polygon.setExteriorRing(line_string)
+            polygons.append(QgsGeometry(polygon))
+
+        # Create a multi-polygon geometry
+        volume_geometry = QgsGeometry.collectGeometry(polygons)
+
+        return (
+            volume_geometry,
+            z_shifted_start,
+            z_shifted_end,
+            z_upper_start,
+            z_upper_end,
+        )
+
 
 class VerticalExtentTransformer(GeoTransformation):
-    def __init__(self):
+    def __init__(self, lower_edge=0, upper_edge=5):
         GeoTransformation.__init__(self)
-        self._lower_edge = 0
-        self.upper_edge = 5
+        self._lower_edge = lower_edge
+        self._upper_edge = upper_edge
 
-    def transform(self, emissions_dict_list: list[EmissionsDict]):
+    def transform_emissions(self, emissions_dict_list: list[EmissionsDict]):
         for emissions_dict in emissions_dict_list:
             for emission in emissions_dict["emissions"]:
-                emission.setVerticalExtent(
-                    {"z_min": self._lower_edge, "z_max": self._upper_edge}
+                self.transform_emission(emission)
+
+    def transform_emission(self, emission: Emission):
+        emission.setVerticalExtent(
+            {"z_min": self._lower_edge, "z_max": self._upper_edge}
+        )
+
+
+class SmoothAndShiftTransformer(GeoTransformation):
+    def __init__(self, aircraft: Aircraft, sas: str):
+        GeoTransformation.__init__(self)
+        self._aircraft = aircraft
+        self._sas_method = "default" if sas == "default" else "sas"
+
+    def transform_emissions(self, emissions_dict_list: list[EmissionsDict]):
+        for emissions_dict in emissions_dict_list:
+            for emission in emissions_dict["emissions"]:
+                tx_geom = QgsGeometry.fromWkt(emission.getGeometryText())
+                seg_points = tx_geom.asPolyline()
+
+                lto_mode = "TX"
+
+                all_tx_polygons = []
+                zsh_start = zsh_end = zup_start, zup_end = 0
+                # Loop through each pair of adjacent points
+                for i in range(len(seg_points) - 1):
+                    start_point_ = seg_points[i]
+                    end_point_ = seg_points[i + 1]
+
+                    if (
+                        start_point_.x() == end_point_.x()
+                        and start_point_.y() == end_point_.y()
+                    ):
+                        # logger.warning(f"Skipping zero-length segment at index {i}.")
+                        continue  # Jump to next iteration
+
+                    (
+                        qgs_multipolygon,
+                        zsh_start,
+                        zsh_end,
+                        zup_start,
+                        zup_end,
+                    ) = GeoTransformation.create_polygon_3d(
+                        self._aircraft,
+                        self._sas_method,
+                        lto_mode,
+                        start_point_,
+                        end_point_,
+                    )
+                    all_tx_polygons.append(qgs_multipolygon)
+
+                # Combine all polygons into a single MultiPolygon
+                combined_polygon = (
+                    QgsGeometry.collectGeometry(all_tx_polygons)
+                    if all_tx_polygons
+                    else None
                 )
+                if combined_polygon:
+                    emission.setGeometryText(combined_polygon.asWkt())
+                    vertical_extent_transformer = VerticalExtentTransformer(
+                        min(zsh_start, zsh_end), max(zup_start, zup_end)
+                    )
+                    vertical_extent_transformer.transform_emission(emission)
+
+                else:
+                    logger.warning("Could not apply exhaust dynamics to emissions")
 
 
-class GateEmissionCalculator:
+class MovementEmissionCalculator(abc.ABC):
+
+    def __init__(self, departure_arrival):
+        self._departure_arrival = departure_arrival
+
+    def _is_arrival(self) -> bool:
+        return self._departure_arrival.lower() not in ["d", "dep", "departure"]
+
+    def _is_departure(self) -> bool:
+        return not self._is_arrival()
+
+    @abc.abstractmethod
+    def calculate_emissions(self) -> list[EmissionsDict]:
+        raise NotImplementedError
+
+
+class GateEmissionCalculator(MovementEmissionCalculator):
 
     def __init__(self, gate, aircraft, departure_arrival):
+        MovementEmissionCalculator.__init__(self, departure_arrival)
         self._gate = gate
         self._aircraft = aircraft
-        self._departure_arrival = departure_arrival
 
     def _calculate_ground_equipment_emissions(self, source_type):
         emissions = Emission(defaultValues=defaultEmissions)
@@ -535,10 +783,10 @@ class GateEmissionCalculator:
 
         return {}
 
-    def calculate_gate_emissions(self) -> list[EmissionsDict]:
+    def calculate_emissions(self) -> list[EmissionsDict]:
         """Calculate gate emissions for a specific source based on the source
          name and time period. The method for calculating emissions from gates
-         requires establishing the sum of three types of emissions:
+         requires establishing the sum of four types of emissions:
 
         1. Emissions from GSE - Data comes from default_gate
         2. Emissions from GPU
@@ -556,18 +804,6 @@ class GateEmissionCalculator:
             gpu_emissions = self._calculate_ground_equipment_emissions("gpu")
             if gpu_emissions:
                 emissions.append(gpu_emissions)
-
-        # QUESTION: Should we add zero emissions here? We're removing zero emissions in line 338!
-        # else:
-        #     gse_emissions = Emission(defaultValues=defaultEmissions)
-        #     gse_emissions.setGeometryText(self._gate.getGeometryText())
-        #     emissions.append(
-        #         {
-        #             "distance_space": 0.0,
-        #             "distance_time": 0.0,
-        #             "emissions": gse_emissions,
-        #         }
-        #     )
 
         return emissions
 
@@ -600,3 +836,440 @@ class GateEmissionCalculator:
             occupancy_in_min = profile_.getOccupancy()
 
         return occupancy_in_min
+
+
+class TaxiingEmissionCalculator(MovementEmissionCalculator):
+
+    AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S = 9.0
+
+    def __init__(self, movement: Movement, method=None, mode="TX"):
+        MovementEmissionCalculator.__init__(self, movement.getDepartureArrivalFlag())
+        self._taxi_route = movement.getTaxiRoute()
+        self._gate = movement.getGate()
+        self._aircraft = movement.getAircraft()
+        self._engine = movement.getAircraftEngine()
+        self._engine_thrust_level_taxiing = movement.getEngineThrustLevelTaxiing()
+        self._block_time = movement.getBlockTime()
+        self._runway_time = movement.getRunwayTime()
+        self._apu_code = movement.getAPUCode()
+        self._taxi_engine_count = movement.getTaxiEngineCount()
+        self._taxi_fuel_ratio = movement.getTaxiFuelRatio()
+        self._number_of_stops = movement.getNumberOfStops()
+        self._movement_name = movement.getName()
+
+        self._set_time_of_main_engine_start_before_takeoff_in_s = (
+            movement.getSingleEngineTaxiingTimeOfMainEngineStartBeforeTakeoff()
+        )
+        self._set_time_of_main_engine_start_after_block_off_in_s = (
+            movement.getSingleEngineTaxiingTimeOfMainEngineStartAfterBlockOff()
+        )
+        self._set_time_of_main_engine_off_after_runway_exit_in_s = (
+            movement.getSingleEngineTaxiingMainEngineOffAfterRunwayExit()
+        )
+
+        self._method = method or {"name": "bymode", "config": {}}
+        self._mode = mode
+
+        self._total_taxiing_time = None
+        if self._block_time is not None and self._runway_time is not None:
+            self._total_taxiing_time = abs(self._block_time - self._runway_time)
+
+        self._start_emissions = self._engine.getStartEmissions()
+        self._include_start_emissions = self._start_emissions is not None
+
+    def calculate_emissions(self) -> list[EmissionsDict]:
+        emissions: list[EmissionsDict] = []
+
+        # ToDo: Only bymode method for now.
+        if self._method["name"] == "bymode":
+            emission_index_ = self._engine.getEmissionIndex().getEmissionIndexByMode(
+                self._mode
+            )
+        else:
+            # get emission indices based on the engine-thrust setting as defined in the movements table
+            emission_index_ = (
+                self._engine.getEmissionIndex().getEmissionIndexByPowerSetting(
+                    self._engine_thrust_level_taxiing, method=self._method
+                )
+            )
+
+        if emission_index_ is None:
+            logger.error(
+                "Did not find emission index for aircraft with type '%s'."
+                % self._aircraft
+            )
+            return emissions
+
+        if self._aircraft.getGroup() != "HELICOPTER":
+
+            # calculate taxiing_length and taxiing_time_from_segments (initial)
+            taxiing_length = 0.0
+            init_taxiing_time_from_segments = 0.0
+            for taxiway_segment_ in self._taxi_route.getSegments():
+                taxiing_length += taxiway_segment_.getLength()
+                init_taxiing_time_from_segments += taxiway_segment_.getTime()
+
+            if self._total_taxiing_time is None:
+                self._total_taxiing_time = init_taxiing_time_from_segments
+
+            # In m/s
+            taxiing_average_speed = conversion.convertToFloat(
+                taxiing_length
+            ) / conversion.convertToFloat(self._total_taxiing_time)
+
+            # Total taxiing time for calculating taxiing emissions is taken from the Movements Table
+            # Queuing emissions are added when taxiing time (traffic log) is greater than user defined taxiroute info (speed, time, etc)
+            queuing_time = (
+                (self._total_taxiing_time - init_taxiing_time_from_segments)
+                if self._total_taxiing_time > init_taxiing_time_from_segments
+                else 0
+            )
+
+            taxiing_time_while_aircraft_moving = 0.0
+
+            apu_t, apu_em = self._load_apu_info()
+
+            # Set the geometry as line with linear interpolation between start and endpoint
+            for index_segment_, taxiway_segment_ in enumerate(
+                self._taxi_route.getSegments()
+            ):
+                em_ = Emission(defaultValues=defaultEmissions)
+                em_.setGeometryText(taxiway_segment_.getGeometryText())
+
+                # Add emission factors,
+                # Multiply by occupancy time and number of engines
+
+                # If time spent in segments < taxiing time in movement table
+                if self._total_taxiing_time <= init_taxiing_time_from_segments:
+                    new_taxiway_segment_time = (
+                        taxiway_segment_.getLength() / taxiing_average_speed
+                    )
+                else:
+                    new_taxiway_segment_time = (
+                        taxiway_segment_.getLength() / taxiway_segment_.getSpeed()
+                    )
+
+                taxiing_time_while_aircraft_moving += new_taxiway_segment_time
+
+                number_of_engines = self._aircraft.getEngineCount()
+                taxi_fuel_ratio = 1.0
+
+                # APU emissions
+                self._apply_apu_emissions(
+                    em_, index_segment_, apu_t, apu_em, new_taxiway_segment_time
+                )
+
+                # Single engine taxiing emissions
+                number_of_engines_, taxi_fuel_ratio_ = (
+                    self._apply_single_engine_taxiing_emissions(
+                        em_, index_segment_, taxiing_time_while_aircraft_moving
+                    )
+                )
+                if number_of_engines_ is not None:
+                    number_of_engines = number_of_engines_
+                if taxi_fuel_ratio_ is not None:
+                    taxi_fuel_ratio = taxi_fuel_ratio_
+
+                em_.add(
+                    emission_index_,
+                    new_taxiway_segment_time * number_of_engines * taxi_fuel_ratio,
+                )
+
+                # Queuing emissions
+                if index_segment_ == len(self._taxi_route.getSegments()) - 1:
+                    em_.add(emission_index_, queuing_time * number_of_engines)
+
+                    # Stop & Go emissions
+                    if (
+                        self._number_of_stops is not None
+                        and self._number_of_stops > 0.0
+                    ):
+                        em_.add(
+                            emission_index_,
+                            self.AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S
+                            * self._number_of_stops,
+                        )
+
+                emissions.append(
+                    {
+                        "emissions": em_,
+                        "distance_time": new_taxiway_segment_time + queuing_time,
+                        "distance_space": taxiway_segment_.getLength(),
+                    }
+                )
+
+        else:  # "HELICOPTER"
+            self._apply_taxiing_emissions_for_helicopters(emissions)
+
+        return emissions
+
+    def _apply_apu_emissions(
+        self, em_, index_segment_, apu_t, apu_em, new_taxiway_segment_time
+    ):
+        # Load APU time and emission factors
+        apu_time = 0
+        if (apu_t is not None and apu_em is not None) and (apu_t > 0):
+            # APU emissions will be added to the stand only
+            if self._apu_code == 1 and index_segment_ == 0:
+                apu_time = apu_t
+            # APU emissions will be added to the stand and the taxiroute
+            elif self._apu_code == 2:
+                if apu_t < self._total_taxiing_time:
+                    # + additional time based on the assumption that the APU is running longer than usual
+                    # first segment taxiing time is included in apu_t (assumption)
+                    apu_time = (
+                        apu_t if index_segment_ == 0 else new_taxiway_segment_time
+                    )
+
+                elif apu_t >= self._total_taxiing_time:
+                    # first segment gets most of the APU emissions, rest is as per taxiing time
+                    apu_time = (
+                        (apu_t - self._total_taxiing_time) + new_taxiway_segment_time
+                        if index_segment_ == 0
+                        else new_taxiway_segment_time
+                    )
+            else:
+                apu_time = 0
+
+            if "fuel_kg_sec" in apu_em:
+                em_.addFuel(apu_em["fuel_kg_sec"] * apu_time)
+            if "co2_g_s" in apu_em:
+                em_.add_value(
+                    PollutantType.CO2,
+                    PollutantUnit.GRAM,
+                    apu_em["co2_g_s"] * apu_time,
+                )
+            if "co_g_s" in apu_em:
+                em_.add_value(
+                    PollutantType.CO,
+                    PollutantUnit.GRAM,
+                    apu_em["co_g_s"] * apu_time,
+                )
+            if "hc_g_s" in apu_em:
+                em_.add_value(
+                    PollutantType.HC,
+                    PollutantUnit.GRAM,
+                    apu_em["hc_g_s"] * apu_time,
+                )
+            if "nox_g_s" in apu_em:
+                em_.add_value(
+                    PollutantType.NOx,
+                    PollutantUnit.GRAM,
+                    apu_em["nox_g_s"] * apu_time,
+                )
+            if "sox_g_s" in apu_em:
+                em_.add_value(
+                    PollutantType.SOx,
+                    PollutantUnit.GRAM,
+                    apu_em["sox_g_s"] * apu_time,
+                )
+            if "pm10_g_s" in apu_em:
+                em_.add_value(
+                    PollutantType.PM10,
+                    PollutantUnit.GRAM,
+                    apu_em["pm10_g_s"] * apu_time,
+                )
+
+    def _load_apu_info(self) -> Tuple[int, Any]:
+        apu_time_ = 0
+        apu_emis_ = None
+
+        gate_type = self._gate.getType()
+        ac_type = self._aircraft.getGroup()
+
+        if ac_type and gate_type:
+            apu_emis_ = self._aircraft.getApuEmissions()
+            _apu_times = self._aircraft.getApuTimes()
+
+            if _apu_times is not None:
+                _ac_apu_times = _apu_times.get(ac_type, {})
+                _gate_apu_times = _ac_apu_times.get(gate_type, {})
+                apu_time_ = _gate_apu_times.get(
+                    "arr_s" if self._is_arrival() else "dep_s", 0
+                )
+            else:
+                logger.info(
+                    "No APU info for %s (AC type: %s, gate type: %s)"
+                    % (self._movement_name, ac_type, gate_type)
+                )
+
+        return apu_time_, apu_emis_
+
+    def _apply_single_engine_taxiing_emissions(
+        self,
+        emission: Emission,
+        index_segment: int,
+        taxiing_time_while_aircraft_moving: float,
+    ) -> Tuple[int, float]:
+
+        if self._is_departure():
+            return self._apply_single_engine_taxiing_emissions_for_departure(
+                emission, index_segment, taxiing_time_while_aircraft_moving
+            )
+        else:
+            return self._apply_single_engine_taxiing_emissions_for_arrival(
+                emission, index_segment, taxiing_time_while_aircraft_moving
+            )
+
+    def _apply_single_engine_taxiing_emissions_for_departure(
+        self,
+        emission: Emission,
+        index_segment: int,
+        taxiing_time_while_aircraft_moving: float,
+    ) -> Tuple[Optional[int], Optional[float]]:
+
+        number_of_engines = None
+        taxi_fuel_ratio = None
+
+        if self._taxi_engine_count is None:
+            logger.info("No Taxi Engine Count for %s", self._movement_name)
+            return number_of_engines, taxi_fuel_ratio
+
+        started_engine_set = False  # Do we need to reset this for each segment?
+
+        if self._set_time_of_main_engine_start_after_block_off_in_s is not None:
+            if (
+                taxiing_time_while_aircraft_moving
+                <= self._set_time_of_main_engine_start_after_block_off_in_s
+            ):
+                number_of_engines = float(
+                    min(self._taxi_engine_count, self._aircraft.getEngineCount())
+                )
+                taxi_fuel_ratio = self._taxi_fuel_ratio
+
+                if self._include_start_emissions and not started_engine_set:
+                    number_of_engines_to_start = number_of_engines
+                    emission += self._start_emissions * number_of_engines_to_start
+                    started_engine_set = True
+
+            if self._include_start_emissions and index_segment == 0:
+                number_of_engines_to_start = self._aircraft.getEngineCount() - float(
+                    min(
+                        self._taxi_engine_count,
+                        self._aircraft.getEngineCount(),
+                    )
+                )
+                emission += self._start_emissions * number_of_engines_to_start
+
+        elif self._set_time_of_main_engine_start_before_takeoff_in_s is not None:
+            if abs(
+                taxiing_time_while_aircraft_moving
+                + self._set_time_of_main_engine_start_after_block_off_in_s
+            ) >= abs(self._runway_time - self._block_time):
+
+                number_of_engines = float(
+                    min(
+                        self._taxi_engine_count,
+                        self._aircraft.getEngineCount(),
+                    )
+                )
+                taxi_fuel_ratio = self._taxi_fuel_ratio
+
+                if self._include_start_emissions and not started_engine_set:
+                    number_of_engines_to_start = number_of_engines
+                    emission += self._start_emissions * number_of_engines_to_start
+                    started_engine_set = True
+
+            if self._include_start_emissions and index_segment == 0:
+                number_of_engines_to_start = self._aircraft.getEngineCount() - float(
+                    min(
+                        self._taxi_engine_count,
+                        self._aircraft.getEngineCount(),
+                    )
+                )
+                emission += self._start_emissions * number_of_engines_to_start
+
+        elif (
+            self._set_time_of_main_engine_start_after_block_off_in_s is None
+            and self._set_time_of_main_engine_start_before_takeoff_in_s is None
+        ):
+            if self._include_start_emissions and index_segment == 0:
+                number_of_engines_to_start = self._aircraft.getEngineCount()
+                # logger.debug("Main-engine start of %f engines at first taxiway segment for departures"
+                #              %(number_of_engines - self.getAircraft().getEngineCount()))
+                emission += self._start_emissions * number_of_engines_to_start
+
+        return number_of_engines, taxi_fuel_ratio
+
+    def _apply_single_engine_taxiing_emissions_for_arrival(
+        self,
+        emission: Emission,
+        index_segment: int,
+        taxiing_time_while_aircraft_moving: float,
+    ) -> Tuple[Optional[int], Optional[float]]:
+        if (
+            index_segment == 0
+            and self._aircraft.getMTOW() is not None
+            and self._aircraft.getMTOW() > 18632
+        ):  # in kg
+            emission.add_value(
+                PollutantType.PM10,
+                PollutantUnit.GRAM,
+                self._aircraft.getMTOW() * 0.000476 - 8.74,
+            )
+
+        number_of_engines = None
+        taxi_fuel_ratio = None
+
+        if (
+            self._taxi_engine_count is not None
+            and self._set_time_of_main_engine_off_after_runway_exit_in_s is not None
+            and abs(taxiing_time_while_aircraft_moving)
+            >= self._set_time_of_main_engine_off_after_runway_exit_in_s
+        ):
+            number_of_engines = float(
+                min(
+                    self._taxi_engine_count,
+                    self._aircraft.getEngineCount(),
+                )
+            )
+            taxi_fuel_ratio = self._taxi_fuel_ratio
+
+        return number_of_engines, taxi_fuel_ratio
+
+    def _apply_taxiing_emissions_for_helicopters(self, emissions: list[EmissionsDict]):
+        # Helicopter taxiing emissions will be added to the first segment of the taxiway
+        tx_segs = self._taxi_route.getSegments()
+        taxiway_segment_1 = tx_segs[0] if tx_segs else None
+
+        if (
+            not self._total_taxiing_time
+            or self._total_taxiing_time <= 0
+            or taxiway_segment_1 is None
+        ):
+            return
+
+        em_ = Emission(defaultValues=defaultEmissions)
+        em_.setGeometryText(taxiway_segment_1.getGeometryText())
+
+        # Check number of engines. If 2, get GI2 as well.
+        if self._aircraft.getEngineCount() > 1:
+            ei1 = self._engine.getEmissionIndex().getEmissionIndexByMode("GI1")
+            tx_time_1 = (
+                ei1.getObject("time_min") * 60.0 if ei1.hasKey("time_min") else 0.0
+            )
+            em_.add(ei1, max(self._total_taxiing_time, tx_time_1))
+
+            ei2 = self._engine.getEmissionIndex().getEmissionIndexByMode("GI2")
+            tx_time_2 = (
+                ei2.getObject("time_min") * 60.0 if ei2.hasKey("time_min") else 0.0
+            )
+            em_.add(
+                ei2,
+                max(self._total_taxiing_time * tx_time_2 / tx_time_1, tx_time_2),
+            )
+            em_.add(ei2, self._total_taxiing_time)
+
+        else:
+            emission_index_ = self._engine.getEmissionIndex().getEmissionIndexByMode(
+                "GI1"
+            )
+            em_.add(emission_index_, self._total_taxiing_time)
+
+        emissions.append(
+            {
+                "emissions": self.em_,
+                "distance_time": self._total_taxiing_time,
+                "distance_space": 0.0,
+            }
+        )
