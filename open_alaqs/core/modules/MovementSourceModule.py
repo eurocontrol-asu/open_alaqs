@@ -1125,31 +1125,15 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
             logger.info("No Taxi Engine Count for %s", self._movement_name)
             return number_of_engines, taxi_fuel_ratio
 
-        started_engine_set = False  # Do we need to reset this for each segment?
-
         if self._set_time_of_main_engine_start_after_block_off_in_s is not None:
             if (
                 taxiing_time_while_aircraft_moving
                 <= self._set_time_of_main_engine_start_after_block_off_in_s
             ):
-                number_of_engines = float(
-                    min(self._taxi_engine_count, self._aircraft.getEngineCount())
-                )
-                taxi_fuel_ratio = self._taxi_fuel_ratio
 
-                if self._include_start_emissions and not started_engine_set:
-                    number_of_engines_to_start = number_of_engines
-                    emission += self._start_emissions * number_of_engines_to_start
-                    started_engine_set = True
-
-            if self._include_start_emissions and index_segment == 0:
-                number_of_engines_to_start = self._aircraft.getEngineCount() - float(
-                    min(
-                        self._taxi_engine_count,
-                        self._aircraft.getEngineCount(),
-                    )
+                number_of_engines, taxi_fuel_ratio = (
+                    self._do_apply_single_engine_taxiing_emissions(emission)
                 )
-                emission += self._start_emissions * number_of_engines_to_start
 
         elif self._set_time_of_main_engine_start_before_takeoff_in_s is not None:
             if abs(
@@ -1157,39 +1141,45 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                 + self._set_time_of_main_engine_start_after_block_off_in_s
             ) >= abs(self._runway_time - self._block_time):
 
-                number_of_engines = float(
-                    min(
-                        self._taxi_engine_count,
-                        self._aircraft.getEngineCount(),
-                    )
+                number_of_engines, taxi_fuel_ratio = (
+                    self._do_apply_single_engine_taxiing_emissions(emission)
                 )
-                taxi_fuel_ratio = self._taxi_fuel_ratio
 
-                if self._include_start_emissions and not started_engine_set:
-                    number_of_engines_to_start = number_of_engines
-                    emission += self._start_emissions * number_of_engines_to_start
-                    started_engine_set = True
-
-            if self._include_start_emissions and index_segment == 0:
-                number_of_engines_to_start = self._aircraft.getEngineCount() - float(
-                    min(
-                        self._taxi_engine_count,
-                        self._aircraft.getEngineCount(),
-                    )
-                )
-                emission += self._start_emissions * number_of_engines_to_start
-
-        elif (
-            self._set_time_of_main_engine_start_after_block_off_in_s is None
-            and self._set_time_of_main_engine_start_before_takeoff_in_s is None
-        ):
-            if self._include_start_emissions and index_segment == 0:
-                number_of_engines_to_start = self._aircraft.getEngineCount()
-                # logger.debug("Main-engine start of %f engines at first taxiway segment for departures"
-                #              %(number_of_engines - self.getAircraft().getEngineCount()))
-                emission += self._start_emissions * number_of_engines_to_start
+        self._apply_start_engine_emissions(emission, index_segment)
 
         return number_of_engines, taxi_fuel_ratio
+
+    def _do_apply_single_engine_taxiing_emissions(
+        self, emission: Emission
+    ) -> Tuple[int, float]:
+        number_of_engines = float(
+            min(self._taxi_engine_count, self._aircraft.getEngineCount())
+        )
+        taxi_fuel_ratio = self._taxi_fuel_ratio
+
+        if self._include_start_emissions:
+            number_of_engines_to_start = number_of_engines
+            emission += self._start_emissions * number_of_engines_to_start
+
+        return number_of_engines, taxi_fuel_ratio
+
+    def _apply_start_engine_emissions(self, emission: Emission, index_segment: int):
+        if self._include_start_emissions and index_segment == 0:
+            # Default value if both times (after_block_off and before_takeoff) are None
+            number_of_engines_to_start = self._aircraft.getEngineCount()
+
+            if (
+                self._set_time_of_main_engine_start_after_block_off_in_s is not None
+                or self._set_time_of_main_engine_start_before_takeoff_in_s is not None
+            ):
+                number_of_engines_to_start -= float(
+                    min(
+                        self._taxi_engine_count,
+                        self._aircraft.getEngineCount(),
+                    )
+                )
+
+            emission += self._start_emissions * number_of_engines_to_start
 
     def _apply_single_engine_taxiing_emissions_for_arrival(
         self,
