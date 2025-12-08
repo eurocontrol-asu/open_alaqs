@@ -52,7 +52,7 @@ class Grid3D:
                 logger.warning(
                     f"Failed to deserialize Grid3D from database '{self._db_path}': {str(e)} "
                     "Falling back to predefined default grid",
-                    exc_info=True
+                    exc_info=True,
                 )
                 # Use predefined default grid if deserialization fails or the path is wrong
                 default_grid = {
@@ -65,11 +65,11 @@ class Grid3D:
                     "reference_latitude": 0.0,
                     "reference_longitude": 0.0,
                 }
-                self._load_from_config(grid_config = default_grid)
-        
+                self._load_from_config(grid_config=default_grid)
+
         # Else extract directly the properties from the given grid config
         else:
-            self._load_from_config(grid_config = grid_config)
+            self._load_from_config(grid_config=grid_config)
 
         # calculate the grid origin from reference coordinates, which is the
         # bottom left
@@ -114,38 +114,51 @@ class Grid3D:
 
         # Check if all required keys exist in the result
         required_keys = [
-            "x_cells", "y_cells", "z_cells",
-            "x_resolution", "y_resolution", "z_resolution",
-            "reference_latitude", "reference_longitude"
+            "x_cells",
+            "y_cells",
+            "z_cells",
+            "x_resolution",
+            "y_resolution",
+            "z_resolution",
+            "reference_latitude",
+            "reference_longitude",
         ]
-        
+
         missing_keys = [key for key in required_keys if key not in result]
         if missing_keys:
             raise Exception(f"Missing required grid definition keys: {missing_keys}")
 
         # Check if any of the required values are None or empty
-        invalid_keys = [key for key in required_keys if result[key] is None or result[key] == ""]
+        invalid_keys = [
+            key for key in required_keys if result[key] is None or result[key] == ""
+        ]
         if invalid_keys:
-            raise Exception(f"Grid definition keys have None or empty values: {invalid_keys}")
+            raise Exception(
+                f"Grid definition keys have None or empty values: {invalid_keys}"
+            )
 
         # Check if values are not numeric (float or int)
-        non_numeric_keys = [key for key in required_keys if not isinstance(result[key], (int, float))]
+        non_numeric_keys = [
+            key for key in required_keys if not isinstance(result[key], (int, float))
+        ]
         if non_numeric_keys:
-            raise Exception(f"Grid definition keys are not numeric (float/int): {non_numeric_keys}")
+            raise Exception(
+                f"Grid definition keys are not numeric (float/int): {non_numeric_keys}"
+            )
 
         # Check if cells and resolution values are negative
         cell_keys = ["x_cells", "y_cells", "z_cells"]
         resolution_keys = ["x_resolution", "y_resolution", "z_resolution"]
-        
+
         negative_cell_keys = [key for key in cell_keys if result[key] < 0]
         if negative_cell_keys:
             raise Exception(f"Grid cell values are negative: {negative_cell_keys}")
-        
+
         negative_resolution_keys = [key for key in resolution_keys if result[key] < 0]
         if negative_resolution_keys:
-            raise Exception(f"Grid resolution values are negative: {negative_resolution_keys}")
-
-
+            raise Exception(
+                f"Grid resolution values are negative: {negative_resolution_keys}"
+            )
 
         self._x_cells = result["x_cells"]
         self._y_cells = result["y_cells"]
@@ -160,7 +173,7 @@ class Grid3D:
 
         # Log the path of the file from where the grid was extracted
         logger.info("Deserialized Grid3D definition from db '%s' ", self._db_path)
-        
+
         # Log the grid properties
         logger.info("3D Grid Definition:")
         logger.info("\t Number of cells in x-direction: %i", self._x_cells)
@@ -505,7 +518,7 @@ class Grid3D:
                     matched_cells.append(z_list)
 
         return matched_cells
-    
+
     def _load_from_config(self, grid_config: dict):
         """Loads the grid from a given grid config dictionary"""
 
