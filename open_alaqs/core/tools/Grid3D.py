@@ -509,7 +509,7 @@ class Grid3D:
     def _load_from_config(self, grid_config: dict):
         """Loads the grid from a given grid config dictionary"""
 
-        logger.info(f"Loading Grid3D from given config")
+        logger.info("Loading Grid3D from given config")
 
         # Definition of the grid
         # number of cells in x,y,z dimensions
