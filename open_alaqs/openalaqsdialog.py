@@ -73,6 +73,14 @@ from open_alaqs.core.tools.csv_interface import (
 from open_alaqs.core.utils.osm import download_osm_airport_data
 from open_alaqs.core.utils.qt import populate_combobox
 from open_alaqs.enums import AlaqsLayerType
+from open_alaqs.core.EmissionCalculation import EmissionCalculation, GridConfig
+from open_alaqs.core.EmissionCalculatorService import (
+    EmissionCalculatorService,
+    EmissionCalculationConfig
+)
+from open_alaqs.core.interfaces.Emissions import PollutantType
+
+from typing import Optional
 
 logger = get_logger(__name__)
 
@@ -2221,6 +2229,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         # initialize calculation
         self._emission_calculation_ = None
         self._emission_calculation_configuration_widget = None
+        
+        # Initialise the service for the emission calculator
+        self._emission_calculator_service = EmissionCalculatorService()
 
         self.resetModuleConfiguration(module_names=[])
         self.resetEmissionCalculationConfiguration()
@@ -2638,97 +2649,112 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             )
             return
 
-        # Temporarily set the project database to extract the airport data
-        project_database = ProjectDatabase()
-        project_database_path = getattr(project_database, "path", None)
-        project_database.path = inventory_path
-        study_data = alaqs.load_study_setup()
-        ref_latitude = study_data.get("airport_latitude", 0.0)
-        ref_longitude = study_data.get("airport_longitude", 0.0)
-        ref_altitude = study_data.get("airport_elevation", 0.0)
-        if project_database_path is None:
-            del project_database.path
-        else:
-            project_database.path = project_database_path
-
-        grid_configuration = {
-            "x_cells": 100,
-            "y_cells": 100,
-            "z_cells": 1,
-            "x_resolution": 100,
-            "y_resolution": 100,
-            "z_resolution": 100,
-            "reference_latitude": ref_latitude,
-            "reference_longitude": ref_longitude,
-            "reference_altitude": ref_altitude,
-        }
-
-        em_config = self._emission_calculation_configuration_widget.get_values()
-
-        self._emission_calculation_ = EmissionCalculation(
-            db_path=inventory_path,
-            grid_config=grid_configuration,
-            start_dt=datetime.fromisoformat(em_config["start_dt_inclusive"]),
-            end_dt=datetime.fromisoformat(em_config["end_dt_inclusive"]),
-            time_interval=timedelta(seconds=int(em_config["time_interval"])),
-        )
-
-        em_config = self._emission_calculation_configuration_widget.get_values()
-        em_config["reference_altitude"] = ref_altitude
-        em_config["receptors"] = self._receptor_points
-
-        if em_config["method"] == "BFFM2" and em_config["should_apply_nox_corrections"]:
-            logger.warning(
-                "Not possible to use both 'BFFM2' " "and 'Apply NOx correction'"
+        # Build config from GUI
+        config = self._build_config_from_gui(inventory_path)
+        if config is None:
+            return
+        
+        # Run calculation via service
+        result = self._emission_calculator_service.calculate_emissions(config)
+        
+        if not result.success:
+            logger.error(f"Emission calculation failed: {result.error_message}")
+            self.message_bar.pushWarning(
+                "Calculation Failed", 
+                result.error_message or "Unknown error"
             )
-
-        selected_module_name = self.ui.source_types.currentText()
-        if selected_module_name.lower() == "all":
-            module_names = SourceModuleRegistry().get_module_names()
-        else:
-            module_names = [selected_module_name]
-
-        for module_name in module_names:
-            self._emission_calculation_.add_source_module(module_name, em_config)
-
-        # dispersion modules
-        dm_module_configs = self.getDispersionModulesConfiguration()
-        pollutant = self.ui.pollutants_names.currentText()
-
-        # dm_name_ should be AUSTALOutputModule
-        for dm_module_name, dm_module_config in dm_module_configs.items():
-            if not dm_module_configs[dm_module_name].get("is_enabled", False):
-                continue
-
-            dm_module_config.update(
-                {
-                    "pollutants_list": self._pollutants_list,
-                    "pollutant": pollutant,
-                    "receptors": self._receptor_points,
-                    "grid": self._emission_calculation_.get3DGrid(),
-                }
-            )
-
-            self._emission_calculation_.add_dispersion_modules(
-                [dm_module_name], dm_module_config
-            )
-
-        # Sources
-        source_name = self.ui.source_names.currentText()
-        source_names = [source_name if source_name is not None else "all"]
-        # Calculate emissions
-        self._emission_calculation_.run(
-            source_names=source_names,
-            vertical_limit_m=em_config["vertical_limit_m"],
-        )
-        self._emission_calculation_.sortEmissionsByTime()
+            return
+        
+        # Show warnings if any
+        for warning in result.warnings:
+            logger.warning(warning)
+        
+        # Store reference to the calculation for output modules
+        self._emission_calculation_ = self._emission_calculator_service.get_calculation()
+        
+        logger.info("Emissions updated successfully")
 
     def get_values(self):
         """
-        This function is used to pass data back to the main alaqs.py class when
-         the UI exits.
+        This function is used to pass data back to the main alaqs.py class when the UI exits.
         """
         return self._return_values
+    
+    def _build_config_from_gui(self, inventory_path: str) -> Optional[EmissionCalculationConfig]:
+        """
+        Build an EmissionCalculationConfig from the current GUI state.
+        
+        :param inventory_path: Path to the inventory database
+        :return: EmissionCalculationConfig or None if building fails
+        """
+        try:
+            # Get airport reference data from database
+            project_database = ProjectDatabase()
+            project_database_path = getattr(project_database, "path", None)
+            project_database.path = inventory_path
+            study_data = alaqs.load_study_setup()
+            ref_latitude = study_data.get("airport_latitude", 0.0)
+            ref_longitude = study_data.get("airport_longitude", 0.0)
+            ref_altitude = study_data.get("airport_elevation", 0.0)
+            
+            # Restore original database path
+            if project_database_path is None:
+                del project_database.path
+            else:
+                project_database.path = project_database_path
+
+            # Build grid configuration
+            grid_config = {
+                "x_cells": 100,
+                "y_cells": 100,
+                "z_cells": 1,
+                "x_resolution": 100,
+                "y_resolution": 100,
+                "z_resolution": 100,
+                "reference_latitude": ref_latitude,
+                "reference_longitude": ref_longitude,
+                "reference_altitude": ref_altitude,
+            }
+
+            # Get values from configuration widget
+            em_config = self._emission_calculation_configuration_widget.get_values()
+
+            # Get source selection
+            selected_source_type = self.ui.source_types.currentText()
+            source_name = self.ui.source_names.currentText()
+            source_names = [source_name] if source_name and source_name.lower() != "all" else []
+
+            # Get pollutant
+            pollutant = self.ui.pollutants_names.currentText()
+
+            # Build the config object
+            config = EmissionCalculationConfig(
+                db_path=inventory_path,
+                start_dt_inclusive=datetime.fromisoformat(em_config["start_dt_inclusive"]),
+                end_dt_inclusive=datetime.fromisoformat(em_config["end_dt_inclusive"]),
+                time_interval=timedelta(seconds=int(em_config["time_interval"])),
+                pollutant=pollutant,
+                method=em_config.get("method", "bymode"),
+                source_type=selected_source_type,
+                source_names=source_names,
+                vertical_limit_m=em_config.get("vertical_limit_m", 914.4),
+                should_apply_nox_corrections=em_config.get("should_apply_nox_corrections", False),
+                source_dynamics=em_config.get("source_dynamics", "none"),
+                grid_config=grid_config,
+                receptor_points=self._receptor_points,
+                dispersion_modules_config=self.getDispersionModulesConfiguration(),
+                output_modules_config=self.getOutputModulesConfiguration(),
+            )
+
+            return config
+
+        except Exception as e:
+            logger.error(f"Failed to build config from GUI: {e}", exc_info=True)
+            self.message_bar.pushWarning(
+                "Configuration Error",
+                f"Failed to build configuration: {str(e)}"
+            )
+            return None
 
 
 class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
