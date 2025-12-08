@@ -22,7 +22,7 @@ import os
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import geopandas as gpd
 from qgis.core import (
@@ -57,6 +57,10 @@ from open_alaqs.core.alaqsdblite import (
 )
 from open_alaqs.core.alaqslogging import get_logger, log_path
 from open_alaqs.core.EmissionCalculation import EmissionCalculation, GridConfig
+from open_alaqs.core.EmissionCalculatorService import (
+    EmissionCalculationConfig,
+    EmissionCalculatorService,
+)
 from open_alaqs.core.interfaces.Emissions import PollutantType
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.core.modules.ModuleManager import (
@@ -73,14 +77,6 @@ from open_alaqs.core.tools.csv_interface import (
 from open_alaqs.core.utils.osm import download_osm_airport_data
 from open_alaqs.core.utils.qt import populate_combobox
 from open_alaqs.enums import AlaqsLayerType
-from open_alaqs.core.EmissionCalculation import EmissionCalculation, GridConfig
-from open_alaqs.core.EmissionCalculatorService import (
-    EmissionCalculatorService,
-    EmissionCalculationConfig
-)
-from open_alaqs.core.interfaces.Emissions import PollutantType
-
-from typing import Optional
 
 logger = get_logger(__name__)
 
@@ -2229,7 +2225,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         # initialize calculation
         self._emission_calculation_ = None
         self._emission_calculation_configuration_widget = None
-        
+
         # Initialise the service for the emission calculator
         self._emission_calculator_service = EmissionCalculatorService()
 
@@ -2653,25 +2649,26 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         config = self._build_config_from_gui(inventory_path)
         if config is None:
             return
-        
+
         # Run calculation via service
         result = self._emission_calculator_service.calculate_emissions(config)
-        
+
         if not result.success:
             logger.error(f"Emission calculation failed: {result.error_message}")
             self.message_bar.pushWarning(
-                "Calculation Failed", 
-                result.error_message or "Unknown error"
+                "Calculation Failed", result.error_message or "Unknown error"
             )
             return
-        
+
         # Show warnings if any
         for warning in result.warnings:
             logger.warning(warning)
-        
+
         # Store reference to the calculation for output modules
-        self._emission_calculation_ = self._emission_calculator_service.get_calculation()
-        
+        self._emission_calculation_ = (
+            self._emission_calculator_service.get_calculation()
+        )
+
         logger.info("Emissions updated successfully")
 
     def get_values(self):
@@ -2679,11 +2676,13 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         This function is used to pass data back to the main alaqs.py class when the UI exits.
         """
         return self._return_values
-    
-    def _build_config_from_gui(self, inventory_path: str) -> Optional[EmissionCalculationConfig]:
+
+    def _build_config_from_gui(
+        self, inventory_path: str
+    ) -> Optional[EmissionCalculationConfig]:
         """
         Build an EmissionCalculationConfig from the current GUI state.
-        
+
         :param inventory_path: Path to the inventory database
         :return: EmissionCalculationConfig or None if building fails
         """
@@ -2696,7 +2695,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             ref_latitude = study_data.get("airport_latitude", 0.0)
             ref_longitude = study_data.get("airport_longitude", 0.0)
             ref_altitude = study_data.get("airport_elevation", 0.0)
-            
+
             # Restore original database path
             if project_database_path is None:
                 del project_database.path
@@ -2722,7 +2721,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             # Get source selection
             selected_source_type = self.ui.source_types.currentText()
             source_name = self.ui.source_names.currentText()
-            source_names = [source_name] if source_name and source_name.lower() != "all" else []
+            source_names = (
+                [source_name] if source_name and source_name.lower() != "all" else []
+            )
 
             # Get pollutant
             pollutant = self.ui.pollutants_names.currentText()
@@ -2730,7 +2731,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             # Build the config object
             config = EmissionCalculationConfig(
                 db_path=inventory_path,
-                start_dt_inclusive=datetime.fromisoformat(em_config["start_dt_inclusive"]),
+                start_dt_inclusive=datetime.fromisoformat(
+                    em_config["start_dt_inclusive"]
+                ),
                 end_dt_inclusive=datetime.fromisoformat(em_config["end_dt_inclusive"]),
                 time_interval=timedelta(seconds=int(em_config["time_interval"])),
                 pollutant=pollutant,
@@ -2738,7 +2741,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 source_type=selected_source_type,
                 source_names=source_names,
                 vertical_limit_m=em_config.get("vertical_limit_m", 914.4),
-                should_apply_nox_corrections=em_config.get("should_apply_nox_corrections", False),
+                should_apply_nox_corrections=em_config.get(
+                    "should_apply_nox_corrections", False
+                ),
                 source_dynamics=em_config.get("source_dynamics", "none"),
                 grid_config=grid_config,
                 receptor_points=self._receptor_points,
@@ -2751,8 +2756,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         except Exception as e:
             logger.error(f"Failed to build config from GUI: {e}", exc_info=True)
             self.message_bar.pushWarning(
-                "Configuration Error",
-                f"Failed to build configuration: {str(e)}"
+                "Configuration Error", f"Failed to build configuration: {str(e)}"
             )
             return None
 

@@ -113,7 +113,9 @@ class EmissionCalculation:
                 }
             )
 
-    def run(self, source_names: List, vertical_limit_m: float, show_progress: bool = True):
+    def run(
+        self, source_names: List, vertical_limit_m: float, show_progress: bool = True
+    ):
         if source_names is None:
             source_names = []
 
@@ -169,7 +171,9 @@ class EmissionCalculation:
             progressbar = None
             total_count_ = 0
             if show_progress:
-                progressbar = self.ProgressBarWidget(dispersion_enabled=dispersion_enabled)
+                progressbar = self.ProgressBarWidget(
+                    dispersion_enabled=dispersion_enabled
+                )
                 total_count_ = len(list(self.getTimeSeries())) - 1
 
             count_ = 0
