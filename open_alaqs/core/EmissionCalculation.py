@@ -113,7 +113,7 @@ class EmissionCalculation:
                 }
             )
 
-    def run(self, source_names: List, vertical_limit_m: float):
+    def run(self, source_names: List, vertical_limit_m: float, show_progress: bool = True):
         if source_names is None:
             source_names = []
 
@@ -165,21 +165,26 @@ class EmissionCalculation:
         # execute process(..)
         logger.debug("Execute process(..)")
         try:
-            # configure the progress bar
-            progressbar = self.ProgressBarWidget(dispersion_enabled=dispersion_enabled)
+            # Only create progress bar if GUI mode is enabled
+            progressbar = None
+            total_count_ = 0
+            if show_progress:
+                progressbar = self.ProgressBarWidget(dispersion_enabled=dispersion_enabled)
+                total_count_ = len(list(self.getTimeSeries())) - 1
+
             count_ = 0
-            total_count_ = len(list(self.getTimeSeries())) - 1
 
             # loop on complete period
             for start_dt, end_dt in pairwise(self.getTimeSeries()):
                 logger.debug(f"start {start_dt}, end {end_dt}")
 
-                # update the progress bar
-                progressbar.setValue(int(100 * count_ / total_count_))
-                count_ += +1
-                QtCore.QCoreApplication.instance().processEvents()
-                if progressbar.wasCanceled():
-                    raise StopIteration("Operation canceled by user")
+                # Update the progress bar only in GUI mode
+                if progressbar is not None:
+                    progressbar.setValue(int(100 * count_ / total_count_))
+                    QtCore.QCoreApplication.instance().processEvents()
+                    if progressbar.wasCanceled():
+                        raise StopIteration("Operation canceled by user")
+                count_ += 1
 
                 # get the ambient condition
                 # ToDo: only run on (start_, end_) with emission sources?
@@ -208,7 +213,6 @@ class EmissionCalculation:
                         ambient_conditions=ambient_condition,
                         vertical_limit_m=vertical_limit_m,
                     ):
-
                         logger.debug(f"{mod_name}: {timestamp_}")
 
                         if emission_ is not None:
