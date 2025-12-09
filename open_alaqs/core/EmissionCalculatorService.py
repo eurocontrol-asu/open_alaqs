@@ -222,6 +222,7 @@ class EmissionCalculatorService:
                     "source_dynamics": config.source_dynamics,
                     "reference_altitude": reference_altitude,
                     "show_progress": False,
+                    "receptors": config.receptor_points,
                 },
             )
             logger.info(f"Added source module: {module_name}")
