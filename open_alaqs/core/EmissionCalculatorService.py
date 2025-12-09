@@ -212,18 +212,18 @@ class EmissionCalculatorService:
         # Get reference altitude from grid config
         reference_altitude = config.grid_config.get("reference_altitude", 0.0)
 
-        # Prepare module configuration
-        module_config = {
-            "method": config.method,
-            "should_apply_nox_corrections": config.should_apply_nox_corrections,
-            "source_dynamics": config.source_dynamics,
-            "receptors": config.receptor_points,
-            "reference_altitude": reference_altitude,
-        }
-
-        # Add each module
+        # Add each module for the configuration
         for module_name in module_names:
-            self._emission_calculation.add_source_module(module_name, module_config)
+            self._emission_calculation.add_source_module(
+                module_name,
+                {
+                    "method": config.method,
+                    "should_apply_nox_corrections": config.should_apply_nox_corrections,
+                    "source_dynamics": config.source_dynamics,
+                    "reference_altitude": reference_altitude,
+                    "show_progress": False,
+                },
+            )
             logger.info(f"Added source module: {module_name}")
 
     def _add_dispersion_modules(self, config: EmissionCalculationConfig) -> None:
