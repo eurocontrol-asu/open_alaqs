@@ -3,17 +3,30 @@ This class provides the module to calculate emissions of movements.
 """
 
 import abc
+import copy
 import difflib
 from datetime import datetime
 from typing import Any, Optional, Tuple, TypedDict
 
 import pandas as pd
 from qgis.core import QgsGeometry, QgsLineString, QgsPoint, QgsPolygon
+from shapely.geometry import MultiLineString
+from shapely.wkt import loads
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft
+from open_alaqs.core.interfaces.AircraftTrajectory import (
+    AircraftTrajectoryPoint,
+    TrajectoryPoint,
+)
 from open_alaqs.core.interfaces.AmbientCondition import AmbientCondition
-from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
+from open_alaqs.core.interfaces.Emissions import (
+    Emission,
+    EmissionIndex,
+    PollutantType,
+    PollutantUnit,
+)
+from open_alaqs.core.interfaces.Engine import Engine
 from open_alaqs.core.interfaces.Movement import (
     EmissionsDict,
     Movement,
@@ -22,7 +35,10 @@ from open_alaqs.core.interfaces.Movement import (
 )
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SourceModule import SourceModule
-from open_alaqs.core.tools import conversion
+from open_alaqs.core.tools import conversion, spatial
+from open_alaqs.core.tools.nox_correction_ambient import (
+    nox_correction_for_ambient_conditions,
+)
 
 logger = get_logger(__name__)
 
@@ -124,32 +140,6 @@ class MovementSourceModule(SourceModule):
     # def getMovements(self):
     #     return pd.DataFrame.from_dict(self.getStore().getMovementDatabase().getEntries(), orient='index')
 
-    def FetchFlightEmissions(
-        self,
-        group: pd.DataFrame,
-        method: CalcMethodDict,
-        mode: str,
-        limit: dict,
-        source_names: list[str],
-        runway_names: list[str],
-        atRunway: bool = True,
-    ) -> list[EmissionsDict]:
-
-        movement = group["Sources"].iloc[0]
-
-        if (
-            source_names
-            and not ("all" in source_names)
-            # to be sure not getting a movement beloging to another source_name
-            and not (movement.getName() in source_names)
-        ):
-            return []
-            # continue
-        flight_emissions = movement.calculateFlightEmissions(
-            atRunway, method, mode, limit
-        )
-        return flight_emissions
-
     @staticmethod
     def getDefaultProfileName(movement):
         if movement.isDeparture():
@@ -159,33 +149,18 @@ class MovementSourceModule(SourceModule):
     def addAdditionalColumnsToDataFrame(self):
         """
         Add additional movement information to the dataframe
-
         """
 
         # Set default emissions
-        default_emission = Emission(
-            defaultValues={
-                "fuel_kg": 0.0,
-                "co_g": 0.0,
-                "co2_g": 0.0,
-                "hc_g": 0.0,
-                "nox_g": 0.0,
-                "sox_g": 0.0,
-                "pm10_g": 0.0,
-                "p1_g": 0.0,
-                "p2_g": 0.0,
-                "pm10_prefoa3_g": 0.0,
-                "pm10_nonvol_g": 0.0,
-                "pm10_sul_g": 0.0,
-                "pm10_organic_g": 0.0,
-                "nvpm_g": 0.0,
-                "nvpm_number": 0.0,
-            }
-        )
+        default_emission = Emission(defaultValues=defaultEmissions)
 
         # Create a function that returns a list of default emissions
         def _default_emissions(*args):
-            return [default_emission]
+            return {
+                "emissions": default_emission,
+                "distance_time": 0.0,
+                "distance_space": 0.0,
+            }
 
         # Load movements from DataFrame
         df = self.getDataframe()
@@ -231,9 +206,9 @@ class MovementSourceModule(SourceModule):
 
         # Add default gate and flight emissions
         empty_series = pd.Series(index=df.index, dtype=object)
-        # TODO OPENGIS.ch: the type of the `GateEmissions` column would be an `Emission` instance, but later we set it to
-        # `{distance_time:float, distance_space:float, emissions: list[Emissions]}`
-        df.loc[:, "GateEmissions"] = empty_series.apply(_default_emissions)
+        df.loc[:, "GateEmissions"] = empty_series.apply(
+            _default_emissions
+        )  # TODO: apply may have performance issues
         df.loc[:, "FlightEmissions"] = empty_series.apply(_default_emissions)
 
         # Update the DataFrame
@@ -333,7 +308,7 @@ class MovementSourceModule(SourceModule):
                 logger.warning(
                     "Did not find a gate for movement '%s'" % (movement.getName())
                 )
-                continue
+                continue  # The corresponding df column already has a default emission dict
 
             gate_emission_calculator = GateEmissionCalculator(
                 gate, movement.getAircraft(), movement.getDepartureArrivalFlag()
@@ -359,6 +334,7 @@ class MovementSourceModule(SourceModule):
 
         # Configure the flight emissions calculation
         mode_ = ""
+        at_runway_ = True
 
         # flight_columns=["aircraft","engine","profile_id", "departure_arrival"]
         # flight_columns = ["engine", "profile_id"]
@@ -366,7 +342,7 @@ class MovementSourceModule(SourceModule):
             "engine",
             "profile_id",
             # The profile and engine will calculate the pollutant emissions correctly, but the Emissions geometry will be incorrect.
-            # This is because the Profile shows the path of the airplane ignoring the azimuth of the Runway
+            # This is because the Profile shows the path of the airplane ignoring the azimuth of the Runway,
             # and it's geometry is stored precalculated with the Runway in the resulting FlightEmissions object.
             # However, the geometry needs to be rotated to match the respective Runway of each Movement.
             lambda idx: df.loc[idx]["Sources"].getRunway().getName(),
@@ -374,23 +350,47 @@ class MovementSourceModule(SourceModule):
         for grouped_values, group in df[relevant_movements].groupby(flight_columns):
 
             # Determine the flight emissions
-            flight_emissions = self.FetchFlightEmissions(
-                group, calc_method, mode_, limit_, source_names, runway_names
+            movement = group["Sources"].iloc[0]
+
+            trajectory = (
+                movement.getTrajectoryAtRunway()
+                if at_runway_
+                else movement.getTrajectory()
+            )
+            if trajectory is None:
+                logger.warning(
+                    "Did not find a trajectory for movement '%s'" % (movement.getName())
+                )
+                continue  # The corresponding df column already has a default emission dict
+
+            flight_emission_calculator = FlightEmissionCalculator(
+                trajectory,
+                movement.getAircraft(),
+                movement.getAircraftEngine(),
+                movement.getTakeoffWeightRatio(),
+                movement.getDepartureArrivalFlag(),
+                movement.getName(),
+                at_runway=at_runway_,
+                method=calc_method,
+                mode=mode_,
+                limit=limit_,
+            )
+            flight_emissions = flight_emission_calculator.calculate_emissions()
+
+            MovementSourceModule.drop_zero_value_emissions(
+                flight_emissions,
+                f"Engine: {grouped_values[0]}, profile id: {grouped_values[1]}",
             )
 
-            to_remove = []
-            for index, em_ in enumerate(flight_emissions):
-                if em_["emissions"].isZero():
-                    logger.debug(
-                        f"Skip zero value emissions for Engine: {grouped_values[0]}, profile id: {grouped_values[1]}"
-                    )
-                    to_remove.append(index)
-            if to_remove:
-                logger.debug(
-                    f"Removed: {len(to_remove)} over {len(flight_emissions)} flight emissions because zero value"
-                )
-            for index in reversed(to_remove):
-                flight_emissions.pop(index)
+            # Apply GeoTransformation, changes are applied in-place
+            if self.smoothAndShiftEnabled():
+                SmoothAndShiftTransformer(
+                    movement.getAircraft(),
+                    self.getApplySmoothAndShift(),
+                    lto_mode=mode_,
+                ).transform_emissions(flight_emissions)
+            else:
+                VerticalExtentTransformer(0, 0).transform_emissions(flight_emissions)
 
             # Update the flight emissions
             for ix in group.index:
@@ -432,7 +432,9 @@ class MovementSourceModule(SourceModule):
                 # Apply GeoTransformation, changes are applied in-place
                 if self.smoothAndShiftEnabled():
                     SmoothAndShiftTransformer(
-                        movement.getAircraft(), self.getApplySmoothAndShift()
+                        movement.getAircraft(),
+                        self.getApplySmoothAndShift(),
+                        lto_mode="TX",
                     ).transform_emissions(te)
 
             # add Gate Emissions
@@ -666,18 +668,31 @@ class VerticalExtentTransformer(GeoTransformation):
 
 
 class SmoothAndShiftTransformer(GeoTransformation):
-    def __init__(self, aircraft: Aircraft, sas: str):
+    def __init__(self, aircraft: Aircraft, sas: str, lto_mode: str = ""):
         GeoTransformation.__init__(self)
         self._aircraft = aircraft
         self._sas_method = "default" if sas == "default" else "sas"
+        self._lto_mode = lto_mode
+
+    # def transform_emissions_2(self, emission: Emission):
+    #     multi_polygon_geom, zsh_start, zsh_end, zup_start, zup_end = (
+    #         self.create_polygon_3d(self._aircraft, self._sas_method, self._lto_mode, start_point_, end_point_)
+    #     )
+    #
+    #     # Set the emissions geometry
+    #     emission.setGeometryText(multi_polygon_geom.asWkt())
+    #
+    #     # Set vertical extent
+    #     vertical_extent_transformer = VerticalExtentTransformer(
+    #         min(zsh_start, zsh_end), max(zup_start, zup_end)
+    #     )
+    #     vertical_extent_transformer.transform_emission(emission)
 
     def transform_emissions(self, emissions_dict_list: list[EmissionsDict]):
         for emissions_dict in emissions_dict_list:
             for emission in emissions_dict["emissions"]:
                 tx_geom = QgsGeometry.fromWkt(emission.getGeometryText())
                 seg_points = tx_geom.asPolyline()
-
-                lto_mode = "TX"
 
                 all_tx_polygons = []
                 zsh_start = zsh_end = zup_start, zup_end = 0
@@ -702,7 +717,7 @@ class SmoothAndShiftTransformer(GeoTransformation):
                     ) = GeoTransformation.create_polygon_3d(
                         self._aircraft,
                         self._sas_method,
-                        lto_mode,
+                        self._lto_mode,
                         start_point_,
                         end_point_,
                     )
@@ -727,7 +742,7 @@ class SmoothAndShiftTransformer(GeoTransformation):
 
 class MovementEmissionCalculator(abc.ABC):
 
-    def __init__(self, departure_arrival):
+    def __init__(self, departure_arrival: str):
         self._departure_arrival = departure_arrival
 
     def _is_arrival(self) -> bool:
@@ -1263,3 +1278,301 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                 "distance_space": 0.0,
             }
         )
+
+
+class FlightEmissionCalculator(MovementEmissionCalculator):
+
+    def __init__(
+        self,
+        trajectory,
+        aircraft: Aircraft,
+        engine: Engine,
+        take_off_weight_ratio: float,
+        departure_arrival: str,
+        movement_name: str,
+        at_runway: bool = True,
+        method=None,
+        mode: str = "",
+        limit=None,
+    ):
+        MovementEmissionCalculator.__init__(self, departure_arrival)
+        self._trajectory = trajectory
+        self._aircraft = aircraft
+        self._engine = engine
+        self._take_off_weight_ratio = take_off_weight_ratio
+        self._movement_name = movement_name
+
+        self._at_runway = at_runway
+        self._method = method or {"name": "bymode", "config": {}}
+        self._mode = mode
+        self._limit = limit or {}
+
+        self._pm10_exception_shown = False
+        self._sox_g_kg_exception_shown = False
+
+    def calculate_emissions(self) -> list[EmissionsDict]:
+        emissions: list[EmissionsDict] = []
+        distance_time_all_segments_in_mode = 0.0
+        distance_space_all_segments_in_mode = 0.0
+
+        if self._aircraft.getGroup() != "HELICOPTER":
+            # Get all individual segments (pairs  of points) for the particular
+            # mode
+            for start_point_, end_point_ in self._trajectory.getPointPairs(self._mode):
+                emissions_dict_ = self.calculate_emissions_per_segment(
+                    start_point_,
+                    end_point_,
+                )
+                distance_time_all_segments_in_mode += emissions_dict_["distance_time"]
+                distance_space_all_segments_in_mode += emissions_dict_["distance_space"]
+                emissions.append(emissions_dict_)
+        else:
+            self._apply_flight_emissions_for_helicopters(emissions)
+
+        return emissions
+
+    def _apply_flight_emissions_for_helicopters(self, emissions: list[EmissionsDict]):
+        # Based on FOCA Guidance on the Determination of Helicopter Emissions and the FOCA Engine Emissions Databank
+        heli_emissions = Emission(defaultValues=defaultEmissions)
+        emission_index_ = self._engine.getEmissionIndex()
+
+        number_of_engines = (
+            self._aircraft.getEngineCount()
+            if (
+                self._aircraft is not None
+                and self._aircraft.getEngineCount() is not None
+            )
+            else 1
+        )
+
+        # Get all individual segments (pairs  of points) for the geometry
+        emissions_geo = []
+        for start_point_, end_point_ in self._trajectory.getPointPairs(self._mode):
+            emissions_geo.append(
+                loads(
+                    spatial.getLineGeometryText(
+                        start_point_.getGeometryText(), end_point_.getGeometryText()
+                    )
+                )
+            )
+        entire_heli_geometry = MultiLineString(emissions_geo)
+        heli_emissions.setGeometryText(entire_heli_geometry)
+        space_in_segment_ = entire_heli_geometry.length
+
+        # Emissions are calculated for the whole trajectory, not for each segment
+        ei_ = (
+            emission_index_.getEmissionIndexByMode("TO")
+            if self._is_departure()
+            else emission_index_.getEmissionIndexByMode("AP")
+        )
+        time_in_segment_ = (
+            ei_.getObject("time_min") * 60.0 if ei_.hasKey("time_min") else 0.0
+        )
+
+        heli_emissions.add(ei_, time_in_segment_ * number_of_engines)
+        emissions_dict_ = {
+            "emissions": heli_emissions,
+            "distance_time": float(time_in_segment_),
+            "distance_space": float(space_in_segment_),
+        }
+        emissions.append(emissions_dict_)
+
+    def calculate_emissions_per_segment(
+        self, start_point_: TrajectoryPoint, end_point_: TrajectoryPoint
+    ):
+        emissions = Emission(defaultValues=defaultEmissions)
+        time_in_segment_s = 0.0
+        space_in_segment_m = 0.0
+
+        # ToDo : Permanent definition
+        try:
+            T = self._method["config"]["ambient_conditions"].getTemperature()
+            # Celsius temperature: T − 273.15
+            speed_of_sound = float(331.3 + 0.606 * (T - 273.15))  # in m/s
+            mach_value = {
+                "mach_number": (start_point_.getTrueAirspeed() / speed_of_sound)
+                * ((288.15 / float(T)) ** (1.0 / 2))
+            }
+        except Exception:
+            mach_value = {"mach_number": 0.0}
+        self._method["config"].update(mach_value)
+
+        # Apply height limits
+        # (Output start and end points are used in the rest of the method)
+        start_point, end_point = FlightEmissionCalculator.apply_height_limits(
+            start_point_, end_point_, self._limit
+        )
+        if start_point is None and end_point is None:
+            emissions.setGeometryText(None)
+            return {
+                "emissions": emissions,
+                "distance_time": float(time_in_segment_s),
+                "distance_space": float(space_in_segment_m),
+            }
+
+        emissions.setGeometryText(
+            spatial.getLineGeometryText(
+                start_point.getGeometryText(), end_point.getGeometryText()
+            )
+        )
+
+        # Emissions calculation
+
+        # Ellipsoidal (2D) distance in meters
+        space_in_segment_m = spatial.ellipsoidal_2d_distance(
+            start_point, end_point, 3857
+        )
+
+        # Time in seconds
+        time_in_segment_s = (2 * space_in_segment_m) / (
+            end_point_.getTrueAirspeed() + start_point.getTrueAirspeed()
+        )
+
+        emission_index_ = self._get_emission_index(
+            start_point.getMode(), start_point.getEngineThrust()
+        )
+
+        if self._method["config"]["apply_nox_corrections"]:
+            self._apply_nox_corrections(emission_index_, start_point.getMode())
+
+        if emission_index_ is None:
+            logger.error(
+                "Did not find emission index for aircraft with type '%s'."
+                % self._aircraft
+            )
+
+        # Calculate the effective time (s)
+        effective_time_s = float(time_in_segment_s) * self._aircraft.getEngineCount()
+
+        emissions.add(emission_index_, effective_time_s)
+
+        return {
+            "emissions": emissions,
+            "distance_time": float(time_in_segment_s),
+            "distance_space": float(space_in_segment_m),
+        }
+
+    @staticmethod
+    def apply_height_limits(
+        start_point: TrajectoryPoint,
+        end_point: TrajectoryPoint,
+        limit: dict,
+    ) -> Tuple[TrajectoryPoint, TrajectoryPoint]:
+        start_point_, end_point_ = start_point, end_point
+
+        if "max_height" in limit:
+            unit_in_feet = limit.get("height_unit_in_feet", False)
+
+            # TODO OPENGIS.ch: if the height of the emission is above the "ICAO threshold" of 914.14 meters, we ignore all the following emissions,
+            # as assumed they are getting higher and higher than this point
+            if (
+                start_point.getZ(unit_in_feet) >= limit["max_height"]
+                and end_point.getZ(unit_in_feet) >= limit["max_height"]
+            ):
+                return None, None  # Ignore point
+
+            elif (
+                start_point.getZ(unit_in_feet)
+                > limit["max_height"]
+                > end_point.getZ(unit_in_feet)
+            ):
+                # make a copy of the point and modify height
+                start_point_ = AircraftTrajectoryPoint(start_point)
+                start_point_.setZ(limit["max_height"], unit_in_feet)
+
+            elif (
+                start_point.getZ(unit_in_feet)
+                < limit["max_height"]
+                < end_point.getZ(unit_in_feet)
+            ):
+                # make a copy of the point and modify height
+                end_point_ = AircraftTrajectoryPoint(end_point_)
+                end_point_.setZ(limit["max_height"], unit_in_feet)
+
+        return start_point_, end_point_
+
+    def _get_emission_index(self, mode: str, engine_thrust: float) -> EmissionIndex:
+        emission_index_ = None
+        if self._method["name"] == "bymode":
+            emission_index_ = self._get_emission_index_bymode(mode)
+        elif self._method["name"] == "BFFM2":
+            emission_index_ = self._get_emission_index_bffm2(mode, engine_thrust)
+
+        return emission_index_
+
+    def _get_emission_index_bymode(self, mode: str) -> EmissionIndex:
+        emission_index_ = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)
+
+        return copy.deepcopy(emission_index_)
+
+    def _get_emission_index_bffm2(
+        self, mode: str, engine_thrust: float
+    ) -> EmissionIndex:
+        # Get emission indices based on the engine-thrust setting of the particular segment
+        emission_index_ = (
+            self._engine.getEmissionIndex().getEmissionIndexByPowerSetting(
+                engine_thrust, method=self._method
+            )
+        )
+
+        # ToDo: Permanent fix for PM10
+        if emission_index_ is None:
+            # logger.error("Error: Cannot calculate EI w. BFFM2. The 'by mode' method will be used for source: '%s'" %(self.getName()))
+            copy_emission_index_ = (
+                self._engine.getEmissionIndex().getEmissionIndexByMode(mode)
+            )
+        else:
+            copy_emission_index_ = copy.deepcopy(emission_index_)
+
+            pm10_g_kg = (
+                self._engine.getEmissionIndex()
+                .getEmissionIndexByMode(mode)
+                .get_value(PollutantType.PM10, "g_kg")
+            )
+            try:
+                copy_emission_index_.setObject("pm10_g_kg", pm10_g_kg[0])
+            except Exception:
+                if not self._pm10_exception_shown:
+                    logger.error(
+                        "Couldn't add emission index for PM10 (%s)"
+                        % self._movement_name
+                    )
+                    self._pm10_exception_shown = True
+
+            sox_g_kg = (
+                self._engine.getEmissionIndex()
+                .getEmissionIndexByMode(mode)
+                .get_value(PollutantType.SOx, "g_kg")
+            )
+            try:
+                copy_emission_index_.setObject("sox_g_kg", sox_g_kg[0])
+            except Exception:
+                if not self._sox_g_kg_exception_shown:
+                    logger.error(
+                        "Couldn't add emission index for SOx (%s)" % self._movement_name
+                    )
+                    self._sox_g_kg_exception_shown = True
+
+        return copy_emission_index_
+
+    def _apply_nox_corrections(self, emission_index: EmissionIndex, mode: str):
+        if self._method["name"] == "bymode":
+            logger.info("Applying NOx Correction for Ambient Conditions")
+            nox_g_kg = emission_index.get_value(PollutantType.NOx, "g_kg")
+        else:
+            logger.info(
+                "Applying NOx Correction for Ambient Conditions. NOx EI will be calculated using 'By mode' method."
+            )
+            nox_g_kg = (
+                self._engine.getEmissionIndex()
+                .getEmissionIndexByMode(mode)
+                .get_value(PollutantType.NOx, "g_kg")
+            )
+
+        corr_nox_ei = nox_correction_for_ambient_conditions(
+            nox_g_kg,
+            self._method["config"]["airport_altitude"],
+            self._take_off_weight_ratio,
+            ac=self._method["config"]["ambient_conditions"],
+        )
+        emission_index.setObject("nox_g_kg", corr_nox_ei)

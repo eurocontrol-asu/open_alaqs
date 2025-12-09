@@ -7,8 +7,15 @@ import shapely.geometry
 import shapely.ops
 import shapely.wkt
 from geographiclib.geodesic import Geodesic
+from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsDistanceArea,
+    QgsPointXY,
+    QgsProject,
+)
 
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.interfaces.AircraftTrajectory import TrajectoryPoint
 from open_alaqs.core.tools import conversion
 from open_alaqs.core.tools.iterator import pairwise
 
@@ -417,3 +424,18 @@ def reproject_geometry(geometry_wkt, epsg_id_source=3857, epsg_id_target=4326):
         swap_coordinates = True
 
     return new_wkt_, swap_coordinates
+
+
+def ellipsoidal_2d_distance(
+    start_point: TrajectoryPoint, end_point: TrajectoryPoint, epsg_id: int
+) -> float:
+    source_epsg = QgsCoordinateReferenceSystem.fromEpsgId(epsg_id)
+    qgs_d = QgsDistanceArea()
+
+    qgs_d.setSourceCrs(source_epsg, QgsProject.instance().transformContext())
+    qgs_d.setEllipsoid(source_epsg.ellipsoidAcronym())
+
+    qgs_start_point = QgsPointXY(start_point.getX(), start_point.getY())
+    qgs_end_point = QgsPointXY(end_point.getX(), end_point.getY())
+
+    return qgs_d.measureLine(qgs_start_point, qgs_end_point)
