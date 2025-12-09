@@ -1973,7 +1973,7 @@ class MovementStore(Store, metaclass=Singleton):
     Class to store instances of 'Movement' objects
     """
 
-    def __init__(self, db_path="", db=None, debug=False):
+    def __init__(self, db_path="", db=None, debug=False, show_progress=True):
         if db is None:
             db = {}
         Store.__init__(self, ordered=True)
@@ -1991,7 +1991,7 @@ class MovementStore(Store, metaclass=Singleton):
             self._movement_db = MovementDatabase(db_path)
 
         # instantiate all movement objects
-        self.initMovements(debug)
+        self.initMovements(debug, show_progress=show_progress)
 
     def getMovementDatabase(self):
         return self._movement_db
@@ -2032,13 +2032,13 @@ class MovementStore(Store, metaclass=Singleton):
 
         return progressbar
 
-    def initMovements(self, debug=False):  # noqa: C901
+    def initMovements(self, debug=False, show_progress=True):  # noqa: C901
 
-        # Start a progressbar, since this might take a while to process
-        progressbar = self.ProgressBarWidget()
+        # Start a progressbar only if show_progress is True
+        progressbar = self.ProgressBarWidget() if show_progress else None
 
         # Use stages to update the progress bar
-        stage_1 = ProgressBarStage.firstStage(progressbar, 7, maximum=7)
+        stage_1 = ProgressBarStage.firstStage(progressbar, 7, maximum=7) if progressbar else None
 
         # Get the movements from the database as a dataframe
         mdf = pd.DataFrame.from_dict(
@@ -2064,7 +2064,8 @@ class MovementStore(Store, metaclass=Singleton):
         eq_mdf = eq_mdf.fillna(np.nan)  # fill with None rather than NaNs
 
         # Check if aircraft exist in the database
-        stage_1.nextValue()
+        if stage_1:
+            stage_1.nextValue()
 
         aircraft_store = self.getAircraftStore()
         for acf in mdf["aircraft"].unique():
@@ -2076,7 +2077,8 @@ class MovementStore(Store, metaclass=Singleton):
                 logger.error(f"Aircraft '{acf}' wasn't found in the DB")
 
         # Check if engines exist in the database
-        stage_1.nextValue()
+        if stage_1:
+            stage_1.nextValue()
 
         engine_store = self.getEngineStore()
         heli_engine_store = self.getHeliEngineStore()
@@ -2112,7 +2114,8 @@ class MovementStore(Store, metaclass=Singleton):
                         eq_mdf.loc[indices, "engine_name"] = None
 
         # Check if runways exist in the database
-        stage_1.nextValue()
+        if stage_1:
+            stage_1.nextValue()
 
         runway_store = self.getRunwayStore()
         for rwy in mdf["runway"].unique():
@@ -2138,7 +2141,8 @@ class MovementStore(Store, metaclass=Singleton):
                 logger.warning(f"Runway '{rwy}' wasn't found in the DB")
 
         # Check if gates exist in the database
-        stage_1.nextValue()
+        if stage_1:
+            stage_1.nextValue()
 
         gate_store = self.getGateStore()
         for gte in mdf["gate"].unique():
@@ -2148,7 +2152,8 @@ class MovementStore(Store, metaclass=Singleton):
                 logger.warning(f"Gate '{gte}' wasn't found in the DB")
 
         # Check if taxi routes exist in the database
-        stage_1.nextValue()
+        if stage_1:
+            stage_1.nextValue()
 
         # Fill empty taxi routes
         empty_tr = (mdf["taxi_route"] == "") | (mdf["taxi_route"].isna())
@@ -2191,7 +2196,8 @@ class MovementStore(Store, metaclass=Singleton):
             #         eq_mdf.loc[indices, "taxi_route"] = np.NaN
 
         # Check if track exist in the database
-        stage_1.nextValue()
+        if stage_1:
+            stage_1.nextValue()
 
         track_store = self.getTrackStore()
         for trk in mdf["track_id"].unique():
@@ -2204,7 +2210,8 @@ class MovementStore(Store, metaclass=Singleton):
                     logger.warning(f"Track '{trk}' wasn't found in the DB")
 
         # Check if profiles exist in the database
-        stage_1.nextValue()
+        if stage_1:
+            stage_1.nextValue()
 
         # Get the unique profiles
         profile_unique = mdf["profile_id"].astype(str).unique()
@@ -2281,14 +2288,17 @@ class MovementStore(Store, metaclass=Singleton):
         engine_store = self.getEngineStore()
 
         # Start the next stage
-        stage_2 = stage_1.nextStage(
-            duration=10, maximum=len(eq_mdf[~none_profile_ids].groupby(u_columns))
-        )
-        logger.debug(
-            f"finished stage 1 "
-            f"(n={stage_1._max - stage_1._min}) "
-            f"in {stage_1._end_time - stage_1._start_time}"
-        )
+        if stage_1:
+            stage_2 = stage_1.nextStage(
+                duration=10, maximum=len(eq_mdf[~none_profile_ids].groupby(u_columns))
+            )
+            logger.debug(
+                f"finished stage 1 "
+                f"(n={stage_1._max - stage_1._min}) "
+                f"in {stage_1._end_time - stage_1._start_time}"
+            )
+        else:
+            stage_2 = None
 
         for (rwy, rwy_dir, tx_route, prf_id, trk_id), mov_df in eq_mdf[
             ~none_profile_ids
@@ -2349,7 +2359,8 @@ class MovementStore(Store, metaclass=Singleton):
                 eq_mdf.loc[eq_mdf_index, "aircraft_obj"] = proxy_mov.getAircraft()
                 eq_mdf.loc[eq_mdf_index, "engine_obj"] = proxy_mov.getAircraftEngine()
 
-            stage_2.nextValue()
+            if stage_2:
+                stage_2.nextValue()
 
         # Get the movements to retain
         # NOTE: not available or not default configurable profiles would have "profile_id" as None
@@ -2357,12 +2368,15 @@ class MovementStore(Store, metaclass=Singleton):
         logger.info("Number of movements retained: %s" % mdf_retained.shape[0])
 
         # Start the final stage
-        stage_3 = stage_2.finalStage(maximum=mdf.shape[0])
-        logger.debug(
-            f"finished stage 2 "
-            f"(n={stage_2._max - stage_2._min}) "
-            f"in {stage_2._end_time - stage_2._start_time}"
-        )
+        if stage_2:
+            stage_3 = stage_2.finalStage(maximum=mdf.shape[0])
+            logger.debug(
+                f"finished stage 2 "
+                f"(n={stage_2._max - stage_2._min}) "
+                f"in {stage_2._end_time - stage_2._start_time}"
+            )
+        else:
+            stage_3 = None
 
         # Create a movement for every entry in the database
         movement_db_entries = self.getMovementDatabase().getEntries()
@@ -2418,19 +2432,21 @@ class MovementStore(Store, metaclass=Singleton):
             self.setObject(movement_dict.get("oid", "unknown"), mov)
 
             # Update the progress bar
-            stage_3.nextValue()
-            if progressbar.wasCanceled():
+            if stage_3:
+                stage_3.nextValue()
+            if progressbar and progressbar.wasCanceled():
                 logger.warning(
                     "user canceled initMovements, " "so it might be incomplete"
                 )
                 break
 
-        stage_3.finish()
-        logger.debug(
-            f"finished stage 3 "
-            f"(n={stage_3._max - stage_3._min}) "
-            f"in {stage_3._end_time - stage_3._start_time}"
-        )
+        if stage_3:
+            stage_3.finish()
+            logger.debug(
+                f"finished stage 3 "
+                f"(n={stage_3._max - stage_3._min}) "
+                f"in {stage_3._end_time - stage_3._start_time}"
+            )
 
 
 class MovementDatabase(SQLSerializable, metaclass=Singleton):
