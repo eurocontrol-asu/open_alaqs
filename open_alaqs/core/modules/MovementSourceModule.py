@@ -46,7 +46,8 @@ class MovementSourceModule(SourceModule):
         SourceModule.__init__(self, values_dict)
 
         if self.getDatabasePath() is not None:
-            movement_store = MovementStore(self.getDatabasePath())
+            show_progress = values_dict.get("show_progress", True)
+            movement_store = MovementStore(self.getDatabasePath(), show_progress=show_progress)
             self.setStore(movement_store)
 
         self._calculation_limit = {"max_height": 914.4, "height_unit_in_feet": False}
@@ -369,7 +370,7 @@ class MovementSourceModule(SourceModule):
         mode_ = ""
 
         # flight_columns=["aircraft","engine","profile_id", "departure_arrival"]
-        # flight_columns = ["engine", "profile_id"]
+        # flight_columns = ["engine","profile_id"]
         flight_columns = [
             "engine",
             "profile_id",
