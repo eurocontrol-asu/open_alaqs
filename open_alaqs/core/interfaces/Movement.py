@@ -1,6 +1,5 @@
 import sys
 from collections import OrderedDict
-from typing import TypedDict
 
 import matplotlib
 import numpy as np
@@ -11,7 +10,6 @@ from qgis.PyQt import QtCore, QtWidgets
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft, AircraftStore
 from open_alaqs.core.interfaces.AircraftTrajectory import AircraftTrajectoryStore
-from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.EngineStore import EngineStore, HeliEngineStore
 from open_alaqs.core.interfaces.Gate import GateStore
 from open_alaqs.core.interfaces.Runway import RunwayStore
@@ -66,12 +64,6 @@ defaultEI = {
     "nvpm_g_kg": 0.0,
     "nvpm_number": 0.0,
 }
-
-
-class EmissionsDict(TypedDict):
-    distance_space: float
-    distance_time: float
-    emissions: list[Emission]
 
 
 class Movement:
@@ -357,7 +349,7 @@ class Movement:
         return self._trajectory_at_runway
 
     def updateTrajectoryAtRunway(self):
-        from open_alaqs.core.modules.MovementSourceModule import GeoTransformation
+        from open_alaqs.core.GeoTransformation import GeoTransformation
 
         self.setTrajectoryAtRunway(
             GeoTransformation.runway_alignment(
