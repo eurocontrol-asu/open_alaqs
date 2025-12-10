@@ -5,17 +5,27 @@ This class provides the module to calculate emissions of movements.
 import abc
 import copy
 import difflib
+import math
 from datetime import datetime
 from typing import Any, Optional, Tuple, TypedDict
 
 import pandas as pd
-from qgis.core import QgsGeometry, QgsLineString, QgsPoint, QgsPolygon
-from shapely.geometry import MultiLineString
+from qgis.core import (
+    QgsCoordinateTransform,
+    QgsDistanceArea,
+    QgsGeometry,
+    QgsLineString,
+    QgsPoint,
+    QgsPointXY,
+    QgsPolygon,
+)
+from shapely.geometry import LineString, MultiLineString
 from shapely.wkt import loads
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft
 from open_alaqs.core.interfaces.AircraftTrajectory import (
+    AircraftTrajectory,
     AircraftTrajectoryPoint,
     TrajectoryPoint,
 )
@@ -33,8 +43,11 @@ from open_alaqs.core.interfaces.Movement import (
     MovementStore,
     defaultEmissions,
 )
+from open_alaqs.core.interfaces.Runway import Runway
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SourceModule import SourceModule
+from open_alaqs.core.interfaces.Taxiway import TaxiwayRoute
+from open_alaqs.core.interfaces.Track import Track
 from open_alaqs.core.tools import conversion, spatial
 from open_alaqs.core.tools.nox_correction_ambient import (
     nox_correction_for_ambient_conditions,
@@ -491,6 +504,290 @@ class GeoTransformation(abc.ABC):
         Applies a GeoTransformation to a list of EmissionsDict in-place.
         """
         raise NotImplementedError
+
+    @staticmethod
+    def runway_alignment(
+        trajectory,
+        track: Track,
+        runway: Runway,
+        runway_time: str,
+        runway_direction: str,
+        taxi_route: TaxiwayRoute,
+        departure_arrival: str,
+    ):
+        if trajectory is None:
+            logger.error(
+                "Could not find trajectory for movement at runway "
+                f"time '{runway_time}'."
+            )
+            return None
+
+        if runway is None:
+            logger.error(
+                "Could not find runway for movement at runway time " f"'{runway_time}'."
+            )
+            return None
+
+        if runway_direction not in runway.getDirections():
+            logger.error(
+                f"Could not find runway direction "
+                f"'{runway_direction}' (movement runway "
+                f"time='{runway_time}'."
+            )
+            return None
+
+        # Set the EPSG identifiers for the source and target projection
+        epsg_id_source = 3857  # WGS 84 / Pseudo-Mercator
+        epsg_id_target = 4326  # WGS 84
+        coord_tr = spatial.create_coordinate_transform(epsg_id_source, epsg_id_target)
+
+        # Create a measure object
+        qgs_d = spatial.create_distance_area(epsg_id_source)
+
+        runway_geom = QgsGeometry.fromWkt(runway.getGeometryText())
+        runway_backup_point, runway_azimuth_deg = (
+            GeoTransformation.get_runway_dir_azimuth(
+                trajectory,
+                runway,
+                runway_geom,
+                runway_direction,
+                qgs_d,
+            )
+        )
+
+        taxi_geom = QgsGeometry.fromWkt(taxi_route.getSegmentsAsLineString().wkt)
+        # NOTE QGIS 3.34.2 is returning and empty geometry and newer QGIS is returning a null geometry
+        runway_intersection_projected = runway_geom.buffer(1, 10).intersection(
+            taxi_geom
+        )
+
+        if (
+            runway_intersection_projected.isNull()
+            or runway_intersection_projected.isEmpty()
+        ):
+            # TODO OPENGIS.ch: in addition to just logging here,
+            # make sure the taxiway and the runway are intersecting, otherwise you cannot save the Movement
+            logger.error(
+                'No intersection point between runway "%s" and taxi route "%s"',
+                runway_direction,
+                taxi_route.getName(),
+            )
+            runway_intersection_geographic = coord_tr.transform(runway_backup_point)
+        else:
+            runway_intersection_geographic = coord_tr.transform(
+                runway_intersection_projected.centroid().asPoint()
+            )
+
+        if not GeoTransformation.has_track(track, taxi_route, departure_arrival):
+            ac_trajectory = AircraftTrajectory(
+                trajectory,
+                skipPointInitialization=True,
+            )
+            ac_trajectory.setIsCartesian(False)
+
+            for point in trajectory.getPoints():
+
+                # ToDo: if NEEDED ... then
+                if point._course == "CUSTOM":
+
+                    x_offset = point.getX()  # Along the runway
+                    y_offset = (
+                        point.getY()
+                    )  # Perpendicular to the runway (e.g. lateral deviation)
+
+                    # Step 1: Move EAST by x_offset meters (azimuth=90°)
+                    lon_east, lat_east = qgs_d.computeSpheroidProject(
+                        runway_intersection_geographic,
+                        x_offset,
+                        math.radians(90),  # Azimuth: 90° = East
+                    )
+
+                    # Step 2: Move NORTH by y_offset meters (azimuth=0°)
+                    lon_new, lat_new = qgs_d.computeSpheroidProject(
+                        QgsPointXY(lon_east, lat_east),
+                        y_offset,
+                        math.radians(0),  # Azimuth: 0° = North
+                    )
+
+                    # Create geographic point (EPSG:4326)
+                    target_point_geographic = QgsPointXY(lon_new, lat_new)
+
+                else:
+
+                    # the target point is with cartesian coordinates, therefore we can calculate the distance with Pythagorian theorem
+                    distance = spatial.getDistanceXY(point.getX(), point.getY())
+
+                    # get target point (calculation in 4326 projection)
+                    target_point_geographic = qgs_d.computeSpheroidProject(
+                        runway_intersection_geographic,
+                        distance,
+                        math.radians(runway_azimuth_deg),
+                    )
+
+                target_point_projected = coord_tr.transform(
+                    target_point_geographic,
+                    QgsCoordinateTransform.ReverseTransform,
+                )
+
+                trajectory_point = AircraftTrajectoryPoint(point)
+                # Update x and y coordinates (z coordinate is not updated by distance calculation)
+                trajectory_point.setCoordinates(
+                    target_point_projected.x(),
+                    target_point_projected.y(),
+                    point.getZ(),
+                )
+                ac_trajectory.addPoint(trajectory_point)
+        else:
+            # process track
+            # ToDo: from track prepare trajectory points
+
+            # build distance to point array from aircraft profile
+            profile_points = trajectory.getPoints()
+            profile_distances = []
+            previous_point = (0.0, 0.0, 0.0)
+            cumulative_distance = 0.0
+            for point in profile_points:
+                point = point.getCoordinates()
+                distance = spatial.getDistanceBetweenPoints(
+                    point[0],
+                    point[1],
+                    point[2],
+                    previous_point[0],
+                    previous_point[1],
+                    previous_point[2],
+                )
+                cumulative_distance = cumulative_distance + distance
+                profile_distances.append(cumulative_distance)
+                previous_point = point
+
+            difference = track.getGeometry().difference(runway.getGeometry().buffer(10))
+            track_line = difference
+            max_length = 0.0
+            # check if the track has been broken into multipe parts, pick the longest one
+            if difference.geom_type == "MultiLineString":
+                for line in difference.geoms:
+                    if line.length > max_length:
+                        max_length = line.length
+                        track_line = line
+
+            track_line_points = list(track_line.coords)
+            if track.getDepartureArrivalFlag() == "A":
+                # reverse arrival track so ordering begins at runway
+                track_line_points.reverse()
+
+            (point, point_wkt) = spatial.reproject_Point(
+                runway_intersection_geographic.x(),
+                runway_intersection_geographic.y(),
+                epsg_id_target,
+                epsg_id_source,
+            )
+            track_line_points.insert(0, (point.GetX(), point.GetY(), 0))
+            track_line = LineString(track_line_points)
+
+            ac_trajectory = AircraftTrajectory()
+            ac_trajectory.setIdentifier(trajectory.getIdentifier())
+            ac_trajectory.setStage(trajectory.getStage())
+            ac_trajectory.setSource(trajectory.getSource())
+            ac_trajectory.setDepartureArrivalFlag(trajectory.getDepartureArrivalFlag())
+            ac_trajectory.setWeight(trajectory.getWeight())
+
+            # match track points to the closest point from the profile trajectory
+            previous_point = list(track_line.coords)[0]
+            cumulative_distance = 0.0
+            for point in track_line.coords:
+                distance = spatial.getDistanceBetweenPoints(
+                    point[0],
+                    point[1],
+                    point[2],
+                    previous_point[0],
+                    previous_point[1],
+                    previous_point[2],
+                )
+                cumulative_distance = cumulative_distance + distance
+
+                closest_distance = profile_distances[-1]
+                closest_idx = len(profile_distances) - 1
+                for idx, qgs_d in enumerate(profile_distances):
+                    if abs(distance - qgs_d) < closest_distance:
+                        closest_distance = abs(distance - qgs_d)
+                        closest_idx = idx
+
+                trajectory_point = AircraftTrajectoryPoint(profile_points[closest_idx])
+                trajectory_point.setCoordinates(point[0], point[1], point[2])
+                trajectory_point.updateGeometryText()
+                ac_trajectory.addPoint(trajectory_point)
+            ac_trajectory.updateGeometryText()
+
+        return ac_trajectory
+
+    @staticmethod
+    def get_runway_dir_azimuth(
+        trajectory,
+        runway: Runway,
+        runway_geom: QgsGeometry,
+        runway_direction: str,
+        qgs_d: QgsDistanceArea,
+    ):
+        runway_points = runway_geom.get().points()
+
+        # Step 1: Geometry endpoints
+        pt1, pt2 = QgsPointXY(runway_points[0]), QgsPointXY(runway_points[-1])
+        # Parse runway directions
+        dirs = [int("".join(filter(str.isdigit, d))) for d in runway.getDirections()]
+        if len(dirs) != 2:
+            raise Exception(f"Expected 2 runway directions, got {dirs}")
+
+        # Parse active direction
+        active = int("".join(filter(str.isdigit, runway_direction)))
+        if active not in dirs:
+            raise Exception(f"Active direction {active} not in {dirs}")
+
+        # Compute geometry azimuth
+        azimuth = math.degrees(qgs_d.bearing(pt1, pt2)) % 360
+        expected = {d: (d * 10) % 360 for d in dirs}
+        diffs = {
+            d: min(abs(azimuth - hdg), 360 - abs(azimuth - hdg))
+            for d, hdg in expected.items()
+        }
+
+        # Assign direction labels to geometry points
+        start_dir = min(diffs, key=diffs.get)
+        end_dir = [d for d in dirs if d != start_dir][0]
+        points = {start_dir: pt1, end_dir: pt2}
+
+        # Determine trajectory direction
+        is_dep = trajectory.getDepartureArrivalFlag() == "D"
+        opp = end_dir if active == start_dir else start_dir
+        backup = points[active] if is_dep else points[opp]
+        target = points[opp] if is_dep else points[active]
+
+        runway_backup_point = backup
+        runway_azimuth_deg = math.degrees(qgs_d.bearing(backup, target)) % 360
+
+        return runway_backup_point, runway_azimuth_deg
+
+    @staticmethod
+    def has_track(
+        track: Track, taxi_route: TaxiwayRoute, departure_arrival: str
+    ) -> bool:
+        if track is None:
+            return False
+
+        if taxi_route.getRunway() != track.getRunway():
+            logger.warning(
+                "Paired taxi route '%s' and track '%s' do not share the same runway, reverting movement to default airplane profile"
+                % (taxi_route.getName(), track.getName())
+            )
+            return False
+
+        if departure_arrival != track.getDepartureArrivalFlag():
+            logger.warning(
+                "Track '%s' departure/arrival flag does not match movement, using default airplane profile instead"
+                % (track.getName())
+            )
+            return False
+
+        return True
 
     @staticmethod
     def create_polygon_3d(aircraft, sas_method, lto_mode, point_1, point_2):

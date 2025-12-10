@@ -9,6 +9,7 @@ import shapely.wkt
 from geographiclib.geodesic import Geodesic
 from qgis.core import (
     QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
     QgsDistanceArea,
     QgsPointXY,
     QgsProject,
@@ -426,16 +427,30 @@ def reproject_geometry(geometry_wkt, epsg_id_source=3857, epsg_id_target=4326):
     return new_wkt_, swap_coordinates
 
 
+def create_distance_area(epsg_id_source: int) -> QgsDistanceArea:
+    source_crs = QgsCoordinateReferenceSystem.fromEpsgId(epsg_id_source)
+    qgs_d = QgsDistanceArea()
+    qgs_d.setSourceCrs(source_crs, QgsProject.instance().transformContext())
+    qgs_d.setEllipsoid(source_crs.ellipsoidAcronym())
+
+    return qgs_d
+
+
 def ellipsoidal_2d_distance(
     start_point: TrajectoryPoint, end_point: TrajectoryPoint, epsg_id: int
 ) -> float:
-    source_epsg = QgsCoordinateReferenceSystem.fromEpsgId(epsg_id)
-    qgs_d = QgsDistanceArea()
-
-    qgs_d.setSourceCrs(source_epsg, QgsProject.instance().transformContext())
-    qgs_d.setEllipsoid(source_epsg.ellipsoidAcronym())
-
+    qgs_d = create_distance_area(epsg_id)
     qgs_start_point = QgsPointXY(start_point.getX(), start_point.getY())
     qgs_end_point = QgsPointXY(end_point.getX(), end_point.getY())
 
     return qgs_d.measureLine(qgs_start_point, qgs_end_point)
+
+
+def create_coordinate_transform(
+    epsg_id_source: int, epsg_id_target: int
+) -> QgsCoordinateTransform:
+    return QgsCoordinateTransform(
+        QgsCoordinateReferenceSystem.fromEpsgId(epsg_id_source),
+        QgsCoordinateReferenceSystem.fromEpsgId(epsg_id_target),
+        QgsProject.instance(),
+    )
