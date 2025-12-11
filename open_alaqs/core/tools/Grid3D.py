@@ -64,6 +64,7 @@ class Grid3D:
                     "z_resolution": 50,
                     "reference_latitude": 0.0,
                     "reference_longitude": 0.0,
+                    "reference_altitude": 0.0,
                 }
                 self._load_from_config(grid_config=default_grid)
 
@@ -188,6 +189,11 @@ class Grid3D:
         logger.info(
             "\t Reference longitude (center of grid): %.5f", self._reference_longitude
         )
+
+        # After setting other values, get altitude from study setup
+        altitude_query = 'SELECT airport_elevation FROM "user_study_setup"'
+        altitude_result = sql_interface.db_execute_sql(self._db_path, altitude_query)
+        self._reference_altitude = altitude_result.get("airport_elevation", 0.0) if altitude_result else 0.0
 
     def _calculate_origin_xy(self) -> tuple[float, float]:
         """
@@ -541,4 +547,8 @@ class Grid3D:
         )
         self._reference_longitude = conversion.convertToFloat(
             grid_config.get("reference_longitude", 0.0)
+        )
+
+        self._reference_altitude = conversion.convertToFloat(
+            grid_config.get("reference_altitude", 0.0)
         )
