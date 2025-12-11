@@ -349,10 +349,10 @@ class Movement:
         return self._trajectory_at_runway
 
     def updateTrajectoryAtRunway(self):
-        from open_alaqs.core.GeoTransformation import GeoTransformation
+        from open_alaqs.core.GeoTransformation import TrajectoryTransformer
 
         self.setTrajectoryAtRunway(
-            GeoTransformation.runway_alignment(
+            TrajectoryTransformer(
                 self.getTrajectory(),
                 self.getTrack(),
                 self.getRunway(),
@@ -360,7 +360,7 @@ class Movement:
                 self.getRunwayDirection(),
                 self.getTaxiRoute(),
                 self.getDepartureArrivalFlag(),
-            )
+            ).runway_alignment()
         )
 
     def setTrajectoryAtRunway(self, var):
