@@ -225,6 +225,13 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
             if self._total_taxiing_time is None:
                 self._total_taxiing_time = init_taxiing_time_from_segments
 
+            if self._total_taxiing_time == 0:
+                logger.warning(
+                    "The movement '%s' was skipped as the taxi route was not defined properly."
+                    % self._movement_name
+                )
+                return emissions
+
             # In m/s
             taxiing_average_speed = conversion.convertToFloat(
                 taxiing_length
@@ -305,7 +312,7 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
 
                 emissions.append(
                     {
-                        "emissions": self.em_,
+                        "emissions": em_,
                         "distance_time": new_taxiway_segment_time + queuing_time,
                         "distance_space": taxiway_segment_.getLength(),
                     }
@@ -621,6 +628,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                     start_point_,
                     end_point_,
                 )
+                # TODO: Evaluate the usage of distance_time and distance_space.
                 distance_time_all_segments_in_mode += emissions_dict_["distance_time"]
                 distance_space_all_segments_in_mode += emissions_dict_["distance_space"]
                 emissions.append(emissions_dict_)
