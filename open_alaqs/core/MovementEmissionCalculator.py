@@ -154,6 +154,7 @@ class GateEmissionCalculator(MovementEmissionCalculator):
 class TaxiingEmissionCalculator(MovementEmissionCalculator):
 
     AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S = 9.0
+    TAXIING_TIME_THRESHOLD = 0.0
 
     def __init__(self, movement: Movement, method=None, mode="TX"):
         MovementEmissionCalculator.__init__(self, movement.getDepartureArrivalFlag())
@@ -225,7 +226,7 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
             if self._total_taxiing_time is None:
                 self._total_taxiing_time = init_taxiing_time_from_segments
 
-            if self._total_taxiing_time == 0:
+            if self._total_taxiing_time <= self.TAXIING_TIME_THRESHOLD:
                 logger.warning(
                     "The movement '%s' was skipped as the taxi route was not defined properly."
                     % self._movement_name
@@ -458,7 +459,7 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
         elif self._set_time_of_main_engine_start_before_takeoff_in_s is not None:
             if abs(
                 taxiing_time_while_aircraft_moving
-                + self._set_time_of_main_engine_start_after_block_off_in_s
+                + self._set_time_of_main_engine_start_before_takeoff_in_s
             ) >= abs(self._runway_time - self._block_time):
 
                 number_of_engines, taxi_fuel_ratio = (
