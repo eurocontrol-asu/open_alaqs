@@ -51,7 +51,6 @@ class GeoTransformation(abc.ABC):
         if lto_mode == "TX":
             z2_ = 0
         else:
-            point_1.getZ()
             z2_ = point_2.getZ()
 
         if lto_mode == "TO" and z2_ > 0:
@@ -232,7 +231,7 @@ class SmoothAndShiftTransformer(GeoTransformation):
                 seg_points = tx_geom.asPolyline()
 
                 all_tx_polygons = []
-                zsh_start = zsh_end = zup_start, zup_end = 0
+                zsh_start = zsh_end = zup_start = zup_end = 0
                 # Loop through each pair of adjacent points
                 for i in range(len(seg_points) - 1):
                     start_point_ = seg_points[i]
@@ -488,9 +487,9 @@ class TrajectoryTransformer:
 
                 closest_distance = profile_distances[-1]
                 closest_idx = len(profile_distances) - 1
-                for idx, qgs_d in enumerate(profile_distances):
-                    if abs(distance - qgs_d) < closest_distance:
-                        closest_distance = abs(distance - qgs_d)
+                for idx, profile_distance in enumerate(profile_distances):
+                    if abs(distance - profile_distance) < closest_distance:
+                        closest_distance = abs(distance - profile_distance)
                         closest_idx = idx
 
                 trajectory_point = AircraftTrajectoryPoint(profile_points[closest_idx])
