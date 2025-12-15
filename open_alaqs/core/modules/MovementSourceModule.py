@@ -435,7 +435,9 @@ class MovementSourceModule(SourceModule):
                 emissions_ = []
                 for em_ in emissions_extended:
                     if "emissions" in em_ and em_["emissions"] is not None:
-                        emissions_.extend([e.transposeToKilograms() for e in em_["emissions"]])
+                        emissions_.extend(
+                            [e.transposeToKilograms() for e in em_["emissions"]]
+                        )
 
                 emissions_extended = emissions_
             else:
