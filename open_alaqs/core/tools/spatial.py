@@ -11,6 +11,8 @@ from qgis.core import (
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsDistanceArea,
+    QgsGeometry,
+    QgsPoint,
     QgsPointXY,
     QgsProject,
 )
@@ -352,6 +354,10 @@ def CreateGeometryFromWkt(geometry_wkt):
 
 
 def getAllPoints(geometry_wkt, swap=False):
+    """
+    Note: Does not work for Multipart geometries
+    (e.g., "MULTILINESTRING((0 0, 10 10),(20 20, 30 30))")
+    """
     geom = geometry_wkt
     if not isinstance(geometry_wkt, ogr.Geometry):
         geom = ogr.CreateGeometryFromWkt(geometry_wkt)
@@ -454,3 +460,15 @@ def create_coordinate_transform(
         QgsCoordinateReferenceSystem.fromEpsgId(epsg_id_target),
         QgsProject.instance(),
     )
+
+
+def get_line_vertices(line: QgsGeometry) -> list[QgsPoint]:
+    """
+    Returns a list of ordered vertices from the  given line geometry.
+    Line can be either single part or multipart.
+    """
+    points = []
+    for part in line.parts():
+        points.extend(part.points())
+
+    return points
