@@ -143,7 +143,7 @@ class MovementSourceModule(SourceModule):
         # Create a function that returns a list of default emissions
         def _default_emissions(*args):
             return {
-                "emissions": default_emission,
+                "emissions": [default_emission],
                 "distance_time": 0.0,
                 "distance_space": 0.0,
             }
@@ -435,7 +435,7 @@ class MovementSourceModule(SourceModule):
                 emissions_ = []
                 for em_ in emissions_extended:
                     if "emissions" in em_ and em_["emissions"] is not None:
-                        emissions_.append(em_["emissions"].transposeToKilograms())
+                        emissions_.extend([e.transposeToKilograms() for e in em_["emissions"]])
 
                 emissions_extended = emissions_
             else:
@@ -454,7 +454,8 @@ class MovementSourceModule(SourceModule):
     def drop_zero_value_emissions(emissions, source):
         to_remove = []
         for index, em_ in enumerate(emissions):
-            if em_["emissions"].isZero():
+            # em_["emissions"] is a list of Emissions objects
+            if all(e.isZero() for e in em_["emissions"]):
                 logger.warning(
                     f"Skip zero value emissions for {source} - index {index}"
                 )

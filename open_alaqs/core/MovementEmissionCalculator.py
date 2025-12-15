@@ -91,7 +91,7 @@ class GateEmissionCalculator(MovementEmissionCalculator):
             return {
                 "distance_space": 0.0,
                 "distance_time": 0.0,
-                "emissions": emissions,
+                "emissions": [emissions],
             }
 
         return {}
@@ -313,7 +313,7 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
 
                 emissions.append(
                     {
-                        "emissions": em_,
+                        "emissions": [em_],
                         "distance_time": new_taxiway_segment_time + queuing_time,
                         "distance_space": taxiway_segment_.getLength(),
                     }
@@ -579,7 +579,7 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
 
         emissions.append(
             {
-                "emissions": em_,
+                "emissions": [em_],
                 "distance_time": self._total_taxiing_time,
                 "distance_space": 0.0,
             }
@@ -678,7 +678,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
 
         heli_emissions.add(ei_, time_in_segment_ * number_of_engines)
         emissions_dict_ = {
-            "emissions": heli_emissions,
+            "emissions": [heli_emissions],
             "distance_time": float(time_in_segment_),
             "distance_space": float(space_in_segment_),
         }
@@ -712,7 +712,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         if start_point is None and end_point is None:
             emissions.setGeometryText(None)
             return {
-                "emissions": emissions,
+                "emissions": [emissions],
                 "distance_time": float(time_in_segment_s),
                 "distance_space": float(space_in_segment_m),
             }
@@ -754,7 +754,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         emissions.add(emission_index_, effective_time_s)
 
         return {
-            "emissions": emissions,
+            "emissions": [emissions],
             "distance_time": float(time_in_segment_s),
             "distance_space": float(space_in_segment_m),
         }
