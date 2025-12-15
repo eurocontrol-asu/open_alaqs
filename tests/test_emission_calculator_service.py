@@ -15,7 +15,6 @@ from tests.utils import (
     load_expected_totals_from_csv,
 )
 
-
 # =============================================================================
 # Test Configuration Constants
 # =============================================================================
@@ -180,7 +179,9 @@ class TestEmissionCalculatorServiceValidation:
             )
 
             is_valid, error_msg = self.service.validate_config(config)
-            assert is_valid is True, f"Pollutant {pollutant} should be valid: {error_msg}"
+            assert (
+                is_valid is True
+            ), f"Pollutant {pollutant} should be valid: {error_msg}"
 
 
 # ==============================================================
@@ -223,7 +224,7 @@ class TestEHRDEmissions:
             calculated=calculated,
             expected=expected,
             rel_tol=REL_TOL,
-            pollutants=["co_kg"]
+            pollutants=["co_kg"],
         )
 
     def test_ehrd_co2_emissions_match_expected(self):
@@ -251,7 +252,7 @@ class TestEHRDEmissions:
             calculated=calculated,
             expected=expected,
             rel_tol=REL_TOL,
-            pollutants=["co2_kg"]
+            pollutants=["co2_kg"],
         )
 
     def test_ehrd_nox_emissions_match_expected(self):
@@ -279,7 +280,7 @@ class TestEHRDEmissions:
             calculated=calculated,
             expected=expected,
             rel_tol=REL_TOL,
-            pollutants=["nox_kg"]
+            pollutants=["nox_kg"],
         )
 
     def test_ehrd_hc_emissions_match_expected(self):
@@ -307,7 +308,7 @@ class TestEHRDEmissions:
             calculated=calculated,
             expected=expected,
             rel_tol=REL_TOL,
-            pollutants=["hc_kg"]
+            pollutants=["hc_kg"],
         )
 
     def test_ehrd_pm10_emissions_match_expected(self):
@@ -335,7 +336,7 @@ class TestEHRDEmissions:
             calculated=calculated,
             expected=expected,
             rel_tol=REL_TOL,
-            pollutants=["pm10_kg"]
+            pollutants=["pm10_kg"],
         )
 
     def test_ehrd_all_pollutants_match_expected(self):
@@ -364,7 +365,7 @@ class TestEHRDEmissions:
             calculated=calculated,
             expected=expected,
             rel_tol=REL_TOL,
-            pollutants=["co_kg", "co2_kg", "hc_kg", "nox_kg", "sox_kg", "pm10_kg"]
+            pollutants=["co_kg", "co2_kg", "hc_kg", "nox_kg", "sox_kg", "pm10_kg"],
         )
 
     def test_ehrd_movement_source_only(self):

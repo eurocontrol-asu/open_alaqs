@@ -56,7 +56,9 @@ class MovementSourceModule(SourceModule):
 
         if self.getDatabasePath() is not None:
             show_progress = values_dict.get("show_progress", True)
-            movement_store = MovementStore(self.getDatabasePath(), show_progress=show_progress)
+            movement_store = MovementStore(
+                self.getDatabasePath(), show_progress=show_progress
+            )
             self.setStore(movement_store)
 
         self._calculation_limit = {"max_height": 914.4, "height_unit_in_feet": False}

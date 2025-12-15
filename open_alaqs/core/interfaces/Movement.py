@@ -556,7 +556,11 @@ class MovementStore(Store, metaclass=Singleton):
         progressbar = self.ProgressBarWidget() if show_progress else None
 
         # Use stages to update the progress bar
-        stage_1 = ProgressBarStage.firstStage(progressbar, 7, maximum=7) if progressbar else None
+        stage_1 = (
+            ProgressBarStage.firstStage(progressbar, 7, maximum=7)
+            if progressbar
+            else None
+        )
 
         # Get the movements from the database as a dataframe
         mdf = pd.DataFrame.from_dict(
