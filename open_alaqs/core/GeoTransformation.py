@@ -44,14 +44,16 @@ class GeoTransformation(abc.ABC):
         raise NotImplementedError
 
     @staticmethod
-    def create_polygon_3d(aircraft, sas_method, lto_mode, point_1, point_2):
+    def create_polygon_3d(
+        aircraft, sas_method, lto_mode, point_1: QgsPoint, point_2: QgsPoint
+    ):
         """
         Create polygon faces using QgsPolygon.
         """
         if lto_mode == "TX":
             z2_ = 0
         else:
-            z2_ = point_2.getZ()
+            z2_ = point_2.z()
 
         if lto_mode == "TO" and z2_ > 0:
             lto_mode = "CL"
@@ -87,8 +89,8 @@ class GeoTransformation(abc.ABC):
             start_coords = [point_1.x(), point_1.y(), 0]
             end_coords = [point_2.x(), point_2.y(), 0]
         else:
-            start_coords = [point_1.getX(), point_1.getY(), point_1.getZ()]
-            end_coords = [point_2.getX(), point_2.getY(), point_2.getZ()]
+            start_coords = [point_1.x(), point_1.y(), point_1.z()]
+            end_coords = [point_2.x(), point_2.y(), point_2.z()]
 
         # Calculate perpendicular vector
         dx = end_coords[0] - start_coords[0]
@@ -228,7 +230,7 @@ class SmoothAndShiftTransformer(GeoTransformation):
         for emissions_dict in emissions_dict_list:
             for emission in emissions_dict["emissions"]:
                 tx_geom = QgsGeometry.fromWkt(emission.getGeometryText())
-                seg_points = tx_geom.asPolyline()
+                seg_points = spatial.get_line_vertices(tx_geom)
 
                 all_tx_polygons = []
                 zsh_start = zsh_end = zup_start = zup_end = 0
