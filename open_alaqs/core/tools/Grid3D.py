@@ -193,7 +193,9 @@ class Grid3D:
         # After setting other values, get altitude from study setup
         altitude_query = 'SELECT airport_elevation FROM "user_study_setup"'
         altitude_result = sql_interface.db_execute_sql(self._db_path, altitude_query)
-        self._reference_altitude = altitude_result.get("airport_elevation", 0.0) if altitude_result else 0.0
+        self._reference_altitude = (
+            altitude_result.get("airport_elevation", 0.0) if altitude_result else 0.0
+        )
 
     def _calculate_origin_xy(self) -> tuple[float, float]:
         """
