@@ -1,0 +1,14 @@
+db_path=
+start_dt_inclusive=2023-03-01T06:00:00
+end_dt_inclusive=2023-03-01T23:00:00
+time_interval_seconds=3600
+pollutant=CO
+method=bymode
+source_type=all
+vertical_limit_m=914.4
+should_apply_nox_corrections=False
+show_logs=False
+source_dynamics=none
+austal_output_path=
+emissions_output_path=
+view_type=by source
