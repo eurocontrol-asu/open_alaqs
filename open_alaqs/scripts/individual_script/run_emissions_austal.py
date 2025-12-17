@@ -2,29 +2,26 @@
 Emission Calculator Service CLI
 Runs emission calculations from a config file and exports results in various formats.
 """
-import sys
-import os
-
-# Ensure local package can be imported when script is executed directly
-sys.path.insert(
-    0,
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")),
-)
 
 import argparse
 import json
 import logging
-import warnings
-import zipfile
+import os
+import shutil
+import sys
 import tarfile
 import tempfile
-import shutil
-from datetime import datetime, timedelta
+import warnings
+import zipfile
 from contextlib import contextmanager
 
 from open_alaqs.core.EmissionCalculatorService import (
-    EmissionCalculatorService,
     EmissionCalculationConfig,
+    EmissionCalculatorService,
+)
+from open_alaqs.core.modules.AUSTALOutputModule import AUSTALDispersionModule
+from open_alaqs.core.modules.EmissionsQGISVectorLayerOutputModule import (
+    EmissionsQGISVectorLayerOutputModule,
 )
 from open_alaqs.core.modules.TableViewWidgetOutputModule import (
     TableViewWidgetOutputModule,
@@ -35,8 +32,6 @@ from open_alaqs.core.modules.EmissionsQGISVectorLayerOutputModule import (
 )
 from open_alaqs.core.modules.AUSTALOutputModule import AUSTALDispersionModule
 from open_alaqs.core.tools.Grid3D import Grid3D
-from qgis.core import QgsVectorFileWriter, QgsCoordinateTransformContext
-
 
 # ============================================================================
 # Logging Control
@@ -54,19 +49,20 @@ def set_show_logs(value):
 
 class SuppressedStream:
     """A stream that discards all writes."""
+
     def write(self, data):
         pass
-    
+
     def writelines(self, lines):
         pass
-    
+
     def flush(self):
         pass
-    
+
     @property
     def encoding(self):
         return "utf-8"
-    
+
     def isatty(self):
         return False
 
@@ -113,7 +109,6 @@ def announce_err(*args, sep=" ", end="\n", flush=True):
             pass
 
 
-
 def _format_timedelta(td):
     """Format a timedelta into H:MM:SS.sss"""
     if td is None:
@@ -124,13 +119,12 @@ def _format_timedelta(td):
     return f"{int(hours)}:{int(minutes):02d}:{seconds:06.3f}"
 
 
-
 @contextmanager
 def suppress_external_output(enable_suppression):
     """
     Context manager that suppresses all stdout/stderr when enabled.
     This prevents external libraries from printing.
-    
+
     Args:
         enable_suppression: If True, suppress output; if False, allow all output
     """
@@ -149,7 +143,7 @@ def suppress_external_output(enable_suppression):
     # Prepare suppressed Python-level streams
     null_stream = SuppressedStream()
 
-    # Try to redirect native C-level stdout/stderr 
+    # Try to redirect native C-level stdout/stderr
     devnull_fd = None
     saved_fd_out = None
     saved_fd_err = None
@@ -165,11 +159,23 @@ def suppress_external_output(enable_suppression):
         try:
             saved_fd_out = os.dup(1)
             saved_fd_err = os.dup(2)
-            safe_out = os.fdopen(os.dup(saved_fd_out), "w", buffering=1, encoding="utf-8", errors="replace")
-            safe_err = os.fdopen(os.dup(saved_fd_err), "w", buffering=1, encoding="utf-8", errors="replace")
+            safe_out = os.fdopen(
+                os.dup(saved_fd_out),
+                "w",
+                buffering=1,
+                encoding="utf-8",
+                errors="replace",
+            )
+            safe_err = os.fdopen(
+                os.dup(saved_fd_err),
+                "w",
+                buffering=1,
+                encoding="utf-8",
+                errors="replace",
+            )
             # Replace module-level originals used by announce()/announce_err()
-            globals()['_ORIG_STDOUT'] = safe_out
-            globals()['_ORIG_STDERR'] = safe_err
+            globals()["_ORIG_STDOUT"] = safe_out
+            globals()["_ORIG_STDERR"] = safe_err
         except Exception:
             # If cannot duplicate fds, continue, announce may be suppressed
             safe_out = None
@@ -178,8 +184,9 @@ def suppress_external_output(enable_suppression):
         # Quiet GDAL/OGR C-level messages if available
         try:
             from osgeo import gdal
+
             # Push quiet error handler
-            gdal.PushErrorHandler('CPLQuietErrorHandler')
+            gdal.PushErrorHandler("CPLQuietErrorHandler")
             gdal_quiet = True
         except Exception:
             gdal_quiet = False
@@ -187,8 +194,11 @@ def suppress_external_output(enable_suppression):
         # Try to silence Qt message handler (best-effort)
         try:
             from qgis.PyQt import QtCore
+
             try:
-                qt_prev_handler = QtCore.qInstallMessageHandler(lambda *args, **kwargs: None)
+                qt_prev_handler = QtCore.qInstallMessageHandler(
+                    lambda *args, **kwargs: None
+                )
             except Exception:
                 qt_prev_handler = None
         except Exception:
@@ -254,8 +264,8 @@ def suppress_external_output(enable_suppression):
 
         # Restore module-level announce streams
         try:
-            globals()['_ORIG_STDOUT'] = prev_module_out
-            globals()['_ORIG_STDERR'] = prev_module_err
+            globals()["_ORIG_STDOUT"] = prev_module_out
+            globals()["_ORIG_STDERR"] = prev_module_err
         except Exception:
             pass
 
@@ -263,6 +273,7 @@ def suppress_external_output(enable_suppression):
         if gdal_quiet:
             try:
                 from osgeo import gdal
+
                 gdal.PopErrorHandler()
             except Exception:
                 pass
@@ -271,6 +282,7 @@ def suppress_external_output(enable_suppression):
         if qt_prev_handler is not None:
             try:
                 from qgis.PyQt import QtCore
+
                 QtCore.qInstallMessageHandler(qt_prev_handler)
             except Exception:
                 pass
@@ -280,10 +292,11 @@ def suppress_external_output(enable_suppression):
 # Qt Application Setup
 # ============================================================================
 
+
 def ensure_qt_app():
     """
     Ensure a QApplication exists for modules that construct Qt widgets.
-    
+
     Returns:
         tuple: (QApplication instance, bool indicating if app was created)
     """
@@ -291,14 +304,14 @@ def ensure_qt_app():
         from qgis.PyQt.QtWidgets import QApplication
     except Exception:
         from PyQt5.QtWidgets import QApplication
-    
+
     app = QApplication.instance()
     if app is None:
         app = QApplication([])
         created = True
     else:
         created = False
-    
+
     return app, created
 
 
@@ -306,51 +319,48 @@ def ensure_qt_app():
 # Configuration Parsing
 # ============================================================================
 
+
 def parse_config(txt_path):
     """
     Parse configuration from a text file with key=value format.
-    
+
     Args:
         txt_path: Path to configuration file
-        
+
     Returns:
         dict: Parsed configuration with appropriate types
     """
     config = {}
-    
+
     # Read key-value pairs
     with open(txt_path, "r") as f:
         for line in f:
             if "=" in line and not line.strip().startswith("#"):
                 key, value = line.strip().split("=", 1)
                 config[key.strip()] = value.strip()
-    
+
     # Parse datetime fields
-    config["start_dt_inclusive"] = datetime.fromisoformat(
-        config["start_dt_inclusive"]
-    )
-    config["end_dt_inclusive"] = datetime.fromisoformat(
-        config["end_dt_inclusive"]
-    )
-    
+    config["start_dt_inclusive"] = datetime.fromisoformat(config["start_dt_inclusive"])
+    config["end_dt_inclusive"] = datetime.fromisoformat(config["end_dt_inclusive"])
+
     # Parse time interval
-    config["time_interval"] = timedelta(
-        seconds=int(config["time_interval_seconds"])
-    )
-    
+    config["time_interval"] = timedelta(seconds=int(config["time_interval_seconds"]))
+
     # Parse boolean fields
     config["should_apply_nox_corrections"] = (
         config.get("should_apply_nox_corrections", "False") == "True"
     )
-    
+
     # Parse show_logs flag (default False)
-    config["show_logs"] = (
-        str(config.get("show_logs", "False")).strip().lower() in ("true", "1", "yes")
+    config["show_logs"] = str(config.get("show_logs", "False")).strip().lower() in (
+        "true",
+        "1",
+        "yes",
     )
-    
+
     # Parse numeric fields
     config["vertical_limit_m"] = float(config.get("vertical_limit_m", 914.4))
-    
+
     # Parse source dynamics (string) and source names (comma-separated)
     raw_dynamics = str(config.get("source_dynamics", "none") or "none").strip()
     sd = raw_dynamics.lower()
@@ -381,17 +391,17 @@ def parse_config(txt_path):
 
     # Ensure there's a base name for emission outputs; default to 'emissions'
     config["emissions_output_name"] = config.get("emissions_output_name", "emissions")
-    
+
     return config
 
 
 def extract_grid_config(grid):
     """
     Extract grid configuration as a dictionary.
-    
+
     Args:
         grid: Grid3D instance
-        
+
     Returns:
         dict: Grid configuration parameters
     """
@@ -411,11 +421,11 @@ def extract_grid_config(grid):
 def create_emission_config(config_dict, grid_config):
     """
     Create EmissionCalculationConfig from parsed configuration.
-    
+
     Args:
         config_dict: Parsed configuration dictionary
         grid_config: Grid configuration dictionary
-        
+
     Returns:
         EmissionCalculationConfig: Configuration object
     """
@@ -581,22 +591,23 @@ def validate_config_interactive(config_dict, config_path):
 # Export Functions
 # ============================================================================
 
+
 def parse_view_type(view_type_str):
     """
     Parse view type string to ViewType enum.
-    
+
     Args:
         view_type_str: String representation of view type
-        
+
     Returns:
         ViewType: Corresponding enum value
     """
     normalized = (
-        view_type_str.strip().lower() 
-        if isinstance(view_type_str, str) 
+        view_type_str.strip().lower()
+        if isinstance(view_type_str, str)
         else "by aggregation"
     )
-    
+
     if normalized in ("by aggregation", "aggregation", "aggregate"):
         return ViewType.BY_AGGREGATION
     elif normalized in ("by source", "source"):
@@ -608,23 +619,21 @@ def parse_view_type(view_type_str):
 def filter_empty_emissions(rows, pollutant_cols):
     """
     Filter out rows where all pollutant columns are empty or zero.
-    
+
     Args:
         rows: List of emission data rows
         pollutant_cols: List of pollutant column names
-        
+
     Returns:
         list: Filtered rows with at least one non-zero pollutant value
     """
+
     def is_empty_value(v):
-        return (
-            v is None 
-            or v == "" 
-            or (isinstance(v, (int, float)) and float(v) == 0.0)
-        )
-    
+        return v is None or v == "" or (isinstance(v, (int, float)) and float(v) == 0.0)
+
     return [
-        row for row in rows 
+        row
+        for row in rows
         if not all(is_empty_value(row.get(col)) for col in pollutant_cols)
     ]
 
@@ -632,7 +641,7 @@ def filter_empty_emissions(rows, pollutant_cols):
 def export_csv(result, config, config_dict, grid, emissions_output_path):
     """
     Export emissions data to CSV format.
-    
+
     Args:
         result: Emission calculation result
         config: EmissionCalculationConfig object
@@ -642,12 +651,10 @@ def export_csv(result, config, config_dict, grid, emissions_output_path):
     """
     emissions_base = config_dict.get("emissions_output_name", "emissions")
     csv_path = os.path.join(emissions_output_path, f"{emissions_base}.csv")
-    
+
     # Parse view type
-    view_type_enum = parse_view_type(
-        config_dict.get("view_type", "by aggregation")
-    )
-    
+    view_type_enum = parse_view_type(config_dict.get("view_type", "by aggregation"))
+
     # Create table module
     values = {
         "start_dt_inclusive": config.start_dt_inclusive,
@@ -656,35 +663,32 @@ def export_csv(result, config, config_dict, grid, emissions_output_path):
         "grid": grid,
         "parent": None,
     }
-    
+
     try:
         table_module = TableViewWidgetOutputModule(values)
-        
+
         # Process emissions data
         table_module.beginJob()
         for timestamp, rows in result.emissions_data.items():
             table_module.process(timestamp, rows)
         table_module.endJob()
-        
+
         # Filter empty rows
         all_fields = (
-            list(table_module.fields.keys()) 
-            if hasattr(table_module, 'fields') 
-            else []
+            list(table_module.fields.keys()) if hasattr(table_module, "fields") else []
         )
         meta_cols = {"timestamp", "wkt", "source_type", "source_name"}
         pollutant_cols = [c for c in all_fields if c not in meta_cols]
-        
+
         filtered_rows = filter_empty_emissions(
-            getattr(table_module, 'rows', []), 
-            pollutant_cols
+            getattr(table_module, "rows", []), pollutant_cols
         )
         table_module.rows = filtered_rows
-        
+
         # Export to CSV
         table_module.export_to_csv(csv_path)
         announce(f"CSV exported to {csv_path}")
-        
+
     except Exception as e:
         announce_err(f"Failed to export CSV: {e}")
 
@@ -692,16 +696,16 @@ def export_csv(result, config, config_dict, grid, emissions_output_path):
 def save_layer_style(layer, style_path):
     """
     Extract and save layer style to QML file.
-    
+
     Args:
         layer: QGIS vector layer
         style_path: Path to save QML style file
-        
+
     Returns:
         str: Style XML string, or None if unavailable
     """
     style_xml = None
-    
+
     # Try to save named style to QML
     try:
         if hasattr(layer, "saveNamedStyle"):
@@ -711,13 +715,13 @@ def save_layer_style(layer, style_path):
                     style_xml = sf.read()
     except Exception:
         pass
-    
+
     # Fallback: extract renderer XML
     if not style_xml:
         try:
             renderer = layer.renderer()
             style_xml = renderer.dumpToXml()
-            
+
             # Write fallback style to QML file
             try:
                 with open(style_path, "w", encoding="utf-8") as sf:
@@ -726,14 +730,14 @@ def save_layer_style(layer, style_path):
                 pass
         except Exception:
             pass
-    
+
     return style_xml
 
 
 def embed_style_in_geojson(geojson_path, style_xml):
     """
     Embed style XML into GeoJSON file.
-    
+
     Args:
         geojson_path: Path to GeoJSON file
         style_xml: Style XML string to embed
@@ -741,14 +745,14 @@ def embed_style_in_geojson(geojson_path, style_xml):
     try:
         with open(geojson_path, "r", encoding="utf-8") as gf:
             gj = json.load(gf)
-        
+
         gj["openalaqs_style"] = style_xml
-        
+
         with open(geojson_path, "w", encoding="utf-8") as gf:
             json.dump(gj, gf, ensure_ascii=False)
-        
+
         announce(f"Embedded style into {geojson_path}")
-        
+
     except Exception as e:
         announce_err(f"Failed to embed style into GeoJSON: {e}")
 
@@ -756,7 +760,7 @@ def embed_style_in_geojson(geojson_path, style_xml):
 def export_geojson(result, config, config_dict, grid, emissions_output_path):
     """
     Export emissions data to GeoJSON format with QGIS styling.
-    
+
     Args:
         result: Emission calculation result
         config: EmissionCalculationConfig object
@@ -765,11 +769,8 @@ def export_geojson(result, config, config_dict, grid, emissions_output_path):
         emissions_output_path: Output directory path
     """
     emissions_base = config_dict.get("emissions_output_name", "emissions")
-    geojson_path = os.path.join(
-        emissions_output_path, 
-        f"{emissions_base}.geojson"
-    )
-    
+    geojson_path = os.path.join(emissions_output_path, f"{emissions_base}.geojson")
+
     # Create QGIS vector layer module
     qgis_values = {
         "start_dt_inclusive": config.start_dt_inclusive,
@@ -779,51 +780,45 @@ def export_geojson(result, config, config_dict, grid, emissions_output_path):
         "should_add_labels": False,
         "grid": grid,
     }
-    
+
     qgis_module = EmissionsQGISVectorLayerOutputModule(qgis_values)
-    
+
     # Process emissions data
     qgis_module.beginJob()
     for timestamp, emissions_rows in result.emissions_data.items():
         qgis_module.process(timestamp, emissions_rows)
     layer = qgis_module.endJob()
-    
+
     if not layer:
         announce("No QGIS vector layer generated.")
         return
-    
+
     # Write GeoJSON file
     try:
         opts = QgsVectorFileWriter.SaveVectorOptions()
         opts.driverName = "GeoJSON"
         opts.fileEncoding = "UTF-8"
-        
+
         res, err_msg = QgsVectorFileWriter.writeAsVectorFormatV2(
-            layer, 
-            geojson_path, 
-            QgsCoordinateTransformContext(), 
-            opts
+            layer, geojson_path, QgsCoordinateTransformContext(), opts
         )
-        
+
         if res != 0:
             announce_err(f"Failed to export QGIS vector: {res}, {err_msg}")
             return
-        
+
         announce(f"QGIS vector exported to {geojson_path}")
-        
+
         # Extract and save layer style
-        style_path = os.path.join(
-            emissions_output_path, 
-            f"{emissions_base}.qml"
-        )
+        style_path = os.path.join(emissions_output_path, f"{emissions_base}.qml")
         style_xml = save_layer_style(layer, style_path)
-        
+
         # Embed style in GeoJSON
         if style_xml:
             embed_style_in_geojson(geojson_path, style_xml)
         else:
             announce("No style available to embed or save.")
-            
+
     except Exception as e:
         announce_err(f"Failed to save GeoJSON using QGIS API: {e}")
 
@@ -831,7 +826,7 @@ def export_geojson(result, config, config_dict, grid, emissions_output_path):
 def export_austal(austal_output_path):
     """
     Export AUSTAL dispersion model input files.
-    
+
     Args:
         austal_output_path: Output directory path
     """
@@ -860,7 +855,7 @@ def export_austal(austal_output_path):
         if not files:
             announce("AUSTAL output directory is empty")
             return
-        
+
     except Exception as e:
         announce_err(f"Could not list AUSTAL output directory: {e}")
 
@@ -868,6 +863,7 @@ def export_austal(austal_output_path):
 # ============================================================================
 # Main Execution
 # ============================================================================
+
 
 def setup_output_directories(config_dict, config_path=None):
     """
@@ -890,6 +886,7 @@ def setup_output_directories(config_dict, config_path=None):
     Returns:
         tuple: (austal_output_path, emissions_output_path)
     """
+
     # Helper to expand and normalise a candidate path
     def _norm_path(p):
         if p is None:
@@ -935,24 +932,16 @@ def setup_output_directories(config_dict, config_path=None):
 def main():
     """Main execution function."""
     # Parse command line arguments
-    parser = argparse.ArgumentParser(
-        description="Run Emission Service from config txt"
-    )
+    parser = argparse.ArgumentParser(description="Run Emission Service from config txt")
     parser.add_argument("config_txt", help="Path to config txt file")
+    parser.add_argument("--csv", action="store_true", help="Export emissions as CSV")
     parser.add_argument(
-        "--csv", 
-        action="store_true", 
-        help="Export emissions as CSV"
+        "--geojson",
+        action="store_true",
+        help="Export emissions as GeoJSON (QGIS vector)",
     )
     parser.add_argument(
-        "--geojson", 
-        action="store_true", 
-        help="Export emissions as GeoJSON (QGIS vector)"
-    )
-    parser.add_argument(
-        "--austal", 
-        action="store_true", 
-        help="Export Austal input files"
+        "--austal", action="store_true", help="Export Austal input files"
     )
     parser.add_argument(
         "--timing",
@@ -968,7 +957,9 @@ def main():
         if sys.stdin is not None and sys.stdin.isatty():
             announce_err(str(e))
             while True:
-                announce("Enter a path to a valid .txt config, or type 'q' to quit: ", end="")
+                announce(
+                    "Enter a path to a valid .txt config, or type 'q' to quit: ", end=""
+                )
                 try:
                     user_input = input().strip()
                 except EOFError:
@@ -997,7 +988,7 @@ def main():
     # Set global show_logs flag
     show_logs = config_dict.get("show_logs", False)
     set_show_logs(show_logs)
-    
+
     # Configure logging based on show_logs
     if not show_logs:
         # Disable all logging from libraries
@@ -1007,7 +998,7 @@ def main():
     else:
         logging.disable(logging.NOTSET)
         logging.basicConfig(level=logging.INFO)
-    
+
     announce("=" * 60)
     announce("Emission Calculator Service".center(60))
     announce("=" * 60)
@@ -1022,7 +1013,7 @@ def main():
 
     # Start measuring total runtime at the point we begin heavy work
     start_time = datetime.now()
-    
+
     # Setup output directories (if config file path is provided, defaults
     # for missing output paths are created next to the config file)
     austal_output_path, emissions_output_path = setup_output_directories(
@@ -1032,10 +1023,10 @@ def main():
     announce(f"  - Emissions: {emissions_output_path}")
     announce(f"  - AUSTAL: {austal_output_path}")
     announce("")
-    
+
     # Suppress external library output when show_logs is False
     suppress_output = not show_logs
-    
+
     with suppress_external_output(suppress_output):
         # Load grid
         announce("=" * 60)
@@ -1047,10 +1038,10 @@ def main():
         grid_config = extract_grid_config(grid)
         announce("Grid loaded successfully")
         announce("")
-        
+
         # Create emission calculation config
         config = create_emission_config(config_dict, grid_config)
-        
+
         # Configure AUSTAL if requested
         if args.austal:
             austal_cfg = {
@@ -1062,7 +1053,7 @@ def main():
                 austal_cfg.update(config_dict.get("austal_settings"))
 
             config.dispersion_modules_config = {"AUSTAL": austal_cfg}
-        
+
         # Run emission calculations
         announce("=" * 60)
         announce("Calculating Emissions".center(60))
@@ -1075,7 +1066,7 @@ def main():
         calc_start = datetime.now()
         result = service.calculate_emissions(config)
         calc_end = datetime.now()
-        
+
         if not result.success:
             announce_err(f"\nError: {result.error_message}")
             sys.exit(1)
@@ -1084,41 +1075,37 @@ def main():
     app = None
     created_qt_app = False
     needs_qt = args.csv or args.geojson
-    
+
     if needs_qt:
         with suppress_external_output(suppress_output):
             app, created_qt_app = ensure_qt_app()
-    
+
     try:
         # Export results
         if args.csv or args.geojson or args.austal:
             announce("=" * 60)
             announce("Exporting Results".center(60))
             announce("=" * 60)
-        
+
         export_start = datetime.now()
         with suppress_external_output(suppress_output):
             if args.csv:
                 announce("")
                 announce("Exporting CSV...")
-                export_csv(
-                    result, config, config_dict, grid, emissions_output_path
-                )
-            
+                export_csv(result, config, config_dict, grid, emissions_output_path)
+
             if args.geojson:
                 announce("")
                 announce("Exporting GeoJSON...")
-                export_geojson(
-                    result, config, config_dict, grid, emissions_output_path
-                )
-            
+                export_geojson(result, config, config_dict, grid, emissions_output_path)
+
             if args.austal:
                 announce("")
                 announce("Exporting AUSTAL files...")
                 # Check if already created by dispersion module
-                dm_cfg = getattr(config, "dispersion_modules_config", None)
+                getattr(config, "dispersion_modules_config", None)
                 export_austal(austal_output_path)
-        
+
         announce("")
         announce("=" * 60)
         announce("All operations completed successfully".center(60))
