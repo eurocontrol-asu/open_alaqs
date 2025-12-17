@@ -50,6 +50,7 @@ I use [**Shields IO**](https://shields.io/) for making badges. It is a simple an
   - [Quick start](#quick-start)
     - [Example Files](#example-files)
     - [EHRD Example Study](#ehrd-example-study)
+    - [Beta: Standalone Emissions + AUSTAL Inputs Exports Script](#beta-standalone-emissions--austal-inputs-export-script)
   - [GSE Application](#gse-application)
 
   - [Development](#development)
@@ -163,6 +164,11 @@ Here you can find the following files and directories:
 
 For more detailed information on how to use OpenALAQS, the project files and expected outputs, read the [User Guide](documents/USER_GUIDE.md).
 
+### Beta: Standalone Emissions + AUSTAL Inputs Export Script
+
+This repository contains a beta standalone script that can generate emissions exports (CSV/GeoJSON) and AUSTAL input files. The script is experimental and may contain bugs or incomplete features.
+
+- Script location: [open_alaqs/scripts/individual_script/run_emissions_austal.py](open_alaqs/scripts/individual_script/run_emissions_austal.py). A dedicated README file with detailed instructions with how to use the script is provided in the same folder.
 
 ## GSE Application
 
