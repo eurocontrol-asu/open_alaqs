@@ -377,6 +377,9 @@ def parse_config(txt_path):
     for path_key in ["db_path", "austal_output_path", "emissions_output_path"]:
         if path_key in config:
             config[path_key] = os.path.expandvars(config[path_key])
+
+    # Ensure there's a base name for emission outputs; default to 'emissions'
+    config["emissions_output_name"] = config.get("emissions_output_name", "emissions")
     
     return config
 
