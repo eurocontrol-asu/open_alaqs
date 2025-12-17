@@ -350,6 +350,29 @@ def parse_config(txt_path):
     # Parse numeric fields
     config["vertical_limit_m"] = float(config.get("vertical_limit_m", 914.4))
     
+    # Parse source dynamics (string) and source names (comma-separated)
+    raw_dynamics = str(config.get("source_dynamics", "none") or "none").strip()
+    sd = raw_dynamics.lower()
+    # Accept common synonyms and normalise to canonical values used by modules
+    if sd in ("none", "no", "off", "0"):
+        config["source_dynamics"] = "none"
+    elif sd in ("default", "def"):
+        config["source_dynamics"] = "default"
+    elif sd in ("smooth", "shift"):
+        config["source_dynamics"] = sd
+    elif sd in ("smooth & shift", "smooth&shift", "smooth_shift", "smooth and shift"):
+        config["source_dynamics"] = "smooth_shift"
+    else:
+        # Unknown value — keep as provided but lowercased; modules may validate further
+        config["source_dynamics"] = sd
+
+    raw_names = config.get("source_names", "")
+    if isinstance(raw_names, str):
+        # allow comma-separated list in the txt file
+        config["source_names"] = [s.strip() for s in raw_names.split(",") if s.strip()]
+    else:
+        config["source_names"] = raw_names or []
+
     # Normalise paths (expand environment variables)
     for path_key in ["db_path", "austal_output_path", "emissions_output_path"]:
         if path_key in config:
@@ -702,28 +725,66 @@ def export_austal(austal_output_path):
 # Main Execution
 # ============================================================================
 
-def setup_output_directories(config_dict):
+def setup_output_directories(config_dict, config_path=None):
     """
-    Create output directories if they don't exist.
-    
+    Determine and create output directories.
+
+    Behavior:
+    - If explicit `austal_output_path` / `emissions_output_path` are present in
+      `config_dict`, those paths are used (environment variables expanded).
+    - Otherwise, if `config_path` is provided, defaults are created under the
+      same directory as the config file: `<config_dir>/outputs/austal/` and
+      `<config_dir>/outputs/emissions/`.
+    - If `config_path` is not provided, falls back to relative defaults
+      `outputs/austal/` and `outputs/emissions/` (created relative to the
+      current working directory).
+
     Args:
         config_dict: Configuration dictionary
-        
+        config_path: Path to the config `.txt` file (optional)
+
     Returns:
         tuple: (austal_output_path, emissions_output_path)
     """
-    austal_output_path = config_dict.get(
-        "austal_output_path", 
-        "outputs/austal/"
-    )
-    emissions_output_path = config_dict.get(
-        "emissions_output_path", 
-        "outputs/emissions/"
-    )
-    
-    os.makedirs(austal_output_path, exist_ok=True)
-    os.makedirs(emissions_output_path, exist_ok=True)
-    
+    # Helper to expand and normalise a candidate path
+    def _norm_path(p):
+        if p is None:
+            return None
+        p = os.path.expandvars(p)
+        return os.path.abspath(p)
+
+    # Prefer explicit config values when provided
+    raw_austal = config_dict.get("austal_output_path")
+    raw_emissions = config_dict.get("emissions_output_path")
+
+    if raw_austal:
+        austal_output_path = _norm_path(raw_austal)
+    else:
+        if config_path:
+            cfg_dir = os.path.dirname(os.path.abspath(config_path))
+            austal_output_path = os.path.join(cfg_dir, "outputs", "austal")
+        else:
+            austal_output_path = os.path.abspath("outputs/austal/")
+
+    if raw_emissions:
+        emissions_output_path = _norm_path(raw_emissions)
+    else:
+        if config_path:
+            cfg_dir = os.path.dirname(os.path.abspath(config_path))
+            emissions_output_path = os.path.join(cfg_dir, "outputs", "emissions")
+        else:
+            emissions_output_path = os.path.abspath("outputs/emissions/")
+
+    # Create directories if missing
+    try:
+        os.makedirs(austal_output_path, exist_ok=True)
+    except Exception:
+        pass
+    try:
+        os.makedirs(emissions_output_path, exist_ok=True)
+    except Exception:
+        pass
+
     return austal_output_path, emissions_output_path
 
 
@@ -941,9 +1002,10 @@ def main():
     # Start measuring total runtime at the point we begin heavy work
     start_time = datetime.now()
     
-    # Setup output directories
+    # Setup output directories (if config file path is provided, defaults
+    # for missing output paths are created next to the config file)
     austal_output_path, emissions_output_path = setup_output_directories(
-        config_dict
+        config_dict, config_path
     )
     announce("Output directories configured:")
     announce(f"  - Emissions: {emissions_output_path}")
