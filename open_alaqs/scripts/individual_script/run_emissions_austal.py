@@ -2,7 +2,8 @@
 Emission Calculator Service CLI
 Runs emission calculations from a config file and exports results in various formats.
 """
-
+import sys
+import os
 import argparse
 import json
 import logging
