@@ -4,6 +4,13 @@ Runs emission calculations from a config file and exports results in various for
 """
 import sys
 import os
+
+# Ensure local package can be imported when script is executed directly
+sys.path.insert(
+    0,
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")),
+)
+
 import argparse
 import json
 import logging
@@ -15,22 +22,16 @@ import shutil
 from datetime import datetime, timedelta
 from contextlib import contextmanager
 
-# Add parent directory to path for imports
-sys.path.insert(
-    0, 
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-)
-
 from open_alaqs.core.EmissionCalculatorService import (
     EmissionCalculatorService,
     EmissionCalculationConfig,
 )
 from open_alaqs.core.modules.TableViewWidgetOutputModule import (
-    TableViewWidgetOutputModule, 
-    ViewType
+    TableViewWidgetOutputModule,
+    ViewType,
 )
 from open_alaqs.core.modules.EmissionsQGISVectorLayerOutputModule import (
-    EmissionsQGISVectorLayerOutputModule
+    EmissionsQGISVectorLayerOutputModule,
 )
 from open_alaqs.core.modules.AUSTALOutputModule import AUSTALDispersionModule
 from open_alaqs.core.tools.Grid3D import Grid3D
@@ -436,6 +437,146 @@ def create_emission_config(config_dict, grid_config):
     )
 
 
+def resolve_config_path(path):
+    """
+    Resolve a provided path to a config text file. Accepts directories,
+    archives (.zip/.tar/.tar.gz/.tgz) or direct file paths.
+
+    Returns the resolved file path or raises FileNotFoundError.
+    """
+    path = os.path.expandvars(path)
+    if os.path.isdir(path):
+        for name in ("example.txt", "config.txt", "settings.txt"):
+            candidate = os.path.join(path, name)
+            if os.path.exists(candidate):
+                return candidate
+        for fn in os.listdir(path):
+            if fn.lower().endswith(".txt"):
+                return os.path.join(path, fn)
+        raise FileNotFoundError(f"No .txt config found in directory: {path}")
+
+    if os.path.isfile(path):
+        low = path.lower()
+        if low.endswith(".zip") or low.endswith(".tar") or low.endswith(".tar.gz") or low.endswith(".tgz"):
+            tmp = tempfile.mkdtemp(prefix="openalaqs_cfg_")
+            try:
+                if zipfile.is_zipfile(path):
+                    with zipfile.ZipFile(path, "r") as z:
+                        z.extractall(tmp)
+                else:
+                    with tarfile.open(path, "r:*") as t:
+                        t.extractall(tmp)
+                return resolve_config_path(tmp)
+            except Exception:
+                shutil.rmtree(tmp, ignore_errors=True)
+                raise
+        else:
+            return path
+
+
+def load_config_interactive(initial_path):
+    """
+    Attempt to parse configuration from `initial_path`. If parsing fails and
+    interactive input is available, prompt the user for an alternative path
+    and retry until success or the user quits.
+
+    Returns (config_dict, resolved_config_path)
+    """
+    config_path = initial_path
+    while True:
+        try:
+            config_dict = parse_config(config_path)
+            return config_dict, config_path
+        except Exception as e:
+            announce_err(f"Failed to parse config '{config_path}': {e}")
+            if sys.stdin is not None and sys.stdin.isatty():
+                announce("Please provide a path to a valid .txt config (or 'q' to quit): ", end="")
+                try:
+                    user_input = input().strip()
+                except EOFError:
+                    announce_err("No input available; exiting.")
+                    sys.exit(1)
+
+                if not user_input:
+                    continue
+                if user_input.lower() in ("q", "quit", "exit"):
+                    announce_err("No valid config provided; exiting.")
+                    sys.exit(1)
+                try:
+                    config_path = resolve_config_path(user_input)
+                except Exception as e2:
+                    announce_err(f"Invalid path: {e2}")
+                    continue
+                # loop and attempt to parse the new config_path
+            else:
+                announce_err("Config file invalid and no interactive input available; exiting.")
+                sys.exit(1)
+
+
+def validate_config_interactive(config_dict, config_path):
+    """
+    Validate required keys in `config_dict`. If validation fails and
+    interactive input is available, prompt the user to provide an alternate
+    config path and re-run parsing/validation until valid or user quits.
+
+    Returns (validated_config_dict, resolved_config_path)
+    """
+    while True:
+        validation_errors = []
+
+        dbp = config_dict.get("db_path")
+        if not dbp:
+            validation_errors.append("Missing required key: db_path")
+        else:
+            if not os.path.exists(dbp):
+                validation_errors.append(f"db_path does not exist: {dbp}")
+
+        if "start_dt_inclusive" not in config_dict or "end_dt_inclusive" not in config_dict:
+            validation_errors.append("Missing start_dt_inclusive or end_dt_inclusive")
+
+        if "time_interval" not in config_dict:
+            validation_errors.append("Missing or invalid time_interval_seconds")
+
+        if not config_dict.get("pollutant"):
+            validation_errors.append("Missing required key: pollutant")
+
+        if not validation_errors:
+            return config_dict, config_path
+
+        announce("")
+        announce("Configuration issues detected:")
+        for err in validation_errors:
+            announce_err(f"  - {err}")
+
+        if sys.stdin is not None and sys.stdin.isatty():
+            announce("")
+            announce("Enter a path to a valid .txt config, or type 'q' to quit: ", end="")
+            try:
+                user_input = input().strip()
+            except EOFError:
+                announce_err("No input available; exiting.")
+                sys.exit(1)
+
+            if not user_input:
+                continue
+            if user_input.lower() in ("q", "quit", "exit"):
+                announce_err("Exiting due to invalid configuration.")
+                sys.exit(1)
+            try:
+                config_path = resolve_config_path(user_input)
+                try:
+                    config_dict = parse_config(config_path)
+                except Exception as e3:
+                    announce_err(f"Failed to parse new config: {e3}")
+                    continue
+            except Exception as e4:
+                announce_err(f"Invalid path: {e4}")
+                continue
+        else:
+            announce_err("Configuration invalid and no interactive input available; exiting.")
+            sys.exit(1)
+
+
 # ============================================================================
 # Export Functions
 # ============================================================================
@@ -820,44 +961,10 @@ def main():
     )
     args = parser.parse_args()
     
-    # Resolve config path: allow passing a directory or archive containing example.txt
-    def resolve_config_path(path):
-        path = os.path.expandvars(path)
-        if os.path.isdir(path):
-            # Look for example.txt or any .txt
-            for name in ("example.txt", "config.txt", "settings.txt"):
-                candidate = os.path.join(path, name)
-                if os.path.exists(candidate):
-                    return candidate
-            # fallback: first .txt file
-            for fn in os.listdir(path):
-                if fn.lower().endswith(".txt"):
-                    return os.path.join(path, fn)
-            raise FileNotFoundError(f"No .txt config found in directory: {path}")
-
-        if os.path.isfile(path):
-            low = path.lower()
-            if low.endswith(".zip") or low.endswith(".tar") or low.endswith(".tar.gz") or low.endswith(".tgz"):
-                # extract and look for example.txt
-                tmp = tempfile.mkdtemp(prefix="openalaqs_cfg_")
-                try:
-                    if zipfile.is_zipfile(path):
-                        with zipfile.ZipFile(path, "r") as z:
-                            z.extractall(tmp)
-                    else:
-                        with tarfile.open(path, "r:*") as t:
-                            t.extractall(tmp)
-                    return resolve_config_path(tmp)
-                except Exception as e:
-                    shutil.rmtree(tmp, ignore_errors=True)
-                    raise
-            else:
-                return path
-
+    # Resolve initial config path (directory, archive or file)
     try:
         config_path = resolve_config_path(args.config_txt)
     except FileNotFoundError as e:
-        # If running interactively, prompt the user to enter a valid path
         if sys.stdin is not None and sys.stdin.isatty():
             announce_err(str(e))
             while True:
@@ -883,98 +990,9 @@ def main():
             announce_err(str(e))
             sys.exit(1)
 
-    # Parse configuration and allow interactive retry if the file is invalid
-    while True:
-        try:
-            config_dict = parse_config(config_path)
-            break
-        except Exception as e:
-            announce_err(f"Failed to parse config '{config_path}': {e}")
-            if sys.stdin is not None and sys.stdin.isatty():
-                announce("Please provide a path to a valid .txt config (or 'q' to quit): ", end="")
-                try:
-                    user_input = input().strip()
-                except EOFError:
-                    announce_err("No input available; exiting.")
-                    sys.exit(1)
-
-                if not user_input:
-                    continue
-                if user_input.lower() in ("q", "quit", "exit"):
-                    announce_err("No valid config provided; exiting.")
-                    sys.exit(1)
-                try:
-                    config_path = resolve_config_path(user_input)
-                except Exception as e2:
-                    announce_err(f"Invalid path: {e2}")
-                    continue
-                # loop and attempt to parse the new config_path
-            else:
-                announce_err("Config file invalid and no interactive input available; exiting.")
-                sys.exit(1)
-
-    # Basic validation of parsed config: report missing/invalid keys to the user
-    while True:
-        validation_errors = []
-
-        # db_path: must be present and point to an existing file
-        dbp = config_dict.get("db_path")
-        if not dbp:
-            validation_errors.append("Missing required key: db_path")
-        else:
-            if not os.path.exists(dbp):
-                validation_errors.append(f"db_path does not exist: {dbp}")
-
-        # Start/end datetimes
-        if "start_dt_inclusive" not in config_dict or "end_dt_inclusive" not in config_dict:
-            validation_errors.append("Missing start_dt_inclusive or end_dt_inclusive")
-
-        # time interval
-        if "time_interval" not in config_dict:
-            validation_errors.append("Missing or invalid time_interval_seconds")
-
-        # pollutant
-        if not config_dict.get("pollutant"):
-            validation_errors.append("Missing required key: pollutant")
-
-        if not validation_errors:
-            break
-
-        # Announce errors and allow interactive correction (only in tty)
-        announce("")
-        announce("Configuration issues detected:")
-        for err in validation_errors:
-            announce_err(f"  - {err}")
-
-        if sys.stdin is not None and sys.stdin.isatty():
-            announce("")
-            announce("Enter a path to a valid .txt config, or type 'q' to quit: ", end="")
-            try:
-                user_input = input().strip()
-            except EOFError:
-                announce_err("No input available; exiting.")
-                sys.exit(1)
-
-            if not user_input:
-                continue
-            if user_input.lower() in ("q", "quit", "exit"):
-                announce_err("Exiting due to invalid configuration.")
-                sys.exit(1)
-            # treat input as path
-            try:
-                config_path = resolve_config_path(user_input)
-                # attempt to reparse with the new path
-                try:
-                    config_dict = parse_config(config_path)
-                except Exception as e3:
-                    announce_err(f"Failed to parse new config: {e3}")
-                    continue
-            except Exception as e4:
-                announce_err(f"Invalid path: {e4}")
-                continue
-        else:
-            announce_err("Configuration invalid and no interactive input available; exiting.")
-            sys.exit(1)
+    # Parse configuration (with interactive retry) and validate it
+    config_dict, config_path = load_config_interactive(config_path)
+    config_dict, config_path = validate_config_interactive(config_dict, config_path)
     
     # Set global show_logs flag
     show_logs = config_dict.get("show_logs", False)
@@ -1118,9 +1136,9 @@ def main():
             announce("")
             announce(f"Total elapsed: {_format_timedelta(total)}")
             if calc_start and calc_end:
-                announce(f"Calculation:   { _format_timedelta(calc_end - calc_start) }")
+                announce(f"Calculation:   {_format_timedelta(calc_end - calc_start)}")
             if export_start and export_end:
-                announce(f"Exports:       { _format_timedelta(export_end - export_start) }")
+                announce(f"Exports:       {_format_timedelta(export_end - export_start)}")
     
     finally:
         # Clean up Qt application if it was created before for some modules
