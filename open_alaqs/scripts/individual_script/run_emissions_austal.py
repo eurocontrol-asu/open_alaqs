@@ -2,12 +2,13 @@
 Emission Calculator Service CLI
 Runs emission calculations from a config file and exports results in various formats.
 """
-import sys
-import os
+
 import argparse
 import json
 import logging
+import os
 import shutil
+import sys
 import tarfile
 import tempfile
 import warnings
@@ -462,7 +463,12 @@ def resolve_config_path(path):
 
     if os.path.isfile(path):
         low = path.lower()
-        if low.endswith(".zip") or low.endswith(".tar") or low.endswith(".tar.gz") or low.endswith(".tgz"):
+        if (
+            low.endswith(".zip")
+            or low.endswith(".tar")
+            or low.endswith(".tar.gz")
+            or low.endswith(".tgz")
+        ):
             tmp = tempfile.mkdtemp(prefix="openalaqs_cfg_")
             try:
                 if zipfile.is_zipfile(path):
@@ -495,7 +501,10 @@ def load_config_interactive(initial_path):
         except Exception as e:
             announce_err(f"Failed to parse config '{config_path}': {e}")
             if sys.stdin is not None and sys.stdin.isatty():
-                announce("Please provide a path to a valid .txt config (or 'q' to quit): ", end="")
+                announce(
+                    "Please provide a path to a valid .txt config (or 'q' to quit): ",
+                    end="",
+                )
                 try:
                     user_input = input().strip()
                 except EOFError:
@@ -514,7 +523,9 @@ def load_config_interactive(initial_path):
                     continue
                 # loop and attempt to parse the new config_path
             else:
-                announce_err("Config file invalid and no interactive input available; exiting.")
+                announce_err(
+                    "Config file invalid and no interactive input available; exiting."
+                )
                 sys.exit(1)
 
 
@@ -536,7 +547,10 @@ def validate_config_interactive(config_dict, config_path):
             if not os.path.exists(dbp):
                 validation_errors.append(f"db_path does not exist: {dbp}")
 
-        if "start_dt_inclusive" not in config_dict or "end_dt_inclusive" not in config_dict:
+        if (
+            "start_dt_inclusive" not in config_dict
+            or "end_dt_inclusive" not in config_dict
+        ):
             validation_errors.append("Missing start_dt_inclusive or end_dt_inclusive")
 
         if "time_interval" not in config_dict:
@@ -555,7 +569,9 @@ def validate_config_interactive(config_dict, config_path):
 
         if sys.stdin is not None and sys.stdin.isatty():
             announce("")
-            announce("Enter a path to a valid .txt config, or type 'q' to quit: ", end="")
+            announce(
+                "Enter a path to a valid .txt config, or type 'q' to quit: ", end=""
+            )
             try:
                 user_input = input().strip()
             except EOFError:
@@ -578,7 +594,9 @@ def validate_config_interactive(config_dict, config_path):
                 announce_err(f"Invalid path: {e4}")
                 continue
         else:
-            announce_err("Configuration invalid and no interactive input available; exiting.")
+            announce_err(
+                "Configuration invalid and no interactive input available; exiting."
+            )
             sys.exit(1)
 
 
@@ -924,7 +942,9 @@ def setup_output_directories(config_dict, config_path=None):
     return austal_output_path, emissions_output_path
 
 
-def run_calculation(config_dict, config_path, austal_output_path, args, suppress_output):
+def run_calculation(
+    config_dict, config_path, austal_output_path, args, suppress_output
+):
     """Run the emission calculation within a suppression context.
 
     Returns: (result, config, grid, calc_start, calc_end)
@@ -967,7 +987,16 @@ def run_calculation(config_dict, config_path, austal_output_path, args, suppress
     return result, config, grid, calc_start, calc_end
 
 
-def run_exports(result, config, config_dict, grid, emissions_output_path, austal_output_path, args, suppress_output):
+def run_exports(
+    result,
+    config,
+    config_dict,
+    grid,
+    emissions_output_path,
+    austal_output_path,
+    args,
+    suppress_output,
+):
     """Run export steps (CSV, GeoJSON, AUSTAL) within suppression context.
 
     Returns: (export_start, export_end)
@@ -1021,7 +1050,9 @@ def main():
         if sys.stdin is not None and sys.stdin.isatty():
             announce_err(str(e))
             while True:
-                announce("Enter a path to a valid .txt config, or type 'q' to quit: ", end="")
+                announce(
+                    "Enter a path to a valid .txt config, or type 'q' to quit: ", end=""
+                )
                 try:
                     user_input = input().strip()
                 except EOFError:
