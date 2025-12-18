@@ -6,9 +6,7 @@ Runs emission calculations from a config file and exports results in various for
 import argparse
 import json
 import logging
-import os
 import shutil
-import sys
 import tarfile
 import tempfile
 import warnings
@@ -27,10 +25,6 @@ from open_alaqs.core.modules.TableViewWidgetOutputModule import (
     TableViewWidgetOutputModule,
     ViewType,
 )
-from open_alaqs.core.modules.EmissionsQGISVectorLayerOutputModule import (
-    EmissionsQGISVectorLayerOutputModule,
-)
-from open_alaqs.core.modules.AUSTALOutputModule import AUSTALDispersionModule
 from open_alaqs.core.tools.Grid3D import Grid3D
 
 # ============================================================================
@@ -929,6 +923,75 @@ def setup_output_directories(config_dict, config_path=None):
     return austal_output_path, emissions_output_path
 
 
+def run_calculation(config_dict, config_path, austal_output_path, args, suppress_output):
+    """Run the emission calculation within a suppression context.
+
+    Returns: (result, config, grid, calc_start, calc_end)
+    """
+    with suppress_external_output(suppress_output):
+        announce("=" * 60)
+        announce("Loading Grid".center(60))
+        announce("=" * 60)
+        announce("")
+        announce(f"From: {config_dict['db_path']}")
+        grid = Grid3D(db_path=config_dict["db_path"], deserialize=True)
+        grid_config = extract_grid_config(grid)
+        announce("Grid loaded successfully")
+        announce("")
+
+        config = create_emission_config(config_dict, grid_config)
+
+        if args.austal:
+            austal_cfg = {"is_enabled": True, "output_path": austal_output_path}
+            if config_dict.get("austal_settings"):
+                austal_cfg.update(config_dict.get("austal_settings"))
+            config.dispersion_modules_config = {"AUSTAL": austal_cfg}
+
+        announce("=" * 60)
+        announce("Calculating Emissions".center(60))
+        announce("=" * 60)
+        announce("")
+        announce(f"Period: {config.start_dt_inclusive} to {config.end_dt_inclusive}")
+        announce(f"Pollutant: {config.pollutant}")
+
+        service = EmissionCalculatorService()
+        calc_start = datetime.now()
+        result = service.calculate_emissions(config)
+        calc_end = datetime.now()
+
+        if not result.success:
+            announce_err(f"\nError: {result.error_message}")
+            sys.exit(1)
+
+    return result, config, grid, calc_start, calc_end
+
+
+def run_exports(result, config, config_dict, grid, emissions_output_path, austal_output_path, args, suppress_output):
+    """Run export steps (CSV, GeoJSON, AUSTAL) within suppression context.
+
+    Returns: (export_start, export_end)
+    """
+    export_start = datetime.now()
+    with suppress_external_output(suppress_output):
+        if args.csv:
+            announce("")
+            announce("Exporting CSV...")
+            export_csv(result, config, config_dict, grid, emissions_output_path)
+
+        if args.geojson:
+            announce("")
+            announce("Exporting GeoJSON...")
+            export_geojson(result, config, config_dict, grid, emissions_output_path)
+
+        if args.austal:
+            announce("")
+            announce("Exporting AUSTAL files...")
+            export_austal(austal_output_path)
+
+    export_end = datetime.now()
+    return export_start, export_end
+
+
 def main():
     """Main execution function."""
     # Parse command line arguments
@@ -957,9 +1020,7 @@ def main():
         if sys.stdin is not None and sys.stdin.isatty():
             announce_err(str(e))
             while True:
-                announce(
-                    "Enter a path to a valid .txt config, or type 'q' to quit: ", end=""
-                )
+                announce("Enter a path to a valid .txt config, or type 'q' to quit: ", end="")
                 try:
                     user_input = input().strip()
                 except EOFError:
@@ -1027,49 +1088,9 @@ def main():
     # Suppress external library output when show_logs is False
     suppress_output = not show_logs
 
-    with suppress_external_output(suppress_output):
-        # Load grid
-        announce("=" * 60)
-        announce("Loading Grid".center(60))
-        announce("=" * 60)
-        announce("")
-        announce(f"From: {config_dict['db_path']}")
-        grid = Grid3D(db_path=config_dict["db_path"], deserialize=True)
-        grid_config = extract_grid_config(grid)
-        announce("Grid loaded successfully")
-        announce("")
-
-        # Create emission calculation config
-        config = create_emission_config(config_dict, grid_config)
-
-        # Configure AUSTAL if requested
-        if args.austal:
-            austal_cfg = {
-                "is_enabled": True,
-                "output_path": austal_output_path,
-            }
-            # Merge any austal_settings from the config file
-            if config_dict.get("austal_settings"):
-                austal_cfg.update(config_dict.get("austal_settings"))
-
-            config.dispersion_modules_config = {"AUSTAL": austal_cfg}
-
-        # Run emission calculations
-        announce("=" * 60)
-        announce("Calculating Emissions".center(60))
-        announce("=" * 60)
-        announce("")
-        announce(f"Period: {config.start_dt_inclusive} to {config.end_dt_inclusive}")
-        announce(f"Pollutant: {config.pollutant}")
-
-        service = EmissionCalculatorService()
-        calc_start = datetime.now()
-        result = service.calculate_emissions(config)
-        calc_end = datetime.now()
-
-        if not result.success:
-            announce_err(f"\nError: {result.error_message}")
-            sys.exit(1)
+    result, config, grid, calc_start, calc_end = run_calculation(
+        config_dict, config_path, austal_output_path, args, suppress_output
+    )
 
     # Initialize Qt app if needed for exports
     app = None
@@ -1087,31 +1108,21 @@ def main():
             announce("Exporting Results".center(60))
             announce("=" * 60)
 
-        export_start = datetime.now()
-        with suppress_external_output(suppress_output):
-            if args.csv:
-                announce("")
-                announce("Exporting CSV...")
-                export_csv(result, config, config_dict, grid, emissions_output_path)
-
-            if args.geojson:
-                announce("")
-                announce("Exporting GeoJSON...")
-                export_geojson(result, config, config_dict, grid, emissions_output_path)
-
-            if args.austal:
-                announce("")
-                announce("Exporting AUSTAL files...")
-                # Check if already created by dispersion module
-                getattr(config, "dispersion_modules_config", None)
-                export_austal(austal_output_path)
+        export_start, export_end = run_exports(
+            result,
+            config,
+            config_dict,
+            grid,
+            emissions_output_path,
+            austal_output_path,
+            args,
+            suppress_output,
+        )
 
         announce("")
         announce("=" * 60)
         announce("All operations completed successfully".center(60))
         announce("=" * 60)
-
-        export_end = datetime.now()
         # Timing summary
         if args.timing:
             total_end = datetime.now()
@@ -1125,8 +1136,10 @@ def main():
             if calc_start and calc_end:
                 announce(f"Calculation:   {_format_timedelta(calc_end - calc_start)}")
             if export_start and export_end:
-                announce(f"Exports:       {_format_timedelta(export_end - export_start)}")
-    
+                announce(
+                    f"Exports:       {_format_timedelta(export_end - export_start)}"
+                )
+
     finally:
         # Clean up Qt application if it was created before for some modules
         if created_qt_app and app is not None:
