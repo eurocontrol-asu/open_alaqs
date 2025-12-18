@@ -15,6 +15,7 @@ import warnings
 import zipfile
 from contextlib import contextmanager
 from datetime import datetime, timedelta
+
 from qgis.core import QgsCoordinateTransformContext, QgsVectorFileWriter
 
 from open_alaqs.core.EmissionCalculatorService import (
@@ -1044,7 +1045,7 @@ def main():
         help="Show elapsed time summary for calculation and exports",
     )
     args = parser.parse_args()
-    
+
     # Resolve initial config path (directory, archive or file)
     try:
         config_path = resolve_config_path(args.config_txt)
@@ -1079,7 +1080,7 @@ def main():
     # Parse configuration (with interactive retry) and validate it
     config_dict, config_path = load_config_interactive(config_path)
     config_dict, config_path = validate_config_interactive(config_dict, config_path)
-    
+
     # Set global show_logs flag
     show_logs = config_dict.get("show_logs", False)
     set_show_logs(show_logs)
