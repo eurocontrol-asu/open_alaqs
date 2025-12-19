@@ -18,20 +18,34 @@ from datetime import datetime, timedelta
 
 from qgis.core import QgsCoordinateTransformContext, QgsVectorFileWriter
 
+
 def get_plugins_dir():
     # Method 1: Check user plugins directory (AppData)
     user_profile = os.path.expanduser("~")
-    user_plugins = os.path.join(user_profile, "AppData", "Roaming", "QGIS", "QGIS3", "profiles", "default", "python", "plugins")
+    user_plugins = os.path.join(
+        user_profile,
+        "AppData",
+        "Roaming",
+        "QGIS",
+        "QGIS3",
+        "profiles",
+        "default",
+        "python",
+        "plugins",
+    )
     if os.path.exists(os.path.join(user_plugins, "open_alaqs")):
         return user_plugins
-    
+
     # Method 2: Check system plugins directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    system_plugins = os.path.abspath(os.path.join(script_dir, '..', '..', '..'))
+    system_plugins = os.path.abspath(os.path.join(script_dir, "..", "..", ".."))
     if os.path.exists(os.path.join(system_plugins, "open_alaqs")):
         return system_plugins
-    
-    raise RuntimeError("Could not locate open_alaqs plugin in user or system directories")
+
+    raise RuntimeError(
+        "Could not locate open_alaqs plugin in user or system directories"
+    )
+
 
 plugins_dir = get_plugins_dir()
 if plugins_dir not in sys.path:
@@ -65,6 +79,7 @@ def import_openalaqs_modules():
     except Exception as _e:
         # announce_err may not be available at import time; raise with clear message
         raise RuntimeError(f"Failed to import open_alaqs modules: {_e}")
+
 
 # ============================================================================
 # Logging Control
