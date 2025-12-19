@@ -29,6 +29,9 @@ Replace `<YourUser>` and the QGIS `<Installed Version>` with values appropriate 
 # Run using the Python from the shell (script path absolute):
 python "C:\Program Files\QGIS <Installed Version>\apps\qgis\python\plugins\open_alaqs\scripts\individual_script\run_emissions_austal.py" "C:\path\to\my_config.txt" --csv --geojson --austal --timing
 
+# Run using the QGIS-aware python wrapper (e.g. python-qgis) with the plugin installed in AppData:
+python-qgis "%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\open_alaqs\scripts\individual_script\run_emissions_austal.py" "C:\Users\cpetr\Downloads\example.txt" --csv --geojson --austal --timing
+
 # Or, if you are already in the plugin or repo folder, run relative to CWD:
 python open_alaqs\scripts\individual_script\run_emissions_austal.py C:\path\to\my_config.txt --csv --geojson --austal --timing
 ```
