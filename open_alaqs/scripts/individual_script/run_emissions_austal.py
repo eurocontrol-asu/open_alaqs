@@ -37,19 +37,34 @@ plugins_dir = get_plugins_dir()
 if plugins_dir not in sys.path:
     sys.path.insert(0, plugins_dir)
 
-from open_alaqs.core.EmissionCalculatorService import (
-    EmissionCalculationConfig,
-    EmissionCalculatorService,
-)
-from open_alaqs.core.modules.AUSTALOutputModule import AUSTALDispersionModule
-from open_alaqs.core.modules.EmissionsQGISVectorLayerOutputModule import (
-    EmissionsQGISVectorLayerOutputModule,
-)
-from open_alaqs.core.modules.TableViewWidgetOutputModule import (
-    TableViewWidgetOutputModule,
-    ViewType,
-)
-from open_alaqs.core.tools.Grid3D import Grid3D
+
+def import_openalaqs_modules():
+    """Import open_alaqs modules at runtime.
+
+    This defers imports until `main()` has set up the plugin path and any
+    logging/suppression behavior
+    """
+    global EmissionCalculationConfig, EmissionCalculatorService
+    global AUSTALDispersionModule, EmissionsQGISVectorLayerOutputModule
+    global TableViewWidgetOutputModule, ViewType, Grid3D
+
+    try:
+        from open_alaqs.core.EmissionCalculatorService import (
+            EmissionCalculationConfig,
+            EmissionCalculatorService,
+        )
+        from open_alaqs.core.modules.AUSTALOutputModule import AUSTALDispersionModule
+        from open_alaqs.core.modules.EmissionsQGISVectorLayerOutputModule import (
+            EmissionsQGISVectorLayerOutputModule,
+        )
+        from open_alaqs.core.modules.TableViewWidgetOutputModule import (
+            TableViewWidgetOutputModule,
+            ViewType,
+        )
+        from open_alaqs.core.tools.Grid3D import Grid3D
+    except Exception as _e:
+        # announce_err may not be available at import time; raise with clear message
+        raise RuntimeError(f"Failed to import open_alaqs modules: {_e}")
 
 # ============================================================================
 # Logging Control
@@ -1141,6 +1156,11 @@ def main():
 
     # Suppress external library output when show_logs is False
     suppress_output = not show_logs
+
+    # Import open_alaqs modules now that sys.path is configured and logging
+    # suppression preferences have been set. This keeps imports out of module
+    # scope (fixes flake8 E402) while preserving plugin discovery logic.
+    import_openalaqs_modules()
 
     result, config, grid, calc_start, calc_end = run_calculation(
         config_dict, config_path, austal_output_path, args, suppress_output
