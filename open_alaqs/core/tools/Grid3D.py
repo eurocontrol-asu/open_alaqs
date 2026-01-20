@@ -105,7 +105,7 @@ class Grid3D:
         y_min = self._grid_origin_y
         x_max = self._grid_origin_x + (self._x_cells * self._x_resolution)
         y_max = self._grid_origin_y + (self._y_cells * self._y_resolution)
-        
+
         return {
             "x_min": x_min,
             "x_max": x_max,
