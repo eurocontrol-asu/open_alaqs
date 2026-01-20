@@ -96,6 +96,23 @@ class Grid3D:
     def getAirportAltitude(self):
         return self._reference_altitude
 
+    def getGridBounds(self) -> dict:
+        """
+        Calculate the grid bounds (x_min, x_max, y_min, y_max) in EPSG:3857 coordinates.
+        These bounds represent the minimum and maximum coordinates of all grid cells.
+        """
+        x_min = self._grid_origin_x
+        y_min = self._grid_origin_y
+        x_max = self._grid_origin_x + (self._x_cells * self._x_resolution)
+        y_max = self._grid_origin_y + (self._y_cells * self._y_resolution)
+        
+        return {
+            "x_min": x_min,
+            "x_max": x_max,
+            "y_min": y_min,
+            "y_max": y_max,
+        }
+
     def _deserialize(self):
         query = """
             SELECT
