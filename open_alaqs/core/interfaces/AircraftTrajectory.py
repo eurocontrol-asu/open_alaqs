@@ -352,16 +352,32 @@ class AircraftTrajectoryPoint(TrajectoryPoint):
             self.setWeight(val.getWeight())
             self.setMode(val.getMode())
             self.setCourse(val.getCourse())
+            self.setFuelFlow(val.getFuelFlow())
         else:
             TrajectoryPoint.__init__(self, val)
             # properties
             self._true_airspeed = conversion.convertToFloat(val.get("tas_metres"))
             self._engine_thrust = conversion.convertToFloat(val.get("power"))
+            self._fuel_flow = conversion.convertToFloat(val.get("fuel_flow") or val.get("fuel_flow_kgm"))
             self._mode = str(val.get("mode", ""))
             self._weight = (
                 conversion.convertToFloat(val["weight"]) if "weight" in val else ""
             )
             self._course = str(val.get("course", ""))
+            
+        # Ensure all attributes are initialized even if not in val dict
+        if not hasattr(self, '_fuel_flow'):
+            self._fuel_flow = None
+        if not hasattr(self, '_engine_thrust'):
+            self._engine_thrust = None
+        if not hasattr(self, '_true_airspeed'):
+            self._true_airspeed = None
+        if not hasattr(self, '_mode'):
+            self._mode = None
+        if not hasattr(self, '_weight'):
+            self._weight = None
+        if not hasattr(self, '_course'):
+            self._course = None
 
     def getIdentifier(self):
         return self._id
@@ -393,6 +409,12 @@ class AircraftTrajectoryPoint(TrajectoryPoint):
     def setPower(self, var):
         self._engine_thrust = var
 
+    def getFuelFlow(self):
+        return self._fuel_flow
+
+    def setFuelFlow(self, var):
+        self._fuel_flow = var
+
     def setWeight(self, val):
         self._weight = val
 
@@ -414,6 +436,7 @@ class AircraftTrajectoryPoint(TrajectoryPoint):
         val = "\n Aircraft trajectory point with id '%s':" % (str(self.getIdentifier()))
         val += "\n\t True airspeed [m]: %s" % (self.getTrueAirspeed())
         val += "\n\t Engine-power setting [%%]: %s" % (self.getEngineThrust())
+        val += "\n\t Fuel flow [kg/s]: %s" % (self.getFuelFlow())
         val += "\n\t Mode : '%s'" % (str(self.getMode()))
         val += "\n\t".join(str(TrajectoryPoint.__str__(self)).split("\n"))
         return val
@@ -475,6 +498,7 @@ class AircraftTrajectoryStore(Store, metaclass=Singleton):
                         trajectory_dict.get("tas_metres")
                     ),
                     "power": conversion.convertToFloat(trajectory_dict.get("power")),
+                    "fuel_flow": conversion.convertToFloat(trajectory_dict.get("fuel_flow_kgm")),
                     "mode": (
                         str(trajectory_dict["mode"])
                         if "mode" in trajectory_dict
@@ -529,18 +553,13 @@ class AircraftTrajectoryDatabase(SQLSerializable, metaclass=Singleton):
                     ("arrival_departure", "VARCHAR(1)"),
                     ("stage", "INTEGER"),
                     ("point", "INTEGER"),
-                    # ("weight_lbs", "DECIMAL NULL"),
-                    # ("horizontal_feet", "DECIMAL NULL"),
-                    # ("vertical_feet", "DECIMAL NULL"),
-                    # ("tas_knots", "DECIMAL NULL"),
                     ("weight_kgs", "DECIMAL NULL"),
                     ("x_m", "DECIMAL NULL DEFAULT 0"),
                     ("y_m", "DECIMAL NULL DEFAULT 0"),
                     ("z_m", "DECIMAL NULL DEFAULT 0"),
-                    # ("horizontal_metres", "DECIMAL NULL DEFAULT 0"),
-                    # ("vertical_metres", "DECIMAL NULL DEFAULT 0"),
                     ("tas_metres", "DECIMAL NULL"),
                     ("power", "DECIMAL NULL"),
+                    ("fuel_flow_kgm", "DECIMAL NULL"),
                     ("mode", "VARCHAR(5)"),
                     ("course", "VARCHAR(15)"),
                 ]
