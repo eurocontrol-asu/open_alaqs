@@ -76,12 +76,19 @@ class MovementSourceModule(SourceModule):
         self._nox_correction = values_dict.get("should_apply_nox_corrections", False)
         self._smooth_and_shift = values_dict.get("source_dynamics", "none")
         self._reference_altitude = values_dict.get("reference_altitude", 0.0)
+        self._grid_bounds = values_dict.get("grid_bounds", None)
 
     def getMethod(self):
         return self._method
 
     def setMethod(self, var):
         self._method = var
+
+    def getGridBounds(self):
+        return self._grid_bounds
+
+    def setGridBounds(self, var):
+        self._grid_bounds = var
 
     def getApplyNOxCorrection(self):
         return self._nox_correction
@@ -250,6 +257,7 @@ class MovementSourceModule(SourceModule):
 
         limit_ = self.getCalculationLimit()
         limit_["height_unit_in_feet"] = False
+        limit_["grid_bounds"] = self.getGridBounds()
 
         calc_method: CalcMethodDict = {
             "name": self.getMethod()["name"],

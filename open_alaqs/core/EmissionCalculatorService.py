@@ -203,14 +203,41 @@ class EmissionCalculatorService:
         if self._emission_calculation is None:
             raise ValueError("Emission calculation not initialized")
 
+        # Map user-friendly source type names to actual module names
+        source_type_mapping = {
+            "all": "all",
+            "area": "AreaSource",
+            "areasource": "AreaSource",
+            "movement": "MovementSource",
+            "movements": "MovementSource",
+            "movementsource": "MovementSource",
+            "parking": "ParkingSource",
+            "parkingsource": "ParkingSource",
+            "point": "PointSource",
+            "pointsource": "PointSource",
+            "roadway": "RoadwaySource",
+            "roadwaysource": "RoadwaySource",
+        }
+
         # Determine which modules to add
-        if config.source_type.lower() == "all":
+        source_type_lower = config.source_type.lower()
+        if source_type_lower == "all":
             module_names = SourceModuleRegistry().get_module_names()
         else:
-            module_names = [config.source_type]
+            # Look up in mapping, fallback to the original value
+            module_name = source_type_mapping.get(source_type_lower, config.source_type)
+            module_names = [module_name]
 
         # Get reference altitude from grid config
         reference_altitude = config.grid_config.get("reference_altitude", 0.0)
+
+        # Get grid bounds from the 3D grid
+        grid_bounds = None
+        if self._emission_calculation._grid is not None:
+            grid_bounds = self._emission_calculation._grid.getGridBounds()
+            logger.info(f"Grid bounds calculated: {grid_bounds}")
+        else:
+            logger.warning("Grid is None, grid_bounds will not be set for segment clipping")
 
         # Add each module for the configuration
         for module_name in module_names:
@@ -223,6 +250,7 @@ class EmissionCalculatorService:
                     "reference_altitude": reference_altitude,
                     "show_progress": False,
                     "receptors": config.receptor_points,
+                    "grid_bounds": grid_bounds,
                 },
             )
             logger.info(f"Added source module: {module_name}")
