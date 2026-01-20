@@ -250,10 +250,16 @@ class EngineEmissionIndex(Store):
             return icao_eedb_bffm2
         return icao_eedb
 
-    def getEmissionIndexByPowerSetting(
-        self, power_setting, method={"name": "BFFM2", "config": {}}
+    def getEmissionIndexByEngineState(
+        self, power_setting, method={"name": "BFFM2", "config": {}}, fuel_flow=None
     ):
         emission_index = None
+
+        # If fuel flow is provided directly, skip power setting conversion and use fuel flow
+        if fuel_flow is not None and fuel_flow > 0:
+            return self.getEmissionIndexByFuelFlow(fuel_flow, method)
+        else:
+            logger.debug(f"Using power setting: {power_setting}% (fuel_flow={fuel_flow} not usable)")
 
         if method["name"] == "matching":
             # match power setting with mode
