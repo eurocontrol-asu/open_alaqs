@@ -237,7 +237,9 @@ class EmissionCalculatorService:
             grid_bounds = self._emission_calculation._grid.getGridBounds()
             logger.info(f"Grid bounds calculated: {grid_bounds}")
         else:
-            logger.warning("Grid is None, grid_bounds will not be set for segment clipping")
+            logger.warning(
+                "Grid is None, grid_bounds will not be set for segment clipping"
+            )
 
         # Add each module for the configuration
         for module_name in module_names:

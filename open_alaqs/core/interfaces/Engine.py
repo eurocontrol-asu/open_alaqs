@@ -259,7 +259,9 @@ class EngineEmissionIndex(Store):
         if fuel_flow is not None and fuel_flow > 0:
             return self.getEmissionIndexByFuelFlow(fuel_flow, method)
         else:
-            logger.debug(f"Using power setting: {power_setting}% (fuel_flow={fuel_flow} not usable)")
+            logger.debug(
+                f"Using power setting: {power_setting}% (fuel_flow={fuel_flow} not usable)"
+            )
 
         if method["name"] == "matching":
             # match power setting with mode
