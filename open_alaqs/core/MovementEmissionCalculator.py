@@ -859,7 +859,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         emissions.setGeometryText(segment_geometry_wkt)
 
         # Emissions calculation
-        
+
         # Ellipsoidal (2D) distance in meters (using height and clipped points)
         space_in_segment_m = spatial.ellipsoidal_2d_distance(
             start_point, end_point, 3857
