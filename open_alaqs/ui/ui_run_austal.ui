@@ -6,14 +6,20 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>700</width>
-    <height>629</height>
+    <width>600</width>
+    <height>1050</height>
    </rect>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>500</width>
+    <height>450</height>
+   </size>
+  </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-    <horstretch>0</horstretch>
-    <verstretch>0</verstretch>
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>1</horstretch>
+    <verstretch>1</verstretch>
    </sizepolicy>
   </property>
   <property name="windowTitle">
@@ -22,24 +28,61 @@
   <property name="modal">
    <bool>true</bool>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="dialogMainLayout">
    <property name="leftMargin">
-    <number>9</number>
+    <number>0</number>
    </property>
    <property name="topMargin">
-    <number>9</number>
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
    </property>
    <property name="bottomMargin">
-    <number>9</number>
+    <number>0</number>
+   </property>
+   <property name="spacing">
+    <number>0</number>
    </property>
    <item>
-    <widget class="QGroupBox" name="outputGroupBox">
-     <property name="title">
-      <string>AUSTAL Input</string>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
      </property>
-     <layout class="QGridLayout" name="gridLayout">
+     <widget class="QWidget" name="scrollContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>882</width>
+        <height>1082</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="mainVerticalLayout">
+       <property name="leftMargin">
+        <number>9</number>
+       </property>
+       <property name="topMargin">
+        <number>9</number>
+       </property>
+       <property name="rightMargin">
+        <number>9</number>
+       </property>
+       <property name="bottomMargin">
+        <number>9</number>
+       </property>
+       <property name="spacing">
+        <number>6</number>
+       </property>
+   <!-- Section 1: AUSTAL Executable -->
+   <item>
+    <widget class="QGroupBox" name="executableGroupBox">
+     <property name="title">
+      <string>1. AUSTAL Executable</string>
+     </property>
+     <layout class="QFormLayout" name="executableLayout">
       <item row="0" column="0">
-       <widget class="QLabel" name="label">
+       <widget class="QLabel" name="executableLabel">
         <property name="text">
          <string>AUSTAL Executable:</string>
         </property>
@@ -55,31 +98,552 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label_2">
+      <item row="1" column="1">
+       <widget class="QLabel" name="executableStatusLabel">
         <property name="text">
-         <string>Work Directory:</string>
+         <string>Status: No executable loaded</string>
+        </property>
+        <property name="styleSheet">
+         <string>background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold; font-size: 11px;</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
-       <widget class="QgsFileWidget" name="work_directory_path">
+     </layout>
+    </widget>
+   </item>
+   <!-- Section 2: Input File Strategy -->
+   <item>
+    <widget class="QGroupBox" name="inputStrategyGroupBox">
+     <property name="title">
+      <string>2. Input File Strategy</string>
+     </property>
+     <layout class="QVBoxLayout" name="inputStrategyLayout">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <!-- Option A: Use Existing Files -->
+      <item>
+       <widget class="QRadioButton" name="useExistingFilesRadio">
+        <property name="text">
+         <string>Use Existing AUSTAL Input Files</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QFrame" name="existingFilesFrame">
+        <property name="visible">
+         <bool>true</bool>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <layout class="QFormLayout" name="existingFilesLayout">
+         <property name="leftMargin">
+          <number>20</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="existingWorkDirLabel">
+           <property name="text">
+            <string>Work Directory:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QgsFileWidget" name="work_directory_path">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLabel" name="existingFilesStatusLabel">
+           <property name="text">
+            <string>Status: No work directory loaded</string>
+           </property>
+           <property name="styleSheet">
+            <string>background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold; font-size: 11px;</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <!-- Separator -->
+      <item>
+       <widget class="Line" name="inputStrategyLine">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <!-- Option B: Generate from CSV -->
+      <item>
+       <widget class="QRadioButton" name="generateFromCsvRadio">
+        <property name="text">
+         <string>Generate AUSTAL Input Files from CSV</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QFrame" name="generateFromCsvFrame">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <layout class="QFormLayout" name="generateFromCsvLayout">
+         <property name="leftMargin">
+          <number>20</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="csvOutputDirLabel">
+           <property name="text">
+            <string>Output Directory:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QgsFileWidget" name="output_directory_path">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="emissionsCsvLabel">
+           <property name="text">
+            <string>Emissions CSV:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QgsFileWidget" name="emissions_csv_path">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="meteoCsvLabel">
+           <property name="text">
+            <string>Meteorology CSV:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QgsFileWidget" name="meteo_csv_path">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="pollutantLabel">
+           <property name="text">
+            <string>Pollutant:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QComboBox" name="pollutant_combo">
+           <item>
+            <property name="text">
+             <string>NOx</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>CO</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>HC</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>PM10</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>PM2.5</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>SOx</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>CO2</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="4" column="0" colspan="2">
+          <widget class="QLabel" name="external_files_feedback">
+           <property name="text">
+            <string>Status: Missing output directory, emissions CSV, and meteo CSV</string>
+           </property>
+           <property name="styleSheet">
+            <string>background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold; font-size: 11px;</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <!-- Grid Management Section (Collapsible) -->
+      <item>
+       <widget class="QGroupBox" name="gridManagementGroupBox">
+        <property name="title">
+         <string>Grid Configuration</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <layout class="QVBoxLayout" name="gridManagementLayout">
+         <item>
+          <layout class="QFormLayout" name="gridSourceLayout">
+           <item row="0" column="0">
+            <widget class="QLabel" name="gridSourceLabel">
+             <property name="text">
+              <string>Grid File:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QgsFileWidget" name="gridSourceFilePath">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <horstretch>1</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QLabel" name="gridSourceHelpLabel">
+           <property name="text">
+            <string>Select an OpenALAQS file (*_out.alaqs) or CSV with grid definition to load grid parameters.</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+           <property name="styleSheet">
+            <string>color: #666666; font-style: italic; font-size: 10px;</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="currentGridSummaryLabel">
+           <property name="text">
+            <string>Current Grid: None</string>
+           </property>
+           <property name="styleSheet">
+            <string>background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;</string>
+           </property>
+          </widget>
+         </item>
+         <!-- Grid Details (Collapsible) -->
+         <item>
+          <widget class="QGroupBox" name="gridDetailsGroupBox">
+           <property name="title">
+            <string>Grid Details</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="checked">
+            <bool>false</bool>
+           </property>
+           <layout class="QGridLayout" name="gridDetailsLayout">
+            <item row="0" column="0">
+             <widget class="QLabel" name="xCellsLabel">
+              <property name="text">
+               <string>X Cells:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QSpinBox" name="xCellsSpinBox">
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>1000</number>
+              </property>
+              <property name="value">
+               <number>50</number>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="2">
+             <widget class="QLabel" name="yCellsLabel">
+              <property name="text">
+               <string>Y Cells:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="3">
+             <widget class="QSpinBox" name="yCellsSpinBox">
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>1000</number>
+              </property>
+              <property name="value">
+               <number>50</number>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="4">
+             <widget class="QLabel" name="zCellsLabel">
+              <property name="text">
+               <string>Z Cells:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="5">
+             <widget class="QSpinBox" name="zCellsSpinBox">
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>1000</number>
+              </property>
+              <property name="value">
+               <number>1</number>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="xResolutionLabel">
+              <property name="text">
+               <string>X Resolution (m):</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QDoubleSpinBox" name="xResolutionSpinBox">
+              <property name="minimum">
+               <double>1.0</double>
+              </property>
+              <property name="maximum">
+               <double>10000.0</double>
+              </property>
+              <property name="value">
+               <double>100.0</double>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QLabel" name="yResolutionLabel">
+              <property name="text">
+               <string>Y Resolution (m):</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="3">
+             <widget class="QDoubleSpinBox" name="yResolutionSpinBox">
+              <property name="minimum">
+               <double>1.0</double>
+              </property>
+              <property name="maximum">
+               <double>10000.0</double>
+              </property>
+              <property name="value">
+               <double>100.0</double>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="4">
+             <widget class="QLabel" name="zResolutionLabel">
+              <property name="text">
+               <string>Z Resolution (m):</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="5">
+             <widget class="QDoubleSpinBox" name="zResolutionSpinBox">
+              <property name="minimum">
+               <double>1.0</double>
+              </property>
+              <property name="maximum">
+               <double>1000.0</double>
+              </property>
+              <property name="value">
+               <double>50.0</double>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="refLatLabel">
+              <property name="text">
+               <string>Reference Latitude (°):</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QDoubleSpinBox" name="refLatSpinBox">
+              <property name="decimals">
+               <number>4</number>
+              </property>
+              <property name="minimum">
+               <double>-90.0</double>
+              </property>
+              <property name="maximum">
+               <double>90.0</double>
+              </property>
+              <property name="value">
+               <double>0.0</double>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="2">
+             <widget class="QLabel" name="refLonLabel">
+              <property name="text">
+               <string>Reference Longitude (°):</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="3">
+             <widget class="QDoubleSpinBox" name="refLonSpinBox">
+              <property name="decimals">
+               <number>4</number>
+              </property>
+              <property name="minimum">
+               <double>-180.0</double>
+              </property>
+              <property name="maximum">
+               <double>180.0</double>
+              </property>
+              <property name="value">
+               <double>0.0</double>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="4">
+             <widget class="QLabel" name="refAltLabel">
+              <property name="text">
+               <string>Reference Altitude (m):</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="5">
+             <widget class="QDoubleSpinBox" name="refAltSpinBox">
+              <property name="minimum">
+               <double>0.0</double>
+              </property>
+              <property name="maximum">
+               <double>30000.0</double>
+              </property>
+              <property name="value">
+               <double>0.0</double>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <!-- Grid Save/Export Buttons -->
+         <item>
+          <layout class="QHBoxLayout" name="gridSaveLayout">
+           <item>
+            <widget class="QPushButton" name="saveGridCsvBtn">
+             <property name="text">
+              <string>Save Grid as CSV</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="updateFileBtn">
+             <property name="text">
+              <string>Update File</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="gridSaveSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <!-- Generate Button -->
+      <item>
+       <widget class="QPushButton" name="generateFromCsvBtn">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
           <horstretch>1</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-       </widget>
-      </item>
-      <item row="2" column="0" colspan="2">
-       <widget class="QCheckBox" name="erase_log">
+        <property name="minimumHeight">
+         <number>35</number>
+        </property>
         <property name="text">
-         <string>Erase Log File at the Start of the Calculation</string>
+         <string>Generate AUSTAL Input Files</string>
         </property>
        </widget>
       </item>
-      <item row="3" column="0" colspan="2">
+     </layout>
+    </widget>
+   </item>
+   <!-- Section 3: Execution -->
+   <item>
+    <widget class="QGroupBox" name="runGroupBox">
+     <property name="title">
+      <string>3. Execution</string>
+     </property>
+     <layout class="QVBoxLayout" name="runLayout">
+      <item>
+       <widget class="QCheckBox" name="erase_log">
+        <property name="text">
+         <string>Erase Log File at Start of Calculation</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="RunA2K">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -87,287 +651,348 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="minimumHeight">
+         <number>35</number>
+        </property>
         <property name="text">
          <string>Run AUSTAL</string>
         </property>
        </widget>
       </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <layout class="QFormLayout" name="formLayout_2">
-     <item row="0" column="0">
-      <widget class="QLabel" name="alaqs_output_file">
-       <property name="text">
-        <string>ALAQS output file:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QgsFileWidget" name="alaqs_file_path">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-         <horstretch>1</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QLabel" name="alaqs_file_path_feedback">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string>Please select the *_out.alaqs file.</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="QFrame" name="configuration_container">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-       <horstretch>1</horstretch>
-       <verstretch>1</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_6">
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
-      <property name="horizontalSpacing">
-       <number>0</number>
-      </property>
-      <item row="0" column="1">
-       <widget class="QSplitter" name="configuration_splitter">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+      <item>
+       <widget class="QLabel" name="executionStatusLabel">
+        <property name="text">
+         <string>Status: Idle</string>
         </property>
-        <property name="childrenCollapsible">
-         <bool>false</bool>
+        <property name="styleSheet">
+         <string>background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;</string>
         </property>
-        <widget class="QFrame" name="configuration_modules">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>1</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>32</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::NoFrame</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_23">
-          <property name="leftMargin">
-           <number>3</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <item>
-           <widget class="QListWidget" name="configuration_modules_list">
-            <property name="minimumSize">
-             <size>
-              <width>32</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="showDropIndicator" stdset="0">
-             <bool>false</bool>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>20</width>
-              <height>20</height>
-             </size>
-            </property>
-            <item>
-             <property name="text">
-              <string>Configuration</string>
-             </property>
-             <property name="icon">
-              <iconset>
-               <normaloff>:/images/themes/default/propertyicons/action.svg</normaloff>:/images/themes/default/propertyicons/action.svg</iconset>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Output Formats</string>
-             </property>
-             <property name="icon">
-              <iconset>
-               <normaloff>:/images/themes/default/mActionFileSave.svg</normaloff>:/images/themes/default/mActionFileSave.svg</iconset>
-             </property>
-            </item>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-        <widget class="QFrame" name="configuration_stack_container">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>10</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::NoFrame</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_5">
-          <property name="leftMargin">
-           <number>6</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>6</number>
-          </property>
-          <item>
-           <widget class="QStackedWidget" name="configuration_stack">
-            <property name="currentIndex">
-             <number>0</number>
-            </property>
-            <widget class="QWidget" name="output_modules_page">
-             <layout class="QVBoxLayout" name="verticalLayout_9">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QTabWidget" name="output_modules_tab_widget"/>
-              </item>
-             </layout>
-            </widget>
-            <widget class="QWidget" name="visualization_modules_page">
-             <layout class="QVBoxLayout" name="verticalLayout_10">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QTabWidget" name="visualization_modules_tab_widget"/>
-              </item>
-             </layout>
-            </widget>
-            <widget class="QWidget" name="visualization_modules_page">
-             <layout class="QVBoxLayout" name="verticalLayout_10">
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QTabWidget" name="visualization_modules_tab_widget"/>
-              </item>
-             </layout>
-            </widget>
-           </widget>
-          </item>
-         </layout>
-        </widget>
        </widget>
       </item>
      </layout>
     </widget>
    </item>
+   <!-- Section 4: Result Visualisation -->
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_6">
-     <item>
-      <widget class="QPushButton" name="ResultsTable">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Results Table</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="PlotTimeSeries">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Plot Time Series</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="VisualiseResults">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Plot Vector Layer</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    <widget class="QGroupBox" name="visualisationGroupBox">
+     <property name="title">
+      <string>4. Result Visualisation</string>
+     </property>
+     <layout class="QVBoxLayout" name="visualisationLayout">
+      <!-- Visualisation Status (Full Width) -->
+      <item>
+       <widget class="QLabel" name="visualisationStatusLabel">
+        <property name="text">
+         <string>Status: Not yet available. Run AUSTAL or load existing results to enable visualisation.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="styleSheet">
+         <string>background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;</string>
+        </property>
+       </widget>
+      </item>
+      <!-- Load Existing Results -->
+      <item>
+       <widget class="QGroupBox" name="loadResultsGroupBox">
+        <property name="title">
+         <string>Load Existing Results</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <layout class="QFormLayout" name="loadResultsLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="loadResultsLabel">
+           <property name="text">
+            <string>Work Directory:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QgsFileWidget" name="resultsWorkDirectoryPath">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <!-- Calculation Configuration (Collapsible) -->
+      <item>
+       <widget class="QGroupBox" name="calculationConfigGroupBox">
+        <property name="title">
+         <string>Calculation Configuration</string>
+        </property>
+        <layout class="QFormLayout" name="calculationConfigLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="startDtLabel">
+           <property name="text">
+            <string>Start (incl.):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QDateTimeEdit" name="startDtEdit">
+           <property name="dateTime">
+            <datetime>
+             <year>2000</year>
+             <month>1</month>
+             <day>1</day>
+             <hour>0</hour>
+             <minute>0</minute>
+             <second>0</second>
+            </datetime>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="endDtLabel">
+           <property name="text">
+            <string>End (incl.):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QDateTimeEdit" name="endDtEdit">
+           <property name="dateTime">
+            <datetime>
+             <year>2000</year>
+             <month>1</month>
+             <day>2</day>
+             <hour>0</hour>
+             <minute>0</minute>
+             <second>0</second>
+            </datetime>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="averagingLabel">
+           <property name="text">
+            <string>Averaging:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QComboBox" name="averagingCombo">
+           <item>
+            <property name="text">
+             <string>hourly</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>8-hours mean</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>daily mean</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>annual mean</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="resultPollutantLabel">
+           <property name="text">
+            <string>Pollutant:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QComboBox" name="resultPollutantCombo">
+           <item>
+            <property name="text">
+             <string>NOx</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>CO</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>HC</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>PM10</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>PM2.5</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>SOx</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>CO2</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <!-- ALAQS Grid File (Collapsible, conditional) -->
+      <item>
+       <widget class="QGroupBox" name="alaqsGridGroupBox">
+        <property name="title">
+         <string>Load the Grid</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <layout class="QFormLayout" name="alaqsGridLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="alaqsGridFileLabel">
+           <property name="text">
+            <string>File:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QgsFileWidget" name="alaqs_file_path">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QLabel" name="alaqsGridHelpLabel">
+           <property name="text">
+            <string>Select an OpenALAQS file (*_out.alaqs) or CSV with grid definition for visualisation.</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+           <property name="styleSheet">
+            <string>color: #666666; font-style: italic; font-size: 10px;</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLabel" name="alaqsGridStatusLabel">
+           <property name="text">
+            <string>Status: No grid file loaded</string>
+           </property>
+           <property name="styleSheet">
+            <string>background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <!-- Result Visualisation Buttons -->
+      <item>
+       <layout class="QHBoxLayout" name="visualisationButtonsLayout">
+        <item>
+         <widget class="QPushButton" name="ResultsTable">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>1</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumHeight">
+           <number>35</number>
+          </property>
+          <property name="text">
+           <string>Results Table</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="PlotTimeSeries">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>1</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumHeight">
+           <number>35</number>
+          </property>
+          <property name="text">
+           <string>Plot Time Series</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="VisualiseResults">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>1</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumHeight">
+           <number>35</number>
+          </property>
+          <property name="text">
+           <string>Plot Vector Layer</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <!-- Stretch at bottom -->
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+      </layout>
+     </widget>
+    </widget>
    </item>
   </layout>
  </widget>
