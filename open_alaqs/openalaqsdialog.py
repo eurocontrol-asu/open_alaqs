@@ -41,7 +41,7 @@ from qgis.core.additions.edit import edit
 from qgis.gui import QgsDoubleSpinBox, QgsFileWidget, QgsMessageBar
 from qgis.PyQt import QtCore, QtGui, QtWidgets
 from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtWidgets import QMessageBox, QSizePolicy
+from qgis.PyQt.QtWidgets import QMessageBox, QSpacerItem, QSizePolicy
 from qgis.PyQt.uic import loadUiType
 from qgis.utils import OverrideCursor
 
@@ -2821,7 +2821,23 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         )
         self.ui = Ui_DialogRunAUSTAL()
         self.ui.setupUi(self)
-        self.ui.configuration_splitter.setSizes([80, 200])
+        
+        # Set locale for coordinate and resolution spinboxes to use point as decimal separator
+        c_locale = QtCore.QLocale(QtCore.QLocale.C)
+        self.ui.refLatSpinBox.setLocale(c_locale)
+        self.ui.refLonSpinBox.setLocale(c_locale)
+        self.ui.xResolutionSpinBox.setLocale(c_locale)
+        self.ui.yResolutionSpinBox.setLocale(c_locale)
+        self.ui.zResolutionSpinBox.setLocale(c_locale)
+        self.ui.refAltSpinBox.setLocale(c_locale)
+        
+        # Immediately hide gray feedback/summary boxes that appear in collapsible sections
+        # These should only be visible when their parent sections are expanded
+        self.ui.currentGridSummaryLabel.setVisible(False)
+        self.ui.alaqsGridStatusLabel.setVisible(False)
+
+        # Setup collapsible sections
+        self._setup_collapsible_sections()
 
         # initialize calculation
         self._conc_calculation_ = None
@@ -2829,26 +2845,23 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.resetConcentrationCalculationConfiguration()
         self.updateMinMaxGUI()
 
-        self.ui.configuration_modules_list.setCurrentRow(0)
-        self.ui.configuration_stack.setCurrentIndex(0)
-        self.ui.configuration_modules_list.currentRowChanged.connect(
-            self.configuration_modules_list_current_row_changed
-        )
-        self.ui.configuration_stack.currentChanged.connect(
-            self.configuration_stack_current_changed
-        )
-
         s = QgsSettings()
         last_alaqs_file_path = s.value("OpenALAQS/last_alaqs_file_path", "")
         last_work_directory_path = s.value("OpenALAQS/last_work_directory_path", "")
-        self.ui.a2k_executable_path.setFilePath(
-            s.value("open_alaqs/a2k_executable_path", "")
-        )
+        last_a2k_executable_path = s.value("open_alaqs/a2k_executable_path", "")
         self.ui.a2k_executable_path.setFilter("AUSTAL Executable (austal.exe austal)")
         self.ui.a2k_executable_path.setDialogTitle("Select AUSTAL Executable File")
+        self.ui.a2k_executable_path.setFilePath(last_a2k_executable_path)
         self.ui.a2k_executable_path.fileChanged.connect(
             self.a2k_executable_path_file_changed
         )
+        # Set initial status for executable if one was saved
+        if last_a2k_executable_path and os.path.isfile(last_a2k_executable_path):
+            self.ui.executableStatusLabel.setText(f"Status: {os.path.basename(last_a2k_executable_path)}")
+            self.ui.executableStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+        else:
+            self.ui.executableStatusLabel.setText("Status: No file loaded")
+            self.ui.executableStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
         self.ui.work_directory_path.setStorageMode(QgsFileWidget.GetDirectory)
         self.ui.work_directory_path.setDialogTitle(
             "Select AUSTAL Input Files (.txt, .dmna, etc.) Directory"
@@ -2857,6 +2870,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.work_directory_path.fileChanged.connect(
             self._on_work_directory_path_changed
         )
+        # Set initial status for work directory if one was saved
+        if os.path.isdir(last_work_directory_path):
+            self.ui.existingFilesStatusLabel.setText(f"Status: {os.path.basename(last_work_directory_path)}")
+            self.ui.existingFilesStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+        else:
+            self.ui.existingFilesStatusLabel.setText("Status: No directory loaded")
+            self.ui.existingFilesStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
         self.ui.alaqs_file_path.setFilter("ALAQS (*.alaqs)")
         self.ui.alaqs_file_path.setDialogTitle("Select ALAQS Output File")
         self.ui.alaqs_file_path.setFilePath(last_alaqs_file_path)
@@ -2866,6 +2886,18 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.load_alaqs_source_file(last_alaqs_file_path)
 
         self.ui.RunA2K.clicked.connect(self.run_austal)
+        
+        # Initialize execution status label
+        self.ui.executionStatusLabel.setText("Status: Idle")
+        self.ui.executionStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
+
+        # Setup results work directory widget - auto-load when path changes
+        self.ui.resultsWorkDirectoryPath.setStorageMode(QgsFileWidget.GetDirectory)
+        self.ui.resultsWorkDirectoryPath.setDialogTitle("Select Work Directory with AUSTAL Results")
+        self.ui.resultsWorkDirectoryPath.fileChanged.connect(self._on_results_directory_changed)
+
+        # Setup grid source file widget - auto-load when path changes
+        self.ui.gridSourceFilePath.fileChanged.connect(self._on_grid_source_file_changed)
 
         self.ui.ResultsTable.clicked.connect(
             lambda: self.runOutputModule("TableViewDispersionModule")
@@ -2886,6 +2918,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if layout is not None:
             layout.addWidget(self.ui.austal_help_button)
 
+        # Setup external CSV file inputs
+        self._setup_external_csv_inputs(s)
+
         self.resetModuleConfiguration(
             module_names=[
                 "CSVDispersionModule",
@@ -2895,11 +2930,130 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             ]
         )
 
-    def configuration_modules_list_current_row_changed(self, row):
-        self.ui.configuration_stack.setCurrentIndex(row)
-
-    def configuration_stack_current_changed(self, index):
-        self.ui.configuration_modules_list.setCurrentRow(index)
+    def _setup_collapsible_sections(self):
+        """Setup collapsible/expandable sections with proper hide/show behavior."""
+        # Helper to recursively set visibility on all layout items including nested layouts
+        def set_layout_visibility(layout, visible):
+            """Recursively set visibility for all items in a layout."""
+            if layout is None:
+                return
+            
+            for i in range(layout.count()):
+                item = layout.itemAt(i)
+                if item is None:
+                    continue
+                
+                # Handle widgets
+                if item.widget():
+                    item.widget().setVisible(visible)
+                # Handle nested layouts
+                elif item.layout():
+                    set_layout_visibility(item.layout(), visible)
+                # Handle spacers
+                elif isinstance(item, QSpacerItem):
+                    item.changeSize(item.sizeHint().width() if visible else 0, 
+                                   item.sizeHint().height() if visible else 0)
+        
+        # Helper to make a groupbox collapsible by toggling its layout visibility
+        def make_collapsible(groupbox):
+            """Connect groupbox toggle to show/hide its contents."""
+            if not hasattr(groupbox, 'isCheckable') or not groupbox.isCheckable():
+                return
+            
+            # Get the layout
+            layout = groupbox.layout()
+            if layout is None:
+                return
+            
+            # Set initial visibility based on checked state
+            set_layout_visibility(layout, groupbox.isChecked())
+            
+            # Connect toggled signal
+            def on_toggle(checked):
+                set_layout_visibility(layout, checked)
+            
+            groupbox.toggled.connect(on_toggle)
+        
+        # Setup collapsible sections
+        make_collapsible(self.ui.executableGroupBox)
+        make_collapsible(self.ui.visualisationGroupBox)
+        make_collapsible(self.ui.gridManagementGroupBox)
+        make_collapsible(self.ui.gridDetailsGroupBox)
+        make_collapsible(self.ui.alaqsGridGroupBox)
+        make_collapsible(self.ui.loadResultsGroupBox)
+        
+        # Hide gray summary/feedback boxes when their parent sections are collapsed
+        # Grid Configuration gray box
+        def toggle_grid_summary_visibility(checked):
+            self.ui.currentGridSummaryLabel.setVisible(checked)
+        
+        self.ui.gridManagementGroupBox.toggled.connect(toggle_grid_summary_visibility)
+        self.ui.currentGridSummaryLabel.setVisible(self.ui.gridManagementGroupBox.isChecked())
+        
+        # Force hide all feedback labels when their parent sections are collapsed
+        # These are specifically the gray boxes that appear as status/feedback
+        self.ui.alaqsGridStatusLabel.setVisible(self.ui.alaqsGridGroupBox.isChecked())
+        
+        # CSV feedback visibility depends on CSV mode being selected
+        self.ui.external_files_feedback.setVisible(self.ui.generateFromCsvRadio.isChecked())
+        
+        # Connect CSV mode toggle for feedback visibility
+        def toggle_csv_feedback_visibility():
+            self.ui.external_files_feedback.setVisible(self.ui.generateFromCsvRadio.isChecked())
+        self.ui.generateFromCsvRadio.toggled.connect(toggle_csv_feedback_visibility)
+        self.ui.useExistingFilesRadio.toggled.connect(toggle_csv_feedback_visibility)
+        
+        # Connect ALAQS feedback visibility
+        def toggle_alaqs_feedback_visibility(checked):
+            self.ui.alaqsGridStatusLabel.setVisible(checked)
+        self.ui.alaqsGridGroupBox.toggled.connect(toggle_alaqs_feedback_visibility)
+        
+        # For calculation config, search for any feedback-like labels and hide them when collapsed
+        def hide_calc_feedback(checked):
+            # Hide any labels with feedback/status in the calculation config
+            calc_layout = self.ui.calculationConfigGroupBox.layout()
+            if calc_layout:
+                for i in range(calc_layout.count()):
+                    item = calc_layout.itemAt(i)
+                    if item and item.widget() and 'feedback' in item.widget().objectName().lower():
+                        item.widget().setVisible(checked)
+        
+        self.ui.calculationConfigGroupBox.toggled.connect(hide_calc_feedback)
+        hide_calc_feedback(self.ui.calculationConfigGroupBox.isChecked())
+        
+        # Enable result buttons when grid + calculation config provided
+        def update_result_buttons():
+            """Enable result buttons based on available data for visualization."""
+            # Check if existing results are loaded
+            has_existing_results = bool(self.ui.loadResultsGroupBox.isChecked() and self.ui.resultsWorkDirectoryPath.filePath())
+            
+            if has_existing_results:
+                # Existing results loaded - buttons can be enabled
+                can_visualize = True
+            else:
+                # No existing results - check if AUSTAL ran or if grid+calc config provided
+                has_austal_results = bool(
+                    self.ui.visualisationStatusLabel.text().startswith("ℹ") and 
+                    "Completed" in self.ui.executionStatusLabel.text()
+                )
+                
+                # Check if grid is configured (either via Grid Management or ALAQS/Grid File)
+                has_grid_config = bool(self.ui.gridManagementGroupBox.isChecked() or (
+                    self.ui.alaqsGridGroupBox.isChecked() and self.ui.alaqs_file_path.filePath()
+                ))
+                
+                # Calculation config is always visible and required (when not using existing results)
+                can_visualize = bool(has_austal_results or has_grid_config)
+            
+            self.ui.ResultsTable.setEnabled(bool(can_visualize))
+            self.ui.PlotTimeSeries.setEnabled(bool(can_visualize))
+            self.ui.VisualiseResults.setEnabled(bool(can_visualize))
+        
+        # Connect configuration toggles to update button state
+        self.ui.loadResultsGroupBox.toggled.connect(update_result_buttons)
+        self.ui.gridManagementGroupBox.toggled.connect(update_result_buttons)
+        self.ui.alaqsGridGroupBox.toggled.connect(update_result_buttons)
+        self.ui.resultsWorkDirectoryPath.fileChanged.connect(update_result_buttons)
 
     def updateMinMaxGUI(self, db_path_=""):
         (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path_)
@@ -2914,35 +3068,37 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         time_series_ = get_inventory_timestamps(db_path)
         return time_series_
 
-    def resetModuleConfiguration(self, module_names):
-        self.ui.output_modules_tab_widget.clear()
-
-        for module_name in OutputDispersionModuleRegistry().get_module_names():
-            module = OutputDispersionModuleRegistry().get_module(module_name)
-            config_widget = module.getConfigurationWidget2()
-
-            if config_widget is None:
-                continue
-
-            scroll_widget = QtWidgets.QScrollArea(self)
-            scroll_widget.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
-            scroll_widget.setWidget(config_widget)
-            scroll_widget.setWidgetResizable(True)
-            self.ui.output_modules_tab_widget.addTab(
-                scroll_widget, module.getModuleDisplayName()
-            )
+    def resetModuleConfiguration(self, module_names):  
+        # Holder for future development
+        pass
 
     def a2k_executable_path_file_changed(self, path):
         """
         Save the selected austal executable file path to restore on dialog
         opening
         """
-        if os.path.exists(path):
+        if path and os.path.isfile(path):
             settings = QgsSettings()
             settings.setValue("open_alaqs/a2k_executable_path", path)
+            # Update status label with success styling
+            self.ui.executableStatusLabel.setText(f"Status: {os.path.basename(path)}")
+            self.ui.executableStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            logger.info(f"AUSTAL executable selected: {path}")
+        else:
+            self.ui.executableStatusLabel.setText("Status: No executable loaded")
+            self.ui.executableStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
+            if path:  # Only clear settings if a path was explicitly cleared
+                settings = QgsSettings()
+                settings.setValue("open_alaqs/a2k_executable_path", "")
 
     def set_feedback(self, feedback: str, is_success: bool) -> None:
-        self.ui.alaqs_file_path_feedback.setText(feedback)
+        # Update alaqsGridStatusLabel with feedback styling
+        if is_success:
+            self.ui.alaqsGridStatusLabel.setText(feedback)
+            self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+        else:
+            self.ui.alaqsGridStatusLabel.setText(feedback)
+            self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
 
         self.ui.VisualiseResults.setEnabled(is_success)
         self.ui.ResultsTable.setEnabled(is_success)
@@ -2956,7 +3112,14 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         path = Path(filename)
         if not filename or not path.is_file() or path.suffix != ".alaqs":
             self.set_feedback("Please select an existing *_out.alaqs file", False)
+            self.ui.alaqsGridStatusLabel.setText("Status: No file loaded")
+            self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
             return
+
+        # Update status to loading state (blue)
+        self.ui.alaqsGridStatusLabel.setText(f"Status: Loading {path.name}...")
+        self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #cce5ff; padding: 8px; border-radius: 4px; border-left: 4px solid #0c63e4; color: #084298; font-weight: bold;")
+        QtWidgets.QApplication.processEvents()  # Update UI immediately
 
         try:
             self.updateMinMaxGUI(filename)
@@ -2978,38 +3141,273 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "reference_altitude": study_data.get("airport_elevation", 0.0),
             }
 
-            # get values from GUI settings
-            em_config = self._concentration_visualization_widget.get_values()
+            # Only proceed with full loading if concentration visualization widget is initialized
+            if self._concentration_visualization_widget is not None:
+                # get values from GUI settings
+                em_config = self._concentration_visualization_widget.get_values()
 
-            start_dt = datetime.fromisoformat(em_config["start_dt_inclusive"])
-            end_dt = datetime.fromisoformat(em_config["end_dt_inclusive"])
+                start_dt = datetime.fromisoformat(em_config["start_dt_inclusive"])
+                end_dt = datetime.fromisoformat(em_config["end_dt_inclusive"])
 
-            time_series = self.getTimeSeries(filename)
+                time_series = self.getTimeSeries(filename)
 
-            assert len(time_series) > 1
+                assert len(time_series) > 1
 
-            time_interval = time_series[1] - time_series[0]
+                time_interval = time_series[1] - time_series[0]
 
-            self._conc_calculation_ = EmissionCalculation(
-                db_path=filename,
-                grid_config=grid_configuration,
-                start_dt=start_dt,
-                end_dt=end_dt,
-                time_interval=time_interval,
-            )
+                self._conc_calculation_ = EmissionCalculation(
+                    db_path=filename,
+                    grid_config=grid_configuration,
+                    start_dt=start_dt,
+                    end_dt=end_dt,
+                    time_interval=time_interval,
+                )
 
             s = QgsSettings()
             s.setValue("OpenALAQS/last_alaqs_file_path", filename)
 
             self.set_feedback("Valid ALAQS file selected", True)
+            # Update status label with loaded filename - green success
+            self.ui.alaqsGridStatusLabel.setText(f"Status: Loaded {path.name}")
+            self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         except sqlite3.OperationalError as err:
             self.set_feedback(f"Could not open database file: {err}.", False)
+            self.ui.alaqsGridStatusLabel.setText("Status: Error loading file")
+            self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+        except Exception as err:
+            self.set_feedback(f"Error loading file: {err}", False)
+            self.ui.alaqsGridStatusLabel.setText("Status: Error loading file")
+            self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
 
     def _on_work_directory_path_changed(self, dirname: str) -> None:
         s = QgsSettings()
 
         if os.path.isdir(dirname):
             s.setValue("OpenALAQS/last_work_directory_path", dirname)
+            # Update status label with success styling (matches AUSTAL executable pattern)
+            self.ui.existingFilesStatusLabel.setText(f"Status: {os.path.basename(dirname)}")
+            self.ui.existingFilesStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            logger.info(f"Work directory selected: {dirname}")
+        else:
+            self.ui.existingFilesStatusLabel.setText("Status: No directory loaded")
+            self.ui.existingFilesStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
+            if dirname:  # Only clear settings if a path was explicitly cleared
+                s.setValue("OpenALAQS/last_work_directory_path", "")
+
+    def _on_results_directory_changed(self, results_dir: str) -> None:
+        """Auto-load AUSTAL results when a valid work directory is selected."""
+        if not results_dir or not os.path.isdir(results_dir):
+            return
+        
+        # Set the results directory as the work directory for visualization
+        self.ui.work_directory_path.setFilePath(results_dir)
+        s = QgsSettings()
+        s.setValue("OpenALAQS/last_work_directory_path", results_dir)
+        
+        # Update visualization status
+        self.ui.visualisationStatusLabel.setText(f"Status: Results loaded from {os.path.basename(results_dir)}")
+        self.ui.visualisationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+        
+        # Enable result buttons
+        self.ui.ResultsTable.setEnabled(True)
+        self.ui.PlotTimeSeries.setEnabled(True)
+        self.ui.VisualiseResults.setEnabled(True)
+        
+        logger.info(f"Results loaded from: {results_dir}")
+
+    def _on_grid_source_file_changed(self, grid_file: str) -> None:
+        """Auto-load grid when a valid grid file is selected and populate Grid Details."""
+        if not grid_file or not os.path.isfile(grid_file):
+            # File deselected or invalid - reset to yellow neutral state
+            self.ui.currentGridSummaryLabel.setText("Current Grid: None")
+            self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+            return
+        
+        try:
+            filename = os.path.basename(grid_file)
+            grid_config = None
+            
+            # Try to parse as OA file (.alaqs)
+            if grid_file.endswith('.alaqs'):
+                try:
+                    project_database = ProjectDatabase()
+                    project_database.path = grid_file
+                    study_data = alaqs.load_study_setup()
+                    
+                    grid_config = {
+                        "x_cells": 100,
+                        "y_cells": 100,
+                        "z_cells": 1,
+                        "x_resolution": 250,
+                        "y_resolution": 250,
+                        "z_resolution": 300,
+                        "reference_latitude": study_data.get("airport_latitude", 0.0),
+                        "reference_longitude": study_data.get("airport_longitude", 0.0),
+                        "reference_altitude": study_data.get("airport_elevation", 0.0),
+                    }
+                except Exception as e:
+                    logger.warning(f"Could not extract grid from ALAQS file: {e}")
+                    grid_config = None
+            
+            # Try to parse as CSV file
+            elif grid_file.endswith('.csv'):
+                try:
+                    import csv
+                    with open(grid_file, 'r') as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            grid_config = {
+                                "x_cells": int(row.get("x_cells", 50)),
+                                "y_cells": int(row.get("y_cells", 50)),
+                                "z_cells": int(row.get("z_cells", 1)),
+                                "x_resolution": float(row.get("x_resolution", 100)),
+                                "y_resolution": float(row.get("y_resolution", 100)),
+                                "z_resolution": float(row.get("z_resolution", 50)),
+                                "reference_latitude": float(row.get("reference_latitude", 0.0)),
+                                "reference_longitude": float(row.get("reference_longitude", 0.0)),
+                                "reference_altitude": float(row.get("reference_altitude", 0.0)),
+                            }
+                            break  # Use first row
+                except Exception as e:
+                    logger.warning(f"Could not extract grid from CSV file: {e}")
+                    grid_config = None
+            
+            # If we successfully loaded grid config, populate the spin boxes
+            if grid_config:
+                self.ui.xCellsSpinBox.setValue(grid_config["x_cells"])
+                self.ui.yCellsSpinBox.setValue(grid_config["y_cells"])
+                # Ensure spinbox can accept the z_cells value
+                if grid_config["z_cells"] > self.ui.zCellsSpinBox.maximum():
+                    self.ui.zCellsSpinBox.setMaximum(grid_config["z_cells"])
+                self.ui.zCellsSpinBox.setValue(grid_config["z_cells"])
+                self.ui.xResolutionSpinBox.setValue(grid_config["x_resolution"])
+                self.ui.yResolutionSpinBox.setValue(grid_config["y_resolution"])
+                # Ensure spinbox can accept the z_resolution value
+                if grid_config["z_resolution"] > self.ui.zResolutionSpinBox.maximum():
+                    self.ui.zResolutionSpinBox.setMaximum(grid_config["z_resolution"] * 1.1)
+                self.ui.zResolutionSpinBox.setValue(grid_config["z_resolution"])
+                self.ui.refLatSpinBox.setValue(grid_config["reference_latitude"])
+                self.ui.refLonSpinBox.setValue(grid_config["reference_longitude"])
+                self.ui.refAltSpinBox.setValue(grid_config["reference_altitude"])
+                
+                # Success - green styling
+                self.ui.currentGridSummaryLabel.setText(
+                    f"Status: {filename} - {grid_config['x_cells']}x{grid_config['y_cells']}x{grid_config['z_cells']} cells"
+                )
+                self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+                logger.info(f"Grid loaded from: {grid_file} with config: {grid_config}")
+            else:
+                # Could not parse - red error styling
+                self.ui.currentGridSummaryLabel.setText(f"Status: {filename} - Could not parse grid parameters")
+                self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+                logger.warning(f"Could not extract grid parameters from: {grid_file}")
+                
+        except Exception as e:
+            logger.error(f"Failed to load grid: {e}")
+            # Error - red styling
+            self.ui.currentGridSummaryLabel.setText(f"Status: Error loading {filename}")
+            self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+
+    def _setup_external_csv_inputs(self, s: QgsSettings) -> None:
+        """Setup the external CSV file input widgets and connections.
+        
+        The UI has two modes:
+        - Use existing AUSTAL input files from a work directory
+        - Generate input files from CSV (emissions + meteorology)
+        """
+        # Configure output directory widget for CSV generation
+        self.ui.output_directory_path.setStorageMode(QgsFileWidget.GetDirectory)
+        self.ui.output_directory_path.setDialogTitle("Select Output Directory for Generated Files")
+        last_output_dir = s.value("OpenALAQS/last_csv_output_directory_path", "")
+        self.ui.output_directory_path.setFilePath(last_output_dir)
+        self.ui.output_directory_path.fileChanged.connect(self._on_output_directory_changed)
+
+        # Configure emissions CSV file widget
+        self.ui.emissions_csv_path.setFilter("CSV Files (*.csv)")
+        self.ui.emissions_csv_path.setDialogTitle("Select Emissions CSV File")
+        last_emissions_csv = s.value("OpenALAQS/last_emissions_csv_path", "")
+        self.ui.emissions_csv_path.setFilePath(last_emissions_csv)
+        self.ui.emissions_csv_path.fileChanged.connect(self._on_emissions_csv_changed)
+
+        # Configure meteorology CSV file widget
+        self.ui.meteo_csv_path.setFilter("CSV Files (*.csv)")
+        self.ui.meteo_csv_path.setDialogTitle("Select Meteorology CSV File")
+        last_meteo_csv = s.value("OpenALAQS/last_meteo_csv_path", "")
+        self.ui.meteo_csv_path.setFilePath(last_meteo_csv)
+        self.ui.meteo_csv_path.fileChanged.connect(self._on_meteo_csv_changed)
+
+        # Connect radio buttons to toggle input modes
+        self.ui.useExistingFilesRadio.toggled.connect(self._on_input_mode_changed)
+        self.ui.generateFromCsvRadio.toggled.connect(self._on_input_mode_changed)
+
+        # Connect generate button
+        self.ui.generateFromCsvBtn.clicked.connect(self._generate_austal_from_csv)
+
+        # Initial state
+        self._on_input_mode_changed()
+
+    def _on_input_mode_changed(self) -> None:
+        """Handle switching between existing files and generate from CSV modes."""
+        use_csv = self.ui.generateFromCsvRadio.isChecked()
+
+        # Show/hide and enable/disable the frames based on selection
+        self.ui.existingFilesFrame.setVisible(not use_csv)
+        self.ui.existingFilesFrame.setEnabled(not use_csv)
+        self.ui.generateFromCsvFrame.setVisible(use_csv)
+        self.ui.generateFromCsvFrame.setEnabled(use_csv)
+
+        # Validate and update feedback
+        if use_csv:
+            self._validate_external_csv_files()
+        else:
+            self.ui.generateFromCsvBtn.setEnabled(False)
+
+    def _on_output_directory_changed(self, dirname: str) -> None:
+        """Handle output directory selection for CSV generation."""
+        if os.path.isdir(dirname):
+            s = QgsSettings()
+            s.setValue("OpenALAQS/last_csv_output_directory_path", dirname)
+        self._validate_external_csv_files()
+
+    def _on_emissions_csv_changed(self, path: str) -> None:
+        """Handle emissions CSV file selection."""
+        if os.path.isfile(path):
+            s = QgsSettings()
+            s.setValue("OpenALAQS/last_emissions_csv_path", path)
+        self._validate_external_csv_files()
+
+    def _on_meteo_csv_changed(self, path: str) -> None:
+        """Handle meteorology CSV file selection."""
+        if os.path.isfile(path):
+            s = QgsSettings()
+            s.setValue("OpenALAQS/last_meteo_csv_path", path)
+        self._validate_external_csv_files()
+
+    def _validate_external_csv_files(self) -> None:
+        """Validate the selected external CSV files and output directory."""
+        output_dir = self.ui.output_directory_path.filePath()
+        emissions_path = self.ui.emissions_csv_path.filePath()
+        meteo_path = self.ui.meteo_csv_path.filePath()
+
+        # Collect missing items
+        missing = []
+        if not output_dir or not os.path.isdir(output_dir):
+            missing.append("output directory")
+        if not emissions_path or not os.path.isfile(emissions_path):
+            missing.append("emissions CSV")
+        if not meteo_path or not os.path.isfile(meteo_path):
+            missing.append("meteo CSV")
+
+        if missing:
+            self.ui.external_files_feedback.setText(f"Status: Missing {', '.join(missing)}")
+            self.ui.external_files_feedback.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+            self.ui.generateFromCsvBtn.setEnabled(False)
+            return
+
+        # All inputs valid - enable generate button
+        self.ui.external_files_feedback.setText("Status: Ready to generate AUSTAL files")
+        self.ui.external_files_feedback.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+        self.ui.generateFromCsvBtn.setEnabled(True)
 
     # Display the text when the user presses the AUSTAL HELP buttton
     def show_austal_help(self):
@@ -3051,15 +3449,39 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         msg_box.setIcon(QtWidgets.QMessageBox.Icon.Information)
         msg_box.exec()
 
+    def _get_austal_work_directory(self) -> str:
+        """Get the work directory for AUSTAL based on selected input mode."""
+        if self.ui.generateFromCsvRadio.isChecked():
+            # Use the output directory from CSV generation
+            return str(self.ui.output_directory_path.filePath())
+        else:
+            # Use the existing files work directory
+            return str(self.ui.work_directory_path.filePath())
+
     @catch_errors
     def run_austal(self, *args, **kwargs):
         from subprocess import PIPE, Popen
 
         try:
+            # Update status to running
+            self.ui.executionStatusLabel.setText("Status: Running AUSTAL...")
+            self.ui.executionStatusLabel.setStyleSheet("background-color: #cce5ff; padding: 8px; border-radius: 4px; border-left: 4px solid #0c63e4; color: #084298; font-weight: bold;")
+            QtWidgets.QApplication.processEvents()  # Update UI immediately
+            
             austal_ = str(self.ui.a2k_executable_path.filePath())
             logger.info("AUSTAL directory:%s" % austal_)
-            work_dir = str(self.ui.work_directory_path.filePath())
+            work_dir = self._get_austal_work_directory()
             logger.info("AUSTAL input files directory:%s" % work_dir)
+
+            if not work_dir or not os.path.isdir(work_dir):
+                self.ui.executionStatusLabel.setText("Status: Error - Invalid input directory")
+                self.ui.executionStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Warning",
+                    "Please select a valid directory containing AUSTAL input files."
+                )
+                return
 
             if self.ui.erase_log.isChecked():
                 opt_ = "D"
@@ -3077,11 +3499,25 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             if p.returncode != 0:
                 raise Austal2000RunError(output)
 
+            # Update status to completed
+            self.ui.executionStatusLabel.setText("Status: Completed successfully")
+            self.ui.executionStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            
+            # Update visualization status and enable result buttons
+            self.ui.visualisationStatusLabel.setText("Status: Results ready. Select configuration and view results below.")
+            self.ui.visualisationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            self.ui.ResultsTable.setEnabled(True)
+            self.ui.PlotTimeSeries.setEnabled(True)
+            self.ui.VisualiseResults.setEnabled(True)
+            
             QtWidgets.QMessageBox.information(
                 self, "Success", "Dispersion simulation completed successfully"
             )
             logger.info("Dispersion simulation completed successfully")
         except Exception as exception:
+            # Update status to error
+            self.ui.executionStatusLabel.setText("Status: Failed")
+            self.ui.executionStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
             QtWidgets.QMessageBox.critical(
                 self, "Error", "AUSTAL execution failed! See the log for details."
             )
@@ -3100,23 +3536,14 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if config is None:
             config = {}
 
-        if self._concentration_visualization_widget is None:
-            self._concentration_visualization_widget = ModuleConfigurationWidget(
-                self.settings_schema
-            )
-            self.ui.configuration_stack.insertWidget(
-                0, self._concentration_visualization_widget
-            )
-
-        self._concentration_visualization_widget.init_values(config)
-        self.update()
+        # Note: Configuration stack widget not available in new simplified UI
+        # The old stacked widget architecture has been replaced with direct controls
+        # This method is kept for compatibility but doesn't do anything
+        pass
 
     def getOutputModulesConfiguration(self):
-        tab = self.ui.output_modules_tab_widget
-        return {
-            tab.tabText(index): tab.widget(index).widget().get_values()
-            for index in range(0, tab.count())
-        }
+        # Note: Output modules tab widget not available in new simplified UI
+        return {}
 
     def ShowNotice(self):
         QtWidgets.QMessageBox.information(self, "Notice", "Feature not ready")
