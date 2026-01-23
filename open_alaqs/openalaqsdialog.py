@@ -23,6 +23,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
+import csv
 
 import geopandas as gpd
 from qgis.core import (
@@ -2844,6 +2845,15 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self._concentration_visualization_widget = None
         self.resetConcentrationCalculationConfiguration()
         self.updateMinMaxGUI()
+        
+        # Initialize current grid configuration - stores in-memory grid values
+        # These values are updated whenever spinboxes change and are used for calculations
+        # until the user closes the dialog
+        self._current_grid_config = None
+        
+        # Track original grid config when loaded from file to detect modifications
+        self._original_grid_config = None
+        self._loaded_grid_file_path = None
 
         s = QgsSettings()
         last_alaqs_file_path = s.value("OpenALAQS/last_alaqs_file_path", "")
@@ -2857,10 +2867,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         )
         # Set initial status for executable if one was saved
         if last_a2k_executable_path and os.path.isfile(last_a2k_executable_path):
-            self.ui.executableStatusLabel.setText(f"Status: {os.path.basename(last_a2k_executable_path)}")
+            executable_name = os.path.basename(last_a2k_executable_path)
+            status_text = f"Executable Loaded. File: {executable_name}"
+            self.ui.executableStatusLabel.setText(status_text)
             self.ui.executableStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         else:
-            self.ui.executableStatusLabel.setText("Status: No file loaded")
+            status_text = "No Executable Loaded\nPlease select the AUSTAL executable file to proceed."
+            self.ui.executableStatusLabel.setText(status_text)
             self.ui.executableStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
         self.ui.work_directory_path.setStorageMode(QgsFileWidget.GetDirectory)
         self.ui.work_directory_path.setDialogTitle(
@@ -2872,10 +2885,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         )
         # Set initial status for work directory if one was saved
         if os.path.isdir(last_work_directory_path):
-            self.ui.existingFilesStatusLabel.setText(f"Status: {os.path.basename(last_work_directory_path)}")
+            dir_name = os.path.basename(last_work_directory_path)
+            status_text = f"Input Directory Loaded. Directory: {dir_name}"
+            self.ui.existingFilesStatusLabel.setText(status_text)
             self.ui.existingFilesStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         else:
-            self.ui.existingFilesStatusLabel.setText("Status: No directory loaded")
+            status_text = "No Input Directory Loaded. Select directory with AUSTAL input files (.txt, .dmna, etc.)"
+            self.ui.existingFilesStatusLabel.setText(status_text)
             self.ui.existingFilesStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
         self.ui.alaqs_file_path.setFilter("ALAQS (*.alaqs)")
         self.ui.alaqs_file_path.setDialogTitle("Select ALAQS Output File")
@@ -2897,7 +2913,15 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.resultsWorkDirectoryPath.fileChanged.connect(self._on_results_directory_changed)
 
         # Setup grid source file widget - auto-load when path changes
+        last_grid_file_path = s.value("OpenALAQS/last_grid_file_path", "")
+        self.ui.gridSourceFilePath.setFilter("Grid Files (*.csv *.alaqs);;CSV Files (*.csv);;OpenALAQS Files (*.alaqs);;All Files (*)")
+        self.ui.gridSourceFilePath.setDialogTitle("Select Grid Configuration File")
+        self.ui.gridSourceFilePath.setFilePath(last_grid_file_path)
         self.ui.gridSourceFilePath.fileChanged.connect(self._on_grid_source_file_changed)
+        
+        # If a grid file was saved, load it immediately
+        if last_grid_file_path and os.path.isfile(last_grid_file_path):
+            self._on_grid_source_file_changed(last_grid_file_path)
 
         self.ui.ResultsTable.clicked.connect(
             lambda: self.runOutputModule("TableViewDispersionModule")
@@ -2920,6 +2944,24 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         # Setup external CSV file inputs
         self._setup_external_csv_inputs(s)
+
+        # Add the save grid as csv button
+        self.ui.saveGridCsvBtn.clicked.connect(self.save_grid_as_csv)
+                
+        # Add the update file button - gets file path from widget when clicked
+        self.ui.updateFileBtn.clicked.connect(lambda: self.update_file(self.ui.gridSourceFilePath.filePath()))
+        
+        # Connect spinbox value changes to update grid status in real-time
+        self.ui.xCellsSpinBox.valueChanged.connect(self._update_grid_status_label)
+        self.ui.yCellsSpinBox.valueChanged.connect(self._update_grid_status_label)
+        self.ui.zCellsSpinBox.valueChanged.connect(self._update_grid_status_label)
+        self.ui.xResolutionSpinBox.valueChanged.connect(self._update_grid_status_label)
+        self.ui.yResolutionSpinBox.valueChanged.connect(self._update_grid_status_label)
+        self.ui.zResolutionSpinBox.valueChanged.connect(self._update_grid_status_label)
+        self.ui.refLatSpinBox.valueChanged.connect(self._update_grid_status_label)
+        self.ui.refLonSpinBox.valueChanged.connect(self._update_grid_status_label)
+        self.ui.refAltSpinBox.valueChanged.connect(self._update_grid_status_label)
+
 
         self.resetModuleConfiguration(
             module_names=[
@@ -2968,10 +3010,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             # Set initial visibility based on checked state
             set_layout_visibility(layout, groupbox.isChecked())
             
-            # Connect toggled signal
+            # Connect toggled signal with layout update
             def on_toggle(checked):
                 set_layout_visibility(layout, checked)
-            
+                # Force layout recalculation and window resize
+                self.ui.scrollArea.widget().layout().activate()
+                self.ui.scrollArea.updateGeometry()
             groupbox.toggled.connect(on_toggle)
         
         # Setup collapsible sections
@@ -3021,39 +3065,70 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.calculationConfigGroupBox.toggled.connect(hide_calc_feedback)
         hide_calc_feedback(self.ui.calculationConfigGroupBox.isChecked())
         
-        # Enable result buttons when grid + calculation config provided
-        def update_result_buttons():
-            """Enable result buttons based on available data for visualization."""
-            # Check if existing results are loaded
-            has_existing_results = bool(self.ui.loadResultsGroupBox.isChecked() and self.ui.resultsWorkDirectoryPath.filePath())
-            
-            if has_existing_results:
-                # Existing results loaded - buttons can be enabled
-                can_visualize = True
-            else:
-                # No existing results - check if AUSTAL ran or if grid+calc config provided
-                has_austal_results = bool(
-                    self.ui.visualisationStatusLabel.text().startswith("ℹ") and 
-                    "Completed" in self.ui.executionStatusLabel.text()
-                )
-                
-                # Check if grid is configured (either via Grid Management or ALAQS/Grid File)
-                has_grid_config = bool(self.ui.gridManagementGroupBox.isChecked() or (
-                    self.ui.alaqsGridGroupBox.isChecked() and self.ui.alaqs_file_path.filePath()
-                ))
-                
-                # Calculation config is always visible and required (when not using existing results)
-                can_visualize = bool(has_austal_results or has_grid_config)
-            
-            self.ui.ResultsTable.setEnabled(bool(can_visualize))
-            self.ui.PlotTimeSeries.setEnabled(bool(can_visualize))
-            self.ui.VisualiseResults.setEnabled(bool(can_visualize))
-        
         # Connect configuration toggles to update button state
-        self.ui.loadResultsGroupBox.toggled.connect(update_result_buttons)
-        self.ui.gridManagementGroupBox.toggled.connect(update_result_buttons)
-        self.ui.alaqsGridGroupBox.toggled.connect(update_result_buttons)
-        self.ui.resultsWorkDirectoryPath.fileChanged.connect(update_result_buttons)
+        self.ui.loadResultsGroupBox.toggled.connect(self._update_result_buttons_state)
+        self.ui.gridManagementGroupBox.toggled.connect(self._update_result_buttons_state)
+        self.ui.alaqsGridGroupBox.toggled.connect(self._update_result_buttons_state)
+        self.ui.resultsWorkDirectoryPath.fileChanged.connect(self._update_result_buttons_state)
+        self.ui.alaqs_file_path.fileChanged.connect(self._update_result_buttons_state)
+        self.ui.gridSourceFilePath.fileChanged.connect(self._update_result_buttons_state)
+        # Connect spinbox changes for grid management
+        self.ui.xCellsSpinBox.valueChanged.connect(self._update_result_buttons_state)
+        self.ui.yCellsSpinBox.valueChanged.connect(self._update_result_buttons_state)
+
+    def _update_result_buttons_state(self):
+        """Update the enabled state of result visualisation buttons.
+        
+        Logic:
+        - ResultsTable & PlotTimeSeries: Enable if (AUSTAL completed) OR (output files loaded)
+          These don't require grid as they display tabular/time series data
+        - VisualiseResults (Vector Layer): Enable if (AUSTAL completed with grid) OR (output files loaded AND grid provided)
+          Vector visualisation requires grid for spatial information
+        """
+        # Check if AUSTAL ran successfully
+        austal_completed = "Completed" in self.ui.executionStatusLabel.text()
+        
+        # Check if output files are loaded (results work directory selected)
+        has_output_files = bool(
+            self.ui.loadResultsGroupBox.isChecked() and 
+            self.ui.resultsWorkDirectoryPath.filePath() and 
+            os.path.isdir(self.ui.resultsWorkDirectoryPath.filePath())
+        )
+        
+        # Check if grid is configured
+        # Grid can come from: Grid Management spinboxes OR ALAQS file OR Grid Source File
+        has_grid_from_management = bool(
+            self.ui.gridManagementGroupBox.isChecked() and
+            int(self.ui.xCellsSpinBox.value()) > 0 and
+            int(self.ui.yCellsSpinBox.value()) > 0
+        )
+        
+        has_grid_from_alaqs = bool(
+            self.ui.alaqsGridGroupBox.isChecked() and 
+            self.ui.alaqs_file_path.filePath() and
+            os.path.isfile(self.ui.alaqs_file_path.filePath())
+        )
+        
+        has_grid_from_file = bool(
+            self.ui.gridSourceFilePath.filePath() and
+            os.path.isfile(self.ui.gridSourceFilePath.filePath())
+        )
+        
+        has_grid_config = bool(has_grid_from_management or has_grid_from_alaqs or has_grid_from_file)
+        
+        # Logic for table and time series - no grid required
+        can_show_table_and_timeseries = bool(austal_completed or has_output_files)
+        
+        # Logic for vector visualisation - requires grid
+        can_visualize_vector = bool(
+            (austal_completed and has_grid_config) or 
+            (has_output_files and has_grid_config)
+        )
+        
+        # Enable/disable buttons accordingly
+        self.ui.ResultsTable.setEnabled(bool(can_show_table_and_timeseries))
+        self.ui.PlotTimeSeries.setEnabled(bool(can_show_table_and_timeseries))
+        self.ui.VisualiseResults.setEnabled(bool(can_visualize_vector))
 
     def updateMinMaxGUI(self, db_path_=""):
         (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path_)
@@ -3080,12 +3155,15 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if path and os.path.isfile(path):
             settings = QgsSettings()
             settings.setValue("open_alaqs/a2k_executable_path", path)
-            # Update status label with success styling
-            self.ui.executableStatusLabel.setText(f"Status: {os.path.basename(path)}")
+            # Update status label with success styling and explicit information
+            executable_name = os.path.basename(path)
+            status_text = f"Executable Loaded. File: {executable_name}"
+            self.ui.executableStatusLabel.setText(status_text)
             self.ui.executableStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
             logger.info(f"AUSTAL executable selected: {path}")
         else:
-            self.ui.executableStatusLabel.setText("Status: No executable loaded")
+            status_text = "No Executable Loaded\nPlease select the AUSTAL executable file to proceed."
+            self.ui.executableStatusLabel.setText(status_text)
             self.ui.executableStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
             if path:  # Only clear settings if a path was explicitly cleared
                 settings = QgsSettings()
@@ -3100,9 +3178,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.ui.alaqsGridStatusLabel.setText(feedback)
             self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
 
-        self.ui.VisualiseResults.setEnabled(is_success)
-        self.ui.ResultsTable.setEnabled(is_success)
-        self.ui.PlotTimeSeries.setEnabled(is_success)
+        # Update button state based on feedback
+        self._update_result_buttons_state()
 
     def load_alaqs_source_file(self, filename):
         """
@@ -3141,7 +3218,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "reference_altitude": study_data.get("airport_elevation", 0.0),
             }
 
-            # Only proceed with full loading if concentration visualization widget is initialized
+            # Only proceed with full loading if concentration visualisation widget is initialized
             if self._concentration_visualization_widget is not None:
                 # get values from GUI settings
                 em_config = self._concentration_visualization_widget.get_values()
@@ -3167,8 +3244,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             s.setValue("OpenALAQS/last_alaqs_file_path", filename)
 
             self.set_feedback("Valid ALAQS file selected", True)
-            # Update status label with loaded filename - green success
-            self.ui.alaqsGridStatusLabel.setText(f"Status: Loaded {path.name}")
+            # Update status label with loaded filename and grid parameters - green success
+            grid_params = (f"Grid: {grid_configuration['x_cells']}×{grid_configuration['y_cells']}×{grid_configuration['z_cells']} cells | "
+                          f"Res: {grid_configuration['x_resolution']:.0f}×{grid_configuration['y_resolution']:.0f}×{grid_configuration['z_resolution']:.0f}m | "
+                          f"Ref: ({grid_configuration['reference_latitude']:.4f}°, {grid_configuration['reference_longitude']:.4f}°, {grid_configuration['reference_altitude']:.0f}m)")
+            status_text = f"Loaded: {path.name}\n{grid_params}"
+            self.ui.alaqsGridStatusLabel.setText(status_text)
             self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         except sqlite3.OperationalError as err:
             self.set_feedback(f"Could not open database file: {err}.", False)
@@ -3184,12 +3265,15 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         if os.path.isdir(dirname):
             s.setValue("OpenALAQS/last_work_directory_path", dirname)
-            # Update status label with success styling (matches AUSTAL executable pattern)
-            self.ui.existingFilesStatusLabel.setText(f"Status: {os.path.basename(dirname)}")
+            # Update status label with success styling and explicit information
+            dir_name = os.path.basename(dirname)
+            status_text = f"Input Directory Loaded\nDirectory: {dir_name}"
+            self.ui.existingFilesStatusLabel.setText(status_text)
             self.ui.existingFilesStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
             logger.info(f"Work directory selected: {dirname}")
         else:
-            self.ui.existingFilesStatusLabel.setText("Status: No directory loaded")
+            status_text = "No Input Directory Loaded\nSelect directory with AUSTAL input files (.txt, .dmna, etc.)"
+            self.ui.existingFilesStatusLabel.setText(status_text)
             self.ui.existingFilesStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
             if dirname:  # Only clear settings if a path was explicitly cleared
                 s.setValue("OpenALAQS/last_work_directory_path", "")
@@ -3197,23 +3281,133 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
     def _on_results_directory_changed(self, results_dir: str) -> None:
         """Auto-load AUSTAL results when a valid work directory is selected."""
         if not results_dir or not os.path.isdir(results_dir):
+            # Update status label when directory is deselected
+            status_text = "No Results Directory Loaded. Select a directory with AUSTAL output files"
+            self.ui.resultsStatusLabel.setText(status_text)
+            self.ui.resultsStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
+            # Clear visualisation status label as well
+            self.ui.visualisationStatusLabel.setText("No results loaded. Select a results directory or run AUSTAL to visualize results.")
+            self.ui.visualisationStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
+            self._update_result_buttons_state()
             return
         
-        # Set the results directory as the work directory for visualization
+        # Set the results directory as the work directory for visualisation
         self.ui.work_directory_path.setFilePath(results_dir)
         s = QgsSettings()
         s.setValue("OpenALAQS/last_work_directory_path", results_dir)
         
-        # Update visualization status
-        self.ui.visualisationStatusLabel.setText(f"Status: Results loaded from {os.path.basename(results_dir)}")
+        # Update results status label with success styling and explicit information
+        dir_name = os.path.basename(results_dir)
+        status_text = f"Results Directory Loaded. Directory: {dir_name}"
+        self.ui.resultsStatusLabel.setText(status_text)
+        self.ui.resultsStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+        
+        # Build grid parameter text if grid is available
+        grid_params_text = ""
+        grid_config = self.get_current_grid_config()
+        if grid_config and any(grid_config[k] > 0 for k in ["x_cells", "y_cells"]):
+            grid_params_text = (f"\n\nDefault Grid\n"
+                               f"Grid: {grid_config['x_cells']}×{grid_config['y_cells']}×{grid_config['z_cells']} cells | "
+                               f"Resolution: {grid_config['x_resolution']:.0f}×{grid_config['y_resolution']:.0f}×{grid_config['z_resolution']:.0f}m | "
+                               f"Reference: ({grid_config['reference_latitude']:.4f}°, {grid_config['reference_longitude']:.4f}°, {grid_config['reference_altitude']:.0f}m)\n\n"
+                               f"Load a grid in the Grid Management section to ensure accurate visualisation.")
+        
+        # Update visualisation status
+        status_text = f"Results loaded from {os.path.basename(results_dir)}{grid_params_text}"
+        self.ui.visualisationStatusLabel.setText(status_text)
         self.ui.visualisationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         
-        # Enable result buttons
-        self.ui.ResultsTable.setEnabled(True)
-        self.ui.PlotTimeSeries.setEnabled(True)
-        self.ui.VisualiseResults.setEnabled(True)
+        # Update button state - will check if grid is also available
+        self._update_result_buttons_state()
         
         logger.info(f"Results loaded from: {results_dir}")
+
+    def _update_grid_status_label(self) -> None:
+        """Update the current grid status label with all grid parameters and save status."""
+        x_cells = int(self.ui.xCellsSpinBox.value())
+        y_cells = int(self.ui.yCellsSpinBox.value())
+        z_cells = int(self.ui.zCellsSpinBox.value())
+        x_res = float(self.ui.xResolutionSpinBox.value())
+        y_res = float(self.ui.yResolutionSpinBox.value())
+        z_res = float(self.ui.zResolutionSpinBox.value())
+        ref_lat = float(self.ui.refLatSpinBox.value())
+        ref_lon = float(self.ui.refLonSpinBox.value())
+        ref_alt = float(self.ui.refAltSpinBox.value())
+        
+        # Update the in-memory grid configuration
+        self._current_grid_config = {
+            "x_cells": x_cells,
+            "y_cells": y_cells,
+            "z_cells": z_cells,
+            "x_resolution": x_res,
+            "y_resolution": y_res,
+            "z_resolution": z_res,
+            "reference_latitude": ref_lat,
+            "reference_longitude": ref_lon,
+            "reference_altitude": ref_alt,
+        }
+        
+        # Check if grid has been modified since loading from file
+        is_modified = self._original_grid_config is not None and self._current_grid_config != self._original_grid_config
+        
+        grid_file_path = self.ui.gridSourceFilePath.filePath()
+        has_file_path = grid_file_path and os.path.isfile(grid_file_path)
+        
+        # Format all parameters compactly
+        params_text = (f"Grid: {x_cells}×{y_cells}×{z_cells} cells | "
+                       f"Res: {x_res:.0f}×{y_res:.0f}×{z_res:.0f}m | "
+                       f"Ref: ({ref_lat:.4f}°, {ref_lon:.4f}°, {ref_alt:.0f}m)")
+        
+        # Determine the state and styling
+        if self._original_grid_config is None and all(
+            self._current_grid_config[k] == 0 for k in ["x_cells", "y_cells", "z_cells"]
+        ):
+            # YELLOW: No file loaded, spinboxes not activated (default values)
+            status_text = "Current Grid: None"
+            self.ui.currentGridSummaryLabel.setText(status_text)
+            # Yellow styling
+            self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+        
+        elif is_modified or (self._original_grid_config is None and not any(
+            self._current_grid_config[k] == 0 for k in ["x_cells", "y_cells", "z_cells"]
+        )):
+            # BLUE: Grid was modified (from file) OR spinboxes were activated without a file
+            if self._loaded_grid_file_path and os.path.isfile(self._loaded_grid_file_path):
+                # File was loaded but spinboxes were modified
+                filename = os.path.basename(self._loaded_grid_file_path)
+                status_text = f"Grid Modified (from {filename})\n{params_text}\nSave the grid or Update file"
+            else:
+                # No file was initially loaded but spinboxes were modified
+                status_text = f"Grid Not Saved\n{params_text}\nSave the grid or press Update File to search for a file"
+            
+            self.ui.currentGridSummaryLabel.setText(status_text)
+            # Blue styling
+            self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #cce5ff; padding: 8px; border-radius: 4px; border-left: 4px solid #0c63e4; color: #084298; font-weight: bold;")
+        
+        else:
+            # GREEN: Grid loaded from file and not modified
+            filename = os.path.basename(self._loaded_grid_file_path) if self._loaded_grid_file_path else "file"
+            status_text = f"Loaded from: {filename}\n{params_text}"
+            self.ui.currentGridSummaryLabel.setText(status_text)
+            # Green styling for saved state
+            self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+
+    def get_current_grid_config(self) -> dict:
+        """
+        Get the current grid configuration from spinboxes.
+        
+        This includes any unsaved modifications and is used for calculations.
+        Returns the configuration even if it hasn't been saved to a file.
+        
+        Returns:
+            dict: Grid configuration with keys: x_cells, y_cells, z_cells, x_resolution, 
+                  y_resolution, z_resolution, reference_latitude, reference_longitude, 
+                  reference_altitude
+        """
+        if self._current_grid_config is None:
+            # Initialize if not yet set
+            self._update_grid_status_label()
+        return self._current_grid_config
 
     def _on_grid_source_file_changed(self, grid_file: str) -> None:
         """Auto-load grid when a valid grid file is selected and populate Grid Details."""
@@ -3221,7 +3415,14 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             # File deselected or invalid - reset to yellow neutral state
             self.ui.currentGridSummaryLabel.setText("Current Grid: None")
             self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+            # Clear stored path when file is deselected
+            s = QgsSettings()
+            s.setValue("OpenALAQS/last_grid_file_path", "")
             return
+        
+        # Store the selected grid file path for next session
+        s = QgsSettings()
+        s.setValue("OpenALAQS/last_grid_file_path", grid_file)
         
         try:
             filename = os.path.basename(grid_file)
@@ -3290,15 +3491,16 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 self.ui.refLonSpinBox.setValue(grid_config["reference_longitude"])
                 self.ui.refAltSpinBox.setValue(grid_config["reference_altitude"])
                 
-                # Success - green styling
-                self.ui.currentGridSummaryLabel.setText(
-                    f"Status: {filename} - {grid_config['x_cells']}x{grid_config['y_cells']}x{grid_config['z_cells']} cells"
-                )
-                self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+                # Store original config and file path for modification tracking
+                self._original_grid_config = grid_config.copy()
+                self._loaded_grid_file_path = grid_file
+                
+                # Update status label with the loaded grid configuration
+                self._update_grid_status_label()
                 logger.info(f"Grid loaded from: {grid_file} with config: {grid_config}")
             else:
                 # Could not parse - red error styling
-                self.ui.currentGridSummaryLabel.setText(f"Status: {filename} - Could not parse grid parameters")
+                self.ui.currentGridSummaryLabel.setText(f"Status: {os.path.basename(grid_file)} - Could not parse grid parameters")
                 self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
                 logger.warning(f"Could not extract grid parameters from: {grid_file}")
                 
@@ -3345,6 +3547,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         # Initial state
         self._on_input_mode_changed()
+
+    def _generate_austal_from_csv(self):
+        return None
 
     def _on_input_mode_changed(self) -> None:
         """Handle switching between existing files and generate from CSV modes."""
@@ -3503,12 +3708,22 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.ui.executionStatusLabel.setText("Status: Completed successfully")
             self.ui.executionStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
             
-            # Update visualization status and enable result buttons
-            self.ui.visualisationStatusLabel.setText("Status: Results ready. Select configuration and view results below.")
+            # Update visualisation status with grid parameters
+            grid_config = self.get_current_grid_config()
+            grid_params_text = ""
+            if grid_config and any(grid_config[k] > 0 for k in ["x_cells", "y_cells"]):
+                grid_params_text = (f"\n\nDefault Grid Configuration:\n"
+                                   f"Grid: {grid_config['x_cells']}×{grid_config['y_cells']}×{grid_config['z_cells']} cells | "
+                                   f"Resolution: {grid_config['x_resolution']:.0f}×{grid_config['y_resolution']:.0f}×{grid_config['z_resolution']:.0f}m | "
+                                   f"Reference: ({grid_config['reference_latitude']:.4f}°, {grid_config['reference_longitude']:.4f}°, {grid_config['reference_altitude']:.0f}m)\n\n"
+                                   f"Load a grid in the Grid Management section to ensure accurate visualisation results.")
+            
+            status_text = f"AUSTAL simulation completed. Results ready for visualisation.{grid_params_text}"
+            self.ui.visualisationStatusLabel.setText(status_text)
             self.ui.visualisationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
-            self.ui.ResultsTable.setEnabled(True)
-            self.ui.PlotTimeSeries.setEnabled(True)
-            self.ui.VisualiseResults.setEnabled(True)
+            
+            # Update result buttons - AUSTAL has run, so buttons should be enabled
+            self._update_result_buttons_state()
             
             QtWidgets.QMessageBox.information(
                 self, "Success", "Dispersion simulation completed successfully"
@@ -3531,6 +3746,238 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     f"AUSTAL execution failed with the following error: {exception}",
                     exc_info=exception,
                 )
+
+
+    def save_grid_as_csv(self) -> None:
+        """
+        Save the current grid configuration to a CSV file.
+        
+        The CSV will contain columns for:
+        - x_cells, y_cells, z_cells (grid dimensions)
+        - x_resolution, y_resolution, z_resolution (cell sizes)
+        - reference_latitude, reference_longitude, reference_altitude (reference point)
+        """
+        try:
+            # Open file save dialog
+            file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self,
+                "Save Grid Configuration as CSV",
+                "",
+                "CSV Files (*.csv);;All Files (*)"
+            )
+            
+            if not file_path:
+                # User cancelled the dialog
+                return
+            
+            # Ensure .csv extension
+            if not file_path.endswith('.csv'):
+                file_path += '.csv'
+            
+            # Get grid values from UI spinboxes
+            grid_config = {
+                "x_cells": int(self.ui.xCellsSpinBox.value()),
+                "y_cells": int(self.ui.yCellsSpinBox.value()),
+                "z_cells": int(self.ui.zCellsSpinBox.value()),
+                "x_resolution": float(self.ui.xResolutionSpinBox.value()),
+                "y_resolution": float(self.ui.yResolutionSpinBox.value()),
+                "z_resolution": float(self.ui.zResolutionSpinBox.value()),
+                "reference_latitude": float(self.ui.refLatSpinBox.value()),
+                "reference_longitude": float(self.ui.refLonSpinBox.value()),
+                "reference_altitude": float(self.ui.refAltSpinBox.value()),
+            }
+            
+            # Write to CSV file
+            with open(file_path, 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=grid_config.keys())
+                writer.writeheader()
+                writer.writerow(grid_config)
+            
+            # Update tracking - grid has been saved
+            self._original_grid_config = grid_config.copy()
+            self._loaded_grid_file_path = file_path
+            
+            # Show success message
+            #logger.info(f"Grid configuration saved to: {file_path}")
+            QtWidgets.QMessageBox.information(
+                self,
+                "Success",
+                f"Grid configuration saved successfully to:\n{file_path}"
+            )
+            
+            # Update status label to reflect saved state
+            self._update_grid_status_label()
+            
+        except Exception as e:
+            logger.error(f"Failed to save grid configuration: {e}", exc_info=True)
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Error",
+                f"Failed to save grid configuration:\n{str(e)}"
+            )
+
+    def update_file(self, file_path: str = None) -> None:
+        """
+        Update the grid file with the current grid configuration.
+        
+        If no file_path is provided, tries to get it from the gridSourceFilePath widget.
+        If that's also empty, opens a file dialog for the user to select a file.
+        
+        Supports:
+        - CSV files: Updates the grid configuration values
+        - OpenALAQS files: Updates grid parameters in study_setup and grid_3d_definition tables
+        
+        Args:
+            file_path (str, optional): Path to the grid file to update. If None, uses gridSourceFilePath widget.
+        """
+        try:
+            # If no file_path provided, try to get it from the widget
+            if not file_path:
+                file_path = self.ui.gridSourceFilePath.filePath()
+            
+            # If still no file, open a dialog for the user to select one
+            if not file_path:
+                file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+                    self,
+                    "Select Grid File to Update (CSV or OpenALAQS)",
+                    "",
+                    "Grid Files (*.csv *.alaqs);;CSV Files (*.csv);;OpenALAQS Files (*.alaqs);;All Files (*)"
+                )
+                
+                if not file_path:
+                    # User cancelled the dialog
+                    return
+                
+                # Update the gridSourceFilePath widget with the selected file
+                self.ui.gridSourceFilePath.setFilePath(file_path)
+            
+            # Verify file exists
+            if not os.path.isfile(file_path):
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "File Not Found",
+                    f"The selected file does not exist:\n{file_path}"
+                )
+                return
+            
+            # Get grid values from UI spinboxes
+            grid_config = {
+                "x_cells": int(self.ui.xCellsSpinBox.value()),
+                "y_cells": int(self.ui.yCellsSpinBox.value()),
+                "z_cells": int(self.ui.zCellsSpinBox.value()),
+                "x_resolution": float(self.ui.xResolutionSpinBox.value()),
+                "y_resolution": float(self.ui.yResolutionSpinBox.value()),
+                "z_resolution": float(self.ui.zResolutionSpinBox.value()),
+                "reference_latitude": float(self.ui.refLatSpinBox.value()),
+                "reference_longitude": float(self.ui.refLonSpinBox.value()),
+                "reference_altitude": float(self.ui.refAltSpinBox.value()),
+            }
+            
+            # Determine file type and update accordingly
+            if file_path.endswith('.csv'):
+                # Update CSV file
+                with open(file_path, 'w', newline='') as csvfile:
+                    writer = csv.DictWriter(csvfile, fieldnames=grid_config.keys())
+                    writer.writeheader()
+                    writer.writerow(grid_config)
+                
+                #logger.info(f"Grid configuration updated in CSV file: {file_path}")
+                QtWidgets.QMessageBox.information(
+                    self,
+                    "Success",
+                    f"Grid configuration updated successfully in:\n{file_path}"
+                )
+            
+            elif file_path.endswith('.alaqs'):
+                # Update OpenALAQS database file
+                try:
+                    project_database = ProjectDatabase()
+                    original_path = getattr(project_database, "path", None)
+                    project_database.path = file_path
+                    
+                    # Update both study_setup and grid_3d_definition tables
+                    conn = sqlite3.connect(file_path)
+                    cursor = conn.cursor()
+                    
+                    # Update study_setup with the reference_altitude
+                    cursor.execute(
+                        """UPDATE user_study_setup 
+                           SET airport_elevation = ?""",
+                        (
+                            grid_config["reference_altitude"]
+                        )
+                    )
+                    
+                    # Update grid_3d_definition table with all grid parameters
+                    cursor.execute(
+                        """UPDATE grid_3d_definition 
+                           SET x_cells = ?,
+                               y_cells = ?,
+                               z_cells = ?,
+                               x_resolution = ?,
+                               y_resolution = ?,
+                               z_resolution = ?,
+                               reference_latitude = ?,
+                               reference_longitude = ?""",
+                        (
+                            grid_config["x_cells"],
+                            grid_config["y_cells"],
+                            grid_config["z_cells"],
+                            grid_config["x_resolution"],
+                            grid_config["y_resolution"],
+                            grid_config["z_resolution"],
+                            grid_config["reference_latitude"],
+                            grid_config["reference_longitude"]
+                        )
+                    )
+                    
+                    conn.commit()
+                    conn.close()
+                    
+                    # Restore original database path
+                    if original_path is None:
+                        project_database.path = None
+                    else:
+                        project_database.path = original_path
+                    
+                    # Update tracking - grid has been saved
+                    self._original_grid_config = grid_config.copy()
+                    self._loaded_grid_file_path = file_path
+                    
+                    #logger.info(f"Grid configuration updated in OpenALAQS file: {file_path}")
+                    QtWidgets.QMessageBox.information(
+                        self,
+                        "Grid parameters successly updated"
+                    )
+                    
+                    # Update status label to reflect saved state
+                    self._update_grid_status_label()
+                
+                except sqlite3.Error as db_err:
+                    #logger.error(f"Database error updating OpenALAQS file: {db_err}", exc_info=True)
+                    QtWidgets.QMessageBox.critical(
+                        self,
+                        "Database Error",
+                        f"Failed to update OpenALAQS database file:\n{str(db_err)}"
+                    )
+                    return
+            
+            else:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Invalid File Type",
+                    f"File must be either .csv or .alaqs format.\n"
+                    f"Selected file: {os.path.basename(file_path)}"
+                )
+                return
+            
+        except Exception as e:
+            #logger.error(f"Failed to update grid configuration file: {e}", exc_info=True)
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Error",
+                f"Failed to update grid configuration file:\n{str(e)}"
+            )
 
     def resetConcentrationCalculationConfiguration(self, config=None):
         if config is None:
