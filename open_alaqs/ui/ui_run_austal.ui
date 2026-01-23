@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>600</width>
+    <width>800</width>
     <height>1050</height>
    </rect>
   </property>
@@ -723,6 +723,16 @@
            </property>
           </widget>
          </item>
+         <item row="1" column="1">
+          <widget class="QLabel" name="resultsStatusLabel">
+           <property name="text">
+            <string>No Results Directory Loaded. Select a directory with AUSTAL output files.</string>
+           </property>
+           <property name="styleSheet">
+            <string>background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold; font-size: 11px;</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </widget>
       </item>
@@ -859,7 +869,7 @@
       <item>
        <widget class="QGroupBox" name="alaqsGridGroupBox">
         <property name="title">
-         <string>Load the Grid</string>
+         <string>Grid Management</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
