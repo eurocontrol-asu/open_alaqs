@@ -2761,17 +2761,17 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         "start_dt_inclusive": {
             "label": "Start (incl.)",
             "widget_type": QtWidgets.QDateTimeEdit,
-            "initial_value": "2000-01-01 00:00:00",
+            "initial_value": datetime(2023, 3, 1, 0, 0, 0),
         },
         "end_dt_inclusive": {
             "label": "End (incl.)",
             "widget_type": QtWidgets.QDateTimeEdit,
-            "initial_value": "2000-01-02 00:00:00",
+            "initial_value": datetime(2023, 3, 1, 23, 0, 0),
         },
         "averaging": {
             "label": "Averaging",
             "widget_type": QtWidgets.QComboBox,
-            "initial_value": "annual mean",
+            "initial_value": "daily mean",
             "widget_config": {
                 "options": [
                     "hourly",
@@ -2823,6 +2823,16 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui = Ui_DialogRunAUSTAL()
         self.ui.setupUi(self)
         
+        # Set default values for calculation configuration widgets
+        if hasattr(self.ui, 'startDtEdit'):
+            self.ui.startDtEdit.setDateTime(QtCore.QDateTime(2023, 3, 1, 0, 0, 0))
+        if hasattr(self.ui, 'endDtEdit'):
+            self.ui.endDtEdit.setDateTime(QtCore.QDateTime(2023, 3, 1, 23, 0, 0))
+        if hasattr(self.ui, 'averagingCombo'):
+            idx = self.ui.averagingCombo.findText("daily mean")
+            if idx >= 0:
+                self.ui.averagingCombo.setCurrentIndex(idx)
+        
         # Set locale for coordinate and resolution spinboxes to use point as decimal separator
         c_locale = QtCore.QLocale(QtCore.QLocale.C)
         self.ui.refLatSpinBox.setLocale(c_locale)
@@ -2842,7 +2852,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         # initialize calculation
         self._conc_calculation_ = None
-        self._concentration_visualization_widget = None
+        self._concentration_visualization_widget = ModuleConfigurationWidget(
+            settings_schema=self.settings_schema
+        )
         self.resetConcentrationCalculationConfiguration()
         self.updateMinMaxGUI()
         

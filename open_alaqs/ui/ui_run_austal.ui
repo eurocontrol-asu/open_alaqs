@@ -312,71 +312,11 @@
            </property>
           </widget>
          </item>
-        </layout>
-       </widget>
-      </item>
-      <!-- Grid Management Section (Collapsible) -->
-      <item>
-       <widget class="QGroupBox" name="gridManagementGroupBox">
-        <property name="title">
-         <string>Grid Configuration</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-        <layout class="QVBoxLayout" name="gridManagementLayout">
-         <item>
-          <layout class="QFormLayout" name="gridSourceLayout">
-           <item row="0" column="0">
-            <widget class="QLabel" name="gridSourceLabel">
-             <property name="text">
-              <string>Grid File:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QgsFileWidget" name="gridSourceFilePath">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>1</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QLabel" name="gridSourceHelpLabel">
-           <property name="text">
-            <string>Select an OpenALAQS file (*_out.alaqs) or CSV with grid definition to load grid parameters.</string>
-           </property>
-           <property name="wordWrap">
-            <bool>true</bool>
-           </property>
-           <property name="styleSheet">
-            <string>color: #666666; font-style: italic; font-size: 10px;</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="currentGridSummaryLabel">
-           <property name="text">
-            <string>Current Grid: None</string>
-           </property>
-           <property name="styleSheet">
-            <string>background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;</string>
-           </property>
-          </widget>
-         </item>
-         <!-- Grid Details (Collapsible) -->
-         <item>
-          <widget class="QGroupBox" name="gridDetailsGroupBox">
+         <!-- Grid Configuration (Nested in CSV Generation) -->
+         <item row="5" column="0" colspan="2">
+          <widget class="QGroupBox" name="gridManagementGroupBox">
            <property name="title">
-            <string>Grid Details</string>
+            <string>Grid Configuration</string>
            </property>
            <property name="checkable">
             <bool>true</bool>
@@ -384,227 +324,287 @@
            <property name="checked">
             <bool>false</bool>
            </property>
-           <layout class="QGridLayout" name="gridDetailsLayout">
-            <item row="0" column="0">
-             <widget class="QLabel" name="xCellsLabel">
+           <layout class="QVBoxLayout" name="gridManagementLayout">
+            <item>
+             <layout class="QFormLayout" name="gridSourceLayout">
+              <item row="0" column="0">
+               <widget class="QLabel" name="gridSourceLabel">
+                <property name="text">
+                 <string>Grid File:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QgsFileWidget" name="gridSourceFilePath">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>1</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QLabel" name="gridSourceHelpLabel">
               <property name="text">
-               <string>X Cells:</string>
+               <string>Select an OpenALAQS file (*_out.alaqs) or CSV with grid definition to load grid parameters.</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+              <property name="styleSheet">
+               <string>color: #666666; font-style: italic; font-size: 10px;</string>
               </property>
              </widget>
             </item>
-            <item row="0" column="1">
-             <widget class="QSpinBox" name="xCellsSpinBox">
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>1000</number>
-              </property>
-              <property name="value">
-               <number>50</number>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="2">
-             <widget class="QLabel" name="yCellsLabel">
+            <item>
+             <widget class="QLabel" name="currentGridSummaryLabel">
               <property name="text">
-               <string>Y Cells:</string>
+               <string>Current Grid: None</string>
+              </property>
+              <property name="styleSheet">
+               <string>background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;</string>
               </property>
              </widget>
             </item>
-            <item row="0" column="3">
-             <widget class="QSpinBox" name="yCellsSpinBox">
-              <property name="minimum">
-               <number>1</number>
+            <!-- Grid Details (Collapsible) -->
+            <item>
+             <widget class="QGroupBox" name="gridDetailsGroupBox">
+              <property name="title">
+               <string>Grid Details</string>
               </property>
-              <property name="maximum">
-               <number>1000</number>
+              <property name="checkable">
+               <bool>true</bool>
               </property>
-              <property name="value">
-               <number>50</number>
+              <property name="checked">
+               <bool>false</bool>
               </property>
+              <layout class="QGridLayout" name="gridDetailsLayout">
+               <item row="0" column="0">
+                <widget class="QLabel" name="xCellsLabel">
+                 <property name="text">
+                  <string>X Cells:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QSpinBox" name="xCellsSpinBox">
+                 <property name="minimum">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <number>1000</number>
+                 </property>
+                 <property name="value">
+                  <number>50</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="2">
+                <widget class="QLabel" name="yCellsLabel">
+                 <property name="text">
+                  <string>Y Cells:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="3">
+                <widget class="QSpinBox" name="yCellsSpinBox">
+                 <property name="minimum">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <number>1000</number>
+                 </property>
+                 <property name="value">
+                  <number>50</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="4">
+                <widget class="QLabel" name="zCellsLabel">
+                 <property name="text">
+                  <string>Z Cells:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="5">
+                <widget class="QSpinBox" name="zCellsSpinBox">
+                 <property name="minimum">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <number>1000</number>
+                 </property>
+                 <property name="value">
+                  <number>1</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QLabel" name="xResolutionLabel">
+                 <property name="text">
+                  <string>X Resolution (m):</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QDoubleSpinBox" name="xResolutionSpinBox">
+                 <property name="minimum">
+                  <double>1.0</double>
+                 </property>
+                 <property name="maximum">
+                  <double>10000.0</double>
+                 </property>
+                 <property name="value">
+                  <double>100.0</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="2">
+                <widget class="QLabel" name="yResolutionLabel">
+                 <property name="text">
+                  <string>Y Resolution (m):</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="3">
+                <widget class="QDoubleSpinBox" name="yResolutionSpinBox">
+                 <property name="minimum">
+                  <double>1.0</double>
+                 </property>
+                 <property name="maximum">
+                  <double>10000.0</double>
+                 </property>
+                 <property name="value">
+                  <double>100.0</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="4">
+                <widget class="QLabel" name="zResolutionLabel">
+                 <property name="text">
+                  <string>Z Resolution (m):</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="5">
+                <widget class="QDoubleSpinBox" name="zResolutionSpinBox">
+                 <property name="minimum">
+                  <double>1.0</double>
+                 </property>
+                 <property name="maximum">
+                  <double>1000.0</double>
+                 </property>
+                 <property name="value">
+                  <double>50.0</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0">
+                <widget class="QLabel" name="refLatLabel">
+                 <property name="text">
+                  <string>Reference Latitude (°):</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="QDoubleSpinBox" name="refLatSpinBox">
+                 <property name="decimals">
+                  <number>4</number>
+                 </property>
+                 <property name="minimum">
+                  <double>-90.0</double>
+                 </property>
+                 <property name="maximum">
+                  <double>90.0</double>
+                 </property>
+                 <property name="value">
+                  <double>0.0</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="2">
+                <widget class="QLabel" name="refLonLabel">
+                 <property name="text">
+                  <string>Reference Longitude (°):</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="3">
+                <widget class="QDoubleSpinBox" name="refLonSpinBox">
+                 <property name="decimals">
+                  <number>4</number>
+                 </property>
+                 <property name="minimum">
+                  <double>-180.0</double>
+                 </property>
+                 <property name="maximum">
+                  <double>180.0</double>
+                 </property>
+                 <property name="value">
+                  <double>0.0</double>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="4">
+                <widget class="QLabel" name="refAltLabel">
+                 <property name="text">
+                  <string>Reference Altitude (m):</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="5">
+                <widget class="QDoubleSpinBox" name="refAltSpinBox">
+                 <property name="minimum">
+                  <double>0.0</double>
+                 </property>
+                 <property name="maximum">
+                  <double>30000.0</double>
+                 </property>
+                 <property name="value">
+                  <double>0.0</double>
+                 </property>
+                </widget>
+               </item>
+              </layout>
              </widget>
             </item>
-            <item row="0" column="4">
-             <widget class="QLabel" name="zCellsLabel">
-              <property name="text">
-               <string>Z Cells:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="5">
-             <widget class="QSpinBox" name="zCellsSpinBox">
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>1000</number>
-              </property>
-              <property name="value">
-               <number>1</number>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="xResolutionLabel">
-              <property name="text">
-               <string>X Resolution (m):</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QDoubleSpinBox" name="xResolutionSpinBox">
-              <property name="minimum">
-               <double>1.0</double>
-              </property>
-              <property name="maximum">
-               <double>10000.0</double>
-              </property>
-              <property name="value">
-               <double>100.0</double>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="2">
-             <widget class="QLabel" name="yResolutionLabel">
-              <property name="text">
-               <string>Y Resolution (m):</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="3">
-             <widget class="QDoubleSpinBox" name="yResolutionSpinBox">
-              <property name="minimum">
-               <double>1.0</double>
-              </property>
-              <property name="maximum">
-               <double>10000.0</double>
-              </property>
-              <property name="value">
-               <double>100.0</double>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="4">
-             <widget class="QLabel" name="zResolutionLabel">
-              <property name="text">
-               <string>Z Resolution (m):</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="5">
-             <widget class="QDoubleSpinBox" name="zResolutionSpinBox">
-              <property name="minimum">
-               <double>1.0</double>
-              </property>
-              <property name="maximum">
-               <double>1000.0</double>
-              </property>
-              <property name="value">
-               <double>50.0</double>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="refLatLabel">
-              <property name="text">
-               <string>Reference Latitude (°):</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QDoubleSpinBox" name="refLatSpinBox">
-              <property name="decimals">
-               <number>4</number>
-              </property>
-              <property name="minimum">
-               <double>-90.0</double>
-              </property>
-              <property name="maximum">
-               <double>90.0</double>
-              </property>
-              <property name="value">
-               <double>0.0</double>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="2">
-             <widget class="QLabel" name="refLonLabel">
-              <property name="text">
-               <string>Reference Longitude (°):</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="3">
-             <widget class="QDoubleSpinBox" name="refLonSpinBox">
-              <property name="decimals">
-               <number>4</number>
-              </property>
-              <property name="minimum">
-               <double>-180.0</double>
-              </property>
-              <property name="maximum">
-               <double>180.0</double>
-              </property>
-              <property name="value">
-               <double>0.0</double>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="4">
-             <widget class="QLabel" name="refAltLabel">
-              <property name="text">
-               <string>Reference Altitude (m):</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="5">
-             <widget class="QDoubleSpinBox" name="refAltSpinBox">
-              <property name="minimum">
-               <double>0.0</double>
-              </property>
-              <property name="maximum">
-               <double>30000.0</double>
-              </property>
-              <property name="value">
-               <double>0.0</double>
-              </property>
-             </widget>
+            <!-- Grid Save/Export Buttons -->
+            <item>
+             <layout class="QHBoxLayout" name="gridSaveLayout">
+              <item>
+               <widget class="QPushButton" name="saveGridCsvBtn">
+                <property name="text">
+                 <string>Save Grid as CSV</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="updateFileBtn">
+                <property name="text">
+                 <string>Update File</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="gridSaveSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
             </item>
            </layout>
           </widget>
-         </item>
-         <!-- Grid Save/Export Buttons -->
-         <item>
-          <layout class="QHBoxLayout" name="gridSaveLayout">
-           <item>
-            <widget class="QPushButton" name="saveGridCsvBtn">
-             <property name="text">
-              <string>Save Grid as CSV</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="updateFileBtn">
-             <property name="text">
-              <string>Update File</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <spacer name="gridSaveSpacer">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-          </layout>
          </item>
         </layout>
        </widget>
@@ -754,8 +754,8 @@
           <widget class="QDateTimeEdit" name="startDtEdit">
            <property name="dateTime">
             <datetime>
-             <year>2000</year>
-             <month>1</month>
+             <year>2023</year>
+             <month>3</month>
              <day>1</day>
              <hour>0</hour>
              <minute>0</minute>
@@ -775,10 +775,10 @@
           <widget class="QDateTimeEdit" name="endDtEdit">
            <property name="dateTime">
             <datetime>
-             <year>2000</year>
-             <month>1</month>
-             <day>2</day>
-             <hour>0</hour>
+             <year>2023</year>
+             <month>3</month>
+             <day>1</day>
+             <hour>23</hour>
              <minute>0</minute>
              <second>0</second>
             </datetime>
@@ -794,6 +794,9 @@
          </item>
          <item row="2" column="1">
           <widget class="QComboBox" name="averagingCombo">
+           <property name="currentIndex">
+            <number>2</number>
+           </property>
            <item>
             <property name="text">
              <string>hourly</string>
