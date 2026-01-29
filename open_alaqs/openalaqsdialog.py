@@ -41,7 +41,7 @@ from qgis.core.additions.edit import edit
 from qgis.gui import QgsDoubleSpinBox, QgsFileWidget, QgsMessageBar
 from qgis.PyQt import QtCore, QtGui, QtWidgets
 from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtWidgets import QMessageBox
+from qgis.PyQt.QtWidgets import QMessageBox, QSizePolicy
 from qgis.PyQt.uic import loadUiType
 from qgis.utils import OverrideCursor
 
@@ -170,7 +170,7 @@ class OpenAlaqsOpenDatabase:
                 project_database = ProjectDatabase()
                 project_database.path = self.db_path
 
-                with OverrideCursor(Qt.WaitCursor):
+                with OverrideCursor(Qt.CursorShape.WaitCursor):
                     result = alaqs.load_study_setup()
 
                 study_data = alaqs.load_study_setup()
@@ -241,12 +241,12 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
 
         self.ui.comboBoxAirportCode.currentTextChanged.connect(self.airport_lookup)
 
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(
-            self.save_study_setup
-        )
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(
-            self.close
-        )
+        self.ui.buttonBox.button(
+            QtWidgets.QDialogButtonBox.StandardButton.Save
+        ).clicked.connect(self.save_study_setup)
+        self.ui.buttonBox.button(
+            QtWidgets.QDialogButtonBox.StandardButton.Close
+        ).clicked.connect(self.close)
 
     def load_study_data(self):
         """
@@ -422,7 +422,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
     """
 
     def __init__(self, iface):
-        QtWidgets.QWidget.__init__(self, None, Qt.WindowStaysOnTopHint)
+        QtWidgets.QWidget.__init__(self, None, Qt.WindowType.WindowStaysOnTopHint)
 
         # Build the UI
         Ui_FormProfiles, _ = loadUiType(
@@ -436,7 +436,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         self.canvas = self.iface.mapCanvas()
 
         # Bindings
-        self.ui.comboBoxHourlyName.currentIndexChanged["QString"].connect(
+        self.ui.comboBoxHourlyName.currentIndexChanged.connect(
             self.change_hourly_profile
         )
         self.ui.pushButtonHourlyDelete.clicked.connect(self.delete_hourly_profile)
@@ -444,15 +444,13 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         self.ui.pushButtonHourlySave.clicked.connect(self.save_hourly_profile)
         self.ui.pushButtonHourlyClear.clicked.connect(self.clear_hourly_profile)
 
-        self.ui.comboBoxDailyName.currentIndexChanged["QString"].connect(
-            self.change_daily_profile
-        )
+        self.ui.comboBoxDailyName.currentIndexChanged.connect(self.change_daily_profile)
         self.ui.pushButtonDailyDelete.clicked.connect(self.delete_daily_profile)
         self.ui.pushButtonDailyNew.clicked.connect(self.new_daily_profile)
         self.ui.pushButtonDailySave.clicked.connect(self.save_daily_profile)
         self.ui.pushButtonDailyClear.clicked.connect(self.clear_daily_profile)
 
-        self.ui.comboBoxMonthlyName.currentIndexChanged["QString"].connect(
+        self.ui.comboBoxMonthlyName.currentIndexChanged.connect(
             self.change_monthly_profile
         )
         self.ui.pushButtonMonthlyDelete.clicked.connect(self.delete_monthly_profile)
@@ -618,10 +616,10 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             self,
             "Delete Profiles",
             "Are you sure you want to delete this profile?",
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes,
+            QtWidgets.QMessageBox.StandardButton.No,
         )
-        return result != QtWidgets.QMessageBox.Yes
+        return result != QtWidgets.QMessageBox.StandardButton.Yes
 
     def delete_hourly_profile(self):
         """
@@ -701,7 +699,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         self.ui.comboBoxMonthlyName.setEditable(True)
 
     @catch_errors
-    def save_hourly_profile(self):
+    def save_hourly_profile(self, checked=False):
         """
         Takes data from the UI and saves a new hourly profile to the currently
          active ALAQS database
@@ -795,10 +793,10 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             self,
             "New Profile",
             "Are you sure you want to save changes to this profile?",
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes,
+            QtWidgets.QMessageBox.StandardButton.No,
         )
-        if answer == QtWidgets.QMessageBox.Yes:
+        if answer == QtWidgets.QMessageBox.StandardButton.Yes:
             # Commit to database
             result = alaqs.add_hourly_profile(properties)
             if result is None:
@@ -810,7 +808,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 )
                 return None
 
-    def save_daily_profile(self):
+    def save_daily_profile(self, checked=False):
         """
         Takes data from the UI and saves a new daily profile to the currently
         active ALAQS database.
@@ -864,8 +862,8 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             self,
             "New Profile",
             "Are you sure you want to save changes to this profile?",
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes,
+            QtWidgets.QMessageBox.StandardButton.No,
         )
         if answer == QtWidgets.QMessageBox.Yes:
             # Commit to database
@@ -879,7 +877,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 )
                 return None
 
-    def save_monthly_profile(self):
+    def save_monthly_profile(self, checked=False):
         """
         Takes data from the UI and saves a new monthly profile to the currently
          active ALAQS database
@@ -968,7 +966,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 return None
 
     @catch_errors
-    def clear_hourly_profile(self):
+    def clear_hourly_profile(self, checked=False):
         self.ui.lineEditHourly00.setText("")
         self.ui.lineEditHourly01.setText("")
         self.ui.lineEditHourly02.setText("")
@@ -996,7 +994,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         return None
 
     @catch_errors
-    def clear_daily_profile(self):
+    def clear_daily_profile(self, checked=False):
         """
         Clears the currently displayed data for hourly profiles ready to receive
          new data.
@@ -1014,7 +1012,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
         return None
 
     @catch_errors
-    def clear_monthly_profile(self):
+    def clear_monthly_profile(self, checked=False):
         """
         Clears the currently displayed data for hourly profiles ready to receive
          new data
@@ -1067,12 +1065,10 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         self.populate_instance()
         self.visualize_route_name()
 
-        self.ui.gate.currentIndexChanged["QString"].connect(self.visualize_route_name)
-        self.ui.runway.currentIndexChanged["QString"].connect(self.visualize_route_name)
-        self.ui.instance.currentIndexChanged["QString"].connect(
-            self.visualize_route_name
-        )
-        self.ui.arrdep.currentIndexChanged["QString"].connect(self.visualize_route_name)
+        self.ui.gate.currentIndexChanged.connect(self.visualize_route_name)
+        self.ui.runway.currentIndexChanged.connect(self.visualize_route_name)
+        self.ui.instance.currentIndexChanged.connect(self.visualize_route_name)
+        self.ui.arrdep.currentIndexChanged.connect(self.visualize_route_name)
 
         self.ui.routes.currentIndexChanged.connect(self.route_changed)
         self.ui.create.clicked.connect(self.create_new_taxi_route)
@@ -1700,15 +1696,15 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui.vert_limit_ft.setEnabled(False)
 
         self.ui.status_update.setText("Ready")
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).setText(
-            "Create Inventory"
-        )
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(
-            self.create_inventory
-        )
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Close).clicked.connect(
-            self.close
-        )
+        self.ui.buttonBox.button(
+            QtWidgets.QDialogButtonBox.StandardButton.Save
+        ).setText("Create Inventory")
+        self.ui.buttonBox.button(
+            QtWidgets.QDialogButtonBox.StandardButton.Save
+        ).clicked.connect(self.create_inventory)
+        self.ui.buttonBox.button(
+            QtWidgets.QDialogButtonBox.StandardButton.Close
+        ).clicked.connect(self.close)
 
         # Set some default values
         self.ui.movement_table_path.setFilter("CSV (*.csv);;TXT (*.txt)")
@@ -1732,7 +1728,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
     def movement_table_path_changed(self, path):
         try:
             if os.path.exists(path):
-                with OverrideCursor(Qt.WaitCursor):
+                with OverrideCursor(Qt.CursorShape.WaitCursor):
                     result = self.examine_movements(path)
 
                 if isinstance(result, str) or isinstance(result, Exception):
@@ -1836,7 +1832,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         """
         try:
             if os.path.exists(path):
-                with OverrideCursor(Qt.WaitCursor):
+                with OverrideCursor(Qt.CursorShape.WaitCursor):
                     result = self.examine_met_file(path)
 
                 if isinstance(result, str):
@@ -2069,7 +2065,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             output_save_name = "%s_out.alaqs" % output_save_name
             inventory_path = os.path.join(output_save_path, output_save_name)
 
-            with OverrideCursor(Qt.WaitCursor):
+            with OverrideCursor(Qt.CursorShape.WaitCursor):
                 result = alaqs.inventory_creation_new(
                     inventory_path, model_parameters, study_setup, met_csv_path
                 )
@@ -2116,7 +2112,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         :return: boolean - True for checked, False for unchecked
         """
         try:
-            return ui_element.checkState() == Qt.Checked
+            return ui_element.checkState() == Qt.CheckState.Checked
         except Exception:
             return None
 
@@ -2209,7 +2205,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         # Create and add a message bar in the QGIS interface
         self.message_bar = QgsMessageBar()
         self.message_bar.setSizePolicy(
-            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed
         )
 
         # Find the main layout of the dialog
@@ -2247,15 +2243,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.populate_pollutants()
         self.updateMinMaxGUI()
 
-        self.ui.pollutants_names.currentIndexChanged["QString"].connect(
-            self.pollutant_changed
-        )
-        self.ui.source_names.currentIndexChanged["QString"].connect(
-            self.source_name_changed
-        )
-        self.ui.source_types.currentIndexChanged["QString"].connect(
-            self.source_type_changed
-        )
+        self.ui.pollutants_names.currentIndexChanged.connect(self.pollutant_changed)
+        self.ui.source_names.currentIndexChanged.connect(self.source_name_changed)
+        self.ui.source_types.currentIndexChanged.connect(self.source_type_changed)
 
         self.ui.ResultsTableButton.clicked.connect(
             lambda: self.outputModuleRequested("TableViewWidgetOutputModule")
@@ -2352,7 +2342,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 continue
 
             scroll_widget = QtWidgets.QScrollArea(self)
-            scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
+            scroll_widget.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
             scroll_widget.setWidget(config_widget)
             scroll_widget.setWidgetResizable(True)
             self.ui.dispersion_modules_tab_widget.addTab(
@@ -2367,7 +2357,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 continue
 
             scroll_widget = QtWidgets.QScrollArea(self)
-            scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
+            scroll_widget.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
             scroll_widget.setWidget(config_widget)
             scroll_widget.setWidgetResizable(True)
             self.ui.output_modules_tab_widget.addTab(
@@ -2935,7 +2925,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 continue
 
             scroll_widget = QtWidgets.QScrollArea(self)
-            scroll_widget.setFrameShape(QtWidgets.QFrame.NoFrame)
+            scroll_widget.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
             scroll_widget.setWidget(config_widget)
             scroll_widget.setWidgetResizable(True)
             self.ui.output_modules_tab_widget.addTab(
@@ -3057,8 +3047,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         msg_box = QtWidgets.QMessageBox(self)
         msg_box.setWindowTitle("AUSTAL Setup Help")
         msg_box.setText(help_text)
-        msg_box.setTextFormat(QtCore.Qt.RichText)
-        msg_box.setIcon(QtWidgets.QMessageBox.Information)
+        msg_box.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        msg_box.setIcon(QtWidgets.QMessageBox.Icon.Information)
         msg_box.exec()
 
     @catch_errors
@@ -3287,23 +3277,25 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
             self.ui.infoLabel.setEnabled(False)
             self.ui.selectLayersGroupBox.setEnabled(False)
             self.ui.importCheckBox.setEnabled(False)
-            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
+            self.ui.buttonBox.button(
+                QtWidgets.QDialogButtonBox.StandardButton.Yes
+            ).setEnabled(False)
 
             self.ui.errorLabel.setVisible(True)
 
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).clicked.connect(
-            self.download
-        )
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Cancel).clicked.connect(
-            self.close
-        )
+        self.ui.buttonBox.button(
+            QtWidgets.QDialogButtonBox.StandardButton.Yes
+        ).clicked.connect(self.download)
+        self.ui.buttonBox.button(
+            QtWidgets.QDialogButtonBox.StandardButton.Cancel
+        ).clicked.connect(self.close)
 
         self.project = QgsProject.instance()
 
     def download(self):
         self.setEnabled(False)
 
-        with OverrideCursor(Qt.WaitCursor):
+        with OverrideCursor(Qt.CursorShape.WaitCursor):
             self._download()
 
         self.setEnabled(True)

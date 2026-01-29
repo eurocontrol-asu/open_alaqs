@@ -6,9 +6,10 @@ import pandas as pd
 from emissions_calculator import EmissionsCalculatorDialog
 from model.database import GSEDatabase
 from movement_editor import MovementEditor
-from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import (
+from qgis.core import NULL
+from qgis.PyQt.QtCore import QAbstractTableModel, Qt
+from qgis.PyQt.QtGui import QFont
+from qgis.PyQt.QtWidgets import (
     QApplication,
     QFileDialog,
     QHBoxLayout,
@@ -60,15 +61,15 @@ class PandasModel(QAbstractTableModel):
     def columnCount(self, parent=None):
         return self._df.shape[1]
 
-    def data(self, index, role=Qt.DisplayRole):
-        if index.isValid() and role == Qt.DisplayRole:
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if index.isValid() and role == Qt.ItemDataRole.DisplayRole:
             return str(self._df.iloc[index.row(), index.column()])
-        return QVariant()
+        return NULL
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role != Qt.DisplayRole:
-            return QVariant()
-        if orientation == Qt.Horizontal:
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role != Qt.ItemDataRole.DisplayRole:
+            return NULL
+        if orientation == Qt.Orientation.Horizontal:
             return str(self._df.columns[section])
         else:
             return str(section)
@@ -331,14 +332,14 @@ class MainController(QMainWindow):
 
             # Improve row selection behavior
             self.gseTableView.setSelectionBehavior(
-                QTableView.SelectRows
+                QTableView.SelectionBehavior.SelectRows
             )  # Select entire rows
             self.gseTableView.setSelectionMode(
-                QTableView.ExtendedSelection
+                QTableView.SelectionMode.ExtendedSelection
             )  # Allow multiple selection
             self.gseTableView.verticalHeader().setVisible(True)  # Show row numbers
             self.gseTableView.horizontalHeader().setDefaultAlignment(
-                Qt.AlignLeft | Qt.AlignVCenter
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
             )
 
         except Exception as e:
@@ -354,7 +355,7 @@ class MainController(QMainWindow):
             )
             self.emissionFactorTableView.verticalHeader().setVisible(False)
             self.emissionFactorTableView.horizontalHeader().setDefaultAlignment(
-                Qt.AlignLeft | Qt.AlignVCenter
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
             )
         except Exception as e:
             QMessageBox.critical(
@@ -425,11 +426,15 @@ class MainController(QMainWindow):
                 "<b>Modify</b>: Add or remove assignments from the existing ones.<br>"
                 "<b>Cancel</b>: Do nothing."
             )
-            reset_button = msgbox.addButton("Reset", QMessageBox.ActionRole)
-            modify_button = msgbox.addButton("Modify", QMessageBox.ActionRole)
-            cancel_button = msgbox.addButton("Cancel", QMessageBox.RejectRole)
+            reset_button = msgbox.addButton("Reset", QMessageBox.ButtonRole.ActionRole)
+            modify_button = msgbox.addButton(
+                "Modify", QMessageBox.ButtonRole.ActionRole
+            )
+            cancel_button = msgbox.addButton(
+                "Cancel", QMessageBox.ButtonRole.RejectRole
+            )
             msgbox.setDefaultButton(modify_button)  # Default to the modify button
-            msgbox.exec_()
+            msgbox.exec()
 
             if msgbox.clickedButton() == reset_button:
                 self.movement_assignments = None
@@ -451,7 +456,7 @@ class MainController(QMainWindow):
             reset_mode="reset" if reset_assignments else "modify",  # Add this parameter
         )
 
-        if dlg.exec_():
+        if dlg.exec():
             new_assignments = dlg.get_assignments()
 
             if not reset_assignments and self.movement_assignments:
@@ -487,7 +492,7 @@ class MainController(QMainWindow):
             path=self.db_source,
             parent=self,
         )
-        dlg.exec_()
+        dlg.exec()
 
     def setup_gse_tab(self):
         """Setup GSE tab with table and buttons"""
@@ -546,11 +551,11 @@ class MainController(QMainWindow):
             self,
             "Confirm Delete",
             f"Are you sure you want to delete {len(indexes)} row(s)?",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )
 
-        if reply == QMessageBox.Yes:
+        if reply == QMessageBox.StandardButton.Yes:
             model = self.gseTableView.model()
             # Sort in reverse order to remove from bottom up
             rows = sorted([index.row() for index in indexes], reverse=True)
@@ -645,7 +650,7 @@ def main():
     backend = "csv"
     controller = MainController(db_source, backend)
     controller.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

@@ -283,15 +283,15 @@ class OpenALAQS:
                         "File at path '%s' already exists. "
                         "Overwrite existing file?" % (str(db_suggested_filename))
                     ),
-                    QtWidgets.QMessageBox.Yes,
-                    QtWidgets.QMessageBox.No,
+                    QtWidgets.QMessageBox.StandardButton.Yes,
+                    QtWidgets.QMessageBox.StandardButton.No,
                 )
-                if should_overwrite == QtWidgets.QMessageBox.Yes:
+                if should_overwrite == QtWidgets.QMessageBox.StandardButton.Yes:
                     db_filename.unlink()
                 else:
                     return
 
-            with OverrideCursor(Qt.WaitCursor):
+            with OverrideCursor(Qt.CursorShape.WaitCursor):
                 result = alaqs.create_project(str(db_filename))
 
             if result is not None:
@@ -386,7 +386,7 @@ class OpenALAQS:
             if save_before_show:
                 self.dialogs["study_setup"].save_study_setup()
             self.dialogs["study_setup"].show()
-            return_code = self.dialogs["study_setup"].exec_()
+            return_code = self.dialogs["study_setup"].exec()
             if return_code == 0:
                 try:
                     self.dialogs["study_setup"].get_values()
@@ -420,7 +420,7 @@ class OpenALAQS:
         """
         self.dialogs["osm_import"] = OpenAlaqsOsmImport()
         self.dialogs["osm_import"].show()
-        self.dialogs["osm_import"].exec_()
+        self.dialogs["osm_import"].exec()
 
     def run_profiles_edit(self):
         """
@@ -428,7 +428,7 @@ class OpenALAQS:
         """
         self.dialogs["profiles"] = OpenAlaqsProfiles(self.iface)
         self.dialogs["profiles"].show()
-        self.dialogs["profiles"].exec_()
+        self.dialogs["profiles"].exec()
 
     def run_taxi_routes(self):
         """
@@ -436,7 +436,7 @@ class OpenALAQS:
         """
         self.dialogs["taxi_routes"] = OpenAlaqsTaxiRoutes(self.iface)
         self.dialogs["taxi_routes"].show()
-        self.dialogs["taxi_routes"].exec_()
+        self.dialogs["taxi_routes"].exec()
 
     def run_build_inventory(self):
         """
@@ -445,7 +445,7 @@ class OpenALAQS:
         """
         self.dialogs["inventory"] = OpenAlaqsInventory()
         self.dialogs["inventory"].show()
-        self.dialogs["inventory"].exec_()
+        self.dialogs["inventory"].exec()
 
     def run_results_analysis(self):
         """
@@ -453,7 +453,7 @@ class OpenALAQS:
         OpenALAQS emission inventory.
         """
         self.dialogs["results"] = OpenAlaqsResultsAnalysis(self.iface)
-        self.dialogs["results"].exec_()
+        self.dialogs["results"].exec()
 
     def run_dispersion_analysis(self):
         """
@@ -461,14 +461,14 @@ class OpenALAQS:
         OpenALAQS emission inventory.
         """
         self.dialogs["results"] = OpenAlaqsDispersionAnalysis(self.iface)
-        self.dialogs["results"].exec_()
+        self.dialogs["results"].exec()
 
     def run_view_logfile(self):
         """
         Opens the widget dialog for review of the Open ALAQSlog file.
         """
         self.dialogs["logfile"] = OpenAlaqsLogfile()
-        self.dialogs["logfile"].exec_()
+        self.dialogs["logfile"].exec()
 
     def run_macro_setting_warning(self):
         """

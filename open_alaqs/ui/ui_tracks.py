@@ -126,10 +126,10 @@ def populate_combo_boxes(fields: dict):
     runways = alaqs.get_runways()
     if runways is None or runways == []:
         msg_box = QtWidgets.QMessageBox()
-        msg_box.setIcon(QtWidgets.QMessageBox.Critical)
+        msg_box.setIcon(QtWidgets.QMessageBox.Icon.Critical)
         msg_box.setWindowTitle("Critical error")
         msg_box.setText("Please define your runways before creating tracks.")
-        msg_box.exec_()
+        msg_box.exec()
     else:
 
         runway_options = []

@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from functools import partial
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
@@ -209,7 +209,7 @@ class MovementEditor(QDialog):
                     gse.get(col, "") if isinstance(gse, dict) else getattr(gse, col, "")
                 )
                 item = QTableWidgetItem(str(val))
-                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
                 self.table.setItem(i, 1 + j, item)
 
             # Time: editable, with spinbox
@@ -304,7 +304,7 @@ class MovementEditor(QDialog):
         for i, row in enumerate(rows):
             for j, val in enumerate(row[:-1]):  # Skip the hidden key
                 item = QTableWidgetItem(str(val))
-                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
                 self.summary_table.setItem(i, j, item)
 
         self.summary_table.resizeColumnsToContents()

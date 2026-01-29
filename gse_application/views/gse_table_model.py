@@ -1,8 +1,9 @@
 # views/gse_table_model.py
 
 from model.gse_types import GSE
-from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant
-from PyQt5.QtWidgets import QMessageBox
+from qgis.core import NULL
+from qgis.PyQt.QtCore import QAbstractTableModel, QModelIndex, Qt
+from qgis.PyQt.QtWidgets import QMessageBox
 
 
 class GSETableModel(QAbstractTableModel):
@@ -50,26 +51,26 @@ class GSETableModel(QAbstractTableModel):
     def columnCount(self, parent=None):
         return len(self._headers)
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
-            return QVariant()
+            return NULL
 
         row = index.row()
         col = index.column()
 
         if row >= len(self._gse_list):
-            return QVariant()
+            return NULL
 
         gse = self._gse_list[row]
         attr = self._headers[col]
 
-        if role == Qt.DisplayRole or role == Qt.EditRole:
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return str(getattr(gse, attr, ""))
 
-        return QVariant()
+        return NULL
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if not index.isValid() or role != Qt.EditRole:
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if not index.isValid() or role != Qt.ItemDataRole.EditRole:
             return False
 
         row = index.row()
@@ -99,7 +100,7 @@ class GSETableModel(QAbstractTableModel):
 
         # Set the value
         setattr(gse, attr, value)
-        self.dataChanged.emit(index, index, [Qt.DisplayRole])
+        self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole])
         return True
 
     def _validate_input(self, attr, value):
@@ -150,15 +151,19 @@ class GSETableModel(QAbstractTableModel):
 
     def flags(self, index):
         if not index.isValid():
-            return Qt.ItemIsEnabled
-        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            return Qt.ItemFlag.ItemIsEnabled
+        return (
+            Qt.ItemFlag.ItemIsEditable
+            | Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsSelectable
+        )
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role != Qt.DisplayRole:
-            return QVariant()
-        if orientation == Qt.Horizontal and section < len(self._headers):
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role != Qt.ItemDataRole.DisplayRole:
+            return NULL
+        if orientation == Qt.Orientation.Horizontal and section < len(self._headers):
             return self._headers[section]
-        return QVariant()
+        return NULL
 
     def insertRows(self, row, count, parent=None):
         """Insert new rows"""

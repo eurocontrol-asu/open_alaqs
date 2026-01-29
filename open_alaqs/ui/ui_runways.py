@@ -89,10 +89,10 @@ def form_open(form, layer, feature):
         raise e
 
     # Only allow the first runway number and letter to be changed
-    fields["first_runway_number"].currentIndexChanged["QString"].connect(
+    fields["first_runway_number"].currentIndexChanged.connect(
         lambda v: first_runway_number_changed(fields, v)
     )
-    fields["first_runway_letter"].currentIndexChanged["QString"].connect(
+    fields["first_runway_letter"].currentIndexChanged.connect(
         lambda v: first_runway_letter_changed(fields, v)
     )
     fields["name_field"].setReadOnly(True)

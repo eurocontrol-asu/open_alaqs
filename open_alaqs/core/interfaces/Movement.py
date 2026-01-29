@@ -541,8 +541,8 @@ class MovementStore(Store, metaclass=Singleton):
     def ProgressBarWidget(self):
         progressbar = QtWidgets.QProgressDialog("Please wait...", "Cancel", 0, 99)
         progressbar.setWindowTitle("Initializing Movements from Database")
-        progressbar.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-        progressbar.setWindowModality(QtCore.Qt.WindowModal)
+        progressbar.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
+        progressbar.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         progressbar.setAutoReset(True)
         progressbar.setAutoClose(True)
         progressbar.resize(350, 100)

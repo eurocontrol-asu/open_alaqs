@@ -48,7 +48,7 @@ def get_nominatum_feature_by_icao_code(icao_code: str) -> Optional[NominatimAero
     request = QNetworkRequest(url)
     reply = nam.blockingGet(request)
 
-    if reply.error() != QNetworkReply.NoError:
+    if reply.error() != QNetworkReply.NetworkError.NoError:
         raise Exception(
             "Failed Nominatim search: [{}] {}".format(
                 reply.error(), reply.errorString()

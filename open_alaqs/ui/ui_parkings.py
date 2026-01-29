@@ -160,7 +160,7 @@ def recalculate_emissions(fields: dict, form):
             )
             msg_box = QtWidgets.QMessageBox()
             msg_box.setText(msg)
-            msg_box.exec_()
+            msg_box.exec()
             return False
 
         # Calculate the total
@@ -174,7 +174,7 @@ def recalculate_emissions(fields: dict, form):
                 "Fleet mix must be decimal values that total 100%. "
                 f"Current sum is {fleet_percentage_total}%."
             )
-            msg_box.exec_()
+            msg_box.exec()
             return False
 
         # Get the relevant validated fields
@@ -227,7 +227,7 @@ def recalculate_emissions(fields: dict, form):
         # Calculate emissions according to the ALAQS method
         emission_profile = {}
         if roadway_method == "COPERT 5":
-            with OverrideCursor(Qt.WaitCursor):
+            with OverrideCursor(Qt.CursorShape.WaitCursor):
                 emission_profile = copert5.roadway_emission_factors(
                     form_data, study_data
                 )
@@ -246,7 +246,7 @@ def recalculate_emissions(fields: dict, form):
 
         msg_box = QtWidgets.QMessageBox()
         msg_box.setText("Emissions could not be calculated: %s" % e)
-        msg_box.exec_()
+        msg_box.exec()
         raise e
 
     return True

@@ -8,6 +8,7 @@
 
 
 from qgis.PyQt import QtCore, QtWidgets
+from qgis.PyQt.QtWidgets import QSizePolicy
 
 
 class Ui_FormDataBrowser(object):
@@ -28,15 +29,16 @@ class Ui_FormDataBrowser(object):
         self.verticalLayout.addWidget(self.data)
         self.buttonBox = QtWidgets.QDialogButtonBox(FormDataBrowser)
         sizePolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.buttonBox.sizePolicy().hasHeightForWidth())
         self.buttonBox.setSizePolicy(sizePolicy)
-        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.buttonBox.setStandardButtons(
-            QtWidgets.QDialogButtonBox.Cancel | QtWidgets.QDialogButtonBox.Ok
+            QtWidgets.QDialogButtonBox.StandardButton.Cancel
+            | QtWidgets.QDialogButtonBox.StandardButton.Ok
         )
         self.buttonBox.setObjectName("buttonBox")
         self.verticalLayout.addWidget(self.buttonBox)
@@ -67,4 +69,4 @@ if __name__ == "__main__":
     ui = Ui_FormDataBrowser()
     ui.setupUi(FormDataBrowser)
     FormDataBrowser.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
