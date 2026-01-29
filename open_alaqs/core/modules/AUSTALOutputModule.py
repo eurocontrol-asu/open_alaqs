@@ -419,11 +419,11 @@ class AUSTALDispersionModule(DispersionModule):
                 None,
                 "Warning",
                 "AUSTAL destionation folder is not empty!\nDelete existing files?",
-                QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.No,
             )
 
-            if answer == QtWidgets.QMessageBox.Yes:
+            if answer == QtWidgets.QMessageBox.StandardButton.Yes:
                 for child in output_path_children:
                     try:
                         if child.is_dir():

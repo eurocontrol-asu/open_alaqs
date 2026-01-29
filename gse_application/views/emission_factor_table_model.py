@@ -1,6 +1,7 @@
 # views/emission_factor_table_model.py
 
-from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
+from qgis.core import NULL
+from qgis.PyQt.QtCore import QAbstractTableModel, Qt
 
 
 class EmissionFactorTableModel(QAbstractTableModel):
@@ -26,16 +27,19 @@ class EmissionFactorTableModel(QAbstractTableModel):
     def columnCount(self, parent=None):
         return len(self.HEADERS)
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
-            return QVariant()
+            return NULL
         factor = self.factors[index.row()]
         field = self.HEADERS[index.column()]
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return str(getattr(factor, field))
-        return QVariant()
+        return NULL
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if (
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Horizontal
+        ):
             return self.HEADERS[section]
-        return QVariant()
+        return NULL

@@ -369,7 +369,7 @@ def ensure_qt_app():
     try:
         from qgis.PyQt.QtWidgets import QApplication
     except Exception:
-        from PyQt5.QtWidgets import QApplication
+        from qgis.PyQt.QtWidgets import QApplication
 
     app = QApplication.instance()
     if app is None:

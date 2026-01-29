@@ -2,8 +2,8 @@ import csv
 import re
 import sqlite3
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtWidgets import (
     QApplication,
     QDialog,
     QFileDialog,
@@ -99,26 +99,28 @@ class EmissionsCalculatorDialog(QDialog):
                 self,
                 "Warning",
                 "You have calculated emission results. Would you like to export them before closing?",
-                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
-                QMessageBox.Yes,
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+                | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Yes,
             )
 
-            if reply == QMessageBox.Yes:
+            if reply == QMessageBox.StandardButton.Yes:
                 # Show export format choice dialog
                 format_choice = QMessageBox()
                 format_choice.setWindowTitle("Choose Export Format")
                 format_choice.setText("Which export format would you like to use?")
 
                 csv_button = format_choice.addButton(
-                    "CSV Format", QMessageBox.ActionRole
+                    "CSV Format", QMessageBox.ButtonRole.ActionRole
                 )
                 alaqs_button = format_choice.addButton(
-                    "Update OpenALAQS database", QMessageBox.ActionRole
+                    "Update OpenALAQS database", QMessageBox.ButtonRole.ActionRole
                 )
-                _ = format_choice.addButton("Cancel", QMessageBox.RejectRole)
+                _ = format_choice.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
 
                 format_choice.setDefaultButton(csv_button)
-                format_choice.exec_()
+                format_choice.exec()
 
                 if format_choice.clickedButton() == csv_button:
                     self.export_emissions_table_csv()
@@ -136,7 +138,7 @@ class EmissionsCalculatorDialog(QDialog):
                         event.ignore()  # Keep dialog open if export was cancelled
                 else:  # Cancel
                     event.ignore()  # Keep dialog open
-            elif reply == QMessageBox.No:
+            elif reply == QMessageBox.StandardButton.No:
                 event.accept()  # Close without saving
             else:  # Cancel
                 event.ignore()  # Keep dialog open
@@ -181,7 +183,7 @@ class EmissionsCalculatorDialog(QDialog):
         self.table_gse.resizeColumnsToContents()
 
     def fill_output_table(self):
-        QApplication.setOverrideCursor(Qt.WaitCursor)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             emissions = self.reconfigure_emissions_table()
             if not emissions:

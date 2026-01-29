@@ -25,7 +25,8 @@ class MatplotlibQtDialog(QtWidgets.QDialog):
 
         self._canvas = FigureCanvas(self._figure)
         self._canvas.setSizePolicy(
-            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Expanding,
         )
         self._canvas.updateGeometry()
         # layout.setStyleSheet("background:white")
