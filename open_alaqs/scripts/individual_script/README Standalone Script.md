@@ -9,32 +9,54 @@ This document explains how to run `run_emissions_austal.py` from the OSGeo4W She
 
 **Basic Steps (OSGeo4W Shell)**
 1. Open the *OSGeo4W Shell* from your Start menu.
-2. Change to your workspace root or the QGIS plugin install folder (examples):
+2. Navigate to the folder containing `run_emissions_austal.py`. This is typically your per-user QGIS plugin install folder:
 
 ```powershell
-
 # Typical per-user QGIS plugin install (use %APPDATA% to avoid hardcoding user):
 cd %APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\open_alaqs
-
-# Typical system-wide QGIS install location (adjust QGIS version as needed):
-cd "C:\Program Files\QGIS <Installed Version>\apps\qgis\python\plugins\open_alaqs"
 ```
 
-Replace `<YourUser>` and the QGIS `<Installed Version>` with values appropriate for your system.
-
-
-3. Run the script with the path to your config text file. Use an absolute path to be certain the correct script is executed. Examples:
+3. Run the script using the `python-qgis` command with the path to your config text file. Use an absolute path for the config file:
 
 ```powershell
-# Run using the Python from the shell (script path absolute):
-python "C:\Program Files\QGIS <Installed Version>\apps\qgis\python\plugins\open_alaqs\scripts\individual_script\run_emissions_austal.py" "C:\path\to\my_config.txt" --csv --geojson --austal --timing
-
 # Run using the QGIS-aware python wrapper (e.g. python-qgis) with the plugin installed in AppData:
-python-qgis "%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\open_alaqs\scripts\individual_script\run_emissions_austal.py" "C:\Users\cpetr\Downloads\example.txt" --csv --geojson --austal --timing
-
-# Or, if you are already in the plugin or repo folder, run relative to CWD:
-python open_alaqs\scripts\individual_script\run_emissions_austal.py C:\path\to\my_config.txt --csv --geojson --austal --timing
+python-qgis scripts\individual_script\run_emissions_austal.py "C:\path\to\my_config.txt" --csv --geojson --austal --timing
 ```
+
+## Advanced: Alternative Execution Methods
+
+### Calling python-qgis.bat directly (OSGeo4W Shell)
+
+If the basic steps above failed or QGIS is installed system-wide and not available in your per-user plugins folder, you can call the QGIS Python batch file directly from the **OSGeo4W Shell**:
+
+```powershell
+# OSGeo4W Shell (Command Prompt) - use "call" command
+call "C:\Program Files\QGIS <Version>\bin\python-qgis-ltr.bat" "C:\path\to\run_emissions_austal.py" "C:\path\to\config.txt" --csv --geojson --austal
+```
+
+Note: Replace `C:\Program Files\QGIS <Version>` with your actual QGIS installation directory. The batch file may be named `python-qgis.bat` or `python-qgis-ltr.bat` depending on your QGIS version.
+
+### IDE Terminal (VS Code, PyCharm, PowerShell)
+
+From any PowerShell terminal (including IDE terminals), use the `&` operator to call the batch file:
+
+```powershell
+# PowerShell - use "&" operator
+& "C:\Program Files\QGIS <Version>\bin\python-qgis-ltr.bat" "C:\path\to\run_emissions_austal.py" "C:\path\to\config.txt" --csv --geojson --austal
+```
+
+Note: No Python environment configuration required. Replace `C:\Program Files\QGIS <Version>` with your actual QGIS installation directory. The batch file may be named `python-qgis.bat` or `python-qgis-ltr.bat` depending on your QGIS version.
+
+### Using python-qgis shortcut (OSGeo4W Shell only)
+
+The `python-qgis` command is only available from the **OSGeo4W Shell**, not from a regular PowerShell terminal. If you're already in the OSGeo4W Shell:
+
+```powershell
+cd C:\path\to\openalaqs
+python-qgis open_alaqs\scripts\individual_script\run_emissions_austal.py "C:\path\to\config.txt" --csv --geojson --austal --timing
+```
+
+**Note:** If `python-qgis` is not recognized in your PowerShell terminal, you're not in the OSGeo4W Shell. Use the IDE Terminal method (with full path to `python-qgis-ltr.bat`) instead.
 
 - Flags:
   - `--csv` : export emissions to a CSV file
@@ -130,7 +152,7 @@ Notes on defaults and creation:
 #  - time_interval_seconds: integer seconds between timesteps
 #  - pollutant: pollutant code (e.g. CO, NOx, PM10)
 
-db_path=C:\Users\mcpetria\dev\outputs\ANP_out.alaqs
+db_path= C:\path\to\my_study.alaqs
 start_dt_inclusive=2024-01-01T00:00:00
 end_dt_inclusive=2024-01-01T23:00:00
 time_interval_seconds=3600

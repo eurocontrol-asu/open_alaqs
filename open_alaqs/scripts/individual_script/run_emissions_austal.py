@@ -16,11 +16,34 @@ import zipfile
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 
-from qgis.core import QgsCoordinateTransformContext, QgsVectorFileWriter
+# Track if QGIS libs were successfully imported
+b_qgis_libs_imported = False
+
+try:
+    from qgis.core import QgsCoordinateTransformContext, QgsVectorFileWriter
+    b_qgis_libs_imported = True
+except ModuleNotFoundError as e:
+    print(
+        "error: QGIS libraries could not be imported.\n\n"
+        "Run the script from the OSGeo4W Shell, using the 'python-qgis' command:\n"
+        "  python-qgis path/to/run_emissions_austal.py <config_file> [options]\n\n"
+        f"Details: {e}\n"
+    )
 
 
 def get_plugins_dir():
-    # Method 1: Check user plugins directory (AppData)
+    # Method 1: Check system plugins directory (workspace/development version - priority)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    system_plugins = os.path.abspath(os.path.join(script_dir, "..", "..", ".."))
+    if os.path.exists(os.path.join(system_plugins, "open_alaqs")):
+        return system_plugins
+
+    # Method 2: Check if we're inside a workspace directory
+    workspace_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
+    if os.path.exists(os.path.join(workspace_root, "open_alaqs")):
+        return workspace_root
+
+    # Method 3: Check user plugins directory (AppData - fallback)
     user_profile = os.path.expanduser("~")
     user_plugins = os.path.join(
         user_profile,
@@ -36,14 +59,8 @@ def get_plugins_dir():
     if os.path.exists(os.path.join(user_plugins, "open_alaqs")):
         return user_plugins
 
-    # Method 2: Check system plugins directory
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    system_plugins = os.path.abspath(os.path.join(script_dir, "..", "..", ".."))
-    if os.path.exists(os.path.join(system_plugins, "open_alaqs")):
-        return system_plugins
-
     raise RuntimeError(
-        "Could not locate open_alaqs plugin in user or system directories"
+        f"Could not locate open_alaqs plugin. Checked: {system_plugins}, {workspace_root}, {user_plugins}"
     )
 
 
@@ -1240,4 +1257,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if b_qgis_libs_imported:
+        main()
