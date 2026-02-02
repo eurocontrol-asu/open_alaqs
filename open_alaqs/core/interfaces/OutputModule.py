@@ -37,6 +37,8 @@ class OutputModule:
         self._database_path = values_dict.get("database_path", "")
         self._output_path = values_dict.get("output_path", "")
         self._name = values_dict.get("name", "")
+        self._parent = values_dict.get("parent", None)
+        self._grid_coverage_warning_shown = False
 
     def setDatabasePath(self, val: str) -> None:
         self._database_path = val
@@ -58,6 +60,7 @@ class OutputModule:
         return ModuleConfigurationWidget(cls.settings_schema)
 
     def beginJob(self):
+        self._grid_coverage_warning_shown = False
         return None
 
     def process(
@@ -89,6 +92,18 @@ class GridOutputModule(OutputModule):
         geom = make_valid(emission.getGeometry())
         intersecting_df = grid_df[grid_df.intersects(geom) == True].copy()  # noqa: E712
         intersecting_df = cast(gpd.GeoDataFrame, intersecting_df)
+
+        # Check if any grid cells intersect with the emission geometry
+        if len(intersecting_df) == 0:
+
+            # Push the warning message only once per job
+            if not self._grid_coverage_warning_shown and self._parent and hasattr(self._parent, 'message_bar'):
+                # Emission is completely outside the grid
+                warning_msg = "Incomplete grid coverage: expand or adjust the grid to include all sources."
+                self._parent.message_bar.pushWarning("Grid Coverage Warning", warning_msg)
+                self._grid_coverage_warning_shown = True
+            
+            return grid_df
 
         # Calculate Emissions' horizontal distribution
         if isinstance(geom, Point):
