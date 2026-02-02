@@ -89,16 +89,9 @@ def calculate_emission_index(  # noqa: C901
         ambient_conditions = {}
     icao_eedb = copy.deepcopy(icao_eedb)
 
-    # installation_corrections_ = {
-    #     "Takeoff":1.0,    # 100%
-    #     "Climbout":1.0,   # 85%
-    #     "Approach":1.0,   # 30%
-    #     "Idle":1.0        # 7%
-    # }
-
     installation_corrections_ = {
         "Takeoff": 1.010,  # 100%
-        "Climbout": 1.012,  # 85%
+        "Climbout": 1.013,  # 85%
         "Approach": 1.020,  # 30%
         "Idle": 1.100,  # 7%
     }
@@ -225,7 +218,7 @@ def calculate_emission_index(  # noqa: C901
     # For the 85 and 100 power points or if all power point EIs are zero, any
     #  value <= 10-4 should suffice.
 
-    # elif ikey == 'Climbout':
+    # elif ikey == 'Climbout': # sets up the EI
     for ik, _ in list(eedb_climbout.items()):
         if eedb_climbout[ik] == 0:
             eedb_climbout[ik] = constants.epsilon
@@ -248,10 +241,10 @@ def calculate_emission_index(  # noqa: C901
     eedb_climbout_values = list(eedb_climbout.values())
     eedb_takeoff_values = list(eedb_takeoff.values())
 
-    y1 = 0.0 if eedb_idle_values == [0.0] else np.log10(eedb_idle_values)
-    y2 = 0.0 if eedb_approach_values == [0.0] else np.log10(eedb_approach_values)
-    y3 = 0.0 if eedb_climbout_values == [0.0] else np.log10(eedb_climbout_values)
-    y4 = 0.0 if eedb_takeoff_values == [0.0] else np.log10(eedb_takeoff_values)
+    y1 = np.log10(eedb_idle_values)
+    y2 = np.log10(eedb_approach_values)
+    y3 = np.log10(eedb_climbout_values)
+    y4 = np.log10(eedb_takeoff_values)
 
     if y1 == y2 == y3 == y4 == 0.0:
         logger.error(
@@ -276,7 +269,7 @@ def calculate_emission_index(  # noqa: C901
     # determined through linear interpolations on the Log-Log scales
     if pollutant.lower() == "nox":
         if x_ff_log < x1:
-            y_ff_log = coef_a1 * x_ff_log + coef_b1
+            y_ff_log = y1 # Cap the y value of the point to be the same as the first point (ID)
 
         elif x1 <= x_ff_log <= x2:
             y_ff_log = np.interp(
@@ -294,10 +287,7 @@ def calculate_emission_index(  # noqa: C901
             )
 
         elif x_ff_log > x4:
-            # First (>100%) line equation (y=ax+b)
-            coef_a100 = (y4 - y3) / (x4 - x3)
-            coef_b100 = y4 - coef_a100 * x4
-            y_ff_log = coef_a100 * x_ff_log + coef_b100
+            y_ff_log = y4 # Cap the y value of the point to be the same as the last point (TO)
 
     elif pollutant.lower() == "co" or pollutant.lower() == "hc":
         # linear avg of y3,y4
@@ -321,9 +311,7 @@ def calculate_emission_index(  # noqa: C901
             data_behavior = 2  # Non-Standard
 
         if x_ff_log < x1:
-            coef_a = (y2 - y1) / (x2 - x1)
-            coef_b = y2 - coef_a * x2
-            y_ff_log = coef_a * x_ff_log + coef_b
+            y_ff_log = y1 # Before ID stay on the same y level as the first point
 
         elif x1 <= x_ff_log <= x2:
             y_ff_log = np.interp(
@@ -331,30 +319,16 @@ def calculate_emission_index(  # noqa: C901
             )
 
         elif x2 <= x_ff_log <= x3:
-            if data_behavior == 1:
+            if data_behavior == 1: # standard, stay on the mean line
                 if x2 < x_ff_log <= ip[0]:
-                    coef_a = (ip[1] - y2) / (ip[0] - x2)
-                    coef_b = y2 - coef_a * x2
-                    y_ff_log = coef_a * x_ff_log + coef_b
-                elif ip[0] < x_ff_log <= x3:
-                    coef_a = (ip[1] - y3) / (ip[0] - x3)
-                    coef_b = y3 - coef_a * x3
-                    y_ff_log = coef_a * x_ff_log + coef_b
-
-            elif data_behavior == 2:
+                    y_ff_log = lin_av
+            elif data_behavior == 2: # non-standard, interpolate
                 y_ff_log = np.interp(
                     x_ff_log, np.concatenate([x2, x3]), np.concatenate([y2, lin_av])
                 )
 
-        elif x3 < x_ff_log <= x4:
-            y_ff_log = np.interp(
-                x_ff_log, np.concatenate([x3, x4]), np.concatenate([y3, y4])
-            )
-
-        elif x_ff_log > x4:
-            coef_a = (ip[1] - lin_av) / (ip[0] - x4)
-            coef_b = ip[1] - coef_a * ip[0]
-            y_ff_log = coef_a * x_ff_log + coef_b
+        else: # x_ff_log > x4 and x3 < x_ff_log <= x4
+            y_ff_log = lin_av # stay on the mean horizontal line, beyond TO as well
     else:
         logger.error(f"Pollutant '{pollutant}' unknown.")
 
@@ -391,7 +365,7 @@ def calculate_emission_index(  # noqa: C901
     else:
         logger.error(f"Pollutant '{pollutant}' unknown.")
 
-    # Emission index in kg/s
+    # Emission index in g/kg
     emission_index = ei[0] if (isinstance(ei, np.ndarray) and ei.size == 1) else ei
 
     return emission_index
