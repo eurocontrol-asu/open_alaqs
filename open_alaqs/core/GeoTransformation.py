@@ -365,7 +365,7 @@ class TrajectoryTransformer:
 
             for point in self._trajectory.getPoints():
 
-                # ToDo: if NEEDED ... then
+                # ToDo: if CUSTOM ... then
                 if point._course == "CUSTOM":
 
                     x_offset = point.getX()  # Along the runway
