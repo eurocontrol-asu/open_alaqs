@@ -29,111 +29,8 @@ from open_alaqs.core.tools.nox_correction_ambient import (
     nox_correction_for_ambient_conditions,
 )
 
+
 logger = get_logger(__name__)
-
-
-def clip_segment_to_grid(
-    start_point: TrajectoryPoint, end_point: TrajectoryPoint, grid_bounds: dict
-) -> tuple:
-    """
-    Clip a segment to grid bounds. Returns the clipped start and end points (or None if fully outside).
-    Also returns the fraction of the original segment that remains after clipping.
-
-    Args:
-        start_point: The start point of the segment
-        end_point: The end point of the segment
-        grid_bounds: Dict with x_min, x_max, y_min, y_max
-
-    Returns:
-        tuple: (clipped_start, clipped_end, distance_fraction)
-        where distance_fraction is the ratio of clipped distance to original distance
-    """
-    x1, y1 = start_point.getX(), start_point.getY()
-    x2, y2 = end_point.getX(), end_point.getY()
-
-    grid_x_min = grid_bounds["x_min"]
-    grid_x_max = grid_bounds["x_max"]
-    grid_y_min = grid_bounds["y_min"]
-    grid_y_max = grid_bounds["y_max"]
-
-    # Calculate original distance for fraction calculation
-    original_distance = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
-
-    # Parametric line: P(t) = P1 + t*(P2 - P1), where t in [0, 1]
-    dx = x2 - x1
-    dy = y2 - y1
-
-    # Find t values where the line enters/exits the grid
-    t_min = 0.0
-    t_max = 1.0
-
-    # Clip against x bounds
-    if dx != 0:
-        t_x_min = (grid_x_min - x1) / dx
-        t_x_max = (grid_x_max - x1) / dx
-        if t_x_min > t_x_max:
-            t_x_min, t_x_max = t_x_max, t_x_min
-        t_min = max(t_min, t_x_min)
-        t_max = min(t_max, t_x_max)
-    else:
-        # Vertical line, check if within x bounds
-        if not (grid_x_min <= x1 <= grid_x_max):
-            return None, None, 0.0
-
-    # Clip against y bounds
-    if dy != 0:
-        t_y_min = (grid_y_min - y1) / dy
-        t_y_max = (grid_y_max - y1) / dy
-        if t_y_min > t_y_max:
-            t_y_min, t_y_max = t_y_max, t_y_min
-        t_min = max(t_min, t_y_min)
-        t_max = min(t_max, t_y_max)
-    else:
-        # Horizontal line, check if within y bounds
-        if not (grid_y_min <= y1 <= grid_y_max):
-            return None, None, 0.0
-
-    # Check if there's any intersection
-    if t_min >= t_max:
-        return None, None, 0.0
-
-    # Calculate clipped endpoints
-    clip_x1 = x1 + t_min * dx
-    clip_y1 = y1 + t_min * dy
-    clip_z1 = start_point.getZ() + t_min * (end_point.getZ() - start_point.getZ())
-
-    clip_x2 = x1 + t_max * dx
-    clip_y2 = y1 + t_max * dy
-    clip_z2 = start_point.getZ() + t_max * (end_point.getZ() - start_point.getZ())
-
-    # Create clipped trajectory points using dict format
-    clipped_start_dict = {
-        "id": start_point.getIdentifier(),
-        "x": clip_x1,
-        "y": clip_y1,
-        "z": clip_z1,
-        "course": start_point.getCourse(),
-    }
-    clipped_start = TrajectoryPoint(clipped_start_dict)
-
-    clipped_end_dict = {
-        "id": end_point.getIdentifier(),
-        "x": clip_x2,
-        "y": clip_y2,
-        "z": clip_z2,
-        "course": end_point.getCourse(),
-    }
-    clipped_end = TrajectoryPoint(clipped_end_dict)
-
-    # Calculate distance fraction
-    clipped_distance = ((clip_x2 - clip_x1) ** 2 + (clip_y2 - clip_y1) ** 2) ** 0.5
-    distance_fraction = (
-        clipped_distance / original_distance if original_distance > 0 else 1.0
-    )
-
-    return clipped_start, clipped_end, distance_fraction
-
-
 class EmissionsDict(TypedDict):
     distance_space: float
     distance_time: float
@@ -296,13 +193,12 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
     def calculate_emissions(self) -> list[EmissionsDict]:
         emissions: list[EmissionsDict] = []
 
-        # ToDo: Only bymode method for now.
         if self._method["name"] == "bymode":
             emission_index_ = self._engine.getEmissionIndex().getEmissionIndexByMode(
                 self._mode
             )
-        else:
-            # get emission indices based on the engine-thrust setting as defined in the movements table
+        else: # BFFM2 method
+            # get emission indices based on the engine-thrust/fuel flow setting as defined in the movements table; fuel flow has priority
             emission_index_ = (
                 self._engine.getEmissionIndex().getEmissionIndexByEngineState(
                     self._engine_thrust_level_taxiing, method=self._method
@@ -834,7 +730,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
 
         if grid_bounds is not None:
             # Try to clip segment to grid bounds
-            clipped_start, clipped_end, distance_fraction = clip_segment_to_grid(
+            clipped_start, clipped_end, distance_fraction = spatial.clip_segment_to_grid(
                 start_point, end_point, grid_bounds
             )
 
