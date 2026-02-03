@@ -9,6 +9,8 @@ from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.RoadwaySources import RoadwaySourcesStore
 from open_alaqs.core.interfaces.SourceModule import SourceWithTimeProfileModule
+from open_alaqs.core.tools import spatial
+from open_alaqs.core.interfaces.AircraftTrajectory import TrajectoryPoint
 
 logger = get_logger(__name__)
 
@@ -47,6 +49,101 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
 
     def beginJob(self) -> None:
         SourceWithTimeProfileModule.beginJob(self)
+    
+    def _clip_roadway_to_grid(self, geometry_wkt: str, grid_bounds: dict) -> tuple:
+        """
+        Clip a roadway LineString to grid bounds using clip_segment_to_grid.
+        
+        Args:
+            geometry_wkt: WKT representation of the roadway LineString
+            grid_bounds: Dict with x_min, x_max, y_min, y_max
+        
+        Returns:
+            tuple: (clipped_wkt, length_fraction) where length_fraction is the 
+                   ratio of clipped length to original length.
+                   Returns (None, 0.0) if roadway is fully outside grid.
+        """
+        try:
+            
+            # Get original length
+            original_length = spatial.getDistanceOfLineStringXY(geometry_wkt)
+            
+            if original_length == 0:
+                return geometry_wkt, 1.0
+            
+            # Parse geometry to extract points
+            points = spatial.getAllPoints(geometry_wkt)
+            
+            if len(points) < 2:
+                return geometry_wkt, 1.0
+            
+            # Clip each segment and collect clipped segments
+            clipped_segments = []
+            
+            for i in range(len(points) - 1):
+                x1, y1, z1 = points[i]
+                x2, y2, z2 = points[i + 1]
+                
+                # Create TrajectoryPoint objects for this segment
+                start_point = TrajectoryPoint({
+                    "id": i,
+                    "x": x1,
+                    "y": y1,
+                    "z": z1,
+                    "course": ""
+                })
+                end_point = TrajectoryPoint({
+                    "id": i + 1,
+                    "x": x2,
+                    "y": y2,
+                    "z": z2,
+                    "course": ""
+                })
+                
+                # Clip the segment
+                clipped_start, clipped_end, fraction = spatial.clip_segment_to_grid(
+                    start_point, end_point, grid_bounds
+                )
+                
+                # If segment is partially or fully in grid, add to clipped segments
+                if clipped_start is not None and clipped_end is not None:
+                    clipped_segments.append((
+                        clipped_start.getX(),
+                        clipped_start.getY(),
+                        clipped_start.getZ(),
+                        clipped_end.getX(),
+                        clipped_end.getY(),
+                        clipped_end.getZ()
+                    ))
+            
+            if not clipped_segments:
+                # Roadway is completely outside grid
+                return None, 0.0
+            
+            # Reconstruct WKT from clipped segments
+            points_list = []
+            for seg in clipped_segments:
+                x1, y1, z1, x2, y2, z2 = seg
+                if not points_list or points_list[-1] != (x1, y1, z1):
+                    points_list.append((x1, y1, z1))
+                points_list.append((x2, y2, z2))
+            
+            # Build WKT LineString
+            coords_str = ", ".join([f"{x} {y} {z}" for x, y, z in points_list])
+            clipped_wkt = f"LINESTRING Z({coords_str})"
+            
+            # Calculate clipped length
+            clipped_length = spatial.getDistanceOfLineStringXY(clipped_wkt)
+            
+            # Calculate length fraction
+            length_fraction = clipped_length / original_length if original_length > 0 else 1.0
+            
+            return clipped_wkt, length_fraction
+            
+        except Exception as e:
+            logger.error(f"Error clipping roadway to grid: {e}")
+            # Return original geometry if clipping fails
+            return geometry_wkt, 1.0
 
     def process(
         self, start_dt: datetime, _end_dt: datetime, source_names=None, **kwargs
@@ -54,6 +151,9 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
         if source_names is None:
             source_names = []
         result_ = []
+        
+        # Get grid bounds from kwargs if available
+        grid_bounds = kwargs.get("grid_bounds", None)
 
         for source_id, source in self.getSources().items():
             if ("all" not in source_names) and (source_id not in source_names):
@@ -87,17 +187,35 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
                 },
                 defaultValues={},
             )
+            
+            # Get roadway geometry and calculate lenth_fraction if available
+            roadway_geometry = source.getGeometryText()
+            length_fraction = 1.0
+            
+            # Apply grid clipping if grid_bounds is provided
+            if grid_bounds is not None and roadway_geometry:
+                clipped_geometry, length_fraction = self._clip_roadway_to_grid(
+                    roadway_geometry, grid_bounds
+                )
+                
+                if clipped_geometry is None:
+                    # Roadway is completely outside grid, skip it
+                    logger.debug(
+                        f"Roadway {source_id} is completely outside grid bounds, skipping"
+                    )
+                    continue
 
             # Add emissions (and convert g to kg)
+            # Multiply by effective_length_fraction to account for grid clipping
             emissions.addGeneric(
                 source.getEmissionIndex(),
-                source.getLength(unitInKM=True) * activity_multiplier / 1000.0,
+                source.getLength(unitInKM=True) * activity_multiplier * length_fraction / 1000.0,
                 unit="gm_km",
                 new_unit="kg",
             )
 
-            # Add emission geometry
-            emissions.setGeometryText(source.getGeometryText())
+            # Add emission geometry (use clipped geometry if available)
+            emissions.setGeometryText(roadway_geometry)
 
             # Add to list of all emissions
             result_.append((start_dt, source, [emissions]))
