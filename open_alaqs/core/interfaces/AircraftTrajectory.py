@@ -240,6 +240,7 @@ class TrajectoryPoint(object):
         self._x = conversion.convertToFloat(val["x"]) if "x" in val else None
         self._y = conversion.convertToFloat(val["y"]) if "y" in val else None
         self._z = conversion.convertToFloat(val["z"]) if "z" in val else None
+        self._course = str(val["course"]) if "course" in val else ""
 
     def getIdentifier(self):
         return self._id
