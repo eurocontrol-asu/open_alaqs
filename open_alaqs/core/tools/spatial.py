@@ -15,6 +15,9 @@ from qgis.core import (
     QgsPoint,
     QgsPointXY,
     QgsProject,
+    QgsClipper,
+    QgsRectangle, 
+    QgsLineString
 )
 
 from open_alaqs.core.alaqslogging import get_logger
@@ -25,9 +28,20 @@ from open_alaqs.core.tools.iterator import pairwise
 logger = get_logger(__name__)
 
 
-def getDistanceBetweenPoints(x1, y1, z1, x2, y2, z2):
+def getDistanceBetweenPoints(x1, y1, z1=0.0, x2=0.0, y2=0.0, z2=0.0):
     """
-    Determine the distance between two points
+    Determine the distance between two points.
+    
+    Args:
+        x1: X coordinate of first point
+        y1: Y coordinate of first point
+        z1: Z coordinate of first point (default: 0.0)
+        x2: X coordinate of second point (default: 0.0)
+        y2: Y coordinate of second point (default: 0.0)
+        z2: Z coordinate of second point (default: 0.0)
+    
+    Returns:
+        Euclidean distance between the two points
     """
     return ((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2) ** 0.5
 
@@ -472,3 +486,120 @@ def get_line_vertices(line: QgsGeometry) -> list[QgsPoint]:
         points.extend(part.points())
 
     return points
+
+
+def clip_segment_to_grid(
+    start_point: TrajectoryPoint, end_point: TrajectoryPoint, grid_bounds: dict
+) -> tuple:
+    """
+    Clip a segment to grid bounds.
+    Returns the clipped start and end points (or None if fully outside).
+    Also returns the fraction of the original segment that remains after clipping.
+
+    Args:
+        start_point: The start point of the segment
+        end_point: The end point of the segment
+        grid_bounds: Dict with x_min, x_max, y_min, y_max (in EPSG:3857 or consistent CRS)
+
+    Returns:
+        tuple: (clipped_start, clipped_end, distance_fraction)
+        where distance_fraction is the ratio of clipped distance to original distance
+        Returns (None, None, 0.0) if segment is fully outside grid bounds
+    """
+    
+    x1, y1 = start_point.getX(), start_point.getY()
+    x2, y2 = end_point.getX(), end_point.getY()
+    z1, z2 = start_point.getZ(), end_point.getZ()
+
+    grid_x_min = grid_bounds["x_min"]
+    grid_x_max = grid_bounds["x_max"]
+    grid_y_min = grid_bounds["y_min"]
+    grid_y_max = grid_bounds["y_max"]
+
+    # Calculate original distance using getDistanceBetweenPoints (2D distance, z=0)
+    original_distance = getDistanceBetweenPoints(x1, y1, 0.0, x2, y2, 0.0)
+    
+    if original_distance == 0:
+        # Points are the same, no clipping needed
+        return start_point, end_point, 1.0
+
+    # Create QgsRectangle for clipping bounds
+    clip_rect = QgsRectangle(grid_x_min, grid_y_min, grid_x_max, grid_y_max)
+    
+    # Create QgsLineString from the segment
+    line = QgsLineString([QgsPoint(x1, y1), QgsPoint(x2, y2)])
+    
+    # Use QgsClipper to clip the line segment which returns a QPolygonF object
+    clipped_polygon = QgsClipper.clippedLine(line, clip_rect)
+    
+    # Check if line was clipped (empty polygon means fully outside)
+    if clipped_polygon.isEmpty():
+        return None, None, 0.0
+    
+    # Extract points from QPolygonF
+    try:
+        if len(clipped_polygon) < 2:
+            return None, None, 0.0
+        
+        # Get clipped start and end points from the polygon
+        clip_x1 = clipped_polygon[0].x()
+        clip_y1 = clipped_polygon[0].y()
+        clip_x2 = clipped_polygon[-1].x()
+        clip_y2 = clipped_polygon[-1].y()
+
+        logger.info(clip_x1)
+        logger.info(clip_x2)
+        logger.info(clip_y1)
+        logger.info(clip_y2)
+        
+        # Interpolate Z coordinates based on how far along the original line the clipped points are
+        # Calculate parametric t values for the clipped points
+        dx = x2 - x1
+        dy = y2 - y1
+        
+        if abs(dx) > abs(dy):
+            # Use x coordinate for interpolation (more numerically stable)
+            t1 = (clip_x1 - x1) / dx if dx != 0 else 0.0
+            t2 = (clip_x2 - x1) / dx if dx != 0 else 1.0
+        else:
+            # Use y coordinate for interpolation
+            t1 = (clip_y1 - y1) / dy if dy != 0 else 0.0
+            t2 = (clip_y2 - y1) / dy if dy != 0 else 1.0
+        
+        # Clamp t values to [0, 1] and interpolate Z
+        t1 = max(0.0, min(1.0, t1))
+        t2 = max(0.0, min(1.0, t2))
+        
+        clip_z1 = z1 + t1 * (z2 - z1)
+        clip_z2 = z1 + t2 * (z2 - z1)
+        
+        # Create clipped trajectory points
+        clipped_start_dict = {
+            "id": start_point.getIdentifier(),
+            "x": clip_x1,
+            "y": clip_y1,
+            "z": clip_z1,
+            "course": start_point.getCourse(),
+        }
+        clipped_start = TrajectoryPoint(clipped_start_dict)
+
+        clipped_end_dict = {
+            "id": end_point.getIdentifier(),
+            "x": clip_x2,
+            "y": clip_y2,
+            "z": clip_z2,
+            "course": end_point.getCourse(),
+        }
+        clipped_end = TrajectoryPoint(clipped_end_dict)
+
+        # Calculate distance fraction using getDistanceBetweenPoints (2D distance)
+        clipped_distance = getDistanceBetweenPoints(clip_x1, clip_y1, 0.0, clip_x2, clip_y2, 0.0)
+        distance_fraction = (
+            clipped_distance / original_distance if original_distance > 0 else 1.0
+        )
+
+        return clipped_start, clipped_end, distance_fraction
+        
+    except Exception as e:
+        logger.error(f"Error clipping segment with QgsClipper: {e}")
+        return None, None, 0.0
