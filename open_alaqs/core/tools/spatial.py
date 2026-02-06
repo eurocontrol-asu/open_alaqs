@@ -662,9 +662,6 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
             x1, y1, z1 = points[i]
             x2, y2, z2 = points[i + 1]
             
-            # Calculate original segment length
-            segment_length = getDistanceBetweenPoints(x1, y1, 0.0, x2, y2, 0.0)
-            
             # Clip the segment using the core function
             clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, fraction = clip_segment_to_grid(
                 x1, y1, z1, x2, y2, z2, grid_bounds
@@ -673,8 +670,9 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
             # If segment is partially or fully in grid, add to clipped segments
             if clip_x1 is not None:
                 clipped_segments.append((clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2))
-                # Accumulate the actual clipped length for this segment
-                total_clipped_length += segment_length * fraction
+                # Calculate the actual clipped segment length (2D distance)
+                clipped_segment_length = getDistanceBetweenPoints(clip_x1, clip_y1, 0.0, clip_x2, clip_y2, 0.0)
+                total_clipped_length += clipped_segment_length
         
         if not clipped_segments:
             # Geometry is completely outside grid
@@ -692,20 +690,9 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
         coords_str = ", ".join([f"{x} {y} {z}" for x, y, z in points_list])
         clipped_wkt = f"LINESTRING Z({coords_str})"
         
-        # Calculate total length fraction based on accumulated segment fractions
-        length_fraction = total_clipped_length / original_length if original_length > 0 else 1.0
-        
-        # Verify against actual WKT length calculation
+        # Calculate length fraction from the actual clipped geometry
         clipped_wkt_length = getDistanceOfLineStringXY(clipped_wkt)
-        length_ratio_from_wkt = clipped_wkt_length / original_length if original_length > 0 else 1.0
-        
-        # Log warning if there's significant difference between methods
-        if abs(length_fraction - length_ratio_from_wkt) > 0.01:
-            logger.warning(
-                f"Length fraction mismatch: accumulated fraction={length_fraction:.4f}, "
-                f"WKT-calculated ratio={length_ratio_from_wkt:.4f}, "
-                f"difference={abs(length_fraction - length_ratio_from_wkt):.4f}"
-            )
+        length_fraction = clipped_wkt_length / original_length if original_length > 0 else 1.0
         
         return clipped_wkt, length_fraction
         
