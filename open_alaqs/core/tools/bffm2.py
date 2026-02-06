@@ -258,7 +258,7 @@ def calculate_emission_index(  # noqa: C901
 
     # First (7-30%) line equation (y=ax+b)
     coef_a1 = (y2 - y1) / (x2 - x1)
-    coef_b1 = y2 - coef_a1 * x2
+    y2 - coef_a1 * x2
 
     # STANDARD DATA BEHAVIOR
 
@@ -269,7 +269,7 @@ def calculate_emission_index(  # noqa: C901
     # determined through linear interpolations on the Log-Log scales
     if pollutant.lower() == "nox":
         if x_ff_log < x1:
-            y_ff_log = y1 # Cap the y value of the point to be the same as the first point (ID)
+            y_ff_log = y1  # Cap the y value of the point to be the same as the first point (ID)
 
         elif x1 <= x_ff_log <= x2:
             y_ff_log = np.interp(
@@ -287,7 +287,9 @@ def calculate_emission_index(  # noqa: C901
             )
 
         elif x_ff_log > x4:
-            y_ff_log = y4 # Cap the y value of the point to be the same as the last point (TO)
+            y_ff_log = (
+                y4  # Cap the y value of the point to be the same as the last point (TO)
+            )
 
     elif pollutant.lower() == "co" or pollutant.lower() == "hc":
         # linear avg of y3,y4
@@ -311,7 +313,7 @@ def calculate_emission_index(  # noqa: C901
             data_behavior = 2  # Non-Standard
 
         if x_ff_log < x1:
-            y_ff_log = y1 # Before ID stay on the same y level as the first point
+            y_ff_log = y1  # Before ID stay on the same y level as the first point
 
         elif x1 <= x_ff_log <= x2:
             y_ff_log = np.interp(
@@ -319,16 +321,16 @@ def calculate_emission_index(  # noqa: C901
             )
 
         elif x2 <= x_ff_log <= x3:
-            if data_behavior == 1: # standard, stay on the mean line
+            if data_behavior == 1:  # standard, stay on the mean line
                 if x2 < x_ff_log <= ip[0]:
                     y_ff_log = lin_av
-            elif data_behavior == 2: # non-standard, interpolate
+            elif data_behavior == 2:  # non-standard, interpolate
                 y_ff_log = np.interp(
                     x_ff_log, np.concatenate([x2, x3]), np.concatenate([y2, lin_av])
                 )
 
-        else: # x_ff_log > x4 and x3 < x_ff_log <= x4
-            y_ff_log = lin_av # stay on the mean horizontal line, beyond TO as well
+        else:  # x_ff_log > x4 and x3 < x_ff_log <= x4
+            y_ff_log = lin_av  # stay on the mean horizontal line, beyond TO as well
     else:
         logger.error(f"Pollutant '{pollutant}' unknown.")
 
