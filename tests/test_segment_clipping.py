@@ -416,6 +416,12 @@ def test_segment_tangent_to_boundary(grid_bounds):
 
     # Should clip the segment at the boundary
     assert clip_x1 is not None or clip_x2 is not None or fraction > 0.0
+    # If clipped, verify Y remains constant and Z changes
+    if clip_x1 is not None and clip_x2 is not None:
+        assert abs(clip_y1 - 6360000) < 0.01
+        assert abs(clip_y2 - 6360000) < 0.01
+        assert 500 <= clip_z1 <= 600
+        assert 500 <= clip_z2 <= 600
 
 
 def test_getDistanceBetweenPoints_2d_with_defaults():
@@ -625,6 +631,7 @@ def test_linestring_crossing_grid_completely(grid_bounds):
     )
     assert grid_bounds["x_min"] <= first_x <= grid_bounds["x_max"]
     assert grid_bounds["y_min"] <= first_y <= grid_bounds["y_max"]
+    assert 100 <= first_z <= 900
 
     # Last point should be at or near grid boundary
     last_x, last_y, last_z = (
@@ -634,6 +641,7 @@ def test_linestring_crossing_grid_completely(grid_bounds):
     )
     assert grid_bounds["x_min"] <= last_x <= grid_bounds["x_max"]
     assert grid_bounds["y_min"] <= last_y <= grid_bounds["y_max"]
+    assert 100 <= last_z <= 900
 
 
 def test_linestring_zero_length(grid_bounds):
@@ -718,9 +726,14 @@ def test_segment_very_steep_angle(grid_bounds):
 
     assert clip_x1 is not None
     assert clip_x2 is not None
+    # X coordinates should remain constant (vertical line)
+    assert abs(clip_x1 - 560000) < 0.01
+    assert abs(clip_x2 - 560000) < 0.01
     # Y coordinates should be clipped to grid
     assert clip_y1 >= grid_bounds["y_min"]
     assert clip_y2 <= grid_bounds["y_max"]
+    # Z values should increase with Y
+    assert clip_z1 < clip_z2
     assert 0.0 < fraction < 1.0
 
 
@@ -737,6 +750,11 @@ def test_segment_very_shallow_angle(grid_bounds):
     assert clip_x2 is not None
     assert clip_x1 >= grid_bounds["x_min"]
     assert clip_x2 <= grid_bounds["x_max"]
+    # Y should remain nearly constant (shallow angle)
+    assert abs(clip_y1 - 6360000) < 100
+    assert abs(clip_y2 - 6360000) < 100
+    # Z values should increase
+    assert clip_z1 < clip_z2
     assert 0.0 < fraction < 1.0
 
 
@@ -755,6 +773,9 @@ def test_segment_barely_touches_grid(grid_bounds):
     if clip_x1 is not None:
         assert grid_bounds["x_min"] <= clip_x1 <= grid_bounds["x_max"]
         assert grid_bounds["y_min"] <= clip_y1 <= grid_bounds["y_max"]
+        # Verify Z is within expected range
+        assert clip_z1 >= 100
+        assert clip_z2 <= 200
         assert 0.0 <= fraction <= 1.0
 
 
@@ -808,31 +829,35 @@ def test_trajectory_segment_exits_all_sides(grid_bounds):
         start_right, end_right, grid_bounds
     )
     assert clipped_s is not None and clipped_e is not None
+    assert clipped_s.getX() >= grid_bounds["x_min"]
     assert clipped_e.getX() <= grid_bounds["x_max"]
-
+    assert 500 <= clipped_s.getZ() <= 600
+    assert 500 <= clipped_e.getZ() <= 600
+    
     # Test exiting top
     start_top = create_trajectory_point(560000, 6364900, 500, 1)
     end_top = create_trajectory_point(560000, 6365200, 600, 2)
-
+    
     clipped_s, clipped_e, frac = spatial.clip_trajectory_segment_to_grid(
         start_top, end_top, grid_bounds
     )
     assert clipped_s is not None and clipped_e is not None
+    assert clipped_s.getY() >= grid_bounds["y_min"]
     assert clipped_e.getY() <= grid_bounds["y_max"]
-
+    assert clipped_s.getZ() < clipped_e.getZ()
+    
     # Test exiting bottom
     start_bottom = create_trajectory_point(560000, 6355100, 500, 1)
     end_bottom = create_trajectory_point(560000, 6354800, 600, 2)
-
+    
     clipped_s, clipped_e, frac = spatial.clip_trajectory_segment_to_grid(
         start_bottom, end_bottom, grid_bounds
     )
     assert clipped_s is not None and clipped_e is not None
+    assert clipped_s.getY() <= grid_bounds["y_max"]
     assert clipped_e.getY() >= grid_bounds["y_min"]
-
-
-def test_trajectory_segment_diagonal_crossing(grid_bounds):
-    """Test trajectory segment with diagonal crossing from corner to corner."""
+    assert 500 <= clipped_s.getZ() <= 600
+    assert 500 <= clipped_e.getZ() <= 600
     start = create_trajectory_point(554000, 6354000, 100, 1)
     end = create_trajectory_point(566000, 6366000, 900, 2)
 
@@ -865,8 +890,13 @@ def test_trajectory_with_extreme_z_values(grid_bounds):
 
     assert clipped_start is not None
     assert clipped_end is not None
+    # Verify X/Y are within grid bounds
+    assert grid_bounds["x_min"] <= clipped_start.getX() <= grid_bounds["x_max"]
+    assert grid_bounds["x_min"] <= clipped_end.getX() <= grid_bounds["x_max"]
+    # Verify Z interpolation
     assert clipped_start.getZ() >= 0
     assert clipped_end.getZ() <= 15000
+    assert clipped_start.getZ() < clipped_end.getZ()
     assert 0.0 < fraction < 1.0
 
 
@@ -892,17 +922,29 @@ def test_linestring_with_many_segments(grid_bounds):
     assert 0.0 < length_fraction < 1.0
     # Should have multiple segments preserved
     assert clipped_wkt.count(",") >= 1
+    # Verify clipped geometry has reasonable Z values
+    import re
+    coords_match = re.findall(r'([\d.]+)\s+([\d.]+)\s+([\d.]+)', clipped_wkt)
+    assert len(coords_match) >= 2
+    z_vals = [float(c[2]) for c in coords_match]
+    assert all(0 <= z <= 1000 for z in z_vals)
 
 
 def test_linestring_entering_and_exiting_grid(grid_bounds):
     """Test LineString that enters and exits the grid multiple times."""
     # Path that goes: outside -> inside -> outside
     wkt = "LINESTRING Z(554000 6360000 0, 555500 6360000 500, 565500 6360000 1000)"
-
+    
     clipped_wkt, length_fraction = spatial.clip_linestring_to_grid(wkt, grid_bounds)
-
+    
     assert clipped_wkt is not None
     assert 0.0 < length_fraction < 1.0
+    # Verify all X coordinates are within grid
+    import re
+    coords_match = re.findall(r'([\d.]+)\s+([\d.]+)\s+([\d.]+)', clipped_wkt)
+    assert len(coords_match) >= 2
+    x_vals = [float(c[0]) for c in coords_match]
+    assert all(grid_bounds["x_min"] <= x <= grid_bounds["x_max"] for x in x_vals)
 
 
 def test_linestring_with_z_values_preserved(grid_bounds):
@@ -949,6 +991,13 @@ def test_linestring_boundary_coordinates_precision(grid_bounds):
 
     assert clipped_wkt is not None
     assert length_fraction > 0.0
+    # Verify clipped geometry respects grid boundaries
+    import re
+    coords_match = re.findall(r'([\d.]+)\s+([\d.]+)\s+([\d.]+)', clipped_wkt)
+    for x, y, z in coords_match:
+        x_val, y_val = float(x), float(y)
+        assert grid_bounds["x_min"] <= x_val <= grid_bounds["x_max"]
+        assert grid_bounds["y_min"] <= y_val <= grid_bounds["y_max"]
 
 
 def test_linestring_vertical_segment(grid_bounds):
