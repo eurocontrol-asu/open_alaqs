@@ -833,11 +833,11 @@ def test_trajectory_segment_exits_all_sides(grid_bounds):
     assert clipped_e.getX() <= grid_bounds["x_max"]
     assert 500 <= clipped_s.getZ() <= 600
     assert 500 <= clipped_e.getZ() <= 600
-    
+
     # Test exiting top
     start_top = create_trajectory_point(560000, 6364900, 500, 1)
     end_top = create_trajectory_point(560000, 6365200, 600, 2)
-    
+
     clipped_s, clipped_e, frac = spatial.clip_trajectory_segment_to_grid(
         start_top, end_top, grid_bounds
     )
@@ -845,11 +845,11 @@ def test_trajectory_segment_exits_all_sides(grid_bounds):
     assert clipped_s.getY() >= grid_bounds["y_min"]
     assert clipped_e.getY() <= grid_bounds["y_max"]
     assert clipped_s.getZ() < clipped_e.getZ()
-    
+
     # Test exiting bottom
     start_bottom = create_trajectory_point(560000, 6355100, 500, 1)
     end_bottom = create_trajectory_point(560000, 6354800, 600, 2)
-    
+
     clipped_s, clipped_e, frac = spatial.clip_trajectory_segment_to_grid(
         start_bottom, end_bottom, grid_bounds
     )
@@ -924,7 +924,8 @@ def test_linestring_with_many_segments(grid_bounds):
     assert clipped_wkt.count(",") >= 1
     # Verify clipped geometry has reasonable Z values
     import re
-    coords_match = re.findall(r'([\d.]+)\s+([\d.]+)\s+([\d.]+)', clipped_wkt)
+
+    coords_match = re.findall(r"([\d.]+)\s+([\d.]+)\s+([\d.]+)", clipped_wkt)
     assert len(coords_match) >= 2
     z_vals = [float(c[2]) for c in coords_match]
     assert all(0 <= z <= 1000 for z in z_vals)
@@ -934,14 +935,15 @@ def test_linestring_entering_and_exiting_grid(grid_bounds):
     """Test LineString that enters and exits the grid multiple times."""
     # Path that goes: outside -> inside -> outside
     wkt = "LINESTRING Z(554000 6360000 0, 555500 6360000 500, 565500 6360000 1000)"
-    
+
     clipped_wkt, length_fraction = spatial.clip_linestring_to_grid(wkt, grid_bounds)
-    
+
     assert clipped_wkt is not None
     assert 0.0 < length_fraction < 1.0
     # Verify all X coordinates are within grid
     import re
-    coords_match = re.findall(r'([\d.]+)\s+([\d.]+)\s+([\d.]+)', clipped_wkt)
+
+    coords_match = re.findall(r"([\d.]+)\s+([\d.]+)\s+([\d.]+)", clipped_wkt)
     assert len(coords_match) >= 2
     x_vals = [float(c[0]) for c in coords_match]
     assert all(grid_bounds["x_min"] <= x <= grid_bounds["x_max"] for x in x_vals)
@@ -993,7 +995,8 @@ def test_linestring_boundary_coordinates_precision(grid_bounds):
     assert length_fraction > 0.0
     # Verify clipped geometry respects grid boundaries
     import re
-    coords_match = re.findall(r'([\d.]+)\s+([\d.]+)\s+([\d.]+)', clipped_wkt)
+
+    coords_match = re.findall(r"([\d.]+)\s+([\d.]+)\s+([\d.]+)", clipped_wkt)
     for x, y, z in coords_match:
         x_val, y_val = float(x), float(y)
         assert grid_bounds["x_min"] <= x_val <= grid_bounds["x_max"]
