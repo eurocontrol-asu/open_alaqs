@@ -29,8 +29,9 @@ from open_alaqs.core.tools.nox_correction_ambient import (
     nox_correction_for_ambient_conditions,
 )
 
-
 logger = get_logger(__name__)
+
+
 class EmissionsDict(TypedDict):
     distance_space: float
     distance_time: float
@@ -197,7 +198,7 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
             emission_index_ = self._engine.getEmissionIndex().getEmissionIndexByMode(
                 self._mode
             )
-        else: # BFFM2 method
+        else:  # BFFM2 method
             # get emission indices based on the engine-thrust/fuel flow setting as defined in the movements table; fuel flow has priority
             emission_index_ = (
                 self._engine.getEmissionIndex().getEmissionIndexByEngineState(
@@ -730,8 +731,10 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
 
         if grid_bounds is not None:
             # Try to clip segment to grid bounds
-            clipped_start, clipped_end, distance_fraction = spatial.clip_trajectory_segment_to_grid(
-                start_point, end_point, grid_bounds
+            clipped_start, clipped_end, distance_fraction = (
+                spatial.clip_trajectory_segment_to_grid(
+                    start_point, end_point, grid_bounds
+                )
             )
 
             if clipped_start is None or clipped_end is None:

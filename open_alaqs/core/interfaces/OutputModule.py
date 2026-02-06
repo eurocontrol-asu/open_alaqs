@@ -97,12 +97,18 @@ class GridOutputModule(OutputModule):
         if len(intersecting_df) == 0:
 
             # Push the warning message only once per job
-            if not self._grid_coverage_warning_shown and self._parent and hasattr(self._parent, 'message_bar'):
+            if (
+                not self._grid_coverage_warning_shown
+                and self._parent
+                and hasattr(self._parent, "message_bar")
+            ):
                 # Emission is completely outside the grid
                 warning_msg = "Incomplete grid coverage: expand or adjust the grid to include all sources."
-                self._parent.message_bar.pushWarning("Grid Coverage Warning", warning_msg)
+                self._parent.message_bar.pushWarning(
+                    "Grid Coverage Warning", warning_msg
+                )
                 self._grid_coverage_warning_shown = True
-            
+
             return grid_df
 
         # Calculate Emissions' horizontal distribution

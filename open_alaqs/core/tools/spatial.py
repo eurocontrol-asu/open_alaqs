@@ -8,16 +8,16 @@ import shapely.ops
 import shapely.wkt
 from geographiclib.geodesic import Geodesic
 from qgis.core import (
+    QgsClipper,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsDistanceArea,
     QgsGeometry,
+    QgsLineString,
     QgsPoint,
     QgsPointXY,
     QgsProject,
-    QgsClipper,
-    QgsRectangle, 
-    QgsLineString
+    QgsRectangle,
 )
 
 from open_alaqs.core.alaqslogging import get_logger
@@ -31,7 +31,7 @@ logger = get_logger(__name__)
 def getDistanceBetweenPoints(x1, y1, z1=0.0, x2=0.0, y2=0.0, z2=0.0):
     """
     Determine the distance between two points.
-    
+
     Args:
         x1: X coordinate of first point
         y1: Y coordinate of first point
@@ -39,7 +39,7 @@ def getDistanceBetweenPoints(x1, y1, z1=0.0, x2=0.0, y2=0.0, z2=0.0):
         x2: X coordinate of second point (default: 0.0)
         y2: Y coordinate of second point (default: 0.0)
         z2: Z coordinate of second point (default: 0.0)
-    
+
     Returns:
         Euclidean distance between the two points
     """
@@ -493,7 +493,7 @@ def clip_segment_to_grid(
 ) -> tuple:
     """
     Clip a segment to grid bounds using point coordinates.
-    
+
     Args:
         x1, y1, z1: Start point coordinates
         x2, y2, z2: End point coordinates
@@ -504,7 +504,7 @@ def clip_segment_to_grid(
         where distance_fraction is the ratio of clipped distance to original distance
         Returns (None, None, None, None, None, None, 0.0) if segment is fully outside grid bounds
     """
-    
+
     grid_x_min = grid_bounds["x_min"]
     grid_x_max = grid_bounds["x_max"]
     grid_y_min = grid_bounds["y_min"]
@@ -512,40 +512,40 @@ def clip_segment_to_grid(
 
     # Calculate original distance using getDistanceBetweenPoints (2D distance, z=0)
     original_distance = getDistanceBetweenPoints(x1, y1, 0.0, x2, y2, 0.0)
-    
+
     if original_distance == 0:
         # Points are the same, no clipping needed
         return x1, y1, z1, x2, y2, z2, 1.0
 
     # Create QgsRectangle for clipping bounds
     clip_rect = QgsRectangle(grid_x_min, grid_y_min, grid_x_max, grid_y_max)
-    
+
     # Create QgsLineString from the segment
     line = QgsLineString([QgsPoint(x1, y1), QgsPoint(x2, y2)])
-    
+
     # Use QgsClipper to clip the line segment which returns a QPolygonF object
     clipped_polygon = QgsClipper.clippedLine(line, clip_rect)
-    
+
     # Check if line was clipped (empty polygon means fully outside)
     if clipped_polygon.isEmpty():
         return None, None, None, None, None, None, 0.0
-    
+
     # Extract points from QPolygonF
     try:
         if len(clipped_polygon) < 2:
             return None, None, None, None, None, None, 0.0
-        
+
         # Get clipped start and end points from the polygon
         clip_x1 = clipped_polygon[0].x()
         clip_y1 = clipped_polygon[0].y()
         clip_x2 = clipped_polygon[-1].x()
         clip_y2 = clipped_polygon[-1].y()
-        
+
         # Interpolate Z coordinates based on how far along the original line the clipped points are
         # Calculate parametric t values for the clipped points
         dx = x2 - x1
         dy = y2 - y1
-        
+
         if abs(dx) > abs(dy):
             # Use x coordinate for interpolation (more numerically stable)
             t1 = (clip_x1 - x1) / dx if dx != 0 else 0.0
@@ -554,22 +554,24 @@ def clip_segment_to_grid(
             # Use y coordinate for interpolation
             t1 = (clip_y1 - y1) / dy if dy != 0 else 0.0
             t2 = (clip_y2 - y1) / dy if dy != 0 else 1.0
-        
+
         # Clamp t values to [0, 1] and interpolate Z
         t1 = max(0.0, min(1.0, t1))
         t2 = max(0.0, min(1.0, t2))
-        
+
         clip_z1 = z1 + t1 * (z2 - z1)
         clip_z2 = z1 + t2 * (z2 - z1)
-        
+
         # Calculate distance fraction using getDistanceBetweenPoints (2D distance)
-        clipped_distance = getDistanceBetweenPoints(clip_x1, clip_y1, 0.0, clip_x2, clip_y2, 0.0)
+        clipped_distance = getDistanceBetweenPoints(
+            clip_x1, clip_y1, 0.0, clip_x2, clip_y2, 0.0
+        )
         distance_fraction = (
             clipped_distance / original_distance if original_distance > 0 else 1.0
         )
 
         return clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, distance_fraction
-        
+
     except Exception as e:
         logger.error(f"Error clipping segment with QgsClipper: {e}")
         return None, None, None, None, None, None, 0.0
@@ -581,12 +583,12 @@ def clip_trajectory_segment_to_grid(
     """
     Clip a trajectory segment to grid bounds.
     Wrapper function that works with TrajectoryPoint objects.
-    
+
     Args:
         start_point: The start TrajectoryPoint of the segment
         end_point: The end TrajectoryPoint of the segment
         grid_bounds: Dict with x_min, x_max, y_min, y_max
-    
+
     Returns:
         tuple: (clipped_start_point, clipped_end_point, distance_fraction)
         where clipped points are TrajectoryPoint objects.
@@ -595,16 +597,16 @@ def clip_trajectory_segment_to_grid(
     # Extract coordinates from TrajectoryPoint objects
     x1, y1, z1 = start_point.getX(), start_point.getY(), start_point.getZ()
     x2, y2, z2 = end_point.getX(), end_point.getY(), end_point.getZ()
-    
+
     # Call core clipping function
-    clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, fraction = clip_segment_to_grid(
-        x1, y1, z1, x2, y2, z2, grid_bounds
+    clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, fraction = (
+        clip_segment_to_grid(x1, y1, z1, x2, y2, z2, grid_bounds)
     )
-    
+
     # Return None if segment is outside
     if clip_x1 is None:
         return None, None, 0.0
-    
+
     # Create clipped TrajectoryPoint objects
     clipped_start_dict = {
         "id": start_point.getIdentifier(),
@@ -623,7 +625,7 @@ def clip_trajectory_segment_to_grid(
         "course": end_point.getCourse(),
     }
     clipped_end = TrajectoryPoint(clipped_end_dict)
-    
+
     return clipped_start, clipped_end, fraction
 
 
@@ -631,53 +633,57 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
     """
     Clip a LineString geometry to grid bounds.
     Wrapper function for clipping entire LineString geometries (e.g., roadways, runways).
-    
+
     Args:
         geometry_wkt: WKT representation of the LineString
         grid_bounds: Dict with x_min, x_max, y_min, y_max
-    
+
     Returns:
-        tuple: (clipped_wkt, length_fraction) where length_fraction is the 
+        tuple: (clipped_wkt, length_fraction) where length_fraction is the
                ratio of clipped length to original length.
                Returns (None, 0.0) if geometry is fully outside grid.
     """
     try:
         # Get original length
         original_length = getDistanceOfLineStringXY(geometry_wkt)
-        
+
         if original_length == 0:
             return geometry_wkt, 1.0
-        
+
         # Parse geometry to extract points
         points = getAllPoints(geometry_wkt)
-        
+
         if len(points) < 2:
             return geometry_wkt, 1.0
-        
+
         # Clip each segment and collect clipped segments with their lengths
         clipped_segments = []
         total_clipped_length = 0.0
-        
+
         for i in range(len(points) - 1):
             x1, y1, z1 = points[i]
             x2, y2, z2 = points[i + 1]
-            
+
             # Clip the segment using the core function
-            clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, fraction = clip_segment_to_grid(
-                x1, y1, z1, x2, y2, z2, grid_bounds
+            clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, fraction = (
+                clip_segment_to_grid(x1, y1, z1, x2, y2, z2, grid_bounds)
             )
-            
+
             # If segment is partially or fully in grid, add to clipped segments
             if clip_x1 is not None:
-                clipped_segments.append((clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2))
+                clipped_segments.append(
+                    (clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2)
+                )
                 # Calculate the actual clipped segment length (2D distance)
-                clipped_segment_length = getDistanceBetweenPoints(clip_x1, clip_y1, 0.0, clip_x2, clip_y2, 0.0)
+                clipped_segment_length = getDistanceBetweenPoints(
+                    clip_x1, clip_y1, 0.0, clip_x2, clip_y2, 0.0
+                )
                 total_clipped_length += clipped_segment_length
-        
+
         if not clipped_segments:
             # Geometry is completely outside grid
             return None, 0.0
-        
+
         # Reconstruct WKT from clipped segments
         points_list = []
         for seg in clipped_segments:
@@ -685,17 +691,19 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
             if not points_list or points_list[-1] != (x1, y1, z1):
                 points_list.append((x1, y1, z1))
             points_list.append((x2, y2, z2))
-        
+
         # Build WKT LineString
         coords_str = ", ".join([f"{x} {y} {z}" for x, y, z in points_list])
         clipped_wkt = f"LINESTRING Z({coords_str})"
-        
+
         # Calculate length fraction from the actual clipped geometry
         clipped_wkt_length = getDistanceOfLineStringXY(clipped_wkt)
-        length_fraction = clipped_wkt_length / original_length if original_length > 0 else 1.0
-        
+        length_fraction = (
+            clipped_wkt_length / original_length if original_length > 0 else 1.0
+        )
+
         return clipped_wkt, length_fraction
-        
+
     except Exception as e:
         logger.error(f"Error clipping LineString to grid: {e}")
         # Return original geometry if clipping fails

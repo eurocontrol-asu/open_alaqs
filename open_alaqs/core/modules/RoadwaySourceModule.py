@@ -55,7 +55,7 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
         if source_names is None:
             source_names = []
         result_ = []
-        
+
         # Get grid bounds from kwargs if available
         grid_bounds = kwargs.get("grid_bounds", None)
 
@@ -91,18 +91,18 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
                 },
                 defaultValues={},
             )
-            
+
             # Get roadway geometry and calculate length_fraction if available
             roadway_geometry = source.getGeometryText()
             length_fraction = 1.0
             clipped_geometry = roadway_geometry
-            
+
             # Apply grid clipping if grid_bounds is provided
             if grid_bounds is not None and roadway_geometry:
                 clipped_geometry, length_fraction = spatial.clip_linestring_to_grid(
                     roadway_geometry, grid_bounds
                 )
-                
+
                 if clipped_geometry is None:
                     # Roadway is completely outside grid, skip it
                     logger.debug(
@@ -114,7 +114,10 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
             # Multiply by effective_length_fraction to account for grid clipping
             emissions.addGeneric(
                 source.getEmissionIndex(),
-                source.getLength(unitInKM=True) * activity_multiplier * length_fraction / 1000.0,
+                source.getLength(unitInKM=True)
+                * activity_multiplier
+                * length_fraction
+                / 1000.0,
                 unit="gm_km",
                 new_unit="kg",
             )
