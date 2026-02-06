@@ -730,7 +730,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
 
         if grid_bounds is not None:
             # Try to clip segment to grid bounds
-            clipped_start, clipped_end, distance_fraction = spatial.clip_segment_to_grid(
+            clipped_start, clipped_end, distance_fraction = spatial.clip_trajectory_segment_to_grid(
                 start_point, end_point, grid_bounds
             )
 
