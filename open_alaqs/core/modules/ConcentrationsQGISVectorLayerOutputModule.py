@@ -533,6 +533,12 @@ class QGISVectorLayerDispersionModule(OutputModule):
 
         except Exception as e:
             logger.error("A2K OutputModule: Cannot fetch data: %s" % e)
+            # Ensure it always return a 3-tuple to avoid unpacking errors in callers
+            try:
+                empty_matrix = np.array([])
+            except Exception:
+                empty_matrix = []
+            return OrderedDict(), None, empty_matrix
 
     def beginJob(self):
         if self._pollutant.startswith("PM"):
