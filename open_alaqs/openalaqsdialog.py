@@ -71,6 +71,7 @@ from open_alaqs.core.modules.ModuleManager import (
     SourceModuleRegistry,
 )
 from open_alaqs.core.tools import conversion
+from open_alaqs.core.tools.Grid3D import Grid3D
 from open_alaqs.core.tools.csv_interface import (
     read_csv_to_dict,
     read_csv_to_geodataframe,
@@ -78,6 +79,7 @@ from open_alaqs.core.tools.csv_interface import (
 from open_alaqs.core.utils.osm import download_osm_airport_data
 from open_alaqs.core.utils.qt import populate_combobox
 from open_alaqs.enums import AlaqsLayerType
+import re
 
 logger = get_logger(__name__)
 
@@ -2863,9 +2865,24 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         # until the user closes the dialog
         self._current_grid_config = None
         
-        # Track original grid config when loaded from file to detect modifications
-        self._original_grid_config = None
-        self._loaded_grid_file_path = None
+        # G1: Snapshot of the grid as originally loaded from file and used to detect
+        # whether the user has modified the spinboxes after loading.
+        self._g1_original_grid_config = None
+        self._g1_loaded_file_path = None
+        
+        # Separate grid loaded from Grid Management in Result Visualisation.
+        # This is independent of the spinboxes and overrides the spinbox grid
+        # for visualisation purposes only.
+        self._visualization_grid_config = None
+        self._visualization_grid_file_path = None
+        
+        # Track whether results are available (AUSTAL ran or results directory loaded)
+        self._results_loaded = False
+        # Track whether AUSTAL was actually run (vs results loaded from directory)
+        self._austal_ran = False
+        # Snapshot of G1 grid at the moment AUSTAL ran and never read spinboxes
+        # dynamically for the visualisation status.
+        self._austal_grid_config = None
 
         s = QgsSettings()
         last_alaqs_file_path = s.value("OpenALAQS/last_alaqs_file_path", "")
@@ -3043,8 +3060,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         def toggle_grid_summary_visibility(checked):
             self.ui.currentGridSummaryLabel.setVisible(checked)
         
-        self.ui.gridManagementGroupBox.toggled.connect(toggle_grid_summary_visibility)
-        self.ui.currentGridSummaryLabel.setVisible(self.ui.gridManagementGroupBox.isChecked())
+        self.ui.gridDetailsGroupBox.toggled.connect(toggle_grid_summary_visibility)
+        self.ui.currentGridSummaryLabel.setVisible(self.ui.gridDetailsGroupBox.isChecked())
         
         # Force hide all feedback labels when their parent sections are collapsed
         # These are specifically the gray boxes that appear as status/feedback
@@ -3201,8 +3218,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         path = Path(filename)
         if not filename or not path.is_file() or path.suffix != ".alaqs":
             self.set_feedback("Please select an existing *_out.alaqs file", False)
-            self.ui.alaqsGridStatusLabel.setText("Status: No file loaded")
+            self.ui.alaqsGridStatusLabel.setText("No Grid selected")
             self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+            # Clear G2 visualization grid when file is deselected
+            self._visualization_grid_config = None
+            self._visualization_grid_file_path = None
+            self._update_visualization_status_label()
             return
 
         # Update status to loading state (blue)
@@ -3218,17 +3239,44 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
             study_data = alaqs.load_study_setup()
 
-            grid_configuration: GridConfig = {
-                "x_cells": 100,
-                "y_cells": 100,
-                "z_cells": 1,
-                "x_resolution": 250,
-                "y_resolution": 250,
-                "z_resolution": 300,
-                "reference_latitude": study_data.get("airport_latitude", 0.0),
-                "reference_longitude": study_data.get("airport_longitude", 0.0),
-                "reference_altitude": study_data.get("airport_elevation", 0.0),
-            }
+            # Read actual grid definition from the database
+            conn = sqlite3.connect(filename)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                'SELECT x_cells, y_cells, z_cells, '
+                'x_resolution, y_resolution, z_resolution, '
+                'reference_latitude, reference_longitude '
+                'FROM "grid_3d_definition"'
+            )
+            grid_row = cursor.fetchone()
+            conn.close()
+
+            if grid_row is not None:
+                grid_configuration: GridConfig = {
+                    "x_cells": int(grid_row["x_cells"]),
+                    "y_cells": int(grid_row["y_cells"]),
+                    "z_cells": int(grid_row["z_cells"]),
+                    "x_resolution": float(grid_row["x_resolution"]),
+                    "y_resolution": float(grid_row["y_resolution"]),
+                    "z_resolution": float(grid_row["z_resolution"]),
+                    "reference_latitude": float(grid_row["reference_latitude"]),
+                    "reference_longitude": float(grid_row["reference_longitude"]),
+                    "reference_altitude": study_data.get("airport_elevation", 0.0),
+                }
+            else:
+                # Fallback if grid_3d_definition table is missing/empty
+                grid_configuration: GridConfig = {
+                    "x_cells": 100,
+                    "y_cells": 100,
+                    "z_cells": 1,
+                    "x_resolution": 250,
+                    "y_resolution": 250,
+                    "z_resolution": 300,
+                    "reference_latitude": study_data.get("airport_latitude", 0.0),
+                    "reference_longitude": study_data.get("airport_longitude", 0.0),
+                    "reference_altitude": study_data.get("airport_elevation", 0.0),
+                }
 
             # Only proceed with full loading if concentration visualisation widget is initialized
             if self._concentration_visualization_widget is not None:
@@ -3263,6 +3311,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             status_text = f"Loaded: {path.name}\n{grid_params}"
             self.ui.alaqsGridStatusLabel.setText(status_text)
             self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+
+            # Store grid into G2 visualization config and update the visualization status label
+            self._visualization_grid_config = grid_configuration.copy()
+            self._visualization_grid_file_path = filename
+            self._update_visualization_status_label()
+
         except sqlite3.OperationalError as err:
             self.set_feedback(f"Could not open database file: {err}.", False)
             self.ui.alaqsGridStatusLabel.setText("Status: Error loading file")
@@ -3297,9 +3351,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             status_text = "No Results Directory Loaded. Select a directory with AUSTAL output files"
             self.ui.resultsStatusLabel.setText(status_text)
             self.ui.resultsStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
-            # Clear visualisation status label as well
-            self.ui.visualisationStatusLabel.setText("No results loaded. Select a results directory or run AUSTAL to visualize results.")
-            self.ui.visualisationStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
+            self._results_loaded = False
+            self._austal_ran = False
+            self._update_visualization_status_label()
             self._update_result_buttons_state()
             return
         
@@ -3314,28 +3368,134 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.resultsStatusLabel.setText(status_text)
         self.ui.resultsStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         
-        # Build grid parameter text if grid is available
-        grid_params_text = ""
-        grid_config = self.get_current_grid_config()
-        if grid_config and any(grid_config[k] > 0 for k in ["x_cells", "y_cells"]):
-            grid_params_text = (f"\n\nDefault Grid\n"
-                               f"Grid: {grid_config['x_cells']}×{grid_config['y_cells']}×{grid_config['z_cells']} cells | "
-                               f"Resolution: {grid_config['x_resolution']:.0f}×{grid_config['y_resolution']:.0f}×{grid_config['z_resolution']:.0f}m | "
-                               f"Reference: ({grid_config['reference_latitude']:.4f}°, {grid_config['reference_longitude']:.4f}°, {grid_config['reference_altitude']:.0f}m)\n\n"
-                               f"Load a grid in the Grid Management section to ensure accurate visualisation.")
+        # Mark results as loaded and update visualisation status with grid details
+        self._results_loaded = True
+        self._austal_ran = False  # Results loaded from directory, not from AUSTAL run
+        # Set header first so _update_visualization_status_label can preserve it
+        self.ui.visualisationStatusLabel.setText(f"Results loaded from {os.path.basename(results_dir)}")
+        self._update_visualization_status_label()
         
-        # Update visualisation status
-        status_text = f"Results loaded from {os.path.basename(results_dir)}{grid_params_text}"
-        self.ui.visualisationStatusLabel.setText(status_text)
-        self.ui.visualisationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
-        
+        # Auto-detect available pollutants and averaging options from result files
+        try:
+            self._detect_and_update_pollutants_and_averaging(results_dir)
+        except Exception as _e:
+            logger.warning('Could not auto-detect pollutants/averaging from results directory: %s', _e)
+
         # Update button state - will check if grid is also available
         self._update_result_buttons_state()
         
         logger.info(f"Results loaded from: {results_dir}")
 
+    def _update_visualization_status_label(self) -> None:
+        """Update the visualization status label.
+
+        G2 = Grid Management (gridSourceFilePath in the Result Visualisation section).
+        G1 = Grid Configuration (spinboxes in the Input Strategy section).
+
+        G1 is NEVER read live here.  The only time G1 appears in this label
+        is when AUSTAL has just run and in that case we use the *snapshot*
+        stored in ``self._austal_grid_config`` (taken at the moment AUSTAL
+        completed).
+
+        Rules:
+        - No results, no G2           → Yellow: "No data loaded"
+        - No results, G2 loaded       → Yellow: show G2 grid, awaiting results
+        - Results + G2 loaded         → Green: show G2 grid
+        - AUSTAL ran, no G2           → Green: show snapshotted G1 grid
+        - Results from dir, no G2     → Green + warning: advise loading G2
+        - G2 path changes             → re-evaluate
+        """
+        try:
+            has_g2 = bool(self._visualization_grid_config and self._visualization_grid_file_path)
+            logger.info(
+                "[VizStatus] _results_loaded=%s, _austal_ran=%s, has_g2=%s, "
+                "g2_path=%s, _austal_grid_config=%s",
+                self._results_loaded, self._austal_ran, has_g2,
+                self._visualization_grid_file_path,
+                self._austal_grid_config is not None,
+            )
+
+            # Helper to format a grid config dict into a display string
+            def _fmt(gc: dict, source_label: str) -> str:
+                return (
+                    f"{source_label}\n"
+                    f"Grid: {gc['x_cells']}×{gc['y_cells']}×{gc['z_cells']} cells | "
+                    f"Resolution: {gc['x_resolution']:.0f}×{gc['y_resolution']:.0f}×"
+                    f"{gc['z_resolution']:.0f}m | "
+                    f"Reference: ({gc['reference_latitude']:.4f}°, "
+                    f"{gc['reference_longitude']:.4f}°, "
+                    f"{gc['reference_altitude']:.0f}m)"
+                )
+
+            # ---- No results loaded ----
+            if not self._results_loaded:
+                if has_g2:
+                    gc = self._visualization_grid_config
+                    grid_details = (f"{gc['x_cells']}×{gc['y_cells']}×{gc['z_cells']} cells | "
+                                   f"Resolution: {gc['x_resolution']:.0f}×{gc['y_resolution']:.0f}×{gc['z_resolution']:.0f}m | "
+                                   f"Reference: ({gc['reference_latitude']:.4f}°, {gc['reference_longitude']:.4f}°, {gc['reference_altitude']:.0f}m)")
+                    text = f"Please run AUSTAL or load results.\n\nGrid: {grid_details}"
+                else:
+                    text = "Please run AUSTAL or load results."
+
+                self.ui.visualisationStatusLabel.setText(text)
+                self.ui.visualisationStatusLabel.setStyleSheet(
+                    "background-color: #fff3cd; padding: 8px; border-radius: 4px; "
+                    "border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
+                )
+
+            # ---- Results are available ----
+            else:
+                if has_g2:
+                    # Best case: G2 grid loaded + results available
+                    gc = self._visualization_grid_config
+                    grid_details = (f"{gc['x_cells']}×{gc['y_cells']}×{gc['z_cells']} cells | "
+                                   f"Resolution: {gc['x_resolution']:.0f}×{gc['y_resolution']:.0f}×{gc['z_resolution']:.0f}m | "
+                                   f"Reference: ({gc['reference_latitude']:.4f}°, {gc['reference_longitude']:.4f}°, {gc['reference_altitude']:.0f}m)")
+                    text = f"Grid: {grid_details}"
+
+                elif self._austal_ran and self._austal_grid_config:
+                    # AUSTAL just ran – show the *snapshot* of G1 taken at run-time
+                    gc = self._austal_grid_config
+                    grid_details = (f"{gc['x_cells']}×{gc['y_cells']}×{gc['z_cells']} cells | "
+                                   f"Resolution: {gc['x_resolution']:.0f}×{gc['y_resolution']:.0f}×{gc['z_resolution']:.0f}m | "
+                                   f"Reference: ({gc['reference_latitude']:.4f}°, {gc['reference_longitude']:.4f}°, {gc['reference_altitude']:.0f}m)")
+                    text = f"Grid: {grid_details}"
+
+                else:
+                    # Results loaded from directory, no G2 grid loaded
+                    gc = self.get_current_grid_config()
+                    if gc and any(gc.get(k, 0) > 0 for k in ["x_cells", "y_cells"]):
+                        grid_details = (f"{gc['x_cells']}×{gc['y_cells']}×{gc['z_cells']} cells | "
+                                       f"Resolution: {gc['x_resolution']:.0f}×{gc['y_resolution']:.0f}×{gc['z_resolution']:.0f}m | "
+                                       f"Reference: ({gc['reference_latitude']:.4f}°, {gc['reference_longitude']:.4f}°, {gc['reference_altitude']:.0f}m)")
+                        text = (f"Default Grid: {grid_details}\n\n"
+                                f"Please load a grid from the Grid Management section for accurate visualisation.")
+                    else:
+                        text = "Please load a grid from the Grid Management section for accurate visualisation."
+
+                self.ui.visualisationStatusLabel.setText(text)
+                self.ui.visualisationStatusLabel.setStyleSheet(
+                    "background-color: #d4edda; padding: 8px; border-radius: 4px; "
+                    "border-left: 4px solid #28a745; color: #155724; font-weight: bold;"
+                )
+
+            self.ui.visualisationStatusLabel.repaint()
+
+        except Exception as e:
+            logger.error("Failed to update visualization status label: %s", e, exc_info=True)
+            self.ui.visualisationStatusLabel.setText("Error updating visualization status")
+            self.ui.visualisationStatusLabel.repaint()
+
     def _update_grid_status_label(self) -> None:
-        """Update the current grid status label with all grid parameters and save status."""
+        """Update the G1 grid status label (currentGridSummaryLabel).
+
+        Colours:
+        - Yellow:  No grid values set (all zero) or no file loaded.
+        - Green:   Grid loaded from file and spinboxes still match.
+        - Blue:    Grid was loaded from a file but spinbox values have been
+                   modified → warn user to save / update the file.
+        """
         x_cells = int(self.ui.xCellsSpinBox.value())
         y_cells = int(self.ui.yCellsSpinBox.value())
         z_cells = int(self.ui.zCellsSpinBox.value())
@@ -3359,50 +3519,44 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             "reference_altitude": ref_alt,
         }
         
-        # Check if grid has been modified since loading from file
-        is_modified = self._original_grid_config is not None and self._current_grid_config != self._original_grid_config
-        
-        grid_file_path = self.ui.gridSourceFilePath.filePath()
-        has_file_path = grid_file_path and os.path.isfile(grid_file_path)
-        
-        # Format all parameters compactly
         params_text = (f"Grid: {x_cells}×{y_cells}×{z_cells} cells | "
                        f"Res: {x_res:.0f}×{y_res:.0f}×{z_res:.0f}m | "
                        f"Ref: ({ref_lat:.4f}°, {ref_lon:.4f}°, {ref_alt:.0f}m)")
         
-        # Determine the state and styling
-        if self._original_grid_config is None and all(
-            self._current_grid_config[k] == 0 for k in ["x_cells", "y_cells", "z_cells"]
-        ):
+        if all(self._current_grid_config[k] == 0 for k in ["x_cells", "y_cells", "z_cells"]):
             # YELLOW: No file loaded, spinboxes not activated (default values)
-            status_text = "Current Grid: None"
-            self.ui.currentGridSummaryLabel.setText(status_text)
-            # Yellow styling
-            self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
-        
-        elif is_modified or (self._original_grid_config is None and not any(
-            self._current_grid_config[k] == 0 for k in ["x_cells", "y_cells", "z_cells"]
-        )):
-            # BLUE: Grid was modified (from file) OR spinboxes were activated without a file
-            if self._loaded_grid_file_path and os.path.isfile(self._loaded_grid_file_path):
-                # File was loaded but spinboxes were modified
-                filename = os.path.basename(self._loaded_grid_file_path)
-                status_text = f"Grid Modified (from {filename})\n{params_text}\nSave the grid or Update file"
+            status_text = "No Grid loaded"
+            style = ("background-color: #fff3cd; padding: 8px; border-radius: 4px; "
+                     "border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+
+        elif self._g1_original_grid_config is not None:
+            # A file was loaded – check if spinboxes still match
+            modified = any(
+                self._current_grid_config[k] != self._g1_original_grid_config.get(k)
+                for k in self._current_grid_config
+            )
+            if modified:
+                # Blue – modified since load
+                fname = os.path.basename(self._g1_loaded_file_path) if self._g1_loaded_file_path else "file"
+                status_text = (f"Grid modified since loading from {fname}.\n"
+                               f"{params_text}\n"
+                               f"Save the grid or update the file to keep your changes.")
+                style = ("background-color: #cce5ff; padding: 8px; border-radius: 4px; "
+                         "border-left: 4px solid #0c63e4; color: #084298; font-weight: bold;")
             else:
-                # No file was initially loaded but spinboxes were modified
-                status_text = f"Grid Not Saved\n{params_text}\nSave the grid or press Update File to search for a file"
-            
-            self.ui.currentGridSummaryLabel.setText(status_text)
-            # Blue styling
-            self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #cce5ff; padding: 8px; border-radius: 4px; border-left: 4px solid #0c63e4; color: #084298; font-weight: bold;")
-        
+                # Green – loaded and unmodified
+                fname = os.path.basename(self._g1_loaded_file_path) if self._g1_loaded_file_path else ""
+                status_text = f"Grid loaded from {fname}\n{params_text}"
+                style = ("background-color: #d4edda; padding: 8px; border-radius: 4px; "
+                         "border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         else:
-            # GREEN: Grid loaded from file and not modified
-            filename = os.path.basename(self._loaded_grid_file_path) if self._loaded_grid_file_path else "file"
-            status_text = f"Loaded from: {filename}\n{params_text}"
-            self.ui.currentGridSummaryLabel.setText(status_text)
-            # Green styling for saved state
-            self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            # Grid values are set but no file was loaded (e.g. typed into spinboxes)
+            status_text = f"Grid loaded from spinbox configuration\n{params_text}"
+            style = ("background-color: #d4edda; padding: 8px; border-radius: 4px; "
+                     "border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+        
+        self.ui.currentGridSummaryLabel.setText(status_text)
+        self.ui.currentGridSummaryLabel.setStyleSheet(style)
 
     def get_current_grid_config(self) -> dict:
         """
@@ -3422,14 +3576,27 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         return self._current_grid_config
 
     def _on_grid_source_file_changed(self, grid_file: str) -> None:
-        """Auto-load grid when a valid grid file is selected and populate Grid Details."""
+        """Handle G1 (Grid Configuration from 'Generate AUSTAL Input Files from CSV') file selection.
+        
+        This is the gridSourceFilePath widget inside gridManagementGroupBox (CSV generation).
+        It loads a grid file and populates the spinboxes + currentGridSummaryLabel.
+        
+        MUST NEVER touch _visualization_grid_config, _visualization_grid_file_path,
+        visualisationStatusLabel, or _update_visualization_status_label().
+        Those belong to G2 (alaqsGridGroupBox / alaqs_file_path in Result Visualisation).
+        """
+        logger.info("[G1] _on_grid_source_file_changed called with: %s", grid_file)
+        
         if not grid_file or not os.path.isfile(grid_file):
-            # File deselected or invalid - reset to yellow neutral state
-            self.ui.currentGridSummaryLabel.setText("Current Grid: None")
-            self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
-            # Clear stored path when file is deselected
+            logger.info("[G1] File deselected or invalid")
             s = QgsSettings()
             s.setValue("OpenALAQS/last_grid_file_path", "")
+            self._g1_original_grid_config = None
+            self._g1_loaded_file_path = None
+            self.ui.currentGridSummaryLabel.setText("No Grid selected")
+            self.ui.currentGridSummaryLabel.setStyleSheet(
+                "background-color: #fff3cd; padding: 8px; border-radius: 4px; "
+                "border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
             return
         
         # Store the selected grid file path for next session
@@ -3437,26 +3604,38 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         s.setValue("OpenALAQS/last_grid_file_path", grid_file)
         
         try:
-            filename = os.path.basename(grid_file)
             grid_config = None
             
             # Try to parse as OA file (.alaqs)
             if grid_file.endswith('.alaqs'):
                 try:
-                    project_database = ProjectDatabase()
-                    project_database.path = grid_file
-                    study_data = alaqs.load_study_setup()
-                    
+                    conn = sqlite3.connect(grid_file)
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        'SELECT x_cells, y_cells, z_cells, '
+                        'x_resolution, y_resolution, z_resolution, '
+                        'reference_latitude, reference_longitude '
+                        'FROM "grid_3d_definition"'
+                    )
+                    grid_row = cursor.fetchone()
+                    cursor.execute('SELECT airport_elevation FROM "user_study_setup"')
+                    alt_row = cursor.fetchone()
+                    conn.close()
+
+                    if grid_row is None:
+                        raise ValueError("No grid_3d_definition found in database")
+
                     grid_config = {
-                        "x_cells": 100,
-                        "y_cells": 100,
-                        "z_cells": 1,
-                        "x_resolution": 250,
-                        "y_resolution": 250,
-                        "z_resolution": 300,
-                        "reference_latitude": study_data.get("airport_latitude", 0.0),
-                        "reference_longitude": study_data.get("airport_longitude", 0.0),
-                        "reference_altitude": study_data.get("airport_elevation", 0.0),
+                        "x_cells": int(grid_row["x_cells"]),
+                        "y_cells": int(grid_row["y_cells"]),
+                        "z_cells": int(grid_row["z_cells"]),
+                        "x_resolution": float(grid_row["x_resolution"]),
+                        "y_resolution": float(grid_row["y_resolution"]),
+                        "z_resolution": float(grid_row["z_resolution"]),
+                        "reference_latitude": float(grid_row["reference_latitude"]),
+                        "reference_longitude": float(grid_row["reference_longitude"]),
+                        "reference_altitude": float(alt_row["airport_elevation"]) if alt_row else 0.0,
                     }
                 except Exception as e:
                     logger.warning(f"Could not extract grid from ALAQS file: {e}")
@@ -3487,40 +3666,30 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             
             # If we successfully loaded grid config, populate the spin boxes
             if grid_config:
+
+                # Snapshot the original loaded values for modification detection
+                self._g1_original_grid_config = grid_config.copy()
+                self._g1_loaded_file_path = grid_file
+                # Populate spinboxes with loaded values
                 self.ui.xCellsSpinBox.setValue(grid_config["x_cells"])
                 self.ui.yCellsSpinBox.setValue(grid_config["y_cells"])
-                # Ensure spinbox can accept the z_cells value
-                if grid_config["z_cells"] > self.ui.zCellsSpinBox.maximum():
-                    self.ui.zCellsSpinBox.setMaximum(grid_config["z_cells"])
                 self.ui.zCellsSpinBox.setValue(grid_config["z_cells"])
                 self.ui.xResolutionSpinBox.setValue(grid_config["x_resolution"])
                 self.ui.yResolutionSpinBox.setValue(grid_config["y_resolution"])
-                # Ensure spinbox can accept the z_resolution value
-                if grid_config["z_resolution"] > self.ui.zResolutionSpinBox.maximum():
-                    self.ui.zResolutionSpinBox.setMaximum(grid_config["z_resolution"] * 1.1)
                 self.ui.zResolutionSpinBox.setValue(grid_config["z_resolution"])
                 self.ui.refLatSpinBox.setValue(grid_config["reference_latitude"])
                 self.ui.refLonSpinBox.setValue(grid_config["reference_longitude"])
                 self.ui.refAltSpinBox.setValue(grid_config["reference_altitude"])
-                
-                # Store original config and file path for modification tracking
-                self._original_grid_config = grid_config.copy()
-                self._loaded_grid_file_path = grid_file
-                
-                # Update status label with the loaded grid configuration
-                self._update_grid_status_label()
-                logger.info(f"Grid loaded from: {grid_file} with config: {grid_config}")
+                # Spinbox valueChanged signals will trigger _update_grid_status_label automatically
             else:
-                # Could not parse - red error styling
-                self.ui.currentGridSummaryLabel.setText(f"Status: {os.path.basename(grid_file)} - Could not parse grid parameters")
-                self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
-                logger.warning(f"Could not extract grid parameters from: {grid_file}")
+
+                self.ui.currentGridSummaryLabel.setText(f"Error: Could not parse {os.path.basename(grid_file)}")
+                self.ui.currentGridSummaryLabel.setStyleSheet(
+                    "background-color: #f8d7da; padding: 8px; border-radius: 4px; "
+                    "border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
                 
         except Exception as e:
-            logger.error(f"Failed to load grid: {e}")
-            # Error - red styling
-            self.ui.currentGridSummaryLabel.setText(f"Status: Error loading {filename}")
-            self.ui.currentGridSummaryLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+            logger.error("Failed to load grid file: %s", e, exc_info=True)
 
     def _setup_external_csv_inputs(self, s: QgsSettings) -> None:
         """Setup the external CSV file input widgets and connections.
@@ -3720,22 +3889,25 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.ui.executionStatusLabel.setText("Status: Completed successfully")
             self.ui.executionStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
             
-            # Update visualisation status with grid parameters
-            grid_config = self.get_current_grid_config()
-            grid_params_text = ""
-            if grid_config and any(grid_config[k] > 0 for k in ["x_cells", "y_cells"]):
-                grid_params_text = (f"\n\nDefault Grid Configuration:\n"
-                                   f"Grid: {grid_config['x_cells']}×{grid_config['y_cells']}×{grid_config['z_cells']} cells | "
-                                   f"Resolution: {grid_config['x_resolution']:.0f}×{grid_config['y_resolution']:.0f}×{grid_config['z_resolution']:.0f}m | "
-                                   f"Reference: ({grid_config['reference_latitude']:.4f}°, {grid_config['reference_longitude']:.4f}°, {grid_config['reference_altitude']:.0f}m)\n\n"
-                                   f"Load a grid in the Grid Management section to ensure accurate visualisation results.")
-            
-            status_text = f"AUSTAL simulation completed. Results ready for visualisation.{grid_params_text}"
-            self.ui.visualisationStatusLabel.setText(status_text)
-            self.ui.visualisationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            # Mark results as loaded and update visualisation status with grid details
+            self._results_loaded = True
+            self._austal_ran = True
+
+            # Snapshot grid at this moment so visualisation status never reads
+            # spinboxes dynamically again.
+            self._austal_grid_config = self.get_current_grid_config().copy() if self.get_current_grid_config() else None
+            logger.info("[AUSTAL] Snapshotted G1 grid for visualisation: %s", self._austal_grid_config)
+            self.ui.visualisationStatusLabel.setText("AUSTAL simulation completed. Results ready for visualisation.")
+            self._update_visualization_status_label()
             
             # Update result buttons - AUSTAL has run, so buttons should be enabled
             self._update_result_buttons_state()
+
+            # Auto-detect and update pollutant/averaging options from work directory outputs
+            try:
+                self._detect_and_update_pollutants_and_averaging(work_dir)
+            except Exception as _e:
+                logger.warning("Auto-detection after AUSTAL run failed: %s", _e)
             
             QtWidgets.QMessageBox.information(
                 self, "Success", "Dispersion simulation completed successfully"
@@ -3758,6 +3930,84 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     f"AUSTAL execution failed with the following error: {exception}",
                     exc_info=exception,
                 )
+
+    def _detect_and_update_pollutants_and_averaging(self, results_dir: str) -> None:
+        """Scan a directory for AUSTAL .dmna files and update pollutant/averaging comboboxes.
+
+        This helper is also called after running AUSTAL so the UI reflects newly
+        produced output files even when the user hasn't selected a separate
+        results directory.
+        """
+        try:
+            if not results_dir or not os.path.isdir(results_dir):
+                return
+
+            dmna_files = [f for f in os.listdir(results_dir) if f.lower().endswith('.dmna')]
+
+            # Scan filenames for known pollutant tokens; skip 'series.dmna' and similar generic files
+            # Map pm2.5/pm25 variants to internal 'p2' code for easier handling
+            known_tokens = ['nox', 'co', 'hc', 'pm10', 'pm2.5', 'pm25', 'sox', 'co2']
+            found_codes = set()
+            for fn in dmna_files:
+                base = fn.lower()
+                # Exclude generic series files.
+                if base.startswith('series') or base == 'series.dmna':
+                    continue
+                # Match token as whole word to avoid false positives (e.g. 'coX' vs 'co').
+                for token in known_tokens:
+                    token_re = token.replace('.', r'\\.')
+                    if re.search(r'(^|[^a-z0-9])' + token_re + r'([^a-z0-9]|$)', base):
+                        code = 'p2' if token in ('pm2.5', 'pm25') else token
+                        found_codes.add(code)
+                        break
+
+            # Map internal codes to UI display labels.
+            code_to_display = {
+                'nox': 'NOx', 'co': 'CO', 'hc': 'HC', 'pm10': 'PM10',
+                'p2': 'PM2.5', 'sox': 'SOx', 'co2': 'CO2'
+            }
+
+            # Populate pollutant combo; preserve previous selection if available.
+            available_display = [code_to_display.get(c, c.upper()) for c in sorted(found_codes)]
+
+            if hasattr(self.ui, 'resultPollutantCombo'):
+                prev = self.ui.resultPollutantCombo.currentText()
+                self.ui.resultPollutantCombo.clear()
+                for disp in available_display:
+                    self.ui.resultPollutantCombo.addItem(disp)
+                # Restore previous selection or default to first option.
+                if prev and self.ui.resultPollutantCombo.findText(prev) >= 0:
+                    self.ui.resultPollutantCombo.setCurrentText(prev)
+                elif available_display:
+                    self.ui.resultPollutantCombo.setCurrentIndex(0)
+
+            # Detect averaging periods from filename patterns
+            # 'y00' suffix = annual mean
+            #  numbered suffixes (-NNN) = time-series data
+            has_annual = any('y00' in f.lower() for f in dmna_files)
+            has_numbered = any(re.search(r'-\d{3}[as]\.dmna$', f.lower()) for f in dmna_files)
+            averaging_options = []
+            if has_numbered:
+                averaging_options.extend(['hourly', '8-hours mean', 'daily mean'])
+            if has_annual:
+                averaging_options.append('annual mean')
+
+            # Populate averaging combo and preserve previous selection if available
+            if hasattr(self.ui, 'averagingCombo') and averaging_options:
+                prev_avg = self.ui.averagingCombo.currentText()
+                self.ui.averagingCombo.clear()
+                for opt in averaging_options:
+                    self.ui.averagingCombo.addItem(opt)
+                # Restore previous selection or default to 'daily mean'.
+                if prev_avg and self.ui.averagingCombo.findText(prev_avg) >= 0:
+                    self.ui.averagingCombo.setCurrentText(prev_avg)
+                else:
+                    if 'daily mean' in averaging_options:
+                        self.ui.averagingCombo.setCurrentText('daily mean')
+                    else:
+                        self.ui.averagingCombo.setCurrentIndex(0)
+        except Exception as _e:
+            logger.warning('Could not auto-detect pollutants/averaging from directory: %s', _e)
 
 
     def save_grid_as_csv(self) -> None:
@@ -4024,32 +4274,111 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
                 gui_modules_config_ = self.getOutputModulesConfiguration()
 
-                # Configuration of the conc. calculation
-                # (from ConcentrationsQGISVectorLayerOutputModule)
-                conc_configuration = (
-                    self._concentration_visualization_widget.get_values()
-                )
-                pollutant_ = conc_configuration.get("pollutant", None)
-                averaging_period_ = conc_configuration.get("averaging", None)
-                check_std = conc_configuration.get("is_uncertainty_enabled", False)
+                # Read UI values (ensure QDateTime transforms to python datetime)
+                if hasattr(self.ui, 'startDtEdit'):
+                    qdt = self.ui.startDtEdit.dateTime()
+                    start_dt = datetime(
+                        qdt.date().year(), qdt.date().month(), qdt.date().day(),
+                        qdt.time().hour(), qdt.time().minute(), qdt.time().second()
+                    )
+                else:
+                    start_dt = datetime(2023, 3, 1, 0, 0)
 
+                if hasattr(self.ui, 'endDtEdit'):
+                    qdt = self.ui.endDtEdit.dateTime()
+                    end_dt = datetime(
+                        qdt.date().year(), qdt.date().month(), qdt.date().day(),
+                        qdt.time().hour(), qdt.time().minute(), qdt.time().second()
+                    )
+                else:
+                    end_dt = datetime(2023, 3, 1, 23, 0)
+
+                # Extract pollutant from UI and normalize to internal code.
+                # Display label → internal code (e.g. 'PM2.5' → 'p2').
+                pollutant_text = (
+                    self.ui.resultPollutantCombo.currentText()
+                    if hasattr(self.ui, 'resultPollutantCombo')
+                    else None
+                )
+                # UI display string to internal pollutant code mapping.
+                pollutant_map = {
+                    "NOx": "nox",
+                    "CO": "co",
+                    "HC": "hc",
+                    "PM10": "pm10",
+                    "PM2.5": "p2",
+                    "SOx": "sox",
+                    "CO2": "co2",
+                }
+                pollutant = None
+                if pollutant_text:
+                    pollutant = pollutant_map.get(pollutant_text, pollutant_text.lower())
+                is_uncertainty = self.ui.uncertaintyCheckBox.isChecked() if hasattr(self.ui, 'uncertaintyCheckBox') else False
+                averaging = self.ui.averagingCombo.currentText() if hasattr(self.ui, 'averagingCombo') else None
+
+                # Initialize widget with UI values for consistent config parsing.
+                self._concentration_visualization_widget.init_values({
+                    "start_dt_inclusive": start_dt,
+                    "end_dt_inclusive": end_dt,
+                    "averaging": averaging,
+                    "pollutant": pollutant,
+                    "is_uncertainty_enabled": is_uncertainty,
+                })
+
+                # Read final configuration from widget after initialization.
+                conc_configuration = self._concentration_visualization_widget.get_values()
+                pollutant_ = conc_configuration.get("pollutant", pollutant)
+                averaging_period_ = conc_configuration.get("averaging", averaging)
+                check_std = conc_configuration.get("is_uncertainty_enabled", is_uncertainty)
+
+                # Use the visualization grid from Grid Management if one has
+                # been loaded; otherwise fall back to the default grid stored
+                # in the concentration calculation object.
+                if self._visualization_grid_config:
+                    active_grid = Grid3D(
+                        db_path=self._conc_calculation_.getDatabasePath(),
+                        grid_config=self._visualization_grid_config,
+                        deserialize=False,
+                    )
+                else:
+                    active_grid = self._conc_calculation_.get3DGrid()
+
+                # Build output module config from UI values and widget configuration.
                 config = {
                     "parent": self,
                     "pollutant": pollutant_,
                     "title": "Mean concentration of '%s'" % pollutant_,
                     "ytitle": "%s" % pollutant_,
-                    "grid": self._conc_calculation_.get3DGrid(),
+                    "grid": active_grid,
                     "database_path": self._conc_calculation_.getDatabasePath(),
                     "concentration_path": concentration_path,
                     "averaging_period": averaging_period_,
-                    "timeseries": self.getTimeSeries(
-                        self._conc_calculation_.getDatabasePath()
-                    ),
-                    # "use_centroid_symbol": False,
+                    "timeseries": self.getTimeSeries(self._conc_calculation_.getDatabasePath()),
+
+
+                    # Disable optional module features by default.
+                    "is_plotting_daily_max_enabled": False,
+                    "is_csv_output_enabled": False,
+                    "is_daily_maximum_enabled": False,
+                    "use_centroid_symbol": False,
+                    "should_add_labels": False,
+                    "should_add_title": False,
+                    "3DVisualization": False,
+                    "name_suffix": "",
+                    "threshold": 0.0001,
                     "check_uncertainty": check_std,
                 }
 
                 config.update(conc_configuration)
+
+                # Force Python datetime objects into config
+                # ModuleConfigurationWidget returns QDateTime as ISO strings and override to prevent type mismatch in module comparisons
+                try:
+                    config["start_dt_inclusive"] = start_dt
+                    config["end_dt_inclusive"] = end_dt
+                except Exception:
+                    # fallback: leave whatever was provided
+                    pass
 
                 if OutputModule.getModuleDisplayName() in gui_modules_config_:
                     config.update(
