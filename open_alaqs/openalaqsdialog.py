@@ -2846,8 +2846,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         
         # Immediately hide gray feedback/summary boxes that appear in collapsible sections
         # These should only be visible when their parent sections are expanded
-        self.ui.currentGridSummaryLabel.setVisible(False)
-        self.ui.alaqsGridStatusLabel.setVisible(False)
+        self.ui.currentGridSummaryLabel.setVisible(True)
+        self.ui.alaqsGridStatusLabel.setVisible(True)
 
         # Setup collapsible sections
         self._setup_collapsible_sections()
@@ -3055,13 +3055,16 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         make_collapsible(self.ui.alaqsGridGroupBox)
         make_collapsible(self.ui.loadResultsGroupBox)
         
-        # Hide gray summary/feedback boxes when their parent sections are collapsed
-        # Grid Configuration gray box
-        def toggle_grid_summary_visibility(checked):
-            self.ui.currentGridSummaryLabel.setVisible(checked)
+        # G1 grid status label (currentGridSummaryLabel) should always be visible
+        # Refresh status message when grid details section is expanded
+        self.ui.gridDetailsGroupBox.toggled.connect(self._update_grid_status_label)
         
-        self.ui.gridDetailsGroupBox.toggled.connect(toggle_grid_summary_visibility)
-        self.ui.currentGridSummaryLabel.setVisible(self.ui.gridDetailsGroupBox.isChecked())
+        # G2 grid status label (alaqsGridStatusLabel) hides when section is collapsed
+        def toggle_alaqs_grid_visibility(checked):
+            self.ui.alaqsGridStatusLabel.setVisible(checked)
+        
+        self.ui.alaqsGridGroupBox.toggled.connect(toggle_alaqs_grid_visibility)
+        self.ui.alaqsGridStatusLabel.setVisible(self.ui.alaqsGridGroupBox.isChecked())
         
         # Force hide all feedback labels when their parent sections are collapsed
         # These are specifically the gray boxes that appear as status/feedback
@@ -3407,13 +3410,6 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         """
         try:
             has_g2 = bool(self._visualization_grid_config and self._visualization_grid_file_path)
-            logger.info(
-                "[VizStatus] _results_loaded=%s, _austal_ran=%s, has_g2=%s, "
-                "g2_path=%s, _austal_grid_config=%s",
-                self._results_loaded, self._austal_ran, has_g2,
-                self._visualization_grid_file_path,
-                self._austal_grid_config is not None,
-            )
 
             # Helper to format a grid config dict into a display string
             def _fmt(gc: dict, source_label: str) -> str:
@@ -3453,32 +3449,33 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                                    f"Resolution: {gc['x_resolution']:.0f}×{gc['y_resolution']:.0f}×{gc['z_resolution']:.0f}m | "
                                    f"Reference: ({gc['reference_latitude']:.4f}°, {gc['reference_longitude']:.4f}°, {gc['reference_altitude']:.0f}m)")
                     text = f"Grid: {grid_details}"
+                    bg_color = "background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;"
 
                 elif self._austal_ran and self._austal_grid_config:
-                    # AUSTAL just ran – show the *snapshot* of G1 taken at run-time
+                    # AUSTAL ran but no G2 grid loaded – show default grid with warning (yellow)
                     gc = self._austal_grid_config
                     grid_details = (f"{gc['x_cells']}×{gc['y_cells']}×{gc['z_cells']} cells | "
                                    f"Resolution: {gc['x_resolution']:.0f}×{gc['y_resolution']:.0f}×{gc['z_resolution']:.0f}m | "
                                    f"Reference: ({gc['reference_latitude']:.4f}°, {gc['reference_longitude']:.4f}°, {gc['reference_altitude']:.0f}m)")
-                    text = f"Grid: {grid_details}"
+                    text = (f"Default Grid loaded\nGrid: {grid_details}\n\n"
+                            f"Please select a grid from Grid Management section to ensure accurate visualisation.")
+                    bg_color = "background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
 
                 else:
-                    # Results loaded from directory, no G2 grid loaded
+                    # Results loaded from directory, no  grid loaded
                     gc = self.get_current_grid_config()
                     if gc and any(gc.get(k, 0) > 0 for k in ["x_cells", "y_cells"]):
                         grid_details = (f"{gc['x_cells']}×{gc['y_cells']}×{gc['z_cells']} cells | "
                                        f"Resolution: {gc['x_resolution']:.0f}×{gc['y_resolution']:.0f}×{gc['z_resolution']:.0f}m | "
                                        f"Reference: ({gc['reference_latitude']:.4f}°, {gc['reference_longitude']:.4f}°, {gc['reference_altitude']:.0f}m)")
-                        text = (f"Default Grid: {grid_details}\n\n"
-                                f"Please load a grid from the Grid Management section for accurate visualisation.")
+                        text = (f"Default Grid loaded\nGrid: {grid_details}\n\n"
+                                f"Please select a grid from Grid Management to ensure accurate visualisation.")
                     else:
-                        text = "Please load a grid from the Grid Management section for accurate visualisation."
+                        text = "Please load a grid from Grid Management section for accurate visualisation."
+                    bg_color = "background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
 
                 self.ui.visualisationStatusLabel.setText(text)
-                self.ui.visualisationStatusLabel.setStyleSheet(
-                    "background-color: #d4edda; padding: 8px; border-radius: 4px; "
-                    "border-left: 4px solid #28a745; color: #155724; font-weight: bold;"
-                )
+                self.ui.visualisationStatusLabel.setStyleSheet(bg_color)
 
             self.ui.visualisationStatusLabel.repaint()
 
@@ -3523,13 +3520,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                        f"Res: {x_res:.0f}×{y_res:.0f}×{z_res:.0f}m | "
                        f"Ref: ({ref_lat:.4f}°, {ref_lon:.4f}°, {ref_alt:.0f}m)")
         
-        if all(self._current_grid_config[k] == 0 for k in ["x_cells", "y_cells", "z_cells"]):
-            # YELLOW: No file loaded, spinboxes not activated (default values)
-            status_text = "No Grid loaded"
-            style = ("background-color: #fff3cd; padding: 8px; border-radius: 4px; "
-                     "border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
-
-        elif self._g1_original_grid_config is not None:
+        if self._g1_original_grid_config is not None:
             # A file was loaded – check if spinboxes still match
             modified = any(
                 self._current_grid_config[k] != self._g1_original_grid_config.get(k)
@@ -3550,10 +3541,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 style = ("background-color: #d4edda; padding: 8px; border-radius: 4px; "
                          "border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         else:
-            # Grid values are set but no file was loaded (e.g. typed into spinboxes)
-            status_text = f"Grid loaded from spinbox configuration\n{params_text}"
-            style = ("background-color: #d4edda; padding: 8px; border-radius: 4px; "
-                     "border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            # No file loaded – show default grid status (yellow)
+            status_text = f"Default Grid Loaded\n{params_text}"
+            style = ("background-color: #fff3cd; padding: 8px; border-radius: 4px; "
+                     "border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
         
         self.ui.currentGridSummaryLabel.setText(status_text)
         self.ui.currentGridSummaryLabel.setStyleSheet(style)
@@ -3894,9 +3885,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self._austal_ran = True
 
             # Snapshot grid at this moment so visualisation status never reads
-            # spinboxes dynamically again.
+            # spinboxes dynamically again
             self._austal_grid_config = self.get_current_grid_config().copy() if self.get_current_grid_config() else None
-            logger.info("[AUSTAL] Snapshotted G1 grid for visualisation: %s", self._austal_grid_config)
             self.ui.visualisationStatusLabel.setText("AUSTAL simulation completed. Results ready for visualisation.")
             self._update_visualization_status_label()
             
