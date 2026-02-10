@@ -3732,7 +3732,6 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.alaqs_pollutant_co.stateChanged.connect(self._validate_alaqs_generation_files)
         self.ui.alaqs_pollutant_hc.stateChanged.connect(self._validate_alaqs_generation_files)
         self.ui.alaqs_pollutant_pm10.stateChanged.connect(self._validate_alaqs_generation_files)
-        self.ui.alaqs_pollutant_pm25.stateChanged.connect(self._validate_alaqs_generation_files)
         self.ui.alaqs_pollutant_sox.stateChanged.connect(self._validate_alaqs_generation_files)
         self.ui.alaqs_pollutant_co2.stateChanged.connect(self._validate_alaqs_generation_files)
 
@@ -3741,9 +3740,14 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.pollutant_co.stateChanged.connect(self._validate_external_csv_files)
         self.ui.pollutant_hc.stateChanged.connect(self._validate_external_csv_files)
         self.ui.pollutant_pm10.stateChanged.connect(self._validate_external_csv_files)
-        self.ui.pollutant_pm25.stateChanged.connect(self._validate_external_csv_files)
         self.ui.pollutant_sox.stateChanged.connect(self._validate_external_csv_files)
         self.ui.pollutant_co2.stateChanged.connect(self._validate_external_csv_files)
+
+        # Connect AUSTAL quality level and mixing height controls to status update
+        self.ui.alaqs_quality_level_spinbox.valueChanged.connect(self._validate_alaqs_generation_files)
+        self.ui.alaqs_mixing_height_checkbox.stateChanged.connect(self._validate_alaqs_generation_files)
+        self.ui.csv_quality_level_spinbox.valueChanged.connect(self._validate_external_csv_files)
+        self.ui.csv_mixing_height_checkbox.stateChanged.connect(self._validate_external_csv_files)
 
         # Connect radio buttons to toggle input modes
         self.ui.useExistingFilesRadio.toggled.connect(self._on_input_mode_changed)
@@ -3756,15 +3760,42 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         # Initial state
         self._on_input_mode_changed()
 
+    def _get_austal_config_from_ui(self, mode: str = "alaqs") -> dict:
+        """Get AUSTAL configuration from UI controls.
+        
+        Args:
+            mode: "alaqs" or "csv" to determine which UI controls to read
+            
+        Returns:
+            dict: AUSTAL dispersion module configuration
+        """
+        if mode == "alaqs":
+            quality_level = int(self.ui.alaqs_quality_level_spinbox.value())
+            mixing_height = self.ui.alaqs_mixing_height_checkbox.isChecked()
+        else:  # csv mode
+            quality_level = int(self.ui.csv_quality_level_spinbox.value())
+            mixing_height = self.ui.csv_mixing_height_checkbox.isChecked()
+        
+        return {
+            "is_enabled": True,
+            "quality_level": quality_level,
+            "options_string": "NOSTANDARD;SCINOTAT;Kmax=1",
+            "roughness_length_m": 0.2,
+            "displacement_height_m": 1.2,
+            "anemometer_height_m": 11.2,
+            "mixing_height_enabled": mixing_height,
+        }
+
     def _generate_austal_input_files(self):
         """Generate AUSTAL input files from CSV files or OpenALAQS output file.
         
         This method:
         1. Determines which generation path to use (CSV or ALAQS)
         2. Creates a subdirectory "AUSTAL_inputs" in the output directory
-        3. Calls the appropriate generation logic
-        4. Marks files as generated and stores the work directory
-        5. Enables the Run AUSTAL button
+        3. For ALAQS mode: processes the OpenALAQS file for selected pollutants
+        4. For CSV mode: TODO - implement CSV generation with selected pollutants
+        5. Marks files as generated and stores the work directory
+        6. Enables the Run AUSTAL button
         """
         use_alaqs = self.ui.generateFromAlaqsRadio.isChecked()
         use_csv = self.ui.generateFromCsvRadio.isChecked()
@@ -3772,8 +3803,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         # Determine the base output directory
         if use_alaqs:
             base_dir = self.ui.alaqs_output_work_dir_path.filePath()
+            selected_pollutants = self._get_selected_alaqs_pollutants()
         elif use_csv:
             base_dir = self.ui.output_directory_path.filePath()
+            selected_pollutants = self._get_selected_pollutants()
         else:
             return
         
@@ -3791,22 +3824,179 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 self.ui.external_files_feedback.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
             return
         
-        # TODO: Implement actual generation logic for ALAQS and CSV modes
-        # For now, just mark as generated and store the directory
+        try:
+            if use_alaqs:
+                # Generate from OpenALAQS output file for selected pollutants
+                alaqs_file = self.ui.alaqs_output_file_path.filePath()
+                self._generate_from_alaqs_file(alaqs_file, austal_inputs_dir, selected_pollutants)
+            elif use_csv:
+                # Generate from CSV files for selected pollutants
+                output_dir = self.ui.output_directory_path.filePath()
+                emissions_csv = self.ui.emissions_csv_path.filePath()
+                meteo_csv = self.ui.meteo_csv_path.filePath()
+                grid_config = self.get_current_grid_config()
+                # Get quality level and mixing height settings for status message
+                quality_level = int(self.ui.csv_quality_level_spinbox.value())
+                mixing_height_enabled = self.ui.csv_mixing_height_checkbox.isChecked()
+                mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
+                # TODO: Implement CSV generation logic
+                logger.info(f"Generating AUSTAL input files from CSV for pollutants: {', '.join(selected_pollutants)}")
+                logger.info(f"AUSTAL parameters - Quality level: {quality_level}, Mixing height: {mixing_height_status}")
+                logger.info(f"Grid config: {grid_config}")
+        except Exception as e:
+            error_msg = f"Error generating AUSTAL input files: {e}"
+            if use_alaqs:
+                self.ui.alaqsGenerationStatusLabel.setText(error_msg)
+                self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+            else:
+                self.ui.external_files_feedback.setText(error_msg)
+                self.ui.external_files_feedback.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+            logger.error(error_msg, exc_info=True)
+            return
+        
+        # Mark files as generated and store directory
         self._austal_input_files_generated = True
         self._generated_austal_work_dir = austal_inputs_dir
         
         # Enable Run AUSTAL button after successful generation
         self.ui.RunA2K.setEnabled(True)
         
+        # Get quality level and mixing height for status message
+        if use_alaqs:
+            quality_level = int(self.ui.alaqs_quality_level_spinbox.value())
+            mixing_height_enabled = self.ui.alaqs_mixing_height_checkbox.isChecked()
+        else:
+            quality_level = int(self.ui.csv_quality_level_spinbox.value())
+            mixing_height_enabled = self.ui.csv_mixing_height_checkbox.isChecked()
+        mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
+        
         # Update status
-        status_msg = f"AUSTAL input files generated successfully in: {austal_inputs_dir}"
+        status_msg = f"AUSTAL input files generated successfully. Quality level: {quality_level}, Mixing height: {mixing_height_status}. Path: {austal_inputs_dir}"
         if use_alaqs:
             self.ui.alaqsGenerationStatusLabel.setText(status_msg)
             self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         else:
             self.ui.external_files_feedback.setText(status_msg)
             self.ui.external_files_feedback.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+
+    def _generate_from_alaqs_file(self, alaqs_file: str, output_dir: str, selected_pollutants: list) -> None:
+        """Generate AUSTAL input files from an OpenALAQS output file.
+        
+        Uses EmissionCalculation directly with source modules and the AUSTAL
+        dispersion module to generate input files (austal.txt, series.dmna,
+        grid .dmna files) for each selected pollutant.
+        
+        The *_out.alaqs file contains all necessary input data (movements,
+        geometries, meteorology, profiles) but not pre-calculated emissions,
+        so source modules must still run to calculate them. The AUSTAL 
+        dispersion module is attached to distribute emissions onto the grid.
+        
+        Args:
+            alaqs_file: Path to the OpenALAQS output file (*_out.alaqs)
+            output_dir: Output directory where AUSTAL input files will be written
+            selected_pollutants: List of selected pollutants to generate files for
+        """
+        logger.info(f"Generating AUSTAL input files from {alaqs_file}")
+        logger.info(f"Selected pollutants: {', '.join(selected_pollutants)}")
+        logger.info(f"Output directory: {output_dir}")
+        
+        # Get quality level and mixing height settings for status message
+        quality_level = int(self.ui.alaqs_quality_level_spinbox.value())
+        mixing_height_enabled = self.ui.alaqs_mixing_height_checkbox.isChecked()
+        mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
+        logger.info(f"AUSTAL parameters - Quality level: {quality_level}, Mixing height: {mixing_height_status}")
+        
+        # Get time series from the ALAQS output file
+        timestamps = get_inventory_timestamps(alaqs_file)
+        if len(timestamps) < 2:
+            raise ValueError("OpenALAQS file does not contain enough time steps (need at least 2)")
+        
+        start_dt = timestamps[0]
+        end_dt = timestamps[-1]
+        time_interval = timestamps[1] - timestamps[0]
+        
+        logger.info(f"Time range: {start_dt} to {end_dt}, interval: {time_interval}")
+        
+        # Read grid configuration from the ALAQS file
+        conn = sqlite3.connect(alaqs_file)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            'SELECT x_cells, y_cells, z_cells, x_resolution, y_resolution, '
+            'z_resolution, reference_latitude, reference_longitude '
+            'FROM "grid_3d_definition" LIMIT 1'
+        )
+        grid_row = cursor.fetchone()
+        conn.close()
+        
+        if grid_row is None:
+            raise ValueError("No grid_3d_definition found in OpenALAQS file")
+        
+        grid_config: GridConfig = {
+            "x_cells": int(grid_row["x_cells"]),
+            "y_cells": int(grid_row["y_cells"]),
+            "z_cells": int(grid_row["z_cells"]),
+            "x_resolution": float(grid_row["x_resolution"]),
+            "y_resolution": float(grid_row["y_resolution"]),
+            "z_resolution": float(grid_row["z_resolution"]),
+            "reference_latitude": float(grid_row["reference_latitude"]),
+            "reference_longitude": float(grid_row["reference_longitude"]),
+            "reference_altitude": 0.0,
+        }
+        
+        logger.info(f"Grid configuration: {grid_config}")
+        
+        # Initialize EmissionCalculation directly (bypasses EmissionCalculatorService)
+        emission_calc = EmissionCalculation(
+            db_path=alaqs_file,
+            grid_config=grid_config,
+            start_dt=start_dt,
+            end_dt=end_dt,
+            time_interval=time_interval,
+        )
+        
+        # Add all source modules (movements, area sources, parking, etc.)
+        source_module_names = SourceModuleRegistry().get_module_names()
+        for module_name in source_module_names:
+            emission_calc.add_source_module(
+                module_name,
+                {
+                    "method": "bymode",
+                    "should_apply_nox_corrections": False,
+                    "source_dynamics": "none",
+                    "reference_altitude": grid_config.get("reference_altitude", 0.0),
+                    "show_progress": False,
+                    "receptors": None,
+                },
+            )
+            logger.info(f"Added source module: {module_name}")
+        
+        # Add AUSTAL dispersion module for the selected pollutants
+        austal_config = self._get_austal_config_from_ui(mode="alaqs")
+        austal_config.update({
+            "output_path": output_dir,
+            "pollutant": None,  # Will be set per pollutant below
+            "pollutants_list": selected_pollutants,
+            "title": "OpenALAQS AUSTAL generation",
+            "grid": emission_calc.get3DGrid(),
+            "receptors": gpd.GeoDataFrame(),
+        })
+        
+        emission_calc.add_dispersion_modules(["AUSTAL"], austal_config)
+        logger.info(f"Added AUSTAL dispersion module with config: Quality level={austal_config['quality_level']}, Mixing height enabled={austal_config['mixing_height_enabled']}")
+        logger.debug(f"Full AUSTAL config: {austal_config}")
+        
+        # Run the calculation: source modules calculate emissions,
+        # AUSTAL dispersion module writes input files
+        logger.info("Running emission calculation with AUSTAL dispersion...")
+        emission_calc.run(
+            source_names=["all"],
+            vertical_limit_m=914.4,
+            show_progress=True,
+        )
+        emission_calc.sortEmissionsByTime()
+        
+        logger.info(f"AUSTAL input files generated for pollutants: {', '.join(selected_pollutants)}")
 
     def _on_input_mode_changed(self) -> None:
         """Handle switching between existing files, generate from OpenALAQS, and generate from CSV modes."""
@@ -3889,19 +4079,28 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.ui.alaqsGenerationStatusLabel.setText(f"Missing {', '.join(missing)}")
             self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
             self.ui.generateFromCsvBtn.setEnabled(False)
-            self.ui.RunA2K.setEnabled(False)
+            # Keep Run AUSTAL enabled if files have already been generated (user may have deselected pollutant by mistake)
+            if not self._austal_input_files_generated:
+                self.ui.RunA2K.setEnabled(False)
             return
 
         if alaqs_file and os.path.isfile(alaqs_file) and not has_valid_grid:
             self.ui.alaqsGenerationStatusLabel.setText("Selected OpenALAQS output file (emission inventory *_out.alaqs) is not valid")
             self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
             self.ui.generateFromCsvBtn.setEnabled(False)
-            self.ui.RunA2K.setEnabled(False)
+            # Keep Run AUSTAL enabled if files have already been generated
+            if not self._austal_input_files_generated:
+                self.ui.RunA2K.setEnabled(False)
             return
 
         # All inputs valid - enable generate button, but Run AUSTAL only after generation succeeds
         selected_list = ", ".join(pollutants)
-        self.ui.alaqsGenerationStatusLabel.setText(f"Ready to generate AUSTAL input files. Pollutants: {selected_list}")
+        # Get quality level and mixing height for status message
+        quality_level = int(self.ui.alaqs_quality_level_spinbox.value())
+        mixing_height_enabled = self.ui.alaqs_mixing_height_checkbox.isChecked()
+        mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
+        status_text = f"Ready to generate AUSTAL input files. Pollutants: {selected_list} | Quality level: {quality_level}, Mixing height: {mixing_height_status}"
+        self.ui.alaqsGenerationStatusLabel.setText(status_text)
         self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         self.ui.generateFromCsvBtn.setEnabled(True)
         # Only enable Run AUSTAL if files have been generated
@@ -3953,7 +4152,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.ui.external_files_feedback.setText(f"Missing {', '.join(missing)}")
             self.ui.external_files_feedback.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
             self.ui.generateFromCsvBtn.setEnabled(False)
-            self.ui.RunA2K.setEnabled(False)
+            # Keep Run AUSTAL enabled if files have already been generated (user may have deselected pollutant by mistake)
+            if not self._austal_input_files_generated:
+                self.ui.RunA2K.setEnabled(False)
             return
 
         # All inputs valid - enable generate button, but Run AUSTAL only after generation succeeds
@@ -4036,8 +4237,6 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             pollutants.append("HC")
         if self.ui.pollutant_pm10.isChecked():
             pollutants.append("PM10")
-        if self.ui.pollutant_pm25.isChecked():
-            pollutants.append("PM2.5")
         if self.ui.pollutant_sox.isChecked():
             pollutants.append("SOx")
         if self.ui.pollutant_co2.isChecked():
@@ -4055,8 +4254,6 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             pollutants.append("HC")
         if self.ui.alaqs_pollutant_pm10.isChecked():
             pollutants.append("PM10")
-        if self.ui.alaqs_pollutant_pm25.isChecked():
-            pollutants.append("PM2.5")
         if self.ui.alaqs_pollutant_sox.isChecked():
             pollutants.append("SOx")
         if self.ui.alaqs_pollutant_co2.isChecked():
@@ -4549,8 +4746,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
     def runOutputModule(self, name):
 
         try:
-            # select output file to load
-            concentration_path = str(self.ui.work_directory_path.filePath())
+            # select output file to load - use the same path as AUSTAL uses
+            concentration_path = str(self._get_austal_work_directory())
             if os.path.exists(concentration_path):
 
                 if self._conc_calculation_.get3DGrid() is None:
