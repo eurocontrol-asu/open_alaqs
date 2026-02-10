@@ -3128,9 +3128,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         )
         
         # Check if grid is configured
-        # Grid can come from: Grid Management spinboxes OR ALAQS file OR Grid Source File
+        # Grid can come from: Grid Management spinboxes OR OpenALAQS file OR Grid Source File
         has_grid_from_management = bool(
-            self.ui.gridManagementGroupBox.isChecked() and
             int(self.ui.xCellsSpinBox.value()) > 0 and
             int(self.ui.yCellsSpinBox.value()) > 0
         )
@@ -3710,8 +3709,41 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.meteo_csv_path.setFilePath(last_meteo_csv)
         self.ui.meteo_csv_path.fileChanged.connect(self._on_meteo_csv_changed)
 
+        # Configure ALAQS output file widget for direct ALAQS generation
+        self.ui.alaqs_output_file_path.setFilter("OpenALAQS Files (*.alaqs)")
+        self.ui.alaqs_output_file_path.setDialogTitle("Select OpenALAQS Output File")
+        last_alaqs_output_file = s.value("OpenALAQS/last_alaqs_output_file_path", "")
+        self.ui.alaqs_output_file_path.setFilePath(last_alaqs_output_file)
+        self.ui.alaqs_output_file_path.fileChanged.connect(self._on_alaqs_output_file_changed)
+
+        # Configure ALAQS output work directory widget
+        self.ui.alaqs_output_work_dir_path.setStorageMode(QgsFileWidget.GetDirectory)
+        self.ui.alaqs_output_work_dir_path.setDialogTitle("Select Output Work Directory for Generated Files")
+        last_alaqs_output_dir = s.value("OpenALAQS/last_alaqs_output_directory_path", "")
+        self.ui.alaqs_output_work_dir_path.setFilePath(last_alaqs_output_dir)
+        self.ui.alaqs_output_work_dir_path.fileChanged.connect(self._on_alaqs_output_directory_changed)
+
+        # Connect ALAQS pollutant checkboxes to validation
+        self.ui.alaqs_pollutant_nox.stateChanged.connect(self._validate_alaqs_generation_files)
+        self.ui.alaqs_pollutant_co.stateChanged.connect(self._validate_alaqs_generation_files)
+        self.ui.alaqs_pollutant_hc.stateChanged.connect(self._validate_alaqs_generation_files)
+        self.ui.alaqs_pollutant_pm10.stateChanged.connect(self._validate_alaqs_generation_files)
+        self.ui.alaqs_pollutant_pm25.stateChanged.connect(self._validate_alaqs_generation_files)
+        self.ui.alaqs_pollutant_sox.stateChanged.connect(self._validate_alaqs_generation_files)
+        self.ui.alaqs_pollutant_co2.stateChanged.connect(self._validate_alaqs_generation_files)
+
+        # Connect CSV pollutant checkboxes to validation
+        self.ui.pollutant_nox.stateChanged.connect(self._validate_external_csv_files)
+        self.ui.pollutant_co.stateChanged.connect(self._validate_external_csv_files)
+        self.ui.pollutant_hc.stateChanged.connect(self._validate_external_csv_files)
+        self.ui.pollutant_pm10.stateChanged.connect(self._validate_external_csv_files)
+        self.ui.pollutant_pm25.stateChanged.connect(self._validate_external_csv_files)
+        self.ui.pollutant_sox.stateChanged.connect(self._validate_external_csv_files)
+        self.ui.pollutant_co2.stateChanged.connect(self._validate_external_csv_files)
+
         # Connect radio buttons to toggle input modes
         self.ui.useExistingFilesRadio.toggled.connect(self._on_input_mode_changed)
+        self.ui.generateFromAlaqsRadio.toggled.connect(self._on_input_mode_changed)
         self.ui.generateFromCsvRadio.toggled.connect(self._on_input_mode_changed)
 
         # Connect generate button
@@ -3724,20 +3756,98 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         return None
 
     def _on_input_mode_changed(self) -> None:
-        """Handle switching between existing files and generate from CSV modes."""
+        """Handle switching between existing files, generate from OpenALAQS, and generate from CSV modes."""
+        use_existing = self.ui.useExistingFilesRadio.isChecked()
+        use_alaqs = self.ui.generateFromAlaqsRadio.isChecked()
         use_csv = self.ui.generateFromCsvRadio.isChecked()
 
         # Show/hide and enable/disable the frames based on selection
-        self.ui.existingFilesFrame.setVisible(not use_csv)
-        self.ui.existingFilesFrame.setEnabled(not use_csv)
+        self.ui.existingFilesFrame.setVisible(use_existing)
+        self.ui.existingFilesFrame.setEnabled(use_existing)
+        self.ui.generateFromAlaqsFrame.setVisible(use_alaqs)
+        self.ui.generateFromAlaqsFrame.setEnabled(use_alaqs)
         self.ui.generateFromCsvFrame.setVisible(use_csv)
         self.ui.generateFromCsvFrame.setEnabled(use_csv)
 
-        # Validate and update feedback
-        if use_csv:
+        # Show/hide the generate button - only visible when generating from OpenALAQS output or CSV
+        self.ui.generateFromCsvBtn.setVisible(use_alaqs or use_csv)
+
+        # Validate and update feedback based on selected mode
+        if use_existing:
+            self.ui.RunA2K.setEnabled(bool(self.ui.work_directory_path.filePath() and 
+                                          os.path.isdir(self.ui.work_directory_path.filePath())))
+        elif use_alaqs:
+            self._validate_alaqs_generation_files()
+        elif use_csv:
             self._validate_external_csv_files()
         else:
+            self.ui.RunA2K.setEnabled(False)
+
+    def _on_alaqs_output_file_changed(self, path: str) -> None:
+        """Handle OpenALAQS output file selection."""
+        if os.path.isfile(path):
+            s = QgsSettings()
+            s.setValue("OpenALAQS/last_alaqs_output_file_path", path)
+        self._validate_alaqs_generation_files()
+
+    def _on_alaqs_output_directory_changed(self, dirname: str) -> None:
+        """Handle OpenALAQS output directory selection."""
+        if os.path.isdir(dirname):
+            s = QgsSettings()
+            s.setValue("OpenALAQS/last_alaqs_output_directory_path", dirname)
+        self._validate_alaqs_generation_files()
+
+    def _validate_alaqs_generation_files(self) -> None:
+        """Validate the selected OpenALAQS output file and working directory."""
+        alaqs_file = self.ui.alaqs_output_file_path.filePath()
+        output_dir = self.ui.alaqs_output_work_dir_path.filePath()
+        pollutants = self._get_selected_alaqs_pollutants()
+
+        # Collect missing items
+        missing = []
+        if not alaqs_file or not os.path.isfile(alaqs_file):
+            missing.append("OpenALAQS Emission Inventory (*_out.alaqs)")
+        if not output_dir or not os.path.isdir(output_dir):
+            missing.append("output directory")
+        if not pollutants:
+            missing.append("at least one pollutant")
+
+        # Check if ALAQS file has grid_3d_definition if provided
+        has_valid_grid = False
+        if alaqs_file and os.path.isfile(alaqs_file):
+            try:
+                conn = sqlite3.connect(alaqs_file)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute(
+                    'SELECT x_cells, y_cells, z_cells FROM "grid_3d_definition" LIMIT 1'
+                )
+                grid_row = cursor.fetchone()
+                conn.close()
+                has_valid_grid = grid_row is not None
+            except Exception:
+                has_valid_grid = False
+
+        if missing:
+            self.ui.alaqsGenerationStatusLabel.setText(f"Missing {', '.join(missing)}")
+            self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
             self.ui.generateFromCsvBtn.setEnabled(False)
+            self.ui.RunA2K.setEnabled(False)
+            return
+
+        if alaqs_file and os.path.isfile(alaqs_file) and not has_valid_grid:
+            self.ui.alaqsGenerationStatusLabel.setText("Selected OpenALAQS output file (emission inventory *_out.alaqs) is not valid")
+            self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+            self.ui.generateFromCsvBtn.setEnabled(False)
+            self.ui.RunA2K.setEnabled(False)
+            return
+
+        # All inputs valid - enable generate and run buttons
+        selected_list = ", ".join(pollutants)
+        self.ui.alaqsGenerationStatusLabel.setText(f"Ready to generate AUSTAL input files. Pollutants: {selected_list}")
+        self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+        self.ui.generateFromCsvBtn.setEnabled(True)
+        self.ui.RunA2K.setEnabled(True)
 
     def _on_output_directory_changed(self, dirname: str) -> None:
         """Handle output directory selection for CSV generation."""
@@ -3761,10 +3871,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self._validate_external_csv_files()
 
     def _validate_external_csv_files(self) -> None:
-        """Validate the selected external CSV files and output directory."""
+        """Validate the selected external CSV files, output directory, and grid configuration."""
         output_dir = self.ui.output_directory_path.filePath()
         emissions_path = self.ui.emissions_csv_path.filePath()
         meteo_path = self.ui.meteo_csv_path.filePath()
+        selected_pollutants = self._get_selected_pollutants()
+        grid_config = self.get_current_grid_config()
 
         # Collect missing items
         missing = []
@@ -3774,17 +3886,24 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             missing.append("emissions CSV")
         if not meteo_path or not os.path.isfile(meteo_path):
             missing.append("meteo CSV")
+        if not selected_pollutants:
+            missing.append("at least one pollutant")
+        if not grid_config:
+            missing.append("grid configuration (load or define in Grid Management section)")
 
         if missing:
-            self.ui.external_files_feedback.setText(f"Status: Missing {', '.join(missing)}")
+            self.ui.external_files_feedback.setText(f"Missing {', '.join(missing)}")
             self.ui.external_files_feedback.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
             self.ui.generateFromCsvBtn.setEnabled(False)
+            self.ui.RunA2K.setEnabled(False)
             return
 
-        # All inputs valid - enable generate button
-        self.ui.external_files_feedback.setText("Status: Ready to generate AUSTAL files")
+        # All inputs valid - enable generate button and run button
+        selected_list = ", ".join(selected_pollutants)
+        self.ui.external_files_feedback.setText(f"Ready to generate AUSTAL input files. Pollutants: {selected_list}")
         self.ui.external_files_feedback.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         self.ui.generateFromCsvBtn.setEnabled(True)
+        self.ui.RunA2K.setEnabled(True)
 
     # Display the text when the user presses the AUSTAL HELP buttton
     def show_austal_help(self):
@@ -3828,18 +3947,130 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
     def _get_austal_work_directory(self) -> str:
         """Get the work directory for AUSTAL based on selected input mode."""
-        if self.ui.generateFromCsvRadio.isChecked():
+        if self.ui.generateFromAlaqsRadio.isChecked():
+            # Use the output directory from OpenALAQS generation
+            return str(self.ui.alaqs_output_work_dir_path.filePath())
+        elif self.ui.generateFromCsvRadio.isChecked():
             # Use the output directory from CSV generation
             return str(self.ui.output_directory_path.filePath())
         else:
             # Use the existing files work directory
             return str(self.ui.work_directory_path.filePath())
 
+    def _get_selected_pollutants(self) -> list:
+        """Get list of selected pollutants for CSV generation mode."""
+        pollutants = []
+        if self.ui.pollutant_nox.isChecked():
+            pollutants.append("NOx")
+        if self.ui.pollutant_co.isChecked():
+            pollutants.append("CO")
+        if self.ui.pollutant_hc.isChecked():
+            pollutants.append("HC")
+        if self.ui.pollutant_pm10.isChecked():
+            pollutants.append("PM10")
+        if self.ui.pollutant_pm25.isChecked():
+            pollutants.append("PM2.5")
+        if self.ui.pollutant_sox.isChecked():
+            pollutants.append("SOx")
+        if self.ui.pollutant_co2.isChecked():
+            pollutants.append("CO2")
+        return pollutants
+
+    def _get_selected_alaqs_pollutants(self) -> list:
+        """Get list of selected pollutants for OpenALAQS generation mode."""
+        pollutants = []
+        if self.ui.alaqs_pollutant_nox.isChecked():
+            pollutants.append("NOx")
+        if self.ui.alaqs_pollutant_co.isChecked():
+            pollutants.append("CO")
+        if self.ui.alaqs_pollutant_hc.isChecked():
+            pollutants.append("HC")
+        if self.ui.alaqs_pollutant_pm10.isChecked():
+            pollutants.append("PM10")
+        if self.ui.alaqs_pollutant_pm25.isChecked():
+            pollutants.append("PM2.5")
+        if self.ui.alaqs_pollutant_sox.isChecked():
+            pollutants.append("SOx")
+        if self.ui.alaqs_pollutant_co2.isChecked():
+            pollutants.append("CO2")
+        return pollutants
+
+    def _validate_austal_inputs(self) -> tuple[bool, str]:
+        """Validate all required inputs for AUSTAL based on selected input mode.
+        
+        Returns:
+            tuple: (is_valid, error_message)
+        """
+        # Check executable is selected
+        if not self.ui.a2k_executable_path.filePath() or not os.path.isfile(self.ui.a2k_executable_path.filePath()):
+            return False, "Please select a valid AUSTAL executable file (Section 1)"
+        
+        # Check mode-specific requirements
+        if self.ui.useExistingFilesRadio.isChecked():
+            work_dir = self.ui.work_directory_path.filePath()
+            if not work_dir or not os.path.isdir(work_dir):
+                return False, "Please select a valid work directory with AUSTAL input files (Section 2, Option A)"
+        
+        elif self.ui.generateFromAlaqsRadio.isChecked():
+            alaqs_file = self.ui.alaqs_output_file_path.filePath()
+            output_dir = self.ui.alaqs_output_work_dir_path.filePath()
+            pollutants = self._get_selected_alaqs_pollutants()
+            
+            if not alaqs_file or not os.path.isfile(alaqs_file):
+                return False, "Please select a valid OpenALAQS output file (Section 2, Option B)"
+            if not output_dir or not os.path.isdir(output_dir):
+                return False, "Please select a valid output work directory (Section 2, Option B)"
+            if not pollutants:
+                return False, "Please select at least one pollutant (Section 2, Option B)"
+            
+            # Check for grid_3d_definition
+            try:
+                conn = sqlite3.connect(alaqs_file)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute('SELECT 1 FROM "grid_3d_definition" LIMIT 1')
+                if cursor.fetchone() is None:
+                    conn.close()
+                    return False, "Selected OpenALAQS file does not have a valid grid_3d_definition (Section 2, Option B)"
+                conn.close()
+            except Exception as e:
+                return False, f"Error reading OpenALAQS file: {e} (Section 2, Option B)"
+        
+        elif self.ui.generateFromCsvRadio.isChecked():
+            output_dir = self.ui.output_directory_path.filePath()
+            emissions_csv = self.ui.emissions_csv_path.filePath()
+            meteo_csv = self.ui.meteo_csv_path.filePath()
+            pollutants = self._get_selected_pollutants()
+            
+            if not output_dir or not os.path.isdir(output_dir):
+                return False, "Please select a valid output directory (Section 2, Option C)"
+            if not emissions_csv or not os.path.isfile(emissions_csv):
+                return False, "Please select a valid emissions CSV file (Section 2, Option C)"
+            if not meteo_csv or not os.path.isfile(meteo_csv):
+                return False, "Please select a valid meteorology CSV file (Section 2, Option C)"
+            if not pollutants:
+                return False, "Please select at least one pollutant (Section 2, Option C)"
+        
+        return True, ""
+
+
     @catch_errors
     def run_austal(self, *args, **kwargs):
         from subprocess import PIPE, Popen
 
         try:
+            # Validate all inputs before running
+            is_valid, error_message = self._validate_austal_inputs()
+            if not is_valid:
+                self.ui.executionStatusLabel.setText(f"Status: Validation Failed - {error_message}")
+                self.ui.executionStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Input Validation Failed",
+                    f"Unable to run AUSTAL:\n\n{error_message}"
+                )
+                return
+
             # Update status to running
             self.ui.executionStatusLabel.setText("Status: Running AUSTAL...")
             self.ui.executionStatusLabel.setStyleSheet("background-color: #cce5ff; padding: 8px; border-radius: 4px; border-left: 4px solid #0c63e4; color: #084298; font-weight: bold;")
