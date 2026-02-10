@@ -182,7 +182,158 @@
         </property>
        </widget>
       </item>
-      <!-- Option B: Generate from CSV -->
+      <!-- Option B: Generate from ALAQS Output File -->
+      <item>
+       <widget class="QRadioButton" name="generateFromAlaqsRadio">
+        <property name="text">
+         <string>Generate AUSTAL Input Files from OpenALAQS Emission Inventory File</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QFrame" name="generateFromAlaqsFrame">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <layout class="QFormLayout" name="generateFromAlaqsLayout">
+         <property name="leftMargin">
+          <number>20</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="alaqsOutputFileLabel">
+           <property name="text">
+            <string>OpenALAQS Emission Inventory File:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QgsFileWidget" name="alaqs_output_file_path">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="alaqsOutputWorkDirLabel">
+           <property name="text">
+            <string>Output Work Directory:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QgsFileWidget" name="alaqs_output_work_dir_path">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0" colspan="2">
+          <widget class="QLabel" name="alaqsGenerationStatusLabel">
+           <property name="text">
+            <string>Status: Missing OpenALAQS *_out file</string>
+           </property>
+           <property name="styleSheet">
+            <string>background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold; font-size: 11px;</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0" colspan="2">
+          <widget class="QLabel" name="alaqsPollutantLabel">
+           <property name="text">
+            <string>Pollutants:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0" colspan="2">
+          <layout class="QHBoxLayout" name="alaqsPollutantCheckboxLayout">
+           <item>
+            <widget class="QCheckBox" name="alaqs_pollutant_nox">
+             <property name="text">
+              <string>NOx</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="alaqs_pollutant_co">
+             <property name="text">
+              <string>CO</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="alaqs_pollutant_hc">
+             <property name="text">
+              <string>HC</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="alaqs_pollutant_pm10">
+             <property name="text">
+              <string>PM10</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="alaqs_pollutant_pm25">
+             <property name="text">
+              <string>PM2.5</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="alaqs_pollutant_sox">
+             <property name="text">
+              <string>SOx</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="alaqs_pollutant_co2">
+             <property name="text">
+              <string>CO2</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="alaqsPollutantSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <!-- Separator -->
+      <item>
+       <widget class="Line" name="inputStrategyLine2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <!-- Option C: Generate from CSV -->
       <item>
        <widget class="QRadioButton" name="generateFromCsvRadio">
         <property name="text">
@@ -225,7 +376,7 @@
          <item row="1" column="0">
           <widget class="QLabel" name="emissionsCsvLabel">
            <property name="text">
-            <string>Emissions CSV:</string>
+            <string>Emissions CSV File:</string>
            </property>
           </widget>
          </item>
@@ -242,7 +393,7 @@
          <item row="2" column="0">
           <widget class="QLabel" name="meteoCsvLabel">
            <property name="text">
-            <string>Meteorology CSV:</string>
+            <string>Meteorology CSV File:</string>
            </property>
           </widget>
          </item>
@@ -256,53 +407,80 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="0">
+         <item row="3" column="0" colspan="2">
           <widget class="QLabel" name="pollutantLabel">
            <property name="text">
-            <string>Pollutant:</string>
+            <string>Pollutants:</string>
            </property>
           </widget>
          </item>
-         <item row="3" column="1">
-          <widget class="QComboBox" name="pollutant_combo">
-           <item>
-            <property name="text">
-             <string>NOx</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>CO</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>HC</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>PM10</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>PM2.5</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>SOx</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>CO2</string>
-            </property>
-           </item>
-          </widget>
-         </item>
          <item row="4" column="0" colspan="2">
+          <layout class="QHBoxLayout" name="pollutantCheckboxLayout">
+           <item>
+            <widget class="QCheckBox" name="pollutant_nox">
+             <property name="text">
+              <string>NOx</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="pollutant_co">
+             <property name="text">
+              <string>CO</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="pollutant_hc">
+             <property name="text">
+              <string>HC</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="pollutant_pm10">
+             <property name="text">
+              <string>PM10</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="pollutant_pm25">
+             <property name="text">
+              <string>PM2.5</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="pollutant_sox">
+             <property name="text">
+              <string>SOx</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="pollutant_co2">
+             <property name="text">
+              <string>CO2</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="pollutantSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+         <item row="5" column="0" colspan="2">
           <widget class="QLabel" name="external_files_feedback">
            <property name="text">
             <string>Status: Missing output directory, emissions CSV, and meteo CSV</string>
@@ -313,15 +491,12 @@
           </widget>
          </item>
          <!-- Grid Configuration (Nested in CSV Generation) -->
-         <item row="5" column="0" colspan="2">
+         <item row="6" column="0" colspan="2">
           <widget class="QGroupBox" name="gridManagementGroupBox">
            <property name="title">
             <string>Grid Configuration</string>
            </property>
            <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="checked">
             <bool>false</bool>
            </property>
            <layout class="QVBoxLayout" name="gridManagementLayout">
