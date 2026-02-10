@@ -4,7 +4,7 @@ from typing import Any, Optional
 import pandas as pd
 from qgis.core import QgsVectorLayer
 from qgis.PyQt import QtWidgets
-from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtCore import QMetaType
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
@@ -111,7 +111,7 @@ class EmissionsQGISVectorLayerOutputModule(GridOutputModule):
         headers = []
         for pollutant_type in PollutantType:
             key = f"{pollutant_type.value}_{PollutantUnit.KG.value}"
-            headers.append((key, QVariant.Double))
+            headers.append((key, QMetaType.Type.Double))
 
         layer_wrapper = ContourPlotVectorLayer(
             layer_name=self._layer_name,
