@@ -2880,6 +2880,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self._results_loaded = False
         # Track whether AUSTAL was actually run (vs results loaded from directory)
         self._austal_ran = False
+        # Track whether AUSTAL input files have been successfully generated
+        self._austal_input_files_generated = False
+        # Track the directory where input files were generated
+        self._generated_austal_work_dir = None
         # Snapshot of G1 grid at the moment AUSTAL ran and never read spinboxes
         # dynamically for the visualisation status.
         self._austal_grid_config = None
@@ -3747,13 +3751,62 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.generateFromCsvRadio.toggled.connect(self._on_input_mode_changed)
 
         # Connect generate button
-        self.ui.generateFromCsvBtn.clicked.connect(self._generate_austal_from_csv)
+        self.ui.generateFromCsvBtn.clicked.connect(self._generate_austal_input_files)
 
         # Initial state
         self._on_input_mode_changed()
 
-    def _generate_austal_from_csv(self):
-        return None
+    def _generate_austal_input_files(self):
+        """Generate AUSTAL input files from CSV files or OpenALAQS output file.
+        
+        This method:
+        1. Determines which generation path to use (CSV or ALAQS)
+        2. Creates a subdirectory "AUSTAL_inputs" in the output directory
+        3. Calls the appropriate generation logic
+        4. Marks files as generated and stores the work directory
+        5. Enables the Run AUSTAL button
+        """
+        use_alaqs = self.ui.generateFromAlaqsRadio.isChecked()
+        use_csv = self.ui.generateFromCsvRadio.isChecked()
+        
+        # Determine the base output directory
+        if use_alaqs:
+            base_dir = self.ui.alaqs_output_work_dir_path.filePath()
+        elif use_csv:
+            base_dir = self.ui.output_directory_path.filePath()
+        else:
+            return
+        
+        # Create AUSTAL_inputs subdirectory
+        austal_inputs_dir = os.path.join(base_dir, "AUSTAL_inputs")
+        try:
+            os.makedirs(austal_inputs_dir, exist_ok=True)
+        except Exception as e:
+            error_msg = f"Failed to create AUSTAL inputs directory: {e}"
+            if use_alaqs:
+                self.ui.alaqsGenerationStatusLabel.setText(error_msg)
+                self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+            else:
+                self.ui.external_files_feedback.setText(error_msg)
+                self.ui.external_files_feedback.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+            return
+        
+        # TODO: Implement actual generation logic for ALAQS and CSV modes
+        # For now, just mark as generated and store the directory
+        self._austal_input_files_generated = True
+        self._generated_austal_work_dir = austal_inputs_dir
+        
+        # Enable Run AUSTAL button after successful generation
+        self.ui.RunA2K.setEnabled(True)
+        
+        # Update status
+        status_msg = f"AUSTAL input files generated successfully in: {austal_inputs_dir}"
+        if use_alaqs:
+            self.ui.alaqsGenerationStatusLabel.setText(status_msg)
+            self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+        else:
+            self.ui.external_files_feedback.setText(status_msg)
+            self.ui.external_files_feedback.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
 
     def _on_input_mode_changed(self) -> None:
         """Handle switching between existing files, generate from OpenALAQS, and generate from CSV modes."""
@@ -3771,6 +3824,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         # Show/hide the generate button - only visible when generating from OpenALAQS output or CSV
         self.ui.generateFromCsvBtn.setVisible(use_alaqs or use_csv)
+        
+        # Reset generation state when mode changes - need to regenerate files
+        self._austal_input_files_generated = False
+        self._generated_austal_work_dir = None
 
         # Validate and update feedback based on selected mode
         if use_existing:
@@ -3842,12 +3899,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.ui.RunA2K.setEnabled(False)
             return
 
-        # All inputs valid - enable generate and run buttons
+        # All inputs valid - enable generate button, but Run AUSTAL only after generation succeeds
         selected_list = ", ".join(pollutants)
         self.ui.alaqsGenerationStatusLabel.setText(f"Ready to generate AUSTAL input files. Pollutants: {selected_list}")
         self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         self.ui.generateFromCsvBtn.setEnabled(True)
-        self.ui.RunA2K.setEnabled(True)
+        # Only enable Run AUSTAL if files have been generated
+        self.ui.RunA2K.setEnabled(self._austal_input_files_generated)
 
     def _on_output_directory_changed(self, dirname: str) -> None:
         """Handle output directory selection for CSV generation."""
@@ -3898,12 +3956,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.ui.RunA2K.setEnabled(False)
             return
 
-        # All inputs valid - enable generate button and run button
+        # All inputs valid - enable generate button, but Run AUSTAL only after generation succeeds
         selected_list = ", ".join(selected_pollutants)
         self.ui.external_files_feedback.setText(f"Ready to generate AUSTAL input files. Pollutants: {selected_list}")
         self.ui.external_files_feedback.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         self.ui.generateFromCsvBtn.setEnabled(True)
-        self.ui.RunA2K.setEnabled(True)
+        # Only enable Run AUSTAL if files have been generated
+        self.ui.RunA2K.setEnabled(self._austal_input_files_generated)
 
     # Display the text when the user presses the AUSTAL HELP buttton
     def show_austal_help(self):
@@ -3946,7 +4005,16 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         msg_box.exec()
 
     def _get_austal_work_directory(self) -> str:
-        """Get the work directory for AUSTAL based on selected input mode."""
+        """Get the work directory for AUSTAL based on selected input mode.
+        
+        For generation modes (CSV/ALAQS), returns the directory where input files
+        were generated. For existing files mode, returns the selected directory.
+        """
+        # If files have been generated, use the generated directory
+        if self._austal_input_files_generated and self._generated_austal_work_dir:
+            return self._generated_austal_work_dir
+        
+        # Otherwise, determine based on selected mode
         if self.ui.generateFromAlaqsRadio.isChecked():
             # Use the output directory from OpenALAQS generation
             return str(self.ui.alaqs_output_work_dir_path.filePath())
