@@ -39,7 +39,7 @@ from qgis.core import (
 from qgis.core.additions.edit import edit
 from qgis.gui import QgsDoubleSpinBox, QgsFileWidget, QgsMessageBar
 from qgis.PyQt import QtCore, QtGui, QtWidgets
-from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtCore import QCoreApplication, Qt
 from qgis.PyQt.QtWidgets import QMessageBox, QSizePolicy
 from qgis.PyQt.uic import loadUiType
 from qgis.utils import OverrideCursor
@@ -64,7 +64,7 @@ from open_alaqs.core.modules.ModuleManager import (
     OutputAnalysisModuleRegistry,
     SourceModuleRegistry,
 )
-from open_alaqs.core.tools import conversion
+from open_alaqs.core.tools import ads_b, conversion
 from open_alaqs.core.tools.csv_interface import (
     read_csv_to_dict,
     read_csv_to_geodataframe,
@@ -1702,6 +1702,9 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         ).clicked.connect(self.close)
 
         # Set some default values
+        self.ui.adsb_table_path.setFilter("CSV (*.csv);;TXT (*.txt)")
+        self.ui.adsb_table_path.setDialogTitle("Import ADS-B Data")
+        self.ui.adsb_table_path.fileChanged.connect(self.adsb_table_path_changed)
         self.ui.movement_table_path.setFilter("CSV (*.csv);;TXT (*.txt)")
         self.ui.movement_table_path.setDialogTitle("Open ALAQS Movement Data")
         self.ui.movement_table_path.fileChanged.connect(
@@ -1719,6 +1722,32 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui.x_cells.setValue(50)
         self.ui.y_cells.setValue(50)
         self.ui.z_cells.setValue(20)
+
+        self._adsb_file_valid = False
+
+    def adsb_table_path_changed(self, path):
+        try:
+            if os.path.exists(path):
+                with OverrideCursor(Qt.CursorShape.WaitCursor):
+                    # Make the UI update for progress label to change
+                    self.ui.status_update.setText("Evaluating ADS-B file...")
+                    QCoreApplication.processEvents()
+
+                    self._adsb_file_valid, message = ads_b.validate_adsb_file(path)
+
+                    self.ui.adsb_summary.setText(message)
+                    if self._adsb_file_valid:
+                        self.ui.status_update.setText(
+                            "The ADS-B data will be imported."
+                        )
+                    else:
+                        self.ui.status_update.setText(
+                            "The ADS-B data will not be imported!"
+                        )
+        except Exception as e:
+            self.ui.status_update.setText("Problem with movement file. See log file")
+            alaqsutils.print_error(self.adsb_table_path_changed.__name__, Exception, e)
+            QtWidgets.QMessageBox.warning(self, "Error", "%s" % e)
 
     def movement_table_path_changed(self, path):
         try:
@@ -1745,7 +1774,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         try:
             # Make the UI update for progress label to change
             self.ui.status_update.setText("Evaluating movement file...")
-            QtWidgets.qApp.processEvents()
+            QCoreApplication.processEvents()
 
             # Open the movement file
             with open(movement_file, "r") as movement_file:
@@ -2056,7 +2085,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
 
             # Create a blank study output database
             self.ui.status_update.setText("Copying inventory database template...")
-            QtWidgets.qApp.processEvents()
+            QCoreApplication.processEvents()
             output_save_name = "%s_out.alaqs" % output_save_name
             inventory_path = os.path.join(output_save_path, output_save_name)
 
@@ -2071,6 +2100,21 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                 )
                 return
             else:
+                if self._adsb_file_valid:
+                    adsb_result, adsb_message = ads_b.import_adsb_file(
+                        self.ui.adsb_table_path.filePath(), inventory_path
+                    )
+                    if adsb_result:
+                        logger.info("ADS-B file was successfully imported!")
+                    else:
+                        logger.warning(
+                            f"The ADS-B file could not be imported! Details: {adsb_message}"
+                        )
+                else:
+                    logger.info(
+                        "Skipping ADS-B file import: no valid CSV file was provided."
+                    )
+
                 QtWidgets.QMessageBox.information(
                     self,
                     "ALAQS - Inventory",
