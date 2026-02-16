@@ -2825,11 +2825,16 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui = Ui_DialogRunAUSTAL()
         self.ui.setupUi(self)
         
-        # Set default values for calculation configuration widgets
+        # Set default values for calculation configuration widgets and make
+        # them read-only for the moment — they are populated from the loaded file.
+
+        # TODO: Implement the averaging strategy and enable to change the time
         if hasattr(self.ui, 'startDtEdit'):
             self.ui.startDtEdit.setDateTime(QtCore.QDateTime(2023, 3, 1, 0, 0, 0))
+            self.ui.startDtEdit.setEnabled(False)
         if hasattr(self.ui, 'endDtEdit'):
             self.ui.endDtEdit.setDateTime(QtCore.QDateTime(2023, 3, 1, 23, 0, 0))
+            self.ui.endDtEdit.setEnabled(False)
         if hasattr(self.ui, 'averagingCombo'):
             idx = self.ui.averagingCombo.findText("annual mean")
             if idx >= 0:
@@ -3183,6 +3188,21 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "end_dt_inclusive": time_end_calc_,
             }
         )
+        # Populate the grayed-out start/end datetime entries with the real timestamps directly from the database.
+        if hasattr(self.ui, 'startDtEdit'):
+            self.ui.startDtEdit.setDateTime(
+                QtCore.QDateTime(
+                    time_start_calc_.year, time_start_calc_.month, time_start_calc_.day,
+                    time_start_calc_.hour, time_start_calc_.minute, time_start_calc_.second,
+                )
+            )
+        if hasattr(self.ui, 'endDtEdit'):
+            self.ui.endDtEdit.setDateTime(
+                QtCore.QDateTime(
+                    time_end_calc_.year, time_end_calc_.month, time_end_calc_.day,
+                    time_end_calc_.hour, time_end_calc_.minute, time_end_calc_.second,
+                )
+            )
 
     def getTimeSeries(self, db_path="") -> list[datetime]:
         time_series_ = get_inventory_timestamps(db_path)
