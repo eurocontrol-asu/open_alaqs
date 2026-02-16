@@ -2852,6 +2852,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         # Setup collapsible sections
         self._setup_collapsible_sections()
 
+        # Connect grid checkbox from the result visualisation section toggle to update visualisation status
+        self.ui.alaqsGridGroupBox.toggled.connect(self._update_visualization_status_label)
+
         # initialize calculation
         self._conc_calculation_ = None
         self._concentration_visualization_widget = ModuleConfigurationWidget(
@@ -3226,6 +3229,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.set_feedback("Please select an existing *_out.alaqs file", False)
             self.ui.alaqsGridStatusLabel.setText("No Grid selected")
             self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+            
             # Clear G2 visualization grid when file is deselected
             self._visualization_grid_config = None
             self._visualization_grid_file_path = None
@@ -3394,30 +3398,25 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
     def _update_visualization_status_label(self) -> None:
         """Update the visualization status label.
-
-        G2 = Grid Management (gridSourceFilePath in the Result Visualisation section).
-        G1 = Grid Configuration (spinboxes in the Input Strategy section).
-
-        G1 is NEVER read live here.  The only time G1 appears in this label
-        is when AUSTAL has just run and in that case we use the *snapshot*
-        stored in ``self._austal_grid_config`` (taken at the moment AUSTAL
-        completed).
-
-        Rules:
-        - No results, no G2           → Yellow: "No data loaded"
-        - No results, G2 loaded       → Yellow: show G2 grid, awaiting results
-        - Results + G2 loaded         → Green: show G2 grid
-        - AUSTAL ran, no G2           → Green: show snapshotted G1 grid
-        - Results from dir, no G2     → Green + warning: advise loading G2
-        - G2 path changes             → re-evaluate
+        
+        Priority for grid display (highest to lowest):
+        1. G2 grid loaded from Result Visualisation section (alaqsGridGroupBox)
+        2. If AUSTAL ran from OpenALAQS generation -> show G1 from that ALAQS file
+        3. If AUSTAL ran from CSV generation -> show G1 from spinboxes
+        4. If AUSTAL ran from existing files -> show default grid
+        5. If results loaded from directory -> show default grid with warning
+        6. No results -> show appropriate message
         """
         try:
-            has_g2 = bool(self._visualization_grid_config and self._visualization_grid_file_path)
-
-            # Helper to format a grid config dict into a display string
-            def _fmt(gc: dict, source_label: str) -> str:
+            has_g2 = bool(
+                self._visualization_grid_config 
+                and self._visualization_grid_file_path
+                and self.ui.alaqsGridGroupBox.isChecked()
+            )
+            
+            # Helper to format grid config
+            def _fmt(gc: dict) -> str:
                 return (
-                    f"{source_label}\n"
                     f"Grid: {gc['x_cells']}×{gc['y_cells']}×{gc['z_cells']} cells | "
                     f"Resolution: {gc['x_resolution']:.0f}×{gc['y_resolution']:.0f}×"
                     f"{gc['z_resolution']:.0f}m | "
@@ -3425,63 +3424,70 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     f"{gc['reference_longitude']:.4f}°, "
                     f"{gc['reference_altitude']:.0f}m)"
                 )
-
+            
             # ---- No results loaded ----
             if not self._results_loaded:
                 if has_g2:
-                    gc = self._visualization_grid_config
-                    grid_details = (f"{gc['x_cells']}×{gc['y_cells']}×{gc['z_cells']} cells | "
-                                   f"Resolution: {gc['x_resolution']:.0f}×{gc['y_resolution']:.0f}×{gc['z_resolution']:.0f}m | "
-                                   f"Reference: ({gc['reference_latitude']:.4f}°, {gc['reference_longitude']:.4f}°, {gc['reference_altitude']:.0f}m)")
-                    text = f"Please run AUSTAL or load results.\n\nGrid: {grid_details}"
+                    text = f"Please run AUSTAL or load results.\n\n{_fmt(self._visualization_grid_config)}"
                 else:
                     text = "Please run AUSTAL or load results."
-
+                
                 self.ui.visualisationStatusLabel.setText(text)
                 self.ui.visualisationStatusLabel.setStyleSheet(
                     "background-color: #fff3cd; padding: 8px; border-radius: 4px; "
                     "border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
                 )
-
+            
             # ---- Results are available ----
             else:
+                # Priority 1: G2 grid from Result Visualisation section
                 if has_g2:
-                    # Best case: G2 grid loaded + results available
-                    gc = self._visualization_grid_config
-                    grid_details = (f"{gc['x_cells']}×{gc['y_cells']}×{gc['z_cells']} cells | "
-                                   f"Resolution: {gc['x_resolution']:.0f}×{gc['y_resolution']:.0f}×{gc['z_resolution']:.0f}m | "
-                                   f"Reference: ({gc['reference_latitude']:.4f}°, {gc['reference_longitude']:.4f}°, {gc['reference_altitude']:.0f}m)")
-                    text = f"Grid: {grid_details}"
+                    text = f"Using Grid from Result Visualisation section\n{_fmt(self._visualization_grid_config)}"
                     bg_color = "background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;"
-
-                elif self._austal_ran and self._austal_grid_config:
-                    # AUSTAL ran but no G2 grid loaded – show default grid with warning (yellow)
-                    gc = self._austal_grid_config
-                    grid_details = (f"{gc['x_cells']}×{gc['y_cells']}×{gc['z_cells']} cells | "
-                                   f"Resolution: {gc['x_resolution']:.0f}×{gc['y_resolution']:.0f}×{gc['z_resolution']:.0f}m | "
-                                   f"Reference: ({gc['reference_latitude']:.4f}°, {gc['reference_longitude']:.4f}°, {gc['reference_altitude']:.0f}m)")
-                    text = (f"Default Grid loaded\nGrid: {grid_details}\n\n"
-                            f"Please select a grid from Grid Management section to ensure accurate visualisation.")
-                    bg_color = "background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
-
+                
+                # Priority 2-4: AUSTAL ran - determine which grid was used
+                elif self._austal_ran:
+                    # Priority 2: AUSTAL ran from OpenALAQS generation (Option B)
+                    if self.ui.generateFromAlaqsRadio.isChecked() and self._austal_grid_config:
+                        alaqs_file = self.ui.alaqs_output_file_path.filePath()
+                        text = f"Using Grid from OpenALAQS file: {os.path.basename(alaqs_file)}\n{_fmt(self._austal_grid_config)}"
+                        bg_color = "background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;"
+                    
+                    # Priority 3: AUSTAL ran from CSV generation (Option C)
+                    elif self.ui.generateFromCsvRadio.isChecked() and self._austal_grid_config:
+                        text = f"Using Grid from CSV Generation\n{_fmt(self._austal_grid_config)}"
+                        bg_color = "background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;"
+                    
+                    # Priority 4: AUSTAL ran from existing files (Option A) - default grid
+                    elif self.ui.useExistingFilesRadio.isChecked():
+                        if self._austal_grid_config:
+                            text = f"Using Default Grid\n{_fmt(self._austal_grid_config)}\n\nRecommendation: Load a Grid from Result Visualisation section for accurate visualisation."
+                        else:
+                            text = "Using default grid\n\nRecommendation: Load a Grid from Result Visualisation section for accurate visualisation."
+                        bg_color = "background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
+                    
+                    else:
+                        # Fallback
+                        if self._austal_grid_config:
+                            text = f"Using default grid\n{_fmt(self._austal_grid_config)}\n\nRecommendation: Load a gGid from Result Visualisation section."
+                        else:
+                            text = "Using default grid\n\nRecommendation: Load a Grid from Result Visualisation section."
+                        bg_color = "background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
+                
+                # Priority 5: Results loaded from directory (no AUSTAL run)
                 else:
-                    # Results loaded from directory, no  grid loaded
                     gc = self.get_current_grid_config()
                     if gc and any(gc.get(k, 0) > 0 for k in ["x_cells", "y_cells"]):
-                        grid_details = (f"{gc['x_cells']}×{gc['y_cells']}×{gc['z_cells']} cells | "
-                                       f"Resolution: {gc['x_resolution']:.0f}×{gc['y_resolution']:.0f}×{gc['z_resolution']:.0f}m | "
-                                       f"Reference: ({gc['reference_latitude']:.4f}°, {gc['reference_longitude']:.4f}°, {gc['reference_altitude']:.0f}m)")
-                        text = (f"Default Grid loaded\nGrid: {grid_details}\n\n"
-                                f"Please select a grid from Grid Management to ensure accurate visualisation.")
+                        text = f"Using default grid\n{_fmt(gc)}\n\nRecommendation: Load a grid from Result Visualisation section for accurate visualisation."
                     else:
-                        text = "Please load a grid from Grid Management section for accurate visualisation."
+                        text = "No grid loaded. Please load a grid from Result Visualisation section for accurate visualisation."
                     bg_color = "background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
-
+                
                 self.ui.visualisationStatusLabel.setText(text)
                 self.ui.visualisationStatusLabel.setStyleSheet(bg_color)
-
+            
             self.ui.visualisationStatusLabel.repaint()
-
+        
         except Exception as e:
             logger.error("Failed to update visualization status label: %s", e, exc_info=True)
             self.ui.visualisationStatusLabel.setText("Error updating visualization status")
@@ -3871,7 +3877,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
         
         # Update status
-        status_msg = f"AUSTAL input files generated successfully. Quality level: {quality_level}, Mixing height: {mixing_height_status}. Path: {austal_inputs_dir}"
+        status_msg = f"AUSTAL input files generated successfully. Path: {austal_inputs_dir}"
         if use_alaqs:
             self.ui.alaqsGenerationStatusLabel.setText(status_msg)
             self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
@@ -4159,7 +4165,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         # All inputs valid - enable generate button, but Run AUSTAL only after generation succeeds
         selected_list = ", ".join(selected_pollutants)
-        self.ui.external_files_feedback.setText(f"Ready to generate AUSTAL input files. Pollutants: {selected_list}")
+        # Get quality level and mixing height for status message
+        quality_level = int(self.ui.alaqs_quality_level_spinbox.value())
+        mixing_height_enabled = self.ui.alaqs_mixing_height_checkbox.isChecked()
+        mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
+        
+        self.ui.external_files_feedback.setText(f"Ready to generate AUSTAL input files. Pollutants: {selected_list} | Quality level: {quality_level}, Mixing height: {mixing_height_status}")
         self.ui.external_files_feedback.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         self.ui.generateFromCsvBtn.setEnabled(True)
         # Only enable Run AUSTAL if files have been generated
@@ -4236,7 +4247,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if self.ui.pollutant_hc.isChecked():
             pollutants.append("HC")
         if self.ui.pollutant_pm10.isChecked():
-            pollutants.append("PM10")
+            pollutants.append("PM")
         if self.ui.pollutant_sox.isChecked():
             pollutants.append("SOx")
         if self.ui.pollutant_co2.isChecked():
@@ -4253,7 +4264,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if self.ui.alaqs_pollutant_hc.isChecked():
             pollutants.append("HC")
         if self.ui.alaqs_pollutant_pm10.isChecked():
-            pollutants.append("PM10")
+            pollutants.append("PM")
         if self.ui.alaqs_pollutant_sox.isChecked():
             pollutants.append("SOx")
         if self.ui.alaqs_pollutant_co2.isChecked():
@@ -4274,7 +4285,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if self.ui.useExistingFilesRadio.isChecked():
             work_dir = self.ui.work_directory_path.filePath()
             if not work_dir or not os.path.isdir(work_dir):
-                return False, "Please select a valid work directory with AUSTAL input files (Section 2, Option A)"
+                return False, "Please select a valid work directory with AUSTAL input files"
         
         elif self.ui.generateFromAlaqsRadio.isChecked():
             alaqs_file = self.ui.alaqs_output_file_path.filePath()
@@ -4282,11 +4293,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             pollutants = self._get_selected_alaqs_pollutants()
             
             if not alaqs_file or not os.path.isfile(alaqs_file):
-                return False, "Please select a valid OpenALAQS output file (Section 2, Option B)"
+                return False, "Please select a valid OpenALAQS output file"
             if not output_dir or not os.path.isdir(output_dir):
-                return False, "Please select a valid output work directory (Section 2, Option B)"
+                return False, "Please select a valid output work directory"
             if not pollutants:
-                return False, "Please select at least one pollutant (Section 2, Option B)"
+                return False, "Please select at least one pollutant"
             
             # Check for grid_3d_definition
             try:
@@ -4296,10 +4307,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 cursor.execute('SELECT 1 FROM "grid_3d_definition" LIMIT 1')
                 if cursor.fetchone() is None:
                     conn.close()
-                    return False, "Selected OpenALAQS file does not have a valid grid_3d_definition (Section 2, Option B)"
+                    return False, "Selected OpenALAQS file does not have a valid grid_3d_definition"
                 conn.close()
             except Exception as e:
-                return False, f"Error reading OpenALAQS file: {e} (Section 2, Option B)"
+                return False, f"Error reading OpenALAQS file: {e}"
         
         elif self.ui.generateFromCsvRadio.isChecked():
             output_dir = self.ui.output_directory_path.filePath()
@@ -4308,13 +4319,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             pollutants = self._get_selected_pollutants()
             
             if not output_dir or not os.path.isdir(output_dir):
-                return False, "Please select a valid output directory (Section 2, Option C)"
+                return False, "Please select a valid output directory"
             if not emissions_csv or not os.path.isfile(emissions_csv):
-                return False, "Please select a valid emissions CSV file (Section 2, Option C)"
+                return False, "Please select a valid emissions CSV file"
             if not meteo_csv or not os.path.isfile(meteo_csv):
-                return False, "Please select a valid meteorology CSV file (Section 2, Option C)"
+                return False, "Please select a valid meteorology CSV file"
             if not pollutants:
-                return False, "Please select at least one pollutant (Section 2, Option C)"
+                return False, "Please select at least one pollutant"
         
         return True, ""
 
@@ -4327,7 +4338,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             # Validate all inputs before running
             is_valid, error_message = self._validate_austal_inputs()
             if not is_valid:
-                self.ui.executionStatusLabel.setText(f"Status: Validation Failed - {error_message}")
+                self.ui.executionStatusLabel.setText(f"Status: Validation Failed: {error_message}")
                 self.ui.executionStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
                 QtWidgets.QMessageBox.warning(
                     self,
@@ -4380,10 +4391,46 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self._results_loaded = True
             self._austal_ran = True
 
-            # Snapshot grid at this moment so visualisation status never reads
-            # spinboxes dynamically again
-            self._austal_grid_config = self.get_current_grid_config().copy() if self.get_current_grid_config() else None
-            self.ui.visualisationStatusLabel.setText("AUSTAL simulation completed. Results ready for visualisation.")
+            # Snapshot grid based on which input mode was used
+            if self.ui.generateFromAlaqsRadio.isChecked():
+                # Option B: Use grid from the ALAQS file
+                alaqs_file = self.ui.alaqs_output_file_path.filePath()
+                try:
+                    conn = sqlite3.connect(alaqs_file)
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        'SELECT x_cells, y_cells, z_cells, x_resolution, y_resolution, '
+                        'z_resolution, reference_latitude, reference_longitude '
+                        'FROM "grid_3d_definition" LIMIT 1'
+                    )
+                    grid_row = cursor.fetchone()
+                    cursor.execute('SELECT airport_elevation FROM "user_study_setup"')
+                    alt_row = cursor.fetchone()
+                    conn.close()
+                    
+                    if grid_row:
+                        self._austal_grid_config = {
+                            "x_cells": int(grid_row["x_cells"]),
+                            "y_cells": int(grid_row["y_cells"]),
+                            "z_cells": int(grid_row["z_cells"]),
+                            "x_resolution": float(grid_row["x_resolution"]),
+                            "y_resolution": float(grid_row["y_resolution"]),
+                            "z_resolution": float(grid_row["z_resolution"]),
+                            "reference_latitude": float(grid_row["reference_latitude"]),
+                            "reference_longitude": float(grid_row["reference_longitude"]),
+                            "reference_altitude": float(alt_row["airport_elevation"]) if alt_row else 0.0,
+                        }
+                except Exception as e:
+                    logger.warning(f"Could not load grid from ALAQS file: {e}")
+                    self._austal_grid_config = self.get_current_grid_config().copy() if self.get_current_grid_config() else None
+            elif self.ui.generateFromCsvRadio.isChecked():
+                # Option C: Use G1 grid from spinboxes
+                self._austal_grid_config = self.get_current_grid_config().copy() if self.get_current_grid_config() else None
+            else:
+                # Option A: Use default/existing grid
+                self._austal_grid_config = self.get_current_grid_config().copy() if self.get_current_grid_config() else None
+
             self._update_visualization_status_label()
             
             # Update result buttons - AUSTAL has run, so buttons should be enabled
