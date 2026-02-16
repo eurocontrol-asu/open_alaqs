@@ -2773,7 +2773,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         "averaging": {
             "label": "Averaging",
             "widget_type": QtWidgets.QComboBox,
-            "initial_value": "daily mean",
+            "initial_value": "annual mean",
             "widget_config": {
                 "options": [
                     "hourly",
@@ -2831,7 +2831,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if hasattr(self.ui, 'endDtEdit'):
             self.ui.endDtEdit.setDateTime(QtCore.QDateTime(2023, 3, 1, 23, 0, 0))
         if hasattr(self.ui, 'averagingCombo'):
-            idx = self.ui.averagingCombo.findText("daily mean")
+            idx = self.ui.averagingCombo.findText("annual mean")
             if idx >= 0:
                 self.ui.averagingCombo.setCurrentIndex(idx)
         
@@ -2862,6 +2862,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         )
         self.resetConcentrationCalculationConfiguration()
         self.updateMinMaxGUI()
+
+        # Update the averaging option menu such that only the annual mean is enabled
+        self._setup_averaging_options()
         
         # Initialize current grid configuration - stores in-memory grid values
         # These values are updated whenever spinboxes change and are used for calculations
@@ -2881,13 +2884,17 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         
         # Track whether results are available (AUSTAL ran or results directory loaded)
         self._results_loaded = False
+        
         # Track whether AUSTAL was actually run (vs results loaded from directory)
         self._austal_ran = False
+        
         # Track whether AUSTAL input files have been successfully generated
         self._austal_input_files_generated = False
+
         # Track the directory where input files were generated
         self._generated_austal_work_dir = None
-        # Snapshot of G1 grid at the moment AUSTAL ran and never read spinboxes
+        
+        # Snapshot of grid at the moment AUSTAL ran and never read spinboxes
         # dynamically for the visualisation status.
         self._austal_grid_config = None
 
@@ -3442,7 +3449,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             else:
                 # Priority 1: G2 grid from Result Visualisation section
                 if has_g2:
-                    text = f"Using Grid from Result Visualisation section\n{_fmt(self._visualization_grid_config)}"
+                    text = f"Using Grid from Result Visualisation Section\n{_fmt(self._visualization_grid_config)}"
                     bg_color = "background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;"
                 
                 # Priority 2-4: AUSTAL ran - determine which grid was used
@@ -3463,24 +3470,24 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                         if self._austal_grid_config:
                             text = f"Using Default Grid\n{_fmt(self._austal_grid_config)}\n\nRecommendation: Load a Grid from Result Visualisation section for accurate visualisation."
                         else:
-                            text = "Using default grid\n\nRecommendation: Load a Grid from Result Visualisation section for accurate visualisation."
+                            text = "Using Default Grid\n\nRecommendation: Load a Grid from Result Visualisation section for accurate visualisation."
                         bg_color = "background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
                     
                     else:
                         # Fallback
                         if self._austal_grid_config:
-                            text = f"Using default grid\n{_fmt(self._austal_grid_config)}\n\nRecommendation: Load a gGid from Result Visualisation section."
+                            text = f"Using Default Grid\n{_fmt(self._austal_grid_config)}\n\nRecommendation: Load a Grid from Result Visualisation section."
                         else:
-                            text = "Using default grid\n\nRecommendation: Load a Grid from Result Visualisation section."
+                            text = "Using Default Grid\n\nRecommendation: Load a Grid from Result Visualisation section."
                         bg_color = "background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
                 
                 # Priority 5: Results loaded from directory (no AUSTAL run)
                 else:
                     gc = self.get_current_grid_config()
                     if gc and any(gc.get(k, 0) > 0 for k in ["x_cells", "y_cells"]):
-                        text = f"Using default grid\n{_fmt(gc)}\n\nRecommendation: Load a grid from Result Visualisation section for accurate visualisation."
+                        text = f"Using Default Grid\n{_fmt(gc)}\n\nRecommendation: Load a Grid from Result Visualisation section for accurate visualisation."
                     else:
-                        text = "No grid loaded. Please load a grid from Result Visualisation section for accurate visualisation."
+                        text = "No Grid loaded. Please load a grid from Result Visualisation section for accurate visualisation."
                     bg_color = "background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
                 
                 self.ui.visualisationStatusLabel.setText(text)
@@ -3489,7 +3496,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.ui.visualisationStatusLabel.repaint()
         
         except Exception as e:
-            logger.error("Failed to update visualization status label: %s", e, exc_info=True)
+            logger.error("Failed to update visualisation status label: %s", e, exc_info=True)
             self.ui.visualisationStatusLabel.setText("Error updating visualization status")
             self.ui.visualisationStatusLabel.repaint()
 
@@ -3797,7 +3804,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         
         This method:
         1. Determines which generation path to use (CSV or ALAQS)
-        2. Creates a subdirectory "AUSTAL_inputs" in the output directory
+        2. Creates a subdirectory "AUSTAL" in the output directory
         3. For ALAQS mode: processes the OpenALAQS file for selected pollutants
         4. For CSV mode: TODO - implement CSV generation with selected pollutants
         5. Marks files as generated and stores the work directory
@@ -3816,19 +3823,61 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         else:
             return
         
-        # Create AUSTAL_inputs subdirectory
-        austal_inputs_dir = os.path.join(base_dir, "AUSTAL_inputs")
-        try:
-            os.makedirs(austal_inputs_dir, exist_ok=True)
-        except Exception as e:
-            error_msg = f"Failed to create AUSTAL inputs directory: {e}"
-            if use_alaqs:
-                self.ui.alaqsGenerationStatusLabel.setText(error_msg)
-                self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
-            else:
-                self.ui.external_files_feedback.setText(error_msg)
-                self.ui.external_files_feedback.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
-            return
+        # Create AUSTAL_inputs subdirectory path
+        austal_inputs_dir = os.path.join(base_dir, "AUSTAL")
+        
+        # Check if directory exists and is not empty
+        if os.path.exists(austal_inputs_dir) and os.path.isdir(austal_inputs_dir):
+
+            # Check if directory has any files
+            dir_contents = os.listdir(austal_inputs_dir)
+            if dir_contents:  # Directory is not empty
+
+                # Show warning dialog
+                reply = QtWidgets.QMessageBox.warning(
+                    self,
+                    "Directory Not Empty",
+                    f"All existing files in this directory will be overwritten.\n\n"
+                    f"Do you want to continue?",
+                    QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+                    QtWidgets.QMessageBox.StandardButton.No  # Default to No for safety
+                )
+                
+                if reply == QtWidgets.QMessageBox.StandardButton.No:
+                    # User chose not to overwrite and shows the messsage to select a different directory
+                    if use_alaqs:
+                        self.ui.alaqsGenerationStatusLabel.setText(
+                            "Generation cancelled. Please select a different output directory."
+                        )
+                        self.ui.alaqsGenerationStatusLabel.setStyleSheet(
+                            "background-color: #fff3cd; padding: 8px; border-radius: 4px; "
+                            "border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
+                        )
+                    else:
+                        self.ui.external_files_feedback.setText(
+                            "Generation cancelled. Please select a different output directory."
+                        )
+                        self.ui.external_files_feedback.setStyleSheet(
+                            "background-color: #fff3cd; padding: 8px; border-radius: 4px; "
+                            "border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
+                        )
+                    return
+                
+                # User chose Yes then proceed with the overwritting
+                logger.info(f"User confirmed overwriting files in: {austal_inputs_dir}")
+            
+            # Create the AUSTAL inputs directory
+            try:
+                os.makedirs(austal_inputs_dir, exist_ok=True)
+            except Exception as e:
+                error_msg = f"Failed to create AUSTAL inputs directory: {e}"
+                if use_alaqs:
+                    self.ui.alaqsGenerationStatusLabel.setText(error_msg)
+                    self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+                else:
+                    self.ui.external_files_feedback.setText(error_msg)
+                    self.ui.external_files_feedback.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+                return
         
         try:
             if use_alaqs:
@@ -3841,10 +3890,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 emissions_csv = self.ui.emissions_csv_path.filePath()
                 meteo_csv = self.ui.meteo_csv_path.filePath()
                 grid_config = self.get_current_grid_config()
+
                 # Get quality level and mixing height settings for status message
                 quality_level = int(self.ui.csv_quality_level_spinbox.value())
                 mixing_height_enabled = self.ui.csv_mixing_height_checkbox.isChecked()
                 mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
+
                 # TODO: Implement CSV generation logic
                 logger.info(f"Generating AUSTAL input files from CSV for pollutants: {', '.join(selected_pollutants)}")
                 logger.info(f"AUSTAL parameters - Quality level: {quality_level}, Mixing height: {mixing_height_status}")
@@ -4247,7 +4298,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if self.ui.pollutant_hc.isChecked():
             pollutants.append("HC")
         if self.ui.pollutant_pm10.isChecked():
-            pollutants.append("PM")
+            pollutants.append("PM10")
         if self.ui.pollutant_sox.isChecked():
             pollutants.append("SOx")
         if self.ui.pollutant_co2.isChecked():
@@ -4264,7 +4315,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if self.ui.alaqs_pollutant_hc.isChecked():
             pollutants.append("HC")
         if self.ui.alaqs_pollutant_pm10.isChecked():
-            pollutants.append("PM")
+            pollutants.append("PM10")
         if self.ui.alaqs_pollutant_sox.isChecked():
             pollutants.append("SOx")
         if self.ui.alaqs_pollutant_co2.isChecked():
@@ -4514,31 +4565,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 elif available_display:
                     self.ui.resultPollutantCombo.setCurrentIndex(0)
 
-            # Detect averaging periods from filename patterns
-            # 'y00' suffix = annual mean
-            #  numbered suffixes (-NNN) = time-series data
-            has_annual = any('y00' in f.lower() for f in dmna_files)
-            has_numbered = any(re.search(r'-\d{3}[as]\.dmna$', f.lower()) for f in dmna_files)
-            averaging_options = []
-            if has_numbered:
-                averaging_options.extend(['hourly', '8-hours mean', 'daily mean'])
-            if has_annual:
-                averaging_options.append('annual mean')
-
-            # Populate averaging combo and preserve previous selection if available
-            if hasattr(self.ui, 'averagingCombo') and averaging_options:
-                prev_avg = self.ui.averagingCombo.currentText()
-                self.ui.averagingCombo.clear()
-                for opt in averaging_options:
-                    self.ui.averagingCombo.addItem(opt)
-                # Restore previous selection or default to 'daily mean'.
-                if prev_avg and self.ui.averagingCombo.findText(prev_avg) >= 0:
-                    self.ui.averagingCombo.setCurrentText(prev_avg)
-                else:
-                    if 'daily mean' in averaging_options:
-                        self.ui.averagingCombo.setCurrentText('daily mean')
-                    else:
-                        self.ui.averagingCombo.setCurrentIndex(0)
+            # TODO: Detect averaging periods from filename patterns and add the option to generate the files on an hourly basis
+            # averaging_options = ['hourly', '8-hours mean', 'daily mean', 'annual mean']
+            self._setup_averaging_options()
         except Exception as _e:
             logger.warning('Could not auto-detect pollutants/averaging from directory: %s', _e)
 
@@ -4767,7 +4796,6 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 return
             
         except Exception as e:
-            #logger.error(f"Failed to update grid configuration file: {e}", exc_info=True)
             QtWidgets.QMessageBox.critical(
                 self,
                 "Error",
@@ -4827,7 +4855,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     end_dt = datetime(2023, 3, 1, 23, 0)
 
                 # Extract pollutant from UI and normalize to internal code.
-                # Display label → internal code (e.g. 'PM2.5' → 'p2').
+                # Display label -> internal code (e.g. 'PM2.5' -> 'p2').
                 pollutant_text = (
                     self.ui.resultPollutantCombo.currentText()
                     if hasattr(self.ui, 'resultPollutantCombo')
@@ -4984,6 +5012,39 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "Could not execute runOutputModule: %s (error: %s)" % (name, e),
             )
             raise e
+        
+    def _setup_averaging_options(self):
+        """Disable all averaging options except 'annual mean' to indicate future functionality."""
+        try:
+            # Get the averaging combo from the UI directly
+            averaging_combo = self.ui.averagingCombo if hasattr(self.ui, 'averagingCombo') else None
+            
+            if averaging_combo and isinstance(averaging_combo, QtWidgets.QComboBox):
+                model = averaging_combo.model()
+                
+                for i in range(averaging_combo.count()):
+                    item_text = averaging_combo.itemText(i)
+                    if item_text != "annual mean":
+                        item = model.item(i)
+                        if item:
+                            # Disable the item
+                            item.setFlags(item.flags() & ~QtCore.Qt.ItemFlag.ItemIsEnabled)
+                            # Set gray color to make it visually clear it's disabled
+                            item.setForeground(QtGui.QColor(150, 150, 150))
+                            # Optional: Add a tooltip explaining why it's disabled
+                            item.setToolTip("This averaging option is not yet available. Coming soon!")
+                
+                # Ensure "annual mean" is selected
+                annual_mean_index = averaging_combo.findText("annual mean")
+                if annual_mean_index >= 0:
+                    averaging_combo.setCurrentIndex(annual_mean_index)
+                    
+                logger.debug("Successfully disabled averaging options except 'annual mean'")
+            else:
+                logger.warning("Could not find averagingCombo in UI")
+                
+        except Exception as e:
+            logger.warning(f"Could not setup averaging options: {e}", exc_info=True)
 
 
 class OpenAlaqsEnabledMacros(QtWidgets.QDialog):
