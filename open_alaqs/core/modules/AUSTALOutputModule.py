@@ -4,6 +4,7 @@ from collections import OrderedDict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Tuple, Union
+import re
 
 import geopandas as gpd
 import numpy as np
@@ -139,7 +140,7 @@ class AUSTALDispersionModule(DispersionModule):
 
         self._pollutants_list = values_dict.get("pollutants_list")
 
-        if self._pollutant:
+        if not self._pollutants_list and self._pollutant:
             self._pollutants_list = [self._pollutant]
 
         self._enable = values_dict.get("is_enabled", False)
@@ -1222,12 +1223,15 @@ class AUSTALDispersionModule(DispersionModule):
             if not source_dir.is_dir():
                 source_dir.mkdir()
 
+            # Initialise the matrix for each pollutant
+            self.InitializeEmissionGridMatrix()
+
             # initialize emission matrix for each pollutant
             # (x_dim, y_dim, z_dim) = self.InitializeEmissionGridMatrix()
 
             # Get the emissions for this pollutant
             _pollutant_emissions = total_emissions_per_cell_df.filter(
-                regex=f"^{_pollutant.lower()}_k?g$"
+                regex=f"(?i)^{re.escape(_pollutant)}_k?g$"
             )
 
             # Convert to kg (if only g is present)
