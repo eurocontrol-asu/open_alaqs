@@ -282,7 +282,7 @@
            <item>
             <widget class="QCheckBox" name="alaqs_pollutant_pm10">
              <property name="text">
-              <string>PM</string>
+              <string>PM10</string>
              </property>
             </widget>
            </item>
@@ -467,7 +467,7 @@
            <item>
             <widget class="QCheckBox" name="pollutant_pm10">
              <property name="text">
-              <string>PM</string>
+              <string>PM10</string>
              </property>
             </widget>
            </item>
@@ -1075,11 +1075,6 @@
            <item>
             <property name="text">
              <string>PM10</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>PM2.5</string>
             </property>
            </item>
            <item>
