@@ -3176,8 +3176,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         )
         
         # Enable/disable buttons accordingly
-        self.ui.ResultsTable.setEnabled(bool(can_show_table_and_timeseries))
-        self.ui.PlotTimeSeries.setEnabled(bool(can_show_table_and_timeseries))
+        # self.ui.ResultsTable.setEnabled(bool(can_show_table_and_timeseries))
+        # self.ui.PlotTimeSeries.setEnabled(bool(can_show_table_and_timeseries))
+        
+        # TODO: ResultsTable and PlotTimeSeries buttons are currently disabled as they dont work with annual mean and they should be reactivated in future development
+        self.ui.ResultsTable.setEnabled(False)
+        self.ui.PlotTimeSeries.setEnabled(False)
+
         self.ui.VisualiseResults.setEnabled(bool(can_visualize_vector))
 
     def updateMinMaxGUI(self, db_path_=""):
