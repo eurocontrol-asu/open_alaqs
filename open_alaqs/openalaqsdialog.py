@@ -3712,7 +3712,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 self.ui.refLatSpinBox.setValue(grid_config["reference_latitude"])
                 self.ui.refLonSpinBox.setValue(grid_config["reference_longitude"])
                 self.ui.refAltSpinBox.setValue(grid_config["reference_altitude"])
-                # Spinbox valueChanged signals will trigger _update_grid_status_label automatically
+                # valueChanged only fires when the value changes; call explicitly so
+                # the status label always updates even when loaded values match defaults.
+                self._update_grid_status_label()
             else:
 
                 self.ui.currentGridSummaryLabel.setText(f"Error: Could not parse {os.path.basename(grid_file)}")
@@ -4641,18 +4643,17 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 writer.writeheader()
                 writer.writerow(grid_config)
             
-            # Update tracking - grid has been saved
-            self._original_grid_config = grid_config.copy()
-            self._loaded_grid_file_path = file_path
-            
+            # Update tracking so the status label turns green
+            self._g1_original_grid_config = grid_config.copy()
+            self._g1_loaded_file_path = file_path
+
             # Show success message
-            #logger.info(f"Grid configuration saved to: {file_path}")
             QtWidgets.QMessageBox.information(
                 self,
                 "Success",
                 f"Grid configuration saved successfully to:\n{file_path}"
             )
-            
+
             # Update status label to reflect saved state
             self._update_grid_status_label()
             
@@ -4728,8 +4729,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     writer = csv.DictWriter(csvfile, fieldnames=grid_config.keys())
                     writer.writeheader()
                     writer.writerow(grid_config)
-                
-                #logger.info(f"Grid configuration updated in CSV file: {file_path}")
+
+                # Update tracking so the status label turns green
+                self._g1_original_grid_config = grid_config.copy()
+                self._g1_loaded_file_path = file_path
+                self._update_grid_status_label()
+
                 QtWidgets.QMessageBox.information(
                     self,
                     "Success",
@@ -4737,28 +4742,18 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 )
             
             elif file_path.endswith('.alaqs'):
-                # Update OpenALAQS database file
+                # Update grid parameters directly in the OpenALAQS database
                 try:
-                    project_database = ProjectDatabase()
-                    original_path = getattr(project_database, "path", None)
-                    project_database.path = file_path
-                    
-                    # Update both study_setup and grid_3d_definition tables
                     conn = sqlite3.connect(file_path)
                     cursor = conn.cursor()
-                    
-                    # Update study_setup with the reference_altitude
+
                     cursor.execute(
-                        """UPDATE user_study_setup 
-                           SET airport_elevation = ?""",
-                        (
-                            grid_config["reference_altitude"]
-                        )
+                        "UPDATE user_study_setup SET airport_elevation = ?",
+                        (grid_config["reference_altitude"],)
                     )
-                    
-                    # Update grid_3d_definition table with all grid parameters
+
                     cursor.execute(
-                        """UPDATE grid_3d_definition 
+                        """UPDATE grid_3d_definition
                            SET x_cells = ?,
                                y_cells = ?,
                                z_cells = ?,
@@ -4775,34 +4770,25 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                             grid_config["y_resolution"],
                             grid_config["z_resolution"],
                             grid_config["reference_latitude"],
-                            grid_config["reference_longitude"]
+                            grid_config["reference_longitude"],
                         )
                     )
-                    
+
                     conn.commit()
                     conn.close()
-                    
-                    # Restore original database path
-                    if original_path is None:
-                        project_database.path = None
-                    else:
-                        project_database.path = original_path
-                    
-                    # Update tracking - grid has been saved
-                    self._original_grid_config = grid_config.copy()
-                    self._loaded_grid_file_path = file_path
-                    
-                    #logger.info(f"Grid configuration updated in OpenALAQS file: {file_path}")
+
+                    # Update tracking so the status label turns green
+                    self._g1_original_grid_config = grid_config.copy()
+                    self._g1_loaded_file_path = file_path
+                    self._update_grid_status_label()
+
                     QtWidgets.QMessageBox.information(
                         self,
-                        "Grid parameters successly updated"
+                        "Success",
+                        f"Grid parameters updated successfully in:\n{file_path}"
                     )
-                    
-                    # Update status label to reflect saved state
-                    self._update_grid_status_label()
-                
+
                 except sqlite3.Error as db_err:
-                    #logger.error(f"Database error updating OpenALAQS file: {db_err}", exc_info=True)
                     QtWidgets.QMessageBox.critical(
                         self,
                         "Database Error",
