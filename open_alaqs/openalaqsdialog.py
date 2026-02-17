@@ -4549,8 +4549,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             dmna_files = [f for f in os.listdir(results_dir) if f.lower().endswith('.dmna')]
 
             # Scan filenames for known pollutant tokens; skip 'series.dmna' and similar generic files
-            # Map pm2.5/pm25 variants to internal 'p2' code for easier handling
-            known_tokens = ['nox', 'co', 'hc', 'pm10', 'pm2.5', 'pm25', 'sox', 'co2']
+            # TODO: ALso map p1 and p2
+            known_tokens = ['nox', 'co', 'hc', 'pm', 'sox', 'co2']
             found_codes = set()
             for fn in dmna_files:
                 base = fn.lower()
@@ -4561,14 +4561,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 for token in known_tokens:
                     token_re = token.replace('.', r'\\.')
                     if re.search(r'(^|[^a-z0-9])' + token_re + r'([^a-z0-9]|$)', base):
-                        code = 'p2' if token in ('pm2.5', 'pm25') else token
-                        found_codes.add(code)
+                        found_codes.add(token)
                         break
 
             # Map internal codes to UI display labels.
             code_to_display = {
-                'nox': 'NOx', 'co': 'CO', 'hc': 'HC', 'pm10': 'PM10',
-                'p2': 'PM2.5', 'sox': 'SOx', 'co2': 'CO2'
+                'nox': 'NOx', 'co': 'CO', 'hc': 'HC', 'pm': 'PM10',
+                'sox': 'SOx', 'co2': 'CO2'
             }
 
             # Populate pollutant combo; preserve previous selection if available.
@@ -4887,7 +4886,6 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     "CO": "co",
                     "HC": "hc",
                     "PM10": "pm10",
-                    "PM2.5": "p2",
                     "SOx": "sox",
                     "CO2": "co2",
                 }
