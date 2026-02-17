@@ -2242,7 +2242,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
         # initialize GUI
         # self._pollutants_list = ["CO", "HC", "NOx", "SOx", "PM10", "P1", "P2"]
-        self._pollutants_list = ["NOx", "CO", "HC", "PM10", "SOx", "CO2"]
+        self._pollutants_list = ["CO2", "CO", "HC", "NOx", "SOx", "PM10"]
         self.populate_pollutants()
         self.updateMinMaxGUI()
 
