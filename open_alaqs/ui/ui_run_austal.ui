@@ -258,10 +258,10 @@
          </item>
          <item row="4" column="0" colspan="2">
           <layout class="QHBoxLayout" name="alaqsPollutantCheckboxLayout">
-           <item>
-            <widget class="QCheckBox" name="alaqs_pollutant_nox">
+          <item>
+            <widget class="QCheckBox" name="alaqs_pollutant_co2">
              <property name="text">
-              <string>NOx</string>
+              <string>CO2</string>
              </property>
             </widget>
            </item>
@@ -280,9 +280,9 @@
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="alaqs_pollutant_pm10">
+            <widget class="QCheckBox" name="alaqs_pollutant_nox">
              <property name="text">
-              <string>PM10</string>
+              <string>NOx</string>
              </property>
             </widget>
            </item>
@@ -294,9 +294,9 @@
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="alaqs_pollutant_co2">
+            <widget class="QCheckBox" name="alaqs_pollutant_pm10">
              <property name="text">
-              <string>CO2</string>
+              <string>PM10</string>
              </property>
             </widget>
            </item>
@@ -443,10 +443,10 @@
          </item>
          <item row="4" column="0" colspan="2">
           <layout class="QHBoxLayout" name="pollutantCheckboxLayout">
-           <item>
-            <widget class="QCheckBox" name="pollutant_nox">
+          <item>
+            <widget class="QCheckBox" name="pollutant_co2">
              <property name="text">
-              <string>NOx</string>
+              <string>CO2</string>
              </property>
             </widget>
            </item>
@@ -465,9 +465,9 @@
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="pollutant_pm10">
+            <widget class="QCheckBox" name="pollutant_nox">
              <property name="text">
-              <string>PM10</string>
+              <string>NOx</string>
              </property>
             </widget>
            </item>
@@ -479,9 +479,9 @@
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="pollutant_co2">
+            <widget class="QCheckBox" name="pollutant_pm10">
              <property name="text">
-              <string>CO2</string>
+              <string>PM10</string>
              </property>
             </widget>
            </item>
@@ -1057,9 +1057,9 @@
          </item>
          <item row="3" column="1">
           <widget class="QComboBox" name="resultPollutantCombo">
-           <item>
+          <item>
             <property name="text">
-             <string>NOx</string>
+             <string>CO2</string>
             </property>
            </item>
            <item>
@@ -1074,7 +1074,7 @@
            </item>
            <item>
             <property name="text">
-             <string>PM10</string>
+             <string>NOx</string>
             </property>
            </item>
            <item>
@@ -1084,7 +1084,7 @@
            </item>
            <item>
             <property name="text">
-             <string>CO2</string>
+             <string>PM10</string>
             </property>
            </item>
           </widget>
