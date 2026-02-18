@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
 import csv
+import shutil
 
 import geopandas as gpd
 from qgis.core import (
@@ -3892,6 +3893,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 
                 # User chose Yes then proceed with the overwritting
                 logger.info(f"User confirmed overwriting files in: {austal_inputs_dir}")
+
+                shutil.rmtree(austal_inputs_dir)
             
             # Create the AUSTAL inputs directory
             try:
