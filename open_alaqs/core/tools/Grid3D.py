@@ -199,7 +199,7 @@ class Grid3D:
         logger.info("\t Number of cells in z-direction: %i", self._z_cells)
         logger.info("\t Resolution in x-direction: %i", self._x_resolution)
         logger.info("\t Resolution in y-direction: %i", self._y_resolution)
-        logger.info("\t Resolution in z-direction: %i", self._x_resolution)
+        logger.info("\t Resolution in z-direction: %i", self._z_resolution)
         logger.info(
             "\t Reference latitude (center of grid): %.5f", self._reference_latitude
         )
