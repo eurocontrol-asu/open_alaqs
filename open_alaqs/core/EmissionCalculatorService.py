@@ -275,7 +275,7 @@ class EmissionCalculatorService:
             dm_config.update(
                 {
                     "pollutant": config.pollutant,
-                    "pollutants_list": self.supported_pollutants,
+                    "pollutants_list": [config.pollutant],
                     "receptors": config.receptor_points,
                     "grid": self._emission_calculation.get3DGrid(),
                 }
