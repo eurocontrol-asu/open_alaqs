@@ -4,6 +4,8 @@ from collections import OrderedDict
 import matplotlib
 import numpy as np
 import pandas as pd
+from shapely.geometry.base import BaseGeometry
+
 from qgis.core import Qgis, QgsGeometry, QgsLineString
 from qgis.PyQt import QtCore, QtWidgets
 
@@ -378,6 +380,47 @@ class Movement:
 
     def getTrack(self):
         return self._track
+
+    def getGeometryText(self):
+        """
+        Returns the WKT geometry text for this movement.
+        Handles the following cases:
+        - Track geometry (plain LineString WKT)
+        - Trajectory at runway (LineString WKT, possibly a MultiLineString
+            if the trajectory was clipped across grid bounds)
+        - Helicopter trajectories, where a Shapely geometry object may have
+            been stored directly instead of WKT
+        - None / empty geometry
+        """
+
+        def _to_wkt(geom_text):
+            """Normalize whatever getGeometryText() returns to a WKT string or None."""
+            if geom_text is None:
+                return None
+            # Shapely geometry stored directly (helicopter case)
+            if isinstance(geom_text, BaseGeometry):
+                return geom_text.wkt if not geom_text.is_empty else None
+            # Already a WKT string
+            if isinstance(geom_text, str):
+                return geom_text if geom_text.strip() else None
+            # Fallback: try to coerce to string (e.g. ogr.Geometry)
+            try:
+                wkt = str(geom_text)
+                return wkt if wkt.strip() else None
+            except Exception:
+                return None
+
+        if self._track is not None:
+            wkt = _to_wkt(self._track.getGeometryText())
+            if wkt:
+                return wkt
+
+        if self._trajectory_at_runway is not None:
+            wkt = _to_wkt(self._trajectory_at_runway.getGeometryText())
+            if wkt:
+                return wkt
+
+        return None
 
     # ["08R", "26L"]
     def getRunwayDirection(self):
