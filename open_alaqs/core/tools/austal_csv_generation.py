@@ -389,6 +389,8 @@ def generate_austal_from_csv(
     austal_config: dict,
     output_dir: str,
     selected_pollutants: List[str],
+    start_dt: datetime = None,
+    end_dt: datetime = None,
 ) -> None:
     """Generate AUSTAL input files from pre-calculated emissions and meteo CSVs.
 
@@ -408,6 +410,10 @@ def generate_austal_from_csv(
             roughness_length_m, displacement_height_m, anemometer_height_m).
         output_dir: Directory where AUSTAL input files will be written.
         selected_pollutants: List of pollutant names (e.g. ['NOx', 'PM10']).
+        start_dt: Only process timesteps >= this datetime. Defaults to the
+            first timestamp in the CSV.
+        end_dt: Only process timesteps <= this datetime. Defaults to the
+            last timestamp in the CSV.
 
     Raises:
         FileNotFoundError: If either CSV path does not exist.
@@ -437,6 +443,13 @@ def generate_austal_from_csv(
     sorted_timestamps = sorted(rows_by_ts.keys())
     # Interval is used to compute end_ts = ts + time_interval for each process() call
     time_interval = _infer_time_interval(sorted_timestamps)
+
+    # Apply optional time-period filter
+    if start_dt is not None or end_dt is not None:
+        _lo = start_dt if start_dt is not None else sorted_timestamps[0]
+        _hi = end_dt if end_dt is not None else sorted_timestamps[-1]
+        sorted_timestamps = [ts for ts in sorted_timestamps if _lo <= ts <= _hi]
+
     logger.info(
         "generate_austal_from_csv: %d timesteps, interval=%s",
         len(sorted_timestamps),
