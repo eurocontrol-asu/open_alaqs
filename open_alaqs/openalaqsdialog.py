@@ -73,6 +73,7 @@ from open_alaqs.core.modules.ModuleManager import (
 )
 from open_alaqs.core.tools import conversion
 from open_alaqs.core.tools.Grid3D import Grid3D
+from open_alaqs.core.tools.austal_csv_generation import generate_austal_from_csv
 from open_alaqs.core.tools.csv_interface import (
     read_csv_to_dict,
     read_csv_to_geodataframe,
@@ -2436,6 +2437,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         config = {
             "parent": self,
             "pollutant": pollutant,
+            "pollutants_list": [pollutant],
             "title": "Total emissions of '%s'"
             % (
                 source_name
@@ -3916,7 +3918,6 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 self._generate_from_alaqs_file(alaqs_file, austal_inputs_dir, selected_pollutants)
             elif use_csv:
                 # Generate from CSV files for selected pollutants
-                output_dir = self.ui.output_directory_path.filePath()
                 emissions_csv = self.ui.emissions_csv_path.filePath()
                 meteo_csv = self.ui.meteo_csv_path.filePath()
                 grid_config = self.get_current_grid_config()
@@ -3925,11 +3926,19 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 quality_level = int(self.ui.csv_quality_level_spinbox.value())
                 mixing_height_enabled = self.ui.csv_mixing_height_checkbox.isChecked()
                 mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
-
-                # TODO: Implement CSV generation logic
                 logger.info(f"Generating AUSTAL input files from CSV for pollutants: {', '.join(selected_pollutants)}")
                 logger.info(f"AUSTAL parameters - Quality level: {quality_level}, Mixing height: {mixing_height_status}")
                 logger.info(f"Grid config: {grid_config}")
+
+                austal_cfg = self._get_austal_config_from_ui(mode="csv")
+                generate_austal_from_csv(
+                    emissions_csv_path=emissions_csv,
+                    meteo_csv_path=meteo_csv,
+                    grid_config=grid_config,
+                    austal_config=austal_cfg,
+                    output_dir=austal_inputs_dir,
+                    selected_pollutants=selected_pollutants,
+                )
         except Exception as e:
             error_msg = f"Error generating AUSTAL input files: {e}"
             if use_alaqs:
