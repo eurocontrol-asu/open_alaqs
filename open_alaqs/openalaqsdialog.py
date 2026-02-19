@@ -3805,10 +3805,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
     def _get_austal_config_from_ui(self, mode: str = "alaqs") -> dict:
         """Get AUSTAL configuration from UI controls.
-        
+
         Args:
             mode: "alaqs" or "csv" to determine which UI controls to read
-            
+
         Returns:
             dict: AUSTAL dispersion module configuration
         """
@@ -3922,12 +3922,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 meteo_csv = self.ui.meteo_csv_path.filePath()
                 grid_config = self.get_current_grid_config()
 
-                # Get quality level and mixing height settings for status message
-                quality_level = int(self.ui.csv_quality_level_spinbox.value())
-                mixing_height_enabled = self.ui.csv_mixing_height_checkbox.isChecked()
-                mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
                 logger.info(f"Generating AUSTAL input files from CSV for pollutants: {', '.join(selected_pollutants)}")
-                logger.info(f"AUSTAL parameters - Quality level: {quality_level}, Mixing height: {mixing_height_status}")
                 logger.info(f"Grid config: {grid_config}")
 
                 austal_cfg = self._get_austal_config_from_ui(mode="csv")
@@ -3956,15 +3951,6 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         
         # Enable Run AUSTAL button after successful generation
         self.ui.RunA2K.setEnabled(True)
-        
-        # Get quality level and mixing height for status message
-        if use_alaqs:
-            quality_level = int(self.ui.alaqs_quality_level_spinbox.value())
-            mixing_height_enabled = self.ui.alaqs_mixing_height_checkbox.isChecked()
-        else:
-            quality_level = int(self.ui.csv_quality_level_spinbox.value())
-            mixing_height_enabled = self.ui.csv_mixing_height_checkbox.isChecked()
-        mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
         
         # Update status
         status_msg = f"AUSTAL input files generated successfully. Path: {austal_inputs_dir}"
@@ -4068,7 +4054,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             logger.info(f"Added source module: {module_name}")
         
         # Add AUSTAL dispersion module for the selected pollutants
-        austal_config = self._get_austal_config_from_ui(mode="alaqs")
+        austal_config = self._get_austal_config_from_ui()
         austal_config.update({
             "output_path": output_dir,
             "pollutant": None,  # Will be set per pollutant below
@@ -4256,10 +4242,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         # All inputs valid - enable generate button, but Run AUSTAL only after generation succeeds
         selected_list = ", ".join(selected_pollutants)
         # Get quality level and mixing height for status message
-        quality_level = int(self.ui.alaqs_quality_level_spinbox.value())
-        mixing_height_enabled = self.ui.alaqs_mixing_height_checkbox.isChecked()
+        quality_level = int(self.ui.csv_quality_level_spinbox.value())
+        mixing_height_enabled = self.ui.csv_mixing_height_checkbox.isChecked()
         mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
-        
+
         self.ui.external_files_feedback.setText(f"Ready to generate AUSTAL input files. Pollutants: {selected_list} | Quality level: {quality_level}, Mixing height: {mixing_height_status}")
         self.ui.external_files_feedback.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         self.ui.generateFromCsvBtn.setEnabled(True)
