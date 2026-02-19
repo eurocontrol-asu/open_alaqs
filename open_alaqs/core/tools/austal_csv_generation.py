@@ -423,8 +423,7 @@ def generate_austal_from_csv(
     # Parse both inputs up front so format errors are caught before AUSTAL initialises
     rows_by_ts = parse_emissions_csv(emissions_csv_path)
     meteo_map = parse_meteo_csv(meteo_csv_path)
-
-    # BY_AGGREGATION exports have no WKT and cannot be placed on the spatial grid
+    
     has_geometry = any(
         (row.get(_COL_WKT) or "").strip().lower() not in _SENTINEL_WKT
         for ts_rows in rows_by_ts.values()
