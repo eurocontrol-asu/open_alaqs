@@ -4007,8 +4007,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 reply = QtWidgets.QMessageBox.warning(
                     self,
                     "Directory Not Empty",
-                    f"All existing files in this directory will be overwritten.\n\n"
-                    f"Do you want to continue?",
+                    "All existing files in this directory will be overwritten.\n\n"
+                    "Do you want to continue?",
                     QtWidgets.QMessageBox.StandardButton.Yes
                     | QtWidgets.QMessageBox.StandardButton.No,
                     QtWidgets.QMessageBox.StandardButton.No,  # Default to No for safety
