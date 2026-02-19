@@ -631,12 +631,18 @@ def clip_trajectory_segment_to_grid(
 
 def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
     """
-    Clip a LineString geometry to grid bounds.
-    Wrapper function for clipping entire LineString geometries (e.g., roadways, runways).
+    Clip a LineString or MultiLineString geometry to grid bounds.
+
+    Handles both single-part (LINESTRING) and multi-part (MULTILINESTRING)
+    geometries.  Each sub-part is clipped segment-by-segment using
+    clip_segment_to_grid(); the surviving segments are stitched back into a
+    LINESTRING Z (contiguous) or MULTILINESTRING Z (non-contiguous).
 
     Args:
-        geometry_wkt: WKT representation of the LineString
-        grid_bounds: Dict with x_min, x_max, y_min, y_max
+        geometry_wkt: WKT representation of the LineString or MultiLineString.
+                      Coordinates must be in the same CRS as grid_bounds
+                      (EPSG:3857 throughout this codebase).
+        grid_bounds: Dict with x_min, x_max, y_min, y_max.
 
     Returns:
         tuple: (clipped_wkt, length_fraction) where length_fraction is the
@@ -644,67 +650,95 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
                Returns (None, 0.0) if geometry is fully outside grid.
     """
     try:
-        # Get original length
-        original_length = getDistanceOfLineStringXY(geometry_wkt)
+        geom = ogr.CreateGeometryFromWkt(geometry_wkt)
+        if geom is None:
+            logger.warning("clip_linestring_to_grid: could not parse WKT")
+            return geometry_wkt, 1.0
 
+        geom_type = geom.GetGeometryType()
+        single_types = (ogr.wkbLineString, ogr.wkbLineString25D, ogr.wkbLineStringM, ogr.wkbLineStringZM)
+        multi_types = (ogr.wkbMultiLineString, ogr.wkbMultiLineString25D, ogr.wkbMultiLineStringM, ogr.wkbMultiLineStringZM)
+
+        if geom_type in single_types:
+            parts = [geom]
+        elif geom_type in multi_types:
+            parts = [geom.GetGeometryRef(i) for i in range(geom.GetGeometryCount())]
+        else:
+            # Not a line geometry — return unchanged
+            return geometry_wkt, 1.0
+
+        if not parts:
+            return geometry_wkt, 1.0
+
+        # Get original total line length (ellipsoidal, EPSG:3857 → EPSG:4326)
+        original_length = sum(
+            getDistanceOfLineStringXY(p.ExportToWkt()) for p in parts
+        )
         if original_length == 0:
             return geometry_wkt, 1.0
 
-        # Parse geometry to extract points
-        points = getAllPoints(geometry_wkt)
+        all_clipped_segments = []
 
-        if len(points) < 2:
-            return geometry_wkt, 1.0
+        for part in parts:
+            n_pts = part.GetPointCount()
+            if n_pts < 2:
+                continue
 
-        # Clip each segment and collect clipped segments with their lengths
-        clipped_segments = []
-        total_clipped_length = 0.0
+            # Extract (x, y, z) tuples directly from OGR — works for any part type
+            part_points = [part.GetPoint(i) for i in range(n_pts)]  # returns (x, y, z)
 
-        for i in range(len(points) - 1):
-            x1, y1, z1 = points[i]
-            x2, y2, z2 = points[i + 1]
+            for i in range(len(part_points) - 1):
+                x1, y1, z1 = part_points[i]
+                x2, y2, z2 = part_points[i + 1]
 
-            # Clip the segment using the core function
-            clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, fraction = (
-                clip_segment_to_grid(x1, y1, z1, x2, y2, z2, grid_bounds)
-            )
-
-            # If segment is partially or fully in grid, add to clipped segments
-            if clip_x1 is not None:
-                clipped_segments.append(
-                    (clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2)
+                clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, _fraction = (
+                    clip_segment_to_grid(x1, y1, z1, x2, y2, z2, grid_bounds)
                 )
-                # Calculate the actual clipped segment length (2D distance)
-                clipped_segment_length = getDistanceBetweenPoints(
-                    clip_x1, clip_y1, 0.0, clip_x2, clip_y2, 0.0
-                )
-                total_clipped_length += clipped_segment_length
 
-        if not clipped_segments:
-            # Geometry is completely outside grid
+                if clip_x1 is not None:
+                    all_clipped_segments.append(
+                        (clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2)
+                    )
+
+        if not all_clipped_segments:
             return None, 0.0
 
-        # Reconstruct WKT from clipped segments
-        points_list = []
-        for seg in clipped_segments:
+        # Build sub-line chains: start a new chain whenever the start of the next
+        # segment is NOT equal to the end of the previous one (non-contiguous parts).
+        # This prevents phantom line segments being created between unrelated parts
+        # (e.g., end of a taxi segment and start of a takeoff-roll segment).
+        line_chains = []        # list of list-of-(x,y,z)
+        current_chain = []
+        for seg in all_clipped_segments:
             x1, y1, z1, x2, y2, z2 = seg
-            if not points_list or points_list[-1] != (x1, y1, z1):
-                points_list.append((x1, y1, z1))
-            points_list.append((x2, y2, z2))
+            if not current_chain or current_chain[-1] != (x1, y1, z1):
+                # Gap detected — close the previous chain and start a new one
+                if len(current_chain) >= 2:
+                    line_chains.append(current_chain)
+                current_chain = [(x1, y1, z1), (x2, y2, z2)]
+            else:
+                current_chain.append((x2, y2, z2))
+        if len(current_chain) >= 2:
+            line_chains.append(current_chain)
 
-        # Build WKT LineString
-        coords_str = ", ".join([f"{x} {y} {z}" for x, y, z in points_list])
-        clipped_wkt = f"LINESTRING Z({coords_str})"
+        if not line_chains:
+            return None, 0.0
 
-        # Calculate length fraction from the actual clipped geometry
-        clipped_wkt_length = getDistanceOfLineStringXY(clipped_wkt)
-        length_fraction = (
-            clipped_wkt_length / original_length if original_length > 0 else 1.0
-        )
+        if len(line_chains) == 1:
+            coords_str = ", ".join(f"{x} {y} {z}" for x, y, z in line_chains[0])
+            clipped_wkt = f"LINESTRING Z({coords_str})"
+        else:
+            parts_str = ", ".join(
+                "(" + ", ".join(f"{x} {y} {z}" for x, y, z in chain) + ")"
+                for chain in line_chains
+            )
+            clipped_wkt = f"MULTILINESTRING Z({parts_str})"
+
+        clipped_length = getDistanceOfLineStringXY(clipped_wkt)
+        length_fraction = clipped_length / original_length if original_length > 0 else 1.0
 
         return clipped_wkt, length_fraction
 
     except Exception as e:
         logger.error(f"Error clipping LineString to grid: {e}")
-        # Return original geometry if clipping fails
         return geometry_wkt, 1.0
