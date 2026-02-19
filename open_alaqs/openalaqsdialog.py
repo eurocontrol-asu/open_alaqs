@@ -2996,6 +2996,21 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         # Setup external CSV file inputs
         self._setup_external_csv_inputs(s)
 
+        # Initialise generation datetime pickers with a generic default
+        _default_dt = QtCore.QDateTime(2000, 1, 1, 0, 0, 0)
+        self.ui.alaqs_start_dt_edit.setDateTime(_default_dt)
+        self.ui.alaqs_end_dt_edit.setDateTime(_default_dt)
+        self.ui.csv_start_dt_edit.setDateTime(_default_dt)
+        self.ui.csv_end_dt_edit.setDateTime(_default_dt)
+
+        # If an OpenALAQS output file was restored from settings, populate the datetime range now
+        if os.path.isfile(last_alaqs_output_file := s.value("OpenALAQS/last_alaqs_output_file_path", "")):
+            self._on_alaqs_output_file_changed(last_alaqs_output_file)
+
+        # If emissions CSV was restored, populate the CSV datetime range now
+        if os.path.isfile(s.value("OpenALAQS/last_emissions_csv_path", "")):
+            self._update_csv_datetime_range()
+
         # Add the save grid as csv button
         self.ui.saveGridCsvBtn.clicked.connect(self.save_grid_as_csv)
                 
@@ -3101,7 +3116,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.generateFromCsvRadio.toggled.connect(toggle_csv_feedback_visibility)
         self.ui.useExistingFilesRadio.toggled.connect(toggle_csv_feedback_visibility)
         
-        # Connect ALAQS feedback visibility
+        # Connect OpenALAQS feedback visibility
         def toggle_alaqs_feedback_visibility(checked):
             self.ui.alaqsGridStatusLabel.setVisible(checked)
         self.ui.alaqsGridGroupBox.toggled.connect(toggle_alaqs_feedback_visibility)
@@ -3257,7 +3272,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
     def load_alaqs_source_file(self, filename):
         """
         Open a file browse window for the user to be able to locate and load an
-         ALAQS output file
+         OpenALAQS output file
         """
         path = Path(filename)
         if not filename or not path.is_file() or path.suffix != ".alaqs":
@@ -3348,7 +3363,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             s = QgsSettings()
             s.setValue("OpenALAQS/last_alaqs_file_path", filename)
 
-            self.set_feedback("Valid ALAQS file selected", True)
+            self.set_feedback("Valid OpenALAQS file selected", True)
             # Update status label with loaded filename and grid parameters - green success
             grid_params = (f"Grid: {grid_configuration['x_cells']}×{grid_configuration['y_cells']}×{grid_configuration['z_cells']} cells | "
                           f"Res: {grid_configuration['x_resolution']:.0f}×{grid_configuration['y_resolution']:.0f}×{grid_configuration['z_resolution']:.0f}m | "
@@ -3436,7 +3451,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         
         Priority for grid display (highest to lowest):
         1. G2 grid loaded from Result Visualisation section (alaqsGridGroupBox)
-        2. If AUSTAL ran from OpenALAQS generation -> show G1 from that ALAQS file
+        2. If AUSTAL ran from OpenALAQS generation -> show G1 from that OpenALAQS file
         3. If AUSTAL ran from CSV generation -> show G1 from spinboxes
         4. If AUSTAL ran from existing files -> show default grid
         5. If results loaded from directory -> show default grid with warning
@@ -3786,11 +3801,15 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.pollutant_sox.stateChanged.connect(self._validate_external_csv_files)
         self.ui.pollutant_co2.stateChanged.connect(self._validate_external_csv_files)
 
-        # Connect AUSTAL quality level and mixing height controls to status update
+        # Connect AUSTAL quality level, mixing height, and datetime controls to status update
         self.ui.alaqs_quality_level_spinbox.valueChanged.connect(self._validate_alaqs_generation_files)
         self.ui.alaqs_mixing_height_checkbox.stateChanged.connect(self._validate_alaqs_generation_files)
+        self.ui.alaqs_start_dt_edit.dateTimeChanged.connect(self._validate_alaqs_generation_files)
+        self.ui.alaqs_end_dt_edit.dateTimeChanged.connect(self._validate_alaqs_generation_files)
         self.ui.csv_quality_level_spinbox.valueChanged.connect(self._validate_external_csv_files)
         self.ui.csv_mixing_height_checkbox.stateChanged.connect(self._validate_external_csv_files)
+        self.ui.csv_start_dt_edit.dateTimeChanged.connect(self._validate_external_csv_files)
+        self.ui.csv_end_dt_edit.dateTimeChanged.connect(self._validate_external_csv_files)
 
         # Connect radio buttons to toggle input modes
         self.ui.useExistingFilesRadio.toggled.connect(self._on_input_mode_changed)
@@ -3911,11 +3930,69 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     self.ui.external_files_feedback.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
                 return
         
+        # Read selected time period from UI
+        def _qdatetime_to_py(qdt: QtCore.QDateTime) -> datetime:
+            d, t = qdt.date(), qdt.time()
+            return datetime(d.year(), d.month(), d.day(), t.hour(), t.minute(), t.second())
+
+        if use_alaqs:
+            sel_start = _qdatetime_to_py(self.ui.alaqs_start_dt_edit.dateTime())
+            sel_end = _qdatetime_to_py(self.ui.alaqs_end_dt_edit.dateTime())
+        else:
+            sel_start = _qdatetime_to_py(self.ui.csv_start_dt_edit.dateTime())
+            sel_end = _qdatetime_to_py(self.ui.csv_end_dt_edit.dateTime())
+
+        # Validate selected time period against available data
+        def _set_status_error(msg: str) -> None:
+            if use_alaqs:
+                self.ui.alaqsGenerationStatusLabel.setText(msg)
+                self.ui.alaqsGenerationStatusLabel.setStyleSheet(
+                    "background-color: #f8d7da; padding: 8px; border-radius: 4px; "
+                    "border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;"
+                )
+            else:
+                self.ui.external_files_feedback.setText(msg)
+                self.ui.external_files_feedback.setStyleSheet(
+                    "background-color: #f8d7da; padding: 8px; border-radius: 4px; "
+                    "border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;"
+                )
+
+        try:
+            if use_alaqs:
+                available = get_inventory_timestamps(self.ui.alaqs_output_file_path.filePath())
+            else:
+                available = []
+                emissions_csv_path = self.ui.emissions_csv_path.filePath()
+                with open(emissions_csv_path, "r") as _f:
+                    _reader = csv.DictReader(_f)
+                    for _row in _reader:
+                        for _col in ("DateTime(YYYY-mm-dd hh:mm:ss)", "DateTime", "datetime", "date_time"):
+                            if _col in _row:
+                                try:
+                                    available.append(datetime.strptime(_row[_col], "%Y-%m-%d %H:%M:%S"))
+                                except ValueError:
+                                    pass
+                                break
+                available.sort()
+
+            if len(available) >= 2:
+                avail_start, avail_end = available[0], available[-1]
+                if sel_start < avail_start or sel_end > avail_end or sel_start >= sel_end:
+                    fmt = "%d-%m-%Y %H:%M"
+                    _set_status_error(
+                        f"AUSTAL input files could not be created: the selected time period "
+                        f"({sel_start.strftime(fmt)} – {sel_end.strftime(fmt)}) is not available in the data. "
+                        f"Available range: {avail_start.strftime(fmt)} – {avail_end.strftime(fmt)}."
+                    )
+                    return
+        except Exception as _e:
+            logger.warning(f"Could not validate time period: {_e}")
+
         try:
             if use_alaqs:
                 # Generate from OpenALAQS output file for selected pollutants
                 alaqs_file = self.ui.alaqs_output_file_path.filePath()
-                self._generate_from_alaqs_file(alaqs_file, austal_inputs_dir, selected_pollutants)
+                self._generate_from_alaqs_file(alaqs_file, austal_inputs_dir, selected_pollutants, sel_start, sel_end)
             elif use_csv:
                 # Generate from CSV files for selected pollutants
                 emissions_csv = self.ui.emissions_csv_path.filePath()
@@ -3923,6 +4000,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 grid_config = self.get_current_grid_config()
 
                 logger.info(f"Generating AUSTAL input files from CSV for pollutants: {', '.join(selected_pollutants)}")
+                logger.info(f"Time period: {sel_start.strftime('%d-%m-%Y %H:%M')} – {sel_end.strftime('%d-%m-%Y %H:%M')}")
                 logger.info(f"Grid config: {grid_config}")
 
                 austal_cfg = self._get_austal_config_from_ui(mode="csv")
@@ -3933,6 +4011,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     austal_config=austal_cfg,
                     output_dir=austal_inputs_dir,
                     selected_pollutants=selected_pollutants,
+                    start_dt=sel_start,
+                    end_dt=sel_end,
                 )
         except Exception as e:
             error_msg = f"Error generating AUSTAL input files: {e}"
@@ -3961,43 +4041,57 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.ui.external_files_feedback.setText(status_msg)
             self.ui.external_files_feedback.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
 
-    def _generate_from_alaqs_file(self, alaqs_file: str, output_dir: str, selected_pollutants: list) -> None:
+    def _generate_from_alaqs_file(
+        self,
+        alaqs_file: str,
+        output_dir: str,
+        selected_pollutants: list,
+        start_dt: Optional[datetime] = None,
+        end_dt: Optional[datetime] = None,
+    ) -> None:
         """Generate AUSTAL input files from an OpenALAQS output file.
-        
+
         Uses EmissionCalculation directly with source modules and the AUSTAL
         dispersion module to generate input files (austal.txt, series.dmna,
         grid .dmna files) for each selected pollutant.
-        
+
         The *_out.alaqs file contains all necessary input data (movements,
         geometries, meteorology, profiles) but not pre-calculated emissions,
-        so source modules must still run to calculate them. The AUSTAL 
+        so source modules must still run to calculate them. The AUSTAL
         dispersion module is attached to distribute emissions onto the grid.
-        
+
         Args:
             alaqs_file: Path to the OpenALAQS output file (*_out.alaqs)
             output_dir: Output directory where AUSTAL input files will be written
             selected_pollutants: List of selected pollutants to generate files for
+            start_dt: Start of the time period to generate files for (inclusive).
+                      Defaults to the first timestamp in the file.
+            end_dt: End of the time period to generate files for (inclusive).
+                    Defaults to the last timestamp in the file.
         """
         logger.info(f"Generating AUSTAL input files from {alaqs_file}")
         logger.info(f"Selected pollutants: {', '.join(selected_pollutants)}")
         logger.info(f"Output directory: {output_dir}")
-        
+
         # Get quality level and mixing height settings for status message
         quality_level = int(self.ui.alaqs_quality_level_spinbox.value())
         mixing_height_enabled = self.ui.alaqs_mixing_height_checkbox.isChecked()
         mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
         logger.info(f"AUSTAL parameters - Quality level: {quality_level}, Mixing height: {mixing_height_status}")
-        
+
         # Get time series from the ALAQS output file
         timestamps = get_inventory_timestamps(alaqs_file)
         if len(timestamps) < 2:
             raise ValueError("OpenALAQS file does not contain enough time steps (need at least 2)")
-        
-        start_dt = timestamps[0]
-        end_dt = timestamps[-1]
+
+        # Use caller-supplied range or fall back to the full range from the file
+        if start_dt is None:
+            start_dt = timestamps[0]
+        if end_dt is None:
+            end_dt = timestamps[-1]
         time_interval = timestamps[1] - timestamps[0]
         
-        logger.info(f"Time range: {start_dt} to {end_dt}, interval: {time_interval}")
+        logger.info(f"Time period: {start_dt.strftime('%d-%m-%Y %H:%M')} – {end_dt.strftime('%d-%m-%Y %H:%M')} (interval: {time_interval})")
         
         # Read grid configuration from the ALAQS file
         conn = sqlite3.connect(alaqs_file)
@@ -4117,6 +4211,25 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if os.path.isfile(path):
             s = QgsSettings()
             s.setValue("OpenALAQS/last_alaqs_output_file_path", path)
+            try:
+                timestamps = get_inventory_timestamps(path)
+                if len(timestamps) >= 2:
+                    dt_min = QtCore.QDateTime(
+                        timestamps[0].year, timestamps[0].month, timestamps[0].day,
+                        timestamps[0].hour, timestamps[0].minute, timestamps[0].second,
+                    )
+                    dt_max = QtCore.QDateTime(
+                        timestamps[-1].year, timestamps[-1].month, timestamps[-1].day,
+                        timestamps[-1].hour, timestamps[-1].minute, timestamps[-1].second,
+                    )
+                    self.ui.alaqs_start_dt_edit.setMinimumDateTime(dt_min)
+                    self.ui.alaqs_start_dt_edit.setMaximumDateTime(dt_max)
+                    self.ui.alaqs_start_dt_edit.setDateTime(dt_min)
+                    self.ui.alaqs_end_dt_edit.setMinimumDateTime(dt_min)
+                    self.ui.alaqs_end_dt_edit.setMaximumDateTime(dt_max)
+                    self.ui.alaqs_end_dt_edit.setDateTime(dt_max)
+            except Exception as e:
+                logger.warning(f"Could not read timestamps from OpenALAQS file: {e}")
         self._validate_alaqs_generation_files()
 
     def _on_alaqs_output_directory_changed(self, dirname: str) -> None:
@@ -4177,11 +4290,18 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         # All inputs valid - enable generate button, but Run AUSTAL only after generation succeeds
         selected_list = ", ".join(pollutants)
-        # Get quality level and mixing height for status message
         quality_level = int(self.ui.alaqs_quality_level_spinbox.value())
         mixing_height_enabled = self.ui.alaqs_mixing_height_checkbox.isChecked()
         mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
-        status_text = f"Ready to generate AUSTAL input files. Pollutants: {selected_list} | Quality level: {quality_level}, Mixing height: {mixing_height_status}"
+        _fmt = "dd-MM-yyyy HH:mm"
+        start_str = self.ui.alaqs_start_dt_edit.dateTime().toString(_fmt)
+        end_str = self.ui.alaqs_end_dt_edit.dateTime().toString(_fmt)
+        status_text = (
+            f"Ready to generate AUSTAL input files. "
+            f"Pollutants: {selected_list} | "
+            f"Period: {start_str} – {end_str} | "
+            f"Quality level: {quality_level}, Mixing height: {mixing_height_status}"
+        )
         self.ui.alaqsGenerationStatusLabel.setText(status_text)
         self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         self.ui.generateFromCsvBtn.setEnabled(True)
@@ -4200,7 +4320,43 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if os.path.isfile(path):
             s = QgsSettings()
             s.setValue("OpenALAQS/last_emissions_csv_path", path)
+            self._update_csv_datetime_range()
         self._validate_external_csv_files()
+
+    def _update_csv_datetime_range(self) -> None:
+        """Parse the emissions CSV to set min/max limits on the CSV datetime pickers."""
+        emissions_path = self.ui.emissions_csv_path.filePath()
+        if not emissions_path or not os.path.isfile(emissions_path):
+            return
+        try:
+            timestamps = []
+            with open(emissions_path, "r") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    raw = (row.get("timestamp") or "").strip()
+                    if raw:
+                        try:
+                            timestamps.append(datetime.fromisoformat(raw))
+                        except ValueError:
+                            pass
+            if len(timestamps) >= 2:
+                timestamps.sort()
+                dt_min = QtCore.QDateTime(
+                    timestamps[0].year, timestamps[0].month, timestamps[0].day,
+                    timestamps[0].hour, timestamps[0].minute, timestamps[0].second,
+                )
+                dt_max = QtCore.QDateTime(
+                    timestamps[-1].year, timestamps[-1].month, timestamps[-1].day,
+                    timestamps[-1].hour, timestamps[-1].minute, timestamps[-1].second,
+                )
+                self.ui.csv_start_dt_edit.setMinimumDateTime(dt_min)
+                self.ui.csv_start_dt_edit.setMaximumDateTime(dt_max)
+                self.ui.csv_start_dt_edit.setDateTime(dt_min)
+                self.ui.csv_end_dt_edit.setMinimumDateTime(dt_min)
+                self.ui.csv_end_dt_edit.setMaximumDateTime(dt_max)
+                self.ui.csv_end_dt_edit.setDateTime(dt_max)
+        except Exception as e:
+            logger.warning(f"Could not read timestamps from emissions CSV: {e}")
 
     def _on_meteo_csv_changed(self, path: str) -> None:
         """Handle meteorology CSV file selection."""
@@ -4241,12 +4397,18 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         # All inputs valid - enable generate button, but Run AUSTAL only after generation succeeds
         selected_list = ", ".join(selected_pollutants)
-        # Get quality level and mixing height for status message
         quality_level = int(self.ui.csv_quality_level_spinbox.value())
         mixing_height_enabled = self.ui.csv_mixing_height_checkbox.isChecked()
         mixing_height_status = "enabled" if mixing_height_enabled else "disabled"
-
-        self.ui.external_files_feedback.setText(f"Ready to generate AUSTAL input files. Pollutants: {selected_list} | Quality level: {quality_level}, Mixing height: {mixing_height_status}")
+        _fmt = "dd-MM-yyyy HH:mm"
+        start_str = self.ui.csv_start_dt_edit.dateTime().toString(_fmt)
+        end_str = self.ui.csv_end_dt_edit.dateTime().toString(_fmt)
+        self.ui.external_files_feedback.setText(
+            f"Ready to generate AUSTAL input files. "
+            f"Pollutants: {selected_list} | "
+            f"Period: {start_str} – {end_str} | "
+            f"Quality level: {quality_level}, Mixing height: {mixing_height_status}"
+        )
         self.ui.external_files_feedback.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
         self.ui.generateFromCsvBtn.setEnabled(True)
         # Only enable Run AUSTAL if files have been generated

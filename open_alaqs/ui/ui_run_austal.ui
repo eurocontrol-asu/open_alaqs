@@ -339,7 +339,41 @@
            </property>
           </widget>
          </item>
-         <item row="6" column="0" colspan="2">
+         <item row="6" column="0">
+          <widget class="QLabel" name="alaqsStartDtLabel">
+           <property name="text">
+            <string>Start (incl.):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="1">
+          <widget class="QDateTimeEdit" name="alaqs_start_dt_edit">
+           <property name="displayFormat">
+            <string>dd-MM-yyyy HH:mm</string>
+           </property>
+           <property name="calendarPopup">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="7" column="0">
+          <widget class="QLabel" name="alaqsEndDtLabel">
+           <property name="text">
+            <string>End (incl.):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="7" column="1">
+          <widget class="QDateTimeEdit" name="alaqs_end_dt_edit">
+           <property name="displayFormat">
+            <string>dd-MM-yyyy HH:mm</string>
+           </property>
+           <property name="calendarPopup">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="8" column="0" colspan="2">
           <widget class="QLabel" name="alaqsGenerationStatusLabel">
            <property name="text">
             <string>Status: Missing OpenALAQS *_out file</string>
@@ -534,7 +568,41 @@
            </property>
           </widget>
          </item>
-         <item row="7" column="0" colspan="2">
+         <item row="7" column="0">
+          <widget class="QLabel" name="csvStartDtLabel">
+           <property name="text">
+            <string>Start (incl.):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="7" column="1">
+          <widget class="QDateTimeEdit" name="csv_start_dt_edit">
+           <property name="displayFormat">
+            <string>dd-MM-yyyy HH:mm</string>
+           </property>
+           <property name="calendarPopup">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="8" column="0">
+          <widget class="QLabel" name="csvEndDtLabel">
+           <property name="text">
+            <string>End (incl.):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="8" column="1">
+          <widget class="QDateTimeEdit" name="csv_end_dt_edit">
+           <property name="displayFormat">
+            <string>dd-MM-yyyy HH:mm</string>
+           </property>
+           <property name="calendarPopup">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="9" column="0" colspan="2">
           <widget class="QLabel" name="external_files_feedback">
            <property name="text">
             <string>Status: Missing output directory, emissions CSV, and meteo CSV</string>
@@ -545,7 +613,7 @@
           </widget>
          </item>
          <!-- Grid Configuration (Nested in CSV Generation) -->
-         <item row="8" column="0" colspan="2">
+         <item row="10" column="0" colspan="2">
           <widget class="QGroupBox" name="gridManagementGroupBox">
            <property name="title">
             <string>Grid Configuration</string>
