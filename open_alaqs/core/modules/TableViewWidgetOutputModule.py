@@ -106,11 +106,22 @@ class TableViewWidgetOutputModule(GridOutputModule):
             )
         elif self._view_type == ViewType.BY_SOURCE:
             for source, emissions in result:
-                emissions_sum = cast(Emission, sum(emissions))
-
-                self.rows.append(
-                    self._prepare_source_row(timestamp, emissions_sum, source)
-                )
+                if source.__class__.__name__ == "Movement":
+                    # Export one row per emission segment for movements.
+                    # Summing all segments into one row and then unary_union-ing their
+                    # geometries loses the per-segment emission split, which forces an
+                    # inaccurate equal-weight distribution in the AUSTAL grid step.
+                    # One row per segment preserves the exact emission/geometry pairing
+                    # that the direct OpenALAQS -> AUSTAL uses
+                    for emission in emissions:
+                        self.rows.append(
+                            self._prepare_source_row(timestamp, emission, source)
+                        )
+                else:
+                    emissions_sum = cast(Emission, sum(emissions))
+                    self.rows.append(
+                        self._prepare_source_row(timestamp, emissions_sum, source)
+                    )
         elif self._view_type == ViewType.BY_GRID_CELL:
             for source, emissions in result:
                 for emission in emissions:
@@ -200,7 +211,14 @@ class TableViewWidgetOutputModule(GridOutputModule):
             source_type = source.__class__.__name__
             source_name = source.getName()
 
-            if hasattr(source, "getGeometryText"):
+            if source_type == "Movement":
+                # For Movement sources use the geometry from the emission object, not
+                # the source. The source geometry is the full trajectory; each emission
+                # carries the geometry of its specific segment (already clipped and
+                # scaled by FlightEmissionCalculator; taxi/gate assumed to be always within the
+                # grid).
+                wkt = emissions.getGeometryText()
+            elif hasattr(source, "getGeometryText"):
                 wkt = source.getGeometryText()
             else:
                 wkt = None

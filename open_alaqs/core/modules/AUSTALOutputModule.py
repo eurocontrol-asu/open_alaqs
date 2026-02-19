@@ -1041,6 +1041,25 @@ class AUSTALDispersionModule(DispersionModule):
                 self._first_start_time = None
                 self._start_time, self._end_time = None, None
 
+    @staticmethod
+    def _iter_primitives(geom):
+        """
+        Yield individual sub-geometries together with their emission weight
+        (fraction of the top-level emission to assign to each sub-geometry).
+
+        - Simple geometry (LineString, Polygon, Point, …): yielded as-is with weight 1.0.
+        - MultiLineString / MultiPolygon: each sub-geometry is yielded with a weight
+          proportional to its length / area relative to the total.
+        """
+        if isinstance(geom, (MultiLineString, MultiPolygon)):
+            total = geom.length if isinstance(geom, MultiLineString) else geom.area
+            for g in geom.geoms:
+                sub_total = g.length if isinstance(geom, MultiLineString) else g.area
+                for primitive, weight in AUSTALDispersionModule._iter_primitives(g):
+                    yield primitive, weight * (sub_total / total if total > 0 else 0)
+        else:
+            yield geom, 1.0
+
     @log_time
     def process(
         self,
@@ -1113,81 +1132,48 @@ class AUSTALDispersionModule(DispersionModule):
             if hasattr(source_, "getHeight") and source_.getHeight() > 0:
                 self._source_height = source_.getHeight()
 
-            for emissions_ in emissions__:
+            _src_name = source_.getName() if hasattr(source_, "getName") else str(source_)
+
+            for _em_idx, emissions_ in enumerate(emissions__):
 
                 # Get the geometry text
-                if emissions_.getGeometryText() is None:
+                wkt_text = emissions_.getGeometryText()
+                if wkt_text is None:
                     logger.warning(
-                        f"AUSTAL: Did not find geometry for "
-                        f"source: {source_.getName()}"
+                        "AUSTAL: Did not find geometry for source '%s' (emission %d/%d)",
+                        _src_name,
+                        _em_idx + 1,
+                        len(emissions__),
                     )
                     continue
 
                 # Get the geometry
                 geom = emissions_.getGeometry()
 
-                # Some convenience variables
-                is_point_element_ = isinstance(geom, Point)
-                is_line_element_ = isinstance(geom, LineString)
-                is_multi_line_element_ = isinstance(geom, MultiLineString)
-                is_polygon_element_ = isinstance(geom, Polygon)
-                is_multi_polygon_element_ = isinstance(geom, MultiPolygon)
-
                 # Convert the emissions to a series object
-                e_series = pd.Series(emissions_.getObjects())
+                _em_objects = emissions_.getObjects()
+                e_series = pd.Series(_em_objects)
 
-                if is_multi_polygon_element_ or is_multi_line_element_:
+                for primitive, weight in AUSTALDispersionModule._iter_primitives(geom):
+                    p_is_point = isinstance(primitive, Point)
+                    p_is_line = isinstance(primitive, LineString)
+                    p_is_polygon = isinstance(primitive, Polygon)
+                    p_is_multi_polygon = isinstance(primitive, MultiPolygon)
 
-                    # Add the emissions for each geometry
-                    # for g in geom:
-                    for g in geom.geoms:
-                        # Determine the emissions for this geometry based on
-                        # area/length (depending on geometry type)
-                        if isinstance(g, Polygon):
-                            mpe_series = e_series * g.area / geom.area
-                        elif isinstance(g, LineString):
-                            mpe_series = e_series * g.length / geom.length
-                        else:
-                            raise TypeError(
-                                f"Geometry of type {type(geom)} is not "
-                                f"supported. It should be either a Polygon or "
-                                f"a LineString"
-                            )
-
-                        # Get matched cell coefficients for this geometry
-                        matched_cells_coeff = self.getMatchedCellCoeffs(
-                            g.wkt,
-                            emissions_,
-                            self._grid,
-                            is_point_element_,
-                            is_line_element_,
-                            is_polygon_element_,
-                            is_multi_polygon_element_,
-                        )
-
-                        # Update the total emissions per cell
-                        total_emissions_per_cell_list = self.updateEmissions(
-                            total_emissions_per_cell_list,
-                            mpe_series,
-                            matched_cells_coeff,
-                        )
-
-                else:
-
-                    # Get matched cell coefficients for this geometry
                     matched_cells_coeff = self.getMatchedCellCoeffs(
-                        emissions_.getGeometryText(),
+                        primitive.wkt,
                         emissions_,
                         self._grid,
-                        is_point_element_,
-                        is_line_element_,
-                        is_polygon_element_,
-                        is_multi_polygon_element_,
+                        p_is_point,
+                        p_is_line,
+                        p_is_polygon,
+                        p_is_multi_polygon,
                     )
 
-                    # Update the total emissions per cell
                     total_emissions_per_cell_list = self.updateEmissions(
-                        total_emissions_per_cell_list, e_series, matched_cells_coeff
+                        total_emissions_per_cell_list,
+                        e_series * weight,
+                        matched_cells_coeff,
                     )
 
         # Create cumulative emissions per cell
@@ -1433,7 +1419,6 @@ class AUSTALDispersionModule(DispersionModule):
         Get matched cells for this coefficients
 
         """
-
         # Check if the matched cells are know for this geometry
         if wkt in self._source_geometries:
 
