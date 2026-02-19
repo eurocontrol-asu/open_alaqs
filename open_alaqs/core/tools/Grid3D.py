@@ -509,8 +509,8 @@ class Grid3D:
                 if z_as_list:
                     z_list = []
                     for z in range(z_idx_low, z_idx_high + 1):
-                        if (
-                            not x > self._x_cells
+                        if not (
+                            x > self._x_cells
                             or y > self._y_cells
                             or z > self._z_cells
                         ):
@@ -518,8 +518,8 @@ class Grid3D:
                     matched_cells.append((x, y, z_list))
                 else:
                     for z in range(z_idx_low, z_idx_high + 1):
-                        if (
-                            not x > self._x_cells
+                        if not (
+                            x > self._x_cells
                             or y > self._y_cells
                             or z > self._z_cells
                         ):
