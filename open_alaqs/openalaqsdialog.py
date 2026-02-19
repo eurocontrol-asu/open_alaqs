@@ -81,6 +81,12 @@ from open_alaqs.core.tools.csv_interface import (
 from open_alaqs.core.utils.osm import download_osm_airport_data
 from open_alaqs.core.utils.qt import populate_combobox
 from open_alaqs.enums import AlaqsLayerType
+from open_alaqs.ui.styles import (
+    STATUS_STYLE_SUCCESS,
+    STATUS_STYLE_WARNING,
+    STATUS_STYLE_ERROR,
+    STATUS_STYLE_INFO,
+)
 import re
 
 logger = get_logger(__name__)
@@ -2921,11 +2927,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             executable_name = os.path.basename(last_a2k_executable_path)
             status_text = f"Executable Loaded. File: {executable_name}"
             self.ui.executableStatusLabel.setText(status_text)
-            self.ui.executableStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            self.ui.executableStatusLabel.setStyleSheet(STATUS_STYLE_SUCCESS)
         else:
             status_text = "No Executable Loaded\nPlease select the AUSTAL executable file to proceed."
             self.ui.executableStatusLabel.setText(status_text)
-            self.ui.executableStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
+            self.ui.executableStatusLabel.setStyleSheet(STATUS_STYLE_WARNING)
         self.ui.work_directory_path.setStorageMode(QgsFileWidget.GetDirectory)
         self.ui.work_directory_path.setDialogTitle(
             "Select AUSTAL Input Files (.txt, .dmna, etc.) Directory"
@@ -2939,11 +2945,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             dir_name = os.path.basename(last_work_directory_path)
             status_text = f"Input Directory Loaded. Directory: {dir_name}"
             self.ui.existingFilesStatusLabel.setText(status_text)
-            self.ui.existingFilesStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            self.ui.existingFilesStatusLabel.setStyleSheet(STATUS_STYLE_SUCCESS)
         else:
             status_text = "No Input Directory Loaded. Select directory with AUSTAL input files (.txt, .dmna, etc.)"
             self.ui.existingFilesStatusLabel.setText(status_text)
-            self.ui.existingFilesStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
+            self.ui.existingFilesStatusLabel.setStyleSheet(STATUS_STYLE_WARNING)
         self.ui.alaqs_file_path.setFilter("ALAQS (*.alaqs)")
         self.ui.alaqs_file_path.setDialogTitle("Select ALAQS Output File")
         self.ui.alaqs_file_path.setFilePath(last_alaqs_file_path)
@@ -2956,7 +2962,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         
         # Initialize execution status label
         self.ui.executionStatusLabel.setText("Status: Idle")
-        self.ui.executionStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
+        self.ui.executionStatusLabel.setStyleSheet(STATUS_STYLE_WARNING)
 
         # Setup results work directory widget - auto-load when path changes
         self.ui.resultsWorkDirectoryPath.setStorageMode(QgsFileWidget.GetDirectory)
@@ -3247,12 +3253,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             executable_name = os.path.basename(path)
             status_text = f"Executable Loaded. File: {executable_name}"
             self.ui.executableStatusLabel.setText(status_text)
-            self.ui.executableStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            self.ui.executableStatusLabel.setStyleSheet(STATUS_STYLE_SUCCESS)
             logger.info(f"AUSTAL executable selected: {path}")
         else:
             status_text = "No Executable Loaded\nPlease select the AUSTAL executable file to proceed."
             self.ui.executableStatusLabel.setText(status_text)
-            self.ui.executableStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
+            self.ui.executableStatusLabel.setStyleSheet(STATUS_STYLE_WARNING)
             if path:  # Only clear settings if a path was explicitly cleared
                 settings = QgsSettings()
                 settings.setValue("open_alaqs/a2k_executable_path", "")
@@ -3261,10 +3267,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         # Update alaqsGridStatusLabel with feedback styling
         if is_success:
             self.ui.alaqsGridStatusLabel.setText(feedback)
-            self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            self.ui.alaqsGridStatusLabel.setStyleSheet(STATUS_STYLE_SUCCESS)
         else:
             self.ui.alaqsGridStatusLabel.setText(feedback)
-            self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+            self.ui.alaqsGridStatusLabel.setStyleSheet(STATUS_STYLE_ERROR)
 
         # Update button state based on feedback
         self._update_result_buttons_state()
@@ -3278,7 +3284,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if not filename or not path.is_file() or path.suffix != ".alaqs":
             self.set_feedback("Please select an existing *_out.alaqs file", False)
             self.ui.alaqsGridStatusLabel.setText("No Grid selected")
-            self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+            self.ui.alaqsGridStatusLabel.setStyleSheet(STATUS_STYLE_WARNING)
             
             # Clear G2 visualization grid when file is deselected
             self._visualization_grid_config = None
@@ -3288,7 +3294,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         # Update status to loading state (blue)
         self.ui.alaqsGridStatusLabel.setText(f"Status: Loading {path.name}...")
-        self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #cce5ff; padding: 8px; border-radius: 4px; border-left: 4px solid #0c63e4; color: #084298; font-weight: bold;")
+        self.ui.alaqsGridStatusLabel.setStyleSheet(STATUS_STYLE_INFO)
         QtWidgets.QApplication.processEvents()  # Update UI immediately
 
         try:
@@ -3370,7 +3376,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                           f"Ref: ({grid_configuration['reference_latitude']:.4f}°, {grid_configuration['reference_longitude']:.4f}°, {grid_configuration['reference_altitude']:.0f}m)")
             status_text = f"Loaded: {path.name}\n{grid_params}"
             self.ui.alaqsGridStatusLabel.setText(status_text)
-            self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            self.ui.alaqsGridStatusLabel.setStyleSheet(STATUS_STYLE_SUCCESS)
 
             # Store grid into G2 visualization config and update the visualization status label
             self._visualization_grid_config = grid_configuration.copy()
@@ -3380,11 +3386,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         except sqlite3.OperationalError as err:
             self.set_feedback(f"Could not open database file: {err}.", False)
             self.ui.alaqsGridStatusLabel.setText("Status: Error loading file")
-            self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+            self.ui.alaqsGridStatusLabel.setStyleSheet(STATUS_STYLE_ERROR)
         except Exception as err:
             self.set_feedback(f"Error loading file: {err}", False)
             self.ui.alaqsGridStatusLabel.setText("Status: Error loading file")
-            self.ui.alaqsGridStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+            self.ui.alaqsGridStatusLabel.setStyleSheet(STATUS_STYLE_ERROR)
 
     def _on_work_directory_path_changed(self, dirname: str) -> None:
         s = QgsSettings()
@@ -3395,12 +3401,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             dir_name = os.path.basename(dirname)
             status_text = f"Input Directory Loaded\nDirectory: {dir_name}"
             self.ui.existingFilesStatusLabel.setText(status_text)
-            self.ui.existingFilesStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            self.ui.existingFilesStatusLabel.setStyleSheet(STATUS_STYLE_SUCCESS)
             logger.info(f"Work directory selected: {dirname}")
         else:
             status_text = "No Input Directory Loaded\nSelect directory with AUSTAL input files (.txt, .dmna, etc.)"
             self.ui.existingFilesStatusLabel.setText(status_text)
-            self.ui.existingFilesStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
+            self.ui.existingFilesStatusLabel.setStyleSheet(STATUS_STYLE_WARNING)
             if dirname:  # Only clear settings if a path was explicitly cleared
                 s.setValue("OpenALAQS/last_work_directory_path", "")
 
@@ -3410,7 +3416,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             # Update status label when directory is deselected
             status_text = "No Results Directory Loaded. Select a directory with AUSTAL output files"
             self.ui.resultsStatusLabel.setText(status_text)
-            self.ui.resultsStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; color: #856404; border-left: 4px solid #ffc107; font-weight: bold;")
+            self.ui.resultsStatusLabel.setStyleSheet(STATUS_STYLE_WARNING)
             self._results_loaded = False
             self._austal_ran = False
             self._update_visualization_status_label()
@@ -3426,7 +3432,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         dir_name = os.path.basename(results_dir)
         status_text = f"Results Directory Loaded. Directory: {dir_name}"
         self.ui.resultsStatusLabel.setText(status_text)
-        self.ui.resultsStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+        self.ui.resultsStatusLabel.setStyleSheet(STATUS_STYLE_SUCCESS)
         
         # Mark results as loaded and update visualisation status with grid details
         self._results_loaded = True
@@ -3483,17 +3489,14 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     text = "Please run AUSTAL or load results."
                 
                 self.ui.visualisationStatusLabel.setText(text)
-                self.ui.visualisationStatusLabel.setStyleSheet(
-                    "background-color: #fff3cd; padding: 8px; border-radius: 4px; "
-                    "border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
-                )
+                self.ui.visualisationStatusLabel.setStyleSheet(STATUS_STYLE_WARNING)
             
             # ---- Results are available ----
             else:
                 # Priority 1: G2 grid from Result Visualisation section
                 if has_g2:
                     text = f"Using Grid from Result Visualisation Section\n{_fmt(self._visualization_grid_config)}"
-                    bg_color = "background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;"
+                    bg_color = STATUS_STYLE_SUCCESS
                 
                 # Priority 2-4: AUSTAL ran - determine which grid was used
                 elif self._austal_ran:
@@ -3501,12 +3504,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     if self.ui.generateFromAlaqsRadio.isChecked() and self._austal_grid_config:
                         alaqs_file = self.ui.alaqs_output_file_path.filePath()
                         text = f"Using Grid from OpenALAQS file: {os.path.basename(alaqs_file)}\n{_fmt(self._austal_grid_config)}"
-                        bg_color = "background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;"
+                        bg_color = STATUS_STYLE_SUCCESS
                     
                     # Priority 3: AUSTAL ran from CSV generation (Option C)
                     elif self.ui.generateFromCsvRadio.isChecked() and self._austal_grid_config:
                         text = f"Using Grid from CSV Generation\n{_fmt(self._austal_grid_config)}"
-                        bg_color = "background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;"
+                        bg_color = STATUS_STYLE_SUCCESS
                     
                     # Priority 4: AUSTAL ran from existing files (Option A) - default grid
                     elif self.ui.useExistingFilesRadio.isChecked():
@@ -3514,7 +3517,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                             text = f"Using Default Grid\n{_fmt(self._austal_grid_config)}\n\nRecommendation: Load a Grid from Result Visualisation section for accurate visualisation."
                         else:
                             text = "Using Default Grid\n\nRecommendation: Load a Grid from Result Visualisation section for accurate visualisation."
-                        bg_color = "background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
+                        bg_color = STATUS_STYLE_WARNING
                     
                     else:
                         # Fallback
@@ -3522,7 +3525,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                             text = f"Using Default Grid\n{_fmt(self._austal_grid_config)}\n\nRecommendation: Load a Grid from Result Visualisation section."
                         else:
                             text = "Using Default Grid\n\nRecommendation: Load a Grid from Result Visualisation section."
-                        bg_color = "background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
+                        bg_color = STATUS_STYLE_WARNING
                 
                 # Priority 5: Results loaded from directory (no AUSTAL run)
                 else:
@@ -3531,7 +3534,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                         text = f"Using Default Grid\n{_fmt(gc)}\n\nRecommendation: Load a Grid from Result Visualisation section for accurate visualisation."
                     else:
                         text = "No Grid loaded. Please load a grid from Result Visualisation section for accurate visualisation."
-                    bg_color = "background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
+                    bg_color = STATUS_STYLE_WARNING
                 
                 self.ui.visualisationStatusLabel.setText(text)
                 self.ui.visualisationStatusLabel.setStyleSheet(bg_color)
@@ -3591,19 +3594,16 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 status_text = (f"Grid modified since loading from {fname}.\n"
                                f"{params_text}\n"
                                f"Save the grid or update the file to keep your changes.")
-                style = ("background-color: #cce5ff; padding: 8px; border-radius: 4px; "
-                         "border-left: 4px solid #0c63e4; color: #084298; font-weight: bold;")
+                style = STATUS_STYLE_INFO
             else:
                 # Green – loaded and unmodified
                 fname = os.path.basename(self._g1_loaded_file_path) if self._g1_loaded_file_path else ""
                 status_text = f"Grid loaded from {fname}\n{params_text}"
-                style = ("background-color: #d4edda; padding: 8px; border-radius: 4px; "
-                         "border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+                style = STATUS_STYLE_SUCCESS
         else:
             # No file loaded – show default grid status (yellow)
             status_text = f"Default Grid Loaded\n{params_text}"
-            style = ("background-color: #fff3cd; padding: 8px; border-radius: 4px; "
-                     "border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+            style = STATUS_STYLE_WARNING
         
         self.ui.currentGridSummaryLabel.setText(status_text)
         self.ui.currentGridSummaryLabel.setStyleSheet(style)
@@ -3644,9 +3644,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self._g1_original_grid_config = None
             self._g1_loaded_file_path = None
             self.ui.currentGridSummaryLabel.setText("No Grid selected")
-            self.ui.currentGridSummaryLabel.setStyleSheet(
-                "background-color: #fff3cd; padding: 8px; border-radius: 4px; "
-                "border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+            self.ui.currentGridSummaryLabel.setStyleSheet(STATUS_STYLE_WARNING)
             return
         
         # Store the selected grid file path for next session
@@ -3736,9 +3734,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             else:
 
                 self.ui.currentGridSummaryLabel.setText(f"Error: Could not parse {os.path.basename(grid_file)}")
-                self.ui.currentGridSummaryLabel.setStyleSheet(
-                    "background-color: #f8d7da; padding: 8px; border-radius: 4px; "
-                    "border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+                self.ui.currentGridSummaryLabel.setStyleSheet(STATUS_STYLE_ERROR)
                 
         except Exception as e:
             logger.error("Failed to load grid file: %s", e, exc_info=True)
@@ -3855,7 +3851,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         1. Determines which generation path to use (CSV or ALAQS)
         2. Creates a subdirectory "AUSTAL" in the output directory
         3. For ALAQS mode: processes the OpenALAQS file for selected pollutants
-        4. For CSV mode: TODO - implement CSV generation with selected pollutants
+        4. For CSV mode: CSV generation with selected pollutants
         5. Marks files as generated and stores the work directory
         6. Enables the Run AUSTAL button
         """
@@ -3898,18 +3894,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                         self.ui.alaqsGenerationStatusLabel.setText(
                             "Generation cancelled. Please select a different output directory."
                         )
-                        self.ui.alaqsGenerationStatusLabel.setStyleSheet(
-                            "background-color: #fff3cd; padding: 8px; border-radius: 4px; "
-                            "border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
-                        )
+                        self.ui.alaqsGenerationStatusLabel.setStyleSheet(STATUS_STYLE_WARNING)
                     else:
                         self.ui.external_files_feedback.setText(
                             "Generation cancelled. Please select a different output directory."
                         )
-                        self.ui.external_files_feedback.setStyleSheet(
-                            "background-color: #fff3cd; padding: 8px; border-radius: 4px; "
-                            "border-left: 4px solid #ffc107; color: #856404; font-weight: bold;"
-                        )
+                        self.ui.external_files_feedback.setStyleSheet(STATUS_STYLE_WARNING)
                     return
                 
                 # User chose Yes then proceed with the overwritting
@@ -3924,10 +3914,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 error_msg = f"Failed to create AUSTAL inputs directory: {e}"
                 if use_alaqs:
                     self.ui.alaqsGenerationStatusLabel.setText(error_msg)
-                    self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+                    self.ui.alaqsGenerationStatusLabel.setStyleSheet(STATUS_STYLE_ERROR)
                 else:
                     self.ui.external_files_feedback.setText(error_msg)
-                    self.ui.external_files_feedback.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+                    self.ui.external_files_feedback.setStyleSheet(STATUS_STYLE_ERROR)
                 return
         
         # Read selected time period from UI
@@ -3946,16 +3936,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         def _set_status_error(msg: str) -> None:
             if use_alaqs:
                 self.ui.alaqsGenerationStatusLabel.setText(msg)
-                self.ui.alaqsGenerationStatusLabel.setStyleSheet(
-                    "background-color: #f8d7da; padding: 8px; border-radius: 4px; "
-                    "border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;"
-                )
+                self.ui.alaqsGenerationStatusLabel.setStyleSheet(STATUS_STYLE_ERROR)
             else:
                 self.ui.external_files_feedback.setText(msg)
-                self.ui.external_files_feedback.setStyleSheet(
-                    "background-color: #f8d7da; padding: 8px; border-radius: 4px; "
-                    "border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;"
-                )
+                self.ui.external_files_feedback.setStyleSheet(STATUS_STYLE_ERROR)
 
         try:
             if use_alaqs:
@@ -4018,10 +4002,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             error_msg = f"Error generating AUSTAL input files: {e}"
             if use_alaqs:
                 self.ui.alaqsGenerationStatusLabel.setText(error_msg)
-                self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+                self.ui.alaqsGenerationStatusLabel.setStyleSheet(STATUS_STYLE_ERROR)
             else:
                 self.ui.external_files_feedback.setText(error_msg)
-                self.ui.external_files_feedback.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+                self.ui.external_files_feedback.setStyleSheet(STATUS_STYLE_ERROR)
             logger.error(error_msg, exc_info=True)
             return
         
@@ -4036,10 +4020,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         status_msg = f"AUSTAL input files generated successfully. Path: {austal_inputs_dir}"
         if use_alaqs:
             self.ui.alaqsGenerationStatusLabel.setText(status_msg)
-            self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            self.ui.alaqsGenerationStatusLabel.setStyleSheet(STATUS_STYLE_SUCCESS)
         else:
             self.ui.external_files_feedback.setText(status_msg)
-            self.ui.external_files_feedback.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            self.ui.external_files_feedback.setStyleSheet(STATUS_STYLE_SUCCESS)
 
     def _generate_from_alaqs_file(
         self,
@@ -4272,7 +4256,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         if missing:
             self.ui.alaqsGenerationStatusLabel.setText(f"Missing {', '.join(missing)}")
-            self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+            self.ui.alaqsGenerationStatusLabel.setStyleSheet(STATUS_STYLE_WARNING)
             self.ui.generateFromCsvBtn.setEnabled(False)
             # Keep Run AUSTAL enabled if files have already been generated (user may have deselected pollutant by mistake)
             if not self._austal_input_files_generated:
@@ -4281,7 +4265,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         if alaqs_file and os.path.isfile(alaqs_file) and not has_valid_grid:
             self.ui.alaqsGenerationStatusLabel.setText("Selected OpenALAQS output file (emission inventory *_out.alaqs) is not valid")
-            self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+            self.ui.alaqsGenerationStatusLabel.setStyleSheet(STATUS_STYLE_ERROR)
             self.ui.generateFromCsvBtn.setEnabled(False)
             # Keep Run AUSTAL enabled if files have already been generated
             if not self._austal_input_files_generated:
@@ -4303,7 +4287,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             f"Quality level: {quality_level}, Mixing height: {mixing_height_status}"
         )
         self.ui.alaqsGenerationStatusLabel.setText(status_text)
-        self.ui.alaqsGenerationStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+        self.ui.alaqsGenerationStatusLabel.setStyleSheet(STATUS_STYLE_SUCCESS)
         self.ui.generateFromCsvBtn.setEnabled(True)
         # Only enable Run AUSTAL if files have been generated
         self.ui.RunA2K.setEnabled(self._austal_input_files_generated)
@@ -4388,7 +4372,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         if missing:
             self.ui.external_files_feedback.setText(f"Missing {', '.join(missing)}")
-            self.ui.external_files_feedback.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+            self.ui.external_files_feedback.setStyleSheet(STATUS_STYLE_WARNING)
             self.ui.generateFromCsvBtn.setEnabled(False)
             # Keep Run AUSTAL enabled if files have already been generated (user may have deselected pollutant by mistake)
             if not self._austal_input_files_generated:
@@ -4409,7 +4393,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             f"Period: {start_str} – {end_str} | "
             f"Quality level: {quality_level}, Mixing height: {mixing_height_status}"
         )
-        self.ui.external_files_feedback.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+        self.ui.external_files_feedback.setStyleSheet(STATUS_STYLE_SUCCESS)
         self.ui.generateFromCsvBtn.setEnabled(True)
         # Only enable Run AUSTAL if files have been generated
         self.ui.RunA2K.setEnabled(self._austal_input_files_generated)
@@ -4577,7 +4561,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             is_valid, error_message = self._validate_austal_inputs()
             if not is_valid:
                 self.ui.executionStatusLabel.setText(f"Status: Validation Failed: {error_message}")
-                self.ui.executionStatusLabel.setStyleSheet("background-color: #fff3cd; padding: 8px; border-radius: 4px; border-left: 4px solid #ffc107; color: #856404; font-weight: bold;")
+                self.ui.executionStatusLabel.setStyleSheet(STATUS_STYLE_WARNING)
                 QtWidgets.QMessageBox.warning(
                     self,
                     "Input Validation Failed",
@@ -4587,7 +4571,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
             # Update status to running
             self.ui.executionStatusLabel.setText("Status: Running AUSTAL...")
-            self.ui.executionStatusLabel.setStyleSheet("background-color: #cce5ff; padding: 8px; border-radius: 4px; border-left: 4px solid #0c63e4; color: #084298; font-weight: bold;")
+            self.ui.executionStatusLabel.setStyleSheet(STATUS_STYLE_INFO)
             QtWidgets.QApplication.processEvents()  # Update UI immediately
             
             austal_ = str(self.ui.a2k_executable_path.filePath())
@@ -4597,7 +4581,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
             if not work_dir or not os.path.isdir(work_dir):
                 self.ui.executionStatusLabel.setText("Status: Error - Invalid input directory")
-                self.ui.executionStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+                self.ui.executionStatusLabel.setStyleSheet(STATUS_STYLE_ERROR)
                 QtWidgets.QMessageBox.warning(
                     self,
                     "Warning",
@@ -4623,7 +4607,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
             # Update status to completed
             self.ui.executionStatusLabel.setText("Status: Completed successfully")
-            self.ui.executionStatusLabel.setStyleSheet("background-color: #d4edda; padding: 8px; border-radius: 4px; border-left: 4px solid #28a745; color: #155724; font-weight: bold;")
+            self.ui.executionStatusLabel.setStyleSheet(STATUS_STYLE_SUCCESS)
             
             # Mark results as loaded and update visualisation status with grid details
             self._results_loaded = True
@@ -4687,7 +4671,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         except Exception as exception:
             # Update status to error
             self.ui.executionStatusLabel.setText("Status: Failed")
-            self.ui.executionStatusLabel.setStyleSheet("background-color: #f8d7da; padding: 8px; border-radius: 4px; border-left: 4px solid #f5c6cb; color: #721c24; font-weight: bold;")
+            self.ui.executionStatusLabel.setStyleSheet(STATUS_STYLE_ERROR)
             QtWidgets.QMessageBox.critical(
                 self, "Error", "AUSTAL execution failed! See the log for details."
             )
