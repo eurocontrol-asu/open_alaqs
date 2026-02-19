@@ -16,32 +16,32 @@ Required column:
     DateTime(YYYY-mm-dd hh:mm:ss)   datetime of the observation
 
 Columns written to the AUSTAL series.dmna file:
-    WindSpeed(m/s)          wind speed             
-    WindDirection(degrees)  wind direction    
-    ObukhovLength(m)        Obukhov length         
-    MixingHeight(m)         mixing layer height    
+    WindSpeed(m/s)          wind speed
+    WindDirection(degrees)  wind direction
+    ObukhovLength(m)        Obukhov length
+    MixingHeight(m)         mixing layer height
 
 Columns parsed but NOT forwarded to AUSTAL (can be omitted):
-    Temperature(K)                  
-    Humidity(kg_water/kg_dry_air)   
-    RelativeHumidity(%)             
-    SeaLevelPressure(Pa)            
-    Scenario                        
+    Temperature(K)
+    Humidity(kg_water/kg_dry_air)
+    RelativeHumidity(%)
+    SeaLevelPressure(Pa)
+    Scenario
 
 Any other columns are ignored.
 
 grid_config dict schema
 -----------------------
 Required keys (all have fallback defaults if omitted):
-    x_cells             int     number of grid cells in X            
-    y_cells             int     number of grid cells in Y            
-    z_cells             int     number of grid cells in Z            
-    x_resolution        float   cell size in X  (m)                  
-    y_resolution        float   cell size in Y  (m)                  
-    z_resolution        float   cell size in Z  (m)                  
-    reference_latitude  float   grid origin latitude  (deg)  
-    reference_longitude float   grid origin longitude (deg)  
-    reference_altitude  float   grid origin altitude  (m)            
+    x_cells             int     number of grid cells in X
+    y_cells             int     number of grid cells in Y
+    z_cells             int     number of grid cells in Z
+    x_resolution        float   cell size in X  (m)
+    y_resolution        float   cell size in Y  (m)
+    z_resolution        float   cell size in Z  (m)
+    reference_latitude  float   grid origin latitude  (deg)
+    reference_longitude float   grid origin longitude (deg)
+    reference_altitude  float   grid origin altitude  (m)
 
 austal_config dict schema
 -------------------------
@@ -67,15 +67,15 @@ from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from typing import Dict, List
+
 import geopandas as gpd
+from qgis.utils import spatialite_connect
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.AmbientCondition import AmbientCondition
+from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.modules.AUSTALOutputModule import AUSTALDispersionModule
 from open_alaqs.core.tools.Grid3D import Grid3D
-from open_alaqs.core.interfaces.Emissions import Emission
-
-from qgis.utils import spatialite_connect
 
 logger = get_logger(__name__)
 
@@ -215,7 +215,7 @@ def parse_emissions_csv(path: str) -> Dict[datetime, List[dict]]:
 
     if movement_wkt_sample is None:
         logger.warning("No movement rows found in the CSV")
-        
+
     if not rows_by_ts:
         raise ValueError(f"Emissions CSV contains no valid rows: {path}")
 
@@ -250,9 +250,7 @@ def parse_meteo_csv(path: str) -> Dict[datetime, "AmbientCondition"]:
             try:
                 ts = datetime.strptime(raw_dt, _METEO_DT_FMT)
             except ValueError:
-                logger.warning(
-                    "Row %d has unparseable DateTime '%s'", i, raw_dt
-                )
+                logger.warning("Row %d has unparseable DateTime '%s'", i, raw_dt)
                 continue
 
             ac_dict = {
@@ -271,7 +269,9 @@ def parse_meteo_csv(path: str) -> Dict[datetime, "AmbientCondition"]:
                 # Written to series.dmna as ua, ra, lm, hm respectively
                 "WindSpeed": _safe_float(row.get("WindSpeed(m/s)"), 0.0),
                 "WindDirection": _safe_float(row.get("WindDirection(degrees)"), 0.0),
-                "ObukhovLength": _safe_float(row.get("ObukhovLength(m)"), 99999.0),  # 99999 = neutral stability
+                "ObukhovLength": _safe_float(
+                    row.get("ObukhovLength(m)"), 99999.0
+                ),  # 99999 = neutral stability
                 "MixingHeight": _safe_float(row.get("MixingHeight(m)"), 914.4),
                 "SpeedOfSound": 340.29,
             }
@@ -333,9 +333,7 @@ def _build_emission(row: dict):
 
     # All *_kg columns are treated as pollutant quantities; non-numeric values become 0.0
     pollutant_values = {
-        col: _safe_float(val)
-        for col, val in row.items()
-        if col.endswith("_kg")
+        col: _safe_float(val) for col, val in row.items() if col.endswith("_kg")
     }
     em = Emission(initValues=pollutant_values)
     raw_wkt = (row.get(_COL_WKT) or "").strip()
@@ -429,16 +427,14 @@ def generate_austal_from_csv(
     # Parse both inputs up front so format errors are caught before AUSTAL initialises
     rows_by_ts = parse_emissions_csv(emissions_csv_path)
     meteo_map = parse_meteo_csv(meteo_csv_path)
-    
+
     has_geometry = any(
         (row.get(_COL_WKT) or "").strip().lower() not in _SENTINEL_WKT
         for ts_rows in rows_by_ts.values()
         for row in ts_rows
     )
     if not has_geometry:
-        raise ValueError(
-            "All rows in the emissions CSV have no WKT geometry."
-        )
+        raise ValueError("All rows in the emissions CSV have no WKT geometry.")
 
     sorted_timestamps = sorted(rows_by_ts.keys())
     # Interval is used to compute end_ts = ts + time_interval for each process() call

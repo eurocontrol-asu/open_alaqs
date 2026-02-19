@@ -4,10 +4,9 @@ from collections import OrderedDict
 import matplotlib
 import numpy as np
 import pandas as pd
-from shapely.geometry.base import BaseGeometry
-
 from qgis.core import Qgis, QgsGeometry, QgsLineString
 from qgis.PyQt import QtCore, QtWidgets
+from shapely.geometry.base import BaseGeometry
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft, AircraftStore

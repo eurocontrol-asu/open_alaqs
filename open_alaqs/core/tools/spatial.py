@@ -656,8 +656,18 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
             return geometry_wkt, 1.0
 
         geom_type = geom.GetGeometryType()
-        single_types = (ogr.wkbLineString, ogr.wkbLineString25D, ogr.wkbLineStringM, ogr.wkbLineStringZM)
-        multi_types = (ogr.wkbMultiLineString, ogr.wkbMultiLineString25D, ogr.wkbMultiLineStringM, ogr.wkbMultiLineStringZM)
+        single_types = (
+            ogr.wkbLineString,
+            ogr.wkbLineString25D,
+            ogr.wkbLineStringM,
+            ogr.wkbLineStringZM,
+        )
+        multi_types = (
+            ogr.wkbMultiLineString,
+            ogr.wkbMultiLineString25D,
+            ogr.wkbMultiLineStringM,
+            ogr.wkbMultiLineStringZM,
+        )
 
         if geom_type in single_types:
             parts = [geom]
@@ -671,9 +681,7 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
             return geometry_wkt, 1.0
 
         # Get original total line length (ellipsoidal, EPSG:3857 → EPSG:4326)
-        original_length = sum(
-            getDistanceOfLineStringXY(p.ExportToWkt()) for p in parts
-        )
+        original_length = sum(getDistanceOfLineStringXY(p.ExportToWkt()) for p in parts)
         if original_length == 0:
             return geometry_wkt, 1.0
 
@@ -707,7 +715,7 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
         # segment is NOT equal to the end of the previous one (non-contiguous parts).
         # This prevents phantom line segments being created between unrelated parts
         # (e.g., end of a taxi segment and start of a takeoff-roll segment).
-        line_chains = []        # list of list-of-(x,y,z)
+        line_chains = []  # list of list-of-(x,y,z)
         current_chain = []
         for seg in all_clipped_segments:
             x1, y1, z1, x2, y2, z2 = seg
@@ -735,7 +743,9 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
             clipped_wkt = f"MULTILINESTRING Z({parts_str})"
 
         clipped_length = getDistanceOfLineStringXY(clipped_wkt)
-        length_fraction = clipped_length / original_length if original_length > 0 else 1.0
+        length_fraction = (
+            clipped_length / original_length if original_length > 0 else 1.0
+        )
 
         return clipped_wkt, length_fraction
 
