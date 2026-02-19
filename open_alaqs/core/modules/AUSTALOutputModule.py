@@ -1,10 +1,10 @@
 import itertools
 import os
+import re
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Tuple, Union
-import re
 
 import geopandas as gpd
 import numpy as np
@@ -1132,7 +1132,9 @@ class AUSTALDispersionModule(DispersionModule):
             if hasattr(source_, "getHeight") and source_.getHeight() > 0:
                 self._source_height = source_.getHeight()
 
-            _src_name = source_.getName() if hasattr(source_, "getName") else str(source_)
+            _src_name = (
+                source_.getName() if hasattr(source_, "getName") else str(source_)
+            )
 
             for _em_idx, emissions_ in enumerate(emissions__):
 
