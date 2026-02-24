@@ -215,7 +215,7 @@ These files can be used directly with the AUSTAL executable or loaded back via t
 
 A typical two-step workflow:
 
-1. **Generate emissions** using the `run_emissions_austal.py` script (in `scripts/individual_script/`), which exports a CSV file with `--csv` flag.
+1. **Generate emissions** using the `run_emissions_austal.py` script (in `scripts/emissions_austal/`), which exports a CSV file with `--csv` flag.
 2. **Generate AUSTAL input files** using this script, pointing `emissions_csv_path` to the CSV output from step 1.
 
 This separation allows you to:

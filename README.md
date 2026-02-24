@@ -168,7 +168,7 @@ For more detailed information on how to use OpenALAQS, the project files and exp
 
 This repository contains a beta standalone script that can generate emissions exports (CSV/GeoJSON) and AUSTAL input files. The script is experimental and may contain bugs or incomplete features.
 
-- Script location: [open_alaqs/scripts/individual_script/run_emissions_austal.py](open_alaqs/scripts/individual_script/run_emissions_austal.py). A dedicated README file with detailed instructions with how to use the script is provided in the same folder.
+- Script location: [open_alaqs/scripts/emissions_austal/run_emissions_austal.py](open_alaqs/scripts/emissions_austal/run_emissions_austal.py). A dedicated README file with detailed instructions with how to use the script is provided in the same folder.
 
 ## GSE Application
 

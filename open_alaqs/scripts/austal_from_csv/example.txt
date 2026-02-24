@@ -16,13 +16,13 @@
 # ---------------------------------------------------------------------------
 
 # Path to pre-calculated emissions CSV
-emissions_csv_path=C:\path\to\emissions.csv
+emissions_csv_path=sample_data\emissions.csv
 
 # Path to meteorology CSV
-meteo_csv_path=C:\path\to\meteo.csv
+meteo_csv_path=sample_data\meteo.csv
 
 # Output directory where AUSTAL input files will be written
-output_path=C:\path\to\austal_output
+output_path=sample_data\austal_output
 
 # Comma-separated list of pollutants to include
 # Accepted values: CO2, CO, HC, NOx, SOx, PM10
@@ -33,7 +33,7 @@ pollutants=NOx,CO,PM10
 # ---------------------------------------------------------------------------
 
 # Option A – Load grid from file (.csv or .alaqs)
-grid_file_path=C:\path\to\grid.csv
+grid_file_path=sample_data\grid.csv
 
 # Option B – Specify grid parameters manually (comment out grid_file_path above)
 # x_cells=50
