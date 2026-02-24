@@ -18,11 +18,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-import csv
 import os
-import re
-import shutil
-import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
@@ -44,7 +40,7 @@ from qgis.core.additions.edit import edit
 from qgis.gui import QgsDoubleSpinBox, QgsFileWidget, QgsMessageBar
 from qgis.PyQt import QtCore, QtGui, QtWidgets
 from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtWidgets import QMessageBox, QSizePolicy, QSpacerItem
+from qgis.PyQt.QtWidgets import QMessageBox, QSizePolicy
 from qgis.PyQt.uic import loadUiType
 from qgis.utils import OverrideCursor
 
@@ -54,40 +50,28 @@ from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqsdblite import (
     ProjectDatabase,
     delete_records,
-    get_inventory_timestamps,
     get_min_max_timestamps,
     is_output_db_file,
 )
 from open_alaqs.core.alaqslogging import get_logger, log_path
-from open_alaqs.core.EmissionCalculation import EmissionCalculation, GridConfig
 from open_alaqs.core.EmissionCalculatorService import (
     EmissionCalculationConfig,
     EmissionCalculatorService,
 )
-from open_alaqs.core.interfaces.Emissions import PollutantType
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.core.modules.ModuleManager import (
     DispersionModuleRegistry,
     OutputAnalysisModuleRegistry,
-    OutputDispersionModuleRegistry,
     SourceModuleRegistry,
 )
 from open_alaqs.core.tools import conversion
-from open_alaqs.core.tools.austal_csv_generation import generate_austal_from_csv
 from open_alaqs.core.tools.csv_interface import (
     read_csv_to_dict,
     read_csv_to_geodataframe,
 )
-from open_alaqs.core.tools.Grid3D import Grid3D
 from open_alaqs.core.utils.osm import download_osm_airport_data
 from open_alaqs.core.utils.qt import populate_combobox
 from open_alaqs.enums import AlaqsLayerType
-from open_alaqs.ui.styles import (
-    STATUS_STYLE_ERROR,
-    STATUS_STYLE_INFO,
-    STATUS_STYLE_SUCCESS,
-    STATUS_STYLE_WARNING,
-)
 
 logger = get_logger(__name__)
 

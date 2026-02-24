@@ -3,12 +3,11 @@ import os
 import re
 import shutil
 import sqlite3
-import geopandas as gpd
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-
+import geopandas as gpd
 from qgis.core import QgsMapLayer, QgsProject, QgsSettings, QgsTextAnnotation
 from qgis.gui import QgsFileWidget
 from qgis.PyQt import QtCore, QtGui, QtWidgets
