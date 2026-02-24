@@ -371,3 +371,34 @@ def insert_into_table(
     """
 
     return db_execute_sql(db_filename, sql, values)
+
+
+def get_grid_3d_definition(db_filename: str) -> Optional[dict[str, Any]]:
+    """Retrieve grid_3d_definition from database.
+
+    Args:
+        db_filename (str): Path to the database file.
+
+    Returns:
+        dict containing x_cells, y_cells, z_cells, or None if not found.
+    """
+    sql = 'SELECT x_cells, y_cells, z_cells FROM "grid_3d_definition" LIMIT 1'
+    return db_execute_sql(db_filename, sql, fetchone=True)
+
+
+def has_grid_3d_definition(db_filename: str) -> bool:
+    """Check if database has a valid grid_3d_definition table.
+
+    Args:
+        db_filename (str): Path to the database file.
+
+    Returns:
+        True if grid_3d_definition exists and has at least one row, False otherwise.
+    """
+    try:
+        with get_db_connection(db_filename) as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT 1 FROM "grid_3d_definition" LIMIT 1')
+            return cur.fetchone() is not None
+    except Exception:
+        return False

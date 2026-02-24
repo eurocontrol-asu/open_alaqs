@@ -31,6 +31,10 @@ from open_alaqs.core.modules.ModuleManager import (
 )
 from open_alaqs.core.tools.austal_csv_generation import generate_austal_from_csv
 from open_alaqs.core.tools.Grid3D import Grid3D
+from open_alaqs.core.tools.sql_interface import (
+    get_grid_3d_definition,
+    has_grid_3d_definition,
+)
 from open_alaqs.ui.styles import (
     STATUS_STYLE_ERROR,
     STATUS_STYLE_INFO,
@@ -1724,18 +1728,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         # Check if ALAQS file has grid_3d_definition if provided
         has_valid_grid = False
         if alaqs_file and os.path.isfile(alaqs_file):
-            try:
-                conn = sqlite3.connect(alaqs_file)
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                cursor.execute(
-                    'SELECT x_cells, y_cells, z_cells FROM "grid_3d_definition" LIMIT 1'
-                )
-                grid_row = cursor.fetchone()
-                conn.close()
-                has_valid_grid = grid_row is not None
-            except Exception:
-                has_valid_grid = False
+            grid_def = get_grid_3d_definition(alaqs_file)
+            has_valid_grid = grid_def is not None
 
         if missing:
             self.ui.alaqsGenerationStatusLabel.setText(f"Missing {', '.join(missing)}")
@@ -2022,20 +2016,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 return False, "Please select at least one pollutant"
 
             # Check for grid_3d_definition
-            try:
-                conn = sqlite3.connect(alaqs_file)
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                cursor.execute('SELECT 1 FROM "grid_3d_definition" LIMIT 1')
-                if cursor.fetchone() is None:
-                    conn.close()
-                    return (
-                        False,
-                        "Selected OpenALAQS file does not have a valid grid_3d_definition",
-                    )
-                conn.close()
-            except Exception as e:
-                return False, f"Error reading OpenALAQS file: {e}"
+            if not has_grid_3d_definition(alaqs_file):
+                return (
+                    False,
+                    "Selected OpenALAQS file does not have a valid grid_3d_definition",
+                )
 
         elif self.ui.generateFromCsvRadio.isChecked():
             output_dir = self.ui.output_directory_path.filePath()
