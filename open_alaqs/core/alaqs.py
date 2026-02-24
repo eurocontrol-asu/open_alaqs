@@ -427,6 +427,5 @@ def inventory_creation_new(
 
 
 @catch_errors
-def import_ads_b_data(adsb_data: list) -> bool:
-    # alaqsdblite.import_ads_b_data()
-    pass  # TODO
+def import_ads_b_data(adsb_data: list, inventory_path: str) -> bool:
+    return alaqsdblite.import_ads_b_data(adsb_data, inventory_path)

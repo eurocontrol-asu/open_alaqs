@@ -141,7 +141,7 @@ class connect_to_alaqs_db:
 
     def __enter__(self) -> sqlite.Connection:
         if not hasattr(self.project_database, "path"):
-            raise Exception("Cannot connec to to undefined ALAQS database!")
+            raise Exception("Cannot connect to undefined ALAQS database!")
 
         self.conn = spatialite_connect(self.project_database.path)
 
@@ -871,3 +871,48 @@ def get_min_max_timestamps(db_path: str) -> tuple[datetime, datetime]:
 # #################################################
 # #########       CALCULATIONS        #############
 # #################################################
+
+
+# #################################################
+# #########     DEFAULT PROFILES      #############
+# #################################################
+
+
+def get_max_profile_oid() -> int:
+    sql = """
+        SELECT max(oid) as max_oid
+        FROM default_aircraft_profiles
+        """
+    res = execute_sql(sql)
+    return res["max_oid"] if res else 0
+
+
+@catch_errors
+def import_ads_b_data(ads_b_data: list, inventory_path: str) -> bool:
+    """
+    TODO: Documentation
+    Insert user defined movement table into the alaqs output file
+    :param inventory_name: path to the alaqs output file
+    :param model_parameters: a list of user defined model parameters used to generate the study output
+    """
+    if not ads_b_data:
+        return False
+
+    conn = sqlite.connect(inventory_path)
+    cursor = conn.cursor()
+
+    n_columns = len(ads_b_data[0])
+    n_rows = len(ads_b_data)
+
+    values_str = "?," * n_columns
+    values_str = values_str[:-1]  # Remove trailing comma
+    cursor.executemany(
+        "INSERT INTO default_aircraft_profiles VALUES (%s)" % values_str,
+        ads_b_data,
+    )
+    conn.commit()
+
+    msg = f"[+] ADS-B data imported into default_aircraft_profiles ({n_rows} rows)"
+    conn.close()
+    logger.info(msg)
+    return True
