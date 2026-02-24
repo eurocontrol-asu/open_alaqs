@@ -11,6 +11,7 @@ from qgis.PyQt.uic import loadUiType
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
+from open_alaqs.core.interfaces.Movement import Movement
 from open_alaqs.core.interfaces.OutputModule import GridOutputModule
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
@@ -106,7 +107,7 @@ class TableViewWidgetOutputModule(GridOutputModule):
             )
         elif self._view_type == ViewType.BY_SOURCE:
             for source, emissions in result:
-                if source.__class__.__name__ == "Movement":
+                if isinstance(source, Movement):
                     # Export one row per emission segment for movements.
                     # Summing all segments into one row and then unary_union-ing their
                     # geometries loses the per-segment emission split, which forces an
@@ -208,10 +209,10 @@ class TableViewWidgetOutputModule(GridOutputModule):
             source_name = "total"
             wkt = None
         else:
-            source_type = source.__class__.__name__
+            source_type = type(source).__name__
             source_name = source.getName()
 
-            if source_type == "Movement":
+            if isinstance(source, Movement):
                 # For Movement sources use the geometry from the emission object, not
                 # the source. The source geometry is the full trajectory; each emission
                 # carries the geometry of its specific segment (already clipped and
