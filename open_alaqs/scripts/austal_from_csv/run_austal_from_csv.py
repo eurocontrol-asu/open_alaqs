@@ -4,7 +4,7 @@ Generates AUSTAL dispersion-model input files from pre-calculated emissions
 and meteorology CSV files and a key=value configuration file.
 
 Usage (from OSGeo4W Shell):
-    python-qgis run_austal_from_csv.py <config_txt> [--timing] [--dry-run]
+    python-qgis run_austal_from_csv.py <config_txt> [--timing] [--dry-run] [--run-austal]
 
 The config file uses key=value pairs (# comments are ignored).
 Required keys:
@@ -24,6 +24,7 @@ Optional keys (defaults shown):
     roughness_length_m      = 0.2
     displacement_height_m   = 1.2
     anemometer_height_m     = 11.2
+    austal_exe_path         = (path to austal.exe — runs AUSTAL after generation)
     show_logs               = False
 """
 
@@ -32,6 +33,7 @@ import csv as _csv_mod
 import logging
 import os
 import sqlite3
+import subprocess
 import sys
 import warnings
 
@@ -232,6 +234,12 @@ def parse_config(txt_path):
         "anemometer_height_m": float(raw.get("anemometer_height_m", 11.2)),
     }
 
+    # AUSTAL executable path (optional — run AUSTAL after generating input files)
+    austal_exe = raw.get("austal_exe_path", "")
+    if austal_exe:
+        austal_exe = os.path.expandvars(austal_exe)
+    config["austal_exe_path"] = austal_exe
+
     # Logging control
     config["show_logs"] = raw.get("show_logs", "False").strip().lower() in (
         "true",
@@ -358,6 +366,11 @@ def validate_config(config):
             "or manual grid keys (x_cells, y_cells, etc.)"
         )
 
+    # AUSTAL executable (optional, but must exist if provided)
+    austal_exe = config.get("austal_exe_path", "")
+    if austal_exe and not os.path.isfile(austal_exe):
+        errors.append(f"austal_exe_path does not exist: {austal_exe}")
+
     return errors
 
 
@@ -461,6 +474,12 @@ def main():
         dest="dry_run",
         help="Parse and validate config without generating files",
     )
+    parser.add_argument(
+        "--run-austal",
+        action="store_true",
+        dest="run_austal",
+        help="Run the AUSTAL executable after generating input files (requires austal_exe_path in config)",
+    )
     args = parser.parse_args()
 
     # Resolve config file
@@ -485,6 +504,8 @@ def main():
     announce(f"Meteo CSV:     {config['meteo_csv_path']}")
     announce(f"Output path:   {config['output_path']}")
     announce(f"Pollutants:    {', '.join(config['pollutants'])}")
+    if config.get("austal_exe_path"):
+        announce(f"AUSTAL exe:    {config['austal_exe_path']}")
     if config.get("grid_file_path"):
         announce(f"Grid file:     {config['grid_file_path']}")
     gc = config["grid_config"]
@@ -533,7 +554,7 @@ def main():
         announce_err(f"\nUnexpected error: {exc}")
         sys.exit(1)
 
-    end_time = _dt.now()
+    gen_end_time = _dt.now()
 
     announce("")
     announce("=" * 60)
@@ -541,12 +562,69 @@ def main():
     announce("=" * 60)
     announce(f"Output: {config['output_path']}")
 
+    # ── Run AUSTAL executable if requested via --run-austal ──────────
+    austal_exe = config.get("austal_exe_path", "")
+    ran_austal = False
+    if args.run_austal:
+        if not austal_exe:
+            announce_err(
+                "\n--run-austal was requested but austal_exe_path is not set in the config."
+            )
+            sys.exit(1)
+        if not os.path.isfile(austal_exe):
+            announce_err(
+                f"\n--run-austal was requested but austal_exe_path does not exist: {austal_exe}"
+            )
+            sys.exit(1)
+
+        ran_austal = True
+        announce("")
+        announce("=" * 60)
+        announce("Running AUSTAL dispersion model".center(60))
+        announce("=" * 60)
+        announce("")
+        announce(f"Executable: {austal_exe}")
+        announce(f"Work dir:   {config['output_path']}")
+        announce("")
+
+        try:
+            cmd = [austal_exe, os.path.abspath(config["output_path"])]
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+            )
+
+            if proc.stdout:
+                for line in proc.stdout.strip().splitlines():
+                    announce(f"  [AUSTAL] {line}")
+            if proc.stderr:
+                for line in proc.stderr.strip().splitlines():
+                    announce_err(f"  [AUSTAL err] {line}")
+
+            if proc.returncode != 0:
+                announce_err(
+                    f"\nAUSTAL exited with code {proc.returncode}."
+                )
+                sys.exit(proc.returncode)
+
+            announce("")
+            announce("AUSTAL completed successfully.")
+        except OSError as exc:
+            announce_err(f"\nFailed to run AUSTAL: {exc}")
+            sys.exit(1)
+
+    end_time = _dt.now()
+
     if args.timing:
         announce("")
         announce("-" * 60)
         announce("Timing summary".center(60))
         announce("-" * 60)
-        announce(f"Total elapsed: {_format_timedelta(end_time - start_time)}")
+        announce(f"  Generation:    {_format_timedelta(gen_end_time - start_time)}")
+        if ran_austal:
+            announce(f"  AUSTAL run:    {_format_timedelta(end_time - gen_end_time)}")
+        announce(f"  Total elapsed: {_format_timedelta(end_time - start_time)}")
 
 
 if __name__ == "__main__":
