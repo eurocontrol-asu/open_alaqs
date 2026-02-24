@@ -65,10 +65,11 @@ python-qgis open_alaqs\scripts\austal_from_csv\run_austal_from_csv.py "C:\path\t
 
 ## Command-Line Flags
 
-| Flag        | Description                                              |
-|-------------|----------------------------------------------------------|
-| `--timing`  | Print elapsed time summary on completion                 |
-| `--dry-run` | Parse and validate config without generating any files   |
+| Flag           | Description                                              |
+|----------------|----------------------------------------------------------|
+| `--timing`     | Print elapsed time summary on completion                 |
+| `--dry-run`    | Parse and validate config without generating any files   |
+| `--run-austal` | Run the AUSTAL executable after generating input files (requires `austal_exe_path` in config) |
 
 ---
 
@@ -115,6 +116,7 @@ The CSV must have a header row with columns: `x_cells`, `y_cells`, `z_cells`, `x
 | Key                       | Type   | Default                         | Description                                      |
 |---------------------------|--------|---------------------------------|--------------------------------------------------|
 | `reference_altitude`      | float  | `0.0`                           | Grid origin altitude (m above sea level)         |
+| `austal_exe_path`         | path   | *(not set)*                     | Path to `austal.exe` — run AUSTAL after generation |
 | `quality_level`           | int    | `1`                             | AUSTAL quality level (1=fastest, 3=most accurate)|
 | `mixing_height_enabled`   | bool   | `False`                         | Include mixing height in AUSTAL series file      |
 | `options_string`          | string | `NOSTANDARD;SCINOTAT;Kmax=1`    | AUSTAL options flags                             |
@@ -208,6 +210,10 @@ The script generates the following AUSTAL input files inside the `output_path` d
 - Source emission files — one per active source/timestep
 
 These files can be used directly with the AUSTAL executable or loaded back via the QGIS plugin's "Use Existing AUSTAL Input Files" option.
+
+### Running AUSTAL automatically
+
+If `austal_exe_path` is set in the config and `--run-austal` is passed on the command line, the script will execute AUSTAL immediately after generating the input files. AUSTAL output (concentration grids, log files) will be written into the same `output_path` directory. The script forwards AUSTAL's stdout/stderr and exits with AUSTAL's return code on failure.
 
 ---
 

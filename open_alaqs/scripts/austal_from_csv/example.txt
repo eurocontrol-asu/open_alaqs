@@ -8,6 +8,7 @@
 # Usage (from OSGeo4W Shell):
 #   python-qgis run_austal_from_csv.py example.txt --timing
 #   python-qgis run_austal_from_csv.py example.txt --dry-run
+#   python-qgis run_austal_from_csv.py example.txt --run-austal --timing
 #
 # =============================================================================
 
@@ -45,6 +46,16 @@ grid_file_path=sample_data\grid.csv
 # reference_latitude=48.6900
 # reference_longitude=9.2220
 # reference_altitude=370.0
+
+# ---------------------------------------------------------------------------
+# OPTIONAL: AUSTAL executable (used with --run-austal flag)
+# ---------------------------------------------------------------------------
+
+# Path to austal.exe — only used when the --run-austal flag is passed
+# on the command line. The script will then run AUSTAL after generating
+# the input files. Without --run-austal, only input files are generated.
+#
+# austal_exe_path=C:\AUSTAL\austal.exe
 
 # ---------------------------------------------------------------------------
 # OPTIONAL: AUSTAL dispersion settings (defaults shown)
