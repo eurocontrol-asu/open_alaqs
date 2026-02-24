@@ -5,7 +5,7 @@ import pandas as pd
 from pyproj import CRS, Transformer
 
 from open_alaqs.core.alaqs import import_ads_b_data
-from open_alaqs.core.alaqsdblite import get_closest_runway_point
+from open_alaqs.core.alaqsdblite import get_closest_runway_point, get_max_profile_oid
 
 
 def validate_adsb_file(path: str) -> tuple[bool, str]:
@@ -77,6 +77,8 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
     # Process each unique flight
     id_column = "flight_id"
     anp_profiles = []
+    max_profile_oid = get_max_profile_oid()
+
     for flight_id in adsb_data[id_column].unique():
         flight_data = adsb_data[adsb_data[id_column] == flight_id].copy()
 
@@ -143,7 +145,7 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
 
             # 2. Prepare data in ANP format
             anp_row = {
-                "oid": len(anp_profiles),
+                "oid": len(anp_profiles) + max_profile_oid + 1,
                 "profile_id": flight_id,
                 "arrival_departure": "A" if is_arrival else "D",
                 "stage": 1,  # Default stage
@@ -161,16 +163,12 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
             anp_profiles.append(anp_row)
 
     # 3. Import data to Inventory DB
-    result_import = import_ads_b_data(anp_profiles)  # TODO
+    result_import = import_ads_b_data(anp_profiles, inventory_path)
 
     if result_import:
         return True, "ADS-B successfully imported!"
     else:
         return False, "ADS-B could not be imported into the database!"
-
-
-def _convert_adsb_file(csv_path: str) -> tuple[bool, str]:
-    pass
 
 
 def _geographic_to_relative_df(df, start_lon, start_lat, start_alt):
