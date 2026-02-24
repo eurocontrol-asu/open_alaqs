@@ -20,7 +20,7 @@ cd %APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\open_alaqs
 
 ```powershell
 # Run using the QGIS-aware python wrapper (e.g. python-qgis) with the plugin installed in AppData:
-python-qgis scripts\individual_script\run_emissions_austal.py "C:\path\to\my_config.txt" --csv --geojson --austal --timing
+python-qgis scripts\emissions_austal\run_emissions_austal.py "C:\path\to\my_config.txt" --csv --geojson --austal --timing
 ```
 
 ## Advanced: Alternative Execution Methods
@@ -53,7 +53,7 @@ The `python-qgis` command is only available from the **OSGeo4W Shell**, not from
 
 ```powershell
 cd C:\path\to\openalaqs
-python-qgis open_alaqs\scripts\individual_script\run_emissions_austal.py "C:\path\to\config.txt" --csv --geojson --austal --timing
+python-qgis open_alaqs\scripts\emissions_austal\run_emissions_austal.py "C:\path\to\config.txt" --csv --geojson --austal --timing
 ```
 
 **Note:** If `python-qgis` is not recognized in your PowerShell terminal, you're not in the OSGeo4W Shell. Use the IDE Terminal method (with full path to `python-qgis-ltr.bat`) instead.
@@ -184,4 +184,4 @@ Using AUSTAL/GeoJSON outputs in QGIS
 - If you need more verbose logs, set `show_logs=True` in the config or pass a config with `show_logs=True`.
 
 **Source**
-- Script location: `open_alaqs/scripts/individual_script/run_emissions_austal.py`
+- Script location: `open_alaqs/scripts/emissions_austal/run_emissions_austal.py`

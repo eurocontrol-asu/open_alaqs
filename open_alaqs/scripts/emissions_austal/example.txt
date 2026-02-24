@@ -1,0 +1,78 @@
+# =============================================================================
+# Example configuration for run_emissions_austal.py
+# =============================================================================
+#
+# Lines starting with '#' are comments.
+# All paths support environment variables (e.g. %USERPROFILE%).
+#
+# Usage (from OSGeo4W Shell):
+#   python-qgis run_emissions_austal.py example.txt --csv --austal --timing
+#   python-qgis run_emissions_austal.py example.txt --csv --geojson --austal --timing
+#
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# REQUIRED: Database path and time range
+# ---------------------------------------------------------------------------
+
+# Path to the .alaqs inventory database
+db_path=sample_data\Inventory.alaqs
+
+# Start and end datetimes (ISO 8601 format)
+start_dt_inclusive=2023-03-01T06:00:00
+end_dt_inclusive=2023-03-01T23:00:00
+
+# Time interval between emission timesteps (seconds)
+time_interval_seconds=3600
+
+# Pollutant code
+# Accepted values: CO, CO2, HC, NOx, PM10, SOx
+pollutant=NOx
+
+# ---------------------------------------------------------------------------
+# OPTIONAL: Calculation method and source filtering (defaults shown)
+# ---------------------------------------------------------------------------
+
+# Calculation method: bymode (default) or BFFM2
+# method=bymode
+
+# Source type filter
+# Accepted values: all, AreaSource, MovementSource, ParkingSource,
+#                  PointSource, RoadwaySource
+# source_type=all
+
+# Comma-separated list of specific source names to include (empty = all)
+# source_names=
+
+# Source dynamics handling
+# Accepted values: none (default), default, smooth & shift
+# source_dynamics=none
+
+# Vertical calculation limit (metres)
+# vertical_limit_m=914.4
+
+# Apply NOx corrections (True/False)
+# should_apply_nox_corrections=False
+
+# View type for CSV export: by source (default) or by aggregation
+# view_type=by source
+
+# ---------------------------------------------------------------------------
+# OPTIONAL: Output paths and naming (defaults shown)
+# ---------------------------------------------------------------------------
+
+# Output directory for AUSTAL files (created if missing)
+# austal_output_path=C:\path\to\austal_output
+
+# Output directory for CSV/GeoJSON files (created if missing)
+# emissions_output_path=C:\path\to\emissions_output
+
+# Base filename for CSV/GeoJSON outputs (default: emissions)
+# emissions_output_name=emissions
+
+# ---------------------------------------------------------------------------
+# OPTIONAL: Logging
+# ---------------------------------------------------------------------------
+
+# Show detailed logs during execution (True/False)
+# show_logs=False
