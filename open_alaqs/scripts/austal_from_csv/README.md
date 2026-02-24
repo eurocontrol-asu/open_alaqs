@@ -1,4 +1,4 @@
-# [BETA] Standalone Script AUSTAL from CSV — Usage Guide
+# [BETA] Standalone Script to use AUSTAL from CSV Files — Usage Guide
 
 This document explains how to run `run_austal_from_csv.py` from the OSGeo4W Shell (recommended) and describes the expected configuration file format and available options.
 
