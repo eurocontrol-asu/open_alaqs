@@ -31,9 +31,9 @@ from open_alaqs import openalaqsuitoolkit
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.gui.DispersionAnalysis import OpenAlaqsDispersionAnalysis
 from open_alaqs.openalaqsdialog import (
     OpenAlaqsAbout,
-    OpenAlaqsDispersionAnalysis,
     OpenAlaqsEnabledMacros,
     OpenAlaqsInventory,
     OpenAlaqsLogfile,
