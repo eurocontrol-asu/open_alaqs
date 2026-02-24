@@ -655,23 +655,11 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
             logger.warning("clip_linestring_to_grid: could not parse WKT")
             return geometry_wkt, 1.0
 
-        geom_type = geom.GetGeometryType()
-        single_types = (
-            ogr.wkbLineString,
-            ogr.wkbLineString25D,
-            ogr.wkbLineStringM,
-            ogr.wkbLineStringZM,
-        )
-        multi_types = (
-            ogr.wkbMultiLineString,
-            ogr.wkbMultiLineString25D,
-            ogr.wkbMultiLineStringM,
-            ogr.wkbMultiLineStringZM,
-        )
+        flattened_type = ogr.GT_Flatten(geom.GetGeometryType())
 
-        if geom_type in single_types:
+        if flattened_type == ogr.wkbLineString:
             parts = [geom]
-        elif geom_type in multi_types:
+        elif flattened_type == ogr.wkbMultiLineString:
             parts = [geom.GetGeometryRef(i) for i in range(geom.GetGeometryCount())]
         else:
             # Not a line geometry — return unchanged
