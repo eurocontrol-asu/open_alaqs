@@ -1,0 +1,76 @@
+# =============================================================================
+# Example configuration for run_austal_from_csv.py
+# =============================================================================
+#
+# Lines starting with '#' are comments.
+# All paths support environment variables (e.g. %USERPROFILE%).
+#
+# Usage (from OSGeo4W Shell):
+#   python-qgis run_austal_from_csv.py example.txt --timing
+#   python-qgis run_austal_from_csv.py example.txt --dry-run
+#
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# REQUIRED: Input / output paths and pollutants
+# ---------------------------------------------------------------------------
+
+# Path to pre-calculated emissions CSV
+emissions_csv_path=C:\path\to\emissions.csv
+
+# Path to meteorology CSV
+meteo_csv_path=C:\path\to\meteo.csv
+
+# Output directory where AUSTAL input files will be written
+output_path=C:\path\to\austal_output
+
+# Comma-separated list of pollutants to include
+# Accepted values: CO2, CO, HC, NOx, SOx, PM10
+pollutants=NOx,CO,PM10
+
+# ---------------------------------------------------------------------------
+# REQUIRED: Grid definition — choose ONE of the two options below
+# ---------------------------------------------------------------------------
+
+# Option A – Load grid from file (.csv or .alaqs)
+grid_file_path=C:\path\to\grid.csv
+
+# Option B – Specify grid parameters manually (comment out grid_file_path above)
+# x_cells=50
+# y_cells=50
+# z_cells=1
+# x_resolution=100
+# y_resolution=100
+# z_resolution=50
+# reference_latitude=48.6900
+# reference_longitude=9.2220
+# reference_altitude=370.0
+
+# ---------------------------------------------------------------------------
+# OPTIONAL: AUSTAL dispersion settings (defaults shown)
+# ---------------------------------------------------------------------------
+
+# AUSTAL quality level (1 = fastest, 3 = most accurate)
+# quality_level=1
+
+# Include mixing height in AUSTAL series file (True/False)
+# mixing_height_enabled=False
+
+# AUSTAL options flags
+# options_string=NOSTANDARD;SCINOTAT;Kmax=1
+
+# Aerodynamic roughness length (metres)
+# roughness_length_m=0.2
+
+# Zero-plane displacement height (metres)
+# displacement_height_m=1.2
+
+# Anemometer height (metres)
+# anemometer_height_m=11.2
+
+# ---------------------------------------------------------------------------
+# OPTIONAL: Logging
+# ---------------------------------------------------------------------------
+
+# Show detailed logs during generation (True/False)
+# show_logs=False
