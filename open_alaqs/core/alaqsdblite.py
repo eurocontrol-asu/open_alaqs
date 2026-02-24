@@ -371,6 +371,83 @@ def add_taxiway_route(taxiway_route):
 
 
 # #################################################
+# #########           RUNWAYS          ############
+# #################################################
+
+
+def get_closest_runway_point(latitude, longitude):
+    """
+    Gets the closes point from any runway in the ALAQS DB
+    with respect to the input point, given in WGS84 (EPSG:4326).
+
+    Args:
+        latitude (float): Latitude of the input point.
+        longitude (float): Longitude of the input point.
+
+    Returns:
+        runway_name: Name of the closest runway.
+        runway_lat: Latitude (WGS84) of the closest runway point, if any.
+        runway_lon: Longitude (WGS84) of the closest runway point, if any.
+    """
+    sql = """
+        WITH
+        input(latitude, longitude) AS (
+            VALUES(?, ?)
+        ),
+        inputpoint AS
+            --(SELECT ST_GeomFromText('POINT(497954 6791138)', 3857) as ip), -- 'POINT(496527 6790979)'
+            (SELECT
+                ST_Transform(
+                    ST_GeomFromText(
+                        'POINT(' || latitude || ' ' || longitude || ')', 4326
+                    ),
+                    3857
+                ) as ip
+            FROM input),
+        endpoints AS
+            (SELECT oid, runway_id, ST_StartPoint(geometry) as sp, ST_EndPoint(geometry) as ep FROM shapes_runways),
+        multipoints AS
+            (SELECT oid, runway_id, ST_GeomFromText('MULTIPOINT((' || ST_X(sp) || ' ' || ST_Y(sp) || '), (' || ST_X(ep) || ' ' || ST_Y(ep) || '))', 3857) as mp
+            FROM endpoints),
+        closest_runway AS
+            (SELECT
+                oid, runway_id,
+                min(
+                    ST_Distance(
+                        mp,
+                        ip
+                    )
+                ) as dist
+            FROM multipoints, inputpoint),
+
+        closest_runway_endpoint AS
+            (SELECT closest_runway.oid as oid, closest_runway.runway_id, dist,
+                ST_ClosestPoint(mp, ip) as closest_endpoint_3857,
+                ST_Transform(
+                    ST_ClosestPoint(
+                        mp,
+                        ip
+                    ),
+                4326) as closest_endpoint_4326
+            FROM closest_runway, multipoints, inputpoint
+            WHERE multipoints.oid = closest_runway.oid)
+
+        SELECT oid, runway_id, ST_X(closest_endpoint_4326) as lat, ST_Y(closest_endpoint_4326) as lon,
+            ST_X(closest_endpoint_3857) as x, ST_Y(closest_endpoint_3857) as y
+        FROM closest_runway_endpoint;
+    """
+    res = execute_sql(sql, [latitude, longitude])
+    runway_oid = res["oid"]
+    runway_name = res["runway_id"]
+    runway_lat = res["lat"]
+    runway_lon = res["lon"]
+    runway_x = res["x"]
+    runway_y = res["y"]
+    print(runway_oid, runway_x, runway_y)
+    return runway_name, runway_lat, runway_lon
+
+
+# #################################################
 # #########          PROFILES         #############
 # #################################################
 
