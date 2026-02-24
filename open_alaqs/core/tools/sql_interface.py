@@ -1,4 +1,7 @@
+import os
 import sqlite3 as sqlite
+import tempfile
+from contextlib import contextmanager
 from typing import Any, Optional, Union
 
 from qgis.utils import spatialite_connect
@@ -143,6 +146,50 @@ class get_db_connection:
             self.conn.close()
 
         return exc_type is None
+
+
+@contextmanager
+def temp_spatialite_db(prefix: str = "openalaqs_temp_"):
+    """Create, yield path to, and delete a temporary SpatiaLite database.
+
+    The database has SpatiaLite metadata initialised so that ST_Transform
+    queries succeed inside the context.
+
+    Args:
+        prefix (str, optional): Prefix for the temporary file. Defaults to "openalaqs_temp_".
+
+    Yields:
+        str: Absolute path to the temporary database file.
+
+    Raises:
+        RuntimeError: If SpatiaLite cannot be initialised.
+    """
+    fd, path = tempfile.mkstemp(suffix=".db", prefix=prefix)
+    os.close(fd)
+    try:
+        conn = spatialite_connect(path)
+        # Populate geometry_columns and spatial_ref_sys so ST_Transform works
+        # The (1) argument suppresses "table already exists" on newer SpatiaLite
+        # fall back to no-arg form for older versions
+        try:
+            conn.execute("SELECT InitSpatialMetaData(1)")
+        except Exception:
+            try:
+                conn.execute("SELECT InitSpatialMetaData()")
+            except Exception as exc:
+                conn.close()
+                raise RuntimeError(
+                    f"Could not initialise SpatiaLite metadata: {exc}"
+                ) from exc
+        conn.commit()
+        conn.close()
+        yield path
+    finally:
+        # Remove the temp file on exit, even if an exception was raised
+        try:
+            os.unlink(path)
+        except Exception:
+            pass
 
 
 def db_execute_sql(

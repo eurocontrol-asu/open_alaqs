@@ -62,20 +62,18 @@ internally by generate_austal_from_csv and must not be included in austal_config
 
 import csv as _csv
 import os
-import tempfile
 from collections import defaultdict
-from contextlib import contextmanager
 from datetime import datetime, timedelta
 from typing import Dict, List
 
 import geopandas as gpd
-from qgis.utils import spatialite_connect
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.AmbientCondition import AmbientCondition
 from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.modules.AUSTALOutputModule import AUSTALDispersionModule
 from open_alaqs.core.tools.Grid3D import Grid3D
+from open_alaqs.core.tools.sql_interface import temp_spatialite_db
 
 logger = get_logger(__name__)
 
@@ -93,46 +91,6 @@ _SENTINEL_WKT = frozenset({"-", "none", "null", ""})
 # Temporary SpatiaLite database
 # ---------------------------------------------------------------------------
 
-
-@contextmanager
-def _temp_spatialite_db():
-    """Create, yield path to, and delete a temporary SpatiaLite database.
-
-    The database has SpatiaLite metadata initialised so that ST_Transform
-    queries succeed inside the context.
-
-    Yields:
-        str: Absolute path to the temporary database file.
-
-    Raises:
-        RuntimeError: If SpatiaLite cannot be initialised.
-    """
-    fd, path = tempfile.mkstemp(suffix=".db", prefix="openalaqs_austal_")
-    os.close(fd)
-    try:
-        conn = spatialite_connect(path)
-        # Populate geometry_columns and spatial_ref_sys so ST_Transform works
-        # The (1) argument suppresses "table already exists" on newer SpatiaLite
-        # fall back to no-arg form for older versions
-        try:
-            conn.execute("SELECT InitSpatialMetaData(1)")
-        except Exception:
-            try:
-                conn.execute("SELECT InitSpatialMetaData()")
-            except Exception as exc:
-                conn.close()
-                raise RuntimeError(
-                    f"Could not initialise SpatiaLite metadata: {exc}"
-                ) from exc
-        conn.commit()
-        conn.close()
-        yield path
-    finally:
-        # Remove the temp file on exit, even if an exception was raised
-        try:
-            os.unlink(path)
-        except Exception:
-            pass
 
 
 # ---------------------------------------------------------------------------
@@ -456,7 +414,7 @@ def generate_austal_from_csv(
 
     # Temp SpatiaLite DB is only needed during Grid3D init and beginJob for ST_Transform;
     # it is deleted automatically when the context exits
-    with _temp_spatialite_db() as temp_db_path:
+    with temp_spatialite_db() as temp_db_path:
         grid = _build_grid3d(grid_config, temp_db_path)
 
         # Merge caller config with the keys controlled internally by this function
