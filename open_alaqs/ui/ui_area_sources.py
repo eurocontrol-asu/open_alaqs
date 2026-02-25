@@ -69,7 +69,9 @@ def form_open(form, layer, feature):
             fields[key].textChanged.connect(lambda: validate(fields))
 
     # Block the ok button (will be overwritten after validation)
-    fields["button_box"].button(fields["button_box"].Ok).blockSignals(True)
+    fields["button_box"].button(fields["button_box"].StandardButton.Ok).blockSignals(
+        True
+    )
 
     # Connect all QComboBoxes and the instudy checkbox on save
     def on_save():
@@ -188,4 +190,6 @@ def validate(fields: dict):
     ]
 
     # Block signals if any of the fields is invalid
-    button_box.button(button_box.Ok).blockSignals("False" in str(results))
+    button_box.button(button_box.StandardButton.Ok).blockSignals(
+        "False" in str(results)
+    )
