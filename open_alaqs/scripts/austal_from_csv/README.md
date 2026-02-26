@@ -215,6 +215,12 @@ These files can be used directly with the AUSTAL executable or loaded back via t
 
 If `austal_exe_path` is set in the config and `--run-austal` is passed on the command line, the script will execute AUSTAL immediately after generating the input files. AUSTAL output (concentration grids, log files) will be written into the same `output_path` directory. The script forwards AUSTAL's stdout/stderr and exits with AUSTAL's return code on failure.
 
+> **Note:** The `austal_exe_path` key is commented out by default in the example config. You must **uncomment** it and set it to the correct path to your `austal.exe` for `--run-austal` to work.
+
+### Important: Clean the output directory before re-running
+
+The script will **fail** if AUSTAL output files (`austal.txt`, `series.dmna`, etc.) already exist in the `output_path` directory from a previous run. Before re-running the script, **delete or move the existing files** from the output directory, or point `output_path` to a new/empty folder.
+
 ---
 
 ## Workflow: Using with run_emissions_austal.py
@@ -245,6 +251,8 @@ If you run the script from inside the QGIS Python environment (e.g. when the pro
 - **QGIS import failure**: Confirm you're running from the OSGeo4W Shell so the required native libraries (GDAL, SpatiaLite) are available.
 - **"emissions_csv_path does not exist"**: Verify the path and that environment variables are expanded correctly.
 - **"Could not initialise SpatiaLite metadata"**: This typically means the SpatiaLite extension is not available. Run from the OSGeo4W Shell.
+- **"FileExistsError" or generation fails on re-run**: The script does not overwrite existing AUSTAL files (`austal.txt`, `series.dmna`). Delete or move the files from `output_path` before running again.
+- **"--run-austal was requested but austal_exe_path is not set"**: Uncomment and set `austal_exe_path` in your config file.
 - **Verbose logging**: Set `show_logs=True` in the config for detailed output.
 
 ---

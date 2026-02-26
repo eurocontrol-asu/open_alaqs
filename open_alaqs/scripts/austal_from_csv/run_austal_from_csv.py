@@ -593,6 +593,7 @@ def main():
                 cmd,
                 capture_output=True,
                 text=True,
+                encoding="latin-1",
             )
 
             if proc.stdout:
