@@ -226,7 +226,9 @@ def parse_config(txt_path):
     config["austal_config"] = {
         "is_enabled": True,
         "quality_level": int(raw.get("quality_level", 1)),
-        "mixing_height_enabled": raw.get("mixing_height_enabled", "False").strip().lower()
+        "mixing_height_enabled": raw.get("mixing_height_enabled", "False")
+        .strip()
+        .lower()
         in ("true", "1", "yes"),
         "options_string": raw.get("options_string", "NOSTANDARD;SCINOTAT;Kmax=1"),
         "roughness_length_m": float(raw.get("roughness_length_m", 0.2)),
@@ -276,7 +278,9 @@ def _load_grid_from_file(grid_file):
             row = cursor.fetchone()
             alt_row = None
             try:
-                cursor.execute('SELECT airport_elevation FROM "user_study_setup" LIMIT 1')
+                cursor.execute(
+                    'SELECT airport_elevation FROM "user_study_setup" LIMIT 1'
+                )
                 alt_row = cursor.fetchone()
             except Exception:
                 pass
@@ -294,7 +298,9 @@ def _load_grid_from_file(grid_file):
                 "z_resolution": float(row["z_resolution"]),
                 "reference_latitude": float(row["reference_latitude"]),
                 "reference_longitude": float(row["reference_longitude"]),
-                "reference_altitude": float(alt_row["airport_elevation"]) if alt_row else 0.0,
+                "reference_altitude": (
+                    float(alt_row["airport_elevation"]) if alt_row else 0.0
+                ),
             }
         except (sqlite3.Error, ValueError) as exc:
             raise ValueError(f"Could not load grid from ALAQS file: {exc}") from exc
@@ -312,7 +318,9 @@ def _load_grid_from_file(grid_file):
                         "y_resolution": float(row.get("y_resolution", 100)),
                         "z_resolution": float(row.get("z_resolution", 50)),
                         "reference_latitude": float(row.get("reference_latitude", 0.0)),
-                        "reference_longitude": float(row.get("reference_longitude", 0.0)),
+                        "reference_longitude": float(
+                            row.get("reference_longitude", 0.0)
+                        ),
                         "reference_altitude": float(row.get("reference_altitude", 0.0)),
                     }
             raise ValueError(f"Grid CSV file is empty: {grid_file}")
@@ -321,8 +329,7 @@ def _load_grid_from_file(grid_file):
 
     else:
         raise ValueError(
-            f"Unsupported grid file format: {grid_file}. "
-            "Use a .csv or .alaqs file."
+            f"Unsupported grid file format: {grid_file}. " "Use a .csv or .alaqs file."
         )
 
 
@@ -340,7 +347,9 @@ def validate_config(config):
     if not config.get("emissions_csv_path"):
         errors.append("Missing required key: emissions_csv_path")
     elif not os.path.isfile(config["emissions_csv_path"]):
-        errors.append(f"emissions_csv_path does not exist: {config['emissions_csv_path']}")
+        errors.append(
+            f"emissions_csv_path does not exist: {config['emissions_csv_path']}"
+        )
 
     if not config.get("meteo_csv_path"):
         errors.append("Missing required key: meteo_csv_path")
@@ -403,7 +412,9 @@ def load_config_interactive(initial_path):
                     sys.exit(1)
                 config_path = os.path.expandvars(user_input)
             else:
-                announce_err("Config invalid and no interactive input available; exiting.")
+                announce_err(
+                    "Config invalid and no interactive input available; exiting."
+                )
                 sys.exit(1)
 
 
@@ -604,9 +615,7 @@ def main():
                     announce_err(f"  [AUSTAL err] {line}")
 
             if proc.returncode != 0:
-                announce_err(
-                    f"\nAUSTAL exited with code {proc.returncode}."
-                )
+                announce_err(f"\nAUSTAL exited with code {proc.returncode}.")
                 sys.exit(proc.returncode)
 
             announce("")
