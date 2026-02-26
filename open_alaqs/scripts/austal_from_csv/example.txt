@@ -23,7 +23,10 @@ emissions_csv_path=sample_data\emissions.csv
 meteo_csv_path=sample_data\meteo.csv
 
 # Output directory where AUSTAL input files will be written
-output_path=sample_data\austal_output
+# IMPORTANT: The output directory must NOT already contain AUSTAL files
+# (austal.txt, series.dmna, etc.) from a previous run. The script will
+# fail if those files exist. Delete them or use a different output folder.
+output_path=sample_data
 
 # Comma-separated list of pollutants to include
 # Accepted values: CO2, CO, HC, NOx, SOx, PM10
@@ -55,7 +58,8 @@ grid_file_path=sample_data\grid.csv
 # on the command line. The script will then run AUSTAL after generating
 # the input files. Without --run-austal, only input files are generated.
 #
-# austal_exe_path=C:\AUSTAL\austal.exe
+# >>> UNCOMMENT the line below and set the correct path to enable --run-austal <<<
+# austal_exe_path=C:\path\to\austal.exe
 
 # ---------------------------------------------------------------------------
 # OPTIONAL: AUSTAL dispersion settings (defaults shown)
