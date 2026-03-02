@@ -200,7 +200,7 @@ def get_gates() -> list[dict[str, Any]]:
 def get_runways() -> list[dict[str, Any]]:
     return execute_sql(
         """
-            SELECT *, AsText(geometry) AS geometry
+            SELECT *
             FROM shapes_runways
             ORDER BY runway_id COLLATE NOCASE
         """,
