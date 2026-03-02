@@ -14,7 +14,6 @@ def validate_adsb_file(path: str) -> tuple[bool, str]:
         "latitude",
         "longitude",
         "altitude",
-        "tas",
     ]
     optional_exclusive_fields = ["thrust", "fuel_flow"]
 
@@ -152,22 +151,22 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
                     mode = "CL"  # Climb
 
             # 2. Prepare data in ANP format
-            anp_row = {
-                "oid": len(anp_profiles) + max_profile_oid + 1,
-                "profile_id": flight_id,
-                "arrival_departure": "A" if is_arrival else "D",
-                "stage": 1,  # Default stage
-                "point": point_counter,
-                "weight_kgs": 0.0,  # Default, can be populated if available
-                "x_m": x_m,
-                "y_m": y_m,
-                "z_m": z_m,
-                "tas_metres": tas_metres,
-                "power": row.get("thrust", ""),
-                "fuel_flow_kgm": row.get("fuel_flow", ""),
-                "mode": mode,
-                "course": "CUSTOM",
-            }
+            anp_row = [
+                len(anp_profiles) + max_profile_oid + 1,  # "oid"
+                flight_id,  # "profile_id"
+                "A" if is_arrival else "D",  # "arrival_departure"
+                1,  # Default stage  # "stage"
+                point_counter,  # "point"
+                0.0,  # Default, can be populated if available  "weight_kgs"
+                x_m,
+                y_m,
+                z_m,
+                tas_metres,  # "tas_metres"
+                row.get("thrust", ""),  # "power"
+                row.get("fuel_flow", ""),  # "fuel_flow_kgm"
+                mode,  # "mode"
+                "CUSTOM",  # "course"
+            ]
             anp_profiles.append(anp_row)
 
     # 3. Import data to Inventory DB
@@ -224,6 +223,6 @@ def _geographic_to_relative_df(df, start_lon, start_lat, start_alt):
     # Relative coordinates
     result_df["x_m"] = x - x0
     result_df["y_m"] = y - y0
-    result_df["z_m"] = result_df["altitude"] * 0.3048 - start_alt
+    result_df["z_m"] = round(result_df["altitude"] * 0.3048 - start_alt, 3)
 
     return result_df
