@@ -1142,7 +1142,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
         """
         runways = alaqs.get_runways()
         self.ui.runway.clear()
-        if (runways is None) or (runways == []):
+        if runways is None or runways == []:
             logger.warning("Taxiway Routes Tool: No runways found")
         else:
             for runway in runways:

@@ -4,17 +4,17 @@ from pathlib import Path
 import pandas as pd
 from pyproj import CRS, Transformer
 
-from open_alaqs.core.alaqs import import_ads_b_data
+from open_alaqs.core.alaqs import get_runways, import_ads_b_data
 from open_alaqs.core.alaqsdblite import get_closest_runway_point, get_max_profile_oid
 
 
 def validate_adsb_file(path: str) -> tuple[bool, str]:
     mandatory_fields = [
         "flight_id",
-        "cum_distance",
         "latitude",
         "longitude",
         "altitude",
+        "tas",
     ]
     optional_exclusive_fields = ["thrust", "fuel_flow"]
 
@@ -24,6 +24,13 @@ def validate_adsb_file(path: str) -> tuple[bool, str]:
 
     if not Path(path).exists():
         return False, "CSV file does not exist!"
+
+    # 0.1 Check that there are runways in the study setup
+    if not get_runways():
+        return (
+            False,
+            "To import ADS-B data, at least one runway should exist in the study!",
+        )
 
     # 1. Check mandatory fields in header
     header = ""
@@ -83,8 +90,9 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
         flight_data = adsb_data[adsb_data[id_column] == flight_id].copy()
 
         # 1.1. Determine arrival/departure
-        is_arrival = abs(flight_data["cum_distance"].min()) > abs(
-            flight_data["cum_distance"].max()
+        is_arrival = (
+            flight_data["altitude"][0]
+            > flight_data.at[flight_data.index[-1], "altitude"]
         )
 
         # 1.2. Convert from geographic coordinates to planar (relative) ones
