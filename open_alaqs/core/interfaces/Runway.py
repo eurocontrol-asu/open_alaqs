@@ -19,21 +19,31 @@ class Runway:
             val = {}
         self._name = str(val["runway_id"]) if "runway_id" in val else ""
         self._directions = self.getDirectionsByName(self._name)
-        self._touchdown_offset = int(val["touchdown"]) if "touchdown" in val else 0
-        self._capacity = int(val["capacity"]) if "capacity" in val else 0
+        self._touchdown_offset = (
+            int(val["touchdown"]) if val.get("touchdown", None) is not None else 0
+        )
+        self._capacity = (
+            int(val["capacity"]) if val.get("capacity", None) is not None else 0
+        )
         self._max_queue_speed = (
-            float(val["max_queue_speed"]) if "max_queue_speed" in val else 0.0
+            float(val["max_queue_speed"])
+            if val.get("max_queue_speed", None) is not None
+            else 0.0
         )
         self._peak_queue_time = (
-            float(val["peak_queue_time"]) if "peak_queue_time" in val else 0.0
+            float(val["peak_queue_time"])
+            if val.get("peak_queue_time", None) is not None
+            else 0.0
         )
 
         self._height = 0.0
-        self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
+        self._geometry_text = (
+            str(val["geometry"]) if val.get("geometry", None) is not None else ""
+        )
 
         self._geometry = (
             loads(val["geometry"])
-            if "geometry" in val
+            if val.get("geometry", None) is not None
             else geometry.GeometryCollection()
         )
         # add height to self._geometry
