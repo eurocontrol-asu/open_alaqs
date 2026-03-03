@@ -860,7 +860,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             QtWidgets.QMessageBox.StandardButton.Yes,
             QtWidgets.QMessageBox.StandardButton.No,
         )
-        if answer == QtWidgets.QMessageBox.Yes:
+        if answer == QtWidgets.QMessageBox.StandardButton.Yes:
             # Commit to database
             result = alaqs.add_daily_profile(properties)
             if result is None:
@@ -944,11 +944,11 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             self,
             "New Profile",
             "Are you sure you want to save changes to this profile?",
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes,
+            QtWidgets.QMessageBox.StandardButton.No,
         )
 
-        if answer == QtWidgets.QMessageBox.Yes:
+        if answer == QtWidgets.QMessageBox.StandardButton.Yes:
             # Commit to database
             result = alaqs.add_monthly_profile(properties)
             if result is None:
@@ -1514,10 +1514,10 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
                 "Notice",
                 "Taxi route '%s' already exists in database."
                 " Overwrite existing route?" % taxi_route_name,
-                QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.No,
             )
-            if reply == QtWidgets.QMessageBox.Yes:
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 delete_taxiroute = True
             else:
                 return False
@@ -1621,11 +1621,11 @@ class OpenAlaqsLogfile(QtWidgets.QDialog):
             self,
             "",
             "Delete the log file?",
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes,
+            QtWidgets.QMessageBox.StandardButton.No,
         )
 
-        if question == QtWidgets.QMessageBox.Yes:
+        if question == QtWidgets.QMessageBox.StandardButton.Yes:
             self.ui.logfile_text_area.clear()
             self.reset_logfile()
 
@@ -1654,7 +1654,7 @@ class OpenAlaqsLogfile(QtWidgets.QDialog):
             with log_path.open("r") as current_log_file:
                 current_log_file_text = current_log_file.read()
 
-                new_path = QtWidgets.QFileDialog.getSaveFileName(
+                new_path, _ = QtWidgets.QFileDialog.getSaveFileName(
                     self, "Save log file as ...", ""
                 )
                 if new_path:
@@ -2042,10 +2042,10 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                     self,
                     "Message",
                     overwrite_msg,
-                    QtWidgets.QMessageBox.Yes,
-                    QtWidgets.QMessageBox.No,
+                    QtWidgets.QMessageBox.StandardButton.Yes,
+                    QtWidgets.QMessageBox.StandardButton.No,
                 )
-                if reply == QtWidgets.QMessageBox.Yes:
+                if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                     pass
                 else:
                     return False
@@ -2448,7 +2448,13 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             return None
 
         output_module, res = self.runOutputModule(OutputModule)
+
+        if output_module is None:
+            logger.error("There were errors running the module '%s'", name)
+            return None
+
         self.handleOutputModuleResult(output_module, res)
+        return None
 
     def runOutputModule(self, OutputModule: Any) -> tuple[Any, Any]:
         # calculate all emissions
@@ -2460,7 +2466,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         if self._emission_calculation_ is None:
             logger.error("Cannot calculate emissions.")
             QMessageBox.warning(self, "Warning", "Cannot calculate emissions.")
-            return
+            return None, None
 
         logger.info("emissions calculated!")
 

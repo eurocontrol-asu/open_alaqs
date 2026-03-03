@@ -153,7 +153,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 self.ui.averagingCombo.setCurrentIndex(idx)
 
         # Set locale for coordinate and resolution spinboxes to use point as decimal separator
-        c_locale = QtCore.QLocale(QtCore.QLocale.C)
+        c_locale = QtCore.QLocale(QtCore.QLocale.Language.C)
         self.ui.refLatSpinBox.setLocale(c_locale)
         self.ui.refLonSpinBox.setLocale(c_locale)
         self.ui.xResolutionSpinBox.setLocale(c_locale)

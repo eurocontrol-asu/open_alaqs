@@ -732,12 +732,12 @@ class MovementStore(Store, metaclass=Singleton):
             if taxi_route_store.hasKey(txr):
                 eq_mdf.loc[indices, "taxi_route"] = txr
             else:
-                eq_mdf.loc[indices, "taxi_route"] = np.NaN
+                eq_mdf.loc[indices, "taxi_route"] = np.nan
                 logger.warning(
                     f'Taxiroute "{txr}" was not found in the taxi routes database!'
                 )
 
-            # TODO OPENGIS.ch: the alternitive taxi route finder below causes multiple taxi alternative taxi routes to be assigned to a movement
+            # TODO OPENGIS.ch: the alternative taxi route finder below causes multiple taxi alternative taxi routes to be assigned to a movement
             # The alternatives should be constraint only for taxi routes from this or nearby gate and should be only one alternative.
             # else:
             #     alt_routes = []
@@ -757,7 +757,7 @@ class MovementStore(Store, metaclass=Singleton):
             #             "which is not in the database",
             #             txr,
             #         )
-            #         eq_mdf.loc[indices, "taxi_route"] = np.NaN
+            #         eq_mdf.loc[indices, "taxi_route"] = np.nan
 
         # Check if track exist in the database
         if stage_1:
