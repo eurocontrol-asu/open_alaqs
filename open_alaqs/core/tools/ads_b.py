@@ -4,11 +4,24 @@ from pathlib import Path
 import pandas as pd
 from pyproj import CRS, Transformer
 
-from open_alaqs.core.alaqs import get_runways, import_ads_b_data
-from open_alaqs.core.alaqsdblite import get_closest_runway_point, get_max_profile_oid
+from open_alaqs.core.alaqs import get_runways
+from open_alaqs.core.alaqsdblite import (
+    get_closest_runway_point,
+    get_max_profile_oid,
+    import_ads_b_data,
+)
 
 
 def validate_adsb_file(path: str) -> tuple[bool, str]:
+    """
+    Checks whether an ADS-B CSV file is valid or not.
+
+    Args:
+        path (str): Path of the ADS-B CSV file.
+
+    Returns:
+        Tuple with a boolean validation result and a string with an explanatory message.
+    """
     mandatory_fields = [
         "flight_id",
         "latitude",
@@ -74,6 +87,17 @@ def validate_adsb_file(path: str) -> tuple[bool, str]:
 
 
 def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
+    """
+    Process a valid ADS-B CSV file, converts it to the ANP profiles format,
+    and saves it into the Emissions Inventory database.
+
+    Args:
+        csv_path (str): Path of the ADS-B CSV file.
+        inventory_path (str): Path of the Emissions Inventory database.
+
+    Returns:
+        Tuple with a boolean import result and a string with a display message.
+    """
     # 1. Pre-process data
     try:
         adsb_data = pd.read_csv(csv_path)
@@ -178,10 +202,12 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
         return False, "ADS-B could not be imported into the database!"
 
 
-def _geographic_to_relative_df(df, start_lon, start_lat, start_alt):
+def _geographic_to_relative_df(
+    df: pd.DataFrame, start_lon: float, start_lat: float, start_alt: float
+) -> pd.DataFrame:
     """
     Convert geographic coordinates to relative Cartesian coordinates
-    using a projected CRS in meters (Option B).
+    using a projected CRS in meters.
 
     Args:
         df: DataFrame with columns ['longitude', 'latitude', 'altitude']
@@ -190,7 +216,7 @@ def _geographic_to_relative_df(df, start_lon, start_lat, start_alt):
         start_alt: reference altitude (m)
 
     Returns:
-        DataFrame with columns ['x_m', 'y_m', 'z_m']
+        Copied input DataFrame with extra columns ['x_m', 'y_m', 'z_m']
     """
     result_df = df.copy()
 

@@ -1745,7 +1745,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                             "The ADS-B data will not be imported!"
                         )
         except Exception as e:
-            self.ui.status_update.setText("Problem with movement file. See log file")
+            self.ui.status_update.setText("Problem with ADS-B file. See log file")
             alaqsutils.print_error(self.adsb_table_path_changed.__name__, Exception, e)
             QtWidgets.QMessageBox.warning(self, "Error", "%s" % e)
 
