@@ -377,17 +377,18 @@ def add_taxiway_route(taxiway_route):
 
 def get_closest_runway_point(latitude, longitude):
     """
-    Gets the closes point from any runway in the ALAQS DB
+    Gets the closest runway endpoint from runways in the ALAQS DB
     with respect to the input point, given in WGS84 (EPSG:4326).
+    Note that this searches the closest runway endpoint, not the closest runway point.
 
     Args:
         latitude (float): Latitude of the input point.
         longitude (float): Longitude of the input point.
 
     Returns:
-        runway_name: Name of the closest runway.
-        runway_lat: Latitude (WGS84) of the closest runway point, if any.
-        runway_lon: Longitude (WGS84) of the closest runway point, if any.
+        runway_name: Name of the runway which has the closest endpoint.
+        runway_lat: Latitude (WGS84) of the closest runway endpoint, if any.
+        runway_lon: Longitude (WGS84) of the closest runway endpoint, if any.
     """
     sql = """
         WITH
@@ -395,7 +396,6 @@ def get_closest_runway_point(latitude, longitude):
             VALUES(?, ?)
         ),
         inputpoint AS
-            --(SELECT ST_GeomFromText('POINT(497954 6791138)', 3857) as ip), -- 'POINT(496527 6790979)'
             (SELECT
                 ST_Transform(
                     ST_GeomFromText(
@@ -443,7 +443,9 @@ def get_closest_runway_point(latitude, longitude):
     runway_lon = res["lon"]
     runway_x = res["x"]
     runway_y = res["y"]
-    print(runway_oid, runway_x, runway_y)
+    logger.debug(
+        f"Runway with the closest endpoint: {runway_name} (oid:{runway_oid}), endpoint:({runway_x}, {runway_y})/({runway_lon}, {runway_lat}), input point: ({longitude}, {latitude})"
+    )
     return runway_name, runway_lat, runway_lon
 
 
@@ -890,10 +892,16 @@ def get_max_profile_oid() -> int:
 @catch_errors
 def import_ads_b_data(ads_b_data: list, inventory_path: str) -> bool:
     """
-    TODO: Documentation
-    Insert user defined movement table into the alaqs output file
-    :param inventory_name: path to the alaqs output file
-    :param model_parameters: a list of user defined model parameters used to generate the study output
+    Imports ADS-B data into the default_aircraft_profiles table of the
+    Emissions Inventory database. The data should be ready to insert.
+
+    Args:
+        ads_b_data (list): List of lists. Each sublist contains all necessary data
+                           (i.e., all columns) to fit in the default_aircraft_profiles table.
+        inventory_path (str): Path of the Emissions Inventory DB.
+
+    Returns:
+        result (bool): Whether the ADS-B data was successfully imported or not.
     """
     if not ads_b_data:
         return False

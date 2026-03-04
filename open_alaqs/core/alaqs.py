@@ -424,8 +424,3 @@ def inventory_creation_new(
     create_alaqs_output(
         inventory_path, model_parameters, study_setup, met_csv_path=met_csv_path
     )
-
-
-@catch_errors
-def import_ads_b_data(adsb_data: list, inventory_path: str) -> bool:
-    return alaqsdblite.import_ads_b_data(adsb_data, inventory_path)
