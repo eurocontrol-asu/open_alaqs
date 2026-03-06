@@ -72,6 +72,12 @@ from open_alaqs.core.tools.csv_interface import (
 from open_alaqs.core.utils.osm import download_osm_airport_data
 from open_alaqs.core.utils.qt import populate_combobox
 from open_alaqs.enums import AlaqsLayerType
+from open_alaqs.ui.styles import (
+    STATUS_STYLE_ERROR,
+    STATUS_STYLE_INFO,
+    STATUS_STYLE_SUCCESS,
+    STATUS_STYLE_WARNING,
+)
 
 logger = get_logger(__name__)
 
@@ -1705,14 +1711,22 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui.adsb_table_path.setFilter("CSV (*.csv);;TXT (*.txt)")
         self.ui.adsb_table_path.setDialogTitle("Import ADS-B Data")
         self.ui.adsb_table_path.fileChanged.connect(self.adsb_table_path_changed)
+        self.ui.adsb_summary.setText(
+            "Optionally, select an CSV file with ADS-B data to be imported"
+        )
+        self.ui.adsb_summary.setStyleSheet(STATUS_STYLE_INFO)
         self.ui.movement_table_path.setFilter("CSV (*.csv);;TXT (*.txt)")
         self.ui.movement_table_path.setDialogTitle("Open ALAQS Movement Data")
         self.ui.movement_table_path.fileChanged.connect(
             self.movement_table_path_changed
         )
+        self.ui.movements_summary.setText("Movements file required")
+        self.ui.movements_summary.setStyleSheet(STATUS_STYLE_WARNING)
         self.ui.met_file_path.setFilter("CSV (*.csv);;TXT (*.txt)")
         self.ui.met_file_path.setDialogTitle("Open ALAQS Meteorological Data")
         self.ui.met_file_path.fileChanged.connect(self.met_file_path_changed)
+        self.ui.met_summary.setText("Meteorological file required")
+        self.ui.met_summary.setStyleSheet(STATUS_STYLE_WARNING)
         self.ui.output_save_path.setStorageMode(QgsFileWidget.GetDirectory)
         self.ui.towing_speed.setValue(10.0)
         self.ui.vert_limit_m.setValue(914.4)
@@ -1736,14 +1750,17 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                     self._adsb_file_valid, message = ads_b.validate_adsb_file(path)
 
                     self.ui.adsb_summary.setText(message)
+
                     if self._adsb_file_valid:
                         self.ui.status_update.setText(
                             "The ADS-B data will be imported."
                         )
+                        self.ui.adsb_summary.setStyleSheet(STATUS_STYLE_SUCCESS)
                     else:
                         self.ui.status_update.setText(
                             "The ADS-B data will not be imported!"
                         )
+                        self.ui.adsb_summary.setStyleSheet(STATUS_STYLE_ERROR)
         except Exception as e:
             self.ui.status_update.setText("Problem with ADS-B file. See log file")
             alaqsutils.print_error(self.adsb_table_path_changed.__name__, Exception, e)
@@ -1756,7 +1773,10 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                     result = self.examine_movements(path)
 
                 if isinstance(result, str) or isinstance(result, Exception):
+                    self.ui.movements_summary.setStyleSheet(STATUS_STYLE_ERROR)
                     raise Exception(result)
+
+                self.ui.movements_summary.setStyleSheet(STATUS_STYLE_SUCCESS)
                 return None
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "Error", "%s" % e)
@@ -1858,10 +1878,14 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             if os.path.exists(path):
                 with OverrideCursor(Qt.CursorShape.WaitCursor):
                     result = self.examine_met_file(path)
+                    self.ui.met_summary.setStyleSheet(
+                        STATUS_STYLE_SUCCESS if result else STATUS_STYLE_ERROR
+                    )
 
                 if isinstance(result, str):
                     raise Exception()
-                return
+
+                return None
         except Exception as e:
             QtWidgets.QMessageBox.warning(
                 self, "Error", "Could not open met file:  %s." % e
