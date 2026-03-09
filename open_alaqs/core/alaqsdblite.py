@@ -379,7 +379,8 @@ def get_closest_runway_point(latitude, longitude):
     """
     Gets the closest runway endpoint from runways in the ALAQS DB
     with respect to the input point, given in WGS84 (EPSG:4326).
-    Note that this searches the closest runway endpoint, not the closest runway point.
+    Note that this searches the closest runway endpoint, not the closest runway point,
+    nor an endpoint in the closest runway..
 
     Args:
         latitude (float): Latitude of the input point.
