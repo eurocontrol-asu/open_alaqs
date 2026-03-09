@@ -10,6 +10,9 @@ from open_alaqs.core.alaqsdblite import (
     get_max_profile_oid,
     import_ads_b_data,
 )
+from open_alaqs.core.alaqslogging import get_logger
+
+logger = get_logger(__name__)
 
 
 def validate_adsb_file(path: str) -> tuple[bool, str]:
@@ -27,6 +30,7 @@ def validate_adsb_file(path: str) -> tuple[bool, str]:
         "latitude",
         "longitude",
         "altitude",
+        "tas",
     ]
     optional_exclusive_fields = ["thrust", "fuel_flow"]
 
@@ -138,8 +142,8 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
             runway_alt,
         )
 
-        print(
-            f"Profile {flight_id} ({runway_name}) - Total points: {len(flight_data_x_y_z)}, "
+        logger.info(
+            f"ADS-B coordinate conversion: Profile {flight_id} ({runway_name}) - Total points: {len(flight_data_x_y_z)}, "
             f"X: [{flight_data_x_y_z['x_m'].min():.1f}, {flight_data_x_y_z['x_m'].max():.1f}] m, "
             f"Y: [{flight_data_x_y_z['y_m'].min():.1f}, {flight_data_x_y_z['y_m'].max():.1f}] m, "
             f"Z: [{flight_data_x_y_z['z_m'].min():.1f}, {flight_data_x_y_z['z_m'].max():.1f}] m"
