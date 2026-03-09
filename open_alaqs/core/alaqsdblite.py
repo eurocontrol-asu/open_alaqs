@@ -432,7 +432,7 @@ def get_closest_runway_point(latitude, longitude):
             FROM closest_runway, multipoints, inputpoint
             WHERE multipoints.oid = closest_runway.oid)
 
-        SELECT oid, runway_id, ST_X(closest_endpoint_4326) as lat, ST_Y(closest_endpoint_4326) as lon,
+        SELECT oid, runway_id, ST_X(closest_endpoint_4326) as lon, ST_Y(closest_endpoint_4326) as lat,
             ST_X(closest_endpoint_3857) as x, ST_Y(closest_endpoint_3857) as y
         FROM closest_runway_endpoint;
     """
