@@ -118,7 +118,7 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
 
         # 1.1. Determine arrival/departure
         is_arrival = (
-            flight_data["altitude"][0]
+            flight_data.at[flight_data.index[0], "altitude"]
             > flight_data.at[flight_data.index[-1], "altitude"]
         )
 
