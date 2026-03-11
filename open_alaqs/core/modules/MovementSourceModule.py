@@ -381,6 +381,7 @@ class MovementSourceModule(SourceModule):
                 SmoothAndShiftTransformer(
                     movement.getAircraft(),
                     self.getApplySmoothAndShift(),
+                    movement.isArrival(),
                     lto_mode=mode_,
                 ).transform_emissions(flight_emissions)
             else:
@@ -428,6 +429,7 @@ class MovementSourceModule(SourceModule):
                     SmoothAndShiftTransformer(
                         movement.getAircraft(),
                         self.getApplySmoothAndShift(),
+                        movement.isArrival(),
                         lto_mode="TX",
                     ).transform_emissions(te)
 

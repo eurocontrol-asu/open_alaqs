@@ -220,10 +220,18 @@ class VerticalExtentTransformer(GeoTransformation):
 
 
 class SmoothAndShiftTransformer(GeoTransformation):
-    def __init__(self, aircraft: Aircraft, sas: str, lto_mode: str = ""):
+    def __init__(
+        self,
+        aircraft: Aircraft,
+        sas: str,
+        is_arrival: bool,
+        lto_mode: str = "",
+    ):
         GeoTransformation.__init__(self)
         self._aircraft = aircraft
         self._sas_method = "default" if sas == "default" else "sas"
+
+        self._is_arrival = is_arrival
         self._lto_mode = lto_mode
 
     def transform_emissions(self, emissions_dict_list: list[EmissionsDict]):
@@ -246,6 +254,13 @@ class SmoothAndShiftTransformer(GeoTransformation):
                         # logger.warning(f"Skipping zero-length segment at index {i}.")
                         continue  # Jump to next iteration
 
+                    lto_mode = self._lto_mode
+                    if not lto_mode:
+                        if self._is_arrival:
+                            lto_mode = "AP"
+                        else:
+                            lto_mode = "TO" if start_point_.z() == 0 else "CL"
+
                     (
                         qgs_multipolygon,
                         zsh_start,
@@ -255,7 +270,7 @@ class SmoothAndShiftTransformer(GeoTransformation):
                     ) = GeoTransformation.create_polygon_3d(
                         self._aircraft,
                         self._sas_method,
-                        self._lto_mode,
+                        lto_mode,
                         start_point_,
                         end_point_,
                     )
