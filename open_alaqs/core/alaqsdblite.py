@@ -375,7 +375,7 @@ def add_taxiway_route(taxiway_route):
 # #################################################
 
 
-def get_closest_runway_point(latitude, longitude):
+def get_closest_runway_point(longitude, latitude):
     """
     Gets the closest runway endpoint from runways in the ALAQS DB
     with respect to the input point, given in WGS84 (EPSG:4326).
@@ -383,24 +383,24 @@ def get_closest_runway_point(latitude, longitude):
     nor an endpoint in the closest runway..
 
     Args:
-        latitude (float): Latitude of the input point.
         longitude (float): Longitude of the input point.
+        latitude (float): Latitude of the input point.
 
     Returns:
         runway_name: Name of the runway which has the closest endpoint.
-        runway_lat: Latitude (WGS84) of the closest runway endpoint, if any.
         runway_lon: Longitude (WGS84) of the closest runway endpoint, if any.
+        runway_lat: Latitude (WGS84) of the closest runway endpoint, if any.
     """
     sql = """
         WITH
-        input(latitude, longitude) AS (
+        input(longitude, latitude) AS (
             VALUES(?, ?)
         ),
         inputpoint AS
             (SELECT
                 ST_Transform(
                     ST_GeomFromText(
-                        'POINT(' || latitude || ' ' || longitude || ')', 4326
+                        'POINT(' || longitude || ' ' || latitude || ')', 4326
                     ),
                     3857
                 ) as ip
@@ -433,21 +433,21 @@ def get_closest_runway_point(latitude, longitude):
             FROM closest_runway, multipoints, inputpoint
             WHERE multipoints.oid = closest_runway.oid)
 
-        SELECT oid, runway_id, ST_X(closest_endpoint_4326) as lon, ST_Y(closest_endpoint_4326) as lat,
+        SELECT oid, runway_id, dist, ST_X(closest_endpoint_4326) as lon, ST_Y(closest_endpoint_4326) as lat,
             ST_X(closest_endpoint_3857) as x, ST_Y(closest_endpoint_3857) as y
         FROM closest_runway_endpoint;
     """
-    res = execute_sql(sql, [latitude, longitude])
+    res = execute_sql(sql, [longitude, latitude])
     runway_oid = res["oid"]
     runway_name = res["runway_id"]
-    runway_lat = res["lat"]
     runway_lon = res["lon"]
+    runway_lat = res["lat"]
     runway_x = res["x"]
     runway_y = res["y"]
-    logger.debug(
-        f"Runway with the closest endpoint: {runway_name} (oid:{runway_oid}), endpoint:({runway_x}, {runway_y})/({runway_lon}, {runway_lat}), input point: ({longitude}, {latitude})"
+    logger.info(
+        f"Runway with the closest endpoint: {runway_name} (oid:{runway_oid}), endpoint ({round(res["dist"], 2)} m.):({runway_x}, {runway_y})/({runway_lon}, {runway_lat}), input point: ({longitude}, {latitude})"
     )
-    return runway_name, runway_lat, runway_lon
+    return runway_name, runway_lon, runway_lat
 
 
 # #################################################
