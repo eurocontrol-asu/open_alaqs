@@ -129,8 +129,8 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
             else flight_data[["latitude", "longitude"]].iloc[0]
         )
 
-        runway_name, runway_lat, runway_lon = get_closest_runway_point(
-            track_lat, track_lon
+        runway_name, runway_lon, runway_lat = get_closest_runway_point(
+            track_lon, track_lat
         )
         runway_alt = 0
 
