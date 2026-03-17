@@ -365,11 +365,15 @@ class TrajectoryTransformer:
                 self._runway_direction,
                 self._taxi_route.getName(),
             )
-            runway_intersection_geographic = coord_tr.transform(runway_backup_point)
+            runway_intersection_projected = runway_backup_point
         else:
-            runway_intersection_geographic = coord_tr.transform(
+            runway_intersection_projected = (
                 runway_intersection_projected.centroid().asPoint()
             )
+
+        runway_intersection_geographic = coord_tr.transform(
+            runway_intersection_projected
+        )
 
         if not self._has_track():
             ac_trajectory = AircraftTrajectory(
@@ -378,36 +382,49 @@ class TrajectoryTransformer:
             )
             ac_trajectory.setIsCartesian(False)
 
-            for point in self._trajectory.getPoints():
+            original_trajectory_points = self._trajectory.getPoints()
+            if not original_trajectory_points:
+                return ac_trajectory
 
-                # ToDo: if CUSTOM ... then
-                if point._course == "CUSTOM":
-                    x_offset = point.getX()  # Along the runway
-                    y_offset = (
-                        point.getY()
-                    )  # Perpendicular to the runway (e.g. lateral deviation)
+            def _add_trajectory_point(original_point, new__point_projected):
+                _trajectory_point = AircraftTrajectoryPoint(original_point)
+                # Update x and y coordinates (z coordinate is not updated by distance calculation)
+                _trajectory_point.setCoordinates(
+                    new__point_projected.x(),
+                    new__point_projected.y(),
+                    original_point.getZ(),
+                )
+                ac_trajectory.addPoint(_trajectory_point)
 
-                    ref_lon = runway_intersection_geographic.x()
-                    ref_lat = runway_intersection_geographic.y()
+            if original_trajectory_points[0]._course == "CUSTOM":
+                # Project ref point (3857) to UTM
+                ref_proj_x = runway_intersection_projected.x()
+                ref_proj_y = runway_intersection_projected.y()
 
-                    utm_zone = int((ref_lon + 180) // 6) + 1
-                    utm_epsg = utm_zone + (32600 if ref_lat >= 0 else 32700)
-                    utm_wgs84_transform = spatial.create_coordinate_transform(
-                        utm_epsg, 4326
-                    )
+                utm_zone = int((runway_intersection_geographic.x() + 180) // 6) + 1
+                utm_epsg = utm_zone + (
+                    32600 if runway_intersection_projected.y() >= 0 else 32700
+                )
+                utm_3857_transform = spatial.create_coordinate_transform(utm_epsg, 3857)
 
-                    ref_utm = utm_wgs84_transform.transform(
-                        ref_lon, ref_lat, QgsCoordinateTransform.ReverseTransform
-                    )
+                ref_utm = utm_3857_transform.transform(
+                    ref_proj_x, ref_proj_y, QgsCoordinateTransform.ReverseTransform
+                )
 
-                    # Forward transformation for the reference point in utm plus the offsets
-                    target_point_geographic = utm_wgs84_transform.transform(
+                for point in original_trajectory_points:
+                    x_offset = point.getX()
+                    y_offset = point.getY()
+
+                    # Convert the utm reference point applying the offsets to 3857
+                    target_point_projected = utm_3857_transform.transform(
                         ref_utm.x() + x_offset, ref_utm.y() + y_offset
                     )
 
-                else:
-
-                    # the target point is with cartesian coordinates, therefore we can calculate the distance with Pythagorian theorem
+                    _add_trajectory_point(point, target_point_projected)
+            else:
+                for point in original_trajectory_points:
+                    # The target point is with cartesian coordinates,
+                    # therefore we can calculate the distance with Pythagorean theorem
                     distance = spatial.getDistanceXY(point.getX(), point.getY())
 
                     # get target point (calculation in 4326 projection)
@@ -417,19 +434,12 @@ class TrajectoryTransformer:
                         math.radians(runway_azimuth_deg),
                     )
 
-                target_point_projected = coord_tr.transform(
-                    target_point_geographic,
-                    QgsCoordinateTransform.ReverseTransform,
-                )
+                    target_point_projected = coord_tr.transform(
+                        target_point_geographic,
+                        QgsCoordinateTransform.ReverseTransform,
+                    )
 
-                trajectory_point = AircraftTrajectoryPoint(point)
-                # Update x and y coordinates (z coordinate is not updated by distance calculation)
-                trajectory_point.setCoordinates(
-                    target_point_projected.x(),
-                    target_point_projected.y(),
-                    point.getZ(),
-                )
-                ac_trajectory.addPoint(trajectory_point)
+                    _add_trajectory_point(point, target_point_projected)
         else:
             # Process track
             # ToDo: from track prepare trajectory points
@@ -470,13 +480,14 @@ class TrajectoryTransformer:
                 # reverse arrival track so ordering begins at runway
                 track_line_points.reverse()
 
-            (point, point_wkt) = spatial.reproject_Point(
-                runway_intersection_geographic.x(),
-                runway_intersection_geographic.y(),
-                epsg_id_target,
-                epsg_id_source,
+            track_line_points.insert(
+                0,
+                (
+                    runway_intersection_projected.x(),
+                    runway_intersection_projected.y(),
+                    0,
+                ),
             )
-            track_line_points.insert(0, (point.GetX(), point.GetY(), 0))
             track_line = LineString(track_line_points)
 
             ac_trajectory = AircraftTrajectory()
