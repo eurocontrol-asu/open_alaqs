@@ -382,28 +382,28 @@ class TrajectoryTransformer:
 
                 # ToDo: if CUSTOM ... then
                 if point._course == "CUSTOM":
-
                     x_offset = point.getX()  # Along the runway
                     y_offset = (
                         point.getY()
                     )  # Perpendicular to the runway (e.g. lateral deviation)
 
-                    # Step 1: Move EAST by x_offset meters (azimuth=90°)
-                    lon_east, lat_east = qgs_d.computeSpheroidProject(
-                        runway_intersection_geographic,
-                        x_offset,
-                        math.radians(90),  # Azimuth: 90° = East
+                    ref_lon = runway_intersection_geographic.x()
+                    ref_lat = runway_intersection_geographic.y()
+
+                    utm_zone = int((ref_lon + 180) // 6) + 1
+                    utm_epsg = utm_zone + (32600 if ref_lat >= 0 else 32700)
+                    utm_wgs84_transform = spatial.create_coordinate_transform(
+                        utm_epsg, 4326
                     )
 
-                    # Step 2: Move NORTH by y_offset meters (azimuth=0°)
-                    lon_new, lat_new = qgs_d.computeSpheroidProject(
-                        QgsPointXY(lon_east, lat_east),
-                        y_offset,
-                        math.radians(0),  # Azimuth: 0° = North
+                    ref_utm = utm_wgs84_transform.transform(
+                        ref_lon, ref_lat, QgsCoordinateTransform.ReverseTransform
                     )
 
-                    # Create geographic point (EPSG:4326)
-                    target_point_geographic = QgsPointXY(lon_new, lat_new)
+                    # Forward transformation for the reference point in utm plus the offsets
+                    target_point_geographic = utm_wgs84_transform.transform(
+                        ref_utm.x() + x_offset, ref_utm.y() + y_offset
+                    )
 
                 else:
 
