@@ -970,7 +970,7 @@ def import_ads_b_data(ads_b_data: list, inventory_path: str) -> bool:
         inventory_path (str): Path of the Emissions Inventory DB.
 
     Returns:
-        result (bool): Whether the ADS-B data was successfully imported or not.
+        result (bool): Whether the ADS-B data were successfully imported or not.
     """
     if not ads_b_data:
         return False
