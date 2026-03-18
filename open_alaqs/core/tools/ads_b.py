@@ -6,11 +6,16 @@ from pyproj import CRS, Transformer
 
 from open_alaqs.core.alaqs import get_runways
 from open_alaqs.core.alaqsdblite import (
-    get_closest_runway_point,
+    ProjectDatabase,
+    get_closest_runway_endpoint,
     get_max_profile_oid,
+    get_runway_closest_endpoint,
     import_ads_b_data,
 )
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.interfaces.Runway import RunwayStore
+from open_alaqs.core.interfaces.Taxiway import TaxiwayRoutesStore
+from open_alaqs.core.tools import spatial
 
 logger = get_logger(__name__)
 
@@ -112,6 +117,7 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
     id_column = "flight_id"
     anp_profiles = []
     max_profile_oid = get_max_profile_oid()
+    flight_count = 0  # For logging purposes
 
     for flight_id in adsb_data[id_column].unique():
         flight_data = adsb_data[adsb_data[id_column] == flight_id].copy()
@@ -123,18 +129,74 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
         )
 
         # 1.2. Convert from geographic coordinates to planar (relative) ones
+        # 1.2.1 Pick a reference point on the runway
+
+        _runway_id = (
+            flight_data.at[flight_data.index[0], "runway"]
+            if "runway" in flight_data.columns
+            else ""
+        )
+        _taxi_route_id = (
+            flight_data.at[flight_data.index[0], "taxi_route"]
+            if "taxi_route" in flight_data.columns
+            else ""
+        )
+        db_path = ProjectDatabase().path
+        runway_obj = RunwayStore(db_path).getObject(_runway_id) if _runway_id else None
+        taxi_route_obj = (
+            TaxiwayRoutesStore(db_path).getObject(_taxi_route_id)
+            if _taxi_route_id
+            else None
+        )
+
+        # 1.2.1.1 Get the reference point depending on the provided information
+        # For closest point analysis, get a point from the ADS-B track
         track_lat, track_lon = (
             flight_data[["latitude", "longitude"]].iloc[-1]
             if is_arrival
             else flight_data[["latitude", "longitude"]].iloc[0]
         )
 
-        runway_name, runway_lon, runway_lat = get_closest_runway_point(
-            track_lon, track_lat
-        )
+        if runway_obj:
+            runway_name = runway_obj.getName()
+            if taxi_route_obj:
+                intersection = spatial.get_intersection_point_runway_and_taxi_route(
+                    runway_obj, taxi_route_obj
+                )
+                if intersection.isEmpty():
+                    logger.warning(
+                        f"Ignoring ADS-B trajectory, since runway ({runway_name}) and taxi route ({taxi_route_obj.getName()}) do not intersect!"
+                    )
+                    continue
+                else:
+                    tr = spatial.create_coordinate_transform(3857, 4326)
+                    intersection_wgs84 = tr.transform(intersection)
+                    runway_lon, runway_lat = (
+                        intersection_wgs84.x(),
+                        intersection_wgs84.y(),
+                    )
+                    logger.info(
+                        "Using runway and taxi_route intersection as reference runway point for importing ADS-B data."
+                    )
+            else:
+                runway_lon, runway_lat = get_runway_closest_endpoint(
+                    runway_name, track_lon, track_lat
+                )
+                logger.info(
+                    "Using runway column for reference runway point calculation for importing ADS-B data."
+                )
+        else:
+            # No runway nor taxi route given, so get the closest runway's endpoint
+            runway_name, runway_lon, runway_lat = get_closest_runway_endpoint(
+                track_lon, track_lat
+            )
+            logger.info(
+                "Using closest runway endpoint calculation as reference runway point for importing ADS-B data."
+            )
+
         runway_alt = 0
 
-        # Apply geographic_to_relative_df_proj with the appropriate runway reference
+        # 1.2.1.2 Apply geographic_to_relative_df_proj with the appropriate runway reference
         flight_data_x_y_z = _geographic_to_relative_df(
             flight_data,
             runway_lon,
@@ -197,11 +259,13 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
             ]
             anp_profiles.append(anp_row)
 
+        flight_count += 1
+
     # 3. Import data to Inventory DB
     result_import = import_ads_b_data(anp_profiles, inventory_path)
 
     if result_import:
-        return True, "ADS-B successfully imported!"
+        return True, f"ADS-B successfully imported! ({flight_count} profile(s))"
     else:
         return False, "ADS-B could not be imported into the database!"
 
