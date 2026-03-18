@@ -92,7 +92,7 @@ def validate_adsb_file(path: str) -> tuple[bool, str]:
             f"Invalid data: rows with no 'thrust' nor 'fuel flow' values: {no_thrust_no_fuel_flow_count}",
         )
 
-    return True, "The ADS-B data is valid!"
+    return True, "The ADS-B data are valid!"
 
 
 def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
