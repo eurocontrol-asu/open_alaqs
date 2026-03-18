@@ -375,12 +375,80 @@ def add_taxiway_route(taxiway_route):
 # #################################################
 
 
-def get_closest_runway_point(longitude, latitude):
+def get_runway_closest_endpoint(runway_id, longitude, latitude):
+    """
+    Gets the closest endpoint from a given runway in the ALAQS DB
+    with respect to the input point, given in WGS84 (EPSG:4326).
+
+    NOTE: Make sure the runway_id exists in the DB before calling this method!
+
+    Args:
+        runway_id (str): Name of the base runway.
+        longitude (float): Longitude of the input point.
+        latitude (float): Latitude of the input point.
+
+    Returns:
+        runway_lon: Longitude (WGS84) of the closest runway endpoint.
+        runway_lat: Latitude (WGS84) of the closest runway endpoint.
+    """
+    sql = """
+        WITH
+        input(runway_id, longitude, latitude) AS (
+            VALUES(?, ?, ?)
+        ),
+        inputpoint AS
+            (SELECT
+                ST_Transform(
+                    ST_GeomFromText(
+                        'POINT(' || longitude || ' ' || latitude || ')', 4326
+                    ),
+                    3857
+                ) as ip
+            FROM input),
+        endpoints AS
+            (SELECT oid, shapes_runways.runway_id, ST_StartPoint(geometry) as sp, ST_EndPoint(geometry) as ep
+            FROM shapes_runways, input
+            WHERE shapes_runways.runway_id = input.runway_id),
+        multipoints AS
+            (SELECT oid, runway_id, ST_GeomFromText('MULTIPOINT((' || ST_X(sp) || ' ' || ST_Y(sp) || '), (' || ST_X(ep) || ' ' || ST_Y(ep) || '))', 3857) as mp
+            FROM endpoints),
+        closest_endpoint AS
+            (SELECT shapes_runways.oid, shapes_runways.runway_id,
+                ST_ClosestPoint(
+                    mp,
+                    inputpoint.ip
+                ) as closest_endpoint_3857,
+                ST_Transform(
+                    ST_ClosestPoint(
+                        mp,
+                        inputpoint.ip
+                    ),
+                4326) as closest_endpoint_4326
+            FROM shapes_runways, multipoints, input, inputpoint
+            where shapes_runways.runway_id = input.runway_id)
+
+        SELECT oid, runway_id, ST_X(closest_endpoint_4326) as lon, ST_Y(closest_endpoint_4326) as lat,
+            ST_X(closest_endpoint_3857) as x, ST_Y(closest_endpoint_3857) as y
+        FROM closest_endpoint;
+    """
+    res = execute_sql(sql, [runway_id, longitude, latitude])
+    runway_name = res["runway_id"]
+    runway_lon = res["lon"]
+    runway_lat = res["lat"]
+    runway_x = res["x"]
+    runway_y = res["y"]
+    logger.info(
+        f"Closest endpoint in runway {runway_name}: ({runway_x}, {runway_y})/({runway_lon}, {runway_lat}), input point: ({longitude}, {latitude})"
+    )
+    return runway_lon, runway_lat
+
+
+def get_closest_runway_endpoint(longitude, latitude):
     """
     Gets the closest runway endpoint from runways in the ALAQS DB
     with respect to the input point, given in WGS84 (EPSG:4326).
     Note that this searches the closest runway endpoint, not the closest runway point,
-    nor an endpoint in the closest runway..
+    nor an endpoint in the closest runway.
 
     Args:
         longitude (float): Longitude of the input point.

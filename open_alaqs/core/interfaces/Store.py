@@ -47,7 +47,11 @@ class Store:
             self.setObject(key, self.getObject(key) + val)
 
     def getObject(self, key):
-        return self._objects[key] if self.hasKey(key) else None
+        if self.hasKey(key):
+            return self._objects[key]
+        else:
+            logger.warning(f"Object with key '{key}' not found in the store!")
+            return None
 
     def getObjects(self):
         return self._objects

@@ -22,8 +22,6 @@ from qgis.core import (
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.AircraftTrajectory import TrajectoryPoint
-from open_alaqs.core.interfaces.Runway import Runway
-from open_alaqs.core.interfaces.Taxiway import TaxiwayRoute
 from open_alaqs.core.tools import conversion
 from open_alaqs.core.tools.iterator import pairwise
 
@@ -490,12 +488,17 @@ def get_line_vertices(line: QgsGeometry) -> list[QgsPoint]:
     return points
 
 
-def get_intersection_point_runway_and_taxi_route(
-    runway: Runway, taxi_route: TaxiwayRoute
-) -> QgsGeometry:
+def get_intersection_point_runway_and_taxi_route(runway, taxi_route) -> QgsGeometry:
     """
     Returns the entry point of a Taxiway route on the Runway.
     Mwy return an empty geometry if there is no intersection.
+
+    Args:
+        runway (Runway): Runway object.
+        taxi_route (TaxiwayRoute): Taxiway route object.
+
+    Returns:
+        QgsGeometry: Geometry (point) object resulting from the intersection. It may be an EMPTY geometry.
     """
     runway_geom = QgsGeometry.fromWkt(runway.getGeometryText())
     taxi_route_geom = QgsGeometry.fromWkt(taxi_route.getSegmentsAsLineString().wkt)

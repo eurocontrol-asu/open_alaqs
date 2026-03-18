@@ -2129,7 +2129,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                         self.ui.adsb_table_path.filePath(), inventory_path
                     )
                     if adsb_result:
-                        logger.info("ADS-B file was successfully imported!")
+                        logger.info(adsb_message)
                     else:
                         logger.warning(
                             f"The ADS-B file could not be imported! Details: {adsb_message}"
