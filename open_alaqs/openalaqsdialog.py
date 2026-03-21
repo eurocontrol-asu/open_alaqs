@@ -2126,7 +2126,9 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             else:
                 if self._adsb_file_valid:
                     adsb_result, adsb_message = ads_b.import_adsb_file(
-                        self.ui.adsb_table_path.filePath(), inventory_path
+                        self.ui.adsb_table_path.filePath(),
+                        inventory_path,
+                        movement_file_path,
                     )
                     if adsb_result:
                         logger.info(adsb_message)

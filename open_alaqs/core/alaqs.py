@@ -16,8 +16,9 @@ the database layer.
 from typing import Any, Optional
 
 from open_alaqs.core import alaqsdblite, alaqsutils
-from open_alaqs.core.alaqsdblite import execute_sql, update_table
+from open_alaqs.core.alaqsdblite import ProjectDatabase, execute_sql, update_table
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.interfaces.Runway import RunwayStore
 from open_alaqs.core.tools.create_output import create_alaqs_output
 from open_alaqs.core.tools.sql_interface import SqlExpression
 from open_alaqs.openalaqs_typing import AirportDict, StudySetup
@@ -206,6 +207,42 @@ def get_runways() -> list[dict[str, Any]]:
         """,
         fetchone=False,
     )
+
+
+def get_runway_by_direction(runway_direction, runway_store=None):
+    """
+    Gets a Runway object by direction.
+    Logs messages if multiple runways were found for the given direction of if the
+    Runway couldn't be found.
+
+    Args:
+        runway_direction (str): Direction of the runway
+        runway_store (RunwayStore): Optionally, a runway store to find the Runway.
+
+    Returns:
+        Tuple[bool, Runway]: Whether a Runway was found along with the Runway object (or None).
+    """
+    # Make sure runways are always 2 characters or more
+    runway_direction = runway_direction.zfill(2)
+
+    if not runway_store:
+        runway_store = RunwayStore(ProjectDatabase().path)
+
+    if runway_store.isinKey(runway_direction):
+        runway_found = [
+            runway
+            for runway in runway_store.getObjects().values()
+            if runway_direction in runway.getName()
+        ]
+        if len(runway_found) > 1:
+            logger.warning(
+                f"Runway {runway_direction} was found in the DB multiple times."
+            )
+        return True, runway_found[0]
+
+    else:
+        logger.warning(f"Runway '{runway_direction}' wasn't found in the DB")
+        return False, None
 
 
 # ############################

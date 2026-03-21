@@ -50,7 +50,9 @@ class Store:
         if self.hasKey(key):
             return self._objects[key]
         else:
-            logger.warning(f"Object with key '{key}' not found in the store!")
+            logger.debug(
+                f"Object with key '{key}' not found in the {self.__class__.__name__}!"
+            )
             return None
 
     def getObjects(self):
