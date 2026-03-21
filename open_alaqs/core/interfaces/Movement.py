@@ -8,6 +8,7 @@ from qgis.core import Qgis, QgsGeometry, QgsLineString
 from qgis.PyQt import QtCore, QtWidgets
 from shapely.geometry.base import BaseGeometry
 
+from open_alaqs.core.alaqs import get_runway_by_direction
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft, AircraftStore
 from open_alaqs.core.interfaces.AircraftTrajectory import AircraftTrajectoryStore
@@ -686,23 +687,12 @@ class MovementStore(Store, metaclass=Singleton):
 
             indices = mdf["runway"] == rwy
 
-            # Make sure runways are always 2 characters or more
-            rwy = rwy.zfill(2)
-
-            if runway_store.isinKey(rwy):
+            res, runway = get_runway_by_direction(rwy, runway_store)
+            if res:
                 eq_mdf.loc[indices, "runway_direction"] = rwy
-                rwy_used = [
-                    key for key in list(runway_store.getObjects().keys()) if rwy in key
-                ]
-                if len(rwy_used) > 1:
-                    logger.warning(
-                        f"Runway {rwy} was found in the DB multiple " "times."
-                    )
-                eq_mdf.loc[indices, "runway"] = rwy_used[0]
-
+                eq_mdf.loc[indices, "runway"] = runway.getName()
             else:
                 eq_mdf.loc[indices, "runway"] = np.nan
-                logger.warning(f"Runway '{rwy}' wasn't found in the DB")
 
         # Check if gates exist in the database
         if stage_1:

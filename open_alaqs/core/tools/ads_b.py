@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 from pyproj import CRS, Transformer
 
-from open_alaqs.core.alaqs import get_runways
+from open_alaqs.core.alaqs import get_runway_by_direction, get_runways
 from open_alaqs.core.alaqsdblite import (
     ProjectDatabase,
     get_closest_runway_endpoint,
@@ -13,7 +13,6 @@ from open_alaqs.core.alaqsdblite import (
     import_ads_b_data,
 )
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.Runway import RunwayStore
 from open_alaqs.core.interfaces.Taxiway import TaxiwayRoutesStore
 from open_alaqs.core.tools import spatial
 
@@ -95,23 +94,32 @@ def validate_adsb_file(path: str) -> tuple[bool, str]:
     return True, "The ADS-B data are valid!"
 
 
-def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
+def import_adsb_file(
+    adsb_path: str, inventory_path: str, movement_path: str
+) -> tuple[bool, str]:
     """
     Process a valid ADS-B CSV file, converts it to the ANP profiles format,
     and saves it into the Emissions Inventory database.
 
     Args:
-        csv_path (str): Path of the ADS-B CSV file.
+        adsb_path (str): Path of the ADS-B CSV file.
         inventory_path (str): Path of the Emissions Inventory database.
+        movement_path (str): Path of the Movement CSV file.
 
     Returns:
         Tuple with a boolean import result and a string with a display message.
     """
     # 1. Pre-process data
     try:
-        adsb_data = pd.read_csv(csv_path)
+        adsb_data = pd.read_csv(adsb_path)
     except Exception as e:
-        return False, f"Error reading the CSV file. Details: {e}"
+        return False, f"Error reading the ADS-B CSV file. Details: {e}"
+
+    try:
+        mdf = pd.read_csv(movement_path, sep=";")
+        mdf_triples = mdf.groupby(["profile_id", "runway", "taxi_route"])
+    except Exception as e:
+        return False, f"Error reading the Movement CSV file. Details: {e}"
 
     # Process each unique flight
     id_column = "flight_id"
@@ -120,6 +128,7 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
     flight_count = 0  # For logging purposes
 
     for flight_id in adsb_data[id_column].unique():
+        logger.info(f"Importing ADS-B trajectory with id '{flight_id}'...")
         flight_data = adsb_data[adsb_data[id_column] == flight_id].copy()
 
         # 1.1. Determine arrival/departure
@@ -131,18 +140,20 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
         # 1.2. Convert from geographic coordinates to planar (relative) ones
         # 1.2.1 Pick a reference point on the runway
 
-        _runway_id = (
-            flight_data.at[flight_data.index[0], "runway"]
-            if "runway" in flight_data.columns
-            else ""
-        )
-        _taxi_route_id = (
-            flight_data.at[flight_data.index[0], "taxi_route"]
-            if "taxi_route" in flight_data.columns
-            else ""
-        )
+        _runway_direction = ""
+        _taxi_route_id = ""
+        for triple, _ in mdf_triples:
+            if flight_id == triple[0]:
+                _runway_direction = str(triple[1])
+                _taxi_route_id = triple[2]
+                break
+
         db_path = ProjectDatabase().path
-        runway_obj = RunwayStore(db_path).getObject(_runway_id) if _runway_id else None
+        res, runway_obj = (
+            get_runway_by_direction(_runway_direction)
+            if _runway_direction
+            else (False, None)
+        )
         taxi_route_obj = (
             TaxiwayRoutesStore(db_path).getObject(_taxi_route_id)
             if _taxi_route_id
@@ -183,7 +194,7 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
                     runway_name, track_lon, track_lat
                 )
                 logger.info(
-                    "Using runway column for reference runway point calculation for importing ADS-B data."
+                    "Using runway object for reference runway point calculation for importing ADS-B data."
                 )
         else:
             # No runway nor taxi route given, so get the closest runway's endpoint
@@ -191,7 +202,7 @@ def import_adsb_file(csv_path: str, inventory_path: str) -> tuple[bool, str]:
                 track_lon, track_lat
             )
             logger.info(
-                "Using closest runway endpoint calculation as reference runway point for importing ADS-B data."
+                "Since runway and taxi_route were not given or found, use closest runway endpoint calculation as reference runway point for importing ADS-B data."
             )
 
         runway_alt = 0
