@@ -1692,10 +1692,6 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui.setupUi(self)
 
         # Connections
-        # TODO OPENGIS.ch: remove the Vertical limit from the form, use the one in the Emission Inventory Analysis only
-        self.ui.vert_limit_m.valueChanged.connect(self.m_to_ft)
-        self.ui.vert_limit_ft.setEnabled(False)
-
         self.ui.status_update.setText("Ready")
         self.ui.buttonBox.button(
             QtWidgets.QDialogButtonBox.StandardButton.Save
@@ -1728,8 +1724,6 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui.met_summary.setText("Meteorological file required")
         self.ui.met_summary.setStyleSheet(STATUS_STYLE_WARNING)
         self.ui.output_save_path.setStorageMode(QgsFileWidget.GetDirectory)
-        self.ui.towing_speed.setValue(10.0)
-        self.ui.vert_limit_m.setValue(914.4)
         self.ui.x_resolution.setValue(250)
         self.ui.y_resolution.setValue(250)
         self.ui.z_resolution.setValue(50)
@@ -2012,10 +2006,6 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             met_csv_path = oautk.validate_field(self.ui.met_file_path, "str")
             study_start_date = oautk.validate_field(self.ui.study_start_date, "str")
             study_end_date = oautk.validate_field(self.ui.study_end_date, "str")
-            vert_limit = self.ui.vert_limit_m.value()
-            towing_speed = self.ui.towing_speed.value()
-            #   method = self.ui.method.currentText()
-            #   met_file_path = oautk.validate_field(self, self.ui.met_file_path, "str")
             x_resolution = self.ui.x_resolution.value()
             y_resolution = self.ui.y_resolution.value()
             z_resolution = self.ui.z_resolution.value()
@@ -2029,8 +2019,6 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                 or (output_save_path is None)
                 or (study_start_date is False)
                 or (study_end_date is False)
-                or (vert_limit is False)
-                or (towing_speed is False)
                 or (x_resolution is False)
                 or (y_resolution is False)
                 or (z_resolution is False)
@@ -2080,8 +2068,6 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             model_parameters["movement_path"] = movement_file_path
             model_parameters["study_start_date"] = study_start_date
             model_parameters["study_end_date"] = study_end_date
-            model_parameters["towing_speed"] = towing_speed
-            model_parameters["vertical_limit"] = vert_limit
             model_parameters["x_resolution"] = x_resolution
             model_parameters["y_resolution"] = y_resolution
             model_parameters["z_resolution"] = z_resolution
@@ -2152,22 +2138,6 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             self.ui.status_update.setText("**Error** See log file")
             error = alaqsutils.print_error(self.create_inventory.__name__, Exception, e)
             return error
-
-    def m_to_ft(self):
-        """
-        Function that converts the user entered vertical limit in metres in feet
-         as well.
-        This isn't an essential process - more cosmetic
-        """
-        try:
-            m_value = self.ui.vert_limit_m.value()
-            ft_value = m_value * 3.2808399
-            self.ui.vert_limit_ft.setValue(ft_value)
-            # Make sure that the cell background is plain white
-            oautk.color_ui_background(self.ui.vert_limit_m, "transparent")
-        except Exception:
-            # Make the cell background red to highlight an error
-            oautk.color_ui_background(self.ui.vert_limit_m, "red")
 
     @staticmethod
     def check_state(ui_element):
