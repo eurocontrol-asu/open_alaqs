@@ -274,13 +274,12 @@ def inventory_update_tbl_inv_period(database_path, model_parameters, study_setup
 
     sql_interface.query_text(
         database_path,
-        "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, vert_limit=%d, apt_elev=%d, "
+        "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, apt_elev=%d, "
         'copert=%d, nox_corr=%d, ffm=%d, smsh=%d, mix_height=%d, min_time="%s", '
         'max_time="%s";'
         % (
             interval,
             temp_isa,
-            model_parameters["vertical_limit"],
             study_setup["airport_elevation"],
             copert,
             nox_corr,
