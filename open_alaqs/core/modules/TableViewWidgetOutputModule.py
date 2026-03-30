@@ -296,7 +296,7 @@ class TableViewWidgetOutputModule(GridOutputModule):
             #     },
             # ],
         )
-        serializer._recreate_table(filename)
+        serializer.recreate_table(filename)
 
         insert_into_table(filename, table_name, self.rows)
 
