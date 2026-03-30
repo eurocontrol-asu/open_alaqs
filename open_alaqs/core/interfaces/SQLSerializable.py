@@ -65,7 +65,7 @@ class SQLSerializable:
         db_path = path or self._db_path
 
         try:
-            self._recreate_table(db_path)
+            self.recreate_table(db_path)
 
             result = sql_interface.insert_into_table(
                 db_path,
@@ -121,7 +121,7 @@ class SQLSerializable:
 
         return None
 
-    def _recreate_table(self, db_path: str = "") -> None:
+    def recreate_table(self, db_path: str = "") -> None:
         """
         Create a new table
         :param path_: database path
