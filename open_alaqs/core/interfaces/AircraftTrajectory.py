@@ -549,6 +549,7 @@ class AircraftTrajectoryDatabase(SQLSerializable, metaclass=Singleton):
         table_name_string="default_aircraft_profiles",
         table_columns_type_dict=None,
         primary_key="",
+        deserialize=True,
     ):
         if table_columns_type_dict is None:
             table_columns_type_dict = OrderedDict(
@@ -578,7 +579,7 @@ class AircraftTrajectoryDatabase(SQLSerializable, metaclass=Singleton):
             primary_key,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 

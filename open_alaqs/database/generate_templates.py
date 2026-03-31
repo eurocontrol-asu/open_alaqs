@@ -113,6 +113,19 @@ if __name__ == "__main__":
     shutil.copyfile(base_template, project_template)
     shutil.copyfile(base_template, inventory_template)
 
+    # Create default_aircraft_profiles table from SQLSerializable subclass
+    from open_alaqs.core.interfaces.AircraftTrajectory import AircraftTrajectoryDatabase
+
+    aircraft_trajectory = AircraftTrajectoryDatabase(
+        str(project_template), deserialize=False
+    )
+    aircraft_trajectory.recreate_table()
+
+    aircraft_trajectory = AircraftTrajectoryDatabase(
+        str(inventory_template), deserialize=False
+    )
+    aircraft_trajectory.recreate_table()
+
     # Create the sqlite engines to the databases
     project_conn = connect(project_template)
     inventory_conn = connect(inventory_template)
@@ -159,3 +172,7 @@ if __name__ == "__main__":
             logging.error('Failed to import data from CSV "%s"', csv_filename.stem)
 
             raise error
+
+    # Close open DB connections
+    project_conn.close()
+    inventory_conn.close()
