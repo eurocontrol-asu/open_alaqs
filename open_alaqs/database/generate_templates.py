@@ -8,6 +8,21 @@ from pathlib import Path, PosixPath
 import pandas as pd
 import sqlalchemy
 
+# Track if QGIS libs were successfully imported
+b_qgis_libs_imported = False
+
+try:
+    from open_alaqs.core.interfaces.AircraftTrajectory import AircraftTrajectoryDatabase
+
+    b_qgis_libs_imported = True
+except ModuleNotFoundError as e:
+    print(
+        "error: QGIS libraries could not be imported.\n\n"
+        "Run the script from the OSGeo4W Shell, using the 'python-qgis' command:\n"
+        "  python-qgis -m open_alaqs.database.generate_templates [options]\n\n"
+        f"Details: {e}\n"
+    )
+
 logging.basicConfig(level=logging.DEBUG)
 
 SRC_DIR = Path(__file__).parent / "src"
@@ -82,7 +97,7 @@ def apply_sql(conn: sqlite3.Connection, sql_paths, file_type):
     conn.commit()
 
 
-if __name__ == "__main__":
+def main():
     """
     Build a new *.alaqs project template and a new *_out.alaqs inventory template.
     """
@@ -114,8 +129,6 @@ if __name__ == "__main__":
     shutil.copyfile(base_template, inventory_template)
 
     # Create default_aircraft_profiles table from SQLSerializable subclass
-    from open_alaqs.core.interfaces.AircraftTrajectory import AircraftTrajectoryDatabase
-
     aircraft_trajectory = AircraftTrajectoryDatabase(
         str(project_template), deserialize=False
     )
@@ -176,3 +189,8 @@ if __name__ == "__main__":
     # Close open DB connections
     project_conn.close()
     inventory_conn.close()
+
+
+if __name__ == "__main__":
+    if b_qgis_libs_imported:
+        main()
