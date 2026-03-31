@@ -37,6 +37,15 @@ MATCH_PATTERNS = {
 }
 
 
+def get_sql_serializable_registry(file_type):
+    shared = [AircraftTrajectoryDatabase]
+    sql_serializable_registry = {
+        "project": [],
+        "inventory": [],
+    }
+    return shared + sql_serializable_registry[file_type]
+
+
 def get_engine(p: Path) -> sqlalchemy.engine.Engine:
     if isinstance(p, PosixPath):
         uri = p.as_uri().replace("file://", "sqlite:///")
@@ -129,15 +138,13 @@ def main():
     shutil.copyfile(base_template, inventory_template)
 
     # Create default_aircraft_profiles table from SQLSerializable subclass
-    aircraft_trajectory = AircraftTrajectoryDatabase(
-        str(project_template), deserialize=False
-    )
-    aircraft_trajectory.recreate_table()
+    def recreate_table_from_sql_serializable(file_type, temṕlate_path):
+        for sql_serializable_subclass in get_sql_serializable_registry(file_type):
+            obj = sql_serializable_subclass(str(temṕlate_path), deserialize=False)
+            obj.recreate_table()
 
-    aircraft_trajectory = AircraftTrajectoryDatabase(
-        str(inventory_template), deserialize=False
-    )
-    aircraft_trajectory.recreate_table()
+    recreate_table_from_sql_serializable("project", project_template)
+    recreate_table_from_sql_serializable("inventory", inventory_template)
 
     # Create the sqlite engines to the databases
     project_conn = connect(project_template)
