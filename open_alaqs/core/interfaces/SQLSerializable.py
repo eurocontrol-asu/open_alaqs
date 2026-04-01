@@ -124,7 +124,7 @@ class SQLSerializable:
     def recreate_table(self, db_path: str = "") -> None:
         """
         Create a new table
-        :param path_: database path
+        :param db_path: database path
         :raise ValueError or Exception: if the query generates a string response (an error)
         """
         db_path = db_path or self._db_path
@@ -174,4 +174,4 @@ class SQLSerializable:
                 ],
             )
 
-        logger.debug("Table '%s' created", (self._table_name))
+        logger.debug("Table '%s' created", self._table_name)
