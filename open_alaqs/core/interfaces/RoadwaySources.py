@@ -158,20 +158,22 @@ class RoadwaySourcesDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to roadway shape file in the spatialite database
     """
 
+    TABLE_NAME = "shapes_roadways"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="shapes_roadways",
         table_columns_type_dict=None,
         primary_key="",
         geometry_columns=None,
+        deserialize=True,
     ):
         if table_columns_type_dict is None:
             table_columns_type_dict = OrderedDict(
                 [
                     ("oid", "INTEGER PRIMARY KEY NOT NULL"),
                     ("roadway_id", "TEXT"),
-                    ("vehicle_year", "DECIMAL"),
+                    ("vehicle_year", "TEXT"),
                     ("height", "DECIMAL"),
                     ("distance", "DECIMAL"),
                     ("speed", "DECIMAL"),
@@ -195,7 +197,7 @@ class RoadwaySourcesDatabase(SQLSerializable, metaclass=Singleton):
                     ("p2_gm_km", "DECIMAL"),
                     ("method", "TEXT"),
                     ("scenario", "TEXT"),
-                    ("instudy", "DECIMAL"),
+                    ("instudy", "TEXT"),
                 ]
             )
         if geometry_columns is None:
@@ -211,13 +213,13 @@ class RoadwaySourcesDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 

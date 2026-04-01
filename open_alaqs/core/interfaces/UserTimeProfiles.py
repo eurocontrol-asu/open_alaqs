@@ -256,13 +256,15 @@ class UserHourProfileDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to user hour profiles in the spatialite database
     """
 
+    TABLE_NAME = "user_hour_profile"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="user_hour_profile",
         table_columns_type_dict=None,
         primary_key="oid",
         geometry_columns=None,
+        deserialize=True,
     ):
 
         if table_columns_type_dict is None:
@@ -303,13 +305,13 @@ class UserHourProfileDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 
@@ -318,13 +320,15 @@ class UserDayProfileDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to user day profiles in the spatialite database
     """
 
+    TABLE_NAME = "user_day_profile"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="user_day_profile",
         table_columns_type_dict=None,
         primary_key="oid",
         geometry_columns=None,
+        deserialize=True,
     ):
 
         if table_columns_type_dict is None:
@@ -347,13 +351,13 @@ class UserDayProfileDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 
@@ -362,13 +366,15 @@ class UserMonthProfileDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to user month profiles in the spatialite database
     """
 
+    TABLE_NAME = "user_month_profile"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="user_month_profile",
         table_columns_type_dict=None,
         primary_key="oid",
         geometry_columns=None,
+        deserialize=True,
     ):
 
         if table_columns_type_dict is None:
@@ -396,13 +402,13 @@ class UserMonthProfileDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 

@@ -60,13 +60,15 @@ class InventoryTimeSeriesDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to runway shape file in the spatialite database
     """
 
+    TABLE_NAME = "tbl_InvTime"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="tbl_InvTime",
         table_columns_type_dict=None,
         primary_key="time_id",
         geometry_columns=None,
+        deserialize=True,
     ):
 
         if table_columns_type_dict is None:
@@ -83,11 +85,11 @@ class InventoryTimeSeriesDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()

@@ -154,13 +154,15 @@ class PointSourcesDatabase(SQLSerializable, metaclass=Singleton):
      database
     """
 
+    TABLE_NAME = "shapes_point_sources"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="shapes_point_sources",
         table_columns_type_dict=None,
         primary_key="",
         geometry_columns=None,
+        deserialize=True,
     ):
         if table_columns_type_dict is None:
             table_columns_type_dict = OrderedDict(
@@ -174,7 +176,7 @@ class PointSourcesDatabase(SQLSerializable, metaclass=Singleton):
                     ("temperature", "DECIMAL"),
                     ("diameter", "DECIMAL"),
                     ("velocity", "DECIMAL"),
-                    ("ops_year", "DECIMAL"),
+                    ("ops_year", "TEXT"),
                     ("hour_profile", "TEXT"),
                     ("daily_profile", "TEXT"),
                     ("month_profile", "TEXT"),
@@ -185,7 +187,7 @@ class PointSourcesDatabase(SQLSerializable, metaclass=Singleton):
                     ("pm10_kg_k", "DECIMAL"),
                     ("p1_kg_k", "DECIMAL"),
                     ("p2_kg_k", "DECIMAL"),
-                    ("instudy", "DECIMAL"),
+                    ("instudy", "TEXT"),
                 ]
             )
         if geometry_columns is None:
@@ -201,13 +203,13 @@ class PointSourcesDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 

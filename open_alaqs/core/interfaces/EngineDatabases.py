@@ -60,12 +60,14 @@ class EngineModeDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to aircraft-engine-emission indices
     """
 
+    TABLE_NAME = "default_aircraft_engine_mode"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="default_aircraft_engine_mode",
         table_columns_type_dict=None,
         primary_key="",
+        deserialize=True,
     ):
 
         if table_columns_type_dict is None:
@@ -81,12 +83,12 @@ class EngineModeDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 

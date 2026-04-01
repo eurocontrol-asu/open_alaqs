@@ -271,10 +271,11 @@ class AmbientConditionDatabaseSQL(SQLSerializable, metaclass=Singleton):
     Class that grants access to ambient conditions table in the spatialite database
     """
 
+    TABLE_NAME = "tbl_InvMeteo"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="tbl_InvMeteo",
         table_columns_type_dict=None,
         primary_key="",
         deserialize=True,
@@ -301,13 +302,13 @@ class AmbientConditionDatabaseSQL(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             None,
         )
 
-        if self._db_path and deserialize:
+        if deserialize and self._db_path:
             self.deserialize()
 
 
