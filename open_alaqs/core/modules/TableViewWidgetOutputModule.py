@@ -1,5 +1,6 @@
 import csv
 import os
+from collections import OrderedDict
 from datetime import datetime
 from enum import Enum
 from typing import Any, Optional, Union, cast
@@ -16,6 +17,7 @@ from open_alaqs.core.interfaces.OutputModule import GridOutputModule
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.tools.Grid3D import Grid3D
+from open_alaqs.core.tools.Singleton import Singleton
 from open_alaqs.core.tools.sql_interface import insert_into_table
 
 Ui_TableViewDialog, _ = loadUiType(
@@ -269,23 +271,10 @@ class TableViewWidgetOutputModule(GridOutputModule):
         if not filename:
             return
 
-        columns = {
-            "timestamp": "DATETIME",
-            "source_type": "TEXT",
-            "source_name": "TEXT",
-            "wkt": "TEXT",
-        }
-
-        for pollutant_type in PollutantType:
-            column_name = f"{pollutant_type.value}_{self.pollutant_unit.value}"
-            columns[column_name] = "DECIMAL"
-
-        table_name = "emission_calculation_result"
-        serializer = SQLSerializable(
+        serializer = EmissionCalculationResultDatabase(
             filename,
-            table_name,
-            columns,
             primary_key="timestamp",
+            pollutant_unit=self.pollutant_unit,
             # TODO OPENGIS.ch: add the geometry column
             # geometry_columns=[
             #     {
@@ -296,9 +285,9 @@ class TableViewWidgetOutputModule(GridOutputModule):
             #     },
             # ],
         )
-        serializer.recreate_table(filename)
+        serializer.recreate_table()
 
-        insert_into_table(filename, table_name, self.rows)
+        insert_into_table(filename, serializer.TABLE_NAME, self.rows)
 
         if os.path.isfile(filename):
             QtWidgets.QMessageBox.information(
@@ -306,6 +295,41 @@ class TableViewWidgetOutputModule(GridOutputModule):
                 "Export SQLite",
                 f"Results saved as SQLite file at `{filename}`",
             )
+
+
+class EmissionCalculationResultDatabase(SQLSerializable, metaclass=Singleton):
+    """
+    Class that grants access to emission calculation results in the spatialite database
+    """
+
+    TABLE_NAME = "emission_calculation_result"
+
+    def __init__(
+        self,
+        db_path_string,
+        primary_key="",
+        pollutant_unit=PollutantUnit.KG,
+    ):
+        table_columns_type_dict = OrderedDict(
+            [
+                ("timestamp", "DATETIME"),
+                ("source_type", "TEXT"),
+                ("source_name", "TEXT"),
+                ("wkt", "TEXT"),
+            ]
+        )
+
+        for pollutant_type in PollutantType:
+            column_name = f"{pollutant_type.value}_{pollutant_unit.value}"
+            table_columns_type_dict[column_name] = "DECIMAL"
+
+        SQLSerializable.__init__(
+            self,
+            db_path_string,
+            self.TABLE_NAME,
+            table_columns_type_dict,
+            primary_key,
+        )
 
 
 class EmissionsTableViewDialog(QtWidgets.QDialog):
