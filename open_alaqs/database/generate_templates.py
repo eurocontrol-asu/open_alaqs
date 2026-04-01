@@ -12,13 +12,28 @@ import sqlalchemy
 b_qgis_libs_imported = False
 
 try:
+    from open_alaqs.core.interfaces.Aircraft import AircraftDatabase
     from open_alaqs.core.interfaces.AircraftTrajectory import AircraftTrajectoryDatabase
+    from open_alaqs.core.interfaces.APU import APUDatabase, APUtimes
+    from open_alaqs.core.interfaces.AreaSources import AreaSourcesDatabase
+    from open_alaqs.core.interfaces.EmissionDynamics import EmissionDynamicsDatabase
+    from open_alaqs.core.interfaces.EngineDatabases import (
+        EngineEmissionFactorsStartDatabase,
+        EngineEmissionIndicesDatabase,
+        HelicopterEngineEmissionIndicesDatabase,
+    )
+    from open_alaqs.core.interfaces.Gate import (
+        DefaultGateEmissionProfileDatabase,
+        GateDatabase,
+    )
     from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 
     b_qgis_libs_imported = True
 except ModuleNotFoundError as e:
     print(
-        "error: QGIS libraries could not be imported.\n\n"
+        "\nError: Some plugin dependencies could not be imported.\n\n"
+        "Tips:\n"
+        "Make sure to install all plugin dependencies in your virtual environment.\n"
         "Run the script from the OSGeo4W Shell, using the 'python-qgis' command:\n"
         "  python-qgis -m open_alaqs.database.generate_templates [options]\n\n"
         f"Details: {e}\n"
@@ -39,7 +54,19 @@ MATCH_PATTERNS = {
 
 
 def get_sql_serializable_registry(file_type: str) -> list[SQLSerializable]:
-    shared = [AircraftTrajectoryDatabase]
+    shared = [
+        AircraftDatabase,
+        AircraftTrajectoryDatabase,
+        APUDatabase,
+        APUtimes,
+        AreaSourcesDatabase,
+        DefaultGateEmissionProfileDatabase,
+        EmissionDynamicsDatabase,
+        EngineEmissionFactorsStartDatabase,
+        EngineEmissionIndicesDatabase,
+        GateDatabase,
+        HelicopterEngineEmissionIndicesDatabase,
+    ]
     sql_serializable_registry = {
         "project": [],
         "inventory": [],
@@ -167,10 +194,12 @@ def main():
     shutil.copyfile(base_template, inventory_template)
 
     # Create default_aircraft_profiles table from SQLSerializable subclass
-    def recreate_table_from_sql_serializable(file_type, temṕlate_path):
+    def recreate_table_from_sql_serializable(file_type, template_path):
         for sql_serializable_subclass in get_sql_serializable_registry(file_type):
-            obj = sql_serializable_subclass(str(temṕlate_path), deserialize=False)
-            obj.recreate_table()
+            obj = sql_serializable_subclass(str(template_path), deserialize=False)
+            obj.recreate_table(
+                str(template_path)
+            )  # The param is important, because of singletons
 
     recreate_table_from_sql_serializable("project", project_template)
     recreate_table_from_sql_serializable("inventory", inventory_template)

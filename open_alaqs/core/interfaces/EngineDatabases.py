@@ -16,12 +16,14 @@ class EngineEmissionFactorsStartDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to emission factors that are related to an engine start
     """
 
+    TABLE_NAME = "default_aircraft_start_ef"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="default_aircraft_start_ef",
         table_columns_type_dict=None,
         primary_key="",
+        deserialize=True,
     ):
 
         if table_columns_type_dict is None:
@@ -44,12 +46,12 @@ class EngineEmissionFactorsStartDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 
@@ -93,12 +95,14 @@ class HelicopterEngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singlet
     Class that grants access to aircraft-engine-emission indices
     """
 
+    TABLE_NAME = "default_helicopter_engine_ei"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="default_helicopter_engine_ei",
         table_columns_type_dict=None,
         primary_key="",
+        deserialize=True,
     ):
 
         if table_columns_type_dict is None:
@@ -140,7 +144,7 @@ class HelicopterEngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singlet
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
         )
@@ -148,7 +152,7 @@ class HelicopterEngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singlet
         self._heli_emission_indices = OrderedDict()
         self._modes = ["GI1", "GI2", "TO", "AP"]
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
             self.initEmissionIndices()
 
@@ -207,12 +211,14 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to aircraft-engine-emission indices
     """
 
+    TABLE_NAME = "default_aircraft_engine_ei"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="default_aircraft_engine_ei",
         table_columns_type_dict=None,
         primary_key="",
+        deserialize=True,
     ):
 
         if table_columns_type_dict is None:
@@ -247,6 +253,8 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
                     ("pm10_nonvol", "DECIMAL"),
                     ("pm10_sul", "DECIMAL"),
                     ("pm10_organic", "DECIMAL"),
+                    ("eng_type", "TEXT"),
+                    ("bpr", "DECIMAL"),
                     ("nvpm_ei", "DECIMAL"),
                     ("nvpm_number_ei", "DECIMAL"),
                 ]
@@ -255,14 +263,14 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
         )
 
         self._emission_indices = OrderedDict()
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
             self.initEmissionIndices()
 

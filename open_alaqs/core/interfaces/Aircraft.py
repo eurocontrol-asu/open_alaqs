@@ -399,12 +399,14 @@ class AircraftDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to default_aircraft table in the spatialite database
     """
 
+    TABLE_NAME = "default_aircraft"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="default_aircraft",
         table_columns_type_dict=None,
         primary_key="",
+        deserialize=True,
     ):
 
         if table_columns_type_dict is None:
@@ -432,10 +434,10 @@ class AircraftDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
