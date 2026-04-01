@@ -195,10 +195,11 @@ class APUDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to apu emissions as stored in the database
     """
 
+    TABLE_NAME = "default_aircraft_apu_ef"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="default_aircraft_apu_ef",
         table_columns_type_dict=None,
         primary_key="",
         geometry_columns=None,
@@ -224,13 +225,13 @@ class APUDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path and deserialize:
+        if deserialize and self._db_path:
             self.deserialize()
 
 
@@ -239,10 +240,11 @@ class APUtimes(SQLSerializable, metaclass=Singleton):
     Class that grants access to apu emissions as stored in the database
     """
 
+    TABLE_NAME = "default_apu_times"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="default_apu_times",
         table_columns_type_dict=None,
         primary_key="",
         geometry_columns=None,
@@ -265,11 +267,11 @@ class APUtimes(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path and deserialize:
+        if deserialize and self._db_path:
             self.deserialize()

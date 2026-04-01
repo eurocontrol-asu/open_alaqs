@@ -114,13 +114,15 @@ class AreaSourcesDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to area shape file in the spatialite database
     """
 
+    TABLE_NAME = "shapes_area_sources"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="shapes_area_sources",
         table_columns_type_dict=None,
         primary_key="",
         geometry_columns=None,
+        deserialize=True,
     ):
 
         if table_columns_type_dict is None:
@@ -128,7 +130,7 @@ class AreaSourcesDatabase(SQLSerializable, metaclass=Singleton):
                 [
                     ("oid", "INTEGER PRIMARY KEY NOT NULL"),
                     ("source_id", "TEXT"),
-                    ("unit_year", "DECIMAL"),
+                    ("unit_year", "TEXT"),
                     ("height", "DECIMAL"),
                     ("heat_flux", "DECIMAL"),
                     ("hourly_profile", "TEXT"),
@@ -141,7 +143,7 @@ class AreaSourcesDatabase(SQLSerializable, metaclass=Singleton):
                     ("pm10_kg_unit", "DECIMAL"),
                     ("p1_kg_unit", "DECIMAL"),
                     ("p2_kg_unit", "DECIMAL"),
-                    ("instudy", "DECIMAL"),
+                    ("instudy", "TEXT"),
                 ]
             )
         if geometry_columns is None:
@@ -157,13 +159,13 @@ class AreaSourcesDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 

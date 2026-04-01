@@ -181,7 +181,7 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_p
     # save ambient conditions to database
     if met_csv_path:
         store = AmbientConditionStore(inventory_path, init_csv_path=met_csv_path)
-        store.serialize()
+        store.serialize()  # DANGEROUS because of singletons!!!
 
     logger.info(
         "New output file with path '%s' has been created" % (str(inventory_path))

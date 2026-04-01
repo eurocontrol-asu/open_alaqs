@@ -187,22 +187,24 @@ class GateDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to gate shape file in the spatialite database
     """
 
+    TABLE_NAME = "shapes_gates"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="shapes_gates",
         table_columns_type_dict=None,
         primary_key="",
         geometry_columns=None,
+        deserialize=True,
     ):
         if table_columns_type_dict is None:
             table_columns_type_dict = OrderedDict(
                 [
                     ("oid", "INTEGER PRIMARY KEY NOT NULL"),
                     ("gate_id", "TEXT"),
-                    ("gate_height", "DECIMAL"),
                     ("gate_type", "TEXT"),
-                    ("instudy", "DECIMAL"),
+                    ("gate_height", "DECIMAL"),
+                    ("instudy", "TEXT"),
                 ]
             )
         if geometry_columns is None:
@@ -218,13 +220,13 @@ class GateDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 
@@ -386,13 +388,15 @@ class DefaultGateEmissionProfileDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to default gate profiles in the spatialite database
     """
 
+    TABLE_NAME = "default_gate_profiles"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="default_gate_profiles",
         table_columns_type_dict=None,
         primary_key="",
         geometry_columns=None,
+        deserialize=True,
     ):
         if table_columns_type_dict is None:
             table_columns_type_dict = OrderedDict(
@@ -419,13 +423,13 @@ class DefaultGateEmissionProfileDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 

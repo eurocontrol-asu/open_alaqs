@@ -131,10 +131,11 @@ class EmissionDynamicsDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to emission dynamics as stored in the database
     """
 
+    TABLE_NAME = "default_emission_dynamics"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="default_emission_dynamics",
         table_columns_type_dict=None,
         primary_key="",
         geometry_columns=None,
@@ -165,11 +166,11 @@ class EmissionDynamicsDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path and deserialize:
+        if deserialize and self._db_path:
             self.deserialize()

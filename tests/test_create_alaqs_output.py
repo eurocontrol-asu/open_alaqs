@@ -139,6 +139,15 @@ def test_create_output(plugin_instance, datasets_to_test):
         assert row["y_cells"] == dataset["model_parameters"]["y_cells"]  # 40
         assert row["z_cells"] == dataset["model_parameters"]["z_cells"]  # 20
 
+        # #defaults
+        # default_profiles_new = get_table_data_from_db(
+        #     dataset["inventory_path"], "default_aircraft_profiles"
+        # )
+        # default_profiles_expected = get_table_data_from_db(
+        #     dataset["expected_db_path"], "default_aircraft_profiles"
+        # )
+        # assert default_profiles_new == default_profiles_expected
+
         # user_ : aircraft_movements, study_setup, taxiroute_taxiways
         study_setup_new = get_table_data_from_db(
             dataset["inventory_path"], "user_study_setup"
