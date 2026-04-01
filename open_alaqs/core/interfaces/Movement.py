@@ -1008,10 +1008,11 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to user-defined movements stored in the database
     """
 
+    TABLE_NAME = "user_aircraft_movements"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="user_aircraft_movements",
         table_columns_type_dict=None,
         primary_key="oid",
         deserialize=True,
@@ -1056,10 +1057,10 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
         )
 
-        if self._db_path and deserialize:
+        if deserialize and self._db_path:
             self.deserialize()

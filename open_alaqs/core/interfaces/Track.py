@@ -108,13 +108,15 @@ class TrackDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to tracks in the spatialite database
     """
 
+    TABLE_NAME = "shapes_tracks"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="shapes_tracks",
         table_columns_type_dict=None,
         primary_key="",
         geometry_columns=None,
+        deserialize=True,
     ):
 
         if table_columns_type_dict is None:
@@ -124,7 +126,7 @@ class TrackDatabase(SQLSerializable, metaclass=Singleton):
                     ("track_id", "TEXT"),
                     ("runway", "TEXT"),
                     ("departure_arrival", "TEXT"),
-                    ("instudy", "INTEGER"),
+                    ("instudy", "INT"),
                 ]
             )
         if geometry_columns is None:
@@ -140,11 +142,11 @@ class TrackDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()

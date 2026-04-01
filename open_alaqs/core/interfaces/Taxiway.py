@@ -282,13 +282,15 @@ class TaxiwaySegmentsDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to taxiway shape file in the spatialite database
     """
 
+    TABLE_NAME = "shapes_taxiways"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="shapes_taxiways",
         table_columns_type_dict=None,
         primary_key="",
         geometry_columns=None,
+        deserialize=True,
     ):
 
         if table_columns_type_dict is None:
@@ -306,7 +308,7 @@ class TaxiwaySegmentsDatabase(SQLSerializable, metaclass=Singleton):
                 {
                     "column_name": "geometry",
                     "SRID": 3857,
-                    "geometry_type": "POLYGON",
+                    "geometry_type": "LINESTRING",
                     "geometry_type_dimension": 2,
                 }
             ]
@@ -314,13 +316,13 @@ class TaxiwaySegmentsDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 
@@ -329,13 +331,15 @@ class TaxiwayRouteDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to taxiway shape file in the spatialite database
     """
 
+    TABLE_NAME = "user_taxiroute_taxiways"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="user_taxiroute_taxiways",
         table_columns_type_dict=None,
         primary_key="",
         geometry_columns=None,
+        deserialize=True,
     ):
 
         if table_columns_type_dict is None:
@@ -345,7 +349,7 @@ class TaxiwayRouteDatabase(SQLSerializable, metaclass=Singleton):
                     ("gate", "TEXT"),
                     ("route_name", "TEXT"),
                     ("runway", "TEXT"),
-                    ("departure_arrival", "VARCHAR(1)"),
+                    ("departure_arrival", "VARCHAR(1) NOT NULL"),
                     ("instance_id", "INTEGER"),
                     ("sequence", "TEXT"),
                     ("groups", "TEXT"),
@@ -358,13 +362,13 @@ class TaxiwayRouteDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 

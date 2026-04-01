@@ -137,13 +137,15 @@ class ParkingSourcesDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to parking shape file in the spatialite database
     """
 
+    TABLE_NAME = "shapes_parking"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="shapes_parking",
         table_columns_type_dict=None,
         primary_key="",
         geometry_columns=None,
+        deserialize=True,
     ):
         if table_columns_type_dict is None:
             table_columns_type_dict = OrderedDict(
@@ -174,7 +176,7 @@ class ParkingSourcesDatabase(SQLSerializable, metaclass=Singleton):
                     ("p1_gm_vh", "DECIMAL"),
                     ("p2_gm_vh", "DECIMAL"),
                     ("method", "TEXT"),
-                    ("instudy", "DECIMAL"),
+                    ("instudy", "TEXT"),
                 ]
             )
         if geometry_columns is None:
@@ -190,13 +192,13 @@ class ParkingSourcesDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
             geometry_columns,
         )
 
-        if self._db_path:
+        if deserialize and self._db_path:
             self.deserialize()
 
 

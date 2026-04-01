@@ -14,19 +14,39 @@ b_qgis_libs_imported = False
 try:
     from open_alaqs.core.interfaces.Aircraft import AircraftDatabase
     from open_alaqs.core.interfaces.AircraftTrajectory import AircraftTrajectoryDatabase
+    from open_alaqs.core.interfaces.AmbientCondition import AmbientConditionDatabaseSQL
     from open_alaqs.core.interfaces.APU import APUDatabase, APUtimes
     from open_alaqs.core.interfaces.AreaSources import AreaSourcesDatabase
     from open_alaqs.core.interfaces.EmissionDynamics import EmissionDynamicsDatabase
     from open_alaqs.core.interfaces.EngineDatabases import (
         EngineEmissionFactorsStartDatabase,
         EngineEmissionIndicesDatabase,
+        EngineModeDatabase,
         HelicopterEngineEmissionIndicesDatabase,
     )
     from open_alaqs.core.interfaces.Gate import (
         DefaultGateEmissionProfileDatabase,
         GateDatabase,
     )
+    from open_alaqs.core.interfaces.InventoryTimeSeries import (
+        InventoryTimeSeriesDatabase,
+    )
+    from open_alaqs.core.interfaces.Movement import MovementDatabase
+    from open_alaqs.core.interfaces.ParkingSources import ParkingSourcesDatabase
+    from open_alaqs.core.interfaces.PointSources import PointSourcesDatabase
+    from open_alaqs.core.interfaces.RoadwaySources import RoadwaySourcesDatabase
+    from open_alaqs.core.interfaces.Runway import RunwayDatabase
     from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
+    from open_alaqs.core.interfaces.Taxiway import (
+        TaxiwayRouteDatabase,
+        TaxiwaySegmentsDatabase,
+    )
+    from open_alaqs.core.interfaces.Track import TrackDatabase
+    from open_alaqs.core.interfaces.UserTimeProfiles import (
+        UserDayProfileDatabase,
+        UserHourProfileDatabase,
+        UserMonthProfileDatabase,
+    )
 
     b_qgis_libs_imported = True
 except ModuleNotFoundError as e:
@@ -57,6 +77,7 @@ def get_sql_serializable_registry(file_type: str) -> list[SQLSerializable]:
     shared = [
         AircraftDatabase,
         AircraftTrajectoryDatabase,
+        AmbientConditionDatabaseSQL,
         APUDatabase,
         APUtimes,
         AreaSourcesDatabase,
@@ -64,8 +85,21 @@ def get_sql_serializable_registry(file_type: str) -> list[SQLSerializable]:
         EmissionDynamicsDatabase,
         EngineEmissionFactorsStartDatabase,
         EngineEmissionIndicesDatabase,
+        EngineModeDatabase,
         GateDatabase,
         HelicopterEngineEmissionIndicesDatabase,
+        InventoryTimeSeriesDatabase,
+        MovementDatabase,
+        ParkingSourcesDatabase,
+        PointSourcesDatabase,
+        RoadwaySourcesDatabase,
+        RunwayDatabase,
+        TaxiwayRouteDatabase,
+        TaxiwaySegmentsDatabase,
+        TrackDatabase,
+        UserDayProfileDatabase,
+        UserHourProfileDatabase,
+        UserMonthProfileDatabase,
     ]
     sql_serializable_registry = {
         "project": [],
