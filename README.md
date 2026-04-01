@@ -256,15 +256,23 @@ Debugging can be done via [QGIS VSCode Debug plugin](https://plugins.qgis.org/pl
 ### Updating the OpenALAQS database templates
 
 The plugin produced `.alaqs` files are cloned from a template databases, that are in `./open_alaqs/core/templates/*.alaqs`.
-The template databases are generated from SQL and CSV files in the `./open_alaqs/database` directory.
+The template databases are generated from SQL and CSV files in the `./open_alaqs/database` directory, as well as from `SQLSerializable` subclasses in `open_alaqs.core.interfaces` module.
 All source files (`.sql` and `.csv`) needed for the build are inside the `./open_alaqs/database/sql` and `./open_alaqs/database/data` folder.
 Other scripts and files supporting the creation of the SQL and CSV files are located in `./open_alaqs/database/scripts` and `./open_alaqs/database/src`.
 
 Copy-pastable way to generate the template databases:
 
 ```
-pipenv run pip install -r requirements.txt
-pipenv run python -m open_alaqs.database.generate_templates --full-recreate
+pip install -r requirements.txt
+python3 -m open_alaqs.database.generate_templates --full-recreate
+```
+
+For that command to run, the environmental variables `LD_LIBRARY_PATH`, `QGIS_PREFIX_PATH`, and `PYTHONPATH` need to be set beforehand. Read QGIS documentation for details.
+
+On **Windows**, using the OSGeo4W Shell, there is no need to set the environmental variables. This command should generate the templates using the `python-qgis` wrapper utility:
+
+```
+python-qgis -m open_alaqs.database.generate_templates --full-recreate
 ```
 
 ### Unit tests
