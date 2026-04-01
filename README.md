@@ -267,13 +267,6 @@ pipenv run pip install -r requirements.txt
 pipenv run python -m open_alaqs.database.generate_templates --full-recreate
 ```
 
-To generate the CAEP examples, run the following command in the Python console in QGIS:
-
-```python
-from open_alaqs.database.create_caep_examples import create_caep_examples
-create_caep_examples()
-```
-
 ### Unit tests
 
 To run the tests inside the same environment as they are executed on GitHub,
