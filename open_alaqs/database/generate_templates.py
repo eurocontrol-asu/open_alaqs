@@ -13,6 +13,7 @@ b_qgis_libs_imported = False
 
 try:
     from open_alaqs.core.interfaces.AircraftTrajectory import AircraftTrajectoryDatabase
+    from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 
     b_qgis_libs_imported = True
 except ModuleNotFoundError as e:
@@ -37,13 +38,32 @@ MATCH_PATTERNS = {
 }
 
 
-def get_sql_serializable_registry(file_type):
+def get_sql_serializable_registry(file_type: str) -> list[SQLSerializable]:
     shared = [AircraftTrajectoryDatabase]
     sql_serializable_registry = {
         "project": [],
         "inventory": [],
     }
     return shared + sql_serializable_registry[file_type]
+
+
+def check_no_duplicate_sql_definition() -> bool:
+    sql_serializables = set(
+        get_sql_serializable_registry("project")
+        + get_sql_serializable_registry("inventory")
+    )
+    sql_serializable_tables = [
+        serializable.TABLE_NAME for serializable in sql_serializables
+    ]
+
+    sql_file_names = [sql_file.stem for sql_file in list(SQL_DIR.glob("*.sql"))]
+
+    duplicates = []
+    for sql_serializable_table in sql_serializable_tables:
+        if sql_serializable_table in sql_file_names:
+            duplicates.append(str(SQL_DIR / (sql_serializable_table + ".sql")))
+
+    return not bool(duplicates), duplicates
 
 
 def get_engine(p: Path) -> sqlalchemy.engine.Engine:
@@ -117,6 +137,15 @@ def main():
         action="store_true",
     )
     args = parser.parse_args()
+
+    ok, duplicates = check_no_duplicate_sql_definition()
+    if not ok:
+        print(duplicates)
+        raise Exception(
+            "The following SQL files already have a corresponding SQL Serializable class, which is redundant:\n\t{}".format(
+                "\n\t".join(duplicates)
+            )
+        )
 
     # Get the path to the project (*.alaqs) and inventory (*_out.alaqs) templates
     base_template = TEMPLATES_DIR / "spatialite_base.alaqs"

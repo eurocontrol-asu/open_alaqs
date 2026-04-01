@@ -543,10 +543,11 @@ class AircraftTrajectoryDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to runway shape file in the spatialite database
     """
 
+    TABLE_NAME = "default_aircraft_profiles"
+
     def __init__(
         self,
         db_path_string,
-        table_name_string="default_aircraft_profiles",
         table_columns_type_dict=None,
         primary_key="",
         deserialize=True,
@@ -574,7 +575,7 @@ class AircraftTrajectoryDatabase(SQLSerializable, metaclass=Singleton):
         SQLSerializable.__init__(
             self,
             db_path_string,
-            table_name_string,
+            self.TABLE_NAME,
             table_columns_type_dict,
             primary_key,
         )
