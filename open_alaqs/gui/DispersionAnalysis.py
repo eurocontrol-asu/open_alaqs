@@ -550,7 +550,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.VisualiseResults.setEnabled(bool(can_visualize_vector))
 
     def updateMinMaxGUI(self, db_path_=""):
-        (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path_)
+        time_start_calc_, time_end_calc_ = get_min_max_timestamps(db_path_)
         self.resetConcentrationCalculationConfiguration(
             config={
                 "start_dt_inclusive": time_start_calc_,

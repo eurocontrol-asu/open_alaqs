@@ -391,7 +391,7 @@ class Grid3D:
         for _hash in cellhash_list:
             if _hash not in val:
                 if _hash not in self._hash_coordinates_map:
-                    (x_idx, y_idx, z_idx) = self.convertCellHashToXYZIndices(_hash)
+                    x_idx, y_idx, z_idx = self.convertCellHashToXYZIndices(_hash)
                     cell = self.convertXYZIndicesToGridCellMinMax(x_idx, y_idx, z_idx)
 
                     if not (

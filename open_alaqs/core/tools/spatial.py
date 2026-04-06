@@ -99,7 +99,7 @@ def getDistanceOfLineStringXY(
     if isinstance(geometry_wkt, ogr.Geometry):
         geometry_wkt = geometry_wkt.ExportToWkt()
 
-    (geometry_wkt, swap) = reproject_geometry(
+    geometry_wkt, swap = reproject_geometry(
         geometry_wkt, epsg_id_source, epsg_id_target
     )
     points_tuple_list = getAllPoints(geometry_wkt, swap)
@@ -381,7 +381,7 @@ def getAllPoints(geometry_wkt, swap=False):
         # for i in xrange(0, geom.GetPointCount()):
 
         # GetPoint returns a tuple not a Geometry
-        (x, y, z) = geom.GetPoint(i)
+        x, y, z = geom.GetPoint(i)
         if not swap:
             points_.append((x, y, z))
         else:

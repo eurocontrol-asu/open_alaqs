@@ -19,6 +19,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+
 from pathlib import Path
 
 from qgis.core import QgsSettings

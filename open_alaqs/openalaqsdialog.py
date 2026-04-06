@@ -18,6 +18,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -2556,7 +2557,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                     self._iface.mapCanvas().scene().addItem(textItem)
 
     def updateMinMaxGUI(self, db_path_=""):
-        (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path_)
+        time_start_calc_, time_end_calc_ = get_min_max_timestamps(db_path_)
         # self.ui.start_dateTime.setMinimumDateTime(time_start_calc_)
         # self.ui.end_dateTime.setMaximumDateTime(time_end_calc_)
 

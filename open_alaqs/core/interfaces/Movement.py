@@ -260,7 +260,7 @@ class Movement:
         self, geometry_wkt_init, width, height, shift, EPSG_source, EPSG_target
     ):
 
-        (geo_wkt, swap) = spatial.reproject_geometry(
+        geo_wkt, swap = spatial.reproject_geometry(
             geometry_wkt_init, EPSG_source, EPSG_target
         )
 
