@@ -4,26 +4,26 @@
 
 - [Aircraft emissions](#aircraft-emissions)
 - [The Boeing Fuel Flow Method II](#the-boeing-fuel-flow-method-ii)
-  - [Overview](#overview)
-  - [Method description](#method-description)
-    - [Step 1 — Fuel flow at reference conditions](#step-1--fuel-flow-at-reference-conditions)
-    - [Step 2 — Convert to ambient fuel flow](#step-2--convert-to-ambient-fuel-flow)
-    - [Step 3 — Emission index interpolation on the log–log curve](#step-3--emission-index-interpolation-on-the-loglog-curve)
-    - [Step 4 — Ambient corrections](#step-4--ambient-corrections)
-    - [Step 5 — Segment emission mass](#step-5--segment-emission-mass)
-  - [Fuel flow interpolation methods](#fuel-flow-interpolation-methods)
-    - [Twin-quadratic fit (ALAQS default)](#twin-quadratic-fit-alaqs-default)
-    - [Piecewise-linear interpolation (CAEP14 / ICAO)](#piecewise-linear-interpolation-caep14--icao)
-  - [Installation corrections](#installation-corrections)
-  - [Humidity correction](#humidity-correction)
-  - [Comparison with the Bymode method](#comparison-with-the-bymode-method)
-  - [ADS-B profile specifics](#ads-b-profile-specifics)
-  - [Implementation in OpenALAQS](#implementation-in-openalaqs)
-    - [Code structure](#code-structure)
-    - [Calculation flow](#calculation-flow)
-    - [Key parameters in the database](#key-parameters-in-the-database)
-    - [LTO ceiling and segment clipping](#lto-ceiling-and-segment-clipping)
-  - [Known limitations](#known-limitations)
+  - [Overview](#overview)
+  - [Method description](#method-description)
+    - [Step 1 — Fuel flow at reference conditions](#step-1--fuel-flow-at-reference-conditions)
+    - [Step 2 — Convert to ambient fuel flow](#step-2--convert-to-ambient-fuel-flow)
+    - [Step 3 — Emission index interpolation on the log–log curve](#step-3--emission-index-interpolation-on-the-loglog-curve)
+    - [Step 4 — Ambient corrections](#step-4--ambient-corrections)
+    - [Step 5 — Segment emission mass](#step-5--segment-emission-mass)
+  - [Fuel flow interpolation methods](#fuel-flow-interpolation-methods)
+    - [Twin-quadratic fit (ALAQS default)](#twin-quadratic-fit-alaqs-default)
+    - [Piecewise-linear interpolation (CAEP14 / ICAO)](#piecewise-linear-interpolation-caep14--icao)
+  - [Installation corrections](#installation-corrections)
+  - [Humidity correction](#humidity-correction)
+  - [Comparison with the Bymode method](#comparison-with-the-bymode-method)
+  - [ADS-B profile specifics](#ads-b-profile-specifics)
+  - [Implementation in OpenALAQS](#implementation-in-openalaqs)
+    - [Code structure](#code-structure)
+    - [Calculation flow](#calculation-flow)
+    - [Key parameters in the database](#key-parameters-in-the-database)
+    - [LTO ceiling and segment clipping](#lto-ceiling-and-segment-clipping)
+  - [Known limitations](#known-limitations)
 
 ---
 
@@ -111,7 +111,7 @@ The corrected reference fuel flows and their corresponding EI values are plotted
 
 ```
 log10(EI) = log10(EI_i) + [log10(EI_{i+1}) - log10(EI_i)] ×
-             [log10(Wf) - log10(Wf_i)] / [log10(Wf_{i+1}) - log10(Wf_i)]
+             [log10(Wf) - log10(Wf_i)] / [log10(Wf_{i+1}) - log10(Wf_i)]
 ```
 
 **CO special handling.** The CO log–log curve is non-monotonic: CO EI is high at idle, drops steeply to a minimum (the "Lean Azeotropic Value", LAV) near the Approach–Climbout boundary, and then remains approximately flat through Climbout and Takeoff. OpenALAQS detects whether the CO curve has this standard shape and, if so, applies a horizontal segment at the LAV once the fuel flow exceeds the AP–CL intersection point. For engines where this standard shape is not detected, a simple linear interpolation is used throughout.
@@ -127,14 +127,14 @@ The raw interpolated EI is corrected for ambient conditions:
 **NOx** (SAE AIR-5715 humidity and P₃T₃ correction):
 
 ```
-h = −19 × (ω − 0.00634)           # humidity coefficient; ω in kg H₂O / kg dry air
+h = −19 × (ω − 0.00634)           # humidity coefficient; ω in kg H₂O / kg dry air
 EI_NOx_corr = EI_NOx × exp(h) × (δ^x / θ^3.3)^0.5
 ```
 
 where `x = 1.0` (default P₃T₃ exponent) and `ω` is the specific humidity, computed from relative humidity `RH`, ambient temperature and pressure if not provided directly:
 
 ```
-p_sat = 6.107 × 10^(7.5 × T_C / (237.3 + T_C))   [mbar; T_C in °C]
+p_sat = 6.107 × 10^(7.5 × T_C / (237.3 + T_C))   [mbar; T_C in °C]
 ω = 0.622 × RH × p_sat / (p_mb − RH × p_sat)
 ```
 
@@ -143,8 +143,8 @@ At the ICAO reference humidity (ω = 0.00634 kg/kg), `exp(h) = 1` and the humidi
 **CO and HC** (temperature and pressure correction only):
 
 ```
-EI_CO_corr  = EI_CO  × (θ^3.3 / δ^1.0)
-EI_HC_corr  = EI_HC  × (θ^3.3 / δ^1.0)
+EI_CO_corr  = EI_CO  × (θ^3.3 / δ^1.0)
+EI_HC_corr  = EI_HC  × (θ^3.3 / δ^1.0)
 ```
 
 ---
@@ -154,11 +154,11 @@ EI_HC_corr  = EI_HC  × (θ^3.3 / δ^1.0)
 The emission mass for one profile segment is:
 
 ```
-mass_pollutant = EI_corr  [g/kg]
-              × Wf_amb    [kg/s, per engine]
-              × n_engines
-              × t_seg     [s]
-              / 1000       [→ kg]
+mass_pollutant = EI_corr  [g/kg]
+              × Wf_amb    [kg/s, per engine]
+              × n_engines
+              × t_seg     [s]
+              / 1000       [→ kg]
 ```
 
 where the segment time is derived from the geodesic distance between the two profile points and the average True Airspeed at start and end of the segment:
@@ -208,10 +208,10 @@ OpenALAQS applies the following default correction factors from SAE AIR-5715:
 
 | LTO mode | Installation correction factor |
 |----------|-------------------------------|
-| Takeoff  | 1.010 |
+| Takeoff  | 1.010 |
 | Climbout | 1.013 |
 | Approach | 1.020 |
-| Idle     | 1.100 |
+| Idle     | 1.100 |
 
 These are applied internally in `bffm2.py` at the start of each call to `calculate_emission_index()` and cannot currently be overridden through the QGIS UI. Custom values can be passed programmatically via the `installation_corrections` dict argument.
 
@@ -303,54 +303,54 @@ The BFFM2 implementation is spread across the following files:
 
 ```
 User clicks "Calculate" (BFFM2 selected)
-    │
-    ▼
+    │
+    ▼
 EmissionCalculatorService.run()
-    builds calc_method = {
-        'name': 'BFFM2',
-        'config': {
-            'ambient_conditions': AmbientCondition(...),
-            'apply_nox_corrections': False,
-            'ff_method': 'twin_quadratic'  # or 'linear'
-        }
-    }
-    │
-    ▼
+    builds calc_method = {
+        'name': 'BFFM2',
+        'config': {
+            'ambient_conditions': AmbientCondition(...),
+            'apply_nox_corrections': False,
+            'ff_method': 'twin_quadratic'  # or 'linear'
+        }
+    }
+    │
+    ▼
 MovementSourceModule.calculate_emissions()
-    ├── TaxiingEmissionCalculator  (TX mode, BFFM2 with idle-floor FF)
-    ├── GateEmissionCalculator     (bymode; APU and GSE)
-    └── FlightEmissionCalculator
-            │
-            ▼
-            for each (start_point_, end_point_) in trajectory.getPointPairs():
-                │
-                ├── Mach = TAS / SOS × √(288.15 / T_amb)
-                ├── method['config'].update({'mach_number': Mach})
-                │
-                ├── engine_thrust = start_point_.getEngineThrust()
-                ├── fuel_flow     = start_point_.getFuelFlow()        # from fuel_flow_kgm
-                │
-                ├── if BFFM2 and fuel_flow > 0:
-                │       ff_per_engine = fuel_flow / n_engines
-                │       if ff_per_engine ≤ Wf_TO:
-                │           use ff_per_engine directly  →  getEmissionIndexByFuelFlow()
-                │       else:
-                │           WARNING; fuel_flow = None  →  twin-quad path
-                │
-                ├── getEmissionIndexByEngineState(engine_thrust, fuel_flow)
-                │       ├── Wf_ref  = twin_quad(engine_thrust, EEDB)   # or linear
-                │       ├── Wf_amb  = Wf_ref × δ / √θ
-                │       └── getEmissionIndexByFuelFlow(Wf_amb)
-                │               └── calculate_emission_index(pollutant, Wf_amb, EEDB, ambient)
-                │                       ├── install corrections → shift EEDB breakpoints
-                │                       ├── Wf_ref_BFFM2 = Wf_amb/δ × θ^3.8 × exp(0.2M²)
-                │                       ├── log–log interpolation  →  EI_raw
-                │                       └── ambient correction  →  EI_corr
-                │
-                ├── d      = ellipsoidal_2d_distance(start_point, end_point)
-                ├── t_seg  = 2 × d / (TAS_start + TAS_end)
-                ├── eff_t  = t_seg × n_engines
-                └── mass   = EI_corr × Wf_amb × eff_t / 1000   [kg]
+    ├── TaxiingEmissionCalculator  (TX mode, BFFM2 with idle-floor FF)
+    ├── GateEmissionCalculator     (bymode; APU and GSE)
+    └── FlightEmissionCalculator
+            │
+            ▼
+            for each (start_point_, end_point_) in trajectory.getPointPairs():
+                │
+                ├── Mach = TAS / SOS × √(288.15 / T_amb)
+                ├── method['config'].update({'mach_number': Mach})
+                │
+                ├── engine_thrust = start_point_.getEngineThrust()
+                ├── fuel_flow     = start_point_.getFuelFlow()        # from fuel_flow_kgm
+                │
+                ├── if BFFM2 and fuel_flow > 0:
+                │       ff_per_engine = fuel_flow / n_engines
+                │       if ff_per_engine ≤ Wf_TO:
+                │           use ff_per_engine directly  →  getEmissionIndexByFuelFlow()
+                │       else:
+                │           WARNING; fuel_flow = None  →  twin-quad path
+                │
+                ├── getEmissionIndexByEngineState(engine_thrust, fuel_flow)
+                │       ├── Wf_ref  = twin_quad(engine_thrust, EEDB)   # or linear
+                │       ├── Wf_amb  = Wf_ref × δ / √θ
+                │       └── getEmissionIndexByFuelFlow(Wf_amb)
+                │               └── calculate_emission_index(pollutant, Wf_amb, EEDB, ambient)
+                │                       ├── install corrections → shift EEDB breakpoints
+                │                       ├── Wf_ref_BFFM2 = Wf_amb/δ × θ^3.8 × exp(0.2M²)
+                │                       ├── log–log interpolation  →  EI_raw
+                │                       └── ambient correction  →  EI_corr
+                │
+                ├── d      = ellipsoidal_2d_distance(start_point, end_point)
+                ├── t_seg  = 2 × d / (TAS_start + TAS_end)
+                ├── eff_t  = t_seg × n_engines
+                └── mass   = EI_corr × Wf_amb × eff_t / 1000   [kg]
 ```
 
 ##### Key parameters in the database
