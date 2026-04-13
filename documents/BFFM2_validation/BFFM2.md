@@ -389,5 +389,3 @@ Only profile segments within the LTO ceiling (default 914.4 m above the runway, 
 - **Straight-line trajectories only.** OpenALAQS currently supports only straight-line departure and arrival tracks. Curved procedures (e.g. SID turns) are approximated as straight lines.
 
 - **Single meteo record per study.** All movements in a study share the same ambient conditions from `tbl_InvMeteo`. Variation in conditions across the study period is not modelled.
-
-
