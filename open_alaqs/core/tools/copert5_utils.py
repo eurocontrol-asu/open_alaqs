@@ -326,12 +326,15 @@ def cold_mileage_fractions(
     )
 
 
-def calculate_emissions(fleet: pd.DataFrame, efs: pd.DataFrame) -> pd.DataFrame:
+def calculate_emissions(
+    fleet: pd.DataFrame, efs: pd.DataFrame, airport_temperature: int | None
+) -> pd.DataFrame:
     """
     Calculate the emissions for each technology (a combination of vehicle category, fuel type and euro standard).
 
     :param fleet: The fleet mix with columns vehicle_category, fuel, euro_standard
     :param efs: The emission factors
+    :param airport_temperature: In degrees C, comes from study setup UI
     """
 
     # Input data validation
@@ -382,7 +385,10 @@ def calculate_emissions(fleet: pd.DataFrame, efs: pd.DataFrame) -> pd.DataFrame:
     fleet = fleet.merge(efs_cold, how="left", left_index=True, right_index=True)
 
     # Determine fraction of cold mileage, beta, and beta reduction factor, bk
-    beta = cold_mileage_fractions()
+    if airport_temperature is not None:
+        beta = cold_mileage_fractions(temperature=airport_temperature)
+    else:
+        beta = cold_mileage_fractions()
     fleet = fleet.merge(beta, how="left", left_index=True, right_index=True)
 
     # Add emissions (g) during transient thermal engine operation (cold start) if bc is known else assume 0
