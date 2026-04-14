@@ -84,7 +84,7 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
                 "vehicle_category": "lcv",
                 "fuel": "petrol",
                 "euro_standard": input_data["lcv_euro_standard"],
-                "N": input_data["lcv_d_percentage"],
+                "N": input_data["lcv_p_percentage"],
             },
             {
                 "vehicle_category": "lcv",
@@ -130,7 +130,7 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
     efs = get_emission_factors(speed, country)
 
     # Calculate the emissions
-    emissions = calculate_emissions(fleet, efs)
+    emissions = calculate_emissions(fleet, efs, input_data["airport_temperature"])
 
     # Calculate the average emission factors
     emission_factors = average_emission_factors(emissions)
