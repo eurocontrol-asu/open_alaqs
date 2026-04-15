@@ -1,6 +1,7 @@
-# OpenALAQS User Guide — Test Case Study
+# Open-ALAQS User Guide - Test Case Study
 
-## Table of Contents
+## [Table of Contents](#table-of-contents)
+[(Back to top)](#table-of-contents)
 - [Test Case Study](#test-case-study)
   - [Starting a Study](#starting-a-study)
     - [Setup a new study](#setup-a-new-study)
@@ -37,7 +38,8 @@
 
 ---
 
-## Test Case Study
+## [Test Case Study](#test-case-study)
+[(Back to top)](#table-of-contents)
 
 This guide walks through a complete OpenALAQS study using **Rotterdam The Hague Airport (EHRD)** as the test case. All input files needed for this exercise are provided:
 
@@ -52,7 +54,8 @@ The study covers a single day of operations at EHRD: six aircraft movements acro
 
 ---
 
-### Starting a Study
+### [Starting a Study](#starting-a-study)
+[(Back to top)](#table-of-contents)
 
 #### Setup a new study
 
@@ -103,7 +106,8 @@ Choose **Runways** and **Taxiways** as the layers to import. Review the imported
 
 ---
 
-### Define emission sources
+### [Define emission sources](#define-emission-sources)
+[(Back to top)](#table-of-contents)
 
 #### Add Features
 
@@ -302,7 +306,8 @@ The terminal building can optionally be digitized as a polygon in the Buildings 
 
 ---
 
-### Activity Profiles
+### [Activity Profiles](#activity-profiles)
+[(Back to top)](#table-of-contents)
 
 Activity profiles scale source emissions by time of day, day of week, and month of year. The default profile applies a multiplier of 1.0 for every hour, day, and month, meaning the source operates at full capacity throughout the year.
 
@@ -320,7 +325,8 @@ For this training study all sources use the **default** profile (all multipliers
 
 ---
 
-### Generate Emissions Inventory
+### [Generate Emissions Inventory](#generate-emissions-inventory)
+[(Back to top)](#table-of-contents)
 
 #### Taxi routes
 
@@ -468,7 +474,8 @@ If the meteorology file is omitted, OpenALAQS falls back to ISA default conditio
 
 ---
 
-### Calculate emissions and query results
+### [Calculate emissions and query results](#calculate-emissions-and-query-results)
+[(Back to top)](#table-of-contents)
 
 Click **Visualize Emission Calculation** in the toolbar and browse to `EHRD_out.alaqs`.
 
@@ -505,7 +512,8 @@ The log file (accessible via **Review Logs**) records one `BFFM2 dispatch confir
 
 ---
 
-### Dispersion modeling with AUSTAL
+### [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal)
+[(Back to top)](#table-of-contents)
 
 #### Input data
 
