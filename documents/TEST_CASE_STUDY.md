@@ -48,7 +48,7 @@ This guide walks through a complete OpenALAQS study using **Rotterdam The Hague 
 | `EHRD.alaqs` | Pre-built study database (starting point) |
 | `EHRD_out.alaqs` | Completed output file (reference result) |
 
-The study covers a single day of operations at EHRD: six aircraft movements across three gates and two runway directions, combined with representative stationary sources (parking lot, roadway, power plant, terminal building).
+The study covers a single day of operations at EHRD: six aircraft movements across three gates and two runway directions, combined with representative stationary sources (parking lot, roadway, power plant, terminal building). All movements use standard ANP profiles from the internal database.
 
 ---
 
@@ -175,7 +175,7 @@ Draw each taxiway segment as a linestring along the taxiway centreline. Use snap
 
 ##### Tracks
 
-For the standard EHRD movements (OID 1, 2, 3, 14) the default ANP profiles are used — no custom tracks are required. For the two ADS-B movements (OID 11 and OID 12), custom profiles with `course = CUSTOM` are already available in the database under profile IDs `1677662358_CFE512` (A321neo/PW1133G) and `1677659385_TFL3423` (E175/CF34-8E5). These are referenced directly in the movements table via `profile_id` — no additional steps are needed in the Tracks layer.
+For all six EHRD movements, standard ANP profiles from `default_aircraft_profiles` are used — no custom tracks are required. The profile IDs are referenced directly in the movements table via `profile_id`. The Tracks layer in OpenALAQS is only needed when using custom ADS-B-derived trajectories with `course = CUSTOM`; it is not used in this study.
 
 ---
 
@@ -413,21 +413,21 @@ The file `EHRD_movements.csv` (semicolon-delimited) defines the six aircraft mov
 | OID | Aircraft | Engine | D/A | Gate | Runway | Runway time | Block time | Profile | Taxi route |
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | A20N | LEAP-1A26 | A | G4 | 24 | 06:05 | 06:10 | JET-SMALL-A-1 | G4/24/A/1 |
-| 2 | A20N | LEAP-1A26 | A | G7 | 24 | 06:15 | 06:20 | JET-SMALL-A-2 | G7/24/A/1 |
+| 2 | A20N | LEAP-1A26 | A | G7 | 24 | 06:15 | 06:20 | JET-SMALL-A-1 | G7/24/A/1 |
 | 3 | A21N | PW1133G | D | G2 | 06 | 06:40 | 06:35 | JET-SMALL-D-2 | G2/24/D/1 |
-| 11 | A21N | PW1133G | D | G2 | 06 | 06:41 | 06:36 | 1677662358_CFE512 | G2/24/D/1 |
-| 12 | E75L | CF34-8E5 | D | G2 | 06 | 06:45 | 06:40 | 1677659385_TFL3423 | G2/24/D/1 |
+| 11 | A21N | PW1133G | D | G2 | 06 | 06:41 | 06:36 | JET-SMALL-D-6 | G2/24/D/1 |
+| 12 | E75L | CF34-8E5 | D | G2 | 06 | 06:45 | 06:40 | JET-MEDIUM-D-2 | G2/24/D/1 |
 | 14 | E75L | CF34-8E5 | D | G2 | 06 | 06:50 | 06:45 | JET-MEDIUM-D-2 | G2/24/D/1 |
 
 Key observations:
 
 - **OIDs 1–2** are A320neo (A20N) arrivals via runway 24 with a 5-minute taxi-in time each.
-- **OIDs 3 and 14** use standard ANP profiles (JET-SMALL-D-2, JET-MEDIUM-D-2). These are the reference profiles from the ANP database.
-- **OIDs 11 and 12** use ADS-B-derived CUSTOM profiles (`1677662358_CFE512` for the A321neo, `1677659385_TFL3423` for the E175). These contain real GPS track coordinates and estimated fuel flow data, and are compared with the standard profiles in the exercise below.
+- **OIDs 3 and 11** are A321neo (A21N / PW1133G) departures using two different ANP departure profiles: JET-SMALL-D-2 and JET-SMALL-D-6. These profiles have different runway distance schedules (D-2 is a shorter-field profile, D-6 represents a longer takeoff roll), resulting in measurable differences in NOx and CO when calculated with BFFM2.
+- **OIDs 12 and 14** are E175 (E75L / CF34-8E5) departures, both using JET-MEDIUM-D-2.
 - **All departures** have taxi time = 5 minutes (block_time to runway_time difference).
 - `apu_code = 0` for all movements — APU emissions are excluded from this study.
 
-**Exercise — ANP vs ADS-B profiles:** Compare the NOx emissions calculated for movement OID 3 (standard profile JET-SMALL-D-2) against OID 11 (ADS-B profile 1677662358_CFE512) for the same aircraft type and engine. The ADS-B profile typically shows different climb power settings and a different trajectory altitude profile compared to the standard ANP profile, resulting in different emission totals. Use the BFFM2 method to highlight these differences.
+**Exercise — ANP profile variant comparison:** Compare NOx emissions for OID 3 (JET-SMALL-D-2) against OID 11 (JET-SMALL-D-6) for the same A21N/PW1133G aircraft and engine. With the BFFM2 method, the two profiles will show different NOx and CO totals because they have different power schedule distributions across the LTO altitude range. JET-SMALL-D-6 has a longer climbout section at elevated thrust, typically resulting in higher BFFM2 NOx compared to D-2.
 
 The movements table supports many optional fields. For this study all optional fields are left empty, which causes the calculator to apply defaults:
 
@@ -495,11 +495,13 @@ Click **Visualize Emission Calculation** in the toolbar and browse to `EHRD_out.
    - BFFM2 gives 20–50% lower NOx for arrivals (actual approach power is far below the 30% AP mode assumption).
    - BFFM2 gives 15–30% higher CO for arrivals (near-idle approach power has high CO EI).
 
-3. **ADS-B vs ANP comparison** — select *MovementSource*, filter to OID 3 vs OID 11 (both A321neo/PW1133G departures). With BFFM2 enabled, OID 11 (ADS-B) will show different NOx and CO compared to OID 3 (standard ANP profile) because the actual power schedule and altitude profile differ from the certification profile.
+3. **ANP profile variant comparison** — select *MovementSource*, filter to OID 3 vs OID 11 (both A321neo/PW1133G departures with different ANP profiles). With BFFM2 enabled, OID 11 (JET-SMALL-D-6) will show different NOx and CO compared to OID 3 (JET-SMALL-D-2) because the two profiles have different thrust schedules and altitude distributions. This illustrates the sensitivity of BFFM2 results to the choice of departure profile.
 
-4. **Smooth & Shift** — enable Source Dynamics in the Configuration tab. Re-run the Vector Layer visualisation. Observe how the taxi emission distribution widens and shifts downwind compared to the raw linestring geometry.
+4. **PM10 sub-components** — select *MovementSource*, examine the `pm10_nonvol_kg`, `pm10_sul_kg`, and `pm10_organic_kg` output columns alongside `pm10_kg`. For departures, `pm10_kg = pm10_nonvol_kg + pm10_sul_kg + pm10_organic_kg` exactly. For arrivals, `pm10_kg` also includes the FOA3 brake-wear contribution (`MTOW × 0.000476 − 8.74` grams per movement), visible as a surplus in `pm10_kg` relative to the sub-component sum. Verify that `p1_kg = p2_kg = pm10_kg` for all movements.
 
-The log file (accessible via **Review Logs**) records one `BFFM2 dispatch confirmed` line per movement when BFFM2 is active, and WARNING messages if an ADS-B movement's fuel flow estimate exceeds the EEDB takeoff ceiling (which occurs for OID 12 at EHRD).
+5. **Smooth & Shift** — enable Source Dynamics in the Configuration tab. Re-run the Vector Layer visualisation. Observe how the taxi emission distribution widens and shifts downwind compared to the raw linestring geometry.
+
+The log file (accessible via **Review Logs**) records one `BFFM2 dispatch confirmed` line per movement when BFFM2 is active, and WARNING messages if an ADS-B movement's fuel flow estimate exceeds the EEDB takeoff ceiling. No such warnings are expected for this study since all movements use standard ANP profiles.
 
 ---
 
