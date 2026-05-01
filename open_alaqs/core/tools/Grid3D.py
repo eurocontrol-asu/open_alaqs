@@ -103,28 +103,77 @@ class Grid3D:
         point.  pyproj's database handles all special zone rules (Norway 32V,
         Svalbard X-bands) that a simple formula would get wrong.
 
-        Raises ValueError for locations outside UTM coverage (beyond ±84°
-        latitude — no commercial airports exist there).
+        Raises:
+            ValueError: if the reference coordinates are genuinely outside
+                UTM coverage. UTM is defined for latitudes 80°S to 84°N
+                (asymmetric — no commercial airports exist there).
+            RuntimeError: if pyproj cannot reach the PROJ data directory,
+                or if proj.db is reachable but inconsistent (outdated,
+                corrupt, or version-mismatched with the running PROJ).
+                These indicate a QGIS/PROJ installation issue, not invalid
+                input. An empty result for coordinates inside the valid
+                UTM band is treated as the latter.
         """
+        import pyproj
         from pyproj import CRS
         from pyproj.aoi import AreaOfInterest
         from pyproj.database import query_utm_crs_info
+        from pyproj.exceptions import DataDirError
 
-        utm_crs_list = query_utm_crs_info(
-            datum_name="WGS 84",
-            area_of_interest=AreaOfInterest(
-                west_lon_degree=self._reference_longitude,
-                south_lat_degree=self._reference_latitude,
-                east_lon_degree=self._reference_longitude,
-                north_lat_degree=self._reference_latitude,
-            ),
-        )
-        if not utm_crs_list:
-            raise ValueError(
-                f"No UTM CRS found for lat={self._reference_latitude}, "
-                f"lon={self._reference_longitude}. "
-                f"Location may be outside UTM coverage (beyond ±84° latitude)."
+        lat = self._reference_latitude
+        lon = self._reference_longitude
+
+        try:
+            utm_crs_list = query_utm_crs_info(
+                datum_name="WGS 84",
+                area_of_interest=AreaOfInterest(
+                    west_lon_degree=lon,
+                    south_lat_degree=lat,
+                    east_lon_degree=lon,
+                    north_lat_degree=lat,
+                ),
             )
+        except DataDirError as e:
+            # pyproj cannot find a valid PROJ data directory (proj.db
+            # missing, or PROJ_DATA / PROJ_LIB pointing nowhere). This
+            # is a QGIS/PROJ install problem, not an Open ALAQS bug.
+            raise RuntimeError(
+                "PROJ data directory is not accessible to pyproj. "
+                "This is a QGIS/PROJ installation issue, not an Open "
+                "ALAQS bug. Check the PROJ_DATA environment variable "
+                "(or PROJ_LIB for PROJ < 9.1), or "
+                "pyproj.datadir.get_data_dir(). "
+                f"Underlying error: {e}"
+            ) from e
+
+        if not utm_crs_list:
+            # UTM is defined for 80°S to 84°N (asymmetric).
+            if -80.0 <= lat <= 84.0:
+                # Coordinates are inside UTM coverage but pyproj
+                # returned no CRS. proj.db is reachable (otherwise the
+                # call above would have raised DataDirError) but
+                # inconsistent — most likely an outdated proj.db or a
+                # PROJ/pyproj version mismatch where the
+                # datum_name="WGS 84" filter matches zero rows.
+                try:
+                    data_dir = pyproj.datadir.get_data_dir()
+                except DataDirError:
+                    data_dir = "<unavailable>"
+                raise RuntimeError(
+                    f"pyproj returned no UTM CRS for valid coordinates "
+                    f"lat={lat}, lon={lon}. PROJ database is reachable "
+                    f"but appears inconsistent (possibly an outdated "
+                    f"proj.db or a PROJ/pyproj version mismatch). "
+                    f"pyproj data dir: {data_dir}. This is a QGIS/PROJ "
+                    f"installation issue, not an Open ALAQS bug."
+                )
+            # Genuinely outside UTM coverage.
+            raise ValueError(
+                f"No UTM CRS found for lat={lat}, lon={lon}. "
+                f"Location is outside UTM coverage (UTM is defined "
+                f"for latitudes 80°S to 84°N)."
+            )
+
         epsg = int(
             CRS.from_authority(
                 utm_crs_list[0].auth_name, utm_crs_list[0].code
