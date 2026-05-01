@@ -32,24 +32,22 @@ class Aircraft:
         self._name = str(val.get("name") or "")
         self._class = str(val.get("class") or "")
         self._mtow = int(val.get("mtow") or 0)
-        self._engine_count = int(val.get("engine_count") or 0)
+        # engine_count is usually an integer (1..8) but a handful of rows
+        # (e.g. GANT with "C" for contra-rotating) carry a non-numeric
+        # marker.  Default to 0 in that case rather than crashing.
+        try:
+            self._engine_count = int(val.get("engine_count") or 0)
+        except (TypeError, ValueError):
+            self._engine_count = 0
         self._departure_profile_name = str(val.get("departure_profile") or "")
         self._arrival_profile_name = str(val.get("arrival_profile") or "")
         self._bada_id = str(val.get("bada_id") or "")
         self._wake_category = str(val.get("wake_category") or "")
         self._apu_id = str(val.get("apu_id") or "")
-        self._registration = str(val.get("aircraft_registration") or "")
-
         self._engine = None
         self._defaultengine = None
         self._apu = None
         self._dynamics = {"TX": None, "AP": None, "CL": None, "TO": None}
-
-    def setRegistration(self, val: str):
-        self._registration = val
-
-    def getRegistration(self) -> str:
-        return self._registration
 
     def getDefaultEngine(self) -> str:
         return self._defaultengine
@@ -158,8 +156,6 @@ class Aircraft:
 
     def __str__(self):
         val = "\n Aircraft of type '%s':" % (self.getICAOIdentifier())
-        if self.getRegistration():
-            val += "\n\t Registration: %s" % (self.getRegistration())
         val += "\n\t Name: %s" % (self.getName())
         val += "\n\t Manufacturer: %s" % (self.getManufacturer())
         val += "\n\t Wake category: %s" % (self.getWakeCategory())
@@ -231,8 +227,17 @@ class AircraftStore(Store, metaclass=Singleton):
 
     def initAircraft(self):
 
-        # unmatched_engines = []
         # ToDo: initiate only AC types in the study ?
+        # TP-XX engine identifiers in default_aircraft.csv are placeholder
+        # turboprop/turboshaft references for helicopters with no specific
+        # engine definition.  They never resolve and spam the log with one
+        # warning each at every init.  Collect them and emit a single INFO
+        # line at the end instead.
+        import re as _re
+
+        _tp_placeholder = _re.compile(r"^TP-\d+$")
+        _tp_skipped: list[tuple[str, str]] = []
+
         for key_, ac_dict in self.getAircraftDatabase().getEntries().items():
             # add aircraft to store
             ac = Aircraft(ac_dict)
@@ -246,12 +251,15 @@ class AircraftStore(Store, metaclass=Singleton):
 
             # If engine not found in the DB, the aircraft is ignored
             if not engine:
-                logger.warning(
-                    'Could not find engine with id "%s" for aircraft "%s"',
-                    ac_dict["engine"],
-                    ac.getICAOIdentifier(),
-                )
-
+                eng_id = ac_dict["engine"]
+                if isinstance(eng_id, str) and _tp_placeholder.match(eng_id):
+                    _tp_skipped.append((eng_id, ac.getICAOIdentifier()))
+                else:
+                    logger.warning(
+                        'Could not find engine with id "%s" for aircraft "%s"',
+                        eng_id,
+                        ac.getICAOIdentifier(),
+                    )
                 continue
 
             ac.setDefaultEngine(engine)
@@ -279,7 +287,6 @@ class AircraftStore(Store, metaclass=Singleton):
                         "pm10_g": 0.0,
                         "p1_g": 0.0,
                         "p2_g": 0.0,
-                        "pm10_prefoa3_g": 0.0,
                         "pm10_nonvol_g": 0.0,
                         "pm10_sul_g": 0.0,
                         "pm10_organic_g": 0.0,
@@ -384,6 +391,23 @@ class AircraftStore(Store, metaclass=Singleton):
 
             self.setObject(ac.getICAOIdentifier(), ac)
 
+        # Single summary line for TP-XX placeholder helicopters whose
+        # engines are not defined in any engine DB — avoids ~40 warnings
+        # per init.  Individual entries still available at debug level.
+        if _tp_skipped:
+            logger.info(
+                "Skipped %d helicopter aircraft with unresolved TP-XX "
+                "placeholder engines (no helicopter engine definition "
+                "available).",
+                len(_tp_skipped),
+            )
+            for _eng_id, _ac_id in _tp_skipped:
+                logger.debug(
+                    'Could not find engine with id "%s" for aircraft "%s"',
+                    _eng_id,
+                    _ac_id,
+                )
+
     def getAircraftDatabase(self):
         return self._aircraft_db
 
@@ -420,7 +444,12 @@ class AircraftDatabase(SQLSerializable, metaclass=Singleton):
                     ("name", "TEXT"),
                     ("class", "TEXT"),
                     ("mtow", "DECIMAL"),
-                    ("engine_count", "INTEGER"),
+                    (
+                        "engine_count",
+                        "TEXT",
+                    ),  # TEXT not INTEGER: some rows carry "C" (contra-rotating) or
+                    # similar non-numeric markers; cast to int at read time in
+                    # AircraftDatabase __init__
                     ("engine_name", "TEXT"),
                     ("engine", "TEXT"),
                     ("departure_profile", "TEXT"),

@@ -548,6 +548,9 @@ class QGISVectorLayerDispersionModule(OutputModule):
         self._data = {}
         # ToDO: self._grid.get_df_from_3d_grid_cells() ?
         self._data_cells = self._grid.get_df_from_2d_grid_cells()
+        # Grid cells are built in UTM; reproject to EPSG:3857 to match the
+        # source/emission geometry CRS used in downstream intersections.
+        self._data_cells = self._data_cells.to_crs("EPSG:3857")
         self._data_cells = self._data_cells.assign(
             Q=pd.Series(0, index=self._data_cells.index)
         )

@@ -17,7 +17,7 @@ from qgis.core import (
     QgsVectorLayer,
     QgsVectorLayerUtils,
 )
-from qgis.PyQt.QtCore import QMetaType, Qt
+from qgis.PyQt.QtCore import Qt, QVariant
 from qgis.PyQt.QtGui import QColor
 
 from open_alaqs.core.alaqslogging import get_logger
@@ -83,6 +83,25 @@ class ContourPlotVectorLayer:
         renderer.setSourceColorRamp(gradient_color_ramp)
         renderer.updateClasses(self.layer, classes_count)
         renderer.updateSymbols(symbol)
+
+        # Strip degenerate zero-width ranges produced by Jenks. Jenks
+        # classification of an emissions grid normally hits the case
+        # where most cells are exactly zero (the airport-domain background:
+        # no aircraft passes over them). Jenks then emits a "0 - 0" bin
+        # as one of its classes, which gets painted with the gradient
+        # ramp's first colour (lightGray) and labelled "0 - 0". That bin
+        # collides with the explicit transparent "0" range added below,
+        # producing two separate zero entries in the legend (the gray
+        # "0 - 0" and the transparent "0") which is visually confusing.
+        # Removing any range whose lower bound equals its upper bound
+        # eliminates the degenerate bin without disturbing any legitimate
+        # graduated bin (legitimate Jenks bins always have lower < upper).
+        # Iterate in reverse so deletion doesn't shift indices.
+        for idx in reversed(range(len(renderer.ranges()))):
+            rng = renderer.ranges()[idx]
+            if rng.lowerValue() == rng.upperValue():
+                renderer.deleteClass(idx)
+
         renderer.addClassRange(QgsRendererRange(0.0, 0.0, transparent_symbol, "0"))
         renderer.sortByValue()
 
@@ -91,7 +110,10 @@ class ContourPlotVectorLayer:
     def _add_field(self, field_name: str) -> None:
         self.layer.startEditing()
 
-        if not self.layer.addAttribute(QgsField(field_name, QMetaType.Type.Double)):
+        # QGIS 3.x QgsField expects QVariant.Double. The QMetaType-based
+        # overload (QMetaType.Type.Double) was introduced in a later QGIS
+        # release and raises TypeError on current plugin targets.
+        if not self.layer.addAttribute(QgsField(field_name, QVariant.Double)):
             raise Exception(f'Could not add field "{field_name}"!')
 
         self.layer.updateFields()

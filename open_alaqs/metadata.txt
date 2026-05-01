@@ -9,7 +9,7 @@ qgisMaximumVersion=4.99
 supportsQt6=True
 description=An open-source local air quality model
 
-version=dev
+version=5.0.0
 author=Eurocontrol
 email=open-alaqs@eurocontrol.int
 
@@ -23,7 +23,13 @@ repository=https://gitlab.aerlabs.nl/eurocontrol/open_alaqs
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-# changelog=
+changelog=5.0.0
+    First stable release after the rebuild.
+    Added: schema migration scripts (CLI + GUI), CAEP14 v14 EI database, AUSTAL operating guide.
+    Changed: emissions vector layer reprojected to EPSG:3857, movements CSV auto-strips legacy columns, default_aircraft_engine_ei dropped legacy pm10_prefoa3 (32 cols).
+    Removed: 18 legacy 4.x-era tables (drop with --drop-extra-tables on migration).
+    Fixed: legacy SpatiaLite metadata migration (geometry_columns triggers).
+    See CHANGELOG.md for details.
 
 # Tags are comma separated with spaces allowed
 tags=python
@@ -32,7 +38,7 @@ homepage=https://www.eurocontrol.int/online-tool/airport-local-air-quality-studi
 category=Plugins
 icon=icon.png
 # experimental flag
-experimental=True
+experimental=False
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False

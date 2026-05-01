@@ -19,7 +19,7 @@ from tests.utils import (
 # Test Configuration Constants
 # =============================================================================
 
-EHRD_GRID_CONFIG = {
+AIRPORT_A_GRID_CONFIG = {
     "x_cells": 100,
     "y_cells": 100,
     "z_cells": 1,
@@ -63,12 +63,12 @@ class TestEmissionCalculatorServiceValidation:
     def test_validate_valid_config(self):
         """Test validation passes with valid config."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="CO",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         is_valid, error_msg = self.service.validate_config(config)
@@ -83,7 +83,7 @@ class TestEmissionCalculatorServiceValidation:
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="CO",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         is_valid, error_msg = self.service.validate_config(config)
@@ -93,12 +93,12 @@ class TestEmissionCalculatorServiceValidation:
     def test_validate_start_after_end(self):
         """Test validation fails when start time is after end time."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 8, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="CO",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         is_valid, error_msg = self.service.validate_config(config)
@@ -108,12 +108,12 @@ class TestEmissionCalculatorServiceValidation:
     def test_validate_zero_time_interval(self):
         """Test validation fails when time interval is zero."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=0),
             pollutant="CO",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         is_valid, error_msg = self.service.validate_config(config)
@@ -123,12 +123,12 @@ class TestEmissionCalculatorServiceValidation:
     def test_validate_invalid_pollutant(self):
         """Test validation fails for unsupported pollutant."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="INVALID",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         is_valid, error_msg = self.service.validate_config(config)
@@ -138,13 +138,13 @@ class TestEmissionCalculatorServiceValidation:
     def test_validate_invalid_method(self):
         """Test validation fails for unsupported method."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="CO",
             method="invalid_method",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         is_valid, error_msg = self.service.validate_config(config)
@@ -154,7 +154,7 @@ class TestEmissionCalculatorServiceValidation:
     def test_validate_missing_grid_config(self):
         """Test validation fails when grid config is missing."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -170,12 +170,12 @@ class TestEmissionCalculatorServiceValidation:
         """Test that all supported pollutants pass validation."""
         for pollutant in ["CO2", "CO", "HC", "NOx", "SOx", "PM10"]:
             config = EmissionCalculationConfig(
-                db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+                db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
                 start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
                 end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
                 time_interval=timedelta(seconds=3600),
                 pollutant=pollutant,
-                grid_config=EHRD_GRID_CONFIG,
+                grid_config=AIRPORT_A_GRID_CONFIG,
             )
 
             is_valid, error_msg = self.service.validate_config(config)
@@ -185,29 +185,29 @@ class TestEmissionCalculatorServiceValidation:
 
 
 # ==============================================================
-# EHRD Dataset Tests - Verify output matches expected CSV values
+# AIRPORT_A Dataset Tests - Verify output matches expected CSV values
 # ==============================================================
 
 
-class TestEHRDEmissions:
-    """Tests using EHRD (Rotterdam) dataset to verify emissions match expected values."""
+class TestAirportAEmissions:
+    """Tests using AIRPORT_A (Rotterdam) dataset to verify emissions match expected values."""
 
     @pytest.fixture(autouse=True)
     def setup(self):
         """Setup service instance for each test."""
         self.service = EmissionCalculatorService()
 
-    def test_ehrd_co_emissions_match_expected(self):
-        """Test EHRD CO emissions match expected CSV values."""
+    def test_airport_a_co_emissions_match_expected(self):
+        """Test AIRPORT_A CO emissions match expected CSV values."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="CO",
             method="bymode",
             source_type="all",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         result = self.service.calculate_emissions(config)
@@ -215,7 +215,11 @@ class TestEHRDEmissions:
 
         # Load expected values from CSV
         expected = load_expected_from_csv_single_row(
-            str(get_data_path("EHRD/EHRD_emissions_table_by_aggregation_co.csv"))
+            str(
+                get_data_path(
+                    "AIRPORT_A/AIRPORT_A_emissions_table_by_aggregation_co.csv"
+                )
+            )
         )
         calculated = aggregate_emissions(result.emissions_data)
 
@@ -227,24 +231,28 @@ class TestEHRDEmissions:
             pollutants=["co_kg"],
         )
 
-    def test_ehrd_co2_emissions_match_expected(self):
-        """Test EHRD CO2 emissions match expected CSV values."""
+    def test_airport_a_co2_emissions_match_expected(self):
+        """Test AIRPORT_A CO2 emissions match expected CSV values."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="CO2",
             method="bymode",
             source_type="all",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         result = self.service.calculate_emissions(config)
         assert result.success is True, f"Calculation failed: {result.error_message}"
 
         expected = load_expected_from_csv_single_row(
-            str(get_data_path("EHRD/EHRD_emissions_table_by_aggregation_co.csv"))
+            str(
+                get_data_path(
+                    "AIRPORT_A/AIRPORT_A_emissions_table_by_aggregation_co.csv"
+                )
+            )
         )
         calculated = aggregate_emissions(result.emissions_data)
 
@@ -255,24 +263,28 @@ class TestEHRDEmissions:
             pollutants=["co2_kg"],
         )
 
-    def test_ehrd_nox_emissions_match_expected(self):
-        """Test EHRD NOx emissions match expected CSV values."""
+    def test_airport_a_nox_emissions_match_expected(self):
+        """Test AIRPORT_A NOx emissions match expected CSV values."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="NOx",
             method="bymode",
             source_type="all",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         result = self.service.calculate_emissions(config)
         assert result.success is True, f"Calculation failed: {result.error_message}"
 
         expected = load_expected_from_csv_single_row(
-            str(get_data_path("EHRD/EHRD_emissions_table_by_aggregation_co.csv"))
+            str(
+                get_data_path(
+                    "AIRPORT_A/AIRPORT_A_emissions_table_by_aggregation_co.csv"
+                )
+            )
         )
         calculated = aggregate_emissions(result.emissions_data)
 
@@ -283,24 +295,28 @@ class TestEHRDEmissions:
             pollutants=["nox_kg"],
         )
 
-    def test_ehrd_hc_emissions_match_expected(self):
-        """Test EHRD HC emissions match expected CSV values."""
+    def test_airport_a_hc_emissions_match_expected(self):
+        """Test AIRPORT_A HC emissions match expected CSV values."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="HC",
             method="bymode",
             source_type="all",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         result = self.service.calculate_emissions(config)
         assert result.success is True, f"Calculation failed: {result.error_message}"
 
         expected = load_expected_from_csv_single_row(
-            str(get_data_path("EHRD/EHRD_emissions_table_by_aggregation_co.csv"))
+            str(
+                get_data_path(
+                    "AIRPORT_A/AIRPORT_A_emissions_table_by_aggregation_co.csv"
+                )
+            )
         )
         calculated = aggregate_emissions(result.emissions_data)
 
@@ -311,24 +327,28 @@ class TestEHRDEmissions:
             pollutants=["hc_kg"],
         )
 
-    def test_ehrd_pm10_emissions_match_expected(self):
-        """Test EHRD PM10 emissions match expected CSV values."""
+    def test_airport_a_pm10_emissions_match_expected(self):
+        """Test AIRPORT_A PM10 emissions match expected CSV values."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="PM10",
             method="bymode",
             source_type="all",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         result = self.service.calculate_emissions(config)
         assert result.success is True, f"Calculation failed: {result.error_message}"
 
         expected = load_expected_from_csv_single_row(
-            str(get_data_path("EHRD/EHRD_emissions_table_by_aggregation_co.csv"))
+            str(
+                get_data_path(
+                    "AIRPORT_A/AIRPORT_A_emissions_table_by_aggregation_co.csv"
+                )
+            )
         )
         calculated = aggregate_emissions(result.emissions_data)
 
@@ -339,24 +359,28 @@ class TestEHRDEmissions:
             pollutants=["pm10_kg"],
         )
 
-    def test_ehrd_all_pollutants_match_expected(self):
-        """Test EHRD all pollutants match expected CSV values in a single calculation."""
+    def test_airport_a_all_pollutants_match_expected(self):
+        """Test AIRPORT_A all pollutants match expected CSV values in a single calculation."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="CO",
             method="bymode",
             source_type="all",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         result = self.service.calculate_emissions(config)
         assert result.success is True, f"Calculation failed: {result.error_message}"
 
         expected = load_expected_from_csv_single_row(
-            str(get_data_path("EHRD/EHRD_emissions_table_by_aggregation_co.csv"))
+            str(
+                get_data_path(
+                    "AIRPORT_A/AIRPORT_A_emissions_table_by_aggregation_co.csv"
+                )
+            )
         )
         calculated = aggregate_emissions(result.emissions_data)
 
@@ -368,17 +392,17 @@ class TestEHRDEmissions:
             pollutants=["co_kg", "co2_kg", "hc_kg", "nox_kg", "sox_kg", "pm10_kg"],
         )
 
-    def test_ehrd_movement_source_only(self):
-        """Test EHRD calculation with MovementSource only produces valid emissions."""
+    def test_airport_a_movement_source_only(self):
+        """Test AIRPORT_A calculation with MovementSource only produces valid emissions."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="CO",
             method="bymode",
             source_type="MovementSource",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         result = self.service.calculate_emissions(config)
@@ -408,7 +432,6 @@ class TestANPEmissions:
         """Setup service instance for each test."""
         self.service = EmissionCalculatorService()
 
-    @pytest.mark.skip(reason="Known issue that has to be fixed")
     def test_anp_co_emissions_match_expected(self):
         """Test ANP CO emissions over full time range match expected CSV totals."""
         config = EmissionCalculationConfig(
@@ -438,7 +461,6 @@ class TestANPEmissions:
             pollutants=["co_kg"],
         )
 
-    @pytest.mark.skip(reason="Known issue that has to be fixed")
     def test_anp_all_pollutants_match_expected(self):
         """Test ANP all pollutants match expected CSV values."""
         config = EmissionCalculationConfig(
@@ -468,7 +490,6 @@ class TestANPEmissions:
             pollutants=["co_kg", "co2_kg", "hc_kg", "nox_kg", "sox_kg", "pm10_kg"],
         )
 
-    @pytest.mark.skip(reason="Known issue that has to be fixed")
     def test_anp_single_hour_emissions(self):
         """Test ANP emissions for a single hour match expected CSV row."""
         config = EmissionCalculationConfig(
@@ -541,14 +562,14 @@ class TestEmissionCalculatorServiceIntegration:
     def test_metadata_returned_correctly(self):
         """Test that calculation result includes correct metadata."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="CO",
             method="bymode",
             source_type="all",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         result = self.service.calculate_emissions(config)
@@ -568,7 +589,7 @@ class TestEmissionCalculatorServiceIntegration:
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="CO",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         result = self.service.calculate_emissions(config)
@@ -580,12 +601,12 @@ class TestEmissionCalculatorServiceIntegration:
     def test_service_getters(self):
         """Test service getter methods return correct values after calculation."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="CO",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         result = self.service.calculate_emissions(config)
@@ -597,19 +618,19 @@ class TestEmissionCalculatorServiceIntegration:
         assert self.service.get_emissions() == result.emissions_data
         assert self.service.get_3d_grid() is not None
         assert self.service.get_database_path() == str(
-            get_data_path("EHRD") / "EHRD_out.alaqs"
+            get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"
         )
 
     def test_multiple_calculations_independent(self):
         """Test that multiple calculations are independent and don't share state."""
-        # First calculation with EHRD
+        # First calculation with AIRPORT_A
         config1 = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="CO",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
         result1 = self.service.calculate_emissions(config1)
         assert result1.success is True
@@ -648,14 +669,14 @@ class TestEmissionCalculatorServiceBFFM2:
     def test_bffm2_produces_emissions(self):
         """Test emission calculation using BFFM2 method produces emissions."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="NOx",
             method="BFFM2",
             source_type="all",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         result = self.service.calculate_emissions(config)
@@ -670,14 +691,14 @@ class TestEmissionCalculatorServiceBFFM2:
     def test_bffm2_nox_corrections_warning(self):
         """Test that BFFM2 with NOx corrections generates a warning."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="NOx",
             method="BFFM2",
             should_apply_nox_corrections=True,
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         # NOx corrections are not applicable with BFFM2, should generate warning
@@ -691,14 +712,14 @@ class TestEmissionCalculatorServiceBFFM2:
         """Test that both BFFM2 and bymode methods successfully produce emissions."""
         # Calculate with bymode method
         config_bymode = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="NOx",
             method="bymode",
             source_type="MovementSource",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         result_bymode = self.service.calculate_emissions(config_bymode)
@@ -707,14 +728,14 @@ class TestEmissionCalculatorServiceBFFM2:
 
         # Calculate with BFFM2 method
         config_bffm2 = EmissionCalculationConfig(
-            db_path=str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
             pollutant="NOx",
             method="BFFM2",
             source_type="MovementSource",
-            grid_config=EHRD_GRID_CONFIG,
+            grid_config=AIRPORT_A_GRID_CONFIG,
         )
 
         result_bffm2 = self.service.calculate_emissions(config_bffm2)

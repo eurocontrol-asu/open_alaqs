@@ -50,41 +50,19 @@ class GeoTransformation(abc.ABC):
         """
         Create polygon faces using QgsPolygon.
         """
+        # ── Coordinate setup ────────────────────────────────────────────────
         if lto_mode == "TX":
             z2_ = 0
         else:
             z2_ = point_2.z()
 
+        # B2 FIX: reclassify TO → CL before any dynamics lookup.
+        # Previously the reclassification happened after d_v/d_h/s_v were already
+        # fetched, then ver_ext was fetched with "default" instead of sas_method,
+        # mixing parameters from different method lookups in the sas z-shift formula.
         if lto_mode == "TO" and z2_ > 0:
             lto_mode = "CL"
 
-        # Define hor_ext, ver_ext and ver_shift
-
-        # take the default vertical extension
-        d_v = aircraft.getEmissionDynamicsByMode()[lto_mode].getEmissionDynamics(
-            sas_method
-        )["vertical_extension"]
-
-        d_h = aircraft.getEmissionDynamicsByMode()[lto_mode].getEmissionDynamics(
-            sas_method
-        )["horizontal_extension"]
-        s_v = aircraft.getEmissionDynamicsByMode()[lto_mode].getEmissionDynamics(
-            sas_method
-        )["vertical_shift"]
-
-        # define the horizontal and vertical extent and vertical shift
-        if lto_mode == "TX" or lto_mode == "TO":
-            ver_ext = aircraft.getEmissionDynamicsByMode()[
-                lto_mode
-            ].getEmissionDynamics(sas_method)["vertical_extension"]
-        else:
-            ver_ext = aircraft.getEmissionDynamicsByMode()[
-                lto_mode
-            ].getEmissionDynamics("default")["vertical_extension"]
-        ver_shift = s_v
-        hor_ext = d_h / 2  # half width
-
-        # Get original coordinates
         if lto_mode == "TX":
             start_coords = [point_1.x(), point_1.y(), 0]
             end_coords = [point_2.x(), point_2.y(), 0]
@@ -92,14 +70,62 @@ class GeoTransformation(abc.ABC):
             start_coords = [point_1.x(), point_1.y(), point_1.z()]
             end_coords = [point_2.x(), point_2.y(), point_2.z()]
 
-        # Calculate perpendicular vector
+        # B1 FIX: guard against XY-identical points reaching this function.
+        # The caller checks x==x and y==y but that check uses QgsPoint.x()/y()
+        # which may differ by floating-point epsilon after coordinate transforms.
+        # An explicit length check here prevents ZeroDivisionError.
         dx = end_coords[0] - start_coords[0]
         dy = end_coords[1] - start_coords[1]
         length = (dx**2 + dy**2) ** 0.5
+        if length == 0.0:
+            raise ValueError(
+                "create_polygon_3d: zero-length XY segment — "
+                f"start={start_coords}, end={end_coords}"
+            )
+
+        # ── Dynamics lookup — E1 FIX: fetch once, not five times ─────────────
+        # B4 FIX: guard against KeyError if the aircraft group has no entry for
+        # this mode in the default_emission_dynamics table.
+        try:
+            mode_dynamics = aircraft.getEmissionDynamicsByMode()[lto_mode]
+        except (KeyError, TypeError):
+            logger.warning(
+                "No emission dynamics found for mode '%s' on aircraft '%s'. "
+                "Using zero-extension defaults.",
+                lto_mode,
+                aircraft.getICAOIdentifier() if aircraft else "unknown",
+            )
+            mode_dynamics = None
+
+        if mode_dynamics is not None:
+            try:
+                sas_params = mode_dynamics.getEmissionDynamics(sas_method)
+            except (KeyError, TypeError):
+                sas_params = mode_dynamics.getEmissionDynamics("default")
+
+            d_h = sas_params["horizontal_extension"]
+            s_v = sas_params["vertical_shift"]
+            d_v = sas_params["vertical_extension"]
+
+            # ver_ext must come from the same method as d_v.
+            # The original code used "default" for airborne modes (CL/AP) and
+            # sas_method for TX/TO, which mixed "default" and "sas" columns in
+            # the sas z-shift formula: z - (ver_ext + d_v) / 2.
+            # Since d_v and ver_ext are both "vertical_extension" from the same
+            # EmissionDynamics object, they must use the same method lookup so
+            # the formula is consistent.  sas_method is already normalised to
+            # either "default" or "sas" in __init__, so this is always correct.
+            ver_ext = d_v
+        else:
+            d_h = d_v = s_v = ver_ext = 0.0
+
+        # ── Polygon geometry ─────────────────────────────────────────────────
+        hor_ext = d_h / 2  # half-width
+        ver_shift = s_v
+
         perp_x = -dy / length
         perp_y = dx / length
 
-        # Apply vertical shift
         if sas_method == "default":
             z_shifted_start = start_coords[2] + ver_shift
             z_shifted_end = end_coords[2] + ver_shift
@@ -178,19 +204,15 @@ class GeoTransformation(abc.ABC):
         # Create QGIS polygons for each face
         polygons = []
         for face in face_indices:
-            # Create a linestring for each face
             line_string = QgsLineString()
             for i in face:
                 line_string.addVertex(vertices[i])
             # Close the ring by adding first vertex again
             line_string.addVertex(vertices[face[0]])
-
-            # Create polygon geometry
             polygon = QgsPolygon()
             polygon.setExteriorRing(line_string)
             polygons.append(QgsGeometry(polygon))
 
-        # Create a multi-polygon geometry
         volume_geometry = QgsGeometry.collectGeometry(polygons)
 
         return (
@@ -241,8 +263,14 @@ class SmoothAndShiftTransformer(GeoTransformation):
                 seg_points = spatial.get_line_vertices(tx_geom)
 
                 all_tx_polygons = []
-                zsh_start = zsh_end = zup_start = zup_end = 0
-                # Loop through each pair of adjacent points
+                # B3 FIX: track z-envelope across ALL segments, not just the
+                # last one.  Previously zsh/zup vars were overwritten each
+                # iteration so VerticalExtentTransformer only saw the final
+                # segment's values, producing a wrong envelope for trajectories
+                # spanning multiple altitude bands.
+                z_min_all = float("inf")
+                z_max_all = float("-inf")
+
                 for i in range(len(seg_points) - 1):
                     start_point_ = seg_points[i]
                     end_point_ = seg_points[i + 1]
@@ -251,8 +279,7 @@ class SmoothAndShiftTransformer(GeoTransformation):
                         start_point_.x() == end_point_.x()
                         and start_point_.y() == end_point_.y()
                     ):
-                        # logger.warning(f"Skipping zero-length segment at index {i}.")
-                        continue  # Jump to next iteration
+                        continue
 
                     lto_mode = self._lto_mode
                     if not lto_mode:
@@ -261,34 +288,42 @@ class SmoothAndShiftTransformer(GeoTransformation):
                         else:
                             lto_mode = "TO" if start_point_.z() == 0 else "CL"
 
-                    (
-                        qgs_multipolygon,
-                        zsh_start,
-                        zsh_end,
-                        zup_start,
-                        zup_end,
-                    ) = GeoTransformation.create_polygon_3d(
-                        self._aircraft,
-                        self._sas_method,
-                        lto_mode,
-                        start_point_,
-                        end_point_,
-                    )
-                    all_tx_polygons.append(qgs_multipolygon)
+                    try:
+                        (
+                            qgs_multipolygon,
+                            zsh_start,
+                            zsh_end,
+                            zup_start,
+                            zup_end,
+                        ) = GeoTransformation.create_polygon_3d(
+                            self._aircraft,
+                            self._sas_method,
+                            lto_mode,
+                            start_point_,
+                            end_point_,
+                        )
+                    except (ValueError, ZeroDivisionError) as exc:
+                        logger.warning(
+                            "Skipping zero-length segment at index %d in "
+                            "SmoothAndShift transform: %s",
+                            i,
+                            exc,
+                        )
+                        continue
 
-                # Combine all polygons into a single MultiPolygon
+                    all_tx_polygons.append(qgs_multipolygon)
+                    z_min_all = min(z_min_all, zsh_start, zsh_end)
+                    z_max_all = max(z_max_all, zup_start, zup_end)
+
                 combined_polygon = (
                     QgsGeometry.collectGeometry(all_tx_polygons)
                     if all_tx_polygons
                     else None
                 )
-                if combined_polygon:
+                if combined_polygon and z_min_all != float("inf"):
                     emission.setGeometryText(combined_polygon.asWkt())
-                    vertical_extent_transformer = VerticalExtentTransformer(
-                        min(zsh_start, zsh_end), max(zup_start, zup_end)
-                    )
-                    vertical_extent_transformer.transform_emission(emission)
-
+                    # E4 FIX: set vertical extent directly — no throwaway object.
+                    emission.setVerticalExtent({"z_min": z_min_all, "z_max": z_max_all})
                 else:
                     logger.warning("Could not apply exhaust dynamics to emissions")
 
@@ -509,8 +544,8 @@ class TrajectoryTransformer:
                 closest_distance = profile_distances[-1]
                 closest_idx = len(profile_distances) - 1
                 for idx, profile_distance in enumerate(profile_distances):
-                    if abs(distance - profile_distance) < closest_distance:
-                        closest_distance = abs(distance - profile_distance)
+                    if abs(cumulative_distance - profile_distance) < closest_distance:
+                        closest_distance = abs(cumulative_distance - profile_distance)
                         closest_idx = idx
 
                 trajectory_point = AircraftTrajectoryPoint(profile_points[closest_idx])
@@ -570,7 +605,25 @@ class TrajectoryTransformer:
         if self._track is None:
             return False
 
-        if self._taxi_route.getRunway() != self._track.getRunway():
+        if self._taxi_route is None:
+            return False
+
+        taxi_runway = self._taxi_route.getRunway()
+        track_runway = self._track.getRunway()
+
+        # Guard against either runway being None (can happen when the DB row
+        # has a NULL runway field or the store lookup returns None).
+        if taxi_runway is None or track_runway is None:
+            logger.warning(
+                "Runway is None for taxi route '%s' or track '%s'; reverting to default airplane profile.",
+                self._taxi_route.getName(),
+                self._track.getName(),
+            )
+            return False
+
+        # Compare only the direction portion: taxi route stores e.g. "06",
+        # track stores the full runway name e.g. "06/24".
+        if taxi_runway not in track_runway:
             logger.warning(
                 "Paired taxi route '%s' and track '%s' do not share the same runway, reverting movement to default airplane profile"
                 % (self._taxi_route.getName(), self._track.getName())

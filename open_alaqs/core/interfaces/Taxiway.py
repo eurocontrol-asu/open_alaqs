@@ -101,17 +101,12 @@ class TaxiwaySegment:
         if val is None:
             val = {}
         self._id = str(val["taxiway_id"]) if "taxiway_id" in val else None
-        self._height = (
-            float(val["height"])
-            if "height" in val and val["height"] is not None
-            else 0.0
-        )
+        # Locale-tolerant float parsing for DB-sourced values (GitHub #159).
+        from open_alaqs.core.tools.conversion import convertToFloat as _ctf
 
-        self._speed_in_m_s = (
-            float(val["speed"]) / 3.6
-            if "speed" in val and val["speed"] is not None
-            else 0.0
-        )
+        self._height = _ctf(val.get("height"), default=0.0)
+        _speed_kmh = _ctf(val.get("speed"), default=0.0)
+        self._speed_in_m_s = _speed_kmh / 3.6
 
         self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
         self._geometry = (

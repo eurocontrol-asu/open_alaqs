@@ -1,5 +1,5 @@
 import math
-from typing import Union
+from typing import Optional, Union
 
 import osgeo.ogr as ogr
 import osgeo.osr as osr
@@ -27,59 +27,120 @@ from open_alaqs.core.tools.iterator import pairwise
 
 logger = get_logger(__name__)
 
+# ---------------------------------------------------------------------------
+# Module-level caches
+# ---------------------------------------------------------------------------
 
-def getDistanceBetweenPoints(x1, y1, z1=0.0, x2=0.0, y2=0.0, z2=0.0):
+# Cache of osr.SpatialReference objects keyed by EPSG id.
+_spatial_references: dict = {}
+
+# Cache of osr.CoordinateTransformation objects keyed by (src_epsg, tgt_epsg).
+_transformations_cache: dict = {}
+
+# Cache of geographiclib.Geodesic objects keyed by EPSG id.
+_geodesic_cache: dict = {}
+
+# Small tolerance used for floating-point coordinate comparisons (metres).
+_COORD_EPS = 1e-6
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+
+def getSpatialReference(epsg_id: int) -> osr.SpatialReference:
+    """Return a cached osr.SpatialReference for the given EPSG code."""
+    if epsg_id not in _spatial_references:
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(epsg_id)
+        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+        _spatial_references[epsg_id] = srs
+    return _spatial_references[epsg_id]
+
+
+def _get_transform(
+    epsg_id_source: int, epsg_id_target: int
+) -> osr.CoordinateTransformation:
+    """Return a cached osr.CoordinateTransformation between two EPSG codes."""
+    key = (epsg_id_source, epsg_id_target)
+    if key not in _transformations_cache:
+        _transformations_cache[key] = osr.CoordinateTransformation(
+            getSpatialReference(epsg_id_source),
+            getSpatialReference(epsg_id_target),
+        )
+    return _transformations_cache[key]
+
+
+def getGeodesic(epsg_id: int = 4326) -> Geodesic:
+    """Return a cached Geodesic object for the ellipsoid of the given EPSG."""
+    if epsg_id not in _geodesic_cache:
+        srs = getSpatialReference(epsg_id)
+        _geodesic_cache[epsg_id] = Geodesic(
+            srs.GetSemiMajor(),
+            1.0 / srs.GetInvFlattening(),
+        )
+    return _geodesic_cache[epsg_id]
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+
+def getDistanceBetweenPoints(
+    x1: float,
+    y1: float,
+    z1: float = 0.0,
+    x2: float = 0.0,
+    y2: float = 0.0,
+    z2: float = 0.0,
+) -> float:
+    """Euclidean distance between two 3-D points."""
+    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
+
+
+def getDistanceXY(
+    x: float,
+    y: float,
+    z: float = 0.0,
+    origin_x: float = 0.0,
+    origin_y: float = 0.0,
+    origin_z: float = 0.0,
+) -> float:
     """
-    Determine the distance between two points.
+    2-D distance from point (x, y) to origin (origin_x, origin_y).
 
-    Args:
-        x1: X coordinate of first point
-        y1: Y coordinate of first point
-        z1: Z coordinate of first point (default: 0.0)
-        x2: X coordinate of second point (default: 0.0)
-        y2: Y coordinate of second point (default: 0.0)
-        z2: Z coordinate of second point (default: 0.0)
-
-    Returns:
-        Euclidean distance between the two points
-    """
-    return ((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2) ** 0.5
-
-
-def getDistanceXY(x, y, z=0.0, origin_x=0.0, origin_y=0.0, origin_z=0.0) -> float:
-    """
-    Determine the radius for the circle by x and y relative to origin
-    (origin_x,origin_y)
+    The z / origin_z parameters are accepted for API compatibility but are
+    not used in the distance calculation.
     """
     x = conversion.convertToFloat(x)
     y = conversion.convertToFloat(y)
-    return math.sqrt(x**2 + y**2)
+    return math.sqrt((x - origin_x) ** 2 + (y - origin_y) ** 2)
 
 
 def getDistance(
     lat1: float, lon1: float, azimuth: float, distance: float, epsg_id: int = 4326
 ) -> dict:
-    geod = getGeodesic(epsg_id)
-
-    # Solve the direct geodesic problem where the length of the geodesic is
-    # specified in terms of distance.
-    return geod.Direct(lat1, lon1, azimuth, distance)
-
-
-def getGeodesic(epsg_id=4326):
-    return Geodesic(
-        getSpatialReference(epsg_id).GetSemiMajor(),
-        1.0 / getSpatialReference(epsg_id).GetInvFlattening(),
-    )
+    """Solve the direct geodesic problem (given start, azimuth, distance)."""
+    return getGeodesic(epsg_id).Direct(lat1, lon1, azimuth, distance)
 
 
 def getInverseDistance(
     lat1: float, lon1: float, lat2: float, lon2: float, epsg_id: int = 4326
 ) -> dict:
-    geod = getGeodesic(epsg_id)
+    """
+    Solve the inverse geodesic problem (given two points, return distance).
 
-    # Solve the inverse geodesic problem
-    return geod.Inverse(lat1, lon1, lat2, lon2)
+    Args:
+        lat1, lon1: Geodetic latitude and longitude of the first point (degrees).
+        lat2, lon2: Geodetic latitude and longitude of the second point (degrees).
+        epsg_id:    EPSG code identifying the ellipsoid (default: 4326 = WGS 84).
+
+    Returns:
+        Dict from geographiclib containing at minimum ``s12`` (distance in metres).
+    """
+    return getGeodesic(epsg_id).Inverse(lat1, lon1, lat2, lon2)
 
 
 def getDistanceOfLineStringXYZ(
@@ -88,165 +149,158 @@ def getDistanceOfLineStringXYZ(
     epsg_id_source: int = 3857,
     epsg_id_target: int = 4326,
 ) -> float:
+    """Geodetic length of a LineString including a vertical component."""
     distance = getDistanceOfLineStringXY(geometry_wkt, epsg_id_source, epsg_id_target)
-
     return math.sqrt(distance * distance + distance_z * distance_z)
 
 
 def getDistanceOfLineStringXY(
-    geometry_wkt, epsg_id_source: int = 3857, epsg_id_target: int = 4326
+    geometry_wkt,
+    epsg_id_source: int = 3857,
+    epsg_id_target: int = 4326,
 ) -> float:
+    """
+    Geodetic length of a LineString in metres.
+
+    Reprojects from *epsg_id_source* to *epsg_id_target* (default: WGS 84)
+    and sums the geodesic distances between consecutive vertices.
+    """
     if isinstance(geometry_wkt, ogr.Geometry):
         geometry_wkt = geometry_wkt.ExportToWkt()
 
-    (geometry_wkt, swap) = reproject_geometry(
+    reprojected_wkt, swap = reproject_geometry(
         geometry_wkt, epsg_id_source, epsg_id_target
     )
-    points_tuple_list = getAllPoints(geometry_wkt, swap)
-    res = 0.0
-
-    # calculate length pairwise and sum the result
-    for start_point_, end_point_ in pairwise(points_tuple_list):
-        res_ = getInverseDistance(
-            start_point_[0], start_point_[1], end_point_[0], end_point_[1]
-        )
-        if "s12" in res_:
-            res_ = conversion.convertToFloat(res_["s12"])
-            if res_ is None:
-                res_ = 0.0
-        res += res_
-    return res
+    points = getAllPoints(reprojected_wkt, swap)
+    total = 0.0
+    for start, end in pairwise(points):
+        result = getInverseDistance(start[0], start[1], end[0], end[1])
+        s12 = result.get("s12")
+        if s12 is not None:
+            s12 = conversion.convertToFloat(s12)
+        total += s12 or 0.0
+    return total
 
 
-def getArea(val):
+def getArea(val: Union[ogr.Geometry, str]) -> float:
+    """Return the area of a geometry (WKT string or ogr.Geometry)."""
+    if isinstance(val, ogr.Geometry):
+        return val.GetArea()
     if isinstance(val, str):
-        p = ogr.CreateGeometryFromWkt(val)
-        area = p.GetArea()
-        return area
-    raise Exception(
-        "val with value '%s' is of type '%s', but only '%s' "
-        "implemented." % (val, type(val), type(""))
+        geom = ogr.CreateGeometryFromWkt(val)
+        if geom is None:
+            raise ValueError(f"getArea: could not parse WKT: {val!r}")
+        return geom.GetArea()
+    raise TypeError(
+        f"getArea: expected str or ogr.Geometry, got {type(val).__name__!r}"
     )
 
 
-def getIntersectionXY(p1, p2):
-    poly1 = p1
-    poly2 = p2
-    if not isinstance(p1, ogr.Geometry):
-        poly1 = ogr.CreateGeometryFromWkt(p1)
-    if not isinstance(p2, ogr.Geometry):
-        poly2 = ogr.CreateGeometryFromWkt(p2)
+def getIntersectionXY(p1, p2) -> str:
+    """Return the WKT of the intersection of two geometries, or ''."""
+    poly1 = p1 if isinstance(p1, ogr.Geometry) else ogr.CreateGeometryFromWkt(p1)
+    poly2 = p2 if isinstance(p2, ogr.Geometry) else ogr.CreateGeometryFromWkt(p2)
 
-    intersection = None
     if poly1 is None:
-        logger.error("getIntersectionXY: Poly 1 '%s' is None.", p1)
-    elif poly2 is None:
-        logger.error("getIntersectionXY: Poly 2 '%s' is None.", p2)
-    else:
-        intersection = poly1.Intersection(poly2)
+        logger.error("getIntersectionXY: geometry 1 is None (input: %s)", p1)
+        return ""
+    if poly2 is None:
+        logger.error("getIntersectionXY: geometry 2 is None (input: %s)", p2)
+        return ""
 
+    intersection = poly1.Intersection(poly2)
     if intersection is not None and not intersection.IsEmpty():
         return intersection.ExportToWkt()
     return ""
 
 
-def getPoint(wkt, x=0.0, y=0.0, z=0.0, swap_xy=False):
+def getPoint(
+    wkt: str, x: float = 0.0, y: float = 0.0, z: float = 0.0, swap_xy: bool = False
+) -> ogr.Geometry:
     wkt = wkt.replace("POINTZ", "POINT").replace("pointz", "point")
     point = ogr.Geometry(ogr.wkbPoint)
 
     if wkt:
         point2 = ogr.CreateGeometryFromWkt(wkt)
         if point2 is None:
-            logger.error("Could not create ogr.wkbPoint from wkt='%s'", wkt)
+            logger.error("getPoint: could not parse WKT %r", wkt)
         else:
-            p1 = point2.GetX()
-            p2 = point2.GetY()
-            p3 = point2.GetZ()
-            if swap_xy:
-                point.AddPoint(p2, p1, p3)
-            else:
-                point.AddPoint(p1, p2, p3)
+            px, py, pz = point2.GetX(), point2.GetY(), point2.GetZ()
+            point.AddPoint(py if swap_xy else px, px if swap_xy else py, pz)
     else:
-        if not swap_xy:
-            point.AddPoint(x, y, z)
-        else:
-            point.AddPoint(y, x, z)
+        point.AddPoint(y if swap_xy else x, x if swap_xy else y, z)
 
     return point
 
 
-def getPointGeometryText(p1, p2, p3=0.0, swap_xy=False):
+def getPointGeometryText(
+    p1: float, p2: float, p3: float = 0.0, swap_xy: bool = False
+) -> str:
     return getPoint("", p1, p2, p3, swap_xy).ExportToWkt()
 
 
-def getLine(p1_wkt, p2_wkt, swap_xy=False):
+def getLine(p1_wkt, p2_wkt, swap_xy: bool = False) -> ogr.Geometry:
     geom = ogr.Geometry(ogr.wkbLineString)
-
-    p1 = p1_wkt
-    if not isinstance(p1_wkt, ogr.Geometry):
-        p1 = getPoint(p1_wkt, swap_xy=swap_xy)
-    p2 = p2_wkt
-    if not isinstance(p2_wkt, ogr.Geometry):
-        p2 = getPoint(p2_wkt, swap_xy=swap_xy)
-
+    p1 = (
+        p1_wkt
+        if isinstance(p1_wkt, ogr.Geometry)
+        else getPoint(p1_wkt, swap_xy=swap_xy)
+    )
+    p2 = (
+        p2_wkt
+        if isinstance(p2_wkt, ogr.Geometry)
+        else getPoint(p2_wkt, swap_xy=swap_xy)
+    )
     geom.AddPoint(p1.GetX(), p1.GetY(), p1.GetZ())
     geom.AddPoint(p2.GetX(), p2.GetY(), p2.GetZ())
-
     return geom
 
 
-def getRectangleXYFromBoundingBox(bbox):
-    # Create ring
-    ring_lower = ogr.Geometry(ogr.wkbLinearRing)
-    ring_lower.AddPoint(bbox["x_min"], bbox["y_min"])
-    ring_lower.AddPoint(bbox["x_max"], bbox["y_min"])
-    ring_lower.AddPoint(bbox["x_max"], bbox["y_max"])
-    ring_lower.AddPoint(bbox["x_min"], bbox["y_max"])
-    ring_lower.AddPoint(bbox["x_min"], bbox["y_min"])
-
-    # Create polygon
+def getRectangleXYFromBoundingBox(bbox: dict) -> ogr.Geometry:
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(bbox["x_min"], bbox["y_min"])
+    ring.AddPoint(bbox["x_max"], bbox["y_min"])
+    ring.AddPoint(bbox["x_max"], bbox["y_max"])
+    ring.AddPoint(bbox["x_min"], bbox["y_max"])
+    ring.AddPoint(bbox["x_min"], bbox["y_min"])
     poly = ogr.Geometry(ogr.wkbPolygon)
-    poly.AddGeometry(ring_lower)
-
+    poly.AddGeometry(ring)
     return poly
 
 
 def getRectangleXYZFromBoundingBox(
-    left_line, right_line, epsg_id_source=3857, epsg_id_target=4326
-):
-    new_geometry_wkt_left = reproject_geometry(
-        left_line, epsg_id_target, epsg_id_source
-    )[0]
-    new_points = getAllPoints(new_geometry_wkt_left)
-    lon_l1, lat_l1, alt11 = new_points[0][0], new_points[0][1], new_points[0][2]
-    lon_l2, lat_l2, alt12 = new_points[1][0], new_points[1][1], new_points[1][2]
+    left_line, right_line, epsg_id_source: int = 3857, epsg_id_target: int = 4326
+) -> ogr.Geometry:
+    # B4 fix: unpack swap and pass it to getAllPoints
+    left_wkt, swap_l = reproject_geometry(left_line, epsg_id_target, epsg_id_source)
+    right_wkt, swap_r = reproject_geometry(right_line, epsg_id_target, epsg_id_source)
 
-    new_geometry_wkt_right = reproject_geometry(
-        right_line, epsg_id_target, epsg_id_source
-    )[0]
-    new_points = getAllPoints(new_geometry_wkt_right)
-    lon_r1, lat_r1, alt21 = new_points[0][0], new_points[0][1], new_points[0][2]
-    lon_r2, lat_r2, alt22 = new_points[1][0], new_points[1][1], new_points[1][2]
+    left_pts = getAllPoints(left_wkt, swap_l)
+    right_pts = getAllPoints(right_wkt, swap_r)
 
-    # Create ring
-    ring_lower = ogr.Geometry(ogr.wkbLinearRing)
-    ring_lower.AddPoint(lon_l2, lat_l2, alt12)
-    ring_lower.AddPoint(lon_r2, lat_r2, alt22)
-    ring_lower.AddPoint(lon_r1, lat_r1, alt21)
-    ring_lower.AddPoint(lon_l1, lat_l1, alt11)
-    ring_lower.AddPoint(lon_l2, lat_l2, alt12)
+    lon_l1, lat_l1, alt11 = left_pts[0]
+    lon_l2, lat_l2, alt12 = left_pts[1]
+    lon_r1, lat_r1, alt21 = right_pts[0]
+    lon_r2, lat_r2, alt22 = right_pts[1]
 
-    # Create polygon
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(lon_l2, lat_l2, alt12)
+    ring.AddPoint(lon_r2, lat_r2, alt22)
+    ring.AddPoint(lon_r1, lat_r1, alt21)
+    ring.AddPoint(lon_l1, lat_l1, alt11)
+    ring.AddPoint(lon_l2, lat_l2, alt12)
+
     poly = ogr.Geometry(ogr.wkbPolygon)
-    poly.AddGeometry(ring_lower)
+    poly.AddGeometry(ring)
     return poly
 
 
-def getLineGeometryText(p1, p2):
+def getLineGeometryText(p1, p2) -> str:
     return getLine(p1, p2).ExportToWkt()
 
 
-def getBoundingBox(val: Union[ogr.Geometry, str]) -> Union[dict, None]:
+def getBoundingBox(val: Union[ogr.Geometry, str]) -> Optional[dict]:
+    """Return a bounding-box dict, or None if the geometry is invalid."""
     if isinstance(val, ogr.Geometry):
         bbox = val.GetEnvelope3D()
         return {
@@ -258,193 +312,183 @@ def getBoundingBox(val: Union[ogr.Geometry, str]) -> Union[dict, None]:
             "z_max": bbox[5],
         }
     if isinstance(val, str):
-        return getBoundingBox(ogr.CreateGeometryFromWkt(val))
+        # B5 fix: guard None before recursing
+        geom = ogr.CreateGeometryFromWkt(val)
+        if geom is None:
+            logger.error("getBoundingBox: could not parse WKT %r", val)
+            return None
+        return getBoundingBox(geom)
+    return None
 
 
-def addHeightToGeometryWkt(geometry_wkt, height):
+def addHeightToGeometryWkt(geometry_wkt: str, height: float) -> str:
+    """Return a copy of the geometry WKT with all Z coordinates set to *height*."""
     geom = shapely.wkt.loads(geometry_wkt)
-    shifted_geom = shapely.ops.transform(lambda x, y, z=None: (x, y, height), geom)
-    # return shapely.wkt.dumps(shifted_geom)
-    return str(shifted_geom)
-
-    # geom = ogr.CreateGeometryFromWkt(geometry_wkt)
-    # new_geom = ogr.Geometry(geom.GetGeometryType())
-    # for i in range(0, geomCre.GetGeometryCount()):
-    #    g = geom.GetGeometryRef(i)
-    #    if geom.GetGeometryType() in [ogr.wkbPoint, ogr.wkbPoint25D]
-    # g_ = ogr.CreateGeometryFromWkt(str(shapely.wkt.dumps(shifted_geom)))
-    # print g_.GetGeometryType() == ogr.wkbPoint25D
+    shifted = shapely.ops.transform(lambda x, y, z=None: (x, y, height), geom)
+    return str(shifted)
 
 
-def getRelativeAreaInBoundingBox(geometry_wkt, cell_bbox):
-    total_area_of_geometry = getArea(geometry_wkt)
+def getRelativeAreaInBoundingBox(geometry_wkt: str, cell_bbox: dict) -> float:
+    total_area = getArea(geometry_wkt)
+    # B6 fix: guard division by zero
+    if total_area == 0:
+        return 0.0
 
-    bbox_polygon_ = getRectangleXYFromBoundingBox(cell_bbox)
-    relative_area_in_cell_ = 0.0
-    matched_area_ = getIntersectionXY(geometry_wkt, bbox_polygon_)
-    if matched_area_:
-        matched_area_geom = ogr.CreateGeometryFromWkt(matched_area_)
+    bbox_polygon = getRectangleXYFromBoundingBox(cell_bbox)
+    matched_wkt = getIntersectionXY(geometry_wkt, bbox_polygon)
+    if not matched_wkt:
+        return 0.0
 
-        # http://www.gdal.org/ogr__core_8h.html
-        if matched_area_geom.GetGeometryType() in [
-            ogr.wkbPoint,
-            ogr.wkbMultiPoint,
-            ogr.wkbPoint25D,
-            ogr.wkbMultiPoint25D,
-        ]:
-            relative_area_in_cell_ = 1.0
-        elif matched_area_geom.GetGeometryType() in [
-            ogr.wkbPolygon,
-            ogr.wkbMultiPolygon,
-            ogr.wkbPolygon25D,
-            ogr.wkbMultiPolygon25D,
-        ]:
-            relative_area_in_cell_ = (
-                matched_area_geom.GetArea() / total_area_of_geometry
-            )
-        else:
-            logger.error(
-                "Matched area '%s' with type id '%i' is neither polygon nor "
-                "point! Setting matching area to zero ... ",
-                matched_area_,
-                matched_area_geom.GetGeometryType(),
-            )
+    matched_geom = ogr.CreateGeometryFromWkt(matched_wkt)
+    if matched_geom is None:
+        return 0.0
 
-    return relative_area_in_cell_
+    flat_type = matched_geom.GetGeometryType()
+    if flat_type in (
+        ogr.wkbPoint,
+        ogr.wkbMultiPoint,
+        ogr.wkbPoint25D,
+        ogr.wkbMultiPoint25D,
+    ):
+        return 1.0
+    if flat_type in (
+        ogr.wkbPolygon,
+        ogr.wkbMultiPolygon,
+        ogr.wkbPolygon25D,
+        ogr.wkbMultiPolygon25D,
+    ):
+        return matched_geom.GetArea() / total_area
+
+    logger.error(
+        "getRelativeAreaInBoundingBox: unexpected geometry type %d for %r",
+        flat_type,
+        matched_wkt,
+    )
+    return 0.0
 
 
 def getRelativeLengthXYInBoundingBox(
-    geometry_wkt, cell_bbox, epsg_id_source=3857, epsg_id_target=4326
-):
-    bbox_polygon_ = getRectangleXYFromBoundingBox(cell_bbox)
-
+    geometry_wkt: str,
+    cell_bbox: dict,
+    epsg_id_source: int = 3857,
+    epsg_id_target: int = 4326,
+) -> float:
+    bbox_polygon = getRectangleXYFromBoundingBox(cell_bbox)
     total_length = getDistanceOfLineStringXY(
         geometry_wkt, epsg_id_source=epsg_id_source, epsg_id_target=epsg_id_target
     )
+    if not total_length:
+        return 0.0
 
-    dist_xy = 0.0
-    intersection_wkt = getIntersectionXY(geometry_wkt, bbox_polygon_)
-    # logger.debug("Intersection: %s" % (intersection_wkt))
+    intersection_wkt = getIntersectionXY(geometry_wkt, bbox_polygon)
+    if not intersection_wkt:
+        return 0.0
 
-    if intersection_wkt:
-        dist_xy = getDistanceOfLineStringXY(
-            intersection_wkt, epsg_id_source, epsg_id_target
-        )
-        # logger.debug("Distance (x,y): %s" % (dist_xy))
-
-    if dist_xy and total_length:
-        return abs(dist_xy) / abs(total_length)
-    return 0.0
+    dist_xy = getDistanceOfLineStringXY(
+        intersection_wkt, epsg_id_source, epsg_id_target
+    )
+    return abs(dist_xy) / abs(total_length) if dist_xy else 0.0
 
 
 def getRelativeHeightInBoundingBox(
     line_z_min: float, line_z_max: float, cell_bbox: dict
 ) -> float:
-    total_height = float(abs(line_z_max - line_z_min))
-
-    # if line.GetPointCount()==2:
-    if line_z_max < cell_bbox["z_min"]:
-        height_line_in_bbox = 0.0
-    elif line_z_min > cell_bbox["z_max"]:
-        height_line_in_bbox = 0.0
-    else:
-        if total_height == 0.0:
-            height_line_in_bbox = 1.0
-        else:
-            height_line_in_bbox = (
-                abs(
-                    max(line_z_min, cell_bbox["z_min"])
-                    - min(line_z_max, cell_bbox["z_max"])
-                )
-                / total_height
-            )
-    return height_line_in_bbox
+    total_height = abs(line_z_max - line_z_min)
+    if line_z_max < cell_bbox["z_min"] or line_z_min > cell_bbox["z_max"]:
+        return 0.0
+    if total_height == 0.0:
+        return 1.0
+    overlap = abs(
+        max(line_z_min, cell_bbox["z_min"]) - min(line_z_max, cell_bbox["z_max"])
+    )
+    return overlap / total_height
 
 
-def CreateGeometryFromWkt(geometry_wkt):
+def CreateGeometryFromWkt(geometry_wkt) -> ogr.Geometry:
+    """Return an ogr.Geometry, accepting both WKT strings and existing geometries."""
     if isinstance(geometry_wkt, ogr.Geometry):
         return geometry_wkt
     return ogr.CreateGeometryFromWkt(geometry_wkt)
 
 
-def getAllPoints(geometry_wkt, swap=False):
+def getAllPoints(geometry_wkt, swap: bool = False) -> list:
     """
-    Note: Does not work for Multipart geometries
-    (e.g., "MULTILINESTRING((0 0, 10 10),(20 20, 30 30))")
+    Extract all vertices of a simple (single-part) LineString as a list of
+    (x, y, z) tuples.  When *swap* is True the x and y values are exchanged,
+    which is used after reprojecting from a projected CRS to a geographic CRS
+    so that the tuples are in (lat, lon, z) order.
+
+    Raises:
+        ValueError: if *geometry_wkt* cannot be parsed or is a multipart geometry.
     """
-    geom = geometry_wkt
-    if not isinstance(geometry_wkt, ogr.Geometry):
+    # B7 fix: guard None from invalid WKT
+    if isinstance(geometry_wkt, ogr.Geometry):
+        geom = geometry_wkt
+    else:
         geom = ogr.CreateGeometryFromWkt(geometry_wkt)
+        if geom is None:
+            raise ValueError(f"getAllPoints: could not parse WKT: {geometry_wkt!r}")
 
-    points_ = []
-    for i in range(0, geom.GetPointCount()):
-        # for i in xrange(0, geom.GetPointCount()):
-
-        # GetPoint returns a tuple not a Geometry
-        (x, y, z) = geom.GetPoint(i)
-        if not swap:
-            points_.append((x, y, z))
-        else:
-            points_.append((y, x, z))
-
-    return points_
-
-
-# cache
-spatial_references = {}
-
-
-def getSpatialReference(epsg_id):
-    if epsg_id not in spatial_references:
-        spatial_reference = osr.SpatialReference()
-        spatial_reference.ImportFromEPSG(epsg_id)
-        spatial_references[epsg_id] = spatial_reference
-    return spatial_references[epsg_id]
-
-
-# cache coordinate transformations
-transformations_cache = {}
+    points = []
+    for i in range(geom.GetPointCount()):
+        x, y, z = geom.GetPoint(i)
+        points.append((y, x, z) if swap else (x, y, z))
+    return points
 
 
 def reproject_Point(
-    x: float, y: float, epsg_id_source: int = 3857, epsg_id_target: int = 4326
-) -> tuple:
+    x: float,
+    y: float,
+    epsg_id_source: int = 3857,
+    epsg_id_target: int = 4326,
+) -> Optional[tuple]:
+    """
+    Reproject a single point from *epsg_id_source* to *epsg_id_target*.
+
+    Returns:
+        (ogr.Geometry, wkt_str) on success, or None on failure.
+    """
     try:
-        # define point
         point = ogr.Geometry(ogr.wkbPoint)
         point.AddPoint(x, y)
-        source = osr.SpatialReference()
-        source.ImportFromEPSG(epsg_id_source)
-        target = osr.SpatialReference()
-        target.ImportFromEPSG(epsg_id_target)
-        transform = osr.CoordinateTransformation(source, target)
-        point.Transform(transform)
+        point.Transform(_get_transform(epsg_id_source, epsg_id_target))
         return point, point.ExportToWkt()
-    except Exception as xc:
-        logger.error("reproject_Point: %s", xc)
+    except Exception as exc:
+        logger.error("reproject_Point: %s", exc)
+        return None
 
 
-def reproject_geometry(geometry_wkt, epsg_id_source=3857, epsg_id_target=4326):
-    source = osr.SpatialReference()
-    source.ImportFromEPSG(epsg_id_source)
+def reproject_geometry(
+    geometry_wkt, epsg_id_source: int = 3857, epsg_id_target: int = 4326
+) -> tuple:
+    """
+    Reproject a geometry from *epsg_id_source* to *epsg_id_target*.
 
-    target = osr.SpatialReference()
-    target.ImportFromEPSG(epsg_id_target)
+    Returns:
+        (reprojected_wkt, swap_coordinates) where *swap_coordinates* is True
+        when one CRS is geographic and the other is projected, indicating that
+        getAllPoints() should swap x and y to yield (lat, lon) order.
 
-    transform = osr.CoordinateTransformation(source, target)
+    Raises:
+        ValueError: if *geometry_wkt* cannot be parsed.
+    """
+    # B8 fix: guard None from invalid WKT
+    geom = (
+        ogr.CreateGeometryFromWkt(geometry_wkt)
+        if isinstance(geometry_wkt, str)
+        else geometry_wkt
+    )
+    if geom is None:
+        raise ValueError(f"reproject_geometry: could not parse WKT: {geometry_wkt!r}")
 
-    geom = ogr.CreateGeometryFromWkt(geometry_wkt)
-    geom.Transform(transform)
+    # O2 fix: use cached transform
+    geom.Transform(_get_transform(epsg_id_source, epsg_id_target))
 
-    new_wkt_ = geom.ExportToWkt()
+    src = getSpatialReference(epsg_id_source)
+    tgt = getSpatialReference(epsg_id_target)
+    swap = bool(src.IsGeographic()) != bool(tgt.IsGeographic())
 
-    swap_coordinates = False
-    if (source.IsGeographic() and not target.IsGeographic()) or (
-        not source.IsGeographic() and target.IsGeographic()
-    ):
-        swap_coordinates = True
-
-    return new_wkt_, swap_coordinates
+    return geom.ExportToWkt(), swap
 
 
 def create_distance_area(epsg_id_source: int) -> QgsDistanceArea:
@@ -452,18 +496,25 @@ def create_distance_area(epsg_id_source: int) -> QgsDistanceArea:
     qgs_d = QgsDistanceArea()
     qgs_d.setSourceCrs(source_crs, QgsProject.instance().transformContext())
     qgs_d.setEllipsoid(source_crs.ellipsoidAcronym())
-
     return qgs_d
+
+
+# Module-level cache for QgsDistanceArea instances keyed by EPSG id.
+# QgsDistanceArea construction involves CRS resolution and ellipsoid setup,
+# which is measurable overhead when called once per trajectory segment.
+_distance_area_cache: dict[int, QgsDistanceArea] = {}
 
 
 def ellipsoidal_2d_distance(
     start_point: TrajectoryPoint, end_point: TrajectoryPoint, epsg_id: int
 ) -> float:
-    qgs_d = create_distance_area(epsg_id)
-    qgs_start_point = QgsPointXY(start_point.getX(), start_point.getY())
-    qgs_end_point = QgsPointXY(end_point.getX(), end_point.getY())
-
-    return qgs_d.measureLine(qgs_start_point, qgs_end_point)
+    if epsg_id not in _distance_area_cache:
+        _distance_area_cache[epsg_id] = create_distance_area(epsg_id)
+    qgs_d = _distance_area_cache[epsg_id]
+    return qgs_d.measureLine(
+        QgsPointXY(start_point.getX(), start_point.getY()),
+        QgsPointXY(end_point.getX(), end_point.getY()),
+    )
 
 
 def create_coordinate_transform(
@@ -476,22 +527,18 @@ def create_coordinate_transform(
     )
 
 
-def get_line_vertices(line: QgsGeometry) -> list[QgsPoint]:
-    """
-    Returns a list of ordered vertices from the  given line geometry.
-    Line can be either single part or multipart.
-    """
+def get_line_vertices(line: QgsGeometry) -> list:
+    """Return ordered vertices from a single-part or multipart line geometry."""
     points = []
     for part in line.parts():
         points.extend(part.points())
-
     return points
 
 
 def get_intersection_point_runway_and_taxi_route(runway, taxi_route) -> QgsGeometry:
     """
     Returns the entry point of a Taxiway route on the Runway.
-    Mwy return an empty geometry if there is no intersection.
+    May return an empty geometry if there is no intersection.
 
     Args:
         runway (Runway): Runway object.
@@ -508,91 +555,77 @@ def get_intersection_point_runway_and_taxi_route(runway, taxi_route) -> QgsGeome
 
 
 def clip_segment_to_grid(
-    x1: float, y1: float, z1: float, x2: float, y2: float, z2: float, grid_bounds: dict
+    x1: float,
+    y1: float,
+    z1: float,
+    x2: float,
+    y2: float,
+    z2: float,
+    grid_bounds: dict,
 ) -> tuple:
     """
-    Clip a segment to grid bounds using point coordinates.
-
-    Args:
-        x1, y1, z1: Start point coordinates
-        x2, y2, z2: End point coordinates
-        grid_bounds: Dict with x_min, x_max, y_min, y_max (in EPSG:3857 or consistent CRS)
+    Clip a single line segment to the axis-aligned bounding box *grid_bounds*.
 
     Returns:
-        tuple: (clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, distance_fraction)
-        where distance_fraction is the ratio of clipped distance to original distance
-        Returns (None, None, None, None, None, None, 0.0) if segment is fully outside grid bounds
+        (clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, distance_fraction)
+        where *distance_fraction* is the ratio of the clipped 2-D length to the
+        original 2-D length.
+        Returns (None, None, None, None, None, None, 0.0) if the segment is
+        fully outside the grid.
     """
-
-    grid_x_min = grid_bounds["x_min"]
-    grid_x_max = grid_bounds["x_max"]
-    grid_y_min = grid_bounds["y_min"]
-    grid_y_max = grid_bounds["y_max"]
-
-    # Calculate original distance using getDistanceBetweenPoints (2D distance, z=0)
     original_distance = getDistanceBetweenPoints(x1, y1, 0.0, x2, y2, 0.0)
 
+    # Zero-length segment (e.g. stationary point). A point has no length to clip;
+    # return it unchanged with fraction=1.0 if it's inside the grid, or
+    # fraction=0.0 (with None coords) if outside.
     if original_distance == 0:
-        # Points are the same, no clipping needed
-        return x1, y1, z1, x2, y2, z2, 1.0
-
-    # Create QgsRectangle for clipping bounds
-    clip_rect = QgsRectangle(grid_x_min, grid_y_min, grid_x_max, grid_y_max)
-
-    # Create QgsLineString from the segment
-    line = QgsLineString([QgsPoint(x1, y1), QgsPoint(x2, y2)])
-
-    # Use QgsClipper to clip the line segment which returns a QPolygonF object
-    clipped_polygon = QgsClipper.clippedLine(line, clip_rect)
-
-    # Check if line was clipped (empty polygon means fully outside)
-    if clipped_polygon.isEmpty():
+        inside = (
+            grid_bounds["x_min"] <= x1 <= grid_bounds["x_max"]
+            and grid_bounds["y_min"] <= y1 <= grid_bounds["y_max"]
+        )
+        if inside:
+            return x1, y1, z1, x2, y2, z2, 1.0
         return None, None, None, None, None, None, 0.0
 
-    # Extract points from QPolygonF
+    clip_rect = QgsRectangle(
+        grid_bounds["x_min"],
+        grid_bounds["y_min"],
+        grid_bounds["x_max"],
+        grid_bounds["y_max"],
+    )
+    clipped = QgsClipper.clippedLine(
+        QgsLineString([QgsPoint(x1, y1), QgsPoint(x2, y2)]), clip_rect
+    )
+
+    if clipped.isEmpty() or len(clipped) < 2:
+        return None, None, None, None, None, None, 0.0
+
     try:
-        if len(clipped_polygon) < 2:
-            return None, None, None, None, None, None, 0.0
+        clip_x1, clip_y1 = clipped[0].x(), clipped[0].y()
+        clip_x2, clip_y2 = clipped[-1].x(), clipped[-1].y()
 
-        # Get clipped start and end points from the polygon
-        clip_x1 = clipped_polygon[0].x()
-        clip_y1 = clipped_polygon[0].y()
-        clip_x2 = clipped_polygon[-1].x()
-        clip_y2 = clipped_polygon[-1].y()
-
-        # Interpolate Z coordinates based on how far along the original line the clipped points are
-        # Calculate parametric t values for the clipped points
-        dx = x2 - x1
-        dy = y2 - y1
-
+        dx, dy = x2 - x1, y2 - y1
         if abs(dx) > abs(dy):
-            # Use x coordinate for interpolation (more numerically stable)
-            t1 = (clip_x1 - x1) / dx if dx != 0 else 0.0
-            t2 = (clip_x2 - x1) / dx if dx != 0 else 1.0
+            t1 = (clip_x1 - x1) / dx if dx else 0.0
+            t2 = (clip_x2 - x1) / dx if dx else 1.0
         else:
-            # Use y coordinate for interpolation
-            t1 = (clip_y1 - y1) / dy if dy != 0 else 0.0
-            t2 = (clip_y2 - y1) / dy if dy != 0 else 1.0
+            t1 = (clip_y1 - y1) / dy if dy else 0.0
+            t2 = (clip_y2 - y1) / dy if dy else 1.0
 
-        # Clamp t values to [0, 1] and interpolate Z
         t1 = max(0.0, min(1.0, t1))
         t2 = max(0.0, min(1.0, t2))
-
         clip_z1 = z1 + t1 * (z2 - z1)
         clip_z2 = z1 + t2 * (z2 - z1)
 
-        # Calculate distance fraction using getDistanceBetweenPoints (2D distance)
         clipped_distance = getDistanceBetweenPoints(
             clip_x1, clip_y1, 0.0, clip_x2, clip_y2, 0.0
         )
-        distance_fraction = (
-            clipped_distance / original_distance if original_distance > 0 else 1.0
-        )
+        fraction = clipped_distance / original_distance
 
-        return clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, distance_fraction
+        return clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, fraction
 
-    except Exception as e:
-        logger.error(f"Error clipping segment with QgsClipper: {e}")
+    except Exception as exc:
+        logger.error("clip_segment_to_grid: %s", exc)
         return None, None, None, None, None, None, 0.0
 
 
@@ -600,73 +633,63 @@ def clip_trajectory_segment_to_grid(
     start_point: TrajectoryPoint, end_point: TrajectoryPoint, grid_bounds: dict
 ) -> tuple:
     """
-    Clip a trajectory segment to grid bounds.
-    Wrapper function that works with TrajectoryPoint objects.
-
-    Args:
-        start_point: The start TrajectoryPoint of the segment
-        end_point: The end TrajectoryPoint of the segment
-        grid_bounds: Dict with x_min, x_max, y_min, y_max
+    Clip a trajectory segment to grid bounds, returning TrajectoryPoint objects.
 
     Returns:
-        tuple: (clipped_start_point, clipped_end_point, distance_fraction)
-        where clipped points are TrajectoryPoint objects.
-        Returns (None, None, 0.0) if segment is fully outside grid bounds
+        (clipped_start, clipped_end, distance_fraction) or (None, None, 0.0).
     """
-    # Extract coordinates from TrajectoryPoint objects
     x1, y1, z1 = start_point.getX(), start_point.getY(), start_point.getZ()
     x2, y2, z2 = end_point.getX(), end_point.getY(), end_point.getZ()
 
-    # Call core clipping function
     clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, fraction = (
         clip_segment_to_grid(x1, y1, z1, x2, y2, z2, grid_bounds)
     )
-
-    # Return None if segment is outside
     if clip_x1 is None:
         return None, None, 0.0
 
-    # Create clipped TrajectoryPoint objects
-    clipped_start_dict = {
-        "id": start_point.getIdentifier(),
-        "x": clip_x1,
-        "y": clip_y1,
-        "z": clip_z1,
-        "course": start_point.getCourse(),
-    }
-    clipped_start = TrajectoryPoint(clipped_start_dict)
-
-    clipped_end_dict = {
-        "id": end_point.getIdentifier(),
-        "x": clip_x2,
-        "y": clip_y2,
-        "z": clip_z2,
-        "course": end_point.getCourse(),
-    }
-    clipped_end = TrajectoryPoint(clipped_end_dict)
-
+    clipped_start = TrajectoryPoint(
+        {
+            "id": start_point.getIdentifier(),
+            "x": clip_x1,
+            "y": clip_y1,
+            "z": clip_z1,
+            "course": start_point.getCourse(),
+        }
+    )
+    clipped_end = TrajectoryPoint(
+        {
+            "id": end_point.getIdentifier(),
+            "x": clip_x2,
+            "y": clip_y2,
+            "z": clip_z2,
+            "course": end_point.getCourse(),
+        }
+    )
     return clipped_start, clipped_end, fraction
+
+
+def _points_close(a: tuple, b: tuple, eps: float = _COORD_EPS) -> bool:
+    """Return True if two (x, y, z) coordinate tuples are within *eps* of each other."""
+    return (
+        abs(a[0] - b[0]) <= eps and abs(a[1] - b[1]) <= eps and abs(a[2] - b[2]) <= eps
+    )
 
 
 def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
     """
-    Clip a LineString or MultiLineString geometry to grid bounds.
+    Clip a LineString or MultiLineString geometry to *grid_bounds*.
 
     Handles both single-part (LINESTRING) and multi-part (MULTILINESTRING)
-    geometries.  Each sub-part is clipped segment-by-segment using
-    clip_segment_to_grid(); the surviving segments are stitched back into a
-    LINESTRING Z (contiguous) or MULTILINESTRING Z (non-contiguous).
+    geometries.  Each sub-part is clipped segment-by-segment; the surviving
+    segments are stitched back into a LINESTRING Z (contiguous) or
+    MULTILINESTRING Z (non-contiguous).
 
     Args:
-        geometry_wkt: WKT representation of the LineString or MultiLineString.
-                      Coordinates must be in the same CRS as grid_bounds
-                      (EPSG:3857 throughout this codebase).
-        grid_bounds: Dict with x_min, x_max, y_min, y_max.
+        geometry_wkt: WKT in the same CRS as grid_bounds (EPSG:3857).
+        grid_bounds:  Dict with x_min, x_max, y_min, y_max.
 
     Returns:
-        tuple: (clipped_wkt, length_fraction) where length_fraction is the
-               ratio of clipped length to original length.
-               Returns (None, 0.0) if geometry is fully outside grid.
+        (clipped_wkt, length_fraction) or (None, 0.0) if fully outside.
     """
     try:
         geom = ogr.CreateGeometryFromWkt(geometry_wkt)
@@ -674,65 +697,47 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
             logger.warning("clip_linestring_to_grid: could not parse WKT")
             return geometry_wkt, 1.0
 
-        flattened_type = ogr.GT_Flatten(geom.GetGeometryType())
-
-        if flattened_type == ogr.wkbLineString:
+        flat_type = ogr.GT_Flatten(geom.GetGeometryType())
+        if flat_type == ogr.wkbLineString:
             parts = [geom]
-        elif flattened_type == ogr.wkbMultiLineString:
+        elif flat_type == ogr.wkbMultiLineString:
             parts = [geom.GetGeometryRef(i) for i in range(geom.GetGeometryCount())]
         else:
-            # Not a line geometry — return unchanged
             return geometry_wkt, 1.0
 
         if not parts:
             return geometry_wkt, 1.0
 
-        # Get original total line length (ellipsoidal, EPSG:3857 → EPSG:4326)
         original_length = sum(getDistanceOfLineStringXY(p.ExportToWkt()) for p in parts)
         if original_length == 0:
             return geometry_wkt, 1.0
 
         all_clipped_segments = []
-
         for part in parts:
             n_pts = part.GetPointCount()
             if n_pts < 2:
                 continue
-
-            # Extract (x, y, z) tuples directly from OGR — works for any part type
-            part_points = [part.GetPoint(i) for i in range(n_pts)]  # returns (x, y, z)
-
-            for i in range(len(part_points) - 1):
-                x1, y1, z1 = part_points[i]
-                x2, y2, z2 = part_points[i + 1]
-
-                clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2, _fraction = (
-                    clip_segment_to_grid(x1, y1, z1, x2, y2, z2, grid_bounds)
-                )
-
-                if clip_x1 is not None:
-                    all_clipped_segments.append(
-                        (clip_x1, clip_y1, clip_z1, clip_x2, clip_y2, clip_z2)
-                    )
+            pts = [part.GetPoint(i) for i in range(n_pts)]
+            for i in range(len(pts) - 1):
+                result = clip_segment_to_grid(*pts[i], *pts[i + 1], grid_bounds)
+                if result[0] is not None:
+                    all_clipped_segments.append(result[:6])
 
         if not all_clipped_segments:
             return None, 0.0
 
-        # Build sub-line chains: start a new chain whenever the start of the next
-        # segment is NOT equal to the end of the previous one (non-contiguous parts).
-        # This prevents phantom line segments being created between unrelated parts
-        # (e.g., end of a taxi segment and start of a takeoff-roll segment).
-        line_chains = []  # list of list-of-(x,y,z)
-        current_chain = []
+        # B10 fix: use epsilon-tolerance for continuity check
+        line_chains: list = []
+        current_chain: list = []
         for seg in all_clipped_segments:
-            x1, y1, z1, x2, y2, z2 = seg
-            if not current_chain or current_chain[-1] != (x1, y1, z1):
-                # Gap detected — close the previous chain and start a new one
+            p_start = seg[:3]
+            p_end = seg[3:]
+            if not current_chain or not _points_close(current_chain[-1], p_start):
                 if len(current_chain) >= 2:
                     line_chains.append(current_chain)
-                current_chain = [(x1, y1, z1), (x2, y2, z2)]
+                current_chain = [p_start, p_end]
             else:
-                current_chain.append((x2, y2, z2))
+                current_chain.append(p_end)
         if len(current_chain) >= 2:
             line_chains.append(current_chain)
 
@@ -740,8 +745,8 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
             return None, 0.0
 
         if len(line_chains) == 1:
-            coords_str = ", ".join(f"{x} {y} {z}" for x, y, z in line_chains[0])
-            clipped_wkt = f"LINESTRING Z({coords_str})"
+            coords = ", ".join(f"{x} {y} {z}" for x, y, z in line_chains[0])
+            clipped_wkt = f"LINESTRING Z({coords})"
         else:
             parts_str = ", ".join(
                 "(" + ", ".join(f"{x} {y} {z}" for x, y, z in chain) + ")"
@@ -753,9 +758,8 @@ def clip_linestring_to_grid(geometry_wkt: str, grid_bounds: dict) -> tuple:
         length_fraction = (
             clipped_length / original_length if original_length > 0 else 1.0
         )
-
         return clipped_wkt, length_fraction
 
-    except Exception as e:
-        logger.error(f"Error clipping LineString to grid: {e}")
+    except Exception as exc:
+        logger.error("clip_linestring_to_grid: %s", exc)
         return geometry_wkt, 1.0

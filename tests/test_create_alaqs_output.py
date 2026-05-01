@@ -30,15 +30,17 @@ def datasets_to_test():
     print("\nINFO: Get datasets to test...")
     return [
         {
-            "title": "EHRD (Rotterdam, NL) Create Output test",
-            "db_path": str(get_data_path("EHRD") / "EHRD.alaqs"),
-            "expected_db_path": str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            "title": "AIRPORT_A (Rotterdam, NL) Create Output test",
+            "db_path": str(get_data_path("AIRPORT_A") / "AIRPORT_A.alaqs"),
+            "expected_db_path": str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             "inventory_path": str(get_tmp_path("alaqs_out.alaqs")),
-            "met_csv_path": str(get_data_path("EHRD") / "EHRD_meteo.csv"),
+            "met_csv_path": str(get_data_path("AIRPORT_A") / "AIRPORT_A_meteo.csv"),
             "model_parameters": {
-                "movement_path": str(get_data_path("EHRD") / "EHRD_movements.csv"),
+                "movement_path": str(
+                    get_data_path("AIRPORT_A") / "AIRPORT_A_movements.csv"
+                ),
                 "study_start_date": "2025-12-01 06:00:00",
-                "study_end_date": "2025-12-01 07:00:00",
+                "study_end_date": "2025-12-03 09:00:00",
                 "towing_speed": 10.0,
                 "vertical_limit": 914.4,
                 "x_resolution": 250,
@@ -73,14 +75,14 @@ def datasets_to_test():
                 "airport_longitude": 4.44,
                 "airport_elevation": 0,
                 "airport_temperature": 15,
-                "vertical_limit": 913,
+                "vertical_limit": 914.4,
                 "roadway_method": "COPERT 5",
                 "roadway_fleet_year": "2020",
                 "roadway_country": "Netherlands",
-                "parking_method": None,
-                "study_info": "Not set",
-                "date_created": "2025-05-05 09:06:07",
-                "date_modified": "2025-05-12 08:32:45",
+                "parking_method": "Open-ALAQS",
+                "study_info": "Open-ALAQS training study, 13 movements over 3 days",
+                "date_created": "2026-04-20 00:00:00",
+                "date_modified": "2026-04-20 00:00:00",
             },
         },
     ]

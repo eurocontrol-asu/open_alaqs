@@ -4,6 +4,7 @@ from collections import OrderedDict
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.interfaces.Store import Store
+from open_alaqs.core.tools.conversion import convertToFloat as _ctf
 from open_alaqs.core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
@@ -27,9 +28,7 @@ class UserHourProfile(UserProfile):
 
         self._hours = OrderedDict()
         for i_ in range(1, 25):
-            self._hours[i_ - 1] = (
-                float(val["h" + "%02d" % i_]) if "h" + "%02d" % i_ in val else 0.0
-            )
+            self._hours[i_ - 1] = _ctf(val.get("h" + "%02d" % i_), default=0.0)
 
     def getHours(self):
         return self._hours
@@ -38,7 +37,7 @@ class UserHourProfile(UserProfile):
         if val is None:
             val = {}
         for key in val:
-            self._hours[key] = float(val[key])
+            self._hours[key] = _ctf(val[key], default=0.0)
 
     def __str__(self):
         val = "\n UserProfile with name '%s'" % (self.getName())
@@ -55,7 +54,7 @@ class UserDayProfile(UserProfile):
 
         self._days = OrderedDict()
         for i_ in ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]:
-            self._days[i_] = float(val[i_]) if i_ in val else 0.0
+            self._days[i_] = _ctf(val.get(i_), default=0.0)
 
     def getDays(self):
         return self._days
@@ -64,7 +63,7 @@ class UserDayProfile(UserProfile):
         if val is None:
             val = {}
         for key in val:
-            self._days[key] = float(val[key])
+            self._days[key] = _ctf(val[key], default=0.0)
 
     def __str__(self):
         val = "\n UserProfile with name '%s'" % (self.getName())
@@ -93,7 +92,7 @@ class UserMonthProfile(UserProfile):
             "nov",
             "dec",
         ]:
-            self._months[i_] = float(val[i_]) if i_ in val else 0.0
+            self._months[i_] = _ctf(val.get(i_), default=0.0)
 
     def getMonths(self):
         return self._months
@@ -102,7 +101,7 @@ class UserMonthProfile(UserProfile):
         if val is None:
             val = {}
         for key in val:
-            self._months[key] = float(val[key])
+            self._months[key] = _ctf(val[key], default=0.0)
 
     def __str__(self):
         val = "\n UserProfile with name '%s'" % (self.getName())

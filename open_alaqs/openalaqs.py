@@ -19,6 +19,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+
 from pathlib import Path
 
 from qgis.core import QgsSettings
@@ -199,7 +200,6 @@ class OpenALAQS:
 
         # Add buttons to toolbar
         self.open_alaqs_toolbar = self.iface.addToolBar("OpenALAQS Toolbar")
-        self.open_alaqs_toolbar.setObjectName("OpenALAQS")
         self.open_alaqs_toolbar.addAction(self.actions["about"])
         self.open_alaqs_toolbar.addSeparator()
         self.open_alaqs_toolbar.addAction(self.actions["project_create"])
@@ -305,7 +305,10 @@ class OpenALAQS:
 
         openalaqsuitoolkit.load_layers(self.iface, str(db_filename))
         openalaqsuitoolkit.load_basemap_layers()
-        openalaqsuitoolkit.set_default_zoom(self.canvas, 51.4775, -0.4614)
+        # No zoom here — the canvas is repositioned by OpenAlaqsStudySetup
+        # once the user picks an ICAO code (see `airport_lookup`).  A
+        # hard-coded zoom here previously landed on Heathrow for every new
+        # study regardless of the actual airport.
         self.actions["study_setup"].setEnabled(True)
         self.actions["osm_import"].setEnabled(True)
         self.actions["profiles_edit"].setEnabled(True)
@@ -316,7 +319,12 @@ class OpenALAQS:
         self.actions["project_load"].setEnabled(False)
         self.actions["project_create"].setEnabled(False)
         self.actions["project_close"].setEnabled(True)
-        self.run_study_setup(save_before_show=True)
+        # Do NOT pass save_before_show=True: on a freshly created study the
+        # template fields are empty, and calling save_study_setup() before the
+        # dialog is even visible fires the "Please correct..." validation
+        # dialog at the user before they have seen anything.  Let the user
+        # fill the form first, then Save triggers the normal validation.
+        self.run_study_setup()
 
     def run_project_load(self):
         """

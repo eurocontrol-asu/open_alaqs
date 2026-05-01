@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
 from open_alaqs.core.tools.copert5_utils import (
     VEHICLE_CATEGORIES,
@@ -9,12 +8,11 @@ from open_alaqs.core.tools.copert5_utils import (
     calculate_emissions,
     ef_query,
 )
-from open_alaqs.database.generate_templates import get_engine
+from tools.template_build.generate_templates import get_engine
 
-TEMPLATES_DIR = Path(__file__).parents[1] / "core/templates"
+TEMPLATES_DIR = Path(__file__).parents[1] / "open_alaqs/core/templates"
 
 
-@pytest.mark.skip(reason="Test is failing for OpenALAQS 4.0.")
 def test_query():
     """
     Check if the query is built correctly
@@ -32,7 +30,6 @@ def test_query():
     assert data.shape == (1255, 7)
 
 
-@pytest.mark.skip(reason="Test is failing for OpenALAQS 4.0.")
 def test_emissions_passenger_cars():
     # Set the combination
     fleet = pd.DataFrame(
@@ -71,7 +68,7 @@ def test_emissions_passenger_cars():
     )["category_short"]
 
     # Calculate the emissions
-    e = calculate_emissions(fleet, ef_data)
+    e = calculate_emissions(fleet, ef_data, airport_temperature=15)
 
     # Calculate the average emission factors
     average_emission_factors(e)

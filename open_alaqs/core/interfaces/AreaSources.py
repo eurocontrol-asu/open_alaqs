@@ -7,6 +7,7 @@ from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.interfaces.Store import Store
 from open_alaqs.core.tools import spatial
+from open_alaqs.core.tools.conversion import convertToFloat as _ctf
 from open_alaqs.core.tools.Singleton import Singleton
 
 loaded_color_logger = False
@@ -27,8 +28,8 @@ class AreaSources(Source):
             val = {}
 
         self._id = str(val["source_id"]) if "source_id" in val else None
-        self._unit_year = float(val.get("unit_year", 0))
-        self._heat_flux = float(val["heat_flux"]) if "heat_flux" in val else None
+        self._unit_year = _ctf(val.get("unit_year", 0), default=0.0)
+        self._heat_flux = _ctf(val.get("heat_flux"), default=None)
 
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
@@ -47,7 +48,7 @@ class AreaSources(Source):
             "p2_kg_unit",
         ]:
             if key_ in val:
-                init_values[key_] = float(val[key_])
+                init_values[key_] = _ctf(val[key_], default=0.0)
                 default_values[key_] = 0.0
 
         self._emissionIndex = EmissionIndex(init_values, default_values)

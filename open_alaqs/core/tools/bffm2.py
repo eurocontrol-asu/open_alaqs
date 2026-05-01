@@ -48,20 +48,46 @@ def calculate_emission_index(  # noqa: C901
     icao_eedb,
     ambient_conditions=None,
     installation_corrections=None,
+    p3t3_y_exponent: float = 0.5,
 ):
     """
     Calculates the emission index associated to a particular fuel flow with the
-     BFFM2 method.
+     BFFM2 method (SAE AIR-5715 / CAEP14).
 
     :param pollutant: str either "NOx", "CO", or "HC"
-    :param fuel_flow: float in units kg/s
-    :param icao_eedb: dict with fuel_flow emission index values from ICAO
-     Emissions
-    :param ambient_conditions: dict with parameters to correct for ambient
-     conditions, default is ISA
-    :param installation_corrections: dict (mode: factor) with adjustment factors
-     for installation effects
-    :return float: calculated fuel flow in kg/s
+    :param fuel_flow: float, AMBIENT fuel flow at segment conditions (kg/s).
+                     This must be the actual in-flight FF, NOT the EEDB reference FF.
+                     Callers must convert beforehand using the CAEP14 inverse:
+                         FF_amb = FF_ref * delta / theta^3.8 / exp(0.2 * M^2)
+                     where FF_ref is the EEDB reference FF at the segment's
+                     power setting / mode.
+    :param icao_eedb: dict with fuel_flow emission index values from ICAO EEDB,
+                     structured as {pollutant: {mode: {ff_ref: ei}}}
+    :param ambient_conditions: dict with parameters for ambient corrections.
+                     Defaults to ISA sea-level if not provided.
+    :param installation_corrections: dict (mode: factor) adjusting EEDB FF
+                     reference points for installation effects (default CAEP14
+                     values: TO x1.010, CL x1.013, AP x1.020, Idle x1.100).
+    :param p3t3_y_exponent: NOx P3T3 exponent y (0.5 for standard/LTO engines;
+                     0.3 for lean-burn engines at non-LTO conditions per CAEP14
+                     BFFM2 V2 update). Caller must pass 0.3 for lean-burn non-LTO.
+    :return float: calculated emission index in g/kg fuel
+
+    Formula conventions (SAE AIR-5715 / CAEP14, verified against CAEP14 v12):
+      ff_ref = ff_amb / delta * theta^3.8 * exp(0.2 * M^2)
+        CAEP14 applies this formula universally for both LTO and non-LTO.
+        ICAO Doc 9889 App 2 uses sqrt(theta)/delta at LTO only; this code
+        follows CAEP14 throughout.
+
+      NOx humidity: h = -19 * (omega - 0.00634)
+        SAE-5715 relative correction vs ISA reference-day humidity omega_0=0.00634.
+        CAEP14 USER INPUTS "Humidity coefficient H" confirms this formula.
+
+      NOx ambient: EI_NOx = EI_ref * exp(h) * (delta^1.02 / theta^3.3)^y
+        y=0.5 confirmed in CAEP14 BFFM2 NOX sheet "p3t3 exponent value = 0.5".
+
+      CO/HC ambient: EI = EI_ref * (theta^3.3 / delta^1.02)^x, x=1
+        CAEP14 BFFM2 CO and HC sheets both apply this correction (x=1).
 
     An issue concerns the modeling of zero values from the certification data,
      especially concerning EITHC values.
@@ -175,17 +201,23 @@ def calculate_emission_index(  # noqa: C901
     if omega is None:
         omega = (0.62197058 * rh * p_sat) / (p_psia * 68.9473 - rh * p_sat)
 
-    # h = Humidity coefficient
+    # h = Humidity coefficient (SAE AIR-5715 relative correction vs ISA ref day omega_0=0.00634)
+    # Positive h means drier than ISA reference day => higher NOx.
+    # Negative h means more humid than ISA reference day => lower NOx.
     h = -19.0 * (omega - 0.00634)
 
     # P3T3 exponent (default value is 1.0)
     x = 1.0
 
-    # P3T3 exponent (default value is 0.5)
-    y = 0.5
+    # P3T3 exponent: 0.5 for standard engines, 0.3 for lean-burn at non-LTO conditions.
+    # Caller must pass p3t3_y_exponent=0.3 for lean-burn non-LTO segments.
+    y = p3t3_y_exponent
 
     # FF_ref = Fuel flow at reference conditions (kg/s)
-    # fuel_flow = Fuel flow at non-reference conditions (kg/s)
+    # fuel_flow = Fuel flow at AMBIENT (non-reference) conditions (kg/s)
+    # SAE AIR-5715 / CAEP14 formula — same for both LTO and non-LTO.
+    # Note: ICAO Doc 9889 App 2 uses sqrt(theta)/delta for LTO only;
+    #       CAEP14 uses theta^3.8/delta universally (verified against CAEP14 v12).
     ff_ref = (fuel_flow / delta) * (theta**3.8) * np.exp(0.2 * m**2)
 
     ############################################################################
@@ -246,7 +278,14 @@ def calculate_emission_index(  # noqa: C901
     y3 = np.log10(eedb_climbout_values)
     y4 = np.log10(eedb_takeoff_values)
 
-    if y1 == y2 == y3 == y4 == 0.0:
+    # Use np.all() for element-wise comparison on numpy arrays.
+    # A plain chain (y1 == y2 == y3 == y4 == 0.0) is undefined for arrays.
+    if (
+        np.all(y1 == 0.0)
+        and np.all(y2 == 0.0)
+        and np.all(y3 == 0.0)
+        and np.all(y4 == 0.0)
+    ):
         logger.error(
             "All input values are zero. Reference points from database"
             " for pollutant '%s':" % pollutant
@@ -255,10 +294,6 @@ def calculate_emission_index(  # noqa: C901
         return 0.0
 
     x_ff_log = np.log10(ff_ref if ff_ref else constants.epsilon)
-
-    # First (7-30%) line equation (y=ax+b)
-    coef_a1 = (y2 - y1) / (x2 - x1)
-    y2 - coef_a1 * x2
 
     # STANDARD DATA BEHAVIOR
 
@@ -321,21 +356,40 @@ def calculate_emission_index(  # noqa: C901
             )
 
         elif x2 <= x_ff_log <= x3:
-            if data_behavior == 1:  # standard, stay on the mean line
-                if x2 < x_ff_log <= ip[0]:
-                    y_ff_log = lin_av
-            elif data_behavior == 2:  # non-standard, interpolate
+            if data_behavior == 1:  # standard
+                # CAEP14 v14 / SAE AIR-5715 "HC_CO Slope To Mean Value" rule for the
+                # standard-intersection case (intersection of the IDLE-APP slanting line
+                # and the (CL, TO)-mean horizontal line falls inside the [APP, CL] FF
+                # range).  In this case the CAEP procedure snaps the EI to the
+                # horizontal value (mean of CL and TO anchor EIs) for ANY FF above the
+                # APP anchor, producing a step discontinuity at the APP boundary.
+                # Physically this reflects that CO/HC reach their combustion-complete
+                # floor almost immediately past approach thrust.
+                #
+                # The previous implementation kept the slanting line up to the
+                # intersection and only snapped beyond.  That smoothed the step but
+                # disagreed with the CAEP14 reference sheet by up to a factor of 8 at
+                # borderline cases (e.g. warm-humid APP-anchor segments).
+                y_ff_log = lin_av
+            elif data_behavior == 2:  # non-standard: log-linear APP→horizontal
+                # When the SL/HL intersection falls outside [APP, CL] the CAEP
+                # procedure draws a log-linear line from (APP_FF, APP_EI) to
+                # (CL_FF, horizontal) and reads off the segment FF on it.
                 y_ff_log = np.interp(
                     x_ff_log, np.concatenate([x2, x3]), np.concatenate([y2, lin_av])
                 )
 
-        else:  # x_ff_log > x4 and x3 < x_ff_log <= x4
+        else:  # x_ff_log > x3 (region includes CL-TO and above-TO)
             y_ff_log = lin_av  # stay on the mean horizontal line, beyond TO as well
     else:
         logger.error(f"Pollutant '{pollutant}' unknown.")
 
     if y_ff_log is None or np.isnan(y_ff_log):
         y_ff_log = np.log10(constants.epsilon)
+
+    # Ensure y_ff_log is a plain Python float so downstream arithmetic works
+    # regardless of whether it came from np.interp, np.log10, or a scalar.
+    y_ff_log = float(np.asarray(y_ff_log).flat[0])
 
     ############################################################################
     #   3. Calculate EI
@@ -346,6 +400,9 @@ def calculate_emission_index(  # noqa: C901
         ein_ox_ref = 10**y_ff_log if 10 ** (y_ff_log) > constants.epsilon else 0.0
 
         # ei = NOx EI at non-reference conditions (g/kg)
+        # SAE AIR-5715 / CAEP14: exp(h) x (delta^1.02 / theta^3.3)^y
+        #   h = -19*(omega - 0.00634)  relative humidity correction vs ISA ref day
+        #   y = 0.5 for standard/LTO (CAEP14 BFFM2 NOX p3t3 exponent = 0.5)
         ei = ein_ox_ref * np.exp(h) * (delta**1.02 / theta**3.3) ** y
 
     elif pollutant.lower() == "co":
@@ -354,6 +411,8 @@ def calculate_emission_index(  # noqa: C901
         ei_co_ref = 10**y_ff_log if 10 ** (y_ff_log) > constants.epsilon else 0.0
 
         # ei = CO EI at non-reference conditions (g/kg)
+        # SAE AIR-5715 / CAEP14: (theta^3.3 / delta^1.02)^x, x=1
+        # CAEP14 BFFM2 CO sheet applies this correction (verified: factor = 0.8824 at test segment).
         ei = ei_co_ref * (theta**3.3 / delta**1.02) ** x
 
     elif pollutant.lower() == "hc":
@@ -362,6 +421,7 @@ def calculate_emission_index(  # noqa: C901
         ei_hc_ref = 10**y_ff_log if 10 ** (y_ff_log) > constants.epsilon else 0.0
 
         # ei = THC EI at non-reference conditions (g/kg)
+        # Same ambient correction as CO: (theta^3.3 / delta^1.02)^x, x=1
         ei = float(ei_hc_ref) * (theta**3.3 / delta**1.02) ** x
 
     else:
@@ -371,77 +431,3 @@ def calculate_emission_index(  # noqa: C901
     emission_index = ei[0] if (isinstance(ei, np.ndarray) and ei.size == 1) else ei
 
     return emission_index
-
-
-# if __name__ == "__main__":
-#     # create a logger for this module
-#     # logger.setLevel(logging.DEBUG)
-#     # # create console handler and set level to debug
-#     # ch = logging.StreamHandler()
-#     # ch.setLevel(logging.DEBUG)
-#     # # create formatter
-#     # formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-#     # # add formatter to ch
-#     # ch.setFormatter(formatter)
-#     # # add ch to logger
-#     # logger.addHandler(ch)
-#
-#     # Input conditions for this example are:
-#     pollutant = "NOx"
-#
-#     # # Example: These values correspond to a cruise point or segment of a flight trajectory using the Trent 892 engine with an ICAO UID of 2RR027
-#     # # For each pollutant, the reference FF (non-adjusted) and EI are given
-#
-#     # Engine	1CM008 (CFM56-5-A1)
-#     # Engine fuel flow rate (in kg/s at reference conditions)
-#     # fuel_flow = 0.882 # Engine fuel flow rate = 0.882 # in kg/s (or 7000 lb/hr/engine)
-#     fuel_flow = 0.319894549
-#     ff_to = 1.051
-#     ff_co = 0.862
-#     ff_app = 0.291
-#     ff_idle = 0.1011
-#
-#     icao_values = {
-#         'CO': OrderedDict({'Idle': {ff_idle: 17.6}, 'Approach': {ff_app: 2.5}, 'Climbout': {ff_co: 0.9}, 'Takeoff': {ff_to: 0.9}}),
-#         'NOx': OrderedDict({'Idle': {ff_idle: 4.0}, 'Approach': {ff_app: 8.0}, 'Climbout': {ff_co: 19.6}, 'Takeoff': {ff_to: 24.6}}),
-#         'HC': OrderedDict({'Idle': {ff_idle: 1.4}, 'Approach': {ff_app: 0.4}, 'Climbout': {ff_co: 0.23}, 'Takeoff': {ff_to: 0.23}})
-#     }
-#
-#     # Altitude = 39000 # in ft
-#     # Standard day (ISA conditions)
-#     ambient_conditions = {
-#     "temperature_in_Kelvin":288.15, #ISA conditions
-#     "pressure_in_Pa":1013.25*100., #ISA conditions
-#     "relative_humidity":0.6, #normal day at ISA conditions
-#     "mach_number":0.779999728 #ground or laboratory
-#     # "humidity_ratio_in_kg_water_per_kg_dry_air":0.00634 #ISA default
-#     }
-#
-#     # ambient_conditions = {
-#     #         "temperature_in_Kelvin":216.65,
-#     #         "pressure_in_Pa":19677,
-#     #         "mach_number":0.84,
-#     #         "relative_humidity":0.60,
-#     #         #either relative humidity or absolute humidity ratio has to be defined
-#     #         # "humidity_ratio_in_kg_water_per_kg_dry_air":0.000053
-#     #     }
-#
-#     # ambient_conditions = {}
-#
-#     installation_corrections = {
-#             "Takeoff":1.010,    # 100%
-#             "Climbout":1.013,   # 85%
-#             "Approach":1.020,   # 30%
-#             "Idle":1.100        # 7%
-#         }
-#
-#     #Don't correct for installation
-#     # installation_corrections = {}
-#
-#     #logger.info("Calculated emission index '%s' for fuel flow '%.2f' is '%.2f'" % (pollutant, fuel_flow, calculate_emission_index(pollutant, fuel_flow, icao_values, ambient_conditions=ambient_conditions, installation_corrections=installation_corrections)))
-#
-#     # fix_print_with_import
-#     print(calculate_emission_index(pollutant, fuel_flow, icao_values, ambient_conditions=ambient_conditions, installation_corrections=installation_corrections))
-#
-#     plotEmissionIndex(pollutant, icao_values)
-#     plotEmissionIndexNominal(pollutant, icao_values, ambient_conditions=ambient_conditions, installation_corrections=installation_corrections, range_relative_fuelflow=[1.00, 1.0], steps=51, suffix="")

@@ -16,11 +16,10 @@ class Gate:
             val = {}
         self._id = str(val["gate_id"]) if "gate_id" in val else None
         self._type = str(val["gate_type"]) if "gate_type" in val else None
-        self._height = (
-            float(val["gate_height"])
-            if "gate_height" in val and val["gate_height"] is not None
-            else 0.0
-        )
+        # Locale-tolerant float parsing for DB-sourced values (GitHub #159).
+        from open_alaqs.core.tools.conversion import convertToFloat as _ctf
+
+        self._height = _ctf(val.get("gate_height"), default=0.0)
 
         self._geometry_text = str(val["geometry"]) if "geometry" in val else ""
 
@@ -269,14 +268,20 @@ class DefaultGateEmissionProfile:
         # self._departure = float(val["departure"]) if "departure" in val else 0.
         # self._arrival = float(val["arrival"]) if "arrival" in val else 0.
         self._op_type = str(val["op_type"]) if "op_type" in val else None
-        self._time = float(val["time"]) if "time" in val else 0.0
+        # Locale-tolerant float parsing for DB-sourced values (GitHub #159).
+        from open_alaqs.core.tools.conversion import convertToFloat as _ctf
+
+        self._time = _ctf(val.get("time"), default=0.0) if "time" in val else 0.0
 
         initValues = {}
         defaultValues = {}
         suffix = "_kg_hour"
         for key_ in ["co", "hc", "nox", "sox", "pm10"]:
             if key_ in val:
-                initValues[key_ + suffix] = float(val[key_]) / 1000.0
+                from open_alaqs.core.tools.conversion import convertToFloat as _ctf
+
+                _v = _ctf(val[key_], default=0.0)
+                initValues[key_ + suffix] = _v / 1000.0
                 defaultValues[key_ + suffix] = 0.0
 
         self._emissionIndex = EmissionIndex(initValues, defaultValues=defaultValues)

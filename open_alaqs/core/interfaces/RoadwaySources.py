@@ -7,6 +7,7 @@ from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.interfaces.Store import Store
 from open_alaqs.core.tools import spatial
+from open_alaqs.core.tools.conversion import convertToFloat as _ctf
 from open_alaqs.core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
@@ -20,10 +21,10 @@ class RoadwaySources(Source):
 
         self._id = str(val["roadway_id"]) if "roadway_id" in val else None
         self._scenario = str(val.get("scenario", ""))
-        self._vehicle_year = float(val.get("vehicle_year", 0))
+        self._vehicle_year = _ctf(val.get("vehicle_year", 0), default=0.0)
         _distance = val.get("distance", 0)
         self._distance = 0.0 if _distance is None else float(_distance)
-        self._speed = float(val.get("speed", 0))
+        self._speed = _ctf(val.get("speed", 0), default=0.0)
 
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
@@ -42,7 +43,7 @@ class RoadwaySources(Source):
             "p2_gm_km",
         ]:
             if key_ in val:
-                init_values[key_] = float(val[key_])
+                init_values[key_] = _ctf(val[key_], default=0.0)
                 default_values[key_] = 0.0
 
         self._emissionIndex = EmissionIndex(init_values, default_values)

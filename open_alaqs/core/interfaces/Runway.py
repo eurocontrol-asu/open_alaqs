@@ -25,16 +25,6 @@ class Runway:
         self._capacity = (
             int(val["capacity"]) if val.get("capacity", None) is not None else 0
         )
-        self._max_queue_speed = (
-            float(val["max_queue_speed"])
-            if val.get("max_queue_speed", None) is not None
-            else 0.0
-        )
-        self._peak_queue_time = (
-            float(val["peak_queue_time"])
-            if val.get("peak_queue_time", None) is not None
-            else 0.0
-        )
 
         self._height = 0.0
         self._geometry_text = (
@@ -86,18 +76,6 @@ class Runway:
     def setCapacity(self, val):
         self._capacity = val
 
-    def getQueueSpeed(self):
-        return self._max_queue_speed
-
-    def setQueueSpeed(self, val):
-        self._max_queue_speed = val
-
-    def getPeakQueueTime(self):
-        return self._peak_queue_time
-
-    def setPeakQueueTime(self, val):
-        self._peak_queue_time = val
-
     def getGeometryText(self):
         return self._geometry_text
 
@@ -111,8 +89,6 @@ class Runway:
         val = "\n Runway with id '%s'" % (self.getName())
         val += "\n\t Touchdown offset: %i" % (self.getTouchdownOffset())
         val += "\n\t Capacity: %i" % (self.getCapacity())
-        val += "\n\t Queue speed: %i" % (self.getQueueSpeed())
-        val += "\n\t Peak queue time: %i" % (self.getPeakQueueTime())
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 
@@ -176,8 +152,6 @@ class RunwayDatabase(SQLSerializable, metaclass=Singleton):
                     ("runway_id", "TEXT"),
                     ("capacity", "INT"),
                     ("touchdown", "INT"),
-                    ("max_queue_speed", "DECIMAL"),
-                    ("peak_queue_time", "DECIMAL"),
                     ("instudy", "DECIMAL"),
                 ]
             )

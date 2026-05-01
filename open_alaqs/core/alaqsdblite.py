@@ -513,7 +513,7 @@ def get_closest_runway_endpoint(longitude, latitude):
     runway_x = res["x"]
     runway_y = res["y"]
     logger.info(
-        f"Runway with the closest endpoint: {runway_name} (oid:{runway_oid}), endpoint ({round(res["dist"], 2)} m.):({runway_x}, {runway_y})/({runway_lon}, {runway_lat}), input point: ({longitude}, {latitude})"
+        f"Runway with the closest endpoint: {runway_name} (oid:{runway_oid}), endpoint ({round(res['dist'], 2)} m.):({runway_x}, {runway_y})/({runway_lon}, {runway_lat}), input point: ({longitude}, {latitude})"
     )
     return runway_name, runway_lon, runway_lat
 
@@ -970,7 +970,7 @@ def import_ads_b_data(ads_b_data: list, inventory_path: str) -> bool:
         inventory_path (str): Path of the Emissions Inventory DB.
 
     Returns:
-        result (bool): Whether the ADS-B data were successfully imported or not.
+        result (bool): Whether the ADS-B data was successfully imported or not.
     """
     if not ads_b_data:
         return False
@@ -992,4 +992,20 @@ def import_ads_b_data(ads_b_data: list, inventory_path: str) -> bool:
     msg = f"[+] ADS-B data imported into default_aircraft_profiles ({n_rows} rows)"
     conn.close()
     logger.info(msg)
+
+    # Reset AircraftTrajectory Singletons so the newly imported profiles are
+    # visible on next access. Without this, profiles imported after the Singletons
+    # were first initialised remain invisible for the rest of the session.
+    try:
+        from open_alaqs.core.interfaces.AircraftTrajectory import (
+            AircraftTrajectoryDatabase,
+            AircraftTrajectoryStore,
+        )
+
+        AircraftTrajectoryDatabase.instance = None
+        AircraftTrajectoryStore.instance = None
+        logger.debug("AircraftTrajectory Singletons reset after ADS-B import.")
+    except Exception as _e:
+        logger.warning("Could not reset AircraftTrajectory Singletons: %s", _e)
+
     return True

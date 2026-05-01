@@ -1,5 +1,0 @@
-<RCC>
-  <qresource prefix="logo">
-    <file>ui/eurocontrol_logo.png</file>
-  </qresource>
-</RCC>

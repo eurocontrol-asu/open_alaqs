@@ -81,7 +81,6 @@ def aggregate_emissions(emissions_data: dict) -> dict:
         "p1_kg": 0.0,
         "p2_kg": 0.0,
         "pm10_organic_kg": 0.0,
-        "pm10_prefoa3_kg": 0.0,
         "pm10_nonvol_kg": 0.0,
         "pm10_sul_kg": 0.0,
     }
@@ -108,7 +107,6 @@ def load_expected_totals_from_csv(csv_path: str) -> dict:
         "p1_kg",
         "p2_kg",
         "pm10_organic_kg",
-        "pm10_prefoa3_kg",
         "pm10_nonvol_kg",
         "pm10_sul_kg",
     ]
@@ -130,7 +128,6 @@ def load_expected_from_csv_single_row(csv_path: str, row_index: int = 0) -> dict
         "p1_kg",
         "p2_kg",
         "pm10_organic_kg",
-        "pm10_prefoa3_kg",
         "pm10_nonvol_kg",
         "pm10_sul_kg",
     ]

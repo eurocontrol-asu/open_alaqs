@@ -28,21 +28,11 @@ def calculate_fuel_flow_from_power_setting(power_setting: float, icao_eedb: dict
         x2 = 0.30
         x3 = 0.85
 
-        logger.warning(
-            "EXPERIMENTAL support for thrust settings between 0% and"
-            f" 7%. The requested power setting is {power_setting}"
-        )
-
     elif 0.07 <= power_setting < 0.60:
         # based on the 7 per cent, 30 per cent and 85 per cent thrust
         x1 = 0.07
         x2 = 0.30
         x3 = 0.85
-
-        logger.warning(
-            "EXPERIMENTAL support for thrust settings between 7% and"
-            f" 60%. The requested power setting is {power_setting}"
-        )
 
     elif 0.60 <= power_setting <= 0.85:
         # based on the 7 per cent, 30 per cent and 85 per cent thrust
@@ -87,6 +77,13 @@ def calculate_fuel_flow_from_power_setting(power_setting: float, icao_eedb: dict
     max_rated_t = icao_eedb[1.0]
 
     fuel_flow_in_kg_s = _y * max_rated_t  # in kg/s
+
+    # Engines cannot run below idle (7% thrust).  For power settings below
+    # 0.07 the parabola extrapolates downward past the TX breakpoint, giving
+    # physically unrealistic sub-idle fuel flows.  Clamp at the TX (idle)
+    # fuel flow so that any power setting < 7% is treated as idle.
+    if power_setting < 0.07:
+        fuel_flow_in_kg_s = max(fuel_flow_in_kg_s, icao_eedb[0.07])
 
     return max(0.0, fuel_flow_in_kg_s)
 

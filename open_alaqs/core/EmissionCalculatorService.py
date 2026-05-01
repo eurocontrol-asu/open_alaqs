@@ -24,6 +24,33 @@ class EmissionCalculationConfig:
     # Required calculation parameters
     pollutant: str  # CO2, CO, HC, NOx, SOx, PM10
     method: str = "bymode"  # bymode, BFFM2
+    # Fuel-flow interpolation method used inside BFFM2.
+    #   "twin_quadratic"  — ALAQS parabolic fit (default, backward-compatible)
+    #   "linear"   — ICAO/CAEP14 piecewise-linear between EEDB breakpoints
+
+    # MEEM version selector — controls which spec is used for nvPM EI.
+    #   "v1" (default): ICAO CAEP/13-MDG, interpolates on % max thrust.
+    #   "v2":            ICAO CAEP/13-WG3, interpolates on BFFM2-adjusted FF.
+    # V2 is CAEP14 v12's preferred method but is NOT compatible with V1 at LTO
+    # under real ambient conditions (~16% gap at the CAEP14 reference case).
+    # Keeping V1 as default preserves reproducibility of historical studies.
+    meem_version: str = "v1"
+
+    # BFFM2 fuel-flow source — what FF to use when the segment has no explicit
+    # fuel_flow_kgm (built-in ANP-derived profiles).
+    #   "trajectory" (default): derive FF from the segment's power_setting via
+    #       twin_quadratic_fit_method. Uses the ANP sub-mode thrust variation
+    #       (ratio of THR_SET in lb to Max Sea Level Static Thrust in lb per
+    #       Aircraft.csv). BFFM2 EIs are then log-log interpolated on the EEDB
+    #       curve at that FF. Matches the CAEP14 v14 BFFM2 workflow.
+    #   "mode_anchor":        use the EEDB anchor FF for the segment's mode
+    #       (TX→0.091, AP→0.244, CL→0.71, TO→0.861 kg/s/eng for LEAP-1A).
+    #       Disables sub-mode resolution but still applies BFFM2 atmospheric
+    #       and humidity corrections. Matches the CAEP14 v14 LTO-mode workflow
+    #       with ambient corrections applied.
+    # Only affects BFFM2; has no effect when method == "bymode" or when an
+    # explicit fuel_flow_kgm is supplied by the trajectory.
+    bffm2_ff_source: str = "trajectory"
 
     # Optional source filtering
     source_type: str = "all"
@@ -247,6 +274,8 @@ class EmissionCalculatorService:
                 module_name,
                 {
                     "method": config.method,
+                    "meem_version": config.meem_version,
+                    "bffm2_ff_source": config.bffm2_ff_source,
                     "should_apply_nox_corrections": config.should_apply_nox_corrections,
                     "source_dynamics": config.source_dynamics,
                     "reference_altitude": reference_altitude,

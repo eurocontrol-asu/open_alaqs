@@ -38,6 +38,14 @@ logger = get_logger(__name__)
 
 
 class ModuleRegistry(metaclass=Singleton):
+    # Module registries are populated at import time (see the source_module_registry.register(...)
+    # calls at the bottom of this module). They must survive Singleton.reset_all(), which is called
+    # by EmissionCalculation.__init__ when the user opens a different .alaqs database in the same
+    # QGIS Python session. Without this flag, the registry instance is wiped, every registered
+    # module is lost, and every subsequent emission calculation silently produces zero output
+    # because EmissionCalculatorService finds no modules to dispatch to.
+    _singleton_persistent = True
+
     ModuleType = TypeVar("ModuleType")
     module_class = object
 

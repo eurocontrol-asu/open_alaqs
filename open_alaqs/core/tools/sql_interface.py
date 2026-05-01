@@ -24,6 +24,12 @@ def connect(database_path: str) -> sqlite.Connection:
         conn = spatialite_connect(database_path)
         # always return bytestrings
         conn.text_factory = str
+        # Read-optimisation pragmas: larger page cache, memory-mapped I/O, and
+        # in-memory temp storage.  These are session-scoped and require no
+        # schema change.  They are most effective on cold loads of large studies.
+        conn.execute("PRAGMA cache_size = -65536")  # 64 MB page cache
+        conn.execute("PRAGMA mmap_size = 268435456")  # 256 MB memory-mapped I/O
+        conn.execute("PRAGMA temp_store = MEMORY")
         return conn
     except Exception as e:
         msg = "Connection could not be established: %s" % e
@@ -138,6 +144,9 @@ class get_db_connection:
 
     def __enter__(self) -> sqlite.Connection:
         self.conn = spatialite_connect(self.sqlite_filename)
+        self.conn.execute("PRAGMA cache_size = -65536")
+        self.conn.execute("PRAGMA mmap_size = 268435456")
+        self.conn.execute("PRAGMA temp_store = MEMORY")
 
         return self.conn
 

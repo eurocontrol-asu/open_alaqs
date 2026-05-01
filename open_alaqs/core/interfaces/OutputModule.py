@@ -81,11 +81,17 @@ class GridOutputModule(OutputModule):
     ) -> gpd.GeoDataFrame:
 
         if emission.getGeometryText() is None:
-            logger.error(
-                "Did not find geometry for '%s'. Skipping an emission of source '%s'",
-                str(emission),
-                str(source.getName()),
-            )
+            # Zero-valued placeholders are synthesised by EmissionCalculation for empty
+            # periods (hours with no movements) and for source modules that yield no
+            # emissions. They are intentional and carry no data; skipping them silently
+            # is correct. Only log as an error if a non-zero emission somehow reaches
+            # this point without geometry — that would indicate a real data-flow bug.
+            if not emission.isZero():
+                logger.error(
+                    "Did not find geometry for '%s'. Skipping an emission of source '%s'",
+                    str(emission),
+                    str(source.getName()),
+                )
             return grid_df
 
         # ensure geometry validity, otherwise the intersects operations might fail. Ideally the invalid geometries should be prevented.

@@ -11,6 +11,31 @@ from open_alaqs.core.tools.Singleton import Singleton
 logger = get_logger(__name__)
 
 
+# Single source of truth for the meteorological CSV column schema. Used both
+# by AmbientCondition.initAmbientCondition (load-time validation/parsing) and
+# by openalaqsdialog.OpenAlaqsInventory.examine_met_file (file-picker
+# validation in the Generate Emission Inventory dialog). Keeping the two
+# call sites pinned to one constant prevents drift -- a previous version
+# had `RelativeHumidity(%)` and `SeaLevelPressure(mb)` hardcoded in the GUI
+# validator while the loader expected `(0-1)` and `(Pa)`, causing a
+# headers-do-not-match popup on every CSV that satisfied the loader.
+#
+# Map: CSV column name (with units) -> internal field name passed to
+# AmbientCondition.__init__ via ambientcondition_dict.
+METEO_CSV_HEADERS = {
+    "Scenario": "Scenario",
+    "DateTime(YYYY-mm-dd hh:mm:ss)": "DateTime",
+    "Temperature(K)": "Temperature",
+    "Humidity(kg_water/kg_dry_air)": "Humidity",
+    "RelativeHumidity(0-1)": "RelativeHumidity",
+    "SeaLevelPressure(Pa)": "SeaLevelPressure",
+    "WindSpeed(m/s)": "WindSpeed",
+    "WindDirection(degrees)": "WindDirection",
+    "ObukhovLength(m)": "ObukhovLength",
+    "MixingHeight(m)": "MixingHeight",
+}
+
+
 class AmbientCondition:
     def __init__(self, val=None):
         if val is None:
@@ -20,7 +45,7 @@ class AmbientCondition:
         self._date = (
             conversion.convertTimeToSeconds(val["DateTime"])
             if "DateTime" in val
-            else ""
+            else 0.0
         )
         # defaults are ISA conditions
         self._temperature_in_K = (
@@ -188,18 +213,7 @@ class AmbientConditionStore(Store, metaclass=Singleton):
         if init_csv_path:
             csv = read_csv_to_dict(init_csv_path)
 
-            headers_ = {
-                "Scenario": "Scenario",
-                "DateTime(YYYY-mm-dd hh:mm:ss)": "DateTime",
-                "Temperature(K)": "Temperature",
-                "Humidity(kg_water/kg_dry_air)": "Humidity",
-                "RelativeHumidity(%)": "RelativeHumidity",
-                "SeaLevelPressure(mb)": "SeaLevelPressure",
-                "WindSpeed(m/s)": "WindSpeed",
-                "WindDirection(degrees)": "WindDirection",
-                "ObukhovLength(m)": "ObukhovLength",
-                "MixingHeight(m)": "MixingHeight",
-            }
+            headers_ = METEO_CSV_HEADERS
 
             # check if all headers are found
             if not sorted(csv.keys()) == sorted(headers_.keys()):

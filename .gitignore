@@ -2,7 +2,13 @@ __pycache__/
 *.log
 .tool-versions
 .vscode/
-example/
 Pipfile*
 .idea/
 debugvs.txt
+.pytest_cache/
+
+# QGIS auto-generated style databases (see scripts in repo root).
+# These get written by QGIS when interacting with layer styles and
+# should never be committed.
+*_styles.db
+symbology-style.db

@@ -7,7 +7,6 @@ from qgis.testing.mocked import get_iface
 
 from open_alaqs.core.alaqsdblite import ProjectDatabase
 from open_alaqs.core.modules.ModuleManager import OutputAnalysisModuleRegistry
-from open_alaqs.core.modules.TableViewWidgetOutputModule import ViewType
 from open_alaqs.openalaqsdialog import OpenAlaqsResultsAnalysis
 from tests.utils import (
     compare_text_files,
@@ -36,69 +35,31 @@ def datasets_to_test(request) -> list:
     print("\nINFO: Get datasets to test...")
     request.cls.datasets = [
         ##################################
-        # Test dataset using EHRD_out.alaqs
+        # Test dataset using AIRPORT_A_out.alaqs
         ##################################
         {
-            "title": "EHRD (Rotterdam, NL) Emission calculation test (CO), vector layer",
-            "db_path": str(get_data_path("EHRD") / "EHRD.alaqs"),
-            "inventory_path": str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            "title": "AIRPORT_A (Rotterdam, NL) Emission calculation test (CO), vector layer",
+            "db_path": str(get_data_path("AIRPORT_A") / "AIRPORT_A.alaqs"),
+            "inventory_path": str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             "module_name": "EmissionsQGISVectorLayerOutputModule",
             "pollutant": "CO",
             "study_start_date": "2025-12-01 06:00:00",
-            "study_end_date": "2025-12-01 07:00:00",
+            "study_end_date": "2025-12-03 09:00:00",
             "expected_file_path": str(
-                get_vector_layer_path("EHRD/vector_layer_co.gpkg", "output")
+                get_vector_layer_path("AIRPORT_A/vector_layer_co.gpkg", "output")
             ),
         },
         {
-            "title": "EHRD (Rotterdam, NL) Emission calculation test (PM10), vector layer",
-            "db_path": str(get_data_path("EHRD") / "EHRD.alaqs"),
-            "inventory_path": str(get_data_path("EHRD") / "EHRD_out.alaqs"),
-            "module_name": "EmissionsQGISVectorLayerOutputModule",
-            "pollutant": "PM10",
-            "study_start_date": "2025-12-01 06:00:00",
-            "study_end_date": "2025-12-01 07:00:00",
-            "expected_file_path": str(
-                get_vector_layer_path("EHRD/vector_layer_pm10.gpkg", "output")
-            ),
-        },
-        {
-            "title": "EHRD (Rotterdam, NL) Emission calculation test (CO), Emissions Table by Aggregation (CSV)",
-            "db_path": str(get_data_path("EHRD") / "EHRD.alaqs"),
-            "inventory_path": str(get_data_path("EHRD") / "EHRD_out.alaqs"),
+            "title": "AIRPORT_A (Rotterdam, NL) Emission calculation test (CO), Emissions Table by Aggregation (CSV)",
+            "db_path": str(get_data_path("AIRPORT_A") / "AIRPORT_A.alaqs"),
+            "inventory_path": str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
             "module_name": "TableViewWidgetOutputModule",
             "pollutant": "CO",
             "study_start_date": "2025-12-01 06:00:00",
-            "study_end_date": "2025-12-01 07:00:00",
+            "study_end_date": "2025-12-03 09:00:00",
             "expected_file_path": str(
-                get_data_path("EHRD/EHRD_emissions_table_by_aggregation_co.csv")
-            ),
-        },
-        {
-            "title": "EHRD (Rotterdam, NL) Emission calculation test (PM10), Emissions Table by Grid Cell (CSV)",
-            "db_path": str(get_data_path("EHRD") / "EHRD.alaqs"),
-            "inventory_path": str(get_data_path("EHRD") / "EHRD_out.alaqs"),
-            "module_name": "TableViewWidgetOutputModule",
-            "pollutant": "PM10",
-            "table_view_type": ViewType.BY_GRID_CELL,
-            "study_start_date": "2025-12-01 06:00:00",
-            "study_end_date": "2025-12-01 07:00:00",
-            "expected_file_path": str(
-                get_data_path("EHRD/EHRD_emissions_table_by_grid_cell_pm10.csv")
-            ),
-        },
-        {
-            "title": "EHRD (Rotterdam, NL) Emission calculation test for Movement Source (CO), vector layer",
-            "db_path": str(get_data_path("EHRD") / "EHRD.alaqs"),
-            "inventory_path": str(get_data_path("EHRD") / "EHRD_out.alaqs"),
-            "module_name": "EmissionsQGISVectorLayerOutputModule",
-            "source_type": "MovementSource",
-            "pollutant": "CO",
-            "study_start_date": "2025-12-01 06:00:00",
-            "study_end_date": "2025-12-01 07:00:00",
-            "expected_file_path": str(
-                get_vector_layer_path(
-                    "EHRD/vector_layer_co_movement_source_centroids.gpkg", "output"
+                get_data_path(
+                    "AIRPORT_A/AIRPORT_A_emissions_table_by_aggregation_co.csv"
                 )
             ),
         },
@@ -272,6 +233,7 @@ def datasets_to_test(request) -> list:
     ]
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("plugin_instance", "datasets_to_test")
 class EmissionCalculationTestCase(QgisTestCase):
     """

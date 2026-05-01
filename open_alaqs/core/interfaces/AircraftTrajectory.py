@@ -231,7 +231,7 @@ class TrajectoryPoint(object):
             val_["course"] = val.getCourse()
             val = val_
 
-        self._id = int(val["id"]) if "id" in val else None
+        self._id = int(val["id"]) if ("id" in val and val["id"] is not None) else None
         self._geometry_text = (
             str(val["geometry_text"])
             if "geometry_text" in val and val["geometry_text"]

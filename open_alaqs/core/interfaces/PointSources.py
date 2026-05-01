@@ -7,6 +7,7 @@ from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.interfaces.Store import Store
 from open_alaqs.core.tools import spatial
+from open_alaqs.core.tools.conversion import convertToFloat as _ctf
 from open_alaqs.core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)
@@ -22,10 +23,10 @@ class PointSources(Source):
         self._category = str(val.get("category", ""))
         self._type = str(val.get("type", ""))
         self._substance = str(val.get("substance", ""))
-        self._temperature = float(val["temperature"]) if "temperature" in val else None
-        self._diameter = float(val["diameter"]) if "diameter" in val else None
-        self._velocity = float(val["velocity"]) if "velocity" in val else None
-        self._ops_year = float(val.get("ops_year", 0))
+        self._temperature = _ctf(val.get("temperature"), default=None)
+        self._diameter = _ctf(val.get("diameter"), default=None)
+        self._velocity = _ctf(val.get("velocity"), default=None)
+        self._ops_year = _ctf(val.get("ops_year", 0), default=0.0)
 
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
@@ -44,7 +45,7 @@ class PointSources(Source):
             "p2_kg_k",
         ]:
             if key_ in val:
-                init_values[key_] = float(val[key_])
+                init_values[key_] = _ctf(val[key_], default=0.0)
                 default_values[key_] = 0.0
 
         self._emissionIndex = EmissionIndex(init_values, default_values)

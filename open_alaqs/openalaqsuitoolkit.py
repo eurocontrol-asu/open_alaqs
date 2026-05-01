@@ -67,7 +67,16 @@ def validate_field(ui_element, var_type):
         elif var_type == "int":
             value = int(value)
         elif var_type == "float":
-            value = float(value)
+            # Locale-tolerant float parsing (GitHub #159). Qt can display
+            # DB-stored "30.3" as "30,3" under European locales; bare
+            # float() would reject that. convertToFloat handles both
+            # conventions and returns None on genuine failure.
+            from open_alaqs.core.tools.conversion import convertToFloat
+
+            converted = convertToFloat(value, default=None)
+            if converted is None:
+                raise ValueError(f"cannot parse {value!r} as float")
+            value = converted
 
         color_ui_background(ui_element, None)
 
@@ -132,8 +141,22 @@ def load_spatialite_layer(
     tree_root.addLayer(layer)
 
 
-def load_basemap_layers(project: QgsProject = QgsProject.instance()) -> None:
-    """Loads a preset of online XYZ basemap layers to the current project. Does nothing if "Basemaps" layer group already exists in the layer tree."""
+def load_basemap_layers(project: Optional[QgsProject] = None) -> None:
+    """Loads a preset of online XYZ basemap layers to the current project. Does nothing if "Basemaps" layer group already exists in the layer tree.
+
+    Note on `project=None` + internal resolution: the previous signature
+    was `project: QgsProject = QgsProject.instance()` which evaluated the
+    singleton at function-definition time (i.e. at module import).
+    Python evaluates default arguments once, at def time, so importing
+    this module before `QgsApplication.initQgis()` has completed caused
+    the incomplete singleton to be captured. A side effect was that
+    QGIS's WKT-to-authid resolver could no longer map CRS WKTs read from
+    GPKG files to their EPSG codes — a confusing late-binding corruption
+    that surfaced in test_emission_calculation's CRS comparison. Using
+    `None` as the sentinel and resolving inside the body avoids that.
+    """
+    if project is None:
+        project = QgsProject.instance()
     xyz_layer_definitions = {
         "Google Satellite": "https://mt1.google.com/vt/lyrs%3Ds%26x%3D{x}%26y%3D{y}%26z%3D{z}",
         "Google Maps": "https://mt1.google.com/vt/lyrs%3Dm%26x%3D{x}%26y%3D{y}%26z%3D{z}",

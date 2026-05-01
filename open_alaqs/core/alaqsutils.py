@@ -68,39 +68,37 @@ def dict_movement(movement_data):
     movement_dict = dict()
     movement_dict["runway_time"] = conversion.convertStringToTime(movement_data[0])
     movement_dict["block_time"] = conversion.convertStringToTime(movement_data[1])
-    movement_dict["aircraft_registration"] = str(movement_data[2])
-    movement_dict["aircraft"] = str(movement_data[3])
-    movement_dict["gate"] = str(movement_data[4])
-    movement_dict["departure_arrival"] = str(movement_data[5])
-    movement_dict["runway"] = str(movement_data[6])
-    movement_dict["engine_name"] = str(movement_data[7])
-    movement_dict["profile_id"] = str(movement_data[8])
-    movement_dict["track_id"] = str(movement_data[9])
-    movement_dict["taxi_route"] = str(movement_data[10])
-    movement_dict["tow_ratio"] = float(movement_data[11]) if movement_data[11] else None
-    movement_dict["apu_code"] = int(movement_data[12]) if movement_data[12] else None
+    movement_dict["aircraft"] = str(movement_data[2])
+    movement_dict["gate"] = str(movement_data[3])
+    movement_dict["departure_arrival"] = str(movement_data[4])
+    movement_dict["runway"] = str(movement_data[5])
+    movement_dict["engine_name"] = str(movement_data[6])
+    movement_dict["profile_id"] = str(movement_data[7])
+    movement_dict["track_id"] = str(movement_data[8])
+    movement_dict["taxi_route"] = str(movement_data[9])
+    movement_dict["tow_ratio"] = float(movement_data[10]) if movement_data[10] else None
+    movement_dict["apu_code"] = int(movement_data[11]) if movement_data[11] else None
     movement_dict["taxi_engine_count"] = (
-        float(movement_data[13]) if movement_data[13] else None
+        float(movement_data[12]) if movement_data[12] else None
     )
     movement_dict["set_time_of_main_engine_start_after_block_off_in_s"] = (
-        float(movement_data[14]) if movement_data[14] else None
+        float(movement_data[13]) if movement_data[13] else None
     )
     movement_dict["set_time_of_main_engine_start_before_takeoff_in_s"] = (
-        float(movement_data[15]) if movement_data[15] else None
+        float(movement_data[14]) if movement_data[14] else None
     )
     movement_dict["set_time_of_main_engine_off_after_runway_exit_in_s"] = (
-        float(movement_data[16]) if movement_data[16] else None
+        float(movement_data[15]) if movement_data[15] else None
     )
     movement_dict["engine_thrust_level_for_taxiing"] = (
-        float(movement_data[17]) if movement_data[17] else None
+        float(movement_data[16]) if movement_data[16] else None
     )
     movement_dict["taxi_fuel_ratio"] = (
-        float(movement_data[18]) if movement_data[18] else None
+        float(movement_data[17]) if movement_data[17] else None
     )
     movement_dict["number_of_stop_and_gos"] = (
-        float(movement_data[19]) if movement_data[19] else None
+        float(movement_data[18]) if movement_data[18] else None
     )
-    movement_dict["domestic"] = str(movement_data[20])
 
     # for key_ in movement_dict:
     for key_ in [

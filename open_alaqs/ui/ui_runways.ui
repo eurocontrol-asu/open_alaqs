@@ -132,34 +132,6 @@
      </property>
     </widget>
    </item>
-   <item row="6" column="0">
-    <widget class="QLabel" name="label_3">
-     <property name="text">
-      <string>Max Queue Speed (km/h)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="1">
-    <widget class="QLineEdit" name="max_queue_speed">
-     <property name="toolTip">
-      <string>Enter the speed that the aircraft travels when queuing</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="0">
-    <widget class="QLabel" name="label_4">
-     <property name="text">
-      <string>Peak Queue Time (mins)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="1">
-    <widget class="QLineEdit" name="peak_queue_time">
-     <property name="toolTip">
-      <string>Enter the time spent queuing to use this runway</string>
-     </property>
-    </widget>
-   </item>
    <item row="9" column="1">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
@@ -193,8 +165,6 @@
   <tabstop>runway_id</tabstop>
   <tabstop>capacity</tabstop>
   <tabstop>touchdown</tabstop>
-  <tabstop>max_queue_speed</tabstop>
-  <tabstop>peak_queue_time</tabstop>
  </tabstops>
  <resources/>
  <connections>

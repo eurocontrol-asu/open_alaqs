@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pandas as pd
-import pytest
 from pandas import testing as tm
 
 from open_alaqs.core.tools.copert5_utils import (
@@ -11,9 +10,9 @@ from open_alaqs.core.tools.copert5_utils import (
     calculate_evaporation,
     ef_query,
 )
-from open_alaqs.database.generate_templates import get_engine
+from tools.template_build.generate_templates import get_engine
 
-TEMPLATES_DIR = Path(__file__).parents[1] / "core/templates"
+TEMPLATES_DIR = Path(__file__).parents[1] / "open_alaqs/core/templates"
 
 VEHICLE_CATEGORIES = {
     "bus": "Buses",
@@ -24,7 +23,6 @@ VEHICLE_CATEGORIES = {
 }
 
 
-@pytest.mark.skip(reason="Test is failing for OpenALAQS 4.0.")
 def test_query():
     """
     Check if the query is built correctly
@@ -48,7 +46,6 @@ def test_query():
     assert data.shape == (1255, 7)
 
 
-@pytest.mark.skip(reason="Test is failing for OpenALAQS 4.0.")
 def test_roadway_calculation():
     """
     Check if the calculation is performed correctly
@@ -97,7 +94,7 @@ def test_roadway_calculation():
     )["category_short"]
 
     # Calculate the emissions
-    emissions = calculate_emissions(fleet, efs)
+    emissions = calculate_emissions(fleet, efs, airport_temperature=15)
 
     # Calculate the average emission factors
     emission_factors = average_emission_factors(emissions)
@@ -120,7 +117,6 @@ def test_roadway_calculation():
     tm.assert_series_equal(emission_factors, emission_factor_refs)
 
 
-@pytest.mark.skip(reason="Test is failing for OpenALAQS 4.0.")
 def test_parking_calculation():
     """
     Check if the calculation is performed correctly
@@ -175,7 +171,7 @@ def test_parking_calculation():
     )["category_short"]
 
     # Calculate the emissions
-    emissions = calculate_emissions(fleet, efs)
+    emissions = calculate_emissions(fleet, efs, airport_temperature=15)
 
     # Calculate the evaporation
     evaporation = calculate_evaporation(fleet, efs)
