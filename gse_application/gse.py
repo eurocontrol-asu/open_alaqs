@@ -28,7 +28,6 @@ from views.ui_main import Ui_MainWindow
 MOVEMENTS_HEADERS = [
     "runway_time",
     "block_time",
-    "aircraft_registration",
     "aircraft",
     "gate",
     "departure_arrival",
@@ -39,6 +38,7 @@ MOVEMENTS_HEADERS = [
     "taxi_route",
     "tow_ratio",
     "apu_code",
+    "gate_emissions_code",
     "taxi_engine_count",
     "set_time_of_main_engine_start_after_block_off_in_s",
     "set_time_of_main_engine_start_before_takeoff_in_s",
@@ -46,7 +46,6 @@ MOVEMENTS_HEADERS = [
     "engine_thrust_level_for_taxiing",
     "taxi_fuel_ratio",
     "number_of_stop_and_gos",
-    "domestic",
 ]
 
 

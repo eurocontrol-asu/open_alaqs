@@ -1,3 +1,4 @@
+import calendar
 import os
 import sys
 from datetime import datetime
@@ -142,6 +143,35 @@ class SourceWithTimeProfileModule(SourceModule):
 
         self.loadSources()
 
+        # Cache hours_in_year once; also pre-resolve profile objects on first
+        # use so getRelativeActivityPerHour() does attribute reads rather than
+        # store lookups on each of the 8 760 calls per source per year.
+        self._hours_in_year: int = 0  # set on first getRelativeActivityPerHour call
+        self._hours_in_year_year: int = -1  # tracks which year the cache is valid for
+        self._profile_cache: dict = {}  # (hour_name, day_name, month_name) -> (h,d,m)
+
+    def _get_profiles(self, hour_name, day_name, month_name):
+        """Return (hour_profile, day_profile, month_profile), caching by name triple."""
+        key = (hour_name, day_name, month_name)
+        if key not in self._profile_cache:
+            h = self._userHourProfileStore.getObject(hour_name)
+            if h is None:
+                raise Exception(
+                    "Could not retrieve the hourly time profile '%s'." % hour_name
+                )
+            d = self._userDayProfileStore.getObject(day_name)
+            if d is None:
+                raise Exception(
+                    "Could not retrieve the weekday time profile '%s'." % day_name
+                )
+            m = self._userMonthProfileStore.getObject(month_name)
+            if m is None:
+                raise Exception(
+                    "Could not retrieve the month time profile '%s'." % month_name
+                )
+            self._profile_cache[key] = (h, d, m)
+        return self._profile_cache[key]
+
     def getEmissionsForTimePeriod(
         self,
         start_dt: datetime,
@@ -161,7 +191,7 @@ class SourceWithTimeProfileModule(SourceModule):
         )
         emit_per_second = emit_per_hour / 60 / 60
 
-        return emit_per_second * time_period.seconds
+        return emit_per_second * time_period.total_seconds()
 
     def getRelativeActivityPerHour(
         self,
@@ -171,34 +201,18 @@ class SourceWithTimeProfileModule(SourceModule):
         daily_profile_name,
         month_profile_name,
     ):
-
-        hour_profile = self._userHourProfileStore.getObject(hour_profile_name)
-        if hour_profile is None:
-            logger.error(
-                "Could not retrieve the hourly time profile '%s'." % (hour_profile_name)
-            )
-            raise Exception(
-                "Could not retrieve the hourly time profile '%s'." % (hour_profile_name)
-            )
-
-        weekday_profile = self._userDayProfileStore.getObject(daily_profile_name)
-        if weekday_profile is None:
-            raise Exception(
-                "Could not retrieve the weekday time profile '%s'."
-                % (daily_profile_name)
-            )
-
-        month_profile = self._userMonthProfileStore.getObject(month_profile_name)
-        if month_profile is None:
-            raise Exception(
-                "Could not retrieve the month time profile '%s'." % (month_profile_name)
-            )
-
+        # Refresh hours_in_year if the calendar year changes (handles multi-year
+        # runs and the leap-year boundary correctly).
         year = inventory_dt.year
-        td = datetime(year + 1, 1, 1, 0, 0, 0) - datetime(year, 1, 1, 0, 0, 0)
-        hours_in_year = int(td.total_seconds() / 60 / 60)
+        if year != self._hours_in_year_year:
+            self._hours_in_year = 8784 if calendar.isleap(year) else 8760
+            self._hours_in_year_year = year
 
-        operating_factor = float(annual_total_operating_hours) / hours_in_year
+        hour_profile, weekday_profile, month_profile = self._get_profiles(
+            hour_profile_name, daily_profile_name, month_profile_name
+        )
+
+        operating_factor = float(annual_total_operating_hours) / self._hours_in_year
         hour_factor = float(hour_profile.getHours()[inventory_dt.hour])
         weekday_factor = float(
             weekday_profile.getDays()[weekday_abbreviations[inventory_dt.weekday()]]
@@ -207,10 +221,4 @@ class SourceWithTimeProfileModule(SourceModule):
             month_profile.getMonths()[month_abbreviations[inventory_dt.month]]
         )
 
-        # debug output
-        # for x in str(inventoryTimeSeries).split("\n"):
-        #     # print "%s" % (str(x))
-        #     logger.info("%s" % (str(x)))
-
-        # Calculate the activity multiplier
         return operating_factor * hour_factor * weekday_factor * month_factor

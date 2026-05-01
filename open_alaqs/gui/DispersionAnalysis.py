@@ -62,6 +62,7 @@ def catch_errors(f):
             return f(*args, **kwargs)
         except Exception as e:
             alaqsutils.print_error(f.__name__, Exception, e)
+            raise e
 
     return wrapper
 
@@ -550,7 +551,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.VisualiseResults.setEnabled(bool(can_visualize_vector))
 
     def updateMinMaxGUI(self, db_path_=""):
-        (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path_)
+        time_start_calc_, time_end_calc_ = get_min_max_timestamps(db_path_)
         self.resetConcentrationCalculationConfiguration(
             config={
                 "start_dt_inclusive": time_start_calc_,
@@ -649,6 +650,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.updateMinMaxGUI(filename)
 
             project_database = ProjectDatabase()
+            _original_db_path = getattr(project_database, "path", None)
             project_database.path = filename
 
             study_data = alaqs.load_study_setup()
@@ -702,7 +704,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
                 time_series = self.getTimeSeries(filename)
 
-                assert len(time_series) > 1
+                if len(time_series) < 2:
+                    raise ValueError(
+                        "OpenALAQS file contains fewer than 2 time steps; "
+                        "cannot determine time interval."
+                    )
 
                 time_interval = time_series[1] - time_series[0]
 
@@ -713,6 +719,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     end_dt=end_dt,
                     time_interval=time_interval,
                 )
+
+            # Restore original database path
+            if _original_db_path is not None:
+                project_database.path = _original_db_path
 
             s = QgsSettings()
             s.setValue("OpenALAQS/last_alaqs_file_path", filename)
@@ -1073,8 +1083,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 try:
                     import csv
 
-                    with open(grid_file, "r") as f:
-                        reader = csv.DictReader(f)
+                    with open(grid_file, "r") as grid_fh:
+                        reader = csv.DictReader(grid_fh)
                         for row in reader:
                             grid_config = {
                                 "x_cells": int(row.get("x_cells", 50)),
@@ -1340,18 +1350,18 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
                 shutil.rmtree(austal_inputs_dir)
 
-            # Create the AUSTAL inputs directory
-            try:
-                os.makedirs(austal_inputs_dir, exist_ok=True)
-            except Exception as e:
-                error_msg = f"Failed to create AUSTAL inputs directory: {e}"
-                if use_alaqs:
-                    self.ui.alaqsGenerationStatusLabel.setText(error_msg)
-                    self.ui.alaqsGenerationStatusLabel.setStyleSheet(STATUS_STYLE_ERROR)
-                else:
-                    self.ui.external_files_feedback.setText(error_msg)
-                    self.ui.external_files_feedback.setStyleSheet(STATUS_STYLE_ERROR)
-                return
+        # Create the AUSTAL inputs directory (always needed, whether it existed or not)
+        try:
+            os.makedirs(austal_inputs_dir, exist_ok=True)
+        except Exception as e:
+            error_msg = f"Failed to create AUSTAL inputs directory: {e}"
+            if use_alaqs:
+                self.ui.alaqsGenerationStatusLabel.setText(error_msg)
+                self.ui.alaqsGenerationStatusLabel.setStyleSheet(STATUS_STYLE_ERROR)
+            else:
+                self.ui.external_files_feedback.setText(error_msg)
+                self.ui.external_files_feedback.setStyleSheet(STATUS_STYLE_ERROR)
+            return
 
         # Read selected time period from UI
         def _qdatetime_to_py(qdt: QtCore.QDateTime) -> datetime:
@@ -2093,7 +2103,17 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             output, err = p.communicate()
 
             if p.returncode != 0:
-                raise Austal2000RunError(output)
+                output_text = (
+                    output.decode("utf-8", errors="replace")
+                    if isinstance(output, bytes)
+                    else str(output)
+                )
+                err_text = (
+                    err.decode("utf-8", errors="replace")
+                    if isinstance(err, bytes)
+                    else str(err)
+                )
+                raise Austal2000RunError(f"{output_text}\nSTDERR: {err_text}".strip())
 
             # Update status to completed
             self.ui.executionStatusLabel.setText("Status: Completed successfully")
@@ -2488,6 +2508,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             # select output file to load - use the same path as AUSTAL uses
             concentration_path = str(self._get_austal_work_directory())
             if os.path.exists(concentration_path):
+
+                if self._conc_calculation_ is None:
+                    raise Exception(
+                        "No emission calculation loaded. Please load an OpenALAQS file first."
+                    )
 
                 if self._conc_calculation_.get3DGrid() is None:
                     raise Exception("No 3DGrid found.")

@@ -33,11 +33,13 @@ class TestGuiConfigurationValues:
     def test_capture_emission_calculation_config(self, plugin_instance):
 
         dlg = OpenAlaqsResultsAnalysis(plugin_instance.iface)
-        inventory_path = str(get_data_path("EHRD") / "EHRD_out.alaqs")  # out file path
+        inventory_path = str(
+            get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"
+        )  # out file path
 
         # Initialize database and trigger dialog setup
         project_database = ProjectDatabase()
-        project_database.path = str(get_data_path("EHRD") / "EHRD.alaqs")
+        project_database.path = str(get_data_path("AIRPORT_A") / "AIRPORT_A.alaqs")
         dlg.result_file_path_changed(inventory_path)  # Trigger UI update
         dlg.ui.result_file_path.setFilePath(inventory_path)  # Set file path in UI
 
@@ -53,6 +55,7 @@ class TestGuiConfigurationValues:
             "method",
             "should_apply_nox_corrections",
             "source_dynamics",
+            "bffm2_ff_source",
             "time_interval",
             "vertical_limit_m",
             "receptor_points",
@@ -73,7 +76,7 @@ class TestGuiConfigurationValues:
 
         # Initialize dialog with test inventory
         dlg = OpenAlaqsResultsAnalysis(plugin_instance.iface)
-        inventory_path = str(get_data_path("EHRD") / "EHRD_out.alaqs")
+        inventory_path = str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs")
         dlg.result_file_path_changed(inventory_path)
 
         # Get output modules config

@@ -1,14 +1,17 @@
 import csv
 import os
-from collections import OrderedDict
 from datetime import datetime
 from enum import Enum
 from typing import Any, Optional, Union, cast
 
+import geopandas as gpd
 import pandas as pd
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtWidgets import QTableWidgetItem
 from qgis.PyQt.uic import loadUiType
+from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
+from shapely.strtree import STRtree
+from shapely.validation import make_valid
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
@@ -17,7 +20,6 @@ from open_alaqs.core.interfaces.OutputModule import GridOutputModule
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.tools.Grid3D import Grid3D
-from open_alaqs.core.tools.Singleton import Singleton
 from open_alaqs.core.tools.sql_interface import insert_into_table
 
 Ui_TableViewDialog, _ = loadUiType(
@@ -68,6 +70,9 @@ class TableViewWidgetOutputModule(GridOutputModule):
         self._view_type: ViewType = values_dict["view_type"]
         self._grid: Grid3D = values_dict["grid"]
 
+        # Store method name so beginJob() and exported rows are self-identifying
+        self._calc_method: str = values_dict.get("method", "unknown")
+
         self.fields = self._prepare_fields()
 
         # Output rows
@@ -83,7 +88,29 @@ class TableViewWidgetOutputModule(GridOutputModule):
         )
 
     def beginJob(self):
+        super().beginJob()
+        self.rows = []  # reset between runs to prevent accumulation
         self.grid_df = self._grid.get_df_from_2d_grid_cells()
+
+        # Grid cells from `Grid3D.get_df_from_2d_grid_cells()` are now built
+        # in the local UTM CRS and tagged correctly.  Keep them as-is for
+        # intersections; emissions (which are in EPSG:3857) are reprojected
+        # to UTM below via `self._geom_transformer`.
+        utm_epsg = self._grid.getUtmEpsg()
+        self._grid_utm_epsg = utm_epsg
+
+        self._grid_df_utm = self.grid_df[["hash", "geometry"]].copy()
+        # Build an STRtree over the UTM grid cells for O(log n) spatial queries
+        # instead of the O(n) linear scan used previously.
+        self._grid_strtree = STRtree(self._grid_df_utm.geometry.values)
+
+        # Pyproj transformer reused across all _process_grid calls to avoid
+        # constructing a new one per emission.
+        from pyproj import Transformer
+
+        self._geom_transformer = Transformer.from_crs(
+            "EPSG:3857", f"EPSG:{utm_epsg}", always_xy=True
+        )
 
     def process(
         self,
@@ -101,12 +128,22 @@ class TableViewWidgetOutputModule(GridOutputModule):
         if self._view_type == ViewType.BY_AGGREGATION:
             emisisons_sums = []
             for source, emissions in result:
-                emisisons_sums.append(cast(Emission, sum(emissions)))
+                if emissions:
+                    emisisons_sums.append(cast(Emission, sum(emissions)))
+            if not emisisons_sums:
+                return
             total_emissions_sum = cast(Emission, sum(emisisons_sums))
-
-            self.rows.append(
-                self._prepare_source_row(timestamp, total_emissions_sum, None)
+            row = self._prepare_source_row(timestamp, total_emissions_sum, None)
+            # Stamp the calculation method on the aggregated row so exported
+            # CSVs are self-identifying — prevents bymode/BFFM2 confusion.
+            row["source_name"] = f"total [{getattr(self, '_calc_method', 'unknown')}]"
+            logger.debug(
+                "TableView BY_AGGREGATION: method=%s, NOx=%.4f kg, CO=%.4f kg",
+                getattr(self, "_calc_method", "unknown"),
+                row.get("nox_kg", 0),
+                row.get("co_kg", 0),
             )
+            self.rows.append(row)
         elif self._view_type == ViewType.BY_SOURCE:
             for source, emissions in result:
                 if isinstance(source, Movement):
@@ -131,6 +168,90 @@ class TableViewWidgetOutputModule(GridOutputModule):
                     self.grid_df = self._process_grid(source, emission, self.grid_df)
         else:
             raise NotImplementedError()
+
+    def _process_grid(
+        self, source: Source, emission: Emission, grid_df: gpd.GeoDataFrame
+    ) -> gpd.GeoDataFrame:
+        """
+        Accumulate emission values into the grid cells that intersect the
+        emission geometry.
+
+        Replaces the per-emission gpd.GeoDataFrame().to_crs() + linear
+        grid_df.intersects() scan with:
+          - a pyproj Transformer built once in beginJob() for CRS conversion
+          - an STRtree built once in beginJob() for O(log n) candidate selection
+          - exact intersection only on the small candidate set from the tree
+        """
+        if emission.getGeometryText() is None:
+            # See OutputModule._process_grid — zero placeholders are intentional sentinels
+            # and do not warrant an error log. Only flag a real missing-geometry bug.
+            if not emission.isZero():
+                logger.error(
+                    "Did not find geometry for '%s'. Skipping an emission of source '%s'",
+                    str(emission),
+                    str(source.getName()),
+                )
+            return grid_df
+
+        from shapely.ops import transform as shapely_transform
+
+        geom_3857 = make_valid(emission.getGeometry())
+
+        # Reproject to UTM using the pre-built transformer — no GeoDataFrame
+        # overhead, no CRS object construction per call.
+        geom_utm = make_valid(
+            shapely_transform(self._geom_transformer.transform, geom_3857)
+        )
+
+        # Query the STRtree for candidate cells (bounding-box pre-filter).
+        candidate_indices = self._grid_strtree.query(geom_utm)
+        if len(candidate_indices) == 0:
+            if (
+                not self._grid_coverage_warning_shown
+                and self._parent
+                and hasattr(self._parent, "message_bar")
+            ):
+                self._parent.message_bar.pushWarning(
+                    "Grid Coverage Warning",
+                    "Incomplete grid coverage: expand or adjust the grid to include all sources.",
+                )
+                self._grid_coverage_warning_shown = True
+            return grid_df
+
+        # Exact intersection test on the small candidate set only.
+        utm_candidates = self._grid_df_utm.iloc[candidate_indices]
+        intersecting_utm = utm_candidates[utm_candidates.geometry.intersects(geom_utm)]
+
+        if len(intersecting_utm) == 0:
+            if (
+                not self._grid_coverage_warning_shown
+                and self._parent
+                and hasattr(self._parent, "message_bar")
+            ):
+                self._parent.message_bar.pushWarning(
+                    "Grid Coverage Warning",
+                    "Incomplete grid coverage: expand or adjust the grid to include all sources.",
+                )
+                self._grid_coverage_warning_shown = True
+            return grid_df
+
+        if isinstance(geom_utm, Point):
+            factor = 1 / len(intersecting_utm)
+        elif isinstance(geom_utm, (LineString, MultiLineString)):
+            factor = intersecting_utm.intersection(geom_utm).length / geom_utm.length
+        elif isinstance(geom_utm, (Polygon, MultiPolygon)):
+            factor = intersecting_utm.intersection(geom_utm).area / geom_utm.area
+        else:
+            raise NotImplementedError(
+                "Unsupported geometry type: {}".format(type(geom_utm).__name__)
+            )
+
+        for pollutant_type in PollutantType:
+            emission_value = emission.get_value(pollutant_type, PollutantUnit.KG)
+            key = f"{pollutant_type.value}_kg"
+            grid_df.loc[intersecting_utm.index, key] += factor * emission_value
+
+        return grid_df
 
     def endJob(self) -> QtWidgets.QDialog:
         headers = list(self.fields.values())
@@ -246,7 +367,11 @@ class TableViewWidgetOutputModule(GridOutputModule):
         if not filename:
             return
 
-        with open(filename, "w") as f:
+        # newline="" is REQUIRED by the csv module to avoid double line
+        # endings on Windows (GitHub #291). Without it, Python's text-mode
+        # translates \n→\r\n while csv.writer emits \r\n, producing \r\r\n
+        # that many tools interpret as a blank line between records.
+        with open(filename, "w", newline="") as f:
             writer = csv.DictWriter(f, list(self.fields.keys()))
             writer.writeheader()
             writer.writerows(self.rows)
@@ -271,10 +396,23 @@ class TableViewWidgetOutputModule(GridOutputModule):
         if not filename:
             return
 
-        serializer = EmissionCalculationResultDatabase(
+        columns = {
+            "timestamp": "DATETIME",
+            "source_type": "TEXT",
+            "source_name": "TEXT",
+            "wkt": "TEXT",
+        }
+
+        for pollutant_type in PollutantType:
+            column_name = f"{pollutant_type.value}_{self.pollutant_unit.value}"
+            columns[column_name] = "DECIMAL"
+
+        table_name = "emission_calculation_result"
+        serializer = SQLSerializable(
             filename,
+            table_name,
+            columns,
             primary_key="timestamp",
-            pollutant_unit=self.pollutant_unit,
             # TODO OPENGIS.ch: add the geometry column
             # geometry_columns=[
             #     {
@@ -285,9 +423,9 @@ class TableViewWidgetOutputModule(GridOutputModule):
             #     },
             # ],
         )
-        serializer.recreate_table()
+        serializer.recreate_table(filename)
 
-        insert_into_table(filename, serializer.TABLE_NAME, self.rows)
+        insert_into_table(filename, table_name, self.rows)
 
         if os.path.isfile(filename):
             QtWidgets.QMessageBox.information(
@@ -295,41 +433,6 @@ class TableViewWidgetOutputModule(GridOutputModule):
                 "Export SQLite",
                 f"Results saved as SQLite file at `{filename}`",
             )
-
-
-class EmissionCalculationResultDatabase(SQLSerializable, metaclass=Singleton):
-    """
-    Class that grants access to emission calculation results in the spatialite database
-    """
-
-    TABLE_NAME = "emission_calculation_result"
-
-    def __init__(
-        self,
-        db_path_string,
-        primary_key="",
-        pollutant_unit=PollutantUnit.KG,
-    ):
-        table_columns_type_dict = OrderedDict(
-            [
-                ("timestamp", "DATETIME"),
-                ("source_type", "TEXT"),
-                ("source_name", "TEXT"),
-                ("wkt", "TEXT"),
-            ]
-        )
-
-        for pollutant_type in PollutantType:
-            column_name = f"{pollutant_type.value}_{pollutant_unit.value}"
-            table_columns_type_dict[column_name] = "DECIMAL"
-
-        SQLSerializable.__init__(
-            self,
-            db_path_string,
-            self.TABLE_NAME,
-            table_columns_type_dict,
-            primary_key,
-        )
 
 
 class EmissionsTableViewDialog(QtWidgets.QDialog):

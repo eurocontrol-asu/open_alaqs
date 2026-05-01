@@ -3,7 +3,6 @@ This class provides the emission calculation for movements.
 """
 
 import abc
-import copy
 import difflib
 from typing import Any, Optional, Tuple, TypedDict
 
@@ -56,10 +55,11 @@ class MovementEmissionCalculator(abc.ABC):
 
 class GateEmissionCalculator(MovementEmissionCalculator):
 
-    def __init__(self, gate, aircraft, departure_arrival):
+    def __init__(self, gate, aircraft, departure_arrival, gate_emissions_code=1):
         MovementEmissionCalculator.__init__(self, departure_arrival)
         self._gate = gate
         self._aircraft = aircraft
+        self._gate_emissions_code = gate_emissions_code
 
     def _calculate_ground_equipment_emissions(self, source_type):
         emissions = Emission(defaultValues=defaultEmissions)
@@ -106,6 +106,9 @@ class GateEmissionCalculator(MovementEmissionCalculator):
         3. Emissions from APU
         4. Emissions from Main Engine Start-up
         """
+        if not self._gate_emissions_code:
+            return []
+
         emissions: list[EmissionsDict] = []
 
         # Calculate emissions for ground equipment (i.e. GSE and GPU)
@@ -121,24 +124,24 @@ class GateEmissionCalculator(MovementEmissionCalculator):
         return emissions
 
     def _get_aircraft_group_match(self, source_type):
-        ac_group = None
-        if ac_group in self._gate.getEmissionProfileGroups():
-            ac_group = self._aircraft.getGroup()
-        else:
-            matched = difflib.get_close_matches(
-                self._aircraft.getGroup(),
-                self._gate.getEmissionProfileGroups(source_type=source_type),
-            )
-            if matched:
-                ac_group = matched[0]
-                if not ac_group.lower() == self._aircraft.getGroup().lower():
-                    logger.warning(
-                        "Did not find a gate emission profile for source type '%s' and aircraft group '%s', "
-                        "but matched to '%s'. Probably update the table 'default_gate_profiles'."
-                        % (source_type, ac_group, self._aircraft.getGroup())
-                    )
+        ac_group = self._aircraft.getGroup()
+        if ac_group in self._gate.getEmissionProfileGroups(source_type=source_type):
+            return ac_group
 
-        return ac_group
+        matched = difflib.get_close_matches(
+            ac_group,
+            self._gate.getEmissionProfileGroups(source_type=source_type),
+        )
+        if matched:
+            if not matched[0].lower() == ac_group.lower():
+                logger.warning(
+                    "Did not find a gate emission profile for source type '%s' and aircraft group '%s', "
+                    "but matched to '%s'. Probably update the table 'default_gate_profiles'."
+                    % (source_type, matched[0], ac_group)
+                )
+            return matched[0]
+
+        return None
 
     def _get_gate_occupancy(self, ac_group, source_type):
         occupancy_in_min = 0.0
@@ -166,6 +169,7 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
         self._block_time = movement.getBlockTime()
         self._runway_time = movement.getRunwayTime()
         self._apu_code = movement.getAPUCode()
+        self._gate_emissions_code = movement.getGateEmissionsCode()
         self._taxi_engine_count = movement.getTaxiEngineCount()
         self._taxi_fuel_ratio = movement.getTaxiFuelRatio()
         self._number_of_stops = movement.getNumberOfStops()
@@ -191,20 +195,101 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
         self._start_emissions = self._engine.getStartEmissions()
         self._include_start_emissions = self._start_emissions is not None
 
+        # Tracks whether the start emissions for the engines covered by
+        # single-engine taxi have already been added (once per movement).
+        # Without this guard, _do_apply_single_engine_taxiing_emissions
+        # would add them per taxi segment within the MES window, producing
+        # K x taxi_engine_count x start_emissions overcount when the MES
+        # window spans K > 1 segments.
+        self._single_engine_start_added = False
+
     def calculate_emissions(self) -> list[EmissionsDict]:
         emissions: list[EmissionsDict] = []
 
-        if self._method["name"] == "bymode":
-            emission_index_ = self._engine.getEmissionIndex().getEmissionIndexByMode(
-                self._mode
-            )
-        else:  # BFFM2 method
-            # get emission indices based on the engine-thrust/fuel flow setting as defined in the movements table; fuel flow has priority
-            emission_index_ = (
-                self._engine.getEmissionIndex().getEmissionIndexByEngineState(
-                    self._engine_thrust_level_taxiing, method=self._method
+        # CAEP14 v14: taxi is a ground operation with M=0. The shared
+        # self._method["config"] dict is mutated by FlightEmissionCalculator
+        # per segment to carry the per-segment Mach into the BFFM2 / MEEM
+        # lookups. Without this isolation, taxi inherits the leftover Mach
+        # from the previous flight's last trajectory segment, producing
+        # 0.5-3% under-prediction of taxi fuel flow and a proportional
+        # propagation to all pollutants. Force M=0 here for both bymode
+        # (MEEM PM lookup) and BFFM2 (EI lookup + MEEM PM injection).
+        _saved_mach = self._method["config"].get("mach_number", 0.0)
+        self._method["config"]["mach_number"] = 0.0
+        try:
+            if self._method["name"] == "bymode":
+                try:
+                    ac = self._method["config"]["ambient_conditions"]
+                    p_amb = float(ac.getPressure())
+                    mver = str(self._method["config"].get("meem_version", "v1"))
+                    emission_index_ = (
+                        self._engine.getEmissionIndex().getEmissionIndexByModeWithMEEM(
+                            self._mode,
+                            p_amb,
+                            0.0,
+                            meem_version=mver,
+                        )
+                    )
+                except Exception:
+                    emission_index_ = (
+                        self._engine.getEmissionIndex().getEmissionIndexByMode(
+                            self._mode
+                        )
+                    )
+            else:  # BFFM2 method
+                # get emission indices based on the engine-thrust/fuel flow setting as defined in the movements table; fuel flow has priority
+                emission_index_ = (
+                    self._engine.getEmissionIndex().getEmissionIndexByEngineState(
+                        self._engine_thrust_level_taxiing, method=self._method
+                    )
                 )
-            )
+                # Inject PM and SOx from the mode EI — BFFM2 only computes NOx/CO/HC
+                if emission_index_ is not None:
+                    try:
+                        mver = str(self._method["config"].get("meem_version", "v1"))
+                        mode_ei_ = self._engine.getEmissionIndex().getEmissionIndexByModeWithMEEM(
+                            self._mode,
+                            float(
+                                self._method["config"][
+                                    "ambient_conditions"
+                                ].getPressure()
+                            ),
+                            0.0,
+                            meem_version=mver,
+                        )
+                    except Exception:
+                        mode_ei_ = (
+                            self._engine.getEmissionIndex().getEmissionIndexByMode(
+                                self._mode
+                            )
+                        )
+                if mode_ei_ is not None:
+                    emission_index_ = EmissionIndex(
+                        initValues=dict(emission_index_._objects)
+                    )
+                    for _field in (
+                        "pm10_g_kg",
+                        "pm10_nonvol_g_kg",
+                        "pm10_sul_g_kg",
+                        "pm10_organic_g_kg",
+                        "nvpm_g_kg",
+                        "nvpm_number_kg",
+                        "p1_g_kg",
+                        "p2_g_kg",
+                    ):
+                        _v = mode_ei_.getObject(_field)
+                        if _v is not None:
+                            emission_index_.setObject(_field, _v)
+                    from open_alaqs.core.interfaces.Emissions import PollutantType
+
+                    emission_index_.setObject(
+                        "sox_g_kg",
+                        mode_ei_.get_value(PollutantType.SOx, "g_kg"),
+                    )
+        finally:
+            # Restore the prior Mach so subsequent operations on this method
+            # dict are unaffected by the taxi isolation.
+            self._method["config"]["mach_number"] = _saved_mach
 
         if emission_index_ is None:
             logger.error(
@@ -304,10 +389,17 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                         self._number_of_stops is not None
                         and self._number_of_stops > 0.0
                     ):
+                        # Stop-and-Go emissions add AVERAGE_DURATION (9 s) per stop at idle
+                        # thrust. Must multiply by number_of_engines to match the convention
+                        # used for regular taxiing (line above) and for queuing time — the
+                        # emission_index is per engine per kg fuel, and fuel burn scales
+                        # with engine count. Prior version omitted * number_of_engines,
+                        # producing half the correct emissions on twin-engine aircraft.
                         em_.add(
                             emission_index_,
                             self.AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S
-                            * self._number_of_stops,
+                            * self._number_of_stops
+                            * number_of_engines,
                         )
 
                 emissions.append(
@@ -326,7 +418,22 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
     def _apply_apu_emissions(
         self, em_, index_segment_, apu_t, apu_em, new_taxiway_segment_time
     ):
-        # Load APU time and emission factors
+        """
+        Add APU emissions to a taxi segment emission object.
+
+        apu_code semantics (set on the movement):
+          -1 / 0  No APU — skip all APU emissions.
+           1      APU running at gate/stand only (first taxi segment receives
+                  the full apu_t time; all other segments receive nothing).
+           2      APU running during the entire taxi phase.  If apu_t is less
+                  than the total taxi time each segment gets its proportional
+                  share; if apu_t >= total taxi time the first segment absorbs
+                  the overshoot and all segments receive their moving time.
+        """
+        # Explicit "no APU" codes — skip without loading any emissions.
+        if self._apu_code <= 0:
+            return
+
         apu_time = 0
         if (apu_t is not None and apu_em is not None) and (apu_t > 0):
             # APU emissions will be added to the stand only
@@ -348,8 +455,6 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                         if index_segment_ == 0
                         else new_taxiway_segment_time
                     )
-            else:
-                apu_time = 0
 
             if "fuel_kg_sec" in apu_em:
                 em_.addFuel(apu_em["fuel_kg_sec"] * apu_time)
@@ -477,13 +582,23 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
         )
         taxi_fuel_ratio = self._taxi_fuel_ratio
 
-        if self._include_start_emissions:
+        # CAEP14 / ALAQS: each engine contributes one start_emissions event
+        # for the entire movement, not per taxi segment. The caller invokes
+        # this method once for every taxi segment that falls inside the MES
+        # window; without the guard the start emissions for the
+        # taxi_engine_count engines would be added K times for K segments.
+        # The complementary (N - taxi_engine_count) engines are added once
+        # by _apply_start_engine_emissions at index_segment == 0.
+        if self._include_start_emissions and not self._single_engine_start_added:
             number_of_engines_to_start = number_of_engines
             emission += self._start_emissions * number_of_engines_to_start
+            self._single_engine_start_added = True
 
         return number_of_engines, taxi_fuel_ratio
 
     def _apply_start_engine_emissions(self, emission: Emission, index_segment: int):
+        if not getattr(self, "_gate_emissions_code", 1):
+            return
         if self._include_start_emissions and index_segment == 0:
             # Default value if both times (after_block_off and before_takeoff) are None
             number_of_engines_to_start = self._aircraft.getEngineCount()
@@ -512,11 +627,9 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
             and self._aircraft.getMTOW() is not None
             and self._aircraft.getMTOW() > 18632
         ):  # in kg
-            emission.add_value(
-                PollutantType.PM10,
-                PollutantUnit.GRAM,
-                self._aircraft.getMTOW() * 0.000476 - 8.74,
-            )
+            brake_wear_g = self._aircraft.getMTOW() * 0.000476 - 8.74
+            for pollutant in (PollutantType.PM10, PollutantType.PM1, PollutantType.PM2):
+                emission.add_value(pollutant, PollutantUnit.GRAM, brake_wear_g)
 
         number_of_engines = None
         taxi_fuel_ratio = None
@@ -632,6 +745,18 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 distance_time_all_segments_in_mode += emissions_dict_["distance_time"]
                 distance_space_all_segments_in_mode += emissions_dict_["distance_space"]
                 emissions.append(emissions_dict_)
+
+            # Emit a single summary warning if any segments triggered the ADS-B
+            # ceiling guard (replaces per-segment warnings).
+            count = getattr(self, "_ceiling_fallback_count", 0)
+            if count:
+                logger.warning(
+                    "BFFM2 %s: ADS-B ff/engine exceeded EEDB TO ceiling (%.4f kg/s) "
+                    "on %d segment(s); power-setting interpolation used for those segments.",
+                    self._movement_name,
+                    self._ceiling_fallback_ceiling,
+                    count,
+                )
         else:
             self._apply_flight_emissions_for_helicopters(emissions)
 
@@ -765,25 +890,142 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         )
 
         # Time in seconds - use original points for TrueAirspeed
-        time_in_segment_s = (2 * space_in_segment_m) / (
-            end_point_.getTrueAirspeed() + start_point_.getTrueAirspeed()
-        )
+        _tas_start = start_point_.getTrueAirspeed() or 0.0
+        _tas_end = end_point_.getTrueAirspeed() or 0.0
+        _speed_sum = _tas_start + _tas_end
+        if _speed_sum == 0.0:
+            logger.warning(
+                "Both start and end TrueAirspeed are zero for segment "
+                "(start: %s, end: %s); time_in_segment_s set to 0.",
+                start_point_.getGeometryText(),
+                end_point_.getGeometryText(),
+            )
+            time_in_segment_s = 0.0
+        else:
+            time_in_segment_s = (2 * space_in_segment_m) / _speed_sum
 
         # Use original start point for emission index calculation (fuel flow, power setting, mode)
-        emission_index_ = self._get_emission_index(
-            start_point_.getMode(),
-            start_point_.getEngineThrust(),
-            fuel_flow=start_point_.getFuelFlow(),
-        )
+        engine_thrust = start_point_.getEngineThrust()
+        fuel_flow = start_point_.getFuelFlow()
+        mode = start_point_.getMode() or "AP"  # guard empty string (Bug #23 residual)
+        # Segment altitude above MSL (metres) — needed by MEEM V1 for the
+        # LTO/non-LTO branch.  getZ() returns None for points without an
+        # explicit elevation; default to 0.
+        altitude_m = float(start_point_.getZ() or 0.0)
 
-        if self._method["config"]["apply_nox_corrections"]:
-            self._apply_nox_corrections(emission_index_, start_point_.getMode())
+        # Bug #22: None engine_thrust would crash calculate_fuel_flow_from_power_setting
+        # inside the BFFM2 path. Fall back to bymode for that segment so one bad
+        # trajectory point doesn't abort the entire movement.
+        if engine_thrust is None and fuel_flow is None:
+            method_name = self._method["name"].lower()
+            if method_name == "bffm2":
+                logger.warning(
+                    "No engine thrust or fuel flow for segment (mode=%s, z=%.1f); "
+                    "using bymode EI for this segment.",
+                    mode,
+                    altitude_m,
+                )
+                emission_index_ = self._get_emission_index_bymode(
+                    mode,
+                    engine_thrust=None,
+                    altitude_m=altitude_m,
+                )
+            else:
+                emission_index_ = self._get_emission_index(
+                    mode,
+                    0.07,
+                    fuel_flow,
+                    altitude_m=altitude_m,
+                )
+        else:
+            # Two BFFM2 strategies for resolving the segment fuel flow used by
+            # the EI log-log interpolation. Controlled by
+            # self._method["config"]["bffm2_ff_source"]:
+            #
+            #   "trajectory" (default): use the segment's own FF. If
+            #       fuel_flow_kgm is supplied (ADS-B profiles with an FF
+            #       estimator), divide by engine_count to get per-engine FF.
+            #       Otherwise the BFFM2 EI lookup delegates to
+            #       twin_quadratic_fit_method on the segment's power_setting
+            #       (from the DB `power` column, = THR_SET_lb / max_thrust_lb
+            #       per ANP source data). Preserves sub-mode thrust variation.
+            #       Matches the CAEP14 v14 BFFM2 workflow.
+            #
+            #   "mode_anchor": always use the EEDB anchor FF for the segment's
+            #       mode label, overriding both supplied fuel_flow_kgm (unless
+            #       it's within the TO-anchor ceiling) and the twin_quadratic
+            #       path. Disables sub-mode resolution but still applies BFFM2
+            #       atmospheric and humidity corrections. Matches the CAEP14
+            #       v14 LTO-mode workflow + ambient corrections.
+            #
+            # fuel_flow_kgm values that exceed the EEDB TO ceiling are always
+            # replaced by the mode anchor (treated as implausible input).
+            ff_source = (
+                self._method["config"].get("bffm2_ff_source", "trajectory")
+                if self._method["name"].lower() == "bffm2"
+                else "trajectory"
+            )
+            _ff_for_index = fuel_flow
+            if self._method["name"].lower() == "bffm2":
+                n_eng = self._aircraft.getEngineCount() or 1
+                try:
+                    _mode_ei = self._engine.getEmissionIndex().getEmissionIndexByMode(
+                        mode
+                    )
+                    ff_anchor = _mode_ei.getObject("fuel_kg_sec") if _mode_ei else None
+                except Exception:
+                    ff_anchor = None
+                try:
+                    _to_ei = self._engine.getEmissionIndex().getEmissionIndexByMode(
+                        "TO"
+                    )
+                    ff_to_ceiling = _to_ei.getObject("fuel_kg_sec") if _to_ei else None
+                except Exception:
+                    ff_to_ceiling = None
+
+                if ff_source == "mode_anchor" and ff_anchor is not None:
+                    # Force anchor FF regardless of supplied value.
+                    _ff_for_index = ff_anchor
+                elif fuel_flow is not None and fuel_flow > 0:
+                    ff_per_engine = fuel_flow / n_eng
+                    if ff_to_ceiling and ff_per_engine > ff_to_ceiling:
+                        # Supplied FF exceeds physical maximum — fall back.
+                        if not hasattr(self, "_ceiling_fallback_count"):
+                            self._ceiling_fallback_count = 0
+                            self._ceiling_fallback_max = ff_per_engine
+                            self._ceiling_fallback_ceiling = ff_to_ceiling
+                        self._ceiling_fallback_count += 1
+                        if ff_per_engine > self._ceiling_fallback_max:
+                            self._ceiling_fallback_max = ff_per_engine
+                        _ff_for_index = ff_anchor
+                    else:
+                        _ff_for_index = ff_per_engine
+                # else: fuel_flow is None and ff_source=="trajectory"
+                # leave _ff_for_index as None so _get_emission_index_bffm2
+                # falls through to the twin_quadratic path on engine_thrust.
+            emission_index_ = self._get_emission_index(
+                mode,
+                engine_thrust,
+                fuel_flow=_ff_for_index,
+                altitude_m=altitude_m,
+            )
 
         if emission_index_ is None:
             logger.error(
                 "Did not find emission index for aircraft with type '%s'."
                 % self._aircraft
             )
+            return {
+                "emissions": [emissions],
+                "distance_time": float(time_in_segment_s),
+                "distance_space": float(space_in_segment_m),
+            }
+
+        if (
+            self._method["config"]["apply_nox_corrections"]
+            and self._method["name"].lower() != "bffm2"
+        ):
+            self._apply_nox_corrections(emission_index_, start_point_.getMode())
 
         # Calculate the effective time (s)
         effective_time_s = float(time_in_segment_s) * self._aircraft.getEngineCount()
@@ -836,66 +1078,135 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         return start_point_, end_point_
 
     def _get_emission_index(
-        self, mode: str, engine_thrust: float, fuel_flow: float = None
+        self,
+        mode: str,
+        engine_thrust: float,
+        fuel_flow: float = None,
+        altitude_m: float = 0.0,
     ) -> EmissionIndex:
         emission_index_ = None
-        if self._method["name"] == "bymode":
-            emission_index_ = self._get_emission_index_bymode(mode)
-        elif self._method["name"] == "BFFM2":
+        method_name = self._method[
+            "name"
+        ].lower()  # normalise once; UI may pass "bffm2" or "BFFM2"
+        if method_name == "bymode":
+            emission_index_ = self._get_emission_index_bymode(
+                mode,
+                engine_thrust=engine_thrust,
+                altitude_m=altitude_m,
+            )
+        elif method_name == "bffm2":
             emission_index_ = self._get_emission_index_bffm2(
-                mode, engine_thrust, fuel_flow
+                mode,
+                engine_thrust,
+                fuel_flow,
+                altitude_m=altitude_m,
+            )
+        else:
+            logger.warning(
+                "Unknown calculation method '%s' for movement '%s'; emission index is None.",
+                self._method["name"],
+                self._movement_name,
             )
 
         return emission_index_
 
-    def _get_emission_index_bymode(self, mode: str) -> EmissionIndex:
-        emission_index_ = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)
-
-        return copy.deepcopy(emission_index_)
+    def _get_emission_index_bymode(
+        self,
+        mode: str,
+        engine_thrust: float = None,
+        altitude_m: float = 0.0,
+    ) -> EmissionIndex:
+        try:
+            ac = self._method["config"]["ambient_conditions"]
+            p_amb = float(ac.getPressure())
+            mach = float(self._method["config"].get("mach_number", 0.0))
+            T_amb = (
+                float(ac.getTemperature()) if ac.getTemperature() is not None else None
+            )
+            mver = str(self._method["config"].get("meem_version", "v1"))
+            src = self._engine.getEmissionIndex().getEmissionIndexByModeWithMEEM(
+                mode,
+                p_amb,
+                mach,
+                power_setting=engine_thrust,
+                altitude_m=altitude_m,
+                T_amb_K=T_amb,
+                meem_version=mver,
+            )
+        except Exception:
+            src = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)
+        # Shallow-copy the flat float dict — no nested objects, so deepcopy is unnecessary.
+        return EmissionIndex(initValues=dict(src._objects))
 
     def _get_emission_index_bffm2(
-        self, mode: str, engine_thrust: float, fuel_flow: float = None
+        self,
+        mode: str,
+        engine_thrust: float,
+        fuel_flow: float = None,
+        altitude_m: float = 0.0,
     ) -> EmissionIndex:
         # Get emission indices based on the engine-thrust setting or fuel flow of that specific segment
         emission_index_ = self._engine.getEmissionIndex().getEmissionIndexByEngineState(
             engine_thrust, method=self._method, fuel_flow=fuel_flow
         )
 
-        # ToDo: Permanent fix for PM10
+        # Get the MEEM-corrected per-mode EI for PM fields.
+        # BFFM2 computes gas-phase EI only (NOx/CO/HC); PM is always from the EEDB.
+        try:
+            ac = self._method["config"]["ambient_conditions"]
+            p_amb = float(ac.getPressure())
+            mach = float(self._method["config"].get("mach_number", 0.0))
+            T_amb = (
+                float(ac.getTemperature()) if ac.getTemperature() is not None else None
+            )
+            mver = str(self._method["config"].get("meem_version", "v1"))
+            mode_ei = self._engine.getEmissionIndex().getEmissionIndexByModeWithMEEM(
+                mode,
+                p_amb,
+                mach,
+                power_setting=engine_thrust,
+                altitude_m=altitude_m,
+                T_amb_K=T_amb,
+                meem_version=mver,
+            )
+        except Exception:
+            mode_ei = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)
+
         if emission_index_ is None:
-            # logger.error("Error: Cannot calculate EI w. BFFM2. The 'by mode' method will be used for source: '%s'" %(self.getName()))
-            copy_emission_index_ = (
-                self._engine.getEmissionIndex().getEmissionIndexByMode(mode)
-            )
+            copy_emission_index_ = EmissionIndex(initValues=dict(mode_ei._objects))
         else:
-            copy_emission_index_ = copy.deepcopy(emission_index_)
-
-            pm10_g_kg = (
-                self._engine.getEmissionIndex()
-                .getEmissionIndexByMode(mode)
-                .get_value(PollutantType.PM10, "g_kg")
+            copy_emission_index_ = EmissionIndex(
+                initValues=dict(emission_index_._objects)
             )
+            for field in (
+                "pm10_g_kg",
+                "pm10_nonvol_g_kg",
+                "pm10_sul_g_kg",
+                "pm10_organic_g_kg",
+                "nvpm_g_kg",
+                "nvpm_number_kg",
+                "p1_g_kg",
+                "p2_g_kg",
+            ):
+                val = mode_ei.getObject(field)
+                if val is not None:
+                    try:
+                        copy_emission_index_.setObject(field, val)
+                    except Exception:
+                        if not self._pm10_exception_shown:
+                            logger.error(
+                                "Couldn't set PM field %s (%s)",
+                                field,
+                                self._movement_name,
+                            )
+                            self._pm10_exception_shown = True
+            sox_g_kg = mode_ei.get_value(PollutantType.SOx, "g_kg")
             try:
-                copy_emission_index_.setObject("pm10_g_kg", pm10_g_kg[0])
-            except Exception:
-                if not self._pm10_exception_shown:
-                    logger.error(
-                        "Couldn't add emission index for PM10 (%s)"
-                        % self._movement_name
-                    )
-                    self._pm10_exception_shown = True
-
-            sox_g_kg = (
-                self._engine.getEmissionIndex()
-                .getEmissionIndexByMode(mode)
-                .get_value(PollutantType.SOx, "g_kg")
-            )
-            try:
-                copy_emission_index_.setObject("sox_g_kg", sox_g_kg[0])
+                copy_emission_index_.setObject("sox_g_kg", sox_g_kg)
             except Exception:
                 if not self._sox_g_kg_exception_shown:
                     logger.error(
-                        "Couldn't add emission index for SOx (%s)" % self._movement_name
+                        "Couldn't add emission index for SOx (%s)", self._movement_name
                     )
                     self._sox_g_kg_exception_shown = True
 
@@ -916,7 +1227,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
             )
 
         corr_nox_ei = nox_correction_for_ambient_conditions(
-            nox_g_kg,
+            (nox_g_kg, "g"),
             self._method["config"]["airport_altitude"],
             self._take_off_weight_ratio,
             ac=self._method["config"]["ambient_conditions"],

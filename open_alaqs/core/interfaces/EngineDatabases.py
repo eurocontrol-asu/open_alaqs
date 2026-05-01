@@ -224,6 +224,22 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
     ):
 
         if table_columns_type_dict is None:
+            # Columns marked `# DEPRECATED (schema v2)` are dead at
+            # emissions-calculation runtime — they were populated by the
+            # one-shot update-scripts that used to live under
+            # database/scripts/ (since removed) but never read during any
+            # calculation. They are retained for now so that existing
+            # .alaqs files and CSV exports remain round-trippable; they
+            # will be dropped as part of a future schema-v2 migration.
+            # See open_alaqs/database/DEPRECATIONS.md for the full list
+            # and rationale.
+            #
+            # Column order MUST match the schema baked into
+            # core/templates/project.alaqs (32 columns); template
+            # generation via tools/template_build/generate_templates.py
+            # uses this dict to recreate the table from scratch, and
+            # downstream CSV imports rely on column order matching the
+            # CSV header in open_alaqs/database/data/.
             table_columns_type_dict = OrderedDict(
                 [
                     ("oid", "INTEGER PRIMARY KEY"),
@@ -240,24 +256,47 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
                     ("pm10_ei", "DECIMAL"),
                     ("p1_ei", "DECIMAL"),
                     ("p2_ei", "INTEGER"),
-                    ("smoke_number", "DECIMAL"),
-                    ("smoke_number_maximum", "DECIMAL"),
-                    ("fuel_type", "TEXT"),
-                    ("manufacturer", "TEXT"),
+                    ("smoke_number", "DECIMAL"),  # DEPRECATED (schema v2)
+                    ("smoke_number_maximum", "DECIMAL"),  # DEPRECATED (schema v2)
+                    (
+                        "fuel_type",
+                        "TEXT",
+                    ),  # DEPRECATED (schema v2) — runtime overridden
+                    (
+                        "manufacturer",
+                        "TEXT",
+                    ),  # DEPRECATED (schema v2) — pass-through only in Engine table
                     ("source", "TEXT"),
-                    ("remark", "TEXT"),
-                    ("status", "TEXT"),
-                    ("engine_name_type", "TEXT"),
-                    ("coolant", "VARCHAR(5)"),
-                    ("combustion_technology", "TEXT"),
-                    ("technology_age", "TEXT"),
-                    ("pm10_prefoa3", "DECIMAL"),
+                    ("remark", "TEXT"),  # DEPRECATED (schema v2) — free-text notes
+                    ("status", "TEXT"),  # DEPRECATED (schema v2)
+                    (
+                        "engine_name_type",
+                        "TEXT",
+                    ),  # DEPRECATED (schema v2) — migration-only
+                    (
+                        "coolant",
+                        "VARCHAR(5)",
+                    ),  # DEPRECATED (schema v2) — engine coolant type
+                    (
+                        "combustion_technology",
+                        "TEXT",
+                    ),  # DEPRECATED (schema v2) — engine combustion class
+                    (
+                        "technology_age",
+                        "TEXT",
+                    ),  # DEPRECATED (schema v2) — engine generation marker
                     ("pm10_nonvol", "DECIMAL"),
                     ("pm10_sul", "DECIMAL"),
                     ("pm10_organic", "DECIMAL"),
-                    ("eng_type", "TEXT"),
-                    ("bpr", "DECIMAL"),
-                    ("nvpm_ei", "DECIMAL"),
+                    (
+                        "eng_type",
+                        "TEXT",
+                    ),  # DEPRECATED (schema v2) — duplicates engine_type
+                    ("bpr", "DECIMAL"),  # DEPRECATED (schema v2) — bypass ratio
+                    (
+                        "nvpm_ei",
+                        "DECIMAL",
+                    ),  # DEPRECATED (schema v2) — superseded by pm10_nonvol
                     ("nvpm_number_ei", "DECIMAL"),
                 ]
             )
@@ -284,6 +323,65 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
                 else ei_val["engine_full_name"]
             )
             self.addEngineEmissionIndex(id_name, ei_val)
+        self._load_meem_metadata()
+
+    def _load_meem_metadata(self) -> None:
+        """
+        Read MEEM V1 columns from default_aircraft_engine_ei via a separate
+        query so the main SQLSerializable SELECT is not broken when these
+        columns are absent in older databases.  Silently skipped on any error
+        or when the schema predates the MEEM columns.
+        """
+        import sqlite3
+
+        MEEM_COLS = (
+            "press_ratio",
+            "meem_nvpm_m_i_f00_avg",
+            "nvpm_m_max_mgkg",
+            "meem_nvpm_n_i_f00_avg",
+            "nvpm_n_max_nkg",
+        )
+        try:
+            conn = sqlite3.connect(self._db_path)
+            conn.row_factory = sqlite3.Row
+            # Verify the MEEM columns actually exist before building the SELECT.
+            # Without this guard, SQLite's legacy double-quote fallback would
+            # reinterpret a missing column name as a string literal and return
+            # the string name as the value — a confusing silent degradation.
+            existing = {
+                r[1]
+                for r in conn.execute(
+                    "PRAGMA table_info(default_aircraft_engine_ei)"
+                ).fetchall()
+            }
+            present_meem = [c for c in MEEM_COLS if c in existing]
+            if not present_meem:
+                conn.close()
+                return  # Older DB without MEEM schema — run plain bymode.
+            cols_sql = ", ".join(f'"{c}"' for c in ("engine_name", *present_meem))
+            rows = conn.execute(
+                f"SELECT DISTINCT {cols_sql} FROM default_aircraft_engine_ei"
+            ).fetchall()
+            conn.close()
+        except Exception:
+            return
+        for row in rows:
+            uid = row["engine_name"]
+            if uid not in self._emission_indices:
+                continue
+            ei_obj = self._emission_indices[uid]
+
+            def _f(k):
+                if k not in present_meem:
+                    return None
+                v = row[k]
+                return float(v) if v is not None else None
+
+            ei_obj._press_ratio = _f("press_ratio")
+            ei_obj._meem_m_f00 = _f("meem_nvpm_m_i_f00_avg")
+            ei_obj._nvpm_m_max_mgkg = _f("nvpm_m_max_mgkg")
+            ei_obj._meem_n_f00 = _f("meem_nvpm_n_i_f00_avg")
+            ei_obj._nvpm_n_max_nkg = _f("nvpm_n_max_nkg")
 
     def addEngineEmissionIndex(self, icaoIdentifier: str, ei_dict: dict) -> None:
 

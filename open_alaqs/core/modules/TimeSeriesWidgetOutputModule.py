@@ -22,8 +22,8 @@ logger = get_logger(__name__)
 
 class ReceptorPointRow(TypedDict):
     id: str
-    latitude: str
-    longitude: str
+    latitude: float
+    longitude: float
     epsg: str
 
 
@@ -80,8 +80,8 @@ class TimeSeriesWidgetOutputModule(OutputModule):
         self._marker = values_dict.get("marker", "")
         # TODO OPENGIS.ch: the `_receptor` should be empty, otherwise it fails later with `_epsg` attribute error
         self._receptor = values_dict.get("receptor_point", {})
-        self.receptor_points: list[Point] = self.configuration_to_receptor_points(
-            values_dict.get("receptor_point", {})
+        self.receptor_points: list[ReceptorPointRow] = (
+            self.configuration_to_receptor_points(values_dict.get("receptor_point", {}))
         )
 
         self._grid = values_dict["grid"]
@@ -94,25 +94,33 @@ class TimeSeriesWidgetOutputModule(OutputModule):
 
     def configuration_to_receptor_points(
         self, receptor_point_rows: list[ReceptorPointRow]
-    ) -> list[Point]:
-        points = []
+    ) -> list[ReceptorPointRow]:
+        rows = []
         for row in receptor_point_rows:
             if row["latitude"] and row["longitude"]:
-                points.append(Point(row["latitude"], row["longitude"]))
+                rows.append(
+                    {
+                        "id": row["id"],
+                        "latitude": float(row["latitude"]),
+                        "longitude": float(row["longitude"]),
+                        "epsg": row["epsg"],
+                    }
+                )
             else:
                 logger.info(f'Skipping row {row["id"]}...')
-
-        return points
+        return rows
 
     def beginJob(self):
         self._data_x = []
         self._data_y = []
 
         self._griddata = self._grid.get_df_from_2d_grid_cells()
+        # Grid cells are built in UTM; reproject to EPSG:3857 to match the
+        # source/emission geometry CRS used in downstream intersections.
+        self._griddata = self._griddata.to_crs("EPSG:3857")
         self._griddata = self._griddata.assign(
             Emission=pd.Series(0, index=self._griddata.index)
         )
-        self._griddata.crs = "epsg:3857"
 
     def process(
         self,
@@ -138,6 +146,10 @@ class TimeSeriesWidgetOutputModule(OutputModule):
 
         else:
             self._data_x.append(timestamp)
+
+            # Reset per-timestep emissions so each data point reflects only
+            # this timestep, not a cumulative total of all previous timesteps.
+            self._griddata["Emission"] = 0.0
 
             for _source, emissions in result:
                 for em_ in emissions:
@@ -207,14 +219,16 @@ class TimeSeriesWidgetOutputModule(OutputModule):
 
             # FIXME OPENGIS.ch: most probably we should make it support more than 1 `receptor_point` in the future
             receptor_point_row = self.receptor_points[0]
-            intersection = self._griddata.to_crs(
-                {
-                    "init": f"epsg:{receptor_point_row['epsg']}",
-                }
-            ).intersects(
-                Point(receptor_point_row["longitude"], receptor_point_row["latitude"])
+            grid_proj = self._griddata.to_crs(epsg=int(receptor_point_row["epsg"]))
+
+            intersection = grid_proj.intersects(
+                Point(
+                    float(receptor_point_row["longitude"]),
+                    float(receptor_point_row["latitude"]),
+                )
             )
-            receptor_cell = self._griddata[intersection == True]  # noqa: E712
+            # receptor_cell = self._griddata[intersection == True]  # noqa: E712
+            receptor_cell = grid_proj[intersection]
 
             if receptor_cell.empty:
                 self._data_y.append(0)

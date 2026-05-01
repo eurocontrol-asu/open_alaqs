@@ -86,6 +86,11 @@ class EmissionsQGISVectorLayerOutputModule(GridOutputModule):
         # prepare the attributes of each point of the vector layer
         self._total_emissions = 0.0
         self._grid_df = self._grid.get_df_from_2d_grid_cells()
+        # Grid cells are built in UTM (correctly tagged by Grid3D).  Reproject
+        # to EPSG:3857 here because (a) source/emission geometries are stored
+        # in EPSG:3857 and must be intersected in the same CRS, and (b) the
+        # output ContourPlotVectorLayer forces its layer CRS to EPSG:3857.
+        self._grid_df = self._grid_df.to_crs("EPSG:3857")
         self._grid_df = self._grid_df.assign(Q=pd.Series(0, index=self._grid_df.index))
 
     def process(

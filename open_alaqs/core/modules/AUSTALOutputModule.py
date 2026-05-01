@@ -10,9 +10,12 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from dateutil import rrule
+from pyproj import Transformer as _ProjTransformer
 from qgis.gui import QgsDoubleSpinBox, QgsSpinBox
 from qgis.PyQt import QtWidgets
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
+from shapely.ops import transform as _shapely_transform
+from shapely.validation import make_valid as _make_valid
 
 from open_alaqs.alaqs_config import DEFAULT_CONCENTRATION_GRID_FACTOR
 from open_alaqs.core.alaqslogging import get_logger
@@ -290,20 +293,33 @@ class AUSTALDispersionModule(DispersionModule):
     @log_time
     def getGridXYFromReferencePoint(self):
         """
-        This method gets the origin of the grid to the bottom-left corner.
-        "Reference" coordinates need to be related to the center of the grid.
+        Computes the reference point and grid borders in the local UTM CRS
+        (obtained from Grid3D.getUtmEpsg()).  All AUSTAL coordinate outputs
+        (dd, x0, y0, xq, yq, xp, yp) are therefore in true metric metres —
+        no post-hoc scale correction is required.
         """
         try:
-            reference_point_wkt = "POINT (%s %s)" % (
-                self._grid._reference_longitude,
-                self._grid._reference_latitude,
-            )
-            logger.info("AUSTAL: Grid reference point: %s" % reference_point_wkt)
+            try:
+                ref_lon = float(self._grid._reference_longitude)
+                ref_lat = float(self._grid._reference_latitude)
+            except (TypeError, ValueError) as e:
+                raise ValueError(
+                    f"AUSTAL: Invalid grid reference coordinates "
+                    f"(longitude={self._grid._reference_longitude!r}, "
+                    f"latitude={self._grid._reference_latitude!r}): {e}"
+                )
 
-            # Convert the ARP into EPSG 3857
+            utm_epsg = self._grid.getUtmEpsg()
+            reference_point_wkt = "POINT (%s %s)" % (ref_lon, ref_lat)
+            logger.info(
+                "AUSTAL: Grid reference point: %s (UTM EPSG:%d)",
+                reference_point_wkt,
+                utm_epsg,
+            )
+
             sql_text = (
-                "SELECT X(ST_Transform(ST_PointFromText('%s', 4326), 3857)), Y(ST_Transform(ST_PointFromText('%s', 4326), 3857));"
-                % (reference_point_wkt, reference_point_wkt)
+                "SELECT X(ST_Transform(ST_PointFromText('%s', 4326), %d)), Y(ST_Transform(ST_PointFromText('%s', 4326), %d));"
+                % (reference_point_wkt, utm_epsg, reference_point_wkt, utm_epsg)
             )
             result = sql_interface.query_text(self._grid._db_path, sql_text)
             if result is None:
@@ -315,42 +331,85 @@ class AUSTALDispersionModule(DispersionModule):
             self._reference_x = conversion.convertToFloat(result[0][0])
             self._reference_y = conversion.convertToFloat(result[0][1])
             self._reference_z = self._grid._reference_altitude
-            # logger.info("self._reference_x: %s, self._reference_y: %s, self._reference_z: %s"%(self._reference_x, self._reference_y, self._reference_z))
 
-            # Calculate the coordinates of the bottom left of the grid
-            grid_origin_x = float(self._reference_x) - (
-                float(self._grid._x_cells) / 2.0
-            ) * float(self._grid._x_resolution)
-            grid_origin_y = float(self._reference_y) - (
-                float(self._grid._y_cells) / 2.0
-            ) * float(self._grid._y_resolution)
-            # logger.info("getGridXYFromReferencePoint: bottom left of the EMIS grid: x0=%.0f, y0=%.0f" % (grid_origin_x, grid_origin_y))
+            # Grid3D._grid_origin_x/y is already in UTM — reuse it directly
+            # instead of recomputing from the reference point.
+            grid_origin_x = self._grid._grid_origin_x
+            grid_origin_y = self._grid._grid_origin_y
 
-            self._x_left_border_calc_grid = float(
+            self._x_left_border_calc_grid = (
                 grid_origin_x
-            ) - DEFAULT_CONCENTRATION_GRID_FACTOR * float(self._grid._x_resolution)
-            self._y_left_border_calc_grid = float(
+                - DEFAULT_CONCENTRATION_GRID_FACTOR * float(self._grid._x_resolution)
+            )
+            self._y_left_border_calc_grid = (
                 grid_origin_y
-            ) - DEFAULT_CONCENTRATION_GRID_FACTOR * float(self._grid._y_resolution)
-            # logger.info("getGridXYFromReferencePoint: bottom left of the CONC grid: xq=%.0f, yq=%.0f" % (self._x_left_border_calc_grid, self._y_left_border_calc_grid))
+                - DEFAULT_CONCENTRATION_GRID_FACTOR * float(self._grid._y_resolution)
+            )
 
-            # emissions grid == coordinates of the bottom left of the grid
-            self._x_left_border_em_grid = float(grid_origin_x)
-            self._y_left_border_em_grid = float(grid_origin_y)
-            # logger.info("emissions grid corner: (%s, %s)"%(self._x_left_border_em_grid, self._y_left_border_em_grid))
+            self._x_left_border_em_grid = grid_origin_x
+            self._y_left_border_em_grid = grid_origin_y
 
             try:
                 if not self._receptors.empty:
-                    for idp in self._receptors.index:
-                        self._receptors.crs = {
-                            "init": "epsg:%s" % self._receptors.loc[idp, "crs"]
-                        }
-                        rec_point = self._receptors.to_crs({"init": "epsg:3857"}).loc[
-                            idp, "geometry"
+                    _AUSTAL_MAX_RECEPTORS = 20
+                    _epsg_col = "EPSG" if "EPSG" in self._receptors.columns else "crs"
+
+                    unique_epsg = self._receptors[_epsg_col].unique()
+                    if len(unique_epsg) > 1:
+                        raise ValueError(
+                            f"Receptor points CSV contains mixed EPSG codes: "
+                            f"{unique_epsg.tolist()}. All rows must use the same CRS."
+                        )
+                    _epsg_val = int(unique_epsg[0])
+
+                    receptors = self._receptors
+                    if (
+                        "geometry" not in receptors.columns
+                        or receptors.geometry.isna().all()
+                    ):
+                        if (
+                            "longitude" not in receptors.columns
+                            or "latitude" not in receptors.columns
+                        ):
+                            raise ValueError(
+                                "Receptor points GeoDataFrame has no geometry column "
+                                "and no 'longitude'/'latitude' columns to build one from."
+                            )
+                        import geopandas as _gpd
+
+                        receptors = _gpd.GeoDataFrame(
+                            receptors,
+                            geometry=_gpd.points_from_xy(
+                                receptors["longitude"], receptors["latitude"]
+                            ),
+                            crs=f"EPSG:{_epsg_val}",
+                        )
+                    else:
+                        receptors = receptors.set_crs(
+                            f"EPSG:{_epsg_val}", allow_override=True
+                        )
+
+                    # Project receptors into UTM — same CRS as the grid.
+                    receptors_projected = receptors.to_crs(f"EPSG:{utm_epsg}")
+
+                    if len(receptors_projected) > _AUSTAL_MAX_RECEPTORS:
+                        logger.warning(
+                            "AUSTAL supports at most %d receptor points; "
+                            "%d provided — truncating to the first %d.",
+                            _AUSTAL_MAX_RECEPTORS,
+                            len(receptors_projected),
+                            _AUSTAL_MAX_RECEPTORS,
+                        )
+                        receptors_projected = receptors_projected.iloc[
+                            :_AUSTAL_MAX_RECEPTORS
                         ]
+
+                    for idp in receptors_projected.index:
+                        rec_point = receptors_projected.loc[idp, "geometry"]
                         self.xp_.append(round(rec_point.x - self._reference_x, 2))
                         self.yp_.append(round(rec_point.y - self._reference_y, 2))
-                        self.zp_.append(rec_point.z)
+                        z_val = rec_point.z if rec_point.has_z else 1.5
+                        self.zp_.append(z_val)
             except Exception as exc_:
                 logger.warning(
                     "Couldn't add receptor points to dispersion study (%s)" % exc_
@@ -446,7 +505,7 @@ class AUSTALDispersionModule(DispersionModule):
         if not (
             list(self.getSortedResults().keys()) == list(self.getSortedSeries().keys())
         ):
-            logger.debug(
+            logger.error(
                 "AUSTAL Error: Contradictory data for series.dmna and austal.txt files"
             )
             return False
@@ -487,13 +546,17 @@ class AUSTALDispersionModule(DispersionModule):
 
         # Make sure that the study spans at least one full day
         if (end_date - start_date).total_seconds() < 86400:
+            # AUSTAL convention: a "day" is 24 timestamps inclusive of
+            # 01:00..00:00, so the last hour is start + 23h. The warning text
+            # and the assignment must agree on +23h.
+            new_end_date = start_date + timedelta(hours=23)
             logger.warning(
                 "A2K warning: The time series must cover at least "
                 "one day. End date will be changed from %s to %s",
                 end_date,
-                start_date + timedelta(hours=24),
+                new_end_date,
             )
-            end_date = start_date + timedelta(hours=23)
+            end_date = new_end_date
 
         # Create a new list to store the hours that were added by this method
         missed_hours = []
@@ -830,6 +893,10 @@ class AUSTALDispersionModule(DispersionModule):
                 text_file.write(
                     "hp\t%s\t' z-receptor\n" % ("\t").join([str(rz) for rz in self.zp_])
                 )
+            else:
+                logger.warning(
+                    f"Add receptor points: len(self.xp_): {len(self.xp_)}, len(self.yp_): {len(self.yp_)}, len(self.zp_): {len(self.zp_)}"
+                )
 
             text_file.write("nx\t%s\t' number of meshes\n" % self._x_meshes)
             text_file.write("ny\t%s\t' number of meshes\n" % self._y_meshes)
@@ -1037,6 +1104,15 @@ class AUSTALDispersionModule(DispersionModule):
                 self._dates = OrderedDict()
                 self._source_geometries = OrderedDict()
 
+                # Build a reusable pyproj Transformer for WKT reprojection.
+                # _transform_wkt_to_utm() is called on every cache miss; using
+                # a pre-built Transformer avoids constructing a GeoDataFrame,
+                # CRS object, and Transformer pipeline from scratch each time.
+                utm_epsg = self._grid.getUtmEpsg()
+                self._wkt_transformer = _ProjTransformer.from_crs(
+                    "EPSG:3857", f"EPSG:{utm_epsg}", always_xy=True
+                )
+
                 # Initialize the variables for the date normalization
                 self._first_start_time = None
                 self._start_time, self._end_time = None, None
@@ -1141,12 +1217,16 @@ class AUSTALDispersionModule(DispersionModule):
                 # Get the geometry text
                 wkt_text = emissions_.getGeometryText()
                 if wkt_text is None:
-                    logger.warning(
-                        "AUSTAL: Did not find geometry for source '%s' (emission %d/%d)",
-                        _src_name,
-                        _em_idx + 1,
-                        len(emissions__),
-                    )
+                    # Zero-valued placeholders are synthesised by EmissionCalculation for
+                    # empty periods; skip silently. Only warn for the real-bug case where
+                    # a non-zero emission reaches AUSTAL without geometry.
+                    if not emissions_.isZero():
+                        logger.warning(
+                            "AUSTAL: Did not find geometry for source '%s' (emission %d/%d)",
+                            _src_name,
+                            _em_idx + 1,
+                            len(emissions__),
+                        )
                     continue
 
                 # Get the geometry
@@ -1194,8 +1274,9 @@ class AUSTALDispersionModule(DispersionModule):
         output_path = self.getOutputPathAsPath()
         fill_results = OrderedDict()
 
-        logger.debug(f"Pollutions list: {self._pollutants_list}")
-        logger.debug(f"Emissions list: {total_emissions_per_cell_df.columns}")
+        if logger.isEnabledFor(10):
+            logger.debug(f"Pollutions list: {self._pollutants_list}")
+            logger.debug(f"Emissions list: {total_emissions_per_cell_df.columns}")
 
         # Fill Emissions Matrix with emission rate (normalised to 1)
         for source_counter, _pollutant in enumerate(self._pollutants_list):
@@ -1407,6 +1488,19 @@ class AUSTALDispersionModule(DispersionModule):
     # 075 (in the federal state Baden- Württemberg: 060), 100, 150
 
     @log_time
+    def _transform_wkt_to_utm(self, wkt: str) -> str:
+        """
+        Re-project a WKT geometry from EPSG:3857 to the local UTM zone.
+
+        Uses the pyproj Transformer built once in beginJob() via
+        shapely.ops.transform instead of constructing a GeoDataFrame, CRS
+        object, and full reprojection pipeline from scratch per call.
+        """
+        from shapely import wkt as shapely_wkt
+
+        geom = _make_valid(shapely_wkt.loads(wkt))
+        return _shapely_transform(self._wkt_transformer.transform, geom).wkt
+
     def getMatchedCellCoeffs(
         self,
         wkt: str,
@@ -1427,8 +1521,12 @@ class AUSTALDispersionModule(DispersionModule):
             # Get the matched cells for this geometry
             return self._source_geometries[wkt]["efficiency"]
 
-        # Determine the bounding box
-        bbox = self.getBoundingBox(wkt)
+        # Transform WKT from EPSG:3857 to UTM so that bbox and efficiency
+        # calculations are in the same metric CRS as the Grid3D cell bounds.
+        wkt_utm = self._transform_wkt_to_utm(wkt)
+
+        # Determine the bounding box (now in UTM metres)
+        bbox = self.getBoundingBox(wkt_utm)
 
         # Get the vertical extent
         vertical_extent = emissions_.getVerticalExtent()
@@ -1440,7 +1538,7 @@ class AUSTALDispersionModule(DispersionModule):
         # Get the matched cells for this geometry
         matched_cells = grid.matchBoundingBoxToCellHashList(bbox, z_as_list=True)
         matched_cells_coeff = self.CalculateCellHashEfficiency(
-            wkt,
+            wkt_utm,  # UTM WKT matches cell bounds CRS
             bbox,
             matched_cells,
             is_point_element_,
@@ -1449,7 +1547,7 @@ class AUSTALDispersionModule(DispersionModule):
             is_multi_polygon_element_,
         )
 
-        # Store the matched cells for this geometry
+        # Cache by original EPSG:3857 WKT key (as supplied by the caller)
         self._source_geometries[wkt] = {
             "bbox": bbox,
             "matched_cells": matched_cells,

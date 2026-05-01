@@ -11,6 +11,21 @@ from open_alaqs.core.interfaces.RoadwaySources import RoadwaySourcesStore
 from open_alaqs.core.interfaces.SourceModule import SourceWithTimeProfileModule
 from open_alaqs.core.tools import spatial
 
+_ZERO_EMISSION_VALUES = {
+    "fuel_kg": 0.0,
+    "co2_kg": 0.0,
+    "co_kg": 0.0,
+    "hc_kg": 0.0,
+    "nox_kg": 0.0,
+    "sox_kg": 0.0,
+    "pm10_kg": 0.0,
+    "p1_kg": 0.0,
+    "p2_kg": 0.0,
+    "pm10_nonvol_kg": 0.0,
+    "pm10_sul_kg": 0.0,
+    "pm10_organic_kg": 0.0,
+}
+
 logger = get_logger(__name__)
 
 
@@ -46,6 +61,8 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
         if self.getDatabasePath() is not None:
             self.setStore(RoadwaySourcesStore(self.getDatabasePath()))
 
+        self._grid_bounds = values_dict.get("grid_bounds", None)
+
     def beginJob(self) -> None:
         SourceWithTimeProfileModule.beginJob(self)
 
@@ -56,8 +73,8 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
             source_names = []
         result_ = []
 
-        # Get grid bounds from kwargs if available
-        grid_bounds = kwargs.get("grid_bounds", None)
+        # Use grid_bounds stored at init (passed via EmissionCalculatorService config)
+        grid_bounds = self._grid_bounds
 
         for source_id, source in self.getSources().items():
             if ("all" not in source_names) and (source_id not in source_names):
@@ -74,22 +91,7 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
 
             # Calculate the emissions for this time interval
             emissions = Emission(
-                initValues={
-                    "fuel_kg": 0.0,
-                    "co2_kg": 0.0,
-                    "co_kg": 0.0,
-                    "hc_kg": 0.0,
-                    "nox_kg": 0.0,
-                    "sox_kg": 0.0,
-                    "pm10_kg": 0.0,
-                    "p1_kg": 0.0,
-                    "p2_kg": 0.0,
-                    "pm10_prefoa3_kg": 0.0,
-                    "pm10_nonvol_kg": 0.0,
-                    "pm10_sul_kg": 0.0,
-                    "pm10_organic_kg": 0.0,
-                },
-                defaultValues={},
+                initValues=dict(_ZERO_EMISSION_VALUES), defaultValues={}
             )
 
             # Get roadway geometry and calculate length_fraction if available

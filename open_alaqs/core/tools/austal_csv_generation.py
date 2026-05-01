@@ -24,7 +24,7 @@ Columns written to the AUSTAL series.dmna file:
 Columns parsed but NOT forwarded to AUSTAL (can be omitted):
     Temperature(K)
     Humidity(kg_water/kg_dry_air)
-    RelativeHumidity(%)
+    RelativeHumidity(0-1)
     SeaLevelPressure(Pa)
     Scenario
 
@@ -136,7 +136,11 @@ def parse_emissions_csv(path: str) -> Dict[datetime, List[dict]]:
     rows_by_ts: Dict[datetime, List[dict]] = defaultdict(list)
 
     with open(path, newline="", encoding="utf-8") as fh:
-        reader = _csv.DictReader(fh)
+        # Auto-detect separator (GitHub #52)
+        from open_alaqs.core.tools.csv_interface import detect_separator
+
+        sep = detect_separator(path)
+        reader = _csv.DictReader(fh, delimiter=sep)
         headers = list(reader.fieldnames or [])
 
         # Fail early if either required column is absent
@@ -199,7 +203,11 @@ def parse_meteo_csv(path: str) -> Dict[datetime, "AmbientCondition"]:
     result: Dict[datetime, AmbientCondition] = {}
 
     with open(path, newline="", encoding="utf-8") as fh:
-        reader = _csv.DictReader(fh)
+        # Auto-detect separator (GitHub #52)
+        from open_alaqs.core.tools.csv_interface import detect_separator
+
+        sep = detect_separator(path)
+        reader = _csv.DictReader(fh, delimiter=sep)
         for i, row in enumerate(reader):
             raw_dt = (row.get("DateTime(YYYY-mm-dd hh:mm:ss)") or "").strip()
             if not raw_dt:
@@ -219,9 +227,9 @@ def parse_meteo_csv(path: str) -> Dict[datetime, "AmbientCondition"]:
                 "Humidity": _safe_float(
                     row.get("Humidity(kg_water/kg_dry_air)"), 0.00634
                 ),
-                "RelativeHumidity": _safe_float(row.get("RelativeHumidity(%)"), 0.6),
+                "RelativeHumidity": _safe_float(row.get("RelativeHumidity(0-1)"), 0.6),
                 "SeaLevelPressure": _safe_float(
-                    row.get("SeaLevelPressure(mb)"), 1013.25
+                    row.get("SeaLevelPressure(Pa)"), 101325.0
                 ),
                 # Written to series.dmna as ua, ra, lm, hm respectively
                 "WindSpeed": _safe_float(row.get("WindSpeed(m/s)"), 0.0),

@@ -1,3 +1,5 @@
+import json
+import sqlite3 as _sqlite3
 import sys
 from collections import OrderedDict
 
@@ -8,7 +10,6 @@ from qgis.core import Qgis, QgsGeometry, QgsLineString
 from qgis.PyQt import QtCore, QtWidgets
 from shapely.geometry.base import BaseGeometry
 
-from open_alaqs.core.alaqs import get_runway_by_direction
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft, AircraftStore
 from open_alaqs.core.interfaces.AircraftTrajectory import AircraftTrajectoryStore
@@ -39,7 +40,6 @@ defaultEmissions = {
     "pm10_g": 0.0,
     "p1_g": 0.0,
     "p2_g": 0.0,
-    "pm10_prefoa3_g": 0.0,
     "pm10_nonvol_g": 0.0,
     "pm10_sul_g": 0.0,
     "pm10_organic_g": 0.0,
@@ -59,7 +59,6 @@ defaultEI = {
     "smoke_number": 0.0,
     "smoke_number_maximum": 0.0,
     "fuel_type": "",
-    "pm10_prefoa3_g_kg": 0.0,
     "pm10_nonvol_g_kg": 0.0,
     "pm10_sul_g_kg": 0.0,
     "pm10_organic_g_kg": 0.0,
@@ -97,13 +96,35 @@ class Movement:
                 )
 
         self._engine_name = str(val.get("engine_name", ""))
-        self._apu_code = (
-            int(val["apu_code"]) if "apu_code" in val and val["apu_code"] else 0
-        )
-        # self._apu_code = 0 #(stand only), 1 (stand and taxiway) or 2 ()stand, taxiing and take - off / climb - out or approach / landing
+        # APU code semantics:
+        #  -1  Explicit "no APU" — skip all APU emissions regardless of DB defaults
+        #   0  No APU (same effect as -1; default when field is NULL or empty)
+        #   1  APU running at gate/stand only (first taxi segment)
+        #   2  APU running during full taxi (and optionally through LTO phases)
+        # Any other value defaults to 0 (no APU).
+        raw_apu = val.get("apu_code") if isinstance(val, dict) else None
+        if raw_apu is None or raw_apu == "":
+            self._apu_code = 0
+        else:
+            try:
+                self._apu_code = int(raw_apu)
+            except (TypeError, ValueError):
+                self._apu_code = 0
+
+        # gate_emissions_code controls whether GSE, GPU and MES gate emissions
+        # are included for this movement.
+        #   1 (default)  Include all gate emissions (GSE, GPU, MES).
+        #   0            Suppress all gate emissions for this movement.
+        raw_gate = val.get("gate_emissions_code") if isinstance(val, dict) else None
+        if raw_gate is None or raw_gate == "":
+            self._gate_emissions_code = 1
+        else:
+            try:
+                self._gate_emissions_code = int(raw_gate)
+            except (TypeError, ValueError):
+                self._gate_emissions_code = 1
 
         self._oid = val.get("oid", None)
-        self._domestic = str(val.get("domestic", ""))
         self._departure_arrival = str(val.get("departure_arrival", ""))
         self._profile_id = str(val.get("profile_id", ""))
         self._track_id = str(val.get("track_id", ""))
@@ -118,7 +139,7 @@ class Movement:
         self._tow_ratio = conversion.convertToFloat(val.get("tow_ratio"), 1)
         self._taxi_fuel_ratio = conversion.convertToFloat(val.get("taxi_fuel_ratio"), 1)
         self._engine_thrust_level_taxiing = conversion.convertToFloat(
-            val.get("engine_thrust_level_taxiing"), 0.07
+            val.get("engine_thrust_level_for_taxiing"), 0.07
         )
 
         self._set_time_of_main_engine_start_after_block_off_in_s = (
@@ -168,6 +189,12 @@ class Movement:
 
     def setAPUCode(self, var):
         self._apu_code = var
+
+    def getGateEmissionsCode(self):
+        return self._gate_emissions_code
+
+    def setGateEmissionsCode(self, var):
+        self._gate_emissions_code = var
 
     def getSingleEngineTaxiingTimeOfMainEngineStartAfterBlockOff(self):
         return self._set_time_of_main_engine_start_after_block_off_in_s
@@ -260,7 +287,7 @@ class Movement:
         self, geometry_wkt_init, width, height, shift, EPSG_source, EPSG_target
     ):
 
-        (geo_wkt, swap) = spatial.reproject_geometry(
+        geo_wkt, swap = spatial.reproject_geometry(
             geometry_wkt_init, EPSG_source, EPSG_target
         )
 
@@ -367,6 +394,16 @@ class Movement:
 
     def setTrajectoryAtRunway(self, var):
         self._trajectory_at_runway = var
+        if self._trajectory_at_runway is None:
+            logger.warning(
+                "setTrajectoryAtRunway: runway alignment returned None for "
+                "movement at runway time '%s' (runway='%s', direction='%s'). "
+                "Check that the runway and trajectory are configured correctly.",
+                getattr(self, "_runway_time", "unknown"),
+                getattr(self.getRunway(), "getName", lambda: "unknown")(),
+                getattr(self, "_runway_direction", "unknown"),
+            )
+            return
         self._trajectory_at_runway.setIsCartesian(False)
 
     def getRunway(self):
@@ -452,12 +489,6 @@ class Movement:
     def setBlockTime(self, val):
         self._block_time = val
 
-    def setDomesticFlag(self, val):
-        self._domestic = val
-
-    def getDomesticFlag(self):
-        return self._domestic
-
     def setDepartureArrivalFlag(self, val):
         self._departure_arrival = val
 
@@ -513,7 +544,6 @@ class Movement:
         val = "\n Movement:"
         val += "\n\t Runway time: %s" % (str(self.getRunwayTime(as_str=True)))
         val += "\n\t Block time: %s" % (str(self.getBlockTime(as_str=True)))
-        val += "\n\t Domestic Flag: %s" % (str(self.getDomesticFlag()))
         val += "\n\t Departure/Arrival Flag: %s" % (str(self.getDepartureArrivalFlag()))
         val += "\n\t Gate: %s" % (str(self.getGate()))
         val += "\n\t Taxi route: %s" % (str(self.getTaxiRoute()))
@@ -551,6 +581,21 @@ class MovementStore(Store, metaclass=Singleton):
         if self._movement_db is None:
             self._movement_db = MovementDatabase(db_path)
 
+        # G5 perf: cache store references so accessor methods return an
+        # attribute read instead of triggering a Singleton registry lookup on
+        # every call.  `initMovements()` calls each accessor hundreds of
+        # times per movement group; caching here eliminates the repeated
+        # lookups with no behavioural change (all *Store classes are
+        # Singletons keyed by db_path).
+        self._runway_store = RunwayStore(db_path)
+        self._aircraft_store = AircraftStore(db_path)
+        self._engine_store = EngineStore(db_path)
+        self._heli_engine_store = HeliEngineStore(db_path)
+        self._aircraft_trajectory_store = AircraftTrajectoryStore(db_path)
+        self._gate_store = GateStore(db_path)
+        self._taxi_route_store = TaxiwayRoutesStore(db_path)
+        self._track_store = TrackStore(db_path)
+
         # instantiate all movement objects
         self.initMovements(debug, show_progress=show_progress)
 
@@ -558,28 +603,150 @@ class MovementStore(Store, metaclass=Singleton):
         return self._movement_db
 
     def getRunwayStore(self):
-        return RunwayStore(self._db_path)
+        return self._runway_store
 
     def getAircraftStore(self):
-        return AircraftStore(self._db_path)
+        return self._aircraft_store
 
     def getEngineStore(self):
-        return EngineStore(self._db_path)
+        return self._engine_store
 
     def getHeliEngineStore(self):
-        return HeliEngineStore(self._db_path)
+        return self._heli_engine_store
 
     def getAircraftTrajectoryStore(self):
-        return AircraftTrajectoryStore(self._db_path)
+        return self._aircraft_trajectory_store
 
     def getGateStore(self):
-        return GateStore(self._db_path)
+        return self._gate_store
 
     def getTaxiRouteStore(self):
-        return TaxiwayRoutesStore(self._db_path)
+        return self._taxi_route_store
 
     def getTrackStore(self):
-        return TrackStore(self._db_path)
+        return self._track_store
+
+    # ── G4: Runway trajectory cache helpers ───────────────────────────────
+    #
+    # runway_alignment() calls computeSpheroidProject() ~20 times per movement
+    # at load time.  The result depends only on (runway, runway_direction,
+    # taxi_route, profile_id, track_id) — the same five values for every
+    # movement in a group.  We cache the computed AircraftTrajectory in two
+    # layers:
+    #
+    #   1. In-memory per MovementStore instance (free after the first run per
+    #      process invocation).
+    #   2. Persistent JSON in the .alaqs DB (free on every subsequent run).
+    #
+    # The JSON schema stores per-point scalars so that the full
+    # AircraftTrajectory — including mode, fuel_flow, power, and TAS values
+    # needed by FlightEmissionCalculator — can be reconstructed exactly.
+
+    _TRAJ_CACHE_TABLE = "cache_runway_trajectories"
+
+    @staticmethod
+    def _ensure_traj_cache_table(db_path: str) -> None:
+        """Create cache_runway_trajectories if it does not yet exist."""
+        conn = _sqlite3.connect(db_path)
+        try:
+            conn.execute(
+                f"CREATE TABLE IF NOT EXISTS {MovementStore._TRAJ_CACHE_TABLE} "
+                f"(cache_key TEXT PRIMARY KEY, trajectory_json TEXT NOT NULL)"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    @staticmethod
+    def _load_traj_from_db(db_path: str, cache_key: str):
+        """Return a reconstructed AircraftTrajectory from the DB cache, or None."""
+        from open_alaqs.core.interfaces.AircraftTrajectory import (
+            AircraftTrajectory,
+            AircraftTrajectoryPoint,
+        )
+
+        conn = _sqlite3.connect(db_path)
+        try:
+            cur = conn.execute(
+                f"SELECT trajectory_json FROM {MovementStore._TRAJ_CACHE_TABLE} "
+                f"WHERE cache_key = ?",
+                (cache_key,),
+            )
+            row = cur.fetchone()
+        except _sqlite3.OperationalError:
+            # Table not yet present in this DB — will be created on first write
+            return None
+        finally:
+            conn.close()
+
+        if row is None:
+            return None
+
+        data = json.loads(row[0])
+        traj = AircraftTrajectory()
+        traj.setIdentifier(data.get("identifier", ""))
+        traj.setStage(data.get("stage"))
+        traj.setDepartureArrivalFlag(data.get("departure_arrival"))
+        traj.setWeight(data.get("weight"))
+        traj.setIsCartesian(data.get("is_cartesian", False))
+        for pt_data in data.get("points", []):
+            pt = AircraftTrajectoryPoint()
+            pt.setCoordinates(pt_data["x"], pt_data["y"], pt_data["z"])
+            if pt_data.get("mode") is not None:
+                pt.setMode(pt_data["mode"])
+            if pt_data.get("course") is not None:
+                pt.setCourse(pt_data["course"])
+            if pt_data.get("fuel_flow") is not None:
+                pt.setFuelFlow(pt_data["fuel_flow"])
+            if pt_data.get("power") is not None:
+                pt.setPower(pt_data["power"])
+            if pt_data.get("tas") is not None and hasattr(pt, "setTrueAirspeed"):
+                pt.setTrueAirspeed(pt_data["tas"])
+            if pt_data.get("weight") is not None:
+                pt.setWeight(pt_data["weight"])
+            traj.addPoint(pt)
+        return traj
+
+    @staticmethod
+    def _save_traj_to_db(db_path: str, cache_key: str, traj) -> None:
+        """Persist traj as JSON in the DB cache."""
+        pts = []
+        for pt in traj.getPoints():
+            coords = pt.getCoordinates()
+            pts.append(
+                {
+                    "x": coords[0],
+                    "y": coords[1],
+                    "z": coords[2],
+                    "mode": pt.getMode(),
+                    "course": pt.getCourse(),
+                    "fuel_flow": pt.getFuelFlow(),
+                    "power": pt.getPower(),
+                    "tas": (
+                        pt.getTrueAirspeed() if hasattr(pt, "getTrueAirspeed") else None
+                    ),
+                    "weight": pt.getWeight(),
+                }
+            )
+        data = {
+            "identifier": traj.getIdentifier(),
+            "stage": traj.getStage(),
+            "departure_arrival": traj.getDepartureArrivalFlag(),
+            "weight": traj.getWeight(),
+            "is_cartesian": traj.isCartesian(),
+            "points": pts,
+        }
+        payload = json.dumps(data)
+        conn = _sqlite3.connect(db_path)
+        try:
+            conn.execute(
+                f"INSERT OR REPLACE INTO {MovementStore._TRAJ_CACHE_TABLE} "
+                f"(cache_key, trajectory_json) VALUES (?, ?)",
+                (cache_key, payload),
+            )
+            conn.commit()
+        finally:
+            conn.close()
 
     def ProgressBarWidget(self):
         progressbar = QtWidgets.QProgressDialog("Please wait...", "Cancel", 0, 99)
@@ -594,6 +761,18 @@ class MovementStore(Store, metaclass=Singleton):
         return progressbar
 
     def initMovements(self, debug=False, show_progress=True):  # noqa: C901
+
+        # G4: Ensure the runway-trajectory cache table exists in the DB.
+        # This is a no-op if the table is already present.
+        try:
+            MovementStore._ensure_traj_cache_table(self._db_path)
+        except Exception as _e:
+            logger.warning("Could not create runway trajectory cache table: %s", _e)
+
+        # G4: In-memory trajectory cache for this invocation.
+        # Key: (rwy, rwy_dir, tx_route_name, prf_id, trk_id)
+        # Value: AircraftTrajectory (shared reference, read-only after creation)
+        _mem_traj_cache: dict = {}
 
         # Start a progressbar only if show_progress is True
         progressbar = self.ProgressBarWidget() if show_progress else None
@@ -687,12 +866,23 @@ class MovementStore(Store, metaclass=Singleton):
 
             indices = mdf["runway"] == rwy
 
-            res, runway = get_runway_by_direction(rwy, runway_store)
-            if res:
+            # Make sure runways are always 2 characters or more
+            rwy = rwy.zfill(2)
+
+            if runway_store.isinKey(rwy):
                 eq_mdf.loc[indices, "runway_direction"] = rwy
-                eq_mdf.loc[indices, "runway"] = runway.getName()
+                rwy_used = [
+                    key for key in list(runway_store.getObjects().keys()) if rwy in key
+                ]
+                if len(rwy_used) > 1:
+                    logger.warning(
+                        f"Runway {rwy} was found in the DB multiple " "times."
+                    )
+                eq_mdf.loc[indices, "runway"] = rwy_used[0]
+
             else:
                 eq_mdf.loc[indices, "runway"] = np.nan
+                logger.warning(f"Runway '{rwy}' wasn't found in the DB")
 
         # Check if gates exist in the database
         if stage_1:
@@ -860,6 +1050,68 @@ class MovementStore(Store, metaclass=Singleton):
             # Get the indices
             inds = mov_df.index
 
+            # ── G4: Runway trajectory — compute once per group ────────────
+            #
+            # All movements in this group share the same (runway,
+            # runway_direction, taxi_route, profile_id, track_id) so
+            # runway_alignment() produces the same AircraftTrajectory for
+            # every one of them.  We compute it once and reuse the result,
+            # saving ~20 computeSpheroidProject() calls per repeated
+            # movement.
+            #
+            # Lookup order:
+            #   1. In-memory cache (free after the first group in this invocation)
+            #   2. Persistent DB cache (free on every re-run of the same study)
+            #   3. Full runway_alignment() computation (only on true first run)
+            _traj_cache_key = (
+                str(rwy),
+                str(rwy_dir),
+                str(tx_route) if tx_route else "",
+                str(prf_id),
+                str(trk_id) if trk_id else "",
+            )
+            _db_cache_key = "|".join(_traj_cache_key)
+
+            _group_traj = _mem_traj_cache.get(_traj_cache_key)
+            if _group_traj is None:
+                try:
+                    _group_traj = MovementStore._load_traj_from_db(
+                        self._db_path, _db_cache_key
+                    )
+                except Exception as _e:
+                    logger.debug("DB trajectory cache read failed: %s", _e)
+                    _group_traj = None
+
+            if _group_traj is None:
+                # Cache miss — compute using the first movement in the group
+                first_idx = inds[0]
+                fm0 = eq_mdf.loc[first_idx]
+                _proxy0 = Movement()
+                _proxy0.setRunway(runway_store.getObject(fm0["runway"]))
+                _proxy0.setRunwayDirection(fm0["runway_direction"])
+                _proxy0.setTrack(track_store.getObject(fm0["track_id"]))
+                _proxy0.setTaxiRoute(taxi_route_store.getObject(fm0["taxi_route"]))
+                _proxy0.setTrajectory(trajectory_store.getObject(fm0["profile_id"]))
+                _raw_t0 = mdf.loc[first_idx, "runway_time"]
+                if isinstance(_raw_t0, str):
+                    _proxy0._time = conversion.convertTimeToSeconds(_raw_t0)
+                elif isinstance(_raw_t0, (int, float)):
+                    _proxy0._time = float(_raw_t0)
+                _proxy0.updateTrajectoryAtRunway()
+                _group_traj = _proxy0.getTrajectoryAtRunway()
+
+                # Persist in both caches (skip if computation failed)
+                if _group_traj is not None:
+                    _mem_traj_cache[_traj_cache_key] = _group_traj
+                    try:
+                        MovementStore._save_traj_to_db(
+                            self._db_path, _db_cache_key, _group_traj
+                        )
+                    except Exception as _e:
+                        logger.debug("DB trajectory cache write failed: %s", _e)
+            else:
+                _mem_traj_cache[_traj_cache_key] = _group_traj  # warm memory cache
+
             # Loop over all `mov_df` to set the correct aircraft, gate and departure flag
             # e.g. for all particular value that are not equal due to group by
             # NOTE: this implementation makes the group by less efficient, but ensures the correct values
@@ -894,7 +1146,17 @@ class MovementStore(Store, metaclass=Singleton):
                 proxy_mov.setTrack(fm_track)
                 proxy_mov.setTaxiRoute(fm_taxi_route)
                 proxy_mov.setTrajectory(fm_trajectory)
-                proxy_mov.updateTrajectoryAtRunway()
+                _raw_rwy_time = mdf.loc[eq_mdf_index, "runway_time"]
+                if isinstance(_raw_rwy_time, str):
+                    proxy_mov._time = conversion.convertTimeToSeconds(_raw_rwy_time)
+                elif isinstance(_raw_rwy_time, (int, float)):
+                    proxy_mov._time = float(_raw_rwy_time)
+                # else: leave as None; TrajectoryTransformer will log it
+                # G4: assign pre-computed group trajectory (no per-movement
+                # geodesic computation). setTrajectoryAtRunway replaces the
+                # updateTrajectoryAtRunway() call that would otherwise re-run
+                # runway_alignment().
+                proxy_mov.setTrajectoryAtRunway(_group_traj)
                 proxy_mov.setDepartureArrivalFlag(fm_departure_arrival)
 
                 # Update the dataframe
@@ -1008,11 +1270,10 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
     Class that grants access to user-defined movements stored in the database
     """
 
-    TABLE_NAME = "user_aircraft_movements"
-
     def __init__(
         self,
         db_path_string,
+        table_name_string="user_aircraft_movements",
         table_columns_type_dict=None,
         primary_key="oid",
         deserialize=True,
@@ -1023,7 +1284,6 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
                     ("oid", "INTEGER PRIMARY KEY"),
                     ("runway_time", "TIMESTAMP"),
                     ("block_time", "TIMESTAMP"),
-                    ("aircraft_registration", "TEXT"),
                     ("aircraft", "TEXT"),
                     ("gate", "TEXT"),
                     ("departure_arrival", "TEXT"),
@@ -1034,6 +1294,7 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
                     ("taxi_route", "TEXT"),
                     ("tow_ratio", "DECIMAL NULL"),
                     ("apu_code", "INTEGER"),
+                    ("gate_emissions_code", "INTEGER DEFAULT 1"),
                     ("taxi_engine_count", "INTEGER"),
                     (
                         "set_time_of_main_engine_start_after_block_off_in_s",
@@ -1050,17 +1311,16 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
                     ("engine_thrust_level_for_taxiing", "DECIMAL NULL"),
                     ("taxi_fuel_ratio", "DECIMAL NULL"),
                     ("number_of_stop_and_gos", "DECIMAL NULL"),
-                    ("domestic", "TEXT"),
                 ]
             )
 
         SQLSerializable.__init__(
             self,
             db_path_string,
-            self.TABLE_NAME,
+            table_name_string,
             table_columns_type_dict,
             primary_key,
         )
 
-        if deserialize and self._db_path:
+        if self._db_path and deserialize:
             self.deserialize()

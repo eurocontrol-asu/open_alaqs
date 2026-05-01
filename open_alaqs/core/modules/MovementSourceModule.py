@@ -65,7 +65,7 @@ class MovementSourceModule(SourceModule):
 
         self._installation_corrections = {
             "Takeoff": 1.010,  # 100%
-            "Climbout": 1.012,  # 85%
+            "Climbout": 1.013,  # 85%
             "Approach": 1.020,  # 30%
             "Idle": 1.100,  # 7%
         }
@@ -73,6 +73,8 @@ class MovementSourceModule(SourceModule):
         self._ambient_conditions = AmbientCondition()
 
         self._method = {"name": values_dict.get("method", "")}
+        self._meem_version = values_dict.get("meem_version", "v1")
+        self._bffm2_ff_source = values_dict.get("bffm2_ff_source", "trajectory")
         self._nox_correction = values_dict.get("should_apply_nox_corrections", False)
         self._smooth_and_shift = values_dict.get("source_dynamics", "none")
         self._reference_altitude = values_dict.get("reference_altitude", 0.0)
@@ -267,6 +269,8 @@ class MovementSourceModule(SourceModule):
                 "airport_altitude": self.getAirportAltitude(),
                 "installation_corrections": self.getInstallationCorrections(),
                 "ambient_conditions": ambient_conditions,
+                "meem_version": self._meem_version,
+                "bffm2_ff_source": self._bffm2_ff_source,
             },
         }
 
@@ -305,7 +309,10 @@ class MovementSourceModule(SourceModule):
                 continue  # The corresponding df column already has a default emission dict
 
             gate_emission_calculator = GateEmissionCalculator(
-                gate, movement.getAircraft(), movement.getDepartureArrivalFlag()
+                gate,
+                movement.getAircraft(),
+                movement.getDepartureArrivalFlag(),
+                gate_emissions_code=movement.getGateEmissionsCode(),
             )
             gate_emissions = gate_emission_calculator.calculate_emissions()
 
@@ -394,6 +401,46 @@ class MovementSourceModule(SourceModule):
         """
         Calculate Taxiing Emissions
         """
+
+        # F3 perf: Cache taxi emission results keyed on the factors that
+        # fully determine the result.  Within one process() call the
+        # ambient_conditions are constant, so any two movements whose
+        # (engine, taxi route, dep/arr flag, thrust level, fuel ratio, stops,
+        # engine count, gate-emissions code, APU code, SET parameters, and
+        # total taxiing time) are identical produce identical emissions and
+        # geometries.  Reusing the cached list avoids rebuilding the
+        # Emission objects and re-running calculate_emissions() per repeated
+        # movement.
+        def _taxi_group_key(movement):
+            return (
+                (
+                    movement.getAircraftEngine().getName()
+                    if movement.getAircraftEngine()
+                    else None
+                ),
+                movement.getTaxiRoute().getName() if movement.getTaxiRoute() else None,
+                movement.getDepartureArrivalFlag(),
+                movement.getEngineThrustLevelTaxiing(),
+                movement.getTaxiFuelRatio(),
+                movement.getNumberOfStops(),
+                movement.getTaxiEngineCount(),
+                movement.getGateEmissionsCode(),
+                movement.getAPUCode(),
+                movement.getSingleEngineTaxiingTimeOfMainEngineStartAfterBlockOff(),
+                movement.getSingleEngineTaxiingTimeOfMainEngineStartBeforeTakeoff(),
+                movement.getSingleEngineTaxiingMainEngineOffAfterRunwayExit(),
+                # Total taxiing time (block - runway) varies per movement and
+                # scales the emissions linearly, so include it in the key.
+                (
+                    abs(movement.getBlockTime() - movement.getRunwayTime())
+                    if movement.getBlockTime() is not None
+                    and movement.getRunwayTime() is not None
+                    else None
+                ),
+            )
+
+        _taxi_cache: dict = {}
+
         for movement_name, movement in self.getSources().items():
 
             # process only movements of the runway under study
@@ -419,19 +466,34 @@ class MovementSourceModule(SourceModule):
                     movement.getName(),
                 )
             else:
-                taxiing_emission_calculator = TaxiingEmissionCalculator(movement)
-                te = taxiing_emission_calculator.calculate_emissions()
+                gkey = _taxi_group_key(movement)
+                cached_te = _taxi_cache.get(gkey)
+                if cached_te is not None:
+                    te = cached_te
+                else:
+                    # Pass calc_method (the BFFM2 config with ambient_conditions
+                    # and mach_number) so taxi honours the configured method and
+                    # ambient correction. Prior default was bymode with no
+                    # ambient, which meant taxi fuel burn and emission indices
+                    # stayed at EEDB ISA reference values regardless of meteo.
+                    taxiing_emission_calculator = TaxiingEmissionCalculator(
+                        movement,
+                        method=calc_method,
+                    )
+                    te = taxiing_emission_calculator.calculate_emissions()
 
-                MovementSourceModule.drop_zero_value_emissions(te, "Taxiing")
+                    MovementSourceModule.drop_zero_value_emissions(te, "Taxiing")
 
-                # Apply GeoTransformation, changes are applied in-place
-                if self.smoothAndShiftEnabled():
-                    SmoothAndShiftTransformer(
-                        movement.getAircraft(),
-                        self.getApplySmoothAndShift(),
-                        movement.isArrival(),
-                        lto_mode="TX",
-                    ).transform_emissions(te)
+                    # Apply GeoTransformation, changes are applied in-place
+                    if self.smoothAndShiftEnabled():
+                        SmoothAndShiftTransformer(
+                            movement.getAircraft(),
+                            self.getApplySmoothAndShift(),
+                            movement.isArrival(),
+                            lto_mode="TX",
+                        ).transform_emissions(te)
+
+                    _taxi_cache[gkey] = te
 
             # add Gate Emissions
             ge = df[df["Sources"] == movement]["GateEmissions"].iloc[0]
@@ -464,17 +526,27 @@ class MovementSourceModule(SourceModule):
 
     @staticmethod
     def drop_zero_value_emissions(emissions, source):
-        to_remove = []
-        for index, em_ in enumerate(emissions):
+        to_remove = [
+            index
+            for index, em_ in enumerate(emissions)
             # em_["emissions"] is a list of Emissions objects
-            if all(e.isZero() for e in em_["emissions"]):
-                logger.warning(
-                    f"Skip zero value emissions for {source} - index {index}"
-                )
-                to_remove.append(index)
+            if all(e.isZero() for e in em_["emissions"])
+        ]
         if to_remove:
-            logger.warning(
-                f"Removed: {len(to_remove)} over {len(emissions)} emissions because zero value"
+            # Single summary line per source instead of one warning per
+            # dropped index plus a final tally.  The detailed indices are
+            # rarely useful at WARNING level; surface them at DEBUG for
+            # anyone who needs to dig in.
+            logger.info(
+                "Dropped %d/%d zero-value emission segments for %s",
+                len(to_remove),
+                len(emissions),
+                source,
+            )
+            logger.debug(
+                "Zero-value indices for %s: %s",
+                source,
+                to_remove,
             )
         for index in reversed(to_remove):
             emissions.pop(index)

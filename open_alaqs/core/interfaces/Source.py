@@ -3,7 +3,10 @@ class Source:
         if val is None:
             val = {}
 
-        self._height = float(val.get("height", 0))
+        # Locale-tolerant float parsing for DB-sourced values (GitHub #159).
+        from open_alaqs.core.tools.conversion import convertToFloat
+
+        self._height = convertToFloat(val.get("height", 0), default=0.0)
         self._hour_profile = str(val.get("hourly_profile", "default"))
         self._daily_profile = str(val.get("daily_profile", "default"))
         self._month_profile = str(val.get("monthly_profile", "default"))

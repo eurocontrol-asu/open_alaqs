@@ -179,6 +179,9 @@
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
+                <property name="decimals">
+                 <number>7</number>
+                </property>
                 <property name="minimum">
                  <double>-90.0</double>
                 </property>
@@ -204,6 +207,9 @@
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
+                </property>
+                <property name="decimals">
+                 <number>7</number>
                 </property>
                 <property name="minimum">
                  <double>-180.0</double>
@@ -236,6 +242,9 @@
               <property name="suffix">
                <string> m</string>
               </property>
+              <property name="minimum">
+               <double>-1000.000000000000000</double>
+              </property>
               <property name="maximum">
                <double>1000000.000000000000000</double>
               </property>
@@ -258,6 +267,12 @@
               </property>
               <property name="suffix">
                <string> °C</string>
+              </property>
+              <property name="minimum">
+               <double>-90.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>60.000000000000000</double>
               </property>
              </widget>
             </item>

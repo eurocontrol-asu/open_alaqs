@@ -7,6 +7,7 @@ from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.interfaces.Store import Store
 from open_alaqs.core.tools import spatial
+from open_alaqs.core.tools.conversion import convertToFloat as _ctf
 from open_alaqs.core.tools.Singleton import Singleton
 
 loaded_color_logger = False
@@ -25,10 +26,10 @@ class ParkingSources(Source):
             val = {}
 
         self._id = str(val["parking_id"]) if "parking_id" in val else None
-        self._vehicle_year = float(val.get("vehicle_year", 0))
-        self._distance = float(val.get("distance", 0))
-        self._idle_time = float(val.get("idle_time", 0))
-        self._speed = float(val.get("speed", 0))
+        self._vehicle_year = _ctf(val.get("vehicle_year", 0), default=0.0)
+        self._distance = _ctf(val.get("distance", 0), default=0.0)
+        self._idle_time = _ctf(val.get("idle_time", 0), default=0.0)
+        self._speed = _ctf(val.get("speed", 0), default=0.0)
 
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
@@ -47,7 +48,7 @@ class ParkingSources(Source):
             "p2_gm_vh",
         ]:
             if key_ in val:
-                init_values[key_] = float(val[key_])
+                init_values[key_] = _ctf(val[key_], default=0.0)
                 default_values[key_] = 0.0
 
         self._emissionIndex = EmissionIndex(init_values, default_values)

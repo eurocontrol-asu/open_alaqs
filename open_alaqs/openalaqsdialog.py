@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 /***************************************************************************
  OpenALAQSDialog
@@ -18,6 +18,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -27,6 +28,7 @@ import geopandas as gpd
 from qgis.core import (
     Qgis,
     QgsApplication,
+    QgsCoordinateTransform,
     QgsExpression,
     QgsFeatureRequest,
     QgsMapLayer,
@@ -100,6 +102,7 @@ def catch_errors(f):
             return f(*args, **kwargs)
         except Exception as e:
             alaqsutils.print_error(f.__name__, Exception, e)
+            raise e
 
     return wrapper
 
@@ -174,7 +177,7 @@ class OpenAlaqsOpenDatabase:
                 with OverrideCursor(Qt.CursorShape.WaitCursor):
                     result = alaqs.load_study_setup()
 
-                study_data = alaqs.load_study_setup()
+                study_data = result
                 if study_data:
                     oautk.set_default_zoom(
                         self.canvas,
@@ -214,6 +217,17 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         )
         self.ui = Ui_DialogStudySetup()
         self.ui.setupUi(self)
+
+        # Force C locale (period decimal separator) on all coordinate/numeric
+        # spinboxes. Without this, QgsDoubleSpinBox uses the system locale,
+        # which in many European locales renders 51.96 as "51,96" — causing
+        # confusion and previously misreading values on save/restore.
+        c_locale = QtCore.QLocale(QtCore.QLocale.Language.C)
+        self.ui.spinBoxAirportLatitude.setLocale(c_locale)
+        self.ui.spinBoxAirportLongitude.setLocale(c_locale)
+        self.ui.spinBoxAirportElevation.setLocale(c_locale)
+        self.ui.spinBoxAirportTemperature.setLocale(c_locale)
+        self.ui.spinBoxVerticalLimit.setLocale(c_locale)
 
         self.iface = iface
 
@@ -274,6 +288,8 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             # TODO OPENGIS.ch: remove the Vertical limit from the form, use the one in the Emission Inventory Analysis only
             self.ui.spinBoxVerticalLimit.setValue(study_data["vertical_limit"])
 
+            self.parking_method = study_data.get("parking_method")
+
             populate_combobox(
                 self.ui.comboBoxRoadwayMethod,
                 alaqs.get_roadway_methods(),
@@ -294,16 +310,12 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             self.ui.textEditStudyInformation.setPlainText(study_data["study_info"])
 
             try:
-                date_created = datetime.datetime.fromisoformat(
-                    study_data["date_created"]
-                )
+                date_created = datetime.fromisoformat(study_data["date_created"])
             except Exception:
                 date_created = datetime.now()
 
             try:
-                date_modified = datetime.datetime.fromisoformat(
-                    study_data["date_modified"]
-                )
+                date_modified = datetime.fromisoformat(study_data["date_modified"])
             except Exception:
                 date_modified = datetime.now()
 
@@ -336,8 +348,8 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
                     airport_data["airport_longitude"]
                 )
                 self.ui.spinBoxAirportElevation.setValue(
-                    int(airport_data["airport_elevation"] * 0.3048)
-                )  # in meters from ft
+                    round(airport_data["airport_elevation"] * 0.3048)
+                )  # convert ft to m
 
                 oautk.set_default_zoom(
                     self.iface.mapCanvas(),
@@ -391,13 +403,31 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
             "study_info": self.study_info,
         }
 
-        # Check for values that failed validation
-        for value in study_setup:
-            if value is False:
-                QtWidgets.QMessageBox.information(
-                    self, "Information", "Please correct input parameters"
-                )
-                return
+        # Check for values that failed validation, and name the offending
+        # fields so the user knows what to correct.
+        field_labels = {
+            "project_name": "Project name",
+            "airport_name": "Airport name",
+            "airport_id": "Airport ID",
+            "airport_code": "Airport ICAO code",
+            "airport_country": "Airport country",
+            "roadway_method": "Roadway method",
+            "roadway_fleet_year": "Roadway fleet year",
+            "roadway_country": "Roadway country",
+        }
+        invalid_fields = [
+            field_labels[key]
+            for key, value in study_setup.items()
+            if value is False and key in field_labels
+        ]
+        if invalid_fields:
+            QtWidgets.QMessageBox.information(
+                self,
+                "Information",
+                "Please correct the following fields:\n\n  \u2022 "
+                + "\n  \u2022 ".join(invalid_fields),
+            )
+            return
 
         result = alaqs.save_study_setup(study_setup)
         if result is None:
@@ -423,7 +453,9 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
     """
 
     def __init__(self, iface):
-        QtWidgets.QWidget.__init__(self, None, Qt.WindowType.WindowStaysOnTopHint)
+        main_window = iface.mainWindow() if iface is not None else None
+        QtWidgets.QDialog.__init__(self, main_window)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
 
         # Build the UI
         Ui_FormProfiles, _ = loadUiType(
@@ -511,19 +543,20 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             self.ui.comboBoxMonthlyName.setEditable(False)
 
     @catch_errors
-    def change_hourly_profile(self, profile_id):
+    def change_hourly_profile(self, _index):
         """
         This reloads the profile UI to show the currently selected hourly
         profile in the UI.
 
-        :param profile_id: the unique ID of the hourly profile to be displayed
+        :param _index: combobox selection index (unused; name is read from currentText)
         :return: :raise Exception:
         """
-        if str(profile_id).strip() == "":
+        profile_name = self.ui.comboBoxHourlyName.currentText().strip()
+        if not profile_name:
             self.clear_hourly_profile()
             return None
 
-        profile_data = alaqs.get_hourly_profile(profile_id)
+        profile_data = alaqs.get_hourly_profile(profile_name)
         if isinstance(profile_data, str):
             raise Exception(profile_data)
         elif profile_data is None:
@@ -556,17 +589,18 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             return None
 
     @catch_errors
-    def change_daily_profile(self, profile_id):
+    def change_daily_profile(self, _index):
         """
         This reloads the profile UI to show the currently selected daily profile
         in the UI.
 
-        :param profile_id: the unique ID of the daily profile to be displayed
+        :param _index: combobox selection index (unused; name is read from currentText)
         """
-        if str(profile_id).strip() == "":
+        profile_name = self.ui.comboBoxDailyName.currentText().strip()
+        if not profile_name:
             self.clear_daily_profile()
             return None
-        profile_data = alaqs.get_daily_profile(profile_id)
+        profile_data = alaqs.get_daily_profile(profile_name)
         if isinstance(profile_data, str):
             raise Exception(profile_data)
         elif profile_data is None:
@@ -582,17 +616,18 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             return None
 
     @catch_errors
-    def change_monthly_profile(self, profile_id):
+    def change_monthly_profile(self, _index):
         """
         This reloads the profile UI to show the currently selected monthly
         profile in the UI.
 
-        :param profile_id: the unique ID of the monthly profile to be displayed
+        :param _index: combobox selection index (unused; name is read from currentText)
         """
-        if str(profile_id).strip() == "":
+        profile_name = self.ui.comboBoxMonthlyName.currentText().strip()
+        if not profile_name:
             self.clear_monthly_profile()
             return None
-        profile_data = alaqs.get_monthly_profile(profile_id)
+        profile_data = alaqs.get_monthly_profile(profile_name)
         if isinstance(profile_data, str):
             raise Exception(profile_data)
         elif profile_data is None:
@@ -836,7 +871,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 )
                 return None
 
-        for value in properties[2:]:
+        for value in properties[1:]:
             if value > 1:
                 QtWidgets.QMessageBox.warning(
                     self, "Error", "Profile values cannot be greater than 1"
@@ -844,7 +879,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 return
 
         pass_check = False
-        for value in properties[2:]:
+        for value in properties[1:]:
             if value == 1:
                 pass_check = True
         if pass_check is False:
@@ -929,7 +964,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
             )
             return None
 
-        for value in properties[2:]:
+        for value in properties[1:]:
             if value > 1:
                 QtWidgets.QMessageBox.warning(
                     self, "Error", "Profile values cannot be greater than 1"
@@ -937,7 +972,7 @@ class OpenAlaqsProfiles(QtWidgets.QDialog):
                 return
 
         pass_check = False
-        for value in properties[2:]:
+        for value in properties[1:]:
             if value == 1:
                 pass_check = True
         if pass_check is False:
@@ -1073,6 +1108,8 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
 
         self.ui.routes.currentIndexChanged.connect(self.route_changed)
         self.ui.create.clicked.connect(self.create_new_taxi_route)
+        if self.canvas is not None:
+            self.canvas.selectionChanged.connect(self.add_taxiways_from_canvas_to_table)
         self.ui.close_button.clicked.connect(self.close)
 
         # routes
@@ -1201,9 +1238,6 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
             for taxiway_route in taxiway_routes:
                 self.ui.routes.addItem(taxiway_route[2])
             logger.debug("Taxiway Routes Tool: routes populated")
-
-        # Add the signal to pick up new selected taxiways
-        self.canvas.selectionChanged.connect(self.add_taxiways_from_canvas_to_table)
 
         if select_name:
             index_select_name_ = self.ui.routes.findText(select_name)
@@ -1396,7 +1430,7 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
 
         # TODO OPENGIS.ch: this is should be the taxiway layer, not the currently active (possible raster) layer
         layer.removeSelection()
-        layer.select(layer.dataProvider().attributeIndexes())
+        layer.selectAll()
 
         to_select = []
         for feature in layer.getFeatures():
@@ -1660,13 +1694,12 @@ class OpenAlaqsLogfile(QtWidgets.QDialog):
             with log_path.open("r") as current_log_file:
                 current_log_file_text = current_log_file.read()
 
-                new_path, _ = QtWidgets.QFileDialog.getSaveFileName(
-                    self, "Save log file as ...", ""
-                )
-                if new_path:
-                    new_file = open(new_path, "wt")
+            new_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self, "Save log file as ...", ""
+            )
+            if new_path:
+                with open(new_path, "wt") as new_file:
                     new_file.write(current_log_file_text)
-                    new_file.close()
 
             self.load_log_file()
         except Exception as e:
@@ -1691,7 +1724,17 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         self.ui = Ui_DialogInventory()
         self.ui.setupUi(self)
 
-        # Connections
+        # Force C locale (period decimal separator) on all numeric spinboxes.
+        # See OpenAlaqsStudySetup.__init__ for rationale.
+        QtCore.QLocale(QtCore.QLocale.Language.C)
+
+        # The "Advanced Options" group (Method dropdown, Towing Speed, Vertical
+        # Limit) was removed from the UI — Method had only "ALAQS" as the sole
+        # choice, Towing Speed was written into a dict no downstream code read,
+        # and Vertical Limit went into a DB column that nothing consumed; the
+        # actual LTO ceiling is hardcoded to 914.4 m in EmissionCalculatorService
+        # and MovementSourceModule.
+
         self.ui.status_update.setText("Ready")
         self.ui.buttonBox.button(
             QtWidgets.QDialogButtonBox.StandardButton.Save
@@ -1816,13 +1859,11 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                         if not isinstance(movement_data[0], str):
                             raise Exception("Movement file is missing header row")
                     else:
-                        # Get the range of movement dates
-                        try:
-                            alaqsutils.dict_movement(movement_data)
-                        except Exception as e:
+                        # Validate minimum column count
+                        if len(movement_data) < 10:
                             raise Exception(
-                                "Line'%i':\n%s\nhas the following error:"
-                                "\n %s" % (index_line, line, e)
+                                "Line %i has too few columns (%d): %s"
+                                % (index_line, len(movement_data), line.strip())
                             )
 
                         date_time = datetime.strptime(
@@ -1901,18 +1942,16 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
 
         csv = read_csv_to_dict(met_file)
 
-        headers_ = {
-            "Scenario": "Scenario",
-            "DateTime(YYYY-mm-dd hh:mm:ss)": "DateTime",
-            "Temperature(K)": "Temperature",
-            "Humidity(kg_water/kg_dry_air)": "Humidity",
-            "RelativeHumidity(%)": "RelativeHumidity",
-            "SeaLevelPressure(mb)": "SeaLevelPressure",
-            "WindSpeed(m/s)": "WindSpeed",
-            "WindDirection(degrees)": "WindDirection",
-            "ObukhovLength(m)": "ObukhovLength",
-            "MixingHeight(m)": "MixingHeight",
-        }
+        # Use the single-source-of-truth schema from AmbientCondition. The GUI
+        # validator and the loader-time validator MUST stay in lockstep --
+        # previously each had its own copy of the dict and they drifted (GUI
+        # demanded `RelativeHumidity(%)` and `SeaLevelPressure(mb)` while the
+        # loader demanded `(0-1)` and `(Pa)`), causing a "headers do not match"
+        # popup on every CSV that satisfied the loader. Importing the constant
+        # makes drift impossible.
+        from open_alaqs.core.interfaces.AmbientCondition import METEO_CSV_HEADERS
+
+        headers_ = METEO_CSV_HEADERS
 
         # check if all headers are found
         if not sorted(csv.keys()) == sorted(headers_.keys()):
@@ -1953,15 +1992,15 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             if CheckAmbientConditions(
                 conversion.convertToFloat(csv["Humidity(kg_water/kg_dry_air)"][row_]),
                 0.00634,
-                100,
+                300,
             ):
                 logger.warning("Check Humidity units/value.")
             if CheckAmbientConditions(
-                conversion.convertToFloat(csv["RelativeHumidity(%)"][row_]), 0.6, 90
+                conversion.convertToFloat(csv["RelativeHumidity(0-1)"][row_]), 0.6, 90
             ):
                 logger.warning("Check Relative Humidity units/value.")
             if CheckAmbientConditions(
-                conversion.convertToFloat(csv["SeaLevelPressure(mb)"][row_]),
+                conversion.convertToFloat(csv["SeaLevelPressure(Pa)"][row_]),
                 101325.0,
                 70,
             ):
@@ -2043,7 +2082,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                 return
 
             full_save_path = os.path.join(
-                output_save_path, output_save_name, "_out.alaqs"
+                output_save_path, output_save_name + "_out.alaqs"
             )
             if os.path.isfile(full_save_path):
                 overwrite_msg = (
@@ -2068,6 +2107,15 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             model_parameters["movement_path"] = movement_file_path
             model_parameters["study_start_date"] = study_start_date
             model_parameters["study_end_date"] = study_end_date
+            # Former Advanced Options UI widgets replaced with fixed CAEP defaults:
+            # - towing_speed is retained in the dict schema for backward compatibility
+            #   with test fixtures; no downstream code reads it.
+            # - vertical_limit is written into tbl_InvPeriod.vert_limit on the inventory
+            #   DB for backward compatibility with existing inventory schemas; the actual
+            #   LTO ceiling used at calculation time is the independent
+            #   EmissionCalculatorService.vertical_limit_m = 914.4 m (CAEP standard).
+            model_parameters["towing_speed"] = 10.0
+            model_parameters["vertical_limit"] = 914.4
             model_parameters["x_resolution"] = x_resolution
             model_parameters["y_resolution"] = y_resolution
             model_parameters["z_resolution"] = z_resolution
@@ -2117,7 +2165,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                         movement_file_path,
                     )
                     if adsb_result:
-                        logger.info(adsb_message)
+                        logger.info("ADS-B file was successfully imported!")
                     else:
                         logger.warning(
                             f"The ADS-B file could not be imported! Details: {adsb_message}"
@@ -2180,7 +2228,37 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             "label": "Apply NOx Corrections",
             "widget_type": QtWidgets.QCheckBox,
             "initial_value": False,
-            "tooltip": "Only available when the method is set to 'bymode'.",
+            "tooltip": (
+                "Apply BFFM2 ambient-condition NOx correction (delta/theta/"
+                "humidity) to the mode-anchor NOx EI when the method is "
+                "'bymode'. Default OFF for compatibility with ICAO-standard "
+                "LTO inventory reports (AEDT, EDMS, ALAQS legacy). Turn ON "
+                "for site-specific studies where actual meteorology differs "
+                "materially from ISA sea level. Has no effect on BFFM2, "
+                "which always applies its own ambient correction."
+            ),
+        },
+        "bffm2_ff_source": {
+            "label": "BFFM2 Fuel-Flow Source",
+            "widget_type": QtWidgets.QComboBox,
+            "initial_value": "trajectory",
+            "widget_config": {
+                "options": ["trajectory", "mode_anchor"],
+            },
+            "tooltip": (
+                "Controls how BFFM2 resolves segment fuel flow when the "
+                "trajectory does not supply an explicit fuel_flow_kgm.\n\n"
+                "'trajectory' (default): derive FF from the segment's "
+                "power_setting via twin-quadratic interpolation on the EEDB "
+                "anchors. Uses ANP sub-mode thrust variation. Matches the "
+                "CAEP14 v14 BFFM2 workflow.\n\n"
+                "'mode_anchor': use the EEDB anchor FF for the segment's "
+                "mode label (TX/AP/CL/TO). Disables sub-mode resolution but "
+                "still applies BFFM2 atmospheric and humidity corrections. "
+                "Matches the CAEP14 v14 LTO-mode workflow with corrections. "
+                "Useful for ICAO-style LTO inventory comparisons.\n\n"
+                "Only applies when method is BFFM2."
+            ),
         },
         "source_dynamics": {
             "label": "Source Dynamics",
@@ -2314,6 +2392,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         self.ui.configuration_modules_list.setCurrentRow(index)
 
     def pollutant_changed(self):
+        self._emission_calculation_ = None
         self.populate_calculation_methods(
             pollutant=self.ui.pollutants_names.currentText()
         )
@@ -2342,6 +2421,51 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             }
         )
 
+        # patch_schema always recreates the method QComboBox via _add_setting,
+        # destroying any previous currentIndexChanged connection. Reconnect
+        # the cache invalidator across all configuration widgets so any
+        # change (method, source_dynamics, vertical limit, time interval,
+        # NOx correction, study window, receptor file) invalidates the
+        # cached emission calculation.
+        self._wire_emission_cache_invalidation()
+
+    def _wire_emission_cache_invalidation(self):
+        """Connect every emission-config widget to the cache-invalidation slot.
+
+        The cached `_emission_calculation_` was previously only invalidated
+        when the calculation method (bymode/BFFM2) changed. Any other
+        configuration change (Source Dynamics, NOx correction, vertical
+        limit, time interval, start/end times, receptor file) silently
+        produced stale plot output because runOutputModule reused the
+        cached result. This helper wires every widget's relevant change
+        signal to the same invalidation slot.
+        """
+        widget = self._emission_calculation_configuration_widget
+        if widget is None:
+            return
+
+        def invalidate(*_):
+            setattr(self, "_emission_calculation_", None)
+
+        for setting_name, w in widget._settings_widgets.items():
+            for signal_name in (
+                "currentIndexChanged",  # QComboBox
+                "stateChanged",  # QCheckBox
+                "valueChanged",  # QSpinBox / QDoubleSpinBox
+                "dateTimeChanged",  # QDateTimeEdit
+                "fileChanged",  # QgsFileWidget
+                "textChanged",  # QLineEdit (fallback)
+            ):
+                signal = getattr(w, signal_name, None)
+                if signal is not None and hasattr(signal, "connect"):
+                    try:
+                        signal.connect(invalidate)
+                    except Exception:
+                        # Widget exposes an attribute by that name but it
+                        # is not a Qt signal - skip silently.
+                        pass
+                    break  # one signal per widget is enough
+
     def resetEmissionCalculationConfiguration(self, config=None):
         if config is None:
             config = {}
@@ -2361,6 +2485,12 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             self.ui.configuration_stack.insertWidget(
                 0, self._emission_calculation_configuration_widget
             )
+
+            # Wire cache invalidation across all configuration widgets so
+            # that any change (Source Dynamics, NOx correction, vertical
+            # limit, time interval, start/end, receptors, method) drops
+            # the stale cached emission calculation.
+            self._wire_emission_cache_invalidation()
 
         self._emission_calculation_configuration_widget.init_values(config)
         self.update()
@@ -2453,9 +2583,8 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         return None
 
     def runOutputModule(self, OutputModule: Any) -> tuple[Any, Any]:
-        # calculate all emissions
+        # calculate all emissions (reuse cached result if still valid)
         logger.info("calculate all emissions...")
-        self._emission_calculation_ = None
         if self._emission_calculation_ is None:
             self.update_emissions()
 
@@ -2514,21 +2643,45 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         if isinstance(res, QtWidgets.QDialog):
             res.show()
         elif isinstance(res, QgsMapLayer):
-            # Replace existing layers with same name...
-            for layer in self._iface.mapCanvas().layers():
-                if layer.name() == res.name():
-                    QgsProject.instance().removeMapLayers([layer.id()])
+            # Replace existing layers with same name. Iterate
+            # QgsProject.instance().mapLayers() (the project-wide layer
+            # registry), NOT self._iface.mapCanvas().layers() — the canvas
+            # only reports layers currently in its render set, which
+            # excludes layers the user toggled off in the legend or that
+            # were otherwise removed from the canvas without being deleted
+            # from the project. Without project-wide iteration, switching
+            # e.g. BFFM2 trajectory → mode_anchor while a previous
+            # "nox Emissions" layer is hidden silently leaves both layers
+            # in the project (QGIS allows duplicate names; layers are
+            # keyed by id, not name). The user then sees stale data
+            # because the legend shows two "nox Emissions" entries and
+            # the rendering order may put the old one on top.
+            ids_to_remove = [
+                lyr.id()
+                for lyr in QgsProject.instance().mapLayers().values()
+                if lyr.name() == res.name()
+            ]
+            if ids_to_remove:
+                QgsProject.instance().removeMapLayers(ids_to_remove)
 
             # and add the vector layer to the existing QGIS layers
             QgsProject.instance().addMapLayers([res])
 
             # automatically zoom to new layer
-            self._iface.mapCanvas().setExtent(res.extent())
-
-            # add coordinate-references system
-            if res.crs() is not None:
-                # self._iface.mapCanvas().mapRenderer().setDestinationCrs(res.crs())
-                self._iface.mapCanvas().mapSettings().setDestinationCrs(res.crs())
+            # res.extent() is in the layer's native CRS (UTM). The canvas may
+            # be in a different CRS (e.g. EPSG:3857). Without the transform,
+            # UTM metre values are misinterpreted as EPSG:3857 coordinates,
+            # placing the view hundreds of kilometres from the airport.
+            canvas_crs = self._iface.mapCanvas().mapSettings().destinationCrs()
+            if res.crs().isValid() and res.crs() != canvas_crs:
+                ct = QgsCoordinateTransform(
+                    res.crs(), canvas_crs, QgsProject.instance()
+                )
+                extent = ct.transformBoundingBox(res.extent())
+            else:
+                extent = res.extent()
+            self._iface.mapCanvas().setExtent(extent)
+            self._iface.mapCanvas().refresh()
 
             if output_module.getModuleName() == "EmissionsQGISVectorLayerOutputModule":
                 # add text to graphics renderer
@@ -2556,7 +2709,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                     self._iface.mapCanvas().scene().addItem(textItem)
 
     def updateMinMaxGUI(self, db_path_=""):
-        (time_start_calc_, time_end_calc_) = get_min_max_timestamps(db_path_)
+        time_start_calc_, time_end_calc_ = get_min_max_timestamps(db_path_)
         # self.ui.start_dateTime.setMinimumDateTime(time_start_calc_)
         # self.ui.end_dateTime.setMaximumDateTime(time_end_calc_)
 
@@ -2622,6 +2775,25 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             )
 
             return
+
+        # Reset every Singleton-backed Store so the next source-listing or
+        # calculation re-reads from the new file. Without this,
+        # source_type_changed() builds a fresh module that calls
+        # `AreaSourcesStore(new_path)` etc., but the Singleton metaclass
+        # ignores the new db_path argument and returns the cached instance
+        # bound to the *previous* file. Symptom: switching the inventory
+        # file in the Analysis dialog shows the old file's source list.
+        # EmissionCalculation also resets at calc time, but that's too late
+        # for the dropdowns the user picks from before clicking Calculate.
+        from open_alaqs.core.tools.Singleton import Singleton
+
+        Singleton.reset_all()
+        # ProjectDatabase is itself a Singleton; reset_all() above clears it,
+        # but its `path` attribute (set by the project-open flow) is also
+        # what the source modules consult, so re-bind it explicitly so the
+        # very next source_type_changed() picks up the right path even if
+        # the user hasn't re-opened the project.
+        ProjectDatabase().path = path
 
         s = QgsSettings()
         s.setValue("OpenALAQS/last_result_file_path", path)
@@ -2729,19 +2901,21 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             ref_altitude = study_data.get("airport_elevation", 0.0)
 
             # Restore original database path
-            if project_database_path is None:
-                del project_database.path
-            else:
+            if project_database_path is not None:
                 project_database.path = project_database_path
 
-            # Build grid configuration
+            # Build grid configuration from inventory DB if available,
+            # falling back to sensible defaults if not yet configured.
+            from open_alaqs.core.tools.sql_interface import get_grid_3d_definition
+
+            _gd = get_grid_3d_definition(inventory_path) or {}
             grid_config = {
-                "x_cells": 100,
-                "y_cells": 100,
-                "z_cells": 1,
-                "x_resolution": 100,
-                "y_resolution": 100,
-                "z_resolution": 100,
+                "x_cells": _gd.get("x_cells", 100),
+                "y_cells": _gd.get("y_cells", 100),
+                "z_cells": _gd.get("z_cells", 1),
+                "x_resolution": _gd.get("x_resolution", 100),
+                "y_resolution": _gd.get("y_resolution", 100),
+                "z_resolution": _gd.get("z_resolution", 100),
                 "reference_latitude": ref_latitude,
                 "reference_longitude": ref_longitude,
                 "reference_altitude": ref_altitude,
@@ -2777,6 +2951,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                     "should_apply_nox_corrections", False
                 ),
                 source_dynamics=em_config.get("source_dynamics", "none"),
+                bffm2_ff_source=em_config.get("bffm2_ff_source", "trajectory"),
                 grid_config=grid_config,
                 receptor_points=self._receptor_points,
                 dispersion_modules_config=self.getDispersionModulesConfiguration(),
@@ -2934,8 +3109,13 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
             alaqs_layer = oautk.get_alaqs_layer(layer_type)
 
             if not alaqs_layer:
+                # `continue` not `return`: a single missing ALAQS layer
+                # (e.g. the user removed the "Tracks" layer from their
+                # project) must not silently abort the entire import,
+                # which would skip every layer that comes after it in
+                # LAYERS_CONFIG iteration order.
                 logger.error(f"Unable to find the ALAQS layer for {layer_type=}")
-                return
+                continue
 
             if "osm_filters" not in layer_config:
                 logger.debug(

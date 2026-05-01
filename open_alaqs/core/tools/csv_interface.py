@@ -11,6 +11,53 @@ from open_alaqs.core.alaqslogging import get_logger
 logger = get_logger(__name__)
 
 
+# Separators we'll try when auto-detecting. Order matters for the fallback
+# path: `,` is checked first because it's the rebuild's canonical format.
+_SUPPORTED_SEPARATORS = (",", ";", "\t")
+
+
+def detect_separator(path: str, sample_bytes: int = 4096) -> str:
+    """
+    Detect the CSV delimiter by sniffing the file header (GitHub #52).
+
+    European-locale Excel exports use ``;`` because ``,`` is the decimal
+    separator. OpenALAQS historically hardcoded ``,`` everywhere, which
+    silently produced a single-column DataFrame for ``;`` files — the
+    downstream schema check then failed with a misleading error.
+
+    Uses csv.Sniffer on the first few KB. Falls back to ``,`` if the
+    sniffer can't decide (e.g. single-column file with no delimiters,
+    empty file, binary file).
+
+    :param path: path to the CSV file
+    :param sample_bytes: how much of the file to sample for sniffing
+    :return: the detected delimiter, one of `,`, `;`, or `\\t`; `,` on fallback
+    """
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            sample = f.read(sample_bytes)
+        if not sample.strip():
+            return ","  # empty file — irrelevant, caller will error
+        try:
+            dialect = csv.Sniffer().sniff(
+                sample, delimiters="".join(_SUPPORTED_SEPARATORS)
+            )
+            if dialect.delimiter in _SUPPORTED_SEPARATORS:
+                return dialect.delimiter
+        except csv.Error:
+            # Sniffer couldn't determine — fall through to heuristic
+            pass
+        # Heuristic fallback: count how many times each candidate appears in
+        # the first non-empty line, pick the most common.
+        first_line = next((line for line in sample.splitlines() if line.strip()), "")
+        counts = {sep: first_line.count(sep) for sep in _SUPPORTED_SEPARATORS}
+        best = max(counts, key=counts.get)
+        return best if counts[best] > 0 else ","
+    except Exception as e:
+        logger.warning("detect_separator: %s — defaulting to ','", e)
+        return ","
+
+
 def write_csv(path_to_file: str, rows: List[list]):
     logger.debug("Writing results to CSV file: '%s'" % path_to_file)
     try:
@@ -31,9 +78,12 @@ def write_csv(path_to_file: str, rows: List[list]):
 def read_csv(path):
     path_to_file = path  # [0]
     if os.path.isfile(path_to_file):
+        # Auto-detect separator (GitHub #52) to support both `,` and `;`
+        # exports from non-English-locale Excel.
+        sep = detect_separator(path_to_file)
         input_ = []
         with open(path_to_file, "r") as csvfile:
-            csv_reader = csv.reader(csvfile, delimiter=",", quotechar='"')
+            csv_reader = csv.reader(csvfile, delimiter=sep, quotechar='"')
             for row in csv_reader:
                 input_.append(row)
         return input_
@@ -80,7 +130,9 @@ def read_csv_to_geodataframe(path):
     path_to_file = path  # [0]
     logger.debug("Reading %s" % path_to_file)
     if os.path.isfile(path_to_file):
-        csv_df = pd.read_csv(path_to_file)
+        # Auto-detect separator (GitHub #52)
+        sep = detect_separator(path_to_file)
+        csv_df = pd.read_csv(path_to_file, sep=sep)
     else:
         logger.error("Couldn't read CSV file: '%s'" % path_to_file)
         csv_df = pd.DataFrame()
@@ -103,19 +155,28 @@ def read_csv_to_geodataframe(path):
             if not csv_df.empty:
                 gdf = gpd.GeoDataFrame(csv_df)
         else:
-            if (
-                ("longitude" in csv_df.keys())
-                and ("latitude" in csv_df.keys())
-                and ("altitude" in csv_df.keys())
-            ):
-                gdf = gpd.GeoDataFrame(
-                    csv_df,
-                    geometry=gpd.points_from_xy(
+            # CSV receptor schema: longitude + latitude required; altitude is optional.
+            # Prior implementation required all three and silently produced an empty
+            # GeoDataFrame when altitude was missing (seen in many user-supplied files
+            # that only carry ID, longitude, latitude, EPSG).  That left AUSTAL with
+            # zero receptor points and only a single WARNING line in the log.
+            if ("longitude" in csv_df.keys()) and ("latitude" in csv_df.keys()):
+                if "altitude" in csv_df.keys():
+                    geom = gpd.points_from_xy(
                         csv_df.longitude, csv_df.latitude, csv_df.altitude
-                    ),
-                )
+                    )
+                else:
+                    # Default receptor height 1.5 m (standard breathing-height used
+                    # elsewhere in the AUSTAL output module)
+                    geom = gpd.points_from_xy(csv_df.longitude, csv_df.latitude)
+                gdf = gpd.GeoDataFrame(csv_df, geometry=geom)
             else:
-                logger.error("Couldn't find 'geometry' column in DataFrame")
+                logger.error(
+                    "Couldn't build receptor geometry: CSV must contain either a "
+                    "'geometry' column with WKT, or 'longitude' and 'latitude' "
+                    "columns (optional 'altitude'). Columns found: %s",
+                    list(csv_df.columns),
+                )
 
     except Exception as exc_:
         logger.error("Cannot convert to GeoDataFrame (%s)" % exc_)

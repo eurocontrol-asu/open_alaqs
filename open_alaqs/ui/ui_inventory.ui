@@ -82,8 +82,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>580</width>
-        <height>525</height>
+        <width>526</width>
+        <height>660</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_6">
@@ -119,19 +119,6 @@
           </item>
          </layout>
         </widget>
-       </item>
-       <item row="4" column="0">
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>10</height>
-          </size>
-         </property>
-        </spacer>
        </item>
        <item row="1" column="0">
         <widget class="QGroupBox" name="movementDataGroupBox">
@@ -441,6 +428,19 @@
          </layout>
         </widget>
        </item>
+       <item row="5" column="0">
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>10</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
       </layout>
      </widget>
     </widget>
@@ -489,6 +489,17 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>QgsCollapsibleGroupBox</class>
+   <extends>QGroupBox</extends>
+   <header>qgscollapsiblegroupbox.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QgsDoubleSpinBox</class>
+   <extends>QDoubleSpinBox</extends>
+   <header>qgsdoublespinbox.h</header>
+  </customwidget>
   <customwidget>
    <class>QgsFileWidget</class>
    <extends>QWidget</extends>

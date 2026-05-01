@@ -1,4 +1,7 @@
 import json
+import os
+import tempfile
+import urllib.parse
 from typing import Optional, TypedDict
 
 from qgis import processing, utils
@@ -7,14 +10,119 @@ from qgis.core import (
     QgsNetworkAccessManager,
     QgsVectorLayer,
 )
-from qgis.PyQt.QtCore import QUrl
+from qgis.PyQt.QtCore import QByteArray, QUrl
 from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
 from qgis.PyQt.QtWidgets import QMessageBox
 
 from open_alaqs.alaqs_config import LAYERS_CONFIG
+from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.enums import AlaqsLayerType
 
+logger = get_logger(__name__)
+
 OSM_DEFAULT_SEARCH_RADIUS_M = 1000
+
+# Overpass API public instances, tried in order.  As of April 2026 the
+# admin of overpass-api.de added strict usage rules (custom UA, Referer,
+# rate-limit awareness); the headers below comply with those rules so
+# overpass-api.de is now first.  The other mirrors are kept as fallbacks
+# for environments where overpass-api.de is unreachable.
+#
+#   * overpass-api.de       — main instance, ~10k queries/day quota
+#   * private.coffee        — community mirror, no rate limit
+#   * VK Maps (maps.mail.ru) — global, "no rate limit", but reachable only
+#                              from networks that don't block .ru
+#                              infrastructure (often blocked by corporate
+#                              firewalls and Firefox Tracking Protection)
+#
+# private.coffee absorbed kumi.systems, so we no longer list the latter.
+OVERPASS_SERVERS = (
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+)
+
+# Timeout for the Overpass HTTP request, in milliseconds.  Larger studies
+# can take well over the default 60s on community mirrors.
+OVERPASS_REQUEST_TIMEOUT_MS = 120_000
+
+
+def _overpass_post(query: str) -> tuple[Optional[bytes], list[str]]:
+    """POST an Overpass QL query to each mirror until one returns 2xx.
+
+    Returns a tuple (xml_bytes_or_None, list_of_per_mirror_error_strings).
+    """
+    nam = QgsNetworkAccessManager.instance()
+
+    # Percent-encode the query so special characters (brackets, colons,
+    # newlines) survive the x-www-form-urlencoded body intact.  plus=True
+    # is the standard form-encoding convention.
+    encoded_query = urllib.parse.quote(query, safe="")
+    body = QByteArray(("data=" + encoded_query).encode("utf-8"))
+
+    errors: list[str] = []
+    for server in OVERPASS_SERVERS:
+        request = QNetworkRequest(QUrl(server))
+        request.setHeader(
+            QNetworkRequest.KnownHeaders.ContentTypeHeader,
+            "application/x-www-form-urlencoded",
+        )
+        # Headers tuned to satisfy the overpass-api.de WAF rules announced
+        # by the server admin (April 2026):
+        #   * Custom, identifying User-Agent — not the QuickOSM signature,
+        #     not a fake browser, no `+` prefix that some WAFs treat as
+        #     crawler-style bait.
+        #   * Referer pointing at the project so the WAF can attribute
+        #     traffic if it needs to.  Required even for non-browser
+        #     callers under the new rules.
+        #   * Generic `Accept: */*` to stay clearly in the script bucket
+        #     and avoid browser-content-negotiation heuristics.
+        request.setRawHeader(
+            b"User-Agent",
+            b"open_alaqs/3 (https://github.com/eurocontrol-asu/open_alaqs; "
+            b"contact-via-github-issues)",
+        )
+        request.setRawHeader(
+            b"Referer", b"https://github.com/eurocontrol-asu/open_alaqs"
+        )
+        request.setRawHeader(b"Accept", b"*/*")
+        request.setTransferTimeout(OVERPASS_REQUEST_TIMEOUT_MS)
+        try:
+            reply = nam.blockingPost(request, body)
+        except Exception as exc:
+            errors.append(f"{server}: exception {exc!r}")
+            logger.warning("Overpass POST to %s threw: %s", server, exc)
+            continue
+
+        err_code = reply.error()
+        if err_code == QNetworkReply.NetworkError.NoError:
+            content = bytes(reply.content())
+            if content and b"<osm" in content[:400]:
+                logger.info("Overpass OK from %s (%d bytes)", server, len(content))
+                return content, errors
+            # 2xx but the body is not valid OSM XML — likely an error page
+            snippet = (
+                content[:200].decode("utf-8", errors="replace")
+                if content
+                else "(empty body)"
+            )
+            errors.append(f"{server}: HTTP OK but non-OSM body: {snippet!r}")
+            logger.warning("Overpass %s returned non-OSM body: %s", server, snippet)
+            continue
+
+        # Inspect HTTP status code when possible
+        http_status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+        err_str = reply.errorString()
+        errors.append(f"{server}: error {err_code} ({err_str}), http={http_status}")
+        logger.warning(
+            "Overpass %s failed: qt_error=%s http=%s msg=%s",
+            server,
+            err_code,
+            http_status,
+            err_str,
+        )
+
+    return None, errors
 
 
 class OsmLayersOutput(TypedDict):
@@ -161,8 +269,11 @@ def download_osm_airport_data(
     aerodrome = get_nominatum_feature_by_icao_code(icao_code)
 
     query_body = get_query_body(layer_types, coords, aerodrome)
+    # [maxsize:64Mi] keeps the admission-control footprint well under the
+    # default 512 MiB so the request passes overpass-api.de's resource gate
+    # even under high load.  Airport-scale extracts comfortably fit in 64 MiB.
     query = f"""
-        [out:xml] [timeout:25];
+        [out:xml] [timeout:25] [maxsize:67108864];
         {query_body}
         (._;>;);
         out body;
@@ -184,21 +295,77 @@ def download_osm_airport_data(
         )
         return (QgsVectorLayer(), QgsVectorLayer(), QgsVectorLayer())
 
-    osm_result = processing.run(
-        "quickosm:downloadosmdatarawquery",
-        {
-            "QUERY": query,
-            "TIMEOUT": 25,
-            "SERVER": "https://overpass-api.de/api/interpreter",
-            "EXTENT": "0.000000000,1.000000000,0.000000000,1.000000000 [EPSG:4326]",
-            "AREA": "",
-            "FILE": "TEMPORARY_OUTPUT",
-        },
+    # Download the Overpass response directly via QgsNetworkAccessManager
+    # instead of through the QuickOSM processing algorithm.  QuickOSM appends
+    # `?info=QgisQuickOSMPlugin` to the URL, which overpass-api.de has been
+    # blocking with HTTP 406 since April 2026.  Going through QNAM also lets
+    # us retry across multiple mirrors cleanly.
+    osm_xml_bytes, mirror_errors = _overpass_post(query)
+    if osm_xml_bytes is None:
+        error_detail = (
+            "\n".join(f"  - {e}" for e in mirror_errors)
+            if mirror_errors
+            else "  (no mirror-level error captured)"
+        )
+        message = (
+            "Could not download OSM data from any of the configured Overpass "
+            "mirrors.\n\n"
+            "Per-mirror errors:\n" + error_detail + "\n\n"
+            "If you are on a corporate network, check whether an HTTP proxy "
+            "is configured in QGIS (Settings \u2192 Options \u2192 Network) "
+            "and whether outbound HTTPS to the Overpass hosts is permitted."
+        )
+        logger.error("OSM download failed on all mirrors: %s", mirror_errors)
+        QMessageBox.critical(
+            (
+                utils.iface.mainWindow()
+                if utils.iface and utils.iface.mainWindow()
+                else None
+            ),
+            "OSM download failed",
+            message,
+        )
+        return (QgsVectorLayer(), QgsVectorLayer(), QgsVectorLayer())
+
+    # Persist the XML to a temp file and open each OGR sub-layer via the
+    # GDAL OSM driver.  The OSM driver exposes sub-layers named `points`,
+    # `lines`, `multipolygons`, `multilinestrings`, and `other_relations`.
+    #
+    # We pass CONFIG_FILE pointing at our bundled osmconf.ini so the
+    # `lines` sub-layer exposes `aeroway` and `ref` as proper columns.
+    # The default /usr/share/gdal/osmconf.ini stuffs both into the
+    # `other_tags` HSTORE blob, which breaks the import filter
+    # `"aeroway" = 'taxiway'` (and the runway equivalent) downstream.
+    tmp_dir = tempfile.mkdtemp(prefix="openalaqs_osm_")
+    osm_path = os.path.join(tmp_dir, "overpass.osm")
+    with open(osm_path, "wb") as fh:
+        fh.write(osm_xml_bytes)
+
+    osmconf_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "osmconf.ini"
+    )
+    if not os.path.isfile(osmconf_path):
+        # Fail loud rather than silently falling back to the system default
+        # which would re-introduce the taxiway/runway import bug.
+        raise RuntimeError(
+            f"Bundled OSM config file is missing at {osmconf_path}. "
+            "Without it the GDAL OSM driver cannot expose aeroway/ref "
+            "columns on the lines sub-layer and taxiway/runway imports "
+            "will silently fail."
+        )
+
+    def _ogr_uri(layer_name: str) -> str:
+        return f"{osm_path}|layername={layer_name}|option:CONFIG_FILE={osmconf_path}"
+
+    points_layer = QgsVectorLayer(_ogr_uri("points"), "points", "ogr")
+    lines_layer = QgsVectorLayer(_ogr_uri("lines"), "lines", "ogr")
+    multipolygons_layer = QgsVectorLayer(
+        _ogr_uri("multipolygons"), "multipolygons", "ogr"
     )
 
-    points = reproject_layer(osm_result["OUTPUT_POINTS"])
-    lines = reproject_layer(osm_result["OUTPUT_LINES"])
-    multipolygons = reproject_layer(osm_result["OUTPUT_MULTIPOLYGONS"])
+    points = reproject_layer(points_layer)
+    lines = reproject_layer(lines_layer)
+    multipolygons = reproject_layer(multipolygons_layer)
 
     singleparts_result = processing.run(
         "native:multiparttosingleparts",

@@ -45,12 +45,12 @@ This guide walks through a complete OpenALAQS study using **Rotterdam The Hague 
 
 | File | Description |
 |---|---|
-| `EHRD_movements.csv` | Aircraft movements table for 2025-12-01 |
-| `EHRD_meteo.csv` | Hourly meteorological data for 2025-12-01 |
-| `EHRD.alaqs` | Pre-built study database (starting point) |
-| `EHRD_out.alaqs` | Completed output file (reference result) |
+| `training_movements.csv` | Aircraft movements table (12 movements across 3 days) |
+| `training_meteo.csv` | Hourly meteorological data (3 days × 25 hourly records) |
+| `training.alaqs` | Pre-built study database (starting point) |
+| `training_out.alaqs` | Completed output file (reference result) |
 
-The study covers a single day of operations at EHRD: six aircraft movements across three gates and two runway directions, combined with representative stationary sources (parking lot, roadway, power plant, terminal building). All movements use standard ANP profiles from the internal database.
+The study covers three days of operations at EHRD: 12 aircraft movements across three gates and two runway directions, combined with representative stationary sources (parking lot, roadway, power plant, terminal building). All movements use standard ANP profiles from the internal database.
 
 ---
 
@@ -59,7 +59,7 @@ The study covers a single day of operations at EHRD: six aircraft movements acro
 
 #### Setup a new study
 
-Click the **CREATE** button in the OpenALAQS toolbar. In the *Create an Open ALAQS project file* dialog, choose a location and filename for your new study (e.g. `EHRD.alaqs`).
+Click the **CREATE** button in the OpenALAQS toolbar. In the *Create an Open ALAQS project file* dialog, choose a location and filename for your new study (e.g. `training.alaqs`).
 
 The **ALAQS Project Properties** window opens automatically. Fill in the following values for the EHRD test case:
 
@@ -90,7 +90,7 @@ Click **OK** to save the project properties. The study is now created and the QG
 
 #### Open an existing study
 
-To open the pre-built EHRD study provided with the training material, click the **OPEN** button in the OpenALAQS toolbar and navigate to `EHRD.alaqs`. All previously defined sources, profiles, and study settings will be restored.
+To open the pre-built EHRD study provided with the training material, click the **OPEN** button in the OpenALAQS toolbar and navigate to `training.alaqs`. All previously defined sources, profiles, and study settings will be restored.
 
 #### Import OpenStreetMap data
 
@@ -380,21 +380,21 @@ Click **Generate Emission Inventory** in the toolbar. Configure the following se
 | Field | Value |
 |---|---|
 | Directory | Choose an output folder |
-| File Name | `EHRD_out` |
+| File Name | `training_out` |
 
 **Movement Data**
 
 | Field | Value |
 |---|---|
-| Movements Table | Browse to `EHRD_movements.csv` |
+| Movements Table | Browse to `training_movements.csv` |
 | Filter Start Date | 2025-12-01 06:00:00 |
-| Filter End Date | 2025-12-01 07:00:00 |
+| Filter End Date | 2025-12-03 08:00:00 |
 
 **Meteorological Data**
 
 | Field | Value |
 |---|---|
-| Meteorological Table | Browse to `EHRD_meteo.csv` |
+| Meteorological Table | Browse to `training_meteo.csv` |
 
 **Modeled Domain** — these settings define the 3D grid used for spatial emission output and dispersion modelling.
 
@@ -408,13 +408,13 @@ The domain is centred on the EHRD reference point (51.96°N, 4.44°E).
 
 **Vertical Limit:** Leave at the default 914.4 m (3000 ft). Emissions above this altitude are excluded from the LTO inventory.
 
-Click **Generate** to create `EHRD_out.alaqs`. This file copies all source definitions from the study database, combines them with the movements and meteorological data, and pre-computes the calculation grid. All subsequent emission calculations and dispersion runs use this output file.
+Click **Generate** to create `training_out.alaqs`. This file copies all source definitions from the study database, combines them with the movements and meteorological data, and pre-computes the calculation grid. All subsequent emission calculations and dispersion runs use this output file.
 
 > The computation time depends on domain size and resolution. The 100 × 100 × 20 grid used here is a reasonable balance between spatial detail and performance for a training exercise.
 
 #### Movements table
 
-The file `EHRD_movements.csv` (semicolon-delimited) defines the six aircraft movements in this study. All movements occur on 2025-12-01 between 06:00 and 07:00.
+The file `training_movements.csv` (semicolon-delimited) defines the 12 aircraft movements in this study. Movements span 2025-12-01 to 2025-12-03.
 
 | OID | Aircraft | Engine | D/A | Gate | Runway | Runway time | Block time | Profile | Taxi route |
 |---|---|---|---|---|---|---|---|---|---|
@@ -447,7 +447,7 @@ The movements table supports many optional fields. For this study all optional f
 
 #### Meteorology
 
-The file `EHRD_meteo.csv` provides 25 hourly records covering 2025-12-01 00:00 to 2025-12-02 00:00. The format uses semicolons as delimiters and the following columns:
+The file `training_meteo.csv` provides 75 hourly records (3 days × 25 records each) covering 2025-12-01 through 2025-12-03. The format uses semicolons as delimiters and the following columns:
 
 ```
 Scenario ; DateTime(YYYY-mm-dd hh:mm:ss) ; Temperature(K) ; Humidity(kg_water/kg_dry_air) ;
@@ -477,14 +477,14 @@ If the meteorology file is omitted, OpenALAQS falls back to ISA default conditio
 ### [Calculate emissions and query results](#calculate-emissions-and-query-results)
 [(Back to top)](#table-of-contents)
 
-Click **Visualize Emission Calculation** in the toolbar and browse to `EHRD_out.alaqs`.
+Click **Visualize Emission Calculation** in the toolbar and browse to `training_out.alaqs`.
 
 **Configuration tab — recommended settings for this study:**
 
 | Setting | Value |
 |---|---|
 | Start | 2025-12-01 06:00:00 |
-| End | 2025-12-01 07:00:00 |
+| End | 2025-12-03 08:00:00 |
 | Method | BFFM2 |
 | Apply NOx Corrections | ☐ (unchecked — must not be used with BFFM2) |
 | Source Dynamics | none |
@@ -585,7 +585,7 @@ Key interpretation note: this study simulates only 2 hours of a single day. Conc
 To display AUSTAL results on the QGIS map canvas:
 
 1. Click **Calculate Dispersion** and open the results viewer.
-2. Select `EHRD_out.alaqs` as the reference file.
+2. Select `training_out.alaqs` as the reference file.
 3. Choose the pollutant (e.g. NOx) and averaging interval (annual mean).
 4. Click **Visualise Results** to load the concentration grid as a QGIS vector layer.
 

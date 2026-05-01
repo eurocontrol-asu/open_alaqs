@@ -129,8 +129,13 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
     # Fetch the emission factors from the database
     efs = get_emission_factors(speed, country)
 
-    # Calculate the emissions
-    emissions = calculate_emissions(fleet, efs, input_data["airport_temperature"])
+    # Calculate the emissions.
+    # `airport_temperature` lives on the study setup (see openalaqsdialog.py
+    # where it is read from spinBoxAirportTemperature into the study_data
+    # dict), NOT on the per-feature parking/roadway form data. Reading it
+    # from input_data raises KeyError('airport_temperature') and surfaces in
+    # the UI as "Emissions could not be calculated: 'airport_temperature'".
+    emissions = calculate_emissions(fleet, efs, study_data["airport_temperature"])
 
     # Calculate the average emission factors
     emission_factors = average_emission_factors(emissions)

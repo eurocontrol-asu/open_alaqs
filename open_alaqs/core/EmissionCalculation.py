@@ -1,3 +1,4 @@
+import bisect
 from datetime import datetime, timedelta
 from typing import Any, List, TypedDict
 
@@ -34,6 +35,10 @@ class GridConfig(TypedDict):
 
 
 class EmissionCalculation:
+    # Class-level variable tracking the last DB file opened.  Singleton stores
+    # are only flushed when this changes — not on every method switch.
+    _last_db_path: str = ""
+
     def __init__(
         self,
         db_path: str,
@@ -43,6 +48,20 @@ class EmissionCalculation:
         time_interval: timedelta,
     ) -> None:
         assert db_path
+
+        # Flush all Singleton stores only when the user opens a *different*
+        # .alaqs database in the same QGIS Python session.  Resetting on
+        # every calculation (e.g. switching bymode → BFFM2 on the same file)
+        # is unnecessary: the stores are still valid for the same DB path.
+        # Resetting unconditionally caused every BFFM2 run to fail silently
+        # (store re-init errors swallowed by the try/except in
+        # EmissionCalculatorService), leaving the output modules serving the
+        # previous bymode results.
+        if db_path != EmissionCalculation._last_db_path:
+            from open_alaqs.core.tools.Singleton import Singleton
+
+            Singleton.reset_all()
+            EmissionCalculation._last_db_path = db_path
 
         self._database_path = db_path
         self._grid = Grid3D(self._database_path, grid_config)
@@ -56,6 +75,11 @@ class EmissionCalculation:
         self._source_modules = {}
         self._dispersion_modules = {}
         self._ambient_conditions_store = AmbientConditionStore(self._database_path)
+        # Pre-sort ambient conditions once so getAmbientCondition() can use
+        # bisect instead of sorting + linear-scanning on every timestep.
+        _all_ac = self._ambient_conditions_store.getAmbientConditions(scenario="")
+        self._sorted_ac = sorted(_all_ac, key=lambda x: x.getDate())
+        self._sorted_ac_times = [ac.getDate() for ac in self._sorted_ac]
 
     @staticmethod
     def ProgressBarWidget(dispersion_enabled=False):
@@ -82,11 +106,20 @@ class EmissionCalculation:
         return progressbar
 
     def getAmbientCondition(self, t_):
-        # Get the ambient conditions
-        ac_ = self._ambient_conditions_store.getAmbientConditions(scenario="")
-
-        # Return the ambient condition closest to the provided date
-        return min(ac_, key=lambda x: abs(t_ - x.getDate()))
+        # Use bisect on the pre-sorted timestamp list for O(log n) lookup
+        # instead of sorting the full list and doing a linear min() search
+        # on every one of the 8 760 timesteps in a year run.
+        times = self._sorted_ac_times
+        if not times:
+            return AmbientCondition()
+        idx = bisect.bisect_left(times, t_)
+        if idx == 0:
+            return self._sorted_ac[0]
+        if idx >= len(times):
+            return self._sorted_ac[-1]
+        before = self._sorted_ac[idx - 1]
+        after = self._sorted_ac[idx]
+        return before if abs(t_ - times[idx - 1]) <= abs(times[idx] - t_) else after
 
     def add_source_module(
         self, module_name: str, module_config: dict[str, Any]
@@ -129,7 +162,6 @@ class EmissionCalculation:
             "pm10_g": 0.0,
             "p1_g": 0.0,
             "p2_g": 0.0,
-            "pm10_prefoa3_g": 0.0,
             "pm10_nonvol_g": 0.0,
             "pm10_sul_g": 0.0,
             "pm10_organic_g": 0.0,
@@ -180,7 +212,8 @@ class EmissionCalculation:
 
             # loop on complete period
             for start_dt, end_dt in pairwise(self.getTimeSeries()):
-                logger.debug(f"start {start_dt}, end {end_dt}")
+                if logger.isEnabledFor(10):  # logging.DEBUG == 10
+                    logger.debug("start %s, end %s", start_dt, end_dt)
 
                 # Update the progress bar only in GUI mode
                 if progressbar is not None:
@@ -206,7 +239,8 @@ class EmissionCalculation:
 
                 # calculate emissions per source
                 for mod_name, mod_obj in self.getModules().items():
-                    logger.debug(mod_name)
+                    if logger.isEnabledFor(10):
+                        logger.debug(mod_name)
 
                     # process() returns a list of tuples for each specific
                     # time interval (start_, end_)
@@ -217,7 +251,8 @@ class EmissionCalculation:
                         ambient_conditions=ambient_condition,
                         vertical_limit_m=vertical_limit_m,
                     ):
-                        logger.debug(f"{mod_name}: {timestamp_}")
+                        if logger.isEnabledFor(10):
+                            logger.debug("%s: %s", mod_name, timestamp_)
 
                         if emission_ is not None:
                             period_emissions.append((source_, emission_))
@@ -234,7 +269,8 @@ class EmissionCalculation:
                     dispersion_mod_name,
                     dispersion_mod_obj,
                 ) in self.getDispersionModules().items():
-                    logger.debug(f"{dispersion_mod_name}: {start_dt}")
+                    if logger.isEnabledFor(10):
+                        logger.debug("%s: %s", dispersion_mod_name, start_dt)
                     dispersion_mod_obj.process(
                         start_dt, end_dt, period_emissions, ambient_condition
                     )

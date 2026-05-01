@@ -19,7 +19,6 @@ defValues = {
     "pm10_g": 0.0,
     "p1_g": 0.0,
     "p2_g": 0.0,
-    "pm10_prefoa3_g": 0.0,
     "pm10_nonvol_g": 0.0,
     "pm10_sul_g": 0.0,
     "pm10_organic_g": 0.0,
@@ -38,7 +37,6 @@ class PollutantType(str, Enum):
     PM1 = "p1"
     PM2 = "p2"
     PM10Organic = "pm10_organic"
-    PM10Prefoa3 = "pm10_prefoa3"
     PM10Nonvol = "pm10_nonvol"
     PM10Sul = "pm10_sul"
 
@@ -64,7 +62,7 @@ class EmissionIndex(Store):
         self, pollutant_type: PollutantType, unit: Literal["kg_hour", "g_kg"]
     ) -> float:
         key = f"{pollutant_type.value}_{unit}"
-        return self._objects[key]
+        return self._objects.get(key, 0.0)
 
     def __str__(self):
         val = "\n\t Emissions indices:"
@@ -131,17 +129,27 @@ class Emission(Store):
             self._vertical_ext.update(var)
 
     def transposeToKilograms(self):
-        emissions_ = Emission()
-        emissions_.setGeometryText(self.getGeometryText())
-        emissions_.setVerticalExtent(self.getVerticalExtent())
-
-        for key in list(self.getObjects().keys()):
-            if "_g" in key and key.index("_g") == len(key) - 2:
-                # add new key
-                emissions_.addObject("%s_kg" % (key[:-2]), self.getObject(key) / 1000.0)
-            else:
-                emissions_.addObject(key, self.getObject(key))
-        return emissions_
+        # Fast path: bypass Emission.__init__ / Store.__init__ / addObject() entirely.
+        # All that is needed is a renamed copy of _objects (co_g → co_kg, etc.) plus
+        # the two metadata attributes.  object.__new__ skips the constructor chain;
+        # we then assign the three attributes directly.
+        # This is safe because:
+        #  - Emission has no __slots__ and no post-init side-effects beyond _objects,
+        #    _geometry_wkt, and _vertical_ext.
+        #  - The caller (MovementSourceModule) only reads get_value() / getGeometryText()
+        #    / getVerticalExtent() on the result; it never calls add() on it.
+        #  - We cannot mutate the source object because cached gate/flight/taxi emissions
+        #    are shared across movements in the same group.
+        new_em = object.__new__(Emission)
+        new_em._objects = {
+            (k[:-2] + "_kg" if (k.endswith("_g") and not k.endswith("_kg")) else k): (
+                v / 1000.0 if (k.endswith("_g") and not k.endswith("_kg")) else v
+            )
+            for k, v in self._objects.items()
+        }
+        new_em._geometry_wkt = self._geometry_wkt
+        new_em._vertical_ext = self._vertical_ext
+        return new_em
 
     def add(self, emission_index_: EmissionIndex, time_s_in_mode: float):
         """
@@ -195,15 +203,24 @@ class Emission(Store):
         key = f"{pollutant_type.value}_{unit.value}"
         multiplier = 1
 
-        # TODO OPENGIS.ch: the conversion should not happen like this: if one value is not present, look for the other.
-        # It should actually always happen on the fly, as all values should be stored in the same unit across ALAQS.
+        # Fallback: if the Emission object hasn't been transposed to the
+        # requested unit, read from the other unit's key and convert on the
+        # fly.  The earlier version of this code had the multipliers inverted
+        # (GRAM fallback used 0.001, KG fallback used 1000), which would
+        # return a 10^6 -off value if ever triggered.  Not a production
+        # regression because emissions are transposeToKilograms()'d before
+        # reaching the callers, but the fallback is still reachable from
+        # scripts and tests that call calculate_emissions_per_segment()
+        # directly.
         if key not in self._objects:
             if unit == PollutantUnit.GRAM:
+                # Stored in kg (co_kg); convert kg → g by ×1000.
                 key = f"{pollutant_type.value}_{PollutantUnit.KG.value}"
-                multiplier = 0.001
-            elif unit == PollutantUnit.KG:
-                key = f"{pollutant_type.value}_{PollutantUnit.GRAM.value}"
                 multiplier = 1000
+            elif unit == PollutantUnit.KG:
+                # Stored in g (co_g); convert g → kg by ÷1000.
+                key = f"{pollutant_type.value}_{PollutantUnit.GRAM.value}"
+                multiplier = 0.001
 
         return self._objects[key] * multiplier
 

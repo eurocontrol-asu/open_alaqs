@@ -77,6 +77,8 @@ class Grid3D:
         self._grid_origin_x = 0.0
         self._grid_origin_y = 0.0
         self._grid_origin_z = 0.0
+        self._utm_epsg = self._get_utm_epsg()
+        logger.info("Grid3D: using UTM CRS EPSG:%d", self._utm_epsg)
         self._grid_origin_x, self._grid_origin_y = self._calculate_origin_xy()
 
         # Restrict this list to a certain length, can give memory buffer
@@ -92,14 +94,87 @@ class Grid3D:
     def getResolutionZ(self) -> float:
         return self._z_resolution
 
+    def getUtmEpsg(self) -> int:
+        return self._utm_epsg
+
+    def _get_utm_epsg(self) -> int:
+        """
+        Use pyproj to find the correct UTM EPSG code for the grid reference
+        point.  pyproj's database handles all special zone rules (Norway 32V,
+        Svalbard X-bands) that a simple formula would get wrong.
+
+        Raises ValueError for locations outside UTM coverage (beyond ±84°
+        latitude — no commercial airports exist there).
+        """
+        from pyproj import CRS
+        from pyproj.aoi import AreaOfInterest
+        from pyproj.database import query_utm_crs_info
+
+        utm_crs_list = query_utm_crs_info(
+            datum_name="WGS 84",
+            area_of_interest=AreaOfInterest(
+                west_lon_degree=self._reference_longitude,
+                south_lat_degree=self._reference_latitude,
+                east_lon_degree=self._reference_longitude,
+                north_lat_degree=self._reference_latitude,
+            ),
+        )
+        if not utm_crs_list:
+            raise ValueError(
+                f"No UTM CRS found for lat={self._reference_latitude}, "
+                f"lon={self._reference_longitude}. "
+                f"Location may be outside UTM coverage (beyond ±84° latitude)."
+            )
+        epsg = int(
+            CRS.from_authority(
+                utm_crs_list[0].auth_name, utm_crs_list[0].code
+            ).to_epsg()
+        )
+        return epsg
+
     # Not used
     def getAirportAltitude(self):
         return self._reference_altitude
 
     def getGridBounds(self) -> dict:
         """
-        Calculate the grid bounds (x_min, x_max, y_min, y_max) in EPSG:3857 coordinates.
-        These bounds represent the minimum and maximum coordinates of all grid cells.
+        Return the grid bounds in EPSG:3857 coordinates.
+
+        Trajectory points in MovementEmissionCalculator are in EPSG:3857, so
+        grid-bound clipping must use the same CRS.  This method converts the
+        UTM origin back to EPSG:3857 so the two coordinate spaces match.
+        """
+        sql = f"""
+            SELECT
+                X(ST_Transform(ST_PointFromText(?, {self._utm_epsg}), 3857)) AS x,
+                Y(ST_Transform(ST_PointFromText(?, {self._utm_epsg}), 3857)) AS y
+        """
+        origin_wkt = f"POINT ({self._grid_origin_x} {self._grid_origin_y})"
+        row = sql_interface.db_execute_sql(self._db_path, sql, [origin_wkt, origin_wkt])
+        x_min_3857 = row["x"]
+        y_min_3857 = row["y"]
+
+        # Cell sizes in EPSG:3857 — divide UTM metres by cos(lat) to recover
+        # the Web Mercator unit equivalent used by trajectory points.
+        import math
+
+        scale = 1.0 / math.cos(math.radians(self._reference_latitude))
+        cell_x_3857 = self._x_resolution * scale
+        cell_y_3857 = self._y_resolution * scale
+
+        return {
+            "x_min": x_min_3857,
+            "x_max": x_min_3857 + self._x_cells * cell_x_3857,
+            "y_min": y_min_3857,
+            "y_max": y_min_3857 + self._y_cells * cell_y_3857,
+        }
+
+    def getGridBoundsUTM(self) -> dict:
+        """
+        Return the grid bounds in the local UTM CRS.
+
+        Use this for spatial operations on UTM-projected data (e.g. grid cell
+        intersection in EmissionsQGISVectorLayerOutputModule).
         """
         x_min = self._grid_origin_x
         y_min = self._grid_origin_y
@@ -216,31 +291,36 @@ class Grid3D:
 
     def _calculate_origin_xy(self) -> tuple[float, float]:
         """
-        Calculates the origin of the grid to the bottom-left corner.
-        "Reference" coordinates need to be related to the center of the grid.
+        Calculates the origin of the grid (bottom-left corner) in the local
+        UTM coordinate system.  Using UTM ensures that x_resolution and
+        y_resolution are true metric values (metres on the ground), eliminating
+        the ~62% horizontal distortion introduced by EPSG:3857 at mid-latitudes.
         """
-        point_wkt = "POINT ({} {})".format(
-            self._reference_longitude,
-            self._reference_latitude,
-        )
-        sql = """
-            SELECT
-                X(
-                    ST_Transform(
-                        ST_PointFromText(?, 4326),
-                        3857
-                    )
-                ) AS x,
-                Y(
-                    ST_Transform(
-                        ST_PointFromText(?, 4326),
-                        3857
-                    )
-                ) AS y
-        """
-        row = sql_interface.db_execute_sql(self._db_path, sql, [point_wkt, point_wkt])
+        if self._db_path:
+            point_wkt = "POINT ({} {})".format(
+                self._reference_longitude,
+                self._reference_latitude,
+            )
+            sql = f"""
+                SELECT
+                    X(ST_Transform(ST_PointFromText(?, 4326), {self._utm_epsg})) AS x,
+                    Y(ST_Transform(ST_PointFromText(?, 4326), {self._utm_epsg})) AS y
+            """
+            row = sql_interface.db_execute_sql(
+                self._db_path, sql, [point_wkt, point_wkt]
+            )
+        else:
+            # No DB available -- project via pyproj directly
+            from pyproj import Transformer as _Transformer
 
-        # Calculate the coordinates of the bottom left of the grid
+            _tr = _Transformer.from_crs(
+                "EPSG:4326", f"EPSG:{self._utm_epsg}", always_xy=True
+            )
+            x_ref, y_ref = _tr.transform(
+                self._reference_longitude, self._reference_latitude
+            )
+            row = {"x": x_ref, "y": y_ref}
+
         origin_x = row["x"] - (self._x_cells / 2.0) * self._x_resolution
         origin_y = row["y"] - (self._y_cells / 2.0) * self._y_resolution
 
@@ -262,6 +342,13 @@ class Grid3D:
             pollutant_cols[key] = pd.Series(0, index=gdf.index, dtype="float64")
 
         gdf = cast(gpd.GeoDataFrame, gdf.assign(**pollutant_cols))
+
+        # Tag cells with the UTM CRS they were actually built in.  Grid cells
+        # are computed using `grid_origin_x/y + idx * resolution` where the
+        # origin and resolution are in local UTM metres (see
+        # `_calculate_origin_xy`).  Callers that need another CRS must
+        # `to_crs()` explicitly.
+        gdf = gdf.set_crs(f"EPSG:{self._utm_epsg}", allow_override=True)
 
         return gdf
 
@@ -391,7 +478,7 @@ class Grid3D:
         for _hash in cellhash_list:
             if _hash not in val:
                 if _hash not in self._hash_coordinates_map:
-                    (x_idx, y_idx, z_idx) = self.convertCellHashToXYZIndices(_hash)
+                    x_idx, y_idx, z_idx = self.convertCellHashToXYZIndices(_hash)
                     cell = self.convertXYZIndicesToGridCellMinMax(x_idx, y_idx, z_idx)
 
                     if not (
@@ -510,14 +597,18 @@ class Grid3D:
                     z_list = []
                     for z in range(z_idx_low, z_idx_high + 1):
                         if not (
-                            x > self._x_cells or y > self._y_cells or z > self._z_cells
+                            x >= self._x_cells
+                            or y >= self._y_cells
+                            or z >= self._z_cells
                         ):
                             z_list.append(z)
                     matched_cells.append((x, y, z_list))
                 else:
                     for z in range(z_idx_low, z_idx_high + 1):
                         if not (
-                            x > self._x_cells or y > self._y_cells or z > self._z_cells
+                            x >= self._x_cells
+                            or y >= self._y_cells
+                            or z >= self._z_cells
                         ):
                             matched_cells.append((x, y, z))
 

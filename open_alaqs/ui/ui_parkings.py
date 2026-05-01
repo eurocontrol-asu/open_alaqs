@@ -81,7 +81,7 @@ def form_open(form, layer, feature):
     fields["recalculate"].clicked.connect(lambda: recalculate_emissions(fields, form))
 
     # Disable various fields
-    fields["method_field"].setText("Open-ALAQS")
+    fields["method_field"].setText("COPERT5")
     fields["method_field"].setEnabled(False)
 
     # Connect the comboboxes to validation

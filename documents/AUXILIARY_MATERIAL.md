@@ -151,7 +151,7 @@ Two profile types are supported:
 
 **ADS-B / CUSTOM profiles** (`course = CUSTOM`): coordinates are geodesic East/North offsets (in metres) from the runway intersection. These are generated from ADS-B recordings and represent the actual flown trajectory. The `fuel_flow_kgm` column, if populated, contains the estimated total-aircraft ambient fuel flow in kg/s for use by the BFFM2 method. Before BFFM2 uses this value, it divides by the engine count to obtain a per-engine estimate. If the per-engine estimate exceeds the EEDB takeoff fuel flow (indicating an unreliable ADS-B estimate), the calculator automatically falls back to power-setting interpolation and logs a warning.
 
-> **Note:** The standard EHRD test case files (`EHRD.alaqs`, `EHRD_out.alaqs`) use only standard ANP profiles. ADS-B / CUSTOM profile support is available but requires the user to populate `default_aircraft_profiles` with custom entries before use.
+> **Note:** The standard test case files (`training.alaqs`, `training_out.alaqs`) use only standard ANP profiles. ADS-B / CUSTOM profile support is available but requires the user to populate `default_aircraft_profiles` with custom entries before use.
 
 <img src="./../open_alaqs/assets/anp_profiles_example.png" alt="Aircraft trajectories" width="70%">
 
@@ -368,7 +368,7 @@ z_upper = z_trajectory + d_v / 2
 
 > In both cases `z_lower` is clamped to zero (ground level cannot be negative).
 
-The figure below illustrates these two formulations for a representative climb segment (JET LARGE, CL mode, EHRD_out.alaqs dynamics):
+The figure below illustrates these two formulations for a representative climb segment (JET LARGE, CL mode, training_out.alaqs dynamics):
 
 <img src="./../open_alaqs/assets/sas_geometry.png" alt="SaS volume geometry — default vs sas method" width="80%">
 
@@ -385,7 +385,7 @@ This means the SaS volume widens and the vertical extent increases as soon as th
 
 ### Departure and approach trajectories
 
-The figure below shows the full SaS volume geometry for a departure and an approach trajectory for a JET LARGE aircraft, using the dynamics values from `EHRD_out.alaqs`. Both methods are shown side by side. The coloured bands are the vertical extent of the emission volume at each segment; the navy shading indicates the overall z-envelope assigned to the emission record (`z_min` to `z_max`).
+The figure below shows the full SaS volume geometry for a departure and an approach trajectory for a JET LARGE aircraft, using the dynamics values from `training_out.alaqs`. Both methods are shown side by side. The coloured bands are the vertical extent of the emission volume at each segment; the navy shading indicates the overall z-envelope assigned to the emission record (`z_min` to `z_max`).
 
 <img src="./../open_alaqs/assets/sas_trajectories.png" alt="SaS departure and approach trajectory volumes" width="95%">
 
@@ -394,7 +394,7 @@ Key observations:
 - Under the **sas** method, AP volumes are centred on the trajectory but vertically spread by `d_v = 100 m` and shifted by `s_v = −138 m`.
 - The z-envelope of the full departure trajectory spans from ground level to well above 900 m under the sas method.
 
-### Parameter values (EHRD_out.alaqs)
+### Parameter values (training_out.alaqs)
 
 The figure below summarises `d_h` and `d_v` for the main aircraft groups and all four LTO modes under both methods. JET LARGE aircraft have the largest SaS volumes; helicopters and GSE have the smallest.
 

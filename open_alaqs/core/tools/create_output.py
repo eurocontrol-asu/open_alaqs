@@ -120,23 +120,10 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_p
     copy_tables = [
         "default_airports",
         "default_stationary_ef",
-        "default_cost319_vehicle_fleet",
-        "default_vehicle_nox_ef",
         "default_apu_times",
-        "default_pollutants",
-        "default_grid_definition",
         "default_helicopter_engine_ei",
         "default_vehicle_fleet_euro_standards",
-        "default_apu_ef",
         "default_aircraft_apu_ef",
-        "default_merge_definition",
-        "default_vehicle_hc_ef",
-        "default_vehicle_pm10_ef",
-        "default_layer_definition",
-        "default_dictionary",
-        "default_class_break",
-        "default_vehicle_co_ef",
-        "default_aircraft_registrations",
         "default_vehicle_ef_copert5",
     ]
     for table in copy_tables:
@@ -181,7 +168,7 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_p
     # save ambient conditions to database
     if met_csv_path:
         store = AmbientConditionStore(inventory_path, init_csv_path=met_csv_path)
-        store.serialize()  # DANGEROUS because of singletons!!!
+        store.serialize()
 
     logger.info(
         "New output file with path '%s' has been created" % (str(inventory_path))
@@ -274,12 +261,13 @@ def inventory_update_tbl_inv_period(database_path, model_parameters, study_setup
 
     sql_interface.query_text(
         database_path,
-        "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, apt_elev=%d, "
+        "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, vert_limit=%d, apt_elev=%d, "
         'copert=%d, nox_corr=%d, ffm=%d, smsh=%d, mix_height=%d, min_time="%s", '
         'max_time="%s";'
         % (
             interval,
             temp_isa,
+            model_parameters["vertical_limit"],
             study_setup["airport_elevation"],
             copert,
             nox_corr,
@@ -353,25 +341,91 @@ def inventory_insert_movements(inventory_name, model_parameters):
     conn = sqlite.connect(inventory_name)
     cur = conn.cursor()
 
+    # Movement CSVs may or may not include the optional gate_emissions_code
+    # column, depending on when they were exported.  We detect the schema
+    # from the header row rather than by column count alone, so custom
+    # column orderings are tolerated too.
+    LEGACY_COLS = [
+        "runway_time",
+        "block_time",
+        "aircraft",
+        "gate",
+        "departure_arrival",
+        "runway",
+        "engine_name",
+        "profile_id",
+        "track_id",
+        "taxi_route",
+        "tow_ratio",
+        "apu_code",
+        "taxi_engine_count",
+        "set_time_of_main_engine_start_after_block_off_in_s",
+        "set_time_of_main_engine_start_before_takeoff_in_s",
+        "set_time_of_main_engine_off_after_runway_exit_in_s",
+        "engine_thrust_level_for_taxiing",
+        "taxi_fuel_ratio",
+        "number_of_stop_and_gos",
+    ]
+
     with open(model_parameters["movement_path"], "rt") as movements:
+        header = movements.readline().strip().split(";")
+        # Strip BOM if present
+        if header and header[0].startswith("\ufeff"):
+            header[0] = header[0][1:]
+
+        # Column names present in this CSV (excluding the synthetic oid)
+        csv_cols = [h.strip() for h in header]
+
+        # Backward compatibility: pre-rebuild CSVs ended with a `domestic`
+        # column that has been dropped from the schema (it was unused at
+        # runtime). Strip it both from the header and from each data row,
+        # so we don't lose the user's `gate_emissions_code` (col 20 in
+        # those files) by falling through to the legacy positional fallback.
+        drop_trailing_domestic = (
+            len(csv_cols) > 0 and csv_cols[-1].lower() == "domestic"
+        )
+        if drop_trailing_domestic:
+            csv_cols = csv_cols[:-1]
+
+        known_cols = set(LEGACY_COLS) | {"gate_emissions_code"}
+        if not set(csv_cols).issubset(known_cols) or not set(LEGACY_COLS).issubset(
+            set(csv_cols)
+        ):
+            # Fall back to legacy positional assumption when header is
+            # missing/unexpected (preserves pre-rebuild behaviour).
+            csv_cols = LEGACY_COLS[:]
+            drop_trailing_domestic = False
+
         all_movements = []
         movement_line = 0
-        columns_ = 0
-        for movement in movements:
+        for raw in movements:
             movement_line += 1
-            if movement_line > 1:
-                movement_data = [movement_line - 1] + movement.strip().split(";")
-                if not columns_:
-                    columns_ = len(movement_data)
-                all_movements.append(movement_data)
+            fields = raw.strip().split(";")
+            # Drop the trailing 'domestic' field if header had it.
+            if drop_trailing_domestic and len(fields) > len(csv_cols):
+                fields = fields[: len(csv_cols)]
+            # Pad to header length in case of trailing empty fields trimmed
+            # by strip()+split.
+            if len(fields) < len(csv_cols):
+                fields += [""] * (len(csv_cols) - len(fields))
+            row_dict = dict(zip(csv_cols, fields))
+            row_dict["oid"] = movement_line
+            all_movements.append(row_dict)
 
     n_rows = len(all_movements)
     if n_rows > 0:
-        values_str_ = "?," * columns_
-        values_str_ = values_str_[:-1]
+        # Explicit column list.  Includes gate_emissions_code only when the
+        # source CSV had it; otherwise the DB column takes its DEFAULT 1.
+        base_cols = ["oid"] + LEGACY_COLS
+        if "gate_emissions_code" in csv_cols:
+            base_cols.append("gate_emissions_code")
+
+        placeholders = ",".join(["?"] * len(base_cols))
+        values_list = [tuple(m.get(c, "") for c in base_cols) for m in all_movements]
         cur.executemany(
-            "INSERT INTO user_aircraft_movements VALUES (%s)" % values_str_,
-            all_movements,
+            f"INSERT INTO user_aircraft_movements ({', '.join(base_cols)}) "
+            f"VALUES ({placeholders})",
+            values_list,
         )
         conn.commit()
     msg = f"[+] Aircraft movements copied to output file ({n_rows} rows)"
@@ -614,9 +668,10 @@ def inventory_copy_vector_layers(inventory_path):
 
         try:
             runways = alaqsdblite.query_string("SELECT * FROM shapes_runways;")
-            curs.executemany(
-                "INSERT INTO shapes_runways VALUES (?,?,?,?,?,?,?,?)", runways
-            )
+            # 6 columns after the session-22 simplification: oid, runway_id,
+            # capacity, touchdown, instudy, geometry. Was 8 (with the now-
+            # dropped max_queue_speed and peak_queue_time).
+            curs.executemany("INSERT INTO shapes_runways VALUES (?,?,?,?,?,?)", runways)
             conn.commit()
             msg = "[+] Runways copied to output file"
             logger.info(msg)
@@ -737,7 +792,7 @@ def inventory_copy_aircraft_engine_ei(inventory_path):
         # insert into the output
         curs.executemany(
             "INSERT INTO default_aircraft_engine_ei "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             data,
         )
     # House keeping

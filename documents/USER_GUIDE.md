@@ -336,7 +336,7 @@ To define a taxi route in OpenALAQS, the user has to first create the taxi-route
 
 Before calculating emissions, the user must generate an OpenALAQS file that includes all user-defined elements of the study (e.g., emission sources) and the default internal database (e.g., emission factors).
 
-The corresponding interface allows the user to set the path for saving the output file, select movements and meteorological data, set time filters, define the domain and its spatial resolution and configure other advanced settings:
+The corresponding interface allows the user to set the path for saving the output file, select movements and meteorological data, set time filters, and define the domain and its spatial resolution:
 + **Emission Inventory Output**:
   + **Directory**: The path (directory) to the output file
   + **File Name**: The name of the output file to be generated
@@ -350,10 +350,6 @@ The corresponding interface allows the user to set the path for saving the outpu
   + **X Resolution**: The spatial resolution in the X-axis, set by default to 250 meters and split into 50 cells.
   + **Y Resolution**: The spatial resolution in the Y-axis, also set by default to 250 meters with 50 cells.
   + **Z Resolution**: The vertical spatial resolution, set by default to 50 meters with 20 cells.
-+ **Advanced Options**:
-  + **Method**: The emission calculation method, currently set to "ALAQS". `not yet fully implemented`
-  + **Towing Speed**: A field specifying towing speed, set to 10.00 km/h. `not yet fully implemented`
-  + **Vertical Limit**: The vertical extent of the LTO domain, set by default to 914.40 meters (approximately 3000 feet). This value also serves as the LTO ceiling in the emission calculator, and should match the `MixingHeight` value used in the meteorological data.
 
 ![generate-emissions-inventory.png](./../open_alaqs/assets/generate-emissions-inventory.png)
 
@@ -396,7 +392,6 @@ The following optional parameters can be left empty. They will only be used if t
 
 | Field | Description | Status |
 |---|---|---|
-| `aircraft_registration` | Aircraft registration number | `not yet fully implemented` |
 | `engine_name` | Engine identifier (from the internal database) | Active |
 | `profile_id` | Performance profile identifier. Standard ANP profiles use `course = ANP2.x`. ADS-B-derived profiles use `course = CUSTOM` with East/North coordinate offsets and an optional `fuel_flow_kgm` column for BFFM2. | Active |
 | `track_id` | Aircraft trajectory identifier | `not yet fully implemented` |
@@ -408,7 +403,6 @@ The following optional parameters can be left empty. They will only be used if t
 | `engine_thrust_level_for_taxiing` | Taxi thrust level as a fraction (ICAO default: 0.07 = 7%). Only affects the BFFM2 emission index for the moving taxi phase; queuing always uses true idle (7%) regardless of this setting. | Active |
 | `taxi_fuel_ratio` | Ratio between actual fuel flow and idle fuel flow during taxi. Acts as a direct multiplier on taxi segment emissions. Default: 1.0. | Active |
 | `number_of_stop_and_gos` | Number of stop-and-go events during taxiing. Each event is modelled as two phases: 21 s at idle (deceleration + hold, per ECAC Doc 29 Vol. 2 Appendix B) plus 11 s at ~15% thrust (acceleration). | Active |
-| `domestic` | Domestic/international flag (Y or N) | Not used |
 
 ### [Meteorology](#meteorology)
 
@@ -427,7 +421,7 @@ The required meteorological parameters are:
 | `WindSpeed` | m/s | |
 | `WindDirection` | degrees | |
 | `ObukhovLength` | m | |
-| `MixingHeight` | m | Also used as the LTO ceiling in the emission calculator (default 914.4 m). Should match the **Vertical Limit** in the output file settings. |
+| `MixingHeight` | m | Also used as the LTO ceiling in the emission calculator (default 914.4 m). Should match the **Vertical Limit** set on the **Configuration** tab when generating the inventory. |
 
 If `Humidity` (specific humidity in kg/kg) is populated and non-zero, it is used directly. If it is empty or zero, specific humidity is derived from `RelativeHumidity`, `Temperature`, and `SeaLevelPressure`. When both fields are populated, `Humidity` takes precedence.
 

@@ -89,6 +89,12 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
             widget.setText(setting_schema["label"])
             label = None
         elif isinstance(widget, QgsDoubleSpinBox):
+            # Force C locale (period decimal separator) on every dynamically
+            # created QgsDoubleSpinBox. Without this, the system locale governs
+            # display — e.g. "914.40" is rendered as "914,40" in fr_FR/de_DE/
+            # nl_NL, which is confusing and inconsistent with the file format.
+            widget.setLocale(QtCore.QLocale(QtCore.QLocale.Language.C))
+
             widget_config = cast(DoubleSpinBoxWidgetConfig, widget_config)
 
             if widget_config.get("minimum") is not None:
@@ -309,7 +315,29 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
             )
             self._settings_schema[setting_name] = patched_setting_schema
             self._add_setting(setting_name, patched_setting_schema)
-            self.init_values({setting_name: patched_setting_schema["initial_value"]})
+
+            # Preserve the current widget value when it is still valid in the
+            # new options list.  Only fall back to initial_value when the
+            # current selection no longer exists (e.g. switching to a pollutant
+            # that doesn't support BFFM2).  Without this guard every call to
+            # populate_calculation_methods() — triggered by pollutant_changed —
+            # would silently reset "BFFM2" back to "bymode".
+            current_values = self.get_values()
+            current_value = current_values.get(setting_name)
+            widget_config = patched_setting_schema.get("widget_config", {})
+            if widget_config and "options" in widget_config:
+                valid = [
+                    o[0] if isinstance(o, tuple) else o
+                    for o in widget_config["options"]
+                ]
+                reset_value = (
+                    current_value
+                    if current_value in valid
+                    else patched_setting_schema["initial_value"]
+                )
+            else:
+                reset_value = patched_setting_schema["initial_value"]
+            self.init_values({setting_name: reset_value})
 
     def get_widget(self, setting_name: str) -> QtWidgets.QWidget:
         return self._settings_widgets[setting_name]

@@ -44,8 +44,6 @@ def form_open(form, layer, feature):
         name_field=form.findChild(QtWidgets.QLineEdit, "runway_id"),
         capacity_field=form.findChild(QtWidgets.QLineEdit, "capacity"),
         offset_field=form.findChild(QtWidgets.QLineEdit, "touchdown"),
-        speed_field=form.findChild(QtWidgets.QLineEdit, "max_queue_speed"),
-        time_field=form.findChild(QtWidgets.QLineEdit, "peak_queue_time"),
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
     )
@@ -236,8 +234,6 @@ def validate(fields: dict):
         validate_field(fields["name_field"], "str"),
         validate_field(fields["capacity_field"], "float"),
         validate_field(fields["offset_field"], "float"),
-        validate_field(fields["speed_field"], "float"),
-        validate_field(fields["time_field"], "float"),
     ]
 
     # Block signals if any of the fields is invalid
