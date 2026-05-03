@@ -471,6 +471,35 @@ def average_emission_factors(e: pd.DataFrame) -> pd.Series:
     return emission_factors
 
 
+def average_cold_only_emission_factors(e: pd.DataFrame) -> pd.Series:
+    """Return only the cold-start contribution from a calculate_emissions
+    DataFrame, fleet-averaged in the same units as average_emission_factors.
+
+    Used by the parking calculator to apply cold-start at trip scale rather
+    than at parking-maneuvering scale. The default parking branch in
+    roadway_emission_factors() multiplies the combined hot+cold EF by the
+    parking maneuvering distance (~0.35 km), which scales cold-start by
+    0.35/1000 ~= 0.00035 (effectively zero). Extracting cold-only here lets
+    the caller apply it at the post-parking trip length L_trip (default
+    12.4 km, COPERT 5).
+
+    For pollutants without a cold contribution (no bc{p} column in the
+    input), E_cold{p} is zero and the returned EF is zero.
+    """
+    cold_cols = [f"E_cold{p}[g]" for p in POLLUTANTS if f"E_cold{p}[g]" in e.columns]
+    total_cold = e[cold_cols].sum() if cold_cols else None
+    total_mileage = e[["N", "M[km]"]].product(axis=1).sum()
+
+    out = {}
+    for p in POLLUTANTS:
+        col = f"E_cold{p}[g]"
+        if total_cold is not None and col in total_cold:
+            out[f"e_cold{p}[g/km]"] = total_cold[col] / total_mileage
+        else:
+            out[f"e_cold{p}[g/km]"] = 0.0
+    return pd.Series(out)
+
+
 def average_evaporation(e: pd.DataFrame, t_min: float) -> pd.Series:
     # Determine the total emissions for t_min
     total_evaporation = e["EVOC[g/day]"].sum() / (24 * 60) * t_min
