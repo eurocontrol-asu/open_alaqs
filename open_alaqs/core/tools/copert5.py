@@ -4,6 +4,7 @@ from open_alaqs.core import alaqsdblite, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools.copert5_utils import (
     VEHICLE_CATEGORIES,
+    average_cold_only_emission_factors,
     average_emission_factors,
     average_evaporation,
     calculate_emissions,
@@ -152,16 +153,61 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
         # Calculate the average evaporation per vehicle
         mean_evaporation = average_evaporation(evaporation, idle_time)
 
+        # Default: emit hot+cold at parking_speed × maneuvering_distance.
+        # The cold contribution at this scale is ~0.00035 of its true
+        # value because parking maneuvering is ~0.35 km vs the M=1000 km
+        # used internally by calculate_emissions. To preserve byte-for-byte
+        # backward compatibility with existing studies, this is the
+        # default behavior.
+        co_ef = emission_factors["eCO[g/km]"] * distance
+        hc_ef = (
+            emission_factors["eVOC[g/km]"] * distance + mean_evaporation["eVOC[g/vh]"]
+        )
+        nox_ef = emission_factors["eNOx[g/km]"] * distance
+        sox_ef = emission_factors["eSO2[g/km]"] * distance
+        pm10_ef = emission_factors["ePM2.5[g/km]"] * distance
+        p1_ef = emission_factors["ePM0.1[g/km]"] * distance
+        p2_ef = emission_factors["ePM2.5[g/km]"] * distance
+
+        # Optional: re-apply cold-start at the post-parking trip scale.
+        # Each parking event triggers exactly one cold start; the cold
+        # portion of emissions occurs over the first L_trip km of the
+        # trip until the engine reaches operating temperature (default
+        # 12.4 km per COPERT 5 / EMEP-EEA Guidebook 2019). Scaling cold
+        # by parking_distance instead of L_trip understates cold-start
+        # NOx by a factor of ~35x for typical parking lots. Gated behind
+        # a study-level flag so existing studies keep their current
+        # totals; new studies opt in.
+        if study_data.get("parking_include_cold_start", False):
+            l_trip = study_data.get("parking_cold_trip_length_km", 12.4)
+            cold_speed = study_data.get("parking_cold_speed_kmh", 30.0)
+
+            # Subtract the small cold contribution already counted at
+            # parking_speed × parking_distance, then add it back at
+            # cold_speed × L_trip to avoid double-counting.
+            cold_at_parking = average_cold_only_emission_factors(emissions)
+            co_ef -= cold_at_parking["e_coldCO[g/km]"] * distance
+            hc_ef -= cold_at_parking["e_coldVOC[g/km]"] * distance
+            nox_ef -= cold_at_parking["e_coldNOx[g/km]"] * distance
+
+            cold_efs = get_emission_factors(cold_speed, country)
+            cold_emissions = calculate_emissions(
+                fleet, cold_efs, study_data["airport_temperature"]
+            )
+            cold_at_trip = average_cold_only_emission_factors(cold_emissions)
+            co_ef += cold_at_trip["e_coldCO[g/km]"] * l_trip
+            hc_ef += cold_at_trip["e_coldVOC[g/km]"] * l_trip
+            nox_ef += cold_at_trip["e_coldNOx[g/km]"] * l_trip
+
         # Calculate the average emissions per vehicle
         emission_factors_dict = {
-            "co_ef": emission_factors["eCO[g/km]"] * distance,
-            "hc_ef": emission_factors["eVOC[g/km]"] * distance
-            + mean_evaporation["eVOC[g/vh]"],
-            "nox_ef": emission_factors["eNOx[g/km]"] * distance,
-            "sox_ef": emission_factors["eSO2[g/km]"] * distance,
-            "pm10_ef": emission_factors["ePM2.5[g/km]"] * distance,
-            "p1_ef": emission_factors["ePM0.1[g/km]"] * distance,
-            "p2_ef": emission_factors["ePM2.5[g/km]"] * distance,
+            "co_ef": co_ef,
+            "hc_ef": hc_ef,
+            "nox_ef": nox_ef,
+            "sox_ef": sox_ef,
+            "pm10_ef": pm10_ef,
+            "p1_ef": p1_ef,
+            "p2_ef": p2_ef,
         }
 
         return emission_factors_dict
