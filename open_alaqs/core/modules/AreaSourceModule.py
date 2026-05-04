@@ -66,6 +66,10 @@ class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
                 and (source_id not in source_names)
             ):
                 continue
+            # Skip sources marked excluded from the study (instudy='0').
+            # See Source.isInStudy() for the read-side contract.
+            if not source.isInStudy():
+                continue
 
             activity_multiplier = self.getEmissionsForTimePeriod(
                 start_dt,
