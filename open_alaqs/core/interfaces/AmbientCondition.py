@@ -49,43 +49,49 @@ class AmbientCondition:
         )
         # defaults are ISA conditions
         self._temperature_in_K = (
-            conversion.convertToFloat(val["Temperature"])
+            conversion.convertToFloat(val["Temperature"], default=288.15)
             if "Temperature" in val
             else 288.15
         )
         self._relative_humidity = (
-            conversion.convertToFloat(val["RelativeHumidity"])
+            conversion.convertToFloat(val["RelativeHumidity"], default=0.6)
             if "RelativeHumidity" in val
             else 0.6
         )
         self._humidity = (
-            conversion.convertToFloat(val["Humidity"]) if "Humidity" in val else 0.00634
+            conversion.convertToFloat(val["Humidity"], default=0.00634)
+            if "Humidity" in val
+            else 0.00634
         )
         self._sealevel_pressure_Pa = (
-            conversion.convertToFloat(val["SeaLevelPressure"])
+            conversion.convertToFloat(val["SeaLevelPressure"], default=1013.25 * 100.0)
             if "SeaLevelPressure" in val
             else 1013.25 * 100.0
         )
         self._wind_speed_in_m_s = (
-            conversion.convertToFloat(val["WindSpeed"]) if "WindSpeed" in val else 0.0
+            conversion.convertToFloat(val["WindSpeed"], default=0.0)
+            if "WindSpeed" in val
+            else 0.0
         )
         self._wind_direction_degrees = (
-            conversion.convertToFloat(val["WindDirection"])
+            conversion.convertToFloat(val["WindDirection"], default=0.0)
             if "WindDirection" in val
             else 0.0
         )
         self._mixing_height_m = (
-            conversion.convertToFloat(val["MixingHeight"])
+            conversion.convertToFloat(
+                val["MixingHeight"], default=conversion.convertFeetToMeters(3000.0)
+            )
             if "MixingHeight" in val
             else conversion.convertFeetToMeters(3000.0)
         )
         self._speed_of_sound_in_m_s = (
-            conversion.convertToFloat(val["SpeedOfSound"])
+            conversion.convertToFloat(val["SpeedOfSound"], default=340.29)
             if "SpeedOfSound" in val
             else 340.29
         )
         self._obukhov_length = (
-            conversion.convertToFloat(val["ObukhovLength"])
+            conversion.convertToFloat(val["ObukhovLength"], default=99999.0)
             if "ObukhovLength" in val
             else 99999.0
         )
