@@ -15,6 +15,21 @@ class Source:
         self._emissionIndex = None
         self._id = None
 
+        # Capture the `instudy` flag from the source row. Rows with
+        # `instudy='0'` are excluded from emission output by the
+        # *SourceModule.process() filter. Default to True so legacy
+        # callers that build sources from non-DB inputs (programmatic
+        # construction, tests) are unaffected. See `isInStudy()`.
+        self._in_study = str(val.get("instudy", "1")).strip() == "1"
+
+    def isInStudy(self) -> bool:
+        """Return True if this source should be included in the
+        emission calculation. Sources with `instudy='0'` in the
+        spatialite layer are excluded; this is the read-side of that
+        contract.
+        """
+        return self._in_study
+
     def getName(self):
         return self._id
 

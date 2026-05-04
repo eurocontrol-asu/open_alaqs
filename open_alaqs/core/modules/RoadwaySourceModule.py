@@ -79,6 +79,10 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
         for source_id, source in self.getSources().items():
             if ("all" not in source_names) and (source_id not in source_names):
                 continue
+            # Skip sources marked excluded from the study (instudy='0').
+            # See Source.isInStudy() for the read-side contract.
+            if not source.isInStudy():
+                continue
 
             # Get the relative activity (percentage of total emissions) for this hour
             activity_multiplier = self.getRelativeActivityPerHour(

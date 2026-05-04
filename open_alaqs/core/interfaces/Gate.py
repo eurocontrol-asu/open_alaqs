@@ -30,6 +30,18 @@ class Gate:
 
         self._emission_profiles = []
 
+        # Capture the `instudy` flag (parity with Source.isInStudy).
+        # Gates do not inherit from Source; this is a separate
+        # implementation of the same contract.
+        self._in_study = str(val.get("instudy", "1")).strip() == "1"
+
+    def isInStudy(self) -> bool:
+        """Return True if this gate should be included in the
+        emission calculation. Gates with `instudy='0'` in the
+        spatialite layer are excluded.
+        """
+        return self._in_study
+
     def getName(self):
         return self._id
 
