@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - rebuild/v5.0.0
   pull_request:
     branches:
       - main
+      - rebuild/v5.0.0
 
 jobs:
   test:
