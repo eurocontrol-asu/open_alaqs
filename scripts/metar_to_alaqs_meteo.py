@@ -601,7 +601,7 @@ def write_alaqs_meteo_csv(
                     rh_str,
                     p_pa_str,
                     "" if r["wind_speed_ms"] is None else f"{r['wind_speed_ms']:.2f}",
-                    "" if r["wind_dir_deg"] is None else f"{r['wind_dir_deg']:.0f}",
+                    "999" if r["wind_dir_deg"] is None else f"{r['wind_dir_deg']:.0f}",
                     f"{L:.0f}",
                     f"{MH:.1f}",
                 ]
