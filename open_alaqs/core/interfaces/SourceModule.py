@@ -149,6 +149,12 @@ class SourceWithTimeProfileModule(SourceModule):
         self._hours_in_year: int = 0  # set on first getRelativeActivityPerHour call
         self._hours_in_year_year: int = -1  # tracks which year the cache is valid for
         self._profile_cache: dict = {}  # (hour_name, day_name, month_name) -> (h,d,m)
+        # Cache for the calendar-weighted mean of the hour x weekday x month
+        # profile product over the inventory year. See _get_profile_mean for
+        # rationale.
+        self._profile_mean_cache: dict = (
+            {}
+        )  # (hour_name, day_name, month_name, year) -> mean
 
     def _get_profiles(self, hour_name, day_name, month_name):
         """Return (hour_profile, day_profile, month_profile), caching by name triple."""
@@ -171,6 +177,51 @@ class SourceWithTimeProfileModule(SourceModule):
                 )
             self._profile_cache[key] = (h, d, m)
         return self._profile_cache[key]
+
+    def _get_profile_mean(self, hour_name, day_name, month_name, year):
+        """Return the calendar-weighted mean of hour_factor * weekday_factor *
+        month_factor over every hour of `year`.
+
+        ALAQS profiles are separable relative weights: total annual activity
+        comes from `unit_year` (or `ops_year`) and the EF, while the three
+        profiles encode only how that activity is distributed across hours,
+        weekdays, and months. For this separability to be physically meaningful,
+        the calendar-weighted mean of (hour x weekday x month) over the year
+        must be 1.0; otherwise the profile silently rescales the source's
+        annual emission. Profiles whose mean is not 1.0 (e.g. a winter-heavy
+        heating profile averaging 0.95) leak shape into mass.
+
+        getRelativeActivityPerHour() now divides its return value by this mean
+        so annual emission equals EF * unit_year for any profile triplet,
+        within float precision.
+
+        Cost: one 8760-hour loop per unique (hour, day, month, year) tuple,
+        amortised across all sources sharing the triplet.
+        """
+        key = (hour_name, day_name, month_name, year)
+        if key not in self._profile_mean_cache:
+            hour_profile, weekday_profile, month_profile = self._get_profiles(
+                hour_name, day_name, month_name
+            )
+            hours_in_year = 8784 if calendar.isleap(year) else 8760
+
+            total = 0.0
+            dt = datetime(year, 1, 1, 0, 0, 0)
+            one_hour = pd.Timedelta(hours=1)
+            for _ in range(hours_in_year):
+                h = float(hour_profile.getHours()[dt.hour])
+                d = float(
+                    weekday_profile.getDays()[weekday_abbreviations[dt.weekday()]]
+                )
+                m = float(month_profile.getMonths()[month_abbreviations[dt.month]])
+                total += h * d * m
+                dt = dt + one_hour
+            mean = total / hours_in_year
+            # Guard against the all-zero profile case. Multiplier is already 0
+            # so emissions remain 0 regardless; returning 1.0 avoids a divide
+            # by zero in getRelativeActivityPerHour.
+            self._profile_mean_cache[key] = mean if mean != 0.0 else 1.0
+        return self._profile_mean_cache[key]
 
     def getEmissionsForTimePeriod(
         self,
@@ -221,4 +272,17 @@ class SourceWithTimeProfileModule(SourceModule):
             month_profile.getMonths()[month_abbreviations[inventory_dt.month]]
         )
 
-        return operating_factor * hour_factor * weekday_factor * month_factor
+        # Normalise by the calendar-weighted profile mean so annual emission
+        # equals EF * unit_year regardless of whether the user-supplied
+        # profile triplet averages to 1.0. See _get_profile_mean docstring.
+        profile_mean = self._get_profile_mean(
+            hour_profile_name, daily_profile_name, month_profile_name, year
+        )
+
+        return (
+            operating_factor
+            * hour_factor
+            * weekday_factor
+            * month_factor
+            / profile_mean
+        )
