@@ -1,13 +1,13 @@
-import itertools
 import os
 from collections import OrderedDict
 from datetime import datetime, timedelta
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 from qgis.gui import QgsDoubleSpinBox
 from qgis.PyQt import QtWidgets
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Polygon
 
 from open_alaqs.alaqs_config import DEFAULT_CONCENTRATION_GRID_FACTOR
 from open_alaqs.core.alaqslogging import get_logger
@@ -546,17 +546,17 @@ class QGISVectorLayerDispersionModule(OutputModule):
 
         # prepare the attributes of each point of the vector layer
         self._data = {}
-        # ToDO: self._grid.get_df_from_3d_grid_cells() ?
-        self._data_cells = self._grid.get_df_from_2d_grid_cells()
-        # Grid cells are built in UTM; reproject to EPSG:3857 to match the
-        # source/emission geometry CRS used in downstream intersections.
-        self._data_cells = self._data_cells.to_crs("EPSG:3857")
-        self._data_cells = self._data_cells.assign(
-            Q=pd.Series(0, index=self._data_cells.index)
-        )
 
         self._total_concentration = 0.0
 
+        # Read y00a (header + matrix) FIRST. The data_cells frame is
+        # then constructed from the y00a header so that polygons are
+        # exactly aligned with the AUSTAL output grid, regardless of
+        # how the .alaqs DB grid is configured. This avoids the
+        # one-row spatial offset that occurs when the writer's calc
+        # grid origin (e.g. standalone with x0=-9375) differs from
+        # the reader's assumed origin (QGIS plugin convention with
+        # halo: x0=-9875).
         output_data, index_, concentration_matrix = self.getA2KData()
 
         self._xmin = (
@@ -580,7 +580,6 @@ class QGISVectorLayerDispersionModule(OutputModule):
             else None
         )
 
-        # self._units = output_data['unit'][0].decode('latin-1') if ('unit' in output_data and len(output_data['unit']) > 0) else None
         self._units = (
             output_data["unit"][0]
             if ("unit" in output_data and len(output_data["unit"]) > 0)
@@ -591,12 +590,12 @@ class QGISVectorLayerDispersionModule(OutputModule):
             conversion.convertToInt(output_data["hghb"][0])
             if ("hghb" in output_data and len(output_data["hghb"]) > 0)
             else None
-        )  # columns
+        )  # columns (i, x)
         self._index_j = (
             conversion.convertToInt(output_data["hghb"][1])
             if ("hghb" in output_data and len(output_data["hghb"]) > 0)
             else None
-        )  # rows
+        )  # rows (j, y)
         self._index_k = (
             conversion.convertToInt(output_data["hghb"][2])
             if ("hghb" in output_data and len(output_data["hghb"]) > 0)
@@ -614,6 +613,66 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 % (self._index_k, self._index_i, self._index_j)
             )
 
+        # Build data_cells in UTM, aligned with the y00a grid. This
+        # replaces the prior approach of building from .alaqs DB grid
+        # (centered, no halo) and projecting to EPSG:3857 with raw
+        # 250 m steps. Working in UTM throughout means each data_cell
+        # corresponds 1:1 to one y00a cell, and direct array
+        # assignment in process() is exact.
+        utm_epsg = self._grid.getUtmEpsg()
+        ref_lon = float(self._grid._reference_longitude)
+        ref_lat = float(self._grid._reference_latitude)
+        ref_wkt = "POINT (%s %s)" % (ref_lon, ref_lat)
+        sql_text = (
+            "SELECT X(ST_Transform(ST_PointFromText('%s', 4326), %d)), "
+            "Y(ST_Transform(ST_PointFromText('%s', 4326), %d));"
+            % (ref_wkt, utm_epsg, ref_wkt, utm_epsg)
+        )
+        ref_result = sql_interface.query_text(self._grid._db_path, sql_text)
+        if ref_result is None:
+            raise Exception(
+                "AUSTAL: Could not transform reference point to UTM "
+                "for data_cells construction."
+            )
+        self._reference_x = conversion.convertToFloat(ref_result[0][0])
+        self._reference_y = conversion.convertToFloat(ref_result[0][1])
+
+        # Absolute UTM SW corner of the y00a calc grid.
+        self._x_left_border_grid = self._reference_x + self._xmin
+        self._y_left_border_grid = self._reference_y + self._ymin
+
+        rows = []
+        for x_idx in range(self._index_i):
+            x_min_cell = self._x_left_border_grid + x_idx * self._delta
+            x_max_cell = x_min_cell + self._delta
+            for y_idx in range(self._index_j):
+                y_min_cell = self._y_left_border_grid + y_idx * self._delta
+                y_max_cell = y_min_cell + self._delta
+                rows.append(
+                    {
+                        "x_idx": x_idx,
+                        "y_idx": y_idx,
+                        "geometry": Polygon(
+                            [
+                                (x_min_cell, y_min_cell),
+                                (x_min_cell, y_max_cell),
+                                (x_max_cell, y_max_cell),
+                                (x_max_cell, y_min_cell),
+                            ]
+                        ),
+                    }
+                )
+
+        self._data_cells = gpd.GeoDataFrame(
+            rows, geometry="geometry", crs=f"EPSG:{utm_epsg}"
+        )
+        self._data_cells = self._data_cells.assign(
+            Q=pd.Series(0, index=self._data_cells.index)
+        )
+        # Initialize the pollutant column to 0 so process() can do
+        # `self._data_cells.loc[..., col] = value` without KeyError.
+        self._data_cells[f"{self._pollutant}_kg"] = 0.0
+
         concentration_matrix_reshaped = np.reshape(
             concentration_matrix, (self._index_k, self._index_j, self._index_i)
         )
@@ -625,7 +684,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 0, :, :
             ].squeeze()
         else:
-            # take the concentration up tp Kmax: <c> = c1*H1/(H1+H2+H3+...) + c2*H2/(H1+H2+H3+...) + c3*H3/(H1+H2+H3+...) + ...
+            # take the concentration up to Kmax: <c> = c1*H1/(H1+H2+H3+...) + ...
             total_column_concentration = np.zeros(shape=(self._index_j, self._index_i))
             for z_ in range(1, self._index_k + 1):
                 total_column_concentration += (
@@ -637,75 +696,36 @@ class QGISVectorLayerDispersionModule(OutputModule):
         return True
 
     def process(self, **kwargs):
-        # Details of the projection
-        pass
-
         if self.getGrid() is None:
             raise Exception("No 3DGrid found.")
 
-        self.getGridXYFromReferencePoint()
-        x0 = self._x_left_border_grid
-        y0 = self._y_left_border_grid
-        # logger.debug("getGridXYFromReferencePoint(x0, y0): %s,%s"%(x0, y0))
+        # Direct array assignment, in UTM index space.
+        #
+        # The data_cells frame was constructed in beginJob() so that
+        # row k = x_idx * n_y + y_idx corresponds to the polygon
+        # at AUSTAL grid index (x_idx, y_idx). y_idx = 0 is the
+        # south-most cell. The y00a matrix is laid out per the DMNA
+        # k+,j-,i+ convention: matrix row 0 is j_phys = J_max
+        # (north-most), matrix row n_y - 1 is j_phys = 1 (south-most).
+        # For y_idx (south-counted) we therefore read matrix row
+        # n_y - 1 - y_idx.
+        #
+        # No Point geometry, no contains() check, no aggregation:
+        # one y00a value goes into exactly one data_cell.
+        col = f"{self._pollutant}_kg"
+        conc_value_counter = 0.0
+        n_y = self._index_j
+        n_x = self._index_i
 
-        # ToDo: User defined vertical layer (Zmin, Zmax)?
-        # Zmax = 0
-        # try:
-        #     Zmax = conversion.convertToFloat(self._sk[self._index_k])
-        #     logger.info("Maximum height: %s"%Zmax)
-        # except Exception:
-        #     Zmax = 0
+        for x_idx in range(n_x):
+            base = x_idx * n_y
+            for y_idx in range(n_y):
+                conc_value = self._concentration_matrix[n_y - 1 - y_idx, x_idx]
+                self.addToTotalConcentration(conc_value)
 
-        conc_value_counter = 0
-        for y, x in itertools.product(
-            *list(map(range, (self._index_j, self._index_i)))
-        ):
-            # sequence is k+,j-,i+
-            conc_value = self._concentration_matrix[self._index_j - (y + 1), x]
-
-            # ToDo: take into account the z level: self._index_k ?
-            # bbox = {
-            #     "y_min": y0 + (y) * self._delta,
-            #     "y_max": y0 + (y) * self._delta,
-            #     "x_min": x0 + (x) * self._delta,
-            #     "x_max": x0 + (x) * self._delta,
-            #     "z_max": Zmax,
-            #     "z_min": 0,
-            # }
-
-            # ToDo: convert bbox to geom object ?
-            geom = Point(
-                x0 + (x) * self._delta + self._delta * 1.0 / 2,
-                y0 + (y) * self._delta + self._delta * 1.0 / 2,
-            )
-            # logger.info(geom)
-
-            self.addToTotalConcentration(conc_value)
-
-            if conc_value >= self._threshold_to_create_a_data_point:
-                conc_value_counter += conc_value
-
-                # include z limitations if any
-                # bbox["z_min"] = self.getMinHeight()
-                # bbox["z_max"] = self.getMaxHeight()
-
-                # match bounding box to cell hashes
-                # matched_cells = []
-
-                # project all z components to zero, i.e. integrate over height
-                # matched_cells = self.getGrid().matchBoundingBoxToCellHashList(bbox, z_as_list=True)
-                # logger.info(matched_cells)
-
-                matched_cells_2D = self._data_cells[
-                    self._data_cells.contains(geom) == True  # noqa: E712
-                ]
-
-                # Calculate horizontal distribution
-                # matched_cells_2D.loc[matched_cells_2D.index, "Concentration"] = \
-                #     conc_value * matched_cells_2D.intersection(geom).area / geom.area
-                self._data_cells.loc[
-                    matched_cells_2D.index, f"{self._pollutant}_kg"
-                ] += conc_value
+                if conc_value >= self._threshold_to_create_a_data_point:
+                    conc_value_counter += conc_value
+                    self._data_cells.at[base + y_idx, col] = conc_value
 
         if round(conc_value_counter, 3) < round(self._total_concentration, 3):
             logger.warning(
@@ -715,10 +735,14 @@ class QGISVectorLayerDispersionModule(OutputModule):
             )
 
     def endJob(self):
-        # create the layer
-        # if self._header and self._data:
-        # if self._header and not self._data.empty:
         if not self._data_cells.empty:
+            # data_cells is in UTM throughout processing. Project to
+            # EPSG:3857 only here, at the very end, so that internal
+            # arithmetic and indexing are not contaminated by the
+            # EPSG:3857 vs UTM scale factor (~1.62 at lat 52). The
+            # ContourPlotVectorLayer below expects EPSG:3857.
+            data_cells_3857 = self._data_cells.to_crs("EPSG:3857")
+
             # create a new instance of a ContourPlotLayer
             contour_layer = ContourPlotVectorLayer(
                 layer_name="Concentration [in {}] {}".format(
@@ -729,7 +753,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 use_centroid_symbol=self._use_centroid_symbol,
             )
 
-            contour_layer.addData(self._data_cells)
+            contour_layer.addData(data_cells_3857)
             contour_layer.setColorGradientRenderer(classes_count=7)
 
             self._contour_layer = contour_layer
