@@ -312,7 +312,19 @@ Activity Profiles are used to describe the relative hourly/daily/monthly operati
 
 ![activity-profiles.png](./../open_alaqs/assets/activity-profiles.png)
 
-Each activity multiplier is a decimal number between 0 and 1. The default profile values are 1 (i.e., 100%), meaning the emission source is fully active. If the emission source is deactivated during a specific time interval (e.g., during night-time curfew), the user can set the corresponding multiplier to 0 for that specific period.
+Profiles are **separable shape factors**, not absolute activity ratios. For each hour of the simulation, OpenALAQS multiplies the source's annual emission by
+
+```
+operating_factor * hour_factor * weekday_factor * month_factor / profile_mean
+```
+
+where `operating_factor = annual_total_operating_hours / hours_in_year`, the three factors are looked up from the assigned profiles, and `profile_mean` is the calendar-weighted mean of `hour_factor × weekday_factor × month_factor` over the simulated year. The internal normalisation by `profile_mean` guarantees that the source's total annual emission equals `EF × annual_total_operating_hours` regardless of the profile shape.
+
+Each factor is a non-negative decimal number. Values are not capped at 1.0; what matters is the ratio between values within a profile. The default profile values are all 1, which produces a uniform distribution: each hour/weekday/month receives its naive share of the annual emission.
+
+> **Note:** Because of the `profile_mean` normalisation, setting a factor to 0 for a specific period (e.g. night-time curfew) zeroes the emission in that period but **redistributes the mass to the remaining non-zero periods** — the total annual emission is preserved. To actually reduce a source's annual emission, lower its `unit_year` (or `ops_year`) field rather than zeroing profile entries.
+
+> **Note:** Profiles whose calendar-weighted mean is exactly 0 (every entry zero) are handled specially: the multiplier evaluates to 0 for every hour, so emissions remain 0 throughout the simulation. There is no normalisation in this case.
 
 ## [Generate Emissions Inventory](#generate-emissions-inventory)
 [(Back to top)](#table-of-contents)
