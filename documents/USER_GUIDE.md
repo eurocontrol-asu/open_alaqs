@@ -312,7 +312,19 @@ Activity Profiles are used to describe the relative hourly/daily/monthly operati
 
 ![activity-profiles.png](./../open_alaqs/assets/activity-profiles.png)
 
-Each activity multiplier is a decimal number between 0 and 1. The default profile values are 1 (i.e., 100%), meaning the emission source is fully active. If the emission source is deactivated during a specific time interval (e.g., during night-time curfew), the user can set the corresponding multiplier to 0 for that specific period.
+Profiles are **separable shape factors**, not absolute activity ratios. For each hour of the simulation, OpenALAQS multiplies the source's annual emission by
+
+```
+operating_factor * hour_factor * weekday_factor * month_factor / profile_mean
+```
+
+where `operating_factor = annual_total_operating_hours / hours_in_year`, the three factors are looked up from the assigned profiles, and `profile_mean` is the calendar-weighted mean of `hour_factor × weekday_factor × month_factor` over the simulated year. The internal normalisation by `profile_mean` guarantees that the source's total annual emission equals `EF × annual_total_operating_hours` regardless of the profile shape.
+
+Each factor is a non-negative decimal number. Values are not capped at 1.0; what matters is the ratio between values within a profile. The default profile values are all 1, which produces a uniform distribution: each hour/weekday/month receives its naive share of the annual emission.
+
+> **Note:** Because of the `profile_mean` normalisation, setting a factor to 0 for a specific period (e.g. night-time curfew) zeroes the emission in that period but **redistributes the mass to the remaining non-zero periods** — the total annual emission is preserved. To actually reduce a source's annual emission, lower its `unit_year` (or `ops_year`) field rather than zeroing profile entries.
+
+> **Note:** Profiles whose calendar-weighted mean is exactly 0 (every entry zero) are handled specially: the multiplier evaluates to 0 for every hour, so emissions remain 0 throughout the simulation. There is no normalisation in this case.
 
 ## [Generate Emissions Inventory](#generate-emissions-inventory)
 [(Back to top)](#table-of-contents)
@@ -336,7 +348,7 @@ To define a taxi route in OpenALAQS, the user has to first create the taxi-route
 
 Before calculating emissions, the user must generate an OpenALAQS file that includes all user-defined elements of the study (e.g., emission sources) and the default internal database (e.g., emission factors).
 
-The corresponding interface allows the user to set the path for saving the output file, select movements and meteorological data, set time filters, and define the domain and its spatial resolution:
+The corresponding interface allows the user to set the path for saving the output file, select movements and meteorological data, optionally provide an ADS-B file, set time filters, and define the domain and its spatial resolution:
 + **Emission Inventory Output**:
   + **Directory**: The path (directory) to the output file
   + **File Name**: The name of the output file to be generated
@@ -344,6 +356,8 @@ The corresponding interface allows the user to set the path for saving the outpu
   + **Movements Table**: A placeholder to select the table containing data about aircraft movements
   + **Filter Start Date**: A date selector to filter the movement data by a specific start date
   + **Filter End Date**: A date selector to filter the movement data by a specific end date
++ **ADS-B Data (Optional)**:
+  + **ADS-B Table**: A placeholder to select a CSV file with ADS-B trajectory data. When provided, the file is validated on selection and a status line below the field indicates whether the file is valid, the number of flights detected, and any warnings. ADS-B trajectories override the corresponding standard ANP profile for movements whose `profile_id` references a `course = CUSTOM` entry in `default_aircraft_profiles`. See [Movements table](#movements-table) and the [`Auxiliary Material`](AUXILIARY_MATERIAL.md#aircraft-trajectories) for the relationship between the ADS-B file and the movement records.
 + **Meteorological Data**:
   + **Meteorological Table**: A placeholder for importing meteorological data
 + **Modeled Domain**:
@@ -354,6 +368,21 @@ The corresponding interface allows the user to set the path for saving the outpu
 ![generate-emissions-inventory.png](./../open_alaqs/assets/generate-emissions-inventory.png)
 
 The user must provide a comma-delimited `.csv` file containing aircraft operations (see [`Movements table`](#movements-table)). An automatic check is performed to ensure that all fields in the movements and meteorology files are in the correct format (e.g., dates should follow the format YYYY-MM-DD HH:MM:SS). The meteorology file is optional; if it is missing or contains invalid data, default values based on ISA conditions will be used.
+
+The optional ADS-B file is also a comma-delimited `.csv`. The validator (`open_alaqs/core/tools/ads_b.py`) checks the columns below; any other columns in the CSV are passed through unchanged.
+
+| Field | Type / Unit | Required | Notes |
+|---|---|---|---|
+| `flight_id` | text | yes | Groups rows belonging to one flight. |
+| `latitude` | degrees, WGS84 | yes | |
+| `longitude` | degrees, WGS84 | yes | |
+| `altitude` | feet | yes | |
+| `tas` | knots | yes | True airspeed. |
+| `power_setting` | fraction 0–1 | one of `power_setting` or `fuel_flow` per row | Engine power setting fraction used by the BFFM2 twin-quadratic fit. The legacy column name `thrust` is accepted as an alias for old files; values are still treated as a fraction. |
+| `fuel_flow` | kg/s, aircraft total | one of `power_setting` or `fuel_flow` per row | Total-aircraft ambient fuel flow. Divided by the engine count before BFFM2 dispatch. |
+| `timestamp` | YYYY-MM-DD HH:MM:SS | optional | Read for human readability only; flight time is taken from the movement table's `runway_time` / `block_time` matched by `profile_id`. |
+
+> **Note:** Ground taxi emissions are handled separately via taxiway routes. ADS-B rows during ground taxi should not be included in this CSV — they would otherwise be imported as flight-trajectory points at zero altitude.
 
 > **Note:** All movements in a study share a single ambient condition record from the meteorological table. OpenALAQS does not model temporal variation in ambient conditions across the study period.
 

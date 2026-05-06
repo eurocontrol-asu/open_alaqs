@@ -29,6 +29,37 @@ from open_alaqs.core.tools.Grid3D import Grid3D
 
 logger = get_logger(__name__)
 
+# AUSTAL's built-in default vertical grid (heights above ground in m).
+# When austal.txt omits the 'sk' line, AUSTAL uses this progressive grid
+# internally.  The per-source grid files (e000N.dmna) must declare an
+# 'sk' that is consistent with the computation grid.  Using a coarser
+# uniform grid (e.g. 50 m spacing) artificially dilutes ground-level
+# emissions over a thick layer, producing unrealistically low surface
+# concentrations.
+# 20 boundaries -> 19 vertical cells; first cell spans 0-3 m.
+AUSTAL_DEFAULT_SK = (
+    0,
+    3,
+    6,
+    10,
+    16,
+    25,
+    40,
+    65,
+    100,
+    150,
+    200,
+    300,
+    400,
+    500,
+    600,
+    700,
+    800,
+    1000,
+    1200,
+    1500,
+)
+
 
 def log_time(func):
     def inner(*args, **kwargs):
@@ -1066,7 +1097,7 @@ class AUSTALDispersionModule(DispersionModule):
 
                 self._x_meshes = self._grid._x_cells
                 self._y_meshes = self._grid._y_cells
-                self._z_meshes = self._grid._z_cells
+                self._z_meshes = len(AUSTAL_DEFAULT_SK) - 1  # 19 levels
 
                 # AUSTAL cannot take non square grid cells, choose finer
                 # resolution (dd) for austal.txt
@@ -1192,10 +1223,11 @@ class AUSTALDispersionModule(DispersionModule):
         # ToDo: how much finer/coarser is the emission dd ?
         # horizontal mesh width in m
         dd_ = self._mesh_width
-        # vertical grid (h0 h1 h2 ...), heights above ground in m
-        sk_ = " ".join(
-            str(self._grid.getResolutionZ() * z) for z in range(self._z_meshes + 1)
-        )
+        # vertical grid (h0 h1 h2 ...), heights above ground in m.
+        # Must match the AUSTAL computation grid (its built-in default)
+        # so that the first cell is thin (0-3 m) rather than the coarse
+        # uniform grid stored in Grid3D (e.g. 0-50 m).
+        sk_ = " ".join(str(h) for h in AUSTAL_DEFAULT_SK)
 
         # Loop over all emissions and append one data point for every cell to
         # total_emissions_per_cell_list for the specific result
