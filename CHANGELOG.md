@@ -10,6 +10,17 @@ First stable release after the rebuild. The 5.0 line is not
 backwards-compatible at the file-format level with the 4.x series — see the
 **Migration** section below for how to bring an old `.alaqs` study forward.
 
+### Compatibility
+
+- **QGIS 3.x (LTR / latest)** — primary supported targets. The CI matrix
+  runs the test suite against the QGIS Docker images
+  `qgis/qgis:3.40.15-noble` (LTR) and `qgis/qgis:3.44.9-noble` (latest)
+  for every PR.
+- **QGIS 4.x (experimental)** — the plugin has been used end-to-end on
+  QGIS 4.x development builds throughout 2026 and is functional there.
+  QGIS 4.x is not yet covered by automated CI; users running on 4.x
+  builds are invited to report issues against this repository.
+
 ### Added
 
 - **`scripts/migrate_alaqs.py`** — CLI tool that rewrites a legacy 4.x-era

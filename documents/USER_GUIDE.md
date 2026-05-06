@@ -336,7 +336,7 @@ To define a taxi route in OpenALAQS, the user has to first create the taxi-route
 
 Before calculating emissions, the user must generate an OpenALAQS file that includes all user-defined elements of the study (e.g., emission sources) and the default internal database (e.g., emission factors).
 
-The corresponding interface allows the user to set the path for saving the output file, select movements and meteorological data, set time filters, and define the domain and its spatial resolution:
+The corresponding interface allows the user to set the path for saving the output file, select movements and meteorological data, optionally provide an ADS-B file, set time filters, and define the domain and its spatial resolution:
 + **Emission Inventory Output**:
   + **Directory**: The path (directory) to the output file
   + **File Name**: The name of the output file to be generated
@@ -344,6 +344,8 @@ The corresponding interface allows the user to set the path for saving the outpu
   + **Movements Table**: A placeholder to select the table containing data about aircraft movements
   + **Filter Start Date**: A date selector to filter the movement data by a specific start date
   + **Filter End Date**: A date selector to filter the movement data by a specific end date
++ **ADS-B Data (Optional)**:
+  + **ADS-B Table**: A placeholder to select a CSV file with ADS-B trajectory data. When provided, the file is validated on selection and a status line below the field indicates whether the file is valid, the number of flights detected, and any warnings. ADS-B trajectories override the corresponding standard ANP profile for movements whose `profile_id` references a `course = CUSTOM` entry in `default_aircraft_profiles`. See [Movements table](#movements-table) and the [`Auxiliary Material`](AUXILIARY_MATERIAL.md#aircraft-trajectories) for the relationship between the ADS-B file and the movement records.
 + **Meteorological Data**:
   + **Meteorological Table**: A placeholder for importing meteorological data
 + **Modeled Domain**:
@@ -354,6 +356,21 @@ The corresponding interface allows the user to set the path for saving the outpu
 ![generate-emissions-inventory.png](./../open_alaqs/assets/generate-emissions-inventory.png)
 
 The user must provide a comma-delimited `.csv` file containing aircraft operations (see [`Movements table`](#movements-table)). An automatic check is performed to ensure that all fields in the movements and meteorology files are in the correct format (e.g., dates should follow the format YYYY-MM-DD HH:MM:SS). The meteorology file is optional; if it is missing or contains invalid data, default values based on ISA conditions will be used.
+
+The optional ADS-B file is also a comma-delimited `.csv`. The validator (`open_alaqs/core/tools/ads_b.py`) checks the columns below; any other columns in the CSV are passed through unchanged.
+
+| Field | Type / Unit | Required | Notes |
+|---|---|---|---|
+| `flight_id` | text | yes | Groups rows belonging to one flight. |
+| `latitude` | degrees, WGS84 | yes | |
+| `longitude` | degrees, WGS84 | yes | |
+| `altitude` | feet | yes | |
+| `tas` | knots | yes | True airspeed. |
+| `power_setting` | fraction 0–1 | one of `power_setting` or `fuel_flow` per row | Engine power setting fraction used by the BFFM2 twin-quadratic fit. The legacy column name `thrust` is accepted as an alias for old files; values are still treated as a fraction. |
+| `fuel_flow` | kg/s, aircraft total | one of `power_setting` or `fuel_flow` per row | Total-aircraft ambient fuel flow. Divided by the engine count before BFFM2 dispatch. |
+| `timestamp` | YYYY-MM-DD HH:MM:SS | optional | Read for human readability only; flight time is taken from the movement table's `runway_time` / `block_time` matched by `profile_id`. |
+
+> **Note:** Ground taxi emissions are handled separately via taxiway routes. ADS-B rows during ground taxi should not be included in this CSV — they would otherwise be imported as flight-trajectory points at zero altitude.
 
 > **Note:** All movements in a study share a single ambient condition record from the meteorological table. OpenALAQS does not model temporal variation in ambient conditions across the study period.
 

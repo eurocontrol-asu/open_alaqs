@@ -465,6 +465,14 @@ Only profile segments within the LTO ceiling (default 914.4 m above the runway, 
 
 - **ADS-B fuel flow accuracy.** The fuel flow stored in `fuel_flow_kgm` for ADS-B profiles is an estimate derived from aircraft performance models, not a direct measurement. For some engine types the estimate can be significantly higher than the EEDB TO value, in which case the plugin automatically falls back to the power-setting path. Users should verify the QGIS log for `WARNING` messages after any BFFM2 run involving ADS-B profiles.
 
-- **Straight-line trajectories only.** OpenALAQS currently supports only straight-line departure and arrival tracks. Curved procedures (e.g. SID turns) are approximated as straight lines.
+- **Straight-line ANP trajectories.** Standard ANP profiles
+  (`course = ANP2.x`) model departure and arrival tracks as straight
+  lines along the runway centerline; curved procedures (e.g. SID
+  turns) are approximated as straight lines in this case. ADS-B
+  derived profiles (`course = CUSTOM`) are not subject to this
+  limitation: their `x_m` and `y_m` columns carry East/North
+  geodesic offsets from the runway intersection and can describe
+  arbitrary curved trajectories, including SID/STAR turns recorded
+  in the source ADS-B data.
 
 - **Single meteo record per study.** All movements in a study share the same ambient conditions from `tbl_InvMeteo`. Variation in conditions across the study period is not modelled.
