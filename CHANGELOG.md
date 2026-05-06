@@ -4,6 +4,75 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
+## [5.0.1] - 2026-05-06
+
+Patch release covering two correctness bugs in the AUSTAL dispersion
+output of 5.0.0 and a set of documentation corrections. No file-format
+or API changes; existing 5.0.0 `.alaqs` files are loaded unchanged.
+
+> **Action required for 5.0.0 dispersion users:** any AUSTAL run made
+> with 5.0.0 has a vertical-grid mismatch that produced ~7x-too-low
+> ground concentrations. Re-run with 5.0.1 before reporting numbers.
+
+### Fixed
+
+- **AUSTAL vertical grid mismatch** in `AUSTALOutputModule.py`. The
+  per-source `e000N.dmna` files were written with a uniform 50 m
+  first cell (`sk` from `Grid3D.getResolutionZ()`), while the calc
+  grid declared in `austal.txt` omitted `sk` and therefore used the
+  AUSTAL built-in default
+  `0 3 6 10 16 25 40 65 100 150 200 300 400 500 600 700 800 1000 1200 1500`
+  (3 m first cell). Ground-level road and parking emissions were
+  released uniformly into the first 50 m of atmosphere instead of
+  0–3 m, suppressing near-source ground concentrations by roughly a
+  factor of 7. The per-source `sk` is now written from the AUSTAL
+  default explicitly.
+- **Concentration GPKG spatial alignment** in
+  `ConcentrationsQGISVectorLayerOutputModule.py`. Three connected
+  issues caused the QGIS-built GPKG of `y00a` output to disagree
+  with the underlying AUSTAL grid: `_data_cells` was built from the
+  `.alaqs` DB grid plus a hardcoded halo and ignored the y00a
+  header; `process()` iterated y00a cells with `delta = 250` in raw
+  EPSG:3857 units while polygons were ~413 raw units wide,
+  producing Point-in-polygon binning that summed multiple y00a
+  cells into one polygon; and the contains() lookup was
+  unnecessary. Fixed by reading `xmin/ymin/delta/hghb` from the
+  y00a header, building `_data_cells` in absolute UTM, mapping y00a
+  cells 1:1 to data_cells via direct array assignment, and
+  reprojecting to EPSG:3857 only at the final `endJob()` step.
+  Verified on a synthetic single-source test: 19 nonzero polygons,
+  cell-by-cell match against the y00a DMNA.
+
+### Documentation
+
+- **Activity Profiles section** in `documents/USER_GUIDE.md` rewritten.
+  The previous description claimed profile values were [0, 1] activity
+  multipliers and that zeroing a period deactivated the source. Both
+  are wrong: profiles are non-negative shape factors, and the internal
+  calendar-weighted normalisation redistributes mass to non-zero
+  periods, leaving the annual total unchanged. The new section gives
+  the multiplicative formula explicitly and points users at
+  `unit_year` / `ops_year` for actual reductions.
+- **BFFM2 limitations** in `documents/BFFM2_validation/BFFM2.md`:
+  the straight-line trajectory limitation applies only to standard
+  ANP profiles. ADS-B `course = CUSTOM` profiles can describe
+  arbitrary curved trajectories.
+- **User Guide Create Output File section** documents the ADS-B
+  Data (Optional) widget and the ADS-B CSV column schema sourced
+  from `open_alaqs/core/tools/ads_b.py:validate_adsb_file`.
+- **CHANGELOG Compatibility subsection** added to the 5.0.0 entry.
+  Lists primary CI targets (QGIS 3.40.15 LTR and 3.44.9) and notes
+  QGIS 4.x as experimentally supported.
+
+### Assets
+
+- `emissions-calculation.png` and `generate-emissions-inventory.png`
+  re-captured against the current 5.0.0 UI (the previous shots
+  pre-dated the ADS-B Data widget and the reorganised
+  Configuration tab).
+- `gates.PNG` removed: byte-for-byte duplicate of `gates.png`,
+  not referenced from any document.
+
 ## [5.0.0] - 2026-04-30
 
 First stable release after the rebuild. The 5.0 line is not

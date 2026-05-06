@@ -9,7 +9,7 @@ qgisMaximumVersion=4.99
 supportsQt6=True
 description=An open-source local air quality model
 
-version=5.0.0
+version=5.0.1
 author=Eurocontrol
 email=open-alaqs@eurocontrol.int
 
