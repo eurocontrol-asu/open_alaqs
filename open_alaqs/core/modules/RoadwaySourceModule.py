@@ -30,6 +30,11 @@ logger = get_logger(__name__)
 
 
 class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
+    # stationary loop-fusion eligible. EmissionCalculation
+    # populates `_activity_vec_cache` before the time-major loop;
+    # process() reads from it via `_try_get_per_hour_activity`.
+    time_invariant_geometry: bool = True
+
     """
     Calculate roadway emissions for a specific roadway based on the roadway name
      and time period
@@ -84,14 +89,20 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
             if not source.isInStudy():
                 continue
 
-            # Get the relative activity (percentage of total emissions) for this hour
-            activity_multiplier = self.getRelativeActivityPerHour(
-                start_dt,
-                source.getUnitsPerYear(),
-                source.getHourProfile(),
-                source.getDailyProfile(),
-                source.getMonthProfile(),
-            )
+            # try the precomputed per-hour activity cache
+            # first; fall back to the legacy scalar walk if
+            # EmissionCalculation didn't populate it (legacy path or
+            # non-1h time interval). The two values are element-wise
+            # equal by construction of getHourlyActivityVector.
+            activity_multiplier = self._try_get_per_hour_activity(source_id, start_dt)
+            if activity_multiplier is None:
+                activity_multiplier = self.getRelativeActivityPerHour(
+                    start_dt,
+                    source.getUnitsPerYear(),
+                    source.getHourProfile(),
+                    source.getDailyProfile(),
+                    source.getMonthProfile(),
+                )
 
             # Calculate the emissions for this time interval
             emissions = Emission(

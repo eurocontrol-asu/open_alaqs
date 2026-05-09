@@ -1,4 +1,24 @@
 class Source:
+    # ------------------------------------------------------------------
+    # Loop-ordering discriminator.
+    #
+    # `True`  -> the geometric footprint is fixed for the whole study
+    #            year. The vectorised emission path can compute spatial
+    #            cell weights once per source and produce an entire
+    #            8760/8784-element hourly emission vector in a single
+    #            pass, then hand it to the output modules.
+    # `False` -> the source's footprint or activity binding to geometry
+    #            varies over time (gates/taxiways/aircraft movements).
+    #            Stays on the legacy time-major hot loop in
+    #            EmissionCalculation.run().
+    #
+    # only declares the flag; it is read in when
+    # EmissionCalculation partitions modules between the two paths. The
+    # base class default is False so the legacy code path is preserved
+    # for any class that has not been audited yet.
+    # ------------------------------------------------------------------
+    time_invariant_geometry: bool = False
+
     def __init__(self, val=None, *args, **kwargs):
         if val is None:
             val = {}
@@ -72,3 +92,58 @@ class Source:
 
     def setGeometryText(self, val):
         self._geometry_text = val
+
+    # ------------------------------------------------------------------
+    # Vectorised activity expansion.
+    #
+    # Returns a length 8760/8784 ndarray of per-hour activity 'units'
+    # for the source. Summing the array yields the annual total
+    # (`getUnitsPerYear()` on most subclasses; `PointSources` overrides
+    # to use `getOpsYear()` since its annual scalar comes from a
+    # different column).
+    #
+    # This method is the source-level analogue of the per-hour scalar
+    # path:
+    #     SourceModule.getRelativeActivityPerHour(...)
+    # The two paths produce element-wise equal results within float
+    # precision; see profiles_vec.hourly_multipliers for the
+    # normalisation invariant proof.
+    #
+    # only adds this method; downstream callers (the
+    # *SourceModule.process methods) keep their per-hour scalar path
+    # until wires up the source-major loop.
+    # ------------------------------------------------------------------
+    def getHourlyActivityVector(self, profiles, year: int):
+        """Return an ndarray of length `hours_in_year(year)` whose sum
+        equals `getUnitsPerYear()` to float precision.
+
+        Parameters
+        ----------
+        profiles
+            A `core.tools.profiles_vec.ProfileSet` built from the
+            already-populated User{Hour,Day,Month}ProfileStore
+            singletons.
+        year
+            Calendar year of the inventory (used for leap-year length
+            and weekday/month calendar walk).
+
+        Returns
+        -------
+        numpy.ndarray of shape (8760,) or (8784,), dtype float.
+        """
+        # Local import to keep Source.py free of numpy/pandas imports
+        # at module-load time; ProfileSet is the only external type
+        # involved and it is pure data.
+        from open_alaqs.core.tools.profiles_vec import (
+            hourly_multipliers,
+            spread_annual,
+        )
+
+        mults = hourly_multipliers(
+            profiles,
+            self.getHourProfile(),
+            self.getDailyProfile(),
+            self.getMonthProfile(),
+            year,
+        )
+        return spread_annual(float(self.getUnitsPerYear() or 0.0), mults)

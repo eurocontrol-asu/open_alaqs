@@ -41,6 +41,11 @@ class CalcMethodDict(TypedDict):
 
 
 class MovementSourceModule(SourceModule):
+    # Aircraft movements (plus gates and taxiways consumed via routes)
+    # have time-varying geometry. stays on legacy time-major
+    # path. Explicit override of the base default for clarity.
+    time_invariant_geometry: bool = False
+
     """
     Calculate emissions due to movements
     """

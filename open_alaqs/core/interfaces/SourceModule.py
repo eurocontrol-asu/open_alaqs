@@ -49,6 +49,22 @@ class SourceModule:
     source name
     """
 
+    # ------------------------------------------------------------------
+    # Loop-ordering discriminator.
+    #
+    # Mirrors `Source.time_invariant_geometry` at the module level. When
+    # True, EmissionCalculation.run() pre-computes the per-source hourly
+    # activity vector once via `precompute_activity_vectors` before
+    # entering the time-major loop, and the module's `process()` reads
+    # from that cache instead of calling `getRelativeActivityPerHour` /
+    # `getEmissionsForTimePeriod` 8760 times per source.
+    #
+    # Stationary modules (Roadway, Parking, Point, Area) override to
+    # True. MovementSourceModule (aircraft + gates + taxiways) keeps
+    # the base False and stays on the time-major path.
+    # ------------------------------------------------------------------
+    time_invariant_geometry: bool = False
+
     @staticmethod
     def getModuleName():
         return ""
@@ -286,3 +302,80 @@ class SourceWithTimeProfileModule(SourceModule):
             * month_factor
             / profile_mean
         )
+
+    # ------------------------------------------------------------------
+    # Vectorised fast-path cache.
+    #
+    # `EmissionCalculation.run()` calls `precompute_activity_vectors` on
+    # each stationary module before entering the time-major loop. This
+    # populates a per-source ndarray of length 8760/8784, computed once
+    # via `Source.getHourlyActivityVector`. The module's `process()`
+    # then reads scalar per-hour activity from the cache via
+    # `_try_get_per_hour_activity` (O(1) ndarray index) instead of
+    # walking 8760 hours through `_get_profile_mean` and per-hour
+    # profile lookups.
+    #
+    # The cache is keyed by source_id and validated by year, so
+    # multi-year runs and database swaps invalidate it implicitly. When
+    # the cache is absent or stale, `_try_get_per_hour_activity`
+    # returns None and the scalar fallback path runs unchanged.
+    # ------------------------------------------------------------------
+    def precompute_activity_vectors(self, profile_set, year: int) -> None:
+        """Build the per-source hourly activity vector cache.
+
+        Parameters
+        ----------
+        profile_set
+            A `core.tools.profiles_vec.ProfileSet` built from the
+            already-populated User{Hour,Day,Month}ProfileStore
+            singletons (typically constructed once in
+            EmissionCalculation.run() and shared across all stationary
+            modules).
+        year
+            Calendar year of the inventory; used for leap-year length
+            and as the cache validity key.
+
+        Sources flagged `instudy='0'` are skipped — they are excluded
+        from emission output by the per-source filter in `process()`,
+        so caching their vectors would just waste memory.
+        """
+        from datetime import datetime
+
+        self._activity_vec_cache: dict = {}
+        self._activity_vec_year: int = year
+        # Anchor for index arithmetic. Plain datetime (no tz) matches
+        # the start_dt the time-major loop passes in.
+        self._activity_vec_t0 = datetime(year, 1, 1, 0, 0, 0)
+
+        for source_id, source in self.getSources().items():
+            if not source.isInStudy():
+                continue
+            self._activity_vec_cache[source_id] = source.getHourlyActivityVector(
+                profile_set, year
+            )
+
+    def _try_get_per_hour_activity(self, source_id: str, inventory_dt: datetime):
+        """Return cached per-hour activity for `source_id` at
+        `inventory_dt`, or None when the cache is absent / stale /
+        out of range.
+
+        On a cache hit, the returned scalar is element-wise equal
+        (within float precision) to
+            getRelativeActivityPerHour(
+                inventory_dt, units_per_year, hour, day, month
+            )
+        for the same source — by construction in
+        `Source.getHourlyActivityVector` and `profiles_vec`.
+        """
+        cache = getattr(self, "_activity_vec_cache", None)
+        if cache is None:
+            return None
+        if source_id not in cache:
+            return None
+        if inventory_dt.year != self._activity_vec_year:
+            return None
+        h_idx = int((inventory_dt - self._activity_vec_t0).total_seconds() // 3600)
+        arr = cache[source_id]
+        if h_idx < 0 or h_idx >= arr.shape[0]:
+            return None
+        return float(arr[h_idx])

@@ -20,6 +20,10 @@ logger = get_logger(__name__)
 
 
 class ParkingSources(Source):
+    # Parking lot footprint and the per-vehicle activity model are
+    # fixed for the study year. stationary path eligible.
+    time_invariant_geometry: bool = True
+
     def __init__(self, val=None, *args, **kwargs):
         super().__init__(val, *args, **kwargs)
         if val is None:

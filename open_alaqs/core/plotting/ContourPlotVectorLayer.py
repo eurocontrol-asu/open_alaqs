@@ -36,6 +36,7 @@ class ContourPlotVectorLayer:
         field_name: str,
         enable_labels: bool,
         use_centroid_symbol: bool,
+        epsg: int = 3857,
     ) -> None:
         self.field_name = field_name
         self.enable_labels = enable_labels
@@ -45,7 +46,7 @@ class ContourPlotVectorLayer:
             layer_name = f"{field_name} {layer_name}"
 
         self.layer = QgsVectorLayer("Polygon", layer_name, "memory")
-        self.layer.setCrs(QgsCoordinateReferenceSystem.fromEpsgId(3857))
+        self.layer.setCrs(QgsCoordinateReferenceSystem.fromEpsgId(epsg))
 
         self._add_field(self.field_name)
 

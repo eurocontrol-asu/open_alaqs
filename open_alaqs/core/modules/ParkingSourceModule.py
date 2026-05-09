@@ -29,6 +29,9 @@ logger = get_logger(__name__)
 
 
 class ParkingSourceWithTimeProfileModule(SourceWithTimeProfileModule):
+    # stationary loop-fusion eligible.
+    time_invariant_geometry: bool = True
+
     """
     Calculate parking emissions for a specific parking based on the parking name
      and time period
@@ -81,14 +84,23 @@ class ParkingSourceWithTimeProfileModule(SourceWithTimeProfileModule):
             if not source.isInStudy():
                 continue
 
-            activity_multiplier = self.getEmissionsForTimePeriod(
-                start_dt,
-                end_dt,
-                source.getUnitsPerYear(),
-                source.getHourProfile(),
-                source.getDailyProfile(),
-                source.getMonthProfile(),
-            )
+            # try the precomputed per-hour activity cache
+            # first. Cache stores per-hour units; for arbitrary
+            # interval lengths scale linearly to match
+            # getEmissionsForTimePeriod's behaviour.
+            cached = self._try_get_per_hour_activity(source_id, start_dt)
+            if cached is not None:
+                period_h = (end_dt - start_dt).total_seconds() / 3600.0
+                activity_multiplier = cached * period_h
+            else:
+                activity_multiplier = self.getEmissionsForTimePeriod(
+                    start_dt,
+                    end_dt,
+                    source.getUnitsPerYear(),
+                    source.getHourProfile(),
+                    source.getDailyProfile(),
+                    source.getMonthProfile(),
+                )
 
             # Calculate the emissions for this time interval
             emissions = Emission(

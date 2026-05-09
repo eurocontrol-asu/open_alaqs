@@ -29,6 +29,11 @@ logger = get_logger(__name__)
 
 
 class PointSourceWithTimeProfileModule(SourceWithTimeProfileModule):
+    # stationary loop-fusion eligible. PointSources cache uses
+    # `getOpsYear()` as the annual scalar (override on the source
+    # class), not `getUnitsPerYear()`.
+    time_invariant_geometry: bool = True
+
     """
     Calculate stationary emissions for a specific source based on the source
      name and time period
@@ -79,14 +84,22 @@ class PointSourceWithTimeProfileModule(SourceWithTimeProfileModule):
 
             # logger.debug("Processing source with id '%s':" % source_id)
 
-            activity_multiplier = self.getEmissionsForTimePeriod(
-                start_dt,
-                end_dt,
-                source.getOpsYear(),
-                source.getHourProfile(),
-                source.getDailyProfile(),
-                source.getMonthProfile(),
-            )
+            # try the precomputed per-hour activity cache
+            # first. PointSources caches `getOpsYear() * mults[h]`
+            # (see Source override); legacy fallback below.
+            cached = self._try_get_per_hour_activity(source_id, start_dt)
+            if cached is not None:
+                period_h = (end_dt - start_dt).total_seconds() / 3600.0
+                activity_multiplier = cached * period_h
+            else:
+                activity_multiplier = self.getEmissionsForTimePeriod(
+                    start_dt,
+                    end_dt,
+                    source.getOpsYear(),
+                    source.getHourProfile(),
+                    source.getDailyProfile(),
+                    source.getMonthProfile(),
+                )
 
             # Calculate the emissions for this time interval
             emissions = Emission(
