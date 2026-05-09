@@ -138,4 +138,3 @@ class EmissionsQGISVectorLayerOutputModule(GridOutputModule):
         )
 
         return layer_wrapper.layer
-

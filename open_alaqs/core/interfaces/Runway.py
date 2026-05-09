@@ -222,4 +222,3 @@ class RunwayDatabase(SQLSerializable, metaclass=Singleton):
 #         # fix_print_with_import
 #         print(rwy_name, rwy)
 #         # logger.debug(rwy)
-

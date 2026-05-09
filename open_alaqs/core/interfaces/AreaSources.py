@@ -199,4 +199,3 @@ class AreaSourcesDatabase(SQLSerializable, metaclass=Singleton):
 #         logger.debug(area)
 #         # fix_print_with_import
 #         print(area_name, area)
-

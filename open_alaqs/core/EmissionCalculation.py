@@ -475,4 +475,3 @@ class EmissionCalculation:
 
     def get3DGrid(self):
         return self._grid
-

@@ -555,4 +555,3 @@ class MovementSourceModule(SourceModule):
             )
         for index in reversed(to_remove):
             emissions.pop(index)
-

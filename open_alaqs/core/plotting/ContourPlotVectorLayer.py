@@ -182,4 +182,3 @@ class ContourPlotVectorLayer:
 
         if not self.layer.commitChanges():
             raise Exception(f'Failed to commit changes to layer "{self.layer.name()}"!')
-

@@ -123,4 +123,3 @@ class ParkingSourceWithTimeProfileModule(SourceWithTimeProfileModule):
 
     def endJob(self):
         SourceWithTimeProfileModule.endJob(self)
-

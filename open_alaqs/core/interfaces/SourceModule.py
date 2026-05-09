@@ -379,4 +379,3 @@ class SourceWithTimeProfileModule(SourceModule):
         if h_idx < 0 or h_idx >= arr.shape[0]:
             return None
         return float(arr[h_idx])
-

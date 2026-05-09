@@ -582,4 +582,3 @@ def iq_value_for_hour(
 KG_PER_HOUR_TO_G_PER_S: float = 1000.0 / 3600.0
 """Unit conversion constant: emission inventory is in kg/h; AUSTAL
 expects g/s in series.dmna. Multiply kg/h by this constant."""
-

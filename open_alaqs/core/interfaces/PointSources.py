@@ -264,4 +264,3 @@ class PointSourcesDatabase(SQLSerializable, metaclass=Singleton):
 #     for point_name, point in list(store.getObjects().items()):
 #         # fix_print_with_import
 #         print(point)
-

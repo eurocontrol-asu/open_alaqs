@@ -147,4 +147,3 @@ class Source:
             year,
         )
         return spread_annual(float(self.getUnitsPerYear() or 0.0), mults)
-

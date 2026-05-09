@@ -118,4 +118,3 @@ class PointSourceWithTimeProfileModule(SourceWithTimeProfileModule):
 
     def endJob(self):
         SourceWithTimeProfileModule.endJob(self)
-
