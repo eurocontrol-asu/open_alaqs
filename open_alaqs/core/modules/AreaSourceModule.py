@@ -105,3 +105,4 @@ class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
 
     def endJob(self):
         SourceWithTimeProfileModule.endJob(self)
+

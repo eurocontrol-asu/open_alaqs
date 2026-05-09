@@ -15,23 +15,31 @@ from qgis.PyQt.QtWidgets import QSpacerItem
 from qgis.PyQt.uic import loadUiType
 
 from open_alaqs.core import alaqs, alaqsutils
-from open_alaqs.core.alaqsdblite import (ProjectDatabase,
-                                         get_inventory_timestamps,
-                                         get_min_max_timestamps)
+from open_alaqs.core.alaqsdblite import (
+    ProjectDatabase,
+    get_inventory_timestamps,
+    get_min_max_timestamps,
+)
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.EmissionCalculation import EmissionCalculation, GridConfig
 from open_alaqs.core.interfaces.Emissions import PollutantType
-from open_alaqs.core.modules.ModuleConfigurationWidget import \
-    ModuleConfigurationWidget
+from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.core.modules.ModuleManager import (
-    OutputDispersionModuleRegistry, SourceModuleRegistry)
-from open_alaqs.core.tools.austal_csv_generation import \
-    generate_austal_from_csv
+    OutputDispersionModuleRegistry,
+    SourceModuleRegistry,
+)
+from open_alaqs.core.tools.austal_csv_generation import generate_austal_from_csv
 from open_alaqs.core.tools.Grid3D import Grid3D
-from open_alaqs.core.tools.sql_interface import (get_grid_3d_definition,
-                                                 has_grid_3d_definition)
-from open_alaqs.ui.styles import (STATUS_STYLE_ERROR, STATUS_STYLE_INFO,
-                                  STATUS_STYLE_SUCCESS, STATUS_STYLE_WARNING)
+from open_alaqs.core.tools.sql_interface import (
+    get_grid_3d_definition,
+    has_grid_3d_definition,
+)
+from open_alaqs.ui.styles import (
+    STATUS_STYLE_ERROR,
+    STATUS_STYLE_INFO,
+    STATUS_STYLE_SUCCESS,
+    STATUS_STYLE_WARNING,
+)
 
 logger = get_logger(__name__)
 

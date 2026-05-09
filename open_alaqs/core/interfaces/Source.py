@@ -134,8 +134,10 @@ class Source:
         # Local import to keep Source.py free of numpy/pandas imports
         # at module-load time; ProfileSet is the only external type
         # involved and it is pure data.
-        from open_alaqs.core.tools.profiles_vec import (hourly_multipliers,
-                                                        spread_annual)
+        from open_alaqs.core.tools.profiles_vec import (
+            hourly_multipliers,
+            spread_annual,
+        )
 
         mults = hourly_multipliers(
             profiles,
@@ -145,3 +147,4 @@ class Source:
             year,
         )
         return spread_annual(float(self.getUnitsPerYear() or 0.0), mults)
+

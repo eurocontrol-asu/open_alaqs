@@ -4,16 +4,16 @@ from typing import Any, Optional, Union, cast
 import geopandas as gpd
 from qgis.core import QgsMapLayer
 from qgis.PyQt.QtWidgets import QWidget
-from shapely.geometry import (LineString, MultiLineString, MultiPolygon, Point,
-                              Polygon)
+from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 from shapely.validation import make_valid
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.Emissions import (Emission, PollutantType,
-                                                  PollutantUnit)
+from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.modules.ModuleConfigurationWidget import (
-    ModuleConfigurationWidget, SettingsSchema)
+    ModuleConfigurationWidget,
+    SettingsSchema,
+)
 
 logger = get_logger(__name__)
 

@@ -10,9 +10,12 @@ from qgis.utils import spatialite_connect
 from open_alaqs.alaqs_config import ALAQS_ROOT_PATH, ALAQS_TEMPLATE_DB_FILENAME
 from open_alaqs.core import alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.tools.sql_interface import (db_delete_records,
-                                                 db_execute_sql,
-                                                 db_update_table, has_table)
+from open_alaqs.core.tools.sql_interface import (
+    db_delete_records,
+    db_execute_sql,
+    db_update_table,
+    has_table,
+)
 
 logger = get_logger(__name__)
 
@@ -995,7 +998,9 @@ def import_ads_b_data(ads_b_data: list, inventory_path: str) -> bool:
     # were first initialised remain invisible for the rest of the session.
     try:
         from open_alaqs.core.interfaces.AircraftTrajectory import (
-            AircraftTrajectoryDatabase, AircraftTrajectoryStore)
+            AircraftTrajectoryDatabase,
+            AircraftTrajectoryStore,
+        )
 
         AircraftTrajectoryDatabase.instance = None
         AircraftTrajectoryStore.instance = None

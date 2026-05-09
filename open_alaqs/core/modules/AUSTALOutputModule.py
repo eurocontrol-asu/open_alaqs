@@ -11,6 +11,13 @@ import numpy as np
 import pandas as pd
 from dateutil import rrule
 from open_alaqs.alaqs_config import DEFAULT_CONCENTRATION_GRID_FACTOR
+from pyproj import Transformer as _ProjTransformer
+from qgis.gui import QgsDoubleSpinBox, QgsSpinBox
+from qgis.PyQt import QtWidgets
+from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
+from shapely.ops import transform as _shapely_transform
+from shapely.validation import make_valid as _make_valid
+
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.AmbientCondition import AmbientCondition
 from open_alaqs.core.interfaces.DispersionModule import DispersionModule
@@ -19,12 +26,6 @@ from open_alaqs.core.interfaces.Movement import Movement
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.tools import conversion, spatial, sql_interface
 from open_alaqs.core.tools.Grid3D import Grid3D
-from pyproj import Transformer as _ProjTransformer
-from qgis.gui import QgsDoubleSpinBox, QgsSpinBox
-from qgis.PyQt import QtWidgets
-from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
-from shapely.ops import transform as _shapely_transform
-from shapely.validation import make_valid as _make_valid
 
 logger = get_logger(__name__)
 
@@ -1811,7 +1812,7 @@ class AUSTALDispersionModule(DispersionModule):
         sorted_dts = list(sorted_results.keys())
 
         legacy_keys = list(self._total_sources.keys())
-        n_legacy = len(legacy_keys)
+        len(legacy_keys)
 
         # Total AUSTAL source slots in column order: legacy first, stationary after.
         # `slot_meta[i]` = (kind, key_or_gid, dir_label_str)
@@ -2054,3 +2055,4 @@ class AUSTALDispersionModule(DispersionModule):
 
         # Return the list
         return cumulative_cell_emissions
+

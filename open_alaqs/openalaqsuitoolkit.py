@@ -1,12 +1,24 @@
 import os
 from typing import Optional
 
-from qgis.core import (Qgis, QgsCoordinateReferenceSystem,
-                       QgsCoordinateTransform, QgsDataSourceUri,
-                       QgsEditFormConfig, QgsEditorWidgetSetup, QgsFillSymbol,
-                       QgsGeometry, QgsLineSymbol, QgsMarkerSymbol, QgsPointXY,
-                       QgsProject, QgsRasterLayer, QgsRectangle,
-                       QgsSingleSymbolRenderer, QgsVectorLayer)
+from qgis.core import (
+    Qgis,
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
+    QgsDataSourceUri,
+    QgsEditFormConfig,
+    QgsEditorWidgetSetup,
+    QgsFillSymbol,
+    QgsGeometry,
+    QgsLineSymbol,
+    QgsMarkerSymbol,
+    QgsPointXY,
+    QgsProject,
+    QgsRasterLayer,
+    QgsRectangle,
+    QgsSingleSymbolRenderer,
+    QgsVectorLayer,
+)
 from qgis.gui import QgsFileWidget, QgsMapCanvas
 from qgis.PyQt import QtWidgets
 

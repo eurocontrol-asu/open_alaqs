@@ -5,14 +5,23 @@ This class provides GeoTransformations.
 import abc
 import math
 
-from qgis.core import (QgsCoordinateTransform, QgsDistanceArea, QgsGeometry,
-                       QgsLineString, QgsPoint, QgsPointXY, QgsPolygon)
+from qgis.core import (
+    QgsCoordinateTransform,
+    QgsDistanceArea,
+    QgsGeometry,
+    QgsLineString,
+    QgsPoint,
+    QgsPointXY,
+    QgsPolygon,
+)
 from shapely.geometry import LineString
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft
 from open_alaqs.core.interfaces.AircraftTrajectory import (
-    AircraftTrajectory, AircraftTrajectoryPoint)
+    AircraftTrajectory,
+    AircraftTrajectoryPoint,
+)
 from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.Runway import Runway
 from open_alaqs.core.interfaces.Taxiway import TaxiwayRoute

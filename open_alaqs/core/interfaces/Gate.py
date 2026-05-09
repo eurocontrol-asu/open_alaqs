@@ -290,8 +290,7 @@ class DefaultGateEmissionProfile:
         suffix = "_kg_hour"
         for key_ in ["co", "hc", "nox", "sox", "pm10"]:
             if key_ in val:
-                from open_alaqs.core.tools.conversion import \
-                    convertToFloat as _ctf
+                from open_alaqs.core.tools.conversion import convertToFloat as _ctf
 
                 _v = _ctf(val[key_], default=0.0)
                 initValues[key_ + suffix] = _v / 1000.0

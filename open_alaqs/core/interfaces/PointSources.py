@@ -26,8 +26,10 @@ class PointSources(Source):
         PointSourceModule.process which calls
         `getEmissionsForTimePeriod(..., source.getOpsYear(), ...)`.
         """
-        from open_alaqs.core.tools.profiles_vec import (hourly_multipliers,
-                                                        spread_annual)
+        from open_alaqs.core.tools.profiles_vec import (
+            hourly_multipliers,
+            spread_annual,
+        )
 
         mults = hourly_multipliers(
             profiles,
@@ -262,3 +264,4 @@ class PointSourcesDatabase(SQLSerializable, metaclass=Singleton):
 #     for point_name, point in list(store.getObjects().items()):
 #         # fix_print_with_import
 #         print(point)
+

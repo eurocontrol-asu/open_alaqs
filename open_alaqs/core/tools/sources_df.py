@@ -254,3 +254,4 @@ def pollutant_columns(type_label: str) -> Iterable[str]:
         raise ValueError(f"unknown type_label {type_label!r}")
     suffix = _TYPE_SCHEMA[type_label]["unit_suffix"]
     return tuple(f"{p}_{suffix}" for p in _POLLUTANTS)
+

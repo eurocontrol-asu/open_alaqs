@@ -230,3 +230,4 @@ class ParkingSourcesDatabase(SQLSerializable, metaclass=Singleton):
 #     store = ParkingSourcesStore(path_to_database)
 #     for parking_name, parking in list(store.getObjects().items()):
 #         logger.debug(parking)
+

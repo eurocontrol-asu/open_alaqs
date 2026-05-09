@@ -248,3 +248,4 @@ def hourly_timestamps(year: int) -> pd.DatetimeIndex:
         periods=hours_in_year(year),
         freq="h",
     )
+

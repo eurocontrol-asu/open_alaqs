@@ -1,12 +1,22 @@
 from typing import cast
 
 import pandas as pd
-from qgis.core import (QgsCentroidFillSymbolLayer, QgsClassificationJenks,
-                       QgsCoordinateReferenceSystem, QgsField, QgsFillSymbol,
-                       QgsGeometry, QgsGradientColorRamp, QgsGradientStop,
-                       QgsGraduatedSymbolRenderer, QgsPointXY,
-                       QgsRendererRange, QgsSymbol, QgsVectorLayer,
-                       QgsVectorLayerUtils)
+from qgis.core import (
+    QgsCentroidFillSymbolLayer,
+    QgsClassificationJenks,
+    QgsCoordinateReferenceSystem,
+    QgsField,
+    QgsFillSymbol,
+    QgsGeometry,
+    QgsGradientColorRamp,
+    QgsGradientStop,
+    QgsGraduatedSymbolRenderer,
+    QgsPointXY,
+    QgsRendererRange,
+    QgsSymbol,
+    QgsVectorLayer,
+    QgsVectorLayerUtils,
+)
 from qgis.PyQt.QtCore import Qt, QVariant
 from qgis.PyQt.QtGui import QColor
 
@@ -172,3 +182,4 @@ class ContourPlotVectorLayer:
 
         if not self.layer.commitChanges():
             raise Exception(f'Failed to commit changes to layer "{self.layer.name()}"!')
+

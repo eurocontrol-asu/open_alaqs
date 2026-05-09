@@ -1,8 +1,10 @@
 from collections import OrderedDict
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.Engine import (EngineEmissionIndex,
-                                               HelicopterEngineEmissionIndex)
+from open_alaqs.core.interfaces.Engine import (
+    EngineEmissionIndex,
+    HelicopterEngineEmissionIndex,
+)
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.tools.Singleton import Singleton
 

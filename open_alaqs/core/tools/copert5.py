@@ -3,9 +3,14 @@ import pandas as pd
 from open_alaqs.core import alaqsdblite, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools.copert5_utils import (
-    VEHICLE_CATEGORIES, average_cold_only_emission_factors,
-    average_emission_factors, average_evaporation, calculate_emissions,
-    calculate_evaporation, ef_query)
+    VEHICLE_CATEGORIES,
+    average_cold_only_emission_factors,
+    average_emission_factors,
+    average_evaporation,
+    calculate_emissions,
+    calculate_evaporation,
+    ef_query,
+)
 
 logger = get_logger(__name__)
 

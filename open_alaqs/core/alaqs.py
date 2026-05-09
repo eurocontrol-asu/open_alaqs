@@ -16,8 +16,7 @@ the database layer.
 from typing import Any, Optional
 
 from open_alaqs.core import alaqsdblite, alaqsutils
-from open_alaqs.core.alaqsdblite import (ProjectDatabase, execute_sql,
-                                         update_table)
+from open_alaqs.core.alaqsdblite import ProjectDatabase, execute_sql, update_table
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Runway import RunwayStore
 from open_alaqs.core.tools.create_output import create_alaqs_output

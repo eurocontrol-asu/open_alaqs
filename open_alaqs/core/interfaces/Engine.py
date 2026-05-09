@@ -5,8 +5,9 @@ from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import EmissionIndex, PollutantType
 from open_alaqs.core.interfaces.Store import Store
 from open_alaqs.core.tools.bffm2 import calculate_emission_index
-from open_alaqs.core.tools.twin_quadratic_fit_method import \
-    calculate_fuel_flow_from_power_setting
+from open_alaqs.core.tools.twin_quadratic_fit_method import (
+    calculate_fuel_flow_from_power_setting,
+)
 
 logger = get_logger(__name__)
 
@@ -338,7 +339,9 @@ class EngineEmissionIndex(Store):
 
             if version == "v2":
                 from open_alaqs.core.tools.meem_v2 import (
-                    calculate_nvpm_ei_v2, compute_ffadj_for_segment)
+                    calculate_nvpm_ei_v2,
+                    compute_ffadj_for_segment,
+                )
 
                 # Find this mode's FF_ref (the mode the segment is operating in)
                 # and compute the segment's target FFadj at current ambient.

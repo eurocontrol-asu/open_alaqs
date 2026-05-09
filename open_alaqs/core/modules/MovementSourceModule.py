@@ -8,16 +8,20 @@ from typing import Tuple, TypedDict
 import pandas as pd
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.GeoTransformation import (SmoothAndShiftTransformer,
-                                               VerticalExtentTransformer)
+from open_alaqs.core.GeoTransformation import (
+    SmoothAndShiftTransformer,
+    VerticalExtentTransformer,
+)
 from open_alaqs.core.interfaces.AmbientCondition import AmbientCondition
 from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.Movement import MovementStore, defaultEmissions
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.SourceModule import SourceModule
 from open_alaqs.core.MovementEmissionCalculator import (
-    FlightEmissionCalculator, GateEmissionCalculator,
-    TaxiingEmissionCalculator)
+    FlightEmissionCalculator,
+    GateEmissionCalculator,
+    TaxiingEmissionCalculator,
+)
 
 logger = get_logger(__name__)
 
@@ -551,3 +555,4 @@ class MovementSourceModule(SourceModule):
             )
         for index in reversed(to_remove):
             emissions.pop(index)
+

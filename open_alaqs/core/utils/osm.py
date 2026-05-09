@@ -5,8 +5,11 @@ import urllib.parse
 from typing import Optional, TypedDict
 
 from qgis import processing, utils
-from qgis.core import (QgsCoordinateReferenceSystem, QgsNetworkAccessManager,
-                       QgsVectorLayer)
+from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsNetworkAccessManager,
+    QgsVectorLayer,
+)
 from qgis.PyQt.QtCore import QByteArray, QUrl
 from qgis.PyQt.QtNetwork import QNetworkReply, QNetworkRequest
 from qgis.PyQt.QtWidgets import QMessageBox

@@ -4,6 +4,7 @@ import sys
 from datetime import datetime
 
 import pandas as pd
+
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.UserTimeProfiles import (
@@ -378,3 +379,4 @@ class SourceWithTimeProfileModule(SourceModule):
         if h_idx < 0 or h_idx >= arr.shape[0]:
             return None
         return float(arr[h_idx])
+
