@@ -4,7 +4,7 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
-## [Unreleased]
+## [5.1.0] - 2026-05-09
 
 Performance and correctness refactor of the calculation and AUSTAL
 output paths. Inventory totals match prior versions bit-for-bit; AUSTAL
