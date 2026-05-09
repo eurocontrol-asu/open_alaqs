@@ -1,4 +1,5 @@
 import itertools
+import logging
 import os
 import re
 from collections import OrderedDict
@@ -177,6 +178,15 @@ class AUSTALDispersionModule(DispersionModule):
         if not self._pollutants_list and self._pollutant:
             self._pollutants_list = [self._pollutant]
 
+        # ------------------------------------------------------------------
+        # AUSTAL grid writer (time-indexed layout):
+        # stationary sources (Source.time_invariant_geometry == True) get
+        # per-hour identical eNNNN.dmna files under their own slot, with
+        # iq=h_idx+1 in series.dmna. Non-stationary sources (movements /
+        # gates / taxiways) keep the legacy per-hour layout under slot
+        # 01/, with iq counting per-source. The hybrid series.dmna
+        # combines both.
+        #
         self._enable = values_dict.get("is_enabled", False)
         # "----------------- general parameters",
         self._mixing_height = values_dict.get("mixing_height_enabled", False)
@@ -368,6 +378,14 @@ class AUSTALDispersionModule(DispersionModule):
             grid_origin_x = self._grid._grid_origin_x
             grid_origin_y = self._grid._grid_origin_y
 
+            # Calc grid is offset 2 cells SW of the em grid so AUSTAL
+            # sources placed at xq=grid_origin sit 2 cells inside the
+            # calc grid SW corner (AUSTAL rejects sources at or outside
+            # the calc grid border). The calc grid is also enlarged by
+            # 2 cells on each side (4 cells total per axis) so that
+            # the 40x40 em grid fits exactly in the centre of the
+            # calc grid, giving symmetric halo and clean overlap of
+            # the emissions and concentration QGIS layers.
             self._x_left_border_calc_grid = (
                 grid_origin_x
                 - DEFAULT_CONCENTRATION_GRID_FACTOR * float(self._grid._x_resolution)
@@ -462,15 +480,18 @@ class AUSTALDispersionModule(DispersionModule):
         # Split the sequ once
         sequ_split = self.getSequ().split(",")
 
-        # Check for each index which mesh to link
+        # Check for each index which mesh to link.
+        # Use em grid sizes (the source/emission spatial pattern); the
+        # calc grid (`_x_meshes`) is only used in austal.txt to declare
+        # the larger dispersion domain.
         indices = [None, None, None]
         for p, q in enumerate(sequ_split):
             if q.startswith("k"):
                 indices[p] = self._z_meshes
             elif q.startswith("j"):
-                indices[p] = self._y_meshes
+                indices[p] = self._y_em_meshes
             else:
-                indices[p] = self._x_meshes
+                indices[p] = self._x_em_meshes
         index_i, index_j, index_k = indices
 
         # Set the emission grid matrix to zero
@@ -872,214 +893,6 @@ class AUSTALDispersionModule(DispersionModule):
             text_file.write("***\n")
 
     @log_time
-    def writeInputFile(self):
-        """
-        Create an AUSTAL input file conform specifications.
-
-        Parameters are taken from the attributes of the main class.
-        """
-
-        # Get the file path
-        file_path = self.getOutputPathAsPath() / "austal.txt"
-
-        if file_path.exists():
-            raise FileExistsError(file_path)
-
-        with file_path.open("w") as text_file:
-
-            text_file.write("----------------- general parameters\n")
-            text_file.write('ti\t"%s"\t\' title\n' % self._title)
-            text_file.write("qs\t%s\t' quality level\n" % self._quality_level)
-            text_file.write("----------------- meteorology\n")
-            text_file.write("z0\t%s\t' roughness length (m)\n" % self._roughness_level)
-            text_file.write(
-                "d0\t%s\t' displacement height (m)\n" % self._displacement_height
-            )
-            text_file.write(
-                "ha\t%s\t' anemometer height (m)\n" % self._anemometer_height
-            )
-            text_file.write("----------------- calculation grid\n")
-            text_file.write("dd\t%s\t' mesh width\n" % self._mesh_width)
-            text_file.write(
-                "x0\t%s\t' left border (m)\n"
-                % (self._x_left_border_calc_grid - self._reference_x)
-            )
-            text_file.write(
-                "y0\t%s\t' lower border (m)\n"
-                % (self._y_left_border_calc_grid - self._reference_y)
-            )
-
-            # Add receptor points
-            if (
-                (len(self.xp_) == len(self.yp_))
-                and (len(self.xp_) == len(self.zp_))
-                and (len(self.xp_) > 0)
-            ):
-                text_file.write(
-                    "xp\t%s\t' x-receptor\n" % ("\t").join([str(rx) for rx in self.xp_])
-                )
-                text_file.write(
-                    "yp\t%s\t' y-receptor\n" % ("\t").join([str(ry) for ry in self.yp_])
-                )
-                text_file.write(
-                    "hp\t%s\t' z-receptor\n" % ("\t").join([str(rz) for rz in self.zp_])
-                )
-            else:
-                logger.warning(
-                    f"Add receptor points: len(self.xp_): {len(self.xp_)}, len(self.yp_): {len(self.yp_)}, len(self.zp_): {len(self.zp_)}"
-                )
-
-            text_file.write("nx\t%s\t' number of meshes\n" % self._x_meshes)
-            text_file.write("ny\t%s\t' number of meshes\n" % self._y_meshes)
-            text_file.write("----------------- source definitions\n")
-
-            if self._options:
-                text_file.write('os\t"%s"\n' % self._options)
-            text_file.write(
-                "iq\t%s\t' file index (set in series.dmna)\n"
-                % ("\t").join(["?" for _iq_ in list(self._total_sources.keys())])
-            )
-            text_file.write(
-                "hq\t%s\t' source height (ignored)\n"
-                % ("\t").join(
-                    [
-                        str(self._source_height)
-                        for _iq_ in list(self._total_sources.keys())
-                    ]
-                )
-            )
-            text_file.write(
-                "xq\t%s\t' x-lower left (south-west) corner of the source\n"
-                % ("\t").join(
-                    [
-                        str(self._x_left_border_em_grid - self._reference_x)
-                        for _iq_ in list(self._total_sources.keys())
-                    ]
-                )
-            )
-            text_file.write(
-                "yq\t%s\t' y-lower left (south-west) corner of the source\n"
-                % ("\t").join(
-                    [
-                        str(self._y_left_border_em_grid - self._reference_y)
-                        for _iq_ in list(self._total_sources.keys())
-                    ]
-                )
-            )
-
-            for poll in self._pollutants_list:
-                if poll.startswith("PM"):
-                    poll = "PM-2" if poll == "PM10" else "PM-1"
-                text_file.write(
-                    "%s\t%s\t' total %s (in g/s) (set in series.dmna)\n"
-                    % (
-                        poll.lower(),
-                        ("\t").join(
-                            [
-                                "?" if poll in self._total_sources[src] else "0"
-                                for iq, src in enumerate(self._total_sources.keys())
-                            ]
-                        ),
-                        poll,
-                    )
-                )
-
-    @log_time
-    def writeTimeSeriesFile(self):
-        """
-        Create an AUSTAL time series file conform specifications.
-
-        Parameters are taken from the attributes of the main class.
-        """
-
-        # Get the file path
-        file_path = self.getOutputPathAsPath() / "series.dmna"
-
-        if file_path.exists():
-            raise FileExistsError(file_path)
-
-        # Get the sorted results
-        sorted_results = self.getSortedResults()
-
-        if self.MixingHeightIncluded():
-            form_line = [
-                '"te%20lt"',
-                '"ra%5.0f"',
-                '"ua%5.1f"',
-                '"lm%7.1f"',
-                '"hm%7.1f"',
-            ]
-        else:
-            form_line = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"']
-
-        with file_path.open("w") as text_file:
-
-            for iq_ in list(self._total_sources.keys()):
-                form_line.append('"%s.iq%%3.0f"' % str(iq_))
-            for iq_ in list(self._total_sources.keys()):
-                for poll in self._total_sources[iq_]:
-                    form_line.append('"%s.%s%%10.3e"' % (str(iq_), poll.lower()))
-
-            text_file.write("form\t%s\n" % ("\t").join(form_line))
-            text_file.write('mode\t"text"\n')
-            text_file.write('sequ\t"i"\n')
-            text_file.write("dims\t%s\n" % 1)
-            text_file.write("lowb\t%s\n" % 1)
-            text_file.write("hghb\t%s\n" % (len(list(sorted_results.keys()))))
-            text_file.write("*\n")
-
-            for dt in sorted_results:
-                iqs = [
-                    (
-                        sorted_results[dt][iq]["timeID"]
-                        if iq in list(sorted_results[dt].keys())
-                        else 1
-                    )
-                    for iq in list(self._total_sources.keys())
-                ]
-                emission_rates = []
-                for iq_ in list(self._total_sources.keys()):
-                    for poll in self._total_sources[iq_]:
-                        if (
-                            iq_ in sorted_results[dt]
-                            and poll in sorted_results[dt][iq_]
-                        ):
-                            emission_rates.append(
-                                "{:10.3e}".format(sorted_results[dt][iq_][poll])
-                            )
-                        else:
-                            emission_rates.append("{:10.3e}".format(0))
-
-                if self.MixingHeightIncluded():
-                    text_file.write(
-                        "%s\t%5.0f\t%5.1f\t%7.1f\t%5.1f\t%s\t%s\n"
-                        % (
-                            dt,
-                            self._series[dt]["WindDirection"],
-                            self._series[dt]["WindSpeed"],
-                            self._series[dt]["ObukhovLength"],
-                            self._series[dt]["MixingHeight"],
-                            ("\t").join(["%3.0f" % (iq) for iq in iqs]),
-                            ("\t").join([er for er in emission_rates]),
-                        )
-                    )
-                else:
-                    text_file.write(
-                        "%s\t%5.0f\t%5.1f\t%7.1f\t%s\t%s\n"
-                        % (
-                            dt,
-                            self._series[dt]["WindDirection"],
-                            self._series[dt]["WindSpeed"],
-                            self._series[dt]["ObukhovLength"],
-                            ("\t").join(["%3.0f" % (iq) for iq in iqs]),
-                            ("\t").join([er for er in emission_rates]),
-                        )
-                    )
-
-            text_file.write("\n")
-            text_file.write("***\n")
-
-    @log_time
     def beginJob(self):
         if self.isEnabled():
             if self._grid is None:
@@ -1095,8 +908,19 @@ class AUSTALDispersionModule(DispersionModule):
 
                 self._emission_grid_matrix = None
 
-                self._x_meshes = self._grid._x_cells
-                self._y_meshes = self._grid._y_cells
+                # Two grid sizes are tracked:
+                #   _x_em_meshes / _y_em_meshes : the em (source) grid
+                #     dimensions. eNNNN.dmna grid files and the
+                #     internal _emission_grid_matrix are this size.
+                #   _x_meshes / _y_meshes      : the calc (dispersion)
+                #     grid dimensions. austal.txt writes these as nx/ny.
+                # The calc grid is the em grid plus DEFAULT_CONCENTRATION_GRID_FACTOR
+                # cells of halo on each side; AUSTAL requires the source
+                # grid to sit entirely inside the calc grid.
+                self._x_em_meshes = self._grid._x_cells
+                self._y_em_meshes = self._grid._y_cells
+                self._x_meshes = self._x_em_meshes + 2 * DEFAULT_CONCENTRATION_GRID_FACTOR
+                self._y_meshes = self._y_em_meshes + 2 * DEFAULT_CONCENTRATION_GRID_FACTOR
                 self._z_meshes = len(AUSTAL_DEFAULT_SK) - 1  # 19 levels
 
                 # AUSTAL cannot take non square grid cells, choose finer
@@ -1147,6 +971,66 @@ class AUSTALDispersionModule(DispersionModule):
                 # Initialize the variables for the date normalization
                 self._first_start_time = None
                 self._start_time, self._end_time = None, None
+
+                # ----------------------------------------------------------
+                # AUSTAL time-indexed path state.
+                #
+                # process() splits incoming `result` into stationary
+                # sources (where source.time_invariant_geometry is True)
+                # and non-stationary ones. Stationary contributions
+                # accumulate into a per-source (n_hours, n_pollutants)
+                # g/s ndarray; their cell weights are computed once on
+                # first encounter via austal_helpers.compute_cell_weights
+                # and cached. Non-stationary sources fall through to the
+                # per-hour grid file path used for movements.
+                #
+                # endJob() aggregates the stationary ndarray by `<type>:`
+                # prefix, writes per-hour identical eNNNN.dmna under each
+                # group's directory, and emits a hybrid series.dmna with
+                # mixed iq semantics.
+                # ----------------------------------------------------------
+                self._ti_grid_spec = None
+                self._ti_rates_per_source = {}    # source_id -> ndarray (n_hours, n_pollutants) g/s
+                self._ti_cell_weights = {}        # source_id -> CellWeights (cached, computed once)
+                self._ti_year_start = None
+                self._ti_n_hours_year = 0
+                self._ti_pollutant_order = []
+                self._ti_source_meta = {}         # source_id -> {height, type_label}
+                self._ti_skipped_no_geometry = set()
+
+                from open_alaqs.core.tools.austal_helpers import AustalGridSpec
+
+                # Grid origin in ABSOLUTE UTM metres, matching the frame
+                # returned by `_transform_wkt_to_utm` and the Grid3D cell
+                # bounds used by the per-hour movement path. The
+                # reference-point subtraction is only applied at the
+                # austal.txt write stage (relative `x0`/`y0` values),
+                # not here.
+                # _ti_grid_spec describes the EM grid (origin and size
+                # of the source/emission area). The CALC grid (used for
+                # AUSTAL dispersion in austal.txt) is enlarged by
+                # `halo` cells on each side. The grid file (eNNNN.dmna)
+                # is em-sized; AUSTAL anchors it at xq = em origin.
+                self._ti_grid_spec = AustalGridSpec(
+                    dd=float(self._mesh_width),
+                    nx=int(self._grid._x_cells),
+                    ny=int(self._grid._y_cells),
+                    x0=float(self._x_left_border_em_grid),
+                    y0=float(self._y_left_border_em_grid),
+                    sk=tuple(float(s) for s in AUSTAL_DEFAULT_SK),
+                )
+                # Pollutant axis is fixed by self._pollutants_list and
+                # ordered as the user/UI provided it. Frozen here so
+                # accumulation arrays have a stable column meaning for
+                # the rest of the run.
+                self._ti_pollutant_order = list(self._pollutants_list or [])
+                logger.debug(
+                    "AUSTAL time-indexed mode: grid %dx%dx%d dd=%g x0=%g y0=%g, pollutants=%s",
+                    self._ti_grid_spec.nx, self._ti_grid_spec.ny,
+                    self._ti_grid_spec.n_layers, self._ti_grid_spec.dd,
+                    self._ti_grid_spec.x0, self._ti_grid_spec.y0,
+                    self._ti_pollutant_order,
+                )
 
     @staticmethod
     def _iter_primitives(geom):
@@ -1200,11 +1084,23 @@ class AUSTALDispersionModule(DispersionModule):
         self._lowb = "1 1 1"
 
         # (i2 j2 k2, in this order)
-        self._hghb = f"{self._x_meshes} {self._y_meshes} {self._z_meshes}"
+        self._hghb = f"{self._x_em_meshes} {self._y_em_meshes} {self._z_meshes}"
 
         # Make sure that the calculation starts from yyyy-01-01.01.00.00
         _start_time, _end_time = self.set_normalized_date(start_dt, end_dt)
         _end_time_string = _end_time.strftime("%Y-%m-%d.%H:%M:%S")
+
+        # ------------------------------------------------------------------
+        # Peel stationary sources off `result` so the per-hour body
+        # below sees only non-stationary sources. Stationary contributions
+        # are accumulated into the per-source rate ndarray and their
+        # cell weights are cached on first encounter.
+        #
+        # endJob() consumes _ti_rates_per_source and _ti_cell_weights
+        # to write per-hour identical eNNNN.dmna files per group plus
+        # the hybrid series.dmna.
+        # ------------------------------------------------------------------
+        result = self._ti_split_and_accumulate(start_dt, result)
 
         # Set results and series for this period if it has not been set
         self._results.setdefault(_end_time_string, OrderedDict())
@@ -1406,18 +1302,15 @@ class AUSTALDispersionModule(DispersionModule):
 
                 for hash, hash_value in nz_emissions_kg.items():
 
-                    # Get the XYZ indices
+                    # Get the XYZ indices in Grid3D (em) frame.
                     vvv = self._grid.convertCellHashToXYZIndices(hash)
 
-                    # Check if the indices are within the bounds
+                    # Drop cells outside the em grid (Grid3D limits).
                     if (
-                        (vvv[0] >= self._x_meshes)
-                        or (vvv[1] >= self._y_meshes)
+                        (vvv[0] >= self._x_em_meshes)
+                        or (vvv[1] >= self._y_em_meshes)
                         or (vvv[2] >= self._z_meshes)
                     ):
-                        # logger.debug("AUSTAL Error: Grid needs to be
-                        # enlarged. Hash '%s' out of grid. Source:'%s'"%(hash,
-                        # source_.getName()))
                         continue
 
                     # Convert the indices of the cell hash to the emission grid
@@ -1481,24 +1374,7 @@ class AUSTALDispersionModule(DispersionModule):
     def endJob(self):
         if self.isEnabled():
             try:
-                if not self.checkTimeIntervalinResults():
-                    raise Exception("AUSTAL: Time Interval Error")
-
-                try:
-                    self.writeInputFile()
-                except Exception as e:
-                    logger.error("AUSTAL: Cannot write 'austal.txt' : %s" % e)
-                    return False
-
-                self.checkHoursinResults()
-
-                try:
-                    self.writeTimeSeriesFile()
-                    return True
-                except Exception as e:
-                    logger.error("AUSTAL: Cannot write 'Series.dmna' %s", e)
-                    return False
-
+                return self._ti_endJob()
             except Exception as e:
                 logger.error("AUSTAL: Cannot endJob: %s" % e)
                 return False
@@ -1518,6 +1394,553 @@ class AUSTALDispersionModule(DispersionModule):
     # odor:_nnn Rated odorant with a rate factor resulting from the identifier nnn,
     # see Section 3.10. Possible values for nnn are: 050 (in the fed- eral state Baden-Württemberg: 040),
     # 075 (in the federal state Baden- Württemberg: 060), 100, 150
+
+    def _ti_split_and_accumulate(self, start_dt, result):
+        """Time-indexed routing helper.
+
+        Walks the period_emissions tuples, peels off entries whose
+        source has `time_invariant_geometry == True`, accumulates
+        their per-pollutant g/s contributions into
+        `self._ti_rates_per_source`, caches their cell weights once
+        on first encounter via austal_helpers.compute_cell_weights,
+        and returns the residual (non-stationary) tuples for the
+        per-hour grid file path below to handle.
+
+        Source identity convention: the source's `getName()` (or its
+        bare `_id`) is prefixed with `<type>:` to match the schema
+        used by `core/tools/sources_df.py` and the helpers'
+        `aggregate_sources_by_type`. The type label is derived from
+        the source's class name (`RoadwaySources` -> `road`, etc.);
+        unknown classes fall through with their bare id, which puts
+        them into their own group at aggregation time.
+
+        Returns the list of `(source, [emissions])` tuples that the
+        per-hour grid file path should still process. In a pure-
+        stationary period this is empty.
+        """
+        from open_alaqs.core.tools.austal_helpers import (
+            KG_PER_HOUR_TO_G_PER_S,
+            compute_cell_weights,
+        )
+
+        # Lazy: lock in the calendar year on first non-empty call.
+        # The plugin's outer loop iterates over a contiguous span; we
+        # fix n_hours from the first start_dt and ignore mid-run year
+        # changes (multi-year runs already invalidate the per-source
+        # activity-vector cache; the same coarse semantics apply here).
+        # Run-relative indexing: the first start_dt seen anchors h_idx=0.
+        # This avoids reconciliation with the date-normalisation done in
+        # the legacy process() body (which shifts series.dmna timestamps
+        # to yyyy-01-01.01:00:00 regardless of the actual run start).
+        if self._ti_year_start is None:
+            year = start_dt.year
+            from open_alaqs.core.tools.profiles_vec import hours_in_year
+            self._ti_year_start = datetime(year, 1, 1, 0, 0, 0)
+            self._ti_n_hours_year = hours_in_year(year)
+            self._ti_first_start_dt = start_dt
+
+        h_idx = int(
+            (start_dt - self._ti_first_start_dt).total_seconds() // 3600
+        )
+        if h_idx < 0 or h_idx >= self._ti_n_hours_year:
+            # Out of the indexed window. Fall back to legacy for
+            # everything in this period.
+            return result
+
+        n_pol = len(self._ti_pollutant_order)
+        residual = []
+
+        for source_, emissions__ in result:
+            is_stationary = bool(getattr(source_, "time_invariant_geometry", False))
+            if not is_stationary:
+                residual.append((source_, emissions__))
+                continue
+
+            # Build the typed source_id. `<type>:<bare_id>` so the
+            # later `aggregate_sources_by_type` groups by class.
+            type_label = self._ti_type_label_for(source_)
+            bare_id = (
+                source_.getName() if hasattr(source_, "getName") else str(source_)
+            )
+            source_id = f"{type_label}:{bare_id}" if type_label else str(bare_id)
+
+            # Lazy-allocate the rates ndarray for this source.
+            if source_id not in self._ti_rates_per_source:
+                self._ti_rates_per_source[source_id] = np.zeros(
+                    (self._ti_n_hours_year, n_pol), dtype=np.float64
+                )
+                self._ti_source_meta[source_id] = {
+                    "height_m": float(getattr(source_, "getHeight", lambda: 0.0)() or 0.0),
+                    "type_label": type_label,
+                }
+
+            # Cache cell weights once per source.
+            if source_id not in self._ti_cell_weights and source_id not in self._ti_skipped_no_geometry:
+                wkt_geom = self._ti_pick_source_wkt(source_, emissions__)
+                if wkt_geom:
+                    wkt_utm = self._transform_wkt_to_utm(wkt_geom)
+                    cw = compute_cell_weights(
+                        wkt_utm,
+                        self._ti_grid_spec,
+                        height_m=self._ti_source_meta[source_id]["height_m"],
+                        delta_z_m=0.0,
+                    )
+                    if cw is None:
+                        # Geometry falls outside the grid; skip the
+                        # source for this run (no spatial pattern means
+                        # no AUSTAL contribution possible).
+                        self._ti_skipped_no_geometry.add(source_id)
+                    else:
+                        self._ti_cell_weights[source_id] = cw
+
+            # Accumulate g/s by pollutant for this hour. The plugin's
+            # Emission keys are stored as `<pollutant_lc>_kg`
+            # (e.g. 'nox_kg', 'pm10_kg' — kg per hour). Convert with
+            # KG_PER_HOUR_TO_G_PER_S = 1000/3600.
+            for emission_ in emissions__:
+                if emission_ is None or emission_.isZero():
+                    continue
+                em_obj = emission_.getObjects()
+                row = self._ti_rates_per_source[source_id][h_idx]
+                for p_idx, pol_name in enumerate(self._ti_pollutant_order):
+                    key = f"{pol_name.lower()}_kg"
+                    val = em_obj.get(key)
+                    if val is None or val == 0:
+                        continue
+                    row[p_idx] += float(val) * KG_PER_HOUR_TO_G_PER_S
+
+        return residual
+
+    @staticmethod
+    def _ti_type_label_for(source_) -> str:
+        """Map a Source instance to a short type label matching the
+        `core/tools/sources_df.py` convention.
+
+        Uses the class name to keep this independent of any per-source
+        attribute. Unknown classes return an empty string; the caller
+        treats that as "do not prefix" so the source falls into its
+        own bucket at aggregation time.
+        """
+        cls_name = type(source_).__name__
+        return {
+            "RoadwaySources": "road",
+            "ParkingSources": "parking",
+            "PointSources":   "point",
+            "AreaSources":    "area",
+        }.get(cls_name, "")
+
+    @staticmethod
+    def _ti_pick_source_wkt(source_, emissions__) -> str:
+        """Pick the WKT geometry for a stationary source, in the same
+        order of preference the legacy process() uses:
+        1. The first non-None geometry on the emission objects (these
+           include grid-clipping in the Roadway path).
+        2. Fall back to the source's own geometry.
+        Returns "" when neither is available; the caller treats that
+        as 'skip this source for the run'.
+        """
+        for em in emissions__:
+            if em is None:
+                continue
+            wkt = em.getGeometryText()
+            if wkt:
+                return wkt
+        return source_.getGeometryText() if hasattr(source_, "getGeometryText") else ""
+
+    def _ti_aggregate_stationary(self):
+        """Aggregate `_ti_rates_per_source` by `<type>:` prefix.
+
+        Returns
+        -------
+        group_ids : List[str], sorted
+        group_weights : Dict[str, CellWeights]
+        group_rates : ndarray (n_hours, n_groups, n_pollutants) g/s
+
+        Sources whose geometry was outside the grid (`_ti_skipped_no_geometry`)
+        are excluded from both rates and weights.
+        """
+        from open_alaqs.core.tools.austal_helpers import (
+            aggregate_sources_by_type,
+        )
+
+        # Stable axis order: alphabetic by source_id. Skip those with no
+        # cached weights — they had geometry outside the grid.
+        source_ids = sorted(
+            sid for sid in self._ti_rates_per_source
+            if sid in self._ti_cell_weights
+        )
+        if not source_ids:
+            n_pol = len(self._ti_pollutant_order)
+            return [], {}, np.zeros((self._ti_n_hours_year, 0, n_pol))
+
+        # Pack (n_hours, n_sources, n_pollutants) rates ndarray.
+        rates_3d = np.stack(
+            [self._ti_rates_per_source[sid] for sid in source_ids], axis=1
+        )
+
+        cell_weights = {sid: self._ti_cell_weights[sid] for sid in source_ids}
+
+        return aggregate_sources_by_type(source_ids, cell_weights, rates_3d)
+
+    def _ti_write_stationary_grids(
+        self, group_ids, group_weights, dir_offset: int,
+    ):
+        """Write one eNNNN.dmna per stationary group per simulated
+        hour under <output>/<NN>/. Returns dict {group_id:
+        dir_index_1based}.
+
+        Each hour's file contains the same time-invariant spatial
+        pattern; only t1/t2 differ. AUSTAL 3.3 rejects single-file
+        multi-day t1/t2 windows ("current grid source not valid after
+        ..."), so we mirror the legacy per-hour layout. The iq column
+        in series.dmna for stationary slots therefore counts h_idx+1
+        from 1..n_hours (set by writeTimeSeriesFile), pointing at
+        eNNNN.dmna identical to legacy non-stationary indexing.
+
+        `dir_offset` is the number of non-stationary AUSTAL sources
+        already occupying low-numbered directories; stationary groups
+        take dir_offset+1 .. dir_offset+K.
+        """
+        from datetime import datetime as _dt
+        from open_alaqs.core.tools.austal_helpers import (
+            expand_to_dense, format_time_offset,
+            grid_file_header_lines, serialise_dense_kji,
+        )
+
+        out_dir = self.getOutputPathAsPath()
+
+        # Walk the normalised end-time strings in order; each gives the
+        # END of the hour, with the START being one hour earlier.
+        sorted_dts = list(self.getSortedResults().keys())
+        if not sorted_dts:
+            return {}
+
+        # Pre-render the dense body for each group once; the same body
+        # is written for every hour (time-invariant spatial pattern).
+        # source_offset_cells=0 because _ti_grid_spec is already in
+        # em-grid frame (origin = em SW corner). The calc grid halo is
+        # only expressed in austal.txt (x0 / nx).
+        dense_by_gid = {
+            gid: serialise_dense_kji(
+                expand_to_dense(
+                    group_weights[gid], self._ti_grid_spec,
+                    source_offset_cells=0,
+                )
+            )
+            for gid in group_ids
+        }
+
+        dir_map = {}
+        for offset, gid in enumerate(group_ids, start=1):
+            dir_idx = dir_offset + offset
+            src_dir = out_dir / f"{dir_idx:02d}"
+            src_dir.mkdir(parents=True, exist_ok=True)
+            body_lines = dense_by_gid[gid]
+            dir_map[gid] = dir_idx
+
+            for h_idx, dt_str in enumerate(sorted_dts, start=1):
+                end_dt = _dt.strptime(dt_str, "%Y-%m-%d.%H:%M:%S")
+                start_dt = end_dt - timedelta(hours=1)
+                ys = _dt(start_dt.year, 1, 1)
+                t1 = format_time_offset(start_dt, ys)
+                t2 = format_time_offset(end_dt, ys)
+                header = grid_file_header_lines(t1, t2, self._ti_grid_spec)
+
+                file_path = src_dir / f"e{h_idx:04d}.dmna"
+                with file_path.open("w", newline="\n") as fh:
+                    fh.write("\n".join(header) + "\n")
+                    fh.write("\n".join(body_lines) + "\n")
+                    fh.write("***\n")
+        return dir_map
+
+    def writeInputFile(
+        self, group_ids, group_dir_map, group_rates,
+    ):
+        """Hybrid austal.txt: legacy non-stationary AUSTAL sources
+        (already in `self._total_sources`) keep their numbering 01..M;
+        stationary groups follow at M+1..M+K.
+
+        Per-pollutant emission line has "?" for any AUSTAL source that
+        emits that pollutant, "0" otherwise. Stationary group emits
+        pollutant p iff group_rates[:, group_idx, p_idx].sum() > 0.
+        """
+        file_path = self.getOutputPathAsPath() / "austal.txt"
+        if file_path.exists():
+            raise FileExistsError(file_path)
+
+        legacy_keys = list(self._total_sources.keys())
+        n_legacy = len(legacy_keys)
+        n_total = n_legacy + len(group_ids)
+
+        # AUSTAL rejects sources with (xq, yq) coincident with (x0, y0).
+        # The legacy writer used `x_left_border_em_grid` (no halo); we
+        # mirror that for stationary entries too so AUSTAL sees a
+        # consistent layout.
+        xq = self._x_left_border_em_grid - self._reference_x
+        yq = self._y_left_border_em_grid - self._reference_y
+
+        # Per-pollutant active mask for stationary groups
+        # (n_groups, n_pollutants): True where group total > 0.
+        if group_rates.size > 0:
+            stat_mask = (group_rates.sum(axis=0) > 0)  # (n_groups, n_pol)
+        else:
+            stat_mask = np.zeros(
+                (0, len(self._ti_pollutant_order)), dtype=bool
+            )
+
+        with file_path.open("w") as f:
+            f.write("----------------- general parameters\n")
+            f.write(f'ti\t"{self._title}"\t\' title\n')
+            f.write(f"qs\t{self._quality_level}\t' quality level\n")
+            f.write("----------------- meteorology\n")
+            f.write(f"z0\t{self._roughness_level}\t' roughness length (m)\n")
+            f.write(f"d0\t{self._displacement_height}\t' displacement height (m)\n")
+            f.write(f"ha\t{self._anemometer_height}\t' anemometer height (m)\n")
+            f.write("----------------- calculation grid\n")
+            f.write(f"dd\t{self._mesh_width}\t' mesh width\n")
+            f.write(
+                f"x0\t{self._x_left_border_calc_grid - self._reference_x}"
+                "\t' left border (m)\n"
+            )
+            f.write(
+                f"y0\t{self._y_left_border_calc_grid - self._reference_y}"
+                "\t' lower border (m)\n"
+            )
+
+            if (
+                len(self.xp_) == len(self.yp_) == len(self.zp_)
+                and len(self.xp_) > 0
+            ):
+                f.write("xp\t" + "\t".join(str(v) for v in self.xp_) + "\t' x-receptor\n")
+                f.write("yp\t" + "\t".join(str(v) for v in self.yp_) + "\t' y-receptor\n")
+                f.write("hp\t" + "\t".join(str(v) for v in self.zp_) + "\t' z-receptor\n")
+
+            f.write(f"nx\t{self._x_meshes}\t' number of meshes\n")
+            f.write(f"ny\t{self._y_meshes}\t' number of meshes\n")
+            f.write("----------------- source definitions\n")
+
+            if self._options:
+                f.write(f'os\t"{self._options}"\n')
+
+            f.write(
+                "iq\t" + "\t".join(["?"] * n_total)
+                + "\t' file index (set in series.dmna)\n"
+            )
+            f.write(
+                "hq\t" + "\t".join([str(self._source_height)] * n_total)
+                + "\t' source height (ignored)\n"
+            )
+            f.write("xq\t" + "\t".join([str(xq)] * n_total) + "\t' x-lower left\n")
+            f.write("yq\t" + "\t".join([str(yq)] * n_total) + "\t' y-lower left\n")
+
+            # Per-pollutant lines
+            for p_idx, poll in enumerate(self._pollutants_list):
+                # Map plugin name to AUSTAL short code
+                austal_name = poll
+                if poll.startswith("PM"):
+                    austal_name = "PM-2" if poll == "PM10" else "PM-1"
+
+                # Legacy non-stationary entries: present iff
+                # _total_sources[<NN>] contains this pollutant abbrev.
+                legacy_marks = [
+                    "?" if austal_name in self._total_sources[k] else "0"
+                    for k in legacy_keys
+                ]
+                # Stationary groups: present iff stat_mask[g, p] is True
+                stat_marks = [
+                    "?" if (
+                        stat_mask.size and stat_mask[g_idx, p_idx]
+                    ) else "0"
+                    for g_idx in range(len(group_ids))
+                ]
+                f.write(
+                    f"{austal_name.lower()}\t"
+                    + "\t".join(legacy_marks + stat_marks)
+                    + f"\t' total {poll} (in g/s) (set in series.dmna)\n"
+                )
+
+    def writeTimeSeriesFile(
+        self, group_ids, group_dir_map, group_rates,
+    ):
+        """Hybrid series.dmna.
+
+        Column layout (legacy non-stationary AUSTAL sources first, then
+        stationary groups):
+            te ra ua lm [hm]
+            <01>.iq ... <NN>.iq        — iq per source per hour
+            <01>.<pol> ... <NN>.<pol>  — emission rate per (source, pollutant)
+                                         that the source emits
+
+        iq semantics:
+          - legacy non-stationary source: timeID counter from
+            `_results[<dt>][<src>]['timeID']` (already 1..n_hours per
+            the legacy process() path).
+          - stationary group: 1 always (only e0001.dmna exists).
+
+        `buff\\t1000000` is added to the header so AUSTAL's DMNA reader
+        accepts the long form line that hybrid runs generate.
+        """
+        from open_alaqs.core.tools.austal_helpers import iq_value_for_hour
+
+        file_path = self.getOutputPathAsPath() / "series.dmna"
+        if file_path.exists():
+            raise FileExistsError(file_path)
+
+        sorted_results = self.getSortedResults()
+        sorted_dts = list(sorted_results.keys())
+
+        legacy_keys = list(self._total_sources.keys())
+        n_legacy = len(legacy_keys)
+
+        # Total AUSTAL source slots in column order: legacy first, stationary after.
+        # `slot_meta[i]` = (kind, key_or_gid, dir_label_str)
+        slot_meta = []
+        for k in legacy_keys:
+            slot_meta.append(("legacy", k, k))   # k is already "01" etc.
+        for gid in group_ids:
+            slot_meta.append(
+                ("stationary", gid, f"{group_dir_map[gid]:02d}")
+            )
+
+        # Active (slot, pollutant) emitters: stationary slots emit
+        # pollutant p iff group_rates[:, g_idx, p_idx].sum() > 0;
+        # legacy slots emit pollutant p iff p (austal short name) in
+        # _total_sources[<NN>].
+        if group_rates.size > 0:
+            stat_active = (group_rates.sum(axis=0) > 0)
+        else:
+            stat_active = np.zeros(
+                (0, len(self._ti_pollutant_order)), dtype=bool
+            )
+
+        active_pairs = []   # list of (slot_idx, pol_idx, kind)
+        for slot_idx, (kind, key, _label) in enumerate(slot_meta):
+            for p_idx, poll in enumerate(self._pollutants_list):
+                austal_name = poll
+                if poll.startswith("PM"):
+                    austal_name = "PM-2" if poll == "PM10" else "PM-1"
+                if kind == "legacy":
+                    if austal_name in self._total_sources[key]:
+                        active_pairs.append((slot_idx, p_idx, "legacy"))
+                else:
+                    g_idx = group_ids.index(key)
+                    if stat_active.size and stat_active[g_idx, p_idx]:
+                        active_pairs.append((slot_idx, p_idx, "stationary"))
+
+        # Build form line
+        form_parts = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"']
+        if self.MixingHeightIncluded():
+            form_parts.append('"hm%7.1f"')
+        for kind, _key, label in slot_meta:
+            form_parts.append(f'"{label}.iq%3.0f"')
+        for slot_idx, p_idx, _kind in active_pairs:
+            label = slot_meta[slot_idx][2]
+            poll = self._pollutants_list[p_idx]
+            austal_name = poll
+            if poll.startswith("PM"):
+                austal_name = "PM-2" if poll == "PM10" else "PM-1"
+            form_parts.append(f'"{label}.{austal_name.lower()}%10.3e"')
+
+        with file_path.open("w") as f:
+            f.write("form\t" + "\t".join(form_parts) + "\n")
+            f.write('mode\t"text"\n')
+            f.write('sequ\t"i"\n')
+            f.write("dims\t1\n")
+            f.write("lowb\t1\n")
+            f.write(f"hghb\t{len(sorted_dts)}\n")
+            f.write("buff\t1000000\n")
+            f.write("*\n")
+
+            for h_idx, dt_str in enumerate(sorted_dts):
+                row_parts = [dt_str]
+                row_parts.append(f"{self._series[dt_str]['WindDirection']:5.0f}")
+                row_parts.append(f"{self._series[dt_str]['WindSpeed']:5.1f}")
+                row_parts.append(f"{self._series[dt_str]['ObukhovLength']:7.1f}")
+                if self.MixingHeightIncluded():
+                    row_parts.append(f"{self._series[dt_str]['MixingHeight']:7.1f}")
+
+                # iq columns
+                for kind, key, _label in slot_meta:
+                    if kind == "legacy":
+                        # Legacy timeID is already 1-based per source
+                        # from the legacy process() path.
+                        td = sorted_results[dt_str].get(key, {}).get("timeID", 1)
+                        row_parts.append(f"{td:3d}")
+                    else:
+                        # Stationary slots now also have one e????.dmna
+                        # per hour (identical content), so iq counts
+                        # h_idx+1 from 1..n_hours, matching the legacy
+                        # per-hour layout. AUSTAL 3.3 rejects multi-day
+                        # single-file validity windows; this preserves
+                        # correctness at the cost of the file-count
+                        # optimisation.
+                        row_parts.append(f"{h_idx + 1:3d}")
+
+                # Emission columns. group_rates is indexed run-relative
+                # (h_idx 0 == first start_dt seen by
+                # _ti_split_and_accumulate), matching the loop's
+                # enumerate index.
+                for slot_idx, p_idx, kind in active_pairs:
+                    if kind == "legacy":
+                        key = slot_meta[slot_idx][1]
+                        poll = self._pollutants_list[p_idx]
+                        austal_name = poll
+                        if poll.startswith("PM"):
+                            austal_name = "PM-2" if poll == "PM10" else "PM-1"
+                        val = sorted_results[dt_str].get(key, {}).get(austal_name, 0.0)
+                    else:
+                        gid = slot_meta[slot_idx][1]
+                        g_idx = group_ids.index(gid)
+                        if 0 <= h_idx < group_rates.shape[0]:
+                            val = float(group_rates[h_idx, g_idx, p_idx])
+                        else:
+                            val = 0.0
+                    row_parts.append(f"{val:10.3e}")
+
+                f.write("\t".join(row_parts) + "\n")
+
+            f.write("\n***\n")
+
+    @log_time
+    def _ti_endJob(self):
+        """Time-indexed endJob orchestrator. Aggregates stationary
+        contributions, writes their grid files, then writes the hybrid
+        austal.txt + series.dmna. Per-hour non-stationary grid files
+        are already on disk from process().
+        """
+        if not self.checkTimeIntervalinResults():
+            raise Exception("AUSTAL: Time Interval Error")
+
+        group_ids, group_weights, group_rates = self._ti_aggregate_stationary()
+        n_legacy = len(self._total_sources)
+
+        try:
+            dir_map = self._ti_write_stationary_grids(
+                group_ids, group_weights, dir_offset=n_legacy,
+            )
+        except Exception as e:
+            logger.error("AUSTAL: cannot write stationary grid files: %s", e)
+            return False
+
+        try:
+            self.writeInputFile(group_ids, dir_map, group_rates)
+        except Exception as e:
+            logger.error("AUSTAL: cannot write 'austal.txt' (hybrid): %s", e)
+            return False
+
+        self.checkHoursinResults()
+
+        try:
+            self.writeTimeSeriesFile(group_ids, dir_map, group_rates)
+        except Exception as e:
+            logger.error("AUSTAL: cannot write 'series.dmna' (hybrid): %s", e)
+            return False
+
+        logger.info(
+            "AUSTAL time-indexed: %d stationary group(s) + %d non-stationary slot(s) written",
+            len(group_ids), n_legacy,
+        )
+        return True
 
     @log_time
     def _transform_wkt_to_utm(self, wkt: str) -> str:

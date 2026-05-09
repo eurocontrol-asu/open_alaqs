@@ -4,6 +4,64 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
+## [Unreleased]
+
+Performance and correctness refactor of the calculation and AUSTAL
+output paths. Inventory totals match prior versions bit-for-bit; AUSTAL
+output now correctly includes stationary-source contributions that the
+previous writer silently dropped (validated against
+`example/training/training_validation_reference.xlsx`).
+
+### Added
+
+- Vectorised emission API. `Source.getHourlyActivityVector` produces
+  the full year of per-hour activity in one numpy operation; stationary
+  source modules pre-compute the cache once per run and read it with
+  O(1) lookups during the time-major loop. Replaces 8760 scalar
+  `getRelativeActivityPerHour` calls per source.
+- Time-indexed AUSTAL writer (`AUSTALOutputModule`). Stationary sources
+  are aggregated by type and emitted as four AUSTAL source slots in a
+  hybrid `series.dmna` alongside the existing per-hour movement slot.
+  Per-source spatial weights are computed once via
+  `core/tools/austal_helpers.compute_cell_weights`.
+- DataFrame data layer (`core/tools/sources_df.py`) backing the
+  AUSTAL writer.
+- Leap-year sanity warning when `[start_dt, end_dt]` does not cover a
+  full calendar year.
+
+### Changed
+
+- AUSTAL calc grid is now the em grid plus
+  `DEFAULT_CONCENTRATION_GRID_FACTOR` cells of halo on every side
+  (44×44 for a 40×40 em grid). Sources sit centred inside the calc
+  grid with symmetric 2-cell buffer. The em grid sits exactly inside
+  the conc raster.
+- Emission and concentration QGIS layers are now exported in the
+  project UTM zone instead of EPSG:3857. Cells render as true
+  `dd × dd` m squares; the cos(lat) distortion at high latitudes is
+  gone.
+- `EmissionsQGISVectorLayerOutputModule` and
+  `ConcentrationsQGISVectorLayerOutputModule` keep working data in
+  EPSG:3857 / UTM respectively and project at output time only.
+- `ContourPlotVectorLayer` accepts an optional `epsg=` argument.
+
+### Fixed
+
+- Stationary contributions (especially `PointSources`) reach the AUSTAL
+  output. The previous writer's `getEfficiencyXY` returned 0 for
+  zero-area geometries (points), silently dropping those sources from
+  `series.dmna` while keeping them in the inventory CSV. Validated
+  against the training reference: stationary totals match within
+  rounding (<0.025%); inventory CSV grand totals match exactly.
+
+### Removed
+
+- `_grid_writer_mode` setting and the legacy per-hour AUSTAL writer
+  path (`writeInputFile` / `writeTimeSeriesFile`). Time-indexed mode
+  is now the only writer.
+- `_use_vectorised_path` flag. The vectorised activity-vector cache
+  is the only path.
+
 ## [5.0.1] - 2026-05-06
 
 Patch release covering two correctness bugs in the AUSTAL dispersion

@@ -14,6 +14,13 @@ logger = get_logger(__name__)
 
 
 class RoadwaySources(Source):
+    # Roadway geometry is fixed for the whole study year: the road
+    # polyline does not move, and the COPERT emission factor table is
+    # evaluated once per source from time-invariant attributes
+    # (vehicle_year, speed, fleet mix). of the optimisation
+    # plan: cleared for the source-major vectorised path.
+    time_invariant_geometry: bool = True
+
     def __init__(self, val=None, *args, **kwargs):
         super().__init__(val, *args, **kwargs)
         if val is None:

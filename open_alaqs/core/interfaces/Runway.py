@@ -49,16 +49,16 @@ class Runway:
 
         # Capture the `instudy` flag for parity with Source / Gate. The
         # filter is NOT yet wired into MovementSourceModule (deferred to
-        # Phase 3), so setting `instudy='0'` on a runway has no effect on
+        # ), so setting `instudy='0'` on a runway has no effect on
         # current emission output. The value is captured here so the
-        # Phase 3 module can read it without a separate schema change.
+        # module can read it without a separate schema change.
         self._in_study = str(val.get("instudy", "1")).strip() == "1"
 
     def isInStudy(self) -> bool:
         """Return True if this runway should be included in the study.
 
         Currently informational only: the filter is not wired into
-        MovementSourceModule yet (Phase 3 work). When LTO movement
+        MovementSourceModule yet. When LTO movement
         emissions are added, the filter goes in the movement
         processing loop.
         """

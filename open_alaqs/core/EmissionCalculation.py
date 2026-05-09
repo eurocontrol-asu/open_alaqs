@@ -152,6 +152,29 @@ class EmissionCalculation:
         if source_names is None:
             source_names = []
 
+        # ------------------------------------------------------------------
+        # Leap-year sanity check.
+        #
+        # The per-hour profile-mean divisor in
+        # SourceModule._get_profile_mean walks the full calendar year
+        # (8784 hours in leap years, 8760 otherwise — see
+        # SourceModule.py L206 and L259). If the user's [start_dt,
+        # end_dt] interval does not cover a full calendar year worth
+        # of hourly periods, the run will silently under- or
+        # over-report annual totals by the missing fraction. Warn but
+        # do not fail; some workflows deliberately run a partial year.
+        # The vectorised path inherits this behaviour by construction
+        # so the check applies regardless.
+        #
+        # Multi-year intervals are skipped — the per-year accounting
+        # is correct in that case (the profile-mean cache invalidates
+        # at the year boundary).
+        # ------------------------------------------------------------------
+        try:
+            self._warn_if_partial_year()
+        except Exception as e:  # never block run() on a sanity check
+            logger.debug("Leap-year sanity check skipped: %s", e)
+
         default_emissions = {
             "fuel_kg": 0.0,
             "co_g": 0.0,
@@ -187,6 +210,68 @@ class EmissionCalculation:
         logger.debug("Execute beginJob(..) of source modules")
         for mod_name, mod_obj in self.getModules().items():
             mod_obj.beginJob()
+
+        # ------------------------------------------------------------------
+        # Vectorised activity-vector setup.
+        #
+        # Build a single shared ProfileSet from the
+        # User{Hour,Day,Month}ProfileStore singletons (populated by the
+        # SourceWithTimeProfileModule.beginJob calls above) and pre-
+        # compute per-source hourly activity vectors for every stationary
+        # module. Each stationary `process()` reads scalar per-hour
+        # activity from the cache via `_try_get_per_hour_activity`
+        # (O(1) ndarray index) instead of walking 8760 hours of profile
+        # state per source.
+        #
+        # The cache is keyed by year (taken from the inventory start
+        # datetime). Multi-year runs are not supported: the activity
+        # vector spans a single calendar year.
+        # ------------------------------------------------------------------
+        from open_alaqs.core.interfaces.UserTimeProfiles import (
+            UserDayProfileStore,
+            UserHourProfileStore,
+            UserMonthProfileStore,
+        )
+        from open_alaqs.core.tools.profiles_vec import build_profile_set
+        from open_alaqs.core.tools.sources_df import build_sources_df
+
+        db_path = self._database_path
+        profile_set = build_profile_set(
+            UserHourProfileStore(db_path),
+            UserDayProfileStore(db_path),
+            UserMonthProfileStore(db_path),
+        )
+        inventory_year = self._start_dt.year
+
+        for mod_name, mod_obj in self.getModules().items():
+            if not getattr(mod_obj, "time_invariant_geometry", False):
+                continue
+            if not hasattr(mod_obj, "precompute_activity_vectors"):
+                # SourceModule subclasses without the vectorised mixin
+                # (i.e. not derived from SourceWithTimeProfileModule)
+                # cannot pre-compute; skip silently.
+                continue
+            mod_obj.precompute_activity_vectors(profile_set, inventory_year)
+            logger.debug(
+                "activity-vector cache populated for module %s "
+                "(%d sources, year %d)",
+                mod_name,
+                len(getattr(mod_obj, "_activity_vec_cache", {})),
+                inventory_year,
+            )
+
+        # Tabular view of all stationary sources for the AUSTAL writer.
+        # Builds one pd.DataFrame per type from the already-populated
+        # Singleton stores; no SQL. See core/tools/sources_df.py for
+        # the full schema and the `<type>:<id>` source_id convention.
+        self._sources_df = build_sources_df(self.getModules())
+        for type_label, df in self._sources_df.items():
+            logger.debug(
+                "sources_df['%s']: %d rows, %d columns",
+                type_label,
+                len(df),
+                len(df.columns),
+            )
 
         # execute beginJob(..) of dispersion modules
         logger.debug("Execute beginJob(..) of dispersion modules")
@@ -302,6 +387,69 @@ class EmissionCalculation:
 
     def getModules(self):
         return self._source_modules
+
+    def _warn_if_partial_year(self) -> None:
+        """Warn when [start_dt, end_dt] doesn't cover a full calendar
+        year, since the per-hour profile-mean divisor uses the calendar
+        year length. See run() for context.
+
+        - Multi-year (year(end_dt) > year(start_dt)+1): skipped.
+        - Spans exactly one calendar year: warn if period count
+          differs from 8760 / 8784.
+        - Spans into next year by ≤ 1 hour (e.g. start=Jan 1 00:00,
+          end=Jan 1 00:00 next year inclusive): treated as full-year.
+
+        Sub-hourly intervals are tolerated: the warning compares
+        against `hours_in_year(year) * (3600 / time_interval_seconds)`.
+        """
+        import calendar
+
+        start = self._start_dt
+        end = self._end_dt
+        ti_seconds = self._time_interval.total_seconds()
+        if ti_seconds <= 0:
+            return
+
+        # Multi-year: skip. The profile cache invalidates per year
+        # and the warning would mis-report.
+        if end.year > start.year + 1:
+            return
+        if end.year == start.year + 1 and not (
+            end.month == 1 and end.day == 1 and end.hour == 0
+        ):
+            return
+
+        year = start.year
+        hours_per_year = 8784 if calendar.isleap(year) else 8760
+        expected_periods = int(hours_per_year * 3600 / ti_seconds)
+
+        # Counting via len(list(getTimeSeries())) - 1 (pairwise pair count).
+        n_periods = max(0, len(list(self.getTimeSeries())) - 1)
+
+        if n_periods == expected_periods:
+            return  # full year coverage
+
+        delta = n_periods - expected_periods
+        pct = abs(delta) * 100.0 / max(expected_periods, 1)
+        sign = "extra" if delta > 0 else "missing"
+        logger.warning(
+            "Year %d has %d hours; the [start_dt=%s, end_dt=%s, interval=%ss] "
+            "interval yields %d periods (%d %s, ~%.2f%%). Per-hour profile mean "
+            "is computed against the full calendar year, so this run will "
+            "%s annual totals by approximately that fraction. Set end_dt to "
+            "%s-01-01 00:00:00 for a full leap-year-aware coverage.",
+            year,
+            hours_per_year,
+            start.isoformat(),
+            end.isoformat(),
+            int(ti_seconds),
+            n_periods,
+            abs(delta),
+            sign,
+            pct,
+            "over-report" if delta > 0 else "under-report",
+            year + 1,
+        )
 
     def getDispersionModules(self):
         return self._dispersion_modules

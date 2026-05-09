@@ -86,11 +86,13 @@ class EmissionsQGISVectorLayerOutputModule(GridOutputModule):
         # prepare the attributes of each point of the vector layer
         self._total_emissions = 0.0
         self._grid_df = self._grid.get_df_from_2d_grid_cells()
-        # Grid cells are built in UTM (correctly tagged by Grid3D).  Reproject
-        # to EPSG:3857 here because (a) source/emission geometries are stored
-        # in EPSG:3857 and must be intersected in the same CRS, and (b) the
-        # output ContourPlotVectorLayer forces its layer CRS to EPSG:3857.
-        self._grid_df = self._grid_df.to_crs("EPSG:3857")
+        # Working CRS = EPSG:3857 because source/emission geometries are
+        # stored in 3857 and must be intersected in the same CRS by
+        # _process_grid. The final output is reprojected back to UTM at
+        # endJob to avoid the cos(lat) cell-size distortion in display.
+        self._working_epsg = 3857
+        self._utm_epsg = self._grid.getUtmEpsg()
+        self._grid_df = self._grid_df.to_crs(f"EPSG:{self._working_epsg}")
         self._grid_df = self._grid_df.assign(Q=pd.Series(0, index=self._grid_df.index))
 
     def process(
@@ -118,13 +120,18 @@ class EmissionsQGISVectorLayerOutputModule(GridOutputModule):
             key = f"{pollutant_type.value}_{PollutantUnit.KG.value}"
             headers.append((key, QMetaType.Type.Double))
 
+        # Reproject to UTM for display so cells render as true 250 m
+        # squares instead of cos(lat)-distorted EPSG:3857 quads.
+        out_df = self._grid_df.to_crs(f"EPSG:{self._utm_epsg}")
+
         layer_wrapper = ContourPlotVectorLayer(
             layer_name=self._layer_name,
             enable_labels=self._enable_labels,
             field_name=self.pollutant_type.value,
             use_centroid_symbol=self._use_centroid_symbol,
+            epsg=self._utm_epsg,
         )
-        layer_wrapper.addData(self._grid_df)
+        layer_wrapper.addData(out_df)
 
         layer_wrapper.setColorGradientRenderer(
             classes_count=7,

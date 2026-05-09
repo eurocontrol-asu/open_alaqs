@@ -736,12 +736,11 @@ class QGISVectorLayerDispersionModule(OutputModule):
 
     def endJob(self):
         if not self._data_cells.empty:
-            # data_cells is in UTM throughout processing. Project to
-            # EPSG:3857 only here, at the very end, so that internal
-            # arithmetic and indexing are not contaminated by the
-            # EPSG:3857 vs UTM scale factor (~1.62 at lat 52). The
-            # ContourPlotVectorLayer below expects EPSG:3857.
-            data_cells_3857 = self._data_cells.to_crs("EPSG:3857")
+            # data_cells is built in UTM. Keep it in UTM for the output
+            # layer so cells render as true 250 m squares (no cos(lat)
+            # distortion) and overlay exactly with the emissions raster
+            # which is also output in UTM.
+            utm_epsg = self._grid.getUtmEpsg()
 
             # create a new instance of a ContourPlotLayer
             contour_layer = ContourPlotVectorLayer(
@@ -751,9 +750,10 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 enable_labels=self._enable_labels,
                 field_name=self._pollutant,
                 use_centroid_symbol=self._use_centroid_symbol,
+                epsg=utm_epsg,
             )
 
-            contour_layer.addData(data_cells_3857)
+            contour_layer.addData(self._data_cells)
             contour_layer.setColorGradientRenderer(classes_count=7)
 
             self._contour_layer = contour_layer

@@ -22,6 +22,10 @@ logger = get_logger(__name__)
 
 
 class AreaSources(Source):
+    # Area source polygon and emission factors are fixed for the study
+    # year. stationary path eligible.
+    time_invariant_geometry: bool = True
+
     def __init__(self, val=None, *args, **kwargs):
         super().__init__(val, *args, **kwargs)
         if val is None:

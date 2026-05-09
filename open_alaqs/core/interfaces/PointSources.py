@@ -14,6 +14,32 @@ logger = get_logger(__name__)
 
 
 class PointSources(Source):
+    # Point source location and emission characteristics are fixed for
+    # the study year. stationary path eligible.
+    time_invariant_geometry: bool = True
+
+    def getHourlyActivityVector(self, profiles, year: int):
+        """PointSources stores its annual scalar in `_ops_year`
+        (column `ops_year` in `shapes_point_sources`), exposed via
+        `getOpsYear()` rather than the base `getUnitsPerYear()`. This
+        override mirrors the per-hour scalar path in
+        PointSourceModule.process which calls
+        `getEmissionsForTimePeriod(..., source.getOpsYear(), ...)`.
+        """
+        from open_alaqs.core.tools.profiles_vec import (
+            hourly_multipliers,
+            spread_annual,
+        )
+
+        mults = hourly_multipliers(
+            profiles,
+            self.getHourProfile(),
+            self.getDailyProfile(),
+            self.getMonthProfile(),
+            year,
+        )
+        return spread_annual(float(self.getOpsYear() or 0.0), mults)
+
     def __init__(self, val=None, *args, **kwargs):
         super().__init__(val, *args, **kwargs)
         if val is None:
