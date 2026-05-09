@@ -4,34 +4,28 @@ from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.DispersionModule import DispersionModule
 from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.interfaces.SourceModule import SourceModule
-from open_alaqs.core.modules.AreaSourceModule import AreaSourceWithTimeProfileModule
+from open_alaqs.core.modules.AreaSourceModule import \
+    AreaSourceWithTimeProfileModule
 from open_alaqs.core.modules.AUSTALOutputModule import AUSTALDispersionModule
-from open_alaqs.core.modules.ConcentrationsQGISVectorLayerOutputModule import (
-    QGISVectorLayerDispersionModule,
-)
-from open_alaqs.core.modules.EmissionsQGISVectorLayerOutputModule import (
-    EmissionsQGISVectorLayerOutputModule,
-)
+from open_alaqs.core.modules.ConcentrationsQGISVectorLayerOutputModule import \
+    QGISVectorLayerDispersionModule
+from open_alaqs.core.modules.EmissionsQGISVectorLayerOutputModule import \
+    EmissionsQGISVectorLayerOutputModule
 from open_alaqs.core.modules.MovementSourceModule import MovementSourceModule
-from open_alaqs.core.modules.ParkingSourceModule import (
-    ParkingSourceWithTimeProfileModule,
-)
-from open_alaqs.core.modules.PointSourceModule import PointSourceWithTimeProfileModule
-from open_alaqs.core.modules.RoadwaySourceModule import (
-    RoadwaySourceWithTimeProfileModule,
-)
-from open_alaqs.core.modules.TableViewDispersionOutputModule import (
-    TableViewDispersionModule,
-)
-from open_alaqs.core.modules.TableViewWidgetOutputModule import (
-    TableViewWidgetOutputModule,
-)
-from open_alaqs.core.modules.TimeSeriesDispersionOutputModule import (
-    TimeSeriesDispersionModule,
-)
-from open_alaqs.core.modules.TimeSeriesWidgetOutputModule import (
-    TimeSeriesWidgetOutputModule,
-)
+from open_alaqs.core.modules.ParkingSourceModule import \
+    ParkingSourceWithTimeProfileModule
+from open_alaqs.core.modules.PointSourceModule import \
+    PointSourceWithTimeProfileModule
+from open_alaqs.core.modules.RoadwaySourceModule import \
+    RoadwaySourceWithTimeProfileModule
+from open_alaqs.core.modules.TableViewDispersionOutputModule import \
+    TableViewDispersionModule
+from open_alaqs.core.modules.TableViewWidgetOutputModule import \
+    TableViewWidgetOutputModule
+from open_alaqs.core.modules.TimeSeriesDispersionOutputModule import \
+    TimeSeriesDispersionModule
+from open_alaqs.core.modules.TimeSeriesWidgetOutputModule import \
+    TimeSeriesWidgetOutputModule
 from open_alaqs.core.tools.Singleton import Singleton
 
 logger = get_logger(__name__)

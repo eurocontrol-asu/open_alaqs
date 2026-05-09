@@ -33,18 +33,13 @@ from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.gui.DispersionAnalysis import OpenAlaqsDispersionAnalysis
-from open_alaqs.openalaqsdialog import (
-    OpenAlaqsAbout,
-    OpenAlaqsEnabledMacros,
-    OpenAlaqsInventory,
-    OpenAlaqsLogfile,
-    OpenAlaqsOpenDatabase,
-    OpenAlaqsOsmImport,
-    OpenAlaqsProfiles,
-    OpenAlaqsResultsAnalysis,
-    OpenAlaqsStudySetup,
-    OpenAlaqsTaxiRoutes,
-)
+from open_alaqs.openalaqsdialog import (OpenAlaqsAbout, OpenAlaqsEnabledMacros,
+                                        OpenAlaqsInventory, OpenAlaqsLogfile,
+                                        OpenAlaqsOpenDatabase,
+                                        OpenAlaqsOsmImport, OpenAlaqsProfiles,
+                                        OpenAlaqsResultsAnalysis,
+                                        OpenAlaqsStudySetup,
+                                        OpenAlaqsTaxiRoutes)
 
 # Configure the logger
 logger = get_logger(__name__)

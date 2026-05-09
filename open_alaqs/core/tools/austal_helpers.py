@@ -44,9 +44,11 @@ Reference for invariants
   cell exactly when the underlying spatial distributions are
   time-invariant — which is the precondition for stationary sources.
 """
+
 from __future__ import annotations
+
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
@@ -98,6 +100,7 @@ class AustalGridSpec:
                 `-((nx/2 + 2) * dd)` for symmetric grids.
     sk        : vertical level top heights (m), length n_layers + 1.
     """
+
     dd: float
     nx: int
     ny: int
@@ -121,6 +124,7 @@ class CellWeights:
     bbox_m  : (xmin, ymin, xmax, ymax) in grid-CRS metres, useful for
               audits and for the source dispatch in austal.txt.
     """
+
     indices: np.ndarray
     weights: np.ndarray
     bbox_m: Tuple[float, float, float, float]
@@ -180,9 +184,7 @@ def _cell_polygon(i: int, j: int, grid: AustalGridSpec) -> Polygon:
     return Polygon([(x_lo, y_lo), (x_hi, y_lo), (x_hi, y_hi), (x_lo, y_hi)])
 
 
-def _xy_efficiency(
-    geom: BaseGeometry, i: int, j: int, grid: AustalGridSpec
-) -> float:
+def _xy_efficiency(geom: BaseGeometry, i: int, j: int, grid: AustalGridSpec) -> float:
     """Fraction of `geom` that falls inside cell (i, j), in [0, 1]."""
     cell = _cell_polygon(i, j, grid)
 
@@ -426,9 +428,7 @@ def aggregate_sources_by_type(
     # average step).
     per_source_annual = rates.sum(axis=(0, 2))
 
-    new_rates = np.zeros(
-        (n_hours, len(new_source_ids), n_pol), dtype=rates.dtype
-    )
+    new_rates = np.zeros((n_hours, len(new_source_ids), n_pol), dtype=rates.dtype)
     new_cell_weights: Dict[str, CellWeights] = {}
 
     for new_idx, gid in enumerate(new_source_ids):
@@ -502,7 +502,7 @@ def serialise_dense_kji(arr: np.ndarray) -> List[str]:
     lines: List[str] = []
     for k in range(nz):
         for j in range(ny - 1, -1, -1):  # j descending
-            row = arr[:, j, k]            # i ascending
+            row = arr[:, j, k]  # i ascending
             lines.append("\t".join(format_grid_value(v) for v in row))
         # Trailing blank between each k-slab matches the reference.
         lines.append("")

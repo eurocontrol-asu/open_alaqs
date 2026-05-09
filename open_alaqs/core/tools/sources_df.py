@@ -54,7 +54,9 @@ The AUSTAL writer will use these column conventions to vectorise the EI ×
 activity products that today live in each `*SourceModule.process()`
 as a single `addGeneric(EI, activity, unit)` call.
 """
+
 from __future__ import annotations
+
 from typing import Dict, Iterable, Mapping, Optional
 
 import pandas as pd
@@ -72,10 +74,10 @@ __all__ = [
 ]
 
 _TYPE_SCHEMA: Dict[str, Dict[str, str]] = {
-    "road":    {"unit_suffix": "gm_km",   "annual_attr": "getUnitsPerYear"},
-    "parking": {"unit_suffix": "gm_vh",   "annual_attr": "getUnitsPerYear"},
-    "point":   {"unit_suffix": "kg_k",    "annual_attr": "getOpsYear"},
-    "area":    {"unit_suffix": "kg_unit", "annual_attr": "getUnitsPerYear"},
+    "road": {"unit_suffix": "gm_km", "annual_attr": "getUnitsPerYear"},
+    "parking": {"unit_suffix": "gm_vh", "annual_attr": "getUnitsPerYear"},
+    "point": {"unit_suffix": "kg_k", "annual_attr": "getOpsYear"},
+    "area": {"unit_suffix": "kg_unit", "annual_attr": "getUnitsPerYear"},
 }
 
 
@@ -101,16 +103,16 @@ def _row_for_source(source, type_label: str, bare_id: str) -> Dict[str, object]:
     annual = float(getattr(source, schema["annual_attr"])() or 0.0)
 
     row: Dict[str, object] = {
-        "source_id":     f"{type_label}:{bare_id}",
-        "type":          type_label,
-        "bare_id":       bare_id,
-        "geometry_wkt":  source.getGeometryText() or "",
-        "height":        float(source.getHeight() or 0.0),
-        "hour_profile":  source.getHourProfile(),
+        "source_id": f"{type_label}:{bare_id}",
+        "type": type_label,
+        "bare_id": bare_id,
+        "geometry_wkt": source.getGeometryText() or "",
+        "height": float(source.getHeight() or 0.0),
+        "hour_profile": source.getHourProfile(),
         "daily_profile": source.getDailyProfile(),
         "month_profile": source.getMonthProfile(),
-        "annual_units":  annual,
-        "instudy":       bool(source.isInStudy()),
+        "annual_units": annual,
+        "instudy": bool(source.isInStudy()),
     }
     # Emission-factor columns are taken straight from the source's
     # EmissionIndex (already populated from the DB row at Source
@@ -151,8 +153,7 @@ def dataframe_from_sources(
         )
 
     rows = [
-        _row_for_source(src, type_label, bare_id)
-        for bare_id, src in sources.items()
+        _row_for_source(src, type_label, bare_id) for bare_id, src in sources.items()
     ]
 
     if not rows:
@@ -160,9 +161,16 @@ def dataframe_from_sources(
         # pollutant columns for the type so callers can `.empty` /
         # `.reindex` without special-casing.
         common = [
-            "source_id", "type", "bare_id", "geometry_wkt", "height",
-            "hour_profile", "daily_profile", "month_profile",
-            "annual_units", "instudy",
+            "source_id",
+            "type",
+            "bare_id",
+            "geometry_wkt",
+            "height",
+            "hour_profile",
+            "daily_profile",
+            "month_profile",
+            "annual_units",
+            "instudy",
         ]
         pollutants = list(pollutant_columns(type_label))
         return pd.DataFrame(columns=common + pollutants).set_index("source_id")
@@ -215,8 +223,8 @@ def build_sources_df(
         type_label_by_module_name = {
             "RoadwaySource": "road",
             "ParkingSource": "parking",
-            "PointSource":   "point",
-            "AreaSource":    "area",
+            "PointSource": "point",
+            "AreaSource": "area",
         }
 
     out: Dict[str, pd.DataFrame] = {}

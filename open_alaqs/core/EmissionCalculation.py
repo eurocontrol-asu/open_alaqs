@@ -5,17 +5,14 @@ from typing import Any, List, TypedDict
 from qgis.PyQt import QtCore, QtWidgets
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.AmbientCondition import (
-    AmbientCondition,
-    AmbientConditionStore,
-)
+from open_alaqs.core.interfaces.AmbientCondition import (AmbientCondition,
+                                                         AmbientConditionStore)
 from open_alaqs.core.interfaces.Emissions import Emission
-from open_alaqs.core.interfaces.InventoryTimeSeries import InventoryTimeSeriesStore
+from open_alaqs.core.interfaces.InventoryTimeSeries import \
+    InventoryTimeSeriesStore
 from open_alaqs.core.interfaces.Source import Source
-from open_alaqs.core.modules.ModuleManager import (
-    DispersionModuleRegistry,
-    SourceModuleRegistry,
-)
+from open_alaqs.core.modules.ModuleManager import (DispersionModuleRegistry,
+                                                   SourceModuleRegistry)
 from open_alaqs.core.tools.Grid3D import Grid3D
 from open_alaqs.core.tools.iterator import pairwise
 
@@ -228,10 +225,7 @@ class EmissionCalculation:
         # vector spans a single calendar year.
         # ------------------------------------------------------------------
         from open_alaqs.core.interfaces.UserTimeProfiles import (
-            UserDayProfileStore,
-            UserHourProfileStore,
-            UserMonthProfileStore,
-        )
+            UserDayProfileStore, UserHourProfileStore, UserMonthProfileStore)
         from open_alaqs.core.tools.profiles_vec import build_profile_set
         from open_alaqs.core.tools.sources_df import build_sources_df
 

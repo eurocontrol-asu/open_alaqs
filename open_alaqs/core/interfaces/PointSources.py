@@ -26,10 +26,8 @@ class PointSources(Source):
         PointSourceModule.process which calls
         `getEmissionsForTimePeriod(..., source.getOpsYear(), ...)`.
         """
-        from open_alaqs.core.tools.profiles_vec import (
-            hourly_multipliers,
-            spread_annual,
-        )
+        from open_alaqs.core.tools.profiles_vec import (hourly_multipliers,
+                                                        spread_annual)
 
         mults = hourly_multipliers(
             profiles,

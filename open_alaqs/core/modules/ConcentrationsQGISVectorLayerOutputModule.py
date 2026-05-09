@@ -12,7 +12,8 @@ from shapely.geometry import Polygon
 from open_alaqs.alaqs_config import DEFAULT_CONCENTRATION_GRID_FACTOR
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.OutputModule import OutputModule
-from open_alaqs.core.plotting.ContourPlotVectorLayer import ContourPlotVectorLayer
+from open_alaqs.core.plotting.ContourPlotVectorLayer import \
+    ContourPlotVectorLayer
 from open_alaqs.core.tools import conversion, sql_interface
 
 logger = get_logger(__name__)

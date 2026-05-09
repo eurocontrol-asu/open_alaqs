@@ -4,7 +4,6 @@ import sys
 from datetime import datetime
 
 import pandas as pd
-
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.interfaces.UserTimeProfiles import (
@@ -374,9 +373,7 @@ class SourceWithTimeProfileModule(SourceModule):
             return None
         if inventory_dt.year != self._activity_vec_year:
             return None
-        h_idx = int(
-            (inventory_dt - self._activity_vec_t0).total_seconds() // 3600
-        )
+        h_idx = int((inventory_dt - self._activity_vec_t0).total_seconds() // 3600)
         arr = cache[source_id]
         if h_idx < 0 or h_idx >= arr.shape[0]:
             return None

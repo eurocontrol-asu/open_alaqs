@@ -12,7 +12,8 @@ from shapely.geometry.base import BaseGeometry
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft, AircraftStore
-from open_alaqs.core.interfaces.AircraftTrajectory import AircraftTrajectoryStore
+from open_alaqs.core.interfaces.AircraftTrajectory import \
+    AircraftTrajectoryStore
 from open_alaqs.core.interfaces.EngineStore import EngineStore, HeliEngineStore
 from open_alaqs.core.interfaces.Gate import GateStore
 from open_alaqs.core.interfaces.Runway import RunwayStore
@@ -661,9 +662,7 @@ class MovementStore(Store, metaclass=Singleton):
     def _load_traj_from_db(db_path: str, cache_key: str):
         """Return a reconstructed AircraftTrajectory from the DB cache, or None."""
         from open_alaqs.core.interfaces.AircraftTrajectory import (
-            AircraftTrajectory,
-            AircraftTrajectoryPoint,
-        )
+            AircraftTrajectory, AircraftTrajectoryPoint)
 
         conn = _sqlite3.connect(db_path)
         try:

@@ -75,16 +75,11 @@ from typing import Optional
 
 # Reuse ISA constants, phase η_comp, altitude correction, and the atmosphere
 # helpers from V1 — they are spec-identical between versions.
-from open_alaqs.core.tools.meem_v1 import (
-    _N_MASS,
-    _N_NUMBER,
-    ISA,
-    PHASE_ETA_COMP,
-    _altitude_correction_factor,
-    combustor_inlet_conditions,
-    isa_conditions,
-    total_conditions,
-)
+from open_alaqs.core.tools.meem_v1 import (_N_MASS, _N_NUMBER, ISA,
+                                           PHASE_ETA_COMP,
+                                           _altitude_correction_factor,
+                                           combustor_inlet_conditions,
+                                           isa_conditions, total_conditions)
 
 logger = logging.getLogger(__name__)
 

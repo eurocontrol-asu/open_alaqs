@@ -25,19 +25,10 @@ from pathlib import Path
 from typing import Any, Optional
 
 import geopandas as gpd
-from qgis.core import (
-    Qgis,
-    QgsApplication,
-    QgsCoordinateTransform,
-    QgsExpression,
-    QgsFeatureRequest,
-    QgsMapLayer,
-    QgsProject,
-    QgsSettings,
-    QgsTextAnnotation,
-    QgsVectorLayer,
-    QgsVectorLayerUtils,
-)
+from qgis.core import (Qgis, QgsApplication, QgsCoordinateTransform,
+                       QgsExpression, QgsFeatureRequest, QgsMapLayer,
+                       QgsProject, QgsSettings, QgsTextAnnotation,
+                       QgsVectorLayer, QgsVectorLayerUtils)
 from qgis.core.additions.edit import edit
 from qgis.gui import QgsDoubleSpinBox, QgsFileWidget, QgsMessageBar
 from qgis.PyQt import QtCore, QtGui, QtWidgets
@@ -49,37 +40,25 @@ from qgis.utils import OverrideCursor
 from open_alaqs import openalaqsuitoolkit as oautk
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core import alaqs, alaqsutils
-from open_alaqs.core.alaqsdblite import (
-    ProjectDatabase,
-    delete_records,
-    get_min_max_timestamps,
-    is_output_db_file,
-)
+from open_alaqs.core.alaqsdblite import (ProjectDatabase, delete_records,
+                                         get_min_max_timestamps,
+                                         is_output_db_file)
 from open_alaqs.core.alaqslogging import get_logger, log_path
 from open_alaqs.core.EmissionCalculatorService import (
-    EmissionCalculationConfig,
-    EmissionCalculatorService,
-)
-from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
+    EmissionCalculationConfig, EmissionCalculatorService)
+from open_alaqs.core.modules.ModuleConfigurationWidget import \
+    ModuleConfigurationWidget
 from open_alaqs.core.modules.ModuleManager import (
-    DispersionModuleRegistry,
-    OutputAnalysisModuleRegistry,
-    SourceModuleRegistry,
-)
+    DispersionModuleRegistry, OutputAnalysisModuleRegistry,
+    SourceModuleRegistry)
 from open_alaqs.core.tools import ads_b, conversion
-from open_alaqs.core.tools.csv_interface import (
-    read_csv_to_dict,
-    read_csv_to_geodataframe,
-)
+from open_alaqs.core.tools.csv_interface import (read_csv_to_dict,
+                                                 read_csv_to_geodataframe)
 from open_alaqs.core.utils.osm import download_osm_airport_data
 from open_alaqs.core.utils.qt import populate_combobox
 from open_alaqs.enums import AlaqsLayerType
-from open_alaqs.ui.styles import (
-    STATUS_STYLE_ERROR,
-    STATUS_STYLE_INFO,
-    STATUS_STYLE_SUCCESS,
-    STATUS_STYLE_WARNING,
-)
+from open_alaqs.ui.styles import (STATUS_STYLE_ERROR, STATUS_STYLE_INFO,
+                                  STATUS_STYLE_SUCCESS, STATUS_STYLE_WARNING)
 
 logger = get_logger(__name__)
 
@@ -1949,7 +1928,8 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
         # loader demanded `(0-1)` and `(Pa)`), causing a "headers do not match"
         # popup on every CSV that satisfied the loader. Importing the constant
         # makes drift impossible.
-        from open_alaqs.core.interfaces.AmbientCondition import METEO_CSV_HEADERS
+        from open_alaqs.core.interfaces.AmbientCondition import \
+            METEO_CSV_HEADERS
 
         headers_ = METEO_CSV_HEADERS
 
@@ -2906,7 +2886,8 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
             # Build grid configuration from inventory DB if available,
             # falling back to sensible defaults if not yet configured.
-            from open_alaqs.core.tools.sql_interface import get_grid_3d_definition
+            from open_alaqs.core.tools.sql_interface import \
+                get_grid_3d_definition
 
             _gd = get_grid_3d_definition(inventory_path) or {}
             grid_config = {

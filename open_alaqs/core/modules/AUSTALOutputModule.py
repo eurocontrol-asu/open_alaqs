@@ -1,5 +1,4 @@
 import itertools
-import logging
 import os
 import re
 from collections import OrderedDict
@@ -11,13 +10,6 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from dateutil import rrule
-from pyproj import Transformer as _ProjTransformer
-from qgis.gui import QgsDoubleSpinBox, QgsSpinBox
-from qgis.PyQt import QtWidgets
-from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
-from shapely.ops import transform as _shapely_transform
-from shapely.validation import make_valid as _make_valid
-
 from open_alaqs.alaqs_config import DEFAULT_CONCENTRATION_GRID_FACTOR
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.AmbientCondition import AmbientCondition
@@ -27,6 +19,12 @@ from open_alaqs.core.interfaces.Movement import Movement
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.tools import conversion, spatial, sql_interface
 from open_alaqs.core.tools.Grid3D import Grid3D
+from pyproj import Transformer as _ProjTransformer
+from qgis.gui import QgsDoubleSpinBox, QgsSpinBox
+from qgis.PyQt import QtWidgets
+from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
+from shapely.ops import transform as _shapely_transform
+from shapely.validation import make_valid as _make_valid
 
 logger = get_logger(__name__)
 
@@ -919,8 +917,12 @@ class AUSTALDispersionModule(DispersionModule):
                 # grid to sit entirely inside the calc grid.
                 self._x_em_meshes = self._grid._x_cells
                 self._y_em_meshes = self._grid._y_cells
-                self._x_meshes = self._x_em_meshes + 2 * DEFAULT_CONCENTRATION_GRID_FACTOR
-                self._y_meshes = self._y_em_meshes + 2 * DEFAULT_CONCENTRATION_GRID_FACTOR
+                self._x_meshes = (
+                    self._x_em_meshes + 2 * DEFAULT_CONCENTRATION_GRID_FACTOR
+                )
+                self._y_meshes = (
+                    self._y_em_meshes + 2 * DEFAULT_CONCENTRATION_GRID_FACTOR
+                )
                 self._z_meshes = len(AUSTAL_DEFAULT_SK) - 1  # 19 levels
 
                 # AUSTAL cannot take non square grid cells, choose finer
@@ -990,12 +992,16 @@ class AUSTALDispersionModule(DispersionModule):
                 # mixed iq semantics.
                 # ----------------------------------------------------------
                 self._ti_grid_spec = None
-                self._ti_rates_per_source = {}    # source_id -> ndarray (n_hours, n_pollutants) g/s
-                self._ti_cell_weights = {}        # source_id -> CellWeights (cached, computed once)
+                self._ti_rates_per_source = (
+                    {}
+                )  # source_id -> ndarray (n_hours, n_pollutants) g/s
+                self._ti_cell_weights = (
+                    {}
+                )  # source_id -> CellWeights (cached, computed once)
                 self._ti_year_start = None
                 self._ti_n_hours_year = 0
                 self._ti_pollutant_order = []
-                self._ti_source_meta = {}         # source_id -> {height, type_label}
+                self._ti_source_meta = {}  # source_id -> {height, type_label}
                 self._ti_skipped_no_geometry = set()
 
                 from open_alaqs.core.tools.austal_helpers import AustalGridSpec
@@ -1026,9 +1032,12 @@ class AUSTALDispersionModule(DispersionModule):
                 self._ti_pollutant_order = list(self._pollutants_list or [])
                 logger.debug(
                     "AUSTAL time-indexed mode: grid %dx%dx%d dd=%g x0=%g y0=%g, pollutants=%s",
-                    self._ti_grid_spec.nx, self._ti_grid_spec.ny,
-                    self._ti_grid_spec.n_layers, self._ti_grid_spec.dd,
-                    self._ti_grid_spec.x0, self._ti_grid_spec.y0,
+                    self._ti_grid_spec.nx,
+                    self._ti_grid_spec.ny,
+                    self._ti_grid_spec.n_layers,
+                    self._ti_grid_spec.dd,
+                    self._ti_grid_spec.x0,
+                    self._ti_grid_spec.y0,
                     self._ti_pollutant_order,
                 )
 
@@ -1435,13 +1444,12 @@ class AUSTALDispersionModule(DispersionModule):
         if self._ti_year_start is None:
             year = start_dt.year
             from open_alaqs.core.tools.profiles_vec import hours_in_year
+
             self._ti_year_start = datetime(year, 1, 1, 0, 0, 0)
             self._ti_n_hours_year = hours_in_year(year)
             self._ti_first_start_dt = start_dt
 
-        h_idx = int(
-            (start_dt - self._ti_first_start_dt).total_seconds() // 3600
-        )
+        h_idx = int((start_dt - self._ti_first_start_dt).total_seconds() // 3600)
         if h_idx < 0 or h_idx >= self._ti_n_hours_year:
             # Out of the indexed window. Fall back to legacy for
             # everything in this period.
@@ -1459,9 +1467,7 @@ class AUSTALDispersionModule(DispersionModule):
             # Build the typed source_id. `<type>:<bare_id>` so the
             # later `aggregate_sources_by_type` groups by class.
             type_label = self._ti_type_label_for(source_)
-            bare_id = (
-                source_.getName() if hasattr(source_, "getName") else str(source_)
-            )
+            bare_id = source_.getName() if hasattr(source_, "getName") else str(source_)
             source_id = f"{type_label}:{bare_id}" if type_label else str(bare_id)
 
             # Lazy-allocate the rates ndarray for this source.
@@ -1470,12 +1476,17 @@ class AUSTALDispersionModule(DispersionModule):
                     (self._ti_n_hours_year, n_pol), dtype=np.float64
                 )
                 self._ti_source_meta[source_id] = {
-                    "height_m": float(getattr(source_, "getHeight", lambda: 0.0)() or 0.0),
+                    "height_m": float(
+                        getattr(source_, "getHeight", lambda: 0.0)() or 0.0
+                    ),
                     "type_label": type_label,
                 }
 
             # Cache cell weights once per source.
-            if source_id not in self._ti_cell_weights and source_id not in self._ti_skipped_no_geometry:
+            if (
+                source_id not in self._ti_cell_weights
+                and source_id not in self._ti_skipped_no_geometry
+            ):
                 wkt_geom = self._ti_pick_source_wkt(source_, emissions__)
                 if wkt_geom:
                     wkt_utm = self._transform_wkt_to_utm(wkt_geom)
@@ -1525,8 +1536,8 @@ class AUSTALDispersionModule(DispersionModule):
         return {
             "RoadwaySources": "road",
             "ParkingSources": "parking",
-            "PointSources":   "point",
-            "AreaSources":    "area",
+            "PointSources": "point",
+            "AreaSources": "area",
         }.get(cls_name, "")
 
     @staticmethod
@@ -1559,15 +1570,12 @@ class AUSTALDispersionModule(DispersionModule):
         Sources whose geometry was outside the grid (`_ti_skipped_no_geometry`)
         are excluded from both rates and weights.
         """
-        from open_alaqs.core.tools.austal_helpers import (
-            aggregate_sources_by_type,
-        )
+        from open_alaqs.core.tools.austal_helpers import aggregate_sources_by_type
 
         # Stable axis order: alphabetic by source_id. Skip those with no
         # cached weights — they had geometry outside the grid.
         source_ids = sorted(
-            sid for sid in self._ti_rates_per_source
-            if sid in self._ti_cell_weights
+            sid for sid in self._ti_rates_per_source if sid in self._ti_cell_weights
         )
         if not source_ids:
             n_pol = len(self._ti_pollutant_order)
@@ -1583,7 +1591,10 @@ class AUSTALDispersionModule(DispersionModule):
         return aggregate_sources_by_type(source_ids, cell_weights, rates_3d)
 
     def _ti_write_stationary_grids(
-        self, group_ids, group_weights, dir_offset: int,
+        self,
+        group_ids,
+        group_weights,
+        dir_offset: int,
     ):
         """Write one eNNNN.dmna per stationary group per simulated
         hour under <output>/<NN>/. Returns dict {group_id:
@@ -1602,9 +1613,12 @@ class AUSTALDispersionModule(DispersionModule):
         take dir_offset+1 .. dir_offset+K.
         """
         from datetime import datetime as _dt
+
         from open_alaqs.core.tools.austal_helpers import (
-            expand_to_dense, format_time_offset,
-            grid_file_header_lines, serialise_dense_kji,
+            expand_to_dense,
+            format_time_offset,
+            grid_file_header_lines,
+            serialise_dense_kji,
         )
 
         out_dir = self.getOutputPathAsPath()
@@ -1623,7 +1637,8 @@ class AUSTALDispersionModule(DispersionModule):
         dense_by_gid = {
             gid: serialise_dense_kji(
                 expand_to_dense(
-                    group_weights[gid], self._ti_grid_spec,
+                    group_weights[gid],
+                    self._ti_grid_spec,
                     source_offset_cells=0,
                 )
             )
@@ -1654,7 +1669,10 @@ class AUSTALDispersionModule(DispersionModule):
         return dir_map
 
     def writeInputFile(
-        self, group_ids, group_dir_map, group_rates,
+        self,
+        group_ids,
+        group_dir_map,
+        group_rates,
     ):
         """Hybrid austal.txt: legacy non-stationary AUSTAL sources
         (already in `self._total_sources`) keep their numbering 01..M;
@@ -1682,11 +1700,9 @@ class AUSTALDispersionModule(DispersionModule):
         # Per-pollutant active mask for stationary groups
         # (n_groups, n_pollutants): True where group total > 0.
         if group_rates.size > 0:
-            stat_mask = (group_rates.sum(axis=0) > 0)  # (n_groups, n_pol)
+            stat_mask = group_rates.sum(axis=0) > 0  # (n_groups, n_pol)
         else:
-            stat_mask = np.zeros(
-                (0, len(self._ti_pollutant_order)), dtype=bool
-            )
+            stat_mask = np.zeros((0, len(self._ti_pollutant_order)), dtype=bool)
 
         with file_path.open("w") as f:
             f.write("----------------- general parameters\n")
@@ -1707,13 +1723,16 @@ class AUSTALDispersionModule(DispersionModule):
                 "\t' lower border (m)\n"
             )
 
-            if (
-                len(self.xp_) == len(self.yp_) == len(self.zp_)
-                and len(self.xp_) > 0
-            ):
-                f.write("xp\t" + "\t".join(str(v) for v in self.xp_) + "\t' x-receptor\n")
-                f.write("yp\t" + "\t".join(str(v) for v in self.yp_) + "\t' y-receptor\n")
-                f.write("hp\t" + "\t".join(str(v) for v in self.zp_) + "\t' z-receptor\n")
+            if len(self.xp_) == len(self.yp_) == len(self.zp_) and len(self.xp_) > 0:
+                f.write(
+                    "xp\t" + "\t".join(str(v) for v in self.xp_) + "\t' x-receptor\n"
+                )
+                f.write(
+                    "yp\t" + "\t".join(str(v) for v in self.yp_) + "\t' y-receptor\n"
+                )
+                f.write(
+                    "hp\t" + "\t".join(str(v) for v in self.zp_) + "\t' z-receptor\n"
+                )
 
             f.write(f"nx\t{self._x_meshes}\t' number of meshes\n")
             f.write(f"ny\t{self._y_meshes}\t' number of meshes\n")
@@ -1723,11 +1742,13 @@ class AUSTALDispersionModule(DispersionModule):
                 f.write(f'os\t"{self._options}"\n')
 
             f.write(
-                "iq\t" + "\t".join(["?"] * n_total)
+                "iq\t"
+                + "\t".join(["?"] * n_total)
                 + "\t' file index (set in series.dmna)\n"
             )
             f.write(
-                "hq\t" + "\t".join([str(self._source_height)] * n_total)
+                "hq\t"
+                + "\t".join([str(self._source_height)] * n_total)
                 + "\t' source height (ignored)\n"
             )
             f.write("xq\t" + "\t".join([str(xq)] * n_total) + "\t' x-lower left\n")
@@ -1748,9 +1769,7 @@ class AUSTALDispersionModule(DispersionModule):
                 ]
                 # Stationary groups: present iff stat_mask[g, p] is True
                 stat_marks = [
-                    "?" if (
-                        stat_mask.size and stat_mask[g_idx, p_idx]
-                    ) else "0"
+                    "?" if (stat_mask.size and stat_mask[g_idx, p_idx]) else "0"
                     for g_idx in range(len(group_ids))
                 ]
                 f.write(
@@ -1760,7 +1779,10 @@ class AUSTALDispersionModule(DispersionModule):
                 )
 
     def writeTimeSeriesFile(
-        self, group_ids, group_dir_map, group_rates,
+        self,
+        group_ids,
+        group_dir_map,
+        group_rates,
     ):
         """Hybrid series.dmna.
 
@@ -1780,7 +1802,6 @@ class AUSTALDispersionModule(DispersionModule):
         `buff\\t1000000` is added to the header so AUSTAL's DMNA reader
         accepts the long form line that hybrid runs generate.
         """
-        from open_alaqs.core.tools.austal_helpers import iq_value_for_hour
 
         file_path = self.getOutputPathAsPath() / "series.dmna"
         if file_path.exists():
@@ -1796,24 +1817,20 @@ class AUSTALDispersionModule(DispersionModule):
         # `slot_meta[i]` = (kind, key_or_gid, dir_label_str)
         slot_meta = []
         for k in legacy_keys:
-            slot_meta.append(("legacy", k, k))   # k is already "01" etc.
+            slot_meta.append(("legacy", k, k))  # k is already "01" etc.
         for gid in group_ids:
-            slot_meta.append(
-                ("stationary", gid, f"{group_dir_map[gid]:02d}")
-            )
+            slot_meta.append(("stationary", gid, f"{group_dir_map[gid]:02d}"))
 
         # Active (slot, pollutant) emitters: stationary slots emit
         # pollutant p iff group_rates[:, g_idx, p_idx].sum() > 0;
         # legacy slots emit pollutant p iff p (austal short name) in
         # _total_sources[<NN>].
         if group_rates.size > 0:
-            stat_active = (group_rates.sum(axis=0) > 0)
+            stat_active = group_rates.sum(axis=0) > 0
         else:
-            stat_active = np.zeros(
-                (0, len(self._ti_pollutant_order)), dtype=bool
-            )
+            stat_active = np.zeros((0, len(self._ti_pollutant_order)), dtype=bool)
 
-        active_pairs = []   # list of (slot_idx, pol_idx, kind)
+        active_pairs = []  # list of (slot_idx, pol_idx, kind)
         for slot_idx, (kind, key, _label) in enumerate(slot_meta):
             for p_idx, poll in enumerate(self._pollutants_list):
                 austal_name = poll
@@ -1916,7 +1933,9 @@ class AUSTALDispersionModule(DispersionModule):
 
         try:
             dir_map = self._ti_write_stationary_grids(
-                group_ids, group_weights, dir_offset=n_legacy,
+                group_ids,
+                group_weights,
+                dir_offset=n_legacy,
             )
         except Exception as e:
             logger.error("AUSTAL: cannot write stationary grid files: %s", e)
@@ -1938,7 +1957,8 @@ class AUSTALDispersionModule(DispersionModule):
 
         logger.info(
             "AUSTAL time-indexed: %d stationary group(s) + %d non-stationary slot(s) written",
-            len(group_ids), n_legacy,
+            len(group_ids),
+            n_legacy,
         )
         return True
 

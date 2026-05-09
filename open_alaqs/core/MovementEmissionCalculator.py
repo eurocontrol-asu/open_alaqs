@@ -12,21 +12,14 @@ from shapely.wkt import loads
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft
 from open_alaqs.core.interfaces.AircraftTrajectory import (
-    AircraftTrajectoryPoint,
-    TrajectoryPoint,
-)
-from open_alaqs.core.interfaces.Emissions import (
-    Emission,
-    EmissionIndex,
-    PollutantType,
-    PollutantUnit,
-)
+    AircraftTrajectoryPoint, TrajectoryPoint)
+from open_alaqs.core.interfaces.Emissions import (Emission, EmissionIndex,
+                                                  PollutantType, PollutantUnit)
 from open_alaqs.core.interfaces.Engine import Engine
 from open_alaqs.core.interfaces.Movement import Movement, defaultEmissions
 from open_alaqs.core.tools import conversion, spatial
-from open_alaqs.core.tools.nox_correction_ambient import (
-    nox_correction_for_ambient_conditions,
-)
+from open_alaqs.core.tools.nox_correction_ambient import \
+    nox_correction_for_ambient_conditions
 
 logger = get_logger(__name__)
 
@@ -280,7 +273,8 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                         _v = mode_ei_.getObject(_field)
                         if _v is not None:
                             emission_index_.setObject(_field, _v)
-                    from open_alaqs.core.interfaces.Emissions import PollutantType
+                    from open_alaqs.core.interfaces.Emissions import \
+                        PollutantType
 
                     emission_index_.setObject(
                         "sox_g_kg",

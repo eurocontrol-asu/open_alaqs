@@ -7,18 +7,10 @@ import shapely.geometry
 import shapely.ops
 import shapely.wkt
 from geographiclib.geodesic import Geodesic
-from qgis.core import (
-    QgsClipper,
-    QgsCoordinateReferenceSystem,
-    QgsCoordinateTransform,
-    QgsDistanceArea,
-    QgsGeometry,
-    QgsLineString,
-    QgsPoint,
-    QgsPointXY,
-    QgsProject,
-    QgsRectangle,
-)
+from qgis.core import (QgsClipper, QgsCoordinateReferenceSystem,
+                       QgsCoordinateTransform, QgsDistanceArea, QgsGeometry,
+                       QgsLineString, QgsPoint, QgsPointXY, QgsProject,
+                       QgsRectangle)
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.AircraftTrajectory import TrajectoryPoint

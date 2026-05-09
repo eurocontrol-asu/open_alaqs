@@ -2,9 +2,7 @@ import sys
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.modules.ModuleConfigurationWidget import (
-    ModuleConfigurationWidget,
-    SettingsSchema,
-)
+    ModuleConfigurationWidget, SettingsSchema)
 
 sys.path.append("..")  # Adds higher directory to python modules path.
 logger = get_logger(__name__)

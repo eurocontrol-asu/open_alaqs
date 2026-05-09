@@ -94,9 +94,7 @@ class RoadwaySourceWithTimeProfileModule(SourceWithTimeProfileModule):
             # EmissionCalculation didn't populate it (legacy path or
             # non-1h time interval). The two values are element-wise
             # equal by construction of getHourlyActivityVector.
-            activity_multiplier = self._try_get_per_hour_activity(
-                source_id, start_dt
-            )
+            activity_multiplier = self._try_get_per_hour_activity(source_id, start_dt)
             if activity_multiplier is None:
                 activity_multiplier = self.getRelativeActivityPerHour(
                     start_dt,

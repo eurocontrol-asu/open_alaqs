@@ -7,10 +7,13 @@ from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import QMetaType
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
-from open_alaqs.core.interfaces.OutputModule import GridOutputModule, OutputModule
+from open_alaqs.core.interfaces.Emissions import (Emission, PollutantType,
+                                                  PollutantUnit)
+from open_alaqs.core.interfaces.OutputModule import (GridOutputModule,
+                                                     OutputModule)
 from open_alaqs.core.interfaces.Source import Source
-from open_alaqs.core.plotting.ContourPlotVectorLayer import ContourPlotVectorLayer
+from open_alaqs.core.plotting.ContourPlotVectorLayer import \
+    ContourPlotVectorLayer
 from open_alaqs.core.tools import Grid3D
 
 pd.set_option("chained_assignment", None)

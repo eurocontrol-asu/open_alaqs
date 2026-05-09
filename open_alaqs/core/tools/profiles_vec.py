@@ -41,7 +41,9 @@ This module is plugin-internal. It does not run SQL: profile data is
 read from the already-populated `User{Hour,Day,Month}ProfileStore`
 Singletons that EmissionCalculation initialises during construction.
 """
+
 from __future__ import annotations
+
 import calendar
 from dataclasses import dataclass
 from datetime import datetime
@@ -55,8 +57,18 @@ import pandas as pd
 # UserMonthProfile internally; see UserTimeProfiles.py).
 _WEEKDAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 _MONTH_KEYS = (
-    "jan", "feb", "mar", "apr", "may", "jun",
-    "jul", "aug", "sep", "oct", "nov", "dec",
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "may",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "oct",
+    "nov",
+    "dec",
 )
 
 __all__ = [
@@ -77,6 +89,7 @@ class ProfileSet:
     daily:   name -> shape  (7,)  array, Mon=0 .. Sun=6
     monthly: name -> shape (12,)  array, Jan=0 .. Dec=11
     """
+
     hourly: Dict[str, np.ndarray]
     daily: Dict[str, np.ndarray]
     monthly: Dict[str, np.ndarray]
@@ -89,7 +102,9 @@ def hours_in_year(year: int) -> int:
 
 
 def build_profile_set(
-    hour_store, day_store, month_store,
+    hour_store,
+    day_store,
+    month_store,
 ) -> ProfileSet:
     """Build a ProfileSet from the plugin's already-populated Singleton
     stores.

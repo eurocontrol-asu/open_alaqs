@@ -9,12 +9,14 @@ import pandas as pd
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtWidgets import QTableWidgetItem
 from qgis.PyQt.uic import loadUiType
-from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
+from shapely.geometry import (LineString, MultiLineString, MultiPolygon, Point,
+                              Polygon)
 from shapely.strtree import STRtree
 from shapely.validation import make_valid
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, PollutantUnit
+from open_alaqs.core.interfaces.Emissions import (Emission, PollutantType,
+                                                  PollutantUnit)
 from open_alaqs.core.interfaces.Movement import Movement
 from open_alaqs.core.interfaces.OutputModule import GridOutputModule
 from open_alaqs.core.interfaces.Source import Source
