@@ -140,6 +140,10 @@ The CSV must have a header row with columns: `x_cells`, `y_cells`, `z_cells`, `x
 
 Boolean keys accept (case-insensitive): `True`, `1`, `yes` for true; anything else is treated as false.
 
+### Receptors (not supported by this script)
+
+The QGIS plugin (v5.1.1+) supports receptor points and writes per-receptor `<substance>-tmpa.dmna` files when AUSTAL is run with both receptors and NOTALUFT. **The standalone script does not currently expose this feature** and runs AUSTAL with grid-only output. As a result, the `Plot Time Series` and `Compliance Report` views in the plugin will not have data to read for runs produced by this script. Receptor support in the standalone script is planned for a future release. If you need per-receptor results for an external emissions CSV, drive the run from the QGIS plugin (the **Generate AUSTAL Input Files from CSV** input mode also exposes a Receptors CSV picker).
+
 ---
 
 ## Input CSV Formats
