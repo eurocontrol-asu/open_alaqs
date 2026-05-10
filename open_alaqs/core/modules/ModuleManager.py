@@ -6,6 +6,9 @@ from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.interfaces.SourceModule import SourceModule
 from open_alaqs.core.modules.AreaSourceModule import AreaSourceWithTimeProfileModule
 from open_alaqs.core.modules.AUSTALOutputModule import AUSTALDispersionModule
+from open_alaqs.core.modules.ComplianceReportOutputModule import (
+    ComplianceReportDispersionModule,
+)
 from open_alaqs.core.modules.ConcentrationsQGISVectorLayerOutputModule import (
     QGISVectorLayerDispersionModule,
 )
@@ -115,6 +118,7 @@ output_dispersion_module_registry = OutputDispersionModuleRegistry()
 output_dispersion_module_registry.register(QGISVectorLayerDispersionModule)
 output_dispersion_module_registry.register(TableViewDispersionModule)
 output_dispersion_module_registry.register(TimeSeriesDispersionModule)
+output_dispersion_module_registry.register(ComplianceReportDispersionModule)
 
 dispersion_module_registry = DispersionModuleRegistry()
 dispersion_module_registry.register(AUSTALDispersionModule)

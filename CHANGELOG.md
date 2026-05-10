@@ -4,6 +4,15 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
+## [5.1.1] - 2026-05-10
+
+Hotfix release from EHRD (Rotterdam) integration testing. Adds per-receptor compliance evaluation against EU Directive 2024/2881 (binding from 1 January 2030) and fixes several AUSTAL writer/reader correctness issues, plus UX improvements around result-button gating and error reporting.
+
+### Added
+
+- New `ComplianceReportOutputModule`. Reads `<substance>-tmpa.dmna` files from the AUSTAL work directory and produces a per-receptor PASS/FAIL table against EU Directive 2024/2881 limit values applicable from 1 January 2030. Reportable substances: PM10, PM2.5, NO2, NOx (ecosystem), SO2. Threshold values verified against the official directive (Annex I, Section 1) and the EEA Air Quality Status Report 2025. CSV export available. CO/HC/CO2 are explicitly excluded with an explanatory note in the dialog header.
+- Receptor CSV picker in both ALAQS and "Generate from CSV" input modes. ALAQS mode uses a 3-tier priority chain: CSV -> `shapes_receptor_points` table in the .alaqs database (filtered to `instudy != 'N'`) -> empty. CSV mode uses the receptor CSV picker only.
+- NOTALUFT (per-hour series) checkbox on the Output Mode row. Required to produce per-receptor `-tmpa.dmna` files that the new Compliance Report and rewritten Plot Time
 ## [5.1.0] - 2026-05-09
 
 Performance and correctness refactor of the calculation and AUSTAL

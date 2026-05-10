@@ -170,6 +170,19 @@ class AUSTALDispersionModule(DispersionModule):
                 os.mkdir(self._output_path)
 
         self._sequ = "k+,j-,i+"
+        # AUSTAL `hq` value (per-source release height). The reference
+        # treats this as "ignored" because the actual release height is
+        # implicit in the per-source grid file's vertical distribution,
+        # but austal.txt still needs a value written. process() updates
+        # this from each source's getHeight() when it loops over
+        # non-stationary sources; with all sources stationary the loop
+        # is empty, so initialise here to keep writeInputFile safe.
+        self._source_height = 0.0
+        # Tracks which (slot_id, timeID) pairs got a writeGridFile call
+        # in process(). Used by _ti_fill_legacy_zero_hours to back-fill
+        # missing zero-hour files for non-stationary slots that survive
+        # the empty-slot drop.
+        self._gridfile_written = {}
         self._grid: Grid3D = values_dict.get("grid", None)
 
         self._pollutants_list = values_dict.get("pollutants_list")
@@ -194,6 +207,20 @@ class AUSTALDispersionModule(DispersionModule):
         self._quality_level = values_dict.get("quality_level", 1)
         # for non-standard calculations
         self._options = values_dict.get("options_string", "SCINOTAT")
+
+        # PM10 component split. AUSTAL has no single emission name for
+        # PM10 — it must be split into pm-1 (< 2.5 um, the PM2.5 fraction)
+        # and pm-2 (2.5-10 um, coarse fraction). The TA Luft concentration
+        # output (pm-y00a.dmna) is the sum of components 1+2.
+        # Default 0.9 fine / 0.1 coarse is appropriate for combustion-
+        # exhaust dominated inventories (aircraft, GSE, road exhaust);
+        # raise toward 0.95+ for pure aircraft exhaust, lower toward 0.5
+        # for non-exhaust dominated (tyre/brake/road wear).
+        try:
+            ff = float(values_dict.get("pm10_fine_fraction", 0.9))
+        except (TypeError, ValueError):
+            ff = 0.9
+        self._pm10_fine_fraction = max(0.0, min(1.0, ff))
 
         # "----------------- meteorology",
         # ToDo: Modify AmbientCondition.py or derive z0, d0, and ha from main
@@ -1225,10 +1252,11 @@ class AUSTALDispersionModule(DispersionModule):
             # Create the source id
             source_id = str(source_counter).zfill(2)
 
-            # Create the source directory if it doesn't exist
-            source_dir = output_path / source_id
-            if not source_dir.is_dir():
-                source_dir.mkdir()
+            # NOTE: source dir is created lazily (only when this hour
+            # has non-zero emissions for this pollutant). Empty slots
+            # never get a directory; surviving slots have any missing
+            # zero-hour files back-filled by _ti_fill_legacy_zero_hours
+            # at endJob time.
 
             # Initialise the matrix for each pollutant
             self.InitializeEmissionGridMatrix()
@@ -1362,23 +1390,48 @@ class AUSTALDispersionModule(DispersionModule):
 
             self._results[_end_time_string].update(fill_results)
 
-            # Start writing to file
-            try:
-                self.writeGridFile(
-                    source_id,
-                    self._timeID_per_source[source_id],
-                    dd_,
-                    sk_,
-                    '"text"',
-                    '"Eq%5.1f"',
-                    '"V"',
-                    '"M"',
-                    3,
-                    '"xyz"',
+            # Skip writeGridFile when this hour contributes zero for
+            # this pollutant. If the slot ends up with non-zero emissions
+            # in some other hour, _ti_fill_legacy_zero_hours back-fills
+            # the missing eXXXX.dmna at endJob using the spec captured
+            # in self._gridfile_spec. If the slot has zero across the
+            # entire run, _ti_drop_empty_legacy_slots removes it without
+            # ever creating the directory.
+            if hashed_emissions > 0:
+                # Capture the spec the first time we have a real write,
+                # so we can replay it later for missing zero-hours.
+                if not hasattr(self, "_gridfile_spec"):
+                    self._gridfile_spec = (
+                        dd_,
+                        sk_,
+                        '"text"',
+                        '"Eq%5.1f"',
+                        '"V"',
+                        '"M"',
+                        3,
+                        '"xyz"',
+                    )
+                source_dir = output_path / source_id
+                if not source_dir.is_dir():
+                    source_dir.mkdir()
+                self._gridfile_written.setdefault(source_id, set()).add(
+                    self._timeID_per_source[source_id]
                 )
-
-            except Exception as exc_:
-                logger.error(exc_)
+                try:
+                    self.writeGridFile(
+                        source_id,
+                        self._timeID_per_source[source_id],
+                        dd_,
+                        sk_,
+                        '"text"',
+                        '"Eq%5.1f"',
+                        '"V"',
+                        '"M"',
+                        3,
+                        '"xyz"',
+                    )
+                except Exception as exc_:
+                    logger.error(exc_)
 
     @log_time
     def endJob(self):
@@ -1597,17 +1650,15 @@ class AUSTALDispersionModule(DispersionModule):
         group_weights,
         dir_offset: int,
     ):
-        """Write one eNNNN.dmna per stationary group per simulated
-        hour under <output>/<NN>/. Returns dict {group_id:
-        dir_index_1based}.
+        """Write one e0001.dmna per stationary group under <output>/<NN>/.
+        Returns dict {group_id: dir_index_1based}.
 
-        Each hour's file contains the same time-invariant spatial
-        pattern; only t1/t2 differ. AUSTAL 3.3 rejects single-file
-        multi-day t1/t2 windows ("current grid source not valid after
-        ..."), so we mirror the legacy per-hour layout. The iq column
-        in series.dmna for stationary slots therefore counts h_idx+1
-        from 1..n_hours (set by writeTimeSeriesFile), pointing at
-        eNNNN.dmna identical to legacy non-stationary indexing.
+        Each grid file declares t1 = run_start, t2 = run_end. The spatial
+        pattern is time-invariant (stationary geometry), so a single file
+        per group suffices for the whole simulation window. AUSTAL accepts
+        this layout; series.dmna's iq column for stationary slots is
+        constant 1 (set by writeTimeSeriesFile), pointing every hour at
+        the same e0001.dmna.
 
         `dir_offset` is the number of non-stationary AUSTAL sources
         already occupying low-numbered directories; stationary groups
@@ -1654,20 +1705,68 @@ class AUSTALDispersionModule(DispersionModule):
             body_lines = dense_by_gid[gid]
             dir_map[gid] = dir_idx
 
-            for h_idx, dt_str in enumerate(sorted_dts, start=1):
-                end_dt = _dt.strptime(dt_str, "%Y-%m-%d.%H:%M:%S")
-                start_dt = end_dt - timedelta(hours=1)
-                ys = _dt(start_dt.year, 1, 1)
-                t1 = format_time_offset(start_dt, ys)
-                t2 = format_time_offset(end_dt, ys)
-                header = grid_file_header_lines(t1, t2, self._ti_grid_spec)
+            # Write a single e0001.dmna per stationary group covering the
+            # full simulation window. Stationary geometry is time-invariant
+            # so 24 (or 8760) byte-identical per-hour files would only
+            # differ in their t1/t2 header lines. AUSTAL accepts a single
+            # grid file whose t2 covers the whole run; series.dmna then
+            # points every hour's iq at index 1 for that source slot.
+            first_end_dt = _dt.strptime(sorted_dts[0], "%Y-%m-%d.%H:%M:%S")
+            last_end_dt = _dt.strptime(sorted_dts[-1], "%Y-%m-%d.%H:%M:%S")
+            run_start = first_end_dt - timedelta(hours=1)
+            ys = _dt(run_start.year, 1, 1)
+            t1 = format_time_offset(run_start, ys)
+            t2 = format_time_offset(last_end_dt, ys)
+            header = grid_file_header_lines(t1, t2, self._ti_grid_spec)
 
-                file_path = src_dir / f"e{h_idx:04d}.dmna"
-                with file_path.open("w", newline="\n") as fh:
-                    fh.write("\n".join(header) + "\n")
-                    fh.write("\n".join(body_lines) + "\n")
-                    fh.write("***\n")
+            file_path = src_dir / "e0001.dmna"
+            with file_path.open("w", newline="\n") as fh:
+                fh.write("\n".join(header) + "\n")
+                fh.write("\n".join(body_lines) + "\n")
+                fh.write("***\n")
         return dir_map
+
+    def _austal_components(self, plugin_pollutant):
+        """Map a plugin pollutant name to AUSTAL emission-line components.
+
+        Returns a list of (austal_component_name, fraction) tuples to
+        be written as separate emission lines / time-series columns.
+
+        - PM10 splits into pm-1 (fine) + pm-2 (coarse), per AUSTAL's
+          requirement (no single 'pm' emission line; pm-y00a.dmna is
+          built by AUSTAL summing components 0..2). Fine fraction comes
+          from self._pm10_fine_fraction (default 0.9).
+        - PM2.5 maps to a single pm-1 line.
+        - All other pollutants map to a single component (the lowercase
+          plugin name) with fraction 1.0.
+
+        Components with a fraction of zero are dropped to avoid emitting
+        all-zero lines/columns.
+        """
+        p = plugin_pollutant.upper()
+        if p == "PM10":
+            fine = self._pm10_fine_fraction
+            coarse = 1.0 - fine
+            out = []
+            if fine > 0.0:
+                out.append(("pm-1", fine))
+            if coarse > 0.0:
+                out.append(("pm-2", coarse))
+            return out or [("pm-1", 1.0)]
+        if p in ("PM25", "PM2.5", "PM-2.5"):
+            return [("pm25", 1.0)]
+        return [(plugin_pollutant.lower(), 1.0)]
+
+    def _legacy_storage_key(self, plugin_pollutant):
+        """Match the key process() used in self._total_sources / _results.
+
+        process() stores PM10 emissions under the key 'PM-2' and other
+        PM under 'PM-1'. The writers use these keys to look up rates
+        even though they then expand the writes into multiple components.
+        """
+        if plugin_pollutant.startswith("PM"):
+            return "PM-2" if plugin_pollutant == "PM10" else "PM-1"
+        return plugin_pollutant
 
     def writeInputFile(
         self,
@@ -1755,17 +1854,21 @@ class AUSTALDispersionModule(DispersionModule):
             f.write("xq\t" + "\t".join([str(xq)] * n_total) + "\t' x-lower left\n")
             f.write("yq\t" + "\t".join([str(yq)] * n_total) + "\t' y-lower left\n")
 
-            # Per-pollutant lines
+            # Per-pollutant lines.
+            # PM10 expands into two AUSTAL component lines (pm-1 + pm-2)
+            # because AUSTAL has no single 'pm' emission name. Other
+            # pollutants emit one line each. The legacy_marks / stat_marks
+            # are determined by the plugin pollutant (a column emits PM10
+            # iff it emits any PM10 mass), and shared across both component
+            # lines for that pollutant.
             for p_idx, poll in enumerate(self._pollutants_list):
-                # Map plugin name to AUSTAL short code
-                austal_name = poll
-                if poll.startswith("PM"):
-                    austal_name = "PM-2" if poll == "PM10" else "PM-1"
+                storage_key = self._legacy_storage_key(poll)
+                components = self._austal_components(poll)
 
                 # Legacy non-stationary entries: present iff
-                # _total_sources[<NN>] contains this pollutant abbrev.
+                # _total_sources[<NN>] contains this pollutant's storage key.
                 legacy_marks = [
-                    "?" if austal_name in self._total_sources[k] else "0"
+                    "?" if storage_key in self._total_sources[k] else "0"
                     for k in legacy_keys
                 ]
                 # Stationary groups: present iff stat_mask[g, p] is True
@@ -1773,11 +1876,20 @@ class AUSTALDispersionModule(DispersionModule):
                     "?" if (stat_mask.size and stat_mask[g_idx, p_idx]) else "0"
                     for g_idx in range(len(group_ids))
                 ]
-                f.write(
-                    f"{austal_name.lower()}\t"
-                    + "\t".join(legacy_marks + stat_marks)
-                    + f"\t' total {poll} (in g/s) (set in series.dmna)\n"
-                )
+
+                for comp_name, frac in components:
+                    if len(components) == 1:
+                        comment = f"' total {poll} (in g/s) (set in series.dmna)"
+                    else:
+                        comment = (
+                            f"' {poll} component {comp_name} "
+                            f"(fraction {frac:.2f}) (set in series.dmna)"
+                        )
+                    f.write(
+                        f"{comp_name}\t"
+                        + "\t".join(legacy_marks + stat_marks)
+                        + f"\t{comment}\n"
+                    )
 
     def writeTimeSeriesFile(
         self,
@@ -1831,19 +1943,25 @@ class AUSTALDispersionModule(DispersionModule):
         else:
             stat_active = np.zeros((0, len(self._ti_pollutant_order)), dtype=bool)
 
-        active_pairs = []  # list of (slot_idx, pol_idx, kind)
+        # Active emission columns: each entry is (slot_idx, p_idx, kind,
+        # austal_component, fraction). PM10 expands into two columns
+        # (pm-1 with fine fraction, pm-2 with coarse fraction). Other
+        # pollutants get a single column with fraction 1.0.
+        active_pairs = []
         for slot_idx, (kind, key, _label) in enumerate(slot_meta):
             for p_idx, poll in enumerate(self._pollutants_list):
-                austal_name = poll
-                if poll.startswith("PM"):
-                    austal_name = "PM-2" if poll == "PM10" else "PM-1"
+                storage_key = self._legacy_storage_key(poll)
+                # Determine if this slot emits this pollutant at all.
                 if kind == "legacy":
-                    if austal_name in self._total_sources[key]:
-                        active_pairs.append((slot_idx, p_idx, "legacy"))
+                    if storage_key not in self._total_sources[key]:
+                        continue
                 else:
                     g_idx = group_ids.index(key)
-                    if stat_active.size and stat_active[g_idx, p_idx]:
-                        active_pairs.append((slot_idx, p_idx, "stationary"))
+                    if not (stat_active.size and stat_active[g_idx, p_idx]):
+                        continue
+                # Slot emits the pollutant: add one column per component.
+                for comp_name, frac in self._austal_components(poll):
+                    active_pairs.append((slot_idx, p_idx, kind, comp_name, frac))
 
         # Build form line
         form_parts = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"']
@@ -1851,13 +1969,9 @@ class AUSTALDispersionModule(DispersionModule):
             form_parts.append('"hm%7.1f"')
         for kind, _key, label in slot_meta:
             form_parts.append(f'"{label}.iq%3.0f"')
-        for slot_idx, p_idx, _kind in active_pairs:
+        for slot_idx, p_idx, _kind, comp_name, _frac in active_pairs:
             label = slot_meta[slot_idx][2]
-            poll = self._pollutants_list[p_idx]
-            austal_name = poll
-            if poll.startswith("PM"):
-                austal_name = "PM-2" if poll == "PM10" else "PM-1"
-            form_parts.append(f'"{label}.{austal_name.lower()}%10.3e"')
+            form_parts.append(f'"{label}.{comp_name}%10.3e"')
 
         with file_path.open("w") as f:
             f.write("form\t" + "\t".join(form_parts) + "\n")
@@ -1885,39 +1999,157 @@ class AUSTALDispersionModule(DispersionModule):
                         td = sorted_results[dt_str].get(key, {}).get("timeID", 1)
                         row_parts.append(f"{td:3d}")
                     else:
-                        # Stationary slots now also have one e????.dmna
-                        # per hour (identical content), so iq counts
-                        # h_idx+1 from 1..n_hours, matching the legacy
-                        # per-hour layout. AUSTAL 3.3 rejects multi-day
-                        # single-file validity windows; this preserves
-                        # correctness at the cost of the file-count
-                        # optimisation.
-                        row_parts.append(f"{h_idx + 1:3d}")
+                        # Stationary groups have a single e0001.dmna per
+                        # group covering the whole simulation window;
+                        # every hour points iq at file index 1.
+                        row_parts.append(f"{1:3d}")
 
                 # Emission columns. group_rates is indexed run-relative
                 # (h_idx 0 == first start_dt seen by
                 # _ti_split_and_accumulate), matching the loop's
-                # enumerate index.
-                for slot_idx, p_idx, kind in active_pairs:
+                # enumerate index. For PM10 each (slot, p_idx) pair
+                # contributes TWO columns (pm-1, pm-2) with the total
+                # rate multiplied by each component's fraction.
+                for slot_idx, p_idx, kind, _comp_name, frac in active_pairs:
                     if kind == "legacy":
                         key = slot_meta[slot_idx][1]
                         poll = self._pollutants_list[p_idx]
-                        austal_name = poll
-                        if poll.startswith("PM"):
-                            austal_name = "PM-2" if poll == "PM10" else "PM-1"
-                        val = sorted_results[dt_str].get(key, {}).get(austal_name, 0.0)
+                        storage_key = self._legacy_storage_key(poll)
+                        total = (
+                            sorted_results[dt_str].get(key, {}).get(storage_key, 0.0)
+                        )
                     else:
                         gid = slot_meta[slot_idx][1]
                         g_idx = group_ids.index(gid)
                         if 0 <= h_idx < group_rates.shape[0]:
-                            val = float(group_rates[h_idx, g_idx, p_idx])
+                            total = float(group_rates[h_idx, g_idx, p_idx])
                         else:
-                            val = 0.0
+                            total = 0.0
+                    val = total * frac
                     row_parts.append(f"{val:10.3e}")
 
                 f.write("\t".join(row_parts) + "\n")
 
             f.write("\n***\n")
+
+    def _ti_drop_empty_legacy_slots(self):
+        """Remove legacy non-stationary slots that had zero emissions
+        across the entire run. process() unconditionally allocates one
+        slot per pollutant in _pollutants_list and writes per-hour grid
+        files for it, even when no non-stationary source emits that
+        pollutant. The result is empty <NN>/eXXXX.dmna files cluttering
+        the output and a phantom column in austal.txt / series.dmna.
+
+        For each slot key in self._total_sources, scan self._results
+        across all hours: drop any (slot, pollutant) pair whose rate is
+        zero in every hour. If a slot ends up with no pollutants, delete
+        the slot entry and its on-disk directory (including the per-hour
+        grid files written by process()).
+        """
+        if not self._total_sources:
+            return
+
+        out_dir = self.getOutputPathAsPath()
+        for slot_id in list(self._total_sources.keys()):
+            keep_pollutants = []
+            for austal_name in list(self._total_sources[slot_id]):
+                any_nonzero = False
+                for dt_str in self._results:
+                    rate = self._results[dt_str].get(slot_id, {}).get(austal_name, 0.0)
+                    if rate != 0.0:
+                        any_nonzero = True
+                        break
+                if any_nonzero:
+                    keep_pollutants.append(austal_name)
+
+            if keep_pollutants:
+                self._total_sources[slot_id] = keep_pollutants
+                continue
+
+            # Slot is dead: drop from _total_sources, strip from per-hour
+            # _results, and delete the slot directory if it exists.
+            del self._total_sources[slot_id]
+            for dt_str in self._results:
+                self._results[dt_str].pop(slot_id, None)
+            slot_dir = out_dir / slot_id
+            if slot_dir.is_dir():
+                for child in slot_dir.iterdir():
+                    try:
+                        child.unlink()
+                    except OSError:
+                        pass
+                try:
+                    slot_dir.rmdir()
+                except OSError:
+                    pass
+            logger.info(
+                "AUSTAL: dropped empty legacy slot '%s' (no non-stationary "
+                "emissions across run)",
+                slot_id,
+            )
+
+    def _ti_fill_legacy_zero_hours(self):
+        """For each surviving non-stationary slot, write a zero-filled
+        eXXXX.dmna for any hour skipped by process() (because that hour
+        had hashed_emissions == 0). AUSTAL's series.dmna iq column points
+        to a file per hour, so missing hours would crash AUSTAL.
+
+        Slots that didn't survive _ti_drop_empty_legacy_slots have no
+        files and no directory; skip them. Slots that had non-zero
+        emissions in every hour have all files already and no work to do
+        here. Only mixed-case slots (some zero hours, some non-zero) get
+        back-filled.
+        """
+        if not self._total_sources:
+            return
+        if not hasattr(self, "_gridfile_spec"):
+            # No non-stationary slot ever had non-zero emissions; nothing
+            # to back-fill (the surviving slots are all stationary, which
+            # are written separately by _ti_write_stationary_grids).
+            return
+
+        n_hours = len(self._results)
+        if n_hours == 0:
+            return
+
+        dd_, sk_, mode, form, vldf, artp, dims, axes = self._gridfile_spec
+
+        for slot_id in self._total_sources:
+            written = self._gridfile_written.get(slot_id, set())
+            if not written:
+                continue
+            missing = set(range(1, n_hours + 1)) - written
+            if not missing:
+                continue
+            logger.info(
+                "AUSTAL: back-filling %d zero-hour grid file(s) for "
+                "legacy slot '%s'",
+                len(missing),
+                slot_id,
+            )
+            self.InitializeEmissionGridMatrix()  # zeroes _emission_grid_matrix
+            for time_id in sorted(missing):
+                try:
+                    self.writeGridFile(
+                        slot_id,
+                        time_id,
+                        dd_,
+                        sk_,
+                        mode,
+                        form,
+                        vldf,
+                        artp,
+                        dims,
+                        axes,
+                    )
+                except Exception as exc_:
+                    logger.error(
+                        "AUSTAL: cannot back-fill zero-hour file for "
+                        "slot '%s' time_id %d: %s",
+                        slot_id,
+                        time_id,
+                        exc_,
+                    )
 
     @log_time
     def _ti_endJob(self):
@@ -1928,6 +2160,17 @@ class AUSTALDispersionModule(DispersionModule):
         """
         if not self.checkTimeIntervalinResults():
             raise Exception("AUSTAL: Time Interval Error")
+
+        # Drop legacy slots that ended up with zero emissions across the
+        # entire run. process() unconditionally allocates one slot per
+        # pollutant in _pollutants_list and writes per-hour grid files
+        # for it, even when no non-stationary source emits that pollutant
+        # (e.g. an .alaqs with zero aircraft movements still allocates a
+        # CO slot from MovementSource and fills it with 24 zero files).
+        # Trim those slots here so they don't appear in austal.txt /
+        # series.dmna and so their now-empty grid directories are removed.
+        self._ti_drop_empty_legacy_slots()
+        self._ti_fill_legacy_zero_hours()
 
         group_ids, group_weights, group_rates = self._ti_aggregate_stationary()
         n_legacy = len(self._total_sources)

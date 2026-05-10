@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>1050</height>
+    <height>800</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -340,13 +340,54 @@
           </widget>
          </item>
          <item row="6" column="0">
+          <widget class="QLabel" name="alaqsReceptorsLabel">
+           <property name="text">
+            <string>Receptors CSV (optional):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="1">
+          <widget class="QgsFileWidget" name="alaqs_receptors_csv_path">
+           <property name="dialogTitle">
+            <string>Select receptor points CSV</string>
+           </property>
+           <property name="filter">
+            <string>CSV files (*.csv);;All files (*)</string>
+           </property>
+           <property name="toolTip">
+            <string>Optional. CSV with columns: id, longitude, latitude, height (optional), EPSG (optional).
+If empty, receptors are auto-loaded from the .alaqs file's shapes_receptor_points table.
+If both empty, AUSTAL runs without xp/yp lines and TalMon writes no -tmpa.dmna file.
+AUSTAL accepts up to 20 monitor points; extras are silently dropped.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="7" column="0">
+          <widget class="QLabel" name="alaqsNotaluftLabel">
+           <property name="text">
+            <string>Output Mode:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="7" column="1">
+          <widget class="QCheckBox" name="alaqs_notaluft_checkbox">
+           <property name="text">
+            <string>Per-hour series (NOTALUFT) — required for hourly/daily/8h analysis</string>
+           </property>
+           <property name="toolTip">
+            <string>Unchecked: AUSTAL writes only the annual mean (TA Luft compliant).
+Checked: AUSTAL writes per-hour concentration files; the result viewer can then aggregate them as hourly, 8-hour, or daily means. Disables the auto annual-mean post-processing.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="8" column="0">
           <widget class="QLabel" name="alaqsStartDtLabel">
            <property name="text">
             <string>Start (incl.):</string>
            </property>
           </widget>
          </item>
-         <item row="6" column="1">
+         <item row="8" column="1">
           <widget class="QDateTimeEdit" name="alaqs_start_dt_edit">
            <property name="displayFormat">
             <string>dd-MM-yyyy HH:mm</string>
@@ -356,14 +397,14 @@
            </property>
           </widget>
          </item>
-         <item row="7" column="0">
+         <item row="9" column="0">
           <widget class="QLabel" name="alaqsEndDtLabel">
            <property name="text">
             <string>End (incl.):</string>
            </property>
           </widget>
          </item>
-         <item row="7" column="1">
+         <item row="9" column="1">
           <widget class="QDateTimeEdit" name="alaqs_end_dt_edit">
            <property name="displayFormat">
             <string>dd-MM-yyyy HH:mm</string>
@@ -373,7 +414,43 @@
            </property>
           </widget>
          </item>
-         <item row="8" column="0" colspan="2">
+         <item row="10" column="0">
+          <widget class="QLabel" name="alaqsPm10FineFractionLabel">
+           <property name="text">
+            <string>PM10 fine fraction (0–1):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="10" column="1">
+          <widget class="QDoubleSpinBox" name="alaqs_pm10_fine_fraction_spinbox">
+           <property name="minimum">
+            <double>0.0</double>
+           </property>
+           <property name="maximum">
+            <double>1.0</double>
+           </property>
+           <property name="singleStep">
+            <double>0.05</double>
+           </property>
+           <property name="decimals">
+            <number>2</number>
+           </property>
+           <property name="value">
+            <double>0.9</double>
+           </property>
+           <property name="toolTip">
+            <string>Share of PM10 mass treated as the fine fraction (pm-1, &lt; 2.5 µm in AUSTAL).
+The remainder goes to pm-2 (2.5–10 µm). AUSTAL writes both as separate emission lines and sums them in pm-y00a.dmna for the PM10 result.
+
+Recommended values:
+ • 0.95 — pure aircraft/jet engine exhaust (nvPM is overwhelmingly &lt; 100 nm).
+ • 0.90 — typical airport mix (aircraft + GSE + airport vehicle exhaust).
+ • 0.70 — general road traffic including non-exhaust contributions (tyre/brake/road wear).
+ • 0.40–0.50 — non-exhaust dominated (tyre/brake wear) or fugitive dust sources.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="11" column="0" colspan="2">
           <widget class="QLabel" name="alaqsGenerationStatusLabel">
            <property name="text">
             <string>Status: Missing OpenALAQS *_out file</string>
@@ -468,14 +545,37 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="0" colspan="2">
+         <item row="3" column="0">
+          <widget class="QLabel" name="csvReceptorsLabel">
+           <property name="text">
+            <string>Receptors CSV (optional):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QgsFileWidget" name="csv_receptors_csv_path">
+           <property name="dialogTitle">
+            <string>Select receptor points CSV</string>
+           </property>
+           <property name="filter">
+            <string>CSV files (*.csv);;All files (*)</string>
+           </property>
+           <property name="toolTip">
+            <string>Optional. CSV with columns: longitude, latitude, height (optional), EPSG (optional), id (optional).
+If empty, AUSTAL runs without xp/yp lines and TalMon writes no -tmpa.dmna file.
+Without -tmpa.dmna, the Compliance Report and Plot Time Series buttons stay disabled.
+AUSTAL accepts up to 20 monitor points; extras are silently dropped.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0" colspan="2">
           <widget class="QLabel" name="pollutantLabel">
            <property name="text">
             <string>Pollutants:</string>
            </property>
           </widget>
          </item>
-         <item row="4" column="0" colspan="2">
+         <item row="5" column="0" colspan="2">
           <layout class="QHBoxLayout" name="pollutantCheckboxLayout">
           <item>
             <widget class="QCheckBox" name="pollutant_co2">
@@ -534,14 +634,14 @@
            </item>
           </layout>
          </item>
-         <item row="5" column="0">
+         <item row="6" column="0">
           <widget class="QLabel" name="csvQualityLevelLabel">
            <property name="text">
             <string>Quality Level (1-3):</string>
            </property>
           </widget>
          </item>
-         <item row="5" column="1">
+         <item row="6" column="1">
           <widget class="QSpinBox" name="csv_quality_level_spinbox">
            <property name="minimum">
             <number>1</number>
@@ -554,28 +654,46 @@
            </property>
           </widget>
          </item>
-         <item row="6" column="0">
+         <item row="7" column="0">
           <widget class="QLabel" name="csvMixingHeightLabel">
            <property name="text">
             <string>Include Mixing Height:</string>
            </property>
           </widget>
          </item>
-         <item row="6" column="1">
+         <item row="7" column="1">
           <widget class="QCheckBox" name="csv_mixing_height_checkbox">
            <property name="text">
             <string>Enable Mixing Height In Output</string>
            </property>
           </widget>
          </item>
-         <item row="7" column="0">
+         <item row="8" column="0">
+          <widget class="QLabel" name="csvNotaluftLabel">
+           <property name="text">
+            <string>Output Mode:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="8" column="1">
+          <widget class="QCheckBox" name="csv_notaluft_checkbox">
+           <property name="text">
+            <string>Per-hour series (NOTALUFT) — required for hourly/daily/8h analysis</string>
+           </property>
+           <property name="toolTip">
+            <string>Unchecked: AUSTAL writes only the annual mean (TA Luft compliant).
+Checked: AUSTAL writes per-hour concentration files; the result viewer can then aggregate them as hourly, 8-hour, or daily means. Disables the auto annual-mean post-processing.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="9" column="0">
           <widget class="QLabel" name="csvStartDtLabel">
            <property name="text">
             <string>Start (incl.):</string>
            </property>
           </widget>
          </item>
-         <item row="7" column="1">
+         <item row="9" column="1">
           <widget class="QDateTimeEdit" name="csv_start_dt_edit">
            <property name="displayFormat">
             <string>dd-MM-yyyy HH:mm</string>
@@ -585,14 +703,14 @@
            </property>
           </widget>
          </item>
-         <item row="8" column="0">
+         <item row="10" column="0">
           <widget class="QLabel" name="csvEndDtLabel">
            <property name="text">
             <string>End (incl.):</string>
            </property>
           </widget>
          </item>
-         <item row="8" column="1">
+         <item row="10" column="1">
           <widget class="QDateTimeEdit" name="csv_end_dt_edit">
            <property name="displayFormat">
             <string>dd-MM-yyyy HH:mm</string>
@@ -602,7 +720,7 @@
            </property>
           </widget>
          </item>
-         <item row="9" column="0" colspan="2">
+         <item row="11" column="0" colspan="2">
           <widget class="QLabel" name="external_files_feedback">
            <property name="text">
             <string>Status: Missing output directory, emissions CSV, and meteo CSV</string>
@@ -613,7 +731,7 @@
           </widget>
          </item>
          <!-- Grid Configuration (Nested in CSV Generation) -->
-         <item row="10" column="0" colspan="2">
+         <item row="12" column="0" colspan="2">
           <widget class="QGroupBox" name="gridManagementGroupBox">
            <property name="title">
             <string>Grid Configuration</string>
@@ -1216,6 +1334,24 @@
         </layout>
        </widget>
       </item>
+      <!-- Section separator before View Results -->
+      <item>
+       <widget class="Line" name="resultsSectionSeparator">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="resultsSectionHeaderLabel">
+        <property name="text">
+         <string>View Results</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-weight: bold; font-size: 11pt; padding: 4px 0px 2px 0px;</string>
+        </property>
+       </widget>
+      </item>
       <!-- Result Visualisation Buttons -->
       <item>
        <layout class="QHBoxLayout" name="visualisationButtonsLayout">
@@ -1234,7 +1370,7 @@
            <number>35</number>
           </property>
           <property name="text">
-           <string>Results Table</string>
+           <string>Compliance Report</string>
           </property>
          </widget>
         </item>
@@ -1278,22 +1414,22 @@
         </item>
        </layout>
       </item>
+      <!-- Status text for the receptor-dependent buttons -->
+      <item>
+       <widget class="QLabel" name="receptorResultsStatusLabel">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">color: #666; font-size: 10pt; padding: 2px 6px;</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
-   </item>
-   <!-- Stretch at bottom -->
-   <item>
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
    </item>
       </layout>
      </widget>
