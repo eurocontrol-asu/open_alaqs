@@ -18,6 +18,23 @@ from open_alaqs.core.tools import conversion, sql_interface
 logger = get_logger(__name__)
 
 
+def _austal_substance_for_results(plugin_pollutant):
+    """Map plugin pollutant name to AUSTAL substance name for output files.
+
+    AUSTAL writes files named after the substance, not the plugin's
+    pollutant name. PM is special: PM10 -> 'pm' (TA Luft sum of pm-1+pm-2),
+    PM2.5 -> 'pm25'. Other names lowercase directly.
+    """
+    if not plugin_pollutant:
+        return ""
+    p = plugin_pollutant.upper()
+    if p == "PM10":
+        return "pm"
+    if p in ("PM25", "PM2.5", "PM-2.5"):
+        return "pm25"
+    return plugin_pollutant.lower()
+
+
 class QGISVectorLayerDispersionModule(OutputModule):
     """
     Module to that returns a QGIS vector layer with representation of
@@ -320,6 +337,40 @@ class QGISVectorLayerDispersionModule(OutputModule):
             logger.debug("Error in timedelta: (t1: %s, t2:%s, t0: %s)" % (t1, t2, t0))
             return False
 
+    def _build_timedelta_error_message(self, output_data):
+        """Build a clear, user-facing message for assure_time_interval failure.
+
+        The condition: the AUSTAL output file's time interval (t1, t2)
+        doesn't match what the selected averaging period needs. Most
+        common cause: user picked a non-annual period for which the
+        plugin's read path hasn't been implemented to aggregate
+        per-hour files into the requested period (e.g. 'daily mean'
+        from per-hour AUSTAL output).
+        """
+        try:
+            t1 = output_data.get("t1", ["?"])[0]
+            t2 = output_data.get("t2", ["?"])[0]
+        except Exception:
+            t1, t2 = "?", "?"
+        return (
+            "Plot Vector Layer can't aggregate to '%s' from this "
+            "AUSTAL output.\n\n"
+            "The output file has a time interval of %s -> %s, which "
+            "doesn't match the selected averaging period.\n\n"
+            "What's supported in Plot Vector Layer:\n"
+            "  - 'annual mean': always works (reads <pollutant>-y00a.dmna)\n"
+            "  - 'hourly': works only when AUSTAL was run with NOTALUFT\n"
+            "    enabled (per-hour <pollutant>-NNNa.dmna files exist)\n"
+            "  - '8-hours mean': as for 'hourly'; aggregates 8 files\n"
+            "  - 'daily mean': not currently supported by Plot Vector\n"
+            "    Layer; use Compliance Report or Plot Time Series to\n"
+            "    inspect daily exceedances at receptor points.\n\n"
+            "Set the averaging combo to 'annual mean' and click Plot "
+            "Vector Layer again, or use the Compliance Report / Plot "
+            "Time Series buttons for receptor-based time analysis."
+            % (self._averaging_period, t1, t2)
+        )
+
     # def assert_validity(self, avg_period="annual mean"):
     #     required_proportion = 0.90 if avg_period == "annual mean" else 0.75
     #     if np.count_nonzero(self._data_y) < required_proportion * len(self._data_y) :
@@ -327,14 +378,17 @@ class QGISVectorLayerDispersionModule(OutputModule):
 
     def readA2Koutput(self, datapath):
         if not os.path.isfile(datapath):
-            QtWidgets.QMessageBox.warning(
-                None,
-                "File not found",
-                "File '%s' not found. Choose another pollutant ? " % (datapath),
+            raise FileNotFoundError(
+                "AUSTAL output file not found: %s\n\n"
+                "This usually means AUSTAL did not run, did not finish, "
+                "or was run with options that do not produce this file. "
+                "For 'annual mean' the file <pollutant>-y00a.dmna is "
+                "expected; for hourly/daily/8-hour averaging the files "
+                "<pollutant>-NNNa.dmna are expected (only produced when "
+                "AUSTAL is run with NOTALUFT)." % datapath
             )
         try:
             # latin-1 read the units ug/m3, utf-8 reads u/g
-            # with open(datapath, encoding="utf-8", errors="ignore") as f:
             with open(datapath, encoding="latin-1", errors="ignore") as f:
                 raw_output_data = [
                     x.rstrip("\n").lstrip().replace('"', "") for x in f.readlines()
@@ -349,17 +403,36 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 elif content.split() and "*" in content.split()[0]:
                     break
 
-            index_ = raw_output_data.index("*")
-            # concentration_matrix = np.loadtxt(datapath, comments="*", skiprows=index_)
+            if not output_data:
+                raise Exception(
+                    "no header keys parsed; file is empty or not a DMNA file"
+                )
+            if "hghb" not in output_data:
+                raise Exception(
+                    "no 'hghb' line found; this is not a valid AUSTAL grid "
+                    "output (header keys present: %s)"
+                    % ", ".join(list(output_data.keys())[:8])
+                )
+
+            try:
+                index_ = raw_output_data.index("*")
+            except ValueError:
+                raise Exception("no '*' delimiter between header and data block")
+
             concentration_matrix = np.loadtxt(
                 raw_output_data, comments="*", skiprows=index_
             )
 
             return output_data, index_, concentration_matrix
 
+        except FileNotFoundError:
+            raise
         except Exception as exc_:
-            logger.error(exc_)
-            return OrderedDict(), None, None
+            # Re-raise with the file path so the user sees what was tried.
+            logger.error("Failed to parse DMNA file '%s': %s", datapath, exc_)
+            raise Exception(
+                "Failed to parse AUSTAL output file '%s': %s" % (datapath, exc_)
+            )
 
     def getA2KData(self):
 
@@ -368,12 +441,12 @@ class QGISVectorLayerDispersionModule(OutputModule):
                 output_file = (
                     os.path.join(
                         self._concentration_database,
-                        "%s-y00a.dmna" % self._pollutant.lower(),
+                        "%s-y00a.dmna" % _austal_substance_for_results(self._pollutant),
                     )
                     if not self._check_uncertainty
                     else os.path.join(
                         self._concentration_database,
-                        "%s-y00s.dmna" % self._pollutant.lower(),
+                        "%s-y00s.dmna" % _austal_substance_for_results(self._pollutant),
                     )
                 )
                 return self.readA2Koutput(output_file)
@@ -408,13 +481,13 @@ class QGISVectorLayerDispersionModule(OutputModule):
                             os.path.join(
                                 self._concentration_database,
                                 "%s-%sa.dmna"
-                                % (self._pollutant.lower(), str(time_counter).zfill(3)),
+                                % (_austal_substance_for_results(self._pollutant), str(time_counter).zfill(3)),
                             )
                             if not self._check_uncertainty
                             else os.path.join(
                                 self._concentration_database,
                                 "%s-%ss.dmna"
-                                % (self._pollutant.lower(), str(time_counter).zfill(3)),
+                                % (_austal_substance_for_results(self._pollutant), str(time_counter).zfill(3)),
                             )
                         )
 
@@ -422,10 +495,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
                             output_file
                         )
                         if not self.assure_time_interval(output_data):
-                            raise Exception(
-                                "Error in timedelta. Choose another averaging period for time interval (%s, %s)"
-                                % (output_data["t1"], output_data["t2"])
-                            )
+                            raise Exception(self._build_timedelta_error_message(output_data))
                         conc[str(time_counter).zfill(3)] = concentration_matrix
                     return (
                         output_data,
@@ -447,7 +517,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
                                     self._concentration_database,
                                     "%s-%sa.dmna"
                                     % (
-                                        self._pollutant.lower(),
+                                        _austal_substance_for_results(self._pollutant),
                                         str(time_counter).zfill(3),
                                     ),
                                 )
@@ -456,14 +526,22 @@ class QGISVectorLayerDispersionModule(OutputModule):
                                     self._concentration_database,
                                     "%s-%ss.dmna"
                                     % (
-                                        self._pollutant.lower(),
+                                        _austal_substance_for_results(self._pollutant),
                                         str(time_counter).zfill(3),
                                     ),
                                 )
                             )
                             if not os.path.isfile(output_file):
-                                logger.warning("File %s doesn't exist!" % output_file)
-                                continue
+                                raise FileNotFoundError(
+                                    "Per-hour AUSTAL grid file not found: %s\n\n"
+                                    "Hourly averaging requires per-hour output "
+                                    "files (<pollutant>-NNNa.dmna), which AUSTAL "
+                                    "only writes when run with the NOTALUFT "
+                                    "option (Output Mode: 'Per-hour series'). "
+                                    "Either re-run AUSTAL with NOTALUFT enabled, "
+                                    "or select 'annual mean' averaging."
+                                    % output_file
+                                )
                             else:
                                 (
                                     output_data,
@@ -471,17 +549,13 @@ class QGISVectorLayerDispersionModule(OutputModule):
                                     concentration_matrix,
                                 ) = self.readA2Koutput(output_file)
                                 if not self.assure_time_interval(output_data):
-                                    raise Exception(
-                                        "Error in timedelta. Choose another averaging period for time interval (%s, %s)"
-                                        % (output_data["t1"], output_data["t2"])
-                                    )
+                                    raise Exception(self._build_timedelta_error_message(output_data))
                                 conc[str(time_counter).zfill(3)] = concentration_matrix
 
                     elif self._averaging_period == "8-hours mean":
-                        QtWidgets.QMessageBox.information(
-                            None,
-                            "8-hours mean",
-                            "For time interval: %s (+8h)" % (self._time_start),
+                        logger.info(
+                            "8-hours mean: aggregating files starting at %s (+8h)",
+                            self._time_start,
                         )
 
                         for time_counter in range(
@@ -495,7 +569,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
                                     self._concentration_database,
                                     "%s-%sa.dmna"
                                     % (
-                                        self._pollutant.lower(),
+                                        _austal_substance_for_results(self._pollutant),
                                         str(time_counter).zfill(3),
                                     ),
                                 )
@@ -504,14 +578,22 @@ class QGISVectorLayerDispersionModule(OutputModule):
                                     self._concentration_database,
                                     "%s-%ss.dmna"
                                     % (
-                                        self._pollutant.lower(),
+                                        _austal_substance_for_results(self._pollutant),
                                         str(time_counter).zfill(3),
                                     ),
                                 )
                             )
                             if not os.path.isfile(output_file):
-                                logger.warning("File %s doesn't exist!" % output_file)
-                                continue
+                                raise FileNotFoundError(
+                                    "Per-hour AUSTAL grid file not found: %s\n\n"
+                                    "8-hour averaging requires per-hour output "
+                                    "files (<pollutant>-NNNa.dmna), which AUSTAL "
+                                    "only writes when run with the NOTALUFT "
+                                    "option (Output Mode: 'Per-hour series'). "
+                                    "Either re-run AUSTAL with NOTALUFT enabled, "
+                                    "or select 'annual mean' averaging."
+                                    % output_file
+                                )
                             else:
                                 (
                                     output_data,
@@ -519,10 +601,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
                                     concentration_matrix,
                                 ) = self.readA2Koutput(output_file)
                                 if not self.assure_time_interval(output_data):
-                                    raise Exception(
-                                        "Error in timedelta. Choose another averaging period for time interval (%s, %s)"
-                                        % (output_data["t1"], output_data["t2"])
-                                    )
+                                    raise Exception(self._build_timedelta_error_message(output_data))
                                 conc[str(time_counter).zfill(3)] = concentration_matrix
 
                     return (
@@ -531,14 +610,20 @@ class QGISVectorLayerDispersionModule(OutputModule):
                         np.array(list(conc.values())).mean(axis=0),
                     )
 
+        except FileNotFoundError:
+            # Always surface a missing-file error: the readA2Koutput
+            # wrapper raises a FileNotFoundError with the exact path and
+            # an explanation of which AUSTAL options produce that file.
+            raise
         except Exception as e:
+            # Previously this branch swallowed parse errors and returned
+            # an empty 3-tuple. That caused process() to fall through to
+            # a generic "Header keys parsed: (none)" message that hid
+            # the real cause (empty file, malformed dmna, NumPy mean of
+            # zero arrays, etc.). Always propagate so the user sees what
+            # actually went wrong.
             logger.error("A2K OutputModule: Cannot fetch data: %s" % e)
-            # Ensure it always return a 3-tuple to avoid unpacking errors in callers
-            try:
-                empty_matrix = np.array([])
-            except Exception:
-                empty_matrix = []
-            return OrderedDict(), None, empty_matrix
+            raise
 
     def beginJob(self):
         if self._pollutant.startswith("PM"):
@@ -608,9 +693,47 @@ class QGISVectorLayerDispersionModule(OutputModule):
             and self._index_j
             and len(concentration_matrix) > 0
         ):
+            # output_data should never be empty at this point: missing
+            # files now raise FileNotFoundError in getA2KData, and parse
+            # failures raise their own descriptive errors in
+            # readA2Koutput. Reaching here means a file existed and
+            # parsed but had unexpected structure.
+            if "hghb" not in output_data or not output_data.get("hghb"):
+                substance = _austal_substance_for_results(self._pollutant)
+                expected = (
+                    "%s-y00a.dmna" % substance
+                    if self._averaging_period == "annual mean"
+                    else "%s-NNNa.dmna" % substance
+                )
+                raise Exception(
+                    "AUSTAL output is malformed for pollutant '%s' "
+                    "(period: %s).\n\n"
+                    "Expected files: %s/%s\n\n"
+                    "Header keys parsed: %s\n\n"
+                    "The file was opened but did not contain the expected "
+                    "'hghb' grid-dimensions line. Check that AUSTAL ran "
+                    "successfully and that the work directory points at "
+                    "an AUSTAL output folder, not a partial or interrupted "
+                    "run."
+                    % (
+                        self._pollutant,
+                        self._averaging_period,
+                        self._concentration_database,
+                        expected,
+                        ", ".join(list(output_data.keys())[:10]) or "(none)",
+                    )
+                )
             raise Exception(
-                "Error in reshaping concentration matrix: (%s, %s, %s)"
-                % (self._index_k, self._index_i, self._index_j)
+                "AUSTAL output has zero concentration cells "
+                "(grid dims k=%s, i=%s, j=%s, matrix len=%s). "
+                "The simulation may have produced an empty result for the "
+                "selected pollutant/period."
+                % (
+                    self._index_k,
+                    self._index_i,
+                    self._index_j,
+                    len(concentration_matrix) if concentration_matrix is not None else 0,
+                )
             )
 
         # Build data_cells in UTM, aligned with the y00a grid. This

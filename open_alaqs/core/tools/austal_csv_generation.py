@@ -354,6 +354,7 @@ def generate_austal_from_csv(
     selected_pollutants: List[str],
     start_dt: datetime = None,
     end_dt: datetime = None,
+    receptors=None,
 ) -> None:
     """Generate AUSTAL input files from pre-calculated emissions and meteo CSVs.
 
@@ -377,6 +378,10 @@ def generate_austal_from_csv(
             first timestamp in the CSV.
         end_dt: Only process timesteps <= this datetime. Defaults to the
             last timestamp in the CSV.
+        receptors: Optional GeoDataFrame with receptor points. Same schema
+            as the ALAQS-mode receptor loader: 'longitude', 'latitude',
+            'height', 'EPSG' columns. If None or empty, AUSTAL runs
+            without xp/yp lines and TalMon will not write -tmpa.dmna.
 
     Raises:
         FileNotFoundError: If either CSV path does not exist.
@@ -388,6 +393,10 @@ def generate_austal_from_csv(
     logger.info("Meteo File=%s", meteo_csv_path)
     logger.info("Output Directory=%s", output_dir)
     logger.info("Selected Pollutants=%s", selected_pollutants)
+    if receptors is not None and len(receptors) > 0:
+        logger.info("Receptors=%d points", len(receptors))
+    else:
+        logger.info("Receptors=none (no -tmpa.dmna will be produced)")
 
     # Parse both inputs up front so format errors are caught before AUSTAL initialises
     rows_by_ts = parse_emissions_csv(emissions_csv_path)
@@ -432,7 +441,11 @@ def generate_austal_from_csv(
                 "pollutants_list": selected_pollutants,
                 "title": "OpenALAQS CSV AUSTAL generation",
                 "grid": grid,
-                "receptors": gpd.GeoDataFrame(),  # no receptor points in CSV mode
+                "receptors": (
+                    receptors
+                    if receptors is not None
+                    else gpd.GeoDataFrame()
+                ),
             }
         )
 

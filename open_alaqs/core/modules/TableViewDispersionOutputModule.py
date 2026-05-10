@@ -131,10 +131,14 @@ class TableViewDispersionModule(OutputModule):
 
     def readA2Koutput(self, datapath):
         if not os.path.isfile(datapath):
-            QtWidgets.QMessageBox.warning(
-                None,
-                "File not found",
-                "File '%s' not found. Choose another pollutant ? " % (datapath),
+            raise FileNotFoundError(
+                "AUSTAL output file not found: %s\n\n"
+                "This usually means AUSTAL did not run, did not finish, "
+                "or was run with options that do not produce this file. "
+                "For 'annual mean' the file <pollutant>-y00a.dmna is "
+                "expected; for hourly/daily/8-hour averaging the files "
+                "<pollutant>-NNNa.dmna are expected (only produced when "
+                "AUSTAL is run with NOTALUFT)." % datapath
             )
         try:
             with open(datapath, encoding="utf8", errors="ignore") as f:

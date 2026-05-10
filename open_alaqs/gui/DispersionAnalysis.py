@@ -1,4 +1,5 @@
 import csv
+import glob
 import os
 import re
 import shutil
@@ -295,7 +296,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self._on_grid_source_file_changed(last_grid_file_path)
 
         self.ui.ResultsTable.clicked.connect(
-            lambda: self.runOutputModule("TableViewDispersionModule")
+            lambda: self.runOutputModule("ComplianceReportDispersionModule")
         )
         self.ui.VisualiseResults.clicked.connect(
             lambda: self.runOutputModule("QGISVectorLayerDispersionModule")
@@ -438,17 +439,18 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         # CSV feedback visibility depends on CSV mode being selected
         self.ui.external_files_feedback.setVisible(
-            self.ui.generateFromCsvRadio.isChecked()
+            self._input_mode() == "csv"
         )
 
         # Connect CSV mode toggle for feedback visibility
-        def toggle_csv_feedback_visibility():
+        def toggle_csv_feedback_visibility(*_args):
             self.ui.external_files_feedback.setVisible(
-                self.ui.generateFromCsvRadio.isChecked()
+                self._input_mode() == "csv"
             )
 
-        self.ui.generateFromCsvRadio.toggled.connect(toggle_csv_feedback_visibility)
         self.ui.useExistingFilesRadio.toggled.connect(toggle_csv_feedback_visibility)
+        self.ui.generateFromAlaqsRadio.toggled.connect(toggle_csv_feedback_visibility)
+        self.ui.generateFromCsvRadio.toggled.connect(toggle_csv_feedback_visibility)
 
         # Connect OpenALAQS feedback visibility
         def toggle_alaqs_feedback_visibility(checked):
@@ -539,16 +541,108 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             (austal_completed and has_grid_config)
             or (has_output_files and has_grid_config)
         )
+        self.ui.VisualiseResults.setEnabled(can_visualize_vector)
+        if not can_visualize_vector:
+            self.ui.VisualiseResults.setToolTip(
+                "Disabled: Plot Vector Layer needs both an AUSTAL grid output "
+                "(.dmna files) and a configured grid (cells > 0, or grid from "
+                "an OpenALAQS file). Run AUSTAL or load existing output files, "
+                "and ensure the grid is set."
+            )
+        else:
+            self.ui.VisualiseResults.setToolTip(
+                "Click to plot the AUSTAL grid output as a QGIS vector layer."
+            )
 
-        # Enable/disable buttons accordingly
-        # self.ui.ResultsTable.setEnabled(bool(can_show_table_and_timeseries))
-        # self.ui.PlotTimeSeries.setEnabled(bool(can_show_table_and_timeseries))
+        # PlotTimeSeries + ResultsTable (Receptor Compliance Report) both
+        # need <substance>-tmpa.dmna files in the work directory. TalMon
+        # produces those only when AUSTAL runs with (a) receptors defined
+        # (xp/yp/hp lines in austal.txt) AND (b) NOTALUFT enabled. If
+        # neither was true, both modules have nothing to read.
+        work_dir_for_tmpa = None
+        try:
+            wd = self._get_austal_work_directory()
+            if wd is not None:
+                work_dir_for_tmpa = str(wd)
+        except Exception:
+            work_dir_for_tmpa = None
+        tmpa_files = []
+        if work_dir_for_tmpa and os.path.isdir(work_dir_for_tmpa):
+            tmpa_files = glob.glob(
+                os.path.join(work_dir_for_tmpa, "*-tmpa.dmna")
+            )
+        has_tmpa = bool(tmpa_files)
 
-        # TODO: ResultsTable and PlotTimeSeries buttons are currently disabled as they dont work with annual mean and they should be reactivated in future development
-        self.ui.ResultsTable.setEnabled(False)
-        self.ui.PlotTimeSeries.setEnabled(False)
+        self.ui.PlotTimeSeries.setEnabled(has_tmpa)
+        self.ui.ResultsTable.setEnabled(has_tmpa)
 
-        self.ui.VisualiseResults.setEnabled(bool(can_visualize_vector))
+        # User feedback on the buttons themselves so the disabled state is
+        # self-explanatory.
+        if has_tmpa:
+            substances = sorted({
+                os.path.basename(p).split("-")[0] for p in tmpa_files
+            })
+            tt_enabled = (
+                "Receptor results available for: %s." % ", ".join(substances)
+            )
+            self.ui.PlotTimeSeries.setToolTip(
+                tt_enabled + " Click to plot time series at receptors."
+            )
+            self.ui.ResultsTable.setToolTip(
+                tt_enabled
+                + " Click to compute per-receptor TA Luft compliance."
+            )
+        else:
+            tt_disabled = (
+                "Disabled: no <substance>-tmpa.dmna files in the AUSTAL "
+                "work directory.\n\nTo enable:\n"
+                "  1. Add receptor points (CSV picker in OpenALAQS "
+                "Generate tab, or shapes_receptor_points in .alaqs)\n"
+                "  2. Tick 'Per-hour series (NOTALUFT)' in Output Mode\n"
+                "  3. Re-generate AUSTAL inputs and re-run AUSTAL"
+            )
+            self.ui.PlotTimeSeries.setToolTip(tt_disabled)
+            self.ui.ResultsTable.setToolTip(tt_disabled)
+
+        # Status label below the result buttons (if the UI exposes one).
+        self._update_receptor_results_status(has_tmpa, tmpa_files)
+
+    def _update_receptor_results_status(self, has_tmpa, tmpa_files):
+        """Update the small status label below the result buttons.
+
+        Tells the user, in plain language, whether receptor-based results
+        (Plot Time Series, Compliance Report) are available, and what to
+        do if not. Silently no-ops if the UI doesn't expose the label
+        (older .ui versions without the receptorResultsStatusLabel).
+        """
+        label = getattr(self.ui, "receptorResultsStatusLabel", None)
+        if label is None:
+            return
+        if has_tmpa:
+            substances = sorted({
+                os.path.basename(p).split("-")[0] for p in tmpa_files
+            })
+            text = (
+                "Receptor results available for: %s. "
+                "Plot Time Series and Compliance Report are enabled."
+                % ", ".join(substances)
+            )
+            label.setStyleSheet(
+                "color: #1a6e1a; font-size: 10pt; padding: 2px 6px;"
+            )
+        else:
+            text = (
+                "No receptor results in this work directory. "
+                "To enable Plot Time Series and Compliance Report: add "
+                "receptors (CSV in OpenALAQS Generate tab, or "
+                "shapes_receptor_points in .alaqs), tick "
+                "'Per-hour series (NOTALUFT)', then re-generate AUSTAL "
+                "inputs and re-run AUSTAL."
+            )
+            label.setStyleSheet(
+                "color: #8a4a00; font-size: 10pt; padding: 2px 6px;"
+            )
+        label.setText(text)
 
     def updateMinMaxGUI(self, db_path_=""):
         time_start_calc_, time_end_calc_ = get_min_max_timestamps(db_path_)
@@ -770,6 +864,14 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             if dirname:  # Only clear settings if a path was explicitly cleared
                 s.setValue("OpenALAQS/last_work_directory_path", "")
 
+        # Refresh Run button state. _on_input_mode_changed only fires on
+        # radio-button toggles, so without this hook a directory change
+        # while already in "Use Existing" mode would leave the button in
+        # its previous (possibly stale) enabled/disabled state. The user
+        # would then have to toggle radios off and back to refresh.
+        if self._input_mode() == "existing":
+            self.ui.RunA2K.setEnabled(bool(dirname and os.path.isdir(dirname)))
+
     def _on_results_directory_changed(self, results_dir: str) -> None:
         """Auto-load AUSTAL results when a valid work directory is selected."""
         if not results_dir or not os.path.isdir(results_dir):
@@ -867,7 +969,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 elif self._austal_ran:
                     # Priority 2: AUSTAL ran from OpenALAQS generation (Option B)
                     if (
-                        self.ui.generateFromAlaqsRadio.isChecked()
+                        self._input_mode() == "alaqs"
                         and self._austal_grid_config
                     ):
                         alaqs_file = self.ui.alaqs_output_file_path.filePath()
@@ -876,14 +978,14 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
                     # Priority 3: AUSTAL ran from CSV generation (Option C)
                     elif (
-                        self.ui.generateFromCsvRadio.isChecked()
+                        self._input_mode() == "csv"
                         and self._austal_grid_config
                     ):
                         text = f"Using Grid from CSV Generation\n{_fmt(self._austal_grid_config)}"
                         bg_color = STATUS_STYLE_SUCCESS
 
                     # Priority 4: AUSTAL ran from existing files (Option A) - default grid
-                    elif self.ui.useExistingFilesRadio.isChecked():
+                    elif self._input_mode() == "existing":
                         if self._austal_grid_config:
                             text = f"Using Default Grid\n{_fmt(self._austal_grid_config)}\n\nRecommendation: Load a Grid from Result Visualisation section for accurate visualisation."
                         else:
@@ -1268,19 +1370,205 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if mode == "alaqs":
             quality_level = int(self.ui.alaqs_quality_level_spinbox.value())
             mixing_height = self.ui.alaqs_mixing_height_checkbox.isChecked()
+            notaluft = self.ui.alaqs_notaluft_checkbox.isChecked()
+            try:
+                pm10_fine_fraction = float(
+                    self.ui.alaqs_pm10_fine_fraction_spinbox.value()
+                )
+            except Exception:
+                pm10_fine_fraction = 0.9
         else:  # csv mode
             quality_level = int(self.ui.csv_quality_level_spinbox.value())
             mixing_height = self.ui.csv_mixing_height_checkbox.isChecked()
+            notaluft = self.ui.csv_notaluft_checkbox.isChecked()
+            # CSV path doesn't have a PM10 split control yet; use default.
+            pm10_fine_fraction = 0.9
+
+        # Build os= options string. NOTALUFT switches AUSTAL from
+        # TA Luft mode (annual mean post-process only) to per-hour
+        # series output. The latter is required for the result viewer
+        # to produce hourly / 8-hour / daily means.
+        if notaluft:
+            options_string = "NOSTANDARD;NOTALUFT;Kmax=1"
+        else:
+            options_string = "NOSTANDARD;SCINOTAT;Kmax=1"
 
         return {
             "is_enabled": True,
             "quality_level": quality_level,
-            "options_string": "NOSTANDARD;SCINOTAT;Kmax=1",
+            "options_string": options_string,
             "roughness_length_m": 0.2,
             "displacement_height_m": 1.2,
             "anemometer_height_m": 11.2,
             "mixing_height_enabled": mixing_height,
+            "pm10_fine_fraction": pm10_fine_fraction,
         }
+
+    def _read_receptor_csv(self, csv_path):
+        """Read a receptor CSV into a GeoDataFrame.
+
+        Returns None on any failure (caller decides fallback). Required
+        columns: longitude, latitude (case-insensitive, lon/lat aliases
+        accepted). Optional: height (default 1.5m), EPSG (default 4326),
+        id (label only).
+        """
+        try:
+            import geopandas as gpd
+            import pandas as pd
+        except Exception as e:
+            logger.warning(
+                "Receptor CSV read skipped (geopandas/pandas import failed): %s", e,
+            )
+            return None
+        if not csv_path or not os.path.isfile(csv_path):
+            return None
+        try:
+            df = pd.read_csv(csv_path)
+            df.columns = [c.strip().lower() for c in df.columns]
+            if "longitude" not in df.columns and "lon" in df.columns:
+                df = df.rename(columns={"lon": "longitude"})
+            if "latitude" not in df.columns and "lat" in df.columns:
+                df = df.rename(columns={"lat": "latitude"})
+            if "longitude" not in df.columns or "latitude" not in df.columns:
+                raise ValueError(
+                    "Receptor CSV must contain 'longitude' and 'latitude' "
+                    "columns (case-insensitive). Got: %s" % list(df.columns)
+                )
+            if "height" not in df.columns:
+                df["height"] = 1.5
+            if "epsg" in df.columns and "EPSG" not in df.columns:
+                df = df.rename(columns={"epsg": "EPSG"})
+            if "EPSG" not in df.columns:
+                df["EPSG"] = 4326
+            logger.info(
+                "Loaded %d receptor point(s) from CSV: %s", len(df), csv_path,
+            )
+            return gpd.GeoDataFrame(df)
+        except Exception as e:
+            logger.warning("Failed to load receptor CSV '%s': %s", csv_path, e)
+            return None
+
+    def _read_receptors_from_alaqs_db(self, alaqs_file):
+        """Read shapes_receptor_points table into a GeoDataFrame.
+
+        Returns None if the file isn't a readable SQLite DB or has no
+        rows. Filters to instudy != 'N' (Y, blank, NULL all kept).
+        """
+        try:
+            import geopandas as gpd
+            import pandas as pd
+        except Exception as e:
+            logger.warning(
+                "Receptor DB read skipped (geopandas/pandas import failed): %s", e,
+            )
+            return None
+        if not alaqs_file or not os.path.isfile(alaqs_file):
+            return None
+        try:
+            conn = sqlite3.connect(alaqs_file)
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT oid, source_id, xcoord, ycoord, height, instudy, "
+                "AsText(geometry) FROM shapes_receptor_points"
+            )
+            rows = cur.fetchall()
+            conn.close()
+        except Exception as e:
+            logger.warning(
+                "Could not read shapes_receptor_points from '%s': %s",
+                alaqs_file, e,
+            )
+            return None
+        if not rows:
+            return None
+        accepted = []
+        for oid, source_id, xc, yc, h, instudy, _wkt in rows:
+            if instudy and str(instudy).strip().upper() == "N":
+                continue
+            accepted.append({
+                "id": source_id or ("R%d" % oid),
+                "longitude": float(xc) if xc is not None else None,
+                "latitude": float(yc) if yc is not None else None,
+                "height": float(h) if h is not None else 1.5,
+                "EPSG": 3857,
+            })
+        if not accepted:
+            return None
+        df = pd.DataFrame(accepted).dropna(subset=["longitude", "latitude"])
+        if df.empty:
+            return None
+        logger.info(
+            "Loaded %d receptor point(s) from %s (shapes_receptor_points).",
+            len(df), alaqs_file,
+        )
+        return gpd.GeoDataFrame(df)
+
+    def _empty_receptors_gdf(self):
+        """Return an empty GeoDataFrame matching the receptor schema."""
+        try:
+            import geopandas as gpd
+        except Exception:
+            return None
+        return gpd.GeoDataFrame()
+
+    def _load_receptors(self, mode, alaqs_file=None):
+        """Mode-aware receptor loader.
+
+        mode='alaqs': read alaqs_receptors_csv_path → fall back to
+            shapes_receptor_points in alaqs_file → empty.
+        mode='csv': read csv_receptors_csv_path only (no .alaqs fallback,
+            since CSV mode has no .alaqs file) → empty.
+        mode='existing' or unknown: empty (no generation happening).
+
+        Returns a GeoDataFrame (possibly empty). Empty means AUSTAL will
+        run without xp/yp lines and TalMon will not write -tmpa.dmna,
+        so the receptor-based result buttons will stay disabled.
+        """
+        if mode == "alaqs":
+            csv_path = ""
+            try:
+                csv_path = self.ui.alaqs_receptors_csv_path.filePath().strip()
+            except Exception:
+                pass
+            gdf = self._read_receptor_csv(csv_path)
+            if gdf is not None and not gdf.empty:
+                return gdf
+            gdf = self._read_receptors_from_alaqs_db(alaqs_file)
+            if gdf is not None and not gdf.empty:
+                return gdf
+            logger.info(
+                "No receptor points (alaqs mode: CSV empty and .alaqs db "
+                "has none). AUSTAL will run without xp/yp lines; "
+                "Compliance Report and Plot Time Series will be disabled."
+            )
+            return self._empty_receptors_gdf()
+
+        if mode == "csv":
+            csv_path = ""
+            try:
+                csv_path = self.ui.csv_receptors_csv_path.filePath().strip()
+            except Exception:
+                pass
+            gdf = self._read_receptor_csv(csv_path)
+            if gdf is not None and not gdf.empty:
+                return gdf
+            logger.info(
+                "No receptor points (CSV mode: receptor CSV empty or not "
+                "provided). AUSTAL will run without xp/yp lines; "
+                "Compliance Report and Plot Time Series will be disabled."
+            )
+            return self._empty_receptors_gdf()
+
+        # 'existing' or unknown
+        return self._empty_receptors_gdf()
+
+    def _load_receptors_for_alaqs_path(self, alaqs_file):
+        """Backward-compatible wrapper around _load_receptors('alaqs').
+
+        Kept for any external callers that may still reach this name;
+        new code should call _load_receptors(mode, alaqs_file) directly.
+        """
+        return self._load_receptors("alaqs", alaqs_file)
 
     def _generate_austal_input_files(self):
         """Generate AUSTAL input files from CSV files or OpenALAQS output file.
@@ -1293,8 +1581,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         5. Marks files as generated and stores the work directory
         6. Enables the Run AUSTAL button
         """
-        use_alaqs = self.ui.generateFromAlaqsRadio.isChecked()
-        use_csv = self.ui.generateFromCsvRadio.isChecked()
+        use_alaqs = self._input_mode() == "alaqs"
+        use_csv = self._input_mode() == "csv"
 
         # Determine the base output directory
         if use_alaqs:
@@ -1458,6 +1746,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 logger.info(f"Grid config: {grid_config}")
 
                 austal_cfg = self._get_austal_config_from_ui(mode="csv")
+                receptors_gdf = self._load_receptors("csv")
                 generate_austal_from_csv(
                     emissions_csv_path=emissions_csv,
                     meteo_csv_path=meteo_csv,
@@ -1467,6 +1756,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     selected_pollutants=selected_pollutants,
                     start_dt=sel_start,
                     end_dt=sel_end,
+                    receptors=receptors_gdf,
                 )
         except Exception as e:
             error_msg = f"Error generating AUSTAL input files: {e}"
@@ -1611,6 +1901,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         # Add AUSTAL dispersion module for the selected pollutants
         austal_config = self._get_austal_config_from_ui()
+        receptors_gdf = self._load_receptors("alaqs", alaqs_file)
         austal_config.update(
             {
                 "output_path": output_dir,
@@ -1618,7 +1909,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "pollutants_list": selected_pollutants,
                 "title": "OpenALAQS AUSTAL generation",
                 "grid": emission_calc.get3DGrid(),
-                "receptors": gpd.GeoDataFrame(),
+                "receptors": receptors_gdf,
             }
         )
 
@@ -1642,11 +1933,27 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             f"AUSTAL input files generated for pollutants: {', '.join(selected_pollutants)}"
         )
 
-    def _on_input_mode_changed(self) -> None:
-        """Handle switching between existing files, generate from OpenALAQS, and generate from CSV modes."""
-        use_existing = self.ui.useExistingFilesRadio.isChecked()
-        use_alaqs = self.ui.generateFromAlaqsRadio.isChecked()
-        use_csv = self.ui.generateFromCsvRadio.isChecked()
+    def _input_mode(self) -> str:
+        """Return current input strategy: 'existing', 'alaqs', or 'csv'."""
+        if self.ui.useExistingFilesRadio.isChecked():
+            return "existing"
+        if self.ui.generateFromAlaqsRadio.isChecked():
+            return "alaqs"
+        if self.ui.generateFromCsvRadio.isChecked():
+            return "csv"
+        return "existing"
+
+    def _on_input_mode_changed(self, *_args) -> None:
+        """Handle switching between input strategies.
+
+        Called both on radio toggle and directly during init. Manages
+        frame visibility, the generate button, generation flag reset,
+        and Run AUSTAL button state for the active mode.
+        """
+        mode = self._input_mode()
+        use_existing = mode == "existing"
+        use_alaqs = mode == "alaqs"
+        use_csv = mode == "csv"
 
         # Show/hide and enable/disable the frames based on selection
         self.ui.existingFilesFrame.setVisible(use_existing)
@@ -1656,7 +1963,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.generateFromCsvFrame.setVisible(use_csv)
         self.ui.generateFromCsvFrame.setEnabled(use_csv)
 
-        # Show/hide the generate button - only visible when generating from OpenALAQS output or CSV
+        # Show/hide the generate button - only visible when generating
+        # from OpenALAQS output or CSV
         self.ui.generateFromCsvBtn.setVisible(use_alaqs or use_csv)
 
         # Reset generation state when mode changes - need to regenerate files
@@ -1721,6 +2029,12 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
     def _validate_alaqs_generation_files(self) -> None:
         """Validate the selected OpenALAQS output file and working directory."""
+        # Only this validator owns the RunA2K state when the OpenALAQS
+        # generation radio is active. If the user is in "Use Existing"
+        # or "Generate from CSV" mode, leave RunA2K alone — that mode's
+        # own handler is the source of truth.
+        owns_run_button = self._input_mode() == "alaqs"
+
         alaqs_file = self.ui.alaqs_output_file_path.filePath()
         output_dir = self.ui.alaqs_output_work_dir_path.filePath()
         pollutants = self._get_selected_alaqs_pollutants()
@@ -1745,7 +2059,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.ui.alaqsGenerationStatusLabel.setStyleSheet(STATUS_STYLE_WARNING)
             self.ui.generateFromCsvBtn.setEnabled(False)
             # Keep Run AUSTAL enabled if files have already been generated (user may have deselected pollutant by mistake)
-            if not self._austal_input_files_generated:
+            if owns_run_button and not self._austal_input_files_generated:
                 self.ui.RunA2K.setEnabled(False)
             return
 
@@ -1756,7 +2070,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.ui.alaqsGenerationStatusLabel.setStyleSheet(STATUS_STYLE_ERROR)
             self.ui.generateFromCsvBtn.setEnabled(False)
             # Keep Run AUSTAL enabled if files have already been generated
-            if not self._austal_input_files_generated:
+            if owns_run_button and not self._austal_input_files_generated:
                 self.ui.RunA2K.setEnabled(False)
             return
 
@@ -1778,7 +2092,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.alaqsGenerationStatusLabel.setStyleSheet(STATUS_STYLE_SUCCESS)
         self.ui.generateFromCsvBtn.setEnabled(True)
         # Only enable Run AUSTAL if files have been generated
-        self.ui.RunA2K.setEnabled(self._austal_input_files_generated)
+        if owns_run_button:
+            self.ui.RunA2K.setEnabled(self._austal_input_files_generated)
 
     def _on_output_directory_changed(self, dirname: str) -> None:
         """Handle output directory selection for CSV generation."""
@@ -1847,6 +2162,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
     def _validate_external_csv_files(self) -> None:
         """Validate the selected external CSV files, output directory, and grid configuration."""
+        # Only this validator owns RunA2K when the CSV generation radio
+        # is active. Otherwise leave the button alone.
+        owns_run_button = self._input_mode() == "csv"
+
         output_dir = self.ui.output_directory_path.filePath()
         emissions_path = self.ui.emissions_csv_path.filePath()
         meteo_path = self.ui.meteo_csv_path.filePath()
@@ -1873,7 +2192,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self.ui.external_files_feedback.setStyleSheet(STATUS_STYLE_WARNING)
             self.ui.generateFromCsvBtn.setEnabled(False)
             # Keep Run AUSTAL enabled if files have already been generated (user may have deselected pollutant by mistake)
-            if not self._austal_input_files_generated:
+            if owns_run_button and not self._austal_input_files_generated:
                 self.ui.RunA2K.setEnabled(False)
             return
 
@@ -1894,7 +2213,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.external_files_feedback.setStyleSheet(STATUS_STYLE_SUCCESS)
         self.ui.generateFromCsvBtn.setEnabled(True)
         # Only enable Run AUSTAL if files have been generated
-        self.ui.RunA2K.setEnabled(self._austal_input_files_generated)
+        if owns_run_button:
+            self.ui.RunA2K.setEnabled(self._austal_input_files_generated)
 
     # Display the text when the user presses the AUSTAL HELP buttton
     def show_austal_help(self):
@@ -1947,10 +2267,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             return self._generated_austal_work_dir
 
         # Otherwise, determine based on selected mode
-        if self.ui.generateFromAlaqsRadio.isChecked():
+        if self._input_mode() == "alaqs":
             # Use the output directory from OpenALAQS generation
             return str(self.ui.alaqs_output_work_dir_path.filePath())
-        elif self.ui.generateFromCsvRadio.isChecked():
+        elif self._input_mode() == "csv":
             # Use the output directory from CSV generation
             return str(self.ui.output_directory_path.filePath())
         else:
@@ -2004,7 +2324,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             return False, "Please select a valid AUSTAL executable file (Section 1)"
 
         # Check mode-specific requirements
-        if self.ui.useExistingFilesRadio.isChecked():
+        if self._input_mode() == "existing":
             work_dir = self.ui.work_directory_path.filePath()
             if not work_dir or not os.path.isdir(work_dir):
                 return (
@@ -2012,7 +2332,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     "Please select a valid work directory with AUSTAL input files",
                 )
 
-        elif self.ui.generateFromAlaqsRadio.isChecked():
+        elif self._input_mode() == "alaqs":
             alaqs_file = self.ui.alaqs_output_file_path.filePath()
             output_dir = self.ui.alaqs_output_work_dir_path.filePath()
             pollutants = self._get_selected_alaqs_pollutants()
@@ -2031,7 +2351,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                     "Selected OpenALAQS file does not have a valid grid_3d_definition",
                 )
 
-        elif self.ui.generateFromCsvRadio.isChecked():
+        elif self._input_mode() == "csv":
             output_dir = self.ui.output_directory_path.filePath()
             emissions_csv = self.ui.emissions_csv_path.filePath()
             meteo_csv = self.ui.meteo_csv_path.filePath()
@@ -2050,7 +2370,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
     @catch_errors
     def run_austal(self, *args, **kwargs):
-        from subprocess import PIPE, Popen
+        import subprocess as _sp
+        from subprocess import Popen
 
         try:
             # Validate all inputs before running
@@ -2099,21 +2420,38 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             else:
                 cmd = [austal_, work_dir]
 
-            p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-            output, err = p.communicate()
+            # Don't redirect stdout/stderr. On Windows the OS allocates a
+            # console window for AUSTAL automatically; with redirection the
+            # window stays blank for the entire (potentially hour-long) run.
+            # Letting output flow through gives the user live progress.
+            # CREATE_NEW_CONSOLE forces a fresh console even when QGIS was
+            # itself launched from one (otherwise AUSTAL's output would
+            # interleave with QGIS console output).
+            creationflags = 0
+            if hasattr(_sp, "CREATE_NEW_CONSOLE"):
+                creationflags = _sp.CREATE_NEW_CONSOLE
+
+            p = Popen(cmd, creationflags=creationflags)
+            p.wait()
 
             if p.returncode != 0:
-                output_text = (
-                    output.decode("utf-8", errors="replace")
-                    if isinstance(output, bytes)
-                    else str(output)
-                )
-                err_text = (
-                    err.decode("utf-8", errors="replace")
-                    if isinstance(err, bytes)
-                    else str(err)
-                )
-                raise Austal2000RunError(f"{output_text}\nSTDERR: {err_text}".strip())
+                # Output was written to AUSTAL's own console; pull error
+                # detail from austal.log in the work dir if it exists.
+                err_msg = f"AUSTAL exited with code {p.returncode}."
+                log_path = os.path.join(work_dir, "austal.log")
+                if os.path.isfile(log_path):
+                    try:
+                        with open(log_path, "r", encoding="utf-8",
+                                  errors="replace") as fh:
+                            tail = fh.readlines()[-40:]
+                        err_msg += "\n\nLast 40 lines of austal.log:\n" + (
+                            "".join(tail)
+                        )
+                    except OSError as exc_:
+                        err_msg += f"\n(Could not read austal.log: {exc_})"
+                else:
+                    err_msg += "\nSee the AUSTAL console window for details."
+                raise Austal2000RunError(err_msg)
 
             # Update status to completed
             self.ui.executionStatusLabel.setText("Status: Completed successfully")
@@ -2124,7 +2462,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             self._austal_ran = True
 
             # Snapshot grid based on which input mode was used
-            if self.ui.generateFromAlaqsRadio.isChecked():
+            if self._input_mode() == "alaqs":
                 # Option B: Use grid from the ALAQS file
                 alaqs_file = self.ui.alaqs_output_file_path.filePath()
                 try:
@@ -2164,7 +2502,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                         if self.get_current_grid_config()
                         else None
                     )
-            elif self.ui.generateFromCsvRadio.isChecked():
+            elif self._input_mode() == "csv":
                 # Option C: Use G1 grid from spinboxes
                 self._austal_grid_config = (
                     self.get_current_grid_config().copy()
@@ -2723,43 +3061,58 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "Error",
                 "Could not execute runOutputModule: %s (error: %s)" % (name, e),
             )
-            raise e
+            # Don't re-raise: that triggers QGIS's own Python traceback
+            # popup, giving the user two error windows for the same
+            # condition. The single dialog above is enough; the full
+            # traceback is written to the QGIS message log (View > Panels
+            # > Log Messages > "open_alaqs") for developer debugging.
+            logger.error(
+                "runOutputModule(%s) failed: %s", name, e, exc_info=True,
+            )
 
     def _setup_averaging_options(self):
-        """Disable all averaging options except 'annual mean' to indicate future functionality."""
+        """Configure the averaging combo box.
+
+        All four options (annual / daily / hourly / 8-hours) are
+        selectable. The reading path (`getA2KData` in
+        ConcentrationsQGISVectorLayerOutputModule and
+        TableViewDispersionOutputModule) handles each by reading the
+        appropriate AUSTAL output file:
+            - annual mean → <pol>-y00a.dmna
+            - daily / hourly / 8-hours → consecutive <pol>-NNNa.dmna
+              files, aggregated client-side over the selected period.
+
+        For non-annual options to actually have files to read, AUSTAL
+        must have been run with the NOTALUFT option (Section 2 →
+        "Output Mode: Per-hour series" checkbox). Without NOTALUFT,
+        only the annual mean file exists; selecting another averaging
+        will hit "File X doesn't exist" warnings.
+        """
         try:
-            # Get the averaging combo from the UI directly
             averaging_combo = (
                 self.ui.averagingCombo if hasattr(self.ui, "averagingCombo") else None
             )
 
             if averaging_combo and isinstance(averaging_combo, QtWidgets.QComboBox):
                 model = averaging_combo.model()
-
+                # Re-enable every item (clear any prior disable from older builds)
                 for i in range(averaging_combo.count()):
-                    item_text = averaging_combo.itemText(i)
-                    if item_text != "annual mean":
-                        item = model.item(i)
-                        if item:
-                            # Disable the item
-                            item.setFlags(
-                                item.flags() & ~QtCore.Qt.ItemFlag.ItemIsEnabled
-                            )
-                            # Set gray color to make it visually clear it's disabled
-                            item.setForeground(QtGui.QColor(150, 150, 150))
-                            # Optional: Add a tooltip explaining why it's disabled
-                            item.setToolTip(
-                                "This averaging option is not yet available. Coming soon!"
-                            )
+                    item = model.item(i)
+                    if item:
+                        item.setFlags(
+                            item.flags() | QtCore.Qt.ItemFlag.ItemIsEnabled
+                        )
+                        item.setForeground(QtGui.QColor(0, 0, 0))
+                        item.setToolTip("")
 
-                # Ensure "annual mean" is selected
+                # Default to annual mean as the initial pick (still the
+                # most reliable option until os=Hourly/Daily are wired
+                # into the AUSTAL run-time config).
                 annual_mean_index = averaging_combo.findText("annual mean")
-                if annual_mean_index >= 0:
+                if annual_mean_index >= 0 and averaging_combo.currentIndex() < 0:
                     averaging_combo.setCurrentIndex(annual_mean_index)
 
-                logger.debug(
-                    "Successfully disabled averaging options except 'annual mean'"
-                )
+                logger.debug("Averaging options enabled (all four selectable).")
             else:
                 logger.warning("Could not find averagingCombo in UI")
 
