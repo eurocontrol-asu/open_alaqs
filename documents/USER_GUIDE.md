@@ -519,13 +519,16 @@ The connection of OpenALAQS with AUSTAL was realized based on the existing archi
 
 ### [Input data](#input-data)
 
-The dispersion module will only be activated if the `Is Enabled` checkbox is checked. By default, this checkbox is unchecked. Once enabled, the user must select one of the output modules (`View Emissions Table`, `Plot Time Series`, or `Plot Vector Layer`).
+The dispersion module will only be activated if the `Is Enabled` checkbox is checked. By default, this checkbox is unchecked.
 
 The following parameters need to be defined:
 + **Roughness Length**: Height above ground where wind speed theoretically becomes zero. Depends on terrain type (e.g., forests, urban areas, flat fields).
 + **Displacement Height**: Height at which the wind profile starts to be affected by obstacles on the ground, such as buildings or trees.
 + **Anemometer Height**: Height at which wind speed measurements are taken. Default: 10 m.
 + **Quality Level**: Determines the number of simulation particles (range: −4 to +4). Higher values increase accuracy but also computation time.
++ **NOTALUFT** (per-hour series): when enabled, AUSTAL writes per-hour grid output (`<substance>-NNNa.dmna`) and, when receptor points are configured, per-receptor time-series files (`<substance>-tmpa.dmna`). Required for **Plot Time Series** and **Compliance Report**; optional for **Plot Vector Layer** with `annual mean`.
++ **PM10 fine fraction**: how PM10 emissions are split between AUSTAL's `pm-1` and `pm-2` substances (default 0.9, suitable for an airport mix dominated by aircraft non-volatile PM and combustion exhaust).
++ **Receptor Points**: Specify receptor points using a `.csv` file. In ALAQS mode the plugin will also auto-load any receptors defined in the `shapes_receptor_points` table of the `.alaqs` file if no CSV is given. Without receptors AUSTAL still produces grid output, but Plot Time Series and Compliance Report stay disabled.
 + **Options String**:
   + `NOSTANDARD`: Activates non-standard calculation configurations.
   + `SCINOTAT`: Forces output in scientific notation with four significant decimal places.
@@ -548,17 +551,29 @@ By default, a file named `austal.log` is generated at the end of the dispersion 
 
 ### [Output data](#output-data)
 
-AUSTAL calculates substance-specific annual means and possibly daily or hourly means with a given number of exceedances. The annual mean is the mean over the time period defined by the provided file `series.dmna`.
+AUSTAL calculates substance-specific annual means and, when run with NOTALUFT, also per-hour means (used by the plugin to derive daily / hourly / 8-hour aggregates and per-receptor time series).
 
-For example, the annual mean concentration file for HC is `hc-y00a.dmna` ('00' refers to the grid, 'a' refers to additional load). The statistical uncertainty is provided in the corresponding file `hc-y00s.dmna`. Concentrations are in micrograms per cubic metre.
+| File pattern | When written | Read by |
+|---|---|---|
+| `<substance>-y00a.dmna` | Always | Plot Vector Layer (annual mean) |
+| `<substance>-NNNa.dmna` | NOTALUFT enabled | Plot Vector Layer (hourly / 8-hour mean) |
+| `<substance>-tmpa.dmna` | NOTALUFT + receptors | Plot Time Series, Compliance Report |
+| `<substance>-y00s.dmna` | Always | Statistical uncertainty companion to `y00a` |
+
+For example, the annual-mean concentration for HC is `hc-y00a.dmna` ('00' refers to the grid; 'a' refers to additional load). The statistical uncertainty is in `hc-y00s.dmna`. Concentrations are in micrograms per cubic metre.
 
 By default, the concentration file only contains the ground layer (K=1). Using the `NOSTANDARD` option, more layers can be written out (e.g. `NOSTANDARD;Kmax=3` in `austal.txt`).
 
+The plugin's substance codes follow AUSTAL convention: `pm` for PM10 (which AUSTAL internally splits into `pm-1` and `pm-2`), `pm25` for PM2.5, lowercase enum value for the rest.
+
 ### [Visualize results](#visualize-results)
 
-To explore the results of a simulation, the user must select the OpenALAQS file used for the calculation (to ensure the exact grid and date are applied), and then choose one of the output modules:
-+ **Visualise Results** as a vector layer
-+ **Plot Time Series** to display results as a time series
-+ **Results Table** to view results in table format
+After a successful AUSTAL run, three result modules are available under the **View Results** section:
+
++ **Plot Vector Layer** — spatial concentration map on the AUSTAL grid. The averaging combo selects which `.dmna` file is read: `annual mean` always works; `hourly` and `8-hours mean` require NOTALUFT.
++ **Plot Time Series** — concentration vs time at a chosen receptor point, with smoothing combo (raw / 1h / 8h / 24h / 7d), navigation toolbar, and CSV export. Requires NOTALUFT + receptors.
++ **Compliance Report** — per-receptor PASS/FAIL evaluation against EU Directive 2024/2881 limit values applicable from 1 January 2030 (PM10, PM2.5, NO2, NOx ecosystem, SO2). Each row reports value, threshold, allowed exceedances, and PASS/FAIL with colour coding. CSV export available. Requires NOTALUFT + receptors.
+
+The status label below the buttons lists which substances have receptor data available, or names the missing piece (no receptors / no NOTALUFT / no AUSTAL output yet) when a button is disabled. Each button's tooltip gives the exact 3-step recipe.
 
 ![running-austal-2.png](./../open_alaqs/assets/running-austal-2.png)
