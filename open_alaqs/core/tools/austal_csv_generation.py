@@ -442,9 +442,7 @@ def generate_austal_from_csv(
                 "title": "OpenALAQS CSV AUSTAL generation",
                 "grid": grid,
                 "receptors": (
-                    receptors
-                    if receptors is not None
-                    else gpd.GeoDataFrame()
+                    receptors if receptors is not None else gpd.GeoDataFrame()
                 ),
             }
         )

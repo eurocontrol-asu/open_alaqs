@@ -1924,7 +1924,7 @@ class AUSTALDispersionModule(DispersionModule):
         sorted_dts = list(sorted_results.keys())
 
         legacy_keys = list(self._total_sources.keys())
-        n_legacy = len(legacy_keys)
+        len(legacy_keys)
 
         # Total AUSTAL source slots in column order: legacy first, stationary after.
         # `slot_meta[i]` = (kind, key_or_gid, dir_label_str)
@@ -1961,9 +1961,7 @@ class AUSTALDispersionModule(DispersionModule):
                         continue
                 # Slot emits the pollutant: add one column per component.
                 for comp_name, frac in self._austal_components(poll):
-                    active_pairs.append(
-                        (slot_idx, p_idx, kind, comp_name, frac)
-                    )
+                    active_pairs.append((slot_idx, p_idx, kind, comp_name, frac))
 
         # Build form line
         form_parts = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"']
@@ -2017,8 +2015,8 @@ class AUSTALDispersionModule(DispersionModule):
                         key = slot_meta[slot_idx][1]
                         poll = self._pollutants_list[p_idx]
                         storage_key = self._legacy_storage_key(poll)
-                        total = sorted_results[dt_str].get(key, {}).get(
-                            storage_key, 0.0
+                        total = (
+                            sorted_results[dt_str].get(key, {}).get(storage_key, 0.0)
                         )
                     else:
                         gid = slot_meta[slot_idx][1]
@@ -2057,9 +2055,7 @@ class AUSTALDispersionModule(DispersionModule):
             for austal_name in list(self._total_sources[slot_id]):
                 any_nonzero = False
                 for dt_str in self._results:
-                    rate = self._results[dt_str].get(slot_id, {}).get(
-                        austal_name, 0.0
-                    )
+                    rate = self._results[dt_str].get(slot_id, {}).get(austal_name, 0.0)
                     if rate != 0.0:
                         any_nonzero = True
                         break
@@ -2135,14 +2131,24 @@ class AUSTALDispersionModule(DispersionModule):
             for time_id in sorted(missing):
                 try:
                     self.writeGridFile(
-                        slot_id, time_id, dd_, sk_, mode, form,
-                        vldf, artp, dims, axes,
+                        slot_id,
+                        time_id,
+                        dd_,
+                        sk_,
+                        mode,
+                        form,
+                        vldf,
+                        artp,
+                        dims,
+                        axes,
                     )
                 except Exception as exc_:
                     logger.error(
                         "AUSTAL: cannot back-fill zero-hour file for "
                         "slot '%s' time_id %d: %s",
-                        slot_id, time_id, exc_,
+                        slot_id,
+                        time_id,
+                        exc_,
                     )
 
     @log_time

@@ -65,6 +65,7 @@ def _austal_substance_for_results(plugin_pollutant):
 # DMNA tmpa parser
 # ---------------------------------------------------------------------------
 
+
 def _parse_tmpa_file(path):
     """Parse a TalMon ``<pollutant>-tmpa.dmna`` file.
 
@@ -119,7 +120,9 @@ def _parse_tmpa_file(path):
         logger.warning(
             "tmpa file '%s': mntn count (%d) doesn't match hghb point "
             "count (%d). Adjusting to hghb count.",
-            path, len(point_names), n_points,
+            path,
+            len(point_names),
+            n_points,
         )
         if len(point_names) < n_points:
             point_names = point_names + [
@@ -128,9 +131,9 @@ def _parse_tmpa_file(path):
         else:
             point_names = point_names[:n_points]
         if len(point_coords) < n_points:
-            point_coords = point_coords + [
-                (0.0, 0.0, 0.0)
-            ] * (n_points - len(point_coords))
+            point_coords = point_coords + [(0.0, 0.0, 0.0)] * (
+                n_points - len(point_coords)
+            )
         else:
             point_coords = point_coords[:n_points]
 
@@ -139,7 +142,8 @@ def _parse_tmpa_file(path):
         t0 = datetime.fromisoformat(rdat_str).replace(tzinfo=None)
     except Exception:
         logger.warning(
-            "Could not parse rdat='%s'; defaulting to 2025-01-01", rdat_str,
+            "Could not parse rdat='%s'; defaulting to 2025-01-01",
+            rdat_str,
         )
         t0 = datetime(2025, 1, 1)
 
@@ -181,16 +185,17 @@ def _parse_tmpa_file(path):
         "point_names": point_names,
         "point_coords": point_coords,
         "units": header["unit"][0] if header["unit"] else "",
-        "project_name": (header.get("idnt", [""])[0]
-                         if header.get("idnt") else ""),
-        "pollutant": (header.get("name", [""])[0].lower()
-                      if header.get("name") else ""),
+        "project_name": (header.get("idnt", [""])[0] if header.get("idnt") else ""),
+        "pollutant": (
+            header.get("name", [""])[0].lower() if header.get("name") else ""
+        ),
     }
 
 
 # ---------------------------------------------------------------------------
 # Plot dialog
 # ---------------------------------------------------------------------------
+
 
 class TimeSeriesPlotDialog(QtWidgets.QDialog):
     """Plot dialog: one line per monitor point, with a smoothing combo."""
@@ -202,8 +207,7 @@ class TimeSeriesPlotDialog(QtWidgets.QDialog):
         ("Monthly mean", "monthly"),
     ]
 
-    def __init__(self, parent, parsed, pollutant_label,
-                 time_start=None, time_end=None):
+    def __init__(self, parent, parsed, pollutant_label, time_start=None, time_end=None):
         super().__init__(parent)
         self.setWindowTitle("Time Series - %s" % pollutant_label.upper())
         self.resize(950, 620)
@@ -219,16 +223,18 @@ class TimeSeriesPlotDialog(QtWidgets.QDialog):
         if time_start is not None or time_end is not None:
             mask = np.ones(len(self._datetime_axis), dtype=bool)
             if time_start is not None:
-                mask &= (self._datetime_axis >= time_start)
+                mask &= self._datetime_axis >= time_start
             if time_end is not None:
-                mask &= (self._datetime_axis <= time_end)
+                mask &= self._datetime_axis <= time_end
             if mask.any():
                 self._datetime_axis = self._datetime_axis[mask]
                 self._data = self._data[mask, :]
             else:
                 logger.warning(
                     "Time-window [%s, %s] excludes all tmpa data; "
-                    "showing full year.", time_start, time_end,
+                    "showing full year.",
+                    time_start,
+                    time_end,
                 )
 
         plt.ioff()
@@ -298,8 +304,7 @@ class TimeSeriesPlotDialog(QtWidgets.QDialog):
         self._axes.set_title(title)
         self._axes.set_ylabel("Concentration [%s]" % self._units)
         self._axes.set_xlabel("Time")
-        self._axes.legend(loc="best", fontsize=8,
-                          ncol=min(4, len(self._point_names)))
+        self._axes.legend(loc="best", fontsize=8, ncol=min(4, len(self._point_names)))
         self._axes.grid(True, alpha=0.3)
 
         if key == "monthly":
@@ -319,17 +324,18 @@ class TimeSeriesPlotDialog(QtWidgets.QDialog):
             return
         try:
             with open(path, "w", encoding="utf-8") as f:
-                f.write("datetime,"
-                        + ",".join("P%s" % n for n in self._point_names)
-                        + "\n")
+                f.write(
+                    "datetime," + ",".join("P%s" % n for n in self._point_names) + "\n"
+                )
                 for i, ts in enumerate(self._datetime_axis):
                     row = [ts.isoformat()] + [
-                        "" if np.isnan(v) else "%.4g" % v
-                        for v in self._data[i, :]
+                        "" if np.isnan(v) else "%.4g" % v for v in self._data[i, :]
                     ]
                     f.write(",".join(row) + "\n")
             QtWidgets.QMessageBox.information(
-                self, "Export OK", "CSV written to:\n%s" % path,
+                self,
+                "Export OK",
+                "CSV written to:\n%s" % path,
             )
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "Export failed", str(e))
@@ -338,6 +344,7 @@ class TimeSeriesPlotDialog(QtWidgets.QDialog):
 # ---------------------------------------------------------------------------
 # Output module class (called by DispersionAnalysis.runOutputModule)
 # ---------------------------------------------------------------------------
+
 
 class TimeSeriesDispersionModule(OutputModule):
     """Plot AUSTAL TalMon time-series at monitor points."""
@@ -383,9 +390,7 @@ class TimeSeriesDispersionModule(OutputModule):
         if not os.path.isdir(wd):
             raise Exception("Work directory does not exist: %s" % wd)
 
-        tmpa_path = os.path.join(
-            wd, "%s-tmpa.dmna" % self._austal_substance
-        )
+        tmpa_path = os.path.join(wd, "%s-tmpa.dmna" % self._austal_substance)
         if not os.path.isfile(tmpa_path):
             # Distinguish the two failure modes with a list of what IS
             # available in this work directory:
@@ -395,6 +400,7 @@ class TimeSeriesDispersionModule(OutputModule):
             #     picked a pollutant that wasn't in the AUSTAL run,
             #     point them at what is available
             import glob as _glob
+
             existing = sorted(_glob.glob(os.path.join(wd, "*-tmpa.dmna")))
             if not existing:
                 raise FileNotFoundError(
@@ -410,15 +416,18 @@ class TimeSeriesDispersionModule(OutputModule):
                     "Re-run AUSTAL with both conditions met to produce "
                     "<pollutant>-tmpa.dmna files." % wd
                 )
-            available = sorted({
-                os.path.basename(p).split("-")[0] for p in existing
-            })
+            available = sorted({os.path.basename(p).split("-")[0] for p in existing})
             # Map AUSTAL substance back to plugin pollutant name
             sub_to_plugin = {
-                "pm": "PM10", "pm25": "PM2.5",
-                "nox": "NOx", "sox": "SOx",
-                "co": "CO", "co2": "CO2", "hc": "HC",
-                "no2": "NO2", "so2": "SO2",
+                "pm": "PM10",
+                "pm25": "PM2.5",
+                "nox": "NOx",
+                "sox": "SOx",
+                "co": "CO",
+                "co2": "CO2",
+                "hc": "HC",
+                "no2": "NO2",
+                "so2": "SO2",
             }
             available_plugin_names = [
                 sub_to_plugin.get(s, s.upper()) for s in available
@@ -444,16 +453,16 @@ class TimeSeriesDispersionModule(OutputModule):
         try:
             self._parsed = _parse_tmpa_file(tmpa_path)
         except Exception as e:
-            raise Exception(
-                "Failed to parse TalMon file '%s': %s" % (tmpa_path, e)
-            )
+            raise Exception("Failed to parse TalMon file '%s': %s" % (tmpa_path, e))
 
         file_pollutant = (self._parsed.get("pollutant") or "").lower()
         if file_pollutant and file_pollutant != self._austal_substance:
             logger.warning(
                 "tmpa file pollutant tag '%s' differs from expected "
                 "AUSTAL substance '%s' (plugin pollutant: %s)",
-                file_pollutant, self._austal_substance, self._pollutant,
+                file_pollutant,
+                self._austal_substance,
+                self._pollutant,
             )
         return True
 

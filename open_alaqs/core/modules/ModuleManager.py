@@ -6,6 +6,9 @@ from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.interfaces.SourceModule import SourceModule
 from open_alaqs.core.modules.AreaSourceModule import AreaSourceWithTimeProfileModule
 from open_alaqs.core.modules.AUSTALOutputModule import AUSTALDispersionModule
+from open_alaqs.core.modules.ComplianceReportOutputModule import (
+    ComplianceReportDispersionModule,
+)
 from open_alaqs.core.modules.ConcentrationsQGISVectorLayerOutputModule import (
     QGISVectorLayerDispersionModule,
 )
@@ -19,9 +22,6 @@ from open_alaqs.core.modules.ParkingSourceModule import (
 from open_alaqs.core.modules.PointSourceModule import PointSourceWithTimeProfileModule
 from open_alaqs.core.modules.RoadwaySourceModule import (
     RoadwaySourceWithTimeProfileModule,
-)
-from open_alaqs.core.modules.ComplianceReportOutputModule import (
-    ComplianceReportDispersionModule,
 )
 from open_alaqs.core.modules.TableViewDispersionOutputModule import (
     TableViewDispersionModule,

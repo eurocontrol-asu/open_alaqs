@@ -8,7 +8,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-import geopandas as gpd
 from qgis.core import QgsMapLayer, QgsProject, QgsSettings, QgsTextAnnotation
 from qgis.gui import QgsFileWidget
 from qgis.PyQt import QtCore, QtGui, QtWidgets
@@ -438,15 +437,11 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         self.ui.alaqsGridStatusLabel.setVisible(self.ui.alaqsGridGroupBox.isChecked())
 
         # CSV feedback visibility depends on CSV mode being selected
-        self.ui.external_files_feedback.setVisible(
-            self._input_mode() == "csv"
-        )
+        self.ui.external_files_feedback.setVisible(self._input_mode() == "csv")
 
         # Connect CSV mode toggle for feedback visibility
         def toggle_csv_feedback_visibility(*_args):
-            self.ui.external_files_feedback.setVisible(
-                self._input_mode() == "csv"
-            )
+            self.ui.external_files_feedback.setVisible(self._input_mode() == "csv")
 
         self.ui.useExistingFilesRadio.toggled.connect(toggle_csv_feedback_visibility)
         self.ui.generateFromAlaqsRadio.toggled.connect(toggle_csv_feedback_visibility)
@@ -568,9 +563,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             work_dir_for_tmpa = None
         tmpa_files = []
         if work_dir_for_tmpa and os.path.isdir(work_dir_for_tmpa):
-            tmpa_files = glob.glob(
-                os.path.join(work_dir_for_tmpa, "*-tmpa.dmna")
-            )
+            tmpa_files = glob.glob(os.path.join(work_dir_for_tmpa, "*-tmpa.dmna"))
         has_tmpa = bool(tmpa_files)
 
         self.ui.PlotTimeSeries.setEnabled(has_tmpa)
@@ -579,18 +572,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         # User feedback on the buttons themselves so the disabled state is
         # self-explanatory.
         if has_tmpa:
-            substances = sorted({
-                os.path.basename(p).split("-")[0] for p in tmpa_files
-            })
-            tt_enabled = (
-                "Receptor results available for: %s." % ", ".join(substances)
-            )
+            substances = sorted({os.path.basename(p).split("-")[0] for p in tmpa_files})
+            tt_enabled = "Receptor results available for: %s." % ", ".join(substances)
             self.ui.PlotTimeSeries.setToolTip(
                 tt_enabled + " Click to plot time series at receptors."
             )
             self.ui.ResultsTable.setToolTip(
-                tt_enabled
-                + " Click to compute per-receptor TA Luft compliance."
+                tt_enabled + " Click to compute per-receptor TA Luft compliance."
             )
         else:
             tt_disabled = (
@@ -619,17 +607,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if label is None:
             return
         if has_tmpa:
-            substances = sorted({
-                os.path.basename(p).split("-")[0] for p in tmpa_files
-            })
+            substances = sorted({os.path.basename(p).split("-")[0] for p in tmpa_files})
             text = (
                 "Receptor results available for: %s. "
                 "Plot Time Series and Compliance Report are enabled."
                 % ", ".join(substances)
             )
-            label.setStyleSheet(
-                "color: #1a6e1a; font-size: 10pt; padding: 2px 6px;"
-            )
+            label.setStyleSheet("color: #1a6e1a; font-size: 10pt; padding: 2px 6px;")
         else:
             text = (
                 "No receptor results in this work directory. "
@@ -639,9 +623,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 "'Per-hour series (NOTALUFT)', then re-generate AUSTAL "
                 "inputs and re-run AUSTAL."
             )
-            label.setStyleSheet(
-                "color: #8a4a00; font-size: 10pt; padding: 2px 6px;"
-            )
+            label.setStyleSheet("color: #8a4a00; font-size: 10pt; padding: 2px 6px;")
         label.setText(text)
 
     def updateMinMaxGUI(self, db_path_=""):
@@ -968,19 +950,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 # Priority 2-4: AUSTAL ran - determine which grid was used
                 elif self._austal_ran:
                     # Priority 2: AUSTAL ran from OpenALAQS generation (Option B)
-                    if (
-                        self._input_mode() == "alaqs"
-                        and self._austal_grid_config
-                    ):
+                    if self._input_mode() == "alaqs" and self._austal_grid_config:
                         alaqs_file = self.ui.alaqs_output_file_path.filePath()
                         text = f"Using Grid from OpenALAQS file: {os.path.basename(alaqs_file)}\n{_fmt(self._austal_grid_config)}"
                         bg_color = STATUS_STYLE_SUCCESS
 
                     # Priority 3: AUSTAL ran from CSV generation (Option C)
-                    elif (
-                        self._input_mode() == "csv"
-                        and self._austal_grid_config
-                    ):
+                    elif self._input_mode() == "csv" and self._austal_grid_config:
                         text = f"Using Grid from CSV Generation\n{_fmt(self._austal_grid_config)}"
                         bg_color = STATUS_STYLE_SUCCESS
 
@@ -1417,7 +1393,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             import pandas as pd
         except Exception as e:
             logger.warning(
-                "Receptor CSV read skipped (geopandas/pandas import failed): %s", e,
+                "Receptor CSV read skipped (geopandas/pandas import failed): %s",
+                e,
             )
             return None
         if not csv_path or not os.path.isfile(csv_path):
@@ -1441,7 +1418,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             if "EPSG" not in df.columns:
                 df["EPSG"] = 4326
             logger.info(
-                "Loaded %d receptor point(s) from CSV: %s", len(df), csv_path,
+                "Loaded %d receptor point(s) from CSV: %s",
+                len(df),
+                csv_path,
             )
             return gpd.GeoDataFrame(df)
         except Exception as e:
@@ -1459,7 +1438,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             import pandas as pd
         except Exception as e:
             logger.warning(
-                "Receptor DB read skipped (geopandas/pandas import failed): %s", e,
+                "Receptor DB read skipped (geopandas/pandas import failed): %s",
+                e,
             )
             return None
         if not alaqs_file or not os.path.isfile(alaqs_file):
@@ -1476,7 +1456,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         except Exception as e:
             logger.warning(
                 "Could not read shapes_receptor_points from '%s': %s",
-                alaqs_file, e,
+                alaqs_file,
+                e,
             )
             return None
         if not rows:
@@ -1485,13 +1466,15 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         for oid, source_id, xc, yc, h, instudy, _wkt in rows:
             if instudy and str(instudy).strip().upper() == "N":
                 continue
-            accepted.append({
-                "id": source_id or ("R%d" % oid),
-                "longitude": float(xc) if xc is not None else None,
-                "latitude": float(yc) if yc is not None else None,
-                "height": float(h) if h is not None else 1.5,
-                "EPSG": 3857,
-            })
+            accepted.append(
+                {
+                    "id": source_id or ("R%d" % oid),
+                    "longitude": float(xc) if xc is not None else None,
+                    "latitude": float(yc) if yc is not None else None,
+                    "height": float(h) if h is not None else 1.5,
+                    "EPSG": 3857,
+                }
+            )
         if not accepted:
             return None
         df = pd.DataFrame(accepted).dropna(subset=["longitude", "latitude"])
@@ -1499,7 +1482,8 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             return None
         logger.info(
             "Loaded %d receptor point(s) from %s (shapes_receptor_points).",
-            len(df), alaqs_file,
+            len(df),
+            alaqs_file,
         )
         return gpd.GeoDataFrame(df)
 
@@ -2441,8 +2425,9 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 log_path = os.path.join(work_dir, "austal.log")
                 if os.path.isfile(log_path):
                     try:
-                        with open(log_path, "r", encoding="utf-8",
-                                  errors="replace") as fh:
+                        with open(
+                            log_path, "r", encoding="utf-8", errors="replace"
+                        ) as fh:
                             tail = fh.readlines()[-40:]
                         err_msg += "\n\nLast 40 lines of austal.log:\n" + (
                             "".join(tail)
@@ -3067,7 +3052,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             # traceback is written to the QGIS message log (View > Panels
             # > Log Messages > "open_alaqs") for developer debugging.
             logger.error(
-                "runOutputModule(%s) failed: %s", name, e, exc_info=True,
+                "runOutputModule(%s) failed: %s",
+                name,
+                e,
+                exc_info=True,
             )
 
     def _setup_averaging_options(self):
@@ -3099,9 +3087,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 for i in range(averaging_combo.count()):
                     item = model.item(i)
                     if item:
-                        item.setFlags(
-                            item.flags() | QtCore.Qt.ItemFlag.ItemIsEnabled
-                        )
+                        item.setFlags(item.flags() | QtCore.Qt.ItemFlag.ItemIsEnabled)
                         item.setForeground(QtGui.QColor(0, 0, 0))
                         item.setToolTip("")
 

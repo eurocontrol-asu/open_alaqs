@@ -25,7 +25,6 @@ from qgis.PyQt import QtCore, QtGui, QtWidgets
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.OutputModule import OutputModule
 from open_alaqs.core.modules.TimeSeriesDispersionOutputModule import (
-    _austal_substance_for_results,
     _parse_tmpa_file,
 )
 
@@ -71,16 +70,16 @@ _PLUGIN_NAME_FOR_SUBSTANCE = {
 # an integer for daily/hourly limits.
 _EU_2030_LIMITS = {
     "pm": {  # PM10
-        "annual_mean":      (20.0, None, "ug/m3"),
-        "daily_exceedance": (45.0, 18,   "ug/m3"),
+        "annual_mean": (20.0, None, "ug/m3"),
+        "daily_exceedance": (45.0, 18, "ug/m3"),
     },
     "pm25": {  # PM2.5
-        "annual_mean":      (10.0, None, "ug/m3"),
-        "daily_exceedance": (25.0, 18,   "ug/m3"),
+        "annual_mean": (10.0, None, "ug/m3"),
+        "daily_exceedance": (25.0, 18, "ug/m3"),
     },
     "no2": {
-        "annual_mean":       (20.0, None, "ug/m3"),
-        "hourly_exceedance": (200.0, 3,   "ug/m3"),
+        "annual_mean": (20.0, None, "ug/m3"),
+        "hourly_exceedance": (200.0, 3, "ug/m3"),
     },
     # NOx ecosystem protection: 30 µg/m³ annual mean (kept from 2008/50).
     "nox": {
@@ -92,7 +91,7 @@ _EU_2030_LIMITS = {
         # with reduced exceedance count - count not yet verified
         # against the consolidated text, so daily is treated as
         # absolute (no exceedances allowed) for now.
-        "annual_mean":      (20.0, None, "ug/m3"),
+        "annual_mean": (20.0, None, "ug/m3"),
         "daily_exceedance": (50.0, None, "ug/m3"),
     },
 }
@@ -116,19 +115,22 @@ def _get_compliance_metrics(substance):
             label = "hours > %g %s" % (threshold, unit)
         else:
             continue
-        metrics.append({
-            "type": mtype,
-            "threshold": threshold,
-            "allowed_exceedances": allowed,
-            "unit": unit,
-            "label": label,
-        })
+        metrics.append(
+            {
+                "type": mtype,
+                "threshold": threshold,
+                "allowed_exceedances": allowed,
+                "unit": unit,
+                "label": label,
+            }
+        )
     return metrics
 
 
 # ---------------------------------------------------------------------------
 # Per-receptor metric computation
 # ---------------------------------------------------------------------------
+
 
 def _compute_metrics_for_substance(tmpa_data, metrics, substance):
     """Build report rows for one substance across all receptors.
@@ -147,9 +149,7 @@ def _compute_metrics_for_substance(tmpa_data, metrics, substance):
     point_names = tmpa_data.get("point_names") or []
 
     rows = []
-    plugin_name = _PLUGIN_NAME_FOR_SUBSTANCE.get(
-        substance.lower(), substance.upper()
-    )
+    plugin_name = _PLUGIN_NAME_FOR_SUBSTANCE.get(substance.lower(), substance.upper())
 
     for r_idx in range(n_recv):
         ts = matrix[:, r_idx].astype(float)
@@ -202,20 +202,22 @@ def _compute_metrics_for_substance(tmpa_data, metrics, substance):
                 value_str = "%d" % value
                 limit_str = "> %g %s" % (m["threshold"], m["unit"])
 
-            rows.append({
-                "receptor": rname,
-                "pollutant": plugin_name,
-                "metric": m["label"],
-                "value": value_str,
-                "limit": limit_str,
-                "allowed_exceedances": allowed_str,
-                "pass": bool(passes),
-                # raw values for CSV
-                "_raw_value": value,
-                "_raw_threshold": m["threshold"],
-                "_raw_allowed": m.get("allowed_exceedances"),
-                "_unit": m["unit"],
-            })
+            rows.append(
+                {
+                    "receptor": rname,
+                    "pollutant": plugin_name,
+                    "metric": m["label"],
+                    "value": value_str,
+                    "limit": limit_str,
+                    "allowed_exceedances": allowed_str,
+                    "pass": bool(passes),
+                    # raw values for CSV
+                    "_raw_value": value,
+                    "_raw_threshold": m["threshold"],
+                    "_raw_allowed": m.get("allowed_exceedances"),
+                    "_unit": m["unit"],
+                }
+            )
 
     return rows
 
@@ -253,7 +255,8 @@ def _build_compliance_rows(work_dir):
         except Exception as exc:
             logger.warning(
                 "Skipping %s for compliance report (parse failed): %s",
-                path, exc,
+                path,
+                exc,
             )
             continue
         info["substances_seen"].append(substance)
@@ -272,6 +275,7 @@ def _build_compliance_rows(work_dir):
 # ---------------------------------------------------------------------------
 # Qt dialog
 # ---------------------------------------------------------------------------
+
 
 class ComplianceReportDialog(QtWidgets.QDialog):
     """Receptor compliance report — table of metrics per receptor and pollutant."""
@@ -304,9 +308,12 @@ class ComplianceReportDialog(QtWidgets.QDialog):
             "EU Directive 2024/2881 limit values (from 1 Jan 2030)  —  "
             "%d pollutant%s evaluated, %d receptor%s, %d tmpa file%s"
             % (
-                n_pol, "" if n_pol == 1 else "s",
-                n_rec, "" if n_rec == 1 else "s",
-                n_tmpa, "" if n_tmpa == 1 else "s",
+                n_pol,
+                "" if n_pol == 1 else "s",
+                n_rec,
+                "" if n_rec == 1 else "s",
+                n_tmpa,
+                "" if n_tmpa == 1 else "s",
             )
         )
         if n_skip:
@@ -335,9 +342,7 @@ class ComplianceReportDialog(QtWidgets.QDialog):
             self._set_cell(i, 4, row["limit"], align_right=True)
             self._set_cell(i, 5, row["allowed_exceedances"], align_right=True)
 
-            result_item = QtWidgets.QTableWidgetItem(
-                "PASS" if row["pass"] else "FAIL"
-            )
+            result_item = QtWidgets.QTableWidgetItem("PASS" if row["pass"] else "FAIL")
             result_item.setTextAlignment(QtCore.Qt.AlignCenter)
             if row["pass"]:
                 result_item.setBackground(QtGui.QColor(190, 240, 190))
@@ -380,24 +385,38 @@ class ComplianceReportDialog(QtWidgets.QDialog):
         try:
             with open(path, "w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
-                writer.writerow([
-                    "Receptor", "Pollutant", "Metric",
-                    "Value", "Unit", "Threshold",
-                    "AllowedExceedances", "Pass",
-                ])
+                writer.writerow(
+                    [
+                        "Receptor",
+                        "Pollutant",
+                        "Metric",
+                        "Value",
+                        "Unit",
+                        "Threshold",
+                        "AllowedExceedances",
+                        "Pass",
+                    ]
+                )
                 for r in self._rows:
-                    writer.writerow([
-                        r["receptor"],
-                        r["pollutant"],
-                        r["metric"],
-                        r.get("_raw_value"),
-                        r.get("_unit", ""),
-                        r.get("_raw_threshold"),
-                        r.get("_raw_allowed") if r.get("_raw_allowed") is not None else "",
-                        "PASS" if r["pass"] else "FAIL",
-                    ])
+                    writer.writerow(
+                        [
+                            r["receptor"],
+                            r["pollutant"],
+                            r["metric"],
+                            r.get("_raw_value"),
+                            r.get("_unit", ""),
+                            r.get("_raw_threshold"),
+                            (
+                                r.get("_raw_allowed")
+                                if r.get("_raw_allowed") is not None
+                                else ""
+                            ),
+                            "PASS" if r["pass"] else "FAIL",
+                        ]
+                    )
             QtWidgets.QMessageBox.information(
-                self, "Export complete",
+                self,
+                "Export complete",
                 "Compliance report saved to:\n%s" % path,
             )
         except Exception as exc:
@@ -409,6 +428,7 @@ class ComplianceReportDialog(QtWidgets.QDialog):
 # ---------------------------------------------------------------------------
 # Output module wrapper (registered with OutputDispersionModuleRegistry)
 # ---------------------------------------------------------------------------
+
 
 class ComplianceReportDispersionModule(OutputModule):
     """Receptor compliance report module.
@@ -495,6 +515,8 @@ class ComplianceReportDispersionModule(OutputModule):
         if self._rows is None:
             return None
         self._dialog = ComplianceReportDialog(
-            self._rows, self._info, parent=self._parent,
+            self._rows,
+            self._info,
+            parent=self._parent,
         )
         return self._dialog

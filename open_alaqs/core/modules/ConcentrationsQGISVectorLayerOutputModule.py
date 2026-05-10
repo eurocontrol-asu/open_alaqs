@@ -481,13 +481,19 @@ class QGISVectorLayerDispersionModule(OutputModule):
                             os.path.join(
                                 self._concentration_database,
                                 "%s-%sa.dmna"
-                                % (_austal_substance_for_results(self._pollutant), str(time_counter).zfill(3)),
+                                % (
+                                    _austal_substance_for_results(self._pollutant),
+                                    str(time_counter).zfill(3),
+                                ),
                             )
                             if not self._check_uncertainty
                             else os.path.join(
                                 self._concentration_database,
                                 "%s-%ss.dmna"
-                                % (_austal_substance_for_results(self._pollutant), str(time_counter).zfill(3)),
+                                % (
+                                    _austal_substance_for_results(self._pollutant),
+                                    str(time_counter).zfill(3),
+                                ),
                             )
                         )
 
@@ -495,7 +501,9 @@ class QGISVectorLayerDispersionModule(OutputModule):
                             output_file
                         )
                         if not self.assure_time_interval(output_data):
-                            raise Exception(self._build_timedelta_error_message(output_data))
+                            raise Exception(
+                                self._build_timedelta_error_message(output_data)
+                            )
                         conc[str(time_counter).zfill(3)] = concentration_matrix
                     return (
                         output_data,
@@ -539,8 +547,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
                                     "only writes when run with the NOTALUFT "
                                     "option (Output Mode: 'Per-hour series'). "
                                     "Either re-run AUSTAL with NOTALUFT enabled, "
-                                    "or select 'annual mean' averaging."
-                                    % output_file
+                                    "or select 'annual mean' averaging." % output_file
                                 )
                             else:
                                 (
@@ -549,7 +556,9 @@ class QGISVectorLayerDispersionModule(OutputModule):
                                     concentration_matrix,
                                 ) = self.readA2Koutput(output_file)
                                 if not self.assure_time_interval(output_data):
-                                    raise Exception(self._build_timedelta_error_message(output_data))
+                                    raise Exception(
+                                        self._build_timedelta_error_message(output_data)
+                                    )
                                 conc[str(time_counter).zfill(3)] = concentration_matrix
 
                     elif self._averaging_period == "8-hours mean":
@@ -591,8 +600,7 @@ class QGISVectorLayerDispersionModule(OutputModule):
                                     "only writes when run with the NOTALUFT "
                                     "option (Output Mode: 'Per-hour series'). "
                                     "Either re-run AUSTAL with NOTALUFT enabled, "
-                                    "or select 'annual mean' averaging."
-                                    % output_file
+                                    "or select 'annual mean' averaging." % output_file
                                 )
                             else:
                                 (
@@ -601,7 +609,9 @@ class QGISVectorLayerDispersionModule(OutputModule):
                                     concentration_matrix,
                                 ) = self.readA2Koutput(output_file)
                                 if not self.assure_time_interval(output_data):
-                                    raise Exception(self._build_timedelta_error_message(output_data))
+                                    raise Exception(
+                                        self._build_timedelta_error_message(output_data)
+                                    )
                                 conc[str(time_counter).zfill(3)] = concentration_matrix
 
                     return (
@@ -732,7 +742,11 @@ class QGISVectorLayerDispersionModule(OutputModule):
                     self._index_k,
                     self._index_i,
                     self._index_j,
-                    len(concentration_matrix) if concentration_matrix is not None else 0,
+                    (
+                        len(concentration_matrix)
+                        if concentration_matrix is not None
+                        else 0
+                    ),
                 )
             )
 
