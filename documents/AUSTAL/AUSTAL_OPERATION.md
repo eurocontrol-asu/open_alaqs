@@ -6,7 +6,13 @@ End-to-end walkthrough of the **Calculate Dispersion** dialog, from the QGIS too
 
 ## Where to find the dialog
 
-In QGIS, click the **Calculate Dispersion** button on the OpenALAQS toolbar (icon: `dispersion_model.png`). The dialog opens with five collapsible sections, numbered roughly in execution order.
+In QGIS, click the **Calculate Dispersion** button on the OpenALAQS toolbar:
+
+<img src="../../open_alaqs/icons/dispersion_model.png" alt="Calculate Dispersion toolbar icon" width="32" />
+
+The dialog opens with five collapsible sections, numbered roughly in execution order.
+
+![AUSTAL Dispersion Analysis dialog](../../open_alaqs/assets/running-austal.png)
 
 ---
 

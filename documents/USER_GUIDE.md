@@ -543,7 +543,20 @@ The user is referred to the [`AUSTAL`](https://www.umweltbundesamt.de/en/topics/
 
 ### [Running AUSTAL](#running-austal)
 
-To launch a simulation with AUSTAL, click `Calculate Dispersion` in the OpenALAQS toolbar. Specify the path to the AUSTAL executable and the project directory (`Work Directory`) where all output files will be written. Click `Run AUSTAL` to start the dispersion calculation. AUSTAL can also be run independently outside OpenALAQS.
+Click `Calculate Dispersion` in the OpenALAQS toolbar to open the dispersion dialog. The dialog has five sections, worked through in order:
+
+1. **AUSTAL Executable** — file-pick the path to `austal.exe` (Windows) or `austal` (Linux). One-time per machine.
+2. **Input File Strategy** — pick one of three radio buttons:
+   + `Use Existing AUSTAL Input Files` — run AUSTAL against a folder you already prepared.
+   + `Generate AUSTAL Input Files from OpenALAQS Emission Inventory File` — drive the run from an `*_out.alaqs` file (most common path).
+   + `Generate AUSTAL Input Files from CSV` — drive the run from emissions and meteo CSV files prepared outside OpenALAQS.
+
+   In the two Generate modes, set the **Work Directory** where the input files (`austal.txt`, `series.dmna`, etc.) and AUSTAL's outputs will be written. The same section also exposes the **Receptors CSV** picker, the **NOTALUFT** checkbox, and the **PM10 fine fraction** spinbox (described above). For Generate-from-`.alaqs`, the plugin auto-loads receptor points from the `shapes_receptor_points` table if the Receptors CSV picker is empty.
+
+3. **Execution** — click `Run AUSTAL`. The optional `Erase Log File at the Start of the Calculation` checkbox deletes any existing `austal.log` before the run.
+4. **Result Visualisation** — populated after a successful run. See [Visualize results](#visualize-results) below.
+
+AUSTAL can also be run independently outside OpenALAQS. For a step-by-step operational walkthrough, see [`documents/AUSTAL/AUSTAL_OPERATION.md`](./AUSTAL/AUSTAL_OPERATION.md).
 
 ![running-austal.png](./../open_alaqs/assets/running-austal.png)
 
