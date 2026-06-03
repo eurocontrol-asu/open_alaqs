@@ -226,7 +226,7 @@ Most tests need QGIS available on the Python path. CI runs the suite in a QGIS D
 
 [(Back to top)](#table-of-contents)
 
-Open-ALAQS is validated against an external reference spreadsheet to floating-point precision across bymode, BFFM2 trajectory, and BFFM2 mode_anchor methods, with non-volatile PM matching EEDB anchors exactly via MEEM V1 at LTO.
+Open-ALAQS is validated against external CAEP14 reference values to floating-point precision across bymode, BFFM2 trajectory, and BFFM2 mode_anchor methods, with non-volatile PM matching EEDB anchors exactly via MEEM V1 at LTO.
 
 The full validation matrix, per-engine results, and cross-platform agreement evidence are in [`documents/VALIDATION_GUIDE.md`](documents/VALIDATION_GUIDE.md).
 
