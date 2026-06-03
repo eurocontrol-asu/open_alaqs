@@ -215,6 +215,13 @@ class PointSourcesDatabase(SQLSerializable, metaclass=Singleton):
                     ("p1_kg_k", "DECIMAL"),
                     ("p2_kg_k", "DECIMAL"),
                     ("instudy", "TEXT"),
+                    # Point-sources v2 (schema migration in
+                    # scripts/migrate_alaqs.py): per-source override of
+                    # the EF row's activity_unit. NULL means inherit
+                    # from the default_stationary_ef row chosen at
+                    # source creation. Legacy .alaqs files have this
+                    # column NULL on every row.
+                    ("activity_unit", "TEXT"),
                 ]
             )
         if geometry_columns is None:

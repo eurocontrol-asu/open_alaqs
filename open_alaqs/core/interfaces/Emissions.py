@@ -170,6 +170,36 @@ class Emission(Store):
                 pollutant_type, PollutantUnit.GRAM, pollutant_ei * fuel_burned
             )
 
+    def add_from_mode_result(self, mode_result, scale: float = 1.0) -> None:
+        """Add emissions from a FOCA-helicopter ``ModeResult`` (Phase 1).
+
+        ``ModeResult`` carries pre-totalled values for one LTO mode (GI/TO/AP)
+        including all engines: fuel_kg, nox_g, hc_g, co_g, pm_g, co2_g.
+
+        Helicopters bypass the EmissionIndex pathway entirely (no precomputed
+        EI table lookups under FOCA 2015 clean schema); ``compute_lto`` from
+        ``foca_heli_utils`` returns the totals directly. This helper writes
+        them into the standard ``Emission`` accumulator so downstream output
+        modules treat helicopter emissions identically to fixed-wing ones.
+
+        ``scale`` applies a multiplicative fraction (0.0-1.0) on the mode
+        contribution. FOCA 2015 allocates Ground Idle (GI) emissions across
+        the departure cycle (80% of GI) and the arrival cycle (20% of GI):
+        callers pass scale=0.8 for departure GI and scale=0.2 for arrival
+        GI. For TO and AP modes the convention is scale=1.0 (the default).
+
+        PM mass is written to PM10 (helicopters' soot is total PM in FOCA's
+        definition). PM1/PM2/PM10Organic/PM10Nonvol/PM10Sul are not split out;
+        future enhancement can populate the size-fractionated buckets from
+        FOCA's mean particle size formulas.
+        """
+        self.addValue("fuel_kg", mode_result.fuel_kg * scale)
+        self.add_value(PollutantType.NOx, PollutantUnit.GRAM, mode_result.nox_g * scale)
+        self.add_value(PollutantType.HC, PollutantUnit.GRAM, mode_result.hc_g * scale)
+        self.add_value(PollutantType.CO, PollutantUnit.GRAM, mode_result.co_g * scale)
+        self.add_value(PollutantType.PM10, PollutantUnit.GRAM, mode_result.pm_g * scale)
+        self.add_value(PollutantType.CO2, PollutantUnit.GRAM, mode_result.co2_g * scale)
+
     def addGeneric(self, emission_index_, factor, unit, new_unit=""):
         for key in list(emission_index_.getObjects().keys()):
             self.addValue(

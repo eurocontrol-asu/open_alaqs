@@ -16,5 +16,11 @@ CREATE TABLE "default_stationary_ef" (
   "particulate_kg_k" DECIMAL NULL,
   "p1_kg_k" DECIMAL NULL,
   "p2_kg_k" DECIMAL NULL,
-  "SUBSTANCE" DECIMAL NULL
+  "SUBSTANCE" DECIMAL NULL,
+  "activity_unit" TEXT NULL,
+  "reference" TEXT NULL,
+  "deprecated" INTEGER NULL,
+  "recommended_month_profile" TEXT NULL,
+  "recommended_day_profile" TEXT NULL,
+  "recommended_hour_profile" TEXT NULL
 );

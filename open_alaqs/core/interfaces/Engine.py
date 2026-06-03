@@ -32,125 +32,6 @@ defaultEI = {
 }
 
 
-class HelicopterEngineEmissionIndex(Store):
-    def __init__(self):
-        Store.__init__(self)
-
-        self._modes_powersetting_map = {
-            "GI1": 0.0,  # Idle Eng#1
-            "GI2": 0.0,  # Idle Eng#2
-            "AP": 0.0,  # Approach
-            "TO": 0.0,  # Hover and Climb
-        }
-
-    def setModePowerSetting(self, mode, power_setting):
-        self._modes_powersetting_map[mode] = power_setting
-
-    def getPowerSettingByMode(self, mode):
-        return self._modes_powersetting_map.get(mode)
-
-    def getModes(self):
-        return ["GI1", "GI2", "TO", "AP"]
-
-    def setObject(self, mode, val):
-        # if self.hasKey(mode):
-        #     logger.warning("Already found engine ei with mode '%s' for engine with full name '%s'.
-        #     Replacing existing entry." % (mode, val["engine_full_name"] if "engine_full_name" in val else "unknown"))
-
-        ei_val = {}
-        ei_val["fuel_kg_sec"] = (
-            val["%s_ff_per_engine_kg_s" % (mode.lower())]
-            if "%s_ff_per_engine_kg_s" % (mode.lower()) in val
-            else 0.0
-        )
-
-        for k in ["co", "hc", "nox", "pm10"]:
-            if k == "pm10":
-                ei_val["%s_g_kg" % k] = val["%s_eipm_g_kg" % (mode.lower())]
-            else:
-                ei_val["%s_g_kg" % k] = val["%s_ei%s_g_kg" % (mode.lower(), k)]
-
-        # AvGas 3.10 (Piston Engine Powered Helicopters) or 3.15 for Jet Fuel (Turboshaft Powered Helicopters)
-        if "engine_type" in val:
-            ei_val["co2_g_kg"] = (
-                val["%s_ff_per_engine_kg_s" % (mode.lower())] * 3.10 * 1000
-                if val["engine_type"] == "PISTON"
-                else val["%s_ff_per_engine_kg_s" % (mode.lower())] * 3.16 * 1000
-            )
-        else:
-            ei_val["co2_g_kg"] = (
-                val["%s_ff_per_engine_kg_s" % (mode.lower())] * 3.16 * 1000
-            )
-        ei_val["fuel_type"] = "AvGas" if val["engine_type"] == "PISTON" else "Jet Fuel"
-
-        # ToDo: Add all pollutants
-        for k in [
-            "sox",
-            "p1",
-            "p2",
-            "smoke_number",
-            "smoke_number_maximum",
-            "pm10_nonvol",
-            "pm10_sul",
-            "pm10_organic",
-        ]:
-            ei_val["%s_g_kg" % k] = 0.0
-            ei_val["%s_g_kg" % k] = 0.0
-            ei_val["%s_g_kg" % k] = 0.0
-            ei_val["%s_g_kg" % k] = 0.0
-
-        ei_val["time_min"] = val["%s_time_min" % (mode.lower())]
-
-        self._objects[mode] = {
-            "emission_index": EmissionIndex(initValues=ei_val, defaultValues=defaultEI),
-            "source": val["source"] if "source" in val else "",
-            "coolant": val["coolant"] if "coolant" in val else "",
-            "combustion_technology": (
-                val["combustion_technology"] if "combustion_technology" in val else ""
-            ),
-            "technology_age": val["technology_age"] if "technology_age" in val else "",
-        }
-
-        # update mode if provided
-        # ToDo: Add "power_setting" to default_helicopter_engine_ei table in ALAQS DB
-        # if "power_setting" in val:
-        #     self.setModePowerSetting(mode, val["%s_power_setting"%(mode.lower())])
-
-    def getEmissionIndexByMode(self, mode) -> Optional[EmissionIndex]:
-        emission_index = None
-        if self.hasKey(mode):
-            emission_index = self.getObject(mode)
-            if emission_index is not None and "emission_index" in emission_index:
-                emission_index = emission_index["emission_index"]
-        else:
-            raise Exception("Did not find emission index for mode '%s'." % (str(mode)))
-        return emission_index
-
-    def getDefaultIndex(self, mode: str) -> dict:
-        return {
-            "mode": str(mode),
-            "emission_index": EmissionIndex(defaultValues=defaultEI),
-            "thrust": 0.0,
-            "fuel_type": "",
-            "source": "",
-            "coolant": "",
-            "combustion_technology": "",
-            "technology_age": "",
-        }
-
-    def __str__(self):
-        val = ""
-        for mode, ps in sorted(
-            list(self._modes_powersetting_map.items()), key=lambda x: x[1]
-        ):
-            val += "\n"
-            val += "\t Power setting is %.2f for mode '%s':" % (float(ps), str(mode))
-            val += "\t %s" % (
-                "\n\t".join(str(self.getEmissionIndexByMode(mode)).split("\n"))
-            )
-        return val
-
-
 class EngineEmissionIndex(Store):
     def __init__(self):
         Store.__init__(self)
@@ -682,7 +563,6 @@ class EngineEmissionIndex(Store):
                 and "ambient_conditions" in method["config"]
                 and method["config"]["ambient_conditions"] is not None
             ):
-                # $$
                 try:
                     ac = {
                         "temperature_in_Kelvin": method["config"][
@@ -700,9 +580,37 @@ class EngineEmissionIndex(Store):
                             "ambient_conditions"
                         ].getRelativeHumidity(),
                     }
-                except Exception:
+                except Exception as _exc:
+                    # Pre-fix this branch silently substituted ISA defaults,
+                    # making upstream meteo problems (empty tbl_InvMeteo,
+                    # missing Temperature, bad units) invisible — BFFM2 then
+                    # ran with ISA and the resulting EI matched ISA exactly
+                    # regardless of the configured ambient_conditions.  Log
+                    # the exception so the root cause is visible.
+                    logger.warning(
+                        "BFFM2 ambient extraction failed (%s); falling back "
+                        "to ISA defaults.  Check that tbl_InvMeteo is "
+                        "populated and that AmbientCondition.getTemperature "
+                        "/ getPressure / getRelativeHumidity return non-None "
+                        "values.",
+                        _exc,
+                    )
                     ac = ambient_conditions
                 ambient_conditions.update(ac)
+            else:
+                # Same blind-spot for the case where the caller never set
+                # ambient_conditions into method["config"] at all (e.g. a
+                # unit test or external script calling Engine directly).
+                # Warn once per Engine instance so production runs surface
+                # the missing config but tests stay quiet.
+                if not getattr(self, "_bffm2_no_ambient_warned", False):
+                    logger.warning(
+                        "BFFM2: method['config']['ambient_conditions'] not "
+                        "set; using ISA defaults (T=288.15 K, P=101325 Pa, "
+                        "RH=0.6).  Production callers should pass an "
+                        "AmbientCondition for proper ambient correction."
+                    )
+                    self._bffm2_no_ambient_warned = True
 
             # Build a hashable cache key from all inputs that affect the result.
             # fuel_flow is rounded to 4 dp to avoid cache misses from floating-point

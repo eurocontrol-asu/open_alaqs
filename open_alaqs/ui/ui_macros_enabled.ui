@@ -85,8 +85,5 @@
    </property>
   </widget>
  </widget>
- <resources>
-  <include location="alaqs_resources.qrc"/>
- </resources>
  <connections/>
 </ui>

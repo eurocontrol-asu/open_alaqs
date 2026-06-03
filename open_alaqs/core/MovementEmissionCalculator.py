@@ -192,7 +192,10 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
         if self._block_time is not None and self._runway_time is not None:
             self._total_taxiing_time = abs(self._block_time - self._runway_time)
 
-        self._start_emissions = self._engine.getStartEmissions()
+        # Start emissions are keyed by aircraft_group, not by engine.
+        # The Engine instance can be shared across aircraft in different
+        # groups, so the per-aircraft value is held on the Aircraft.
+        self._start_emissions = self._aircraft.getStartEmissions()
         self._include_start_emissions = self._start_emissions is not None
 
         # Tracks whether the start emissions for the engines covered by
@@ -763,50 +766,208 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         return emissions
 
     def _apply_flight_emissions_for_helicopters(self, emissions: list[EmissionsDict]):
-        # Based on FOCA Guidance on the Determination of Helicopter Emissions and the FOCA Engine Emissions Databank
-        heli_emissions = Emission(defaultValues=defaultEmissions)
-        emission_index_ = self._engine.getEmissionIndex()
+        """Helicopter half-LTO emissions, FOCA 2015 Appendix A.
 
-        number_of_engines = (
-            self._aircraft.getEngineCount()
-            if (
-                self._aircraft is not None
-                and self._aircraft.getEngineCount() is not None
-            )
-            else 1
+        Routes through the FOCA helper modules
+        (`open_alaqs.core.tools.foca_heli`,
+        `open_alaqs.core.tools.foca_heli_utils`) and the
+        `Emission.add_from_mode_result` accumulator helper. Does NOT use
+        `self._engine` (which is None by design for helicopters per
+        `Movement.py` line ~1469: FOCA computes directly off the
+        Helicopter row's category / max_shp / engine_count).
+
+        Departure half: TO at full mode time + GI at 80 % (GI_DEPARTURE_FRACTION).
+        Arrival half:   AP at full mode time + GI at 20 % (GI_ARRIVAL_FRACTION).
+        """
+        # Local imports keep this method self-contained and avoid pulling
+        # the FOCA helpers into the module-import path of every other
+        # calculator class. They are cheap (already imported elsewhere in
+        # the package).
+        from open_alaqs.core.tools.foca_heli import (
+            GI_ARRIVAL_FRACTION,
+            GI_DEPARTURE_FRACTION,
+            PROFILES,
+            HelicopterCategory,
+        )
+        from open_alaqs.core.tools.foca_heli_utils import (
+            _mode_result,
+            compute_mode_emissions,
         )
 
-        # Get all individual segments (pairs  of points) for the geometry
+        # self._aircraft is a Helicopter instance for this path (the
+        # caller in FlightEmissionCalculator.calculate_emissions
+        # dispatches via aircraft.getGroup() == "HELICOPTER"; Movement.py
+        # has already routed via HelicopterStore so the object exposes
+        # getCategory / getEngineCount / getMaxShpPerEngine).
+        helicopter = self._aircraft
+
+        # Surface zero contribution rather than crash if the helicopter
+        # row is incomplete (engine binding absent, MTOM missing for a
+        # twin, etc.). getCategory() returns "UNKNOWN" in those cases.
+        if helicopter is None:
+            logger.warning(
+                "Helicopter movement skipped: aircraft object is None. "
+                "Contribution to total emissions = 0 for this movement."
+            )
+            return
+
+        category_str = helicopter.getCategory()
+        if category_str == "UNKNOWN":
+            ac_icao = "?"
+            try:
+                ac_icao = helicopter.getICAOIdentifier()
+            except Exception:
+                pass
+            logger.warning(
+                "Helicopter movement skipped: FOCA category UNKNOWN for "
+                "aircraft '%s' (engine binding or MTOM missing in "
+                "default_helicopter / default_helicopter_engines). "
+                "Contribution to total emissions = 0 for this movement.",
+                ac_icao,
+            )
+            return
+
+        try:
+            category = HelicopterCategory(category_str)
+        except ValueError:
+            logger.warning(
+                "Helicopter movement skipped: unrecognised FOCA "
+                "category %r. Contribution to total emissions = 0 for "
+                "this movement.",
+                category_str,
+            )
+            return
+
+        n_engines = int(helicopter.getEngineCount() or 1)
+        max_shp = float(helicopter.getMaxShpPerEngine() or 0.0)
+
+        if max_shp <= 0.0:
+            ac_icao = "?"
+            try:
+                ac_icao = helicopter.getICAOIdentifier()
+            except Exception:
+                pass
+            logger.warning(
+                "Helicopter movement skipped: max_shp_per_engine missing "
+                "or zero for aircraft '%s'. Contribution to total "
+                "emissions = 0 for this movement.",
+                ac_icao,
+            )
+            return
+
+        profile = PROFILES[category]
+        is_dep = self._is_departure()
+
+        # Ground-idle: 80 % of the GI mode time for the departure half,
+        # 20 % for the arrival half (FOCA 2015 Appendix A). The fraction
+        # is folded into the mode time before _mode_result; the values
+        # returned are total grams for that fractional mode time across
+        # all engines.
+        gi_fraction = GI_DEPARTURE_FRACTION if is_dep else GI_ARRIVAL_FRACTION
+        gi_em = compute_mode_emissions(category, max_shp, profile.gi_power)
+        gi = _mode_result(
+            "GI",
+            profile.gi_power,
+            profile.gi_time_min * gi_fraction,
+            gi_em,
+            n_engines,
+        )
+
+        # Active mode: TO at full to_time for the departure half, AP at
+        # full ap_time for the arrival half.
+        if is_dep:
+            active_em = compute_mode_emissions(category, max_shp, profile.to_power)
+            active = _mode_result(
+                "TO",
+                profile.to_power,
+                profile.to_time_min,
+                active_em,
+                n_engines,
+            )
+        else:
+            active_em = compute_mode_emissions(category, max_shp, profile.ap_power)
+            active = _mode_result(
+                "AP",
+                profile.ap_power,
+                profile.ap_time_min,
+                active_em,
+                n_engines,
+            )
+
+        # Accumulate GI + active mode totals into a single Emission. The
+        # scale=1.0 is intentional: the GI time has already been scaled
+        # by gi_fraction above (matching the standalone's
+        # compute_helicopter.compute_helicopter line-by-line).
+        heli_emissions = Emission(defaultValues=defaultEmissions)
+        heli_emissions.add_from_mode_result(gi, scale=1.0)
+        heli_emissions.add_from_mode_result(active, scale=1.0)
+
+        # Attach the trajectory geometry (preserves the spatial behaviour
+        # the rest of the output pipeline expects). For helicopters the
+        # "trajectory" is the FOCA half-LTO footprint anchored at the
+        # runway, generated upstream by foca_heli_trajectory; here we
+        # only walk its pre-built point pairs.
+        #
+        # IMPORTANT: setGeometryText takes a WKT STRING (every other
+        # call site in this module does), not a shapely object. Earlier
+        # revision of this patch passed the shapely MultiLineString
+        # directly. Storing the WKT explicitly keeps the type
+        # consistent with the fixed-wing path.
+        #
+        # IMPORTANT: skip zero-length segments. The FOCA helicopter
+        # trajectory builder emits a duplicate GI point at the runway
+        # threshold (start and end of the 4-minute ground-idle phase
+        # share the same x=y=0 coordinates). A MultiLineString with a
+        # zero-length component is `is_valid == False`, and
+        # `OutputModule._process_grid` runs `make_valid()` on the
+        # geometry, which collapses the invalid MultiLineString into a
+        # GeometryCollection (MultiPoint + LineString). The
+        # `GeometryCollection` branch of the spatial-allocation switch
+        # in `_process_grid` then silently DROPS the emission from the
+        # per-cell grid (only logged at DEBUG level), even though the
+        # per-movement CSV still shows the FOCA total. Filter the
+        # degenerate segment so the geometry stays a valid
+        # MultiLineString and reaches `_process_grid` intact.
         emissions_geo = []
         for start_point_, end_point_ in self._trajectory.getPointPairs(self._mode):
-            emissions_geo.append(
-                loads(
-                    spatial.getLineGeometryText(
-                        start_point_.getGeometryText(), end_point_.getGeometryText()
-                    )
+            seg = loads(
+                spatial.getLineGeometryText(
+                    start_point_.getGeometryText(),
+                    end_point_.getGeometryText(),
                 )
             )
-        entire_heli_geometry = MultiLineString(emissions_geo)
-        heli_emissions.setGeometryText(entire_heli_geometry)
-        space_in_segment_ = entire_heli_geometry.length
+            # 2D length only — the GI duplicate pair shares (x, y)
+            # even if z differs, and the AUSTAL grid is 2D-indexed,
+            # so a degenerate 2D segment is what we want to skip.
+            if seg.length > 0.0:
+                emissions_geo.append(seg)
+        if emissions_geo:
+            entire_heli_geometry = MultiLineString(emissions_geo)
+            heli_emissions.setGeometryText(entire_heli_geometry.wkt)
+            space_in_segment_ = entire_heli_geometry.length
+        else:
+            # No usable trajectory segments. The per-movement CSV will
+            # still show the FOCA emission values but the grid
+            # apportionment skips this movement.
+            logger.warning(
+                "Helicopter movement '%s' has no non-degenerate "
+                "trajectory segments; emissions will not be apportioned "
+                "to the AUSTAL grid. Check that "
+                "TrajectoryTransformer.runway_alignment_for_helicopter "
+                "produced a trajectory with horizontal motion.",
+                self._movement_name,
+            )
+            space_in_segment_ = 0.0
 
-        # Emissions are calculated for the whole trajectory, not for each segment
-        ei_ = (
-            emission_index_.getEmissionIndexByMode("TO")
-            if self._is_departure()
-            else emission_index_.getEmissionIndexByMode("AP")
-        )
-        time_in_segment_ = (
-            ei_.getObject("time_min") * 60.0 if ei_.hasKey("time_min") else 0.0
-        )
+        time_in_segment_ = gi.time_s + active.time_s
 
-        heli_emissions.add(ei_, time_in_segment_ * number_of_engines)
-        emissions_dict_ = {
-            "emissions": [heli_emissions],
-            "distance_time": float(time_in_segment_),
-            "distance_space": float(space_in_segment_),
-        }
-        emissions.append(emissions_dict_)
+        emissions.append(
+            {
+                "emissions": [heli_emissions],
+                "distance_time": float(time_in_segment_),
+                "distance_space": float(space_in_segment_),
+            }
+        )
 
     def calculate_emissions_per_segment(
         self, start_point_: TrajectoryPoint, end_point_: TrajectoryPoint
@@ -1146,9 +1307,31 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         altitude_m: float = 0.0,
     ) -> EmissionIndex:
         # Get emission indices based on the engine-thrust setting or fuel flow of that specific segment
-        emission_index_ = self._engine.getEmissionIndex().getEmissionIndexByEngineState(
-            engine_thrust, method=self._method, fuel_flow=fuel_flow
-        )
+        try:
+            emission_index_ = (
+                self._engine.getEmissionIndex().getEmissionIndexByEngineState(
+                    engine_thrust, method=self._method, fuel_flow=fuel_flow
+                )
+            )
+        except ValueError as _exc:
+            # BFFM2 twin-quadratic fit raises ValueError when the requested
+            # power setting is outside [0.07, 1.05]. This happens when the
+            # ANP profile `power` column for piston/propeller aircraft
+            # (e.g. PISTON-D-2 point 1) is not a 0-1 thrust fraction but
+            # an absolute power value. Observed values: 1.40, 3.38, 6.25.
+            # Fall through to the mode-anchor EI path: the `is None` branch
+            # below uses mode_ei (per-mode EI) as the result.
+            if not getattr(self, "_bffm2_power_oor_shown", False):
+                logger.warning(
+                    "BFFM2: power setting out of twin-quadratic range for "
+                    "movement '%s' segment mode '%s'; falling back to "
+                    "mode-anchor EI. (%s)",
+                    self._movement_name,
+                    mode,
+                    _exc,
+                )
+                self._bffm2_power_oor_shown = True
+            emission_index_ = None
 
         # Get the MEEM-corrected per-mode EI for PM fields.
         # BFFM2 computes gas-phase EI only (NOx/CO/HC); PM is always from the EEDB.

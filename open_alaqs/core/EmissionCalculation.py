@@ -80,6 +80,20 @@ class EmissionCalculation:
         _all_ac = self._ambient_conditions_store.getAmbientConditions(scenario="")
         self._sorted_ac = sorted(_all_ac, key=lambda x: x.getDate())
         self._sorted_ac_times = [ac.getDate() for ac in self._sorted_ac]
+        if not self._sorted_ac_times:
+            # An empty meteo table is silently tolerated and getAmbientCondition()
+            # returns AmbientCondition() (ISA defaults).  Pre-fix this was the
+            # invisible cause of BFFM2 emissions appearing to ignore tbl_InvMeteo:
+            # the chain (calc_method["config"]["ambient_conditions"]) propagates
+            # ISA verbatim end-to-end.  Surface the condition so users know why
+            # their BFFM2 output ignores configured meteo.
+            logger.warning(
+                "tbl_InvMeteo is empty for database '%s'.  All time slices will "
+                "use ISA defaults (T=288.15 K, P=101325 Pa, RH=0.6) for ambient "
+                "corrections.  Populate tbl_InvMeteo via the Inventory > Meteo "
+                "dialog to enable BFFM2 ambient corrections.",
+                self._database_path,
+            )
 
     @staticmethod
     def ProgressBarWidget(dispersion_enabled=False):

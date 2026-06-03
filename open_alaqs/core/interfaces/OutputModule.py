@@ -4,7 +4,14 @@ from typing import Any, Optional, Union, cast
 import geopandas as gpd
 from qgis.core import QgsMapLayer
 from qgis.PyQt.QtWidgets import QWidget
-from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
+from shapely.geometry import (
+    GeometryCollection,
+    LineString,
+    MultiLineString,
+    MultiPolygon,
+    Point,
+    Polygon,
+)
 from shapely.validation import make_valid
 
 from open_alaqs.core.alaqslogging import get_logger
@@ -117,17 +124,36 @@ class GridOutputModule(OutputModule):
 
             return grid_df
 
-        # Calculate Emissions' horizontal distribution
+        # Calculate Emissions' horizontal distribution.
+        # GeometryCollection (especially empty) and other unsupported types
+        # can arise when an emission was added with no geometry (the
+        # Emission default geometry is an empty GeometryCollection): skip
+        # rather than crash the whole plot. The numerical total is still
+        # recorded in the per-movement output; only the spatial allocation
+        # for this particular emission is skipped.
         if isinstance(geom, Point):
             factor = 1 / len(intersecting_df)
+            float("nan")
         elif isinstance(geom, (LineString, MultiLineString)):
             factor = intersecting_df.intersection(geom).length / geom.length
+            float(geom.length)
         elif isinstance(geom, (Polygon, MultiPolygon)):
             factor = intersecting_df.intersection(geom).area / geom.area
-        else:
-            raise NotImplementedError(
-                "Usupported geometry type: {}".format(type(geom).__name__)
+            float(geom.area)
+        elif isinstance(geom, GeometryCollection):
+            logger.debug(
+                "Skipping spatial allocation for emission with "
+                "GeometryCollection geometry (typically empty/default): "
+                "non-spatial totals are preserved in per-movement output."
             )
+            return grid_df
+        else:
+            logger.warning(
+                "Skipping spatial allocation for emission with unsupported "
+                "geometry type: %s",
+                type(geom).__name__,
+            )
+            return grid_df
 
         for pollutant_type in PollutantType:
             emission_value = emission.get_value(pollutant_type, PollutantUnit.KG)

@@ -32,6 +32,7 @@
     - [Taxi routes](#taxi-routes)
     - [Create output file](#create-output-file)
     - [Movements table](#movements-table)
+    - [Helicopters (FOCA 2015)](#helicopters-foca-2015)
     - [Meteorology](#meteorology)
   - [Calculate emissions and query results](#calculate-emissions-and-query-results)
   - [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal)
@@ -263,20 +264,36 @@ When adding a roadway, the following information is required:
 
 #### [Point sources](#point-sources)
 
-Stationary or infrastructure-related emissions from airport facilities, such as power and heating plants, incinerators, training fires, and fuel storage tanks, are represented as point sources in OpenALAQS.
+Stationary or infrastructure-related emissions from airport facilities, such as power and heating plants, incinerators, training fires, fuel storage tanks, and stationary internal-combustion engines, are represented as point sources in OpenALAQS.
 
 When adding a point source, the following information is required:
 + **Parameters**
-  + **Category**: Source category (Tank, Incinerator, Other, Power/Heat plant, Solvent degreaser, Surface coating)
-  + **Type**: Category specific type (Oil or diesel, Automobile gasoline, Aviation gasoline, JP4, JP5, JET A)
-  + **Height**: Height at which emissions are released (in meters) `not yet fully implemented`
-  + **Units per year**: Operating hours per year
-+ **Profiles**:
-  + Hourly, Daily or Monthly activity profiles
+  + **Category**: Source category. Seven categories ship by default: *Other* (0), *Incinerator* (1), *Power/Heat Plant* (2), *Fuel Tank* (3), *Solvent Degreaser* (4), *Surface Coating* (5), *Stationary IC Engine* (6).
+  + **Type**: Category-specific type. The full set is in [`default_stationary_ef`](./../open_alaqs/database/data/default_stationary_ef.csv); examples include natural gas, light/heavy fuel oil, JP-4, JP-5, JET A, automobile gasoline, aviation gasoline.
+  + **Height**: Height at which emissions are released (in metres). `Not yet fully implemented`.
+  + **Activity per year**: How much the source operates in one inventory year. The numeric value of throughput, fuel consumed, or hours run.
+  + **Activity unit** (read-only): Unit paired with *Activity per year*. Inherited from the selected emission factor row (`default_stationary_ef.activity_unit`). Examples: `1000_m3` (natural gas throughput), `1000_L` (liquid-fuel throughput), `hr` (engine operating hours), `1000_kg` (solid waste / coating).
++ **Profiles**: Each point source carries one *hour*, one *day*, and one *month* profile. The profiles split the *Activity per year* total into a per-hour timeline across the inventory year. Three named profiles ship with the templates: `heating_season` (winter-weighted month profile), `cooling_season` (summer-weighted month profile), and `business_hours` (8 AM to 6 PM weekday hour profile). Pick the named profile that matches the source, or define a custom profile via the OpenALAQS Toolbar → *Activity Profiles* panel.
 
 ![points-layer.png](./../open_alaqs/assets/points-layer.png)
 
-The internal OpenALAQS database contains default emission factors for each category and type (see [`default_stationary_ef`](./../open_alaqs/database/data/default_stationary_ef.csv)). The emission calculation is: `emission (kg) = EF (kg/unit) × units_per_year × (interval_hours / 8760)`.
+The internal OpenALAQS database contains default emission factors for each category and type (see [`default_stationary_ef`](./../open_alaqs/database/data/default_stationary_ef.csv)). Each emission factor (CO, HC, NOx, SOx, PM10, P1, P2) is in kilograms per *Activity unit*. The per-hour emission is:
+
+```
+emission_kg_per_hour
+    = EF_kg_per_activity_unit
+    × annual_activity
+    × hour_profile_factor
+    × day_profile_factor
+    × month_profile_factor
+    / 8760
+```
+
+where the three profile factors are dimensionless and average to 1.0 across the year. For a source with all three profiles set to *constant* (1.0 everywhere), the hourly emission is simply `EF × annual_activity / 8760`, equivalent to a uniform spread across the inventory year.
+
+**Schema migration note**: studies produced by older plugin versions used a single `units_per_year` field (hours per year only) without an explicit activity unit. The `scripts/migrate_alaqs.py` tool upgrades legacy `.alaqs` files in place, renames `units_per_year` to `annual_activity`, adds the `activity_unit` column to `shapes_point_sources`, and reports any source pinned to an emission-factor row that has since been deprecated. See `documents/AUXILIARY_MATERIAL.md` for the v2 schema reference.
+
+**Stationary IC Engine sources** are a v2 addition (category 6) and use `hr` as the activity unit (engine operating hours per year). Available types include diesel and natural-gas reciprocating engines at three power tiers (<50 kW, 50 to 500 kW, >500 kW); pick the type that matches the rated power of the engine on site.
 
 #### [Area sources](#area-sources)
 
@@ -432,6 +449,47 @@ The following optional parameters can be left empty. They will only be used if t
 | `engine_thrust_level_for_taxiing` | Taxi thrust level as a fraction (ICAO default: 0.07 = 7%). Only affects the BFFM2 emission index for the moving taxi phase; queuing always uses true idle (7%) regardless of this setting. | Active |
 | `taxi_fuel_ratio` | Ratio between actual fuel flow and idle fuel flow during taxi. Acts as a direct multiplier on taxi segment emissions. Default: 1.0. | Active |
 | `number_of_stop_and_gos` | Number of stop-and-go events during taxiing. Each event is modelled as two phases: 21 s at idle (deceleration + hold, per ECAC Doc 29 Vol. 2 Appendix B) plus 11 s at ~15% thrust (acceleration). | Active |
+
+### [Helicopters (FOCA 2015)](#helicopters-foca-2015)
+
+Helicopter movements share the Movements table format described above; the only operational difference is that the `aircraft` field carries an ICAO type designator that resolves against the helicopter catalog (`default_helicopter`) rather than the fixed-wing catalog (`default_aircraft`). At calculation time the plugin checks both catalogs for each ICAO; rows in `default_helicopter` are routed through the FOCA 2015 emission methodology and the dedicated helicopter trajectory generator. No flag in the Movements table marks a row as a helicopter — the lookup result determines dispatch.
+
+**FOCA 2015 method.** The reference is Rindlisbacher T., Chabbey L., "Guidance on the Determination of Helicopter Emissions", Swiss Federal Office of Civil Aviation, Edition 2, December 2015 (Ref: COO.2207.111.2.2015750). Emissions are computed live from each helicopter's engine type, maximum shaft horsepower, engine count, and category; no precomputed emission indices are stored. The implementation is independent of the **Method** selection on the Configuration tab (ByMode / BFFM2): both fixed-wing methods invoke the same FOCA path for helicopters.
+
+**Helicopter category.** Each movement is classified at runtime into one of four FOCA categories using engine type, engine count, and MTOM. The classification is not stored in the table:
+
+| Category | Rule |
+|---|---|
+| `PISTON` | `engine_type = PISTON` |
+| `SINGLE_TURBOSHAFT` | `engine_type = TURBOSHAFT`, `engine_count = 1` |
+| `TWIN_TURBOSHAFT_LIGHT` | `engine_type = TURBOSHAFT`, `engine_count ≥ 2`, MTOM ≤ 3400 kg |
+| `TWIN_TURBOSHAFT_HEAVY` | `engine_type = TURBOSHAFT`, `engine_count ≥ 2`, MTOM > 3400 kg |
+
+The 3400 kg threshold is defined in FOCA 2015 section 2.4. The category drives both the emission formulas and the trajectory geometry; the per-category trajectory parameters and their citations are documented in [`TRAJECTORY_DATA_SOURCES.md`](TRAJECTORY_DATA_SOURCES.md).
+
+**Default catalog.** 60 helicopter rows in `default_helicopter` covering common types (R22, A109, EC135, AS332, S76, S92, etc.). 86 engine rows in `default_helicopter_engines` covering the corresponding turboshaft and piston engines. The columns are:
+
+| Table | Field | Notes |
+|---|---|---|
+| `default_helicopter` | `icao` | ICAO type designator |
+| | `variant_label` | Disambiguates multiple rows per ICAO (e.g. `A109E_POWER` vs `A109II`). Composite logical key is `(icao, variant_label)`. |
+| | `manufacturer`, `name` | Free text |
+| | `mtow_kg` | Maximum take-off weight in kilograms (used for category derivation) |
+| | `engine_count` | Number of engines (used for category derivation) |
+| | `engine`, `engine_name` | References a row in `default_helicopter_engines` |
+| | `max_shp_per_engine` | Maximum shaft horsepower per engine |
+| | `is_default` | `1` if this is the default variant for the ICAO when the Movements table does not specify a `variant_label` |
+| `default_helicopter_engines` | `engine_name` | Logical key |
+| | `engine_full_name` | Free text |
+| | `engine_type` | `PISTON` or `TURBOSHAFT` |
+| | `max_shp_per_engine` | Fallback if the helicopter row does not override |
+| | `source` | Provenance citation |
+
+To add a helicopter type that is not in the default catalog, insert a row into `default_helicopter` referencing an existing engine in `default_helicopter_engines` (or insert a new engine row first). The minimum fields are `icao`, `variant_label`, `mtow_kg`, `engine_count`, `engine`, `engine_name`, `max_shp_per_engine`, `is_default`. Once the row is in place, any movement whose `aircraft` field matches that ICAO will be routed through the FOCA path automatically.
+
+**What is suppressed for helicopters.** APU emissions and gate emissions are skipped at the dispatch level regardless of the movement table's `apu_code` and `gate_emissions_code` values. The FOCA 2015 LTO cycle covers all of ground idle, takeoff, climb-out, approach, and landing on its own, so APU and GSE / GPU / MES emissions are not double-counted. Taxi emissions are handled by the fixed-wing taxi route logic; helicopters typically taxi minimally (ground idle on the spot or air-taxi).
+
+**Limitations.** The 3000 ft AGL LTO ceiling is per the ICAO LTO definition; emissions above that altitude are not modelled. Two known FOCA 2015 PDF inconsistencies were resolved during implementation (piston fuel-flow leading coefficient and twin-heavy Appendix C power settings) and are recorded in the docstring of `open_alaqs/core/tools/foca_heli.py`.
 
 ### [Meteorology](#meteorology)
 

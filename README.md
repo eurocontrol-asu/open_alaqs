@@ -15,7 +15,7 @@ QGIS plugin for airport emissions inventory and dispersion. Builds an annual emi
   - [Quick start](#quick-start)
     - [Example files](#example-files)
     - [Training example study](#training-example-study)
-    - [Beta: Standalone Emissions + AUSTAL Inputs export script](#beta-standalone-emissions--austal-inputs-export-script)
+    - [Standalone Emissions + AUSTAL Inputs export script](#standalone-emissions--austal-inputs-export-script)
   - [Workflow](#workflow)
   - [Emission calculation methods](#emission-calculation-methods)
   - [Meteorological data](#meteorological-data)
@@ -112,16 +112,25 @@ The training study lives in `example/training/` and contains:
 
 For a step-by-step walk-through of opening, configuring, and running a study, see the [User Guide](documents/USER_GUIDE.md).
 
-### Beta: Standalone Emissions + AUSTAL Inputs export script
+### Standalone Emissions + AUSTAL Inputs export script
 
-A beta standalone script generates emissions exports (CSV/GeoJSON) and AUSTAL input files outside the QGIS plugin. It is experimental and may contain incomplete features.
+Two standalone paths to run Open-ALAQS outside the QGIS plugin are shipped:
 
-- Script location: [`scripts/emissions_austal/run_emissions_austal.py`](scripts/emissions_austal/run_emissions_austal.py)
-- Usage: see [`scripts/emissions_austal/README.md`](scripts/emissions_austal/README.md)
-- A METAR-to-meteo converter is provided in [`scripts/metar_to_alaqs_meteo.py`](scripts/metar_to_alaqs_meteo.py) (see [`scripts/README_metar_to_alaqs_meteo.md`](scripts/README_metar_to_alaqs_meteo.md)) for producing the meteo CSV from raw METAR observations.
-- A schema migration tool for upgrading legacy `.alaqs` files to the current schema is provided in [`scripts/migrate_alaqs.py`](scripts/migrate_alaqs.py).
+**QGIS-bound CLIs** (`scripts/`). Use the plugin's libraries directly under an OSGeo4W shell or QGIS Python:
 
-See [`scripts/README.md`](scripts/README.md) for the full inventory of standalone scripts.
+- [`scripts/emissions_austal/run_emissions_austal.py`](scripts/emissions_austal/run_emissions_austal.py) runs the full emissions calculation against a `.alaqs` inventory and optionally generates AUSTAL inputs in one pass. See [`scripts/emissions_austal/README.md`](scripts/emissions_austal/README.md).
+- [`scripts/austal_from_csv/run_austal_from_csv.py`](scripts/austal_from_csv/run_austal_from_csv.py) generates AUSTAL inputs from pre-computed emissions / meteo CSVs (no `.alaqs` required). See [`scripts/austal_from_csv/README.md`](scripts/austal_from_csv/README.md).
+- [`scripts/metar_to_alaqs_meteo.py`](scripts/metar_to_alaqs_meteo.py) converts METAR observations into the `meteo.csv` format (see [`scripts/README_metar_to_alaqs_meteo.md`](scripts/README_metar_to_alaqs_meteo.md)).
+- [`scripts/migrate_alaqs.py`](scripts/migrate_alaqs.py) is the schema migration tool for upgrading legacy `.alaqs` files; [`scripts/migrate_alaqs_gui.py`](scripts/migrate_alaqs_gui.py) is the Qt GUI wrapper.
+
+**QGIS-free package** (`openalaqs_standalone/`). A pip-installable Python package that runs the full emission calculation without QGIS, PyQt5, or SpatiaLite at runtime. Uses pyproj + shapely + numpy. Designed for headless / CI / cluster use and for batched validation against the CAEP14 reference.
+
+- Package: [`openalaqs_standalone/`](openalaqs_standalone/) (see its [README](openalaqs_standalone/README.md))
+- AUSTAL writer helpers used by the standalone live in [`austal_prep/`](austal_prep/)
+- Validation: [`openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md`](openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md) and the bundled `training_v3.alaqs` fixture.
+- Optional Reference A NOx ambient correction: `--apply-nox-corrections` (default off; preserves bymode bit-identity with the plugin).
+
+See [`scripts/README.md`](scripts/README.md) for the full inventory of QGIS-bound CLIs.
 
 ## Workflow
 
@@ -141,6 +150,7 @@ Open-ALAQS ships three aircraft emission methods selectable at run time:
 - **bymode** — multiplies anchor-mode fuel flow × anchor-mode EI × time × engine count. No ambient corrections. Use as a tautological baseline.
 - **BFFM2 (trajectory)** — default BFFM2 path. For each trajectory segment resolves fuel flow from the segment's sub-mode power setting via the twin-quadratic fit, applies SAE AIR-5715 atmospheric corrections for NOx, and snaps CO/HC to the horizontal mean(CL, TO) value above the APP anchor in the standard-intersection case (CAEP14 v14 rule).
 - **BFFM2 (mode_anchor)** — uses the mode anchor fuel flow (IDLE/APP/CL/TO EEDB values) as the BFFM2 input, still applying ambient corrections. Useful when trajectories lack per-segment sub-mode fidelity.
+- **Helicopters (FOCA 2015)** — separate dispatch for movements flagged as helicopters. Four FOCA categories (PISTON, SINGLE_TURBOSHAFT, TWIN_TURBOSHAFT_LIGHT/HEAVY) with per-category trajectories and emission indices. APU and gate emissions are suppressed; airborne emissions only. See [`documents/USER_GUIDE.md`](documents/USER_GUIDE.md) for category derivation and [`documents/TRAJECTORY_DATA_SOURCES.md`](documents/TRAJECTORY_DATA_SOURCES.md) for the data sources.
 
 PM is via MEEM V1 at LTO (EEDB nvPM anchors unchanged at LTO altitudes). The MEEM V2 base method (ICAO CAEP/13-WG3) is also implemented for non-LTO altitudes. The MDG4 / Staged Combustion update is not implemented.
 
@@ -152,7 +162,7 @@ For BFFM2 implementation details see [`documents/BFFM2_validation/BFFM2.md`](doc
 
 Open-ALAQS expects an hourly meteo CSV during output creation. A standalone utility for producing it from a METAR stream ships in `scripts/`:
 
-- [`scripts/metar_to_alaqs_meteo.py`](scripts/metar_to_alaqs_meteo.py) — parses METAR observations from stdin or a file, computes relative humidity from T/Td, buckets hourly, writes the ALAQS-schema CSV.
+- [`scripts/metar_to_alaqs_meteo.py`](scripts/metar_to_alaqs_meteo.py) — parses raw METAR, IEM CSV, or Ogimet observations (`--source {auto,iem-csv,ogimet,raw}`), computes relative humidity from T/Td, buckets hourly, writes the ALAQS-schema CSV.
 - [`scripts/README_metar_to_alaqs_meteo.md`](scripts/README_metar_to_alaqs_meteo.md) — usage and notes on where to fetch METAR data (NOAA Aviation Weather Center, ogimet.com, metar-taf.com API, python-metar). Fetching is deliberately left to the user; the script focuses on parsing and resampling.
 
 ## GSE Application
@@ -182,7 +192,7 @@ pre-commit install
 
 ### Debugging
 
-For debugging the plugin inside QGIS, you can enable QGIS's Python console (Plugins → Python Console) and use standard Python debugging tools.
+For inspecting plugin state interactively, use QGIS's Python console (Plugins → Python Console). For step debugging, install the QGIS Dev Tools plugin (debugpy backend) and attach from VS Code or PyCharm.
 
 ### Updating the Open-ALAQS database templates
 
@@ -210,11 +220,13 @@ The full test suite runs offscreen and requires no display:
 QT_QPA_PLATFORM=offscreen PYTHONPATH=$PWD python3 -m pytest tests/
 ```
 
+Most tests need QGIS available on the Python path. CI runs the suite in a QGIS Docker container (3.40 and 3.44 matrix); see `.github/workflows/`.
+
 ## Validation
 
 [(Back to top)](#table-of-contents)
 
-Open-ALAQS is validated against the CAEP14 v14 reference spreadsheet (`CAEP14_FBE_Engines_Emissions_Calculation_Sheet_v14.xlsx`) to floating-point precision across bymode, BFFM2 trajectory, and BFFM2 mode_anchor methods, with non-volatile PM matching EEDB anchors exactly via MEEM V1 at LTO.
+Open-ALAQS is validated against an external reference spreadsheet to floating-point precision across bymode, BFFM2 trajectory, and BFFM2 mode_anchor methods, with non-volatile PM matching EEDB anchors exactly via MEEM V1 at LTO.
 
 The full validation matrix, per-engine results, and cross-platform agreement evidence are in [`documents/BFFM2_validation/BFFM2.md`](documents/BFFM2_validation/BFFM2.md).
 
@@ -247,4 +259,4 @@ This software is published under European Union Public Licence v. 1.2 ([`LICENCE
 
 [(Back to top)](#table-of-contents)
 
-For questions, bug reports, or feature requests, please open an issue on the [GitHub repository](https://github.com/eurocontrol-asu/open_alaqs/issues).
+For questions, bug reports, or feature requests, contact us by email at [open-alaqs@eurocontrol.int](mailto:open-alaqs@eurocontrol.int).

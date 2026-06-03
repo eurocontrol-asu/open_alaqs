@@ -22,6 +22,26 @@ def calculate_fuel_flow_from_power_setting(power_setting: float, icao_eedb: dict
             )
             return None
 
+    # Symmetric clamp for numerical overshoots above max rated thrust.  The
+    # function already clamps the fuel-flow output at the idle (7%) value when
+    # power_setting < 0.07 to avoid sub-idle extrapolation -- see lines below.
+    # On the upper end the EEDB max is the 100% thrust point and the
+    # twin-quadratic fit is not calibrated for >100% thrust.  However, small
+    # overshoots (~1-2%) can arise from (a) floating-point noise in profile
+    # interpolation, (b) data rounding in default_emission_dynamics, and (c)
+    # BFFM2 power-setting derivation under non-ISA conditions.  Clamp small
+    # overshoots to exactly 1.0; raise only for genuinely out-of-range values
+    # that indicate an upstream computation error.
+    _PS_UPPER_TOLERANCE = 1.05
+    if 1.0 < power_setting <= _PS_UPPER_TOLERANCE:
+        logger.warning(
+            "Power setting %.6f exceeds EEDB max (1.0) by %.2f%% -- "
+            "clamping to 1.0 for the twin-quadratic fit.",
+            power_setting,
+            100.0 * (power_setting - 1.0),
+        )
+        power_setting = 1.0
+
     if 0 <= power_setting < 0.07:
         # based on the 7 per cent, 30 per cent and 85 per cent thrust
         x1 = 0.07
@@ -47,9 +67,9 @@ def calculate_fuel_flow_from_power_setting(power_setting: float, icao_eedb: dict
         x3 = 1.0
     else:
         raise ValueError(
-            "The power setting should be between 0.07 and 1.0 "
-            "(inclusive). The requested power setting is "
-            f"{power_setting}"
+            "The power setting should be between 0.07 and 1.0 (inclusive); "
+            f"a tolerance up to {_PS_UPPER_TOLERANCE} is clamped to 1.0. "
+            f"The requested power setting is {power_setting}, outside that range."
         )
 
     # Y = AX**2 + BX + C

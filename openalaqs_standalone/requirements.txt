@@ -1,0 +1,12 @@
+# openalaqs_standalone runtime dependencies. Pure Python, no QGIS,
+# no native SpatiaLite extension. Tested against Python 3.12.
+
+numpy>=1.24
+pandas>=2.0
+pyarrow>=14.0
+shapely>=2.0
+pyproj>=3.4
+
+# Validation suite only:
+openpyxl>=3.1
+pytest>=7.0

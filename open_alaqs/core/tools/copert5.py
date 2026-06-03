@@ -143,9 +143,13 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
 
     if input_data["parking"]:
 
-        # Get the idle time [min] and travel distance [km]
+        # Get the idle time [min] and travel distance [m -> km].
+        # The UI field "distance" is labelled "Travel Distance [m]"
+        # (see ui_parkings.ui); the COPERT 5 emission factors are in
+        # g/km; previous code treated the value directly as km, which
+        # made every stored *_gm_vh ~1000x too high.
         idle_time = input_data["idle_time"]
-        distance = input_data["travel_distance"]
+        distance = float(input_data["travel_distance"]) / 1000.0
 
         # Calculate the evaporation
         evaporation = calculate_evaporation(fleet, efs)

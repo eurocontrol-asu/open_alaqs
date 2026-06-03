@@ -64,6 +64,12 @@ def form_open(form, layer, feature):
         diameter=form.findChild(QtWidgets.QLineEdit, "diameter"),
         velocity=form.findChild(QtWidgets.QLineEdit, "velocity"),
         ops_year=form.findChild(QtWidgets.QLineEdit, "ops_year"),
+        # Read-only "Activity unit" field (added in the point-sources v2
+        # schema migration). Populated from the selected EF row's
+        # `activity_unit` column by `change_type_field`. Legacy .alaqs
+        # files predate the v2 columns; the form handler falls back to
+        # "1000_m3 (legacy default)" when the column is missing or NULL.
+        activity_unit=form.findChild(QtWidgets.QLineEdit, "activity_unit"),
         category=form.findChild(QtWidgets.QComboBox, "category"),
         type=form.findChild(QtWidgets.QComboBox, "type"),
         hour_profile=form.findChild(QtWidgets.QComboBox, "hour_profile"),
@@ -202,6 +208,8 @@ def change_type_field(fields: dict, type_name: str):
         fields["pm10_kg_k"].setText("")
         fields["p1_kg_k"].setText("")
         fields["p2_kg_k"].setText("")
+        if fields.get("activity_unit") is not None:
+            fields["activity_unit"].setText("")
 
         return None
 
@@ -230,6 +238,37 @@ def change_type_field(fields: dict, type_name: str):
     fields["pm10_kg_k"].setText(str(data["particulate_kg_k"]))
     fields["p1_kg_k"].setText(str(data["p1_kg_k"]))
     fields["p2_kg_k"].setText(str(data["p2_kg_k"]))
+
+    # Activity unit (point-sources v2). Pulled from the selected EF
+    # row's `activity_unit` column. Legacy rows from pre-v2 .alaqs
+    # files have NULL here; the historical default was 1000 m^3 of
+    # fuel gas, so we surface that as the displayed fallback to
+    # preserve compatibility with existing studies.
+    activity_unit_field = fields.get("activity_unit")
+    if activity_unit_field is not None:
+        activity_unit_field.setText(
+            str(data.get("activity_unit") or "1000_m3 (legacy default)")
+        )
+
+    # Recommended temporal profiles (point-sources v2). When the EF
+    # row carries `recommended_*_profile`, pre-select that profile in
+    # each of the three profile dropdowns. The user can still
+    # override; this only changes the default. Legacy EF rows have
+    # NULL recommendations and we leave the existing selection alone.
+    for field_key, ef_key in [
+        ("hour_profile", "recommended_hour_profile"),
+        ("daily_profile", "recommended_day_profile"),
+        ("month_profile", "recommended_month_profile"),
+    ]:
+        recommended = data.get(ef_key)
+        if not recommended:
+            continue
+        combo = fields.get(field_key)
+        if combo is None:
+            continue
+        idx = combo.findText(recommended)
+        if idx >= 0:
+            combo.setCurrentIndex(idx)
 
 
 @catch_errors

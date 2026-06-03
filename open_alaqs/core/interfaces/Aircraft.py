@@ -11,7 +11,15 @@ from open_alaqs.core.interfaces.Emissions import Emission, PollutantType, Pollut
 from open_alaqs.core.interfaces.EngineDatabases import (
     EngineEmissionFactorsStartDatabase,
 )
-from open_alaqs.core.interfaces.EngineStore import EngineStore, HeliEngineStore
+from open_alaqs.core.interfaces.EngineStore import EngineStore
+
+# HeliEngineStore was added in a later revision of EngineStore.py. Older
+# installs do not define it. Make the import optional so this file is
+# drop-in compatible with both trees.
+try:
+    from open_alaqs.core.interfaces.EngineStore import HeliEngineStore
+except ImportError:
+    HeliEngineStore = None
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.interfaces.Store import Store
 from open_alaqs.core.tools.Singleton import Singleton
@@ -48,12 +56,32 @@ class Aircraft:
         self._defaultengine = None
         self._apu = None
         self._dynamics = {"TX": None, "AP": None, "CL": None, "TO": None}
+        # Main-engine-start emission factor (Emission object) keyed by
+        # aircraft_group. Stored on Aircraft rather than Engine because
+        # the same Engine instance is shared across aircraft from
+        # different groups (default_aircraft_start_ef is per group, not
+        # per engine), and storing on the engine causes last-aircraft-
+        # wins overwrites for shared engines.
+        self._start_emissions = None
 
     def getDefaultEngine(self) -> str:
         return self._defaultengine
 
     def setDefaultEngine(self, var):
         self._defaultengine = var
+
+    def getStartEmissions(self):
+        return self._start_emissions
+
+    def setStartEmissions(self, ef):
+        self._start_emissions = ef
+
+    def is_helicopter(self) -> bool:
+        # Base Aircraft is fixed-wing. The Helicopter subclass (in
+        # open_alaqs.core.interfaces.Helicopter) overrides this to
+        # return True. Movement.py calls this method unguarded
+        # (e.g. line 1424), so it must exist on the base class.
+        return False
 
     def getDefaultDepartureProfileName(self):
         return self._departure_profile_name
@@ -242,12 +270,16 @@ class AircraftStore(Store, metaclass=Singleton):
             # add aircraft to store
             ac = Aircraft(ac_dict)
 
-            engine = (
-                self.getEngineStore().getObject(ac_dict["engine"])
-                or self.getEngineStore().getObject(ac_dict["engine_name"])
-                or self.getHeliEngineStore().getObject(ac_dict["engine"])
-                or self.getHeliEngineStore().getObject(ac_dict["engine_name"])
-            )
+            engine = self.getEngineStore().getObject(
+                ac_dict["engine"]
+            ) or self.getEngineStore().getObject(ac_dict["engine_name"])
+            # Helicopter engine store may be absent in older installs.
+            if engine is None:
+                heli_store = self.getHeliEngineStore()
+                if heli_store is not None:
+                    engine = heli_store.getObject(
+                        ac_dict["engine"]
+                    ) or heli_store.getObject(ac_dict["engine_name"])
 
             # If engine not found in the DB, the aircraft is ignored
             if not engine:
@@ -295,9 +327,11 @@ class AircraftStore(Store, metaclass=Singleton):
                 start_ei.setVerticalExtent({"z_min": 0, "z_max": 5})
 
                 if ac_group is None:
-                    ac.getDefaultEngine().setStartEmissions(
+                    ac.setStartEmissions(
                         start_ei
-                    )  # association of start ef by aircraft group!
+                    )  # start ef is keyed by aircraft group; stored on
+                    # the Aircraft (not the shared Engine) to avoid
+                    # last-aircraft-wins overwrite for shared engines.
                 else:
                     for value in (
                         self.getEngineStartEmissionFactorsDatabase()
@@ -341,9 +375,11 @@ class AircraftStore(Store, metaclass=Singleton):
                                 value["p2"],
                             )
 
-                    ac.getDefaultEngine().setStartEmissions(
+                    ac.setStartEmissions(
                         start_ei
-                    )  # association of start ef by aircraft group!
+                    )  # start ef is keyed by aircraft group; stored on
+                    # the Aircraft (not the shared Engine) to avoid
+                    # last-aircraft-wins overwrite for shared engines.
 
                 if ac.getGroup():
                     apu_times_ = self.getAPUStore().get_apu_times(ac.getGroup())
@@ -415,6 +451,8 @@ class AircraftStore(Store, metaclass=Singleton):
         return EngineStore(self._db_path)
 
     def getHeliEngineStore(self):
+        if HeliEngineStore is None:
+            return None
         return HeliEngineStore(self._db_path)
 
 

@@ -23,7 +23,6 @@ from qgis.core import (
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.AircraftTrajectory import TrajectoryPoint
 from open_alaqs.core.tools import conversion
-from open_alaqs.core.tools.iterator import pairwise
 
 logger = get_logger(__name__)
 
@@ -160,10 +159,23 @@ def getDistanceOfLineStringXY(
     epsg_id_target: int = 4326,
 ) -> float:
     """
-    Geodetic length of a LineString in metres.
+    Geodetic length of a (Multi)LineString in metres.
+
+    Handles both simple LineString and MultiLineString inputs.  The latter
+    arises when getIntersectionXY clips a polyline that enters and leaves
+    the same cell more than once (e.g. a V-shaped taxi-in segment crossing
+    the same cell boundary twice): OGR returns the disjoint pieces as a
+    MultiLineString.  Earlier versions of this function delegated to
+    getAllPoints which is LineString-only, so MultiLineString inputs
+    produced an empty points list and zero length.  That silently dropped
+    mass for every cell a polyline re-entered, producing a ~50% loss for
+    affected segments (a single E190 taxi-in observation showed ~0.96 kg
+    CO lost per movement, ~4.5% of the per-week aircraft total).
 
     Reprojects from *epsg_id_source* to *epsg_id_target* (default: WGS 84)
-    and sums the geodesic distances between consecutive vertices.
+    and sums the geodesic distances between consecutive vertices, treating
+    each sub-line independently (no spurious "jump" distance between the
+    end of one part and the start of the next).
     """
     if isinstance(geometry_wkt, ogr.Geometry):
         geometry_wkt = geometry_wkt.ExportToWkt()
@@ -171,14 +183,51 @@ def getDistanceOfLineStringXY(
     reprojected_wkt, swap = reproject_geometry(
         geometry_wkt, epsg_id_source, epsg_id_target
     )
-    points = getAllPoints(reprojected_wkt, swap)
+
+    geom = ogr.CreateGeometryFromWkt(reprojected_wkt)
+    if geom is None:
+        return 0.0
+
+    # Flatten to a list of single LineString parts.  Anything that is not
+    # a LineString or MultiLineString contributes zero length (Point,
+    # Polygon, empty geometry, etc.).
+    parts: list = []
+    gt = geom.GetGeometryType()
+    if gt in (ogr.wkbLineString, ogr.wkbLineString25D):
+        parts = [geom]
+    elif gt in (ogr.wkbMultiLineString, ogr.wkbMultiLineString25D):
+        parts = [geom.GetGeometryRef(i) for i in range(geom.GetGeometryCount())]
+    elif gt in (ogr.wkbGeometryCollection, ogr.wkbGeometryCollection25D):
+        for i in range(geom.GetGeometryCount()):
+            sub = geom.GetGeometryRef(i)
+            sub_gt = sub.GetGeometryType()
+            if sub_gt in (ogr.wkbLineString, ogr.wkbLineString25D):
+                parts.append(sub)
+            elif sub_gt in (ogr.wkbMultiLineString, ogr.wkbMultiLineString25D):
+                for j in range(sub.GetGeometryCount()):
+                    parts.append(sub.GetGeometryRef(j))
+    else:
+        return 0.0
+
     total = 0.0
-    for start, end in pairwise(points):
-        result = getInverseDistance(start[0], start[1], end[0], end[1])
-        s12 = result.get("s12")
-        if s12 is not None:
-            s12 = conversion.convertToFloat(s12)
-        total += s12 or 0.0
+    for part in parts:
+        n_pts = part.GetPointCount()
+        if n_pts < 2:
+            continue
+        prev_x, prev_y, _ = part.GetPoint(0)
+        if swap:
+            prev_x, prev_y = prev_y, prev_x
+        for i in range(1, n_pts):
+            cur_x, cur_y, _ = part.GetPoint(i)
+            if swap:
+                cur_x, cur_y = cur_y, cur_x
+            result = getInverseDistance(prev_x, prev_y, cur_x, cur_y)
+            s12 = result.get("s12")
+            if s12 is not None:
+                s12 = conversion.convertToFloat(s12)
+            total += s12 or 0.0
+            prev_x, prev_y = cur_x, cur_y
+
     return total
 
 

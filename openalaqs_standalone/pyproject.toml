@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openalaqs-standalone"
+version = "0.8.0"
+description = "QGIS-free OpenALAQS emission pipeline: stationary adapter + aircraft calculator"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "pyarrow>=14.0",
+    "shapely>=2.0",
+    "pyproj>=3.4",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "openpyxl>=3.1",
+]
+
+# This pyproject ships the openalaqs_standalone package only. The
+# wider plugin (open_alaqs) is distributed as a QGIS plugin, not via
+# pip, and is owned by the repository root.
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["openalaqs_standalone*"]
+
+[tool.pytest.ini_options]
+testpaths = ["."]

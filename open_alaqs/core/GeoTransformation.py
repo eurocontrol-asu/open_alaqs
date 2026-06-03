@@ -379,25 +379,96 @@ class TrajectoryTransformer:
         qgs_d = spatial.create_distance_area(epsg_id_source)
 
         runway_geom = QgsGeometry.fromWkt(self._runway.getGeometryText())
-        runway_backup_point, runway_azimuth_deg = self._get_runway_dir_azimuth(
-            runway_geom, qgs_d
+        runway_backup_point, _runway_target_point, runway_azimuth_deg = (
+            self._get_runway_dir_azimuth(runway_geom, qgs_d)
         )
 
-        runway_intersection_projected = (
+        # Trajectory origin selection (mirrors the standalone's
+        # `_intersection_cached` behaviour, see
+        # openalaqs_standalone/compute_aircraft.py around the "ANCHOR
+        # SELECTION" comment): for BOTH arrivals and departures the
+        # origin is the taxi-route/runway intersection point, with a
+        # direction-appropriate fallback when the taxi route does not
+        # intersect the runway.
+        #
+        #   DEPARTURE: origin = taxi-route runway-intersection point
+        #              (where the aircraft enters the runway). Fallback =
+        #              active threshold (brake-release point = the runway
+        #              endpoint the aircraft is departing FROM).
+        #              Walk azimuth = motion direction = runway_azimuth_deg.
+        #
+        #   ARRIVAL:   origin = taxi-route runway-intersection point
+        #              (where the aircraft exits the runway). No rollout
+        #              shift: the trajectory profile already encodes the
+        #              rollout via its x>0 points, and the standalone /
+        #              CAEP14 reference both anchor at the unshifted
+        #              intersection. Fallback = active threshold
+        #              (touchdown point).
+        #              Walk azimuth = motion direction = (runway_azimuth_deg
+        #              + 180) % 360. _get_runway_dir_azimuth returns for
+        #              arrivals an azimuth pointing from opp toward active
+        #              (approach direction); we flip for the motion walk.
+        #
+        # The projection loop below also handles the SIGN of profile-x so
+        # arrival approach points (x<0) walk in the approach direction and
+        # rollout points (x>0) walk in the motion direction.  For departures
+        # all profile x are non-negative and the sign-flip is a no-op.
+        #
+        # Why both arr and dep use the intersection:
+        #   - ANP profiles: identical result to the old "active threshold"
+        #     anchor in the common case where the takeoff roll lies inside
+        #     the inventory grid (no grid clipping).
+        #   - CUSTOM (ADS-B imported) profiles: the importer
+        #     (core/tools/ads_b.py) anchors imported (x_m, y_m) at the
+        #     runway-taxi intersection, so the runtime anchor MUST match
+        #     or the trajectory shifts by the threshold-to-intersection
+        #     distance (~80-130 m at most airports, producing visible
+        #     downstream offsets).
+        #   - Arrivals: the rollout-shift in the prior version was a fix
+        #     for visual continuity but it shifted the touchdown point
+        #     away from the runway threshold by rollout_length, producing
+        #     a -3-5% NOx offset on the approach segments. The standalone
+        #     CAEP14 reference does NOT shift; we now match.
+        is_dep = self._departure_arrival == "D"
+
+        # Compute the runway-exit / runway-entry point of the taxi route.
+        # Same call for both arr and dep; the intersection is geometric.
+        exit_point_projected = (
             spatial.get_intersection_point_runway_and_taxi_route(
                 self._runway, self._taxi_route
             )
+            if self._taxi_route is not None
+            else None
         )
 
-        if runway_intersection_projected.isEmpty():  # Checks both Empty and Null
-            # TODO OPENGIS.ch: in addition to just logging here,
-            # make sure the taxiway and the runway are intersecting, otherwise you cannot save the Movement
-            logger.error(
-                'No intersection point between runway "%s" and taxi route "%s"',
-                self._runway_direction,
-                self._taxi_route.getName(),
-            )
-            runway_intersection_projected = runway_backup_point
+        if is_dep:
+            trajectory_walk_azimuth_deg = runway_azimuth_deg
+            if exit_point_projected is None or exit_point_projected.isEmpty():
+                # Fall back to the active threshold (brake-release point).
+                runway_intersection_projected = runway_backup_point
+                logger.info(
+                    "No runway-taxi intersection for departure movement at "
+                    "runway time '%s' (taxi route '%s'); using active "
+                    "threshold as trajectory origin.",
+                    self._runway_time,
+                    self._taxi_route.getName() if self._taxi_route else "?",
+                )
+            else:
+                runway_intersection_projected = exit_point_projected
+        else:
+            trajectory_walk_azimuth_deg = (runway_azimuth_deg + 180.0) % 360.0
+            if exit_point_projected is None or exit_point_projected.isEmpty():
+                # Fall back to the active threshold (touchdown point).
+                runway_intersection_projected = _runway_target_point
+                logger.info(
+                    "No runway-taxi intersection for arrival movement at "
+                    "runway time '%s' (taxi route '%s'); using active "
+                    "threshold as trajectory origin.",
+                    self._runway_time,
+                    self._taxi_route.getName() if self._taxi_route else "?",
+                )
+            else:
+                runway_intersection_projected = exit_point_projected
 
         runway_intersection_geographic = coord_tr.transform(
             runway_intersection_projected
@@ -451,15 +522,37 @@ class TrajectoryTransformer:
                     _add_trajectory_point(point, target_point_projected)
             else:
                 for point in original_trajectory_points:
-                    # The target point is with cartesian coordinates,
-                    # therefore we can calculate the distance with Pythagorean theorem
-                    distance = spatial.getDistanceXY(point.getX(), point.getY())
+                    # The target point is in cartesian coordinates relative to
+                    # the trajectory origin, with x along the runway azimuth
+                    # and y across it (ANP profile convention).  ANP profiles
+                    # use y=0 always, so the relevant geometry is one-dimensional
+                    # along the runway axis.
+                    #
+                    # The SIGN of profile-x carries direction relative to motion:
+                    #   x ≥ 0  → ahead of the origin in motion direction
+                    #            (departure takeoff/climbout; arrival rollout)
+                    #   x < 0  → behind the origin in motion direction
+                    #            (arrival approach points, which are behind
+                    #            touchdown when measured along the motion axis)
+                    # computeSpheroidProject only accepts non-negative
+                    # distances, so we walk |distance| at the configured
+                    # azimuth for x≥0 and at (azimuth+180) for x<0.  This is
+                    # a no-op for departure profiles (all profile x are
+                    # non-negative there).
+                    x_val = point.getX()
+                    y_val = point.getY()
+                    distance = math.hypot(x_val, y_val)
+                    effective_azimuth_deg = (
+                        trajectory_walk_azimuth_deg
+                        if x_val >= 0
+                        else (trajectory_walk_azimuth_deg + 180.0) % 360.0
+                    )
 
                     # get target point (calculation in 4326 projection)
                     target_point_geographic = qgs_d.computeSpheroidProject(
                         runway_intersection_geographic,
                         distance,
-                        math.radians(runway_azimuth_deg),
+                        math.radians(effective_azimuth_deg),
                     )
 
                     target_point_projected = coord_tr.transform(
@@ -591,15 +684,173 @@ class TrajectoryTransformer:
         points = {start_dir: pt1, end_dir: pt2}
 
         # Determine trajectory direction
-        is_dep = self._trajectory.getDepartureArrivalFlag() == "D"
+        # Use self._departure_arrival (set by the constructor) rather than
+        # self._trajectory.getDepartureArrivalFlag(), so this helper also works
+        # when called from the helicopter path where the input trajectory is None
+        # (the helicopter trajectory is generated from FOCA category, not loaded
+        # from default_aircraft_profiles).
+        is_dep = self._departure_arrival == "D"
         opp = end_dir if active == start_dir else start_dir
         backup = points[active] if is_dep else points[opp]
         target = points[opp] if is_dep else points[active]
 
         runway_backup_point = backup
+        runway_target_point = target
         runway_azimuth_deg = math.degrees(qgs_d.bearing(backup, target)) % 360
 
-        return runway_backup_point, runway_azimuth_deg
+        return runway_backup_point, runway_target_point, runway_azimuth_deg
+
+    def runway_alignment_for_helicopter(self, category_str: str):
+        """Build a runway-aligned FOCA helicopter LTO trajectory.
+
+        Replaces the legacy HELIPROF-based path for helicopters: instead of
+        loading a pre-defined 8-point profile from default_aircraft_profiles
+        and translating it (where all 8 points sit at local x=y=0, collapsing
+        to a vertical column at the runway threshold), we generate the LTO
+        trajectory live via the per-category FOCA formulas, producing a
+        proper arc with realistic horizontal motion (5-11 km along-track,
+        climb/descent between ground and 3000 ft LTO ceiling).
+
+        :param category_str: FOCA helicopter category string. One of
+            'PISTON', 'SINGLE_TURBOSHAFT', 'TWIN_TURBOSHAFT_LIGHT',
+            'TWIN_TURBOSHAFT_HEAVY'. Coming from Helicopter.getCategory().
+        :return: AircraftTrajectory with points in the project CRS
+            (EPSG:3857). Returns None if inputs are invalid.
+
+        Coordinate convention:
+            For DEPARTURE: trajectory's local x=0 is the takeoff point
+            (active end of runway). Local +x is the departure direction.
+            World origin = backup_point. World walk azimuth = runway azimuth.
+
+            For ARRIVAL: trajectory's local x=0 is the touchdown point
+            (active end of runway). Local +x is the direction OPPOSITE to
+            motion (back along the approach path). World origin = target_point.
+            World walk azimuth = (runway_azimuth + 180) % 360.
+        """
+        if self._runway is None:
+            logger.error(
+                "Helicopter trajectory: no runway for movement at runway time '%s'.",
+                self._runway_time,
+            )
+            return None
+
+        if self._runway_direction not in self._runway.getDirections():
+            logger.error(
+                "Helicopter trajectory: runway direction '%s' not in "
+                "available directions %s (runway time '%s').",
+                self._runway_direction,
+                self._runway.getDirections(),
+                self._runway_time,
+            )
+            return None
+
+        # Resolve helicopter category to enum
+        from open_alaqs.core.interfaces.AircraftTrajectory import (
+            AircraftTrajectory,
+            AircraftTrajectoryPoint,
+        )
+        from open_alaqs.core.tools.foca_heli import HelicopterCategory
+        from open_alaqs.core.tools.foca_heli_trajectory import (
+            build_arrival,
+            build_departure,
+        )
+
+        try:
+            category = HelicopterCategory(category_str)
+        except ValueError:
+            logger.error(
+                "Helicopter trajectory: unknown category '%s' for movement at "
+                "runway time '%s'.",
+                category_str,
+                self._runway_time,
+            )
+            return None
+
+        # Geodesic projection setup (same EPSG codes as the fixed-wing path)
+        epsg_id_source = 3857
+        epsg_id_target = 4326
+        coord_tr = spatial.create_coordinate_transform(epsg_id_source, epsg_id_target)
+        qgs_d = spatial.create_distance_area(epsg_id_source)
+
+        runway_geom = QgsGeometry.fromWkt(self._runway.getGeometryText())
+        backup_point, target_point, runway_azimuth_deg = self._get_runway_dir_azimuth(
+            runway_geom,
+            qgs_d,
+        )
+
+        is_dep = self._departure_arrival == "D"
+        local_pts = build_departure(category) if is_dep else build_arrival(category)
+        if not local_pts:
+            logger.error(
+                "Helicopter trajectory: builder produced no points for "
+                "category '%s', departure_arrival '%s'.",
+                category_str,
+                self._departure_arrival,
+            )
+            return None
+
+        # World origin and walk direction for projecting local cartesian points
+        # to geographic positions.
+        if is_dep:
+            origin_projected = backup_point
+            walk_azimuth_deg = runway_azimuth_deg
+        else:
+            origin_projected = target_point
+            walk_azimuth_deg = (runway_azimuth_deg + 180.0) % 360.0
+        origin_geographic = coord_tr.transform(origin_projected)
+        walk_azimuth_rad = math.radians(walk_azimuth_deg)
+
+        # Build a fresh AircraftTrajectory. The metadata fields (profile id,
+        # stage, weight) are not used by the helicopter emission path, but we
+        # populate them with sensible defaults so downstream logging is sane.
+        ac_trajectory = AircraftTrajectory(
+            {
+                "profile_id": f"HELI-{category_str}-{self._departure_arrival or '?'}",
+                "stage": 1,
+                "arrival_departure": self._departure_arrival,
+                "weight_kgs": None,
+            }
+        )
+        ac_trajectory.setIsCartesian(False)
+
+        for idx, lp in enumerate(local_pts, start=1):
+            # Local cartesian distance from origin. Z is altitude (project-
+            # independent), x is along-track. y is always 0 for the FOCA
+            # helicopter trajectories (no lateral motion).
+            distance = math.hypot(lp.x_m, lp.y_m)
+            if distance == 0:
+                # Avoid degenerate spheroid projection; world position = origin
+                target_geographic = origin_geographic
+            else:
+                target_geographic = qgs_d.computeSpheroidProject(
+                    origin_geographic,
+                    distance,
+                    walk_azimuth_rad,
+                )
+            target_projected = coord_tr.transform(
+                target_geographic,
+                QgsCoordinateTransform.ReverseTransform,
+            )
+
+            tp = AircraftTrajectoryPoint(
+                {
+                    "id": idx,
+                    "geometry_text": "",
+                    "x": target_projected.x(),
+                    "y": target_projected.y(),
+                    "z": lp.z_m,
+                    "tas_metres": lp.tas_m_s,
+                    "mode": lp.mode,
+                    "course": "",
+                    "fuel_flow": None,
+                    "weight": None,
+                    "power": None,
+                }
+            )
+            tp.setCoordinates(target_projected.x(), target_projected.y(), lp.z_m)
+            ac_trajectory.addPoint(tp)
+
+        return ac_trajectory
 
     def _has_track(self) -> bool:
         if self._track is None:

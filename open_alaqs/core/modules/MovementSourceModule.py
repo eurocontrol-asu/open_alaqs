@@ -142,9 +142,26 @@ class MovementSourceModule(SourceModule):
 
     @staticmethod
     def getDefaultProfileName(movement):
+        aircraft = movement.getAircraft()
+        # Helicopters bypass default_aircraft_profiles -- their trajectory
+        # is generated at runtime via foca_heli_trajectory. Return a
+        # direction-encoded sentinel "FOCA_HELI_{D,A}" so downstream
+        # groupby operations (in particular the flight_columns groupby in
+        # this same module) place departure and arrival helicopter
+        # movements in DIFFERENT groups -- a single 'FOCA_HELI' string
+        # would collapse them and only the first direction's emissions
+        # would be computed and applied to both. Calling
+        # getDefault{Departure,Arrival}ProfileName on a Helicopter
+        # instance raises AttributeError; Helicopter has no such method.
+        if (
+            aircraft is not None
+            and hasattr(aircraft, "is_helicopter")
+            and aircraft.is_helicopter()
+        ):
+            return "FOCA_HELI_D" if movement.isDeparture() else "FOCA_HELI_A"
         if movement.isDeparture():
-            return movement.getAircraft().getDefaultDepartureProfileName()
-        return movement.getAircraft().getDefaultArrivalProfileName()
+            return aircraft.getDefaultDepartureProfileName()
+        return aircraft.getDefaultArrivalProfileName()
 
     def addAdditionalColumnsToDataFrame(self):
         """
@@ -154,13 +171,22 @@ class MovementSourceModule(SourceModule):
         # Set default emissions
         default_emission = Emission(defaultValues=defaultEmissions)
 
-        # Create a function that returns a list of default emissions
+        # Default value for the GateEmissions and FlightEmissions cells.
+        # MUST be a list (of EmissionsDict) to match the runtime type
+        # returned by GateEmissionCalculator.calculate_emissions() and
+        # FlightEmissionCalculator.calculate_emissions(). The concatenation
+        # `te + ge + fe` in process() requires all three operands to be
+        # lists; a dict default here previously caused a TypeError for
+        # helicopter movements (where `gate is None` skips the
+        # gate-emissions assignment loop and the default value survives).
         def _default_emissions(*args):
-            return {
-                "emissions": [default_emission],
-                "distance_time": 0.0,
-                "distance_space": 0.0,
-            }
+            return [
+                {
+                    "emissions": [default_emission],
+                    "distance_time": 0.0,
+                    "distance_space": 0.0,
+                }
+            ]
 
         # Load movements from DataFrame
         df = self.getDataframe()
@@ -168,16 +194,29 @@ class MovementSourceModule(SourceModule):
         # Add the runway times
         df.loc[:, "RunwayTime"] = [mov.getRunwayTime() for mov in df["Sources"]]
 
-        # Add the gate
-        df.loc[:, "gate"] = [mov.getGate().getName() for mov in df["Sources"]]
+        # Add the gate. For helicopter movements getGate() returns None
+        # (helicopters operate from helipads, not gates); use empty string
+        # as the dataframe value rather than crashing on NoneType.getName().
+        df.loc[:, "gate"] = [
+            mov.getGate().getName() if mov.getGate() is not None else ""
+            for mov in df["Sources"]
+        ]
 
         # Add the aircraft and aircraft group
         df.loc[:, "aircraft"] = [mov.getAircraft().getName() for mov in df["Sources"]]
         df.loc[:, "ac_group"] = [mov.getAircraft().getGroup() for mov in df["Sources"]]
 
-        # Add the engine
+        # Add the engine. For helicopter movements getAircraftEngine() returns
+        # None (helicopters use HelicopterEngine via the Helicopter object's
+        # metadata, not an entry in engine_store); use empty string as the
+        # dataframe value rather than crashing on NoneType.getName().
         df.loc[:, "engine"] = [
-            mov.getAircraftEngine().getName() for mov in df["Sources"]
+            (
+                mov.getAircraftEngine().getName()
+                if mov.getAircraftEngine() is not None
+                else ""
+            )
+            for mov in df["Sources"]
         ]
 
         # Add the departure/arrival
@@ -308,10 +347,21 @@ class MovementSourceModule(SourceModule):
 
             gate = movement.getGate()
             if gate is None:
-                logger.warning(
-                    "Did not find a gate for movement '%s'" % (movement.getName())
+                # Helicopters do not have a gate by design (helipad
+                # operation). The default emission list survives unchanged
+                # for these movements; the FOCA emission dispatch handles
+                # the actual emission calculation for helicopters elsewhere.
+                aircraft = movement.getAircraft()
+                is_heli = (
+                    aircraft is not None
+                    and hasattr(aircraft, "is_helicopter")
+                    and aircraft.is_helicopter()
                 )
-                continue  # The corresponding df column already has a default emission dict
+                if not is_heli:
+                    logger.warning(
+                        "Did not find a gate for movement '%s'" % (movement.getName())
+                    )
+                continue  # The corresponding df column already has a default emission list
 
             gate_emission_calculator = GateEmissionCalculator(
                 gate,
@@ -352,6 +402,23 @@ class MovementSourceModule(SourceModule):
             # and it's geometry is stored precalculated with the Runway in the resulting FlightEmissions object.
             # However, the geometry needs to be rotated to match the respective Runway of each Movement.
             lambda idx: df.loc[idx]["Sources"].getRunway().getName(),
+            # Trajectory placement for arrivals (Option A in
+            # GeoTransformation.runway_alignment) shifts the origin so the
+            # profile end-of-rollout point lands at the taxi-route runway-
+            # exit. This makes the per-mov trajectory taxi-route-dependent
+            # for arrivals, so the groupby must distinguish by taxi route
+            # too — otherwise the first member's trajectory is reused for
+            # all members of the same (engine, profile, runway) group and
+            # members with different gates / taxi routes get the wrong
+            # spatial placement. Departures are taxi-route-independent so
+            # this only refines the group splits (each member of the
+            # finer group still produces the same trajectory; the cache
+            # absorbs the redundancy).
+            lambda idx: (
+                df.loc[idx]["Sources"].getTaxiRoute().getName()
+                if df.loc[idx]["Sources"].getTaxiRoute() is not None
+                else ""
+            ),
         ]
         for grouped_values, group in df[relevant_movements].groupby(flight_columns):
 
@@ -466,10 +533,21 @@ class MovementSourceModule(SourceModule):
             # Add Taxiing Emissions
             if movement.getTaxiRoute() is None:
                 te = []
-                logger.error(
-                    "Did not find a taxi route for movement '%s'. Cannot calculate taxiing emissions.",
-                    movement.getName(),
+                # Helicopters do not taxi by design (helipad operation).
+                # Log a non-error only for fixed-wing movements where a
+                # missing taxi route signals a real configuration issue.
+                aircraft = movement.getAircraft()
+                is_heli = (
+                    aircraft is not None
+                    and hasattr(aircraft, "is_helicopter")
+                    and aircraft.is_helicopter()
                 )
+                if not is_heli:
+                    logger.error(
+                        "Did not find a taxi route for movement '%s'. "
+                        "Cannot calculate taxiing emissions.",
+                        movement.getName(),
+                    )
             else:
                 gkey = _taxi_group_key(movement)
                 cached_te = _taxi_cache.get(gkey)

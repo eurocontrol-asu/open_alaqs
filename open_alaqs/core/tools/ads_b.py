@@ -366,17 +366,19 @@ def import_adsb_file(
             else:
                 tas_metres = None
 
-            # Determine mode based on arrival/departure and altitude
+            # Determine mode based on arrival/departure and altitude.
+            # For departures, z_m <= 0 marks ground-level (or sub-MSL)
+            # points as TO; airborne points are CL. The previous check
+            # used `z_m == 0` (literal equality), which silently failed
+            # at airports below MSL — e.g. Rotterdam (EHRD) at z=-4.57 m
+            # never matched, so every ground-roll point became CL.
             if is_arrival:
-                # Approaching: set mode to AP
                 mode = "AP"
             else:
-                # Departing: check altitude
-                z_m = row.get("z_m", 0.0)
-                if z_m == 0:
-                    mode = "TO"  # Take-off
+                if z_m <= 0:
+                    mode = "TO"
                 else:
-                    mode = "CL"  # Climb
+                    mode = "CL"
 
             # 2. Prepare data in ANP format for default_aircraft_profiles
             # (14-column schema):

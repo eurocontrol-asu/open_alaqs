@@ -577,6 +577,364 @@ def _get_trigger_host_from_ddl(sql: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Phase 3 — point-sources v2 hooks
+# ---------------------------------------------------------------------------
+# Two small post-migration steps tied to the point-sources v2 schema
+# additions:
+#
+#   1. The three v2 temporal profiles (`heating_season`,
+#      `cooling_season`, `business_hours`) live in the canonical
+#      template files (built into `core/templates/project.alaqs` and
+#      `inventory.alaqs`). New studies inherit them automatically.
+#      Existing studies, migrated through Phase 1, need an explicit
+#      INSERT OR IGNORE step because `user_*_profile` tables are in
+#      `USER_DATA_TABLES_FORBIDDEN_FROM_REFRESH` (Phase 2 cannot
+#      touch them) — the user's existing custom profiles must be
+#      preserved, but the three v2 system profiles can be appended
+#      idempotently.
+#
+#   2. A migration report identifying in-study shapes_point_sources
+#      rows whose EF fingerprint matches a `deprecated=1` row in
+#      `default_stationary_ef`. Read-only. Output is a CSV next to
+#      the source file (or `--report-deprecated-pins=PATH`).
+
+# Three v2 profiles. Use h01..h24 (1-indexed) per the schema.
+POINT_SOURCES_V2_PROFILES = {
+    "user_month_profile": {
+        "cols": [
+            "jan",
+            "feb",
+            "mar",
+            "apr",
+            "may",
+            "jun",
+            "jul",
+            "aug",
+            "sep",
+            "oct",
+            "nov",
+            "dec",
+        ],
+        "rows": {
+            "heating_season": [
+                2.00,
+                1.80,
+                1.40,
+                0.70,
+                0.30,
+                0.10,
+                0.05,
+                0.05,
+                0.30,
+                0.80,
+                1.50,
+                1.90,
+            ],
+            "cooling_season": [
+                0.20,
+                0.20,
+                0.30,
+                0.50,
+                0.90,
+                1.40,
+                1.80,
+                1.80,
+                1.20,
+                0.60,
+                0.30,
+                0.20,
+            ],
+            "business_hours": [
+                1.00,
+                1.00,
+                1.00,
+                1.00,
+                1.00,
+                1.00,
+                1.00,
+                1.00,
+                1.00,
+                1.00,
+                1.00,
+                1.00,
+            ],
+        },
+    },
+    "user_day_profile": {
+        "cols": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+        "rows": {
+            "heating_season": [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],
+            "cooling_season": [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],
+            "business_hours": [1.20, 1.20, 1.20, 1.20, 1.20, 0.40, 0.40],
+        },
+    },
+    "user_hour_profile": {
+        "cols": [f"h{i:02d}" for i in range(1, 25)],
+        "rows": {
+            "heating_season": [1.0] * 24,
+            "cooling_season": [
+                0.4,
+                0.3,
+                0.3,
+                0.3,
+                0.3,
+                0.4,
+                0.6,
+                0.8,
+                1.0,
+                1.2,
+                1.4,
+                1.6,
+                1.8,
+                2.0,
+                2.0,
+                2.0,
+                1.8,
+                1.5,
+                1.2,
+                1.0,
+                0.8,
+                0.6,
+                0.5,
+                0.4,
+            ],
+            "business_hours": [
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.5,
+                1.5,
+                1.5,
+                1.5,
+                1.5,
+                1.5,
+                1.5,
+                1.5,
+                1.5,
+                1.5,
+                1.5,
+                1.5,
+                1.5,
+                1.0,
+                0.5,
+                0.3,
+                0.2,
+                0.2,
+            ],
+        },
+    },
+}
+
+
+def insert_point_sources_v2_profiles(conn: sqlite3.Connection) -> dict:
+    """Insert the three v2 temporal profiles into each `user_*_profile`
+    table where they are not already present. Idempotent on
+    profile_name. Returns {table: [inserted_profile_names]}.
+
+    Safe to call on any .alaqs file: tables that do not exist are
+    silently skipped (logged), and existing profile rows are never
+    overwritten.
+    """
+    summary: dict = {}
+    tables_present = get_tables(conn)
+    for table, spec in POINT_SOURCES_V2_PROFILES.items():
+        if table not in tables_present:
+            summary[table] = []
+            continue
+        inserted = []
+        for name, values in spec["rows"].items():
+            present = conn.execute(
+                f"SELECT 1 FROM {table} WHERE profile_name = ?", (name,)
+            ).fetchone()
+            if present:
+                continue
+            placeholders = ", ".join(["?"] * (1 + len(spec["cols"])))
+            conn.execute(
+                f"INSERT INTO {table} (profile_name, {', '.join(spec['cols'])}) "
+                f"VALUES ({placeholders})",
+                [name] + values,
+            )
+            inserted.append(name)
+        summary[table] = inserted
+    return summary
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 — deprecated-pin report
+# ---------------------------------------------------------------------------
+# Helper substitution rules for the recommended_replacement column.
+# Keys are case-insensitive substrings tested against the legacy EF
+# description. Add entries here when expanding the v2 ruleset.
+_DEPRECATED_PIN_REPLACEMENTS = {
+    "natural gas : utility": "Natural Gas, Large Wall-Fired >100 MMBtu/hr, Uncontrolled Pre-NSPS",
+    "natural gas : industrial": "Natural Gas, Large Wall-Fired >100 MMBtu/hr, Low-NOx burners",
+    "natural gas : commercial": "Natural Gas, Small Boilers <100 MMBtu/hr, Uncontrolled",
+    "natural gas : domestic": "Natural Gas, Residential <0.3 MMBtu/hr",
+    "diesel": "Diesel >600 hp, Open-Chamber, Uncontrolled (verify size class and chamber type)",
+}
+
+
+def _suggest_replacement(category_int: int, description: str) -> str | None:
+    desc_l = (description or "").lower()
+    for needle, replacement in _DEPRECATED_PIN_REPLACEMENTS.items():
+        if needle in desc_l:
+            return replacement
+    return None
+
+
+def report_deprecated_pins(
+    conn: sqlite3.Connection,
+    report_path: Path,
+) -> int:
+    """Write a CSV listing every in-study `shapes_point_sources` row
+    whose EF fingerprint matches a `deprecated=1` row in
+    `default_stationary_ef`.
+
+    Fingerprint = (`category_name` -> int via `default_stationary_category`,
+    `substance_name` -> int via `default_stationary_substance`,
+    `nox_kg_k` rounded to 4 decimal places). HC and other pollutant
+    columns are NOT part of the fingerprint because operators
+    routinely override them on individual sources after picking an EF
+    preset.
+
+    Returns the number of CSV rows written (excluding header).
+
+    Notes:
+      - Read-only on the DB.
+      - Requires v2 schema (the `deprecated` column on
+        `default_stationary_ef`). Returns 0 if the column is missing.
+      - Multiple legacy rows may share a fingerprint (e.g. Natural Gas
+        Commercial and Domestic both have NOx=1.6); the canonical
+        match is the lowest oid and the report's `notes` column
+        surfaces siblings.
+    """
+    import csv as _csv
+    from collections import defaultdict as _defaultdict
+
+    # Guard: v2 column must exist on default_stationary_ef
+    if not _has_column(conn, "default_stationary_ef", "deprecated"):
+        print("  (deprecated column not present; Phase 1 hasn't run yet)")
+        with report_path.open("w", newline="") as fh:
+            w = _csv.writer(fh)
+            w.writerow(
+                [
+                    "source_id",
+                    "shapes_point_sources_oid",
+                    "shapes_category",
+                    "shapes_substance",
+                    "current_nox_kg_k",
+                    "legacy_ef_oid",
+                    "legacy_ef_description",
+                    "recommended_replacement_description",
+                    "notes",
+                ]
+            )
+        return 0
+
+    legacy_index = _defaultdict(list)
+    for oid, cat, sub, nox, desc in conn.execute(
+        "SELECT oid, category, SUBSTANCE, nox_kg_k, description "
+        "FROM default_stationary_ef WHERE deprecated = 1"
+    ):
+        try:
+            key = (int(cat), int(sub), round(float(nox), 4))
+        except (TypeError, ValueError):
+            continue
+        legacy_index[key].append((oid, cat, desc))
+
+    cat_code = {
+        name: int(code)
+        for code, name in conn.execute(
+            "SELECT category, category_name FROM default_stationary_category"
+        )
+    }
+    sub_code = {
+        name: int(code)
+        for code, name in conn.execute(
+            "SELECT substance, substance_name FROM default_stationary_substance"
+        )
+    }
+
+    n = 0
+    with report_path.open("w", newline="") as fh:
+        w = _csv.writer(fh)
+        w.writerow(
+            [
+                "source_id",
+                "shapes_point_sources_oid",
+                "shapes_category",
+                "shapes_substance",
+                "current_nox_kg_k",
+                "legacy_ef_oid",
+                "legacy_ef_description",
+                "recommended_replacement_description",
+                "notes",
+            ]
+        )
+        for sps_oid, source_id, cat_name, sub_name, current_nox in conn.execute(
+            "SELECT oid, source_id, category, substance, nox_kg_k "
+            "FROM shapes_point_sources WHERE instudy = '1'"
+        ):
+            cat_int = cat_code.get((cat_name or "").strip())
+            sub_int = sub_code.get((sub_name or "").strip())
+            if cat_int is None or sub_int is None or current_nox is None:
+                continue
+            try:
+                key = (cat_int, sub_int, round(float(current_nox), 4))
+            except (TypeError, ValueError):
+                continue
+            matches = legacy_index.get(key)
+            if not matches:
+                continue
+            legacy_ef_oid, legacy_cat, legacy_desc = matches[0]
+            recommended = _suggest_replacement(legacy_cat, legacy_desc)
+            notes = []
+            if len(matches) > 1:
+                sib = ", ".join(f"oid={m[0]}:{m[2][:40]}" for m in matches[1:])
+                notes.append(f"ambiguous fingerprint; also matches {sib}")
+            if recommended is None:
+                notes.append("no automatic recommendation; review manually")
+            desc_l = (legacy_desc or "").lower()
+            if (
+                "industrial" in desc_l
+                and "natural gas" in desc_l
+                and abs(float(current_nox) - 2.24) < 1e-3
+            ):
+                notes.append(
+                    "WARNING: legacy 'Industrial' label carries 2.24 kg/10^3 m^3, "
+                    "which is AP-42 LOW-NOX BURNER value, not uncontrolled large boiler"
+                )
+            if "diesel" in desc_l and legacy_cat == 2:
+                notes.append(
+                    "WARNING: legacy 'Diesel' row used 1000_m3 units; new IC Engine "
+                    "row uses operating HOURS. Re-verify activity quantity unit."
+                )
+            w.writerow(
+                [
+                    source_id,
+                    sps_oid,
+                    cat_name,
+                    sub_name,
+                    current_nox,
+                    legacy_ef_oid,
+                    legacy_desc,
+                    recommended or "",
+                    " | ".join(notes),
+                ]
+            )
+            n += 1
+    return n
+
+
+def _has_column(conn: sqlite3.Connection, table: str, column: str) -> bool:
+    """True iff `column` is present on `table`."""
+    return any(r[1] == column for r in conn.execute(f"PRAGMA table_info({table})"))
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -821,6 +1179,29 @@ def main(argv: list[str]) -> int:  # noqa: C901
         "(default_aircraft, default_aircraft_engine_ei, ...) "
         "to the refresh list. WILL OVERWRITE user customizations.",
     )
+    parser.add_argument(
+        "--skip-point-sources-v2",
+        action="store_true",
+        help="Skip Phase 3: the point-sources v2 hook that "
+        "INSERT-OR-IGNOREs the three named temporal profiles "
+        "(heating_season, cooling_season, business_hours) into "
+        "user_*_profile. Default: enabled. Skip only if you know your "
+        "study predates the v2 schema and you want to keep it in v1 "
+        "shape.",
+    )
+    parser.add_argument(
+        "--report-deprecated-pins",
+        nargs="?",
+        const="AUTO",
+        default=None,
+        metavar="PATH",
+        help="Emit a CSV listing in-study shapes_point_sources rows "
+        "whose EF fingerprint matches a deprecated default_stationary_ef "
+        "row. Requires the v2 schema (run with Phase 1 first if the "
+        "study is pre-v2). Pass a path explicitly, or omit the value to "
+        "write to migration_<source-basename>.csv in the source's "
+        "directory.",
+    )
     args = parser.parse_args(argv)
 
     # File existence checks
@@ -929,6 +1310,21 @@ def main(argv: list[str]) -> int:  # noqa: C901
             print("\n=== Phase 2: reference data refresh (dry-run) ===")
             print(f"  data_dir: {args.data_dir}")
             print(f"  tables to refresh ({len(refresh_list)}): {refresh_list}")
+        if not args.skip_point_sources_v2:
+            print("\n=== Phase 3: point-sources v2 profiles (dry-run) ===")
+            print(
+                "  Would INSERT-OR-IGNORE: heating_season, cooling_season, "
+                "business_hours into user_month/day/hour_profile."
+            )
+        if args.report_deprecated_pins is not None:
+            print("\n=== Phase 3 report (dry-run) ===")
+            if args.report_deprecated_pins == "AUTO":
+                report_path = (
+                    args.alaqs_path.parent / f"migration_{args.alaqs_path.stem}.csv"
+                )
+            else:
+                report_path = Path(args.report_deprecated_pins)
+            print(f"  Would write deprecated-pin report to: {report_path}")
         print("\n--dry-run: no changes applied.")
         ref.close()
         src.close()
@@ -953,6 +1349,37 @@ def main(argv: list[str]) -> int:  # noqa: C901
                 n = refresh_reference_data(src, refresh_list, args.data_dir)
                 src.execute("COMMIT")
                 print(f"\nPhase 2 applied: {n} table(s) refreshed.")
+
+        # ----- Phase 3: point-sources v2 hooks -----
+        # Always runs unless explicitly skipped. The
+        # INSERT-OR-IGNORE semantics make it safe to run on any
+        # study (pre-v2 or already v2).
+        if not args.skip_point_sources_v2:
+            print("\n=== Phase 3: point-sources v2 profiles ===")
+            src.execute("BEGIN")
+            summary = insert_point_sources_v2_profiles(src)
+            src.execute("COMMIT")
+            for table, inserted in summary.items():
+                if inserted:
+                    print(f"  {table}: inserted {inserted}")
+                else:
+                    print(f"  {table}: already present (or table absent)")
+        else:
+            print("\n=== Phase 3: SKIPPED (--skip-point-sources-v2) ===")
+
+        # ----- Optional: deprecated-pin report -----
+        # Runs after Phase 1+2+3 so the DB is in v2 shape before the
+        # fingerprint match. Read-only on the source.
+        if args.report_deprecated_pins is not None:
+            print("\n=== Phase 3 report: deprecated-pin scan ===")
+            if args.report_deprecated_pins == "AUTO":
+                report_path = (
+                    args.alaqs_path.parent / f"migration_{args.alaqs_path.stem}.csv"
+                )
+            else:
+                report_path = Path(args.report_deprecated_pins)
+            n_pins = report_deprecated_pins(src, report_path)
+            print(f"  Wrote {n_pins} in-study sources to {report_path}")
 
         # VACUUM outside any transaction
         try:

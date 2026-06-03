@@ -112,6 +112,7 @@ class EmissionsQGISVectorLayerOutputModule(GridOutputModule):
                 self._grid_df = self._process_grid(source, emission, self._grid_df)
 
     def endJob(self) -> Optional[QgsVectorLayer]:
+
         if self._grid_df.empty:
             return None
 

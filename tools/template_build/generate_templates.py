@@ -55,11 +55,14 @@ def get_sql_serializable_registry(file_type: str) -> list:
         EngineEmissionFactorsStartDatabase,
         EngineEmissionIndicesDatabase,
         EngineModeDatabase,
-        HelicopterEngineEmissionIndicesDatabase,
     )
     from open_alaqs.core.interfaces.Gate import (
         DefaultGateEmissionProfileDatabase,
         GateDatabase,
+    )
+    from open_alaqs.core.interfaces.Helicopter import (
+        HelicopterDatabase,
+        HelicopterEnginesDatabase,
     )
     from open_alaqs.core.interfaces.InventoryTimeSeries import (
         InventoryTimeSeriesDatabase,
@@ -93,7 +96,8 @@ def get_sql_serializable_registry(file_type: str) -> list:
         EngineEmissionIndicesDatabase,
         EngineModeDatabase,
         GateDatabase,
-        HelicopterEngineEmissionIndicesDatabase,
+        HelicopterDatabase,
+        HelicopterEnginesDatabase,
         InventoryTimeSeriesDatabase,
         MovementDatabase,
         ParkingSourcesDatabase,
@@ -164,25 +168,31 @@ def apply_sqlserializable_registry(template_path: Path, file_type: str) -> None:
 
 
 def get_engine(p: Path) -> sqlalchemy.engine.Engine:
-    # Path.as_uri() always returns 'file:///...' (three slashes), but it only
-    # works on absolute paths — it raises ValueError on relative ones. Resolve
-    # first so callers can pass either absolute or relative paths. Seven tests
-    # (test_copert5, test_copert5_utils, test_template_sql) used to fail here
-    # because they pass `Path(__file__).parents[1] / "core/templates" / ...`
-    # which is relative at construction time.
+    # SQLite URIs differ between platforms in non-obvious ways:
+    #   POSIX absolute:   sqlite:////home/user/db.alaqs   (4 slashes)
+    #   POSIX relative:   sqlite:///rel/path/db.alaqs     (3 slashes)
+    #   Windows absolute: sqlite:///C:/Users/.../db.alaqs (3 slashes; the
+    #                                                       drive letter
+    #                                                       is the absolute
+    #                                                       marker)
+    # Hand-rolling the URI for both platforms is error-prone — earlier
+    # revisions of this function tried to handle it with
+    # `str(p).lstrip('/')` plus an extra slash, which broke on Windows
+    # because Windows absolute paths have no leading '/' to strip, so the
+    # 4-slash form ended up encoding `sqlite:////C:\Users\...` which
+    # SQLAlchemy mis-parsed into `C:\C:\Users\...` (duplicated drive
+    # letter) when passed to sqlite3.connect.
     #
-    # SQLAlchemy URI convention:
-    #   sqlite:///relative/path  (3 slashes) — relative to CWD
-    #   sqlite:////absolute/path (4 slashes) — absolute
-    # Path.as_uri() produces file:///absolute/path (3 slashes), which after a
-    # naive "file:" → "sqlite:" replace becomes sqlite:///absolute/path — which
-    # SQLAlchemy interprets as a RELATIVE path, giving it twice the CWD prefix.
-    # Build the URI explicitly to avoid that trap.
+    # `sqlalchemy.engine.URL.create(drivername="sqlite", database=...)`
+    # handles the platform differences for us. Resolve the path first so
+    # relative inputs (e.g. test fixtures that compose paths from
+    # `Path(__file__).parents[1]`) become absolute before URL.create
+    # decides how to encode them.
+    from sqlalchemy.engine import URL
+
     p = Path(p).resolve()
-    uri = (
-        f"sqlite:///{p}" if not p.is_absolute() else f"sqlite:////{str(p).lstrip('/')}"
-    )
-    engine = sqlalchemy.create_engine(uri)
+    url = URL.create(drivername="sqlite", database=str(p))
+    engine = sqlalchemy.create_engine(url)
 
     # Attach a connection-level listener that loads SpatiaLite into every
     # fresh connection the engine opens. Without this, SELECTs that touch

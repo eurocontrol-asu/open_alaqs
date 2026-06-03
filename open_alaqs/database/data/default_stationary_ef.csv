@@ -1,51 +1,65 @@
-oid,category,type,temperature,diameter,velocity,z,description,co_kg_k,hc_kg_k,nox_kg_k,sox_kg_k,particulate_kg_k,p1_kg_k,p2_kg_k,SUBSTANCE
-1,1,1,400,3,15,20,Pathological,0.0,0.0,1.501,0.0,4.003,0,0,1
-2,1,2,400,3,15,20,Paper single chamber,100.1,25.02,1.001,0.7505,15.51,0,0,1
-3,1,3,400,3,15,20,Paper multiple chamber,12.51,1.001,1.501,0.7505,4.003,0,0,1
-4,1,4,400,3,15,20,Film single chamber,50.03,12.51,0.5003,0.3502,7.505,0,0,1
-5,1,5,400,3,15,20,Film multiple chamber,6.254,5.003,0.7505,0.3502,2.001,0,0,1
-6,2,1,400,1,15,20,Bituminous Coal : Pulverized (> 10^8 BTU/HR),0.3002,0.55,10.51,39.03,60.04,0,0,1
-7,2,2,400,1,15,20,Bituminous Coal : Overfeed Stoker (> 10^7 BTU/HR),3.002,0.055,3.25,19.51,8.005,0,0,1
-8,2,3,400,1,15,20,Bituminous Coal : Spreader Stoker (< 10^7 BTU/HR),2.502,0.055,7.005,19.51,30.02,0,0,1
-9,2,4,400,1,15,20,Bituminous Coal : Hand Fired (all),45.03,9.006,1.501,15.51,7.505,0,0,1
-10,2,5,400,1,15,20,Anthracite Coal : Pulverized (> 10^8 BTU/HR),0.3002,0.055,9.006,13.66,5.003,0,0,1
-11,2,6,400,1,15,20,Anthracite Coal : Overfeed Stoker (> 10^7 BTU/HR),0.3002,0.055,5.003,19.51,4.603,0,0,1
-12,2,7,400,1,15,20,Anthracite Coal : Spreader Stoker (< 10^7 BTU/HR),0.3002,0.055,5.003,19.51,4.603,0,0,1
-13,2,8,400,1,15,20,Anthracite Coal : Hand Fired (all),45.03,9.006,1.501,19.51,5.003,0,0,1
-14,2,9,400,1,15,20,Fuel Oil : Utility (> 10^8 BTU/HR),0.6004,0.1201,8.005,19.34,1.251,0,0,2
-15,2,10,400,1,15,20,Fuel Oil : Residual (> 10^7 BTU/HR),0.6004,0.1541,6.605,19.24,1.251,0,0,2
-16,2,11,400,1,15,20,Fuel Oil : Distillate (> 10^7 BTU/HR),0.6004,0.03002,2.402,17.24,0.2402,0,0,2
-17,2,12,400,1,15,20,Fuel Oil :Residential (< 10^7 BTU/HR),0.6004,0.2992,2.202,17.24,0.3002,0,0,2
-18,2,13,400,1,15,20,Liquified Petroleum Gas : Industrial (butane),0.4003,0.06004,1.581,0.3703,0.03002,0,0,2
-19,2,14,400,1,15,20,Liquified Petroleum Gas : Industrial (propane),0.3703,0.06004,1.491,0.3703,0.03002,0,0,2
-20,2,15,400,1,15,20,Liquified Petroleum Gas : Commercial (butane),0.2302,0.09006,1.131,0.3703,0.03002,0,0,2
-21,2,16,400,1,15,20,Liquified Petroleum Gas : Commercial (propane),0.2302,0.09006,1.131,0.3703,0.03002,0,0,2
-22,2,17,400,1,15,20,Liquified Petroleum Gas : Domestic (butane),0.2202,0.09006,1.05,0.3703,0.03002,0,0,2
-23,2,18,400,1,15,20,Diesel,12.2,4.493,56.24,3.743,4.013,0,0,2
-24,2,19,400,1,15,20,Natural Gas : Utility (> 10^8 BTU/HR),0.64,0.0278,8.8,0.009607,0.04803,0,0,3
-25,2,20,400,1,15,20,Natural Gas : Industrial (> 10^7 BTU/HR),0.56,0.925,2.24,0.009607,0.04803,0,0,3
-26,2,21,400,1,15,20,Natural Gas : Commercial (< 10^7 BTU/HR),0.32,0.127,1.6,0.009607,0.04803,0,0,3
-27,2,22,400,1,15,20,Natural Gas : Domestic (< 10^7 BTU/HR),0.32,0.127,1.6,0.009607,0.04803,0,0,3
-28,3,1,50,1,4,5,Fuel Oil/Diesel,0.0,0.003726,0.0,0.0,0.0,0,0,2
-29,3,2,50,1,4,5,Automobile Gasoline,0.0,1.8465,0.0,0.0,0.0,0,0,2
-30,3,3,50,1,4,5,Aviation Gasoline,0.0,1.032,0.0,0.0,0.0,0,0,2
-31,3,4,50,1,4,5,JP4,0.0,0.44005,0.0,0.0,0.0,0,0,2
-32,3,5,50,1,4,5,JP5/JET A,0.0,0.004767,0.0,0.0,0.0,0,0,2
-33,4,1,50,6,3,4,Cold Cleaners,0.0,500.0,0.0,0.0,0.0,0,0,1
-34,4,2,50,6,3,4,Open-Top Vapor,0.0,600.0,0.0,0.0,0.0,0,0,1
-35,4,3,50,6,3,4,Conveyorized vapor,0.0,400.0,0.0,0.0,0.0,0,0,1
-36,4,4,50,6,3,4,Conveyorized nonboiling,0.0,450.0,0.0,0.0,0.0,0,0,1
-37,5,1,50,2,3,4,Enamel air dry,0.0,531.9,0.0,0.0,0.0,0,0,2
-38,5,2,50,2,3,4,Enamel baking,0.0,503.7,0.0,0.0,0.0,0,0,2
-39,5,3,50,2,3,4,Acrylic enamel,0.0,613.8,0.0,0.0,0.0,0,0,2
-40,5,4,50,2,3,4,Alkyd enamel,0.0,465.0,0.0,0.0,0.0,0,0,2
-41,5,5,50,2,3,4,Primer surfacer,0.0,449.1,0.0,0.0,0.0,0,0,2
-42,5,6,50,2,3,4,Primer epoxy,0.0,376.9,0.0,0.0,0.0,0,0,2
-43,5,7,50,2,3,4,Varnish baking,0.0,569.7,0.0,0.0,0.0,0,0,2
-44,5,8,50,2,3,4,Lacquer spraying,0.0,650.8,0.0,0.0,0.0,0,0,2
-45,5,9,50,2,3,4,Vinyl roller coat,0.0,774.9,0.0,0.0,0.0,0,0,2
-46,5,10,50,2,3,4,Polyurethane,0.0,601.5,0.0,0.0,0.0,0,0,2
-47,5,11,50,2,3,4,Stain,0.0,690.4,0.0,0.0,0.0,0,0,2
-48,5,12,50,2,3,4,Sealer,0.0,777.6,0.0,0.0,0.0,0,0,2
-49,5,13,50,2,3,4,Magnet wire enamel,0.0,660.5,0.0,0.0,0.0,0,0,2
-50,5,14,50,2,3,4,Paper/Fabric coating,0.0,686.9,0.0,0.0,0.0,0,0,2
+oid,category,type,temperature,diameter,velocity,z,description,co_kg_k,hc_kg_k,nox_kg_k,sox_kg_k,particulate_kg_k,p1_kg_k,p2_kg_k,SUBSTANCE,activity_unit,reference,deprecated,recommended_month_profile,recommended_day_profile,recommended_hour_profile
+1,1,1,400,3,15,20,Pathological,0.0,0.0,1.501,0.0,4.003,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+2,1,2,400,3,15,20,Paper single chamber,100.1,25.02,1.001,0.7505,15.51,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+3,1,3,400,3,15,20,Paper multiple chamber,12.51,1.001,1.501,0.7505,4.003,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+4,1,4,400,3,15,20,Film single chamber,50.03,12.51,0.5003,0.3502,7.505,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+5,1,5,400,3,15,20,Film multiple chamber,6.254,5.003,0.7505,0.3502,2.001,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+6,2,1,400,1,15,20,Bituminous Coal : Pulverized (> 10^8 BTU/HR),0.3002,0.55,10.51,39.03,60.04,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+7,2,2,400,1,15,20,Bituminous Coal : Overfeed Stoker (> 10^7 BTU/HR),3.002,0.055,3.25,19.51,8.005,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+8,2,3,400,1,15,20,Bituminous Coal : Spreader Stoker (< 10^7 BTU/HR),2.502,0.055,7.005,19.51,30.02,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+9,2,4,400,1,15,20,Bituminous Coal : Hand Fired (all),45.03,9.006,1.501,15.51,7.505,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+10,2,5,400,1,15,20,Anthracite Coal : Pulverized (> 10^8 BTU/HR),0.3002,0.055,9.006,13.66,5.003,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+11,2,6,400,1,15,20,Anthracite Coal : Overfeed Stoker (> 10^7 BTU/HR),0.3002,0.055,5.003,19.51,4.603,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+12,2,7,400,1,15,20,Anthracite Coal : Spreader Stoker (< 10^7 BTU/HR),0.3002,0.055,5.003,19.51,4.603,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+13,2,8,400,1,15,20,Anthracite Coal : Hand Fired (all),45.03,9.006,1.501,19.51,5.003,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+14,2,9,400,1,15,20,Fuel Oil : Utility (> 10^8 BTU/HR),0.6004,0.1201,8.005,19.34,1.251,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+15,2,10,400,1,15,20,Fuel Oil : Residual (> 10^7 BTU/HR),0.6004,0.1541,6.605,19.24,1.251,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+16,2,11,400,1,15,20,Fuel Oil : Distillate (> 10^7 BTU/HR),0.6004,0.03002,2.402,17.24,0.2402,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+17,2,12,400,1,15,20,Fuel Oil :Residential (< 10^7 BTU/HR),0.6004,0.2992,2.202,17.24,0.3002,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+18,2,13,400,1,15,20,Liquified Petroleum Gas : Industrial (butane),0.4003,0.06004,1.581,0.3703,0.03002,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+19,2,14,400,1,15,20,Liquified Petroleum Gas : Industrial (propane),0.3703,0.06004,1.491,0.3703,0.03002,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+20,2,15,400,1,15,20,Liquified Petroleum Gas : Commercial (butane),0.2302,0.09006,1.131,0.3703,0.03002,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+21,2,16,400,1,15,20,Liquified Petroleum Gas : Commercial (propane),0.2302,0.09006,1.131,0.3703,0.03002,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+22,2,17,400,1,15,20,Liquified Petroleum Gas : Domestic (butane),0.2202,0.09006,1.05,0.3703,0.03002,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+23,2,18,400,1,15,20,Diesel,12.2,4.493,56.24,3.743,4.013,0,0,2,hr,AP-42 (legacy mapping),1,default,default,default
+24,2,19,400,1,15,20,Natural Gas : Utility (> 10^8 BTU/HR),0.64,0.0278,8.8,0.009607,0.04803,0,0,3,1000_m3,AP-42 (legacy mapping),1,default,default,default
+25,2,20,400,1,15,20,Natural Gas : Industrial (> 10^7 BTU/HR),0.56,0.925,2.24,0.009607,0.04803,0,0,3,1000_m3,AP-42 (legacy mapping),1,default,default,default
+26,2,21,400,1,15,20,Natural Gas : Commercial (< 10^7 BTU/HR),0.32,0.127,1.6,0.009607,0.04803,0,0,3,1000_m3,AP-42 (legacy mapping),1,default,default,default
+27,2,22,400,1,15,20,Natural Gas : Domestic (< 10^7 BTU/HR),0.32,0.127,1.6,0.009607,0.04803,0,0,3,1000_m3,AP-42 (legacy mapping),1,default,default,default
+28,3,1,50,1,4,5,Fuel Oil/Diesel,0.0,0.003726,0.0,0.0,0.0,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+29,3,2,50,1,4,5,Automobile Gasoline,0.0,1.8465,0.0,0.0,0.0,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+30,3,3,50,1,4,5,Aviation Gasoline,0.0,1.032,0.0,0.0,0.0,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+31,3,4,50,1,4,5,JP4,0.0,0.44005,0.0,0.0,0.0,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+32,3,5,50,1,4,5,JP5/JET A,0.0,0.004767,0.0,0.0,0.0,0,0,2,1000_L,AP-42 (legacy mapping),1,default,default,default
+33,4,1,50,6,3,4,Cold Cleaners,0.0,500.0,0.0,0.0,0.0,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+34,4,2,50,6,3,4,Open-Top Vapor,0.0,600.0,0.0,0.0,0.0,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+35,4,3,50,6,3,4,Conveyorized vapor,0.0,400.0,0.0,0.0,0.0,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+36,4,4,50,6,3,4,Conveyorized nonboiling,0.0,450.0,0.0,0.0,0.0,0,0,1,1000_kg,AP-42 (legacy mapping),1,default,default,default
+37,5,1,50,2,3,4,Enamel air dry,0.0,531.9,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+38,5,2,50,2,3,4,Enamel baking,0.0,503.7,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+39,5,3,50,2,3,4,Acrylic enamel,0.0,613.8,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+40,5,4,50,2,3,4,Alkyd enamel,0.0,465.0,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+41,5,5,50,2,3,4,Primer surfacer,0.0,449.1,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+42,5,6,50,2,3,4,Primer epoxy,0.0,376.9,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+43,5,7,50,2,3,4,Varnish baking,0.0,569.7,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+44,5,8,50,2,3,4,Lacquer spraying,0.0,650.8,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+45,5,9,50,2,3,4,Vinyl roller coat,0.0,774.9,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+46,5,10,50,2,3,4,Polyurethane,0.0,601.5,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+47,5,11,50,2,3,4,Stain,0.0,690.4,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+48,5,12,50,2,3,4,Sealer,0.0,777.6,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+49,5,13,50,2,3,4,Magnet wire enamel,0.0,660.5,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+50,5,14,50,2,3,4,Paper/Fabric coating,0.0,686.9,0.0,0.0,0.0,0,0,2,1000_kg,AP-42 (legacy mapping),1,default,default,default
+51,2,100,400,1,15,20,"Natural Gas, Large Wall-Fired >100 MMBtu/hr, Uncontrolled Pre-NSPS",1.34,0.092,4.48,0.009607,0.04803,0,0,3,1000_m3,"AP-42 1.4-1 (lb/10^6 scf -> kg/10^3 m^3, /62.42796)",0,heating_season,default,default
+52,2,101,400,1,15,20,"Natural Gas, Large Wall-Fired >100 MMBtu/hr, Uncontrolled Post-NSPS",1.34,0.092,3.04,0.009607,0.04803,0,0,3,1000_m3,AP-42 1.4-1,0,heating_season,default,default
+53,2,102,400,1,15,20,"Natural Gas, Large Wall-Fired >100 MMBtu/hr, Low-NOx burners",1.34,0.092,2.24,0.009607,0.04803,0,0,3,1000_m3,AP-42 1.4-1,0,heating_season,default,default
+54,2,103,400,1,15,20,"Natural Gas, Large Wall-Fired >100 MMBtu/hr, FGR",1.34,0.092,1.6,0.009607,0.04803,0,0,3,1000_m3,AP-42 1.4-1,0,heating_season,default,default
+55,2,104,400,1,15,20,"Natural Gas, Tangential-Fired, Uncontrolled",0.96,0.09,2.72,0.009607,0.04803,0,0,3,1000_m3,AP-42 1.4-1,0,heating_season,default,default
+56,2,105,400,1,15,20,"Natural Gas, Tangential-Fired, FGR",0.96,0.09,1.22,0.009607,0.04803,0,0,3,1000_m3,AP-42 1.4-1,0,heating_season,default,default
+57,2,106,400,1,15,20,"Natural Gas, Small Boilers <100 MMBtu/hr, Uncontrolled",0.32,0.127,1.6,0.009607,0.04803,0,0,3,1000_m3,AP-42 1.4-1,0,heating_season,default,default
+58,2,107,400,1,15,20,"Natural Gas, Small Boilers, Low-NOx burners",0.32,0.127,0.8,0.009607,0.04803,0,0,3,1000_m3,AP-42 1.4-1,0,heating_season,default,default
+59,2,108,400,1,15,20,"Natural Gas, Small Boilers, LNB + FGR",0.32,0.127,0.51,0.009607,0.04803,0,0,3,1000_m3,AP-42 1.4-1,0,heating_season,default,default
+60,2,109,400,1,15,20,"Natural Gas, Residential <0.3 MMBtu/hr",0.32,0.127,1.5,0.009607,0.04803,0,0,3,1000_m3,AP-42 1.4-1,0,heating_season,default,default
+61,2,110,400,1,15,20,"Natural Gas, EMEP Tier 1 commercial/institutional",0.32,0.127,1.84,0.009607,0.04803,0,0,3,1000_m3,EMEP 1.A.4 (51 g/GJ * 36 MJ/m^3 / 1000),0,heating_season,default,default
+62,6,1,400,1,15,20,"Diesel >600 hp, Prechamber, Uncontrolled",2.5,0.36,10.5,1.05,0.3,0,0,2,hr,AP-42 3.4 (April 2025),0,default,business_hours,business_hours
+63,6,2,400,1,15,20,"Diesel >600 hp, Open-Chamber, Uncontrolled",2.5,0.36,14.0,1.05,0.3,0,0,2,hr,AP-42 3.4 (April 2025),0,default,business_hours,business_hours
+64,6,3,400,1,15,20,"Diesel <600 hp, Uncontrolled",2.05,0.45,4.41,0.93,0.31,0,0,2,hr,AP-42 3.3,0,default,business_hours,business_hours

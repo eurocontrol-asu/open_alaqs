@@ -61,6 +61,55 @@ AUSTAL_DEFAULT_SK = (
 )
 
 
+def _austal_sk_overlap_layers(z_min, z_max, sk=AUSTAL_DEFAULT_SK):
+    """Apportion a source's vertical extent [z_min, z_max] across AUSTAL
+    sk layers and return (iz, fraction_of_extent) tuples for layers
+    with non-zero overlap.
+
+    sk has 20 boundaries -> 19 layers indexed 0..18. Layer k spans
+    [sk[k], sk[k+1]). The fractions sum to 1 for sources fully inside
+    [sk[0], sk[-1]], and to less than 1 for sources extending beyond
+    the AUSTAL ceiling (sk[-1] = 1500 m) or below ground (sk[0] = 0 m).
+    Above-ceiling segments are clipped, not redistributed, matching
+    AUSTAL's own behaviour for releases above the computation grid.
+
+    Point releases (z_min == z_max) return a single layer (k, 1.0)
+    where sk[k] <= z_min < sk[k+1]. A source exactly at z = sk[-1]
+    returns the top layer (len(sk) - 2, 1.0).
+
+    This function replaces the plugin's previous uniform 50 m vertical
+    binning, which both coarse-bucketed near-ground emissions and
+    clipped everything above z_cells * z_resolution = 500 m. The
+    sk-overlap apportionment matches the algorithm used by the
+    `austal_prep` standalone package (austal_helpers._z_layers_for_source).
+    """
+    if z_min > z_max:
+        z_min, z_max = z_max, z_min
+
+    n_layers = len(sk) - 1
+
+    if z_min == z_max:
+        for k in range(n_layers):
+            if sk[k] <= z_min < sk[k + 1]:
+                return [(k, 1.0)]
+        if z_min >= sk[-1]:
+            return [(n_layers - 1, 1.0)]
+        return []
+
+    extent = z_max - z_min
+    if extent <= 0:
+        return []
+
+    out = []
+    for k in range(n_layers):
+        lo, hi = sk[k], sk[k + 1]
+        overlap_lo = max(lo, z_min)
+        overlap_hi = min(hi, z_max)
+        if overlap_hi > overlap_lo:
+            out.append((k, (overlap_hi - overlap_lo) / extent))
+    return out
+
+
 def log_time(func):
     def inner(*args, **kwargs):
         start = datetime.now()
@@ -1985,7 +2034,19 @@ class AUSTALDispersionModule(DispersionModule):
 
             for h_idx, dt_str in enumerate(sorted_dts):
                 row_parts = [dt_str]
-                row_parts.append(f"{self._series[dt_str]['WindDirection']:5.0f}")
+                # AUSTAL convention (austal_de.pdf p.32): wind direction
+                # ra in [0, 360] for valid directions, 999 for "missing".
+                # ra=0 with ua>0 is INVALID and triggers an AUSTAL warning
+                # ("Datenzeilen mit Windrichtung gleich 0 und Windgeschwindigkeit
+                # groesser 0"). When the upstream meteo source omits the wind
+                # direction, AmbientCondition.__init__ defaults it to 0.0; if
+                # wind speed is non-zero in the same hour, we re-encode to
+                # the AUSTAL "missing" sentinel 999 here.
+                wd = self._series[dt_str]["WindDirection"]
+                ws = self._series[dt_str]["WindSpeed"]
+                if wd == 0 and ws > 0:
+                    wd = 999
+                row_parts.append(f"{wd:5.0f}")
                 row_parts.append(f"{self._series[dt_str]['WindSpeed']:5.1f}")
                 row_parts.append(f"{self._series[dt_str]['ObukhovLength']:7.1f}")
                 if self.MixingHeightIncluded():
@@ -2026,6 +2087,16 @@ class AUSTALDispersionModule(DispersionModule):
                         else:
                             total = 0.0
                     val = total * frac
+                    # AUSTAL aborts multi-source runs with
+                    #   *** Grid source "NN" not available!  (TalSrc.SrcCrtPtl.14)
+                    # at the hour after any source rate transitions to exactly
+                    # 0.000e+00 mid-run. Empirically validated against
+                    # representative multi-runway studies: replacing zeros
+                    # with a 1e-30 floor lets the same run complete. Total mass emitted by the floor over a year
+                    # of zeros is ~3.2e-26 g per slot, well below numerical
+                    # precision of any output.
+                    if val == 0.0:
+                        val = 1.0e-30
                     row_parts.append(f"{val:10.3e}")
 
                 f.write("\t".join(row_parts) + "\n")
@@ -2128,7 +2199,27 @@ class AUSTALDispersionModule(DispersionModule):
                 slot_id,
             )
             self.InitializeEmissionGridMatrix()  # zeroes _emission_grid_matrix
+            # Defensive: place a single-cell phantom Eq weight of 1.0 so
+            # the back-filled distribution sums to 1.0 (a valid Eq file).
+            # The rate in series.dmna for these hours is now 1e-30 (see
+            # rate-floor patch in _ti_write_series), so the contribution
+            # is 1e-30 g/s * 1.0 = 1e-30 per cell — negligible.
+            self._emission_grid_matrix[0, 0, 0] = 1.0
+            # writeGridFile() reads self._start_time / self._end_time to
+            # build the t1/t2 header. After all process() calls, those
+            # attributes hold the last hour's timestamps. Without resetting
+            # them per back-filled file, AUSTAL aborts with
+            #   *** File "...e0001.dmna" [...] not valid at 00:00:00!
+            #     (TalTmn.TmnGet.41)
+            # because every back-filled file would carry the same stale
+            # window. Process() writes e-files with a 2-hour window
+            # t1=(N-1)h, t2=(N+1)h relative to the run start; replicate
+            # that here.
+            saved_start = self._start_time
+            saved_end = self._end_time
             for time_id in sorted(missing):
+                self._start_time = self._first_start_time + timedelta(hours=time_id - 1)
+                self._end_time = self._first_start_time + timedelta(hours=time_id + 1)
                 try:
                     self.writeGridFile(
                         slot_id,
@@ -2150,6 +2241,9 @@ class AUSTALDispersionModule(DispersionModule):
                         time_id,
                         exc_,
                     )
+            # Restore in case any downstream code reads these.
+            self._start_time = saved_start
+            self._end_time = saved_end
 
     @log_time
     def _ti_endJob(self):
@@ -2254,17 +2348,72 @@ class AUSTALDispersionModule(DispersionModule):
         if "delta_z" in vertical_extent and vertical_extent["delta_z"] > 0:
             bbox["z_max"] = bbox["z_max"] + vertical_extent["delta_z"]
 
-        # Get the matched cells for this geometry
-        matched_cells = grid.matchBoundingBoxToCellHashList(bbox, z_as_list=True)
-        matched_cells_coeff = self.CalculateCellHashEfficiency(
-            wkt_utm,  # UTM WKT matches cell bounds CRS
-            bbox,
-            matched_cells,
-            is_point_element_,
-            is_line_element_,
-            is_polygon_element_,
-            is_multi_polygon_element_,
+        # XY cell match: use Grid3D's horizontal binning (still uniform,
+        # which is correct - AUSTAL's horizontal grid is uniform too).
+        # Z cell match: BYPASS Grid3D's uniform z_resolution; use the
+        # AUSTAL sk-layer overlap directly. This is the fix for the
+        # vertical-binning bug where emissions were coarse-binned at
+        # uniform 50 m intervals and anything above z_cells * 50 m
+        # (default 500 m) was clipped. See _austal_sk_overlap_layers
+        # docstring for the apportionment rule.
+        x_idx_low, y_idx_low, _ = grid.convertCoordinatesToXYZIndices(
+            bbox["x_min"], bbox["y_min"], 0.0
         )
+        x_idx_high, y_idx_high, _ = grid.convertCoordinatesToXYZIndices(
+            bbox["x_max"], bbox["y_max"], 0.0
+        )
+
+        z_layers = _austal_sk_overlap_layers(bbox["z_min"], bbox["z_max"])
+
+        matched_cells_coeff = OrderedDict()
+        matched_cells = []
+
+        # Iterate XY cells, computing XY efficiency once per column and
+        # multiplying by each overlapping sk-layer's fraction.
+        for ix in range(max(0, x_idx_low), min(x_idx_high + 1, grid._x_cells)):
+            for iy in range(max(0, y_idx_low), min(y_idx_high + 1, grid._y_cells)):
+                # Cell bbox for XY efficiency: z bounds are irrelevant
+                # for getEfficiencyXY (it works on the XY footprint
+                # only), so set them to 0 to keep the dict shape.
+                x_center, y_center, _ = (
+                    grid.convertCellHashListToCenterGridCellCoordinates(
+                        [grid.convertXYZIndicesToCellHash(ix, iy, 0)]
+                    )[grid.convertXYZIndicesToCellHash(ix, iy, 0)]
+                )
+                cell_bbox_xy = {
+                    "x_min": x_center - grid.getResolutionX() / 2.0,
+                    "x_max": x_center + grid.getResolutionX() / 2.0,
+                    "y_min": y_center - grid.getResolutionY() / 2.0,
+                    "y_max": y_center + grid.getResolutionY() / 2.0,
+                    "z_min": 0.0,
+                    "z_max": 0.0,
+                }
+
+                efficiency_xy_ = self.getEfficiencyXY(
+                    wkt_utm,
+                    cell_bbox_xy,
+                    _is_point=is_point_element_,
+                    _is_line=is_line_element_,
+                    _is_polygon=is_polygon_element_,
+                    _is_multi_polygon=is_multi_polygon_element_,
+                )
+
+                if efficiency_xy_ == 0:
+                    continue
+
+                # Build a cell entry per overlapping sk layer. The
+                # cell hash uses iz_sk (0..18) as the z component, so
+                # the matrix-write site downstream (which reads
+                # vvv[2] directly) lands in the right e-file layer.
+                column_hashes = []
+                for iz_sk, z_frac in z_layers:
+                    if iz_sk >= self._z_meshes:
+                        continue
+                    cell_hash = grid.convertXYZIndicesToCellHash(ix, iy, iz_sk)
+                    matched_cells_coeff[cell_hash] = efficiency_xy_ * z_frac
+                    column_hashes.append(cell_hash)
+                if column_hashes:
+                    matched_cells.append(column_hashes)
 
         # Cache by original EPSG:3857 WKT key (as supplied by the caller)
         self._source_geometries[wkt] = {

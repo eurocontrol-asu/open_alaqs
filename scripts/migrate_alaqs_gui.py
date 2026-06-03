@@ -147,6 +147,7 @@ class MainWindow(QMainWindow):
         root.addWidget(self._build_files_box())
         root.addWidget(self._build_phase1_box())
         root.addWidget(self._build_phase2_box())
+        root.addWidget(self._build_phase3_box())
         root.addWidget(self._build_destructive_box())
         root.addLayout(self._build_actions_row())
 
@@ -365,6 +366,37 @@ class MainWindow(QMainWindow):
         self._update_phase2_enabled(False)
         return box
 
+    def _build_phase3_box(self):
+        box = QGroupBox("Point-sources v2 hooks  (temporal profiles + optional report)")
+        lay = QVBoxLayout(box)
+
+        self.skip_psv2 = QCheckBox("Skip Phase 3  (--skip-point-sources-v2)")
+        self.skip_psv2.setToolTip(
+            "Skip the point-sources v2 hook.\n\n"
+            "Phase 3 INSERT-OR-IGNOREs three named temporal profiles "
+            "(heating_season, cooling_season, business_hours) into the "
+            "user_*_profile tables. Existing user-defined profiles are "
+            "preserved. Skip only if you want to keep your study in "
+            "v1 shape."
+        )
+        lay.addWidget(self.skip_psv2)
+
+        self.report_pins = QCheckBox(
+            "Emit deprecated-pin report  (--report-deprecated-pins)"
+        )
+        self.report_pins.setToolTip(
+            "After Phase 1 + 2 + 3 finish, write a CSV listing every "
+            "in-study shapes_point_sources row whose EF fingerprint "
+            "matches a deprecated default_stationary_ef row.\n\n"
+            "Read-only on the DB. The report is written next to the "
+            "source as migration_<basename>.csv. Useful for spotting "
+            "studies still pinned to legacy AP-42 rows that have been "
+            "superseded by the v2 AP-42 1.4-1 / 3.3 / 3.4 entries."
+        )
+        lay.addWidget(self.report_pins)
+
+        return box
+
     def _build_destructive_box(self):
         box = QGroupBox(
             "Risky options — these can MODIFY or DELETE data and cannot be undone"
@@ -541,6 +573,12 @@ class MainWindow(QMainWindow):
                     )
                     return None
                 argv += ["--refresh-tables", custom]
+
+        if self.skip_psv2.isChecked():
+            argv.append("--skip-point-sources-v2")
+        if self.report_pins.isChecked():
+            # nargs="?" lets the script auto-generate the path.
+            argv.append("--report-deprecated-pins")
 
         return argv
 

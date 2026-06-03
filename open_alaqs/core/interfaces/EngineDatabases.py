@@ -3,7 +3,6 @@ from collections import OrderedDict
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Engine import (
     EngineEmissionIndex,
-    HelicopterEngineEmissionIndex,
 )
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.tools.Singleton import Singleton
@@ -90,122 +89,6 @@ class EngineModeDatabase(SQLSerializable, metaclass=Singleton):
 
         if deserialize and self._db_path:
             self.deserialize()
-
-
-class HelicopterEngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
-    """
-    Class that grants access to aircraft-engine-emission indices
-    """
-
-    TABLE_NAME = "default_helicopter_engine_ei"
-
-    def __init__(
-        self,
-        db_path_string,
-        table_columns_type_dict=None,
-        primary_key="",
-        deserialize=True,
-    ):
-
-        if table_columns_type_dict is None:
-            table_columns_type_dict = OrderedDict(
-                [
-                    ("oid", "INTEGER PRIMARY KEY"),
-                    ("engine_name", "TEXT"),
-                    ("engine_type", "TEXT"),
-                    ("max_shp_per_engine", "DECIMAL"),
-                    ("shp_correction_factor", "DECIMAL"),
-                    ("number_of_engines", "INTEGER"),
-                    ("gi1_time_min", "DECIMAL"),
-                    ("gi2_time_min", "DECIMAL"),
-                    ("to_time_min", "DECIMAL"),
-                    ("ap_time_min", "DECIMAL"),
-                    ("gi1_ff_per_engine_kg_s", "DECIMAL"),
-                    ("gi2_ff_per_engine_kg_s", "DECIMAL"),
-                    ("to_ff_per_engine_kg_s", "DECIMAL"),
-                    ("ap_ff_per_engine_kg_s", "DECIMAL"),
-                    ("gi1_einox_g_kg", "DECIMAL"),
-                    ("gi2_einox_g_kg", "DECIMAL"),
-                    ("to_einox_g_kg", "DECIMAL"),
-                    ("ap_einox_g_kg", "DECIMAL"),
-                    ("gi1_eihc_g_kg", "DECIMAL"),
-                    ("gi2_eihc_g_kg", "DECIMAL"),
-                    ("to_eihc_g_kg", "DECIMAL"),
-                    ("ap_eihc_g_kg", "DECIMAL"),
-                    ("gi1_eico_g_kg", "DECIMAL"),
-                    ("gi2_eico_g_kg", "DECIMAL"),
-                    ("to_eico_g_kg", "DECIMAL"),
-                    ("ap_eico_g_kg", "DECIMAL"),
-                    ("gi1_eipm_g_kg", "DECIMAL"),
-                    ("gi2_eipm_g_kg", "DECIMAL"),
-                    ("to_eipm_g_kg", "DECIMAL"),
-                    ("ap_eipm_g_kg", "DECIMAL"),
-                ]
-            )
-
-        SQLSerializable.__init__(
-            self,
-            db_path_string,
-            self.TABLE_NAME,
-            table_columns_type_dict,
-            primary_key,
-        )
-
-        self._heli_emission_indices = OrderedDict()
-        self._modes = ["GI1", "GI2", "TO", "AP"]
-
-        if deserialize and self._db_path:
-            self.deserialize()
-            self.initEmissionIndices()
-
-    def getModes(self):
-        return self._modes
-
-    def initEmissionIndices(self):
-        for ei_key, ei_val in list(self.getEntries().items()):
-            id_name = (
-                ei_val["engine_name"]
-                if ei_val["engine_name"]
-                else ei_val["engine_full_name"]
-            )
-            self.addEngineEmissionIndex(id_name, ei_val)
-
-    def addEngineEmissionIndex(self, icaoIdentifier, ei_dict):
-        if icaoIdentifier not in self._heli_emission_indices:
-            self._heli_emission_indices[icaoIdentifier] = (
-                HelicopterEngineEmissionIndex()
-            )
-        for mode in self.getModes():
-            self._heli_emission_indices[icaoIdentifier].setObject(mode, ei_dict)
-
-    def getHeliEngineEmissionIndices(self):
-        return self._heli_emission_indices
-
-    def hasHeliEngineEmissionIndex(self, icaoIdentifier, mode=""):
-        if icaoIdentifier in self._heli_emission_indices:
-            if mode:
-                if mode in self._heli_emission_indices[icaoIdentifier].getModes():
-                    return True
-            else:
-                return True
-        return False
-
-    def getHeliEngineEmissionIndex(
-        self, icaoIdentifier="", mode="", defaultIfNotFound=False
-    ):
-        if not icaoIdentifier:
-            return self._heli_emission_indices
-        if self.hasHeliEngineEmissionIndex(icaoIdentifier):
-            if not mode:
-                return self._heli_emission_indices[icaoIdentifier]
-            else:
-                if mode in self._heli_emission_indices[icaoIdentifier].getModes():
-                    return self._heli_emission_indices[
-                        icaoIdentifier
-                    ].getEmissionIndexByMode(mode)
-
-        # ToDo: default
-        return None
 
 
 class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
@@ -298,6 +181,20 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
                         "DECIMAL",
                     ),  # DEPRECATED (schema v2) — superseded by pm10_nonvol
                     ("nvpm_number_ei", "DECIMAL"),
+                    # MEEM V1 / nvPM-from-rated-thrust columns. Populated by
+                    # post-import data scripts (ICAO EEDB extract); read by
+                    # _load_meem_metadata() into EmissionIndex._press_ratio
+                    # and _meem_*/_nvpm_*_max_* attributes for the MEEM v2
+                    # emission method. Without these columns the calculator
+                    # silently falls back to bymode. Declared here so fresh
+                    # templates carry them (NULL for unseeded engines) and
+                    # migrations recognise them as matching columns rather
+                    # than reporting them as 'extras' in the source.
+                    ("press_ratio", "DECIMAL"),
+                    ("meem_nvpm_m_i_f00_avg", "DECIMAL"),
+                    ("meem_nvpm_n_i_f00_avg", "DECIMAL"),
+                    ("nvpm_m_max_mgkg", "DECIMAL"),
+                    ("nvpm_n_max_nkg", "DECIMAL"),
                 ]
             )
 
@@ -449,7 +346,6 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
 #     #logger.debug(start_ef.getEntries())
 #
 #     ei_db = EngineEmissionIndicesDatabase(path_to_database)
-#     heli_ei_db = HelicopterEngineEmissionIndicesDatabase(path_to_database)
 #     # logger.debug("Found %i emission indices" % (len(ei_db.getEngineEmissionIndices())))
 #
 #     # for entry in ei_db.getEntries():

@@ -13,8 +13,9 @@ from shapely.geometry.base import BaseGeometry
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft, AircraftStore
 from open_alaqs.core.interfaces.AircraftTrajectory import AircraftTrajectoryStore
-from open_alaqs.core.interfaces.EngineStore import EngineStore, HeliEngineStore
+from open_alaqs.core.interfaces.EngineStore import EngineStore
 from open_alaqs.core.interfaces.Gate import GateStore
+from open_alaqs.core.interfaces.Helicopter import HelicopterStore
 from open_alaqs.core.interfaces.Runway import RunwayStore
 from open_alaqs.core.interfaces.SQLSerializable import SQLSerializable
 from open_alaqs.core.interfaces.Store import Store
@@ -221,15 +222,52 @@ class Movement:
         self._number_of_stop_and_gos = var
 
     def getName(self):
-        # if self.getAircraft() and self.getAircraft().getRegistration():
-        #     return self.getAircraft().getRegistration()
-        # else:
-        return "id %s: %s-%s-%s-%s" % (
+        """Source name for display in dropdowns, vector-layer attributes,
+        and CSV exports.
+
+        Format:
+            id <oid>: <ICAO> <D|A> <gate> → <rwy>   <date> <hh:mm>   (fixed-wing departure)
+            id <oid>: <ICAO> <D|A> <rwy> → <gate>   <date> <hh:mm>   (fixed-wing arrival)
+            id <oid>: <ICAO> <D|A> ↑ <rwy>          <date> <hh:mm>   (helicopter departure)
+            id <oid>: <ICAO> <D|A> ↓ <rwy>          <date> <hh:mm>   (helicopter arrival)
+
+        The arrow direction encodes the physical flow: for fixed-wing
+        departures the aircraft moves gate → runway, for arrivals
+        runway → gate. Helicopters have no gate, so a vertical arrow
+        (↑ departure, ↓ arrival) is used instead.
+
+        The "id <oid>:" prefix is preserved so comparison tools that
+        parse the oid from the leading token keep working.
+        """
+        aircraft = self.getAircraft()
+        icao = aircraft.getICAOIdentifier()
+        da = self.getDepartureArrivalFlag()
+        rwy_dir = self.getRunwayDirection() or "?"
+        is_dep = da == "D"
+
+        # Path representation: helicopters (no gate) use vertical arrows;
+        # fixed-wing uses gate ↔ runway directional arrow per D/A.
+        gate_name = self.getGateName() or ""
+        if not gate_name:
+            arrow = "↑" if is_dep else "↓"
+            path = "%s %s" % (arrow, rwy_dir)
+        elif is_dep:
+            path = "%s → %s" % (gate_name, rwy_dir)
+        else:
+            path = "%s → %s" % (rwy_dir, gate_name)
+
+        # Drop seconds from the timestamp for compactness
+        # (e.g. "2025-12-01 06:15:00" → "2025-12-01 06:15").
+        runway_time = self.getRunwayTime(as_str=True) or ""
+        if len(runway_time) >= 16:
+            runway_time = runway_time[:16]
+
+        return "id %s: %s %s %s  %s" % (
             self.getOid(),
-            self.getAircraft().getICAOIdentifier(),
-            self.getDepartureArrivalFlag(),
-            self.getRunwayTime(as_str=True),
-            self.getBlockTime(as_str=True),
+            icao,
+            da,
+            path,
+            runway_time,
         )
 
     def getEngineThrustLevelTaxiing(self):
@@ -380,11 +418,45 @@ class Movement:
     def updateTrajectoryAtRunway(self):
         from open_alaqs.core.GeoTransformation import TrajectoryTransformer
 
+        aircraft = self.getAircraft()
+        runway = self.getRunway()
+        # Helicopter dispatch: generate the FOCA-category trajectory live
+        # via foca_heli_trajectory + TrajectoryTransformer.runway_alignment_for_helicopter,
+        # bypassing the legacy HELIPROF profile path (which collapses to a
+        # zero-length column at the runway threshold and gives degenerate
+        # emission geometry). Only takes the helicopter path if the aircraft
+        # exposes a usable FOCA category (i.e. is a Helicopter instance
+        # registered with HelicopterStore); legacy helicopter rows still
+        # loaded as plain Aircraft fall through to the fixed-wing path with
+        # whatever profile they reference.
+        if (
+            aircraft is not None
+            and runway is not None
+            and aircraft.is_helicopter()
+            and hasattr(aircraft, "getCategory")
+        ):
+            category_str = aircraft.getCategory()
+            if category_str and category_str != "UNKNOWN":
+                self.setTrajectoryAtRunway(
+                    TrajectoryTransformer(
+                        None,  # trajectory unused; generated live from category
+                        self.getTrack(),
+                        runway,
+                        self.getRunwayTime(as_str=True),
+                        self.getRunwayDirection(),
+                        self.getTaxiRoute(),
+                        self.getDepartureArrivalFlag(),
+                    ).runway_alignment_for_helicopter(category_str)
+                )
+                return
+
+        # Fixed-wing (and legacy helicopter Aircraft without HelicopterStore
+        # registration) path: unchanged.
         self.setTrajectoryAtRunway(
             TrajectoryTransformer(
                 self.getTrajectory(),
                 self.getTrack(),
-                self.getRunway(),
+                runway,
                 self.getRunwayTime(as_str=True),
                 self.getRunwayDirection(),
                 self.getTaxiRoute(),
@@ -589,8 +661,8 @@ class MovementStore(Store, metaclass=Singleton):
         # Singletons keyed by db_path).
         self._runway_store = RunwayStore(db_path)
         self._aircraft_store = AircraftStore(db_path)
+        self._helicopter_store = HelicopterStore(db_path)
         self._engine_store = EngineStore(db_path)
-        self._heli_engine_store = HeliEngineStore(db_path)
         self._aircraft_trajectory_store = AircraftTrajectoryStore(db_path)
         self._gate_store = GateStore(db_path)
         self._taxi_route_store = TaxiwayRoutesStore(db_path)
@@ -608,11 +680,11 @@ class MovementStore(Store, metaclass=Singleton):
     def getAircraftStore(self):
         return self._aircraft_store
 
+    def getHelicopterStore(self):
+        return self._helicopter_store
+
     def getEngineStore(self):
         return self._engine_store
-
-    def getHeliEngineStore(self):
-        return self._heli_engine_store
 
     def getAircraftTrajectoryStore(self):
         return self._aircraft_trajectory_store
@@ -642,7 +714,39 @@ class MovementStore(Store, metaclass=Singleton):
     # AircraftTrajectory — including mode, fuel_flow, power, and TAS values
     # needed by FlightEmissionCalculator — can be reconstructed exactly.
 
-    _TRAJ_CACHE_TABLE = "cache_runway_trajectories"
+    # Cache table name is suffixed with a schema version.  Bump the suffix
+    # whenever the meaning of a cache entry changes (e.g. when the trajectory
+    # origin convention changes, when a new field is added to the per-point
+    # JSON, or when the cache_key construction is changed in any way that
+    # would otherwise produce stale-but-still-readable entries).
+    #
+    # v4 (current): arrival trajectory origin = (taxi-route runway-exit
+    #               point) shifted by the profile rollout length in the
+    #               approach direction.  This places the profile end-of-
+    #               rollout point exactly at the taxi route's runway-exit,
+    #               eliminating the on-runway gap between trajectory rollout
+    #               and taxi route start.  Departure trajectory origin
+    #               unchanged from v3 (active threshold = brake release).
+    #               For arrivals the cache entry now depends on the taxi
+    #               route as well as the runway and profile — the cache key
+    #               already includes taxi_route so this is automatic.
+    # v3 (deprecated): both dep and arr origin at active threshold
+    #               (points[active]); signed-x projection.  Physically
+    #               correct touchdown anchor but left visible gap between
+    #               rollout end and taxi exit on the runway centerline.
+    # v2 (deprecated): origin at direction-aware threshold via
+    #               `runway_backup_point` — for arrivals this was the OPP
+    #               threshold (wrong end of runway).
+    # v1 (deprecated): origin at intersection centroid for both dep and
+    #               arr.  Failed for multi-branch taxi routes.
+    #
+    # Older tables (cache_runway_trajectories, cache_runway_trajectories_v2,
+    # cache_runway_trajectories_v3) may still exist in older .alaqs files
+    # and are no longer read.  Drop manually to reclaim space:
+    #   DROP TABLE IF EXISTS cache_runway_trajectories;
+    #   DROP TABLE IF EXISTS cache_runway_trajectories_v2;
+    #   DROP TABLE IF EXISTS cache_runway_trajectories_v3;
+    _TRAJ_CACHE_TABLE = "cache_runway_trajectories_v4"
 
     @staticmethod
     def _ensure_traj_cache_table(db_path: str) -> None:
@@ -812,8 +916,11 @@ class MovementStore(Store, metaclass=Singleton):
             stage_1.nextValue()
 
         aircraft_store = self.getAircraftStore()
+        helicopter_store = self.getHelicopterStore()
         for acf in mdf["aircraft"].unique():
-            store_has_key = aircraft_store.hasKey(acf)
+            store_has_key = aircraft_store.hasKey(
+                acf
+            ) or helicopter_store.hasIdentifier(acf)
             eq_mdf.loc[mdf.aircraft == acf, "aircraft"] = (
                 acf if store_has_key else np.nan
             )
@@ -825,7 +932,6 @@ class MovementStore(Store, metaclass=Singleton):
             stage_1.nextValue()
 
         engine_store = self.getEngineStore()
-        heli_engine_store = self.getHeliEngineStore()
         for eng in mdf["engine_name"].unique():
 
             indices = mdf["engine_name"] == eng
@@ -833,29 +939,43 @@ class MovementStore(Store, metaclass=Singleton):
             if engine_store.hasKey(eng):
                 eq_mdf.loc[indices, "engine_name"] = eng
 
-            elif heli_engine_store.hasKey(eng):
-                eq_mdf.loc[indices, "engine_name"] = eng
-
             else:
+                # Helicopters do not have engine_name resolution through
+                # the engine store; their FOCA emissions use max_shp from
+                # the Helicopter row directly. An unresolved engine for a
+                # helicopter movement is normal and benign.
                 logger.debug("Engine %s not in ALAQS DB", eng)
 
-                # Get the aircraft
-                def_ac = mdf[mdf["engine_name"] == eng]["aircraft"].iloc[0]
+                # When engine_name is missing or unknown, fall back to each
+                # aircraft's own default engine. Different aircraft can share
+                # the same missing engine_name value (commonly the empty
+                # string for datasets that don't pre-fill the field); each
+                # must resolve to its own default engine, not the first
+                # aircraft's.
+                for ac in mdf.loc[indices, "aircraft"].unique():
+                    sub_indices = indices & (mdf["aircraft"] == ac)
 
-                # Check if the aircraft exists in the database
-                if aircraft_store.hasKey(def_ac):
+                    if not aircraft_store.hasKey(ac):
+                        eq_mdf.loc[sub_indices, "engine_name"] = None
+                        continue
 
-                    # Get the default engine for this aircraft
-                    eng = aircraft_store.getObject(def_ac).getDefaultEngine().getName()
+                    default_engine = aircraft_store.getObject(ac).getDefaultEngine()
+                    if default_engine is None:
+                        eq_mdf.loc[sub_indices, "engine_name"] = None
+                        continue
+
+                    eng_fallback = default_engine.getName()
 
                     logger.debug(
-                        "\t +++ taking default engine %s for aircraft %s", eng, def_ac
+                        "\t +++ taking default engine %s for aircraft %s",
+                        eng_fallback,
+                        ac,
                     )
 
-                    if engine_store.hasKey(eng):
-                        eq_mdf.loc[indices, "engine_name"] = eng
+                    if engine_store.hasKey(eng_fallback):
+                        eq_mdf.loc[sub_indices, "engine_name"] = eng_fallback
                     else:
-                        eq_mdf.loc[indices, "engine_name"] = None
+                        eq_mdf.loc[sub_indices, "engine_name"] = None
 
         # Check if runways exist in the database
         if stage_1:
@@ -893,7 +1013,18 @@ class MovementStore(Store, metaclass=Singleton):
             store_has_key = gate_store.hasKey(gte)
             eq_mdf.loc[mdf["gate"] == gte, "gate"] = gte if store_has_key else np.nan
             if not store_has_key:
-                logger.warning(f"Gate '{gte}' wasn't found in the DB")
+                # Suppress the warning when every affected movement is a
+                # helicopter -- helicopters operate from helipads and do not
+                # consume a gate by design. The 5.2.0 training fixture has two
+                # such AS50 movements with gate=''. Only warn when a
+                # fixed-wing aircraft is hit, which signals a real missing
+                # gate definition the user needs to add.
+                affected_acf = mdf.loc[mdf["gate"] == gte, "aircraft"].unique()
+                all_heli = bool(len(affected_acf)) and all(
+                    helicopter_store.hasIdentifier(_a) for _a in affected_acf
+                )
+                if not all_heli:
+                    logger.warning(f"Gate '{gte}' wasn't found in the DB")
 
         # Check if taxi routes exist in the database
         if stage_1:
@@ -912,10 +1043,33 @@ class MovementStore(Store, metaclass=Singleton):
             if taxi_route_store.hasKey(txr):
                 eq_mdf.loc[indices, "taxi_route"] = txr
             else:
-                eq_mdf.loc[indices, "taxi_route"] = np.nan
-                logger.warning(
-                    f'Taxiroute "{txr}" was not found in the taxi routes database!'
+                # Same helicopter suppression as for gates: helicopters do
+                # not taxi -- they take off from a helipad or runway
+                # threshold directly. The taxi_route is auto-constructed as
+                # 'gate/runway/D|A/1' above; for helicopters with empty
+                # gate this becomes '/24/D/1' which is meaningless. Only
+                # warn when at least one fixed-wing movement is affected.
+                affected_acf = mdf.loc[indices, "aircraft"].unique()
+                all_heli = bool(len(affected_acf)) and all(
+                    helicopter_store.hasIdentifier(_a) for _a in affected_acf
                 )
+                if all_heli:
+                    # CRITICAL: do NOT set NaN here. The downstream groupby
+                    # at the bottom of initMovements has dropna=True
+                    # (pandas default), which would drop helicopter
+                    # movements from the per-movement processing loop
+                    # entirely, never reaching the FOCA trajectory +
+                    # emission dispatch. Use a sentinel so the rows
+                    # survive the groupby. The sentinel is never looked
+                    # up in taxi_route_store (taxi_route_store.getObject
+                    # returns None, and Movement.updateTrajectoryAtRunway
+                    # short-circuits via aircraft.is_helicopter()).
+                    eq_mdf.loc[indices, "taxi_route"] = "HELIPAD"
+                else:
+                    eq_mdf.loc[indices, "taxi_route"] = np.nan
+                    logger.warning(
+                        f'Taxiroute "{txr}" was not found in the taxi routes database!'
+                    )
 
             # TODO OPENGIS.ch: the alternative taxi route finder below causes multiple taxi alternative taxi routes to be assigned to a movement
             # The alternatives should be constraint only for taxi routes from this or nearby gate and should be only one alternative.
@@ -948,10 +1102,18 @@ class MovementStore(Store, metaclass=Singleton):
             store_has_key = track_store.hasKey(trk)
             eq_mdf.loc[mdf.track_id == trk, "track_id"] = trk if store_has_key else ""
             if not store_has_key:
-                if not trk:
-                    logger.warning("Track has empty name and will be skipped!")
-                else:
-                    logger.warning(f"Track '{trk}' wasn't found in the DB")
+                # Same helicopter suppression as for gate/taxi: helicopters
+                # do not have user-defined tracks (their trajectory is
+                # FOCA-generated at runtime). Only warn for fixed-wing rows.
+                affected_acf = mdf.loc[mdf["track_id"] == trk, "aircraft"].unique()
+                all_heli = bool(len(affected_acf)) and all(
+                    helicopter_store.hasIdentifier(_a) for _a in affected_acf
+                )
+                if not all_heli:
+                    if not trk:
+                        logger.warning("Track has empty name and will be skipped!")
+                    else:
+                        logger.warning(f"Track '{trk}' wasn't found in the DB")
 
         # Check if profiles exist in the database
         if stage_1:
@@ -967,9 +1129,38 @@ class MovementStore(Store, metaclass=Singleton):
         for _, airgroup in mdf.groupby(["aircraft", "departure_arrival"]):
             ij_ = airgroup.index
             _ac = airgroup["aircraft"].iloc[0]
+            # AircraftStore is keyed by ICAO only. For helicopter movements
+            # the aircraft column may carry a variant_label (e.g. "AS350B3"),
+            # which won't resolve in AircraftStore. Fall through to the
+            # HelicopterStore which indexes by both ICAO and variant_label.
             _aircraft = aircraft_store.getObject(_ac)
+            if _aircraft is None and helicopter_store.hasIdentifier(_ac):
+                _aircraft = helicopter_store.getByIdentifier(_ac)
             if _aircraft is not None:
                 _ad = airgroup["departure_arrival"].iloc[0]
+                # Helicopters bypass the default_aircraft_profiles lookup
+                # entirely. Their trajectory is generated at runtime by
+                # foca_heli_trajectory + TrajectoryTransformer.runway_alignment_for_helicopter,
+                # driven by the FOCA category derived from
+                # (engine_type, engine_count, mtow) at runtime. Setting a
+                # non-NaN sentinel here keeps the helicopter movement out of
+                # the "skip if profile_id NaN" filter further down. The
+                # sentinel is never looked up in trajectory_store --
+                # updateTrajectoryAtRunway() short-circuits via
+                # aircraft.is_helicopter() before consulting profile_id.
+                if hasattr(_aircraft, "is_helicopter") and _aircraft.is_helicopter():
+                    # Sentinel must encode direction (D vs A) so the
+                    # downstream groupby (over runway, runway_direction,
+                    # taxi_route, profile_id, track_id) places departure
+                    # and arrival in different groups. Otherwise a single
+                    # _group_traj is computed once per group and shared
+                    # between dep and arr movements, which is wrong (the
+                    # FOCA trajectory differs by direction). Encoding
+                    # category too would be over-specification: at this
+                    # point we don't have it cheap and dep/arr within
+                    # the same helicopter category share trajectory.
+                    eq_mdf.loc[ij_, "profile_id"] = f"FOCA_HELI_{_ad}"
+                    continue
                 if _ad == "A":
                     profile_id = _aircraft.getDefaultArrivalProfileName()
                 elif _ad == "D":
@@ -1003,10 +1194,18 @@ class MovementStore(Store, metaclass=Singleton):
             ):
                 eq_mdf.loc[indices, "profile_id"] = prf
             else:
-                logger.warning(
-                    f"Lack of profile_id: '{prf}' using default value: '{eq_mdf.loc[indices[0], 'profile_id']}' "
-                    f"for movements: {mdf.loc[indices]['oid'].values}"
+                # Suppress for all-helicopter groups: their default
+                # profile_id is the FOCA_HELI_{D,A} sentinel by design
+                # (helicopters bypass default_aircraft_profiles).
+                affected_acf = mdf.loc[indices, "aircraft"].unique()
+                all_heli = bool(len(affected_acf)) and all(
+                    helicopter_store.hasIdentifier(_a) for _a in affected_acf
                 )
+                if not all_heli:
+                    logger.warning(
+                        f"Lack of profile_id: '{prf}' using default value: '{eq_mdf.loc[indices[0], 'profile_id']}' "
+                        f"for movements: {mdf.loc[indices]['oid'].values}"
+                    )
 
         # now if remained a profile_id as None in eq_mdf means that:
         # A) profile_id in original mdf is None or
@@ -1028,7 +1227,6 @@ class MovementStore(Store, metaclass=Singleton):
             "profile_id",
             "track_id",
         ]
-        heli_engine_store = self.getHeliEngineStore()
         engine_store = self.getEngineStore()
 
         # Start the next stage
@@ -1087,6 +1285,28 @@ class MovementStore(Store, metaclass=Singleton):
                 first_idx = inds[0]
                 fm0 = eq_mdf.loc[first_idx]
                 _proxy0 = Movement()
+                # Bind the aircraft + direction so updateTrajectoryAtRunway can
+                # route through the helicopter branch when applicable. Without
+                # this the proxy has no aircraft, the helicopter branch in
+                # updateTrajectoryAtRunway is skipped, the fixed-wing
+                # runway_alignment() is called with self._trajectory=None
+                # (helicopters bypass default_aircraft_profiles so the
+                # trajectory_store lookup returned None), and the function
+                # returns None. The result is a None _group_traj for every
+                # helicopter group: emissions still compute via the
+                # MovementEmissionCalculator's is_helicopter() FOCA dispatch
+                # (which uses time-in-mode, not spatial geometry), but the
+                # inventory output has no helicopter trajectory geometry for
+                # QGIS visualisation.
+                _ac_id_proxy = mdf.loc[first_idx, "aircraft"]
+                _proxy_aircraft = aircraft_store.getObject(_ac_id_proxy)
+                if _proxy_aircraft is None and helicopter_store.hasIdentifier(
+                    _ac_id_proxy
+                ):
+                    _proxy_aircraft = helicopter_store.getByIdentifier(_ac_id_proxy)
+                if _proxy_aircraft is not None:
+                    _proxy0.setAircraft(_proxy_aircraft)
+                _proxy0.setDepartureArrivalFlag(mdf.loc[first_idx, "departure_arrival"])
                 _proxy0.setRunway(runway_store.getObject(fm0["runway"]))
                 _proxy0.setRunwayDirection(fm0["runway_direction"])
                 _proxy0.setTrack(track_store.getObject(fm0["track_id"]))
@@ -1122,7 +1342,19 @@ class MovementStore(Store, metaclass=Singleton):
 
                 fm = eq_mdf.loc[eq_mdf_index]
                 fm_gate = gate_store.getObject(fm["gate"])
-                fm_aircraft = aircraft_store.getObject(fm["aircraft"])
+                # Aircraft resolution: HelicopterStore takes precedence so that
+                # a row in default_helicopter (ICAO or variant_label) returns
+                # a Helicopter instance rather than the legacy Aircraft instance
+                # from default_aircraft. The new is_helicopter() dispatch in
+                # the calculator then routes the Helicopter through FOCA
+                # formulas via compute_lto. Falls through to AircraftStore for
+                # fixed-wing ICAOs and for legacy helicopters that aren't yet
+                # in default_helicopter (transitional).
+                _ac_id = fm["aircraft"]
+                if helicopter_store.hasIdentifier(_ac_id):
+                    fm_aircraft = helicopter_store.getByIdentifier(_ac_id)
+                else:
+                    fm_aircraft = aircraft_store.getObject(_ac_id)
                 fm_runway = runway_store.getObject(fm["runway"])
                 fm_taxi_route = taxi_route_store.getObject(fm["taxi_route"])
                 fm_trajectory = trajectory_store.getObject(fm["profile_id"])
@@ -1130,8 +1362,6 @@ class MovementStore(Store, metaclass=Singleton):
 
                 if engine_store.hasKey(fm["engine_name"]):
                     fm_engine = engine_store.getObject(fm["engine_name"])
-                elif heli_engine_store.hasKey(fm["engine_name"]):
-                    fm_engine = heli_engine_store.getObject(fm["engine_name"])
                 else:
                     fm_engine = None
 
@@ -1178,9 +1408,30 @@ class MovementStore(Store, metaclass=Singleton):
             if stage_2:
                 stage_2.nextValue()
 
-        # Get the movements to retain
-        # NOTE: not available or not default configurable profiles would have "profile_id" as None
-        mdf_retained = eq_mdf[~eq_mdf[df_cols].isna().any(axis=1)]
+        # Get the movements to retain.
+        #
+        # Helicopters legitimately have several df_cols as None/NaN:
+        #   - engine_name: helicopters use the Helicopter object's engine
+        #     metadata directly, never engine_store
+        #   - gate: helicopters operate from helipads
+        #   - taxi_route: helicopters do not taxi
+        #   - trajectory: helicopters use FOCA-generated runtime trajectories,
+        #     not entries in default_aircraft_profiles (trajectory_store)
+        # Requiring these for helicopter rows drops every helicopter movement
+        # at this filter step. Apply the strict check only to non-helicopter
+        # rows; for helicopters, only the columns that are genuinely required
+        # for downstream FOCA emission dispatch are checked.
+        helicopter_optional = ["engine_name", "gate", "taxi_route", "trajectory"]
+        common_required = [c for c in df_cols if c not in helicopter_optional]
+        is_helicopter_row = eq_mdf["aircraft_obj"].apply(
+            lambda a: a is not None
+            and hasattr(a, "is_helicopter")
+            and a.is_helicopter()
+        )
+        common_na = eq_mdf[common_required].isna().any(axis=1)
+        helicopter_optional_na = eq_mdf[helicopter_optional].isna().any(axis=1)
+        is_dropped = common_na | ((~is_helicopter_row) & helicopter_optional_na)
+        mdf_retained = eq_mdf[~is_dropped]
         logger.info("Number of movements retained: %s" % mdf_retained.shape[0])
 
         # Start the final stage
@@ -1215,24 +1466,24 @@ class MovementStore(Store, metaclass=Singleton):
             # Get the relevant objects
             mov_aircraft = mov_df_entry["aircraft_obj"]
 
-            if mov_aircraft.getGroup() == "HELICOPTER":
-
-                # Get the helicopter engine
-                mov_engine = heli_engine_store.getObject(mov_df_entry["engine_name"])
+            if mov_aircraft.is_helicopter():
+                # Helicopters: emissions computed by FOCA formulas from
+                # max_shp_per_engine + category + n_engines directly off the
+                # Helicopter row. No engine object needed.
+                mov_engine = None
             else:
-
                 # Get the aircraft engine
                 mov_engine = engine_store.getObject(mov_df_entry["engine_name"])
 
-            # Replace with Default Engine if it can't be found
-            if mov_engine is None:
-                mov_engine = mov_aircraft.getDefaultEngine()
-                logger.info(
-                    "Engine wasn't found for movement %s. "
-                    "Will use default engine (%s).",
-                    mov.getName(),
-                    mov_engine.getName(),
-                )
+                # Replace with Default Engine if it can't be found
+                if mov_engine is None:
+                    mov_engine = mov_aircraft.getDefaultEngine()
+                    logger.info(
+                        "Engine wasn't found for movement %s. "
+                        "Will use default engine (%s).",
+                        mov.getName(),
+                        mov_engine.getName(),
+                    )
 
             # Add the relevant objects to the movement
             mov.setGate(mov_df_entry["gate_obj"])
@@ -1269,6 +1520,12 @@ class MovementDatabase(SQLSerializable, metaclass=Singleton):
     """
     Class that grants access to user-defined movements stored in the database
     """
+
+    # Class-level marker so the template-build registry's
+    # check_no_duplicate_sql_definition can audit MovementDatabase without
+    # instantiating it. The runtime table_name_string constructor arg
+    # defaults to this same value.
+    TABLE_NAME = "user_aircraft_movements"
 
     def __init__(
         self,

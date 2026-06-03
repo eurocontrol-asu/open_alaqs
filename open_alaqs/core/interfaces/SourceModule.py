@@ -243,15 +243,41 @@ class SourceWithTimeProfileModule(SourceModule):
         self,
         start_dt: datetime,
         end_dt: datetime,
-        annual_total_operating_hours,
+        annual_activity,
         hour_profile_name,
         daily_profile_name,
         month_profile_name,
     ):
+        """Return total emissions (per pollutant per unit) for the
+        time period [start_dt, end_dt).
+
+        Parameters
+        ----------
+        annual_activity : float
+            Total annual activity in whatever unit pairs with the
+            emission factor. The pairing is recorded in the
+            `activity_unit` column on `default_stationary_ef` and
+            `shapes_point_sources` (added by the point-sources v2
+            schema migration in `scripts/migrate_alaqs.py`). Examples:
+
+                Natural gas combustion       1000 m^3 of fuel gas
+                Diesel ICE                   hours of operation
+                Fuel storage tank            1000 L of throughput
+                Solid waste incinerator      1000 kg of waste
+                Surface coating              1000 kg of coating
+
+            The formula below is unit-agnostic; only the user-facing
+            labels and the report-writers need to consume
+            `activity_unit`. The previous parameter name was
+            `annual_total_operating_hours`. All callers in this
+            codebase (Point/Area/Parking/Roadway SourceModule) pass
+            this argument positionally, so the rename is a no-op for
+            them.
+        """
         time_period = end_dt - start_dt
         emit_per_hour = self.getRelativeActivityPerHour(
             start_dt,
-            annual_total_operating_hours,
+            annual_activity,
             hour_profile_name,
             daily_profile_name,
             month_profile_name,
@@ -263,7 +289,7 @@ class SourceWithTimeProfileModule(SourceModule):
     def getRelativeActivityPerHour(
         self,
         inventory_dt: datetime,
-        annual_total_operating_hours,
+        annual_activity,
         hour_profile_name,
         daily_profile_name,
         month_profile_name,
@@ -279,7 +305,7 @@ class SourceWithTimeProfileModule(SourceModule):
             hour_profile_name, daily_profile_name, month_profile_name
         )
 
-        operating_factor = float(annual_total_operating_hours) / self._hours_in_year
+        operating_factor = float(annual_activity) / self._hours_in_year
         hour_factor = float(hour_profile.getHours()[inventory_dt.hour])
         weekday_factor = float(
             weekday_profile.getDays()[weekday_abbreviations[inventory_dt.weekday()]]

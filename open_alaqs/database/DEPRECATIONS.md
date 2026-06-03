@@ -115,3 +115,61 @@ The runtime-only file `default_aircraft.csv` survives in
 `database/data/`; its older `database/src/` counterpart (902 rows,
 semicolon-delimited) was the regeneration pipeline's intermediate
 input and is no longer needed.
+
+## Helicopter LTO infrastructure refactor (5.2.0 release)
+
+The legacy helicopter emission-index table and its supporting class
+hierarchy were removed in favour of live FOCA 2015 LTO computation
+(`open_alaqs/core/tools/foca_heli.py`). The legacy pipeline carried
+unverified per-mode emission indices and was never invoked by any
+production code path.
+
+**Removed entirely:**
+
+| Artifact | Where |
+|---|---|
+| `default_helicopter_engine_ei.csv` (86 rows) | `database/data/` |
+| Table `default_helicopter_engine_ei` | Schema (project template) |
+| `class HelicopterEngineEmissionIndicesDatabase` | `core/interfaces/EngineDatabases.py` |
+| `class HeliEngineStore` | `core/interfaces/EngineStore.py` |
+| `class HelicopterEngineEmissionIndex` | `core/interfaces/Engine.py` |
+| `Aircraft.getHeliEngineStore()` + initAircraft fallback | `core/interfaces/Aircraft.py` |
+| `Movement._heli_engine_store` field + 4 call sites | `core/interfaces/Movement.py` |
+| 61 helicopter rows from `default_aircraft.csv` | `database/data/` |
+| 16 HELIPROF rows from `default_aircraft_profiles.csv` | `database/data/` |
+| `Helicopter.DEFAULT_*_PROFILE_NAME`, `getDefault{Departure,Arrival}ProfileName()` | `core/interfaces/Helicopter.py` |
+
+**Replaced by:**
+
+- `default_helicopter.csv` (60 rows): helicopter catalog with `icao`,
+  `variant_label`, `mtow_kg`, `engine_count`, `engine`, `max_shp_per_engine`,
+  `is_default`.
+- `default_helicopter_engines.csv` (86 rows): engine metadata with
+  `engine_name`, `engine_full_name`, `engine_type`, `max_shp_per_engine`,
+  `source`.
+- `HelicopterStore`, `HelicopterDatabase`, `HelicopterEnginesDatabase`,
+  `Helicopter`, `HelicopterEngine` in `core/interfaces/Helicopter.py`.
+- Runtime per-category trajectory generation in
+  `core/tools/foca_heli_trajectory.py` (replaces the 8-point HELIPROF
+  profiles, which collapsed to a zero-length column at the runway
+  threshold).
+
+**Migration for users with existing .alaqs files**: pass
+`--drop-extra-tables` to `migrate_alaqs.py` to drop the legacy
+`default_helicopter_engine_ei` table from old files (their helicopter
+movements will then resolve through the new `default_helicopter` /
+`default_helicopter_engines` tables seeded by the migration).
+
+## Added in 5.2.0: 5 MEEM v1 / nvPM columns in `default_aircraft_engine_ei`
+
+The columns `press_ratio`, `meem_nvpm_m_i_f00_avg`, `meem_nvpm_n_i_f00_avg`,
+`nvpm_m_max_mgkg`, `nvpm_n_max_nkg` were always read by
+`EngineEmissionIndicesDatabase._load_meem_metadata()` but were missing from
+the SQLSerializable schema declaration. Fresh templates therefore lacked
+the columns and the MEEM v2 emission method silently degraded to bymode.
+
+Now declared in the schema. Seed data in the shipped CSV is NULL for
+these 5 columns (no MEEM data shipped); populate them with a separate
+post-import script if needed. Without the columns populated, the MEEM v2
+emission method continues to degrade gracefully to bymode (the soft
+fallback in `_load_meem_metadata` is retained).

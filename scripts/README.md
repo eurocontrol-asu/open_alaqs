@@ -106,6 +106,46 @@ A hardcoded guard refuses to refresh user-data tables (`user_*`,
 `shapes_*`) regardless of `--refresh-tables`. The guard logs a warning
 and silently strips forbidden names from the resolved list.
 
+### Phase 3 — point-sources v2 hooks (auto, opt-out via `--skip-point-sources-v2`)
+
+Two small post-migration steps tied to the point-sources v2 schema:
+
+1. INSERT-OR-IGNOREs three named temporal profiles (`heating_season`,
+   `cooling_season`, `business_hours`) into each of
+   `user_month_profile`, `user_day_profile`, `user_hour_profile`.
+   These three profiles are shipped in the canonical templates
+   (`open_alaqs/core/templates/{project,inventory}.alaqs`) so new
+   studies inherit them automatically. The Phase 3 INSERT-OR-IGNORE
+   step backfills them into legacy studies migrated through Phase 1.
+   The user's existing custom profiles (e.g. `parking`, `roadways`)
+   are never modified. Idempotent on `profile_name`; running Phase 3
+   on an already-migrated study is a no-op.
+
+   The `user_*_profile` tables are in
+   `USER_DATA_TABLES_FORBIDDEN_FROM_REFRESH` and therefore cannot be
+   handled by Phase 2's CSV refresh path; Phase 3 is the only mechanism.
+
+2. An optional deprecated-pin report (`--report-deprecated-pins`).
+   Read-only on the source. Writes a CSV listing every in-study
+   `shapes_point_sources` row whose EF fingerprint
+   `(category, substance, NOx)` matches a `deprecated=1` row in
+   `default_stationary_ef`. Each row includes a
+   `recommended_replacement_description`, optional `ambiguous
+   fingerprint` annotations when multiple legacy rows share the
+   fingerprint, and two specific warnings for high-impact pre-v2
+   data quality issues:
+   - The legacy "Industrial natural gas" row whose NOx value of 2.24
+     kg/10³ m³ is the AP-42 low-NOx-burner value, not the
+     uncontrolled large-boiler value.
+   - The legacy diesel row that used `1000_m3` units but matches the
+     new `Stationary IC Engine` EFs that use hours.
+
+   Output path defaults to `migration_<source-basename>.csv` in the
+   source's directory; pass `--report-deprecated-pins PATH` for an
+   explicit path.
+
+To skip Phase 3 entirely, pass `--skip-point-sources-v2`.
+
 ### Safety
 
 - A `.bak-<timestamp>.alaqs` copy is made in the same directory before
@@ -159,6 +199,14 @@ python3 scripts/migrate_alaqs.py legacy.alaqs \
 # Override the data CSV directory (e.g. for a frozen snapshot):
 python3 scripts/migrate_alaqs.py legacy.alaqs \
     --refresh-reference-data --data-dir /path/to/frozen_csvs/
+
+# v2: schema + data refresh + named-profile insert + deprecated-pin report
+python3 scripts/migrate_alaqs.py legacy.alaqs \
+    --refresh-reference-data --report-deprecated-pins
+
+# v2: skip Phase 3 (keep study in v1 shape)
+python3 scripts/migrate_alaqs.py legacy.alaqs \
+    --refresh-reference-data --skip-point-sources-v2
 ```
 
 ### Exit codes
@@ -198,6 +246,11 @@ prints the edit plan without modifying the source file. Destructive options
 (`--no-backup`, `--drop-extra-tables`, `--drop-extra-columns`,
 `--refresh-include-user-extensible`) are gathered in a red-bordered group
 and trigger a warning dialog before apply.
+
+The Phase 3 group box exposes two checkboxes:
+
+- *Skip Phase 3* — equivalent to `--skip-point-sources-v2`.
+- *Emit deprecated-pin report* — equivalent to `--report-deprecated-pins`. The report path is auto-generated next to the source file.
 
 ## Translation helpers
 

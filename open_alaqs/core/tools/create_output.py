@@ -121,10 +121,19 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_p
         "default_airports",
         "default_stationary_ef",
         "default_apu_times",
-        "default_helicopter_engine_ei",
         "default_vehicle_fleet_euro_standards",
         "default_aircraft_apu_ef",
         "default_vehicle_ef_copert5",
+        # 5.2.0: helicopter catalog tables. The inventory template ships these
+        # empty; populate from the source project so HelicopterStore can
+        # resolve helicopter ICAOs/variant_labels during emission calculation.
+        # Without these copies the helicopter dispatch path falls back to
+        # AircraftStore, which can't find helicopter aircraft either since
+        # the 5.2.0 default_aircraft.csv has no HELICOPTER rows -- net effect
+        # is "Aircraft 'AS50' wasn't found in the DB" and the movement is
+        # dropped from the inventory.
+        "default_helicopter",
+        "default_helicopter_engines",
     ]
     for table in copy_tables:
         inventory_copy_generic_table(inventory_path, table)
@@ -667,11 +676,26 @@ def inventory_copy_vector_layers(inventory_path):
             logger.error(msg)
 
         try:
-            runways = alaqsdblite.query_string("SELECT * FROM shapes_runways;")
-            # 6 columns after the session-22 simplification: oid, runway_id,
-            # capacity, touchdown, instudy, geometry. Was 8 (with the now-
-            # dropped max_queue_speed and peak_queue_time).
-            curs.executemany("INSERT INTO shapes_runways VALUES (?,?,?,?,?,?)", runways)
+            # Schema-robust copy: source projects predating the session-22
+            # simplification still have 8 cols in shapes_runways (with
+            # max_queue_speed and peak_queue_time, since dropped). Select only
+            # the destination cols so legacy files copy cleanly.
+            dst_cols = [r[1] for r in curs.execute("PRAGMA table_info(shapes_runways)")]
+            src_db_path = alaqsdblite.ProjectDatabase().path
+            with sqlite.connect(src_db_path) as src_conn:
+                src_cols = [
+                    r[1] for r in src_conn.execute("PRAGMA table_info(shapes_runways)")
+                ]
+            common = [c for c in dst_cols if c in src_cols]
+            col_list = ", ".join(f'"{c}"' for c in common)
+            placeholders = ",".join("?" * len(common))
+            runways = alaqsdblite.query_string(
+                f"SELECT {col_list} FROM shapes_runways;"
+            )
+            curs.executemany(
+                f"INSERT INTO shapes_runways ({col_list}) VALUES ({placeholders})",
+                runways,
+            )
             conn.commit()
             msg = "[+] Runways copied to output file"
             logger.info(msg)
@@ -681,11 +705,26 @@ def inventory_copy_vector_layers(inventory_path):
             logger.error(msg)
 
         try:
+            # Use explicit column names in both SELECT and INSERT so the
+            # copy is robust to schema-evolution column-order differences
+            # between source and target (e.g. activity_unit was appended to
+            # shapes_point_sources by ALTER TABLE on migrated v1 studies,
+            # putting it after geometry, whereas the v2 template defines it
+            # before geometry).
+            _ps_cols = (
+                "oid, source_id, height, category, point_type, substance, "
+                "temperature, diameter, velocity, ops_year, "
+                "hour_profile, daily_profile, month_profile, "
+                "co_kg_k, hc_kg_k, nox_kg_k, sox_kg_k, pm10_kg_k, "
+                "p1_kg_k, p2_kg_k, instudy, activity_unit, geometry"
+            )
+            _ps_placeholders = ",".join(["?"] * 23)
             point_sources = alaqsdblite.query_string(
-                "SELECT * FROM shapes_point_sources;"
+                f"SELECT {_ps_cols} FROM shapes_point_sources;"
             )
             curs.executemany(
-                "INSERT INTO shapes_point_sources VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                f"INSERT INTO shapes_point_sources ({_ps_cols}) "
+                f"VALUES ({_ps_placeholders})",
                 point_sources,
             )
             conn.commit()
@@ -775,24 +814,47 @@ def inventory_copy_aircraft_engine_ei(inventory_path):
     conn = sqlite.connect(inventory_path)
     curs = conn.cursor()
     conn.text_factory = str
-    # aircraft_engines = alaqsdblite.query_string("SELECT DISTINCT engine FROM default_aircraft;")
 
-    # SS
-    # aircraft_engines = alaqsdblite.query_string("SELECT DISTINCT engine FROM default_aircraft;")
+    # Schema-robust INSERT: read the destination schema first, then SELECT only
+    # the matching columns from the source project DB. This works whether the
+    # source has fewer or more columns than the destination (e.g. when MEEM
+    # columns were added to the schema in 5.2.0 some user projects predate
+    # them). Source-only columns are dropped, destination-only columns are left
+    # NULL by SQLite.
+    dst_cols = [
+        r[1] for r in curs.execute("PRAGMA table_info(default_aircraft_engine_ei)")
+    ]
+    src_db_path = alaqsdblite.ProjectDatabase().path
+    with sqlite.connect(src_db_path) as src_conn:
+        src_cols = [
+            r[1]
+            for r in src_conn.execute("PRAGMA table_info(default_aircraft_engine_ei)")
+        ]
+    common_cols = [c for c in dst_cols if c in src_cols]
+    col_list_sql = ", ".join(f'"{c}"' for c in common_cols)
+    placeholders = ",".join("?" * len(common_cols))
+
     aircraft_engines = alaqsdblite.query_string(
         "SELECT DISTINCT engine_name FROM default_aircraft_engine_ei;"
     )
 
-    for engine in aircraft_engines:
-        # Get details of this aircraft from the main project database
+    # query_string returns a list of tuples like [(engine_name,), ...] -- unpack
+    # the first element rather than f-string-formatting the tuple, which would
+    # produce a literal "('engine_name',)" in the SQL and match zero rows.
+    for row in aircraft_engines:
+        engine = row[0] if row else None
+        if not engine:
+            continue
+        # Use parameterized query (handles SQL injection and tuple formatting in one step).
         sql_text = (
-            'SELECT * FROM default_aircraft_engine_ei WHERE engine_name="%s";' % engine
+            f"SELECT {col_list_sql} FROM default_aircraft_engine_ei "
+            f"WHERE engine_name = ?;"
         )
-        data = alaqsdblite.query_string(sql_text)
-        # insert into the output
+        with sqlite.connect(src_db_path) as src_conn:
+            data = src_conn.execute(sql_text, (engine,)).fetchall()
         curs.executemany(
-            "INSERT INTO default_aircraft_engine_ei "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            f"INSERT INTO default_aircraft_engine_ei ({col_list_sql}) "
+            f"VALUES ({placeholders})",
             data,
         )
     # House keeping

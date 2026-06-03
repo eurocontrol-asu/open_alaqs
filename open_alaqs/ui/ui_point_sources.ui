@@ -133,7 +133,24 @@
        <item row="3" column="0">
         <widget class="QLabel" name="label_2">
          <property name="text">
-          <string>Units Per Year</string>
+          <string>Activity per year</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_activity_unit">
+         <property name="text">
+          <string>Activity unit</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLineEdit" name="activity_unit">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+         <property name="toolTip">
+          <string>Unit pairing for the Activity per year value. Inherited from the selected emission factor (default_stationary_ef.activity_unit). Examples: 1000_m3 (natural gas), 1000_L (liquid fuel), hr (engine operating hours), 1000_kg (solid waste / coating).</string>
          </property>
         </widget>
        </item>

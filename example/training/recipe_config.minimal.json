@@ -1,0 +1,8 @@
+{
+  "year": 2025,
+  "include_aircraft": true,
+  "processes": 8,
+  "pollutants": "co,hc,nox,pm10,pm25",
+  "start": "2025-07-17",
+  "end": "2025-07-23"
+}
