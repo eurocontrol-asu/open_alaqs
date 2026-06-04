@@ -4,6 +4,97 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
+## [5.2.2] - 2026-06-04
+
+Patch release. Documentation audit (Tier 1–3) plus a small docstring
+update in `foca_heli_trajectory.py` for the renamed reference file.
+No behavioural code changes. Inventory totals are bit-identical to
+5.2.1.
+
+### Documentation
+
+- **Tier 1 audit fixes (29 patches across BFFM2.md, USER_GUIDE.md,
+  TEST_CASE_STUDY.md)**:
+  - `BFFM2.md`: δ exponent 1.0 → 1.02 in NOx / CO / HC ambient
+    corrections; Mach formula simplified to `TAS / SOS` (the extraneous
+    `√(288.15/T_amb)` factor was double-correcting since SOS already
+    depends on T); Step 2 rewritten to match the CAEP14 universal form
+    the code actually applies; PM10 sulphate value corrected (~48.96
+    mg/kg stored, FSC ≈ 667 ppm, not the 36.75 mg/kg / 500 ppm
+    previously claimed); CO interpolation described using the actual
+    code terminology (`lin_av`, CAEP14 v14 "HC_CO Slope To Mean Value"
+    rule); idle floor clamp behaviour clarified (only applied for
+    P < 0.07); installation-correction attribution aligned with the
+    code's CAEP14 reference.
+  - `USER_GUIDE.md`: stop-and-go timing corrected (9 s at idle per
+    engine, not the fictional 21 s + 11 s two-phase model);
+    anemometer height default formula (`10 + 6·z0`); Stationary IC
+    engine tiers corrected (diesel only, >600 hp / <600 hp threshold
+    per AP-42 §3.4); named profile claim refined; PM10 sulphate value
+    correction; RelativeHumidity unit fixed (0–1 fraction, not %);
+    helicopter APU/gate suppression mechanism described accurately;
+    new Activity Profiles "Worked example" subsection with concrete
+    factor values for `heating_season`, `cooling_season`, and
+    `business_hours` profiles.
+  - `TEST_CASE_STUDY.md`: worked example rebuilt against the actual
+    `example/training/training_movements.csv` (was describing
+    aircraft, engines, and profile IDs that did not exist in the file);
+    13 movements (not 6 or 12); A20N + E190 aircraft (not A21N + E75L);
+    meteo file delimiter (comma, not semicolon), pressure unit (Pa,
+    not mb), RH unit (0–1, not %), specific humidity (0.00446, not
+    0.00634); 6 taxi routes referenced (not 3); EHRD elevation (-15
+    m, not 0); Exercise 3 reworked as a per-aircraft method drift
+    comparison.
+
+- **Tier 2 audit fixes (7 patches across AUXILIARY_MATERIAL.md and
+  the renamed HELICOPTER_TRAJECTORIES.md)**:
+  - `AUXILIARY_MATERIAL.md`: PM10 sulphate and PM10 organic formula
+    LHS units corrected (mg/kg, not g/kg); δ_k unit clarified
+    (`mg/g_HC`); FSC ≈ 667 ppm; COPERT country count corrected to
+    38 entries (was 37) with Slovakia gap and EU28 aggregate noted.
+  - `HELICOPTER_TRAJECTORIES.md` (formerly `TRAJECTORY_DATA_SOURCES.md`):
+    approach intermediate altitude corrected to 500 ft AGL (not 1500
+    ft; matches `FINAL_BREAK_ALT_FT` in `foca_heli_trajectory.py`);
+    `compute_lto()` file path corrected (`foca_heli_utils.py`, not
+    `foca_heli.py`); APU/gate suppression mechanism described
+    accurately.
+
+- **Tier 3 audit fixes (10 patches across AUSTAL.md, AUSTAL_OPERATION.md,
+  VALIDATION_GUIDE.md)**:
+  - `AUSTAL.md`: Linux package extension (.zip, not .tar.gz); English
+    language file names (`AST_en@latin1.nls`, `DIA_en@latin1.nls`)
+    and their source (separate AUSTAL Sprachpakete download); file
+    table expanded to include the two `.nls` files.
+  - `AUSTAL_OPERATION.md`: "Files written" listing corrected
+    (removed `zeitreihe.dmna` and `meta.txt` which the plugin never
+    writes; added the per-source `eNNNN.dmna` subdirectories);
+    receptor CSV `id` column claim dropped (the reader doesn't
+    process it); module class names corrected in the View Results
+    table (`QGISVectorLayerDispersionModule`, `TimeSeriesDispersionModule`,
+    `ComplianceReportDispersionModule` — previously listed using file
+    basenames as if they were class names).
+  - `VALIDATION_GUIDE.md`: removed references to APU backfill files
+    (`apu_tier1_backfill.sql`, `apu_tier2_backfill.sql`,
+    `APU_TIER2_RESULTS.md`) that were cleaned out of `documents/` in
+    the 5.2.0 release; EHRD elevation corrected (-15 m, not -4.57 m);
+    helicopter row count corrected (60, not 61); removed the
+    "Plugin baseline policy" section which described a workflow
+    appropriate for an internal fork distribution, not the public
+    release.
+
+### Renamed
+
+- `documents/TRAJECTORY_DATA_SOURCES.md` → `documents/HELICOPTER_TRAJECTORIES.md`.
+  The file covers only helicopter (FOCA 2015) trajectories; the
+  previous name was misleading. References updated in `README.md`,
+  `documents/USER_GUIDE.md`, and the two docstrings in
+  `open_alaqs/core/tools/foca_heli_trajectory.py`. The
+  `CHANGELOG.md` [5.2.0] entry was left as-is (historical record).
+
+### Plugin metadata
+
+- `open_alaqs/metadata.txt`: version 5.2.1 → 5.2.2.
+
 ## [5.2.1] - 2026-06-04
 
 Patch release. Plugin code unchanged from 5.2.0; standalone
