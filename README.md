@@ -150,7 +150,7 @@ Open-ALAQS ships three aircraft emission methods selectable at run time:
 - **bymode** — multiplies anchor-mode fuel flow × anchor-mode EI × time × engine count. No ambient corrections. Use as a tautological baseline.
 - **BFFM2 (trajectory)** — default BFFM2 path. For each trajectory segment resolves fuel flow from the segment's sub-mode power setting via the twin-quadratic fit, applies SAE AIR-5715 atmospheric corrections for NOx, and snaps CO/HC to the horizontal mean(CL, TO) value above the APP anchor in the standard-intersection case (CAEP14 v14 rule).
 - **BFFM2 (mode_anchor)** — uses the mode anchor fuel flow (IDLE/APP/CL/TO EEDB values) as the BFFM2 input, still applying ambient corrections. Useful when trajectories lack per-segment sub-mode fidelity.
-- **Helicopters (FOCA 2015)** — separate dispatch for movements flagged as helicopters. Four FOCA categories (PISTON, SINGLE_TURBOSHAFT, TWIN_TURBOSHAFT_LIGHT/HEAVY) with per-category trajectories and emission indices. APU and gate emissions are suppressed; airborne emissions only. See [`documents/USER_GUIDE.md`](documents/USER_GUIDE.md) for category derivation and [`documents/TRAJECTORY_DATA_SOURCES.md`](documents/TRAJECTORY_DATA_SOURCES.md) for the data sources.
+- **Helicopters (FOCA 2015)** — separate dispatch for movements flagged as helicopters. Four FOCA categories (PISTON, SINGLE_TURBOSHAFT, TWIN_TURBOSHAFT_LIGHT/HEAVY) with per-category trajectories and emission indices. APU and gate emissions are suppressed; airborne emissions only. See [`documents/USER_GUIDE.md`](documents/USER_GUIDE.md) for category derivation and [`documents/HELICOPTER_TRAJECTORIES.md`](documents/HELICOPTER_TRAJECTORIES.md) for the data sources.
 
 PM is via MEEM V1 at LTO (EEDB nvPM anchors unchanged at LTO altitudes). The MEEM V2 base method (ICAO CAEP/13-WG3) is also implemented for non-LTO altitudes. The MDG4 / Staged Combustion update is not implemented.
 
@@ -226,9 +226,9 @@ Most tests need QGIS available on the Python path. CI runs the suite in a QGIS D
 
 [(Back to top)](#table-of-contents)
 
-Open-ALAQS is validated against external CAEP14 reference values to floating-point precision across bymode, BFFM2 trajectory, and BFFM2 mode_anchor methods, with non-volatile PM matching EEDB anchors exactly via MEEM V1 at LTO.
+Open-ALAQS is validated against an external reference spreadsheet to floating-point precision across bymode, BFFM2 trajectory, and BFFM2 mode_anchor methods, with non-volatile PM matching EEDB anchors exactly via MEEM V1 at LTO.
 
-The full validation matrix, per-engine results, and cross-platform agreement evidence are in [`documents/VALIDATION_GUIDE.md`](documents/VALIDATION_GUIDE.md).
+The full validation matrix, per-engine results, and cross-platform agreement evidence are in [`documents/BFFM2_validation/BFFM2.md`](documents/BFFM2_validation/BFFM2.md).
 
 ## Recent changes
 
