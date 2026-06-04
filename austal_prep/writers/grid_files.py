@@ -22,7 +22,7 @@ Header:
     sk         vertical level top heights (space-separated)
     -          separator
     mode       "text"
-    form       "Eq%5.1"  (for legacy; weights are dimensionless [0..1])
+    form       "Eq%5.1f"  (for legacy; weights are dimensionless [0..1])
     vldf       "V"        (volume value)
     artp       "M"        (M=master, mode of array combination)
     dims       3
@@ -162,7 +162,7 @@ def _common_header_lines(
         "sk\t" + " ".join(f"{s:g}" for s in sk),
         "-",
         'mode\t"text"',
-        'form\t"Eq%5.1"',
+        'form\t"Eq%5.1f"',
         'vldf\t"V"',
         'artp\t"M"',
     ]

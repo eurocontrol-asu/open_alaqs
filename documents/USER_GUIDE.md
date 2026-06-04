@@ -291,6 +291,13 @@ emission_kg_per_hour
 
 where the three profile factors are dimensionless and average to 1.0 across the year. For a source with all three profiles set to *constant* (1.0 everywhere), the hourly emission is simply `EF × annual_activity / 8760`, equivalent to a uniform spread across the inventory year.
 
+**Worked examples**:
+
++ *Heating plant on natural gas* (Category 2): 850 000 m³ consumed per year → enter `Activity per year = 850`. The selected type's row has `activity_unit = 1000_m3` (read-only). With `nox_kg_k = 1.9`, annual NOx = 850 × 1.9 = 1 615 kg.
++ *Diesel backup generator* (Category 6, Stationary IC Engine): 400 operating hours per year → enter `Activity per year = 400`, `activity_unit = hr`. With `nox_kg_k = 0.012`, annual NOx = 400 × 0.012 = 4.8 kg.
++ *Incinerator* (Category 1): 3 200 tonnes of waste per year → enter `Activity per year = 3200`, `activity_unit = 1000_kg`. The EF applies to the 3 200 figure directly.
++ *Fuel storage tank* (Category 3): 1 800 000 L throughput per year → enter `Activity per year = 1800`, `activity_unit = 1000_L`. The EF here represents evaporative VOC losses per thousand litres throughput.
+
 **Schema migration note**: studies produced by older plugin versions used a single `units_per_year` field (hours per year only) without an explicit activity unit. The `scripts/migrate_alaqs.py` tool upgrades legacy `.alaqs` files in place, renames `units_per_year` to `annual_activity`, adds the `activity_unit` column to `shapes_point_sources`, and reports any source pinned to an emission-factor row that has since been deprecated. See `documents/AUXILIARY_MATERIAL.md` for the v2 schema reference.
 
 **Stationary IC Engine sources** are a v2 addition (category 6) and use `hr` as the activity unit (engine operating hours per year). Available types include diesel and natural-gas reciprocating engines at three power tiers (<50 kW, 50 to 500 kW, >500 kW); pick the type that matches the rated power of the engine on site.

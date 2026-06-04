@@ -140,15 +140,15 @@ def write_series(
 
     # Build column list
     # Header: form line
-    form_parts = ['"te%20lt"', '"ra%5.0"', '"ua%5.1"', '"lm%7.1"']
+    form_parts = ['"te%20lt"', '"ra%5.0f"', '"ua%5.1f"', '"lm%7.1f"']
     if mixing_height_included:
-        form_parts.append('"hm%7.1"')
+        form_parts.append('"hm%7.1f"')
 
     # Per-source iq columns: number them 01, 02, ... matching the
     # per-source grid directory naming convention. (See grid_files.py)
     iq_indices = [f"{i + 1:02d}" for i in range(len(source_ids))]
     for iq in iq_indices:
-        form_parts.append(f'"{iq}.iq%3.0"')
+        form_parts.append(f'"{iq}.iq%3.0f"')
 
     # Per-active-pair emission columns. PM10 expands into two
     # columns (pm-1 and pm-2); PM2.5 into one (pm25-1); other
