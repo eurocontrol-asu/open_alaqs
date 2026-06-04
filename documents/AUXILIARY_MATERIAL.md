@@ -69,15 +69,15 @@ Aircraft PM10 emissions are decomposed into three physical components, stored se
 **Sulphate PM (`pm10_sul`)** — volatile sulphate particles formed from sulphur in the fuel. Computed from the fuel sulphur content (FSC) and a conversion efficiency ε using ICAO Doc 9889 Appendix D:
 
 ```
-pm10_sul (g/kg) = FSC (kg/kg) × ε × 3 062 500
+pm10_sul (mg/kg) = FSC (kg/kg) × ε × 3 062 500
 ```
 
-The database uses **FSC = 500 ppm (0.0005 kg/kg)** and **ε = 0.024** (CAEP14 default), giving a constant value of **36.75 mg/kg** for all engines and all modes.
+The database uses **FSC ≈ 667 ppm (0.000667 kg/kg)** and **ε = 0.024** (CAEP14 default), giving a constant value of **~48.96 mg/kg** for all engines and all modes.
 
 **Organic vPM (`pm10_organic`)** — volatile organic particles from unburned hydrocarbons, calculated by the parameterised vPM method from ICAO Doc 9889 Appendix D:
 
 ```
-pm10_organic (g/kg) = δ_k × EI_HC (g/kg)
+pm10_organic (mg/kg) = δ_k (mg/g_HC) × EI_HC (g/kg)
 ```
 
 where δ_k is the mode-specific conversion factor:
@@ -227,7 +227,7 @@ COPERT contains emission factors for more than 450 individual vehicle types cons
 
 The implementation (see [`copert5.py`](./../open_alaqs/core/tools/copert5.py)) of the COPERT methodology in OpenALAQS preserves the core information from the original model, albeit with some simplification tailored to the scope of OpenALAQS. It generates typical emission factors for roadway segments or parking areas based on fleet year (as a proxy for Euro standard), country, fleet mix, number of vehicles, temperature, average speed, and roadway segment length.
 
-The vehicle categories examined are Passenger Cars (PCs), Light Commercial Vehicles (LCVs), Heavy Duty Trucks (HDTs), buses and motorcycles. Only petrol and diesel engines are included. Emission factors are provided for 37 countries: EU27 Member States, EU27 aggregated, UK, Iceland, Norway, Switzerland, Liechtenstein, North Macedonia, Turkey, Albania, Serbia and Montenegro.
+The vehicle categories examined are Passenger Cars (PCs), Light Commercial Vehicles (LCVs), Heavy Duty Trucks (HDTs), buses and motorcycles. Only petrol and diesel engines are included. Emission factors are provided for 38 entries: 26 EU Member States (Slovakia is not currently present in the dataset), the EU27 and EU28 aggregates, plus UK, Iceland, Norway, Switzerland, Liechtenstein, North Macedonia, Turkey, Albania, Serbia, and Montenegro.
 
 **Special remarks**:
 + HDTs petrol: only "Conventional" Euro standard option is available

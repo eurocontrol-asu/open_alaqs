@@ -5,7 +5,7 @@ Builds 3D trajectories (x, y, z in meters) for the departure and arrival
 halves of an LTO, scaled per helicopter category.
 
 Source data for per-category parameters is documented in
-documents/TRAJECTORY_DATA_SOURCES.md. Core summary:
+documents/HELICOPTER_TRAJECTORIES.md. Core summary:
 
   - PISTON (R22):           500 ft/min climb at 60 kt,  75 kt cruise
   - SINGLE_TURBOSHAFT:     1000 ft/min climb at 60 kt, 120 kt cruise (FOCA Appx A)
@@ -53,7 +53,7 @@ HOVER_DURATION_S = 18.0  # From Appendix A — assumed universal
 class TrajectoryParams:
     """Category-specific flight parameters for trajectory building.
 
-    See documents/TRAJECTORY_DATA_SOURCES.md for per-field citations.
+    See documents/HELICOPTER_TRAJECTORIES.md for per-field citations.
     """
 
     climb_roc_fpm: float  # rate of climb during TO mode

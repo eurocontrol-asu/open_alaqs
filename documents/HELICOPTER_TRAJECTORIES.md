@@ -115,13 +115,14 @@ here are the post-2015 corrected values, as documented in the
 
 For all four categories the approach is modelled as two segments:
 
-1. `approach_start_nm` → 1500 ft AGL: initial descent at
+1. `approach_start_nm` → 500 ft AGL: initial descent at
    `approach_tas_initial_kt` and `approach_rod_initial_fpm`.
-2. 1500 ft AGL → hover (5 ft AGL): final descent at
+2. 500 ft AGL → hover (5 ft AGL): final descent at
    `approach_tas_final_kt` and `approach_rod_final_fpm`.
 
-The 1500-ft intermediate altitude is a FOCA Appendix A convention
-(start of the deceleration profile). Hover is held for
+The 500-ft intermediate altitude (`FINAL_BREAK_ALT_FT` in
+`foca_heli_trajectory.py`) represents a typical final-approach
+altitude for the deceleration profile. Hover is held for
 `HOVER_DURATION_S` (18 s) before touchdown.
 
 ## Departure geometry
@@ -141,13 +142,21 @@ elsewhere:
 - **Fuel flow and emission indices**. Computed live from the
   helicopter's engine type, max shaft horsepower, engine count, and
   category at each FOCA LTO mode (Ground Idle, Takeoff, Climb-out,
-  Approach). See `foca_heli.py` `compute_lto()`.
+  Approach). See `compute_lto()` in `foca_heli_utils.py`. The
+  per-pollutant fuel-flow and emission-index helpers
+  (`piston_fuel_flow_kg_s`, `turboshaft_ei_nox_g_kg`, etc.) live in
+  `foca_heli.py`.
 - **Mode time-in-mode allocation**. The trajectory generator emits
   per-segment timing (`t_s` field on each `TrajectoryPoint`); the
   emission calculator integrates fuel flow over these times.
-- **APU and gate emissions**. Suppressed for helicopters at the
-  dispatch level in `MovementEmissionCalculator` regardless of the
-  movement table's `apu_code` and `gate_emissions_code` values.
+- **APU and gate emissions**. APU is skipped because the helicopter
+  taxi branch (`_apply_taxiing_emissions_for_helicopters` in
+  `MovementEmissionCalculator.py`) does not call the APU code path
+  — `apu_code` is not consulted on this branch. For gate emissions,
+  `gate_emissions_code` is still respected (the gate function returns
+  early if it is 0); when gate emissions are enabled, GSE and GPU
+  sub-components are explicitly skipped for helicopters, but MES (Main
+  Engine Start) is computed normally.
 
 ## Adding a new category
 

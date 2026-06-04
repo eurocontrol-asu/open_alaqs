@@ -28,6 +28,7 @@
       - [Area sources](#area-sources)
       - [Buildings](#buildings)
   - [Activity Profiles](#activity-profiles)
+    - [Worked example — defining and using named profiles](#worked-example--defining-and-using-named-profiles)
   - [Generate Emissions Inventory](#generate-emissions-inventory)
     - [Taxi routes](#taxi-routes)
     - [Create output file](#create-output-file)
@@ -350,6 +351,39 @@ Each factor is a non-negative decimal number. Values are not capped at 1.0; what
 
 > **Note:** Profiles whose calendar-weighted mean is exactly 0 (every entry zero) are handled specially: the multiplier evaluates to 0 for every hour, so emissions remain 0 throughout the simulation. There is no normalisation in this case.
 
+### [Worked example — defining and using named profiles](#worked-example--defining-and-using-named-profiles)
+
+The names `heating_season`, `cooling_season`, and `business_hours` are recommended in `default_stationary_ef` but must be defined by the user in the Activity Profiles Editor (see [Point Sources](#point-sources)). Suggested factor values, intended as a starting point for a temperate European airport:
+
+**`heating_season` — month profile, winter-weighted** (peaks Jan/Feb/Dec):
+
+```
+Jan=2.5, Feb=2.2, Mar=1.5, Apr=0.8, May=0.3, Jun=0.1,
+Jul=0.1, Aug=0.1, Sep=0.4, Oct=1.0, Nov=1.8, Dec=2.4
+```
+
+**`cooling_season` — month profile, summer-weighted** (peaks Jun-Aug):
+
+```
+Jan=0.1, Feb=0.1, Mar=0.2, Apr=0.5, May=1.2, Jun=2.2,
+Jul=2.5, Aug=2.4, Sep=1.5, Oct=0.6, Nov=0.2, Dec=0.1
+```
+
+**`business_hours` — define in BOTH `user_hour_profile` and `user_day_profile`** (one row in each table, sharing the name; the lookup uses the appropriate row at each context):
+
+- Hour profile: zero for h01–h07 and h19–h24, ~1.0 for h08–h18 (peak ~1.2 around mid-morning).
+- Day profile: 1.0 for Mon–Fri, 0 for Sat/Sun.
+
+**Example combinations:**
+
+| Source type | Month profile | Day profile | Hour profile | Resulting timing |
+|---|---|---|---|---|
+| Heating plant | `heating_season` | `default` | `default` | Concentrated in winter; uniform within each day. |
+| Stationary IC engine | `default` | `business_hours` | `business_hours` | Year-round but Mon–Fri 08:00–18:00 only. |
+| Cooling tower | `cooling_season` | `default` | `business_hours` | Summer daytime, every day. |
+
+Values are relative — what matters is the ratio between entries. The `profile_mean` normalisation rescales them so the source's total annual emission is preserved across any choice of profile shape (see notes above).
+
 ## [Generate Emissions Inventory](#generate-emissions-inventory)
 [(Back to top)](#table-of-contents)
 
@@ -472,7 +506,7 @@ Helicopter movements share the Movements table format described above; the only 
 | `TWIN_TURBOSHAFT_LIGHT` | `engine_type = TURBOSHAFT`, `engine_count ≥ 2`, MTOM ≤ 3400 kg |
 | `TWIN_TURBOSHAFT_HEAVY` | `engine_type = TURBOSHAFT`, `engine_count ≥ 2`, MTOM > 3400 kg |
 
-The 3400 kg threshold is defined in FOCA 2015 section 2.4. The category drives both the emission formulas and the trajectory geometry; the per-category trajectory parameters and their citations are documented in [`TRAJECTORY_DATA_SOURCES.md`](TRAJECTORY_DATA_SOURCES.md).
+The 3400 kg threshold is defined in FOCA 2015 section 2.4. The category drives both the emission formulas and the trajectory geometry; the per-category trajectory parameters and their citations are documented in [`HELICOPTER_TRAJECTORIES.md`](HELICOPTER_TRAJECTORIES.md).
 
 **Default catalog.** 60 helicopter rows in `default_helicopter` covering common types (R22, A109, EC135, AS332, S76, S92, etc.). 86 engine rows in `default_helicopter_engines` covering the corresponding turboshaft and piston engines. The columns are:
 
