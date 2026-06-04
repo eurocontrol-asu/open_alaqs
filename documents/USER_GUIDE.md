@@ -273,7 +273,7 @@ When adding a point source, the following information is required:
   + **Height**: Height at which emissions are released (in metres). `Not yet fully implemented`.
   + **Activity per year**: How much the source operates in one inventory year. The numeric value of throughput, fuel consumed, or hours run.
   + **Activity unit** (read-only): Unit paired with *Activity per year*. Inherited from the selected emission factor row (`default_stationary_ef.activity_unit`). Examples: `1000_m3` (natural gas throughput), `1000_L` (liquid-fuel throughput), `hr` (engine operating hours), `1000_kg` (solid waste / coating).
-+ **Profiles**: Each point source carries one *hour*, one *day*, and one *month* profile. The profiles split the *Activity per year* total into a per-hour timeline across the inventory year. Three named profiles ship with the templates: `heating_season` (winter-weighted month profile), `cooling_season` (summer-weighted month profile), and `business_hours` (8 AM to 6 PM weekday hour profile). Pick the named profile that matches the source, or define a custom profile via the OpenALAQS Toolbar → *Activity Profiles* panel.
++ **Profiles**: Each point source carries one *hour*, one *day*, and one *month* profile. The profiles split the *Activity per year* total into a per-hour timeline across the inventory year. The `default_stationary_ef` table recommends profile names per source type (e.g. `business_hours` for stationary IC engines, `heating_season` for power/heat plants); these names refer to profiles you must define yourself via the OpenALAQS Toolbar → *Activity Profiles* panel, since the user profile tables in the project template ship empty. Until you create them, sources fall back to the default uniform profile.
 
 ![points-layer.png](./../open_alaqs/assets/points-layer.png)
 
@@ -300,7 +300,7 @@ where the three profile factors are dimensionless and average to 1.0 across the 
 
 **Schema migration note**: studies produced by older plugin versions used a single `units_per_year` field (hours per year only) without an explicit activity unit. The `scripts/migrate_alaqs.py` tool upgrades legacy `.alaqs` files in place, renames `units_per_year` to `annual_activity`, adds the `activity_unit` column to `shapes_point_sources`, and reports any source pinned to an emission-factor row that has since been deprecated. See `documents/AUXILIARY_MATERIAL.md` for the v2 schema reference.
 
-**Stationary IC Engine sources** are a v2 addition (category 6) and use `hr` as the activity unit (engine operating hours per year). Available types include diesel and natural-gas reciprocating engines at three power tiers (<50 kW, 50 to 500 kW, >500 kW); pick the type that matches the rated power of the engine on site.
+**Stationary IC Engine sources** are a v2 addition (category 6) and use `hr` as the activity unit (engine operating hours per year). Available types are diesel reciprocating engines at two power tiers: `>600 hp` (split further into *Prechamber* and *Open-Chamber* combustion types, per AP-42 §3.4) and `<600 hp`. Pick the type that matches the rated power and combustion chamber of the engine on site.
 
 #### [Area sources](#area-sources)
 
@@ -455,7 +455,7 @@ The following optional parameters can be left empty. They will only be used if t
 | `set_time_of_main_engine_off_after_runway_exit_in_s` | Duration in seconds after runway exit during which full-engine taxi applies before engines are cut (arrival). | Active |
 | `engine_thrust_level_for_taxiing` | Taxi thrust level as a fraction (ICAO default: 0.07 = 7%). Only affects the BFFM2 emission index for the moving taxi phase; queuing always uses true idle (7%) regardless of this setting. | Active |
 | `taxi_fuel_ratio` | Ratio between actual fuel flow and idle fuel flow during taxi. Acts as a direct multiplier on taxi segment emissions. Default: 1.0. | Active |
-| `number_of_stop_and_gos` | Number of stop-and-go events during taxiing. Each event is modelled as two phases: 21 s at idle (deceleration + hold, per ECAC Doc 29 Vol. 2 Appendix B) plus 11 s at ~15% thrust (acceleration). | Active |
+| `number_of_stop_and_gos` | Number of stop-and-go events during taxiing. Each event adds `AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S = 9.0` seconds at idle thrust per engine (`MovementEmissionCalculator.py:159, 403`). Added to the queuing segment only (last taxi segment). | Active |
 
 ### [Helicopters (FOCA 2015)](#helicopters-foca-2015)
 
@@ -494,7 +494,7 @@ The 3400 kg threshold is defined in FOCA 2015 section 2.4. The category drives b
 
 To add a helicopter type that is not in the default catalog, insert a row into `default_helicopter` referencing an existing engine in `default_helicopter_engines` (or insert a new engine row first). The minimum fields are `icao`, `variant_label`, `mtow_kg`, `engine_count`, `engine`, `engine_name`, `max_shp_per_engine`, `is_default`. Once the row is in place, any movement whose `aircraft` field matches that ICAO will be routed through the FOCA path automatically.
 
-**What is suppressed for helicopters.** APU emissions and gate emissions are skipped at the dispatch level regardless of the movement table's `apu_code` and `gate_emissions_code` values. The FOCA 2015 LTO cycle covers all of ground idle, takeoff, climb-out, approach, and landing on its own, so APU and GSE / GPU / MES emissions are not double-counted. Taxi emissions are handled by the fixed-wing taxi route logic; helicopters typically taxi minimally (ground idle on the spot or air-taxi).
+**What is suppressed for helicopters.** APU emissions are skipped because the helicopter taxi branch (`_apply_taxiing_emissions_for_helicopters` in `MovementEmissionCalculator.py`) does not call the APU code path — `apu_code` is not consulted on this branch. For gate emissions, `gate_emissions_code` is still respected (the gate function returns early if it is 0); when gate emissions are enabled, GSE and GPU sub-components are explicitly skipped for helicopters but MES (Main Engine Start) is computed normally. The FOCA 2015 LTO cycle covers ground idle, takeoff, climb-out, approach, and landing on its own, avoiding double-counting against the suppressed sub-components. Taxi emissions themselves are handled by the helicopter taxi function; helicopters typically taxi minimally (ground idle on the spot or air-taxi).
 
 **Limitations.** The 3000 ft AGL LTO ceiling is per the ICAO LTO definition; emissions above that altitude are not modelled. Two known FOCA 2015 PDF inconsistencies were resolved during implementation (piston fuel-flow leading coefficient and twin-heavy Appendix C power settings) and are recorded in the docstring of `open_alaqs/core/tools/foca_heli.py`.
 
@@ -510,7 +510,7 @@ The required meteorological parameters are:
 | `DateTime` | YYYY-MM-DD HH:MM:SS | |
 | `Temperature` | K | |
 | `Humidity` | kg water / kg dry air | Used directly if non-zero; takes priority over `RelativeHumidity` |
-| `RelativeHumidity` | % | Used to derive specific humidity if `Humidity` is zero or empty |
+| `RelativeHumidity` | fraction (0–1) | Used to derive specific humidity if `Humidity` is zero or empty |
 | `SeaLevelPressure` | Pa | |
 | `WindSpeed` | m/s | |
 | `WindDirection` | degrees | |
@@ -556,7 +556,7 @@ The emission output CSV contains the following PM-related columns for aircraft m
 |---|---|
 | `pm10_kg` | Total PM10 = combustion PM10 + brake wear (arrivals only) |
 | `pm10_nonvol_kg` | Non-volatile PM (nvPM mass), MEEM V1 ambient-corrected where 5-point EEDB data are available |
-| `pm10_sul_kg` | Sulphate vPM = 36.75 mg/kg × fuel burned (FSC 500 ppm, ε = 0.024, CAEP14 default) |
+| `pm10_sul_kg` | Sulphate vPM = ~48.96 mg/kg × fuel burned (FSC ≈ 667 ppm, ε = 0.024; stored as a constant in the `pm10_sul` column) |
 | `pm10_organic_kg` | Organic vPM = δ_k × HC_EI × fuel burned |
 | `p1_kg` | PM1.0 placeholder; currently equal to `pm10_kg` |
 | `p2_kg` | PM2.5 placeholder; currently equal to `pm10_kg` |
@@ -589,7 +589,7 @@ The dispersion module will only be activated if the `Is Enabled` checkbox is che
 The following parameters need to be defined:
 + **Roughness Length**: Height above ground where wind speed theoretically becomes zero. Depends on terrain type (e.g., forests, urban areas, flat fields).
 + **Displacement Height**: Height at which the wind profile starts to be affected by obstacles on the ground, such as buildings or trees.
-+ **Anemometer Height**: Height at which wind speed measurements are taken. Default: 10 m.
++ **Anemometer Height**: Height at which wind speed measurements are taken. Default: `10 + 6·z0` m, where `z0` is the roughness length (≈ 11.2 m at the typical airport value `z0 = 0.2`).
 + **Quality Level**: Determines the number of simulation particles (range: −4 to +4). Higher values increase accuracy but also computation time.
 + **NOTALUFT** (per-hour series): when enabled, AUSTAL writes per-hour grid output (`<substance>-NNNa.dmna`) and, when receptor points are configured, per-receptor time-series files (`<substance>-tmpa.dmna`). Required for **Plot Time Series** and **Compliance Report**; optional for **Plot Vector Layer** with `annual mean`.
 + **PM10 fine fraction**: how PM10 emissions are split between AUSTAL's `pm-1` and `pm-2` substances (default 0.9, suitable for an airport mix dominated by aircraft non-volatile PM and combustion exhaust).
