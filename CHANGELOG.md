@@ -4,6 +4,45 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
+## [5.2.1] - 2026-06-04
+
+Patch release. Plugin code unchanged from 5.2.0; standalone
+`austal_prep` writer bug-fix plus a Point Sources documentation
+extension. Inventory totals are bit-identical to 5.2.0.
+
+### Fixed
+
+- **`austal_prep` AUSTAL form-line type letters**: `series.dmna` and
+  the per-source `eNNNN.dmna` grid files were emitted with format
+  tokens missing the trailing AUSTAL type letter (e.g. `"ra%5.0"`
+  instead of `"ra%5.0f"`). AUSTAL aborted at parse time with
+  `IBJdmn.DmnAnaForm.11` ("Invalid format string") because the parser
+  hit the next field's label where it expected a type indicator. The
+  standalone writer now matches the plugin's AUSTAL output module
+  (`open_alaqs/core/modules/AUSTALOutputModule.py:2016` and grid-file
+  form line). Affected tokens: `ra`, `ua`, `lm`, `hm`, `iq`, `Eq`.
+  Surfaced by a real-airport run on EHRD road traffic; not caught
+  earlier because the 5.2.0 validation campaign compared file content
+  against the plugin's output rather than running AUSTAL end-to-end
+  on the standalone output.
+
+### Tests
+
+- New `tests/test_austal_form_line.py` (3 tests): generic guard that
+  every quoted token in the `form` line ends with a valid AUSTAL type
+  letter (one of `t`, `f`, `d`, `e`), plus exact-token pins on
+  `te%20lt`, `ra%5.0f`, `ua%5.1f`, `lm%7.1f`, `hm%7.1f`, `01.iq%3.0f`
+  for `series.dmna` and `Eq%5.1f` for the grid files. Each test
+  individually catches one of the four reverted bug sites.
+
+### Documentation
+
+- `documents/USER_GUIDE.md` Point Sources section: added four worked
+  examples covering each activity unit (`1000_m3`, `hr`, `1000_kg`,
+  `1000_L`) clarifying how to enter `Activity per year` for natural
+  gas heating plants, stationary IC engines, incinerators, and fuel
+  storage tanks.
+
 ## [5.2.0] - 2026-06-02
 
 Major release with two new top-level packages, helicopter dispatch (FOCA
