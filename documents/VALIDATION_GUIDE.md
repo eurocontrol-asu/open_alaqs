@@ -489,20 +489,23 @@ without the other breaks the plugin.
 ### 3. `default_aircraft.csv` containing duplicate helicopter rows
 
 **Symptom**: the plugin's helicopter feature emits zero (or duplicate)
-emissions; `default_aircraft.csv` has 1981 rows where it should have 1920.
+emissions; `default_aircraft.csv` has more rows than the expected 1919
+(post-refactor count: the 60 helicopters were extracted to their own
+table).
 
-**Root cause**: in the validated tree, 61 helicopter rows were moved out
-of `default_aircraft.csv` and into `default_helicopter.csv` as part of
-the FOCA 2015 helicopter dispatch refactor. A rebuild that uses the
-upstream `default_aircraft.csv` as its source (instead of the validated
-tree's version) reintroduces the helicopter rows, leaving duplicates
-across the two tables.
+**Root cause**: 60 helicopter rows were moved out of
+`default_aircraft.csv` and into `default_helicopter.csv` as part of
+the FOCA 2015 helicopter dispatch refactor introduced in the 5.2.0
+release. A rebuild that uses an upstream `default_aircraft.csv` from
+before that refactor (instead of the current canonical version)
+reintroduces the helicopter rows, leaving duplicates across the two
+tables.
 
-**Fix**: ship `default_aircraft.csv` from the validated tree verbatim
-(md5 in this release: `0f6d84ffb5ae1ea824d112740d635905`, post APU
-Tier 2 backfill per `documents/APU_TIER2_RESULTS.md`; the pre-backfill
-md5 `1bee84f33eb1b8b8482894aa2eaf9d05` is the validated-tree baseline
-this release was built on). Don't overlay an upstream version.
+**Fix**: ship `default_aircraft.csv` from the canonical tree verbatim.
+The 5.2.0 release applied Tier 1 (per-ac_group rule) and Tier 2
+(per-ICAO research) APU backfills — see the `[5.2.0]` section of
+`CHANGELOG.md` for the list of ICAOs whose `apu_id` was populated.
+Don't overlay an upstream version that pre-dates the backfill.
 
 **Lesson**: overlays must take their baseline from the tree they are
 overlaid on top of, not from a different tree.
@@ -521,9 +524,9 @@ rows; no error is raised; emissions silently drop to zero.
  Citation light jets, most King Air turboprops, PC-24, ATR family).
  (b) "we don't know the APU model" - INCORRECT as zero.
 
-The fix is per-ICAO research distilled into the SQL backfill scripts
-in `documents/apu_tier1_backfill.sql` and
-`documents/apu_tier2_backfill.sql`. A group-default backfill
+The fix is per-ICAO research, applied to `default_aircraft.csv` in
+the 5.2.0 release. See `CHANGELOG.md` [5.2.0] for the list of ICAOs
+that received populated `apu_id` values. A group-default backfill
 (assigning a "most-common APU per `ac_group`") is WITHDRAWN as it
 conflates the two meanings.
 
@@ -571,41 +574,13 @@ build doesn't include them, sub-class symptoms will show up:
 | Fix | File | Symptom if reverted |
 | -------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------- |
 | COPERT 5 parking distance `m → km` | `core/tools/copert5.py` | All parking COPERT 5 emissions ~1000x too high |
-| ADS-B `z_m <= 0` for mode classification | `core/tools/ads_b.py` | Sub-MSL airports (e.g. EHRD at -4.57 m) misclassify TO as CL |
+| ADS-B `z_m <= 0` for mode classification | `core/tools/ads_b.py` | Sub-MSL airports (e.g. EHRD at -15 m per `default_airports.csv`) misclassify TO as CL |
 | BFFM2 1.05 power-setting tolerance clamp | `core/tools/twin_quadratic_fit_method.py` | Small floating-point overshoots abort the whole movement |
 | BFFM2 `ValueError` fallback to mode-anchor EI| `core/MovementEmissionCalculator.py` | BFFM2 failures abort the study instead of degrading |
 | Geodetic length for `MultiLineString` | `core/tools/spatial.py` | Mass silently dropped for clipped polylines re-entering the same cell |
 | Empty `tbl_InvMeteo` warning | `core/EmissionCalculation.py` | BFFM2 silently uses ISA when meteo table is empty |
 
-### 7. Plugin baseline policy
-
-The plugin in this release is built on top of the validated plugin tree,
-not the upstream `eurocontrol-asu/open_alaqs` `main` branch. Switching
-the plugin baseline silently changes which fixes are present.
-
-The validation step for any new build is a `diff -r` of the new plugin's
-`open_alaqs/` against the validated tree:
-
-```bash
-diff -r new_build/open_alaqs validated_tree/open_alaqs --brief \
- --exclude="__pycache__" --exclude="*.log" --exclude="*.pyc"
-```
-
-Every difference must be one of:
-- A documented v2 release addition (PointSources.py, SourceModule.py,
- ui_point_sources.{ui,py}, default_stationary_ef.csv + .csv,
- default_stationary_category.csv, project.alaqs / inventory.alaqs
- templates, metadata.txt).
-- The APU backfill (default_aircraft.csv with 162 populated apu_id).
-- The internal-debug strip (core/diag.py removed + its 2 import hooks
- removed from EmissionsQGISVectorLayerOutputModule.py and OutputModule.py).
-- Anonymisation of internal-validation references in comments
- (AUSTALOutputModule.py and spatial.py; text-only, zero behavioural
- change).
-
-Any difference outside this list is a potential regression.
-
-### 8. recipe_config.json parameter coverage
+### 7. recipe_config.json parameter coverage
 
 The Dataiku recipe parses `recipe_config.json` via `_resolve_config(...)`.
 A parameter that exists in the CLI but is not in `_resolve_config` will be

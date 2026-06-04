@@ -12,7 +12,7 @@ AUSTAL can be downloaded from the official webpage of the German Environment Age
 
 Download the base package appropriate for your operating system:
 - **Windows**: `AUSTAL_3.3.0_Windows.zip`
-- **Linux**: `AUSTAL_3.3.0_Linux.tar.gz`
+- **Linux**: `AUSTAL_3.3.0_Linux.zip`
 
 Current version: AUSTAL 3.3.0 (released 22.03.2024)
 
@@ -30,7 +30,7 @@ After extracting AUSTAL, you must replace the default `austal.settings` file wit
 - Replace it with the `austal.settings` file provided with OpenALAQS
 - This ensures proper integration and configuration for OpenALAQS simulations
 
-The English language files (`AST_en` and `DIA_en`) are already included in the AUSTAL distribution. If they are not provided, use the ones from this folder.
+The English language files (`AST_en@latin1.nls` and `DIA_en@latin1.nls`, Latin-1 / ISO-8859-1 encoding) ship in the separate AUSTAL "Sprachpakete DE/EN, UTF-8/ISO-8859-1" language pack download from the same UBA page. If they are not already in your AUSTAL installation, use the copies bundled in this folder (`documents/AUSTAL/`).
 
 ## Configuration Files
 
@@ -50,7 +50,9 @@ When setting up AUSTAL for use with OpenALAQS, ensure the following files are in
 
 | File | Purpose | Status |
 |------|---------|--------|
-| `austal.settings` | Main AUSTAL configuration | Create/Modify |
+| `austal.settings` | Main AUSTAL configuration | Replace with the copy from `documents/AUSTAL/` |
+| `AST_en@latin1.nls` | English assistant-message catalogue | Copy from `documents/AUSTAL/` if missing |
+| `DIA_en@latin1.nls` | English diagnostic-message catalogue | Copy from `documents/AUSTAL/` if missing |
 
 
 ## Additional Resources
