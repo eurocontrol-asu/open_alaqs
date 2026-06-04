@@ -66,42 +66,32 @@ The BFFM2 calculation for a single profile segment proceeds in six steps. Steps 
 
 The power setting `P` (a dimensionless fraction from 0 to 1, where 1 = maximum takeoff thrust) is converted to a reference fuel flow `Wf_ref` at ICAO SLS conditions (T = 288.15 K, p = 101 325 Pa, M = 0) using one of the two interpolation methods described in [Fuel flow interpolation methods](#fuel-flow-interpolation-methods).
 
-Both methods are bounded from below by the idle (TX) fuel flow:
+The twin-quadratic method applies an idle floor clamp only at very low power settings:
 
 ```
-Wf_ref = max(interpolated_value, Wf_TX)
+if P < 0.07:
+    Wf_ref = max(parabola_value, Wf_TX)
 ```
 
-This prevents physically impossible sub-idle values from the quadratic fit at very low power settings.
+For P ≥ 0.07 the twin-quadratic value is used directly; the parabola passes through `(0.07, Wf_TX)` by construction, so the unclamped value rarely goes sub-idle in practice. The anchor method has no idle clamp.
 
 ---
 
-##### Step 2 — Convert to ambient fuel flow
+##### Step 2 — Convert to BFFM2 reference fuel flow
 
-The reference fuel flow is corrected for actual ambient conditions using the ICAO correction factors θ (temperature ratio) and δ (pressure ratio):
+The per-engine ambient fuel flow `Wf_amb` (from Step 1, or supplied directly via ADS-B's `fuel_flow_kgm` column) is projected to BFFM2 reference fuel flow using the CAEP14 universal correction:
 
 ```
 θ = T_amb / 288.15
 δ = p_amb / 101 325
+M = TAS / SOS
 
-Wf_amb = Wf_ref × δ / √θ
-```
-
-`Wf_amb` is the per-engine ambient fuel flow in kg/s. This is the value used both for the log–log interpolation in Step 3 and for computing fuel burned in Step 6.
-
-The Mach number correction to the reference fuel flow is applied *inside* the BFFM2 interpolation (Step 3) rather than here, consistent with SAE AIR-5715:
-
-```
 Wf_ref_BFFM2 = (Wf_amb / δ) × θ^3.8 × exp(0.2 × M²)
 ```
 
-where M is the True Mach number at the start of the segment:
+where `SOS = 331.3 + 0.606 × (T_amb − 273.15) m/s` is the speed of sound at ambient temperature, and M is the true Mach number at the start of the segment.
 
-```
-M = (TAS / SOS) × √(288.15 / T_amb)
-```
-
-and SOS = 331.3 + 0.606 × (T_amb − 273.15) m/s.
+`Wf_ref_BFFM2` is the value used for the log–log interpolation in Step 3. CAEP14 prescribes this universal form for all flight phases; the older ICAO Doc 9889 Appendix 2 decomposition (separate `δ/√θ` ambient correction at LTO only, followed by a Mach correction at high altitude) is not used. See the inline comment at `bffm2.py:79-81` for the rationale.
 
 ---
 
@@ -116,7 +106,7 @@ log10(EI) = log10(EI_i) + [log10(EI_{i+1}) - log10(EI_i)] ×
              [log10(Wf) - log10(Wf_i)] / [log10(Wf_{i+1}) - log10(Wf_i)]
 ```
 
-**CO special handling.** The CO log–log curve is non-monotonic: CO EI is high at idle, drops steeply to a minimum (the "Lean Azeotropic Value", LAV) near the Approach–Climbout boundary, and then remains approximately flat through Climbout and Takeoff. OpenALAQS detects whether the CO curve has this standard shape and, if so, applies a horizontal segment at the LAV once the fuel flow exceeds the AP–CL intersection point. For engines where this standard shape is not detected, a simple linear interpolation is used throughout.
+**CO / HC special handling.** The CO and HC log–log curves are non-monotonic: EI is high at idle, drops steeply through Approach, and remains approximately flat through Climbout and Takeoff. OpenALAQS applies the CAEP14 v14 "HC_CO Slope To Mean Value" rule: for any fuel flow above the Approach anchor, the EI is snapped to `lin_av`, the linear average of the Climbout and Takeoff anchor EIs. This produces a step discontinuity at the Approach boundary. For engines where the standard shape is not detected (non-monotonic decrease from idle to approach), a simple linear interpolation is used throughout.
 
 **Extrapolation capping.** If `Wf_ref_BFFM2` falls below the idle breakpoint, the idle EI is used. If it exceeds the takeoff breakpoint, the takeoff EI is used. No extrapolation beyond the EEDB range is performed.
 
@@ -130,10 +120,10 @@ The raw interpolated EI is corrected for ambient conditions:
 
 ```
 h = −19 × (ω − 0.00634)           # humidity coefficient; ω in kg H₂O / kg dry air
-EI_NOx_corr = EI_NOx × exp(h) × (δ^x / θ^3.3)^0.5
+EI_NOx_corr = EI_NOx × exp(h) × (δ^1.02 / θ^3.3)^0.5
 ```
 
-where `x = 1.0` (default P₃T₃ exponent) and `ω` is the specific humidity, computed from relative humidity `RH`, ambient temperature and pressure if not provided directly:
+where `ω` is the specific humidity, computed from relative humidity `RH`, ambient temperature and pressure if not provided directly:
 
 ```
 p_sat = 6.107 × 10^(7.5 × T_C / (237.3 + T_C))   [mbar; T_C in °C]
@@ -145,8 +135,8 @@ At the ICAO reference humidity (ω = 0.00634 kg/kg), `exp(h) = 1` and the humidi
 **CO and HC** (temperature and pressure correction only):
 
 ```
-EI_CO_corr  = EI_CO  × (θ^3.3 / δ^1.0)
-EI_HC_corr  = EI_HC  × (θ^3.3 / δ^1.0)
+EI_CO_corr  = EI_CO  × (θ^3.3 / δ^1.02)
+EI_HC_corr  = EI_HC  × (θ^3.3 / δ^1.02)
 ```
 
 ---
@@ -157,7 +147,7 @@ BFFM2 does not interpolate PM or SOx on a gas-phase log-log curve. Instead, afte
 
 - **`pm10_g_kg`** = `pm10_ei` (total combustion PM10: nonvol + sulphate + organic)
 - **`pm10_nonvol_g_kg`** = `pm10_nonvol`, subject to MEEM V1 ambient correction (see [MEEM V1](#meem-v1--nvpm-ambient-correction))
-- **`pm10_sul_g_kg`** = `pm10_sul` (36.75 mg/kg constant)
+- **`pm10_sul_g_kg`** = `pm10_sul` (~0.04896 g/kg stored value; back-calculates to FSC ≈ 667 ppm with ε = 0.024)
 - **`pm10_organic_g_kg`** = `pm10_organic`
 - **`nvpm_number_kg`** = `nvpm_number_ei`, subject to MEEM V1 number correction
 - **`sox_g_kg`** = `sox_ei` (1.0 g/kg for jet fuel)
@@ -214,7 +204,7 @@ The four EEDB breakpoints are connected by three straight line segments in P–W
 
 This is the interpolation assumed in the ICAO CAEP14 BFFM2 reference calculator and produces results that are generally within 1–2% of the twin-quadratic values for standard EHRD movements.
 
-> **Note.** For power settings below 7% (P < 0.07), both methods return the TX idle fuel flow (idle floor clamp). For P > 1.0, the TO fuel flow is returned.
+> **Note.** For P < 0.07 the twin-quadratic method applies `max(parabola_value, Wf_TX)`. For 1.0 < P ≤ 1.05 the power setting is clamped to 1.0 (with a logged warning) and the high-range parabola is evaluated, effectively returning the TO fuel flow. For P > 1.05 a `ValueError` is raised — the method does **not** silently return TO.
 
 ---
 
@@ -222,7 +212,7 @@ This is the interpolation assumed in the ICAO CAEP14 BFFM2 reference calculator 
 
 Engine installation in the airframe causes small losses in net thrust and slight changes in fuel flow relative to the bare-engine values measured on the EEDB test stand. BFFM2 accounts for this by multiplying the EEDB reference fuel flow breakpoints by mode-specific installation correction factors *before* the log–log interpolation. This shifts the interpolation x-axis breakpoints without changing the EI y-axis values.
 
-OpenALAQS applies the following default correction factors from SAE AIR-5715:
+OpenALAQS applies the following default correction factors (CAEP14 default; originally from SAE AIR-5715):
 
 | LTO mode | Installation correction factor |
 |----------|-------------------------------|
@@ -304,7 +294,7 @@ For the EHRD test case:
 
 **CO: BFFM2 is higher for arrivals, similar for departures**
 
-The EEDB CO curve is U-shaped: high at idle (~20–24 g/kg), dropping to a minimum (LAV ~0.2–0.6 g/kg) near Climbout/Takeoff power. Near-idle approach segments get CO EI ≈ idle level in BFFM2, whereas bymode uses the lower AP value (~2–4 g/kg). For departures, both methods give similar CO because most departure segments are at or near TO/CL power where CO EI is at the LAV floor. HC follows the same qualitative pattern.
+The EEDB CO curve is U-shaped: high at idle (~20–24 g/kg), dropping to a minimum (`lin_av` ~0.2–0.6 g/kg) near Climbout/Takeoff power. Near-idle approach segments get CO EI ≈ idle level in BFFM2, whereas bymode uses the lower AP value (~2–4 g/kg). For departures, both methods give similar CO because most departure segments are at or near TO/CL power where CO EI is at the `lin_av` floor. HC follows the same qualitative pattern.
 
 | Movement type | Typical CO: BFFM2 vs Bymode |
 |---------------|------------------------------|
@@ -346,7 +336,7 @@ The BFFM2 implementation is spread across the following files:
 
 | File | Role |
 |------|------|
-| `core/tools/bffm2.py` | Core formula: ambient corrections, log–log interpolation, CO LAV logic, installation corrections |
+| `core/tools/bffm2.py` | Core formula: ambient corrections, log–log interpolation, CO/HC slope-to-mean-value logic, installation corrections |
 | `core/tools/twin_quadratic_fit_method.py` | Power setting → reference fuel flow via twin-quadratic polynomial (Step 1, ALAQS default) |
 | `core/tools/meem_v1.py` | MEEM V1 nvPM ambient correction: ISA/ambient P3 computation, F_GR conversion, 5-point interpolation |
 | `core/interfaces/Engine.py` (`EngineEmissionIndex` class) | Orchestrates Steps 1–5: twin-quad call, ambient correction, cache, call to `bffm2.py`; `getEmissionIndexByModeWithMEEM()` applies MEEM V1 |
@@ -380,7 +370,7 @@ MovementSourceModule.calculate_emissions()
             ▼
             for each (start_point_, end_point_) in trajectory.getPointPairs():
                 │
-                ├── Mach = TAS / SOS × √(288.15 / T_amb)
+                ├── Mach = TAS / SOS
                 ├── method['config'].update({'mach_number': Mach})
                 │
                 ├── engine_thrust = start_point_.getEngineThrust()
@@ -427,7 +417,7 @@ MovementSourceModule.calculate_emissions()
 | `default_aircraft_engine_ei` | `fuel_kg_sec` | EEDB reference fuel flow (kg/s per engine, SLS) |
 | `default_aircraft_engine_ei` | `nox_ei`, `co_ei`, `hc_ei` | EEDB emission indices (g/kg) |
 | `default_aircraft_engine_ei` | `pm10_nonvol` | nvPM mass EI (g/kg) |
-| `default_aircraft_engine_ei` | `pm10_sul` | Sulphate vPM EI (g/kg); 36.75 mg/kg constant |
+| `default_aircraft_engine_ei` | `pm10_sul` | Sulphate vPM EI (g/kg); ~0.04896 g/kg stored constant (FSC ≈ 667 ppm, ε = 0.024) |
 | `default_aircraft_engine_ei` | `pm10_organic` | Organic vPM EI (g/kg) |
 | `default_aircraft_engine_ei` | `pm10_ei` | Total PM10 EI = nonvol + sul + organic (g/kg) |
 | `default_aircraft_engine_ei` | `p1_ei`, `p2_ei` | PM1.0 / PM2.5 placeholders; currently = `pm10_ei` |

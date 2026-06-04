@@ -45,12 +45,12 @@ This guide walks through a complete OpenALAQS study using **Rotterdam The Hague 
 
 | File | Description |
 |---|---|
-| `training_movements.csv` | Aircraft movements table (12 movements across 3 days) |
-| `training_meteo.csv` | Hourly meteorological data (3 days × 25 hourly records) |
+| `training_movements.csv` | Aircraft movements table (13 movements across 3 days) |
+| `training_meteo.csv` | Hourly meteorological data (75 hourly records, covering 2025-12-01 00:00 through 2025-12-04 00:00) |
 | `training.alaqs` | Pre-built study database (starting point) |
 | `training_out.alaqs` | Completed output file (reference result) |
 
-The study covers three days of operations at EHRD: 12 aircraft movements across three gates and two runway directions, combined with representative stationary sources (parking lot, roadway, power plant, terminal building). All movements use standard ANP profiles from the internal database.
+The study covers three days of operations at EHRD: 13 aircraft movements across three gates and two runway directions, combined with representative stationary sources (parking lot, roadway, power plant, terminal building). Twelve movements use standard ANP profiles from the internal database; one movement uses a CUSTOM ADS-B-derived profile (`1677686160_DIETB`) to illustrate the trajectory override mechanism.
 
 ---
 
@@ -73,7 +73,7 @@ The **ALAQS Project Properties** window opens automatically. Fill in the followi
 | Country | NL |
 | Latitude | 51.96 |
 | Longitude | 4.44 |
-| Elevation (m) | 0 |
+| Elevation (m) | -15 |
 
 Once you enter the ICAO code `EHRD`, the remaining airport fields are populated automatically from the internal database. You can adjust them if needed.
 
@@ -179,7 +179,7 @@ Draw each taxiway segment as a linestring along the taxiway centreline. Use snap
 
 ##### Tracks
 
-For all six EHRD movements, standard ANP profiles from `default_aircraft_profiles` are used — no custom tracks are required. The profile IDs are referenced directly in the movements table via `profile_id`. The Tracks layer in OpenALAQS is only needed when using custom ADS-B-derived trajectories with `course = CUSTOM`; it is not used in this study.
+Twelve of the thirteen EHRD movements use standard ANP profiles from `default_aircraft_profiles`. One movement (row 11, A20N departure on day 3) uses the CUSTOM ADS-B-derived profile `1677686160_DIETB` to illustrate the trajectory override mechanism. Profile IDs are referenced directly in the movements table via `profile_id`; the Tracks layer is not used in this study since CUSTOM profiles are read from `default_aircraft_profiles`, not from the Tracks layer.
 
 ---
 
@@ -334,7 +334,7 @@ Taxi routes define the sequence of taxiway segments an aircraft follows between 
 
 For each route, select the **Gate**, **Runway direction**, and **Operation type** (Arrival or Departure), then choose the ordered sequence of taxiway segment names. Finally, select the **aircraft groups** that use this route (for EHRD all groups share the same routes).
 
-Create the following three taxi routes for this study:
+Create six taxi routes for this study — one arrival and one departure variant for each of the three gates G2, G4, G7. Three are detailed below as representative examples; create the other three (G2 arrival, G4 departure, G7 departure) by analogous taxiway-segment selection. The `training_movements.csv` file references all six route names.
 
 **Route G4/24/A/1** — Arrivals from runway 24 to gate G4
 
@@ -369,7 +369,7 @@ Create the following three taxi routes for this study:
 | Taxiway sequence | K → R → T → F → D → U → P |
 | Aircraft groups | All |
 
-> **Note:** Departure movements to runway 06 at EHRD follow the same physical route as departures to runway 24 on the ground (EHRD has a single runway). The runway direction `06` or `24` only affects the LTO flight profile — the taxiway route is the same. Reference `G2/24/D/1` in the movements table for all departures regardless of runway direction.
+> **Note:** EHRD has a single physical runway with directions 06 and 24. Departures to runway 06 follow the same ground path as departures to runway 24; the runway designator affects only the LTO flight profile, not the taxiway route. Each gate still gets its own arrival and departure routes because aircraft enter and exit the gate area along different segments.
 
 #### Create output file
 
@@ -414,61 +414,60 @@ Click **Generate** to create `training_out.alaqs`. This file copies all source d
 
 #### Movements table
 
-The file `training_movements.csv` (semicolon-delimited) defines the 12 aircraft movements in this study. Movements span 2025-12-01 to 2025-12-03.
+The file `training_movements.csv` (semicolon-delimited) defines the 13 aircraft movements in this study, spanning 2025-12-01 06:05 through 2025-12-03 08:05. The table below shows five representative rows; consult the file directly for the complete set.
 
-| OID | Aircraft | Engine | D/A | Gate | Runway | Runway time | Block time | Profile | Taxi route |
-|---|---|---|---|---|---|---|---|---|---|
-| 1 | A20N | LEAP-1A26 | A | G4 | 24 | 06:05 | 06:10 | JET-SMALL-A-1 | G4/24/A/1 |
-| 2 | A20N | LEAP-1A26 | A | G7 | 24 | 06:15 | 06:20 | JET-SMALL-A-1 | G7/24/A/1 |
-| 3 | A21N | PW1133G | D | G2 | 06 | 06:40 | 06:35 | JET-SMALL-D-2 | G2/24/D/1 |
-| 11 | A21N | PW1133G | D | G2 | 06 | 06:41 | 06:36 | JET-SMALL-D-6 | G2/24/D/1 |
-| 12 | E75L | CF34-8E5 | D | G2 | 06 | 06:45 | 06:40 | JET-MEDIUM-D-2 | G2/24/D/1 |
-| 14 | E75L | CF34-8E5 | D | G2 | 06 | 06:50 | 06:45 | JET-MEDIUM-D-2 | G2/24/D/1 |
+| # | runway_time | aircraft | gate | op | runway | engine | profile_id | taxi route |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 2025-12-01 06:05 | A20N | G4 | A | 24 | 01P20CM128 (LEAP-1A26) | JET-SMALL-A-1 | G4/24/A/1 |
+| 2 | 2025-12-01 06:15 | A20N | G4 | D | 24 | 01P20CM128 (LEAP-1A26) | JET-SMALL-D-1 | G4/24/D/1 |
+| 3 | 2025-12-01 06:40 | E190 | G7 | A | 24 | 11GE144 (CF34-10E) | JET-REGIONAL-A-1 | G7/24/A/1 |
+| 8 | 2025-12-02 07:30 | E190 | G4 | D | 06 | 11GE144 (CF34-10E) | JET-REGIONAL-D-1 | G4/24/D/1 |
+| 11 | 2025-12-03 07:00 | A20N | G2 | D | 24 | 01P20CM128 (LEAP-1A26) | **1677686160_DIETB** (CUSTOM) | G2/24/D/1 |
 
 Key observations:
 
-- **OIDs 1–2** are A320neo (A20N) arrivals via runway 24 with a 5-minute taxi-in time each.
-- **OIDs 3 and 11** are A321neo (A21N / PW1133G) departures using two different ANP departure profiles: JET-SMALL-D-2 and JET-SMALL-D-6. These profiles have different runway distance schedules (D-2 is a shorter-field profile, D-6 represents a longer takeoff roll), resulting in measurable differences in NOx and CO when calculated with BFFM2.
-- **OIDs 12 and 14** are E175 (E75L / CF34-8E5) departures, both using JET-MEDIUM-D-2.
-- **All departures** have taxi time = 5 minutes (block_time to runway_time difference).
-- `apu_code = 0` for all movements — APU emissions are excluded from this study.
+- **Aircraft mix.** Two ICAO types: A20N (Airbus A320neo, JET SMALL, 8 movements) and E190 (Embraer ERJ-190, JET REGIONAL, 5 movements). Each is paired with its default engine: `01P20CM128` (CFM LEAP-1A26) and `11GE144` (CF34-10E) respectively.
+- **Profile mix.** Twelve movements use standard ANP profiles (`JET-SMALL-A-1`, `JET-SMALL-D-1`, `JET-REGIONAL-A-1`, `JET-REGIONAL-D-1`). Row 11 uses the CUSTOM ADS-B profile `1677686160_DIETB` — same A20N aircraft, but the trajectory is overridden by the CUSTOM points from `default_aircraft_profiles`.
+- **Operation split.** 7 arrivals, 6 departures, distributed across the three days. Each day's activity is clustered in the early-morning hours.
+- **Runway direction.** Most movements use runway 24; three rows (6, 8, 13) use runway 06.
+- **APU and gate emissions suppressed.** All 13 rows have `apu_code = 0` and `gate_emissions_code = 0`, so APU and gate (GSE/GPU/MES) emissions are excluded in this study. This isolates the aircraft trajectory contribution for comparison against the bymode/BFFM2 methodology output.
 
-**Exercise — ANP profile variant comparison:** Compare NOx emissions for OID 3 (JET-SMALL-D-2) against OID 11 (JET-SMALL-D-6) for the same A21N/PW1133G aircraft and engine. With the BFFM2 method, the two profiles will show different NOx and CO totals because they have different power schedule distributions across the LTO altitude range. JET-SMALL-D-6 has a longer climbout section at elevated thrust, typically resulting in higher BFFM2 NOx compared to D-2.
+The movements table supports many optional fields. For this study all optional fields (other than `apu_code` and `gate_emissions_code`, which are explicitly 0) are left empty, which causes the calculator to apply defaults:
 
-The movements table supports many optional fields. For this study all optional fields are left empty, which causes the calculator to apply defaults:
-
-| Optional field | Default applied |
+| Optional field | Default applied when empty |
 |---|---|
 | `engine_name` | Most representative engine for the aircraft type |
 | `engine_thrust_level_for_taxiing` | 0.07 (7% thrust, ICAO idle) |
 | `taxi_engine_count` | All engines operating |
-| `apu_code` | 0 (no APU) |
-| `gate_emissions_code` | 1 (GSE, GPU and MES included) |
+| `tow_ratio` | 1.0 |
+| `number_of_stop_and_gos` | 0 |
+
+Note that the *system* default for `gate_emissions_code` when the field is empty is **1** (gate emissions enabled), but this study explicitly overrides it to **0** for every row.
 
 #### Meteorology
 
-The file `training_meteo.csv` provides 75 hourly records (3 days × 25 records each) covering 2025-12-01 through 2025-12-03. The format uses semicolons as delimiters and the following columns:
+The file `training_meteo.csv` provides 75 hourly records covering 2025-12-01 00:00 through 2025-12-04 00:00. The format is comma-delimited with the following columns:
 
 ```
-Scenario ; DateTime(YYYY-mm-dd hh:mm:ss) ; Temperature(K) ; Humidity(kg_water/kg_dry_air) ;
-RelativeHumidity(%) ; SeaLevelPressure(mb) ; WindSpeed(m/s) ; WindDirection(degrees) ;
-ObukhovLength(m) ; MixingHeight(m)
+Scenario, DateTime(YYYY-mm-dd hh:mm:ss), Temperature(K), Humidity(kg_water/kg_dry_air),
+RelativeHumidity(0-1), SeaLevelPressure(Pa), WindSpeed(m/s), WindDirection(degrees),
+ObukhovLength(m), MixingHeight(m)
 ```
 
-Representative values for the 06:00 hour used in this study:
+Representative values for the 06:00 hour on 2025-12-01:
 
 | Parameter | Value |
 |---|---|
 | Temperature | 280.5 K (7.35 °C) |
-| Specific humidity | 0.00634 kg/kg |
-| Relative humidity | 0.68 (68%) |
+| Specific humidity | 0.00446 kg/kg |
+| Relative humidity | 0.68 |
 | Pressure | 97 600 Pa |
 | Wind speed | 5 m/s |
 | Wind direction | 225° (SW) |
 | Obukhov length | 99 999 m (neutral stability) |
 | Mixing height | 914.4 m |
 
-The `Humidity` column (specific humidity) takes priority over `RelativeHumidity` when both are provided. For the BFFM2 ambient corrections, the specific humidity of 0.00634 kg/kg equals the ISA reference day humidity, so the NOx humidity correction factor is 1.0 for this dataset.
+The `Humidity` column (specific humidity) takes priority over `RelativeHumidity` when both are provided. The specific humidity of 0.00446 kg/kg is **below** the ISA reference day humidity (0.00634 kg/kg), so the BFFM2 NOx humidity correction factor is **less than 1.0** for this dataset — drier air shifts NOx emission indices downward.
 
 If the meteorology file is omitted, OpenALAQS falls back to ISA default conditions (T = 288.15 K, P = 101 325 Pa, H = 0.00634 kg/kg).
 
@@ -502,7 +501,7 @@ Click **Visualize Emission Calculation** in the toolbar and browse to `training_
    - BFFM2 gives 20–50% lower NOx for arrivals (actual approach power is far below the 30% AP mode assumption).
    - BFFM2 gives 15–30% higher CO for arrivals (near-idle approach power has high CO EI).
 
-3. **ANP profile variant comparison** — select *MovementSource*, filter to OID 3 vs OID 11 (both A321neo/PW1133G departures with different ANP profiles). With BFFM2 enabled, OID 11 (JET-SMALL-D-6) will show different NOx and CO compared to OID 3 (JET-SMALL-D-2) because the two profiles have different thrust schedules and altitude distributions. This illustrates the sensitivity of BFFM2 results to the choice of departure profile.
+3. **Per-aircraft method drift** — extend exercise 2 by splitting the per-movement CSV by aircraft type. Compare the BFFM2-minus-ByMode NOx delta for the eight A20N movements versus the five E190 movements. Because the two aircraft have different engine power schedules and different default ANP profiles, the BFFM2 correction shifts them differently. Expect larger relative drift on the regional jet (E190) approach segments, where actual approach thrust is further below the 30% AP-mode default than on the narrowbody. This illustrates that BFFM2 vs ByMode differences are aircraft-type dependent, not just mode dependent.
 
 4. **PM10 sub-components** — select *MovementSource*, examine the `pm10_nonvol_kg`, `pm10_sul_kg`, and `pm10_organic_kg` output columns alongside `pm10_kg`. For departures, `pm10_kg = pm10_nonvol_kg + pm10_sul_kg + pm10_organic_kg` exactly. For arrivals, `pm10_kg` also includes the FOA3 brake-wear contribution (`MTOW × 0.000476 − 8.74` grams per movement), visible as a surplus in `pm10_kg` relative to the sub-component sum. Verify that `p1_kg = p2_kg = pm10_kg` for all movements.
 
@@ -576,9 +575,9 @@ AUSTAL writes concentration output files in `.dmna` format, one file per polluta
 | `co-y00a.dmna` | CO period mean concentration |
 | `nox-y00s.dmna` | Statistical uncertainty for NOx |
 
-The values represent the **mean concentration over the simulated period** (2025-12-01 06:00–07:00), not an annual mean. Each file is a plain-text matrix of concentration values on the model grid. The grid is north-oriented; the first value in the matrix corresponds to the south-west corner of the domain.
+The values represent the **mean concentration over the simulated period** (2025-12-01 06:00 through 2025-12-03 08:00, ≈50 hours), not an annual mean. Each file is a plain-text matrix of concentration values on the model grid. The grid is north-oriented; the first value in the matrix corresponds to the south-west corner of the domain.
 
-Key interpretation note: this study simulates only 2 hours of a single day. Concentrations from this run are illustrative only and cannot be compared directly to air quality limit values, which require full annual averaging.
+Key interpretation note: this study spans a 50-hour window across three days, but actual aircraft activity is clustered in early-morning hours (~06:00–08:00 daily, ~6 hours of operations total). Concentrations from this run are illustrative only and cannot be compared directly to air quality limit values, which require full annual averaging.
 
 #### Visualize results
 
@@ -596,4 +595,4 @@ To inspect specific grid cells, use the **Results Table** option to export conce
 ---
 
 *Test case prepared using EHRD operational data for the OpenALAQS Training Course, March 2026.*
-*Airport: Rotterdam The Hague (EHRD) | Movements period: 2025-12-01 06:00–07:00 | Six movements, four source types.*
+*Airport: Rotterdam The Hague (EHRD) | Movements period: 2025-12-01 06:05 to 2025-12-03 08:05 | Thirteen movements, four source types.*
