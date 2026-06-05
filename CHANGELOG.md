@@ -6,6 +6,19 @@ ISO 8601.
 
 ## [Unreleased]
 
+## [5.2.3] - 2026-06-05
+
+Patch release. COPERT 5 / road-traffic review against EMEP/EEA
+Guidebook 2023 Update 2025. Two methodology bug fixes (HDV diesel
+cold-mileage formula; parking-source evaporation excluding Running
+losses), one data integrity fix (PM10 ≥ PM2.5 enforced in 639 row
+pairs / 2505 cells in `default_vehicle_ef_copert5.csv`), explanatory
+comments, new dataset provenance documentation, and a "Known
+limitations and future work" subsection in `AUXILIARY_MATERIAL.md`.
+Inventory impact: zero on training_v3; 1–17% drop in parking VOC for
+studies with non-zero `idle_time` (depends on Euro composition). Two
+previously-failing `test_database` parity tests now pass.
+
 COPERT 5 / road-traffic review. All Guidebook-derived design decisions
 and fixes are cited inline with the uniform format
 `EMEP/EEA Guidebook 2023 Update 2025, chapter <NFR-code>, §<section> (p.<page>)`,
