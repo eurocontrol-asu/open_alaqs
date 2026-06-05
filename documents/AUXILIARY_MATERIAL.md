@@ -260,7 +260,7 @@ When the user saves a roadway or parking feature in the study, OpenALAQS calls [
    ```
    β = 0.6474 − 0.02545 × L − (0.00974 − 0.000385 × L) × T
    ```
-   where L is the average trip length [km] (country-specific, from COPERT 1990 data) and T is the ambient temperature [°C] (from study setup). For diesel HDTs and buses a separate formula applies: `β = max(8.25 / L, 1)`. Motorcycles and petrol HDTs use β = 0 (hot emissions only).
+   where L is the average trip length [km] (country-specific, from COPERT 1990 data) and T is the ambient temperature [°C] (from study setup). For diesel HDTs and buses a separate formula applies: `β = min(8.25 / L, 1)` (per EMEP/EEA Guidebook 2023 Update 2025, chapter 1.A.3.b.i-iv §3.4 p.77: `β = 8.25 / ltrip`, capped at 1). Motorcycles and petrol HDTs use β = 0 (hot emissions only).
 
    A pollutant-specific reduction factor `bc` (from EMEP/EEA Tables 3-41, 3-43, 3-46) modifies β for Euro 2 through Euro 6 petrol passenger cars and LCVs. Cold emission total:
    ```
@@ -328,6 +328,38 @@ The resulting `Emission` object (with `co_kg`, `nox_kg`, `pm10_kg`, etc.) is ass
 > **Note on PM mapping:** COPERT 5 provides PM2.5 and PM0.1 emission factors. OpenALAQS maps PM2.5 to both `pm10_kg` and `p2_kg`, and PM0.1 to `p1_kg`. This is a simplification that overestimates PM10 relative to a dedicated coarse-fraction estimate. The legacy ALAQS path does not compute SOx, p1, or p2 (set to zero).
 
 > **Note on CO2:** CO2 is not computed by the COPERT module. The `co2_kg` output column remains zero for roadway and parking sources.
+
+#### Known limitations and future work
+
+Items below are documented limitations of the current COPERT 5 implementation. Each is captured for transparency and as a reference target for in-code comments that reference deferred work. They do not block correct use of the module; they identify areas where a future PR could improve fidelity.
+
+**1. Parking cold-emission approximations (referenced from `copert5.py` parking branch).**
+When the parking cold-start flag is enabled, the standalone cold-zone EF computation uses two single-value approximations:
+
+- `parking_speed = 20 km/h` and `cold_speed = 30 km/h` as the speed at which the cold EF is evaluated. Per the Guidebook 2023 Update 2025 chapter 1.A.3.b.i-iv §3.4 framework, cold-start EFs are a function of speed (Tables 3-40, 3-44, 3-47). The single-value choice is a simplification.
+- `L_trip = 12.4 km` is the default trip length used in the β cold-mileage fraction. Per Guidebook §3.4, L_trip should reflect the actual fleet trip-length distribution.
+
+Both values are overridable per study via `study_data["parking_cold_speed_kmh"]` and `study_data["parking_cold_trip_length_km"]`. The default branch (without the flag) is not affected by these choices.
+
+A future PR could expose a speed profile and trip-length distribution per parking source for higher fidelity. This requires no schema change; only configuration plumbing.
+
+**2. Evaporation Hot-soak per-event scaling and Running losses on roadway sources (referenced from `copert5_utils.py:calculate_evaporation`).**
+After the fix that excludes Running losses from parking-source evaporation per Guidebook chapter 1.A.3.b.v §4.7 (p.28-29), two related issues remain:
+
+- *Hot-soak per-event scaling*: `average_evaporation` treats Diurnal and Hot soak as time-proportional via `idle_time / (24 × 60)`. Per Guidebook §2.1.3 and the Tier 2 equations, Hot soak is a per-parking-event quantum (one event per engine turn-off). The current approximation understates Hot soak for short parkings and overstates it for long ones. A clean fix would treat Hot soak as fixed-per-event and only Diurnal as time-proportional.
+- *Running losses on roadway sources*: per Guidebook §4.7, Running losses are mileage-based and should be allocated to driving (road) sources. OpenALAQS does not currently expose an evaporation contribution on roadway sources. After the parking-source fix, this VOC contribution is dropped from the inventory (small magnitude on modern fleets). The Guidebook-faithful path is to add a Running-losses evaporation contribution to roadway emission factors.
+
+Both items are deferred to a future PR. The current fix corrects the most clear-cut methodological deviation (Running losses appearing in parking emissions) while accepting these two known approximations.
+
+**3. Data integrity items not yet resolved.**
+Two items in `default_vehicle_ef_copert5.csv` remain open (see `documents/DATASET_PROVENANCE.md` for full details):
+
+- EU27 / EU28 labelling mismatch: the EU27 country aggregate is missing PM10 rows (EU28 has them instead). Deferred because the fix requires re-running the ingest to produce a consistent EU-aggregate set.
+- NH3 values appear ~10× lower than the Guidebook Tier 2 references. Currently inert because NH3 is not exposed in the road traffic emissions output pipeline. Deferred to a future data refresh.
+
+#### Guidebook citation discipline
+
+Every COPERT-related design decision and fix in the current code is cited with chapter, section, and page reference to the EMEP/EEA Guidebook. Citations use the uniform format `EMEP/EEA Guidebook 2023 Update 2025, chapter <NFR-code>, §<section> (p.<page>)`. Verbatim quotes are included in comments where the decision turns on exact wording. When the next Guidebook update is published, walk the cited references in `copert5.py`, `copert5_utils.py`, and this document to re-verify each item against the new source. Items requiring particular attention are catalogued in the Known limitations section above.
 
 ## [Smooth and Shift](#smooth-and-shift)
 [(Back to top)](#table-of-contents)
