@@ -4,6 +4,147 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
+## [Unreleased]
+
+COPERT 5 / road-traffic review. All Guidebook-derived design decisions
+and fixes are cited inline with the uniform format
+`EMEP/EEA Guidebook 2023 Update 2025, chapter <NFR-code>, §<section> (p.<page>)`,
+covering chapters 1.A.3.b.i-iv and 1.A.3.b.v. Verbatim quotes are
+included in code comments where the decision turns on exact wording.
+This makes re-verification against future Guidebook updates a
+chapter-by-chapter sweep of the cited references in `copert5.py`,
+`copert5_utils.py`, and `documents/AUXILIARY_MATERIAL.md`.
+
+### Fixed
+
+- **HDV/Bus diesel cold-mileage fraction formula** (`copert5_utils.py:92`).
+  Previous code computed `max(8.25 / trip_length, 1)`, which is the inverse
+  of the formulation in EMEP/EEA Guidebook 2023 Update 2025 chapter
+  1.A.3.b.i-iv §3.4 (p.77): `β = 8.25 / ltrip; if β > 1 then β = 1`.
+  Corrected to `min(8.25 / trip_length, 1)`. Documentation in
+  `documents/AUXILIARY_MATERIAL.md:263` updated to match.
+
+  No inventory change is expected on the currently shipped
+  `default_vehicle_ef_copert5.csv` (COPERT 5.4.52 data): all 5920 HDV+Bus
+  diesel "Cold" rows are 0.0 across all 13 speed columns, so β multiplies
+  zero either way. The fix becomes inventory-relevant on any future
+  EF refresh to COPERT 5.8 / 5.9.1, where the EMEP/EEA Guidebook 2025
+  Appendix 4 provides non-zero HDV diesel cold parameters for CO, VOC and
+  NOx across Euro V through Euro VII. Regression test added at
+  `tests/test_copert5_hdv_cold_mileage.py`.
+
+- **Parking-source evaporation excludes Running losses**
+  (`copert5_utils.py:calculate_evaporation`). Previous code summed
+  Diurnal + Hot soak + Running losses into the per-vehicle parking
+  evaporation EF. Per EMEP/EEA Guidebook 2023 Update 2025, chapter
+  1.A.3.b.v "Gasoline evaporation" §4.7 (p.28-29):
+
+  > "Running losses are proportional to the mileage driven by the
+  > vehicles. Therefore, their allocation to urban areas, rural areas
+  > and highways has to follow the mileage split assumed for the
+  > calculation of exhaust emissions."
+
+  Running losses are mileage-based and belong on driving sources, not
+  parking. After the fix, parking evaporation sums only Diurnal + Hot
+  soak. Numerical impact depends on the fleet's Euro mix and the parking
+  source's `idle_time`:
+
+  - Euro 1+ petrol (modern, canister-equipped): Running losses are
+    0.3–4% of evaporation; parking VOC drops accordingly.
+  - Pre-Euro 1 / Conventional petrol (no canister): Running losses are
+    13–17% of evaporation; parking VOC drops accordingly.
+  - Parking sources with `idle_time = 0` (e.g. the canonical training_v3
+    dataset): zero impact.
+
+  Running losses are NOT yet redistributed to road / movement sources;
+  see `documents/AUXILIARY_MATERIAL.md` "Known limitations and future
+  work" item 2. The related Hot-soak per-event scaling correction is
+  also captured there. Regression test added at
+  `tests/test_copert5_evaporation_excludes_running_losses.py`.
+
+- **Data integrity fix: PM10 < PM2.5 in `default_vehicle_ef_copert5.csv`**.
+  639 (vehicle_category, fuel, euro_standard, country, hot-cold-evaporation,
+  evaporation_split) row pairs had at least one of 13 speed columns where the
+  PM10 emission factor was less than the corresponding PM2.5 value, totalling
+  2505 violating cells. This is physically impossible (PM10 includes the PM2.5
+  fraction by definition) and is also inconsistent with EMEP/EEA Guidebook
+  2023 Update 2025, chapter 1.A.3.b.i-iv §1.1 (p.4) which states PM10 = PM2.5
+  = TSP for road transport exhaust (the coarse fraction is negligible).
+
+  Fix: for each violating cell, PM10[speed] is set to max(PM10[speed],
+  PM2.5[speed]). Mean undershoot in violating cells: 5%; max 28%. Primary
+  concentration: PC Diesel and LCV Diesel across Euro 1 through Euro 6 d.
+  Cells where PM10 was already >= PM2.5 are unchanged. Reproducible script
+  at `tools/data_integrity_fixes/fix_pm10_at_least_pm25.py` (idempotent).
+
+  The embedded SQLite copies of `default_vehicle_ef_copert5` in 7 .alaqs
+  files (`open_alaqs/core/templates/project.alaqs`,
+  `example/training/training.alaqs`, `example/training/training_out.alaqs`,
+  `tests/data/generic/generic_out.alaqs`, `tests/data/ANP/ANP.alaqs`,
+  `tests/data/ANP/ANP_out.alaqs`,
+  `gse_application/tests/example_db.alaqs`) were synced via
+  `tools/data_integrity_fixes/sync_csv_into_alaqs_caches.py`. Zero impact on
+  training_v3 (its (cat, fuel, euro) combinations have no violations). Two
+  previously-failing `test_database` parity tests now pass.
+
+- **Verification: Switzerland 10× PM10 error not reproducible.** Earlier
+  audit notes had flagged a suspected 10× scaling error on Switzerland PM10
+  rows for PC Petrol/Diesel Conventional/Euro 1 and LCV Diesel Conventional.
+  Re-verification 2026-06-05 found Switzerland PM10 values bit-identical to
+  Germany, Italy, France, Austria and EU28 across the affected rows.
+  Systematic outlier sweep (Switzerland vs other-country medians at speed=50)
+  found no outliers above 5× ratio. Item closed as not reproducible.
+
+### Documentation
+
+- **Code comments thoroughly cite Guidebook source** for every COPERT-related
+  design decision touched in this PR, with chapter, section, page, and
+  verbatim quotes where the decision turns on exact wording. Citations
+  use the uniform format
+  `EMEP/EEA Guidebook 2023 Update 2025, chapter <NFR-code>, §<section> (p.<page>)`
+  to support systematic re-verification when the next Guidebook update is
+  published.
+
+- **Explanatory comments added without behavioural change**:
+  - `copert5_utils.py:28` POLLUTANTS: documents why PM10 is intentionally
+    not in the list (Guidebook §1.1 p.4: PM10 ≡ PM2.5 ≡ TSP for road
+    transport exhaust). Closes audit items B2 and B3 as not-a-bug.
+  - `copert5.py:172, 228` `pm10_ef = ePM2.5`: documents that the
+    assignment is correct per the Guidebook PM2.5=PM10=TSP convention.
+  - `copert5.py:160-218` parking branch: corrected math claims for both
+    the default and flag-enabled branches. The previous "~0.00035 of
+    true value" claim was mathematically wrong (M=1000 km internal
+    normalisation cancels in `average_emission_factors`). The previous
+    "~35× undercount" claim conflated cold-only contribution ratio with
+    total-emission ratio (real per-pollutant ratios for training_v3:
+    2.6× NOx, 4.4× CO, 48× VOC). Added design-decision documentation
+    for the single-value `cold_speed=30 km/h` and `L_trip=12.4 km`
+    approximations in the flag branch.
+  - `copert5.py:209-241` CO2/CH4/NH3 omission from output dict:
+    documents that CO2 and CH4 are computed but not exposed because
+    `shapes_roadways` and `shapes_parking` schemas lack `co2_gm_km` /
+    `ch4_gm_km` columns. End-to-end exposure requires a schema change
+    deferred to a future PR. NH3 is documented as out-of-scope for the
+    aviation-focused emissions pipeline. Closes audit items B5 and B6.
+
+- **Known limitations and future work** added as a subsection to
+  `documents/AUXILIARY_MATERIAL.md` under COPERT. Captures three items
+  for transparency and as reference targets for in-code comments:
+  parking cold-emission single-value approximations
+  (`parking_speed=20 km/h`, `cold_speed=30 km/h`, `L_trip=12.4 km`); the
+  Hot-soak per-event scaling approximation and the Running-losses-on-
+  roadway-sources gap (both deferred after the parking-evaporation
+  fix); and the two unresolved data integrity items (EU27/EU28 labelling
+  mismatch, NH3 magnitude). A "Guidebook citation discipline" note
+  records the uniform citation format used throughout the code and
+  documents.
+
+- **Dataset provenance documentation** at
+  `documents/DATASET_PROVENANCE.md` (new file) capturing what is known
+  and unknown about the source COPERT version (5.4.52), the schema, the
+  CSV ↔ SQLite cache relationship (7 .alaqs files), the data integrity
+  state as of this PR, and the procedure for a future refresh.
+
 ## [5.2.2] - 2026-06-04
 
 Patch release. Documentation audit (Tier 1–3) plus a small docstring

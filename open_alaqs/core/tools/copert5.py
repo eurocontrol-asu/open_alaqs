@@ -157,31 +157,65 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
         # Calculate the average evaporation per vehicle
         mean_evaporation = average_evaporation(evaporation, idle_time)
 
-        # Default: emit hot+cold at parking_speed × maneuvering_distance.
-        # The cold contribution at this scale is ~0.00035 of its true
-        # value because parking maneuvering is ~0.35 km vs the M=1000 km
-        # used internally by calculate_emissions. To preserve byte-for-byte
-        # backward compatibility with existing studies, this is the
-        # default behavior.
+        # Default branch: stored per-vehicle emission = e_avg × distance,
+        # where e_avg = e_hot + β × e_cold is the fleet-averaged per-km EF
+        # from calculate_emissions, computed assuming the EMEP/EEA Guidebook
+        # default trip length L_trip=12.4 km. The M=1000 km internal
+        # normalisation inside calculate_emissions cancels out in
+        # average_emission_factors, so e_avg is independent of M.
+        #
+        # This default is a geometric mismatch: e_avg was derived for a
+        # full 12.4 km trip but is applied to a much shorter
+        # parking-maneuvering distance. It corresponds to no clean
+        # physical scenario; in particular it is NOT what an earlier
+        # comment claimed (~0.00035 of the true cold contribution — that
+        # ratio came from M=1000 km, which cancels). The Guidebook does
+        # NOT prescribe a spatial allocation of cold-start between
+        # parking and access road; this is an OpenALAQS implementation
+        # choice. Kept as default for backwards compatibility with
+        # existing studies. The flag-True branch below opts into the
+        # alternative "parking absorbs full trip cold-start" semantic.
         co_ef = emission_factors["eCO[g/km]"] * distance
         hc_ef = (
             emission_factors["eVOC[g/km]"] * distance + mean_evaporation["eVOC[g/vh]"]
         )
         nox_ef = emission_factors["eNOx[g/km]"] * distance
         sox_ef = emission_factors["eSO2[g/km]"] * distance
+        # PM10 = PM2.5 for road transport exhaust per EMEP/EEA Guidebook 2023
+        # Update 2025 §1.1 (p.4). See POLLUTANTS in copert5_utils.py for the
+        # full rationale.
         pm10_ef = emission_factors["ePM2.5[g/km]"] * distance
         p1_ef = emission_factors["ePM0.1[g/km]"] * distance
         p2_ef = emission_factors["ePM2.5[g/km]"] * distance
 
-        # Optional: re-apply cold-start at the post-parking trip scale.
-        # Each parking event triggers exactly one cold start; the cold
-        # portion of emissions occurs over the first L_trip km of the
-        # trip until the engine reaches operating temperature (default
-        # 12.4 km per COPERT 5 / EMEP-EEA Guidebook 2019). Scaling cold
-        # by parking_distance instead of L_trip understates cold-start
-        # NOx by a factor of ~35x for typical parking lots. Gated behind
-        # a study-level flag so existing studies keep their current
-        # totals; new studies opt in.
+        # Optional opt-in branch: spatial-allocation choice that the
+        # parking source absorbs the full cold-start emission of
+        # departing vehicles. Per the Guidebook (1.A.3.b.i-iv §3.4)
+        # cold-start is distributed over the first β × L_trip km of the
+        # trip; which physical source (parking vs road) the cold-start
+        # belongs to is NOT specified by the Guidebook.
+        #
+        # Total emission ratio vs the default depends on the cold/hot
+        # ratio per pollutant for the fleet. On a typical Euro 4/V mix
+        # at 15 °C (training_v3 worked example): ~2.6x for NOx, ~4.4x
+        # for CO, ~48x for VOC, 1x for PM/SOx (this branch only adjusts
+        # CO/VOC/NOx). The ratio is NOT simply L_trip / parking_distance
+        # (~35x for 12.4 / 0.35 km); that figure applies only to the
+        # cold-only contribution component, not to the total emission,
+        # because hot dominates per-km EF for NOx/CO/PM.
+        #
+        # Design note: l_trip=12.4 km and cold_speed=30 km/h are
+        # single-value approximations of the post-parking trip length
+        # and speed. In reality the cold zone (first β × L_trip km)
+        # spans parking maneuvering (~20 km/h), access road
+        # (~30-50 km/h), and arterial driving (~50-70 km/h); e_cold is
+        # speed-dependent (Tables 3-40/3-44/3-47). The two defaults are
+        # overridable via study_data["parking_cold_trip_length_km"] and
+        # study_data["parking_cold_speed_kmh"] for studies that want
+        # airport-specific values. Proper integration over a cold-zone
+        # speed profile is a methodological refinement deferred to a
+        # future PR; see "Known limitations and future work" item 1 in
+        # documents/AUXILIARY_MATERIAL.md.
         if study_data.get("parking_include_cold_start", False):
             l_trip = study_data.get("parking_cold_trip_length_km", 12.4)
             cold_speed = study_data.get("parking_cold_speed_kmh", 30.0)
@@ -203,6 +237,32 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
             hc_ef += cold_at_trip["e_coldVOC[g/km]"] * l_trip
             nox_ef += cold_at_trip["e_coldNOx[g/km]"] * l_trip
 
+        # CO2, CH4, and NH3 are computed in calculate_emissions (all three are
+        # in POLLUTANTS at copert5_utils.py:28) but intentionally not exposed
+        # in this dict. Each is omitted for a different reason:
+        #
+        # CO2: end-to-end exposure requires a schema change (add `co2_gm_km`
+        #   column to shapes_roadways and shapes_parking; update the INSERT
+        #   statement in create_output.py from 28 to 29 placeholders; populate
+        #   `co2_kg` in RoadwaySourceModule and ParkingSourceModule; provide
+        #   a migration for existing .alaqs studies). Deferred to a dedicated
+        #   schema-expansion PR. The downstream slot `co2_kg` exists in
+        #   *SourceModule._ZERO_EMISSION_VALUES and stays at 0.0 for road
+        #   sources in the meantime; aircraft and APU paths populate it via
+        #   fuel_kg * 3.16 (see Movement.py:53, Engine.py:17, APU.py:57).
+        #
+        # CH4: same schema gap as CO2, same deferral rationale. CH4 is a minor
+        #   combustion product for road transport relative to CO2, and
+        #   aircraft CH4 is the larger lever at airport scale.
+        #
+        # NH3: out of scope for the aviation-focused emissions pipeline. NH3
+        #   is primarily relevant for agricultural inventories and SCR-equipped
+        #   road fleets; not a priority pollutant for airport air quality.
+        #   The dataset values are also ~10x lower than EMEP/EEA Guidebook
+        #   Tier 2 references and would require verification before any
+        #   exposure (see documents/DATASET_PROVENANCE.md, data integrity
+        #   item 4).
+        #
         # Calculate the average emissions per vehicle
         emission_factors_dict = {
             "co_ef": co_ef,
@@ -216,12 +276,17 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
 
         return emission_factors_dict
 
+    # CO2, CH4, NH3 are computed but intentionally not exposed here; see the
+    # detailed comment above the parking-branch dict earlier in this function.
     # Return the result as dict
     emission_factors_dict = {
         "co_ef": emission_factors["eCO[g/km]"],
         "hc_ef": emission_factors["eVOC[g/km]"],
         "nox_ef": emission_factors["eNOx[g/km]"],
         "sox_ef": emission_factors["eSO2[g/km]"],
+        # PM10 = PM2.5 for road transport exhaust per EMEP/EEA Guidebook 2023
+        # Update 2025 §1.1 (p.4). See POLLUTANTS in copert5_utils.py for the
+        # full rationale.
         "pm10_ef": emission_factors["ePM2.5[g/km]"],
         "p1_ef": emission_factors["ePM0.1[g/km]"],
         "p2_ef": emission_factors["ePM2.5[g/km]"],

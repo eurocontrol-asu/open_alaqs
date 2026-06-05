@@ -198,14 +198,23 @@ def test_parking_calculation():
         }
     )
 
-    # Set the reference values (hot emission factors)
+    # Set the reference values (hot emission factors).
+    #
+    # The eVOC[g/vh] value below excludes Running losses per the parking
+    # evaporation fix (Guidebook 2023 Update 2025, chapter 1.A.3.b.v §4.7,
+    # p.28-29). Pre-fix value was 0.033798717802083, including Running
+    # losses. After the fix, parking evaporation sums only Diurnal + Hot
+    # soak; Running losses belong on driving sources (see
+    # documents/AUXILIARY_MATERIAL.md "Known limitations and future work"
+    # item 2 for the deferred work to expose them on roadway sources).
     evaporation_refs = pd.Series(
         {
-            "eVOC[g/vh]": 0.033798717802083,
+            "eVOC[g/vh]": 0.03336142004126675,
         }
     )
 
-    # Set the reference values (hot emission factors)
+    # Set the reference values (hot emission factors).
+    # eVOC[g/km] line updated to match the B7-corrected mean_evaporation value.
     emission_factor_refs = pd.Series(
         {
             "eCH4[g/km]": 0.001982406 * distance,
@@ -216,7 +225,7 @@ def test_parking_calculation():
             "ePM0.1[g/km]": 0.000104992 * distance,
             "ePM2.5[g/km]": 0.001049922 * distance,
             "eSO2[g/km]": 0.000538297 * distance,
-            "eVOC[g/km]": 0.012275 * distance + 0.033798717802083,
+            "eVOC[g/km]": 0.012275 * distance + 0.03336142004126675,
         }
     )
 

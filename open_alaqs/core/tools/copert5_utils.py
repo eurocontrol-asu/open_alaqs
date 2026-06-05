@@ -25,6 +25,23 @@ EURO_STANDARDS = [
     "Euro VI A/B/C",
     "Euro VI D/E",
 ]
+# PM10 is intentionally excluded from this list. Per EMEP/EEA Guidebook 2023
+# Update 2025, chapter 1.A.3.b.i-iv "Road transport" §1.1 (p.4) and the table
+# notes throughout (PM2.5=PM10=TSP), road transport exhaust PM at PM10, PM2.5,
+# and TSP are numerically equal: the coarse exhaust fraction (>2.5 µm) is
+# treated as negligible. Code paths that need a pm10_ef value use the PM2.5
+# emission factor by design (see copert5.py).
+#
+# The legacy COPERT 5.4.52 dataset shipped in `default_vehicle_ef_copert5.csv`
+# contained separate PM10 rows that diverged from PM2.5 due to data-import
+# artifacts. As of 2026-06-05: the 639 row pairs where PM10 < PM2.5 (2505
+# violating cells) have been fixed via PM10[speed] = max(PM10[speed],
+# PM2.5[speed]); see tools/data_integrity_fixes/fix_pm10_at_least_pm25.py
+# and documents/DATASET_PROVENANCE.md. The EU28-only PM10 vs EU27 labelling
+# mismatch remains open (deferred). Even with PM10 ≥ PM2.5 enforced,
+# activating PM10 here would still not produce methodologically distinct
+# output since the Guidebook explicitly states they are equal for road
+# exhaust; future EF refreshes will use a single "PM Exhaust" label.
 POLLUTANTS = ["CH4", "CO", "CO2", "NH3", "NOx", "PM0.1", "PM2.5", "SO2", "VOC"]
 
 VEHICLE_CATEGORIES = {
@@ -89,7 +106,11 @@ def cold_mileage_fractions(
         - (0.00974 - 0.000385 * trip_length) * temperature
     )
     # Method for diesel heavy-duty vehicles and buses
-    beta_hdt_diesel = max(8.25 / trip_length, 1)
+    # Per EMEP/EEA Guidebook 2023 Update 2025, chapter 1.A.3.b.i-iv §3.4 p.77:
+    #   beta = 8.25 / ltrip; if beta > 1 then beta = 1
+    # i.e. cold-mileage fraction is the warm-up distance (8.25 km) over the
+    # trip length, capped at 1.0 for trips shorter than 8.25 km.
+    beta_hdt_diesel = min(8.25 / trip_length, 1)
 
     # Calculate the cold mileage reduction factor
     # Table 3-43: β-reduction factors (bci,k) for Euro 6 petrol vehicles
@@ -439,13 +460,46 @@ def calculate_evaporation(fleet: pd.DataFrame, efs: pd.DataFrame) -> pd.DataFram
     # Set the technology as index
     fleet = fleet.set_index(["vehicle_category", "fuel", "euro_standard"])
 
-    # Determine evaporation emission factors (VOC only)
+    # Determine evaporation emission factors (VOC only).
+    #
+    # Per EMEP/EEA Guidebook 2023 Update 2025, chapter 1.A.3.b.v "Gasoline
+    # evaporation" §4.7 "Gridding" (p.28-29), the three evaporation modes have
+    # distinct spatial allocations:
+    #
+    #   - Diurnal: "occur at any time, their spatial allocation to urban /
+    #     rural / highway conditions depends on the time spent by the vehicles
+    #     on the different road classes". Parked vehicles dominate.
+    #
+    #   - Hot soak: "the majority of these emissions occur in the area of
+    #     residence of the car owner, as they are associated with short trips".
+    #     One event per parking (engine turn-off).
+    #
+    #   - Running losses: "are proportional to the mileage driven by the
+    #     vehicles. Therefore, their allocation to urban areas, rural areas and
+    #     highways has to follow the mileage split assumed for the calculation
+    #     of exhaust emissions."
+    #
+    # Parking sources therefore include only Diurnal + Hot soak. Running losses
+    # belong on driving (road / movement) sources, but OpenALAQS does not
+    # currently expose an evaporation contribution on roadway sources; see
+    # "Known limitations and future work" item 2 in
+    # documents/AUXILIARY_MATERIAL.md.
+    #
+    # Known limitation: Hot soak is a per-parking-event quantum, but the
+    # downstream scaling in average_evaporation treats all components as
+    # time-proportional via idle_time / (24*60). This understates Hot soak
+    # for short parkings and overstates it for long ones; correction
+    # deferred to a future PR (see AUXILIARY_MATERIAL.md).
     efs_evap = efs[efs["hot-cold-evaporation"] == "Evaporation"].pivot(
         index=["vehicle_category", "fuel", "euro_standard"],
         columns="evaporation_split",
         values="e[g/km]",
     )
-    efs_evap["eVOC[g/day]"] = efs_evap.sum(axis=1)
+    # Parking sums only Diurnal + Hot soak (Guidebook §4.7); Running losses
+    # excluded. Defensive subset: include whichever of the two columns are
+    # present in the EF data.
+    parking_evap_modes = [c for c in ("Diurnal", "Hot soak") if c in efs_evap.columns]
+    efs_evap["eVOC[g/day]"] = efs_evap[parking_evap_modes].sum(axis=1)
     fleet = fleet.merge(
         efs_evap[["eVOC[g/day]"]], how="left", left_index=True, right_index=True
     )
