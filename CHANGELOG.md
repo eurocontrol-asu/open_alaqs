@@ -6,6 +6,27 @@ ISO 8601.
 
 ## [Unreleased]
 
+## [5.2.4] - 2026-06-18
+
+Patch release. AUSTAL writer bug fix. Generating AUSTAL input files from
+the AUSTAL Dispersion Analysis window aborted with "The grid source
+directory '.../05' is missing! AUSTAL terminated because of invalid
+input." whenever a selected pollutant had zero total emissions and sat
+before a non-zero pollutant in the selection (for example zero-SOx
+selected together with CO2). The time-indexed writer numbered source
+slots by pollutant position and created each slot directory lazily, so
+a zero-emission pollutant left no directory; dropping its slot then left
+an interior hole in the numbering (01,02,03,04,06), and AUSTAL, which
+expects grid source directories numbered sequentially, aborted on the
+missing 05. New `_ti_compact_legacy_slots()` renumbers the surviving
+slots to a gap-free 01..N, renaming directories and remapping all
+slot-keyed state so directories, austal.txt and series.dmna stay
+consistent. No-op when slots are already contiguous, so runs with no
+dropped slot remain byte-for-byte identical (AUSTAL bit-reproducibility
+preserved). The standalone austal_prep writer was unaffected (it prunes
+zero-emission sources before numbering). Adds
+`tests/test_austal_slot_compaction.py`.
+
 ## [5.2.3] - 2026-06-05
 
 Patch release. COPERT 5 / road-traffic review against EMEP/EEA
