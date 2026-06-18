@@ -2159,6 +2159,110 @@ class AUSTALDispersionModule(DispersionModule):
                 slot_id,
             )
 
+    def _ti_compact_legacy_slots(self):
+        """Renumber surviving legacy slots to a contiguous 01..N range.
+
+        process() assigns each pollutant a slot id by its position in
+        _pollutants_list (NOx=01, CO=02, ... SOx=05, CO2=06), and
+        _ti_drop_empty_legacy_slots() removes slots that carried zero
+        emissions across the whole run. When a removed slot is not the
+        last one (e.g. zero-SOx slot 05 dropped while CO2 keeps 06), the
+        surviving ids have a hole: 01,02,03,04,06.
+
+        AUSTAL does not read directory names from austal.txt literally;
+        it counts the source columns and expects grid source directories
+        numbered sequentially 01..N. An interior hole makes it look for a
+        directory that was never created ("The grid source directory
+        '.../05' is missing!") and abort with "invalid input".
+
+        This method closes the holes: it builds an order-preserving map
+        old_id -> new_id over the surviving slots, renames the on-disk
+        directories, and applies the same map to every piece of
+        slot-keyed state (_total_sources, _results[*], _timeID_per_source,
+        _gridfile_written). It is a no-op when the ids are already
+        contiguous, so runs with no dropped slot are unaffected (and stay
+        bit-identical).
+        """
+        if not self._total_sources:
+            return
+
+        # Surviving ids in their current (sorted) order. Keys are
+        # zero-padded strings like "01".."NN", so lexical sort == numeric.
+        old_ids = sorted(self._total_sources.keys())
+        remap = {}
+        for new_idx, old_id in enumerate(old_ids, start=1):
+            new_id = str(new_idx).zfill(2)
+            if new_id != old_id:
+                remap[old_id] = new_id
+
+        if not remap:
+            # Already contiguous (01..N). Nothing to do; preserves the
+            # no-dropped-slot fast path byte-for-byte.
+            return
+
+        out_dir = self.getOutputPathAsPath()
+
+        # 1) Rename on-disk directories. Renaming into a gap (06 -> 05)
+        # is safe because the target id was removed; but to be robust
+        # against any ordering where a target name still exists, stage
+        # through a temporary suffix first, then move into place.
+        staged = {}
+        for old_id, new_id in remap.items():
+            src = out_dir / old_id
+            if src.is_dir():
+                tmp = out_dir / (old_id + "__compact_tmp")
+                try:
+                    src.rename(tmp)
+                    staged[new_id] = tmp
+                except OSError as exc:
+                    logger.error(
+                        "AUSTAL: could not stage slot dir '%s' for " "renumbering: %s",
+                        old_id,
+                        exc,
+                    )
+        for new_id, tmp in staged.items():
+            dst = out_dir / new_id
+            try:
+                tmp.rename(dst)
+            except OSError as exc:
+                logger.error(
+                    "AUSTAL: could not finalise slot dir rename to '%s': %s",
+                    new_id,
+                    exc,
+                )
+
+        # 2) Remap _total_sources, preserving insertion order.
+        new_total = OrderedDict()
+        for old_id in old_ids:
+            new_id = remap.get(old_id, old_id)
+            new_total[new_id] = self._total_sources[old_id]
+        self._total_sources = new_total
+
+        # 3) Remap per-hour _results[<dt>][<slot>].
+        for dt_str in self._results:
+            hour = self._results[dt_str]
+            moved = {}
+            for old_id, new_id in remap.items():
+                if old_id in hour:
+                    moved[new_id] = hour.pop(old_id)
+            hour.update(moved)
+
+        # 4) Remap _timeID_per_source and _gridfile_written.
+        for attr in ("_timeID_per_source", "_gridfile_written"):
+            state = getattr(self, attr, None)
+            if not state:
+                continue
+            moved = {}
+            for old_id, new_id in remap.items():
+                if old_id in state:
+                    moved[new_id] = state.pop(old_id)
+            state.update(moved)
+
+        logger.info(
+            "AUSTAL: compacted legacy slots to contiguous ids (remap %s)",
+            ", ".join(f"{o}->{n}" for o, n in remap.items()),
+        )
+
     def _ti_fill_legacy_zero_hours(self):
         """For each surviving non-stationary slot, write a zero-filled
         eXXXX.dmna for any hour skipped by process() (because that hour
@@ -2265,6 +2369,16 @@ class AUSTALDispersionModule(DispersionModule):
         # series.dmna and so their now-empty grid directories are removed.
         self._ti_drop_empty_legacy_slots()
         self._ti_fill_legacy_zero_hours()
+        # Renumber surviving legacy slots to a gap-free 01..N sequence.
+        # _ti_drop_empty_legacy_slots may leave holes (e.g. a zero-SOx
+        # slot 05 removed while CO2 keeps id 06). AUSTAL enumerates grid
+        # source directories sequentially from the source-column count in
+        # austal.txt, so an interior hole makes it look for a directory
+        # that does not exist ("grid source directory '.../05' is
+        # missing") and abort. Compaction renames the directories and
+        # remaps all slot-keyed state so directories, austal.txt and
+        # series.dmna stay mutually consistent and contiguous.
+        self._ti_compact_legacy_slots()
 
         group_ids, group_weights, group_rates = self._ti_aggregate_stationary()
         n_legacy = len(self._total_sources)
