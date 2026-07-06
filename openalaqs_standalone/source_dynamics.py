@@ -118,15 +118,13 @@ def load_emission_dynamics(conn: sqlite3.Connection) -> dict:
     coerced to 0.0 (the plugin's ``db_row[...] or 0`` behaviour).
     """
     out: dict = {}
-    rows = conn.execute(
-        """
+    rows = conn.execute("""
         SELECT ac_group, flight_stage,
                horizontal_extent_m, vertical_extent_m, vertical_shift_m,
                horizontal_extent_m_sas, vertical_extent_m_sas,
                vertical_shift_m_sas
         FROM default_emission_dynamics
-        """
-    ).fetchall()
+        """).fetchall()
 
     for group, stage, he, ve, vs, he_s, ve_s, vs_s in rows:
         # Plugin: `if not row.ac_group or not row.flight_stage: continue`

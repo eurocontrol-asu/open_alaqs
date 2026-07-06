@@ -71,9 +71,9 @@ from shapely.ops import linemerge
 
 # Plugin-side FOCA helicopter math (pure Python, no QGIS dependency)
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from open_alaqs.core.tools.bffm2 import (  # noqa: E402
+from open_alaqs.core.tools.bffm2 import (
     calculate_emission_index as bffm2_ei,
-)
+)  # noqa: E402
 from open_alaqs.core.tools.foca_heli import (  # noqa: E402
     GI_ARRIVAL_FRACTION,
     GI_DEPARTURE_FRACTION,

@@ -471,8 +471,7 @@ class EmissionsCalculatorDialog(QDialog):
                 cursor = conn.cursor()
 
                 # Check if the table exists, create if not
-                cursor.execute(
-                    """
+                cursor.execute("""
                     CREATE TABLE IF NOT EXISTS default_gate_profiles (
                         oid INTEGER PRIMARY KEY,
                         gate_type TEXT,
@@ -489,8 +488,7 @@ class EmissionsCalculatorDialog(QDialog):
                         pm10 REAL,
                         source TEXT
                     )
-                """
-                )
+                """)
 
                 # Optional: Clear existing data (if you want to overwrite)
                 cursor.execute("DELETE FROM default_gate_profiles")
