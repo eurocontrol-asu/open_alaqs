@@ -56,6 +56,7 @@ def get_sql_serializable_registry(file_type: str) -> list:
         EngineEmissionIndicesDatabase,
         EngineModeDatabase,
     )
+    from open_alaqs.core.interfaces.EngineTestEvents import EngineTestEventsDatabase
     from open_alaqs.core.interfaces.Gate import (
         DefaultGateEmissionProfileDatabase,
         GateDatabase,
@@ -112,9 +113,11 @@ def get_sql_serializable_registry(file_type: str) -> list:
         UserMonthProfileDatabase,
     ]
     # Per-template extras: project-only and inventory-only tables.
-    # Currently empty; reserved for future per-template-only schemas.
+    # engine_test_events lives in the project template (it holds user-editable
+    # test-run event definitions), not in the inventory template (inventory
+    # holds computed emissions, no event tables).
     template_specific = {
-        "project": [],
+        "project": [EngineTestEventsDatabase],
         "inventory": [],
     }
     return shared + template_specific[file_type]
