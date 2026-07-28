@@ -199,6 +199,57 @@ def lookup_params(
     return st.get(method)
 
 
+def _compute_z_envelope(method, s_v, d_v, z_ground):
+    """Pure vertical-envelope formula. Mirror of
+    ``open_alaqs.core.GeoTransformation._compute_z_envelope``.
+
+    Returns ``(z_lower, z_upper)`` for one endpoint / stationary source at
+    ground z = ``z_ground``, under smooth-and-shift ``method``
+    (``"default"`` or ``"sas"``; any other value takes the no-shift
+    fallback branch).
+
+    Expressions and evaluation order preserved verbatim from the previous
+    inline z-block of ``segment_footprint`` so the CAEP14 regression is
+    byte-identical before and after this extraction. ``ver_ext = d_v``
+    symbol identity from the original code is preserved rather than
+    algebraically simplified. No z clamping applied here.
+    """
+    ver_ext = d_v  # preserved: plugin sets ver_ext = d_v after lookup
+
+    if method == "default":
+        z_lower = z_ground + s_v
+        z_upper = z_lower + ver_ext
+    elif method == "sas":
+        z_lower = z_ground - (ver_ext + d_v) / 2.0
+        z_upper = z_ground + ver_ext
+    else:
+        z_lower = z_ground
+        z_upper = z_ground
+
+    return z_lower, z_upper
+
+
+def get_vertical_envelope(params, method, z_ground):
+    """Convenience wrapper: (params, method, z_ground) -> (z_lower, z_upper).
+
+    ``params`` is the pre-resolved dict from ``lookup_params`` or
+    ``load_emission_dynamics``, with keys ``horizontal_extension``,
+    ``vertical_shift``, ``vertical_extension``. Consumed by paths that need
+    only the vertical envelope of a stationary source (engine-test
+    emissions, phase 3), rather than a full footprint around a trajectory
+    segment.
+
+    Numerically equivalent to the plugin-side
+    ``GeoTransformation.get_vertical_envelope`` for the same inputs; the
+    signature differs only because the standalone resolves the DB lookup
+    separately upstream in ``lookup_params``, whereas the plugin's wrapper
+    performs the lookup itself from an ``Aircraft`` object.
+    """
+    return _compute_z_envelope(
+        method, params["vertical_shift"], params["vertical_extension"], z_ground
+    )
+
+
 def segment_footprint(
     p1: tuple,
     p2: tuple,
@@ -257,7 +308,6 @@ def segment_footprint(
     d_h = params["horizontal_extension"]
     s_v = params["vertical_shift"]
     d_v = params["vertical_extension"]
-    ver_ext = d_v  # plugin: ver_ext is the same vertical_extension as d_v
 
     hor_ext = d_h / 2.0  # half-width
 
@@ -265,23 +315,13 @@ def segment_footprint(
     perp_x = -dy / length
     perp_y = dx / length
 
-    if method == "default":
-        z_shifted_start = z1 + s_v
-        z_shifted_end = z2 + s_v
-        z_upper_start = z_shifted_start + ver_ext
-        z_upper_end = z_shifted_end + ver_ext
-    elif method == "sas":
-        z_shifted_start = z1 - (ver_ext + d_v) / 2.0
-        z_shifted_end = z2 - (ver_ext + d_v) / 2.0
-        z_upper_start = z1 + ver_ext
-        z_upper_end = z2 + ver_ext
-    else:
-        # Should not happen (resolve_method gates this), but mirror the
-        # plugin's "none" branch: no spread, no shift.
-        z_shifted_start = z1
-        z_shifted_end = z2
-        z_upper_start = z1
-        z_upper_end = z2
+    # z-envelope per endpoint, delegated to _compute_z_envelope.
+    z_shifted_start, z_upper_start = _compute_z_envelope(method, s_v, d_v, z1)
+    z_shifted_end, z_upper_end = _compute_z_envelope(method, s_v, d_v, z2)
+
+    # Fallback method (neither "default" nor "sas") also zeroes the
+    # horizontal spread. Preserved from the previous inline else branch.
+    if method not in ("default", "sas"):
         hor_ext = 0.0
 
     # Footprint rectangle, plugin bottom-face vertex order [0,1,2,3] =
