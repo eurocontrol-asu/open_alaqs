@@ -125,9 +125,7 @@ class GeoTransformation(abc.ABC):
         avoid recomputing the vertical values from a single dynamics
         lookup.
         """
-        params = GeoTransformation._get_dynamics_params(
-            aircraft, sas_method, lto_mode
-        )
+        params = GeoTransformation._get_dynamics_params(aircraft, sas_method, lto_mode)
         return GeoTransformation._compute_z_envelope(
             sas_method,
             params["vertical_shift"],
@@ -177,9 +175,7 @@ class GeoTransformation(abc.ABC):
 
         # ── Dynamics lookup — delegated to _get_dynamics_params (E1 FIX
         # preserved: fetched once, then used twice below).
-        params = GeoTransformation._get_dynamics_params(
-            aircraft, sas_method, lto_mode
-        )
+        params = GeoTransformation._get_dynamics_params(aircraft, sas_method, lto_mode)
         d_h = params["horizontal_extension"]
         s_v = params["vertical_shift"]
         d_v = params["vertical_extension"]
