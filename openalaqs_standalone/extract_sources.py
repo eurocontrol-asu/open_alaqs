@@ -332,8 +332,22 @@ def _extract_area_sources(conn: sqlite3.Connection) -> list[dict]:
         return []
     cols = [d[0] for d in cur.description]
     rows = []
+    n_test_sites_skipped = 0
     for raw in cur.fetchall():
         rec = dict(zip(cols, raw))
+
+        # Skip engine-test sites (is_test_site='1'). Their emissions come
+        # from the engine_test_events table, not from the *_kg_unit fixed
+        # rates on this row, and the compute module for engine tests is
+        # introduced in a later phase. The IS NULL / '' fallbacks preserve
+        # backward compatibility with pre-v1b projects that lack the
+        # column entirely (SQLite's SELECT * still returns their rows,
+        # just without the column, so rec.get returns None).
+        is_test_site = str(rec.get("is_test_site") or "0").strip()
+        if is_test_site == "1":
+            n_test_sites_skipped += 1
+            continue
+
         wkt, kind, length_m, area_m2 = _wkb_to_wkt_via_shapely(rec.get("geometry"))
         raw_id = rec.get("source_id") or rec.get("oid")
         rows.append(
@@ -365,6 +379,11 @@ def _extract_area_sources(conn: sqlite3.Connection) -> list[dict]:
                     default=str,
                 ),
             }
+        )
+    if n_test_sites_skipped:
+        print(
+            f"  [extract_sources] {n_test_sites_skipped} engine-test site(s) "
+            "skipped: engine-test emissions module not yet available"
         )
     return rows
 
