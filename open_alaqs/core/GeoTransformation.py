@@ -44,6 +44,98 @@ class GeoTransformation(abc.ABC):
         raise NotImplementedError
 
     @staticmethod
+    def _get_dynamics_params(aircraft, sas_method, lto_mode):
+        """Resolve per-mode plume dynamics for (aircraft, lto_mode) under
+        ``sas_method``.
+
+        Returns a dict with keys ``horizontal_extension``, ``vertical_shift``,
+        ``vertical_extension``. Preserves the pre-existing behaviour of
+        ``create_polygon_3d``: emits the same missing-dynamics warning when
+        the mode is absent, and falls back from ``sas_method`` to
+        ``"default"`` when the requested method key is unavailable.
+
+        Extracted from ``create_polygon_3d`` for reuse by callers that need
+        only the vertical envelope (e.g. engine-test emissions), without
+        constructing a trajectory-segment polygon.
+        """
+        # B4 FIX (preserved): guard against KeyError if the aircraft group
+        # has no entry for this mode in the default_emission_dynamics table.
+        try:
+            mode_dynamics = aircraft.getEmissionDynamicsByMode()[lto_mode]
+        except (KeyError, TypeError):
+            logger.warning(
+                "No emission dynamics found for mode '%s' on aircraft '%s'. "
+                "Using zero-extension defaults.",
+                lto_mode,
+                aircraft.getICAOIdentifier() if aircraft else "unknown",
+            )
+            return {
+                "horizontal_extension": 0.0,
+                "vertical_shift": 0.0,
+                "vertical_extension": 0.0,
+            }
+
+        try:
+            return mode_dynamics.getEmissionDynamics(sas_method)
+        except (KeyError, TypeError):
+            return mode_dynamics.getEmissionDynamics("default")
+
+    @staticmethod
+    def _compute_z_envelope(sas_method, s_v, d_v, z_ground):
+        """Pure vertical-envelope formula.
+
+        Returns ``(z_lower, z_upper)`` for one endpoint (or one stationary
+        source) at ground z = ``z_ground``, under smooth-and-shift method
+        ``sas_method`` (``"default"`` or ``"sas"``; any other value takes
+        the no-shift fallback branch).
+
+        Expressions and evaluation order preserved verbatim from the
+        previous inline z-block of ``create_polygon_3d`` so the movement
+        inventory build is byte-identical before and after this extraction.
+        The ``ver_ext = d_v`` symbol identity from the original code is
+        preserved rather than algebraically simplified. z-floor clamping
+        (``max(0, z)``) is NOT applied here; the caller does it during
+        geometry-vertex construction, matching the prior behaviour.
+        """
+        ver_ext = d_v  # preserved: original had `ver_ext = d_v` after lookup
+        ver_shift = s_v  # preserved: original had `ver_shift = s_v`
+
+        if sas_method == "default":
+            z_lower = z_ground + ver_shift
+            z_upper = z_lower + ver_ext
+        elif sas_method == "sas":
+            z_lower = z_ground - (ver_ext + d_v) / 2
+            z_upper = z_ground + ver_ext
+        else:
+            z_lower = z_ground
+            z_upper = z_ground
+
+        return z_lower, z_upper
+
+    @staticmethod
+    def get_vertical_envelope(aircraft, sas_method, lto_mode, z_ground):
+        """Convenience wrapper: (aircraft, method, mode, z_ground) ->
+        (z_lower, z_upper).
+
+        Combines ``_get_dynamics_params`` and ``_compute_z_envelope`` for
+        callers that need only the vertical envelope of a stationary source
+        (e.g. engine-test emissions) rather than the full 3-D polygon
+        around a trajectory segment. ``create_polygon_3d`` itself does not
+        call this wrapper; it calls the two internal helpers directly to
+        avoid recomputing the vertical values from a single dynamics
+        lookup.
+        """
+        params = GeoTransformation._get_dynamics_params(
+            aircraft, sas_method, lto_mode
+        )
+        return GeoTransformation._compute_z_envelope(
+            sas_method,
+            params["vertical_shift"],
+            params["vertical_extension"],
+            z_ground,
+        )
+
+    @staticmethod
     def create_polygon_3d(
         aircraft, sas_method, lto_mode, point_1: QgsPoint, point_2: QgsPoint
     ):
@@ -83,66 +175,32 @@ class GeoTransformation(abc.ABC):
                 f"start={start_coords}, end={end_coords}"
             )
 
-        # ── Dynamics lookup — E1 FIX: fetch once, not five times ─────────────
-        # B4 FIX: guard against KeyError if the aircraft group has no entry for
-        # this mode in the default_emission_dynamics table.
-        try:
-            mode_dynamics = aircraft.getEmissionDynamicsByMode()[lto_mode]
-        except (KeyError, TypeError):
-            logger.warning(
-                "No emission dynamics found for mode '%s' on aircraft '%s'. "
-                "Using zero-extension defaults.",
-                lto_mode,
-                aircraft.getICAOIdentifier() if aircraft else "unknown",
-            )
-            mode_dynamics = None
-
-        if mode_dynamics is not None:
-            try:
-                sas_params = mode_dynamics.getEmissionDynamics(sas_method)
-            except (KeyError, TypeError):
-                sas_params = mode_dynamics.getEmissionDynamics("default")
-
-            d_h = sas_params["horizontal_extension"]
-            s_v = sas_params["vertical_shift"]
-            d_v = sas_params["vertical_extension"]
-
-            # ver_ext must come from the same method as d_v.
-            # The original code used "default" for airborne modes (CL/AP) and
-            # sas_method for TX/TO, which mixed "default" and "sas" columns in
-            # the sas z-shift formula: z - (ver_ext + d_v) / 2.
-            # Since d_v and ver_ext are both "vertical_extension" from the same
-            # EmissionDynamics object, they must use the same method lookup so
-            # the formula is consistent.  sas_method is already normalised to
-            # either "default" or "sas" in __init__, so this is always correct.
-            ver_ext = d_v
-        else:
-            d_h = d_v = s_v = ver_ext = 0.0
+        # ── Dynamics lookup — delegated to _get_dynamics_params (E1 FIX
+        # preserved: fetched once, then used twice below).
+        params = GeoTransformation._get_dynamics_params(
+            aircraft, sas_method, lto_mode
+        )
+        d_h = params["horizontal_extension"]
+        s_v = params["vertical_shift"]
+        d_v = params["vertical_extension"]
 
         # ── Polygon geometry ─────────────────────────────────────────────────
         hor_ext = d_h / 2  # half-width
-        ver_shift = s_v
 
         perp_x = -dy / length
         perp_y = dx / length
 
-        if sas_method == "default":
-            z_shifted_start = start_coords[2] + ver_shift
-            z_shifted_end = end_coords[2] + ver_shift
-            z_upper_start = z_shifted_start + ver_ext
-            z_upper_end = z_shifted_end + ver_ext
+        # z-envelope per endpoint, delegated to _compute_z_envelope.
+        z_shifted_start, z_upper_start = GeoTransformation._compute_z_envelope(
+            sas_method, s_v, d_v, start_coords[2]
+        )
+        z_shifted_end, z_upper_end = GeoTransformation._compute_z_envelope(
+            sas_method, s_v, d_v, end_coords[2]
+        )
 
-        elif sas_method == "sas":
-            z_shifted_start = start_coords[2] - (ver_ext + d_v) / 2
-            z_shifted_end = end_coords[2] - (ver_ext + d_v) / 2
-            z_upper_start = start_coords[2] + ver_ext
-            z_upper_end = end_coords[2] + ver_ext
-
-        else:
-            z_shifted_start = start_coords[2]
-            z_shifted_end = end_coords[2]
-            z_upper_start = z_shifted_start
-            z_upper_end = z_shifted_end
+        # Fallback method (neither "default" nor "sas") also zeroes the
+        # horizontal spread. Preserved from the previous inline else branch.
+        if sas_method not in ("default", "sas"):
             hor_ext = 0
 
         # Create 3D vertices using QgsPoint
