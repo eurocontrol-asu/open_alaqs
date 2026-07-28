@@ -35,6 +35,14 @@ class AreaSources(Source):
         self._unit_year = _ctf(val.get("unit_year", 0), default=0.0)
         self._heat_flux = _ctf(val.get("heat_flux"), default=None)
 
+        # is_test_site: TEXT '1' / '0', matching the instudy convention.
+        # '1' = this area source is an engine-test site (emissions come from
+        # per-event records, not from the *_kg_unit fixed rates). '0' or
+        # missing = a normal area source, unchanged behaviour. Consumed by
+        # the engine-test source module (added in a later phase); no
+        # effect on existing area-source processing.
+        self._is_test_site = str(val.get("is_test_site", "0")).strip() == "1"
+
         if self._geometry_text and self._height is not None:
             self.setGeometryText(
                 spatial.addHeightToGeometryWkt(self.getGeometryText(), self.getHeight())
@@ -62,6 +70,21 @@ class AreaSources(Source):
 
     def setHeatFlux(self, var):
         self._heat_flux = var
+
+    def isTestSite(self) -> bool:
+        """True if this area source is flagged as an engine-test site.
+
+        Test-site area sources emit via per-event records in the
+        ``engine_test_events`` table, not via the fixed ``*_kg_unit``
+        rates on the row itself. Consumed by the engine-test source
+        module. No effect on existing area-source processing when
+        False (which includes rows written by older plugin versions
+        that predate the flag).
+        """
+        return self._is_test_site
+
+    def setTestSite(self, flag: bool) -> None:
+        self._is_test_site = bool(flag)
 
     def __str__(self):
         val = "\n AreaSources with id '%s'" % (self.getName())
@@ -149,6 +172,7 @@ class AreaSourcesDatabase(SQLSerializable, metaclass=Singleton):
                     ("p1_kg_unit", "DECIMAL"),
                     ("p2_kg_unit", "DECIMAL"),
                     ("instudy", "TEXT"),
+                    ("is_test_site", "TEXT"),
                 ]
             )
         if geometry_columns is None:
