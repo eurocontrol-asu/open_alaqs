@@ -1,0 +1,455 @@
+"""Phase 3 standalone tests: extract_engine_test_events + compute_engine_test.
+
+QGIS-free. Uses raw sqlite3 fixtures for the extract tests and native
+Python dicts for the compute tests.
+"""
+
+from __future__ import annotations
+
+import io
+import os
+import sqlite3
+import tempfile
+from contextlib import redirect_stdout
+from datetime import datetime
+
+from openalaqs_standalone.compute_engine_test import (
+    _period_window_fraction,
+    compute_engine_test_for_period,
+)
+from openalaqs_standalone.extract_engine_test_events import (
+    extract_engine_test_events,
+)
+
+# ═══════════════════════════════════════════════════════════════════════
+# Fixtures: scratch SpatiaLite-free DBs
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def _make_db_with_both_tables(area_rows, event_rows, include_is_test_site=True):
+    """Create a scratch DB with shapes_area_sources + engine_test_events."""
+    path = tempfile.NamedTemporaryFile(suffix=".alaqs", delete=False).name
+    conn = sqlite3.connect(path)
+
+    if include_is_test_site:
+        area_ddl = """
+            CREATE TABLE shapes_area_sources (
+                oid INTEGER PRIMARY KEY,
+                source_id TEXT,
+                height DECIMAL,
+                instudy TEXT DEFAULT '1',
+                is_test_site TEXT DEFAULT '0',
+                geometry BLOB
+            )
+        """
+    else:
+        area_ddl = """
+            CREATE TABLE shapes_area_sources (
+                oid INTEGER PRIMARY KEY,
+                source_id TEXT,
+                height DECIMAL,
+                instudy TEXT DEFAULT '1',
+                geometry BLOB
+            )
+        """
+    conn.execute(area_ddl)
+    for r in area_rows:
+        cols = ", ".join(r.keys())
+        ph = ", ".join(["?"] * len(r))
+        conn.execute(
+            f"INSERT INTO shapes_area_sources ({cols}) VALUES ({ph})",
+            list(r.values()),
+        )
+
+    conn.execute(
+        """
+        CREATE TABLE engine_test_events (
+            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_id TEXT NOT NULL,
+            test_id TEXT,
+            start_datetime TEXT NOT NULL,
+            end_datetime TEXT NOT NULL,
+            aircraft_type TEXT NOT NULL,
+            engine_uid TEXT,
+            engine_count INTEGER,
+            t_TX_s INTEGER NOT NULL DEFAULT 0,
+            t_AP_s INTEGER NOT NULL DEFAULT 0,
+            t_CL_s INTEGER NOT NULL DEFAULT 0,
+            t_TO_s INTEGER NOT NULL DEFAULT 0,
+            thrust_mode TEXT NOT NULL DEFAULT 'snap',
+            instudy TEXT NOT NULL DEFAULT '1'
+        )
+        """
+    )
+    for r in event_rows:
+        cols = ", ".join(r.keys())
+        ph = ", ".join(["?"] * len(r))
+        conn.execute(
+            f"INSERT INTO engine_test_events ({cols}) VALUES ({ph})",
+            list(r.values()),
+        )
+    conn.commit()
+    return path, conn
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Section 1: extract_engine_test_events
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_extract_returns_events_for_test_site_parents():
+    path, conn = _make_db_with_both_tables(
+        area_rows=[
+            {"source_id": "N1", "height": 3.0, "instudy": "1", "is_test_site": "1"},
+            {"source_id": "A1", "height": 0.0, "instudy": "1", "is_test_site": "0"},
+        ],
+        event_rows=[
+            {
+                "source_id": "N1",
+                "start_datetime": "2024-12-01T09:00:00",
+                "end_datetime": "2024-12-01T09:30:00",
+                "aircraft_type": "C56X",
+            },
+            {
+                "source_id": "A1",
+                "start_datetime": "2024-12-01T09:00:00",
+                "end_datetime": "2024-12-01T09:30:00",
+                "aircraft_type": "C56X",
+            },
+        ],
+    )
+    try:
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            events = extract_engine_test_events(conn)
+        conn.close()
+        # A1 event skipped (parent not test site); only N1 event kept.
+        assert len(events) == 1
+        assert events[0]["source_id"] == "N1"
+        assert events[0]["source_height_m"] == 3.0
+        assert "1 event(s) skipped: parent source not flagged" in buf.getvalue()
+    finally:
+        os.unlink(path)
+
+
+def test_extract_skips_orphan_events():
+    path, conn = _make_db_with_both_tables(
+        area_rows=[
+            {"source_id": "N1", "height": 3.0, "instudy": "1", "is_test_site": "1"},
+        ],
+        event_rows=[
+            {
+                "source_id": "N1",
+                "start_datetime": "2024-12-01T09:00:00",
+                "end_datetime": "2024-12-01T09:30:00",
+                "aircraft_type": "C56X",
+            },
+            {
+                "source_id": "GHOST",
+                "start_datetime": "2024-12-01T09:00:00",
+                "end_datetime": "2024-12-01T09:30:00",
+                "aircraft_type": "C56X",
+            },
+        ],
+    )
+    try:
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            events = extract_engine_test_events(conn)
+        conn.close()
+        assert len(events) == 1
+        assert "1 event(s) skipped: source_id not found" in buf.getvalue()
+    finally:
+        os.unlink(path)
+
+
+def test_extract_skips_events_marked_out_of_study():
+    path, conn = _make_db_with_both_tables(
+        area_rows=[
+            {"source_id": "N1", "height": 3.0, "instudy": "1", "is_test_site": "1"},
+        ],
+        event_rows=[
+            {
+                "source_id": "N1",
+                "start_datetime": "2024-12-01T09:00:00",
+                "end_datetime": "2024-12-01T09:30:00",
+                "aircraft_type": "C56X",
+                "instudy": "0",
+            },
+        ],
+    )
+    try:
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            events = extract_engine_test_events(conn)
+        conn.close()
+        assert len(events) == 0
+        assert "1 event(s) skipped: event out of study" in buf.getvalue()
+    finally:
+        os.unlink(path)
+
+
+def test_extract_returns_empty_for_missing_engine_test_events_table():
+    path = tempfile.NamedTemporaryFile(suffix=".alaqs", delete=False).name
+    conn = sqlite3.connect(path)
+    conn.execute("CREATE TABLE shapes_area_sources (source_id TEXT, is_test_site TEXT)")
+    try:
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            events = extract_engine_test_events(conn)
+        conn.close()
+        assert events == []
+        assert "engine_test_events table absent" in buf.getvalue()
+    finally:
+        os.unlink(path)
+
+
+def test_extract_returns_empty_for_pre_v1b_area_source_schema():
+    """A DB where shapes_area_sources lacks is_test_site (pre-v1b)."""
+    path, conn = _make_db_with_both_tables(
+        area_rows=[{"source_id": "N1", "height": 0.0, "instudy": "1"}],
+        event_rows=[],
+        include_is_test_site=False,
+    )
+    try:
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            events = extract_engine_test_events(conn)
+        conn.close()
+        assert events == []
+        assert "lacks is_test_site column" in buf.getvalue()
+    finally:
+        os.unlink(path)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Section 2: _period_window_fraction
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def _dt(day, hour, minute=0):
+    return datetime(2024, 12, day, hour, minute)
+
+
+def test_standalone_fraction_matches_plugin_math():
+    """Sanity: standalone fraction implementation matches the plugin's
+    for the same seven topology cases."""
+    p_start, p_end = _dt(1, 9), _dt(1, 10)
+
+    # Entirely inside
+    assert _period_window_fraction(_dt(1, 9, 15), _dt(1, 9, 45), p_start, p_end) == 1.0
+    # Straddles start
+    assert _period_window_fraction(_dt(1, 8, 45), _dt(1, 9, 15), p_start, p_end) == 0.5
+    # Straddles end
+    assert _period_window_fraction(_dt(1, 9, 45), _dt(1, 10, 15), p_start, p_end) == 0.5
+    # Outside
+    assert _period_window_fraction(_dt(1, 7), _dt(1, 8), p_start, p_end) == 0.0
+    # Touching start
+    assert _period_window_fraction(_dt(1, 8), _dt(1, 9), p_start, p_end) == 0.0
+    # Missing dt
+    assert _period_window_fraction(None, _dt(1, 9, 15), p_start, p_end) == 0.0
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Section 3: compute_engine_test_for_period
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def _ei(fuel_kg_sec, **kwargs):
+    """Build an EI-row dict with fuel_flow and named pollutant EIs."""
+    d = {"fuel_kg_sec": fuel_kg_sec}
+    for k, v in kwargs.items():
+        d[f"{k}_ei_g_kg_fuel"] = v
+    return d
+
+
+def _event_dict(**overrides):
+    base = {
+        "event_id": 1,
+        "source_id": "N1",
+        "start_datetime": "2024-12-01T09:00:00",
+        "end_datetime": "2024-12-01T09:30:00",
+        "aircraft_type": "C56X",
+        "engine_uid": "B602",
+        "engine_count": 2,
+        "t_TX_s": 0,
+        "t_AP_s": 0,
+        "t_CL_s": 0,
+        "t_TO_s": 0,
+        "thrust_mode": "snap",
+        "instudy": "1",
+    }
+    base.update(overrides)
+    return base
+
+
+def test_compute_matches_hand_calculation_full_period():
+    """t_CL=900s, engine_count=2, FF=0.5 kg/s, NOx EI=20 g/kg, fraction=1
+    → fuel = 900*2*1 * 0.5 = 900 kg; NOx = 20 * 900 = 18000 g."""
+    ei_lookup = {
+        ("B602", "CL"): _ei(fuel_kg_sec=0.5, nox=20.0),
+    }
+    aircraft_lookup = {"C56X": {"engine_count": 2, "engine_uid": "B602"}}
+    events = [_event_dict(t_CL_s=900)]
+
+    totals = compute_engine_test_for_period(
+        events, _dt(1, 9), _dt(1, 10), ei_lookup, aircraft_lookup
+    )
+    assert set(totals.keys()) == {"N1"}
+    assert abs(totals["N1"]["fuel"] - 900.0) < 1e-9
+    assert abs(totals["N1"]["nox"] - 18000.0) < 1e-6
+
+
+def test_compute_period_window_fraction_applied():
+    """Event 08:45-09:15 (30min) with t_CL=1800s, period 09:00-10:00.
+    fraction=0.5 → t_effective=1800*2*0.5=1800 → fuel=1800*1.0=1800 kg.
+    """
+    ei_lookup = {("B602", "CL"): _ei(fuel_kg_sec=1.0)}
+    aircraft_lookup = {"C56X": {"engine_count": 2, "engine_uid": "B602"}}
+    events = [
+        _event_dict(
+            t_CL_s=1800,
+            start_datetime="2024-12-01T08:45:00",
+            end_datetime="2024-12-01T09:15:00",
+        )
+    ]
+    totals = compute_engine_test_for_period(
+        events, _dt(1, 9), _dt(1, 10), ei_lookup, aircraft_lookup
+    )
+    assert abs(totals["N1"]["fuel"] - 1800.0) < 1e-9
+
+
+def test_compute_multiple_events_same_source_summed():
+    """Two events on N1 summed: e1 t_TX=600s FF=1.0 → 600 kg fuel;
+    e2 t_TX=300s → 300 kg fuel. Total 900 kg."""
+    ei_lookup = {("B602", "TX"): _ei(fuel_kg_sec=1.0)}
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+    events = [
+        _event_dict(event_id=1, t_TX_s=600, engine_count=1),
+        _event_dict(
+            event_id=2,
+            t_TX_s=300,
+            engine_count=1,
+            start_datetime="2024-12-01T09:45:00",
+            end_datetime="2024-12-01T09:55:00",
+        ),
+    ]
+    totals = compute_engine_test_for_period(
+        events, _dt(1, 9), _dt(1, 10), ei_lookup, aircraft_lookup
+    )
+    assert abs(totals["N1"]["fuel"] - 900.0) < 1e-9
+
+
+def test_compute_multiple_sources_kept_separate():
+    ei_lookup = {("B602", "CL"): _ei(fuel_kg_sec=1.0)}
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+    events = [
+        _event_dict(source_id="N1", event_id=1, t_CL_s=100, engine_count=1),
+        _event_dict(source_id="COMP", event_id=2, t_CL_s=200, engine_count=1),
+    ]
+    totals = compute_engine_test_for_period(
+        events, _dt(1, 9), _dt(1, 10), ei_lookup, aircraft_lookup
+    )
+    assert set(totals.keys()) == {"N1", "COMP"}
+    assert abs(totals["N1"]["fuel"] - 100.0) < 1e-9
+    assert abs(totals["COMP"]["fuel"] - 200.0) < 1e-9
+
+
+def test_compute_zero_running_source_omitted():
+    ei_lookup = {("B602", "TX"): _ei(fuel_kg_sec=1.0)}
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+    events = [_event_dict(t_TX_s=0)]
+    totals = compute_engine_test_for_period(
+        events, _dt(1, 9), _dt(1, 10), ei_lookup, aircraft_lookup
+    )
+    assert totals == {}
+
+
+def test_compute_out_of_study_event_ignored():
+    ei_lookup = {("B602", "CL"): _ei(fuel_kg_sec=1.0)}
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+    events = [_event_dict(t_CL_s=100, instudy="0")]
+    totals = compute_engine_test_for_period(
+        events, _dt(1, 9), _dt(1, 10), ei_lookup, aircraft_lookup
+    )
+    assert totals == {}
+
+
+def test_compute_missing_ei_flagged_and_skipped():
+    """No EI row for engine * mode → no contribution, diagnostic emitted."""
+    ei_lookup = {}  # empty
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+    events = [_event_dict(t_CL_s=900, engine_count=1)]
+    diagnostics = []
+    totals = compute_engine_test_for_period(
+        events,
+        _dt(1, 9),
+        _dt(1, 10),
+        ei_lookup,
+        aircraft_lookup,
+        diagnostics=diagnostics,
+    )
+    assert totals == {}
+    assert any("no EI for engine" in msg for msg in diagnostics)
+
+
+def test_compute_unresolvable_engine_count_flagged():
+    """engine_count=None on event AND aircraft → skip with diagnostic."""
+    ei_lookup = {("B602", "CL"): _ei(fuel_kg_sec=1.0)}
+    aircraft_lookup = {"C56X": {"engine_uid": "B602"}}  # no engine_count
+    events = [_event_dict(t_CL_s=900, engine_count=None)]
+    diagnostics = []
+    totals = compute_engine_test_for_period(
+        events,
+        _dt(1, 9),
+        _dt(1, 10),
+        ei_lookup,
+        aircraft_lookup,
+        diagnostics=diagnostics,
+    )
+    assert totals == {}
+    assert any("engine count unresolved" in msg for msg in diagnostics)
+
+
+def test_compute_meem_falls_back_to_snap_with_diagnostic():
+    """meem thrust mode currently reuses snap EI; diagnostic emitted."""
+    ei_lookup = {("B602", "CL"): _ei(fuel_kg_sec=1.0)}
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+    events = [_event_dict(t_CL_s=100, engine_count=1, thrust_mode="meem")]
+    diagnostics = []
+    totals = compute_engine_test_for_period(
+        events,
+        _dt(1, 9),
+        _dt(1, 10),
+        ei_lookup,
+        aircraft_lookup,
+        diagnostics=diagnostics,
+    )
+    # Fuel still computed via snap fallback.
+    assert abs(totals["N1"]["fuel"] - 100.0) < 1e-9
+    assert any("meem thrust mode not implemented" in msg for msg in diagnostics)
+
+
+def test_compute_engine_uid_row_takes_precedence():
+    """Row's engine_uid wins over aircraft default."""
+    ei_lookup = {
+        ("EXPLICIT_UID", "TX"): _ei(fuel_kg_sec=2.0),
+        ("DEFAULT_UID", "TX"): _ei(fuel_kg_sec=1.0),
+    }
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "DEFAULT_UID"}}
+    events = [_event_dict(t_TX_s=100, engine_count=1, engine_uid="EXPLICIT_UID")]
+    totals = compute_engine_test_for_period(
+        events, _dt(1, 9), _dt(1, 10), ei_lookup, aircraft_lookup
+    )
+    # Explicit UID used → fuel = 100*1*2 = 200 kg
+    assert abs(totals["N1"]["fuel"] - 200.0) < 1e-9
+
+
+def test_compute_engine_uid_falls_back_to_aircraft():
+    ei_lookup = {("DEFAULT_UID", "TX"): _ei(fuel_kg_sec=1.0)}
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "DEFAULT_UID"}}
+    events = [_event_dict(t_TX_s=100, engine_count=1, engine_uid=None)]
+    totals = compute_engine_test_for_period(
+        events, _dt(1, 9), _dt(1, 10), ei_lookup, aircraft_lookup
+    )
+    assert abs(totals["N1"]["fuel"] - 100.0) < 1e-9
