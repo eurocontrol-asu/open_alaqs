@@ -128,6 +128,7 @@ class TestGuiConfigurationValues:
         # Expected source module types
         expected_modules = [
             "AreaSource",
+            "EngineTestSource",
             "MovementSource",
             "ParkingSource",
             "PointSource",
