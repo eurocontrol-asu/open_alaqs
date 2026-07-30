@@ -3,6 +3,10 @@ from qgis.PyQt import QtWidgets
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.openalaqsuitoolkit import validate_field
+from open_alaqs.ui._area_sources_helpers import (
+    seed_is_test_site_from_feature,
+    write_is_test_site_to_feature,
+)
 
 logger = get_logger(__name__)
 
@@ -49,10 +53,17 @@ def form_open(form, layer, feature):
         p2_kg_unit_field=form.findChild(QtWidgets.QLineEdit, "p2_kg_unit"),
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
+        is_test_site=form.findChild(QtWidgets.QCheckBox, "is_test_site"),
     )
 
     # Hide the instudy field
     fields["instudy"].setHidden(True)
+
+    # Seed the is_test_site checkbox from the feature. Values arrive as
+    # TEXT '1' / '0' (matching the DB), NULL (from ALTER TABLE ADD COLUMN
+    # on migrated projects), or absent entirely (pre-v1b schema — the
+    # widget still exists on the form but has nothing to read).
+    seed_is_test_site_from_feature(fields["is_test_site"], feature)
 
     # Disable heat flux fields
     fields["heat_flux_field"].setText("0")
@@ -85,6 +96,10 @@ def form_open(form, layer, feature):
             "monthly_profile", fields["month_profile_field"].currentText()
         )
         feature["instudy"] = str(int(fields["instudy"].isChecked()))
+        # is_test_site as TEXT '1' / '0' to match the DB column type
+        # (see EngineTestEvents.py schema). AreaSources.isTestSite()
+        # reads by string comparison.
+        write_is_test_site_to_feature(fields["is_test_site"], feature)
 
     fields["button_box"].accepted.connect(on_save)
 

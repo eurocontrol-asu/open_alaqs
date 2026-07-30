@@ -46,7 +46,27 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="0" colspan="2">
+   <item row="4" column="0">
+    <widget class="QLabel" name="label_is_test_site">
+     <property name="text">
+      <string>Engine test site</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QCheckBox" name="is_test_site">
+     <property name="toolTip">
+      <string>When enabled, this source's emissions come from engine_test_events records (loaded via scripts/import_engine_test_events.py) and the *_kg_unit rates on the Emissions tab are ignored.</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0" colspan="2">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
       <number>0</number>
