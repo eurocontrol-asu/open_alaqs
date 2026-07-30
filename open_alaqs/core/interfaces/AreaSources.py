@@ -86,6 +86,21 @@ class AreaSources(Source):
     def setTestSite(self, flag: bool) -> None:
         self._is_test_site = bool(flag)
 
+    def getEngineTestEvents(self, events_store) -> list:
+        """Return the ``EngineTestEvent`` objects associated with this
+        area source.
+
+        Returns ``[]`` for area sources not flagged as test sites, even
+        if an event happens to share the same ``source_id`` in the
+        database (defensive against stale rows in ``engine_test_events``
+        after a source's ``is_test_site`` flag has been flipped back
+        to ``'0'``). To retrieve events regardless of the flag, call
+        ``events_store.getEventsBySourceId(source_id)`` directly.
+        """
+        if not self._is_test_site or events_store is None:
+            return []
+        return events_store.getEventsBySourceId(self._id)
+
     def __str__(self):
         val = "\n AreaSources with id '%s'" % (self.getName())
         val += "\n\t Units per Year: %f" % (self.getUnitsPerYear())
