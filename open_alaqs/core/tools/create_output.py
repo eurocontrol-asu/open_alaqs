@@ -569,6 +569,53 @@ def inventory_copy_taxiway_routes(inventory_path):
     logger.info(msg)
 
 
+def _copy_shape_table_schema_robust(dst_cursor, dst_conn, table_name: str) -> str:
+    """Copy all rows from ``table_name`` in the currently-active project
+    database into ``dst_cursor``'s connection.
+
+    Schema-robust: reads both source and destination column lists at runtime
+    from ``PRAGMA table_info``, then SELECTs and INSERTs on the intersection
+    only. Rows are inserted with an explicit column list, so any columns the
+    destination has but the source doesn't (e.g. ``is_test_site`` added by
+    schema evolution) take their DEFAULT value instead of raising a
+    column-count mismatch.
+
+    This mirrors the pattern already used for ``shapes_runways`` and
+    ``shapes_point_sources`` earlier in this function. Extracted so all
+    vector-layer copies share the same robust path, closing a class of
+    silent-failure bugs where a hardcoded ``VALUES (?,?,...)`` was left
+    stale after a column was added.
+
+    Returns a status string (the log message that would be emitted on
+    success) so the caller can log it consistently.
+    """
+    dst_cols = [r[1] for r in dst_cursor.execute(f"PRAGMA table_info({table_name})")]
+    src_db_path = alaqsdblite.ProjectDatabase().path
+    with sqlite.connect(src_db_path) as src_conn:
+        src_cols = [r[1] for r in src_conn.execute(f"PRAGMA table_info({table_name})")]
+    common = [c for c in dst_cols if c in src_cols]
+    if not common:
+        # Source table missing or empty schema. Nothing to copy; caller
+        # sees no rows in the destination, which is the same outcome as
+        # a source with zero rows.
+        return f"[+] {table_name} skipped (no common columns with source)"
+
+    col_list = ", ".join(f'"{c}"' for c in common)
+    placeholders = ",".join("?" * len(common))
+    rows = alaqsdblite.query_string(f"SELECT {col_list} FROM {table_name};")
+    if rows is None:
+        # query_string logs the error internally and returns None on
+        # failure. Nothing to insert; log a skip line so it is visible
+        # in the run output.
+        return f"[+] {table_name} skipped (source SELECT returned None)"
+    dst_cursor.executemany(
+        f"INSERT INTO {table_name} ({col_list}) VALUES ({placeholders})",
+        rows,
+    )
+    dst_conn.commit()
+    return f"[+] {table_name} copied to output file"
+
+
 def inventory_copy_vector_layers(inventory_path):
     """
     Copy all vector layers from the currently active alaqs project file to the output file
@@ -579,185 +626,33 @@ def inventory_copy_vector_layers(inventory_path):
         conn = sql_interface.connect(inventory_path)
         curs = conn.cursor()
 
-        try:
-            area_sources = alaqsdblite.query_string(
-                "SELECT * FROM shapes_area_sources;"
-            )
-            curs.executemany(
-                "INSERT INTO shapes_area_sources VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                area_sources,
-            )
-            conn.commit()
-            msg = "[+] Area sources copied to output file"
-            logger.info(msg)
-
-        except Exception as e:
-            # fix_print_with_import
-            print(e)
-            msg = "Problem copying area sources: %s" % e
-            logger.error(msg)
-
-        try:
-            buildings = alaqsdblite.query_string("SELECT * FROM shapes_buildings;")
-            curs.executemany(
-                "INSERT INTO shapes_buildings VALUES (?,?,?,?,?)", buildings
-            )
-            conn.commit()
-            msg = "[+] Buildings copied to output file"
-            logger.info(msg)
-
-        except Exception as e:
-            msg = "Problem copying buildings: %s" % e
-            logger.error(msg)
-
-        try:
-            gates = alaqsdblite.query_string("SELECT * FROM shapes_gates;")
-            curs.executemany("INSERT INTO shapes_gates VALUES (?,?,?,?,?,?)", gates)
-            conn.commit()
-            msg = "[+] Gates copied to output file"
-            logger.info(msg)
-
-        except Exception as e:
-            msg = "Problem copying gates: %s" % e
-            logger.error(msg)
-
-        try:
-            parking = alaqsdblite.query_string("SELECT * FROM shapes_parking;")
-            curs.executemany(
-                "INSERT INTO shapes_parking VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                parking,
-            )
-            conn.commit()
-            msg = "[+] Parkings copied to output file"
-            logger.info(msg)
-
-        except Exception as e:
-            msg = "Problem copying parking: %s" % e
-            logger.error(msg)
-
-        try:
-            receptors = alaqsdblite.query_string(
-                "SELECT * FROM shapes_receptor_points;"
-            )
-            curs.executemany(
-                "INSERT INTO shapes_receptor_points VALUES (?,?,?,?,?,?,?)", receptors
-            )
-            conn.commit()
-            msg = "[+] Receptor points copied to output file"
-            logger.info(msg)
-
-        except Exception as e:
-            msg = "Problem copying receptor points: %s" % e
-            logger.error(msg)
-
-        # try:
-        #     receptors = alaqsdblite.query_string("SELECT * FROM shapes_receptors;")
-        #     curs.executemany('INSERT INTO shapes_receptors VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', receptors)
-        #     conn.commit()
-        #     msg = "[+] Receptors copied to output file"
-        #     logger.info(msg)
-        #
-        # except Exception as e:
-        #     msg = "Problem copying receptors: %s" % e
-        #     logger.error(msg)
-
-        try:
-            roadways = alaqsdblite.query_string("SELECT * FROM shapes_roadways;")
-            curs.executemany(
-                "INSERT INTO shapes_roadways VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                roadways,
-            )
-            conn.commit()
-            msg = "[+] Roadways copied to output file"
-            logger.info(msg)
-
-        except Exception as e:
-            msg = "Problem copying roadways: %s" % e
-            logger.error(msg)
-
-        try:
-            # Schema-robust copy: source projects predating the session-22
-            # simplification still have 8 cols in shapes_runways (with
-            # max_queue_speed and peak_queue_time, since dropped). Select only
-            # the destination cols so legacy files copy cleanly.
-            dst_cols = [r[1] for r in curs.execute("PRAGMA table_info(shapes_runways)")]
-            src_db_path = alaqsdblite.ProjectDatabase().path
-            with sqlite.connect(src_db_path) as src_conn:
-                src_cols = [
-                    r[1] for r in src_conn.execute("PRAGMA table_info(shapes_runways)")
-                ]
-            common = [c for c in dst_cols if c in src_cols]
-            col_list = ", ".join(f'"{c}"' for c in common)
-            placeholders = ",".join("?" * len(common))
-            runways = alaqsdblite.query_string(
-                f"SELECT {col_list} FROM shapes_runways;"
-            )
-            curs.executemany(
-                f"INSERT INTO shapes_runways ({col_list}) VALUES ({placeholders})",
-                runways,
-            )
-            conn.commit()
-            msg = "[+] Runways copied to output file"
-            logger.info(msg)
-
-        except Exception as e:
-            msg = "Problem copying runways: %s" % e
-            logger.error(msg)
-
-        try:
-            # Use explicit column names in both SELECT and INSERT so the
-            # copy is robust to schema-evolution column-order differences
-            # between source and target (e.g. activity_unit was appended to
-            # shapes_point_sources by ALTER TABLE on migrated v1 studies,
-            # putting it after geometry, whereas the v2 template defines it
-            # before geometry).
-            _ps_cols = (
-                "oid, source_id, height, category, point_type, substance, "
-                "temperature, diameter, velocity, ops_year, "
-                "hour_profile, daily_profile, month_profile, "
-                "co_kg_k, hc_kg_k, nox_kg_k, sox_kg_k, pm10_kg_k, "
-                "p1_kg_k, p2_kg_k, instudy, activity_unit, geometry"
-            )
-            _ps_placeholders = ",".join(["?"] * 23)
-            point_sources = alaqsdblite.query_string(
-                f"SELECT {_ps_cols} FROM shapes_point_sources;"
-            )
-            curs.executemany(
-                f"INSERT INTO shapes_point_sources ({_ps_cols}) "
-                f"VALUES ({_ps_placeholders})",
-                point_sources,
-            )
-            conn.commit()
-            msg = "[+] Point sources copied to output file"
-            logger.info(msg)
-
-        except Exception as e:
-            msg = "Problem copying point sources: %s" % e
-            logger.error(msg)
-
-        try:
-            taxiways = alaqsdblite.query_string("SELECT * FROM shapes_taxiways;")
-            curs.executemany(
-                "INSERT INTO shapes_taxiways VALUES (?,?,?,?,?,?)", taxiways
-            )
-            conn.commit()
-            msg = "[+] Taxiways copied to output file"
-            logger.info(msg)
-
-        except Exception as e:
-            msg = "Problem copying taxiways: %s" % e
-            logger.error(msg)
-
-        try:
-            tracks = alaqsdblite.query_string("SELECT * FROM shapes_tracks;")
-            curs.executemany("INSERT INTO shapes_tracks VALUES (?,?,?,?,?,?)", tracks)
-            conn.commit()
-            msg = "[+] Tracks copied to output file"
-            logger.info(msg)
-
-        except Exception as e:
-            msg = "Problem copying tracks: %s" % e
-            logger.error(msg)
+        # Every ``shapes_*`` vector table copied through the same
+        # schema-robust helper. Order preserved from the previous
+        # explicit-block-per-table implementation so any downstream
+        # logs that rely on ordering (line-diff on the run log) still
+        # look the same.
+        for _table in (
+            "shapes_area_sources",
+            "shapes_buildings",
+            "shapes_gates",
+            "shapes_parking",
+            "shapes_receptor_points",
+            "shapes_roadways",
+            "shapes_runways",
+            "shapes_point_sources",
+            "shapes_taxiways",
+            "shapes_tracks",
+        ):
+            try:
+                msg = _copy_shape_table_schema_robust(curs, conn, _table)
+                logger.info(msg)
+            except Exception as e:
+                # Preserve prior behaviour: an error on one table is
+                # logged and swallowed so the remaining tables still
+                # get a chance to copy. Downstream tests then see
+                # whichever tables succeeded.
+                msg = "Problem copying %s: %s" % (_table, e)
+                logger.error(msg)
 
         msg = "[+] Copied all vector layers"
         logger.info(msg)
