@@ -73,6 +73,16 @@ class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
             # See Source.isInStudy() for the read-side contract.
             if not source.isInStudy():
                 continue
+            # Skip engine-test sites: their emissions come from per-event
+            # records in ``engine_test_events`` and are computed by
+            # ``EngineTestSourceModule``. Processing them here would apply
+            # the *_kg_unit fixed rates on top of the event-based compute,
+            # double-counting. Test-site sources are silently skipped
+            # (log-worthy only if they somehow still carry non-zero
+            # *_kg_unit rates, which is a data-entry inconsistency handled
+            # by input validation, not here).
+            if source.isTestSite():
+                continue
 
             # try the precomputed per-hour activity cache
             # first; legacy fallback below.

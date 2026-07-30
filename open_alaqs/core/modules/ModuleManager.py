@@ -15,6 +15,7 @@ from open_alaqs.core.modules.ConcentrationsQGISVectorLayerOutputModule import (
 from open_alaqs.core.modules.EmissionsQGISVectorLayerOutputModule import (
     EmissionsQGISVectorLayerOutputModule,
 )
+from open_alaqs.core.modules.EngineTestSourceModule import EngineTestSourceModule
 from open_alaqs.core.modules.MovementSourceModule import MovementSourceModule
 from open_alaqs.core.modules.ParkingSourceModule import (
     ParkingSourceWithTimeProfileModule,
@@ -103,6 +104,7 @@ class DispersionModuleRegistry(ModuleRegistry):
 
 source_module_registry = SourceModuleRegistry()
 source_module_registry.register(AreaSourceWithTimeProfileModule)
+source_module_registry.register(EngineTestSourceModule)
 source_module_registry.register(MovementSourceModule)
 source_module_registry.register(ParkingSourceWithTimeProfileModule)
 source_module_registry.register(PointSourceWithTimeProfileModule)
