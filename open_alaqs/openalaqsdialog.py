@@ -3226,3 +3226,308 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
             layer_types = list(LAYERS_CONFIG.keys())
 
         return layer_types
+
+
+class OpenAlaqsImportEngineTestEvents(QtWidgets.QDialog):
+    """
+    Dialog for importing engine-test event rows from a CSV into the
+    currently-loaded ALAQS project.
+
+    Thin UI wrapper around
+    ``open_alaqs.core.tools.engine_test_import`` (the same core module
+    used by the ``scripts/import_engine_test_events.py`` CLI). The
+    dialog handles: file picker, validation summary display, mode
+    selection, confirmation on destructive modes, and calling
+    ``apply_insert`` on user confirmation. All CSV format and
+    validation semantics live in the core module; changes there flow
+    automatically into this dialog.
+    """
+
+    def __init__(self, iface, database_path):
+        main_window = iface.mainWindow() if iface is not None else None
+        QtWidgets.QDialog.__init__(self, main_window)
+        self.iface = iface
+        self._database_path = database_path
+
+        # Held per-run state.
+        self._csv_path: Optional[Path] = None
+        self._validation_result = None  # ValidationResult after last validation
+        self._db_warnings = []  # list[RowIssue] from validate_against_db
+        self._csv_row_count = 0
+
+        self._build_ui()
+
+    # ── UI construction ───────────────────────────────────────────
+
+    def _build_ui(self):
+        self.setWindowTitle("Import Engine Test Events")
+        self.setMinimumWidth(700)
+        self.setMinimumHeight(500)
+
+        layout = QtWidgets.QVBoxLayout(self)
+
+        # DB path label (read-only, informational).
+        db_label = QtWidgets.QLabel(
+            f"<b>Target study:</b> {os.path.basename(self._database_path or '<none>')}"
+        )
+        db_label.setWordWrap(True)
+        layout.addWidget(db_label)
+
+        # File picker row.
+        file_row = QtWidgets.QHBoxLayout()
+        file_row.addWidget(QtWidgets.QLabel("CSV file:"))
+        self._csv_path_edit = QtWidgets.QLineEdit()
+        self._csv_path_edit.setPlaceholderText(
+            "Choose a CSV with engine-test event rows..."
+        )
+        self._csv_path_edit.setReadOnly(True)
+        file_row.addWidget(self._csv_path_edit)
+        browse_btn = QtWidgets.QPushButton("Browse...")
+        browse_btn.clicked.connect(self._on_browse)
+        file_row.addWidget(browse_btn)
+        layout.addLayout(file_row)
+
+        # Insert-mode radio group.
+        mode_box = QtWidgets.QGroupBox("Insert mode")
+        mode_layout = QtWidgets.QVBoxLayout()
+        self._mode_append = QtWidgets.QRadioButton("Append (add to existing events)")
+        self._mode_append.setChecked(True)
+        self._mode_replace_source = QtWidgets.QRadioButton(
+            "Replace for source (delete existing events for each source_id "
+            "in the CSV, then insert)"
+        )
+        self._mode_replace_all = QtWidgets.QRadioButton(
+            "Replace all (DELETE all rows in engine_test_events first — " "destructive)"
+        )
+        mode_layout.addWidget(self._mode_append)
+        mode_layout.addWidget(self._mode_replace_source)
+        mode_layout.addWidget(self._mode_replace_all)
+        mode_box.setLayout(mode_layout)
+        layout.addWidget(mode_box)
+
+        # Warnings toggle.
+        self._tolerate_warnings = QtWidgets.QCheckBox(
+            "Tolerate warnings (proceed even if the CSV has warnings)"
+        )
+        layout.addWidget(self._tolerate_warnings)
+
+        # Summary text area (read-only).
+        layout.addWidget(QtWidgets.QLabel("Validation summary:"))
+        self._summary_text = QtWidgets.QTextEdit()
+        self._summary_text.setReadOnly(True)
+        self._summary_text.setFontFamily("monospace")
+        self._summary_text.setPlaceholderText(
+            "Pick a CSV file above; the validation summary will appear here."
+        )
+        layout.addWidget(self._summary_text, 1)  # stretch=1
+
+        # Buttons row.
+        button_row = QtWidgets.QHBoxLayout()
+        button_row.addStretch(1)
+        self._apply_btn = QtWidgets.QPushButton("Apply")
+        self._apply_btn.setEnabled(False)
+        self._apply_btn.clicked.connect(self._on_apply)
+        button_row.addWidget(self._apply_btn)
+        close_btn = QtWidgets.QPushButton("Close")
+        close_btn.clicked.connect(self.reject)
+        button_row.addWidget(close_btn)
+        layout.addLayout(button_row)
+
+        # React to toggle changes: re-check apply-button enablement.
+        self._tolerate_warnings.toggled.connect(self._update_apply_enabled)
+
+    # ── File choice → validate ────────────────────────────────────
+
+    def _on_browse(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "Choose engine-test events CSV",
+            "",
+            "CSV files (*.csv);;All files (*)",
+        )
+        if not path:
+            return
+        self._csv_path = Path(path)
+        self._csv_path_edit.setText(str(self._csv_path))
+        self._run_validation()
+
+    def _run_validation(self):
+        """Read the CSV, run structural + DB-level validation, and
+        show the summary. Never mutates the DB."""
+        from open_alaqs.core.tools.engine_test_import import (
+            format_summary,
+            read_csv,
+            validate_against_db,
+            validate_csv_rows,
+        )
+
+        if self._csv_path is None:
+            return
+
+        # Read CSV.
+        try:
+            rows, header_error = read_csv(self._csv_path)
+        except Exception as e:
+            self._summary_text.setPlainText(f"ERROR: could not read CSV:\n{e}")
+            self._apply_btn.setEnabled(False)
+            return
+        if header_error is not None:
+            self._summary_text.setPlainText(f"ERROR: {header_error}")
+            self._apply_btn.setEnabled(False)
+            return
+        self._csv_row_count = len(rows)
+
+        # Structural validation.
+        self._validation_result = validate_csv_rows(rows)
+
+        # DB cross-checks.
+        try:
+            import sqlite3
+
+            conn = sqlite3.connect(self._database_path)
+            try:
+                self._db_warnings = validate_against_db(
+                    self._validation_result.valid_rows, conn
+                )
+            finally:
+                conn.close()
+        except Exception as e:
+            self._summary_text.setPlainText(
+                f"ERROR: DB cross-checks failed:\n{e}\n\n"
+                "Structural validation still completed; see partial "
+                "summary below.\n\n"
+                + format_summary(self._validation_result, [], self._csv_row_count)
+            )
+            self._apply_btn.setEnabled(False)
+            return
+
+        # Display combined summary.
+        self._summary_text.setPlainText(
+            format_summary(
+                self._validation_result, self._db_warnings, self._csv_row_count
+            )
+        )
+        self._update_apply_enabled()
+
+    def _update_apply_enabled(self):
+        """Recompute whether Apply should be enabled given current state."""
+        if self._validation_result is None:
+            self._apply_btn.setEnabled(False)
+            return
+        # Errors are always disqualifying.
+        if self._validation_result.errors:
+            self._apply_btn.setEnabled(False)
+            return
+        # No valid rows → nothing to insert.
+        if not self._validation_result.valid_rows:
+            self._apply_btn.setEnabled(False)
+            return
+        # Warnings block unless the user opted in.
+        total_warnings = len(self._validation_result.warnings) + len(self._db_warnings)
+        if total_warnings > 0 and not self._tolerate_warnings.isChecked():
+            self._apply_btn.setEnabled(False)
+            return
+        self._apply_btn.setEnabled(True)
+
+    # ── Apply ─────────────────────────────────────────────────────
+
+    def _selected_mode(self) -> str:
+        if self._mode_replace_all.isChecked():
+            return "replace-all"
+        if self._mode_replace_source.isChecked():
+            return "replace-for-source"
+        return "append"
+
+    def _on_apply(self):
+        """Confirm destructive modes, then INSERT into the DB."""
+        import sqlite3
+
+        from open_alaqs.core.tools.engine_test_import import (
+            apply_insert,
+            format_apply_summary,
+        )
+
+        mode = self._selected_mode()
+
+        # Extra confirmation on replace-all (the CLI's --i-mean-it
+        # equivalent). replace-for-source is destructive too but scoped;
+        # a plain OK/Cancel is enough for it.
+        if mode == "replace-all":
+            resp = QMessageBox.warning(
+                self,
+                "Delete ALL existing engine-test events?",
+                "This will DELETE every row in engine_test_events "
+                "before inserting the CSV rows. This cannot be undone.\n\n"
+                "Are you sure?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if resp != QMessageBox.Yes:
+                return
+        elif mode == "replace-for-source":
+            source_ids = sorted(
+                {r.source_id for r in self._validation_result.valid_rows}
+            )
+            preview = ", ".join(source_ids[:5])
+            if len(source_ids) > 5:
+                preview += f", ... ({len(source_ids)} total)"
+            resp = QMessageBox.warning(
+                self,
+                "Delete existing events for these sources?",
+                "This will DELETE existing engine_test_events rows for "
+                f"the following source_id(s) before inserting the new "
+                f"rows:\n\n{preview}\n\nAre you sure?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if resp != QMessageBox.Yes:
+                return
+
+        # Run the insert.
+        try:
+            conn = sqlite3.connect(self._database_path)
+        except sqlite3.Error as e:
+            QMessageBox.critical(
+                self,
+                "Import failed",
+                f"Could not open the study database:\n{e}",
+            )
+            return
+
+        try:
+            per_source = apply_insert(conn, self._validation_result.valid_rows, mode)
+        except sqlite3.Error as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            conn.close()
+            QMessageBox.critical(
+                self,
+                "Import failed",
+                f"DB write failed; changes rolled back.\n\n{e}",
+            )
+            return
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        # Show apply summary appended to the existing validation summary.
+        self._summary_text.setPlainText(
+            self._summary_text.toPlainText()
+            + "\n\n"
+            + format_apply_summary(per_source, mode)
+        )
+        self._apply_btn.setEnabled(False)  # prevent double-apply
+
+        QMessageBox.information(
+            self,
+            "Import complete",
+            f"Inserted {sum(per_source.values())} event(s) across "
+            f"{len(per_source)} source(s).\n\n"
+            "Reopen the study (or reload it) if you want to see the new "
+            "events in any layer view. Regenerate the emission inventory "
+            "to include the new events in the totals.",
+        )
