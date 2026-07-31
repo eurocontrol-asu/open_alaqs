@@ -334,12 +334,20 @@ An engine test site (run-up pad) is an area source flagged for special treatment
 2. In the source's edit form, tick the **Engine test site** checkbox. The `*_kg_unit` rates on the Emissions tab are ignored for a test site; you can leave them at zero.
 3. Save the study.
 4. Prepare a CSV of events. Each row is one engine test run and needs a `source_id` (matching the area source you just flagged), `start_datetime`, `end_datetime`, `aircraft_type`, and per-mode running times in seconds (`t_TX_s`, `t_AP_s`, `t_CL_s`, `t_TO_s`). Optional columns: `test_id`, `engine_uid`, `engine_count`. See [`scripts/README.md`](../scripts/README.md#import_engine_test_eventspy) for the full CSV specification.
-5. Load the events with the importer script:
-   ```bash
-   python scripts/import_engine_test_events.py study.alaqs events.csv
-   ```
-   Run without `--apply` first to validate. Add `--apply` when the summary looks clean.
+5. Load the events. Two ways, functionally identical:
+   * **From QGIS (default):** click *"Import engine test events (CSV)"* in the OpenALAQS toolbar. In the dialog: browse to the CSV, review the validation summary, pick the insert mode (`Append` / `Replace for source` / `Replace all`), tick "Tolerate warnings" if you want to accept them, and click Apply. Destructive modes prompt for extra confirmation.
+   * **From the terminal (for scripting):**
+     ```bash
+     python scripts/import_engine_test_events.py study.alaqs events.csv
+     ```
+     Run without `--apply` first to validate. Add `--apply` when the summary looks clean.
 6. Regenerate the emission inventory. Test-site emissions appear alongside regular sources with no further configuration.
+
+**Note on pre-existing `.alaqs` files:** if your study was created by a plugin version older than the one that added engine-test-site support, running the migration is required before step 2 works — the checkbox has no place to write to otherwise. Run:
+```bash
+python scripts/migrate_alaqs.py study.alaqs
+```
+Then close and reopen the project in QGIS.
 
 **Thrust computation modes.** Each event has an optional `thrust_mode` column (default `snap`), not exposed in the CSV — set it via SQL if you need a non-default:
 
