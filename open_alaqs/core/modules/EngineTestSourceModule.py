@@ -90,6 +90,12 @@ class EngineTestSourceModule(SourceModule):
         self._events_store: Optional[EngineTestEventsStore] = None
         self._aircraft_store = None
         self._engine_store = None
+        self._ambient_store = None  # AmbientConditionStore; only used for BFFM2
+
+        # Diagnostic: set to True the first time an event asks for BFFM2
+        # and the ambient store is empty. Prevents log flooding when a
+        # study uses BFFM2 without a populated tbl_InvMeteo.
+        self._bffm2_isa_fallback_logged: bool = False
 
         # Default thrust-mode override; per-event ``thrust_mode`` still
         # takes precedence. Kept for potential future study-level
@@ -116,6 +122,12 @@ class EngineTestSourceModule(SourceModule):
     def setEngineStore(self, store) -> None:
         self._engine_store = store
 
+    def getAmbientStore(self):
+        return self._ambient_store
+
+    def setAmbientStore(self, store) -> None:
+        self._ambient_store = store
+
     # ── Lifecycle ──────────────────────────────────────────────────────
 
     def beginJob(self):
@@ -141,6 +153,16 @@ class EngineTestSourceModule(SourceModule):
             from open_alaqs.core.interfaces.EngineStore import EngineStore
 
             self._engine_store = EngineStore(db_path)
+
+        if self._ambient_store is None:
+            # AmbientConditionStore is a Singleton; if EmissionCalculation
+            # has already loaded it for the same db_path, this call
+            # returns the same instance rather than re-reading tbl_InvMeteo.
+            from open_alaqs.core.interfaces.AmbientCondition import (
+                AmbientConditionStore,
+            )
+
+            self._ambient_store = AmbientConditionStore(db_path)
 
     def endJob(self):
         # Nothing to release; stores are Singletons owned by the runtime.
@@ -305,12 +327,30 @@ class EngineTestSourceModule(SourceModule):
         mode_times = event.getModeTimes()  # {"TX": s, "AP": s, "CL": s, "TO": s}
         thrust_mode = event.getThrustMode() or self._default_thrust_mode
 
+        # BFFM2 needs ambient conditions at the event midpoint. Lazy: only
+        # look up when the thrust mode requires it, so snap/meem events
+        # don't pay the cost.
+        ambient_conditions = None
+        if thrust_mode == "bffm2":
+            ambient_conditions = self._resolve_event_ambient(event)
+            # None means the ambient store is empty AND diagnostic already
+            # emitted; fall back to snap-equivalent behaviour by returning
+            # None here so _resolve_ei drops to base EI (which is what an
+            # ISA-fallback would produce anyway when the store is empty —
+            # AmbientCondition() empty getters yield None).
+            # The BFFM2 wrapper (getEmissionIndexByModeWithBFFM2) already
+            # handles the "empty AmbientCondition → fall back to base" path
+            # via the existing bffm2.py ISA-defaults branch. So passing
+            # ambient_conditions even when the store was empty is safe;
+            # the diagnostic gets logged once and BFFM2 downcasts to ISA
+            # internally.
+
         any_mode_computed = False
         for mode, t_mode_s in mode_times.items():
             if t_mode_s <= 0:
                 continue
 
-            ei = _resolve_ei(engine, mode, thrust_mode)
+            ei = _resolve_ei(engine, mode, thrust_mode, ambient_conditions)
             if ei is None:
                 logger.warning(
                     "EngineTest event %s: no EI for engine %r mode %r; "
@@ -330,6 +370,56 @@ class EngineTestSourceModule(SourceModule):
             any_mode_computed = True
 
         return any_mode_computed
+
+    def _resolve_event_ambient(self, event):
+        """Look up ambient conditions at the event's midpoint via the
+        AmbientConditionStore.
+
+        Returns:
+          * The nearest ``AmbientCondition`` from ``tbl_InvMeteo``, OR
+          * An empty ``AmbientCondition()`` (whose getTemperature /
+            getPressure / getRelativeHumidity return None) if the store
+            is empty. A diagnostic is emitted once per module lifetime
+            in this case so the user learns their study is missing
+            meteo but log volume stays sane.
+
+        The empty case is handled downstream by ``bffm2.calculate_emission_index``
+        (existing behaviour): it silently substitutes ISA defaults with
+        its own logger.warning. So the ISA-fallback path is well-defined
+        and the diagnostic here explains WHY BFFM2 got ISA defaults for
+        callers who ask.
+        """
+        if self._ambient_store is None:
+            # Ambient store never loaded (e.g. beginJob not called).
+            # Return empty AmbientCondition; BFFM2 will fall back to ISA
+            # inside bffm2.py.
+            from open_alaqs.core.interfaces.AmbientCondition import AmbientCondition
+
+            return AmbientCondition()
+
+        start_dt = event.getStartDateTime()
+        end_dt = event.getEndDateTime()
+        if start_dt is None or end_dt is None:
+            # Degenerate event; the caller (process) already filtered
+            # these but be safe.
+            from open_alaqs.core.interfaces.AmbientCondition import AmbientCondition
+
+            return AmbientCondition()
+
+        midpoint_dt = start_dt + (end_dt - start_dt) / 2
+        midpoint_ts = midpoint_dt.timestamp()
+
+        ambient = self._ambient_store.getNearestByTime(midpoint_ts)
+        if ambient.getTemperature() is None and not self._bffm2_isa_fallback_logged:
+            logger.warning(
+                "EngineTestSource: tbl_InvMeteo has no ambient data; "
+                "BFFM2 events will fall back to ISA defaults "
+                "(T=288.15 K, P=101325 Pa, RH=0.6). Populate tbl_InvMeteo "
+                "to get real ambient corrections. This message is shown "
+                "once per run."
+            )
+            self._bffm2_isa_fallback_logged = True
+        return ambient
 
 
 # ── Free functions (unit-testable without instantiating the module) ────
@@ -361,7 +451,7 @@ def _period_window_fraction(
     return overlap_s / total_s
 
 
-def _resolve_ei(engine, mode: str, thrust_mode: str):
+def _resolve_ei(engine, mode: str, thrust_mode: str, ambient_conditions=None):
     """Return the ``EmissionIndex`` for ``mode`` on ``engine`` under the
     requested ``thrust_mode``.
 
@@ -369,6 +459,11 @@ def _resolve_ei(engine, mode: str, thrust_mode: str):
     ``'meem'`` → MEEM-corrected via ``getEmissionIndexByModeWithMEEM``
         at sea-level ambient, Mach 0 (correct for stationary run-ups at
         airport elevation).
+    ``'bffm2'`` → BFFM2-corrected gas-phase EIs (NOx, CO, HC) via
+        ``getEmissionIndexByModeWithBFFM2`` at the caller-supplied
+        ``ambient_conditions``, Mach 0. PM10 (and PM sub-classes), SOx,
+        and CO2 pass through unchanged from the base mode EI. Per
+        Design A: BFFM2 gas + EEDB PM composed together.
 
     Note on MEEM for engine-test events: MEEM V1 only corrects nvPM EIs,
     and its LTO branch (which applies here — engine test runs are at
@@ -383,20 +478,48 @@ def _resolve_ei(engine, mode: str, thrust_mode: str):
     room for future work (e.g. non-anchor thrust events with an
     explicit ``power_setting`` column).
 
-    Falls back to ``'snap'`` if MEEM is unavailable on the engine (older
-    EEDB entries without enough data for the correction). Returns None
-    if even the snap lookup fails.
+    Note on BFFM2: unlike MEEM, BFFM2 IS numerically different from snap
+    whenever the ambient is not ISA. Users choosing ``'bffm2'`` need a
+    populated ``tbl_InvMeteo``; the module emits a diagnostic if the
+    ambient store is empty and the underlying ``bffm2.py`` layer
+    substitutes ISA defaults with its own warning.
+
+    Falls back to ``'snap'`` if MEEM or BFFM2 is unavailable on the
+    engine (older EEDB entries without enough data for the correction).
+    Returns None if even the snap lookup fails.
     """
     try:
         if thrust_mode == "meem":
-            ei = engine.getEmissionIndexByModeWithMEEM(
-                mode,
-                p_amb_Pa=_MEEM_P_AMB_PA,
-                mach=_MEEM_MACH,
-            )
+            try:
+                ei = engine.getEmissionIndexByModeWithMEEM(
+                    mode,
+                    p_amb_Pa=_MEEM_P_AMB_PA,
+                    mach=_MEEM_MACH,
+                )
+            except AttributeError:
+                # Old engine lacking the MEEM wrapper method. Fall
+                # through to snap.
+                ei = None
             if ei is not None:
                 return ei
             # Fall through to snap on MEEM unavailability.
+        elif thrust_mode == "bffm2":
+            if ambient_conditions is None:
+                # Caller forgot to supply ambient. Fall back to snap.
+                return engine.getEmissionIndexByMode(mode)
+            try:
+                ei = engine.getEmissionIndexByModeWithBFFM2(
+                    mode,
+                    ambient_conditions=ambient_conditions,
+                    mach=0.0,
+                )
+            except AttributeError:
+                # Old engine lacking the BFFM2 wrapper method. Fall
+                # through to snap.
+                ei = None
+            if ei is not None:
+                return ei
+            # Fall through to snap on BFFM2 unavailability.
         return engine.getEmissionIndexByMode(mode)
     except Exception:  # pragma: no cover
         # Engine misconfigured (mode not in its table). Callers log

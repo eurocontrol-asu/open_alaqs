@@ -637,3 +637,324 @@ def test_process_meem_thrust_mode_calls_meem_ei():
     # 10 g/kg * 900 kg = 9000.
     nox_g = e.get_value(PollutantType.NOx, PollutantUnit.GRAM)
     assert abs(nox_g - 27000.0) < 1e-6
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Section 6: Phase 5b — BFFM2 thrust mode
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class _FakeAmbientCondition:
+    """Stand-in for AmbientCondition. Real class provides
+    getTemperature (K), getPressure (Pa), getRelativeHumidity (0..1)."""
+
+    def __init__(self, T_K=None, P_Pa=None, RH=None):
+        self._T = T_K
+        self._P = P_Pa
+        self._RH = RH
+
+    def getTemperature(self):
+        return self._T
+
+    def getPressure(self):
+        return self._P
+
+    def getRelativeHumidity(self):
+        return self._RH
+
+
+class _FakeAmbientStore:
+    """Stand-in for AmbientConditionStore. ``objects`` = list of tuples
+    (timestamp_s, AmbientCondition). getNearestByTime returns nearest."""
+
+    def __init__(self, entries=None):
+        # entries: list of (timestamp_s, AmbientCondition)
+        self._entries = sorted(entries or [], key=lambda p: p[0])
+
+    def getNearestByTime(self, ts):
+        if not self._entries:
+            return _FakeAmbientCondition()  # empty
+        import bisect
+
+        times = [e[0] for e in self._entries]
+        idx = bisect.bisect_left(times, ts)
+        if idx == 0:
+            return self._entries[0][1]
+        if idx >= len(times):
+            return self._entries[-1][1]
+        before = self._entries[idx - 1]
+        after = self._entries[idx]
+        return before[1] if abs(ts - before[0]) <= abs(after[0] - ts) else after[1]
+
+    def getObjects(self):
+        # Truthiness of the store used by the module's _resolve_event_ambient
+        # code path (implicit via getTemperature() is None fallback).
+        return {i: e[1] for i, e in enumerate(self._entries)}
+
+
+def test_process_bffm2_calls_engine_bffm2_wrapper():
+    """thrust_mode='bffm2' routes through Engine.getEmissionIndexByModeWithBFFM2."""
+    from open_alaqs.core.interfaces.Emissions import PollutantType, PollutantUnit
+
+    bffm2_ei = _FakeEI(
+        fuel_kg_sec=1.0, pollutant_g_per_kg={PollutantType.NOx.name: 50.0}
+    )
+    snap_ei = _FakeEI(
+        fuel_kg_sec=1.0, pollutant_g_per_kg={PollutantType.NOx.name: 10.0}
+    )
+
+    captured = {}
+
+    class TripleEngine:
+        def getEmissionIndexByMode(self, mode):
+            return snap_ei
+
+        def getEmissionIndexByModeWithMEEM(self, mode, **kwargs):
+            return snap_ei
+
+        def getEmissionIndexByModeWithBFFM2(self, mode, ambient_conditions, mach=0.0):
+            captured["mode"] = mode
+            captured["ambient"] = ambient_conditions
+            captured["mach"] = mach
+            return bffm2_ei
+
+    event = _event(t_CL_s=900, engine_count=1, thrust_mode="bffm2")
+    m = _make_module_with_fakes(
+        events=[event],
+        aircraft_map={"C56X": _FakeAircraft()},
+        engine_map={"B602": TripleEngine()},
+    )
+    ambient = _FakeAmbientCondition(T_K=298.15, P_Pa=100000.0, RH=0.7)
+    # Event start=09:00 end=09:30 → midpoint 09:15
+    midpoint_ts = _dt(1, 9, 15).timestamp()
+    m.setAmbientStore(_FakeAmbientStore(entries=[(midpoint_ts, ambient)]))
+    m.setSource("N1", _make_test_site_source())
+
+    result = m.process(_dt(1, 9), _dt(1, 10))
+    assert result, "expected a non-empty result"
+
+    # Wrapper invoked with the ambient we injected.
+    assert captured.get("mode") == "CL"
+    assert captured.get("ambient") is ambient
+    assert captured.get("mach") == 0.0
+
+    # NOx computed with BFFM2 EI: 50 g/kg * 900 kg = 45000 g
+    e = result[0][2][0]
+    nox_g = e.get_value(PollutantType.NOx, PollutantUnit.GRAM)
+    assert abs(nox_g - 45000.0) < 1e-6
+
+
+def test_process_bffm2_uses_event_midpoint_for_meteo_lookup():
+    """Confirm ambient store is queried at ((start+end)/2).timestamp()."""
+
+    class Recorder:
+        queried_ts = None
+
+        def getNearestByTime(self, ts):
+            self.queried_ts = ts
+            return _FakeAmbientCondition(T_K=288.15, P_Pa=101325.0, RH=0.6)
+
+        def getObjects(self):
+            return {"x": self.getNearestByTime(0)}
+
+    recorder = Recorder()
+
+    # Event 09:00-09:30 → midpoint 09:15
+    event = _event(
+        t_CL_s=900,
+        engine_count=1,
+        thrust_mode="bffm2",
+        start="2024-12-01T09:00:00",
+        end="2024-12-01T09:30:00",
+    )
+    m = _make_module_with_fakes(
+        events=[event],
+        aircraft_map={"C56X": _FakeAircraft()},
+        engine_map={
+            "B602": type(
+                "E",
+                (),
+                {
+                    "getEmissionIndexByMode": lambda self, mode: _FakeEI(1.0, {}),
+                    "getEmissionIndexByModeWithBFFM2": lambda self, mode, ambient_conditions, mach=0.0: _FakeEI(
+                        1.0, {}
+                    ),
+                },
+            )()
+        },
+    )
+    m.setAmbientStore(recorder)
+    m.setSource("N1", _make_test_site_source())
+
+    m.process(_dt(1, 9), _dt(1, 10))
+
+    expected_ts = _dt(1, 9, 15).timestamp()
+    assert recorder.queried_ts == expected_ts
+
+
+def test_process_bffm2_with_empty_ambient_store_falls_through_and_logs(caplog):
+    """When AmbientConditionStore is empty, module logs ISA-fallback
+    warning once. BFFM2 wrapper still called with an empty ambient
+    (bffm2.py handles ISA substitution internally)."""
+    import logging
+
+    called_with_ambient = []
+
+    class DualEngine:
+        def getEmissionIndexByMode(self, mode):
+            return _FakeEI(1.0, {})
+
+        def getEmissionIndexByModeWithBFFM2(self, mode, ambient_conditions, mach=0.0):
+            called_with_ambient.append(ambient_conditions)
+            return _FakeEI(1.0, {})
+
+    event = _event(t_CL_s=900, engine_count=1, thrust_mode="bffm2")
+    m = _make_module_with_fakes(
+        events=[event],
+        aircraft_map={"C56X": _FakeAircraft()},
+        engine_map={"B602": DualEngine()},
+    )
+    m.setAmbientStore(_FakeAmbientStore(entries=[]))  # empty
+    m.setSource("N1", _make_test_site_source())
+
+    with caplog.at_level(logging.WARNING):
+        m.process(_dt(1, 9), _dt(1, 10))
+
+    # BFFM2 wrapper was called (with empty ambient); ISA fallback
+    # happens downstream in bffm2.py.
+    assert len(called_with_ambient) == 1
+    # ISA-fallback warning fired.
+    assert any(
+        "tbl_InvMeteo has no ambient data" in rec.message for rec in caplog.records
+    )
+
+
+def test_process_bffm2_isa_fallback_warning_logged_only_once(caplog):
+    """Multiple BFFM2 events with an empty store → warning fires once."""
+    import logging
+
+    class DualEngine:
+        def getEmissionIndexByMode(self, mode):
+            return _FakeEI(1.0, {})
+
+        def getEmissionIndexByModeWithBFFM2(self, mode, ambient_conditions, mach=0.0):
+            return _FakeEI(1.0, {})
+
+    e1 = _event(event_id=1, t_CL_s=600, engine_count=1, thrust_mode="bffm2")
+    e2 = _event(
+        event_id=2,
+        t_CL_s=300,
+        engine_count=1,
+        thrust_mode="bffm2",
+        start="2024-12-01T09:35:00",
+        end="2024-12-01T09:45:00",
+    )
+    m = _make_module_with_fakes(
+        events=[e1, e2],
+        aircraft_map={"C56X": _FakeAircraft()},
+        engine_map={"B602": DualEngine()},
+    )
+    m.setAmbientStore(_FakeAmbientStore(entries=[]))
+    m.setSource("N1", _make_test_site_source())
+
+    with caplog.at_level(logging.WARNING):
+        m.process(_dt(1, 9), _dt(1, 10))
+
+    n_warnings = sum(
+        1 for rec in caplog.records if "tbl_InvMeteo has no ambient data" in rec.message
+    )
+    assert n_warnings == 1
+
+
+def test_process_snap_and_meem_do_not_query_ambient_store():
+    """snap and meem thrust modes should NOT trigger meteo lookups."""
+
+    class Recorder:
+        queries = 0
+
+        def getNearestByTime(self, ts):
+            Recorder.queries += 1
+            return _FakeAmbientCondition()
+
+        def getObjects(self):
+            return {}
+
+    for tm in ("snap", "meem"):
+        Recorder.queries = 0
+        event = _event(t_CL_s=900, engine_count=1, thrust_mode=tm)
+        m = _make_module_with_fakes(
+            events=[event],
+            aircraft_map={"C56X": _FakeAircraft()},
+            engine_map={
+                "B602": type(
+                    "E",
+                    (),
+                    {
+                        "getEmissionIndexByMode": lambda self, mode: _FakeEI(1.0, {}),
+                        "getEmissionIndexByModeWithMEEM": lambda self, mode, **kw: _FakeEI(
+                            1.0, {}
+                        ),
+                    },
+                )()
+            },
+        )
+        m.setAmbientStore(Recorder())
+        m.setSource("N1", _make_test_site_source())
+        m.process(_dt(1, 9), _dt(1, 10))
+        assert Recorder.queries == 0, f"{tm} should not query ambient store"
+
+
+def test_process_bffm2_with_engine_that_lacks_wrapper_falls_back_to_snap():
+    """If Engine has no getEmissionIndexByModeWithBFFM2 method (older
+    engines), _resolve_ei catches the AttributeError and returns snap."""
+    from open_alaqs.core.interfaces.Emissions import PollutantType, PollutantUnit
+
+    snap_ei = _FakeEI(
+        fuel_kg_sec=1.0, pollutant_g_per_kg={PollutantType.NOx.name: 10.0}
+    )
+
+    class OldEngine:
+        def getEmissionIndexByMode(self, mode):
+            return snap_ei
+
+    event = _event(t_CL_s=900, engine_count=1, thrust_mode="bffm2")
+    m = _make_module_with_fakes(
+        events=[event],
+        aircraft_map={"C56X": _FakeAircraft()},
+        engine_map={"B602": OldEngine()},
+    )
+    ambient = _FakeAmbientCondition(T_K=298.15, P_Pa=100000.0, RH=0.7)
+    midpoint_ts = _dt(1, 9, 15).timestamp()
+    m.setAmbientStore(_FakeAmbientStore(entries=[(midpoint_ts, ambient)]))
+    m.setSource("N1", _make_test_site_source())
+
+    # Should not raise; falls back to snap.
+    result = m.process(_dt(1, 9), _dt(1, 10))
+    assert result, "expected result even with old engine"
+    e = result[0][2][0]
+    # snap: 10 g/kg * 900 kg = 9000
+    nox_g = e.get_value(PollutantType.NOx, PollutantUnit.GRAM)
+    assert abs(nox_g - 9000.0) < 1e-6
+
+
+def test_process_bffm2_no_ambient_passed_falls_back_to_snap():
+    """If ambient_conditions ends up None (which happens if the store
+    was never set at all), _resolve_ei falls back to snap without a
+    crash."""
+
+    class Engine:
+        def getEmissionIndexByMode(self, mode):
+            return _FakeEI(1.0, {})
+
+    event = _event(t_CL_s=900, engine_count=1, thrust_mode="bffm2")
+    m = _make_module_with_fakes(
+        events=[event],
+        aircraft_map={"C56X": _FakeAircraft()},
+        engine_map={"B602": Engine()},
+    )
+    # DON'T call setAmbientStore. _ambient_store is None.
+    m.setSource("N1", _make_test_site_source())
+
+    # Should not raise; falls back to snap-equivalent behaviour.
+    result = m.process(_dt(1, 9), _dt(1, 10))
+    assert result, "expected result even without ambient store"

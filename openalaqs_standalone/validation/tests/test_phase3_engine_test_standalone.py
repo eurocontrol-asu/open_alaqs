@@ -478,3 +478,289 @@ def test_compute_engine_uid_falls_back_to_aircraft():
         events, _dt(1, 9), _dt(1, 10), ei_lookup, aircraft_lookup
     )
     assert abs(totals["N1"]["fuel"] - 100.0) < 1e-9
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Section 4: Phase 5b — BFFM2 thrust mode
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def _build_engine_ei_lookup_all_modes(uid: str, nox_ei=20.0):
+    """Build a 4-mode ei_lookup for one engine with plausible FFs and
+    per-mode EIs, so BFFM2's icao_eedb builder can complete."""
+    return {
+        (uid, "TX"): _ei(fuel_kg_sec=0.05, nox=nox_ei, co=10.0, hc=5.0),
+        (uid, "AP"): _ei(fuel_kg_sec=0.20, nox=nox_ei, co=1.0, hc=0.1),
+        (uid, "CL"): _ei(fuel_kg_sec=0.60, nox=nox_ei, co=0.5, hc=0.05),
+        (uid, "TO"): _ei(fuel_kg_sec=0.80, nox=nox_ei, co=0.5, hc=0.05),
+    }
+
+
+def _prep_bffm2_conn_with_meteo(t_K=298.15, p_Pa=100000.0, rh=0.7):
+    """Create a scratch SQLite connection with a populated tbl_InvMeteo."""
+    conn = sqlite3.connect(":memory:")
+    conn.execute(
+        """CREATE TABLE tbl_InvMeteo (
+            DateTime TEXT,
+            Temperature REAL,
+            SeaLevelPressure REAL,
+            RelativeHumidity REAL,
+            Humidity REAL
+        )"""
+    )
+    conn.execute(
+        "INSERT INTO tbl_InvMeteo VALUES (?, ?, ?, ?, ?)",
+        ("2024-12-01 09:00:00", t_K, p_Pa, rh, 0.008),
+    )
+    conn.commit()
+    return conn
+
+
+def test_bffm2_without_conn_falls_back_to_snap_with_diagnostic():
+    """bffm2 events without conn → warn once, treat as snap."""
+    ei_lookup = _build_engine_ei_lookup_all_modes("B602")
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+    events = [_event_dict(t_CL_s=100, engine_count=1, thrust_mode="bffm2")]
+    diagnostics: list = []
+
+    snap_totals = compute_engine_test_for_period(
+        [_event_dict(t_CL_s=100, engine_count=1, thrust_mode="snap")],
+        _dt(1, 9),
+        _dt(1, 10),
+        ei_lookup,
+        aircraft_lookup,
+    )
+    bffm2_totals = compute_engine_test_for_period(
+        events,
+        _dt(1, 9),
+        _dt(1, 10),
+        ei_lookup,
+        aircraft_lookup,
+        diagnostics=diagnostics,
+        conn=None,
+    )
+
+    # Same numerical output as snap (fell back).
+    assert snap_totals == bffm2_totals
+    # Diagnostic emitted once.
+    n = sum(1 for msg in diagnostics if "conn=None" in msg)
+    assert n == 1
+
+
+def test_bffm2_no_conn_warning_logged_only_once():
+    """Multiple bffm2 events with conn=None → warning fires only once."""
+    ei_lookup = _build_engine_ei_lookup_all_modes("B602")
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+    events = [
+        _event_dict(event_id=1, t_CL_s=100, engine_count=1, thrust_mode="bffm2"),
+        _event_dict(
+            event_id=2,
+            t_CL_s=100,
+            engine_count=1,
+            thrust_mode="bffm2",
+            start_datetime="2024-12-01T09:45:00",
+            end_datetime="2024-12-01T09:55:00",
+        ),
+    ]
+    diagnostics: list = []
+    compute_engine_test_for_period(
+        events,
+        _dt(1, 9),
+        _dt(1, 10),
+        ei_lookup,
+        aircraft_lookup,
+        diagnostics=diagnostics,
+        conn=None,
+    )
+    n = sum(1 for msg in diagnostics if "conn=None" in msg)
+    assert n == 1
+
+
+def test_bffm2_incomplete_engine_ei_falls_back_to_snap():
+    """Engine missing one mode in ei_lookup → BFFM2 requires all 4 for
+    the icao_eedb; falls back to snap with a per-event diagnostic."""
+    # Only 3 modes present.
+    ei_lookup = {
+        ("B602", "TX"): _ei(fuel_kg_sec=0.05, nox=20.0, co=10.0, hc=5.0),
+        ("B602", "AP"): _ei(fuel_kg_sec=0.20, nox=20.0, co=1.0, hc=0.1),
+        ("B602", "CL"): _ei(fuel_kg_sec=0.60, nox=20.0, co=0.5, hc=0.05),
+        # "TO" missing
+    }
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+    events = [_event_dict(t_CL_s=100, engine_count=1, thrust_mode="bffm2")]
+    conn = _prep_bffm2_conn_with_meteo()
+    diagnostics: list = []
+
+    totals = compute_engine_test_for_period(
+        events,
+        _dt(1, 9),
+        _dt(1, 10),
+        ei_lookup,
+        aircraft_lookup,
+        diagnostics=diagnostics,
+        conn=conn,
+    )
+    # Fell back to snap. CL fuel = 100 * 1 * 1.0 * 0.6 = 60 kg.
+    assert abs(totals["N1"]["fuel"] - 60.0) < 1e-9
+    # Diagnostic emitted.
+    assert any("complete 4-mode" in msg for msg in diagnostics)
+
+
+def test_bffm2_missing_tbl_invmeteo_falls_back_to_isa_with_diagnostic():
+    """Conn provided but tbl_InvMeteo table doesn't exist → ISA
+    fallback with diagnostic."""
+    ei_lookup = _build_engine_ei_lookup_all_modes("B602")
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+    events = [_event_dict(t_CL_s=100, engine_count=1, thrust_mode="bffm2")]
+    conn = sqlite3.connect(":memory:")  # bare, no tbl_InvMeteo
+    diagnostics: list = []
+
+    totals = compute_engine_test_for_period(
+        events,
+        _dt(1, 9),
+        _dt(1, 10),
+        ei_lookup,
+        aircraft_lookup,
+        diagnostics=diagnostics,
+        conn=conn,
+    )
+    # BFFM2 with ISA ambient still produces numbers (not zero, not
+    # snap-equivalent — BFFM2 gas correction with humidity 0.6 differs
+    # from raw EEDB).
+    assert totals["N1"]["fuel"] > 0
+    # Diagnostic emitted.
+    assert any("tbl_InvMeteo not in the DB" in msg for msg in diagnostics)
+
+
+def test_bffm2_populated_meteo_produces_different_numbers_than_snap():
+    """The whole point of BFFM2: different ambient → different NOx.
+    High RH should REDUCE NOx compared to low RH (Boeing formula
+    humidity correction dominates)."""
+    ei_lookup = _build_engine_ei_lookup_all_modes("B602")
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+    events = [_event_dict(t_CL_s=100, engine_count=1, thrust_mode="bffm2")]
+
+    # High RH ambient
+    conn_high = _prep_bffm2_conn_with_meteo(rh=0.95)
+    totals_high = compute_engine_test_for_period(
+        events,
+        _dt(1, 9),
+        _dt(1, 10),
+        ei_lookup,
+        aircraft_lookup,
+        conn=conn_high,
+    )
+    # Low RH ambient
+    conn_low = _prep_bffm2_conn_with_meteo(rh=0.1)
+    totals_low = compute_engine_test_for_period(
+        events,
+        _dt(1, 9),
+        _dt(1, 10),
+        ei_lookup,
+        aircraft_lookup,
+        conn=conn_low,
+    )
+
+    # Different NOx between high and low RH.
+    assert abs(totals_high["N1"]["nox"] - totals_low["N1"]["nox"]) > 1.0
+
+
+def test_bffm2_uses_event_midpoint_for_meteo():
+    """Two events at same period but different midpoints → different
+    meteo lookups. Given a tbl_InvMeteo with time-varying data, results
+    should differ."""
+    ei_lookup = _build_engine_ei_lookup_all_modes("B602")
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+
+    conn = sqlite3.connect(":memory:")
+    conn.execute(
+        """CREATE TABLE tbl_InvMeteo (
+            DateTime TEXT, Temperature REAL, SeaLevelPressure REAL,
+            RelativeHumidity REAL, Humidity REAL
+        )"""
+    )
+    # Two meteo rows: 08:00 (cold, dry) and 09:20 (warm, humid).
+    conn.execute(
+        "INSERT INTO tbl_InvMeteo VALUES (?, ?, ?, ?, ?)",
+        ("2024-12-01 08:00:00", 278.15, 101325.0, 0.2, 0.001),
+    )
+    conn.execute(
+        "INSERT INTO tbl_InvMeteo VALUES (?, ?, ?, ?, ?)",
+        ("2024-12-01 09:20:00", 303.15, 100000.0, 0.9, 0.020),
+    )
+    conn.commit()
+
+    # Event A: 09:00-09:10 → midpoint 09:05 → uses 08:00 row (cold)
+    ev_a = _event_dict(
+        event_id=1,
+        t_CL_s=60,
+        engine_count=1,
+        thrust_mode="bffm2",
+        start_datetime="2024-12-01T09:00:00",
+        end_datetime="2024-12-01T09:10:00",
+    )
+    # Event B: 09:30-09:40 → midpoint 09:35 → uses 09:20 row (warm)
+    ev_b = _event_dict(
+        event_id=2,
+        t_CL_s=60,
+        engine_count=1,
+        thrust_mode="bffm2",
+        source_id="N2",
+        start_datetime="2024-12-01T09:30:00",
+        end_datetime="2024-12-01T09:40:00",
+    )
+
+    totals = compute_engine_test_for_period(
+        [ev_a, ev_b],
+        _dt(1, 9),
+        _dt(1, 10),
+        ei_lookup,
+        aircraft_lookup,
+        conn=conn,
+    )
+    # Different ambient → different NOx.
+    assert abs(totals["N1"]["nox"] - totals["N2"]["nox"]) > 1.0
+
+
+def test_bffm2_pm_and_sox_passthrough():
+    """PM10 and SOx should use base EEDB values (Design A: BFFM2 gas + EEDB PM/SOx)."""
+    # Give the engine distinct PM/SOx values so we can identify them
+    # in the output.
+    ei_lookup = _build_engine_ei_lookup_all_modes("B602")
+    for mode in ("TX", "AP", "CL", "TO"):
+        ei_lookup[("B602", mode)]["pm10_ei_g_kg_fuel"] = 0.5
+        ei_lookup[("B602", mode)]["sox_ei_g_kg_fuel"] = 1.0
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+    events = [_event_dict(t_CL_s=100, engine_count=1, thrust_mode="bffm2")]
+    conn = _prep_bffm2_conn_with_meteo()
+
+    totals = compute_engine_test_for_period(
+        events,
+        _dt(1, 9),
+        _dt(1, 10),
+        ei_lookup,
+        aircraft_lookup,
+        conn=conn,
+    )
+    # PM10 and SOx should be non-zero and proportional to fuel burn.
+    # We can't assert exact values without computing ff_amb ourselves,
+    # but we can check the ratio pm10/sox = 0.5/1.0 = 0.5.
+    ratio = totals["N1"]["pm10"] / totals["N1"]["sox"]
+    assert abs(ratio - 0.5) < 1e-6
+
+
+def test_bffm2_backward_compat_signature_without_conn():
+    """The function without conn keyword should still work (snap-only
+    callers)."""
+    ei_lookup = _build_engine_ei_lookup_all_modes("B602")
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+    events = [_event_dict(t_CL_s=100, engine_count=1, thrust_mode="snap")]
+    # Old-style call (no conn kwarg).
+    totals = compute_engine_test_for_period(
+        events,
+        _dt(1, 9),
+        _dt(1, 10),
+        ei_lookup,
+        aircraft_lookup,
+    )
+    assert totals["N1"]["fuel"] == 60.0  # CL: 100*1*1.0 * 0.6 kg/s = 60 kg

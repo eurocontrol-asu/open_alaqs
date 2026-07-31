@@ -278,6 +278,53 @@ class AmbientConditionStore(Store, metaclass=Singleton):
         else:
             return sorted(list(self.getObjects().values()), key=lambda ac: ac.getDate())
 
+    def getNearestByTime(self, timestamp_s):
+        """Return the ``AmbientCondition`` whose ``DateTime`` is closest
+        (nearest neighbour) to ``timestamp_s`` (a Unix timestamp).
+
+        Returns an empty ``AmbientCondition()`` if the store has no
+        entries. Callers that need to know whether the store was empty
+        can check ``bool(self.getObjects())`` before calling; the
+        returned empty instance has getters that return None (matching
+        the pre-existing "no meteo loaded" contract used by
+        ``EmissionCalculation.getAmbientCondition``).
+
+        Mirrors the bisect semantics of
+        ``EmissionCalculation.getAmbientCondition`` so per-time lookups
+        that pass through the SourceModule layer produce the same
+        AmbientCondition as those done inside EmissionCalculation.
+
+        :param timestamp_s: Unix timestamp (seconds since epoch).
+        :return: nearest ``AmbientCondition`` or empty instance.
+        """
+        import bisect
+
+        # Sort once per call; the store's contents change rarely and the
+        # cost is O(n log n) but n is typically small (one row per hour
+        # for a year = 8760). If profiling shows this is hot, cache the
+        # sorted list on the store as EmissionCalculation does.
+        sorted_ac = self.getAmbientConditions(scenario="")
+        if not sorted_ac:
+            return AmbientCondition()
+
+        times = [
+            (ac.getDate().timestamp() if hasattr(ac.getDate(), "timestamp") else 0.0)
+            for ac in sorted_ac
+        ]
+
+        idx = bisect.bisect_left(times, timestamp_s)
+        if idx == 0:
+            return sorted_ac[0]
+        if idx >= len(times):
+            return sorted_ac[-1]
+        before = sorted_ac[idx - 1]
+        after = sorted_ac[idx]
+        return (
+            before
+            if abs(timestamp_s - times[idx - 1]) <= abs(times[idx] - timestamp_s)
+            else after
+        )
+
     def serialize(self):
         if not self.getAmbientConditionDatabase().serialize():
             logger.error(
