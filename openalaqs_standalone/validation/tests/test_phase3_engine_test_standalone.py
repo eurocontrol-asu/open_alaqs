@@ -411,13 +411,37 @@ def test_compute_unresolvable_engine_count_flagged():
     assert any("engine count unresolved" in msg for msg in diagnostics)
 
 
-def test_compute_meem_falls_back_to_snap_with_diagnostic():
-    """meem thrust mode currently reuses snap EI; diagnostic emitted."""
+def test_compute_meem_produces_same_result_as_snap():
+    """MEEM for engine-test events is numerically identical to snap
+    because engine-test modes are always at ICAO EEDB anchor thrust
+    settings, where MEEM V1's interpolation trivially returns the
+    anchor value. See compute_engine_test.py module docstring."""
+    ei_lookup = {("B602", "CL"): _ei(fuel_kg_sec=1.0, nox=20.0)}
+    aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
+
+    snap_events = [_event_dict(t_CL_s=100, engine_count=1, thrust_mode="snap")]
+    meem_events = [_event_dict(t_CL_s=100, engine_count=1, thrust_mode="meem")]
+
+    snap_totals = compute_engine_test_for_period(
+        snap_events, _dt(1, 9), _dt(1, 10), ei_lookup, aircraft_lookup
+    )
+    meem_totals = compute_engine_test_for_period(
+        meem_events, _dt(1, 9), _dt(1, 10), ei_lookup, aircraft_lookup
+    )
+    # Byte-identical results.
+    assert snap_totals == meem_totals
+
+
+def test_compute_meem_does_not_emit_diagnostic():
+    """No diagnostic should be emitted for the meem thrust mode. The
+    'not implemented' diagnostic was misleading (meem = snap at anchor
+    thrust, so nothing is unimplemented in a way that changes results)
+    and was removed in Phase 5a."""
     ei_lookup = {("B602", "CL"): _ei(fuel_kg_sec=1.0)}
     aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
     events = [_event_dict(t_CL_s=100, engine_count=1, thrust_mode="meem")]
     diagnostics = []
-    totals = compute_engine_test_for_period(
+    compute_engine_test_for_period(
         events,
         _dt(1, 9),
         _dt(1, 10),
@@ -425,9 +449,10 @@ def test_compute_meem_falls_back_to_snap_with_diagnostic():
         aircraft_lookup,
         diagnostics=diagnostics,
     )
-    # Fuel still computed via snap fallback.
-    assert abs(totals["N1"]["fuel"] - 100.0) < 1e-9
-    assert any("meem thrust mode not implemented" in msg for msg in diagnostics)
+    # The old diagnostic string must be absent.
+    assert not any("not implemented" in msg for msg in diagnostics)
+    # And no meem-specific diagnostic should be emitted at all.
+    assert not any("meem" in msg.lower() for msg in diagnostics)
 
 
 def test_compute_engine_uid_row_takes_precedence():
