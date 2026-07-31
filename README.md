@@ -1,6 +1,6 @@
 # Open-ALAQS
 
-QGIS plugin for airport emissions inventory and dispersion. Builds an annual emissions inventory from runway, taxiway, gate, stationary, and movement sources, and exports AUSTAL-ready dispersion inputs.
+QGIS plugin for airport emissions inventory and dispersion. Builds an annual emissions inventory from runway, taxiway, gate, stationary, engine-test-run, and movement sources, and exports AUSTAL-ready dispersion inputs.
 
 <img src="./open_alaqs/assets/oa-logo.jpg" alt="Open-ALAQS logo" width="50%">
 
@@ -141,6 +141,8 @@ See [`scripts/README.md`](scripts/README.md) for the full inventory of QGIS-boun
 3. Run *Generate Emission Inventory* on the baked inventory to calculate emissions with the selected method.
 4. For dispersion runs, see [`documents/AUSTAL/AUSTAL_OPERATION.md`](documents/AUSTAL/AUSTAL_OPERATION.md).
 
+For engine test runs (run-ups), an extra step between 1 and 2: mark the area source(s) that represent the run-up pad as engine test sites via the QGIS form ("Engine test site" checkbox), and bulk-load the events via [`scripts/import_engine_test_events.py`](scripts/README.md). Per-event masses are then included in the inventory automatically; the source's `*_kg_unit` rate columns are ignored.
+
 ## Emission calculation methods
 
 [(Back to top)](#table-of-contents)
@@ -155,6 +157,16 @@ Open-ALAQS ships three aircraft emission methods selectable at run time:
 PM is via MEEM V1 at LTO (EEDB nvPM anchors unchanged at LTO altitudes). The MEEM V2 base method (ICAO CAEP/13-WG3) is also implemented for non-LTO altitudes. The MDG4 / Staged Combustion update is not implemented.
 
 For BFFM2 implementation details see [`documents/BFFM2_validation/BFFM2.md`](documents/BFFM2_validation/BFFM2.md).
+
+### Engine test runs
+
+A separate calculation path handles engine test runs (run-ups) as stationary sources. An area source flagged as a test site (`is_test_site='1'`) has its emissions computed from per-event rows in the `engine_test_events` table rather than from the source's `*_kg_unit` rate columns. Each event carries a start/end datetime, an aircraft type and engine, a per-mode duration (`t_TX_s` / `t_AP_s` / `t_CL_s` / `t_TO_s`), and a `thrust_mode` (`snap` / `meem` / `bffm2`).
+
+- **`snap`** — plain ICAO EEDB EI for each mode. Default. No ambient corrections.
+- **`meem`** — nvPM correction (MEEM V1). Numerically identical to `snap` for engine-test events because engine test modes correspond to ICAO EEDB anchor thrust settings; interpolation at an anchor returns the anchor's own value.
+- **`bffm2`** — gas-phase EIs (NOx, CO, HC) corrected with ambient conditions from `tbl_InvMeteo` at each event's midpoint (SAE AIR-5715 / CAEP14). PM10 and SOx pass through from the EEDB per-mode. If `tbl_InvMeteo` is empty, `bffm2` falls back to ISA defaults with a one-per-run diagnostic.
+
+The default across every event is `snap`; users opt into `meem` or `bffm2` per-event via a SQL update on `engine_test_events.thrust_mode`. Both `EngineTestSourceModule` (plugin) and `openalaqs_standalone/compute_engine_test.py` (standalone) implement the same math bit-for-bit. See the *Engine test sites* subsection of [`documents/USER_GUIDE.md`](documents/USER_GUIDE.md) for the setup workflow.
 
 ## Meteorological data
 

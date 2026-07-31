@@ -11,6 +11,7 @@ the plugin reads.
 | `metar_to_alaqs_meteo.py` | Parse METAR observations into the `meteo.csv` format Open-ALAQS expects during *Create Output*. | Once per study, before inventory creation, to produce the hourly meteorology file. |
 | `migrate_alaqs.py` | Upgrade a legacy `.alaqs` file to the current schema. | Whenever a user brings a `.alaqs` produced by an older plugin version and needs to open it with the current one. |
 | `migrate_alaqs_gui.py` | Qt5 GUI wrapper around `migrate_alaqs.py`. Exposes every CLI flag plus a live log panel; useful for users uncomfortable with the command line. | Same situations as `migrate_alaqs.py`, when a GUI is preferred. Run with QGIS's bundled Python (e.g. `C:\PROGRA~1\QGIS34~1.13\bin\python.exe migrate_alaqs_gui.py`). |
+| `import_engine_test_events.py` | Bulk-load engine run-up events from a CSV into the `engine_test_events` table. | After creating test-site area sources (`is_test_site='1'`) but before generating the emission inventory. |
 | `austal_from_csv/` | [BETA] Standalone CLI that produces AUSTAL dispersion-model input files from pre-computed emissions and meteo CSVs (no `.alaqs` needed). See [`austal_from_csv/README.md`](austal_from_csv/README.md). | When you already have emissions/meteo CSVs and want AUSTAL inputs. |
 | `emissions_austal/` | [BETA] Standalone CLI that runs the full emissions calculation against a `.alaqs` inventory and optionally generates AUSTAL inputs in one pass. See [`emissions_austal/README.md`](emissions_austal/README.md). | When you want to run the calculator headlessly from an OSGeo4W shell. |
 | `update-strings.sh` | Run `pylupdate4` to refresh the `i18n/*.ts` Qt translation source files from `*.py` / `*.ui` changes. | Translation-maintenance workflow; only needed when the plugin UI strings change. |
@@ -216,6 +217,95 @@ python3 scripts/migrate_alaqs.py legacy.alaqs \
 | 0 | Migration applied or nothing to do. |
 | 1 | Migration failed; original restored from backup if available. |
 | 2 | Bad arguments / file not found. |
+
+## `import_engine_test_events.py`
+
+Bulk-loads engine-test event rows from a CSV into an ALAQS project's
+`engine_test_events` table. Consumed after users have created their
+test-site area sources (`is_test_site='1'` — see the "Engine test
+sites" subsection of `documents/USER_GUIDE.md`) and want to populate
+events without writing SQL by hand.
+
+### CSV format
+
+Wide format, one row per event. Header required. Column names match
+the DB schema exactly:
+
+- **Required:** `source_id`, `start_datetime`, `end_datetime`,
+  `aircraft_type`
+- **Optional:** `test_id`, `engine_uid`, `engine_count`, `t_TX_s`,
+  `t_AP_s`, `t_CL_s`, `t_TO_s`, `instudy`
+
+`thrust_mode` is intentionally NOT accepted from CSV: the DB column
+still exists and defaults to `snap`, so users who need `meem` or
+`bffm2` should `UPDATE` the row via SQL. This makes the choice
+explicit rather than silently mis-typed in a spreadsheet cell.
+
+Datetimes must be ISO 8601 (e.g. `2024-12-01T09:00:00`). `instudy`
+must be `0` or `1` (defaults to `1`). Mode times (`t_*_s`) are
+integer seconds, default 0. `engine_count` if given must be a
+positive integer; if blank, falls back to the aircraft's default at
+compute time.
+
+### Modes
+
+- **Dry run (default):** validates the CSV against the DB, prints
+  a summary, no writes.
+- `--apply` performs the INSERT.
+- `--mode append` (default) — add rows to existing events.
+- `--mode replace-for-source` — DELETE existing events for each
+  `source_id` in the CSV, then insert. Re-import a corrected batch
+  cleanly.
+- `--mode replace-all` — DELETE all events first. Requires
+  `--i-mean-it` as a safety flag against scripted mistakes.
+- `--tolerate-warnings` — proceed even with warnings (unknown
+  `source_id`, unknown `engine_uid`, running seconds exceed event
+  window, etc.). Default is to fail on any warning.
+
+### Validation
+
+Row errors reject the row: `missing_required`,
+`unparseable_datetime`, `end_before_start`, `invalid_mode_time`,
+`invalid_engine_count`, `invalid_instudy`, `duplicate_row`.
+
+Row warnings abort the whole import unless `--tolerate-warnings`:
+`unknown_source_id`, `source_not_test_site`, `unknown_aircraft_type`,
+`unknown_engine_uid`, `running_exceeds_window` (60 s tolerance).
+
+All errors and warnings surface at once so the whole CSV can be
+fixed in one pass rather than iteratively.
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | Success (dry-run passed, or apply completed). |
+| 1 | Fatal error (CSV parse failure, DB error, invalid arguments). |
+| 2 | Validation failed (row errors, or warnings without `--tolerate-warnings`). |
+
+### Examples
+
+Dry-run a batch:
+
+```bash
+python scripts/import_engine_test_events.py \
+    /path/to/study.alaqs /path/to/logbook.csv
+```
+
+Apply after review:
+
+```bash
+python scripts/import_engine_test_events.py \
+    /path/to/study.alaqs /path/to/logbook.csv --apply
+```
+
+Re-import a corrected batch for one source:
+
+```bash
+python scripts/import_engine_test_events.py \
+    /path/to/study.alaqs /path/to/N1_fix.csv \
+    --apply --mode replace-for-source
+```
 
 ## `migrate_alaqs_gui.py`
 

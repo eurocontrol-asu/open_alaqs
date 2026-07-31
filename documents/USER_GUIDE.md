@@ -26,6 +26,7 @@
       - [Roadways](#roadways)
       - [Point sources](#point-sources)
       - [Area sources](#area-sources)
+      - [Engine test sites](#engine-test-sites)
       - [Buildings](#buildings)
   - [Activity Profiles](#activity-profiles)
     - [Worked example — defining and using named profiles](#worked-example--defining-and-using-named-profiles)
@@ -320,6 +321,41 @@ When adding an area source, the following information is required:
 The emission calculation is: `emission (kg) = EF (kg/unit) × units_per_year × (interval_hours / 8760)`.
 
 Beyond the standard pollutants, two additional pollutants **P1** and **P2** can be defined by the user. For aircraft movements, P1 and P2 are placeholders for PM1.0 and PM2.5 respectively, currently set equal to PM10 until dedicated emission indices become available in the EEDB (see [`PM10 output columns`](#pm10-output-columns)).
+
+The area-source form also has an **Engine test site** checkbox. When enabled, the source's `*_kg_unit` emission-rate fields above are ignored at compute time; per-mode emissions come from rows in the `engine_test_events` table instead. See the next subsection for the setup workflow.
+
+#### [Engine test sites](#engine-test-sites)
+
+An engine test site (run-up pad) is an area source flagged for special treatment. Rather than emitting a fixed per-unit rate multiplied by an activity profile, its emissions come from discrete engine-test events — each event specifies a start and end datetime, an aircraft type and engine, per-mode durations, and a thrust-computation mode.
+
+**Setup workflow:**
+
+1. Draw the area source in QGIS covering the extent of the run-up pad. Fill in name and height as for a regular area source.
+2. In the source's edit form, tick the **Engine test site** checkbox. The `*_kg_unit` rates on the Emissions tab are ignored for a test site; you can leave them at zero.
+3. Save the study.
+4. Prepare a CSV of events. Each row is one engine test run and needs a `source_id` (matching the area source you just flagged), `start_datetime`, `end_datetime`, `aircraft_type`, and per-mode running times in seconds (`t_TX_s`, `t_AP_s`, `t_CL_s`, `t_TO_s`). Optional columns: `test_id`, `engine_uid`, `engine_count`. See [`scripts/README.md`](../scripts/README.md#import_engine_test_eventspy) for the full CSV specification.
+5. Load the events with the importer script:
+   ```bash
+   python scripts/import_engine_test_events.py study.alaqs events.csv
+   ```
+   Run without `--apply` first to validate. Add `--apply` when the summary looks clean.
+6. Regenerate the emission inventory. Test-site emissions appear alongside regular sources with no further configuration.
+
+**Thrust computation modes.** Each event has an optional `thrust_mode` column (default `snap`), not exposed in the CSV — set it via SQL if you need a non-default:
+
+- `snap` — plain ICAO EEDB EI for each mode, no ambient corrections. This is the default.
+- `meem` — nvPM correction (MEEM V1). Accepted for consistency with the wider ALAQS methodology, but numerically identical to `snap` for engine-test events because engine test modes correspond to ICAO EEDB anchor thrust settings.
+- `bffm2` — gas-phase EIs (NOx, CO, HC) corrected with ambient conditions from `tbl_InvMeteo` at each event's midpoint (SAE AIR-5715 / CAEP14). PM10 and SOx pass through from the EEDB per-mode. If `tbl_InvMeteo` is empty or has no data at the event's midpoint, `bffm2` falls back to ISA defaults with a one-per-run warning in the run log.
+
+**Emission math.** For each event and each of the four ICAO modes with a non-zero running time,
+
+```
+t_effective_s = t_mode_s × engine_count × period_window_fraction
+fuel_burned_kg = fuel_flow_kg_s × t_effective_s
+mass_g[pollutant] = EI_g_per_kg[pollutant] × fuel_burned_kg
+```
+
+`period_window_fraction` handles events that straddle two inventory periods: the fraction of the event's duration falling inside each period. An event 09:30–10:30 with a 09:00–10:00 period contributes 50 % of its emissions to that period and 50 % to the next one.
 
 #### [Buildings](#buildings)
 

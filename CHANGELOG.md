@@ -6,6 +6,56 @@ ISO 8601.
 
 ## [Unreleased]
 
+Engine-test emissions add-on. Adds a new mechanism for representing
+aircraft engine test runs (run-ups) as stationary emission sources
+with per-event fuel and per-pollutant computation matching the
+regular movement path.
+
+- **New schema on area sources.** `shapes_area_sources.is_test_site`
+  TEXT column marks an area source as an engine-test site. Legacy
+  studies migrate silently (NULL → not a test site). Fresh studies
+  from the template have the column present with no default value.
+- **New table `engine_test_events`.** One row per engine test run,
+  with fields: `source_id`, `test_id`, `start_datetime`,
+  `end_datetime`, `aircraft_type`, `engine_uid`, `engine_count`,
+  `t_TX_s`, `t_AP_s`, `t_CL_s`, `t_TO_s`, `thrust_mode` (`snap` /
+  `meem` / `bffm2`, default `snap`), and `instudy`. Migration via
+  `scripts/migrate_alaqs.py` handles the new table on existing
+  studies.
+- **UI toggle on the area-source form.** New "Engine test site"
+  checkbox in the QGIS area-source edit dialog. When enabled, the
+  source's `*_kg_unit` emission-rate fields are ignored at compute
+  time; per-mode emissions come from the event rows instead.
+- **CSV import tool.** `scripts/import_engine_test_events.py` bulk-
+  loads events from a CSV into the `engine_test_events` table. Dry
+  run is the default; `--apply` writes. Three modes (`append`,
+  `replace-for-source`, `replace-all`); safety flag `--i-mean-it`
+  required for `replace-all`. Eight row-level error codes and five
+  warning codes surface at once; `--tolerate-warnings` proceeds
+  despite warnings.
+- **Compute (plugin).** New `EngineTestSourceModule` computes each
+  event's fuel and per-pollutant emissions from
+  `Movement.defaultEmissions`, using
+  `t_effective = t_mode_s × engine_count × period_window_fraction`
+  seconds per mode. `AreaSourceWithTimeProfileModule` skips test-
+  site sources so the two paths don't double-count.
+- **Compute (standalone).** `openalaqs_standalone/compute_engine_test.py`
+  is the QGIS-free twin, matching the plugin math bit-for-bit. Also
+  ships `extract_engine_test_events.py` for the SQL side. Accepts
+  an optional `conn` kwarg for BFFM2 meteo lookups; snap-only
+  callers work with no signature change.
+- **Three thrust modes.** `snap` (raw ICAO EEDB), `meem` (nvPM
+  correction; numerically identical to `snap` for engine-test
+  events because mode = anchor thrust), and `bffm2` (gas-phase
+  ambient correction on NOx / CO / HC via `tbl_InvMeteo`, with
+  PM10 and SOx passed through from the EEDB per Design A). BFFM2
+  looks up meteo at each event's midpoint and falls back to ISA
+  with a one-per-run diagnostic if the table is empty.
+
+New public API on `Engine`: `getEmissionIndexByModeWithBFFM2(mode,
+ambient_conditions, mach=0.0)`. New public API on
+`AmbientConditionStore`: `getNearestByTime(timestamp_s)`.
+
 ## [5.2.4] - 2026-06-18
 
 Patch release. AUSTAL writer bug fix. Generating AUSTAL input files from
