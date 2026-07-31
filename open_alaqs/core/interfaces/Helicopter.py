@@ -209,6 +209,26 @@ class Helicopter:
         """
         return "HELICOPTER"
 
+    def getEmissionDynamicsByMode(self):
+        """Helicopters do not participate in the smooth-and-shift plume model.
+
+        The S&S plume model represents thermal buoyancy of jet/turboprop
+        exhaust; helicopter rotor downwash is a different physics not
+        modelled here. Returning an empty mapping causes
+        ``GeoTransformation.create_polygon_3d`` to raise ``KeyError`` on
+        the ``[lto_mode]`` subscript, which is caught by the existing
+        ``except (KeyError, TypeError)`` block and falls through to
+        zero-extension defaults (the same behaviour as an aircraft with
+        no ``default_emission_dynamics`` entry). Emission masses are
+        preserved.
+
+        Without this method, ``[lto_mode]`` is attempted on the return
+        value of a missing method and Python raises ``AttributeError``,
+        which is NOT caught by the existing exception tuple, aborting
+        the inventory build. See issue #340.
+        """
+        return {}
+
     def __str__(self) -> str:
         return (
             f"\n Helicopter '{self._icao}' / variant '{self._variant_label}':"
