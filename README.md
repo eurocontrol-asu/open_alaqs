@@ -141,7 +141,7 @@ See [`scripts/README.md`](scripts/README.md) for the full inventory of QGIS-boun
 3. Run *Generate Emission Inventory* on the baked inventory to calculate emissions with the selected method.
 4. For dispersion runs, see [`documents/AUSTAL/AUSTAL_OPERATION.md`](documents/AUSTAL/AUSTAL_OPERATION.md).
 
-For engine test runs (run-ups), an extra step between 1 and 2: mark the area source(s) that represent the run-up pad as engine test sites via the QGIS form ("Engine test site" checkbox), and bulk-load the events via [`scripts/import_engine_test_events.py`](scripts/README.md). Per-event masses are then included in the inventory automatically; the source's `*_kg_unit` rate columns are ignored.
+For engine test runs (run-ups), an extra step between 1 and 2: mark the area source(s) that represent the run-up pad as engine test sites via the QGIS form ("Engine test site" checkbox), and bulk-load the events via the toolbar's *"Import engine test events (CSV)"* action (or, for scripting workflows, [`scripts/import_engine_test_events.py`](scripts/README.md)). Per-event masses are then included in the inventory automatically; the source's `*_kg_unit` rate columns are ignored.
 
 ## Emission calculation methods
 

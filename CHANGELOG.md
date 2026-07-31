@@ -26,13 +26,28 @@ regular movement path.
   checkbox in the QGIS area-source edit dialog. When enabled, the
   source's `*_kg_unit` emission-rate fields are ignored at compute
   time; per-mode emissions come from the event rows instead.
-- **CSV import tool.** `scripts/import_engine_test_events.py` bulk-
-  loads events from a CSV into the `engine_test_events` table. Dry
-  run is the default; `--apply` writes. Three modes (`append`,
-  `replace-for-source`, `replace-all`); safety flag `--i-mean-it`
-  required for `replace-all`. Eight row-level error codes and five
-  warning codes surface at once; `--tolerate-warnings` proceeds
-  despite warnings.
+- **CSV import tool.** Two entry points share one core
+  implementation in `open_alaqs.core.tools.engine_test_import`:
+    - **Toolbar action** *"Import engine test events (CSV)"* opens a
+      dialog with a file picker, validation summary, insert-mode
+      radio group (`append` / `replace-for-source` / `replace-all`
+      with confirmation on the destructive modes), and a
+      "Tolerate warnings" checkbox. This is the primary path.
+    - **CLI** `scripts/import_engine_test_events.py` provides the
+      same functionality from a terminal, for scripting. Dry run
+      is the default; `--apply` writes. `--i-mean-it` required for
+      `replace-all`. `--tolerate-warnings` for the non-strict path.
+  Eight row-level error codes and five warning codes surface at
+  once from either entry point; both produce byte-identical
+  INSERTs.
+- **`is_test_site` UI toggle write guarded on pre-v1b studies.**
+  Toggling the "Engine test site" checkbox on a study created by
+  an older plugin version raised `KeyError` on save because the
+  layer's schema had no `is_test_site` field. The write now catches
+  the KeyError, logs a WARNING pointing at `scripts/migrate_alaqs.py`,
+  and returns False. Other fields on the same feature are still
+  saved normally. Users need to run the migration to gain the
+  column.
 - **Compute (plugin).** New `EngineTestSourceModule` computes each
   event's fuel and per-pollutant emissions from
   `Movement.defaultEmissions`, using
