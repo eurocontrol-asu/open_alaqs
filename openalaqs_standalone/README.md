@@ -109,6 +109,20 @@ compute_helicopter.py  FOCA helicopter per-movement emissions
 compute_gate_movements.py  per-movement gate (GSE + GPU) emissions,
                        driven by the movements and default_gate_profiles;
                        folded into each movement's total
+compute_engine_test.py per-event engine-test-run emissions from the
+                       `engine_test_events` table. QGIS-free twin of
+                       `EngineTestSourceModule`; same math bit-for-bit.
+                       Three thrust modes: `snap` (default), `meem`
+                       (numerically identical to snap for engine-test
+                       events at anchor thrust), `bffm2` (gas-phase
+                       ambient correction, PM10/SOx passthrough).
+                       BFFM2 requires an optional `conn` kwarg for
+                       `tbl_InvMeteo` lookups; snap-only workflows use
+                       the same signature as before.
+extract_engine_test_events.py  read engine_test_events joined against
+                       shapes_area_sources (test-site filter);
+                       produces the event-dict input that
+                       compute_engine_test.py consumes.
 compute_movements.py   dispatch + study-level driver
 parallel.py            multiprocessing driver for the movement
                        compute; results bit-identical to the serial
@@ -153,6 +167,7 @@ cli.py / __main__.py   `python -m openalaqs_standalone <command>`:
 | Gate | `shapes_gates` + `default_gate_profiles` | implemented (movement-driven calculator) |
 | Aircraft movement | `user_aircraft_movements` | implemented (calculator, 3 methods) |
 | Helicopter movement | `user_aircraft_movements` | implemented (FOCA calculator) |
+| Engine test site | `engine_test_events` + `shapes_area_sources` (`is_test_site='1'`) | implemented (calculator, 3 thrust modes) |
 
 ## Quick start
 
