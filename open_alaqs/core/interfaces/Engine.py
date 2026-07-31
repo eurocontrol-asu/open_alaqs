@@ -300,6 +300,84 @@ class EngineEmissionIndex(Store):
             )
             return base_ei
 
+    def getEmissionIndexByModeWithBFFM2(
+        self,
+        mode,
+        ambient_conditions,
+        mach=0.0,
+    ):
+        """Per-mode EI with BFFM2 ambient corrections applied to gas-phase
+        pollutants.
+
+        BFFM2 corrects NOx, CO, HC EIs and the ambient-adjusted fuel
+        flow using the temperature/pressure/humidity/Mach dependence.
+        PM10 (and PM sub-classes), SOx, and CO2 pass through unchanged
+        from the base mode EI. Composed result: base EI overlaid with
+        BFFM2-corrected gas-phase EIs and ambient FF.
+
+        Semantics matches ``MovementEmissionCalculator._get_emission_index_bffm2``:
+        gas from BFFM2 twin-quadratic path, PM from EEDB per-mode.
+        Falls back to plain ``getEmissionIndexByMode(mode)`` if BFFM2
+        raises for any reason (missing FF at anchors, twin-quadratic
+        out-of-range, etc). See phase 5b design memo for the choice of
+        MEEM-PM composition.
+
+        :param mode: operating mode ("T/O","C/O","App","Idle" or the
+                     aliases "TO","CL","AP","TX",...).
+        :param ambient_conditions: an ``AmbientCondition`` instance with
+                                   getTemperature (K), getPressure (Pa),
+                                   getRelativeHumidity (0..1). Passed
+                                   into ``method["config"]``.
+        :param mach: flight Mach number. Default 0.0 (stationary engine
+                     at airport elevation — the correct value for
+                     engine-test events).
+        :return: composite EmissionIndex, or the plain ``getEmissionIndexByMode``
+                 result if BFFM2 fails.
+        """
+        base_ei = self.getEmissionIndexByMode(mode)
+        if base_ei is None:
+            return None
+
+        power_setting = self.getPowerSettingByMode(mode)
+        if power_setting is None:
+            # Alternative mode names (e.g. mode="C/O" but stored as "CL").
+            alt = self.getAlternativeModeNames().get(mode)
+            if alt is not None:
+                power_setting = self.getPowerSettingByMode(alt)
+        if power_setting is None:
+            return base_ei
+
+        try:
+            method = {
+                "name": "BFFM2",
+                "config": {
+                    "ambient_conditions": ambient_conditions,
+                    "mach_number": float(mach),
+                },
+            }
+            bffm2_ei = self.getEmissionIndexByEngineState(
+                float(power_setting), method=method
+            )
+        except Exception as exc:
+            logger.debug("BFFM2 fall-through for mode %s: %s", mode, exc)
+            return base_ei
+
+        if bffm2_ei is None:
+            return base_ei
+
+        # Compose: start from base EI (which carries PM, SOx, CO2 fields
+        # in EEDB values), overlay BFFM2 gas-phase and ambient FF. Matches
+        # the plugin's MovementEmissionCalculator._get_emission_index_bffm2
+        # ordering.
+        composite = EmissionIndex(
+            initValues=dict(base_ei._objects), defaultValues=defaultEI
+        )
+        for field in ("fuel_kg_sec", "nox_g_kg", "co_g_kg", "hc_g_kg"):
+            val = bffm2_ei.getObject(field)
+            if val is not None:
+                composite.setObject(field, val)
+        return composite
+
     def getICAOEngineEmissionsDB(self, index1_power=False, id2=None, format=""):
         icao_eedb: dict[float, EmissionIndex] = {}
         for mode_, obj_ in list(self.getObjects().items()):

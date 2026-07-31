@@ -33,6 +33,7 @@ Design (per phase 0 memo):
 
 from __future__ import annotations
 
+import sqlite3  # noqa: E402  (kept adjacent to the typing imports)
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -45,6 +46,25 @@ _MODE_TIME_COL = {
     "AP": "t_AP_s",
     "CL": "t_CL_s",
     "TO": "t_TO_s",
+}
+
+
+# BFFM2 mode-name mapping: our short mode keys → the name-form the
+# shared bffm2 module expects. Matches openalaqs_standalone.compute_aircraft.
+_BFFM2_MODE_NAMES = {
+    "TX": "Idle",
+    "AP": "Approach",
+    "CL": "Climbout",
+    "TO": "Takeoff",
+}
+
+# CAEP14 installation corrections. Same as compute_aircraft's; kept
+# adjacent for source-of-truth clarity.
+_BFFM2_INSTALLATION_CORRECTIONS = {
+    "Takeoff": 1.010,
+    "Climbout": 1.013,
+    "Approach": 1.020,
+    "Idle": 1.100,
 }
 
 
@@ -181,6 +201,133 @@ def _add_ei_to_totals(
         totals[pol] += float(v) * fuel_burned
 
 
+def _build_icao_eedb_for_engine(
+    engine_uid: str, ei_lookup: Dict[Tuple[str, str], Dict]
+) -> Optional[Dict]:
+    """Build the BFFM2-shaped icao_eedb dict for one engine.
+
+    Format expected by ``open_alaqs.core.tools.bffm2.calculate_emission_index``:
+      ``{pollutant: {mode_name: {ff_ref_kg_s: ei_g_kg}}}``
+
+    Where ``pollutant`` is ``PollutantType.NOx / .CO / .HC`` (or the
+    string variants they map from), ``mode_name`` is the BFFM2 name
+    (``"Idle" / "Approach" / "Climbout" / "Takeoff"``), and
+    ``ff_ref_kg_s`` is the mode's reference fuel flow.
+
+    Returns ``None`` if any of the four modes is missing from the
+    lookup, or if any missing has no ``fuel_kg_sec``. BFFM2 without a
+    complete 4-mode anchor set is undefined.
+    """
+    # Import lazily so snap-only callers don't pull it in.
+    from open_alaqs.core.interfaces.Emissions import PollutantType
+
+    eedb: Dict = {
+        p: {} for p in (PollutantType.NOx, PollutantType.CO, PollutantType.HC)
+    }
+    _POL_MAP = {
+        PollutantType.NOx: "nox_ei_g_kg_fuel",
+        PollutantType.CO: "co_ei_g_kg_fuel",
+        PollutantType.HC: "hc_ei_g_kg_fuel",
+    }
+    for mode, bffm2_name in _BFFM2_MODE_NAMES.items():
+        row = ei_lookup.get((engine_uid, mode))
+        if row is None:
+            return None
+        ff = row.get("fuel_kg_sec")
+        if ff is None:
+            return None
+        ff = float(ff)
+        for pol, ei_key in _POL_MAP.items():
+            v = row.get(ei_key)
+            if v is None:
+                return None
+            eedb[pol][bffm2_name] = {ff: float(v)}
+    return eedb
+
+
+def _add_bffm2_ei_to_totals(
+    totals: Dict[str, float],
+    ei_row: Dict,
+    icao_eedb: Dict,
+    meteo: Dict,
+    t_effective_s: float,
+) -> None:
+    """Add one segment's BFFM2-corrected gas emissions plus base PM/SOx
+    to the running totals dict.
+
+    Gas-phase EIs (NOx, CO, HC) come from ``bffm2.calculate_emission_index``
+    at the segment's ambient fuel flow. PM10, PM sub-classes, SOx, and
+    fuel burn come from the per-mode ``ei_row`` (same as snap). Matches
+    the plugin's Engine.getEmissionIndexByModeWithBFFM2 composition:
+    BFFM2 gas + EEDB PM (Design A per phase 5 memo).
+    """
+    # Ambient fuel flow conversion: FF_ref → FF_amb via θ/δ/Mach.
+    #   FF_amb = FF_ref * δ / θ^3.8 / exp(0.2*M²)
+    # Matches Engine.getEmissionIndexByEngineState's pre-conversion so the
+    # bffm2 module's internal inverse correction cancels the pre-conversion
+    # and lands on the correct EEDB interpolation position.
+    import math
+
+    from open_alaqs.core.interfaces.Emissions import PollutantType
+    from open_alaqs.core.tools.bffm2 import calculate_emission_index as _bffm2_ei
+
+    ff_ref = float(ei_row.get("fuel_kg_sec") or 0.0)
+    if ff_ref <= 0.0:
+        # Missing FF; can't do BFFM2. Fall through to snap for this mode
+        # by delegating to the standard _add_ei_to_totals-style math.
+        _add_ei_to_totals(totals, ei_row, t_effective_s)
+        return
+
+    T_K = meteo["T_K"]
+    P_Pa = meteo["P_Pa"]
+    RH = meteo["RH"]
+    mach = float(meteo.get("mach_number", 0.0))
+    theta = T_K / 288.15
+    delta = P_Pa / 101325.0
+    ff_amb = ff_ref * delta / (theta**3.8) / math.exp(0.2 * mach**2)
+
+    fuel_burned = ff_amb * t_effective_s
+    totals["fuel"] += fuel_burned
+
+    ambient_conditions = {
+        "temperature_in_Kelvin": T_K,
+        "pressure_in_Pa": P_Pa,
+        "relative_humidity": RH,
+        "mach_number": mach,
+    }
+
+    for pol_enum, dest_key in (
+        (PollutantType.NOx, "nox"),
+        (PollutantType.CO, "co"),
+        (PollutantType.HC, "hc"),
+    ):
+        ei = _bffm2_ei(
+            pol_enum,
+            ff_amb,
+            icao_eedb,
+            ambient_conditions=ambient_conditions,
+            installation_corrections=_BFFM2_INSTALLATION_CORRECTIONS,
+        )
+        totals[dest_key] += float(ei) * fuel_burned
+
+    # PM10, SOx, CO2, and PM sub-classes from the EEDB row unchanged.
+    _EEDB_PASSTHROUGH = {
+        "co2": "co2_ei_g_kg_fuel",
+        "sox": "sox_ei_g_kg_fuel",
+        "pm10": "pm10_ei_g_kg_fuel",
+        "p1": "p1_ei_g_kg_fuel",
+        "p2": "p2_ei_g_kg_fuel",
+        "pm10_nonvol": "pm10_nonvol_ei_g_kg_fuel",
+        "pm10_sul": "pm10_sul_ei_g_kg_fuel",
+        "pm10_organic": "pm10_organic_ei_g_kg_fuel",
+    }
+    for pol, ei_key in _EEDB_PASSTHROUGH.items():
+        v = ei_row.get(ei_key)
+        if v is None:
+            continue
+        totals[pol] += float(v) * fuel_burned
+
+
 def compute_engine_test_for_period(
     events: Iterable[Dict],
     period_start: datetime,
@@ -188,6 +335,7 @@ def compute_engine_test_for_period(
     ei_lookup: Dict[Tuple[str, str], Dict],
     aircraft_lookup: Dict,
     diagnostics: Optional[List[str]] = None,
+    conn: Optional[sqlite3.Connection] = None,
 ) -> Dict[str, Dict[str, float]]:
     """Compute per-source emission totals for one period.
 
@@ -205,6 +353,12 @@ def compute_engine_test_for_period(
         Used for engine-count and default-engine-uid fallback.
     diagnostics : optional list to append skip-warning strings to. If
         provided, callers can surface these in their run log.
+    conn : optional sqlite3 connection to the ``.alaqs`` project.
+        Required only for events with ``thrust_mode='bffm2'``: used to
+        look up ``tbl_InvMeteo`` at each event's midpoint. If not
+        supplied, BFFM2 events fall back to snap with a single
+        diagnostic. If supplied but the table is empty, BFFM2 events
+        fall back to ISA-with-diagnostic (once per call).
 
     Returns
     -------
@@ -214,6 +368,10 @@ def compute_engine_test_for_period(
     """
     if diagnostics is None:
         diagnostics = []
+
+    # Once-per-call flags for BFFM2 diagnostics.
+    _bffm2_isa_fallback_logged = False
+    _bffm2_no_conn_logged = False
 
     by_source: Dict[str, Dict[str, float]] = {}
 
@@ -244,7 +402,7 @@ def compute_engine_test_for_period(
             continue
 
         thrust_mode = str(event.get("thrust_mode") or "snap")
-        if thrust_mode not in ("snap", "meem"):
+        if thrust_mode not in ("snap", "meem", "bffm2"):
             diagnostics.append(
                 f"event {event.get('event_id')}: unknown thrust_mode "
                 f"{thrust_mode!r}; treating as 'snap'"
@@ -262,6 +420,86 @@ def compute_engine_test_for_period(
         # future-work note if non-anchor thrust events are ever added.
         if thrust_mode == "meem":
             thrust_mode = "snap"
+
+        # BFFM2 setup: pre-build the icao_eedb once per event (all four
+        # modes for the resolved engine) and resolve meteo at event
+        # midpoint. If any prerequisite is missing, fall back to snap
+        # with a diagnostic — matches the plugin's behaviour of falling
+        # through to base EI on BFFM2 failure.
+        bffm2_ready = False
+        bffm2_icao_eedb = None
+        bffm2_meteo = None
+        if thrust_mode == "bffm2":
+            if conn is None:
+                if not _bffm2_no_conn_logged:
+                    diagnostics.append(
+                        "bffm2 events present but conn=None; falling back "
+                        "to snap for all bffm2 events this call. Pass conn "
+                        "to compute_engine_test_for_period to enable BFFM2."
+                    )
+                    _bffm2_no_conn_logged = True
+                thrust_mode = "snap"
+            else:
+                bffm2_icao_eedb = _build_icao_eedb_for_engine(engine_uid, ei_lookup)
+                if bffm2_icao_eedb is None:
+                    diagnostics.append(
+                        f"event {event.get('event_id')}: bffm2 requested but "
+                        f"engine {engine_uid!r} lacks a complete 4-mode "
+                        "EI+FF anchor set; falling back to snap"
+                    )
+                    thrust_mode = "snap"
+                else:
+                    # Meteo lookup at event midpoint.
+                    mid_dt = e_start + (e_end - e_start) / 2
+                    mid_iso = mid_dt.strftime("%Y-%m-%d %H:%M:%S")
+                    # Delegate to movements.get_meteo_at which reads
+                    # tbl_InvMeteo with "<= runway_time" semantics and
+                    # falls back to ISA if the table has no matching
+                    # row. Import lazily to avoid the standalone runtime
+                    # dependency for snap-only callers.
+                    from openalaqs_standalone import movements as _mv
+
+                    row = conn.execute(
+                        "SELECT COUNT(*) FROM sqlite_master "
+                        "WHERE type='table' AND name='tbl_InvMeteo'"
+                    ).fetchone()
+                    if row[0] == 0 and not _bffm2_isa_fallback_logged:
+                        diagnostics.append(
+                            "bffm2 events present but tbl_InvMeteo not in "
+                            "the DB; BFFM2 will fall back to ISA defaults. "
+                            "Populate tbl_InvMeteo to get real ambient "
+                            "corrections. This message is shown once per "
+                            "call."
+                        )
+                        _bffm2_isa_fallback_logged = True
+                        bffm2_meteo = dict(_mv.ISA_AMBIENT)
+                    else:
+                        try:
+                            bffm2_meteo = _mv.get_meteo_at(conn, mid_iso, use_isa=False)
+                            # Warn once if the returned meteo is ISA
+                            # (meaning tbl_InvMeteo had no <= mid_iso
+                            # row, get_meteo_at recursively fell back).
+                            if (
+                                bffm2_meteo.get("T_K") == 288.15
+                                and bffm2_meteo.get("P_Pa") == 101325.0
+                                and not _bffm2_isa_fallback_logged
+                            ):
+                                diagnostics.append(
+                                    "bffm2 events present but tbl_InvMeteo "
+                                    "has no data at or before their midpoint; "
+                                    "BFFM2 will fall back to ISA defaults. "
+                                    "This message is shown once per call."
+                                )
+                                _bffm2_isa_fallback_logged = True
+                        except Exception as _exc:
+                            diagnostics.append(
+                                f"bffm2 meteo lookup failed ({_exc}); "
+                                "falling back to snap for this event"
+                            )
+                            thrust_mode = "snap"
+
+                    if thrust_mode == "bffm2":
+                        bffm2_ready = True
 
         source_id = event.get("source_id")
         if source_id is None:
@@ -285,7 +523,12 @@ def compute_engine_test_for_period(
                 )
                 continue
             t_effective = t_mode_s * engine_count * fraction
-            _add_ei_to_totals(totals, ei_row, t_effective)
+            if bffm2_ready:
+                _add_bffm2_ei_to_totals(
+                    totals, ei_row, bffm2_icao_eedb, bffm2_meteo, t_effective
+                )
+            else:
+                _add_ei_to_totals(totals, ei_row, t_effective)
             contributed = True
 
         if not contributed and source_id in by_source:
