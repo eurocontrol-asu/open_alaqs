@@ -370,6 +370,19 @@ def _resolve_ei(engine, mode: str, thrust_mode: str):
         at sea-level ambient, Mach 0 (correct for stationary run-ups at
         airport elevation).
 
+    Note on MEEM for engine-test events: MEEM V1 only corrects nvPM EIs,
+    and its LTO branch (which applies here — engine test runs are at
+    ground level, Mach 0) is a log-log / linear interpolation across
+    the four ICAO EEDB anchor points. Since engine-test modes always
+    correspond to those anchor thrust settings (TX=0.07, AP=0.30,
+    CL=0.85, TO=1.00 F00), MEEM V1 returns the anchor's own nvPM value
+    unchanged. Gas-phase EIs (NOx, CO, HC, SOx) are untouched by MEEM V1
+    in any case. So for engine-test events, ``'meem'`` and ``'snap'``
+    produce numerically identical results. The MEEM path is kept for
+    consistency with the wider ALAQS emission methodology and to leave
+    room for future work (e.g. non-anchor thrust events with an
+    explicit ``power_setting`` column).
+
     Falls back to ``'snap'`` if MEEM is unavailable on the engine (older
     EEDB entries without enough data for the correction). Returns None
     if even the snap lookup fails.

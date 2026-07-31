@@ -14,9 +14,18 @@ Design (per phase 0 memo):
   * D4 window-fraction hour-split: identical formula to the plugin,
     reimplemented here in native Python.
   * D2 thrust-mode override: per event; ``'snap'`` uses the raw EI
-    for that mode, ``'meem'`` is not yet supported here and falls
-    back to snap with a diagnostic (proper MEEM standalone port is
-    a Phase 5 concern).
+    for that mode. ``'meem'`` is accepted and produces numerically
+    identical results to ``'snap'`` for engine-test events. This is
+    NOT a coverage gap: MEEM V1 only corrects nvPM EIs, and its LTO
+    branch is a log-log / linear interpolation across the four ICAO
+    EEDB anchor points. Since engine-test events always run at one of
+    those anchor thrust settings (TX=0.07, AP=0.30, CL=0.85, TO=1.00
+    F00), the interpolation trivially returns the anchor's own nvPM
+    value. Gas-phase pollutants (NOx, CO, HC, SOx) are untouched by
+    MEEM V1 in any case. See the plugin's ``getEmissionIndexByModeWithMEEM``
+    for the reference implementation. If future work introduces
+    non-anchor thrust events, the standalone path here becomes
+    non-trivial and must delegate to ``open_alaqs.core.tools.meem_v1``.
   * D5 one aircraft/engine per event: mixed run-ups appear as
     multiple events sharing source_id.
   * D10 interval-overlap: same strict ``<`` semantics.
@@ -242,13 +251,17 @@ def compute_engine_test_for_period(
             )
             thrust_mode = "snap"
 
-        # Standalone does not implement MEEM yet; fall back to snap.
-        # Kept as an explicit diagnostic so callers know the coverage gap.
+        # Standalone treats 'meem' as 'snap' for engine-test events
+        # because MEEM V1 at an ICAO anchor thrust setting (which is
+        # what every engine-test mode is) reduces to the anchor's own
+        # nvPM value. Log-log/linear interpolation at a knot returns
+        # the knot. Gas-phase EIs are unaffected by MEEM V1. Result:
+        # snap and meem produce byte-identical numbers here. No
+        # diagnostic emitted; users legitimately choosing 'meem' get
+        # the answer they expect. See the module docstring for the
+        # future-work note if non-anchor thrust events are ever added.
         if thrust_mode == "meem":
-            diagnostics.append(
-                f"event {event.get('event_id')}: meem thrust mode not "
-                "implemented in standalone; falling back to snap"
-            )
+            thrust_mode = "snap"
 
         source_id = event.get("source_id")
         if source_id is None:
