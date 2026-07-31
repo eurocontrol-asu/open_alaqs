@@ -37,7 +37,40 @@ class _FakeCheckbox:
 
 class _FakeFeature:
     """QgsFeature stand-in supporting ``feature['key']`` reads/writes
-    and KeyError on missing keys."""
+    and KeyError on missing keys.
+
+    IMPORTANT: assignment to a key not present at construction time
+    raises KeyError, mirroring the real QgsFeature behaviour (fields
+    must be declared on the layer's schema). This is stricter than a
+    plain dict — the original Phase 4b tests used a dict-based fake
+    that silently accepted new keys, which masked the bug fixed on
+    the fix-is-test-site-write-keyerror branch (KeyError on save
+    against a pre-v1b .alaqs whose shapes_area_sources layer has no
+    is_test_site field).
+    """
+
+    def __init__(self, data: dict = None):
+        self._data = dict(data or {})
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+    def __setitem__(self, key, value):
+        if key not in self._data:
+            raise KeyError(key)
+        self._data[key] = value
+
+    def __contains__(self, key):
+        return key in self._data
+
+
+class _FakeFeatureLegacyDict:
+    """Loose dict-like fake, kept for the ONE test that intentionally
+    exercises a feature whose field set is unknown at construction time
+    (e.g. a study created on the current schema where every field is
+    present). Real QgsFeature would allow the assignment in that case
+    because the field is declared on the layer.
+    """
 
     def __init__(self, data: dict = None):
         self._data = dict(data or {})
@@ -123,23 +156,51 @@ def test_seed_from_feature_integer_zero_leaves_unchecked():
 def test_write_writes_1_when_checked():
     feature = _FakeFeature({"is_test_site": "0"})
     cb = _FakeCheckbox(checked=True)
-    write_is_test_site_to_feature(cb, feature)
+    result = write_is_test_site_to_feature(cb, feature)
     assert feature["is_test_site"] == "1"
+    assert result is True
 
 
 def test_write_writes_0_when_unchecked():
     feature = _FakeFeature({"is_test_site": "1"})
     cb = _FakeCheckbox(checked=False)
-    write_is_test_site_to_feature(cb, feature)
+    result = write_is_test_site_to_feature(cb, feature)
     assert feature["is_test_site"] == "0"
+    assert result is True
 
 
-def test_write_creates_key_when_absent():
-    """A pre-v1b feature layer that gained is_test_site during the
-    edit session; the write should still work."""
-    feature = _FakeFeature({})  # key missing
+def test_write_returns_false_when_field_absent_no_crash(caplog):
+    """A pre-v1b .alaqs whose shapes_area_sources layer has no
+    is_test_site field: assignment raises KeyError. The helper must
+    catch it, log a WARNING pointing at migrate_alaqs.py, and return
+    False so callers know the state wasn't persisted.
+
+    This test would have caught the KeyError-on-save bug reported
+    against Phase 4b if the original tests hadn't used a dict-based
+    fake that permissively accepted new keys.
+    """
+    import logging
+
+    feature = _FakeFeature({})  # NO is_test_site field
     cb = _FakeCheckbox(checked=True)
-    write_is_test_site_to_feature(cb, feature)
+
+    with caplog.at_level(logging.WARNING):
+        result = write_is_test_site_to_feature(cb, feature)
+
+    assert result is False
+    # The field is NOT added; the feature is unchanged.
+    assert "is_test_site" not in feature
+    # The WARNING mentions the migration command.
+    assert any("migrate_alaqs" in rec.message for rec in caplog.records)
+
+
+def test_write_still_works_on_a_present_but_null_field():
+    """After migrate_alaqs.py runs, the field exists with NULL. The
+    write should succeed (setting the string value replaces the NULL)."""
+    feature = _FakeFeature({"is_test_site": None})
+    cb = _FakeCheckbox(checked=True)
+    result = write_is_test_site_to_feature(cb, feature)
+    assert result is True
     assert feature["is_test_site"] == "1"
 
 
