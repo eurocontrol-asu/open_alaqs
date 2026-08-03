@@ -504,18 +504,29 @@ def _resolve_ei(engine, mode: str, thrust_mode: str, ambient_conditions=None):
     Falls back to ``'snap'`` if MEEM or BFFM2 is unavailable on the
     engine (older EEDB entries without enough data for the correction).
     Returns None if even the snap lookup fails.
+
+    Implementation note: the mode/MEEM/BFFM2 methods live on the
+    ``EngineEmissionIndex`` store returned by ``engine.getEmissionIndex()``,
+    NOT on the ``Engine`` object itself. Calling them directly on the
+    Engine raises ``AttributeError`` (which the try/except below would
+    silently swallow, causing every mode to return None and every event
+    to produce zero emissions — the bug this comment now guards against).
     """
+    ei_store = engine.getEmissionIndex() if engine is not None else None
+    if ei_store is None:
+        return None
+
     try:
         if thrust_mode == "meem":
             try:
-                ei = engine.getEmissionIndexByModeWithMEEM(
+                ei = ei_store.getEmissionIndexByModeWithMEEM(
                     mode,
                     p_amb_Pa=_MEEM_P_AMB_PA,
                     mach=_MEEM_MACH,
                 )
             except AttributeError:
-                # Old engine lacking the MEEM wrapper method. Fall
-                # through to snap.
+                # Old engine EI store lacking the MEEM wrapper method.
+                # Fall through to snap.
                 ei = None
             if ei is not None:
                 return ei
@@ -523,21 +534,21 @@ def _resolve_ei(engine, mode: str, thrust_mode: str, ambient_conditions=None):
         elif thrust_mode == "bffm2":
             if ambient_conditions is None:
                 # Caller forgot to supply ambient. Fall back to snap.
-                return engine.getEmissionIndexByMode(mode)
+                return ei_store.getEmissionIndexByMode(mode)
             try:
-                ei = engine.getEmissionIndexByModeWithBFFM2(
+                ei = ei_store.getEmissionIndexByModeWithBFFM2(
                     mode,
                     ambient_conditions=ambient_conditions,
                     mach=0.0,
                 )
             except AttributeError:
-                # Old engine lacking the BFFM2 wrapper method. Fall
-                # through to snap.
+                # Old engine EI store lacking the BFFM2 wrapper method.
+                # Fall through to snap.
                 ei = None
             if ei is not None:
                 return ei
             # Fall through to snap on BFFM2 unavailability.
-        return engine.getEmissionIndexByMode(mode)
+        return ei_store.getEmissionIndexByMode(mode)
     except Exception:  # pragma: no cover
         # Engine misconfigured (mode not in its table). Callers log
         # and skip.

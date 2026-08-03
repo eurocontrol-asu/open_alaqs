@@ -37,37 +37,42 @@ def _apply_test_site_field_state(fields, is_test_site: bool) -> None:
     records in ``engine_test_events``, so the following fields on the
     area-source form are ignored at compute time:
 
-      * Units per Year (``unit_field``)
-      * All seven ``*_kg_unit`` emission-rate fields
-      * The three activity-profile combo boxes (hourly / daily /
-        monthly)
+      * Units per Year (``unit_field``) on the Parameters tab
+      * All seven ``*_kg_unit`` emission-rate fields on the Emissions
+        tab
+      * The three activity-profile combo boxes on the Profiles tab
 
-    Disabling them when the checkbox is ticked signals to the user
-    that they don't need to fill them in. Re-enabling on untick lets
-    the user restore a regular area-source configuration.
+    Signalling "these fields are irrelevant" is done by two mechanisms:
+
+      * The ``unit_field`` (Parameters tab, index 0) is disabled
+        individually. Direct ``QLineEdit.setEnabled(False)`` gives the
+        grayed-out look.
+      * The Profiles tab (index 1) and Emissions tab (index 2) are
+        disabled at the ``QTabWidget`` level. ``setTabEnabled(i,
+        False)`` grays out the tab label and makes it unclickable.
+        Per-widget ``setEnabled`` calls on the fields inside those
+        tabs don't produce the expected visual effect in the QGIS
+        attribute form (fields inside inactive tabs stay looking
+        active), which is why the individual-widget approach that
+        worked for ``unit_field`` doesn't work here.
 
     Height and Source Name stay enabled regardless (height matters
     for dispersion positioning; name is the source identifier).
     Heat flux stays disabled with '0' (already the default for all
     area sources).
     """
-    fields_to_toggle = (
-        "unit_field",
-        "co_kg_unit_field",
-        "hc_kg_unit_field",
-        "nox_kg_unit_field",
-        "sox_kg_unit_field",
-        "pm10_kg_unit_field",
-        "p1_kg_unit_field",
-        "p2_kg_unit_field",
-        "hour_profile_field",
-        "daily_profile_field",
-        "month_profile_field",
-    )
-    for name in fields_to_toggle:
-        widget = fields.get(name)
-        if widget is not None:
-            widget.setEnabled(not is_test_site)
+    # Individual field on the always-visible Parameters tab.
+    unit_field = fields.get("unit_field")
+    if unit_field is not None:
+        unit_field.setEnabled(not is_test_site)
+
+    # Tab-level disable for Profiles (index 1) and Emissions (index 2).
+    # The tabWidget itself is looked up lazily since form_open doesn't
+    # store it in the fields dict.
+    tab_widget = fields.get("tab_widget")
+    if tab_widget is not None:
+        for tab_index in (1, 2):
+            tab_widget.setTabEnabled(tab_index, not is_test_site)
 
 
 def _open_load_events_dialog(form, fields, feature):
@@ -145,6 +150,10 @@ def form_open(form, layer, feature):
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
         is_test_site=form.findChild(QtWidgets.QCheckBox, "is_test_site"),
         load_events_csv=form.findChild(QtWidgets.QPushButton, "load_events_csv"),
+        # The QTabWidget wrapping the Parameters / Profiles / Emissions
+        # tabs. Used by _apply_test_site_field_state to gray out the
+        # Profiles and Emissions tabs when the checkbox is ticked.
+        tab_widget=form.findChild(QtWidgets.QTabWidget, "tabWidget"),
     )
 
     # Hide the instudy field
