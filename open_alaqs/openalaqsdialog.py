@@ -3412,14 +3412,18 @@ class OpenAlaqsImportEngineTestEvents(QtWidgets.QDialog):
             rows, implicit_source_id=self._source_id
         )
 
-        # DB cross-checks.
+        # DB cross-checks. Pass implicit_source_id so warnings about
+        # the source-being-created are suppressed (it isn't in the DB
+        # yet because the form hasn't been saved).
         try:
             import sqlite3
 
             conn = sqlite3.connect(self._database_path)
             try:
                 self._db_warnings = validate_against_db(
-                    self._validation_result.valid_rows, conn
+                    self._validation_result.valid_rows,
+                    conn,
+                    implicit_source_id=self._source_id,
                 )
             finally:
                 conn.close()
