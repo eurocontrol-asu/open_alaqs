@@ -125,6 +125,10 @@ def form_open(form, layer, feature):
             lambda: _open_load_events_dialog(form, fields, feature)
         )
 
+    # Re-run validation whenever the test-site toggle changes: the set
+    # of required fields differs between test-site and regular modes.
+    fields["is_test_site"].toggled.connect(lambda _checked: validate(fields))
+
     # Disable heat flux fields
     fields["heat_flux_field"].setText("0")
     fields["heat_flux_field"].setEnabled(False)
@@ -160,6 +164,28 @@ def form_open(form, layer, feature):
         # (see EngineTestEvents.py schema). AreaSources.isTestSite()
         # reads by string comparison.
         write_is_test_site_to_feature(fields["is_test_site"], feature)
+
+        # For test sites, the compute path ignores unit_year and the
+        # *_kg_unit rate columns. Auto-fill "0" on any that the user
+        # left blank so the DB stores a valid numeric rather than NULL
+        # (which some downstream code doesn't handle). Users who care
+        # can override these values, but there's no reason to force
+        # them to.
+        if fields["is_test_site"].isChecked():
+            fields_to_zero_fill = [
+                "unit_field",
+                "co_kg_unit_field",
+                "hc_kg_unit_field",
+                "nox_kg_unit_field",
+                "sox_kg_unit_field",
+                "pm10_kg_unit_field",
+                "p1_kg_unit_field",
+                "p2_kg_unit_field",
+            ]
+            for f_name in fields_to_zero_fill:
+                widget = fields.get(f_name)
+                if widget is not None and not widget.text().strip():
+                    widget.setText("0")
 
     fields["button_box"].accepted.connect(on_save)
 
@@ -245,24 +271,47 @@ def validate(fields: dict):
     correctly. If they have, the attributes are committed to the feature.
     Otherwise an error message is displayed and the incorrect field is
     highlighted in red.
+
+    When the "Engine test site" checkbox is ticked, the emissions and
+    unit-rate fields are irrelevant (the compute path reads events from
+    ``engine_test_events`` and ignores the ``*_kg_unit`` columns). Those
+    fields are skipped in validation so the user can save the source
+    without filling in numbers that will never be used. ``on_save()``
+    auto-fills them with ``"0"`` so the DB stores something valid.
+
+    Source name, height, and heat flux are validated regardless — they
+    matter for both regular area sources AND test sites (height for
+    dispersion positioning, name for the source_id, heat flux is
+    already 0 and disabled).
     """
 
     # Get the button box
     button_box = fields["button_box"]
 
-    # Validate all fields
+    # Fields validated for every area source.
     results = [
         validate_field(fields["name_field"], "str"),
         validate_field(fields["height_field"], "float"),
         validate_field(fields["heat_flux_field"], "float"),
-        validate_field(fields["co_kg_unit_field"], "float"),
-        validate_field(fields["hc_kg_unit_field"], "float"),
-        validate_field(fields["nox_kg_unit_field"], "float"),
-        validate_field(fields["sox_kg_unit_field"], "float"),
-        validate_field(fields["pm10_kg_unit_field"], "float"),
-        validate_field(fields["p1_kg_unit_field"], "float"),
-        validate_field(fields["p2_kg_unit_field"], "float"),
     ]
+
+    # Fields validated only for regular area sources. Skipped when the
+    # source is a test site.
+    is_test_site = (
+        fields.get("is_test_site") is not None and fields["is_test_site"].isChecked()
+    )
+    if not is_test_site:
+        results.extend(
+            [
+                validate_field(fields["co_kg_unit_field"], "float"),
+                validate_field(fields["hc_kg_unit_field"], "float"),
+                validate_field(fields["nox_kg_unit_field"], "float"),
+                validate_field(fields["sox_kg_unit_field"], "float"),
+                validate_field(fields["pm10_kg_unit_field"], "float"),
+                validate_field(fields["p1_kg_unit_field"], "float"),
+                validate_field(fields["p2_kg_unit_field"], "float"),
+            ]
+        )
 
     # Block signals if any of the fields is invalid
     button_box.button(button_box.StandardButton.Ok).blockSignals(
