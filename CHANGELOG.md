@@ -28,15 +28,19 @@ regular movement path.
   time; per-mode emissions come from the event rows instead.
 - **CSV import tool.** Two entry points share one core
   implementation in `open_alaqs.core.tools.engine_test_import`:
-    - **Toolbar action** *"Import engine test events (CSV)"* opens a
-      dialog with a file picker, validation summary, insert-mode
-      radio group (`append` / `replace-for-source` / `replace-all`
-      with confirmation on the destructive modes), and a
-      "Tolerate warnings" checkbox. This is the primary path.
+    - **Per-source dialog** *"Load engine test events CSV..."* on
+      the area-source edit form (enabled when "Engine test site"
+      is ticked). Scoped to the current source: the `source_id`
+      column becomes optional in the CSV and rows for other
+      sources are silently skipped (informational count shown).
+      Insert modes: `append` and `replace-for-source`. This is the
+      primary path.
     - **CLI** `scripts/import_engine_test_events.py` provides the
-      same functionality from a terminal, for scripting. Dry run
-      is the default; `--apply` writes. `--i-mean-it` required for
-      `replace-all`. `--tolerate-warnings` for the non-strict path.
+      same functionality from a terminal, for scripting and
+      multi-source bulk-load. Dry run is the default; `--apply`
+      writes. Extra `replace-all` mode available (requires
+      `--i-mean-it` safety flag). `--tolerate-warnings` for the
+      non-strict path.
   Eight row-level error codes and five warning codes surface at
   once from either entry point; both produce byte-identical
   INSERTs.
@@ -48,6 +52,21 @@ regular movement path.
   and returns False. Other fields on the same feature are still
   saved normally. Users need to run the migration to gain the
   column.
+- **Form UX for test sites.** When "Engine test site" is ticked,
+  the Units per Year, Emissions tab (`*_kg_unit`), and Profile
+  fields gray out; validation on those fields is skipped; missing
+  values auto-fill with `"0"` on save. Only Source Name and Height
+  are required. Toggling back to a regular area source re-enables
+  the fields.
+- **Source-name dropdown filter in Results Analysis.** Test-site
+  sources (`is_test_site='1'`) only appear under `EngineTestSource`;
+  regular area sources only appear under `AreaSource`. Prevents
+  users from picking a test site under the wrong module and
+  silently getting zero.
+- **Cache invalidation after CSV import.** The dialog resets the
+  `EngineTestEventsStore` Singleton after a successful `apply`,
+  so a subsequent emission calc reads the freshly-imported events
+  rather than a cached pre-import state.
 - **Compute (plugin).** New `EngineTestSourceModule` computes each
   event's fuel and per-pollutant emissions from
   `Movement.defaultEmissions`, using
