@@ -771,15 +771,50 @@ def test_read_csv_source_id_still_read_when_present_in_header(tmp_path):
     assert rows[0]["source_id"] == "TESTPAD_B"  # unchanged
 
 
-def test_validate_csv_rows_mismatched_source_id_errors_out():
+def test_validate_csv_rows_other_source_rows_silently_skipped():
     """A row whose source_id doesn't match the implicit_source_id
-    should be rejected as an error, not a warning."""
+    should be silently skipped and counted in skipped_other_source.
+    Not an error, not a warning. Purpose: user keeps one master CSV
+    across all their sources; each source's dialog picks its own
+    subset."""
     rows = _rows_from_string(_csv_text(_row(source_id="TESTPAD_B", t_CL_s="900")))
     result = importer.validate_csv_rows(rows, implicit_source_id="TESTPAD_A")
-    assert len(result.errors) == 1
-    assert result.errors[0].code == "mismatched_source_id"
-    assert "TESTPAD_A" in result.errors[0].message
-    assert "TESTPAD_B" in result.errors[0].message
+    assert result.errors == []
+    assert result.warnings == []
+    assert result.valid_rows == []
+    assert result.skipped_other_source == 1
+
+
+def test_validate_csv_rows_mixed_sources_only_matching_rows_kept():
+    """Master CSV with rows for TESTPAD_A and TESTPAD_B: only TESTPAD_A
+    rows validate; TESTPAD_B rows are skipped."""
+    rows = _rows_from_string(
+        _csv_text(
+            _row(
+                source_id="TESTPAD_A",
+                start="2024-12-01T09:00:00",
+                end="2024-12-01T09:30:00",
+                t_CL_s="900",
+            ),
+            _row(
+                source_id="TESTPAD_B",
+                start="2024-12-01T10:00:00",
+                end="2024-12-01T10:30:00",
+                t_CL_s="900",
+            ),
+            _row(
+                source_id="TESTPAD_A",
+                start="2024-12-02T11:00:00",
+                end="2024-12-02T11:30:00",
+                t_CL_s="300",
+            ),
+        )
+    )
+    result = importer.validate_csv_rows(rows, implicit_source_id="TESTPAD_A")
+    assert result.errors == []
+    assert len(result.valid_rows) == 2
+    assert all(r.source_id == "TESTPAD_A" for r in result.valid_rows)
+    assert result.skipped_other_source == 1
 
 
 def test_validate_csv_rows_matching_source_id_passes():
@@ -793,11 +828,12 @@ def test_validate_csv_rows_matching_source_id_passes():
 
 def test_validate_csv_rows_no_implicit_source_id_backward_compat():
     """When implicit_source_id is None (default, CLI path), any
-    source_id is accepted; no mismatched_source_id error possible."""
+    source_id is accepted; no skipping happens."""
     rows = _rows_from_string(_csv_text(_row(source_id="ANY_SOURCE", t_CL_s="900")))
     result = importer.validate_csv_rows(rows)
     assert result.errors == []
     assert result.valid_rows[0].source_id == "ANY_SOURCE"
+    assert result.skipped_other_source == 0
 
 
 def test_read_csv_still_requires_source_id_when_no_implicit(tmp_path):
@@ -829,3 +865,145 @@ def test_end_to_end_dialog_flow_no_source_id_column(tmp_path):
     assert result.errors == []
     assert len(result.valid_rows) == 2
     assert all(r.source_id == "TESTPAD_A" for r in result.valid_rows)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Section 8: UX fixes reported after real QGIS testing
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_running_exceeds_window_uses_per_engine_time_not_multiplied():
+    """running_exceeds_window should compare per-engine mode times to
+    the event window, NOT multiply by engine_count. Engines run in
+    parallel during a run-up (Phase 3 compute is
+    t_mode_s × engine_count for total engine-seconds, but each engine
+    only runs for t_mode_s within the window). The Phase 4a check
+    incorrectly multiplied, producing spurious warnings on legitimate
+    twin-engine test runs."""
+    # 30-min window, 1800s of mode times per engine, 2 engines.
+    # Per-engine time = 1800s = window duration. No warning expected.
+    # Old buggy code: 1800 * 2 = 3600s vs 1800s window → warning fires.
+    rows = _rows_from_string(
+        _csv_text(_row(engine_count="2", t_TX_s="1200", t_AP_s="300", t_CL_s="300"))
+    )
+    result = importer.validate_csv_rows(rows)
+    assert result.errors == []
+    assert not any(w.code == "running_exceeds_window" for w in result.warnings)
+
+
+def test_running_exceeds_window_still_fires_when_actually_exceeds():
+    """Sanity check: the warning fires when per-engine time genuinely
+    exceeds the window."""
+    # 30-min window, but 3000s per engine (way over)
+    rows = _rows_from_string(
+        _csv_text(_row(engine_count="2", t_TX_s="2000", t_AP_s="500", t_CL_s="500"))
+    )
+    result = importer.validate_csv_rows(rows)
+    assert any(w.code == "running_exceeds_window" for w in result.warnings)
+
+
+def test_validate_against_db_suppresses_unknown_source_for_implicit():
+    """When implicit_source_id matches a row's source_id AND that
+    source is not yet in shapes_area_sources (because the user is
+    creating it in the form right now), the unknown_source_id warning
+    should NOT fire. This was the noise reported by real QGIS testing
+    after PR #345 merged."""
+    path, conn = _make_scratch_db(area_sources=[])  # empty
+    try:
+        rows = _rows_from_string(_csv_text(_row(source_id="TESTPAD_A", t_CL_s="900")))
+        result = importer.validate_csv_rows(rows)
+        db_warnings = importer.validate_against_db(
+            result.valid_rows, conn, implicit_source_id="TESTPAD_A"
+        )
+        assert not any(w.code == "unknown_source_id" for w in db_warnings)
+    finally:
+        conn.close()
+        os.unlink(path)
+
+
+def test_validate_against_db_still_warns_for_other_unknown_sources():
+    """Suppression is targeted: only the implicit source's warning is
+    suppressed. Other unknown source_ids in the CSV still warn (if any
+    slipped through the pre-DB skip). In practice the pre-DB filter
+    already handles them so this scenario is for callers who don't
+    use implicit_source_id at all."""
+    path, conn = _make_scratch_db(area_sources=[])
+    try:
+        # No implicit_source_id supplied — every unknown source_id
+        # should warn as before.
+        rows = _rows_from_string(_csv_text(_row(source_id="GHOST", t_CL_s="900")))
+        result = importer.validate_csv_rows(rows)
+        db_warnings = importer.validate_against_db(result.valid_rows, conn)
+        assert any(w.code == "unknown_source_id" for w in db_warnings)
+    finally:
+        conn.close()
+        os.unlink(path)
+
+
+def test_format_summary_shows_skipped_count_when_nonzero():
+    """When skipped_other_source > 0, the summary output should
+    include a line about it so the user sees how many rows were
+    filtered out."""
+    result = importer.ValidationResult(
+        valid_rows=[],
+        skipped_other_source=3,
+    )
+    summary = importer.format_summary(result, [], csv_row_count=5)
+    assert "Rows for other sources: 3" in summary
+
+
+def test_format_summary_hides_skipped_line_when_zero():
+    """No noise when nothing was skipped."""
+    result = importer.ValidationResult(valid_rows=[])
+    summary = importer.format_summary(result, [], csv_row_count=3)
+    assert "Rows for other sources" not in summary
+
+
+def test_end_to_end_master_csv_flow():
+    """Simulate the intended workflow: one master CSV with events for
+    multiple sources, opened per-source. Each source sees only its own
+    rows without any errors or warnings about the others."""
+    path, conn = _make_scratch_db(
+        area_sources=[
+            {"source_id": "TESTPAD_A", "is_test_site": "1"},
+            {"source_id": "TESTPAD_B", "is_test_site": "1"},
+        ]
+    )
+    try:
+        # Master CSV with mixed sources
+        rows = _rows_from_string(
+            _csv_text(
+                _row(
+                    source_id="TESTPAD_A",
+                    start="2024-12-01T09:00:00",
+                    end="2024-12-01T09:30:00",
+                    t_CL_s="600",
+                ),
+                _row(
+                    source_id="TESTPAD_B",
+                    start="2024-12-01T10:00:00",
+                    end="2024-12-01T10:30:00",
+                    t_CL_s="300",
+                ),
+                _row(
+                    source_id="TESTPAD_A",
+                    start="2024-12-02T11:00:00",
+                    end="2024-12-02T11:30:00",
+                    t_CL_s="900",
+                ),
+            )
+        )
+        # Open dialog scoped to TESTPAD_A
+        result = importer.validate_csv_rows(rows, implicit_source_id="TESTPAD_A")
+        db_warnings = importer.validate_against_db(
+            result.valid_rows, conn, implicit_source_id="TESTPAD_A"
+        )
+        assert result.errors == []
+        assert result.warnings == []
+        assert db_warnings == []
+        assert len(result.valid_rows) == 2
+        assert result.skipped_other_source == 1
+        assert all(r.source_id == "TESTPAD_A" for r in result.valid_rows)
+    finally:
+        conn.close()
+        os.unlink(path)

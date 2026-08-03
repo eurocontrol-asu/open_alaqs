@@ -173,6 +173,13 @@ class ValidationResult:
     errors: list[RowIssue] = field(default_factory=list)
     warnings: list[RowIssue] = field(default_factory=list)
     header_error: Optional[str] = None
+    # Rows skipped because their source_id is for a different source
+    # than ``implicit_source_id``. Only populated when the caller
+    # supplies ``implicit_source_id`` (per-source dialog path). Not an
+    # error, not a warning — informational only. Purpose: the user
+    # keeps one master CSV with events for many sources, and each
+    # source's dialog picks its own subset.
+    skipped_other_source: int = 0
 
 
 # ── Parsing helpers ────────────────────────────────────────────────────
@@ -238,14 +245,15 @@ def validate_csv_rows(
     """Validate the CSV without touching the DB. DB cross-checks happen
     downstream in ``validate_against_db``.
 
-    If ``implicit_source_id`` is supplied, any row whose ``source_id``
-    is present but not equal to ``implicit_source_id`` yields a
-    ``mismatched_source_id`` error. This is used by the per-source UI
-    dialog to enforce that the CSV's rows all belong to the source
-    the user is editing. Typically the caller has already used
-    ``read_csv(..., implicit_source_id=X)`` to fill in ``source_id``
-    on rows where the column was absent, so this check only fires on
-    rows where the user explicitly put a mismatched value.
+    If ``implicit_source_id`` is supplied, rows whose ``source_id``
+    doesn't match are silently skipped and counted in
+    ``result.skipped_other_source``. This is used by the per-source
+    UI dialog: users can keep one master CSV of engine test events
+    across the airport and each source's dialog picks its own subset.
+    Typically the caller has already used ``read_csv(...,
+    implicit_source_id=X)`` to fill in ``source_id`` on rows where the
+    column was absent, so this skip only affects rows where the user
+    explicitly named a different source.
     """
     result = ValidationResult()
     seen_dupe_keys: dict[tuple, int] = {}
@@ -267,20 +275,14 @@ def validate_csv_rows(
         source_id = row["source_id"].strip()
         aircraft_type = row["aircraft_type"].strip()
 
-        # Scope enforcement: if the dialog supplied an implicit source,
-        # any row whose source_id differs is a hard error. Prevents a
-        # user from accidentally writing to another source's events via
-        # the per-source dialog.
+        # Scope filter: if the dialog supplied an implicit source, rows
+        # for OTHER sources are silently skipped (not errored). Purpose:
+        # the user keeps one master CSV with events for all sources at
+        # the airport, and each source's per-source dialog picks its
+        # own subset. The count is surfaced in the summary as
+        # informational so the user sees how many rows were skipped.
         if implicit_source_id is not None and source_id != implicit_source_id:
-            errs.append(
-                RowIssue(
-                    i,
-                    "mismatched_source_id",
-                    f"source_id {source_id!r} does not match the target "
-                    f"source {implicit_source_id!r}",
-                )
-            )
-            result.errors.extend(errs)
+            result.skipped_other_source += 1
             continue
 
         # Datetimes
@@ -379,21 +381,23 @@ def validate_csv_rows(
         # Record dupe key only for successfully-validated (so-far) rows.
         seen_dupe_keys[dupe_key] = i
 
-        # Running-seconds vs window warning (D from Phase 2).
+        # Running-seconds vs window warning (D from Phase 2). Engines
+        # run in parallel during a run-up: each engine runs for
+        # ``running`` seconds within the ``window_s`` duration. So the
+        # sanity check is per-engine, matching Phase 2's
+        # EngineTestEvent.getConsistencyWarnings. An earlier version
+        # (Phase 4a) multiplied by engine_count, which is wrong: it
+        # assumed serial engine running and produced spurious warnings
+        # on legitimate twin-engine test runs.
         running = sum(mode_times.values())
-        if engine_count is not None and engine_count > 0:
-            running_total = running * engine_count
-        else:
-            running_total = running
         window_s = (end_dt - start_dt).total_seconds()
-        if running_total > window_s + _RUNNING_EXCEEDS_WINDOW_TOLERANCE_S:
+        if running > window_s + _RUNNING_EXCEEDS_WINDOW_TOLERANCE_S:
             result.warnings.append(
                 RowIssue(
                     i,
                     "running_exceeds_window",
-                    f"sum of mode times ({running_total}s across "
-                    f"{engine_count or 1} engine(s)) exceeds the "
-                    f"event window ({int(window_s)}s) by more than "
+                    f"sum of mode times ({running}s per engine) exceeds "
+                    f"the event window ({int(window_s)}s) by more than "
                     f"{_RUNNING_EXCEEDS_WINDOW_TOLERANCE_S}s tolerance",
                 )
             )
@@ -525,31 +529,49 @@ def _fetch_lookup_sets(conn: sqlite3.Connection) -> dict[str, set]:
 def validate_against_db(
     valid_rows: list[ValidatedRow],
     conn: sqlite3.Connection,
+    implicit_source_id: Optional[str] = None,
 ) -> list[RowIssue]:
     """Cross-check each already-CSV-valid row against reference tables
     in the DB. Emits warnings (not errors) so the caller decides whether
-    to abort."""
+    to abort.
+
+    If ``implicit_source_id`` is supplied AND matches a row's
+    ``source_id``, the ``unknown_source_id`` and ``source_not_test_site``
+    warnings are suppressed for that row. Rationale: the per-source UI
+    dialog is opened while the user is CREATING the source, so the
+    source isn't in ``shapes_area_sources`` yet — flagging it as
+    unknown would be noise. The eventual save writes the source and
+    the events line up.
+    """
     lookups = _fetch_lookup_sets(conn)
     warnings: list[RowIssue] = []
 
     for r in valid_rows:
+        # Suppress unknown_source_id / source_not_test_site for the
+        # source the user is currently creating in the form.
+        is_source_being_created = (
+            implicit_source_id is not None and r.source_id == implicit_source_id
+        )
+
         if r.source_id not in lookups["shapes_area_sources"]:
-            warnings.append(
-                RowIssue(
-                    r.row_number,
-                    "unknown_source_id",
-                    f"source_id {r.source_id!r} not found in shapes_area_sources",
+            if not is_source_being_created:
+                warnings.append(
+                    RowIssue(
+                        r.row_number,
+                        "unknown_source_id",
+                        f"source_id {r.source_id!r} not found in shapes_area_sources",
+                    )
                 )
-            )
         elif r.source_id not in lookups["test_site_source_ids"]:
-            warnings.append(
-                RowIssue(
-                    r.row_number,
-                    "source_not_test_site",
-                    f"source_id {r.source_id!r} exists but is_test_site='0'; "
-                    "compute would ignore its events",
+            if not is_source_being_created:
+                warnings.append(
+                    RowIssue(
+                        r.row_number,
+                        "source_not_test_site",
+                        f"source_id {r.source_id!r} exists but is_test_site='0'; "
+                        "compute would ignore its events",
+                    )
                 )
-            )
 
         if (
             lookups["default_aircraft"]
@@ -641,6 +663,11 @@ def format_summary(
     lines.append(f"  CSV rows read:          {csv_row_count}")
     lines.append(f"  Rows valid:             {len(result.valid_rows)}")
     lines.append(f"  Rows rejected:          {len(result.errors)}")
+    if result.skipped_other_source > 0:
+        lines.append(
+            f"  Rows for other sources: {result.skipped_other_source} "
+            f"(skipped; not for this source)"
+        )
     lines.append(f"  Warnings:               {total_warnings}")
 
     if result.errors:
