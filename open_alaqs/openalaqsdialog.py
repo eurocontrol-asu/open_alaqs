@@ -3530,6 +3530,30 @@ class OpenAlaqsImportEngineTestEvents(QtWidgets.QDialog):
             except Exception:
                 pass
 
+        # Invalidate cached Singletons that could be serving pre-import
+        # data. EmissionCalculation only calls Singleton.reset_all() when
+        # the DB PATH changes (not when the same-path DB is written to),
+        # so an EngineTestEventsStore populated by a prior emission run
+        # in the same QGIS session would keep serving its stale (often
+        # empty) cache and the newly-imported events would appear to
+        # produce zero emissions. Reset only the stores this import can
+        # affect; other Singletons (aircraft, engines, area sources,
+        # meteo) are untouched by an engine-test-events import.
+        try:
+            from open_alaqs.core.interfaces.EngineTestEvents import (
+                EngineTestEventsDatabase,
+                EngineTestEventsStore,
+            )
+
+            EngineTestEventsStore.reset()
+            EngineTestEventsDatabase.reset()
+        except Exception:
+            # Reset is a best-effort cache invalidation; if the imports
+            # or the reset call fail for any reason, the user will still
+            # get correct results after a QGIS restart. Don't fail the
+            # apply on cache-management errors.
+            pass
+
         # Show apply summary appended to the existing validation summary.
         self._summary_text.setPlainText(
             self._summary_text.toPlainText()
