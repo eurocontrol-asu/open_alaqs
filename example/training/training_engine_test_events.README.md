@@ -55,20 +55,3 @@ Datetimes in ISO-8601 (`YYYY-MM-DDTHH:MM:SS`). Mode times in seconds per
 engine. Empty `engine_uid` / `engine_count` fall back to the aircraft's
 defaults. See `documents/USER_GUIDE.md` §Engine test sites for the full
 specification.
-
-## Adapting to a different year
-
-If the study's inventory period is not 2025, update the dates via SQL
-or edit the CSV before loading:
-
-```
-python -c "
-import sqlite3
-c = sqlite3.connect('training.alaqs')
-c.execute(\"UPDATE engine_test_events SET start_datetime = REPLACE(start_datetime, '2025-', '2026-'), end_datetime = REPLACE(end_datetime, '2025-', '2026-') WHERE source_id='TESTPAD_A'\")
-c.commit()
-"
-```
-
-Events dated outside the inventory period contribute zero to the
-inventory (no overlap with any inventory hour).
