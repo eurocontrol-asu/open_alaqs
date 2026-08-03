@@ -168,8 +168,10 @@ def _add_ei_to_totals(
 
     ``ei_row`` is a dict shaped like ``default_aircraft_engine_ei``:
       * ``fuel_kg_sec`` (fuel flow per engine).
-      * ``co_ei_g_kg_fuel``, ``hc_ei_g_kg_fuel``, ``nox_ei_g_kg_fuel``,
-        ``pm_ei_g_kg_fuel`` etc. (pollutant EI, grams per kilogram fuel).
+      * ``co_ei``, ``hc_ei``, ``nox_ei``, ``sox_ei``, ``pm10_ei``,
+        ``p1_ei``, ``p2_ei`` (pollutant EI, grams per kilogram fuel).
+      * Optional: ``pm10_nonvol``, ``pm10_sul``, ``pm10_organic``
+        (PM subclasses).
 
     Matches Emission.add() in the plugin: fuel_burned = FF * t_effective;
     pollutant_g = EI[g_kg] * fuel_burned.
@@ -180,18 +182,22 @@ def _add_ei_to_totals(
     fuel_burned = float(ff) * t_effective_s
     totals["fuel"] += fuel_burned
 
+    # Map internal totals-dict pollutant name → actual column name in
+    # default_aircraft_engine_ei. The DB column names are compact
+    # (co_ei, nox_ei); the totals dict uses the pollutant name alone
+    # (co, nox). CO2 is computed from fuel_burned since default EI is
+    # 3160 g/kg (matches Movement.py:defaultEI).
     _EI_KEY_MAP = {
-        "co": "co_ei_g_kg_fuel",
-        "co2": "co2_ei_g_kg_fuel",
-        "hc": "hc_ei_g_kg_fuel",
-        "nox": "nox_ei_g_kg_fuel",
-        "sox": "sox_ei_g_kg_fuel",
-        "pm10": "pm10_ei_g_kg_fuel",
-        "p1": "p1_ei_g_kg_fuel",
-        "p2": "p2_ei_g_kg_fuel",
-        "pm10_nonvol": "pm10_nonvol_ei_g_kg_fuel",
-        "pm10_sul": "pm10_sul_ei_g_kg_fuel",
-        "pm10_organic": "pm10_organic_ei_g_kg_fuel",
+        "co": "co_ei",
+        "hc": "hc_ei",
+        "nox": "nox_ei",
+        "sox": "sox_ei",
+        "pm10": "pm10_ei",
+        "p1": "p1_ei",
+        "p2": "p2_ei",
+        "pm10_nonvol": "pm10_nonvol",
+        "pm10_sul": "pm10_sul",
+        "pm10_organic": "pm10_organic",
     }
     for pol, ei_key in _EI_KEY_MAP.items():
         v = ei_row.get(ei_key)
@@ -199,6 +205,11 @@ def _add_ei_to_totals(
             continue
         # Emission mass in grams. Matches plugin convention.
         totals[pol] += float(v) * fuel_burned
+
+    # CO2 has no per-engine EI column in the EEDB; use the fixed
+    # 3160 g/kg default that the plugin's Emissions.py:defaultEI also
+    # uses. Passing through fuel_burned means CO2 = 3160 * fuel_burned.
+    totals["co2"] += 3160.0 * fuel_burned
 
 
 def _build_icao_eedb_for_engine(
@@ -225,9 +236,9 @@ def _build_icao_eedb_for_engine(
         p: {} for p in (PollutantType.NOx, PollutantType.CO, PollutantType.HC)
     }
     _POL_MAP = {
-        PollutantType.NOx: "nox_ei_g_kg_fuel",
-        PollutantType.CO: "co_ei_g_kg_fuel",
-        PollutantType.HC: "hc_ei_g_kg_fuel",
+        PollutantType.NOx: "nox_ei",
+        PollutantType.CO: "co_ei",
+        PollutantType.HC: "hc_ei",
     }
     for mode, bffm2_name in _BFFM2_MODE_NAMES.items():
         row = ei_lookup.get((engine_uid, mode))
@@ -310,22 +321,26 @@ def _add_bffm2_ei_to_totals(
         )
         totals[dest_key] += float(ei) * fuel_burned
 
-    # PM10, SOx, CO2, and PM sub-classes from the EEDB row unchanged.
+    # PM10, SOx, and PM sub-classes from the EEDB row unchanged. CO2
+    # is computed from fuel_burned since default_aircraft_engine_ei has
+    # no CO2 column; use the fixed 3160 g/kg matching the plugin's
+    # Emissions.py:defaultEI.
     _EEDB_PASSTHROUGH = {
-        "co2": "co2_ei_g_kg_fuel",
-        "sox": "sox_ei_g_kg_fuel",
-        "pm10": "pm10_ei_g_kg_fuel",
-        "p1": "p1_ei_g_kg_fuel",
-        "p2": "p2_ei_g_kg_fuel",
-        "pm10_nonvol": "pm10_nonvol_ei_g_kg_fuel",
-        "pm10_sul": "pm10_sul_ei_g_kg_fuel",
-        "pm10_organic": "pm10_organic_ei_g_kg_fuel",
+        "sox": "sox_ei",
+        "pm10": "pm10_ei",
+        "p1": "p1_ei",
+        "p2": "p2_ei",
+        "pm10_nonvol": "pm10_nonvol",
+        "pm10_sul": "pm10_sul",
+        "pm10_organic": "pm10_organic",
     }
     for pol, ei_key in _EEDB_PASSTHROUGH.items():
         v = ei_row.get(ei_key)
         if v is None:
             continue
         totals[pol] += float(v) * fuel_burned
+
+    totals["co2"] += 3160.0 * fuel_burned
 
 
 def compute_engine_test_for_period(
