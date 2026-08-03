@@ -331,17 +331,16 @@ An engine test site (run-up pad) is an area source flagged for special treatment
 **Setup workflow:**
 
 1. Draw the area source in QGIS covering the extent of the run-up pad. Fill in name and height as for a regular area source.
-2. In the source's edit form, tick the **Engine test site** checkbox. The `*_kg_unit` rates on the Emissions tab are ignored for a test site; you can leave them at zero.
-3. Save the study.
-4. Prepare a CSV of events. Each row is one engine test run and needs a `source_id` (matching the area source you just flagged), `start_datetime`, `end_datetime`, `aircraft_type`, and per-mode running times in seconds (`t_TX_s`, `t_AP_s`, `t_CL_s`, `t_TO_s`). Optional columns: `test_id`, `engine_uid`, `engine_count`. See [`scripts/README.md`](../scripts/README.md#import_engine_test_eventspy) for the full CSV specification.
-5. Load the events. Two ways, functionally identical:
-   * **From QGIS (default):** click *"Import engine test events (CSV)"* in the OpenALAQS toolbar. In the dialog: browse to the CSV, review the validation summary, pick the insert mode (`Append` / `Replace for source` / `Replace all`), tick "Tolerate warnings" if you want to accept them, and click Apply. Destructive modes prompt for extra confirmation.
-   * **From the terminal (for scripting):**
+2. In the source's edit form, tick the **Engine test site** checkbox. When ticked, the Units per Year, Emissions tab, and Profiles fields gray out — they are ignored at compute time for test sites. Only Source Name and Height are required.
+3. Prepare a CSV of events. Each row is one engine test run. Required columns: `start_datetime`, `end_datetime`, `aircraft_type`, and per-mode running times in seconds (`t_TX_s`, `t_AP_s`, `t_CL_s`, `t_TO_s`). Optional columns: `source_id` (auto-filled from the current source), `test_id`, `engine_uid`, `engine_count`. See [`scripts/README.md`](../scripts/README.md#import_engine_test_eventspy) for the full CSV specification. If your CSV includes events for multiple sources (a "master CSV"), the dialog silently skips rows for other sources when opened from a specific source's form.
+4. Load the events. Two ways, functionally identical:
+   * **From the source form (default):** click *"Load engine test events CSV..."* in the area-source dialog (the button is only enabled when "Engine test site" is ticked). Browse to the CSV, review the validation summary, pick the insert mode (`Append` or `Replace`), tick "Tolerate warnings" if needed, and click Apply. The dialog is scoped to the current source; the `source_id` column becomes optional in the CSV.
+   * **From the terminal (for scripting or multi-source bulk-load):**
      ```bash
      python scripts/import_engine_test_events.py study.alaqs events.csv
      ```
-     Run without `--apply` first to validate. Add `--apply` when the summary looks clean.
-6. Regenerate the emission inventory. Test-site emissions appear alongside regular sources with no further configuration.
+     Run without `--apply` first to validate. Add `--apply` when the summary looks clean. The CLI has an extra `replace-all` mode for global operations.
+5. Save the area source form (OK button). Then regenerate the emission inventory. Test-site emissions appear alongside regular sources.
 
 **Note on pre-existing `.alaqs` files:** if your study was created by a plugin version older than the one that added engine-test-site support, running the migration is required before step 2 works — the checkbox has no place to write to otherwise. Run:
 ```bash
