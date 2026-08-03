@@ -46,6 +46,26 @@ class AreaSourceWithTimeProfileModule(SourceWithTimeProfileModule):
         if self.getDatabasePath() is not None:
             self.setStore(AreaSourcesStore(self.getDatabasePath()))
 
+    def loadSources(self):
+        """Populate ``_sources`` from ``AreaSourcesStore``, skipping any
+        area sources flagged as engine-test sites (``is_test_site='1'``).
+
+        The store is shared with ``EngineTestSourceModule``, which lists
+        only test sites. Filtering here means the Results Analysis
+        source-name dropdown for "AreaSource" excludes test sites, and
+        each test-site source only appears once (under
+        "EngineTestSource"). Prevents user confusion where the same
+        source appears in both dropdowns and can be selected under the
+        wrong module (which would silently produce zero because
+        ``process()`` at line 84 skips test sites).
+        """
+        if self.getStore() is None:
+            return
+        for source_name, source in self.getStore().getObjects().items():
+            if source.isTestSite():
+                continue
+            self.setSource(source_name, source)
+
     def beginJob(self):
         # super(AreaSourceWithTimeProfileModule, self).beginJob()
         SourceWithTimeProfileModule.beginJob(self)

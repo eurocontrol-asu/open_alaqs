@@ -130,6 +130,23 @@ class EngineTestSourceModule(SourceModule):
 
     # ── Lifecycle ──────────────────────────────────────────────────────
 
+    def loadSources(self):
+        """Populate ``_sources`` from ``AreaSourcesStore``, keeping only
+        area sources flagged as engine-test sites (``is_test_site='1'``).
+
+        The store is shared with ``AreaSourceModule``; filtering here
+        means the Results Analysis source-name dropdown for
+        "EngineTestSource" excludes regular area sources. Each area
+        source ends up in exactly one module's dropdown based on its
+        ``is_test_site`` flag.
+        """
+        if self.getStore() is None:
+            return
+        for source_name, source in self.getStore().getObjects().items():
+            if not source.isTestSite():
+                continue
+            self.setSource(source_name, source)
+
     def beginJob(self):
         SourceModule.beginJob(self)
 
