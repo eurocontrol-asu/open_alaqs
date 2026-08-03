@@ -48,9 +48,17 @@ class SQLSerializable:
 
     def setEntry(self, key: Any, value_object: dict[str, Any]) -> None:
         if self.hasEntry(key):
+            # Include the table name so callers can trace which SQL
+            # source is producing duplicate/NULL keys. Without it the
+            # warning is undiagnosable: any SQLSerializable-derived
+            # class could be the culprit, and reference tables like
+            # tbl_InvMeteo can produce hundreds of these per calc run
+            # if their inferred primary key column is populated with
+            # NULL. The str(key) cast keeps None showing as 'None' in
+            # the log rather than raising a formatting error.
             logger.warning(
-                "Already found entry with key '%s'. Replacing existing entry."
-                % (str(key))
+                "Already found entry with key '%s' in table '%s'. "
+                "Replacing existing entry." % (str(key), self._table_name)
             )
 
         self._entries[key] = value_object
