@@ -29,6 +29,55 @@ def catch_errors(f):
     return wrapper
 
 
+def _open_load_events_dialog(form, fields, feature):
+    """Launch OpenAlaqsImportEngineTestEvents scoped to the current source.
+
+    Called from the "Load engine test events CSV..." button on the area
+    source form. Discovers the currently-loaded project's DB path via
+    ``ProjectDatabase().path``, reads the source_id from the form's
+    ``name_field`` (which is the ``source_id`` line edit — the same value
+    that will be written to the feature on save), and passes both into
+    the dialog.
+
+    Refuses if:
+      * the source_id field is empty (nothing to scope to yet), or
+      * ProjectDatabase().path returns nothing (unlikely in the QGIS
+        flow, but defensive).
+    """
+    from qgis.PyQt.QtWidgets import QMessageBox
+
+    from open_alaqs.core.alaqsdblite import ProjectDatabase
+    from open_alaqs.openalaqsdialog import OpenAlaqsImportEngineTestEvents
+
+    source_id = (fields["name_field"].text() or "").strip()
+    if not source_id:
+        QMessageBox.warning(
+            form,
+            "Missing source name",
+            "Enter a Source Name before loading engine test events. "
+            "The events need to be tied to this source's identifier.",
+        )
+        return
+
+    try:
+        db_path = ProjectDatabase().path
+    except Exception:
+        db_path = None
+    if not db_path:
+        QMessageBox.warning(
+            form,
+            "No project loaded",
+            "The currently-loaded ALAQS project could not be found. "
+            "Save the study before loading engine test events.",
+        )
+        return
+
+    dialog = OpenAlaqsImportEngineTestEvents(
+        iface=None, database_path=db_path, source_id=source_id
+    )
+    dialog.exec()
+
+
 def form_open(form, layer, feature):
     logger.debug("This is the modified simple form")
     logger.debug(f"Layer {layer} and feature {feature}")
@@ -54,6 +103,7 @@ def form_open(form, layer, feature):
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
         is_test_site=form.findChild(QtWidgets.QCheckBox, "is_test_site"),
+        load_events_csv=form.findChild(QtWidgets.QPushButton, "load_events_csv"),
     )
 
     # Hide the instudy field
@@ -64,6 +114,16 @@ def form_open(form, layer, feature):
     # on migrated projects), or absent entirely (pre-v1b schema — the
     # widget still exists on the form but has nothing to read).
     seed_is_test_site_from_feature(fields["is_test_site"], feature)
+
+    # Wire the "Load engine test events CSV..." button. It is enabled
+    # only when the source is flagged as a test site. Clicking it opens
+    # the OpenAlaqsImportEngineTestEvents dialog scoped to this source.
+    if fields["load_events_csv"] is not None:
+        fields["load_events_csv"].setEnabled(fields["is_test_site"].isChecked())
+        fields["is_test_site"].toggled.connect(fields["load_events_csv"].setEnabled)
+        fields["load_events_csv"].clicked.connect(
+            lambda: _open_load_events_dialog(form, fields, feature)
+        )
 
     # Disable heat flux fields
     fields["heat_flux_field"].setText("0")

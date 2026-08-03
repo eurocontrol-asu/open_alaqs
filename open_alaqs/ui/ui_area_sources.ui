@@ -56,7 +56,7 @@
    <item row="4" column="1">
     <widget class="QCheckBox" name="is_test_site">
      <property name="toolTip">
-      <string>When enabled, this source's emissions come from engine_test_events records (loaded via scripts/import_engine_test_events.py) and the *_kg_unit rates on the Emissions tab are ignored.</string>
+      <string>When enabled, this source's emissions come from engine_test_events records (loaded via the "Load events CSV..." button below) and the *_kg_unit rates on the Emissions tab are ignored.</string>
      </property>
      <property name="text">
       <string/>
@@ -67,6 +67,19 @@
     </widget>
    </item>
    <item row="5" column="0" colspan="2">
+    <widget class="QPushButton" name="load_events_csv">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="toolTip">
+      <string>Bulk-load engine test event rows from a CSV. Enabled only when this source is an engine test site.</string>
+     </property>
+     <property name="text">
+      <string>Load engine test events CSV...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0" colspan="2">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
       <number>0</number>

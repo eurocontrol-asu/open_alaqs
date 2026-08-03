@@ -3231,7 +3231,7 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
 class OpenAlaqsImportEngineTestEvents(QtWidgets.QDialog):
     """
     Dialog for importing engine-test event rows from a CSV into the
-    currently-loaded ALAQS project.
+    currently-loaded ALAQS project. Scoped to a single source.
 
     Thin UI wrapper around
     ``open_alaqs.core.tools.engine_test_import`` (the same core module
@@ -3241,13 +3241,27 @@ class OpenAlaqsImportEngineTestEvents(QtWidgets.QDialog):
     ``apply_insert`` on user confirmation. All CSV format and
     validation semantics live in the core module; changes there flow
     automatically into this dialog.
+
+    Launched from the area-source form's "Load engine test events CSV"
+    button. The current source's ``source_id`` is passed in and used to:
+      * label the dialog title so users know which source they're
+        loading events for,
+      * force the ``source_id`` column on all incoming rows (users
+        don't need to fill it in; if they do, mismatched values are
+        surfaced as errors, not silently accepted).
+
+    ``replace-all`` mode is intentionally omitted from the per-source
+    dialog — it would delete events for OTHER sources too, which is
+    surprising from within a form scoped to one source. Users with a
+    genuine need for global replacement fall back to the CLI.
     """
 
-    def __init__(self, iface, database_path):
+    def __init__(self, iface, database_path, source_id):
         main_window = iface.mainWindow() if iface is not None else None
         QtWidgets.QDialog.__init__(self, main_window)
         self.iface = iface
         self._database_path = database_path
+        self._source_id = source_id
 
         # Held per-run state.
         self._csv_path: Optional[Path] = None
@@ -3260,18 +3274,29 @@ class OpenAlaqsImportEngineTestEvents(QtWidgets.QDialog):
     # ── UI construction ───────────────────────────────────────────
 
     def _build_ui(self):
-        self.setWindowTitle("Import Engine Test Events")
+        self.setWindowTitle(f"Load engine test events for {self._source_id}")
         self.setMinimumWidth(700)
         self.setMinimumHeight(500)
 
         layout = QtWidgets.QVBoxLayout(self)
 
-        # DB path label (read-only, informational).
-        db_label = QtWidgets.QLabel(
-            f"<b>Target study:</b> {os.path.basename(self._database_path or '<none>')}"
+        # Scope header. Prominently show which source events are going
+        # to, so users don't confuse this dialog for a global import.
+        scope_label = QtWidgets.QLabel(
+            f"<b>Target source:</b> {self._source_id}<br>"
+            f"<b>Study:</b> {os.path.basename(self._database_path or '<none>')}"
         )
-        db_label.setWordWrap(True)
-        layout.addWidget(db_label)
+        scope_label.setWordWrap(True)
+        layout.addWidget(scope_label)
+
+        # Note about the source_id column.
+        note_label = QtWidgets.QLabel(
+            "<i>All rows in the CSV will be assigned to this source. "
+            "The <code>source_id</code> column in the CSV is optional; "
+            "if present it must match the target source above.</i>"
+        )
+        note_label.setWordWrap(True)
+        layout.addWidget(note_label)
 
         # File picker row.
         file_row = QtWidgets.QHBoxLayout()
@@ -3287,21 +3312,20 @@ class OpenAlaqsImportEngineTestEvents(QtWidgets.QDialog):
         file_row.addWidget(browse_btn)
         layout.addLayout(file_row)
 
-        # Insert-mode radio group.
+        # Insert-mode radio group. Replace-all deliberately omitted
+        # from the per-source dialog (would touch other sources); use
+        # the CLI for that.
         mode_box = QtWidgets.QGroupBox("Insert mode")
         mode_layout = QtWidgets.QVBoxLayout()
-        self._mode_append = QtWidgets.QRadioButton("Append (add to existing events)")
+        self._mode_append = QtWidgets.QRadioButton(
+            "Append (add to existing events for this source)"
+        )
         self._mode_append.setChecked(True)
         self._mode_replace_source = QtWidgets.QRadioButton(
-            "Replace for source (delete existing events for each source_id "
-            "in the CSV, then insert)"
-        )
-        self._mode_replace_all = QtWidgets.QRadioButton(
-            "Replace all (DELETE all rows in engine_test_events first — " "destructive)"
+            f"Replace (delete existing events for {self._source_id!r}, " "then insert)"
         )
         mode_layout.addWidget(self._mode_append)
         mode_layout.addWidget(self._mode_replace_source)
-        mode_layout.addWidget(self._mode_replace_all)
         mode_box.setLayout(mode_layout)
         layout.addWidget(mode_box)
 
@@ -3364,9 +3388,14 @@ class OpenAlaqsImportEngineTestEvents(QtWidgets.QDialog):
         if self._csv_path is None:
             return
 
-        # Read CSV.
+        # Read CSV — the current source_id acts as an implicit scope,
+        # so the source_id column becomes optional in the CSV. When
+        # absent, read_csv fills it in on every row with self._source_id.
+        # When present, validate_csv_rows below flags mismatches.
         try:
-            rows, header_error = read_csv(self._csv_path)
+            rows, header_error = read_csv(
+                self._csv_path, implicit_source_id=self._source_id
+            )
         except Exception as e:
             self._summary_text.setPlainText(f"ERROR: could not read CSV:\n{e}")
             self._apply_btn.setEnabled(False)
@@ -3377,8 +3406,11 @@ class OpenAlaqsImportEngineTestEvents(QtWidgets.QDialog):
             return
         self._csv_row_count = len(rows)
 
-        # Structural validation.
-        self._validation_result = validate_csv_rows(rows)
+        # Structural validation — scoped so mismatched source_id becomes
+        # a hard error.
+        self._validation_result = validate_csv_rows(
+            rows, implicit_source_id=self._source_id
+        )
 
         # DB cross-checks.
         try:
@@ -3432,14 +3464,12 @@ class OpenAlaqsImportEngineTestEvents(QtWidgets.QDialog):
     # ── Apply ─────────────────────────────────────────────────────
 
     def _selected_mode(self) -> str:
-        if self._mode_replace_all.isChecked():
-            return "replace-all"
         if self._mode_replace_source.isChecked():
             return "replace-for-source"
         return "append"
 
     def _on_apply(self):
-        """Confirm destructive modes, then INSERT into the DB."""
+        """Confirm destructive mode, then INSERT into the DB."""
         import sqlite3
 
         from open_alaqs.core.tools.engine_test_import import (
@@ -3449,34 +3479,16 @@ class OpenAlaqsImportEngineTestEvents(QtWidgets.QDialog):
 
         mode = self._selected_mode()
 
-        # Extra confirmation on replace-all (the CLI's --i-mean-it
-        # equivalent). replace-for-source is destructive too but scoped;
-        # a plain OK/Cancel is enough for it.
-        if mode == "replace-all":
+        # Confirmation on replace-for-source. Scoped to the current
+        # source, which is already prominent in the dialog title, so a
+        # simple confirmation suffices.
+        if mode == "replace-for-source":
             resp = QMessageBox.warning(
                 self,
-                "Delete ALL existing engine-test events?",
-                "This will DELETE every row in engine_test_events "
-                "before inserting the CSV rows. This cannot be undone.\n\n"
-                "Are you sure?",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No,
-            )
-            if resp != QMessageBox.Yes:
-                return
-        elif mode == "replace-for-source":
-            source_ids = sorted(
-                {r.source_id for r in self._validation_result.valid_rows}
-            )
-            preview = ", ".join(source_ids[:5])
-            if len(source_ids) > 5:
-                preview += f", ... ({len(source_ids)} total)"
-            resp = QMessageBox.warning(
-                self,
-                "Delete existing events for these sources?",
-                "This will DELETE existing engine_test_events rows for "
-                f"the following source_id(s) before inserting the new "
-                f"rows:\n\n{preview}\n\nAre you sure?",
+                f"Delete existing events for {self._source_id}?",
+                f"This will DELETE existing engine_test_events rows for "
+                f"source {self._source_id!r} before inserting the new "
+                "rows.\n\nAre you sure?",
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )

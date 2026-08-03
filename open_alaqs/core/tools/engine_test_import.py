@@ -233,9 +233,19 @@ def _parse_mode_seconds(s: Optional[str]) -> tuple[bool, int, Optional[str]]:
 
 def validate_csv_rows(
     csv_rows: Iterable[dict[str, str]],
+    implicit_source_id: Optional[str] = None,
 ) -> ValidationResult:
     """Validate the CSV without touching the DB. DB cross-checks happen
     downstream in ``validate_against_db``.
+
+    If ``implicit_source_id`` is supplied, any row whose ``source_id``
+    is present but not equal to ``implicit_source_id`` yields a
+    ``mismatched_source_id`` error. This is used by the per-source UI
+    dialog to enforce that the CSV's rows all belong to the source
+    the user is editing. Typically the caller has already used
+    ``read_csv(..., implicit_source_id=X)`` to fill in ``source_id``
+    on rows where the column was absent, so this check only fires on
+    rows where the user explicitly put a mismatched value.
     """
     result = ValidationResult()
     seen_dupe_keys: dict[tuple, int] = {}
@@ -256,6 +266,22 @@ def validate_csv_rows(
 
         source_id = row["source_id"].strip()
         aircraft_type = row["aircraft_type"].strip()
+
+        # Scope enforcement: if the dialog supplied an implicit source,
+        # any row whose source_id differs is a hard error. Prevents a
+        # user from accidentally writing to another source's events via
+        # the per-source dialog.
+        if implicit_source_id is not None and source_id != implicit_source_id:
+            errs.append(
+                RowIssue(
+                    i,
+                    "mismatched_source_id",
+                    f"source_id {source_id!r} does not match the target "
+                    f"source {implicit_source_id!r}",
+                )
+            )
+            result.errors.extend(errs)
+            continue
 
         # Datetimes
         start_str = row["start_datetime"].strip()
@@ -393,15 +419,37 @@ def validate_csv_rows(
     return result
 
 
-def read_csv(csv_path: Path) -> tuple[list[dict[str, str]], Optional[str]]:
-    """Read the CSV. Return (rows, header_error). If the header is
-    missing a required column, ``header_error`` is set and ``rows`` is
-    empty.
+def read_csv(
+    csv_path: Path,
+    implicit_source_id: Optional[str] = None,
+) -> tuple[list[dict[str, str]], Optional[str]]:
+    """Read the CSV. Return (rows, header_error).
+
+    If ``implicit_source_id`` is provided:
+      * ``source_id`` is treated as optional in the CSV header.
+      * If the CSV header does NOT contain ``source_id``, the returned
+        rows have ``source_id`` filled with ``implicit_source_id`` on
+        every row.
+      * If the CSV header DOES contain ``source_id``, its values pass
+        through unchanged; the caller (typically
+        ``validate_csv_rows`` with the same ``implicit_source_id``)
+        surfaces any mismatch as a ``mismatched_source_id`` error.
+
+    If ``implicit_source_id`` is None, ``source_id`` is a required
+    column (the default CLI behaviour).
+
+    If the header is missing a required column, ``header_error`` is
+    set and ``rows`` is empty.
     """
     with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames or []
-        missing = [c for c in REQUIRED_COLUMNS if c not in fieldnames]
+        if implicit_source_id is None:
+            required = REQUIRED_COLUMNS
+        else:
+            # source_id becomes optional when a scope is supplied.
+            required = tuple(c for c in REQUIRED_COLUMNS if c != "source_id")
+        missing = [c for c in required if c not in fieldnames]
         if missing:
             return [], (
                 "CSV header missing required column(s): "
@@ -410,6 +458,11 @@ def read_csv(csv_path: Path) -> tuple[list[dict[str, str]], Optional[str]]:
                 + f"\n  columns expected: {list(ALL_COLUMNS)}"
             )
         rows = list(reader)
+
+    # Fill in source_id on all rows if it was absent from the header.
+    if implicit_source_id is not None and "source_id" not in fieldnames:
+        for row in rows:
+            row["source_id"] = implicit_source_id
     return rows, None
 
 
