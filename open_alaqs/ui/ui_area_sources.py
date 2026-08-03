@@ -29,6 +29,47 @@ def catch_errors(f):
     return wrapper
 
 
+def _apply_test_site_field_state(fields, is_test_site: bool) -> None:
+    """Enable or disable form fields that are irrelevant to an
+    engine-test site.
+
+    An engine-test-site area source gets its emissions from per-event
+    records in ``engine_test_events``, so the following fields on the
+    area-source form are ignored at compute time:
+
+      * Units per Year (``unit_field``)
+      * All seven ``*_kg_unit`` emission-rate fields
+      * The three activity-profile combo boxes (hourly / daily /
+        monthly)
+
+    Disabling them when the checkbox is ticked signals to the user
+    that they don't need to fill them in. Re-enabling on untick lets
+    the user restore a regular area-source configuration.
+
+    Height and Source Name stay enabled regardless (height matters
+    for dispersion positioning; name is the source identifier).
+    Heat flux stays disabled with '0' (already the default for all
+    area sources).
+    """
+    fields_to_toggle = (
+        "unit_field",
+        "co_kg_unit_field",
+        "hc_kg_unit_field",
+        "nox_kg_unit_field",
+        "sox_kg_unit_field",
+        "pm10_kg_unit_field",
+        "p1_kg_unit_field",
+        "p2_kg_unit_field",
+        "hour_profile_field",
+        "daily_profile_field",
+        "month_profile_field",
+    )
+    for name in fields_to_toggle:
+        widget = fields.get(name)
+        if widget is not None:
+            widget.setEnabled(not is_test_site)
+
+
 def _open_load_events_dialog(form, fields, feature):
     """Launch OpenAlaqsImportEngineTestEvents scoped to the current source.
 
@@ -128,6 +169,15 @@ def form_open(form, layer, feature):
     # Re-run validation whenever the test-site toggle changes: the set
     # of required fields differs between test-site and regular modes.
     fields["is_test_site"].toggled.connect(lambda _checked: validate(fields))
+
+    # Enable/disable the fields that a test site ignores (compute reads
+    # events from engine_test_events instead). Called once at form-open
+    # to apply the initial state, and re-called on every toggle so the
+    # visual state tracks the checkbox.
+    _apply_test_site_field_state(fields, fields["is_test_site"].isChecked())
+    fields["is_test_site"].toggled.connect(
+        lambda checked: _apply_test_site_field_state(fields, checked)
+    )
 
     # Disable heat flux fields
     fields["heat_flux_field"].setText("0")
