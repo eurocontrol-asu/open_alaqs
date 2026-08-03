@@ -36,7 +36,6 @@ from open_alaqs.gui.DispersionAnalysis import OpenAlaqsDispersionAnalysis
 from open_alaqs.openalaqsdialog import (
     OpenAlaqsAbout,
     OpenAlaqsEnabledMacros,
-    OpenAlaqsImportEngineTestEvents,
     OpenAlaqsInventory,
     OpenAlaqsLogfile,
     OpenAlaqsOpenDatabase,
@@ -167,18 +166,6 @@ class OpenALAQS:
             self.run_taxi_routes,
         )
 
-        # Create action that will show the Import Engine Test Events dialog.
-        # Icon: reuse "profiles.png" as a placeholder — this action is
-        # conceptually similar (bulk-load a set of records for later
-        # emission calculation) and adding a dedicated icon is deferred
-        # until we have artwork.
-        self.actions["import_engine_test_events"] = self.create_connected_action(
-            QtGui.QIcon(str(icons_path / "profiles.png")),
-            "Import engine test events (CSV)",
-            self.iface.mainWindow(),
-            self.run_import_engine_test_events,
-        )
-
         # Create action that will show the Calculate Emissions Inventory dialog
         self.actions["build_inventory"] = self.create_connected_action(
             QtGui.QIcon(str(icons_path / "calculate.png")),
@@ -225,7 +212,6 @@ class OpenALAQS:
         self.open_alaqs_toolbar.addAction(self.actions["osm_import"])
         self.open_alaqs_toolbar.addAction(self.actions["profiles_edit"])
         self.open_alaqs_toolbar.addAction(self.actions["taxi_routes"])
-        self.open_alaqs_toolbar.addAction(self.actions["import_engine_test_events"])
         self.open_alaqs_toolbar.addAction(self.actions["build_inventory"])
 
         self.open_alaqs_toolbar.addSeparator()
@@ -241,7 +227,6 @@ class OpenALAQS:
         self.actions["osm_import"].setEnabled(False)
         self.actions["profiles_edit"].setEnabled(False)
         self.actions["taxi_routes"].setEnabled(False)
-        self.actions["import_engine_test_events"].setEnabled(False)
         self.actions["build_inventory"].setEnabled(False)
 
         self.macro_check()
@@ -328,7 +313,6 @@ class OpenALAQS:
         self.actions["osm_import"].setEnabled(True)
         self.actions["profiles_edit"].setEnabled(True)
         self.actions["taxi_routes"].setEnabled(True)
-        self.actions["import_engine_test_events"].setEnabled(True)
         self.actions["build_inventory"].setEnabled(True)
         self.actions["view_results_analysis"].setEnabled(True)
         self.actions["calculate_dispersion"].setEnabled(True)
@@ -361,7 +345,6 @@ class OpenALAQS:
                 self.actions["osm_import"].setEnabled(True)
                 self.actions["profiles_edit"].setEnabled(True)
                 self.actions["taxi_routes"].setEnabled(True)
-                self.actions["import_engine_test_events"].setEnabled(True)
                 self.actions["build_inventory"].setEnabled(True)
                 self.actions["view_results_analysis"].setEnabled(True)
                 self.actions["calculate_dispersion"].setEnabled(True)
@@ -390,8 +373,6 @@ class OpenALAQS:
             self.actions["profiles_edit"].setEnabled(False)
         if "taxi_routes" in self.actions:
             self.actions["taxi_routes"].setEnabled(False)
-        if "import_engine_test_events" in self.actions:
-            self.actions["import_engine_test_events"].setEnabled(False)
         if "build_inventory" in self.actions:
             self.actions["build_inventory"].setEnabled(False)
         if "calculate_dispersion" in self.actions:
@@ -465,36 +446,6 @@ class OpenALAQS:
         self.dialogs["taxi_routes"] = OpenAlaqsTaxiRoutes(self.iface)
         self.dialogs["taxi_routes"].show()
         self.dialogs["taxi_routes"].exec()
-
-    def run_import_engine_test_events(self):
-        """
-        Opens the widget dialog for importing engine-test events from a
-        CSV into the currently-loaded ALAQS project.
-        """
-        # Discover the currently-loaded project's DB path. Same pattern
-        # as OpenAlaqsInventory uses (ProjectDatabase is a Singleton
-        # holding the currently-open .alaqs path).
-        try:
-            from open_alaqs.core.alaqsdblite import ProjectDatabase
-
-            db_path = ProjectDatabase().path
-        except Exception:
-            db_path = None
-
-        if not db_path:
-            QtWidgets.QMessageBox.warning(
-                self.iface.mainWindow() if self.iface else None,
-                "No project loaded",
-                "Load an Open ALAQS project first before importing "
-                "engine-test events.",
-            )
-            return
-
-        self.dialogs["import_engine_test_events"] = OpenAlaqsImportEngineTestEvents(
-            self.iface, db_path
-        )
-        self.dialogs["import_engine_test_events"].show()
-        self.dialogs["import_engine_test_events"].exec()
 
     def run_build_inventory(self):
         """

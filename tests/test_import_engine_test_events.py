@@ -739,3 +739,93 @@ def test_cli_missing_alaqs_returns_1(tmp_path, capsys):
     csv_path = _write_csv(tmp_path, "x.csv", _row(t_CL_s="900"))
     rc = importer.main([str(tmp_path / "no.alaqs"), csv_path])
     assert rc == 1
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Section 7: implicit_source_id (per-source dialog scope)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_read_csv_source_id_optional_when_implicit_supplied(tmp_path):
+    """With implicit_source_id set, source_id column is not required
+    in the header. Rows get their source_id filled in."""
+    p = tmp_path / "no_source.csv"
+    p.write_text(
+        "start_datetime,end_datetime,aircraft_type,test_id,engine_uid,"
+        "engine_count,t_TX_s,t_AP_s,t_CL_s,t_TO_s,instudy\n"
+        "2024-12-01T09:00:00,2024-12-01T09:15:00,C56X,,,,600,0,300,0,1\n"
+    )
+    rows, err = importer.read_csv(p, implicit_source_id="TESTPAD_A")
+    assert err is None
+    assert len(rows) == 1
+    assert rows[0]["source_id"] == "TESTPAD_A"
+
+
+def test_read_csv_source_id_still_read_when_present_in_header(tmp_path):
+    """With implicit_source_id set AND source_id column in header, the
+    CSV values pass through unchanged. Validation catches mismatches."""
+    p = tmp_path / "with_source.csv"
+    p.write_text(_csv_text(_row(source_id="TESTPAD_B")))
+    rows, err = importer.read_csv(p, implicit_source_id="TESTPAD_A")
+    assert err is None
+    assert rows[0]["source_id"] == "TESTPAD_B"  # unchanged
+
+
+def test_validate_csv_rows_mismatched_source_id_errors_out():
+    """A row whose source_id doesn't match the implicit_source_id
+    should be rejected as an error, not a warning."""
+    rows = _rows_from_string(_csv_text(_row(source_id="TESTPAD_B", t_CL_s="900")))
+    result = importer.validate_csv_rows(rows, implicit_source_id="TESTPAD_A")
+    assert len(result.errors) == 1
+    assert result.errors[0].code == "mismatched_source_id"
+    assert "TESTPAD_A" in result.errors[0].message
+    assert "TESTPAD_B" in result.errors[0].message
+
+
+def test_validate_csv_rows_matching_source_id_passes():
+    """A row whose source_id matches the implicit_source_id should
+    validate normally."""
+    rows = _rows_from_string(_csv_text(_row(source_id="TESTPAD_A", t_CL_s="900")))
+    result = importer.validate_csv_rows(rows, implicit_source_id="TESTPAD_A")
+    assert result.errors == []
+    assert len(result.valid_rows) == 1
+
+
+def test_validate_csv_rows_no_implicit_source_id_backward_compat():
+    """When implicit_source_id is None (default, CLI path), any
+    source_id is accepted; no mismatched_source_id error possible."""
+    rows = _rows_from_string(_csv_text(_row(source_id="ANY_SOURCE", t_CL_s="900")))
+    result = importer.validate_csv_rows(rows)
+    assert result.errors == []
+    assert result.valid_rows[0].source_id == "ANY_SOURCE"
+
+
+def test_read_csv_still_requires_source_id_when_no_implicit(tmp_path):
+    """Backward compat: without implicit_source_id, source_id is still
+    a required column."""
+    p = tmp_path / "no_source.csv"
+    p.write_text(
+        "start_datetime,end_datetime,aircraft_type\n"
+        "2024-12-01T09:00:00,2024-12-01T09:15:00,C56X\n"
+    )
+    rows, err = importer.read_csv(p)
+    assert err is not None
+    assert "source_id" in err
+
+
+def test_end_to_end_dialog_flow_no_source_id_column(tmp_path):
+    """Simulate the dialog flow: CSV lacks source_id column, dialog
+    supplies TESTPAD_A. All rows get validated with source_id filled
+    in, no mismatch errors."""
+    p = tmp_path / "dialog_scenario.csv"
+    p.write_text(
+        "start_datetime,end_datetime,aircraft_type,t_CL_s\n"
+        "2024-12-01T09:00:00,2024-12-01T09:15:00,C56X,300\n"
+        "2024-12-02T10:00:00,2024-12-02T10:20:00,PC24,600\n"
+    )
+    rows, err = importer.read_csv(p, implicit_source_id="TESTPAD_A")
+    assert err is None
+    result = importer.validate_csv_rows(rows, implicit_source_id="TESTPAD_A")
+    assert result.errors == []
+    assert len(result.valid_rows) == 2
+    assert all(r.source_id == "TESTPAD_A" for r in result.valid_rows)
