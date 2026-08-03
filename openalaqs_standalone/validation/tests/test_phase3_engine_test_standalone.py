@@ -256,10 +256,20 @@ def test_standalone_fraction_matches_plugin_math():
 
 
 def _ei(fuel_kg_sec, **kwargs):
-    """Build an EI-row dict with fuel_flow and named pollutant EIs."""
+    """Build an EI-row dict with fuel_flow and named pollutant EIs.
+
+    Uses the actual DB column names from default_aircraft_engine_ei
+    (co_ei, nox_ei, etc.) so this test fixture matches the shape
+    that extract_engine_test_events and movements.py produce.
+    """
     d = {"fuel_kg_sec": fuel_kg_sec}
     for k, v in kwargs.items():
-        d[f"{k}_ei_g_kg_fuel"] = v
+        # PM subclasses use bare names (pm10_nonvol, pm10_sul,
+        # pm10_organic); gas-phase / main pollutants get "_ei" suffix.
+        if k in ("pm10_nonvol", "pm10_sul", "pm10_organic"):
+            d[k] = v
+        else:
+            d[f"{k}_ei"] = v
     return d
 
 
@@ -728,8 +738,8 @@ def test_bffm2_pm_and_sox_passthrough():
     # in the output.
     ei_lookup = _build_engine_ei_lookup_all_modes("B602")
     for mode in ("TX", "AP", "CL", "TO"):
-        ei_lookup[("B602", mode)]["pm10_ei_g_kg_fuel"] = 0.5
-        ei_lookup[("B602", mode)]["sox_ei_g_kg_fuel"] = 1.0
+        ei_lookup[("B602", mode)]["pm10_ei"] = 0.5
+        ei_lookup[("B602", mode)]["sox_ei"] = 1.0
     aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
     events = [_event_dict(t_CL_s=100, engine_count=1, thrust_mode="bffm2")]
     conn = _prep_bffm2_conn_with_meteo()
