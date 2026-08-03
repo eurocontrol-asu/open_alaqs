@@ -145,6 +145,30 @@ def test_fraction_end_before_start_returns_zero():
 # ═══════════════════════════════════════════════════════════════════════
 
 
+def _wrap_as_engine(ei_store):
+    """Wrap an EI-store-shaped fake as an Engine-shaped fake.
+
+    The mode-lookup methods (``getEmissionIndexByMode``,
+    ``getEmissionIndexByModeWithMEEM``,
+    ``getEmissionIndexByModeWithBFFM2``) live on the
+    ``EngineEmissionIndex`` store returned by
+    ``engine.getEmissionIndex()``, NOT on the ``Engine`` object itself.
+    Tests here define ``FakeEngine`` classes with the methods flat on
+    the top-level fake for readability; this helper wraps them into
+    the correct two-level shape before passing to ``_resolve_ei`` or
+    module ``process()``.
+    """
+
+    class _EngineShim:
+        def __init__(self, ei):
+            self._ei = ei
+
+        def getEmissionIndex(self):
+            return self._ei
+
+    return _EngineShim(ei_store)
+
+
 def test_resolve_ei_snap_uses_plain_lookup():
     """Snap path calls plain getEmissionIndexByMode, does not attempt
     MEEM."""
@@ -159,7 +183,7 @@ def test_resolve_ei_snap_uses_plain_lookup():
             calls.append(("meem", mode))
             return "should-not-be-called"
 
-    ei = _resolve_ei(FakeEngine(), "TX", "snap")
+    ei = _resolve_ei(_wrap_as_engine(FakeEngine()), "TX", "snap")
     assert ei == "snap-ei"
     assert calls == [("snap", "TX")]
 
@@ -176,7 +200,7 @@ def test_resolve_ei_meem_calls_meem_path():
             calls.append(("meem", mode, kwargs.get("p_amb_Pa"), kwargs.get("mach")))
             return "meem-ei"
 
-    ei = _resolve_ei(FakeEngine(), "CL", "meem")
+    ei = _resolve_ei(_wrap_as_engine(FakeEngine()), "CL", "meem")
     assert ei == "meem-ei"
     assert calls == [("meem", "CL", 101325.0, 0.0)]
 
@@ -195,7 +219,7 @@ def test_resolve_ei_meem_falls_back_to_snap_when_unavailable():
             calls.append(("meem", mode))
             return None  # unavailable
 
-    ei = _resolve_ei(FakeEngine(), "TO", "meem")
+    ei = _resolve_ei(_wrap_as_engine(FakeEngine()), "TO", "meem")
     assert ei == "snap-fallback-ei"
     assert calls == [("meem", "TO"), ("snap", "TO")]
 
@@ -205,7 +229,7 @@ def test_resolve_ei_returns_none_on_exception():
         def getEmissionIndexByMode(self, mode):
             raise Exception("mode unknown")
 
-    ei = _resolve_ei(FakeEngine(), "TX", "snap")
+    ei = _resolve_ei(_wrap_as_engine(FakeEngine()), "TX", "snap")
     assert ei is None
 
 
@@ -258,7 +282,28 @@ class _FakeAircraftStore:
 
 
 class _FakeEngine:
-    """Engine-shaped: getEmissionIndexByMode(mode) → EmissionIndex."""
+    """Engine-shaped: getEmissionIndex() → store with
+    ``getEmissionIndexByMode(mode)`` / ``getEmissionIndexByModeWithMEEM``
+    / ``getEmissionIndexByModeWithBFFM2``.
+
+    Matches the real ``open_alaqs.core.interfaces.Engine.Engine`` API:
+    the mode-lookup methods live on the ``EngineEmissionIndex`` store
+    returned by ``getEmissionIndex()``, not on the Engine itself.
+    """
+
+    def __init__(self, per_mode_ei):
+        self._per_mode = per_mode_ei
+        self._ei_store = _FakeEIStore(per_mode_ei)
+
+    def getEmissionIndex(self):
+        return self._ei_store
+
+
+class _FakeEIStore:
+    """Store-shaped wrapper that dispatches getEmissionIndexByMode(mode)
+    to the per-mode EI mapping. MEEM and BFFM2 wrappers deliberately
+    absent so tests that need them can subclass; presence controls the
+    _resolve_ei fall-through behaviour."""
 
     def __init__(self, per_mode_ei):
         self._per_mode = per_mode_ei
@@ -268,11 +313,27 @@ class _FakeEngine:
 
 
 class _FakeEngineStore:
+    """EngineStore-shaped: ``getObject(uid)`` → engine.
+
+    Auto-wraps stored engines with ``_wrap_as_engine`` if they don't
+    already expose ``getEmissionIndex``. This lets tests define
+    ``class DualEngine`` etc. with the flat mode-lookup shape for
+    readability, while the module still receives the correct
+    two-level shape (``engine.getEmissionIndex().getEmissionIndexByMode(...)``)
+    that matches the real ``open_alaqs.core.interfaces.Engine.Engine``
+    class.
+    """
+
     def __init__(self, mapping):
         self._m = mapping
 
     def getObject(self, key):
-        return self._m.get(key)
+        engine = self._m.get(key)
+        if engine is None:
+            return None
+        if hasattr(engine, "getEmissionIndex"):
+            return engine
+        return _wrap_as_engine(engine)
 
 
 class _FakeEventsStore:
