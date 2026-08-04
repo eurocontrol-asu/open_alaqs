@@ -9,7 +9,7 @@ qgisMaximumVersion=4.99
 supportsQt6=True
 description=An open-source local air quality model
 
-version=5.2.4
+version=5.3.0
 author=Eurocontrol
 email=open-alaqs@eurocontrol.int
 
@@ -23,12 +23,10 @@ repository=https://gitlab.aerlabs.nl/eurocontrol/open_alaqs
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-changelog=5.0.0
-    First stable release after the rebuild.
-    Added: schema migration scripts (CLI + GUI), CAEP14 v14 EI database, AUSTAL operating guide.
-    Changed: emissions vector layer reprojected to EPSG:3857, movements CSV auto-strips legacy columns, default_aircraft_engine_ei dropped legacy pm10_prefoa3 (32 cols).
-    Removed: 18 legacy 4.x-era tables (drop with --drop-extra-tables on migration).
-    Fixed: legacy SpatiaLite metadata migration (geometry_columns triggers).
+changelog=5.3.0
+    Feature release: engine-test emissions add-on.
+    Added: new is_test_site flag on area sources, engine_test_events table, CSV importer (in-QGIS dialog + CLI), EngineTestSourceModule with three thrust modes (snap / meem / bffm2), openalaqs_standalone integration with per-source, per-hour emission output routed through the same austal_prep pipeline as other stationary sources, distinct engine_test group in the plugin's AUSTAL export.
+    Fixed: _resolve_ei called the mode-lookup methods on Engine instead of its EmissionIndex store, producing zero emissions for every event. SQLSerializable duplicate-key warning now names the offending table. Tab-level gray-out for Profiles / Emissions when a test-site checkbox is ticked. Helicopter class missing getEmissionDynamicsByMode (issue #340).
     See CHANGELOG.md for details.
 
 # Tags are comma separated with spaces allowed
