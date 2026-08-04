@@ -47,6 +47,7 @@ from openalaqs_standalone._profiles import STATIONARY_POLLUTANTS
 from openalaqs_standalone.adapt_meteo import adapt_meteo
 from openalaqs_standalone.adapt_receptors import adapt_receptors
 from openalaqs_standalone.compute_area import compute_area_emissions
+from openalaqs_standalone.compute_engine_test import compute_engine_test_emissions
 from openalaqs_standalone.compute_parking import compute_parking_emissions
 from openalaqs_standalone.compute_point import compute_point_emissions
 from openalaqs_standalone.compute_road import compute_road_emissions
@@ -321,6 +322,14 @@ def orchestrate(
         (compute_parking_emissions, "parking"),
         (compute_point_emissions, "point"),
         (compute_area_emissions, "area"),
+        # Engine-test sites are area-source polygons in the DB but their
+        # emissions come from per-event records in engine_test_events,
+        # not from the *_kg_unit rates. compute_engine_test_emissions
+        # produces the same long-form (timestamp, source_id, pollutant,
+        # kg_in_hour) schema and emits only hours with actual event
+        # overlap, so a study with zero test sites or no events adds
+        # zero rows here.
+        (compute_engine_test_emissions, "engine_test"),
     ]
 
     em_chunks: list[pd.DataFrame] = []
