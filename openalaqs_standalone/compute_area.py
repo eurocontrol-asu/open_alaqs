@@ -84,7 +84,24 @@ def compute_area_emissions(
     try:
         profiles = load_profiles(conn)
         cur = conn.cursor()
-        cur.execute("SELECT * FROM shapes_area_sources WHERE instudy = '1'")
+        # Skip engine-test sites (is_test_site='1'). Their emissions come
+        # from engine_test_events via compute_engine_test_emissions, not
+        # from the *_kg_unit rates on the row. Pre-v1b DBs lack the
+        # column entirely, so we probe with PRAGMA and pick a WHERE
+        # clause that works either way. Column-absent means no test
+        # sites exist and every row goes through the area path.
+        area_cols = [
+            r[1] for r in cur.execute("PRAGMA table_info(shapes_area_sources)")
+        ]
+        has_test_site_col = "is_test_site" in area_cols
+        if has_test_site_col:
+            cur.execute(
+                "SELECT * FROM shapes_area_sources "
+                "WHERE instudy = '1' "
+                "AND (is_test_site IS NULL OR is_test_site = '' OR is_test_site = '0')"
+            )
+        else:
+            cur.execute("SELECT * FROM shapes_area_sources WHERE instudy = '1'")
         cols = [d[0] for d in cur.description]
         rows = [dict(zip(cols, row)) for row in cur.fetchall()]
     finally:

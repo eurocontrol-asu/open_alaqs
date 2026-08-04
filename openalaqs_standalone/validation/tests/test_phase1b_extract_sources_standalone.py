@@ -101,9 +101,10 @@ def _make_scratch_db_pre_v1b(rows):
 # ---------------------------------------------------------------------------
 
 
-def test_extract_skips_test_sites_and_logs():
-    """A row with is_test_site='1' is filtered out; the diagnostic log
-    line reports how many were skipped."""
+def test_extract_test_sites_emitted_as_engine_test_type():
+    """A row with is_test_site='1' is emitted as source_type
+    'engine_test' with source_id prefixed 'engine_test:' — not skipped.
+    Regular area rows still come through as 'area'."""
     path, conn = _make_scratch_db_with_column(
         [
             {"source_id": "A1", "is_test_site": "0", "geometry": None},
@@ -112,24 +113,33 @@ def test_extract_skips_test_sites_and_logs():
         ]
     )
     try:
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            rows = _extract_area_sources(conn)
+        rows = _extract_area_sources(conn)
         conn.close()
 
-        # A1 and A2 kept, N1 skipped
-        labels = sorted(r["label"] for r in rows)
-        assert labels == ["A1", "A2"], f"expected A1, A2; got {labels}"
+        # All 3 rows emitted
+        assert len(rows) == 3
+        by_id = {r["label"]: r for r in rows}
 
-        # Diagnostic printed with correct count
-        out = buf.getvalue()
-        assert "1 engine-test site(s) skipped" in out, f"log missing: {out!r}"
+        # A1, A2 → source_type 'area', source_id 'area:...'
+        assert by_id["A1"]["source_type"] == "area"
+        assert by_id["A1"]["source_id"] == "area:A1"
+        assert by_id["A2"]["source_type"] == "area"
+        assert by_id["A2"]["source_id"] == "area:A2"
+
+        # N1 → source_type 'engine_test', source_id 'engine_test:...'
+        assert by_id["N1"]["source_type"] == "engine_test"
+        assert by_id["N1"]["source_id"] == "engine_test:N1"
+        # is_test_site flag also in extra_json for downstream consumers
+        import json as _json
+
+        extra = _json.loads(by_id["N1"]["extra_json"])
+        assert extra["is_test_site"] == "1"
     finally:
         os.unlink(path)
 
 
-def test_extract_multiple_test_sites_counted():
-    """Two test-site rows yields a count of 2 in the log line."""
+def test_extract_multiple_test_sites_all_emitted_as_engine_test():
+    """Two test-site rows both emitted with engine_test source_type."""
     path, conn = _make_scratch_db_with_column(
         [
             {"source_id": "N1", "is_test_site": "1", "geometry": None},
@@ -138,19 +148,21 @@ def test_extract_multiple_test_sites_counted():
         ]
     )
     try:
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            rows = _extract_area_sources(conn)
+        rows = _extract_area_sources(conn)
         conn.close()
-        assert len(rows) == 1
-        assert rows[0]["label"] == "A1"
-        assert "2 engine-test site(s) skipped" in buf.getvalue()
+        assert len(rows) == 3
+        engine_test_rows = [r for r in rows if r["source_type"] == "engine_test"]
+        area_rows = [r for r in rows if r["source_type"] == "area"]
+        assert len(engine_test_rows) == 2
+        assert len(area_rows) == 1
+        assert sorted(r["label"] for r in engine_test_rows) == ["COMP", "N1"]
     finally:
         os.unlink(path)
 
 
-def test_extract_no_test_sites_silent():
-    """When no rows are flagged, no diagnostic is emitted."""
+def test_extract_no_test_sites_all_area():
+    """When no rows are flagged, all come through as source_type
+    'area'. No engine_test rows produced."""
     path, conn = _make_scratch_db_with_column(
         [
             {"source_id": "A1", "is_test_site": "0", "geometry": None},
@@ -158,13 +170,10 @@ def test_extract_no_test_sites_silent():
         ]
     )
     try:
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            rows = _extract_area_sources(conn)
+        rows = _extract_area_sources(conn)
         conn.close()
         assert len(rows) == 2
-        # No skip-log line at all
-        assert "engine-test site(s) skipped" not in buf.getvalue()
+        assert all(r["source_type"] == "area" for r in rows)
     finally:
         os.unlink(path)
 

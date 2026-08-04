@@ -332,28 +332,33 @@ def _extract_area_sources(conn: sqlite3.Connection) -> list[dict]:
         return []
     cols = [d[0] for d in cur.description]
     rows = []
-    n_test_sites_skipped = 0
     for raw in cur.fetchall():
         rec = dict(zip(cols, raw))
 
-        # Skip engine-test sites (is_test_site='1'). Their emissions come
-        # from the engine_test_events table, not from the *_kg_unit fixed
-        # rates on this row, and the compute module for engine tests is
-        # introduced in a later phase. The IS NULL / '' fallbacks preserve
-        # backward compatibility with pre-v1b projects that lack the
-        # column entirely (SQLite's SELECT * still returns their rows,
-        # just without the column, so rec.get returns None).
+        # Engine-test sites (is_test_site='1') get emitted with
+        # source_id "engine_test:<oid>" and source_type "engine_test"
+        # instead of "area:<oid>" / "area". This lets `orchestrate.py`
+        # dispatch to `compute_engine_test_emissions` for them and keeps
+        # their emissions out of the regular area-source compute (which
+        # would produce zero anyway since test sites carry no *_kg_unit
+        # rates). Downstream `austal_prep` doesn't dispatch on
+        # source_type — it uses geometry_kind (polygon) — so the AUSTAL
+        # writer treats these the same as regular area sources. The
+        # source_id prefix guarantees uniqueness against area sources
+        # with the same numeric oid. Pre-v1b projects lacking the
+        # column entirely still work: rec.get returns None, str(None) =
+        # "None", .strip() = "None", not "1", so those rows fall
+        # through to the area path unchanged.
         is_test_site = str(rec.get("is_test_site") or "0").strip()
-        if is_test_site == "1":
-            n_test_sites_skipped += 1
-            continue
+        source_type = "engine_test" if is_test_site == "1" else "area"
+        source_prefix = "engine_test" if is_test_site == "1" else "area"
 
         wkt, kind, length_m, area_m2 = _wkb_to_wkt_via_shapely(rec.get("geometry"))
         raw_id = rec.get("source_id") or rec.get("oid")
         rows.append(
             {
-                "source_id": f"area:{raw_id}",
-                "source_type": "area",
+                "source_id": f"{source_prefix}:{raw_id}",
+                "source_type": source_type,
                 "label": str(raw_id),
                 "geometry_wkt": wkt,
                 "geometry_kind": kind,
@@ -375,15 +380,11 @@ def _extract_area_sources(conn: sqlite3.Connection) -> list[dict]:
                         "pm10_kg_unit": rec.get("pm10_kg_unit"),
                         "p1_kg_unit": rec.get("p1_kg_unit"),
                         "p2_kg_unit": rec.get("p2_kg_unit"),
+                        "is_test_site": is_test_site,
                     },
                     default=str,
                 ),
             }
-        )
-    if n_test_sites_skipped:
-        print(
-            f"  [extract_sources] {n_test_sites_skipped} engine-test site(s) "
-            "skipped: engine-test emissions module not yet available"
         )
     return rows
 
@@ -394,11 +395,12 @@ def extract_sources(alaqs_path: Path, out_path: Optional[Path] = None) -> pd.Dat
     If `out_path` is given, write the DataFrame to a parquet file.
 
     Source types extracted:
-        road     from shapes_roadways
-        parking  from shapes_parking
-        gate     from shapes_gates           (no EFs; movement-driven)
-        point    from shapes_point_sources
-        area     from shapes_area_sources
+        road         from shapes_roadways
+        parking      from shapes_parking
+        gate         from shapes_gates           (no EFs; movement-driven)
+        point        from shapes_point_sources
+        area         from shapes_area_sources    (is_test_site='0')
+        engine_test  from shapes_area_sources    (is_test_site='1')
 
     Aircraft tracks (shapes_aircraft_tracks, shapes_tracks,
     cache_runway_trajectories) are not extracted: they are intermediate

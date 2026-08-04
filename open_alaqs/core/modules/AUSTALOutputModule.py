@@ -1634,8 +1634,29 @@ class AUSTALDispersionModule(DispersionModule):
         attribute. Unknown classes return an empty string; the caller
         treats that as "do not prefix" so the source falls into its
         own bucket at aggregation time.
+
+        Engine-test sites are AreaSources instances (they share the
+        DB table and Python class with regular area sources) but they
+        get their own label ``engine_test`` so the AUSTAL by-type
+        aggregation doesn't merge their per-hour g/s rates with
+        regular area sources' constant rates. Merging would smear the
+        sparse test-event spikes into the ambient area emission and
+        both dispersion signatures would be lost. The
+        ``isTestSite()`` accessor is defined on AreaSources; any
+        older Source subclass without that method falls back to the
+        class-name map unchanged.
         """
         cls_name = type(source_).__name__
+
+        if cls_name == "AreaSources":
+            try:
+                if hasattr(source_, "isTestSite") and source_.isTestSite():
+                    return "engine_test"
+            except Exception:
+                # Defensive: an accessor raising should not derail the
+                # aggregation. Fall through to the standard 'area' label.
+                pass
+
         return {
             "RoadwaySources": "road",
             "ParkingSources": "parking",

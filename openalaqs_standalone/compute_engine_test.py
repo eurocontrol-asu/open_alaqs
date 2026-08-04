@@ -34,7 +34,8 @@ Design (per phase 0 memo):
 from __future__ import annotations
 
 import sqlite3  # noqa: E402  (kept adjacent to the typing imports)
-from datetime import datetime
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 # Mode-keys shared with the plugin. Order preserved so downstream tables
@@ -554,9 +555,228 @@ def compute_engine_test_for_period(
     return by_source
 
 
+# ══════════════════════════════════════════════════════════════════════
+# Orchestration wrapper — matches the compute_area_emissions signature
+# so orchestrate.py can dispatch to it uniformly.
+# ══════════════════════════════════════════════════════════════════════
+
+# Pollutant name mapping: internal keys from compute_engine_test_for_period
+# vs the standard `pollutant` column in emissions.parquet used by all
+# other computes. "pm25" in the standard schema is the p2 sub-fraction
+# (matches AREA_POLLUTANT_COLS in compute_area).
+_POLLUTANT_INTERNAL_TO_STANDARD = {
+    "co": "co",
+    "hc": "hc",
+    "nox": "nox",
+    "sox": "sox",
+    "pm10": "pm10",
+    "p2": "pm25",
+}
+
+
+def _load_ei_lookup(conn: sqlite3.Connection) -> Dict[Tuple[str, str], Dict[str, Any]]:
+    """Load default_aircraft_engine_ei into (engine_name, mode) → row-dict.
+
+    Mirrors what the plugin's EngineStore does internally, but as a
+    plain dict for the standalone path. Only the columns needed by
+    _add_ei_to_totals are read; the SELECT explicitly lists them so
+    a schema drift on unrelated columns doesn't break this.
+    """
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT engine_name, mode, thrust, fuel_kg_sec, "
+        "co_ei, hc_ei, nox_ei, sox_ei, pm10_ei, p1_ei, p2_ei, "
+        "pm10_nonvol, pm10_sul, pm10_organic "
+        "FROM default_aircraft_engine_ei"
+    )
+    out: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    for row in cur.fetchall():
+        if row[0] is None or row[1] is None:
+            # NULL engine_name or mode: unusable. The plugin's
+            # SQLSerializable loader also drops these (they collide
+            # on key='None' in its in-memory dict).
+            continue
+        out[(row[0], row[1])] = {
+            "thrust": row[2],
+            "fuel_kg_sec": row[3],
+            "co_ei": row[4],
+            "hc_ei": row[5],
+            "nox_ei": row[6],
+            "sox_ei": row[7],
+            "pm10_ei": row[8],
+            "p1_ei": row[9],
+            "p2_ei": row[10],
+            "pm10_nonvol": row[11],
+            "pm10_sul": row[12],
+            "pm10_organic": row[13],
+        }
+    return out
+
+
+def _load_aircraft_lookup(conn: sqlite3.Connection) -> Dict[str, Dict[str, Any]]:
+    """Load default_aircraft into icao → row-dict."""
+    cur = conn.cursor()
+    cur.execute("SELECT icao, engine_count, engine FROM default_aircraft")
+    return {
+        icao: {"engine_count": ec, "engine_uid": eng}
+        for icao, ec, eng in cur.fetchall()
+    }
+
+
+def compute_engine_test_emissions(
+    alaqs_path: "Path",
+    year: int,
+    pollutants: Optional[list] = None,
+    time_window: Optional[Tuple[Any, Any]] = None,
+):
+    """Compute hourly engine-test emissions for all in-study test sites.
+
+    Signature mirrors ``compute_area_emissions`` so ``orchestrate.py``
+    can dispatch to it uniformly alongside road / parking / point /
+    area. Returns a long-form DataFrame with columns
+    ``[timestamp, source_id, pollutant, kg_in_hour]``.
+
+    Only hours where an event actually overlaps produce rows. Zero-
+    emission hours are omitted to keep the parquet compact, matching
+    the convention of the other stationary computes (which also skip
+    zero-emission source-pollutant-hour combinations).
+
+    ``pollutants`` filters the output; unknown pollutants are silently
+    dropped. Passing ``None`` uses the standard set (STATIONARY_POLLUTANTS
+    intersected with the pollutants engine-test emits: co, hc, nox,
+    sox, pm10, pm25).
+
+    ``time_window = (start, end)`` restricts emissions to the half-open
+    interval [start, end). Any event whose overlap window falls fully
+    outside is skipped; partial overlaps are clipped hour-by-hour by
+    the per-period compute (which already handles this via
+    ``_period_window_fraction``).
+
+    The ``year`` argument is only used to bracket a full-year scan when
+    ``time_window`` is None; it doesn't force events to be re-dated.
+    """
+    import pandas as pd
+
+    if pollutants is None:
+        pollutants = ["co", "hc", "nox", "sox", "pm10", "pm25"]
+
+    # Load DB pieces once
+    conn = sqlite3.connect(str(alaqs_path))
+    try:
+        # Import lazily to avoid a hard dependency at module import time
+        # (the plugin path never needs extract_engine_test_events).
+        from openalaqs_standalone.extract_engine_test_events import (
+            extract_engine_test_events,
+        )
+
+        events = extract_engine_test_events(conn)
+        ei_lookup = _load_ei_lookup(conn)
+        aircraft_lookup = _load_aircraft_lookup(conn)
+    finally:
+        conn.close()
+
+    if not events:
+        return pd.DataFrame(
+            columns=["timestamp", "source_id", "pollutant", "kg_in_hour"]
+        )
+
+    # Determine the hour range to scan. If a time_window is given, use
+    # it directly. Otherwise bracket the union of event windows AND
+    # clamp to the inventory year — passing an event dated outside
+    # `year` still emits its own overlapping hours (the compute doesn't
+    # gate on year), but this keeps the scan bounded.
+    if time_window is not None:
+        scan_start, scan_end = time_window
+        if isinstance(scan_start, str):
+            scan_start = datetime.fromisoformat(scan_start)
+        if isinstance(scan_end, str):
+            scan_end = datetime.fromisoformat(scan_end)
+    else:
+        year_start = datetime(year, 1, 1)
+        year_end = datetime(year + 1, 1, 1)
+        scan_start, scan_end = year_start, year_end
+
+    # Which hours actually have overlapping events? For each event,
+    # compute the set of hour-buckets it touches; take the union.
+    # Cheaper than looping 8760 empty hours.
+    touched_hours: set = set()
+    for ev in events:
+        try:
+            e_start = datetime.fromisoformat(ev["start_datetime"])
+            e_end = datetime.fromisoformat(ev["end_datetime"])
+        except (KeyError, ValueError, TypeError):
+            continue
+        # Clip to scan window
+        e_start_clip = max(e_start, scan_start)
+        e_end_clip = min(e_end, scan_end)
+        if e_start_clip >= e_end_clip:
+            continue
+        # Enumerate the hour buckets [floor(start_hour), ceil(end_hour))
+        h = e_start_clip.replace(minute=0, second=0, microsecond=0)
+        while h < e_end_clip:
+            touched_hours.add(h)
+            h = h + timedelta(hours=1)
+
+    if not touched_hours:
+        return pd.DataFrame(
+            columns=["timestamp", "source_id", "pollutant", "kg_in_hour"]
+        )
+
+    # Compute per-hour, per-source per-pollutant totals in grams,
+    # convert to kg, emit long-form rows. Only hours with non-zero
+    # contribution produce rows.
+    ts_out: list = []
+    sid_out: list = []
+    pol_out: list = []
+    kg_out: list = []
+
+    pollutants_set = set(pollutants)
+    # Filter the internal-to-standard map to only requested pollutants.
+    active_map = {
+        k: v for k, v in _POLLUTANT_INTERNAL_TO_STANDARD.items() if v in pollutants_set
+    }
+
+    for hour in sorted(touched_hours):
+        by_source = compute_engine_test_for_period(
+            events=events,
+            period_start=hour,
+            period_end=hour + timedelta(hours=1),
+            ei_lookup=ei_lookup,
+            aircraft_lookup=aircraft_lookup,
+            conn=None,
+        )
+        for raw_source_id, totals in by_source.items():
+            # Prefix with "engine_test:" to match extract_sources.py's
+            # source_id convention (its rows in sources.parquet use
+            # the same prefix).
+            source_id = f"engine_test:{raw_source_id}"
+            for internal_key, standard_key in active_map.items():
+                grams = totals.get(internal_key, 0.0)
+                if grams <= 0.0:
+                    continue
+                kg = grams / 1000.0
+                ts_out.append(hour)
+                sid_out.append(source_id)
+                pol_out.append(standard_key)
+                kg_out.append(kg)
+
+    df = pd.DataFrame(
+        {
+            "timestamp": ts_out,
+            "source_id": sid_out,
+            "pollutant": pol_out,
+            "kg_in_hour": kg_out,
+        }
+    )
+    if not df.empty:
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
+    return df
+
+
 __all__ = [
     "_period_window_fraction",
     "_resolve_engine_count",
     "_resolve_engine_uid",
     "compute_engine_test_for_period",
+    "compute_engine_test_emissions",
 ]
