@@ -6,6 +6,8 @@ ISO 8601.
 
 ## [Unreleased]
 
+## [5.3.0] - 2026-08-04
+
 Engine-test emissions add-on. Adds a new mechanism for representing
 aircraft engine test runs (run-ups) as stationary emission sources
 with per-event fuel and per-pollutant computation matching the
@@ -53,11 +55,16 @@ regular movement path.
   saved normally. Users need to run the migration to gain the
   column.
 - **Form UX for test sites.** When "Engine test site" is ticked,
-  the Units per Year, Emissions tab (`*_kg_unit`), and Profile
-  fields gray out; validation on those fields is skipped; missing
-  values auto-fill with `"0"` on save. Only Source Name and Height
-  are required. Toggling back to a regular area source re-enables
-  the fields.
+  the Units per Year field disables (Parameters tab) and the
+  Profiles and Emissions tabs are disabled entirely via
+  `QTabWidget.setTabEnabled(False)`. Per-widget `setEnabled` had
+  no visual effect on widgets nested inside tabs — QGIS' attribute
+  form appears to override enabled state there — so the tab-level
+  approach is the one that actually communicates the intent.
+  Validation on the ignored fields is skipped; missing values
+  auto-fill with `"0"` on save. Only Source Name and Height are
+  required. Toggling back to a regular area source re-enables the
+  tabs.
 - **Source-name dropdown filter in Results Analysis.** Test-site
   sources (`is_test_site='1'`) only appear under `EngineTestSource`;
   regular area sources only appear under `AreaSource`. Prevents
@@ -78,6 +85,24 @@ regular movement path.
   ships `extract_engine_test_events.py` for the SQL side. Accepts
   an optional `conn` kwarg for BFFM2 meteo lookups; snap-only
   callers work with no signature change.
+- **Standalone orchestrator integration.**
+  `openalaqs_standalone/orchestrate.py` now calls
+  `compute_engine_test_emissions` alongside road / parking /
+  point / area, so a Dataiku recipe run against a study with
+  engine test events produces `engine_test` rows in
+  `emissions.parquet` and an `engine_test:<oid>` source row in
+  `sources.parquet`, with no flag needed. Downstream `austal_prep`
+  dispatches on `geometry_kind` (polygon), so engine-test sources
+  are picked up as time-varying polygon emitters and appear as
+  their own AUSTAL slot with per-hour g/s columns in
+  `series.dmna`.
+- **Plugin AUSTAL export labels engine-test sites as their own
+  group.** `AUSTALDispersionModule._ti_type_label_for` returns
+  `engine_test` for AreaSources instances with
+  `isTestSite() == True` instead of the shared `area` label. In
+  the by-type aggregation this keeps the sparse per-event g/s
+  spikes distinct from constant regular-area rates instead of
+  smearing them together.
 - **Three thrust modes.** `snap` (raw ICAO EEDB), `meem` (nvPM
   correction; numerically identical to `snap` for engine-test
   events because mode = anchor thrust), and `bffm2` (gas-phase
@@ -89,6 +114,40 @@ regular movement path.
 New public API on `Engine`: `getEmissionIndexByModeWithBFFM2(mode,
 ambient_conditions, mach=0.0)`. New public API on
 `AmbientConditionStore`: `getNearestByTime(timestamp_s)`.
+
+### Fixed
+
+- **`_resolve_ei` called mode-lookup methods on the wrong object.**
+  The helper was calling `engine.getEmissionIndexByMode(mode)` and
+  the two thrust-corrected variants directly on the `Engine`
+  instance. `Engine` doesn't define those methods; they live on the
+  `EngineEmissionIndex` store returned by `engine.getEmissionIndex()`.
+  The `AttributeError` was silently swallowed by an `except
+  Exception:` catch-all, so every mode returned `None`, every event
+  contributed nothing, and every test-site emission came out zero
+  (with no warning). Fixed to extract `ei_store` once and call the
+  mode methods on that. Also rewrote the phase-3 fake-engine tests
+  which had reproduced the wrong API shape and so wouldn't have
+  caught this regression.
+- **Helicopter class missing `getEmissionDynamicsByMode`** (issue
+  #340). Movement compute raised `AttributeError` on any helicopter
+  because `Helicopter` didn't implement the accessor the
+  fixed-wing path uses. Added a no-op that returns `{}`; the
+  existing `KeyError` fallback then kicks in and zero-extension
+  defaults are applied, matching the behaviour of a fixed-wing
+  aircraft with no `default_emission_dynamics` entry.
+
+### Diagnostics
+
+- **SQLSerializable duplicate-key warning now names the offending
+  table.** The message previously read `Already found entry with
+  key 'X'. Replacing existing entry.` with no hint about which of
+  the ~20 SQLSerializable-derived tables was producing the
+  duplicates. Now it reads `Already found entry with key 'X' in
+  table 'default_aircraft_engine_ei'. Replacing existing entry.`
+  Same message shape, one more field. Useful for tracing NULL-PK
+  corruption in customised `.alaqs` files (typical after an EEDB
+  update that inserted rows without oid values).
 
 ## [5.2.4] - 2026-06-18
 
