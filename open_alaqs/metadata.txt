@@ -9,7 +9,7 @@ qgisMaximumVersion=4.99
 supportsQt6=True
 description=An open-source local air quality model
 
-version=5.3.1
+version=5.3.2
 author=Eurocontrol
 email=open-alaqs@eurocontrol.int
 
@@ -23,10 +23,9 @@ repository=https://gitlab.aerlabs.nl/eurocontrol/open_alaqs
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-changelog=5.3.1
-    Bug-fix release. Computed results change for studies with trajectories crossing the vertical limit.
-    Fixed: trajectory segments crossing the vertical limit (mixing height) now count only their part below it, in the plugin, the standalone and the CAEP14 reference (previously the whole segment was counted; departures most affected). Helicopter movements of different types sharing a profile, runway and taxi route no longer receive the first member's emissions. Movement names and log lines show the input (local) time instead of being shifted by the machine's UTC offset. Standalone: engine lookup keys on engine_name as the plugin does; BFFM2 segments without power and fuel flow use Bymode indices as the plugin does.
-    Tests: ANP expected CSV regenerated; new regression tests for each fix.
+changelog=5.3.2
+    Bug-fix release for helicopter movements. Helicopter results change: climb and approach are cut at the vertical limit (mixing height) and the grid, as fixed-wing segments are; arrivals are placed on the approach side. Fixed-wing movements and stationary sources are unchanged.
+    Fixed: helicopter movements with a gate no longer stop the calculation; the FOCA half-LTO starts or ends at the gate (helipad) and ground idle is released there as a point. Helicopter arrivals come in along the approach. AUSTAL output keeps point emissions of movements. Standalone: same placement, arrival direction and vertical cut as the plugin.
     See CHANGELOG.md for details.
 
 # Tags are comma separated with spaces allowed

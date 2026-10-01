@@ -6,6 +6,45 @@ ISO 8601.
 
 ## [Unreleased]
 
+## [5.3.2] - 2026-10-01
+
+Bug-fix release for helicopter movements. Computed helicopter results
+change: the climb or approach is now cut at the vertical limit (mixing
+height) and the grid, as fixed-wing segments are since 5.3.1, and arrivals
+are placed on the approach side. Fixed-wing movements and stationary
+sources are unchanged.
+
+### Fixed
+
+- Helicopter movements with a gate no longer stop the calculation
+  (`'Helicopter' object has no attribute 'getStartEmissions'`); helicopters
+  never taxi and get no gate or APU emission. The FOCA half-LTO starts or
+  ends at the gate centroid (the helipad) along the runway heading, and
+  ground idle is released there as a point instead of being spread over the
+  flight path. Without a gate the runway end is used as before. Helicopters
+  at different gates or of different FOCA categories get their own
+  trajectory; smooth & shift keeps point geometries.
+- Helicopter arrivals come in along the approach; they were drawn from the
+  touchdown point beyond the far end of the runway.
+- Helicopter climb and approach keep only their part below the period's
+  vertical limit (mixing height) and inside the grid; the FOCA mode mass is
+  scaled by the share of the mode's time spent on that part. Ground idle is
+  not affected.
+- AUSTAL output keeps point emissions of movements: a point's cell
+  efficiency was 0 (area ratio), so they were dropped from the AUSTAL input.
+  Stationary point sources were not affected.
+- Standalone: helicopter placement (gate centroid, else runway threshold),
+  arrival direction and vertical cut as in the plugin. New QGIS-free module
+  `open_alaqs.core.tools.foca_heli_trajectory`.
+
+### Tests
+
+- New: `test_zz_helicopter_helipad_regression`,
+  `test_zz_helicopter_vertical_limit_regression`,
+  `test_austal_point_emission_cell`, standalone
+  `test_helicopter_helipad_standalone` and
+  `test_helicopter_vertical_limit_standalone`.
+
 ## [5.3.1] - 2026-10-01
 
 Bug-fix release. Computed results change for studies with trajectories
