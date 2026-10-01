@@ -16,6 +16,7 @@ from qgis.PyQt import QtWidgets
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 from shapely.ops import transform as _shapely_transform
 from shapely.validation import make_valid as _make_valid
+from shapely.wkt import loads
 
 from open_alaqs.alaqs_config import DEFAULT_CONCENTRATION_GRID_FACTOR
 from open_alaqs.core.alaqslogging import get_logger
@@ -377,7 +378,17 @@ class AUSTALDispersionModule(DispersionModule):
          geometry in the cell box
 
         """
-        if _is_point or _is_polygon or _is_multi_polygon:
+        if _is_point:
+            # A point has no area, so the area ratio below is always 0 for
+            # it: the point belongs entirely to the cell that contains it.
+            # Half-open bounds, so a point on a shared cell edge counts once.
+            point = loads(emissions_wkt)
+            inside = (
+                cell_bbox["x_min"] <= point.x < cell_bbox["x_max"]
+                and cell_bbox["y_min"] <= point.y < cell_bbox["y_max"]
+            )
+            return 1.0 if inside else 0.0
+        if _is_polygon or _is_multi_polygon:
             return spatial.getRelativeAreaInBoundingBox(emissions_wkt, cell_bbox)
         elif _is_line:
             # get relative length (X,Y) in bounding box (assumes constant speed)

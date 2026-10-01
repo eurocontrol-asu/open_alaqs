@@ -63,7 +63,7 @@ from openalaqs_standalone import movements as mv
 POLLUTANTS = ("co", "co2", "hc", "nox", "sox", "pm10", "pm25")
 
 
-def compute_helicopter(conn, mov: dict) -> Optional[dict]:
+def compute_helicopter(conn, mov: dict, ctx: Optional[dict] = None) -> Optional[dict]:
     """Compute FOCA Appendix A half-LTO totals for one helicopter movement.
 
     Parameters
@@ -74,6 +74,13 @@ def compute_helicopter(conn, mov: dict) -> Optional[dict]:
         The movement dict from `movements.get_movement`. A helicopter
         movement is one with no `profile_id`; the dispatch layer is
         responsible for routing such movements here.
+    ctx
+        The per-study context from `compute_movements.build_context`
+        (runways, grid bounds). When given, the active mode (TO or AP) is
+        limited to the part of the FOCA flight path below the movement's
+        mixing height and inside the grid, as the plugin does
+        (`FlightEmissionCalculator._helicopter_active_retained`). When None,
+        nothing is cut (the reference's behaviour).
 
     Returns
     -------
@@ -127,15 +134,21 @@ def compute_helicopter(conn, mov: dict) -> Optional[dict]:
             "AP", profile.ap_power, profile.ap_time_min, active_em, n_eng
         )
 
+    # Vertical limit and grid (plugin parity): scale the active mode by the
+    # share of its time spent below the mixing height and inside the grid.
+    a = 1.0
+    if ctx is not None:
+        a = _active_retained_fraction(conn, mov, ctx, category, is_dep)
+
     # Half-LTO totals: GI plus the active mode, converted g -> kg.
     # SOx is not modelled by FOCA; it is zero, matching the reference.
     em = {
-        "co": (gi.co_g + active.co_g) / 1000.0,
-        "co2": (gi.co2_g + active.co2_g) / 1000.0,
-        "hc": (gi.hc_g + active.hc_g) / 1000.0,
-        "nox": (gi.nox_g + active.nox_g) / 1000.0,
+        "co": (gi.co_g + a * active.co_g) / 1000.0,
+        "co2": (gi.co2_g + a * active.co2_g) / 1000.0,
+        "hc": (gi.hc_g + a * active.hc_g) / 1000.0,
+        "nox": (gi.nox_g + a * active.nox_g) / 1000.0,
         "sox": 0.0,
-        "pm10": (gi.pm_g + active.pm_g) / 1000.0,
+        "pm10": (gi.pm_g + a * active.pm_g) / 1000.0,
         # Helicopter PM is written to PM10 only, matching the plugin's
         # FOCA 2015 behaviour (interfaces/Emissions.py writes the FOCA
         # pm_g value to PollutantType.PM10 and explicitly does not split
@@ -156,7 +169,7 @@ def compute_helicopter(conn, mov: dict) -> Optional[dict]:
         "brake_wear_pm10_kg": 0.0,
         "traj_fuel_by_mode_kg": {
             "GI": gi.fuel_kg,
-            active.mode: active.fuel_kg,
+            active.mode: a * active.fuel_kg,
         },
         "segments_included": 0,
         "segments_skipped_vertical": 0,
@@ -172,3 +185,59 @@ def compute_helicopter(conn, mov: dict) -> Optional[dict]:
         "brake_wear_em_kg": {p: 0.0 for p in POLLUTANTS},
         "total_em_kg": em,
     }
+
+
+def _active_retained_fraction(
+    conn, mov: dict, ctx: dict, category, is_dep: bool
+) -> float:
+    """Share of the active-mode time below the mixing height and inside the
+    grid, on the same FOCA flight path the plugin builds: origin at the
+    helicopter's gate centroid (its helipad) or else the active runway end;
+    departure along the runway, arrival back along the approach."""
+    from open_alaqs.core.tools.foca_heli_trajectory import (
+        active_mode_retained,
+        build_arrival,
+        build_departure,
+    )
+    from openalaqs_standalone import geometry as geo
+
+    runway = ctx["runways"][mov["runway_direction"]]
+    origin = None
+    if mov.get("gate"):
+        gate = mv.get_gate(conn, mov["gate"])
+        if gate is not None and gate["geom_3857"] is not None:
+            c = gate["geom_3857"].centroid
+            origin = (c.x, c.y)
+    if origin is None:
+        origin = geo.runway_threshold_3857(runway, mov["runway_direction"])
+    az = geo.runway_azimuth_deg(runway, mov["runway_direction"], is_dep=is_dep)
+
+    local_pts = build_departure(category) if is_dep else build_arrival(category)
+    world = []
+    for p in local_pts:
+        if p.x_m == 0.0:
+            x, y = origin
+        else:
+            x, y = geo.project_anp(origin, az, p.x_m, 0.0)
+        world.append((x, y, p.z_m))
+
+    bounds = ctx["grid_bounds"]
+
+    def _clip(p1, p2):
+        clipped = geo.clip_segment_2d(p1[:2], p2[:2], bounds)
+        if clipped is None:
+            return None
+        (cx1, cy1), (cx2, cy2) = clipped
+        full = ((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2) ** 0.5
+
+        def _z(cx, cy):
+            f = ((cx - p1[0]) ** 2 + (cy - p1[1]) ** 2) ** 0.5 / full
+            return p1[2] + f * (p2[2] - p1[2])
+
+        return (cx1, cy1, _z(cx1, cy1)), (cx2, cy2, _z(cx2, cy2))
+
+    max_height = mv.get_mixing_height_at(conn, mov["runway_time"])
+    fraction, _ = active_mode_retained(
+        local_pts, world, max_height_m=max_height, clip_2d=_clip
+    )
+    return fraction

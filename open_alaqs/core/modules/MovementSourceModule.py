@@ -346,6 +346,18 @@ class MovementSourceModule(SourceModule):
                 continue
 
             gate = movement.getGate()
+            aircraft = movement.getAircraft()
+            if (
+                gate is not None
+                and aircraft is not None
+                and hasattr(aircraft, "is_helicopter")
+                and aircraft.is_helicopter()
+            ):
+                # A helicopter's gate is its helipad: it places the FOCA
+                # trajectory (ground idle included) but carries no GSE or
+                # APU emissions (the gate calculator expects a fixed-wing
+                # aircraft).
+                continue
             if gate is None:
                 # Helicopters do not have a gate by design (helipad
                 # operation). The default emission list survives unchanged
@@ -402,6 +414,12 @@ class MovementSourceModule(SourceModule):
             # and it's geometry is stored precalculated with the Runway in the resulting FlightEmissions object.
             # However, the geometry needs to be rotated to match the respective Runway of each Movement.
             lambda idx: df.loc[idx]["Sources"].getRunway().getName(),
+            # A helicopter's gate is the origin of its trajectory (helipad
+            # operation), so helicopters at different gates need different
+            # groups. Empty for fixed-wing aircraft, whose groups are unchanged.
+            lambda idx: (
+                df.loc[idx]["gate"] if df.loc[idx]["ac_group"] == "HELICOPTER" else ""
+            ),
             # Trajectory placement for arrivals (Option A in
             # GeoTransformation.runway_alignment) shifts the origin so the
             # profile end-of-rollout point lands at the taxi-route runway-

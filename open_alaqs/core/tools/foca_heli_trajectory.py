@@ -336,6 +336,89 @@ def build_arrival(category: HelicopterCategory) -> list[TrajectoryPoint]:
 
 
 # ---------------------------------------------------------------------------
+# Vertical limit and grid: part of the active mode that is kept
+# ---------------------------------------------------------------------------
+
+
+def _cut_below(p1: tuple, p2: tuple, max_height_m: float) -> Optional[tuple]:
+    """Part of the 3D segment p1 -> p2 at or below max_height_m.
+
+    Altitude is linear along the segment. A point exactly at the limit is
+    kept, so the FOCA level flight at the LTO ceiling (914.4 m) survives the
+    default 914.4 m limit. Returns (q1, q2) or None when the whole segment
+    lies above the limit.
+    """
+    z1, z2 = p1[2], p2[2]
+    if z1 > max_height_m and z2 > max_height_m:
+        return None
+    if z1 <= max_height_m and z2 <= max_height_m:
+        return p1, p2
+    f = (max_height_m - min(z1, z2)) / abs(z2 - z1)
+    lo, hi = (p1, p2) if z1 < z2 else (p2, p1)
+    cut = tuple(lo[k] + f * (hi[k] - lo[k]) for k in range(3))
+    return (p1, cut) if z1 < z2 else (cut, p2)
+
+
+def active_mode_retained(
+    local_pts: list[TrajectoryPoint],
+    world_xyz: list[tuple],
+    max_height_m: Optional[float] = None,
+    clip_2d=None,
+) -> tuple[float, list[tuple]]:
+    """Share of the active mode (TO or AP) kept by the vertical limit and the
+    grid, and the kept flight-path segments.
+
+    The FOCA mode emission is one mass for the whole climb (or approach) at
+    constant power, so it is cut by time: each flight segment carries the
+    time of its builder segment, spread uniformly along its length (constant
+    speed within a builder segment), and contributes the time of the part
+    below the limit and inside the grid.
+
+    :param local_pts: the builder points (build_departure / build_arrival)
+        of this trajectory; they carry the times.
+    :param world_xyz: the same points projected to the study CRS, as
+        (x, y, z), index for index.
+    :param max_height_m: vertical limit (the period's mixing height); None
+        for no limit. Points exactly at the limit are kept.
+    :param clip_2d: optional function (p1, p2) -> (q1, q2) or None, clipping
+        a 3D segment to the grid in the horizontal plane.
+    :return: (fraction of the active mode time kept, kept segments as
+        ((x, y, z), (x, y, z)) tuples).
+    """
+    if len(local_pts) != len(world_xyz):
+        raise ValueError(
+            f"{len(local_pts)} builder points but {len(world_xyz)} world points"
+        )
+    total_s = 0.0
+    kept_s = 0.0
+    kept_segments = []
+    for i in range(len(local_pts) - 1):
+        a, b = local_pts[i], local_pts[i + 1]
+        dt = b.t_s - a.t_s
+        if dt <= 0.0 or a.x_m == b.x_m:
+            # ground idle, hover, touchdown: not part of the active mode
+            continue
+        total_s += dt
+        p1, p2 = tuple(world_xyz[i]), tuple(world_xyz[i + 1])
+        full_len = math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+        if full_len == 0.0:
+            continue
+        part = (p1, p2) if max_height_m is None else _cut_below(p1, p2, max_height_m)
+        if part is not None and clip_2d is not None:
+            part = clip_2d(*part)
+        if part is None:
+            continue
+        q1, q2 = part
+        kept_len = math.hypot(q2[0] - q1[0], q2[1] - q1[1])
+        if kept_len <= 0.0:
+            continue
+        kept_s += dt * kept_len / full_len
+        kept_segments.append((tuple(q1), tuple(q2)))
+    fraction = kept_s / total_s if total_s > 0.0 else 1.0
+    return fraction, kept_segments
+
+
+# ---------------------------------------------------------------------------
 # Frame transforms
 # ---------------------------------------------------------------------------
 

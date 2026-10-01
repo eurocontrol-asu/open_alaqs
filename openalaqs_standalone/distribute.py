@@ -689,8 +689,9 @@ def distribute_to_grid(  # noqa: C901 — top-level spatial+temporal distributio
         source at the movement's ground reference. (A future step
         could spread it along the taxi route; that is additive.)
       - Helicopters: no trajectory segments, so the whole
-        `total_em_kg` is placed at the single cell the helicopter's
-        runway position falls in.
+        `total_em_kg` is placed at the single cell of the helicopter's
+        gate centroid (its helipad) or, without a gate, of its runway
+        threshold.
 
     Summing `kg` over all cells and buckets for a pollutant reproduces
     the mode-"(a)" study total: the spatial distribution, like the
@@ -1555,16 +1556,27 @@ def distribute_to_grid(  # noqa: C901 — top-level spatial+temporal distributio
                                 )
         else:
             # Helicopter (or any movement with no retained segments):
-            # the whole total is a point source at the runway
-            # threshold for the movement's direction (not pt1
-            # unconditionally; for direction-33 movements that would
-            # pick the wrong end of the runway).
-            if runways is None:
-                runways = _mv.get_runways(conn)
-            runway = runways[mov["runway_direction"]]
-            from openalaqs_standalone import geometry as _geo
+            # the whole total is a point source. A helicopter with a gate
+            # (its helipad) is placed at the gate centroid, as
+            # the plugin places the helicopter's take-off / touchdown spot
+            # there. Otherwise the point is the runway threshold for the
+            # movement's direction (not pt1 unconditionally; for
+            # direction-33 movements that would pick the wrong end of the
+            # runway).
+            pos = None
+            gate_id = mov.get("gate")
+            if gate_id and _mv.get_helicopter(conn, mov["aircraft"]) is not None:
+                gate = _mv.get_gate(conn, gate_id)
+                if gate is not None and gate["geom_3857"] is not None:
+                    c = gate["geom_3857"].centroid
+                    pos = (c.x, c.y)
+            if pos is None:
+                if runways is None:
+                    runways = _mv.get_runways(conn)
+                runway = runways[mov["runway_direction"]]
+                from openalaqs_standalone import geometry as _geo
 
-            pos = _geo.runway_threshold_3857(runway, mov["runway_direction"])
+                pos = _geo.runway_threshold_3857(runway, mov["runway_direction"])
             ix, iy = cell_index(pos[0], pos[1], grid_bounds, grid_definition)
             for p in POLLUTANTS:
                 _add(b_start, ix, iy, p, res["total_em_kg"][p])

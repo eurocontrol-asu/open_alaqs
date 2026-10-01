@@ -6,7 +6,7 @@ import abc
 import difflib
 from typing import Any, Optional, Tuple, TypedDict
 
-from shapely.geometry import MultiLineString
+from shapely.geometry import LineString, MultiLineString, Point
 from shapely.wkt import loads
 
 from open_alaqs.core.alaqslogging import get_logger
@@ -894,40 +894,37 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 n_engines,
             )
 
-        # Accumulate GI + active mode totals into a single Emission. The
-        # scale=1.0 is intentional: the GI time has already been scaled
-        # by gi_fraction above (matching the standalone's
+        # Ground idle and the active mode are kept as two emissions with
+        # their own geometry. Ground idle happens at the take-off /
+        # touchdown spot (the helipad, or the runway end when the movement
+        # has no gate), so it is released there as a point. Spreading it
+        # over the flight path, as a single emission on the trajectory
+        # line would, moves most of the helicopter CO and HC (ground idle
+        # dominates both) kilometres away and up to the LTO ceiling. The
+        # scale=1.0 is intentional: the GI time has already been scaled by
+        # gi_fraction above (matching the standalone's
         # compute_helicopter.compute_helicopter line-by-line).
-        heli_emissions = Emission(defaultValues=defaultEmissions)
-        heli_emissions.add_from_mode_result(gi, scale=1.0)
-        heli_emissions.add_from_mode_result(active, scale=1.0)
+        gi_emissions = Emission(defaultValues=defaultEmissions)
+        gi_emissions.add_from_mode_result(gi, scale=1.0)
+        # The take-off / touchdown spot: the trajectory's ground-idle point.
+        gi_point_wkt = None
+        for point_ in self._trajectory.getPoints():
+            if str(point_.getMode()).upper() == "GI":
+                gi_point_wkt = Point(point_.getCoordinates()).wkt
+                break
 
-        # Attach the trajectory geometry (preserves the spatial behaviour
-        # the rest of the output pipeline expects). For helicopters the
-        # "trajectory" is the FOCA half-LTO footprint anchored at the
-        # runway, generated upstream by foca_heli_trajectory; here we
-        # only walk its pre-built point pairs.
+        # Flight path geometry for the active mode.
         #
         # IMPORTANT: setGeometryText takes a WKT STRING (every other
-        # call site in this module does), not a shapely object. Earlier
-        # revision of this patch passed the shapely MultiLineString
-        # directly. Storing the WKT explicitly keeps the type
-        # consistent with the fixed-wing path.
+        # call site in this module does), not a shapely object.
         #
         # IMPORTANT: skip zero-length segments. The FOCA helicopter
-        # trajectory builder emits a duplicate GI point at the runway
-        # threshold (start and end of the 4-minute ground-idle phase
-        # share the same x=y=0 coordinates). A MultiLineString with a
-        # zero-length component is `is_valid == False`, and
-        # `OutputModule._process_grid` runs `make_valid()` on the
-        # geometry, which collapses the invalid MultiLineString into a
-        # GeometryCollection (MultiPoint + LineString). The
-        # `GeometryCollection` branch of the spatial-allocation switch
-        # in `_process_grid` then silently DROPS the emission from the
-        # per-cell grid (only logged at DEBUG level), even though the
-        # per-movement CSV still shows the FOCA total. Filter the
-        # degenerate segment so the geometry stays a valid
-        # MultiLineString and reaches `_process_grid` intact.
+        # trajectory builder emits a duplicate GI point at the origin
+        # (start and end of the ground-idle phase share the same x=y=0
+        # coordinates). A MultiLineString with a zero-length component is
+        # `is_valid == False`, and `OutputModule._process_grid` runs
+        # `make_valid()` on the geometry, which collapses it into a
+        # GeometryCollection that the spatial allocation then drops.
         emissions_geo = []
         for start_point_, end_point_ in self._trajectory.getPointPairs(self._mode):
             seg = loads(
@@ -936,38 +933,117 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                     end_point_.getGeometryText(),
                 )
             )
-            # 2D length only — the GI duplicate pair shares (x, y)
-            # even if z differs, and the AUSTAL grid is 2D-indexed,
-            # so a degenerate 2D segment is what we want to skip.
+            # 2D length only: the GI duplicate pair shares (x, y) even if
+            # z differs, and the grid is 2D-indexed.
             if seg.length > 0.0:
                 emissions_geo.append(seg)
+
+        # Vertical limit and grid, as for fixed-wing flight segments: only
+        # the part of the climb or approach below the period's vertical
+        # limit (the mixing height) and inside the grid is kept, and the
+        # FOCA active-mode mass is scaled by the share of the mode's time
+        # spent on that part. Ground idle is at the ground and is kept.
+        retained = self._helicopter_active_retained(category, is_dep)
+        active_scale = 1.0
+        if retained is not None:
+            active_scale, kept_segments = retained
+            emissions_geo = [
+                LineString([q1, q2])
+                for q1, q2 in kept_segments
+                if LineString([q1, q2]).length > 0.0
+            ]
+        active_emissions = Emission(defaultValues=defaultEmissions)
+        active_emissions.add_from_mode_result(active, scale=active_scale)
+
+        flight_wkt = None
+        space_in_segment_ = 0.0
         if emissions_geo:
             entire_heli_geometry = MultiLineString(emissions_geo)
-            heli_emissions.setGeometryText(entire_heli_geometry.wkt)
+            flight_wkt = entire_heli_geometry.wkt
             space_in_segment_ = entire_heli_geometry.length
-        else:
-            # No usable trajectory segments. The per-movement CSV will
-            # still show the FOCA emission values but the grid
-            # apportionment skips this movement.
+
+        if gi_point_wkt is None and flight_wkt is None:
             logger.warning(
-                "Helicopter movement '%s' has no non-degenerate "
-                "trajectory segments; emissions will not be apportioned "
-                "to the AUSTAL grid. Check that "
+                "Helicopter movement '%s' has no trajectory geometry; "
+                "emissions will not be apportioned to the grid. Check that "
                 "TrajectoryTransformer.runway_alignment_for_helicopter "
-                "produced a trajectory with horizontal motion.",
+                "produced a trajectory.",
                 self._movement_name,
             )
-            space_in_segment_ = 0.0
+        elif gi_point_wkt is None:
+            # No ground-idle point to anchor to: keep everything on the
+            # flight path.
+            gi_emissions.setGeometryText(flight_wkt)
+            active_emissions.setGeometryText(flight_wkt)
+        elif flight_wkt is None:
+            logger.warning(
+                "Helicopter movement '%s' has no non-degenerate trajectory "
+                "segments; the whole emission is released at the take-off / "
+                "touchdown point.",
+                self._movement_name,
+            )
+            gi_emissions.setGeometryText(gi_point_wkt)
+            active_emissions.setGeometryText(gi_point_wkt)
+        else:
+            gi_emissions.setGeometryText(gi_point_wkt)
+            active_emissions.setGeometryText(flight_wkt)
 
-        time_in_segment_ = gi.time_s + active.time_s
+        gi_dict: EmissionsDict = {
+            "emissions": [gi_emissions],
+            "distance_time": float(gi.time_s),
+            "distance_space": 0.0,
+        }
+        active_dict: EmissionsDict = {
+            "emissions": [active_emissions],
+            "distance_time": float(active.time_s) * active_scale,
+            "distance_space": float(space_in_segment_),
+        }
+        # Chronological order: ground idle before take-off, after landing.
+        if is_dep:
+            emissions.extend([gi_dict, active_dict])
+        else:
+            emissions.extend([active_dict, gi_dict])
 
-        emissions.append(
-            {
-                "emissions": [heli_emissions],
-                "distance_time": float(time_in_segment_),
-                "distance_space": float(space_in_segment_),
-            }
+    def _helicopter_active_retained(self, category, is_dep: bool):
+        """(share of the active-mode time kept, kept flight segments) under
+        this period's vertical limit and grid bounds, or None when the
+        trajectory does not match the FOCA builder (nothing is cut then)."""
+        from open_alaqs.core.tools.foca_heli_trajectory import (
+            active_mode_retained,
+            build_arrival,
+            build_departure,
         )
+
+        max_height = self._limit.get("max_height")
+        if max_height is not None and self._limit.get("height_unit_in_feet", False):
+            max_height = conversion.convertFeetToMeters(max_height)
+        grid_bounds = self._limit.get("grid_bounds")
+
+        def _clip(p1, p2):
+            x1, y1, z1, x2, y2, z2, _ = spatial.clip_segment_to_grid(
+                *p1, *p2, grid_bounds
+            )
+            if x1 is None:
+                return None
+            return (x1, y1, z1), (x2, y2, z2)
+
+        local_pts = build_departure(category) if is_dep else build_arrival(category)
+        world_xyz = [pt.getCoordinates() for pt in self._trajectory.getPoints()]
+        try:
+            return active_mode_retained(
+                local_pts,
+                world_xyz,
+                max_height_m=max_height,
+                clip_2d=_clip if grid_bounds is not None else None,
+            )
+        except ValueError as exc:
+            logger.warning(
+                "Helicopter movement '%s': %s; vertical limit and grid not "
+                "applied to its flight path.",
+                self._movement_name,
+                exc,
+            )
+            return None
 
     def calculate_emissions_per_segment(
         self, start_point_: TrajectoryPoint, end_point_: TrajectoryPoint
