@@ -293,6 +293,20 @@ have been dropped (−63.76 kg CO₂).  The fix adds
 m`, and `compute_aircraft.compute_fixed_wing` now reads it once per
 movement and passes the result through the clip.
 
+### Segments crossing the vertical limit
+
+A segment with one endpoint below and one above the limit used to be
+counted whole: only the altitude of the upper endpoint was capped, so
+its full horizontal length entered distance, time and emissions. The
+plugin (`apply_height_limits`), the standalone and this reference now
+move the upper endpoint along the segment to where it meets the limit
+(altitude linear along the segment), so only the part below the limit
+counts. On the training fixture at 914.4 m every crossing segment lies
+outside the 50 × 50 grid, so the pinned plugin outputs are unchanged.
+Tests: `tests/test_height_limit_crossing_segment.py` (plugin) and
+`validation/tests/test_crossing_segment_standalone.py` (standalone =
+reference, also at a 300 m limit; analytic crossing distance).
+
 ### BFFM2 taxi ambient FF
 
 The plugin's `TaxiingEmissionCalculator` calls

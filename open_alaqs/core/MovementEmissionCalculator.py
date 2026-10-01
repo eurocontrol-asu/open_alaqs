@@ -1223,18 +1223,45 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 > limit["max_height"]
                 > end_point.getZ(unit_in_feet)
             ):
-                # make a copy of the point and modify height
+                # Segment crosses the ceiling, start above: move the start point
+                # along the segment to where it meets the ceiling (altitude assumed
+                # linear along the segment), so that only the part below the
+                # ceiling contributes distance, time and emissions. Previously only
+                # the altitude was clamped and the whole segment was counted.
+                z_hi = start_point.getZ(unit_in_feet)
+                z_lo = end_point.getZ(unit_in_feet)
+                f = (limit["max_height"] - z_lo) / (z_hi - z_lo)
                 start_point_ = AircraftTrajectoryPoint(start_point)
-                start_point_.setZ(limit["max_height"], unit_in_feet)
+                start_point_.setCoordinates(
+                    end_point.getX() + f * (start_point.getX() - end_point.getX()),
+                    end_point.getY() + f * (start_point.getY() - end_point.getY()),
+                    (
+                        limit["max_height"]
+                        if not unit_in_feet
+                        else conversion.convertFeetToMeters(limit["max_height"])
+                    ),
+                )
 
             elif (
                 start_point.getZ(unit_in_feet)
                 < limit["max_height"]
                 < end_point.getZ(unit_in_feet)
             ):
-                # make a copy of the point and modify height
-                end_point_ = AircraftTrajectoryPoint(end_point_)
-                end_point_.setZ(limit["max_height"], unit_in_feet)
+                # Segment crosses the ceiling, end above: move the end point to the
+                # crossing (see above).
+                z_lo = start_point.getZ(unit_in_feet)
+                z_hi = end_point.getZ(unit_in_feet)
+                f = (limit["max_height"] - z_lo) / (z_hi - z_lo)
+                end_point_ = AircraftTrajectoryPoint(end_point)
+                end_point_.setCoordinates(
+                    start_point.getX() + f * (end_point.getX() - start_point.getX()),
+                    start_point.getY() + f * (end_point.getY() - start_point.getY()),
+                    (
+                        limit["max_height"]
+                        if not unit_in_feet
+                        else conversion.convertFeetToMeters(limit["max_height"])
+                    ),
+                )
 
         return start_point_, end_point_
 

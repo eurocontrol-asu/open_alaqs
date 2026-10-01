@@ -698,8 +698,9 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         # Vertical clip: match the plugin's apply_height_limits
         # (MovementEmissionCalculator.py lines 1042-1078). Three cases:
         #   both endpoints above ceiling -> skip the segment entirely;
-        #   start above, end below       -> clamp start_z to ceiling;
-        #   start below, end above       -> clamp end_z   to ceiling.
+        #   start above, end below       -> start moved to the crossing;
+        #   start below, end above       -> end moved to the crossing
+        #   (see the crossing-segment block below).
         # The ceiling is max_height_m, the per-movement MixingHeight
         # from tbl_InvMeteo (with vertical_limit fallback). Both the
         # standalone and the plugin read MixingHeight; see the
@@ -712,15 +713,28 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         if z1 >= max_height_m - EPS_VERTICAL_M and z2 >= max_height_m - EPS_VERTICAL_M:
             segs_skip_v += 1
             continue
+        # Crossing segments: the endpoint above the ceiling is moved along the
+        # segment to the crossing (altitude linear along the segment), so only
+        # the part below the ceiling counts. Mirrors the plugin's
+        # apply_height_limits, which interpolates in EPSG:3857.
+        _cross = None
         if z1 > max_height_m > z2:
+            _cross = ("start", (max_height_m - z2) / (z1 - z2))
             z1 = max_height_m
         elif z1 < max_height_m < z2:
+            _cross = ("end", (max_height_m - z1) / (z2 - z1))
             z2 = max_height_m
         if mode1 not in engine_ei or tas1 + tas2 <= 0:
             continue
 
         p1 = _proj(x1, y1)
         p2 = _proj(x2, y2)
+        if _cross is not None:
+            _f = _cross[1]
+            if _cross[0] == "start":
+                p1 = (p2[0] + _f * (p1[0] - p2[0]), p2[1] + _f * (p1[1] - p2[1]))
+            else:
+                p2 = (p1[0] + _f * (p2[0] - p1[0]), p1[1] + _f * (p2[1] - p1[1]))
         clipped = geo.clip_segment_2d(p1, p2, ctx["grid_bounds"])
         if clipped is None:
             segs_skip_g += 1

@@ -32,7 +32,10 @@ For each fixed-wing movement:
 * Trajectory (TO/CL for D, AP for A) per segment:
     1. Vertical clip at 914.4 m, with 1e-6 m tolerance (matches the
        apply_height_limits ULP fix).  If both endpoints are at or above
-       the ceiling, the segment is dropped.
+       the ceiling, the segment is dropped.  If the segment crosses the
+       ceiling, the endpoint above it is moved along the segment to the
+       crossing (altitude linear along the segment), so only the part
+       below the ceiling counts.
     2. Runway-aligned projection of both endpoints to EPSG:3857:
        - ANP profile: geodesic forward projection of distance =
          sqrt(local_x^2 + local_y^2) from the runway-taxi-route
@@ -773,11 +776,26 @@ def _compute_fixed_wing(
         if z1 >= max_height_m - EPS_VERTICAL_M and z2 >= max_height_m - EPS_VERTICAL_M:
             segs_skip_v += 1
             continue
+        # Crossing segments: keep only the part below the ceiling. The
+        # endpoint above the ceiling is moved along the segment to the
+        # crossing (altitude linear along the segment), as the plugin's
+        # apply_height_limits does (interpolation in EPSG:3857).
+        _cross = None
+        if z1 > max_height_m > z2:
+            _cross = ("start", (max_height_m - z2) / (z1 - z2))
+        elif z1 < max_height_m < z2:
+            _cross = ("end", (max_height_m - z1) / (z2 - z1))
         if mode1 not in engine_ei or tas1 + tas2 <= 0:
             continue
 
         p1 = _proj(x1, y1)
         p2 = _proj(x2, y2)
+        if _cross is not None:
+            _f = _cross[1]
+            if _cross[0] == "start":
+                p1 = (p2[0] + _f * (p1[0] - p2[0]), p2[1] + _f * (p1[1] - p2[1]))
+            else:
+                p2 = (p1[0] + _f * (p2[0] - p1[0]), p1[1] + _f * (p2[1] - p1[1]))
         clipped = _clip_segment_2d(p1, p2, ctx["grid_bounds"])
         if clipped is None:
             segs_skip_g += 1
