@@ -761,6 +761,16 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             )
 
         seg_fuel = seg_time * seg_ff_amb * n_eng
+        # Plugin guard ("Bug #22" in MovementEmissionCalculator): under
+        # BFFM2, a segment whose start point has neither power nor fuel
+        # flow uses the Bymode emission indices (mode anchor). Piston and
+        # propeller ANP profiles often carry no power.
+        bymode_fallback = False
+        if method != "bymode":
+            _pw, _ffk = mv.get_trajectory_point_power_ff(
+                conn, mov["profile_id"], pt1[0]
+            )
+            bymode_fallback = _pw is None and _ffk is None
         # Compute this segment's emission into its own dict so the
         # per-segment record can carry it, then fold it into the
         # running movement total. The arithmetic is identical to
@@ -787,6 +797,8 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
                 )
                 if factor != 1.0:
                     seg_em["nox"] *= factor
+        elif bymode_fallback:
+            _add_em(seg_em, seg_fuel, eng)
         else:
             _bffm2_apply_segment(
                 seg_em, seg_ff_amb, seg_fuel, eng, icao_eedb, meteo, mach

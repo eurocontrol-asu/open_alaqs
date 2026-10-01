@@ -822,7 +822,17 @@ def _compute_fixed_wing(
             )
 
         seg_fuel = seg_time * seg_ff_amb * n_eng
-        if method == "bymode":
+        # Plugin guard ("Bug #22"): under BFFM2 a segment whose start point
+        # has neither power nor fuel flow uses the Bymode indices.
+        bymode_fallback = False
+        if method != "bymode":
+            _row = conn.execute(
+                "SELECT power, fuel_flow_kgm FROM default_aircraft_profiles "
+                "WHERE profile_id=? AND point=?",
+                (mov["profile_id"], pt1[0]),
+            ).fetchone()
+            bymode_fallback = _row is None or (_row[0] is None and _row[1] is None)
+        if method == "bymode" or bymode_fallback:
             _add_em(em, seg_fuel, eng)
         else:
             _bffm2_apply_segment(em, seg_ff_amb, seg_fuel, eng, icao_eedb, meteo, mach)
