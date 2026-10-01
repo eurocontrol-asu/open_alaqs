@@ -1,9 +1,10 @@
 import time
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any, Optional, Union
 
 
-# For time conversions: Use UTC time only
+# Time conversions: naive time strings are local machine time throughout
+# (convertTimeToSeconds, convertSecondsToTime, convertSecondsToDateTime).
 def convertToFloat(value: Any, default: Optional[float] = None) -> Optional[float]:
     """
     Convert value to a float or if not possible return a default value.
@@ -91,14 +92,19 @@ def convertToInt(value: Any, default: Optional[int] = None) -> Optional[int]:
 
 def convertSecondsToTime(value: float) -> Union[time.struct_time, None]:
     """
-    Convert a timestamp in seconds to a timestamp as string.
+    Convert a timestamp in seconds to a time tuple in local machine time.
+
+    This is the inverse of ``convertTimeToSeconds``, which reads naive time
+    strings as local machine time (as the calculation's period boundaries
+    do). Formatting in UTC instead shifted movement names and log lines by
+    the machine's UTC offset (issue #110).
 
     :param value:
     :return:
     """
     if value is None:
         return None
-    return datetime.fromtimestamp(int(value), UTC).utctimetuple()
+    return datetime.fromtimestamp(int(value)).timetuple()
 
 
 def convertStringToTime(value: str, format_="%Y-%m-%d %H:%M:%S") -> Union[tuple, None]:
