@@ -419,6 +419,16 @@ class MovementSourceModule(SourceModule):
                 if df.loc[idx]["Sources"].getTaxiRoute() is not None
                 else ""
             ),
+            # Movements without an engine object (helicopters: their engine
+            # lives on the Helicopter object, not in engine_store) have
+            # engine == "" (see above), so without this key every such type
+            # sharing profile, runway and taxi route falls into one group and
+            # gets the first member's emissions (e.g. an R44 piston receiving
+            # AS350 turboshaft values). Empty when an engine exists, so
+            # fixed-wing groups are unchanged.
+            lambda idx: (
+                df.loc[idx]["aircraft"] if df.loc[idx]["engine"] == "" else ""
+            ),
         ]
         for grouped_values, group in df[relevant_movements].groupby(flight_columns):
 
