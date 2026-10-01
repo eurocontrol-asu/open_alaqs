@@ -6,6 +6,36 @@ ISO 8601.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Trajectory segments crossing the vertical limit (mixing height) now count
+  only their part below it**, in the plugin (`apply_height_limits`), the
+  standalone and the CAEP14 reference. Previously only the upper endpoint's
+  altitude was capped and the whole segment was counted. This changes results
+  for every study with trajectories crossing the limit (lower emissions;
+  departures most affected). Re-baselined: `test_zz_bymode_analytical_regression`
+  (NOx 23.4860 → 23.4703 kg) and the ANP expected CSV.
+- Helicopter movements of different types sharing a profile, runway and taxi
+  route no longer receive the first member's emissions
+  (`MovementSourceModule` grouping key includes the aircraft type when the
+  movement has no engine object).
+- Movement names and log lines show the input (local) time; they were shifted
+  by the machine's UTC offset (`conversion.convertSecondsToTime`). Numbers are
+  unaffected.
+- Standalone: engine lookup uses `engine_name` as the plugin does, falling back
+  to `engine_full_name` only when `engine_name` is empty. Study databases whose
+  `engine_full_name` differs from `engine_name` had their movements dropped.
+- Standalone and CAEP14 reference: BFFM2 segments whose start point has no
+  power and no fuel flow use Bymode indices, as the plugin does (Bug #22 guard).
+
+### Tests
+
+- ANP expected CSV regenerated with the current pipeline (HC column was stale
+  since 5.1.2); the two strict xfails in `TestANPEmissions` are removed.
+- New: `test_height_limit_crossing_segment`, `test_zz_helicopter_grouping_regression`,
+  `test_time_conversion_timezone`, `test_zz_bffm2_missing_power_parity`,
+  standalone `test_engine_lookup_regression` and `test_crossing_segment_standalone`.
+
 ## [5.3.0] - 2026-08-04
 
 Engine-test emissions add-on. Adds a new mechanism for representing
