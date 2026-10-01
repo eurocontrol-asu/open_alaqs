@@ -196,20 +196,22 @@ def test_bymode_grand_totals_match_anchor_math(tmp_path):
                         grand_totals[key] += v
 
     # Plugin-reported grand totals (known good after gate fix):
-    # CO = 21.9661, HC = 1.2340, NOx = 23.4860, fuel (CO2/3.16) = 1742.80
+    # CO = 21.9658, HC = 1.2340, NOx = 23.4703, fuel (CO2/3.16) = 1741.61
+    # (crossing segments clipped at the vertical limit; previously counted
+    # whole: CO 21.9661, NOx 23.4860, fuel 1742.80)
     assert (
-        abs(grand_totals["co_kg"] - 21.9661) < 0.001
-    ), f"bymode CO grand total drifted: got {grand_totals['co_kg']:.4f}, expected 21.9661"
+        abs(grand_totals["co_kg"] - 21.9658) < 0.001
+    ), f"bymode CO grand total drifted: got {grand_totals['co_kg']:.4f}, expected 21.9658"
     assert (
         abs(grand_totals["hc_kg"] - 1.2340) < 0.001
     ), f"bymode HC grand total drifted: got {grand_totals['hc_kg']:.4f}, expected 1.2340"
     assert (
-        abs(grand_totals["nox_kg"] - 23.4860) < 0.01
-    ), f"bymode NOx grand total drifted: got {grand_totals['nox_kg']:.4f}, expected 23.4860"
+        abs(grand_totals["nox_kg"] - 23.4703) < 0.01
+    ), f"bymode NOx grand total drifted: got {grand_totals['nox_kg']:.4f}, expected 23.4703"
     fuel_from_co2 = grand_totals["co2_kg"] / 3.16
     assert (
-        abs(fuel_from_co2 - 1742.80) < 0.1
-    ), f"bymode fuel (from CO2) drifted: got {fuel_from_co2:.2f}, expected 1742.80"
+        abs(fuel_from_co2 - 1741.61) < 0.1
+    ), f"bymode fuel (from CO2) drifted: got {fuel_from_co2:.2f}, expected 1741.61"
 
 
 def test_bffm2_trajectory_default_matches_prefix_a_behavior(tmp_path):
