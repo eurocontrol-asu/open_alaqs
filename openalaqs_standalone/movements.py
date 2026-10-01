@@ -442,7 +442,12 @@ def get_engine_ei(conn: sqlite3.Connection, engine_name: str) -> dict:
     dict with `ff` (fuel flow, kg/s/engine) and the five `*_ei`
     emission indices (g/kg). NULL emission indices are coerced to 0.0.
 
-    The match is exact on `engine_full_name`. The earlier LIKE
+    The match is exact and mirrors the plugin's key
+    (`EngineEmissionIndicesDatabase.initEmissionIndices`): `engine_name`,
+    or `engine_full_name` for rows whose `engine_name` is empty. Matching
+    on `engine_full_name` alone silently dropped every movement whose
+    engine table carries the real designation in `engine_full_name`
+    (e.g. "CFM56-7B26" for engine "3CM033"). The earlier LIKE
     `%engine_name%` pattern was incorrect: short engine names that are
     substrings of longer ones (e.g. "FOI-3" inside FOI-30..FOI-39,
     "FOI-1" inside FOI-10..FOI-199, "ECTL_1" inside ECTL_10..ECTL_19)
@@ -458,9 +463,11 @@ def get_engine_ei(conn: sqlite3.Connection, engine_name: str) -> dict:
     for r in conn.execute(
         """
         SELECT mode, fuel_kg_sec, co_ei, hc_ei, nox_ei, sox_ei, pm10_ei
-        FROM default_aircraft_engine_ei WHERE engine_full_name = ?
+        FROM default_aircraft_engine_ei
+        WHERE engine_name = ?
+           OR ((engine_name IS NULL OR engine_name = '') AND engine_full_name = ?)
         """,
-        (engine_name,),
+        (engine_name, engine_name),
     ):
         result[r[0]] = {
             "ff": r[1],
