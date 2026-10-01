@@ -4,6 +4,7 @@ This class provides GeoTransformations.
 
 import abc
 import math
+from typing import Optional
 
 from qgis.core import (
     QgsCoordinateTransform,
@@ -13,6 +14,7 @@ from qgis.core import (
     QgsPoint,
     QgsPointXY,
     QgsPolygon,
+    QgsWkbTypes,
 )
 from shapely.geometry import LineString
 
@@ -314,6 +316,13 @@ class SmoothAndShiftTransformer(GeoTransformation):
         for emissions_dict in emissions_dict_list:
             for emission in emissions_dict["emissions"]:
                 tx_geom = QgsGeometry.fromWkt(emission.getGeometryText())
+                if tx_geom.type() == QgsWkbTypes.PointGeometry:
+                    # Point releases (e.g. helicopter ground idle at the
+                    # helipad) have no segment to widen: keep the point and
+                    # set a zero-thickness vertical extent at its height.
+                    z = tx_geom.constGet().z() if tx_geom.constGet().is3D() else 0.0
+                    emission.setVerticalExtent({"z_min": z, "z_max": z})
+                    continue
                 seg_points = spatial.get_line_vertices(tx_geom)
 
                 all_tx_polygons = []
@@ -754,7 +763,9 @@ class TrajectoryTransformer:
 
         return runway_backup_point, runway_target_point, runway_azimuth_deg
 
-    def runway_alignment_for_helicopter(self, category_str: str):
+    def runway_alignment_for_helicopter(
+        self, category_str: str, origin_3857: Optional[QgsPointXY] = None
+    ):
         """Build a runway-aligned FOCA helicopter LTO trajectory.
 
         Replaces the legacy HELIPROF-based path for helicopters: instead of
@@ -768,6 +779,11 @@ class TrajectoryTransformer:
         :param category_str: FOCA helicopter category string. One of
             'PISTON', 'SINGLE_TURBOSHAFT', 'TWIN_TURBOSHAFT_LIGHT',
             'TWIN_TURBOSHAFT_HEAVY'. Coming from Helicopter.getCategory().
+        :param origin_3857: optional take-off / touchdown spot (EPSG:3857),
+            normally the centroid of the movement's gate (the helipad).
+            When given it replaces the runway end as the world origin;
+            the walk direction still follows the runway heading. When
+            None (no gate), the runway end is used as before.
         :return: AircraftTrajectory with points in the project CRS
             (EPSG:3857). Returns None if inputs are invalid.
 
@@ -779,7 +795,9 @@ class TrajectoryTransformer:
             For ARRIVAL: trajectory's local x=0 is the touchdown point
             (active end of runway). Local +x is the direction OPPOSITE to
             motion (back along the approach path). World origin = target_point.
-            World walk azimuth = (runway_azimuth + 180) % 360.
+            World walk azimuth = runway_azimuth, which for an arrival is the
+            bearing from the opposite end to the active end, i.e. against
+            the landing direction.
         """
         if self._runway is None:
             logger.error(
@@ -850,7 +868,16 @@ class TrajectoryTransformer:
             walk_azimuth_deg = runway_azimuth_deg
         else:
             origin_projected = target_point
-            walk_azimuth_deg = (runway_azimuth_deg + 180.0) % 360.0
+            # runway_azimuth_deg is the bearing from the opposite end to the
+            # active end, i.e. AGAINST the landing direction: exactly the
+            # direction of local +x (back along the approach path). Adding
+            # 180 degrees put the approach on the far side of the runway
+            # (a runway-24 arrival came in from the south-west, flying 060).
+            walk_azimuth_deg = runway_azimuth_deg
+        if origin_3857 is not None:
+            # Helipad operation: take off from / land on the movement's
+            # gate instead of the runway end, along the runway heading.
+            origin_projected = QgsPointXY(origin_3857)
         origin_geographic = coord_tr.transform(origin_projected)
         walk_azimuth_rad = math.radians(walk_azimuth_deg)
 

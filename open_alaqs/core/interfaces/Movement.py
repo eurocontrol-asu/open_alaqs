@@ -415,6 +415,21 @@ class Movement:
     def getTrajectoryAtRunway(self):
         return self._trajectory_at_runway
 
+    def _helipad_origin_3857(self):
+        """Centroid (EPSG:3857) of the movement's gate, or None.
+
+        Used as the take-off / touchdown spot of a helicopter movement: a
+        helicopter assigned to a gate operates from that helipad instead
+        of the runway end.
+        """
+        gate = self.getGate()
+        if gate is None or not gate.getGeometryText():
+            return None
+        geom = QgsGeometry.fromWkt(gate.getGeometryText())
+        if geom.isNull() or geom.isEmpty():
+            return None
+        return geom.centroid().asPoint()
+
     def updateTrajectoryAtRunway(self):
         from open_alaqs.core.GeoTransformation import TrajectoryTransformer
 
@@ -446,7 +461,9 @@ class Movement:
                         self.getRunwayDirection(),
                         self.getTaxiRoute(),
                         self.getDepartureArrivalFlag(),
-                    ).runway_alignment_for_helicopter(category_str)
+                    ).runway_alignment_for_helicopter(
+                        category_str, origin_3857=self._helipad_origin_3857()
+                    )
                 )
                 return
 
@@ -1093,6 +1110,25 @@ class MovementStore(Store, metaclass=Singleton):
             #         )
             #         eq_mdf.loc[indices, "taxi_route"] = np.nan
 
+        # Helicopters never taxi, whatever the taxi route column holds: a
+        # helicopter at a helipad gate would otherwise keep the rebuilt
+        # 'gate/runway/D|A/1' route (when it exists) and reach the fixed-wing
+        # TaxiingEmissionCalculator, which fails on a Helicopter object. Give
+        # every helicopter row a sentinel instead (never found in
+        # taxi_route_store, so the movement's taxi route is None). The
+        # sentinel carries the gate and the FOCA category because the runway
+        # trajectory below is computed once per (runway, direction,
+        # taxi_route, profile, track) group: helicopters at different
+        # helipads, or of different categories, need different trajectories.
+        heli_rows = mdf["aircraft"].apply(helicopter_store.hasIdentifier)
+        for ix in mdf.index[heli_rows]:
+            gte = eq_mdf.loc[ix, "gate"]
+            helipad = "HELIPAD" + (f"@{gte}" if isinstance(gte, str) and gte else "")
+            category = helicopter_store.getByIdentifier(
+                mdf.loc[ix, "aircraft"]
+            ).getCategory()
+            eq_mdf.loc[ix, "taxi_route"] = f"{helipad}#{category}"
+
         # Check if track exist in the database
         if stage_1:
             stage_1.nextValue()
@@ -1311,6 +1347,9 @@ class MovementStore(Store, metaclass=Singleton):
                 _proxy0.setRunwayDirection(fm0["runway_direction"])
                 _proxy0.setTrack(track_store.getObject(fm0["track_id"]))
                 _proxy0.setTaxiRoute(taxi_route_store.getObject(fm0["taxi_route"]))
+                # The gate is the helipad origin of a helicopter trajectory
+                # (see updateTrajectoryAtRunway); unused for fixed-wing.
+                _proxy0.setGate(gate_store.getObject(fm0["gate"]))
                 _proxy0.setTrajectory(trajectory_store.getObject(fm0["profile_id"]))
                 _raw_t0 = mdf.loc[first_idx, "runway_time"]
                 if isinstance(_raw_t0, str):

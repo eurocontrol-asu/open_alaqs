@@ -309,7 +309,7 @@ def compute_for_movement(
         # Helicopter: FOCA Appendix A, method-independent. The
         # reference's helicopter result has no `method` key; add it
         # here so the result shape is uniform across aircraft types.
-        result = _ch.compute_helicopter(conn, mov)
+        result = _ch.compute_helicopter(conn, mov, ctx)
         if result is not None:
             result["method"] = method
     else:
