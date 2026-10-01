@@ -6,6 +6,11 @@ ISO 8601.
 
 ## [Unreleased]
 
+## [5.3.1] - 2026-10-01
+
+Bug-fix release. Computed results change for studies with trajectories
+crossing the vertical limit (see the first item under Fixed).
+
 ### Fixed
 
 - **Trajectory segments crossing the vertical limit (mixing height) now count
