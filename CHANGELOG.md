@@ -6,6 +6,30 @@ ISO 8601.
 
 ## [Unreleased]
 
+## [5.3.3] - 2026-10-05
+
+Bug-fix release for the standalone. Plugin results are unchanged.
+
+### Fixed
+
+- Standalone: `gate_emissions_code = 0` now suppresses a departure's
+  engine-start emissions, as the plugin does
+  (`_apply_start_engine_emissions`). The standalone added them for every
+  departure, so standalone HC was higher than the plugin's on such
+  departures (start emissions are HC only). NULL, blank and unparseable
+  codes count as 1, as in the plugin.
+
+### Changed
+
+- The standalone's version now follows the plugin release:
+  `openalaqs_standalone.__version__` and `pyproject.toml` are both 5.3.3
+  (they were 0.9.0 and 0.8.0).
+
+### Tests
+
+- New: `test_zz_gate_code_start_parity` (plugin = standalone with the code
+  set to 0) and standalone `test_start_gate_code`.
+
 ## [5.3.2] - 2026-10-01
 
 Bug-fix release for helicopter movements. Computed helicopter results

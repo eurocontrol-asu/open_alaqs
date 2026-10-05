@@ -91,4 +91,5 @@ GeoPackage outputs exist, and a single `austal --include-aircraft`
 run produces the combined stationary + aircraft AUSTAL input.
 """
 
-__version__ = "0.9.0"
+# Follows the OpenALAQS plugin release (open_alaqs/metadata.txt).
+__version__ = "5.3.3"
