@@ -11,6 +11,9 @@ taxi-out phase. Per the plugin:
     NOT call _apply_start_engine_emissions; only the _for_departure
     counterpart (line 539, calling at line 573) does. Engines do not
     start on arrival.
+  - Not when the movement's gate_emissions_code is 0: the plugin's
+    _apply_start_engine_emissions returns early for such a movement,
+    as its gate calculator does for GSE and GPU.
   - Spatial placement is the first taxi segment (index_segment == 0)
     of the taxi-out route. The standalone follows its existing
     convention of lumping all stationary aircraft emissions (taxi,
@@ -105,6 +108,20 @@ def get_aircraft_groups_and_engines(conn: sqlite3.Connection) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _gate_emissions_suppressed(code) -> bool:
+    """True when a movement's gate_emissions_code is 0.
+
+    Mirrors the plugin's Movement.__init__: NULL, blank and unparseable
+    values default to 1 (include).
+    """
+    if code is None or (isinstance(code, str) and code.strip() == ""):
+        return False
+    try:
+        return int(code) == 0
+    except (TypeError, ValueError):
+        return False
+
+
 def compute_start_emissions_for_movement(
     conn: sqlite3.Connection,
     mov: dict,
@@ -119,6 +136,10 @@ def compute_start_emissions_for_movement(
       - mov["departure_arrival"] is not 'D' (arrivals never start
         engines; the plugin's arrival handler does not call
         _apply_start_engine_emissions),
+      - mov["gate_emissions_code"] is 0 (the plugin's
+        _apply_start_engine_emissions returns early when the code is
+        0; NULL, blank or unparseable codes count as 1, as in the
+        plugin's Movement.__init__),
       - the aircraft ICAO has no row in default_aircraft,
       - the aircraft's ac_group is NULL (helicopters detected via
         get_aircraft_group returning None elsewhere also land here),
@@ -138,6 +159,11 @@ def compute_start_emissions_for_movement(
 
     # Arrivals: plugin's arrival handler never adds start emissions.
     if mov.get("departure_arrival") != "D":
+        return dict(zero)
+
+    # gate_emissions_code 0 suppresses the start emissions, as it does
+    # the GSE and GPU ones (plugin: _apply_start_engine_emissions).
+    if _gate_emissions_suppressed(mov.get("gate_emissions_code")):
         return dict(zero)
 
     if aircraft_groups is None:
