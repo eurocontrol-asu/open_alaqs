@@ -9,7 +9,7 @@ qgisMaximumVersion=4.99
 supportsQt6=True
 description=An open-source local air quality model
 
-version=5.3.2
+version=5.3.3
 author=Eurocontrol
 email=open-alaqs@eurocontrol.int
 
@@ -23,9 +23,10 @@ repository=https://gitlab.aerlabs.nl/eurocontrol/open_alaqs
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-changelog=5.3.2
-    Bug-fix release for helicopter movements. Helicopter results change: climb and approach are cut at the vertical limit (mixing height) and the grid, as fixed-wing segments are; arrivals are placed on the approach side. Fixed-wing movements and stationary sources are unchanged.
-    Fixed: helicopter movements with a gate no longer stop the calculation; the FOCA half-LTO starts or ends at the gate (helipad) and ground idle is released there as a point. Helicopter arrivals come in along the approach. AUSTAL output keeps point emissions of movements. Standalone: same placement, arrival direction and vertical cut as the plugin.
+changelog=5.3.3
+    Bug-fix release for the standalone; plugin results are unchanged.
+    Fixed (standalone): gate_emissions_code 0 suppresses a departure's engine-start emissions, as in the plugin.
+    Changed: the standalone's version follows the plugin release (5.3.3).
     See CHANGELOG.md for details.
 
 # Tags are comma separated with spaces allowed
