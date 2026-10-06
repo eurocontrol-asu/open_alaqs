@@ -334,8 +334,9 @@ def build_aircraft_austal_tables(
     for ix, iy, iz in zip(occupied["ix"], occupied["iy"], occupied["iz"]):
         ix_i, iy_i, iz_i = int(ix), int(iy), int(iz)
         # Guard against an iz that somehow exceeds the sk range; in
-        # practice _iz_layer_fractions clamps to top layer so this
-        # is defensive only.
+        # practice _iz_layer_fractions clamps below-ground heights to
+        # layer 0 and above-top heights to the top layer, so this is
+        # defensive only.
         if iz_i < 0 or iz_i >= n_layers:
             iz_i = max(0, min(iz_i, n_layers - 1))
         sid = cell_source_id(ix_i, iy_i, iz_i)

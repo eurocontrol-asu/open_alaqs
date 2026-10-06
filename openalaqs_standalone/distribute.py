@@ -592,6 +592,12 @@ def _iz_layer_fractions(z1: float, z2: float, sk: list) -> dict:
     Edge cases:
       - z1 == z2: places the entire fraction in the single layer
         containing that altitude (degenerate ground-only segment).
+      - z below 0 (below ground): clamped to 0, so the share goes to
+        the ground layer. ADS-B (CUSTOM) profiles carry heights relative
+        to MSL, so at an airport below sea level their ground-roll points
+        are negative; without the clamp a segment with both ends at or
+        below 0 had no overlap with any layer and fell through to the
+        top-layer fallback below.
       - z value at or above sk[-1]: caller is expected to have
         clipped these out already (compute_aircraft.py drops segments
         whose both endpoints are above max_height_m). For defensive
@@ -603,8 +609,9 @@ def _iz_layer_fractions(z1: float, z2: float, sk: list) -> dict:
     n_layers = len(sk) - 1
     if not sk or n_layers < 1:
         return {0: 1.0}
-    z_lo = min(z1, z2)
-    z_hi = max(z1, z2)
+    # Below-ground heights belong to the ground layer (see Edge cases).
+    z_lo = max(0.0, min(z1, z2))
+    z_hi = max(0.0, max(z1, z2))
     extent = z_hi - z_lo
     if extent <= 0.0:
         # Point altitude: find the layer it falls in.
@@ -621,7 +628,8 @@ def _iz_layer_fractions(z1: float, z2: float, sk: list) -> dict:
         if overlap > 0.0:
             fractions[iz] = overlap / extent
     if not fractions:
-        # Both endpoints above top of sk: dump in top layer.
+        # Both endpoints at or above the top of sk: dump in top layer.
+        # (Below-ground segments no longer reach here: clamped above.)
         fractions[n_layers - 1] = 1.0
     # Normalise to remove floating-point drift so the apportionment
     # conserves the segment mass exactly.
