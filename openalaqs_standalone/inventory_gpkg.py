@@ -128,8 +128,7 @@ def _init_gpkg(
     GeoPackage. We do not write rtree spatial indexes — the cells are
     100x100 and a full scan is fast enough that the index buys nothing.
     """
-    conn.executescript(
-        """
+    conn.executescript("""
         PRAGMA application_id = 0x47504B47;
         PRAGMA user_version   = 10300;
 
@@ -162,8 +161,7 @@ def _init_gpkg(
             m TINYINT NOT NULL,
             CONSTRAINT fk_gc_srs FOREIGN KEY (srs_id) REFERENCES gpkg_spatial_ref_sys(srs_id)
         );
-        """
-    )
+        """)
 
     # WGS 84 and 'undefined' rows are mandated by the GPKG spec;
     # we add ours after.
