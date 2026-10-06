@@ -1147,7 +1147,7 @@ def distribute_to_grid(  # noqa: C901 — top-level spatial+temporal distributio
                                 continue
                             try:
                                 geom_row = conn.execute(
-                                    "SELECT geometry FROM shapes_taxiways "
+                                    "SELECT geometry, speed FROM shapes_taxiways "
                                     "WHERE taxiway_id=?",
                                     (tid,),
                                 ).fetchone()
@@ -1177,16 +1177,40 @@ def distribute_to_grid(  # noqa: C901 — top-level spatial+temporal distributio
                                     grid_bounds,
                                     grid_definition,
                                 )
+                            try:
+                                seg_speed = float(geom_row[1] or 0.0)
+                            except (TypeError, ValueError):
+                                seg_speed = 0.0
                             segments_data.append(
                                 {
                                     "tid": tid,
                                     "length": seg_geom.length,
+                                    "speed": seg_speed,
                                     "fracs": seg_fracs,
                                 }
                             )
                     route_segments_cache[_cache_key] = segments_data
 
                 total_seg_length = sum(s["length"] for s in segments_data)
+
+                # Share of the natural taxi emission per segment, as the
+                # plugin (MovementEmissionCalculator, taxi loop): when the
+                # movement's taxi time exceeds the route's own time
+                # (queuing), each segment is driven at its own speed, so its
+                # share is its time, length / speed; otherwise every segment
+                # is driven at the route's average speed, i.e. its share is
+                # its length. Totals are unchanged; only the split between
+                # segments differs when speeds differ.
+                seg_shares = None
+                if segments_data and total_seg_length > 0:
+                    seg_shares = [s["length"] / total_seg_length for s in segments_data]
+                    if (res.get("queuing_time_s") or 0.0) > 0.0 and all(
+                        (s.get("speed") or 0.0) > 0.0 for s in segments_data
+                    ):
+                        _t = [s["length"] / s["speed"] for s in segments_data]
+                        _tt = sum(_t)
+                        if _tt > 0.0:
+                            seg_shares = [x / _tt for x in _t]
 
                 # --- TAXI + APU + START + QUEUE + STOP + BRAKE_WEAR per-segment placement. ---
                 # Mass split per the plugin
@@ -1220,7 +1244,7 @@ def distribute_to_grid(  # noqa: C901 — top-level spatial+temporal distributio
                 if segments_data and total_seg_length > 0:
                     last_idx = len(segments_data) - 1
                     for idx, seg in enumerate(segments_data):
-                        length_frac = seg["length"] / total_seg_length
+                        length_frac = seg_shares[idx]
                         # Per-source contributions for this segment (full,
                         # before cell-fraction split). Kept separate so the
                         # diagnostic can record each kind individually.
