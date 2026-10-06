@@ -68,11 +68,17 @@ def _austal_sk_overlap_layers(z_min, z_max, sk=AUSTAL_DEFAULT_SK):
     with non-zero overlap.
 
     sk has 20 boundaries -> 19 layers indexed 0..18. Layer k spans
-    [sk[k], sk[k+1]). The fractions sum to 1 for sources fully inside
+    [sk[k], sk[k+1]). The fractions sum to 1 for sources inside
     [sk[0], sk[-1]], and to less than 1 for sources extending beyond
-    the AUSTAL ceiling (sk[-1] = 1500 m) or below ground (sk[0] = 0 m).
-    Above-ceiling segments are clipped, not redistributed, matching
-    AUSTAL's own behaviour for releases above the computation grid.
+    the AUSTAL ceiling (sk[-1] = 1500 m). Above-ceiling segments are
+    clipped, not redistributed, matching AUSTAL's own behaviour for
+    releases above the computation grid.
+
+    Heights below ground (z < 0) are clamped to 0 and so belong to the
+    ground layer. ADS-B (CUSTOM) profiles carry heights relative to MSL
+    (the importer uses reference altitude 0), so at an airport below sea
+    level their ground roll lies at z < 0. Clipping it, as before, removed
+    those emissions from the AUSTAL input altogether.
 
     Point releases (z_min == z_max) return a single layer (k, 1.0)
     where sk[k] <= z_min < sk[k+1]. A source exactly at z = sk[-1]
@@ -86,6 +92,9 @@ def _austal_sk_overlap_layers(z_min, z_max, sk=AUSTAL_DEFAULT_SK):
     """
     if z_min > z_max:
         z_min, z_max = z_max, z_min
+    # Below-ground heights belong to the ground layer (see docstring).
+    z_min = max(0.0, z_min)
+    z_max = max(0.0, z_max)
 
     n_layers = len(sk) - 1
 

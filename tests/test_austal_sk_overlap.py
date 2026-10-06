@@ -68,16 +68,21 @@ def test_above_ceiling_is_clipped_not_redistributed():
     assert sum(f for _, f in got) < 1.0
 
 
-def test_segment_below_ground_is_clipped():
-    """Negative z_min is clipped at 0. -10 to 5 m gives only the
-    0-3 m and 3-5 m overlaps."""
+def test_segment_below_ground_is_clamped():
+    """Negative z is clamped to 0, so the below-ground part goes to the
+    ground layer. -10 to 5 m is treated as 0 to 5 m: 3/5 in layer 0
+    (0-3 m) and 2/5 in layer 1 (3-5 m). Fractions sum to 1."""
     got = dict(_austal_sk_overlap_layers(-10, 5))
-    extent = 5 - (-10)  # 15
-    assert got == {
-        0: 3 / extent,  # 0-3 m
-        1: 2 / extent,  # 3-5 m
-    }
-    assert sum(got.values()) < 1.0
+    assert got == {0: 3 / 5, 1: 2 / 5}
+    assert abs(sum(got.values()) - 1.0) < 1e-12
+
+
+def test_below_ground_goes_to_ground_layer():
+    """ADS-B ground roll at an airport below sea level (EHRD, -15 ft):
+    flat and sloped segments at or below 0 m land in layer 0 instead of
+    being dropped."""
+    for z_min, z_max in ((-4.572, -4.572), (-0.9, -4.6), (-4.572, 0.0)):
+        assert _austal_sk_overlap_layers(z_min, z_max) == [(0, 1.0)]
 
 
 def test_reversed_inputs_normalized():
