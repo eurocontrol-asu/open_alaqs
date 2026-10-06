@@ -113,12 +113,12 @@ def get_sql_serializable_registry(file_type: str) -> list:
         UserMonthProfileDatabase,
     ]
     # Per-template extras: project-only and inventory-only tables.
-    # engine_test_events lives in the project template (it holds user-editable
-    # test-run event definitions), not in the inventory template (inventory
-    # holds computed emissions, no event tables).
+    # engine_test_events is edited in the project and copied into the
+    # inventory by Create Output, because EngineTestSourceModule reads the
+    # events from the inventory being calculated.
     template_specific = {
         "project": [EngineTestEventsDatabase],
-        "inventory": [],
+        "inventory": [EngineTestEventsDatabase],
     }
     return shared + template_specific[file_type]
 
