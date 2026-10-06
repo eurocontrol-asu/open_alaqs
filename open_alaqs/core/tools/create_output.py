@@ -114,6 +114,7 @@ def create_alaqs_output(inventory_path, model_parameters, study_setup, met_csv_p
     inventory_copy_aircraft_profiles(inventory_path)
     inventory_copy_taxiway_routes(inventory_path)
     inventory_copy_emission_dynamics(inventory_path)
+    inventory_copy_engine_test_events(inventory_path)
     inventory_copy_study_setup(inventory_path)
 
     # Set the tables to copy
@@ -664,6 +665,75 @@ def inventory_copy_vector_layers(inventory_path):
         return error_msg
     finally:
         conn.close()
+
+
+ENGINE_TEST_EVENTS_TABLE = "engine_test_events"
+
+
+@catch_errors
+def inventory_copy_engine_test_events(inventory_path):
+    """
+    Copy the engine test events of the active project into the output file.
+
+    ``EngineTestSourceModule`` reads the events from the database being
+    calculated (the ``*_out.alaqs``), so without this copy every engine test
+    site of a study computes to zero.
+
+    The table is created in the output file from the project's own
+    definition when it is missing (output files built from an older
+    inventory template). Rows are copied by column name. A project without
+    the table (not yet migrated) is skipped with a log line.
+
+    :param inventory_path: path to the alaqs output file
+    """
+    src_db_path = alaqsdblite.ProjectDatabase().path
+    with sqlite.connect(src_db_path) as src_conn:
+        row = src_conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
+            (ENGINE_TEST_EVENTS_TABLE,),
+        ).fetchone()
+        if row is None:
+            logger.info(
+                "[-] No %s table in the project; no engine test events copied "
+                "(run scripts/migrate_alaqs.py on older studies)",
+                ENGINE_TEST_EVENTS_TABLE,
+            )
+            return
+        create_sql = row[0]
+        src_cols = [
+            r[1]
+            for r in src_conn.execute(
+                f'PRAGMA table_info("{ENGINE_TEST_EVENTS_TABLE}")'
+            )
+        ]
+        conn = sqlite.connect(inventory_path)
+        try:
+            cur = conn.cursor()
+            exists = cur.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                (ENGINE_TEST_EVENTS_TABLE,),
+            ).fetchone()
+            if not exists:
+                cur.execute(create_sql)
+            dst_cols = [
+                r[1]
+                for r in cur.execute(f'PRAGMA table_info("{ENGINE_TEST_EVENTS_TABLE}")')
+            ]
+            common_cols = [c for c in dst_cols if c in src_cols]
+            col_list_sql = ", ".join(f'"{c}"' for c in common_cols)
+            rows = src_conn.execute(
+                f'SELECT {col_list_sql} FROM "{ENGINE_TEST_EVENTS_TABLE}"'
+            ).fetchall()
+            if rows:
+                cur.executemany(
+                    f'INSERT INTO "{ENGINE_TEST_EVENTS_TABLE}" ({col_list_sql}) '
+                    f'VALUES ({",".join("?" * len(common_cols))})',
+                    rows,
+                )
+            conn.commit()
+        finally:
+            conn.close()
+    logger.info("[+] Copied %d engine test events", len(rows))
 
 
 @catch_errors
