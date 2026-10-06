@@ -61,8 +61,7 @@ def _make_db_with_both_tables(area_rows, event_rows, include_is_test_site=True):
             list(r.values()),
         )
 
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE engine_test_events (
             event_id INTEGER PRIMARY KEY AUTOINCREMENT,
             source_id TEXT NOT NULL,
@@ -79,8 +78,7 @@ def _make_db_with_both_tables(area_rows, event_rows, include_is_test_site=True):
             thrust_mode TEXT NOT NULL DEFAULT 'snap',
             instudy TEXT NOT NULL DEFAULT '1'
         )
-        """
-    )
+        """)
     for r in event_rows:
         cols = ", ".join(r.keys())
         ph = ", ".join(["?"] * len(r))
@@ -509,15 +507,13 @@ def _build_engine_ei_lookup_all_modes(uid: str, nox_ei=20.0):
 def _prep_bffm2_conn_with_meteo(t_K=298.15, p_Pa=100000.0, rh=0.7):
     """Create a scratch SQLite connection with a populated tbl_InvMeteo."""
     conn = sqlite3.connect(":memory:")
-    conn.execute(
-        """CREATE TABLE tbl_InvMeteo (
+    conn.execute("""CREATE TABLE tbl_InvMeteo (
             DateTime TEXT,
             Temperature REAL,
             SeaLevelPressure REAL,
             RelativeHumidity REAL,
             Humidity REAL
-        )"""
-    )
+        )""")
     conn.execute(
         "INSERT INTO tbl_InvMeteo VALUES (?, ?, ?, ?, ?)",
         ("2024-12-01 09:00:00", t_K, p_Pa, rh, 0.008),
@@ -683,12 +679,10 @@ def test_bffm2_uses_event_midpoint_for_meteo():
     aircraft_lookup = {"C56X": {"engine_count": 1, "engine_uid": "B602"}}
 
     conn = sqlite3.connect(":memory:")
-    conn.execute(
-        """CREATE TABLE tbl_InvMeteo (
+    conn.execute("""CREATE TABLE tbl_InvMeteo (
             DateTime TEXT, Temperature REAL, SeaLevelPressure REAL,
             RelativeHumidity REAL, Humidity REAL
-        )"""
-    )
+        )""")
     # Two meteo rows: 08:00 (cold, dry) and 09:20 (warm, humid).
     conn.execute(
         "INSERT INTO tbl_InvMeteo VALUES (?, ?, ?, ?, ?)",

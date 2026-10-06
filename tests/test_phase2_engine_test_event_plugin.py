@@ -316,8 +316,7 @@ def _seed_events_db(db_path: str, rows: list[dict]) -> None:
     the SQLSerializable layer. Used to construct fixtures for the store
     tests. The Store class picks the rows up on load."""
     conn = sqlite3.connect(db_path)
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS engine_test_events (
             event_id INTEGER PRIMARY KEY AUTOINCREMENT,
             source_id TEXT NOT NULL,
@@ -334,8 +333,7 @@ def _seed_events_db(db_path: str, rows: list[dict]) -> None:
             thrust_mode TEXT NOT NULL DEFAULT 'snap',
             instudy TEXT NOT NULL DEFAULT '1'
         )
-        """
-    )
+        """)
     for r in rows:
         cols = ", ".join(r.keys())
         ph = ", ".join(["?"] * len(r))
