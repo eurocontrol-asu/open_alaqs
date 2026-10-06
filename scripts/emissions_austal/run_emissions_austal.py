@@ -934,7 +934,14 @@ def export_geojson(result, config, config_dict, grid, emissions_output_path):
 
 def export_austal(austal_output_path):
     """
-    Export AUSTAL dispersion model input files.
+    Report the AUSTAL input files.
+
+    The files (austal.txt, series.dmna, the eNNNN.dmna grids) are written
+    by the AUSTAL dispersion module during the calculation, which main()
+    enables through `config.dispersion_modules_config`. This function only
+    reports them. It used to call `writeInputFile()` again without the
+    group arguments that method requires, which always failed with a
+    TypeError after the files had been written.
 
     Args:
         austal_output_path: Output directory path
@@ -942,19 +949,6 @@ def export_austal(austal_output_path):
     # Ensure output path exists
     abs_austal_path = os.path.abspath(austal_output_path)
     os.makedirs(abs_austal_path, exist_ok=True)
-
-    # Try to write files if they dont already exist
-    try:
-        austal_module = AUSTALDispersionModule({"output_path": abs_austal_path})
-        try:
-            austal_module.writeInputFile()
-        except FileExistsError:
-            # It's fine if file already existed the contents will be reported
-            pass
-        except Exception as e:
-            announce_err(f"Failed to write Austal input files: {e}")
-    except Exception as e:
-        announce_err(f"Failed to initialize AUSTAL module: {e}")
 
     # Always report the AUSTAL output directory and its contents so the user
     # can verify what was created
