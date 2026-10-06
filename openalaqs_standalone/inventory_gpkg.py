@@ -35,6 +35,12 @@ same way the plugin grids them:
   road sources          Plugin: `factor = intersection.length /
                        geom.length` for LineString. We use
                        distribute._linestring_cell_fractions.
+  other sources         Any other prefix (area:, engine_test:, gate:,
+                       ...) is gridded by its geometry: polygons by
+                       area share, lines by length share, points by
+                       the cell they lie in. These used to be left out,
+                       so e.g. area sources and engine run-ups were
+                       missing from the GeoPackage totals.
 
 The result is bit-identical to what the plugin would write if
 configured for the same study, modulo the per-movement compute
@@ -377,6 +383,8 @@ def write_pollutant_gpkgs(
     src_point = sources[sources["source_id"].str.startswith("point:")]
     src_road = sources[sources["source_id"].str.startswith("road:")]
     src_parking = sources[sources["source_id"].str.startswith("parking:")]
+    _known = ("aircraft:cell:", "point:", "road:", "parking:")
+    src_other = sources[~sources["source_id"].str.startswith(_known)]
 
     # Pre-parse non-aircraft geometries: parking and gate cell-fraction
     # dicts depend only on geometry, not pollutant, so cache them
@@ -422,6 +430,37 @@ def write_pollutant_gpkgs(
                 road_fracs[r["source_id"]] = {}
         else:
             road_fracs[r["source_id"]] = {}
+
+    # Other sources (area:, engine_test:, gate:, ...): by geometry.
+    other_fracs = {}
+    for _, r in src_other.iterrows():
+        wkt_ = r.get("geometry_wkt")
+        if not isinstance(wkt_, str) or not wkt_.strip():
+            continue
+        g = _shapely_wkt.loads(wkt_)
+        if g.is_empty:
+            continue
+        if g.geom_type in ("Polygon", "MultiPolygon"):
+            other_fracs[r["source_id"]] = _polygon_cell_fractions(
+                g, grid_bounds, grid_definition
+            )
+        elif g.geom_type in ("LineString", "MultiLineString"):
+            lines = list(g.geoms) if g.geom_type == "MultiLineString" else [g]
+            total_len = sum(line.length for line in lines)
+            fracs: dict = {}
+            for line in lines:
+                if total_len <= 0 or line.length <= 0:
+                    continue
+                for cell, f in _linestring_cell_fractions(
+                    list(line.coords), grid_bounds, grid_definition
+                ).items():
+                    fracs[cell] = fracs.get(cell, 0.0) + f * line.length / total_len
+            other_fracs[r["source_id"]] = fracs
+        else:
+            c = g if g.geom_type == "Point" else g.centroid
+            other_fracs[r["source_id"]] = {
+                cell_index(c.x, c.y, grid_bounds, grid_definition): 1.0
+            }
 
     point_cells = {}
     for _, r in src_point.iterrows():
@@ -477,6 +516,14 @@ def write_pollutant_gpkgs(
 
         # Road linestrings (length-weighted)
         for sid, fracs in road_fracs.items():
+            mass = per_src.get(sid, 0.0)
+            if not mass or not fracs:
+                continue
+            for cell, f in fracs.items():
+                cell_mass[cell] = cell_mass.get(cell, 0.0) + mass * f
+
+        # Other sources (area, engine_test, gate, ...)
+        for sid, fracs in other_fracs.items():
             mass = per_src.get(sid, 0.0)
             if not mass or not fracs:
                 continue
