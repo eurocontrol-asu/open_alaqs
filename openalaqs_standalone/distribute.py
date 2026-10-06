@@ -1586,6 +1586,50 @@ def distribute_to_grid(  # noqa: C901 — top-level spatial+temporal distributio
                                     p,
                                     v,
                                 )
+        elif res.get("heli_origin_3857") is not None:
+            # Helicopter with its FOCA flight path (compute_helicopter
+            # with a context): placed as the plugin places it. Ground
+            # idle is a point at the origin (helipad or runway end), at
+            # ground level. The active mode (TO or AP) is spread along
+            # the kept flight-path segments by horizontal length, and in
+            # 3D over the layers spanned by the whole path (the plugin
+            # uses the bounding box of the path's single geometry).
+            gx, gy = res["heli_origin_3857"]
+            gix, giy = cell_index(gx, gy, grid_bounds, grid_definition)
+            gi_em = res.get("heli_gi_em_kg") or {}
+            act_em = res.get("heli_active_em_kg") or {}
+            for p in POLLUTANTS:
+                _add(b_start, gix, giy, p, gi_em.get(p, 0.0))
+            segs = [
+                s_ for s_ in (res.get("heli_active_segments") or [])
+                if ((s_[1][0] - s_[0][0]) ** 2 + (s_[1][1] - s_[0][1]) ** 2) > 0.0
+            ]
+            seg_len = [
+                ((s_[1][0] - s_[0][0]) ** 2 + (s_[1][1] - s_[0][1]) ** 2) ** 0.5
+                for s_ in segs
+            ]
+            total_len = sum(seg_len)
+            cell_w: dict = {}
+            if total_len > 0.0:
+                for s_, ln in zip(segs, seg_len):
+                    for cell, f in _segment_cell_fractions(
+                        s_[0][:2], s_[1][:2], grid_bounds, grid_definition
+                    ).items():
+                        cell_w[cell] = cell_w.get(cell, 0.0) + f * ln / total_len
+            if use_3d and segs:
+                zs = [z for s_ in segs for z in (s_[0][2], s_[1][2])]
+                act_iz = _iz_layer_fractions(min(zs), max(zs), sk)
+            else:
+                act_iz = {0: 1.0}
+            if not cell_w:
+                # No part of the path kept: the active share is zero; keep
+                # any residual at the origin so mass is conserved.
+                cell_w = {(gix, giy): 1.0}
+                act_iz = {0: 1.0}
+            for (cx, cy), f in cell_w.items():
+                for iz, fz in act_iz.items():
+                    for p in POLLUTANTS:
+                        _add(b_start, cx, cy, p, act_em.get(p, 0.0) * f * fz, iz)
         else:
             # Helicopter (or any movement with no retained segments):
             # the whole total is a point source. A helicopter with a gate

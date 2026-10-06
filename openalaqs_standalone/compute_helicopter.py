@@ -137,8 +137,11 @@ def compute_helicopter(conn, mov: dict, ctx: Optional[dict] = None) -> Optional[
     # Vertical limit and grid (plugin parity): scale the active mode by the
     # share of its time spent below the mixing height and inside the grid.
     a = 1.0
+    kept_segments, origin = None, None
     if ctx is not None:
-        a = _active_retained_fraction(conn, mov, ctx, category, is_dep)
+        a, kept_segments, origin = _active_retained_fraction(
+            conn, mov, ctx, category, is_dep
+        )
 
     # Half-LTO totals: GI plus the active mode, converted g -> kg.
     # SOx is not modelled by FOCA; it is zero, matching the reference.
@@ -158,7 +161,7 @@ def compute_helicopter(conn, mov: dict, ctx: Optional[dict] = None) -> Optional[
         "pm25": 0.0,
     }
 
-    return {
+    result = {
         "oid": mov["oid"],
         "aircraft": mov["aircraft"],
         "departure_arrival": mov["departure_arrival"],
@@ -185,6 +188,27 @@ def compute_helicopter(conn, mov: dict, ctx: Optional[dict] = None) -> Optional[
         "brake_wear_em_kg": {p: 0.0 for p in POLLUTANTS},
         "total_em_kg": em,
     }
+    if origin is not None:
+        # Where the plugin places the two parts (GeoTransformation, FOCA
+        # helicopter path): ground idle as a point at the origin (the
+        # helipad, else the runway end), the active mode along the kept
+        # flight-path segments. Used by distribute_to_grid; the totals
+        # above are unchanged.
+        result["heli_origin_3857"] = tuple(origin)
+        result["heli_active_segments"] = list(kept_segments or [])
+        result["heli_gi_em_kg"] = {
+            "co": gi.co_g / 1000.0,
+            "co2": gi.co2_g / 1000.0,
+            "hc": gi.hc_g / 1000.0,
+            "nox": gi.nox_g / 1000.0,
+            "sox": 0.0,
+            "pm10": gi.pm_g / 1000.0,
+            "pm25": 0.0,
+        }
+        result["heli_active_em_kg"] = {
+            k: em[k] - result["heli_gi_em_kg"][k] for k in em
+        }
+    return result
 
 
 def _active_retained_fraction(
@@ -193,7 +217,10 @@ def _active_retained_fraction(
     """Share of the active-mode time below the mixing height and inside the
     grid, on the same FOCA flight path the plugin builds: origin at the
     helicopter's gate centroid (its helipad) or else the active runway end;
-    departure along the runway, arrival back along the approach."""
+    departure along the runway, arrival back along the approach.
+
+    Returns (fraction, kept segments as ((x, y, z), (x, y, z)) in
+    EPSG:3857, origin (x, y))."""
     from open_alaqs.core.tools.foca_heli_trajectory import (
         active_mode_retained,
         build_arrival,
@@ -237,7 +264,7 @@ def _active_retained_fraction(
         return (cx1, cy1, _z(cx1, cy1)), (cx2, cy2, _z(cx2, cy2))
 
     max_height = mv.get_mixing_height_at(conn, mov["runway_time"])
-    fraction, _ = active_mode_retained(
+    fraction, kept = active_mode_retained(
         local_pts, world, max_height_m=max_height, clip_2d=_clip
     )
-    return fraction
+    return fraction, kept, origin

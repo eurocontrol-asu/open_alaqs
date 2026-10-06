@@ -1,10 +1,11 @@
 """Regression: the standalone places a helicopter with a gate at that gate.
 
-The standalone keeps no trajectory segments for helicopters and releases the
-whole FOCA total as a point. On main the point was always the runway
-threshold. The plugin now starts a helicopter with a gate (its helipad) at the
-gate centroid, so the standalone places the point there too. Without a gate
-the threshold is kept, and the totals never change.
+The plugin starts a helicopter with a gate (its helipad) at the gate
+centroid: ground idle is a point there and the active mode (TO or AP) runs
+along the FOCA flight path from it. The standalone places them the same way
+(compute_helicopter returns the origin and the kept path; distribute_to_grid
+spreads the active part along it). Without a gate the origin is the runway
+threshold. The totals never change.
 
 Fixture: ``training_v3.alaqs`` (AS50 departure and arrival on runway 24, gates
 G2, G4, G7).
@@ -25,7 +26,7 @@ from openalaqs_standalone.geometry import grid_bounds_3857, runway_threshold_385
 
 SRC = Path(__file__).resolve().parents[1] / "data" / "training_v3.alaqs"
 
-GRID = {"x_cells": 100, "y_cells": 100, "x_resolution": 100, "y_resolution": 100}
+GRID = {"x_cells": 200, "y_cells": 200, "x_resolution": 100, "y_resolution": 100}
 REF = (51.96, 4.44)
 
 
@@ -56,7 +57,8 @@ def _run(tmp_path, name, gate_d, gate_a):
         "reference_latitude": REF[0],
         "reference_longitude": REF[1],
     }
-    bounds = grid_bounds_3857(100, 100, 100, 100, *REF)
+    # Same grid as the database's, so the whole flight path is inside it.
+    bounds = grid_bounds_3857(200, 200, 100, 100, *REF)
     results = compute_all_movements(conn, method="bymode", use_isa_meteo=False)
     heli = {
         oid: res
@@ -72,20 +74,42 @@ def _cells(grid, pollutant="nox"):
     return sorted({(int(r.ix), int(r.iy)) for r in g.itertuples()})
 
 
+def _total(heli, pollutant="nox"):
+    return sum(r["total_em_kg"][pollutant] for r in heli.values())
+
+
+def _cell_mass(grid, cell, pollutant="nox"):
+    g = grid[(grid.pollutant == pollutant) & (grid.ix == cell[0]) & (grid.iy == cell[1])]
+    return g.kg.sum()
+
+
 def test_helicopter_with_gate_is_placed_at_the_gate(tmp_path):
     conn, bounds, grid_def, heli, grid = _run(tmp_path, "gate.alaqs", "G2", "G4")
-    expected = []
-    for gate_id in ("G2", "G4"):
-        c = _mv.get_gate(conn, gate_id)["geom_3857"].centroid
-        expected.append(cell_index(c.x, c.y, bounds, grid_def))
-    assert _cells(grid) == sorted(expected)
+    gate_of = {"D": "G2", "A": "G4"}
+    for res in heli.values():
+        c = _mv.get_gate(conn, gate_of[res["departure_arrival"]])["geom_3857"].centroid
+        cell = cell_index(c.x, c.y, bounds, grid_def)
+        # the origin is the gate centroid, and ground idle sits in its cell
+        assert res["heli_origin_3857"] == pytest.approx((c.x, c.y))
+        assert _cell_mass(grid, cell) >= res["heli_gi_em_kg"]["nox"] * (1 - 1e-9)
+        # the active part runs along a path that starts (departure) or
+        # ends (arrival) at the gate
+        segs = res["heli_active_segments"]
+        end = segs[0][0] if res["departure_arrival"] == "D" else segs[-1][1]
+        assert (end[0], end[1]) == pytest.approx((c.x, c.y))
+    # the active part is spread over several cells
+    assert len(_cells(grid)) > 2
+    assert grid[grid.pollutant == "nox"].kg.sum() == pytest.approx(_total(heli), rel=1e-9)
 
 
-def test_helicopter_without_gate_stays_at_the_threshold(tmp_path):
+def test_helicopter_without_gate_starts_at_the_threshold(tmp_path):
     conn, bounds, grid_def, heli, grid = _run(tmp_path, "nogate.alaqs", "", "")
     runway = _mv.get_runways(conn)[24]
     pos = runway_threshold_3857(runway, 24)
-    assert _cells(grid) == [cell_index(pos[0], pos[1], bounds, grid_def)]
+    for res in heli.values():
+        assert res["heli_origin_3857"] == pytest.approx(tuple(pos))
+    assert cell_index(pos[0], pos[1], bounds, grid_def) in _cells(grid)
+    assert grid[grid.pollutant == "nox"].kg.sum() == pytest.approx(_total(heli), rel=1e-9)
 
 
 def test_gate_does_not_change_helicopter_totals(tmp_path):
