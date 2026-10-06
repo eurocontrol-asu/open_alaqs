@@ -254,6 +254,17 @@ def import_adsb_file(
     anp_profiles = []
     max_profile_oid = get_max_profile_oid()
 
+    # Profile heights are relative to the airport (ANP profiles start at
+    # 0 m, and the grid's z origin is 0), while ADS-B altitudes are MSL.
+    # Subtract the study's airport elevation so the two agree. A study
+    # whose elevation is 0 imports exactly as before.
+    runway_alt = _airport_elevation_m(inventory_path)
+    if runway_alt:
+        logger.info(
+            "ADS-B altitudes converted to heights above the airport "
+            f"(airport elevation {runway_alt:.2f} m)."
+        )
+
     for flight_id in adsb_data[id_column].unique():
         flight_data = adsb_data[adsb_data[id_column] == flight_id].copy()
 
@@ -331,8 +342,6 @@ def import_adsb_file(
             logger.info(
                 "Since runway and taxi_route were not given or found, use closest runway endpoint calculation as reference runway point for importing ADS-B data."
             )
-
-        runway_alt = 0
 
         # 1.3. Apply geographic_to_relative with the chosen reference
         flight_data_x_y_z = _geographic_to_relative_df(
@@ -417,6 +426,32 @@ def import_adsb_file(
         return True, "ADS-B successfully imported!"
     else:
         return False, "ADS-B could not be imported into the database!"
+
+
+def _airport_elevation_m(*db_paths: Optional[str]) -> float:
+    """Airport elevation above MSL (m) from `user_study_setup`.
+
+    Tries each database in turn (the inventory being written, then the
+    open study); returns 0.0 if none has a usable value.
+    """
+    import sqlite3
+
+    for path in [*db_paths, ProjectDatabase().path]:
+        if not path:
+            continue
+        try:
+            with sqlite3.connect(path) as conn:
+                row = conn.execute(
+                    "SELECT airport_elevation FROM user_study_setup"
+                ).fetchone()
+        except sqlite3.Error:
+            continue
+        if row and row[0] not in (None, ""):
+            try:
+                return float(row[0])
+            except (TypeError, ValueError):
+                continue
+    return 0.0
 
 
 def _geographic_to_relative_df(
