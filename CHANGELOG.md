@@ -6,6 +6,44 @@ ISO 8601.
 
 ## [Unreleased]
 
+Bug fixes for the AUSTAL input, ADS-B imports, engine tests and the
+standalone gridding. Results change where noted.
+
+### Fixed
+
+- Engine tests: the inventory now carries `engine_test_events` (template
+  table, copied by Create Output). Every engine test site computed to zero
+  before, and loading events into an open `*_out.alaqs` failed.
+- AUSTAL: `austal.txt` now declares `hm ?` when `series.dmna` has the
+  mixing-height column and the options contain `NOSTANDARD` (austal_prep and
+  the plugin). Without the line AUSTAL ignores the column in every hour and
+  uses its own mixing height. **Concentrations change** for runs with a
+  supplied mixing height.
+- AUSTAL (plugin): emissions below 0 m go to the ground layer instead of
+  being left out of the AUSTAL input.
+- ADS-B import: profile heights are relative to the airport
+  (`user_study_setup.airport_elevation` is subtracted). Studies with
+  elevation 0 import as before; others now get correct heights.
+- Standalone: flight segments at or below 0 m go to the ground AUSTAL
+  layer, not the top one.
+- Standalone: the taxi emission is split over the route's segments by time
+  when the movement queues, as the plugin does (totals unchanged).
+- Standalone: helicopter emissions are placed along the kept FOCA flight
+  path (ground idle at the pad), as the plugin does (totals unchanged).
+- Standalone: the per-pollutant GeoPackages include area, engine-test and
+  other sources.
+- `scripts/run_emissions_austal.py --austal` no longer reports a false
+  failure.
+
+### Tests
+
+- New: `test_engine_test_events_in_inventory`,
+  `test_iz_layer_fractions_below_ground`, `test_adsb_airport_elevation`,
+  `test_inventory_gpkg_all_source_kinds`, `test_taxi_split_by_segment_time`,
+  `test_austal_txt_mixing_height`, `test_austal_txt_mixing_height_plugin`.
+- Changed: `test_austal_sk_overlap` (clamp instead of clip) and the
+  helipad placement tests.
+
 ### Fixed
 
 - Engine test sites computed to zero in the normal workflow: Create Output
