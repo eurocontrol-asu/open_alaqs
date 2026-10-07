@@ -27,20 +27,29 @@ def _import(tmp_path, elevation_m, profile_id):
     dst = tmp_path / f"{profile_id}.alaqs"
     shutil.copy(src, dst)
     with sqlite3.connect(dst) as conn:
-        conn.execute("UPDATE user_study_setup SET airport_elevation = ?", (elevation_m,))
+        conn.execute(
+            "UPDATE user_study_setup SET airport_elevation = ?", (elevation_m,)
+        )
     ProjectDatabase().path = str(dst)
     csv_path = tmp_path / f"{profile_id}.csv"
     rows = ["flight_id,latitude,longitude,altitude,tas,power_setting,fuel_flow"]
     for i in range(5):  # departure from the runway at -15 ft MSL
-        rows.append(f"{profile_id},{51.950 + 0.01 * i},4.44,{-15 + 400 * i},"
-                    f"{150 + 15 * i},{1.0 - 0.03 * i},{0.9 - 0.02 * i}")
+        rows.append(
+            f"{profile_id},{51.950 + 0.01 * i},4.44,{-15 + 400 * i},"
+            f"{150 + 15 * i},{1.0 - 0.03 * i},{0.9 - 0.02 * i}"
+        )
     csv_path.write_text("\n".join(rows) + "\n")
     ok, msg = import_adsb_file(str(csv_path), str(dst))
     assert ok, msg
     with sqlite3.connect(dst) as conn:
-        z = [r[0] for r in conn.execute(
-            "SELECT z_m FROM default_aircraft_profiles WHERE profile_id = ? "
-            "ORDER BY point", (profile_id,))]
+        z = [
+            r[0]
+            for r in conn.execute(
+                "SELECT z_m FROM default_aircraft_profiles WHERE profile_id = ? "
+                "ORDER BY point",
+                (profile_id,),
+            )
+        ]
     return dst, z
 
 

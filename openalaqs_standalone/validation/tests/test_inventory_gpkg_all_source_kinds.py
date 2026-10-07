@@ -13,7 +13,7 @@ import sqlite3
 import pandas as pd
 import pytest
 from pyproj import Transformer
-from shapely.geometry import LineString, Polygon, Point
+from shapely.geometry import LineString, Point, Polygon
 
 from openalaqs_standalone.geometry import grid_bounds_3857
 from openalaqs_standalone.inventory_gpkg import write_pollutant_gpkgs
@@ -37,8 +37,12 @@ def _xy(dx, dy):
 
 
 def _square(cx, cy, half):
-    pts = [_xy(cx - half, cy - half), _xy(cx + half, cy - half),
-           _xy(cx + half, cy + half), _xy(cx - half, cy + half)]
+    pts = [
+        _xy(cx - half, cy - half),
+        _xy(cx + half, cy - half),
+        _xy(cx + half, cy + half),
+        _xy(cx - half, cy + half),
+    ]
     return Polygon(pts)
 
 
@@ -53,17 +57,28 @@ def test_gpkg_total_includes_area_engine_test_and_point(tmp_path):
         ],
         columns=["source_id", "geometry_wkt"],
     )
-    masses = {"road:r1": 1.0, "parking:p1": 0.2, "area:airside": 0.3,
-              "engine_test:t1": 0.05, "point:s1": 0.01, "aircraft:cell:4_4_0": 0.7}
+    masses = {
+        "road:r1": 1.0,
+        "parking:p1": 0.2,
+        "area:airside": 0.3,
+        "engine_test:t1": 0.05,
+        "point:s1": 0.01,
+        "aircraft:cell:4_4_0": 0.7,
+    }
     emissions = pd.DataFrame(
-        [(pd.Timestamp("2025-08-05 05:00"), sid, "nox", kg) for sid, kg in masses.items()],
+        [
+            (pd.Timestamp("2025-08-05 05:00"), sid, "nox", kg)
+            for sid, kg in masses.items()
+        ],
         columns=["timestamp", "source_id", "pollutant", "kg_in_hour"],
     )
     sources = pd.concat(
         [sources, pd.DataFrame([("aircraft:cell:4_4_0", "")], columns=sources.columns)],
         ignore_index=True,
     )
-    paths = write_pollutant_gpkgs(emissions, sources, _bounds(), GRID_DEF, tmp_path, pollutants=["nox"])
+    paths = write_pollutant_gpkgs(
+        emissions, sources, _bounds(), GRID_DEF, tmp_path, pollutants=["nox"]
+    )
     conn = sqlite3.connect(paths["nox"])
     table = conn.execute("select table_name from gpkg_contents").fetchone()[0]
     total = conn.execute(f'select sum(nox) from "{table}"').fetchone()[0]

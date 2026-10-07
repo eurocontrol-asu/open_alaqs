@@ -1601,7 +1601,8 @@ def distribute_to_grid(  # noqa: C901 — top-level spatial+temporal distributio
             for p in POLLUTANTS:
                 _add(b_start, gix, giy, p, gi_em.get(p, 0.0))
             segs = [
-                s_ for s_ in (res.get("heli_active_segments") or [])
+                s_
+                for s_ in (res.get("heli_active_segments") or [])
                 if ((s_[1][0] - s_[0][0]) ** 2 + (s_[1][1] - s_[0][1]) ** 2) > 0.0
             ]
             seg_len = [

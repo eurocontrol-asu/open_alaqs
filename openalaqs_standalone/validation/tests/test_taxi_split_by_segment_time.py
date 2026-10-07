@@ -77,7 +77,9 @@ def test_taxi_split_by_segment_time_when_queuing():
     results = compute_all_movements(conn, method="bymode", use_isa_meteo=False)
     ctx = build_context(conn)
     bounds, grid_def = ctx["grid_bounds"], _mv.get_grid_definition(conn)
-    queued = [r for r in results.values() if r.get("queuing_time_s", 0) > 0 and r["segments"]]
+    queued = [
+        r for r in results.values() if r.get("queuing_time_s", 0) > 0 and r["segments"]
+    ]
     assert queued, "fixture has no movement with queuing"
     res = queued[0]
     grid = distribute_to_grid({res["oid"]: _tx_only(res)}, conn, bounds, grid_def)

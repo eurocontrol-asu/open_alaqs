@@ -33,20 +33,22 @@ def _write(tmp_path: Path, **kw) -> list:
 
 
 def _hm_lines(lines):
-    return [l for l in lines if l.split("\t")[0] == "hm"]
+    return [line for line in lines if line.split("\t")[0] == "hm"]
 
 
 def test_hm_line_written_with_column_and_nostandard(tmp_path):
     lines = _write(tmp_path, os_options="NOSTANDARD;SCINOTAT;Kmax=1")
-    assert [l.split("\t")[:2] for l in _hm_lines(lines)] == [["hm", "?"]]
+    assert [line.split("\t")[:2] for line in _hm_lines(lines)] == [["hm", "?"]]
     # in the meteorology block, before the grid
     assert lines.index(_hm_lines(lines)[0]) < next(
-        i for i, l in enumerate(lines) if l.startswith("dd\t")
+        i for i, line in enumerate(lines) if line.startswith("dd\t")
     )
 
 
 def test_no_hm_line_without_column(tmp_path):
-    lines = _write(tmp_path, os_options="NOSTANDARD;SCINOTAT", mixing_height_included=False)
+    lines = _write(
+        tmp_path, os_options="NOSTANDARD;SCINOTAT", mixing_height_included=False
+    )
     assert _hm_lines(lines) == []
 
 

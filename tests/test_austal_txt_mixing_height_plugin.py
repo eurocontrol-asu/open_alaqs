@@ -72,7 +72,9 @@ def _austal_txt(tmp_path, options, mixing_height):
     }
     res = EmissionCalculatorService().calculate_emissions(cfg)
     assert res.success, res.error_message
-    return (out / "austal.txt").read_text().splitlines(), (out / "series.dmna").read_text()
+    return (out / "austal.txt").read_text().splitlines(), (
+        out / "series.dmna"
+    ).read_text()
 
 
 @pytest.mark.parametrize(
@@ -85,6 +87,6 @@ def _austal_txt(tmp_path, options, mixing_height):
 )
 def test_hm_line(tmp_path, options, mixing_height, expect_line):
     lines, series = _austal_txt(tmp_path, options, mixing_height)
-    hm = [l.split("\t")[:2] for l in lines if l.split("\t")[0] == "hm"]
+    hm = [line.split("\t")[:2] for line in lines if line.split("\t")[0] == "hm"]
     assert hm == ([["hm", "?"]] if expect_line else [])
     assert ('"hm%' in series) is mixing_height

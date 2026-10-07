@@ -1905,9 +1905,10 @@ class AUSTALDispersionModule(DispersionModule):
             # AUSTAL uses the hm column of series.dmna only when austal.txt
             # declares `hm ?`, and only together with NOSTANDARD; without the
             # line it silently applies its own mixing height in every hour.
-            if self.MixingHeightIncluded() and "NOSTANDARD" in (
-                self._options or ""
-            ).upper():
+            if (
+                self.MixingHeightIncluded()
+                and "NOSTANDARD" in (self._options or "").upper()
+            ):
                 f.write("hm\t?\t' mixing height (m) (set in series.dmna)\n")
             f.write("----------------- calculation grid\n")
             f.write(f"dd\t{self._mesh_width}\t' mesh width\n")

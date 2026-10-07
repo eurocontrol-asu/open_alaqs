@@ -79,7 +79,9 @@ def _total(heli, pollutant="nox"):
 
 
 def _cell_mass(grid, cell, pollutant="nox"):
-    g = grid[(grid.pollutant == pollutant) & (grid.ix == cell[0]) & (grid.iy == cell[1])]
+    g = grid[
+        (grid.pollutant == pollutant) & (grid.ix == cell[0]) & (grid.iy == cell[1])
+    ]
     return g.kg.sum()
 
 
@@ -99,7 +101,9 @@ def test_helicopter_with_gate_is_placed_at_the_gate(tmp_path):
         assert (end[0], end[1]) == pytest.approx((c.x, c.y))
     # the active part is spread over several cells
     assert len(_cells(grid)) > 2
-    assert grid[grid.pollutant == "nox"].kg.sum() == pytest.approx(_total(heli), rel=1e-9)
+    assert grid[grid.pollutant == "nox"].kg.sum() == pytest.approx(
+        _total(heli), rel=1e-9
+    )
 
 
 def test_helicopter_without_gate_starts_at_the_threshold(tmp_path):
@@ -109,7 +113,9 @@ def test_helicopter_without_gate_starts_at_the_threshold(tmp_path):
     for res in heli.values():
         assert res["heli_origin_3857"] == pytest.approx(tuple(pos))
     assert cell_index(pos[0], pos[1], bounds, grid_def) in _cells(grid)
-    assert grid[grid.pollutant == "nox"].kg.sum() == pytest.approx(_total(heli), rel=1e-9)
+    assert grid[grid.pollutant == "nox"].kg.sum() == pytest.approx(
+        _total(heli), rel=1e-9
+    )
 
 
 def test_gate_does_not_change_helicopter_totals(tmp_path):

@@ -297,7 +297,7 @@ def _write_one_pollutant_gpkg(
         conn.close()
 
 
-def write_pollutant_gpkgs(
+def write_pollutant_gpkgs(  # noqa: C901 (one branch per source kind)
     emissions: pd.DataFrame,
     sources: pd.DataFrame,
     grid_bounds: dict,
