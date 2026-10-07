@@ -1,7 +1,7 @@
 """Vertical layer split of segments at or below ground level.
 
 ADS-B (CUSTOM) profiles carry heights relative to MSL (the importer uses
-reference altitude 0). At an airport below sea level (EHRD, -15 ft) the
+reference altitude 0). At an airport below sea level (e.g. -15 ft) the
 ground-roll points are negative. `_iz_layer_fractions` must put such
 segments in the ground layer, not in the top layer.
 """
@@ -40,7 +40,7 @@ SK = [
 @pytest.mark.parametrize(
     "z1, z2",
     [
-        (-0.9, -4.6),  # both ends below ground (EHRD ground roll)
+        (-0.9, -4.6),  # both ends below ground (ground roll)
         (-4.6, -0.9),  # same, other order
         (-4.572, 0.0),  # one end exactly at ground level
         (0.0, -4.572),

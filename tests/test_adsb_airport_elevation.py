@@ -3,7 +3,7 @@
 ADS-B altitudes are MSL. Profile heights in OpenALAQS are relative to the
 airport (ANP profiles start at 0 m; the grid's z origin is 0). The importer
 subtracts `user_study_setup.airport_elevation`, so a track at an airport
-below sea level (EHRD, -15 ft) starts at 0 m, not at -4.572 m. A study with
+below sea level (e.g. -15 ft) starts at 0 m, not at -4.572 m. A study with
 elevation 0 imports exactly as before.
 """
 
