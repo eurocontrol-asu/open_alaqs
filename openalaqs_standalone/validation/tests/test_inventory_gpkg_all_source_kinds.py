@@ -3,7 +3,7 @@
 write_pollutant_gpkgs used to grid only aircraft cells, point, road and
 parking sources; area sources (e.g. other airside fuel) and engine run-up
 sources were left out, so the GeoPackage total fell short of
-emissions.parquet (EHRD, 5 August 2025: 1.369 kg NOx of area sources).
+emissions.parquet by the mass of those sources.
 """
 
 from __future__ import annotations

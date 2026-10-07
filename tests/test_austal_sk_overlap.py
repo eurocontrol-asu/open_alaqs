@@ -78,7 +78,7 @@ def test_segment_below_ground_is_clamped():
 
 
 def test_below_ground_goes_to_ground_layer():
-    """ADS-B ground roll at an airport below sea level (EHRD, -15 ft):
+    """ADS-B ground roll at an airport below sea level (e.g. -15 ft):
     flat and sloped segments at or below 0 m land in layer 0 instead of
     being dropped."""
     for z_min, z_max in ((-4.572, -4.572), (-0.9, -4.6), (-4.572, 0.0)):

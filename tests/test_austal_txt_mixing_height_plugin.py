@@ -2,7 +2,7 @@
 
 AUSTAL uses the hm column of series.dmna only with the line `hm ?` in
 austal.txt, and only with the option NOSTANDARD; without the line it
-silently applies its own mixing height (EHRD test, 6-7 October 2026).
+silently applies its own mixing height (test with AUSTAL 3.3.0).
 """
 
 import datetime as dt

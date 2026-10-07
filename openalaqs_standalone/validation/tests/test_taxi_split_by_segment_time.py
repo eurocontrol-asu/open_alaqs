@@ -6,8 +6,7 @@ route's time (the excess is queuing); otherwise every segment is driven at the
 route's average speed. The natural taxi emission of a segment is therefore
 proportional to length / speed in the first case and to length in the second.
 distribute_to_grid used the length share in both cases, which moved mass from
-slow apron segments to fast taxiway segments (EHRD, 5 August 2025: 0.91 kg
-NOx moved between cells; totals unchanged).
+slow apron segments to fast taxiway segments (totals unchanged).
 
 Fixture: ``training_v3.alaqs`` (taxiways at 15 and 30 km/h; movements with
 queuing).

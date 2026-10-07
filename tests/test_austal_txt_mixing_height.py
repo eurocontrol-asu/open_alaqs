@@ -2,10 +2,10 @@
 
 AUSTAL uses the hm column of series.dmna only when austal.txt has the line
 `hm ?`, and only with the option NOSTANDARD. Without the line it silently
-applies its own mixing height. EHRD test (AUSTAL 3.3.0, 6-7 October 2026):
-four runs that differ only in that line and in the hm column. Without the
-line, an hm column of MET values and one of 914.4 m gave identical
-concentrations in all 24 hours; with the line they differed in every hour.
+applies its own mixing height. Test with AUSTAL 3.3.0: four runs that
+differ only in that line and in the hm column. Without the line, an
+hourly hm column and a constant 914.4 m one gave identical concentrations
+in every hour; with the line they differed in every hour.
 """
 
 from pathlib import Path

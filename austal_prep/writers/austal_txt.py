@@ -45,9 +45,10 @@ def writes_mixing_height(mixing_height_included: bool, os_options: str) -> bool:
     series.dmna gets an hm column when mixing_height_included is set,
     but AUSTAL uses that column only when austal.txt declares `hm ?`;
     without the line AUSTAL silently applies its own mixing height in
-    every hour (EHRD test, 6 October 2026: four runs differing only in
-    the line and the column; without the line, MET and 914.4 m columns
-    gave identical concentrations in all 24 hours). The parameter is
+    every hour (test with AUSTAL 3.3.0: four runs differing only in the
+    line and the column; without the line, an hourly column and a
+    constant 914.4 m column gave identical concentrations in every
+    hour). The parameter is
     effective only with the option NOSTANDARD (AUSTAL manual 3.1.1), so
     the line is written only when both are present.
     """
