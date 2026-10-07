@@ -9,7 +9,7 @@ qgisMaximumVersion=4.99
 supportsQt6=True
 description=An open-source local air quality model
 
-version=5.3.3
+version=5.3.4
 author=Eurocontrol
 email=open-alaqs@eurocontrol.int
 
@@ -23,10 +23,9 @@ repository=https://gitlab.aerlabs.nl/eurocontrol/open_alaqs
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-changelog=5.3.3
-    Bug-fix release for the standalone; plugin results are unchanged.
-    Fixed (standalone): gate_emissions_code 0 suppresses a departure's engine-start emissions, as in the plugin.
-    Changed: the standalone's version follows the plugin release (5.3.3).
+changelog=5.3.4
+    Bug fixes; results change where noted in CHANGELOG.md.
+    Fixed: engine test events reach the inventory (engine test sites computed to zero). AUSTAL: austal.txt declares hm when series.dmna has a mixing height (concentrations change for such runs); below-ground emissions go to the ground layer instead of being dropped. ADS-B import: heights relative to the airport elevation. shapely 2.2 compatibility (every calculation failed with shapely 2.2). Standalone: below-ground segments, taxi split by time when queuing, helicopters along the FOCA path, GeoPackages include all source kinds.
     See CHANGELOG.md for details.
 
 # Tags are comma separated with spaces allowed
