@@ -40,13 +40,19 @@ standalone gridding. Results change where noted.
   other sources.
 - `scripts/run_emissions_austal.py --austal` no longer reports a false
   failure.
+- Compatibility with shapely 2.2: setting a constant height with
+  `shapely.ops.transform` (runways, `spatial.addHeightToGeometryWkt`) returned
+  a scalar Z, which shapely 2.2 rejects ("'float' object is not iterable"), so
+  every calculation failed. New helper `spatial.constant_z`. Results are
+  unchanged.
 
 ### Tests
 
 - New: `test_engine_test_events_in_inventory`,
   `test_iz_layer_fractions_below_ground`, `test_adsb_airport_elevation`,
   `test_inventory_gpkg_all_source_kinds`, `test_taxi_split_by_segment_time`,
-  `test_austal_txt_mixing_height`, `test_austal_txt_mixing_height_plugin`.
+  `test_austal_txt_mixing_height`, `test_austal_txt_mixing_height_plugin`,
+  `test_shapely_constant_z`.
 - Changed: `test_austal_sk_overlap` (clamp instead of clip) and the
   helipad placement tests.
 

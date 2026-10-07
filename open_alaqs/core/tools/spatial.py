@@ -1,6 +1,7 @@
 import math
 from typing import Optional, Union
 
+import numpy as np
 import osgeo.ogr as ogr
 import osgeo.osr as osr
 import shapely.geometry
@@ -370,10 +371,27 @@ def getBoundingBox(val: Union[ogr.Geometry, str]) -> Optional[dict]:
     return None
 
 
+def constant_z(height: float):
+    """Coordinate function for `shapely.ops.transform` that sets every Z to
+    *height*.
+
+    shapely calls the function with whole coordinate arrays. Up to 2.1 it
+    fell back to one point at a time when the result was not an array per
+    axis; 2.2 no longer does, so returning the scalar *height* for Z fails
+    with "'float' object is not iterable". The Z array has the shape of x,
+    which works in both calling modes.
+    """
+
+    def _set_z(x, y, z=None):
+        return x, y, np.full_like(np.asarray(x, dtype=float), height)
+
+    return _set_z
+
+
 def addHeightToGeometryWkt(geometry_wkt: str, height: float) -> str:
     """Return a copy of the geometry WKT with all Z coordinates set to *height*."""
     geom = shapely.wkt.loads(geometry_wkt)
-    shifted = shapely.ops.transform(lambda x, y, z=None: (x, y, height), geom)
+    shifted = shapely.ops.transform(constant_z(height), geom)
     return str(shifted)
 
 
