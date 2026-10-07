@@ -1902,6 +1902,13 @@ class AUSTALDispersionModule(DispersionModule):
             f.write(f"z0\t{self._roughness_level}\t' roughness length (m)\n")
             f.write(f"d0\t{self._displacement_height}\t' displacement height (m)\n")
             f.write(f"ha\t{self._anemometer_height}\t' anemometer height (m)\n")
+            # AUSTAL uses the hm column of series.dmna only when austal.txt
+            # declares `hm ?`, and only together with NOSTANDARD; without the
+            # line it silently applies its own mixing height in every hour.
+            if self.MixingHeightIncluded() and "NOSTANDARD" in (
+                self._options or ""
+            ).upper():
+                f.write("hm\t?\t' mixing height (m) (set in series.dmna)\n")
             f.write("----------------- calculation grid\n")
             f.write(f"dd\t{self._mesh_width}\t' mesh width\n")
             f.write(
