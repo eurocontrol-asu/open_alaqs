@@ -6,8 +6,11 @@ ISO 8601.
 
 ## [Unreleased]
 
+## [5.3.4] - 2026-10-07
+
 Bug fixes for the AUSTAL input, ADS-B imports, engine tests and the
-standalone gridding. Results change where noted.
+standalone gridding, and compatibility with shapely 2.2. Results change
+where noted.
 
 ### Fixed
 
