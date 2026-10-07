@@ -13,18 +13,38 @@ import pytest
 from openalaqs_standalone.distribute import _iz_layer_fractions
 
 # AUSTAL vertical grid used by austal_prep (19 layers to 1500 m)
-SK = [0, 3, 6, 10, 16, 25, 40, 65, 100, 150, 200, 300, 400, 500, 600, 700, 800,
-      1000, 1200, 1500]
+SK = [
+    0,
+    3,
+    6,
+    10,
+    16,
+    25,
+    40,
+    65,
+    100,
+    150,
+    200,
+    300,
+    400,
+    500,
+    600,
+    700,
+    800,
+    1000,
+    1200,
+    1500,
+]
 
 
 @pytest.mark.parametrize(
     "z1, z2",
     [
-        (-0.9, -4.6),   # both ends below ground (EHRD ground roll)
-        (-4.6, -0.9),   # same, other order
+        (-0.9, -4.6),  # both ends below ground (EHRD ground roll)
+        (-4.6, -0.9),  # same, other order
         (-4.572, 0.0),  # one end exactly at ground level
         (0.0, -4.572),
-        (-3.0, -3.0),   # point below ground
+        (-3.0, -3.0),  # point below ground
     ],
 )
 def test_below_ground_goes_to_ground_layer(z1, z2):
