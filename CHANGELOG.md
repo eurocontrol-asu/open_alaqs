@@ -11,9 +11,15 @@ standalone gridding. Results change where noted.
 
 ### Fixed
 
-- Engine tests: the inventory now carries `engine_test_events` (template
-  table, copied by Create Output). Every engine test site computed to zero
-  before, and loading events into an open `*_out.alaqs` failed.
+- Engine test sites computed to zero in the normal workflow: Create Output
+  did not carry `engine_test_events` into the `*_out.alaqs`, and the
+  inventory template had no such table, so `EngineTestSourceModule` (which
+  reads the events from the inventory being calculated) found none. Loading
+  events while an `*_out.alaqs` was open failed with "no such table:
+  engine_test_events". The inventory template now has the table, and Create
+  Output copies the project's events by column name (creating the table in
+  older output files; projects without the table are skipped with a log
+  line). Results for studies without engine test events are unchanged.
 - AUSTAL: `austal.txt` now declares `hm ?` when `series.dmna` has the
   mixing-height column and the options contain `NOSTANDARD` (austal_prep and
   the plugin). Without the line AUSTAL ignores the column in every hour and
@@ -43,22 +49,6 @@ standalone gridding. Results change where noted.
   `test_austal_txt_mixing_height`, `test_austal_txt_mixing_height_plugin`.
 - Changed: `test_austal_sk_overlap` (clamp instead of clip) and the
   helipad placement tests.
-
-### Fixed
-
-- Engine test sites computed to zero in the normal workflow: Create Output
-  did not carry `engine_test_events` into the `*_out.alaqs`, and the
-  inventory template had no such table, so `EngineTestSourceModule` (which
-  reads the events from the inventory being calculated) found none. Loading
-  events while an `*_out.alaqs` was open failed with "no such table:
-  engine_test_events". The inventory template now has the table, and Create
-  Output copies the project's events by column name (creating the table in
-  older output files; projects without the table are skipped with a log
-  line). Results for studies without engine test events are unchanged.
-
-### Tests
-
-- New: `test_engine_test_events_in_inventory`.
 
 ## [5.3.3] - 2026-10-05
 
