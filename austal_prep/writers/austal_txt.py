@@ -39,6 +39,21 @@ from austal_prep.writers._pollutants import (
 )
 
 
+def writes_mixing_height(mixing_height_included: bool, os_options: str) -> bool:
+    """True when austal.txt must carry the line `hm ?`.
+
+    series.dmna gets an hm column when mixing_height_included is set,
+    but AUSTAL uses that column only when austal.txt declares `hm ?`;
+    without the line AUSTAL silently applies its own mixing height in
+    every hour (EHRD test, 6 October 2026: four runs differing only in
+    the line and the column; without the line, MET and 914.4 m columns
+    gave identical concentrations in all 24 hours). The parameter is
+    effective only with the option NOSTANDARD (AUSTAL manual 3.1.1), so
+    the line is written only when both are present.
+    """
+    return bool(mixing_height_included) and "NOSTANDARD" in (os_options or "").upper()
+
+
 def write_austal_config(
     out_path: Path,
     study: AustalStudyConfig,
@@ -78,6 +93,8 @@ def write_austal_config(
     add(f"z0\t{f(study.z0)}\t' roughness length (m)")
     add(f"d0\t{f(study.d0)}\t' displacement height (m)")
     add(f"ha\t{f(study.ha)}\t' anemometer height (m)")
+    if writes_mixing_height(study.mixing_height_included, study.os_options):
+        add("hm\t?\t' mixing height (m) (set in series.dmna)")
 
     add("----------------- calculation grid")
     add(f"dd\t{f(grid.dd)}\t' mesh width")
