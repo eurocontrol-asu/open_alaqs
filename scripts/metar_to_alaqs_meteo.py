@@ -68,6 +68,15 @@ Night-time (cloud-dependent):
   * >= 4 oktas: D or E depending on wind
   * < 4 oktas: F (wind < 3), E (3-5), D (5+)
 
+Night-time warm/humid correction (--night-rule, default sky_eps), applied
+only to night-time E and F, never past D:
+  * sky_eps: clear-sky emissivity eps = 1.24 (e/T)^(1/7) (Brutsaert 1975),
+    e in hPa from the dewpoint (Magnus), T in K; one class towards neutral
+    if eps > 0.85, two if eps > 0.92
+  * T20+Td15: one class if T > 20 C and Td > 15 C, two if also Td > 20 C
+  * T20: one class if T > 20 C (dominated in the validation; not advised)
+  * baseline: no correction (classical Pasquill-Turner)
+
 PG -> Obukhov length (van Ulden & Holtslag 1985, as adopted in OPS):
   L = -10 (A), -30 (B), -100 (C), 99999 (D), +200 (E), +50 (F)  [m]
 
@@ -400,6 +409,54 @@ def pasquill_gifford(wind_ms: float, oktas: int, solar_elev: float) -> str:
 PG_TO_L = {"A": -10.0, "B": -30.0, "C": -100.0, "D": 99999.0, "E": 200.0, "F": 50.0}
 PG_TO_MH = {"A": 1500.0, "B": 1000.0, "C": 600.0, "D": 400.0, "E": 200.0, "F": 100.0}
 
+# Night-time warm/humid corrections of the stable classes.  Validated against
+# 00 UTC radiosondes at six warm-climate stations (804 night pairs, May to
+# September 2025); sky_eps is the recommended default (night-rule report).
+NIGHT_RULES = ("sky_eps", "baseline", "T20+Td15", "T20")
+DEFAULT_NIGHT_RULE = "sky_eps"
+
+
+def clear_sky_emissivity(temp_c: float, dew_c: float) -> float:
+    """Brutsaert (1975) clear-sky emissivity, e from the dewpoint (Magnus)."""
+    e_hpa = 6.112 * math.exp(17.625 * dew_c / (243.04 + dew_c))
+    return 1.24 * (e_hpa / (temp_c + 273.15)) ** (1.0 / 7.0)
+
+
+def apply_night_rule(
+    pg: str,
+    solar_elev: float,
+    temp_c: Optional[float],
+    dew_c: Optional[float],
+    rule: str = DEFAULT_NIGHT_RULE,
+) -> str:
+    """Move a night-time E or F class towards neutral under warm/humid skies.
+
+    Acts only when the sun is at or below the horizon and the base class is
+    E or F; the class never goes past D.  Rules (strict thresholds):
+      baseline  no change (classical Pasquill-Turner)
+      T20       one class if T > 20 C
+      T20+Td15  one class if T > 20 C and Td > 15 C, two if also Td > 20 C
+      sky_eps   one class if emissivity > 0.85, two if > 0.92
+    Hours without the needed temperature or dewpoint keep their class.
+    """
+    if rule not in NIGHT_RULES:
+        raise ValueError(f"unknown night rule {rule!r}; choose from {NIGHT_RULES}")
+    if rule == "baseline" or solar_elev > 0 or pg not in ("E", "F"):
+        return pg
+    steps = 0
+    if rule == "T20":
+        if temp_c is not None and temp_c > 20.0:
+            steps = 1
+    elif rule == "T20+Td15":
+        if temp_c is not None and dew_c is not None and temp_c > 20.0 and dew_c > 15.0:
+            steps = 2 if dew_c > 20.0 else 1
+    elif rule == "sky_eps":
+        if temp_c is not None and dew_c is not None:
+            eps = clear_sky_emissivity(temp_c, dew_c)
+            steps = 2 if eps > 0.92 else (1 if eps > 0.85 else 0)
+    order = ["D", "E", "F"]
+    return order[max(0, order.index(pg) - steps)]
+
 
 # --------------------------------------------------------------------------- #
 # Hourly resampling                                                           #
@@ -529,6 +586,7 @@ def _per_row_l_and_mh(
     lat: Optional[float],
     lon: Optional[float],
     mh_cap_m: Optional[float],
+    night_rule: str = DEFAULT_NIGHT_RULE,
 ) -> "Tuple[float, float, Optional[str]]":
     if lat is None or lon is None or row.get("wind_speed_ms") is None:
         return (
@@ -544,6 +602,7 @@ def _per_row_l_and_mh(
     t_mid = row["datetime"] + dt.timedelta(minutes=30)
     se = solar_elevation_deg(t_mid.replace(tzinfo=dt.timezone.utc), lat, lon)
     pg = pasquill_gifford(row["wind_speed_ms"], row.get("oktas", 0) or 0, se)
+    pg = apply_night_rule(pg, se, row.get("temp_c"), row.get("dew_c"), night_rule)
     L = PG_TO_L[pg]
     MH = PG_TO_MH[pg] if mh_cap_m is None else min(PG_TO_MH[pg], mh_cap_m)
     return (L, MH, pg)
@@ -556,6 +615,7 @@ def write_alaqs_meteo_csv(
     lat: Optional[float] = None,
     lon: Optional[float] = None,
     mixing_height_cap_m: Optional[float] = None,
+    night_rule: str = DEFAULT_NIGHT_RULE,
 ) -> int:
     """Write an Open-ALAQS meteo.csv.  Returns the number of rows written."""
     n = 0
@@ -578,7 +638,7 @@ def write_alaqs_meteo_csv(
                 q_str = ""
             rh_str = "" if r["rh"] is None else f"{r['rh']:.3f}"
 
-            L, MH, _pg = _per_row_l_and_mh(r, lat, lon, mixing_height_cap_m)
+            L, MH, _pg = _per_row_l_and_mh(r, lat, lon, mixing_height_cap_m, night_rule)
 
             w.writerow(
                 [
@@ -607,7 +667,12 @@ def write_alaqs_meteo_csv(
 # windrose is a hand-rolled SVG.
 
 
-def _enrich_with_pg(rows: list, lat: Optional[float], lon: Optional[float]) -> None:
+def _enrich_with_pg(
+    rows: list,
+    lat: Optional[float],
+    lon: Optional[float],
+    night_rule: str = DEFAULT_NIGHT_RULE,
+) -> None:
     """Add a 'pg' key (PG class A-F or None) to every row in place.
 
     Uses the same calculation as _per_row_l_and_mh so the stability plot's
@@ -616,7 +681,7 @@ def _enrich_with_pg(rows: list, lat: Optional[float], lon: Optional[float]) -> N
     excluded from the stability plot.
     """
     for r in rows:
-        _L, _MH, pg = _per_row_l_and_mh(r, lat, lon, None)
+        _L, _MH, pg = _per_row_l_and_mh(r, lat, lon, None, night_rule)
         r["pg"] = pg
 
 
@@ -886,6 +951,7 @@ def _write_plots(
     lat: Optional[float],
     lon: Optional[float],
     file=sys.stderr,
+    night_rule: str = DEFAULT_NIGHT_RULE,
 ) -> None:
     """Render the stability and windrose HTML files into plots_dir.
 
@@ -897,7 +963,7 @@ def _write_plots(
     label = (icao or "STATION").upper()
 
     if lat is not None and lon is not None:
-        _enrich_with_pg(rows, lat, lon)
+        _enrich_with_pg(rows, lat, lon, night_rule)
         stab_path = os.path.join(plots_dir, f"{label.lower()}_{year}_stability.html")
         with open(stab_path, "w", encoding="utf-8") as f:
             f.write(build_stability_html(rows, label))
@@ -1271,6 +1337,13 @@ def main(argv: Optional[list] = None) -> int:
     )
     p.add_argument("--lon", type=float, default=None, help="Airport longitude.")
     p.add_argument(
+        "--night-rule",
+        choices=NIGHT_RULES,
+        default=DEFAULT_NIGHT_RULE,
+        help="Night-time correction of the stable classes E/F under warm or "
+        "humid skies (default sky_eps; baseline = classical Pasquill-Turner).",
+    )
+    p.add_argument(
         "--start",
         required=True,
         help="Study start, ISO-8601 UTC (e.g. 2025-01-01T00:00).",
@@ -1374,6 +1447,7 @@ def main(argv: Optional[list] = None) -> int:
         lat=args.lat,
         lon=args.lon,
         mixing_height_cap_m=args.mixing_height,
+        night_rule=args.night_rule,
     )
 
     mode = "PG-classified" if args.lat is not None else "fixed-neutral"
@@ -1388,6 +1462,7 @@ def main(argv: Optional[list] = None) -> int:
             year=start.year,
             lat=args.lat,
             lon=args.lon,
+            night_rule=args.night_rule,
         )
 
     return 0
