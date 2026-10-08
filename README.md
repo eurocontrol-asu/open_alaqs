@@ -174,7 +174,7 @@ The default across every event is `snap`; users opt into `meem` or `bffm2` per-e
 
 Open-ALAQS expects an hourly meteo CSV during output creation. A standalone utility for producing it from a METAR stream ships in `scripts/`:
 
-- [`scripts/metar_to_alaqs_meteo.py`](scripts/metar_to_alaqs_meteo.py) — parses raw METAR, IEM CSV, or Ogimet observations (`--source {auto,iem-csv,ogimet,raw}`), computes relative humidity from T/Td, buckets hourly, writes the ALAQS-schema CSV.
+- [`scripts/metar_to_alaqs_meteo.py`](scripts/metar_to_alaqs_meteo.py) — parses raw METAR, IEM CSV, or Ogimet observations (`--source {auto,iem-csv,ogimet,raw}`), computes relative humidity from T/Td, buckets hourly (wind direction averaged on the circle), classifies stability (Pasquill-Gifford with the mid-hour sun and a night-time humidity correction, `--night-rule`), writes the ALAQS-schema CSV.
 - [`scripts/README_metar_to_alaqs_meteo.md`](scripts/README_metar_to_alaqs_meteo.md) — usage and notes on where to fetch METAR data (NOAA Aviation Weather Center, ogimet.com, metar-taf.com API, python-metar). Fetching is deliberately left to the user; the script focuses on parsing and resampling.
 
 ## GSE Application

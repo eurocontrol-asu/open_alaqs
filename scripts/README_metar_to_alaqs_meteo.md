@@ -23,7 +23,7 @@ is rejected.
 | `RelativeHumidity(0-1)` | fraction | 0..1 (NOT percent) |
 | `SeaLevelPressure(Pa)` | Pascals | QNH × 100 (NOT hPa) |
 | `WindSpeed(m/s)` | m/s | 10 m wind |
-| `WindDirection(degrees)` | ° true | 0-360, written as `999` when missing or VRB |
+| `WindDirection(degrees)` | ° true | 0-359 (north is 0), written as `999` when no report of the hour gives a direction (missing, VRB or calm) |
 | `ObukhovLength(m)` | m | per-hour from PG class, or 99999 (neutral) |
 | `MixingHeight(m)` | m | per-hour from PG class, or fixed default 914.4 |
 
@@ -39,7 +39,9 @@ default,2025-12-01 06:00:00,280.15,0.00538,0.871,101600,5.14,240,99999,400.0
 1. Reads METAR observations from stdin or a file in one of three auto-detected
    formats (see *Supported input formats* below).
 2. Parses each observation: timestamp, wind, temperature, dewpoint, QNH,
-   sky condition (cloud cover in oktas).
+   sky condition (cloud cover in oktas). A reported direction of `360`
+   (north) is stored as 0; `VRB` and calm (`00000KT`) reports carry no
+   direction.
 3. Field-by-field plausibility check: temperature within [-90, +60] °C, QNH
    within [870, 1085] hPa, wind speed within [0, 250] kt, wind direction
    within [0, 360) °. Out-of-range fields are nulled (the row is kept).
@@ -55,12 +57,17 @@ default,2025-12-01 06:00:00,280.15,0.00538,0.871,101600,5.14,240,99999,400.0
    * Relative humidity as a fraction 0-1 from T and Td (Magnus)
    * Pressure in Pascals (QNH × 100)
    * Wind speed in m/s (knots × 0.514444)
-6. Buckets observations into hourly averages across the study window.
+6. Buckets observations into hourly averages across the study window. The
+   row labelled hh:00 averages the reports of hh:00 to hh:59. Wind
+   directions are averaged on the circle (mean of the unit vectors), so
+   reports either side of north average to north (010° and 350° give 0°,
+   not 180°).
 7. Forward-fills any hour with no observation from the most recent good hour.
 8. When `--lat` and `--lon` are provided, classifies each hour into a
-   Pasquill-Gifford stability class A-F using wind, oktas and solar
-   elevation, then emits the corresponding `ObukhovLength` and
-   `MixingHeight`. Without `--lat/--lon` the script emits a constant
+   Pasquill-Gifford stability class A-F using wind, oktas and the solar
+   elevation at mid-hour, applies the night-time humidity correction
+   (`--night-rule`, default `sky_eps`), then emits the corresponding
+   `ObukhovLength` and `MixingHeight`. Without `--lat/--lon` the script emits a constant
    neutral atmosphere.
 9. Writes the CSV with the schema above.
 10. Prints a coverage report to stderr: source used, records retained,
@@ -161,7 +168,9 @@ the meteo.csv into Open-ALAQS.
 When `--lat` and `--lon` are supplied:
 
 * **Solar elevation** is computed analytically from the airport coordinates
-  using declination and the equation of time.
+  using declination and the equation of time, at the middle of the hour
+  (hh:30 UTC), since the row hh:00 averages the reports of hh:00 to hh:59.
+  Night is solar elevation ≤ 0°.
 * **Cloud cover** in oktas is the maximum coverage among the METAR sky
   groups (FEW=2, SCT=4, BKN=6, OVC=8, VV=8). Absence of cloud groups is
   treated as 0 oktas (clear).
@@ -172,6 +181,25 @@ When `--lat` and `--lon` are supplied:
 * **Night-time** (solar elevation ≤ 0°) uses the cloud-dependent table:
   ≥4 oktas → D or E depending on wind; <4 oktas → F (wind <3 m/s), E (3-5),
   or D (≥5).
+* **Night-time humidity correction** (`--night-rule`, default `sky_eps`).
+  The classical night table over-states stability where a humid sky
+  radiates strongly back to the ground. The correction acts only on
+  night-time E and F, moves the class towards neutral and never past D:
+
+  | rule | action |
+  | --- | --- |
+  | `sky_eps` (default) | clear-sky emissivity ε = 1.24·(e/T)^(1/7) (Brutsaert 1975), e in hPa from the dewpoint (Magnus, e = 6.112·exp(17.625·Td/(243.04+Td))), T in K; one class if ε > 0.85, two if ε > 0.92 |
+  | `T20+Td15` | one class if T > 20 °C and Td > 15 °C, two if also Td > 20 °C |
+  | `T20` | one class if T > 20 °C (not advised) |
+  | `baseline` | no correction (classical Pasquill-Turner; the behaviour before this option) |
+
+  Hours without temperature or dewpoint keep their class. Because of the
+  floor at D, the two-class tier only matters for F. The rules were
+  compared against 00 UTC radiosonde stability at six warm-climate stations
+  (804 night-time pairs, May to September 2025): `sky_eps` had the highest
+  exact agreement (59.3 %, against 58.1 % for `T20+Td15` and 50.2 % for
+  `baseline`) and was the only rule first or second in every climate
+  regime. `baseline` remains the stable-biased (conservative) choice.
 * PG class → Obukhov length (van Ulden & Holtslag 1985, as in OPS):
   A=−10, B=−30, C=−100, D=99999, E=+200, F=+50 m.
 * PG class → mixing height (Nieuwstadt 1981):
@@ -270,6 +298,9 @@ Options:
 - `--mixing-height <m>` mixing height. Without `--lat/--lon` it is the
   constant value used for every row (default 914.4 m). With `--lat/--lon`
   it caps the PG-derived value.
+- `--night-rule {sky_eps,baseline,T20+Td15,T20}` night-time humidity
+  correction of the stable classes (see *Stability classification*).
+  Default `sky_eps`; `baseline` gives the classical table.
 - `--source {auto,iem-csv,ogimet,raw}` input format. Default `auto`.
 - `--anchor-year-month YYYY-MM` anchor year/month for `--source raw`.
   Defaults to the year/month of `--start`.
@@ -294,10 +325,22 @@ Options:
   An hour with no observation inherits the previous hour's values
   indefinitely. The coverage report surfaces this, but the script does
   not enforce a hard cap on the gap length.
-* **Wind direction missing/VRB is written as `999`** by convention. The
-  plugin's `AmbientCondition.py` may or may not treat this as a
-  sentinel; post-process the column if your downstream consumer expects
-  blank instead.
+* **Hours without a direction are written as `999`** (no report of the
+  hour gives one: missing, VRB or calm). AUSTAL 3.3.0 does **not** treat
+  `ra = 999` in an explicit `series.dmna` as variable: it uses it as 279°
+  (999 − 720). Its random direction for DD > 360 belongs to the AKTerm
+  conversion only (`TalAKT.c`), and the explicit series is read as already
+  converted (program description section 3.5.2; tested with
+  3.3.0-WI-x). Replace 999 before an AUSTAL run, for example with the
+  direction of the nearest hour that has one.
+* **No minimum wind speed is applied.** AUSTAL sets winds below 0.75 m/s
+  to 0.7 m/s only when it converts an AKTerm (`TalAKT.c`), not in an
+  explicit `series.dmna`, where very low winds pass unchanged and give very
+  high concentrations. Apply a floor (for example 0.7 m/s) to the CSV if
+  needed.
+* **The night-time humidity correction was validated in warm climates**
+  (May to September, six stations). At mid-latitude sites the night sky
+  emissivity rarely exceeds 0.85, so `sky_eps` changes few hours there.
 * **Specific humidity is approximated** from RH and saturation vapour
   pressure, not directly measured. This is the standard convention but
   introduces a small bias (~0.1% RH equivalent) versus a direct
