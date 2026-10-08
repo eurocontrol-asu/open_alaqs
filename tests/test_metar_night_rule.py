@@ -40,8 +40,13 @@ def _dew_for_eps(t, eps):
 
 @pytest.mark.parametrize(
     "eps, base, expected",
-    [(0.84, "F", "F"), (0.86, "F", "E"), (0.93, "F", "D"),
-     (0.86, "E", "D"), (0.93, "E", "D")],
+    [
+        (0.84, "F", "F"),
+        (0.86, "F", "E"),
+        (0.93, "F", "D"),
+        (0.86, "E", "D"),
+        (0.93, "E", "D"),
+    ],
 )
 def test_sky_eps_steps_and_floor(eps, base, expected):
     td = _dew_for_eps(35.0, eps)  # 0.92 is reachable only in very warm, moist air
@@ -51,11 +56,13 @@ def test_sky_eps_steps_and_floor(eps, base, expected):
 
 @pytest.mark.parametrize(
     "t, td, base, expected",
-    [(20.0, 16.0, "F", "F"),   # T not above 20
-     (21.0, 15.0, "F", "F"),   # Td not above 15
-     (21.0, 16.0, "F", "E"),   # one class
-     (25.0, 21.0, "F", "D"),   # two classes
-     (25.0, 21.0, "E", "D")],  # never past D
+    [
+        (20.0, 16.0, "F", "F"),  # T not above 20
+        (21.0, 15.0, "F", "F"),  # Td not above 15
+        (21.0, 16.0, "F", "E"),  # one class
+        (25.0, 21.0, "F", "D"),  # two classes
+        (25.0, 21.0, "E", "D"),
+    ],  # never past D
 )
 def test_t20_td15(t, td, base, expected):
     assert M.apply_night_rule(base, NIGHT, t, td, "T20+Td15") == expected
@@ -85,8 +92,13 @@ def test_unknown_rule_rejected():
 
 def test_row_classification_uses_rule():
     # Clear, light-wind night: base class F; humid enough for sky_eps.
-    row = {"datetime": dt.datetime(2025, 7, 15, 0), "wind_speed_ms": 1.5,
-           "oktas": 0, "temp_c": 25.0, "dew_c": _dew_for_eps(25.0, 0.88)}
+    row = {
+        "datetime": dt.datetime(2025, 7, 15, 0),
+        "wind_speed_ms": 1.5,
+        "oktas": 0,
+        "temp_c": 25.0,
+        "dew_c": _dew_for_eps(25.0, 0.88),
+    }
     _, _, base = M._per_row_l_and_mh(row, 51.95, 4.44, None, "baseline")
     _, _, eps = M._per_row_l_and_mh(row, 51.95, 4.44, None, "sky_eps")
     assert (base, eps) == ("F", "E")
