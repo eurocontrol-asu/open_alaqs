@@ -6,6 +6,39 @@ ISO 8601.
 
 ## [Unreleased]
 
+METAR converter (`scripts/metar_to_alaqs_meteo.py`): wind direction and
+stability fixes, and a night-time humidity correction. **Meteorology
+files built with the converter change**; rebuild them to pick up the
+fixes.
+
+### Fixed
+
+- Hourly wind direction was the arithmetic mean of the reports, so reports
+  either side of north averaged to a southerly wind (010° and 360° gave
+  185°). It is now the circular mean.
+- A reported direction of 360 (north) failed the range check and was
+  dropped, so a northerly hour became `999` or kept only its other report.
+  360 is now stored as 0.
+- Calm reports (`00000KT`) added a 0° direction to the hourly mean. They
+  now carry no direction, like `VRB`.
+- An hourly mean of 359.5° or more was written as `360`; it is now written
+  as `0`.
+- The stability class used the solar elevation at hh:00, although the row
+  averages the reports of hh:00 to hh:59. It now uses the sun at hh:30.
+  Hours around sunrise and sunset change class.
+
+### Added
+
+- `--night-rule {sky_eps,baseline,T20+Td15,T20}`: night-time correction of
+  the stable classes E and F under warm or humid skies, never past D.
+  The default `sky_eps` moves a class one step towards neutral when the
+  clear-sky emissivity (Brutsaert, dewpoint by Magnus) exceeds 0.85, two
+  when it exceeds 0.92. `--night-rule baseline` keeps the previous night
+  table. **Results change** where night-time skies are humid.
+- Documentation: AUSTAL 3.3.0 reads `ra = 999` in `series.dmna` as 279°
+  and applies no minimum wind speed to an explicit series; replace 999 and
+  floor low winds before an AUSTAL run.
+
 ## [5.3.4] - 2026-10-07
 
 Bug fixes for the AUSTAL input, ADS-B imports, engine tests and the
