@@ -51,7 +51,10 @@ Stability classification (when --lat and --lon are given)
 Per hour, the script assigns a Pasquill-Gifford class A-F from three
 inputs: 10 m wind speed, total cloud cover in oktas (FEW=2, SCT=4, BKN=6,
 OVC and VV=8; max coverage among reported layers; absence of cloud groups
-= 0 oktas), and analytically-computed solar elevation.
+= 0 oktas), and analytically-computed solar elevation.  The solar
+elevation is taken at the middle of the hour (hh:30 UTC), since a row
+labelled hh:00 averages the reports of hh:00 to hh:59.  Night is solar
+elevation <= 0.
 
 Daytime insolation (Pasquill 1961 / Turner 1970):
   * Solar elevation > 60 deg: strong
@@ -534,7 +537,12 @@ def _per_row_l_and_mh(
             None,
         )
 
-    se = solar_elevation_deg(row["datetime"].replace(tzinfo=dt.timezone.utc), lat, lon)
+    # A row labelled hh:00 averages the reports of hh:00 to hh:59 and stands
+    # for the interval ending at hh+1, so the sun is taken at mid-hour.
+    # Taking it at hh:00 classifies the hour with the sun of up to an hour
+    # before its observations (wrong night/day flag around sunrise/sunset).
+    t_mid = row["datetime"] + dt.timedelta(minutes=30)
+    se = solar_elevation_deg(t_mid.replace(tzinfo=dt.timezone.utc), lat, lon)
     pg = pasquill_gifford(row["wind_speed_ms"], row.get("oktas", 0) or 0, se)
     L = PG_TO_L[pg]
     MH = PG_TO_MH[pg] if mh_cap_m is None else min(PG_TO_MH[pg], mh_cap_m)
