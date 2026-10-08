@@ -6,6 +6,8 @@ ISO 8601.
 
 ## [Unreleased]
 
+## [5.3.5] - 2026-10-08
+
 METAR converter (`scripts/metar_to_alaqs_meteo.py`): wind direction and
 stability fixes, and a night-time humidity correction. **Meteorology
 files built with the converter change**; rebuild them to pick up the

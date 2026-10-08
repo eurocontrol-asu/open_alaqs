@@ -9,7 +9,7 @@ qgisMaximumVersion=4.99
 supportsQt6=True
 description=An open-source local air quality model
 
-version=5.3.4
+version=5.3.5
 author=Eurocontrol
 email=open-alaqs@eurocontrol.int
 
@@ -23,9 +23,10 @@ repository=https://gitlab.aerlabs.nl/eurocontrol/open_alaqs
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-changelog=5.3.4
-    Bug fixes; results change where noted in CHANGELOG.md.
-    Fixed: engine test events reach the inventory (engine test sites computed to zero). AUSTAL: austal.txt declares hm when series.dmna has a mixing height (concentrations change for such runs); below-ground emissions go to the ground layer instead of being dropped. ADS-B import: heights relative to the airport elevation. shapely 2.2 compatibility (every calculation failed with shapely 2.2). Standalone: below-ground segments, taxi split by time when queuing, helicopters along the FOCA path, GeoPackages include all source kinds.
+changelog=5.3.5
+    METAR converter fixes; meteorology files built with the converter change (rebuild them). Plugin and standalone results are unchanged.
+    Fixed: hourly wind direction is the circular mean of the reports; a reported 360 is kept as north; calm reports carry no direction; a mean rounding to 360 is written as 0; the stability class uses the mid-hour sun.
+    Added: --night-rule (default sky_eps) moves night-time E/F towards neutral under humid skies, never past D; --night-rule baseline keeps the previous table.
     See CHANGELOG.md for details.
 
 # Tags are comma separated with spaces allowed
