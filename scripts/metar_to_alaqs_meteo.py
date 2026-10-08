@@ -206,8 +206,14 @@ def parse_metar(line: str, report_day: dt.date) -> Optional[MetarObs]:
     mw = _RE_WIND.search(line)
     if mw:
         dir_str = mw.group(1)
-        wind_dir = None if dir_str == "VRB" else float(dir_str)
         wind_spd = float(mw.group(2))
+        if dir_str == "VRB" or wind_spd == 0.0:
+            # VRB, and calm (00000KT), carry no usable direction.
+            wind_dir = None
+        else:
+            # METAR reports north as 360; store it as 0 so it passes
+            # validation and averages correctly.
+            wind_dir = float(dir_str) % 360.0
 
     # Temperature / dewpoint
     temp = dew = None
@@ -397,6 +403,17 @@ PG_TO_MH = {"A": 1500.0, "B": 1000.0, "C": 600.0, "D": 400.0, "E": 200.0, "F": 1
 # --------------------------------------------------------------------------- #
 
 
+def _circular_mean_deg(directions: list) -> float:
+    """Mean of wind directions on the circle, in [0, 360).
+
+    An arithmetic mean is wrong across north: 10 and 350 average to 180
+    instead of 0.  The mean of the unit vectors is used instead.
+    """
+    s = sum(math.sin(math.radians(d)) for d in directions)
+    c = sum(math.cos(math.radians(d)) for d in directions)
+    return math.degrees(math.atan2(s, c)) % 360.0
+
+
 def _hour_bucket(t: dt.datetime) -> dt.datetime:
     return t.replace(minute=0, second=0, microsecond=0)
 
@@ -462,7 +479,7 @@ def hourly_average(
                 "dew_c": dew_c,
                 "rh": rh,
                 "qnh_hpa": sum(qnhs) / len(qnhs) if qnhs else None,
-                "wind_dir_deg": sum(wdir) / len(wdir) if wdir else None,
+                "wind_dir_deg": _circular_mean_deg(wdir) if wdir else None,
                 "wind_speed_ms": sum(wspd) / len(wspd) if wspd else None,
                 "oktas": max(0, min(8, oktas_avg)),
                 "_source": "observed",
