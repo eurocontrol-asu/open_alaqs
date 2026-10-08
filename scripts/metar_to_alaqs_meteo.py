@@ -650,9 +650,11 @@ def write_alaqs_meteo_csv(
                     p_pa_str,
                     "" if r["wind_speed_ms"] is None else f"{r['wind_speed_ms']:.2f}",
                     # Round first, then wrap: a mean of 359.5 or more is north (0).
-                    "999"
-                    if r["wind_dir_deg"] is None
-                    else str(int(round(r["wind_dir_deg"])) % 360),
+                    (
+                        "999"
+                        if r["wind_dir_deg"] is None
+                        else str(int(round(r["wind_dir_deg"])) % 360)
+                    ),
                     f"{L:.0f}",
                     f"{MH:.1f}",
                 ]
