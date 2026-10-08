@@ -48,3 +48,14 @@ def test_hourly_direction_is_circular_mean():
 def test_circular_mean_across_north():
     assert round(M._circular_mean_deg([350.0, 10.0])) % 360 == 0
     assert abs(M._circular_mean_deg([80.0, 100.0]) - 90.0) < 1e-9
+
+
+def test_csv_writes_north_as_0_after_rounding(tmp_path):
+    out = tmp_path / "m.csv"
+    rows = [{"datetime": dt.datetime(2024, 1, 6, h), "temp_c": 6.0, "dew_c": 4.0,
+             "rh": 0.87, "qnh_hpa": 1004.0, "wind_dir_deg": d,
+             "wind_speed_ms": 3.0, "oktas": 8}
+            for h, d in enumerate([359.6, 359.4, 0.4, None])]
+    M.write_alaqs_meteo_csv(rows, "t", str(out))
+    dirs = [line.split(",")[7] for line in out.read_text().splitlines()[1:]]
+    assert dirs == ["0", "359", "0", "999"]
