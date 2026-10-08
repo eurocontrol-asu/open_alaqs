@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openalaqs-standalone"
-version = "5.3.4"
+version = "5.3.5"
 description = "QGIS-free OpenALAQS emission pipeline: stationary adapter + aircraft calculator"
 requires-python = ">=3.10"
 dependencies = [
