@@ -77,6 +77,18 @@ MAX_HEIGHT_M = 914.4
 # Tolerance on the vertical ceiling test, matching the plugin's
 # apply_height_limits ULP fix.
 EPS_VERTICAL_M = 1e-6
+# Plausibility limit for a supplied (ADS-B / CUSTOM) fuel flow, as a multiple of the
+# engine's ICAO take-off fuel flow. The ICAO value is a static, sea-level test-bed
+# figure, not an in-flight maximum: at climb speed the fuel flow for a given net thrust
+# is higher (ram drag), and climb points at high thrust can exceed it by a few percent.
+# Only values above this multiple are treated as implausible input (wrong units, a
+# total entered per engine, a wrong engine count) and replaced by the mode anchor. Same
+# value as open_alaqs.core.MovementEmissionCalculator.ADSB_FF_CEILING_FACTOR.
+# Above the take-off point the BFFM2 indices stay bounded: NOx is held at its
+# take-off value, CO and HC at the mean of the climb-out and take-off values (as
+# from the climb-out point upwards), so an accepted fuel flow above the take-off
+# value needs no other guard.
+ADSB_FF_CEILING_FACTOR = 1.5
 # CO2 per kg of fuel burned (stoichiometric, ICAO).
 CO2_PER_KG_FUEL = 3.16
 
@@ -328,7 +340,8 @@ def _bffm2_traj_ff_amb(
     Mirrors MovementEmissionCalculator lines 1082-1124:
       - If the trajectory point carries `fuel_flow_kgm` (ADS-B /
         CUSTOM profiles): use fuel_flow_kgm / n_eng, with a fallback to
-        the TO anchor fuel flow as a ceiling if it is exceeded.
+        the mode anchor when it exceeds ADSB_FF_CEILING_FACTOR x the TO
+        anchor fuel flow (plausibility limit).
       - Otherwise (ANP profiles): twin-quadratic fit on the segment's
         `power` setting to get the EEDB reference fuel flow, then the
         SAE AIR-5715 / CAEP14 inverse ambient correction:
@@ -346,7 +359,7 @@ def _bffm2_traj_ff_amb(
 
     # ADS-B / CUSTOM path: fuel_flow_kgm is an ambient (in-flight) FF
     # for ALL engines combined.
-    ff_to_ceiling = engine_ei["TO"]["ff"]
+    ff_to_ceiling = engine_ei["TO"]["ff"] * ADSB_FF_CEILING_FACTOR
     if ff_kgm not in (None, 0):
         ff_per_engine = ff_kgm / n_eng
         if ff_per_engine > ff_to_ceiling:

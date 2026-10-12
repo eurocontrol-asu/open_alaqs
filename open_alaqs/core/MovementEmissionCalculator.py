@@ -30,6 +30,18 @@ from open_alaqs.core.tools.nox_correction_ambient import (
 
 logger = get_logger(__name__)
 
+# Plausibility limit for a supplied (ADS-B / CUSTOM) fuel flow, as a multiple of the
+# engine's ICAO take-off fuel flow. The ICAO value is a static, sea-level test-bed
+# figure, not an in-flight maximum: at climb speed the fuel flow for a given net thrust
+# is higher (ram drag), and climb points at high thrust can exceed it by a few percent.
+# Only values above this multiple are treated as implausible input (wrong units, a
+# total entered per engine, a wrong engine count) and replaced by the mode anchor.
+# Above the take-off point the BFFM2 indices stay bounded: NOx is held at its
+# take-off value, CO and HC at the mean of the climb-out and take-off values (as
+# from the climb-out point upwards), so an accepted fuel flow above the take-off
+# value needs no other guard.
+ADSB_FF_CEILING_FACTOR = 1.5
+
 
 class EmissionsDict(TypedDict):
     distance_space: float
@@ -754,10 +766,11 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
             count = getattr(self, "_ceiling_fallback_count", 0)
             if count:
                 logger.warning(
-                    "BFFM2 %s: ADS-B ff/engine exceeded EEDB TO ceiling (%.4f kg/s) "
-                    "on %d segment(s); power-setting interpolation used for those segments.",
+                    "BFFM2 %s: ADS-B ff/engine exceeded the plausibility ceiling (%.4f kg/s, "
+                    "%.2f x EEDB TO) on %d segment(s); mode-anchor fuel flow used for those segments.",
                     self._movement_name,
                     self._ceiling_fallback_ceiling,
+                    ADSB_FF_CEILING_FACTOR,
                     count,
                 )
         else:
@@ -1195,8 +1208,8 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
             #       atmospheric and humidity corrections. Matches the CAEP14
             #       v14 LTO-mode workflow + ambient corrections.
             #
-            # fuel_flow_kgm values that exceed the EEDB TO ceiling are always
-            # replaced by the mode anchor (treated as implausible input).
+            # fuel_flow_kgm values above ADSB_FF_CEILING_FACTOR x the EEDB TO fuel
+            # flow are always replaced by the mode anchor (treated as implausible input).
             ff_source = (
                 self._method["config"].get("bffm2_ff_source", "trajectory")
                 if self._method["name"].lower() == "bffm2"
@@ -1219,6 +1232,8 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                     ff_to_ceiling = _to_ei.getObject("fuel_kg_sec") if _to_ei else None
                 except Exception:
                     ff_to_ceiling = None
+                if ff_to_ceiling:
+                    ff_to_ceiling = ff_to_ceiling * ADSB_FF_CEILING_FACTOR
 
                 if ff_source == "mode_anchor" and ff_anchor is not None:
                     # Force anchor FF regardless of supplied value.
@@ -1226,7 +1241,8 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 elif fuel_flow is not None and fuel_flow > 0:
                     ff_per_engine = fuel_flow / n_eng
                     if ff_to_ceiling and ff_per_engine > ff_to_ceiling:
-                        # Supplied FF exceeds physical maximum — fall back.
+                        # Supplied FF implausibly high (above ADSB_FF_CEILING_FACTOR x the
+                        # ICAO take-off value): fall back to the mode anchor.
                         if not hasattr(self, "_ceiling_fallback_count"):
                             self._ceiling_fallback_count = 0
                             self._ceiling_fallback_max = ff_per_engine

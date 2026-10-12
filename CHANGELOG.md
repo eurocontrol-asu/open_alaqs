@@ -46,6 +46,18 @@ checks: `documents/AIRCRAFT_PROFILES_PROVENANCE.md`.
   aircraft of the same propulsion and engine count. The other 1,261 types
   (mostly without an MTOW) keep their group. Mapping:
   `tools/anp22_profiles/output/default_aircraft_mapping.csv`.
+- BFFM2 trajectory: a supplied (ADS-B / CUSTOM) fuel flow is now rejected only
+  above 1.5 times the engine's ICAO take-off fuel flow
+  (`ADSB_FF_CEILING_FACTOR`), instead of above the take-off value itself. The
+  ICAO value is a static, sea-level test-bed figure: in flight, a high-thrust
+  climb point can burn a few percent more, and such points were replaced by
+  the mode anchor (the climb value for climb points). Above the take-off point
+  the BFFM2 indices stay bounded (NOx at its take-off value, CO and HC at the
+  mean of the climb-out and take-off values), so no other guard is needed. The
+  limit still catches wrong units, a total fuel flow entered per engine and a
+  wrong engine count. Plugin, standalone and the CAEP14 reference tool use the
+  same factor. The log message for rejected points now says that the
+  mode-anchor fuel flow is used.
 
 ### Added
 
