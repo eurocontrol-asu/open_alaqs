@@ -6,6 +6,60 @@ ISO 8601.
 
 ## [Unreleased]
 
+Aircraft profile catalogue (`default_aircraft_profiles.csv`) and default
+profiles (`default_aircraft.csv`) corrected against ANP v2.2. **Results
+change** for movements without a `profile_id`, for the profiles listed
+below, and for BFFM2 trajectory runs on propeller aircraft. Details and
+checks: `documents/AIRCRAFT_PROFILES_PROVENANCE.md`.
+
+### Fixed
+
+- 47 ANP v2.2 type profiles were missing (every profile of GIIB, HS748A and
+  PA30, and e.g. `A321-232-D-1`, `CNA441-D-1`, `A330-301-A-1`): commit
+  `ab42da5` had renamed them into the group profiles. They are back, as
+  copies of their group.
+- `757300-A-1` had 4 points and started at 50 ft; restored to its 31 ANP
+  fixed points.
+- `power` of the 17 `CNT (%)` aircraft (C130, DHC8, CNA172, DC3, ...) was a
+  percentage divided by the static thrust (departures 0.01 to 0.33); now
+  thrust / static thrust. RPM aircraft (CNA206, CNA20T, PA28, PA31) carried
+  RPM / static thrust (up to 6.25); their power is now empty. Values above
+  1.0 are capped at 1.0. BFFM2 trajectory no longer falls back to the
+  mode-anchor EI on 23 profiles.
+- `CNA206-D-1` was the 3,600 lb departure; now the 3,000 lb one (stage-1
+  weight), like `CNA20T-D-1`.
+- Empty `weight_kgs` filled for 73 profiles (all 7378MAX and A350-941
+  profiles among them).
+- The ANP 2.1 profiles (COMJET, DHC-2FLT, GASEPF; 13 profiles) are removed:
+  no type defaults to them and they had no weight or power. In a new study,
+  a movement that names one of them gets the aircraft's default profile,
+  with a warning. Existing studies keep their own copy.
+- Groups of the wrong propulsion class: `PISTON-D-1` was a jet climb
+  (ECLIPSE500), now CNA172; `PISTON-D-2` was a turboprop (CNA208), now PA31;
+  `TURBOPROP-D-4` was a jet (IA1125), now EMB120.
+
+### Changed
+
+- `default_aircraft.csv`: 658 types now default to a type-specific ANP v2.2
+  profile (stage-1 departure, `A-1` arrival) instead of a group: 184 through
+  the ANP v2.2 substitution workbook, 474 through the nearest-MTOW ANP
+  aircraft of the same propulsion and engine count. The other 1,261 types
+  (mostly without an MTOW) keep their group. Mapping:
+  `tools/anp22_profiles/output/default_aircraft_mapping.csv`.
+
+### Added
+
+- `tools/anp22_profiles/build_anp22_profiles.py`: reproduces both CSVs from
+  the 5.3.5 tables and the ANP v2.2 tables.
+- `tools/test_fixtures/regenerate_default_aircraft.py`.
+
+### Tests
+
+- New: `test_default_aircraft_profiles_anp22`.
+- `tools/test_fixtures/regenerate_default_aircraft_profiles.py` keeps the
+  study-specific rows of a fixture (CUSTOM, HELIPROF) instead of deleting
+  them, and drops the removed ANP 2.1 profiles. Fixtures regenerated.
+
 ## [5.3.5] - 2026-10-08
 
 METAR converter (`scripts/metar_to_alaqs_meteo.py`): wind direction and
