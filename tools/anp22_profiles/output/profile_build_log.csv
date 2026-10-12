@@ -1,0 +1,845 @@
+profile_id,aircraft,origin,weight,power_parameter,power,capped_points,negative_points,rows
+707-A-1,707,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,7
+707-D-1,707,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+707-D-2,707,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+707-D-3,707,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+707-D-4,707,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+707-D-5,707,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+707-D-6,707,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737-A-1,737,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737-D-1,737,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737-D-2,737,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737-D-3,737,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737-D-4,737,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+7478-A-1,7478,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+7478-D-1,7478,restored: rows of JET-LARGE-D-5 (renamed from 7478-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+JET-LARGE-D-5,7478,copy of 7478-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+7478-D-2,7478,restored: rows of JET-LARGE-D-6 (renamed from 7478-D-2 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+JET-LARGE-D-6,7478,copy of 7478-D-2,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+7478-D-3,7478,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+7478-D-4,7478,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+7478-D-5,7478,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+7478-D-6,7478,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+7478-D-7,7478,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+7478-D-8,7478,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+7478-D-9,7478,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+707120-A-1,707120,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,7
+707120-D-1,707120,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+707120-D-2,707120,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+707120-D-3,707120,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+707120-D-4,707120,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+707120-D-5,707120,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+707120-D-6,707120,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+707320-A-1,707320,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707320-D-1,707320,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707320-D-2,707320,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707320-D-3,707320,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707320-D-4,707320,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707320-D-5,707320,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707320-D-6,707320,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707320-D-7,707320,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+717200-A-1,717200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+717200-D-1,717200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+717200-D-2,717200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+717200-D-3,717200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+717200-D-4,717200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+717200-D-5,717200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+717200-D-6,717200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+727100-A-1,727100,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+727100-D-1,727100,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727100-D-2,727100,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727100-D-3,727100,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727100-D-4,727100,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727200-A-1,727200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,7
+727200-D-1,727200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+727200-D-2,727200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+727200-D-3,727200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+727200-D-4,727200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+737300-A-1,737300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737300-D-1,737300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737300-D-2,737300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737300-D-3,737300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737300-D-4,737300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737400-A-1,737400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737400-D-1,737400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737400-D-2,737400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737400-D-3,737400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737400-D-4,737400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737400-D-0,737400,kept,filled: v2.2 stage M weight 150000 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+737500-A-1,737500,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737500-D-1,737500,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737500-D-2,737500,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737500-D-3,737500,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737500-D-4,737500,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737500-D-5,737500,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737500-D-0,737500,kept,filled: v2.2 stage M weight 128500 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+737700-A-1,737700,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737700-D-1,737700,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+737700-D-2,737700,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+737700-D-3,737700,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+737700-D-4,737700,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+737700-D-5,737700,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+737700-D-6,737700,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+737800-A-1,737800,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,31
+737800-D-1,737800,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737800-D-2,737800,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737800-D-3,737800,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737800-D-4,737800,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737800-D-5,737800,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737800-D-6,737800,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747100-A-1,747100,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,7
+747100-D-1,747100,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747100-D-2,747100,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747100-D-3,747100,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747100-D-4,747100,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747100-D-5,747100,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747100-D-6,747100,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747200-A-1,747200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747200-D-1,747200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747200-D-2,747200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747200-D-3,747200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747200-D-4,747200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747200-D-5,747200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747200-D-6,747200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747200-D-7,747200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+747400-A-1,747400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747400-D-1,747400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747400-D-2,747400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747400-D-3,747400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747400-D-4,747400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747400-D-5,747400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747400-D-6,747400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+747400-D-7,747400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+747400-D-8,747400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+747400-D-9,747400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+JET-SMALL-A-1,A320-232,copy of A320-232-A-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+757300-A-1,757300,rebuilt from ANP v2.2 fixed points 757300 A 'DEFAULT' stage 1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,31
+757300-D-1,757300,restored: rows of JET-SMALL-D-6 (renamed from 757300-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+JET-SMALL-D-6,757300,copy of 757300-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757300-D-2,757300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757300-D-3,757300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757300-D-4,757300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757300-D-5,757300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757300-D-6,757300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+767300-A-1,767300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+767300-D-1,767300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767300-D-2,767300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767300-D-3,767300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767300-D-4,767300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767300-D-5,767300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+767300-D-6,767300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+767300-D-7,767300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+767400-A-1,767400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,26
+767400-D-1,767400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+767400-D-2,767400,restored: rows of JET-MEDIUM-D-5 (renamed from 767400-D-2 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+JET-MEDIUM-D-5,767400,copy of 767400-D-2,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+767400-D-3,767400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+767400-D-4,767400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+767400-D-5,767400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+767400-D-6,767400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+767400-D-7,767400,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+777200-A-1,777200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,34
+777200-D-1,777200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+777200-D-2,777200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+777200-D-3,777200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+777200-D-4,777200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+777200-D-5,777200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+777200-D-6,777200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+777200-D-7,777200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+777200-D-8,777200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+777200-D-9,777200,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+777300-A-1,777300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,26
+777300-D-1,777300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+777300-D-2,777300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+777300-D-3,777300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+777300-D-4,777300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+777300-D-5,777300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+777300-D-6,777300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+777300-D-7,777300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+1900D-A-1,1900D,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+1900D-D-1,1900D,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,10
+1900D-D-2,1900D,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+707QN-D-1,707QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707QN-D-2,707QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707QN-D-3,707QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707QN-D-4,707QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707QN-D-5,707QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707QN-D-6,707QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707QN-D-7,707QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+707QN-A-1,707QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+727D15-A-1,727D15,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+727D15-D-1,727D15,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727D15-D-2,727D15,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727D15-D-3,727D15,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727D15-D-4,727D15,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727D15-D-5,727D15,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+727D17-A-1,727D17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+727D17-D-1,727D17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727D17-D-2,727D17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727D17-D-3,727D17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727D17-D-4,727D17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727EM1-A-1,727EM1,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+727EM1-D-1,727EM1,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727EM1-D-2,727EM1,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727EM1-D-3,727EM1,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727EM1-D-4,727EM1,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727EM2-A-1,727EM2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+727EM2-D-1,727EM2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727EM2-D-2,727EM2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727EM2-D-3,727EM2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727EM2-D-4,727EM2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727EM2-D-5,727EM2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+727Q15-D-1,727Q15,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727Q15-D-2,727Q15,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727Q15-D-3,727Q15,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727Q15-D-4,727Q15,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727Q15-D-5,727Q15,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+727Q15-A-1,727Q15,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+727Q7-D-1,727Q7,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727Q7-D-2,727Q7,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727Q7-D-3,727Q7,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727Q7-D-4,727Q7,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727Q7-A-1,727Q7,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+727Q9-A-1,727Q9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+727Q9-D-1,727Q9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727Q9-D-2,727Q9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727Q9-D-3,727Q9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+727Q9-D-4,727Q9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+727QF-D-1,727QF,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+727QF-D-2,727QF,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+727QF-D-3,727QF,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+727QF-D-4,727QF,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+727QF-A-1,727QF,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+7373B2-A-1,7373B2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+7373B2-D-1,7373B2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+7373B2-D-2,7373B2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+7373B2-D-3,7373B2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+7373B2-D-4,7373B2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+7373B2-D-0,7373B2,kept,filled: v2.2 stage M weight 139500 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+737D17-A-1,737D17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737D17-D-1,737D17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737D17-D-2,737D17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737D17-D-3,737D17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737D17-D-4,737D17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737N17-A-1,737N17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737N17-D-1,737N17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737N17-D-2,737N17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737N17-D-3,737N17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737N17-D-4,737N17,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737N9-A-1,737N9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737N9-D-1,737N9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737N9-D-2,737N9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737N9-D-3,737N9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737N9-D-4,737N9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737QN-A-1,737QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+737QN-D-1,737QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737QN-D-2,737QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737QN-D-3,737QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+737QN-D-4,737QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+74710Q-A-1,74710Q,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74710Q-D-1,74710Q,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74710Q-D-2,74710Q,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74710Q-D-3,74710Q,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74710Q-D-4,74710Q,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74710Q-D-5,74710Q,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74710Q-D-6,74710Q,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720A-A-1,74720A,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720A-D-1,74720A,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720A-D-2,74720A,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720A-D-3,74720A,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720A-D-4,74720A,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720A-D-5,74720A,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720A-D-6,74720A,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+74720A-D-7,74720A,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+74720B-A-1,74720B,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720B-D-1,74720B,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720B-D-2,74720B,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720B-D-3,74720B,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720B-D-4,74720B,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720B-D-5,74720B,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720B-D-6,74720B,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+74720B-D-7,74720B,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+747SP-A-1,747SP,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747SP-D-1,747SP,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747SP-D-2,747SP,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747SP-D-3,747SP,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747SP-D-4,747SP,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747SP-D-5,747SP,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747SP-D-6,747SP,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+747SP-D-7,747SP,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+757PW-A-1,757PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757PW-D-1,757PW,restored: rows of JET-SMALL-D-5 (renamed from 757PW-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+JET-SMALL-D-5,757PW,copy of 757PW-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757PW-D-2,757PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757PW-D-3,757PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757PW-D-4,757PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757PW-D-5,757PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757PW-D-6,757PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757PW-D-7,757PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757RR-A-1,757RR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757RR-D-1,757RR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757RR-D-2,757RR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757RR-D-3,757RR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757RR-D-4,757RR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757RR-D-5,757RR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757RR-D-6,757RR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+757RR-D-7,757RR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+767CF6-A-1,767CF6,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+767CF6-D-1,767CF6,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767CF6-D-2,767CF6,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767CF6-D-3,767CF6,restored: rows of JET-LARGE-D-3 (renamed from 767CF6-D-3 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+JET-LARGE-D-3,767CF6,copy of 767CF6-D-3,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767CF6-D-4,767CF6,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767CF6-D-5,767CF6,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767CF6-D-6,767CF6,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767CF6-D-7,767CF6,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767JT9-A-1,767JT9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+767JT9-D-1,767JT9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767JT9-D-2,767JT9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767JT9-D-3,767JT9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767JT9-D-4,767JT9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767JT9-D-5,767JT9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767JT9-D-6,767JT9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+767JT9-D-7,767JT9,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+7773ER-A-1,7773ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+7773ER-D-1,7773ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+7773ER-D-2,7773ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+7773ER-D-3,7773ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+7773ER-D-4,7773ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+7773ER-D-5,7773ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+7773ER-D-6,7773ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+7773ER-D-7,7773ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+7773ER-D-8,7773ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+7773ER-D-9,7773ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+7878R-A-1,7878R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+7878R-D-1,7878R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+7878R-D-2,7878R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+7878R-D-3,7878R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+7878R-D-4,7878R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+7878R-D-5,7878R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+7878R-D-6,7878R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+7878R-D-7,7878R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+7878R-D-8,7878R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+7878R-D-9,7878R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A300-622R-A-1,A300-622R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+A300-622R-D-1,A300-622R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A300-622R-D-2,A300-622R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A300-622R-D-3,A300-622R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A300-622R-D-4,A300-622R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A300-622R-D-5,A300-622R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A300-622R-D-6,A300-622R,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A300B4-203-A-1,A300B4-203,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A300B4-203-D-1,A300B4-203,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A300B4-203-D-2,A300B4-203,restored: rows of JET-LARGE-D-7 (renamed from A300B4-203-D-2 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+JET-LARGE-D-7,A300B4-203,copy of A300B4-203-D-2,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A300B4-203-D-3,A300B4-203,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A300B4-203-D-4,A300B4-203,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A300B4-203-D-5,A300B4-203,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A310-304-A-1,A310-304,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+A310-304-D-1,A310-304,restored: rows of JET-LARGE-D-1 (renamed from A310-304-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+JET-LARGE-D-1,A310-304,copy of A310-304-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A310-304-D-2,A310-304,restored: rows of JET-LARGE-D-2 (renamed from A310-304-D-2 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+JET-LARGE-D-2,A310-304,copy of A310-304-D-2,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A310-304-D-3,A310-304,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A310-304-D-4,A310-304,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A310-304-D-5,A310-304,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A310-304-D-6,A310-304,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A319-131-A-1,A319-131,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+A319-131-D-1,A319-131,restored: rows of JET-SMALL-D-2 (renamed from A319-131-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+JET-SMALL-D-2,A319-131,copy of A319-131-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A319-131-D-2,A319-131,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A319-131-D-3,A319-131,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A319-131-D-4,A319-131,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A319-131-D-5,A319-131,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+A320-211-A-1,A320-211,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+A320-211-D-1,A320-211,restored: rows of JET-SMALL-D-3 (renamed from A320-211-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+JET-SMALL-D-3,A320-211,copy of A320-211-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A320-211-D-2,A320-211,restored: rows of JET-MEDIUM-D-3 (renamed from A320-211-D-2 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+JET-MEDIUM-D-3,A320-211,copy of A320-211-D-2,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A320-211-D-3,A320-211,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A320-211-D-4,A320-211,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A320-211-D-5,A320-211,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A320-232-A-1,A320-232,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+A320-232-D-1,A320-232,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A320-232-D-2,A320-232,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A320-232-D-3,A320-232,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A320-232-D-4,A320-232,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A320-232-D-5,A320-232,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A321-232-A-1,A321-232,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+A321-232-D-1,A321-232,restored: rows of JET-SMALL-D-4 (renamed from A321-232-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+JET-SMALL-D-4,A321-232,copy of A321-232-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A321-232-D-2,A321-232,restored: rows of JET-MEDIUM-D-4 (renamed from A321-232-D-2 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+JET-MEDIUM-D-4,A321-232,copy of A321-232-D-2,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A321-232-D-3,A321-232,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A321-232-D-4,A321-232,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A321-232-D-5,A321-232,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-301-A-1,A330-301,restored: rows of JET-MEDIUM-A-1 (renamed from A330-301-A-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+JET-MEDIUM-A-1,A330-301,copy of A330-301-A-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+A330-301-D-1,A330-301,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-301-D-2,A330-301,restored: rows of JET-MEDIUM-D-6 (renamed from A330-301-D-2 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+JET-MEDIUM-D-6,A330-301,copy of A330-301-D-2,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-301-D-3,A330-301,restored: rows of JET-MEDIUM-D-7 (renamed from A330-301-D-3 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+JET-MEDIUM-D-7,A330-301,copy of A330-301-D-3,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-301-D-4,A330-301,restored: rows of JET-LARGE-D-4 (renamed from A330-301-D-4 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+JET-LARGE-D-4,A330-301,copy of A330-301-D-4,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-301-D-5,A330-301,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-301-D-6,A330-301,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-301-D-7,A330-301,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-343-A-1,A330-343,restored: rows of JET-LARGE-A-1 (renamed from A330-343-A-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,14
+JET-LARGE-A-1,A330-343,copy of A330-343-A-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,14
+A330-343-D-1,A330-343,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-343-D-2,A330-343,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-343-D-3,A330-343,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-343-D-4,A330-343,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-343-D-5,A330-343,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-343-D-6,A330-343,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A330-343-D-7,A330-343,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A340-211-A-1,A340-211,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,14
+A340-211-D-1,A340-211,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A340-211-D-2,A340-211,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A340-211-D-3,A340-211,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A340-211-D-4,A340-211,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A340-211-D-5,A340-211,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A340-211-D-6,A340-211,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A340-211-D-7,A340-211,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,13
+A340-642-A-1,A340-642,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,14
+A340-642-D-1,A340-642,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A340-642-D-2,A340-642,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A340-642-D-3,A340-642,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A340-642-D-4,A340-642,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A340-642-D-5,A340-642,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A340-642-D-6,A340-642,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+A340-642-D-7,A340-642,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+A380-841-A-1,A380-841,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,15
+A380-841-D-1,A380-841,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-841-D-2,A380-841,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-841-D-3,A380-841,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-841-D-4,A380-841,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-841-D-5,A380-841,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-841-D-6,A380-841,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-841-D-7,A380-841,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-841-D-8,A380-841,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,8
+A380-861-A-1,A380-861,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,15
+A380-861-D-1,A380-861,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-861-D-2,A380-861,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-861-D-3,A380-861,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-861-D-4,A380-861,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-861-D-5,A380-861,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-861-D-6,A380-861,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-861-D-7,A380-861,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+A380-861-D-8,A380-861,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,8
+BAC111-A-1,BAC111,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+BAC111-D-1,BAC111,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+BAC111-D-2,BAC111,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+BAC111-D-3,BAC111,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+BAE146-A-1,BAE146,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+BAE146-D-1,BAE146,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+BAE146-D-2,BAE146,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+BAE146-D-3,BAE146,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+BAE300-A-1,BAE300,restored: rows of JET-REGIONAL-A-1 (renamed from BAE300-A-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+JET-REGIONAL-A-1,BAE300,copy of BAE300-A-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+BAE300-D-1,BAE300,restored: rows of JET-REGIONAL-D-5 (renamed from BAE300-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+JET-REGIONAL-D-5,BAE300,copy of BAE300-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+BAE300-D-2,BAE300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+BAE300-D-3,BAE300,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+BEC58P-A-1,BEC58P,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+BEC58P-D-1,BEC58P,restored: rows of PISTON-D-4 (renamed from BEC58P-D-1 in ab42da5),kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),4,0,10
+PISTON-D-4,BEC58P,copy of BEC58P-D-1,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),4,0,10
+C130-A-1,C130,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,10
+C130-D-1,C130,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),4,0,11
+C130-D-2,C130,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),3,0,11
+C130E-D-1,C130E,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),4,0,11
+C130E-D-2,C130E,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),3,0,11
+C130E-A-1,C130E,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,10
+CIT3-A-1,CIT3,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+CIT3-D-1,CIT3,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+CL600-A-1,CL600,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+CL600-D-1,CL600,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+CL601-A-1,CL601,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+CL601-D-1,CL601,restored: rows of JET-REGIONAL-D-1 (renamed from CL601-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+JET-REGIONAL-D-1,CL601,copy of CL601-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+CNA208-D-1,CNA208,restored: rows of PISTON-D-2 (renamed from CNA208-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),2,0,11
+PISTON-D-2,PA31,copy of PA31-D-1 (class replacement of CNA208-D-1),filled: v2.2 stage 1 weight 7000 lb,Other (RPM),emptied (RPM aircraft),0,0,9
+CNA208-A-1,CNA208,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+CNA441-A-1,CNA441,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+CNA441-D-1,CNA441,restored: rows of TURBOPROP-D-1 (renamed from CNA441-D-1 in ab42da5),kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),5,0,9
+TURBOPROP-D-1,CNA441,copy of CNA441-D-1,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),5,0,9
+CNA500-A-1,CNA500,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+CNA500-D-1,CNA500,restored: rows of JET-BUSINESS-D-2 (renamed from CNA500-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+JET-BUSINESS-D-2,CNA500,copy of CNA500-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+CNA510-A-1,CNA510,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+CNA510-D-1,CNA510,restored: rows of JET-BUSINESS-D-1 (renamed from CNA510-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,12
+JET-BUSINESS-D-1,CNA510,copy of CNA510-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,12
+CNA525C-A-1,CNA525C,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+CNA525C-D-1,CNA525C,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+CNA55B-A-1,CNA55B,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+CNA55B-D-1,CNA55B,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+CNA560E-A-1,CNA560E,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+CNA560E-D-1,CNA560E,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,12
+CNA560U-A-1,CNA560U,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+CNA560U-D-1,CNA560U,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+CNA560XL-A-1,CNA560XL,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+CNA560XL-D-1,CNA560XL,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,9
+CNA680-A-1,CNA680,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+CNA680-D-1,CNA680,restored: rows of JET-BUSINESS-D-4 (renamed from CNA680-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+JET-BUSINESS-D-4,CNA680,copy of CNA680-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+CNA750-A-1,CNA750,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+CNA750-D-1,CNA750,restored: rows of JET-MEDIUM-D-1 (renamed from CNA750-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+JET-MEDIUM-D-1,CNA750,copy of CNA750-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+CRJ9-ER-A-1,CRJ9-ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+CRJ9-ER-D-1,CRJ9-ER,restored: rows of JET-REGIONAL-D-2 (renamed from CRJ9-ER-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+JET-REGIONAL-D-2,CRJ9-ER,copy of CRJ9-ER-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+CRJ9-ER-D-2,CRJ9-ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+CRJ9-ER-D-3,CRJ9-ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+CRJ9-ER-D-4,CRJ9-ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+CRJ9-ER-D-5,CRJ9-ER,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+CRJ9-LR-A-1,CRJ9-LR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+CRJ9-LR-D-1,CRJ9-LR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+CRJ9-LR-D-2,CRJ9-LR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+CRJ9-LR-D-3,CRJ9-LR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+CRJ9-LR-D-4,CRJ9-LR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+CRJ9-LR-D-5,CRJ9-LR,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+CVR580-A-1,CVR580,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+CVR580-D-1,CVR580,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),4,0,10
+CVR580-D-2,CVR580,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),3,0,10
+CVR580-D-3,CVR580,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),3,0,10
+DC1010-A-1,DC1010,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+DC1010-D-1,DC1010,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1010-D-2,DC1010,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1010-D-3,DC1010,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1010-D-4,DC1010,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1010-D-5,DC1010,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1010-D-6,DC1010,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1030-A-1,DC1030,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+DC1030-D-1,DC1030,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1030-D-2,DC1030,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1030-D-3,DC1030,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1030-D-4,DC1030,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1030-D-5,DC1030,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1030-D-6,DC1030,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1030-D-7,DC1030,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1040-A-1,DC1040,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+DC1040-D-1,DC1040,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1040-D-2,DC1040,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1040-D-3,DC1040,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1040-D-4,DC1040,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1040-D-5,DC1040,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1040-D-6,DC1040,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC1040-D-7,DC1040,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC3-A-1,DC3,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+DC3-D-1,DC3,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),6,0,9
+DC3-D-2,DC3,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),5,0,9
+DC3-D-3,DC3,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),4,0,8
+DC6-A-1,DC6,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+DC6-D-1,DC6,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),7,0,9
+DC6-D-2,DC6,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),5,0,9
+DC6-D-3,DC6,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),1,0,9
+DC850-A-1,DC850,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+DC850-D-1,DC850,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC850-D-2,DC850,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC850-D-3,DC850,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC850-D-4,DC850,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC850-D-5,DC850,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC850-D-6,DC850,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC860-A-1,DC860,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+DC860-D-1,DC860,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC860-D-2,DC860,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC860-D-3,DC860,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC860-D-4,DC860,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC860-D-5,DC860,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC860-D-6,DC860,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC860-D-7,DC860,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC870-A-1,DC870,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+DC870-D-1,DC870,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC870-D-2,DC870,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC870-D-3,DC870,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC870-D-4,DC870,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC870-D-5,DC870,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC870-D-6,DC870,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC870-D-7,DC870,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC8QN-D-1,DC8QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC8QN-D-2,DC8QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC8QN-D-3,DC8QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC8QN-D-4,DC8QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC8QN-D-5,DC8QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC8QN-D-6,DC8QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC8QN-D-7,DC8QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC8QN-A-1,DC8QN,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+DC910-A-1,DC910,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+DC910-D-1,DC910,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC910-D-2,DC910,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC910-D-3,DC910,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC930-A-1,DC930,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+DC930-D-1,DC930,restored: rows of JET-MEDIUM-D-2 (renamed from DC930-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+JET-MEDIUM-D-2,DC930,copy of DC930-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC930-D-2,DC930,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC930-D-3,DC930,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC93LW-A-1,DC93LW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+DC93LW-D-1,DC93LW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC93LW-D-2,DC93LW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC93LW-D-3,DC93LW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC950-A-1,DC950,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+DC950-D-1,DC950,restored: rows of JET-REGIONAL-D-3 (renamed from DC950-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+JET-REGIONAL-D-3,DC950,copy of DC950-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC950-D-2,DC950,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC950-D-3,DC950,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC95HW-A-1,DC95HW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+DC95HW-D-1,DC95HW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC95HW-D-2,DC95HW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DC95HW-D-3,DC95HW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+DHC6-A-1,DHC6,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+DHC6-D-1,DHC6,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),2,0,9
+DHC6QP-D-1,DHC6QP,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),2,0,9
+DHC6QP-A-1,DHC6QP,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+DHC7-A-1,DHC7,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+DHC7-D-1,DHC7,restored: rows of TURBOPROP-D-5 (renamed from DHC7-D-1 in ab42da5),kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),3,0,11
+TURBOPROP-D-5,DHC7,copy of DHC7-D-1,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),3,0,11
+DHC8-A-1,DHC8,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+DHC8-D-1,DHC8,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),2,0,11
+DHC830-A-1,DHC830,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+DHC830-D-1,DHC830,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),1,0,11
+DO228-A-1,DO228,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+DO228-D-1,DO228,restored: rows of TURBOPROP-D-2 (renamed from DO228-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+TURBOPROP-D-2,DO228,copy of DO228-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+DO328-A-1,DO328,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+DO328-D-1,DO328,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+ECLIPSE500-A-1,ECLIPSE500,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+ECLIPSE500-D-1,ECLIPSE500,restored: rows of PISTON-D-1 (renamed from ECLIPSE500-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,13
+PISTON-D-1,CNA172,copy of CNA172-D-1 (class replacement of ECLIPSE500-D-1),filled: v2.2 stage 1 weight 2450 lb,CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),7,0,9
+ECLIPSE500-D-2,ECLIPSE500,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,13
+ECLIPSE500-D-3,ECLIPSE500,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,13
+EMB120-A-1,EMB120,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+EMB120-D-1,EMB120,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+EMB145-A-1,EMB145,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB145-D-1,EMB145,restored: rows of JET-BUSINESS-D-5 (renamed from EMB145-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+JET-BUSINESS-D-5,EMB145,copy of EMB145-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB145-D-2,EMB145,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB145-D-3,EMB145,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB145-D-4,EMB145,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB14L-A-1,EMB14L,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB14L-D-1,EMB14L,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB14L-D-2,EMB14L,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB14L-D-3,EMB14L,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB14L-D-4,EMB14L,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB14L-D-5,EMB14L,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB14L-D-6,EMB14L,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB170-A-1,EMB170,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+EMB170-D-1,EMB170,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB170-D-2,EMB170,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB170-D-3,EMB170,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB175-A-1,EMB175,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+EMB175-D-1,EMB175,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB175-D-2,EMB175,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB175-D-3,EMB175,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB190-A-1,EMB190,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+EMB190-D-1,EMB190,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB190-D-2,EMB190,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB190-D-3,EMB190,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+EMB190-D-4,EMB190,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+EMB195-A-1,EMB195,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+EMB195-D-1,EMB195,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+EMB195-D-2,EMB195,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+EMB195-D-3,EMB195,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+EMB195-D-4,EMB195,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+F10062-A-1,F10062,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+F10062-D-1,F10062,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+F10062-D-2,F10062,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+F10062-D-3,F10062,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+F10065-A-1,F10065,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+F10065-D-1,F10065,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+F10065-D-2,F10065,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+F10065-D-3,F10065,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+F28MK2-A-1,F28MK2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+F28MK2-D-1,F28MK2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,12
+F28MK2-D-2,F28MK2,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,12
+F28MK4-A-1,F28MK4,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+F28MK4-D-1,F28MK4,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,12
+F28MK4-D-2,F28MK4,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,12
+F28MK4-D-3,F28MK4,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,12
+FAL20-A-1,FAL20,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+FAL20-D-1,FAL20,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+GII-A-1,GII,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+GII-D-1,GII,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,15
+GIIB-A-1,GIIB,restored: rows of JET-BUSINESS-A-1 (renamed from GIIB-A-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+JET-BUSINESS-A-1,GIIB,copy of GIIB-A-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+GIIB-D-1,GIIB,restored: rows of JET-BUSINESS-D-6 (renamed from GIIB-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,15
+JET-BUSINESS-D-6,GIIB,copy of GIIB-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,15
+GIV-A-1,GIV,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+GIV-D-1,GIV,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,17
+GV-A-1,GV,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+GV-D-1,GV,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,17
+HS748A-A-1,HS748A,restored: rows of TURBOPROP-A-1 (renamed from HS748A-A-1 in ab42da5),kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+TURBOPROP-A-1,HS748A,copy of HS748A-A-1,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+HS748A-D-1,HS748A,restored: rows of TURBOPROP-D-6 (renamed from HS748A-D-1 in ab42da5),kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),1,0,10
+TURBOPROP-D-6,HS748A,copy of HS748A-D-1,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),1,0,10
+IA1125-A-1,IA1125,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+IA1125-D-1,IA1125,restored: rows of TURBOPROP-D-4 (renamed from IA1125-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+TURBOPROP-D-4,EMB120,copy of EMB120-D-1 (class replacement of IA1125-D-1),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+L1011-A-1,L1011,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+L1011-D-1,L1011,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+L1011-D-2,L1011,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+L1011-D-3,L1011,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+L1011-D-4,L1011,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+L1011-D-5,L1011,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+L1011-D-6,L1011,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+L10115-A-1,L10115,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+L10115-D-1,L10115,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+L10115-D-2,L10115,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+L10115-D-3,L10115,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+L10115-D-4,L10115,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+L10115-D-5,L10115,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+L10115-D-6,L10115,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+L10115-D-7,L10115,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,12
+L188-A-1,L188,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+L188-D-1,L188,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),3,0,10
+L188-D-2,L188,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),1,0,10
+L188-D-3,L188,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,10
+LEAR25-D-1,LEAR25,restored: rows of JET-SMALL-D-1 (renamed from LEAR25-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+JET-SMALL-D-1,LEAR25,copy of LEAR25-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+LEAR25-A-1,LEAR25,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+LEAR35-A-1,LEAR35,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+LEAR35-D-1,LEAR35,restored: rows of JET-BUSINESS-D-3 (renamed from LEAR35-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+JET-BUSINESS-D-3,LEAR35,copy of LEAR35-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+MD11GE-A-1,MD11GE,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,7
+MD11GE-D-1,MD11GE,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD11GE-D-2,MD11GE,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD11GE-D-3,MD11GE,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD11GE-D-4,MD11GE,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD11GE-D-5,MD11GE,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD11GE-D-6,MD11GE,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD11GE-D-7,MD11GE,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD11PW-A-1,MD11PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,7
+MD11PW-D-1,MD11PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD11PW-D-2,MD11PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD11PW-D-3,MD11PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD11PW-D-4,MD11PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD11PW-D-5,MD11PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD11PW-D-6,MD11PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD11PW-D-7,MD11PW,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD81-A-1,MD81,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,27
+MD81-D-1,MD81,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD81-D-2,MD81,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD81-D-3,MD81,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD81-D-4,MD81,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD82-A-1,MD82,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,27
+MD82-D-1,MD82,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD82-D-2,MD82,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD82-D-3,MD82,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD82-D-4,MD82,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD82-D-5,MD82,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD83-A-1,MD83,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,27
+MD83-D-1,MD83,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD83-D-2,MD83,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD83-D-3,MD83,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD83-D-4,MD83,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD83-D-5,MD83,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+MD9025-A-1,MD9025,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+MD9025-D-1,MD9025,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,8
+MD9025-D-2,MD9025,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,8
+MD9025-D-3,MD9025,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,8
+MD9025-D-4,MD9025,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,8
+MD9025-D-5,MD9025,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,8
+MD9028-A-1,MD9028,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+MD9028-D-1,MD9028,restored: rows of JET-REGIONAL-D-4 (renamed from MD9028-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,8
+JET-REGIONAL-D-4,MD9028,copy of MD9028-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,8
+MD9028-D-2,MD9028,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,8
+MD9028-D-3,MD9028,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,8
+MD9028-D-4,MD9028,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,8
+MD9028-D-5,MD9028,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,8
+MU3001-A-1,MU3001,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+MU3001-D-1,MU3001,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,11
+PA30-D-1,PA30,restored: rows of PISTON-D-3 (renamed from PA30-D-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+PISTON-D-3,PA30,copy of PA30-D-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+PA30-A-1,PA30,restored: rows of PISTON-A-1 (renamed from PA30-A-1 in ab42da5),kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+PISTON-A-1,PA30,copy of PA30-A-1,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,9
+PA31-D-1,PA31,kept,filled: v2.2 stage 1 weight 7000 lb,Other (RPM),emptied (RPM aircraft),0,0,9
+PA31-A-1,PA31,kept,filled: v2.2 stage 1 weight 7000 lb,Other (RPM),emptied (RPM aircraft),0,0,7
+PA42-A-1,PA42,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,10
+PA42-D-1,PA42,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,11
+SABR80-A-1,SABR80,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),0,0,7
+SABR80-D-1,SABR80,kept,kept (equals v2.2),CNT (lb),kept (CNT / static thrust),1,0,12
+SD330-A-1,SD330,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+SD330-D-1,SD330,restored: rows of TURBOPROP-D-3 (renamed from SD330-D-1 in ab42da5),kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),4,0,10
+TURBOPROP-D-3,SD330,copy of SD330-D-1,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),4,0,10
+SF340-A-1,SF340,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+SF340-D-1,SF340,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),4,0,10
+SF340-D-2,SF340,kept,kept (equals v2.2),CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),3,0,10
+CNA206-D-1,CNA206,rebuilt from ANP v2.2 fixed points CNA206 D '3000LB' stage 1,filled: v2.2 stage 1 weight 3000 lb,Other (RPM),emptied (RPM aircraft),0,0,9
+CNA206-A-1,CNA206,kept,filled: v2.2 stage 1 weight 3000 lb,Other (RPM),emptied (RPM aircraft),0,0,9
+720B-A-1,720B,kept,filled: v2.2 stage 1 weight 165000 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+7378MAX-A-1,7378MAX,kept,filled: v2.2 stage 1 weight 140000 lb,CNT (lb),kept (CNT / static thrust),0,0,12
+A350-941-A-1,A350-941,kept,filled: v2.2 stage 1 weight 421680 lb,CNT (lb),kept (CNT / static thrust),0,0,13
+CNA172-A-1,CNA172,kept,filled: v2.2 stage 1 weight 2450 lb,CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),0,0,11
+CNA182-A-1,CNA182,kept,filled: v2.2 stage 1 weight 2800 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+CONCRD-A-1,CONCRD,kept,filled: v2.2 stage 1 weight 340000 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+DC9Q7-A-1,DC9Q7,kept,filled: v2.2 stage 1 weight 70000 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+DC9Q9-A-1,DC9Q9,kept,filled: v2.2 stage 1 weight 93500 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+720B-D-1,720B,kept,filled: v2.2 stage 1 weight 165000 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+720B-D-2,720B,kept,filled: v2.2 stage 2 weight 175000 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+720B-D-3,720B,kept,filled: v2.2 stage 3 weight 185000 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+720B-D-4,720B,kept,filled: v2.2 stage 4 weight 200000 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+720B-D-5,720B,kept,filled: v2.2 stage 5 weight 210000 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+7378MAX-D-1,7378MAX,kept,filled: v2.2 stage 1 weight 140000 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+7378MAX-D-2,7378MAX,kept,filled: v2.2 stage 2 weight 144600 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+7378MAX-D-3,7378MAX,kept,filled: v2.2 stage 3 weight 149600 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+7378MAX-D-4,7378MAX,kept,filled: v2.2 stage 4 weight 159300 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+7378MAX-D-5,7378MAX,kept,filled: v2.2 stage 5 weight 171300 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+7378MAX-D-6,7378MAX,kept,filled: v2.2 stage 6 weight 174500 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+7378MAX-D-0,7378MAX,kept,filled: v2.2 stage M weight 181200 lb,CNT (lb),kept (CNT / static thrust),0,0,11
+A350-941-D-1,A350-941,kept,filled: v2.2 stage 1 weight 421680 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+A350-941-D-2,A350-941,kept,filled: v2.2 stage 2 weight 433189 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+A350-941-D-3,A350-941,kept,filled: v2.2 stage 3 weight 445270 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+A350-941-D-4,A350-941,kept,filled: v2.2 stage 4 weight 466326 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+A350-941-D-5,A350-941,kept,filled: v2.2 stage 5 weight 493412 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+A350-941-D-6,A350-941,kept,filled: v2.2 stage 6 weight 522377 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+A350-941-D-7,A350-941,kept,filled: v2.2 stage 7 weight 552871 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+A350-941-D-8,A350-941,kept,filled: v2.2 stage 8 weight 585147 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+A350-941-D-0,A350-941,kept,filled: v2.2 stage M weight 606271 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+CNA172-D-1,CNA172,kept,filled: v2.2 stage 1 weight 2450 lb,CNT (% of Max Static Thrust),x static thrust / 100 (percentage stored divided by static thrust),7,0,9
+CNA182-D-1,CNA182,kept,filled: v2.2 stage 1 weight 2800 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+DC9Q7-D-1,DC9Q7,kept,filled: v2.2 stage 1 weight 70000 lb,CNT (lb),kept (CNT / static thrust),0,0,12
+DC9Q7-D-2,DC9Q7,kept,filled: v2.2 stage 2 weight 78000 lb,CNT (lb),kept (CNT / static thrust),0,0,12
+DC9Q7-D-3,DC9Q7,kept,filled: v2.2 stage 3 weight 85000 lb,CNT (lb),kept (CNT / static thrust),0,0,12
+DC9Q9-D-1,DC9Q9,kept,filled: v2.2 stage 1 weight 93500 lb,CNT (lb),kept (CNT / static thrust),0,0,12
+DC9Q9-D-2,DC9Q9,kept,filled: v2.2 stage 2 weight 103000 lb,CNT (lb),kept (CNT / static thrust),0,0,12
+DC9Q9-D-3,DC9Q9,kept,filled: v2.2 stage 3 weight 112000 lb,CNT (lb),kept (CNT / static thrust),0,0,12
+720-A-1,720,kept,filled: v2.2 stage 1 weight 145000 lb,CNT (lb),kept (CNT / static thrust),0,0,7
+720-D-1,720,kept,filled: v2.2 stage 1 weight 145000 lb,CNT (lb),kept (CNT / static thrust),0,0,12
+720-D-2,720,kept,filled: v2.2 stage 2 weight 155000 lb,CNT (lb),kept (CNT / static thrust),0,0,12
+720-D-3,720,kept,filled: v2.2 stage 3 weight 165000 lb,CNT (lb),kept (CNT / static thrust),0,0,12
+720-D-4,720,kept,filled: v2.2 stage 4 weight 180000 lb,CNT (lb),kept (CNT / static thrust),0,0,12
+720-D-5,720,kept,filled: v2.2 stage 5 weight 190000 lb,CNT (lb),kept (CNT / static thrust),0,0,12
+CNA206-D-2,CNA206,kept,filled: v2.2 stage 2 weight 3300 lb,Other (RPM),emptied (RPM aircraft),0,0,9
+CNA206-D-3,CNA206,kept,filled: v2.2 stage 3 weight 3600 lb,Other (RPM),emptied (RPM aircraft),0,0,9
+CNA20T-A-1,CNA20T,kept,filled: v2.2 stage 1 weight 3000 lb,Other (RPM),emptied (RPM aircraft),0,0,9
+CNA20T-D-1,CNA20T,kept,filled: v2.2 stage 1 weight 3000 lb,Other (RPM),emptied (RPM aircraft),0,0,9
+CNA20T-D-2,CNA20T,kept,filled: v2.2 stage 2 weight 3300 lb,Other (RPM),emptied (RPM aircraft),0,0,9
+CNA20T-D-3,CNA20T,kept,filled: v2.2 stage 3 weight 3600 lb,Other (RPM),emptied (RPM aircraft),0,0,9
+CONCRD-D-1,CONCRD,kept,filled: v2.2 stage 1 weight 340000 lb,CNT (lb),kept (CNT / static thrust),1,0,10
+CONCRD-D-2,CONCRD,kept,filled: v2.2 stage 2 weight 340000 lb,CNT (lb),kept (CNT / static thrust),1,0,10
+CONCRD-D-3,CONCRD,kept,filled: v2.2 stage 3 weight 375000 lb,CNT (lb),kept (CNT / static thrust),1,0,10
+CONCRD-D-4,CONCRD,kept,filled: v2.2 stage 4 weight 375000 lb,CNT (lb),kept (CNT / static thrust),1,0,10
+CONCRD-D-5,CONCRD,kept,filled: v2.2 stage 5 weight 400000 lb,CNT (lb),kept (CNT / static thrust),1,0,10
+CONCRD-D-6,CONCRD,kept,filled: v2.2 stage 6 weight 400000 lb,CNT (lb),kept (CNT / static thrust),1,0,10
+DC820-A-1,DC820,kept,filled: v2.2 stage 1 weight 180000 lb,CNT (lb),kept (CNT / static thrust),0,0,7
+DC820-D-1,DC820,kept,filled: v2.2 stage 1 weight 180000 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+DC820-D-2,DC820,kept,filled: v2.2 stage 2 weight 190000 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+DC820-D-3,DC820,kept,filled: v2.2 stage 3 weight 205000 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+DC820-D-4,DC820,kept,filled: v2.2 stage 4 weight 225000 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+DC820-D-5,DC820,kept,filled: v2.2 stage 5 weight 250000 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+DC820-D-6,DC820,kept,filled: v2.2 stage 6 weight 270000 lb,CNT (lb),kept (CNT / static thrust),0,0,10
+PA28-A-1,PA28,kept,filled: v2.2 stage 1 weight 2325 lb,Other (RPM),emptied (RPM aircraft),0,0,7
+PA28-D-1,PA28,kept,filled: v2.2 stage 1 weight 2325 lb,Other (RPM),emptied (RPM aircraft),0,0,9
+COMJET-A-1,,removed (ANP 2.1),,,,,,0
+COMJET-D-1,,removed (ANP 2.1),,,,,,0
+COMJET-D-2,,removed (ANP 2.1),,,,,,0
+COMJET-D-3,,removed (ANP 2.1),,,,,,0
+COMJET-D-4,,removed (ANP 2.1),,,,,,0
+COMJET-D-5,,removed (ANP 2.1),,,,,,0
+COMJET-D-6,,removed (ANP 2.1),,,,,,0
+DHC-2FLT-A-1,,removed (ANP 2.1),,,,,,0
+DHC-2FLT-D-1,,removed (ANP 2.1),,,,,,0
+GASEPF-A-1,,removed (ANP 2.1),,,,,,0
+GASEPF-A-2,,removed (ANP 2.1),,,,,,0
+GASEPF-D-1,,removed (ANP 2.1),,,,,,0
+GASEPF-D-2,,removed (ANP 2.1),,,,,,0

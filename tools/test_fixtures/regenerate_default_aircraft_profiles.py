@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regenerate the `default_aircraft_profiles` table in 6 .alaqs fixture files
+Regenerate the `default_aircraft_profiles` table in the .alaqs fixture files
 from the canonical `open_alaqs/database/data/default_aircraft_profiles.csv`.
 
 WHY THIS EXISTS
@@ -17,16 +17,20 @@ current CSV removes the drift.
 
 USAGE
 -----
-    QT_QPA_PLATFORM=offscreen python3 tests/regenerate_default_aircraft_profiles.py
+    python3 tools/test_fixtures/regenerate_default_aircraft_profiles.py
 
 WHAT THIS DOES
 --------------
-For each of the 6 target .alaqs files:
+For each of the target .alaqs files:
   1. Opens the SQLite file
-  2. DELETEs every row in `default_aircraft_profiles`
-  3. INSERTs all rows from `default_aircraft_profiles.csv` in canonical
-     column order
-  4. VACUUMs the database to reclaim space
+  2. Keeps aside the rows whose profile_id is not in the CSV (study-specific
+     rows such as CUSTOM ADS-B profiles or HELIPROF rows), except retired
+     catalogue profiles (RETIRED_PREFIXES), which are dropped
+  3. DELETEs every row in `default_aircraft_profiles`
+  4. INSERTs all rows from `default_aircraft_profiles.csv` in canonical
+     column order, then the kept rows with oids renumbered after the last
+     CSV oid (same order; movements reference profile_id, not oid)
+  5. VACUUMs the database to reclaim space
 
 Column ordering: the DB schema stores columns as (oid, profile_id, ..., fuel_flow_kgm,
 mode, course), while the CSV stores (mode, course, fuel_flow_kgm) at the
@@ -57,6 +61,10 @@ ALAQS_FILES = [
     REPO_ROOT / "tests" / "data" / "AIRPORT_A" / "AIRPORT_A_out.alaqs",
     REPO_ROOT / "open_alaqs" / "core" / "templates" / "project.alaqs",
 ]
+
+# Catalogue profiles removed from the CSV: dropped from the fixtures too,
+# not kept as study-specific rows.
+RETIRED_PREFIXES = ("COMJET-", "DHC-2FLT-", "GASEPF-")
 
 # Columns that should be parsed as numeric from the CSV. Everything else
 # stays as string (or is left NULL if empty).
@@ -127,6 +135,26 @@ def regenerate_one(alaqs_path: Path, columns: list[str], rows: list[dict]) -> No
             "SELECT COUNT(*) FROM default_aircraft_profiles"
         ).fetchone()[0]
 
+        # Rows that are not part of the canonical catalogue (study-specific
+        # CUSTOM / HELIPROF profiles) are kept and re-inserted after it.
+        csv_ids = {row["profile_id"] for row in rows}
+        db_order = [
+            r[1] for r in conn.execute("PRAGMA table_info(default_aircraft_profiles)")
+        ]
+        kept = [
+            dict(zip(db_order, r))
+            for r in conn.execute(
+                "SELECT * FROM default_aircraft_profiles ORDER BY oid"
+            )
+            if dict(zip(db_order, r))["profile_id"] not in csv_ids
+            and not str(dict(zip(db_order, r))["profile_id"]).startswith(
+                RETIRED_PREFIXES
+            )
+        ]
+        next_oid = max(int(row["oid"]) for row in rows) + 1
+        for k, r in enumerate(kept):
+            r["oid"] = next_oid + k
+
         # Wipe and re-populate atomically
         conn.execute("DELETE FROM default_aircraft_profiles")
 
@@ -141,12 +169,22 @@ def regenerate_one(alaqs_path: Path, columns: list[str], rows: list[dict]) -> No
         conn.executemany(
             insert_sql, [tuple(row[c] for c in usable_cols) for row in rows]
         )
+        if kept:
+            kept_cols = [c for c in db_order]
+            conn.executemany(
+                f"INSERT INTO default_aircraft_profiles ({', '.join(kept_cols)}) "
+                f"VALUES ({', '.join('?' for _ in kept_cols)})",
+                [tuple(r[c] for c in kept_cols) for r in kept],
+            )
         conn.commit()
 
         after = conn.execute(
             "SELECT COUNT(*) FROM default_aircraft_profiles"
         ).fetchone()[0]
-        print(f"  {alaqs_path.name}: {before} → {after} rows")
+        print(
+            f"  {alaqs_path.name}: {before} → {after} rows "
+            f"({len(kept)} non-catalogue rows kept)"
+        )
     finally:
         conn.close()
 
