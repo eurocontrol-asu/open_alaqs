@@ -94,6 +94,9 @@ from open_alaqs.core.tools.foca_heli_utils import (  # noqa: E402
 # ---------------------------------------------------------------------------
 
 MAX_HEIGHT_M = 914.4
+# Plausibility limit on a supplied fuel flow, as a multiple of the ICAO take-off
+# fuel flow; mirrors MovementEmissionCalculator.ADSB_FF_CEILING_FACTOR.
+ADSB_FF_CEILING_FACTOR = 1.5
 EPS_VERTICAL_M = 1e-6
 
 
@@ -883,7 +886,7 @@ def _bffm2_traj_ff_amb(conn, mov, pt, eng, engine_ei, meteo, mach, n_eng) -> flo
 
     Mirrors MovementEmissionCalculator.py line 1082-1124:
       - If fuel_flow_kgm is supplied (ADS-B / CUSTOM): use fuel_flow_kgm / n_eng,
-        with a TO-anchor ceiling fallback (anchor FF) if exceeded.
+        with a fallback to the anchor FF above ADSB_FF_CEILING_FACTOR x the TO anchor.
       - Otherwise (ANP): use twin_quadratic_fit on the segment's `power`
         setting to get the EEDB reference FF, then convert to ambient FF
         via the SAE AIR-5715 / CAEP14 inverse correction:
@@ -905,7 +908,7 @@ def _bffm2_traj_ff_amb(conn, mov, pt, eng, engine_ei, meteo, mach, n_eng) -> flo
 
     # ADS-B / CUSTOM path: fuel_flow_kgm is already an ambient (in-flight) FF
     # for ALL engines combined.
-    ff_to_ceiling = engine_ei["TO"]["ff"]
+    ff_to_ceiling = engine_ei["TO"]["ff"] * ADSB_FF_CEILING_FACTOR
     if ff_kgm not in (None, 0):
         ff_per_engine = ff_kgm / n_eng
         if ff_per_engine > ff_to_ceiling:
