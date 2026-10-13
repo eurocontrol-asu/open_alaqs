@@ -59,6 +59,12 @@ checks: `documents/AIRCRAFT_PROFILES_PROVENANCE.md`.
   same factor. The log message for rejected points now says that the
   mode-anchor fuel flow is used.
 
+### Fixed (dependencies)
+
+- `requirements.txt`: `pyarrow<26`. pyarrow 26.0.0 (released 2026-10-09)
+  requires NumPy 2, and `numpy` is pinned to 1.26.4, so pyarrow failed to
+  import and every parquet step (standalone AUSTAL runs) failed.
+
 ### Added
 
 - `tools/anp22_profiles/build_anp22_profiles.py`: reproduces both CSVs from
