@@ -41,7 +41,6 @@ import argparse
 import csv
 import hashlib
 import io
-import math
 import re
 import subprocess
 import sys
