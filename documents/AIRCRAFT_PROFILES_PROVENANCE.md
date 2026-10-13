@@ -5,7 +5,7 @@ This document records where the rows of
 profile columns of `open_alaqs/database/data/default_aircraft.csv` come from,
 what was corrected in the amendment of October 2026, and how to reproduce it.
 
-Last updated: 2026-10-12.
+Last updated: 2026-10-13.
 
 ## 1. Sources
 
@@ -143,9 +143,15 @@ and names), so only their profile tables are updated. The standalone
 validation databases (`openalaqs_standalone/validation/data/`) are snapshots
 and are not changed.
 
-## 5. Open points
+## 5. Use of ANP data
 
-* ANP terms of use for redistributing derived profiles.
+ANP v2.2 may be used for these profiles; ANP v2.3 may not. Nothing in the
+catalogue, the builder or its inputs comes from ANP v2.3, and
+`tests/test_default_aircraft_profiles_anp22.py` fails if an aircraft that
+exists only in later releases appears.
+
+## 6. Open points
+
 * Modes of fixed-point departures are kept as they were (e.g. `777300-D-1`
   switches to CL at 1,565 ft, before its thrust cutback).
 * Arrival placement in the plugin (touchdown on the taxi-route exit) is a
