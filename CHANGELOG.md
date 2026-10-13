@@ -6,11 +6,16 @@ ISO 8601.
 
 ## [Unreleased]
 
+## [5.3.6] - 2026-10-13
+
 Aircraft profile catalogue (`default_aircraft_profiles.csv`) and default
-profiles (`default_aircraft.csv`) corrected against ANP v2.2. **Results
-change** for movements without a `profile_id`, for the profiles listed
-below, and for BFFM2 trajectory runs on propeller aircraft. Details and
-checks: `documents/AIRCRAFT_PROFILES_PROVENANCE.md`.
+profiles (`default_aircraft.csv`) corrected against ANP v2.2; BFFM2
+plausibility limit on supplied fuel flows raised to 1.5 times the ICAO
+take-off value; `pyarrow` pinned below 26. **Results change** for movements
+without a `profile_id`, for the profiles listed below, for BFFM2 trajectory
+runs on propeller aircraft, and for ADS-B / CUSTOM points between 1.0 and
+1.5 times the take-off fuel flow. Details and checks for the profiles:
+`documents/AIRCRAFT_PROFILES_PROVENANCE.md`.
 
 ### Fixed
 
@@ -37,6 +42,9 @@ checks: `documents/AIRCRAFT_PROFILES_PROVENANCE.md`.
 - Groups of the wrong propulsion class: `PISTON-D-1` was a jet climb
   (ECLIPSE500), now CNA172; `PISTON-D-2` was a turboprop (CNA208), now PA31;
   `TURBOPROP-D-4` was a jet (IA1125), now EMB120.
+- `requirements.txt`: `pyarrow<26`. pyarrow 26.0.0 (released 2026-10-09)
+  requires NumPy 2, and `numpy` is pinned to 1.26.4, so pyarrow failed to
+  import and every parquet step (standalone AUSTAL runs) failed.
 
 ### Changed
 
@@ -59,12 +67,6 @@ checks: `documents/AIRCRAFT_PROFILES_PROVENANCE.md`.
   same factor. The log message for rejected points now says that the
   mode-anchor fuel flow is used.
 
-### Fixed (dependencies)
-
-- `requirements.txt`: `pyarrow<26`. pyarrow 26.0.0 (released 2026-10-09)
-  requires NumPy 2, and `numpy` is pinned to 1.26.4, so pyarrow failed to
-  import and every parquet step (standalone AUSTAL runs) failed.
-
 ### Added
 
 - `tools/anp22_profiles/build_anp22_profiles.py`: reproduces both CSVs from
@@ -73,7 +75,9 @@ checks: `documents/AIRCRAFT_PROFILES_PROVENANCE.md`.
 
 ### Tests
 
-- New: `test_default_aircraft_profiles_anp22`.
+- New: `test_default_aircraft_profiles_anp22`, `test_adsb_ff_ceiling_factor`
+  (standalone), `test_zz_adsb_ff_ceiling_factor_parity` (plugin and
+  standalone around the limit).
 - `tools/test_fixtures/regenerate_default_aircraft_profiles.py` keeps the
   study-specific rows of a fixture (CUSTOM, HELIPROF) instead of deleting
   them, and drops the removed ANP 2.1 profiles. Fixtures regenerated.

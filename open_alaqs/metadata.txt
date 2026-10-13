@@ -9,7 +9,7 @@ qgisMaximumVersion=4.99
 supportsQt6=True
 description=An open-source local air quality model
 
-version=5.3.5
+version=5.3.6
 author=Eurocontrol
 email=open-alaqs@eurocontrol.int
 
@@ -23,10 +23,10 @@ repository=https://gitlab.aerlabs.nl/eurocontrol/open_alaqs
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-changelog=5.3.5
-    METAR converter fixes; meteorology files built with the converter change (rebuild them). Plugin and standalone results are unchanged.
-    Fixed: hourly wind direction is the circular mean of the reports; a reported 360 is kept as north; calm reports carry no direction; a mean rounding to 360 is written as 0; the stability class uses the mid-hour sun.
-    Added: --night-rule (default sky_eps) moves night-time E/F towards neutral under humid skies, never past D; --night-rule baseline keeps the previous table.
+changelog=5.3.6
+    Aircraft profiles corrected against ANP v2.2; results change for movements without a profile_id and for the corrected profiles (see CHANGELOG.md).
+    Fixed: 47 missing ANP v2.2 type profiles restored (GIIB, HS748A and PA30 had none); 757300-A-1 complete again; power of the CNT (%) aircraft is a thrust fraction (was a percentage divided by the static thrust), RPM aircraft have no power, values capped at 1.0; three groups of the wrong propulsion class corrected; ANP 2.1 profiles removed; pyarrow pinned below 26 (pyarrow 26 needs NumPy 2).
+    Changed: 658 aircraft types default to a type-specific ANP v2.2 profile instead of a group; BFFM2 trajectory rejects a supplied fuel flow only above 1.5 times the ICAO take-off value.
     See CHANGELOG.md for details.
 
 # Tags are comma separated with spaces allowed
