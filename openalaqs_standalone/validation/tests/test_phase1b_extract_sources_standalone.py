@@ -24,8 +24,7 @@ def _make_scratch_db_with_column(rows):
     """Create a scratch DB whose shapes_area_sources includes is_test_site."""
     path = tempfile.NamedTemporaryFile(suffix=".alaqs", delete=False).name
     conn = sqlite3.connect(path)
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE shapes_area_sources (
             oid INTEGER PRIMARY KEY,
             source_id TEXT,
@@ -46,8 +45,7 @@ def _make_scratch_db_with_column(rows):
             is_test_site TEXT DEFAULT '0',
             geometry BLOB
         )
-        """
-    )
+        """)
     for r in rows:
         placeholders = ", ".join(["?"] * len(r))
         cols = ", ".join(r.keys())
@@ -64,8 +62,7 @@ def _make_scratch_db_pre_v1b(rows):
     (pre-v1b schema shape)."""
     path = tempfile.NamedTemporaryFile(suffix=".alaqs", delete=False).name
     conn = sqlite3.connect(path)
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE shapes_area_sources (
             oid INTEGER PRIMARY KEY,
             source_id TEXT,
@@ -85,8 +82,7 @@ def _make_scratch_db_pre_v1b(rows):
             instudy TEXT DEFAULT '1',
             geometry BLOB
         )
-        """
-    )
+        """)
     for r in rows:
         placeholders = ", ".join(["?"] * len(r))
         cols = ", ".join(r.keys())

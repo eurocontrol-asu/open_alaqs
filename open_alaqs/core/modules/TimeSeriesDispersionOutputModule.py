@@ -33,9 +33,9 @@ matplotlib.use("Qt5Agg")
 
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.backends.backend_qt5agg import FigureCanvas  # noqa: E402
-from matplotlib.backends.backend_qt5agg import (  # noqa: E402
+from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT as NavigationToolbar,
-)
+)  # noqa: E402
 from matplotlib.dates import DateFormatter  # noqa: E402
 from qgis.PyQt import QtWidgets  # noqa: E402
 

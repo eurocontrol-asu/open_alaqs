@@ -118,8 +118,7 @@ def extract_engine_test_events(conn: sqlite3.Connection) -> list[dict]:
         return []
 
     # Query: LEFT JOIN so we can count orphaned events, then filter.
-    cur.execute(
-        """
+    cur.execute("""
         SELECT e.event_id, e.source_id, e.test_id,
                e.start_datetime, e.end_datetime,
                e.aircraft_type, e.engine_uid, e.engine_count,
@@ -129,8 +128,7 @@ def extract_engine_test_events(conn: sqlite3.Connection) -> list[dict]:
         FROM engine_test_events AS e
         LEFT JOIN shapes_area_sources AS s
           ON e.source_id = s.source_id
-        """
-    )
+        """)
     cols = [d[0] for d in cur.description]
 
     events: list[dict] = []

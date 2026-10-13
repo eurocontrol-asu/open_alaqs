@@ -120,27 +120,23 @@ def test_helper_destination_has_extra_column_takes_default(source_and_dest):
     src_path, dst_conn, dst_cursor = source_and_dest
     # Source: v1b-minus-1 schema (no is_test_site)
     with sqlite3.connect(src_path) as sc:
-        sc.execute(
-            """
+        sc.execute("""
             CREATE TABLE shapes_area_sources (
                 oid INTEGER, source_id TEXT, height REAL, instudy TEXT
             )
-            """
-        )
+            """)
         sc.execute(
             "INSERT INTO shapes_area_sources (oid, source_id, height, instudy) "
             "VALUES (?, ?, ?, ?)",
             (1, "A1", 3.0, "1"),
         )
     # Destination: v1b schema (adds is_test_site TEXT DEFAULT '0')
-    dst_cursor.execute(
-        """
+    dst_cursor.execute("""
         CREATE TABLE shapes_area_sources (
             oid INTEGER, source_id TEXT, height REAL, instudy TEXT,
             is_test_site TEXT DEFAULT '0'
         )
-        """
-    )
+        """)
 
     msg = _copy_shape_table_schema_robust(dst_cursor, dst_conn, "shapes_area_sources")
     assert "copied to output file" in msg
@@ -160,14 +156,12 @@ def test_helper_source_has_extra_column_ignored(source_and_dest):
     """
     src_path, dst_conn, dst_cursor = source_and_dest
     with sqlite3.connect(src_path) as sc:
-        sc.execute(
-            """
+        sc.execute("""
             CREATE TABLE shapes_runways (
                 oid INTEGER, name TEXT,
                 max_queue_speed REAL, peak_queue_time REAL
             )
-            """
-        )
+            """)
         sc.execute(
             "INSERT INTO shapes_runways VALUES (?, ?, ?, ?)",
             (1, "24", 5.0, 3.0),

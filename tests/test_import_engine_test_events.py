@@ -49,15 +49,13 @@ def _make_scratch_db(
     path = tempfile.NamedTemporaryFile(suffix=".alaqs", delete=False).name
     conn = sqlite3.connect(path)
 
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE shapes_area_sources (
             oid INTEGER PRIMARY KEY,
             source_id TEXT,
             is_test_site TEXT DEFAULT '0'
         )
-        """
-    )
+        """)
     for src in area_sources or []:
         conn.execute(
             "INSERT INTO shapes_area_sources (source_id, is_test_site) VALUES (?, ?)",
@@ -75,8 +73,7 @@ def _make_scratch_db(
             (uid,),
         )
 
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE engine_test_events (
             event_id INTEGER PRIMARY KEY AUTOINCREMENT,
             source_id TEXT NOT NULL,
@@ -93,8 +90,7 @@ def _make_scratch_db(
             thrust_mode TEXT NOT NULL DEFAULT 'snap',
             instudy TEXT NOT NULL DEFAULT '1'
         )
-        """
-    )
+        """)
     conn.commit()
     return path, conn
 
@@ -560,8 +556,7 @@ def scratch_db_with_test_site(tmp_path):
     conn.execute("INSERT INTO default_aircraft VALUES ('C56X')")
     conn.execute("CREATE TABLE default_aircraft_engine_ei (engine_full_name TEXT)")
     conn.execute("INSERT INTO default_aircraft_engine_ei VALUES ('B602')")
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE engine_test_events (
             event_id INTEGER PRIMARY KEY AUTOINCREMENT,
             source_id TEXT NOT NULL,
@@ -578,8 +573,7 @@ def scratch_db_with_test_site(tmp_path):
             thrust_mode TEXT NOT NULL DEFAULT 'snap',
             instudy TEXT NOT NULL DEFAULT '1'
         )
-        """
-    )
+        """)
     conn.commit()
     conn.close()
     return path
