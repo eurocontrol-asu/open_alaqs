@@ -910,10 +910,16 @@ def distribute_to_grid(  # noqa: C901 — top-level spatial+temporal distributio
                 sas_zmin = sas_zmax = None
                 fractions = None
                 if _sas_method is not None and _dyn_group is not None:
-                    _stage = _sd.sas_mode_for_segment(
-                        _is_arrival,
-                        seg.get("z1_m", 0.0),
-                        seg.get("z2_m", 0.0),
+                    # A runway taxiing segment (mode TX: an arrival's roll from the rollout end to its
+                    # exit) takes the taxi footprint, as the taxi route does.
+                    _stage = (
+                        "TX"
+                        if seg.get("mode") == "TX"
+                        else _sd.sas_mode_for_segment(
+                            _is_arrival,
+                            seg.get("z1_m", 0.0),
+                            seg.get("z2_m", 0.0),
+                        )
                     )
                     _params = _sd.lookup_params(
                         _emission_dynamics, _dyn_group, _stage, _sas_method

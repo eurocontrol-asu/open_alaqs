@@ -40,6 +40,19 @@ class CalcMethodDict(TypedDict):
     config: CalcMethodConfigDict
 
 
+def _placement_key(movement):
+    """Cache-key part for the runway placement of a movement's flight profile (landing roll, runway stretch)."""
+    t = movement.getTrajectoryAtRunway()
+    pl = getattr(t, "runway_placement", None) or {}
+    st = pl.get("stretch") or {}
+    return (
+        round(float(pl.get("rollout_time_s") or 0.0), 6),
+        round(float(st.get("time_s") or 0.0), 6),
+        tuple(round(v, 3) for v in st.get("p1_3857", ())),
+        tuple(round(v, 3) for v in st.get("p2_3857", ())),
+    )
+
+
 class MovementSourceModule(SourceModule):
     # Aircraft movements (plus gates and taxiways consumed via routes)
     # have time-varying geometry. stays on legacy time-major
@@ -537,6 +550,9 @@ class MovementSourceModule(SourceModule):
                     and movement.getRunwayTime() is not None
                     else None
                 ),
+                # The flight profile's runway placement (landing roll, runway stretch) changes the taxi
+                # split for arrivals: movements on different profiles must not share a cached result.
+                _placement_key(movement),
             )
 
         _taxi_cache: dict = {}

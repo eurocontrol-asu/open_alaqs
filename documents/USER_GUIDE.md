@@ -167,11 +167,19 @@ More information on the corresponding GSE/GPU, APU and MES emission factors and 
 
 Runways are linear features that define the vertical plane where approach, landing, take-off, and climb-out operations occur. Each end of the runway is designated as a specific runway, depending on the direction of movement.
 
-When adding a runway, the following information is required:
-+ Capacity (departures/hour) `not yet fully implemented`
-+ Touchdown offset (meters) `not yet fully implemented`
-+ Maximum queue speed (km/h) `not yet fully implemented`
-+ Peak queue time (minutes) `not yet fully implemented`
+When adding a runway, the following information can be given:
++ Touchdown Offset, Runway 1 (meters): distance from the Runway 1 end (its landing threshold) to the touchdown of arrivals landing on Runway 1. Empty or 0: each arrival profile's own distance, i.e. where the profile descends through 50 ft (15.24 m, the ILS reference datum height), about 290 m before touchdown on a 3° approach.
++ Touchdown Offset, Runway 2 (meters): the same for Runway 2. Empty: the Runway 1 value.
+
+Draw the runway from threshold to threshold. For a displaced threshold, enter the displacement plus about 290 m.
+
+**Placement of the flight profiles on the runway.** The taxi route does not move the flight profile; it is checked against it.
++ Arrivals (ANP profiles) touch down at the landing threshold plus the Touchdown Offset. The aircraft leaves the runway at the first point where its taxi route meets the runway past the touchdown at 50 kt or less (ICAO Doc 9157 Part 2: rapid-exit reference speed); if no crossing is that slow, at the first one past the touchdown. When that exit comes before the end of the profile's rollout, the rollout ends there. When it comes after, the aircraft rolls on along the runway to the exit; that stretch is taxiing (from the rollout-end speed down to at most 18 kt).
++ Departures (ANP profiles) start their take-off roll where the taxi route last meets the runway (the line-up point); a route that runs along the runway (backtracking) lines up where it leaves it.
++ ADS-B (CUSTOM) profiles keep their own positions.
++ Taxi routes are read in the direction of travel, whichever order their taxiways are listed in: from the stand for a departure, to the stand for an arrival.
+
+Nothing blocks the calculation. An exit above 50 kt, or a route that meets the runway only before the touchdown, is reported in the log. The standalone tool also writes a check report (`runway_checks.csv`), one line per route and profile with what to change.
 
 ![runways-layer.png](./../open_alaqs/assets/runways-layer.png)
 
@@ -493,8 +501,8 @@ This table contains all the aircraft movements occurring at the airport during a
 
 | Field | Description |
 |---|---|
-| `runway_time` | Date and time of arrival at the runway (YYYY-MM-DD HH:MM:SS) |
-| `block_time` | Date and time of arrival at the gate (YYYY-MM-DD HH:MM:SS) |
+| `runway_time` | Date and time on the runway (YYYY-MM-DD HH:MM:SS): for an arrival the touchdown (A-CDM ALDT), for a departure the start of the take-off roll. An A-CDM take-off time (ATOT) is wheels-off: take the take-off roll off it first. |
+| `block_time` | Date and time at the gate (YYYY-MM-DD HH:MM:SS): in-block for an arrival, off-block for a departure. The taxi time is the difference; for an arrival the landing roll of its profile is taken out of it, as the profile already counts the roll. |
 | `aircraft` | ICAO aircraft type designator |
 | `gate` | Stand used for the aircraft operation |
 | `departure_arrival` | Type of operation (A = arrival, D = departure) |

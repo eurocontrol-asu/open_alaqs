@@ -167,6 +167,28 @@ def _build_aircraft_tables(
     return sources_df, emissions_df, results
 
 
+def _write_runway_checks(alaqs_path, emissions_folder, summary: dict) -> None:
+    """Route and profile check report (runway_checks.csv): informs only, never stops the run."""
+    try:
+        import sqlite3
+        from contextlib import closing
+
+        from openalaqs_standalone import runway_checks as _rc
+
+        with closing(sqlite3.connect(str(alaqs_path))) as conn:
+            rep = _rc.check_study(conn)
+        rep.to_csv(emissions_folder / "runway_checks.csv", index=False)
+        n = rep.groupby("severity").movements.sum().to_dict() if len(rep) else {}
+        listed = ", ".join(f"{k} {v} movements" for k, v in sorted(n.items()))
+        print(
+            f"  runway checks: {len(rep)} findings ({listed or 'none'}); "
+            "see emissions_folder/runway_checks.csv"
+        )
+        summary["runway_checks"] = {str(k): int(v) for k, v in n.items()}
+    except Exception as e:  # noqa: BLE001 -- a check must never block the calculation
+        print(f"  runway checks skipped: {e}")
+
+
 def orchestrate(
     alaqs_path: Path,
     output_root: Path,
@@ -347,6 +369,7 @@ def orchestrate(
     # downstream diagnostic dumping; default {} when aircraft skipped.
     ac_results: dict = {}
     if include_aircraft:
+        _write_runway_checks(alaqs_path, emissions_folder, summary)
         ac_sources_df, ac_emissions_df, ac_results = _build_aircraft_tables(
             alaqs_path,
             aircraft_method,

@@ -196,27 +196,30 @@ def test_bymode_grand_totals_match_anchor_math(tmp_path):
                         grand_totals[key] += v
 
     # Plugin-reported grand totals (known good after gate fix):
-    # CO = 21.9658, HC = 1.2340, NOx = 23.4703, fuel (CO2/3.16) = 1741.61
-    # (crossing segments clipped at the vertical limit; previously counted
-    # whole: CO 21.9661, NOx 23.4860, fuel 1742.80)
+    # CO = 21.1457, HC = 1.1889, NOx = 22.9820, fuel (CO2/3.16) = 1672.57
+    # (runway placement, 13 Oct 2026: ANP arrivals touch down at the threshold
+    # + Touchdown Offset and end their rollout at the route exit, the landing
+    # roll is taken out of the arrival taxi time; the standalone gives the same
+    # totals. Before: CO 21.9658, HC 1.2340, NOx 23.4703, fuel 1741.61; before
+    # the vertical-limit clipping: CO 21.9661, NOx 23.4860, fuel 1742.80)
     assert (
-        abs(grand_totals["co_kg"] - 21.9658) < 0.001
-    ), f"bymode CO grand total drifted: got {grand_totals['co_kg']:.4f}, expected 21.9658"
+        abs(grand_totals["co_kg"] - 21.1457) < 0.001
+    ), f"bymode CO grand total drifted: got {grand_totals['co_kg']:.4f}, expected 21.1457"
     assert (
-        abs(grand_totals["hc_kg"] - 1.2340) < 0.001
-    ), f"bymode HC grand total drifted: got {grand_totals['hc_kg']:.4f}, expected 1.2340"
+        abs(grand_totals["hc_kg"] - 1.1889) < 0.001
+    ), f"bymode HC grand total drifted: got {grand_totals['hc_kg']:.4f}, expected 1.1889"
     assert (
-        abs(grand_totals["nox_kg"] - 23.4703) < 0.01
-    ), f"bymode NOx grand total drifted: got {grand_totals['nox_kg']:.4f}, expected 23.4703"
+        abs(grand_totals["nox_kg"] - 22.9820) < 0.01
+    ), f"bymode NOx grand total drifted: got {grand_totals['nox_kg']:.4f}, expected 22.9820"
     fuel_from_co2 = grand_totals["co2_kg"] / 3.16
     assert (
-        abs(fuel_from_co2 - 1741.61) < 0.1
-    ), f"bymode fuel (from CO2) drifted: got {fuel_from_co2:.2f}, expected 1741.61"
+        abs(fuel_from_co2 - 1672.57) < 0.1
+    ), f"bymode fuel (from CO2) drifted: got {fuel_from_co2:.2f}, expected 1672.57"
 
 
 def test_bffm2_trajectory_default_matches_prefix_a_behavior(tmp_path):
     """BFFM2 with default bffm2_ff_source='trajectory' should give the CAEP14 v14
-    spec-aligned NOx grand total of 14.07 kg. This value reflects the post-fix
+    spec-aligned NOx grand total of 13.69 kg (14.07 kg before the runway placement of 13 Oct 2026). This value reflects the post-fix
     behavior with: (a) Climbout install correction = 1.013 (was 1.012 typo), and
     (b) taxi Mach=0 isolation in TaxiingEmissionCalculator (was leaking the last
     flight segment's Mach into BFFM2 ambient correction)."""
@@ -235,8 +238,8 @@ def test_bffm2_trajectory_default_matches_prefix_a_behavior(tmp_path):
                 if v:
                     nox_kg += v
 
-    assert abs(nox_kg - 14.0673) < 0.02, (
-        f"BFFM2 trajectory NOx grand total drifted: got {nox_kg:.4f}, expected 14.0673. "
+    assert abs(nox_kg - 13.6882) < 0.02, (
+        f"BFFM2 trajectory NOx grand total drifted: got {nox_kg:.4f}, expected 13.6882. "
         f"This may indicate regression in bffm2_ff_source routing, ambient correction, "
         f"taxi Mach isolation, or installation correction values."
     )
@@ -244,8 +247,9 @@ def test_bffm2_trajectory_default_matches_prefix_a_behavior(tmp_path):
 
 def test_bffm2_mode_anchor_matches_lto_with_ambient(tmp_path):
     """BFFM2 with bffm2_ff_source='mode_anchor' should give a CAEP14 v14
-    spec-aligned NOx grand total of 21.21 kg, sitting between plugin bymode
-    (23.49 kg, no ambient corrections) and plugin BFFM2 trajectory (14.07 kg,
+    spec-aligned NOx grand total of 20.73 kg (21.21 kg before the runway placement of
+    13 Oct 2026), sitting between plugin bymode (22.98 kg, no ambient corrections) and
+    plugin BFFM2 trajectory (13.69 kg,
     sub-mode FF). Reflects post-fix behavior with Climbout install correction
     = 1.013 and taxi Mach=0 isolation."""
     from open_alaqs.core.alaqsdblite import ProjectDatabase
@@ -264,8 +268,8 @@ def test_bffm2_mode_anchor_matches_lto_with_ambient(tmp_path):
                     nox_kg += v
 
     assert (
-        abs(nox_kg - 21.2085) < 0.02
-    ), f"BFFM2 mode_anchor NOx grand total drifted: got {nox_kg:.4f}, expected 21.2085."
+        abs(nox_kg - 20.7275) < 0.02
+    ), f"BFFM2 mode_anchor NOx grand total drifted: got {nox_kg:.4f}, expected 20.7275."
 
 
 def test_mes_single_engine_start_emissions_added_once_per_movement(tmp_path):

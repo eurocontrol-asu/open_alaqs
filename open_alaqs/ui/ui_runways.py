@@ -3,7 +3,7 @@ import re
 from qgis.PyQt import QtWidgets
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.openalaqsuitoolkit import validate_field
+from open_alaqs.openalaqsuitoolkit import color_ui_background, validate_field
 
 logger = get_logger(__name__)
 
@@ -42,8 +42,8 @@ def form_open(form, layer, feature):
             QtWidgets.QComboBox, "second_runway_letter"
         ),
         name_field=form.findChild(QtWidgets.QLineEdit, "runway_id"),
-        capacity_field=form.findChild(QtWidgets.QLineEdit, "capacity"),
         offset_field=form.findChild(QtWidgets.QLineEdit, "touchdown"),
+        offset_2_field=form.findChild(QtWidgets.QLineEdit, "touchdown_2"),
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
     )
@@ -229,12 +229,15 @@ def validate(fields: dict):
     # Get the button box
     button_box = fields["button_box"]
 
-    # Validate all fields
-    results = [
-        validate_field(fields["name_field"], "str"),
-        validate_field(fields["capacity_field"], "float"),
-        validate_field(fields["offset_field"], "float"),
-    ]
+    # Validate all fields. The Touchdown Offsets may be empty (empty = the profile's own distance for
+    # Runway 1, the Runway 1 value for Runway 2); when filled they must be numbers.
+    results = [validate_field(fields["name_field"], "str")]
+    for key in ("offset_field", "offset_2_field"):
+        field = fields.get(key)
+        if field is not None and field.text().strip():
+            results.append(validate_field(field, "float"))
+        elif field is not None:
+            color_ui_background(field, None)
 
     # Block signals if any of the fields is invalid
     button_box.button(button_box.StandardButton.Ok).blockSignals(

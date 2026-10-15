@@ -107,8 +107,8 @@ The training study lives in `example/training/` and contains:
 - `training_out.alaqs` — the processed inventory database (Generate Emission Inventory output)
 - `training_movements.csv` — aircraft movements input
 - `training_meteo.csv` — hourly meteorological input
-- `training_ads_b_data.csv` — ADS-B trajectory input (used by the BFFM2 trajectory method)
-- `training_validation_reference.xlsx` — reference values for verifying your installation
+- `training_ads_b_data.csv` — ADS-B tracks, imported into the inventory when it is generated (movement 11 flies `1764584438_PHBBA`)
+- `training_validation_reference.xlsx` — reference values for verifying your installation (the plugin's results on `training_out.alaqs` beside the CAEP14 reference implementation, per movement and method)
 
 For a step-by-step walk-through of opening, configuring, and running a study, see the [User Guide](documents/USER_GUIDE.md).
 
@@ -238,7 +238,7 @@ Most tests need QGIS available on the Python path. CI runs the suite in a QGIS D
 
 [(Back to top)](#table-of-contents)
 
-Open-ALAQS is validated against an external reference spreadsheet to floating-point precision across bymode, BFFM2 trajectory, and BFFM2 mode_anchor methods, with non-volatile PM matching EEDB anchors exactly via MEEM V1 at LTO.
+Open-ALAQS is validated against the CAEP validation (EUROCONTROL's CAEP/14 engine-emissions calculation; its results are reproduced in the tests) to floating-point precision across bymode, BFFM2 trajectory, and BFFM2 mode_anchor methods, with non-volatile PM matching EEDB anchors exactly via MEEM V1 at LTO. The plugin, the QGIS-free standalone and an independent reference implementation agree movement by movement on the training fixture (`openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md`). The sensitivity options on the trajectory method's fuel flow are described in [`documents/FUEL_FLOW_OPTIONS.md`](documents/FUEL_FLOW_OPTIONS.md).
 
 The full validation matrix, per-engine results, and cross-platform agreement evidence are in [`documents/BFFM2_validation/BFFM2.md`](documents/BFFM2_validation/BFFM2.md).
 

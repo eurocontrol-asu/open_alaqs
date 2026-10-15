@@ -91,6 +91,12 @@ Wf_ref_BFFM2 = (Wf_amb / δ) × θ^3.8 × exp(0.2 × M²)
 
 where `SOS = 331.3 + 0.606 × (T_amb − 273.15) m/s` is the speed of sound at ambient temperature, and M is the true Mach number at the start of the segment.
 
+Until October 2026 the code (plugin, standalone and CAEP14 reference implementation) multiplied this by
+`√(288.15 / T_amb)`, which is not a Mach number away from ISA; it now computes `TAS / SOS` as written here
+(`openalaqs_standalone/validation/tests/test_segment_mach.py`). Mach enters only through `exp(0.2 × M²)`, so the
+change is small: on the training fixture's days (280.5 to 295 K) up to 0.08 % on NOx with `bffm2_anchor` and 0.02 % with
+`bffm2_traj`, nothing at ISA and nothing for `bymode`.
+
 `Wf_ref_BFFM2` is the value used for the log–log interpolation in Step 3. CAEP14 prescribes this universal form for all flight phases; the older ICAO Doc 9889 Appendix 2 decomposition (separate `δ/√θ` ambient correction at LTO only, followed by a Mach correction at high altitude) is not used. See the inline comment at `bffm2.py:79-81` for the rationale.
 
 ---

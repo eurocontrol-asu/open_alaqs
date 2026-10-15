@@ -13,18 +13,27 @@ from open_alaqs.core.tools.Singleton import Singleton
 logger = get_logger(__name__)
 
 
+def _offset(v):
+    """A Touchdown Offset value as float, or None when empty."""
+    if v is None or (isinstance(v, str) and not v.strip()):
+        return None
+    try:
+        return float(str(v).replace(",", "."))
+    except ValueError:
+        return None
+
+
 class Runway:
     def __init__(self, val=None):
         if val is None:
             val = {}
         self._name = str(val["runway_id"]) if "runway_id" in val else ""
         self._directions = self.getDirectionsByName(self._name)
-        self._touchdown_offset = (
-            int(val["touchdown"]) if val.get("touchdown", None) is not None else 0
-        )
-        self._capacity = (
-            int(val["capacity"]) if val.get("capacity", None) is not None else 0
-        )
+        # Touchdown Offset (m) per landing direction: `touchdown` for the first-named end (e.g. 06 of
+        # "06/24"), `touchdown_2` for the other; `touchdown_2` empty (or absent in older studies) = the value
+        # of `touchdown`. 0 = each arrival profile's own threshold-crossing distance (50 ft point).
+        self._touchdown_offset = _offset(val.get("touchdown")) or 0.0
+        self._touchdown_offset_2 = _offset(val.get("touchdown_2"))
 
         self._height = 0.0
         self._geometry_text = (
@@ -87,11 +96,23 @@ class Runway:
     def setTouchdownOffset(self, val):
         self._touchdown_offset = val
 
-    def getCapacity(self):
-        return self._capacity
+    def getTouchdownOffset2(self):
+        """Touchdown Offset of the second-named end; None when not set (the first end's value applies)."""
+        return self._touchdown_offset_2
 
-    def setCapacity(self, val):
-        self._capacity = val
+    def setTouchdownOffset2(self, val):
+        self._touchdown_offset_2 = val
+
+    def getTouchdownOffsetFor(self, direction) -> float:
+        """Touchdown Offset (m) for landings on `direction` (a name such as "24"); 0 = profile's own."""
+        dirs = self.getDirections()
+        if (
+            len(dirs) > 1
+            and str(direction) == dirs[-1]
+            and self._touchdown_offset_2 is not None
+        ):
+            return self._touchdown_offset_2
+        return self._touchdown_offset or 0.0
 
     def getGeometryText(self):
         return self._geometry_text
@@ -104,8 +125,8 @@ class Runway:
 
     def __str__(self):
         val = "\n Runway with id '%s'" % (self.getName())
-        val += "\n\t Touchdown offset: %i" % (self.getTouchdownOffset())
-        val += "\n\t Capacity: %i" % (self.getCapacity())
+        val += "\n\t Touchdown offset: %s" % (self.getTouchdownOffset())
+        val += "\n\t Touchdown offset (second end): %s" % (self.getTouchdownOffset2())
         val += "\n\t Geometry text: '%s'" % (self.getGeometryText())
         return val
 
@@ -167,8 +188,8 @@ class RunwayDatabase(SQLSerializable, metaclass=Singleton):
                 [
                     ("oid", "INTEGER PRIMARY KEY NOT NULL"),
                     ("runway_id", "TEXT"),
-                    ("capacity", "INT"),
                     ("touchdown", "INT"),
+                    ("touchdown_2", "INT"),
                     ("instudy", "DECIMAL"),
                 ]
             )
@@ -192,6 +213,24 @@ class RunwayDatabase(SQLSerializable, metaclass=Singleton):
         )
 
         if deserialize and self._db_path:
+            # Studies made before touchdown_2 existed (and not yet migrated) still load: read only the
+            # columns the table has.
+            try:
+                import sqlite3 as _sqlite3
+
+                with _sqlite3.connect(self._db_path) as _conn:
+                    _have = {
+                        r[1]
+                        for r in _conn.execute(
+                            f'PRAGMA table_info("{self.TABLE_NAME}")'
+                        )
+                    }
+                if _have:
+                    self._table_columns = OrderedDict(
+                        (k, v) for k, v in self._table_columns.items() if k in _have
+                    )
+            except Exception:
+                pass
             self.deserialize()
 
 

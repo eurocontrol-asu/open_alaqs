@@ -89,11 +89,16 @@ def get_runways(conn: sqlite3.Connection) -> dict:
     cases; for single-runway studies the result is a 2-key dict
     pointing at one runway, identical-behavior under the lookup.
     """
-    rows = conn.execute("SELECT runway_id, geometry FROM shapes_runways").fetchall()
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(shapes_runways)")}
+    td1 = "touchdown" if "touchdown" in cols else "NULL"
+    td2 = "touchdown_2" if "touchdown_2" in cols else "NULL"
+    rows = conn.execute(
+        f"SELECT runway_id, geometry, {td1}, {td2} FROM shapes_runways"
+    ).fetchall()
     if not rows:
         raise RuntimeError("No runway found in shapes_runways")
     out: dict = {}
-    for runway_id, geom_blob in rows:
+    for runway_id, geom_blob, touchdown_1, touchdown_2 in rows:
         geom = spatialite_blob_to_shapely(geom_blob)
         coords = list(geom.coords)
         dirs = [
@@ -106,6 +111,13 @@ def get_runways(conn: sqlite3.Connection) -> dict:
             "pt2_3857": (coords[-1][0], coords[-1][1]),
             "directions": dirs,
         }
+        # Touchdown Offset (m) per landing direction: `touchdown` for the first-named end, `touchdown_2` for the
+        # other (when the study has it, else `touchdown` for both). Empty or 0 = the profile's own distance.
+        t1 = float(touchdown_1 or 0.0)
+        t2 = float(touchdown_2) if touchdown_2 is not None else t1
+        rwy["touchdown_offset_m"] = (
+            {dirs[0]: t1, dirs[-1]: t2} if len(dirs) > 1 else {dirs[0]: t1}
+        )
         for d in dirs:
             out[d] = rwy
     return out

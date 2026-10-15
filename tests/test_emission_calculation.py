@@ -18,6 +18,29 @@ from tests.utils import (
 start_app()
 
 
+def assert_layer_values_equal(expected, result, field: str, rel=1e-6, abs_=1e-12):
+    """Per-cell value check: same cells (by rounded bounding box), same `field` value within tolerance."""
+
+    def cells(layer):
+        out = {}
+        for f in layer.getFeatures():
+            bb = f.geometry().boundingBox()
+            key = tuple(
+                round(v, 2)
+                for v in (bb.xMinimum(), bb.yMinimum(), bb.xMaximum(), bb.yMaximum())
+            )
+            out[key] = float(f[field] or 0.0)
+        return out
+
+    e, r = cells(expected), cells(result)
+    assert e.keys() == r.keys(), f"{len(e.keys() ^ r.keys())} cells differ"
+    bad = [k for k in e if r[k] != pytest.approx(e[k], rel=rel, abs=abs_)]
+    assert not bad, (
+        f"{len(bad)} of {len(e)} cells differ in {field!r}; total "
+        f"{sum(r.values())!r} vs expected {sum(e.values())!r}"
+    )
+
+
 @pytest.fixture(scope="class")
 def plugin_instance(request):
     print("\nINFO: Get plugin instance")
@@ -175,7 +198,7 @@ def datasets_to_test(request) -> list:
             "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
             "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
             "module_name": "EmissionsQGISVectorLayerOutputModule",
-            "source_type": "AreaSourceWithTimeProfileModule",
+            "source_type": "AreaSource",
             "pollutant": "CO",
             "study_start_date": "2023-03-01 06:00:00",
             "study_end_date": "2023-03-01 22:00:00",
@@ -190,7 +213,7 @@ def datasets_to_test(request) -> list:
             "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
             "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
             "module_name": "EmissionsQGISVectorLayerOutputModule",
-            "source_type": "ParkingSourceWithTimeProfileModule",
+            "source_type": "ParkingSource",
             "pollutant": "CO",
             "study_start_date": "2023-03-01 06:00:00",
             "study_end_date": "2023-03-01 22:00:00",
@@ -205,7 +228,7 @@ def datasets_to_test(request) -> list:
             "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
             "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
             "module_name": "EmissionsQGISVectorLayerOutputModule",
-            "source_type": "PointSourceWithTimeProfileModule",
+            "source_type": "PointSource",
             "pollutant": "CO",
             "study_start_date": "2023-03-01 06:00:00",
             "study_end_date": "2023-03-01 22:00:00",
@@ -220,7 +243,7 @@ def datasets_to_test(request) -> list:
             "db_path": str(get_data_path("ANP") / "ANP.alaqs"),
             "inventory_path": str(get_data_path("ANP") / "ANP_out.alaqs"),
             "module_name": "EmissionsQGISVectorLayerOutputModule",
-            "source_type": "RoadwaySourceWithTimeProfileModule",
+            "source_type": "RoadwaySource",
             "pollutant": "CO",
             "study_start_date": "2023-03-01 06:00:00",
             "study_end_date": "2023-03-01 22:00:00",
@@ -274,7 +297,10 @@ class EmissionCalculationTestCase(QgisTestCase):
             dlg.ui.result_file_path.setFilePath(inventory_path)
 
             if "source_type" in dataset:
+                # The dialog lists the modules' getModuleName() ("AreaSource", ...); an unknown name would
+                # silently leave the selection on "all".
                 idx = dlg.ui.source_types.findText(dataset["source_type"])
+                assert idx != -1, f"unknown source type {dataset['source_type']!r}"
                 if idx != -1:
                     dlg.ui.source_types.setCurrentIndex(idx)
                     print(
@@ -336,6 +362,10 @@ class EmissionCalculationTestCase(QgisTestCase):
                     },
                 )
                 assert layer.crs() == res.crs()
+                # checkLayersEqual(unordered=True) pairs the result's attributes with the expected layer's
+                # fields, and the expected layers carry an extra "fid" first: the emission value is never
+                # compared there. Compare it per cell here.
+                assert_layer_values_equal(layer, res, dataset["pollutant"].lower())
 
                 result_tested = True
 

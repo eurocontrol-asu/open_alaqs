@@ -469,6 +469,7 @@ class Movement:
 
         # Fixed-wing (and legacy helicopter Aircraft without HelicopterStore
         # registration) path: unchanged.
+        gate = self.getGate()
         self.setTrajectoryAtRunway(
             TrajectoryTransformer(
                 self.getTrajectory(),
@@ -478,6 +479,7 @@ class Movement:
                 self.getRunwayDirection(),
                 self.getTaxiRoute(),
                 self.getDepartureArrivalFlag(),
+                gate_geometry_text=gate.getGeometryText() if gate is not None else None,
             ).runway_alignment()
         )
 
@@ -763,7 +765,12 @@ class MovementStore(Store, metaclass=Singleton):
     #   DROP TABLE IF EXISTS cache_runway_trajectories;
     #   DROP TABLE IF EXISTS cache_runway_trajectories_v2;
     #   DROP TABLE IF EXISTS cache_runway_trajectories_v3;
-    _TRAJ_CACHE_TABLE = "cache_runway_trajectories_v4"
+    # v5 (13 Oct 2026): ANP arrivals touch down at the landing threshold + Touchdown Offset (else the
+    #               profile's 50 ft point) and end their rollout at the route's exit; ANP departures
+    #               brake-release at the route's line-up point; the runway placement (landing roll, runway
+    #               stretch) is stored with the trajectory for the taxi calculation. The key adds the
+    #               runway's Touchdown Offsets.
+    _TRAJ_CACHE_TABLE = "cache_runway_trajectories_v5"
 
     @staticmethod
     def _ensure_traj_cache_table(db_path: str) -> None:
@@ -810,6 +817,13 @@ class MovementStore(Store, metaclass=Singleton):
         traj.setDepartureArrivalFlag(data.get("departure_arrival"))
         traj.setWeight(data.get("weight"))
         traj.setIsCartesian(data.get("is_cartesian", False))
+        if data.get("runway_placement") is not None:
+            rp_ = dict(data["runway_placement"])
+            if rp_.get("stretch"):
+                rp_["stretch"] = dict(rp_["stretch"])
+                for k in ("p1_3857", "p2_3857"):
+                    rp_["stretch"][k] = tuple(rp_["stretch"][k])
+            traj.runway_placement = rp_
         for pt_data in data.get("points", []):
             pt = AircraftTrajectoryPoint()
             pt.setCoordinates(pt_data["x"], pt_data["y"], pt_data["z"])
@@ -856,6 +870,7 @@ class MovementStore(Store, metaclass=Singleton):
             "weight": traj.getWeight(),
             "is_cartesian": traj.isCartesian(),
             "points": pts,
+            "runway_placement": getattr(traj, "runway_placement", None),
         }
         payload = json.dumps(data)
         conn = _sqlite3.connect(db_path)
@@ -1297,12 +1312,18 @@ class MovementStore(Store, metaclass=Singleton):
             #   1. In-memory cache (free after the first group in this invocation)
             #   2. Persistent DB cache (free on every re-run of the same study)
             #   3. Full runway_alignment() computation (only on true first run)
+            _rwy_obj = runway_store.getObject(rwy)
             _traj_cache_key = (
                 str(rwy),
                 str(rwy_dir),
                 str(tx_route) if tx_route else "",
                 str(prf_id),
                 str(trk_id) if trk_id else "",
+                (
+                    f"td={_rwy_obj.getTouchdownOffset()}/{_rwy_obj.getTouchdownOffset2()}"
+                    if _rwy_obj is not None
+                    else ""
+                ),
             )
             _db_cache_key = "|".join(_traj_cache_key)
 

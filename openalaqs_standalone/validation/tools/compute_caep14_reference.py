@@ -69,7 +69,7 @@ from typing import Optional
 # Third-party - already required by the plugin's ADS-B importer and tests
 import pyproj
 from shapely import wkt as _shapely_wkt
-from shapely.geometry import LineString, box
+from shapely.geometry import LineString, Point, box
 from shapely.ops import linemerge
 
 # Plugin-side FOCA helicopter math (pure Python, no QGIS dependency)
@@ -204,22 +204,175 @@ def _connect(alaqs_path: str) -> sqlite3.Connection:
 
 
 def _get_runway(conn: sqlite3.Connection) -> dict:
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(shapes_runways)")}
+    td1 = "touchdown" if "touchdown" in cols else "NULL"
+    td2 = "touchdown_2" if "touchdown_2" in cols else "NULL"
     row = conn.execute(
-        "SELECT runway_id, ST_AsText(geometry) FROM shapes_runways"
+        f"SELECT runway_id, ST_AsText(geometry), {td1}, {td2} FROM shapes_runways"
     ).fetchone()
     if not row:
         raise RuntimeError("No runway found in shapes_runways")
-    runway_id, geom_wkt = row
+    runway_id, geom_wkt, touchdown_1, touchdown_2 = row
     geom = _shapely_wkt.loads(geom_wkt)
     coords = list(geom.coords)
     dirs = [int("".join(ch for ch in d if ch.isdigit())) for d in runway_id.split("/")]
+    t1 = float(touchdown_1 or 0.0)
+    t2 = float(touchdown_2) if touchdown_2 is not None else t1
     return {
         "runway_id": runway_id,
         "geom_3857": geom,
         "pt1_3857": (coords[0][0], coords[0][1]),
         "pt2_3857": (coords[-1][0], coords[-1][1]),
         "directions": dirs,
+        "touchdown_offset_m": {dirs[0]: t1, dirs[-1]: t2},
     }
+
+
+def _arrival_touchdown_3857(runway: dict, runway_direction: int, traj) -> tuple:
+    """ANP arrival anchor: the landing threshold plus the runway Touchdown Offset of this direction if set, else
+    the profile's own distance from the 50 ft (15.24 m) crossing to the touchdown (x = 0), along the runway.
+    """
+    d = (runway.get("touchdown_offset_m") or {}).get(runway_direction, 0.0) or 0.0
+    if d <= 0:
+        h, found = 50 * 0.3048, None
+        for a, b in zip(traj, traj[1:]):
+            if a[3] >= h > b[3]:
+                found = a[1] + (h - a[3]) * (b[1] - a[1]) / (b[3] - a[3])
+        d = -found if found is not None and found <= 0 else 0.0
+    az = _bearing_deg(runway["pt1_3857"], runway["pt2_3857"])
+    expected = {k: (k * 10) % 360 for k in runway["directions"]}
+    diffs = {k: min(abs(az - hdg), 360 - abs(az - hdg)) for k, hdg in expected.items()}
+    start_dir = min(diffs, key=diffs.get)
+    end_dir = [k for k in runway["directions"] if k != start_dir][0]
+    points = {start_dir: runway["pt1_3857"], end_dir: runway["pt2_3857"]}
+    thr = points[runway_direction]
+    far = points[end_dir if runway_direction == start_dir else start_dir]
+    lon0, lat0 = _TO_WGS84.transform(*thr)
+    lon, lat, _ = _GEOD.fwd(lon0, lat0, _bearing_deg(thr, far), d)
+    return _TO_3857.transform(lon, lat), d, thr, far
+
+
+_KT = 0.514444
+_EXIT_SPEED_LIMIT_KT = 50.0
+
+
+def _arrival_rollout_cut(runway: dict, taxi_geom, traj, d_td: float, thr, far) -> list:
+    """ANP arrival rollout ended at the taxi route's runway exit when the exit comes first.
+
+    Crossings: pieces of the route inside the buffered runway, in route order, along-runway distance from the
+    landing threshold of each piece's centroid (pieces within 5 m of each other are one crossing). Exit: the
+    first crossing past the touchdown where the profile is at or below 50 kt, else the first past the
+    touchdown. The profile is cut there (straddling row interpolated) if the exit precedes its last point.
+    """
+    if taxi_geom is None:
+        return traj
+    inter = (
+        runway["geom_3857"]
+        .buffer(RUNWAY_BUFFER_M, quad_segs=10)
+        .intersection(taxi_geom)
+    )
+    pieces = [g for g in getattr(inter, "geoms", [inter]) if not g.is_empty]
+    lon0, lat0 = _TO_WGS84.transform(*thr)
+    az_rwy = _bearing_deg(thr, far)
+
+    def _s(pt):
+        lon, lat = _TO_WGS84.transform(pt.x, pt.y)
+        az, _, dist = _GEOD.inv(lon0, lat0, lon, lat)
+        return dist * math.cos(math.radians(az - az_rwy))
+
+    ordered = sorted(pieces, key=lambda g: taxi_geom.project(g.centroid))
+    crossings = []
+    for g in ordered:
+        sv = _s(g.centroid)
+        if crossings and abs(sv - crossings[-1]) <= 5.0 + g.length:
+            continue
+        crossings.append(sv)
+
+    def _v(x):
+        for a, b in zip(traj, traj[1:]):
+            if a[1] <= x <= b[1] and b[1] > a[1]:
+                return a[4] + (x - a[1]) / (b[1] - a[1]) * (b[4] - a[4])
+        return 0.0
+
+    past = [c - d_td for c in crossings if c > d_td]
+    if not past:
+        return traj
+    x_cut = next((x for x in past if _v(x) / _KT <= _EXIT_SPEED_LIMIT_KT), past[0])
+    if x_cut >= traj[-1][1]:
+        return traj
+    out = []
+    for a, b in zip(traj, traj[1:]):
+        out.append(a)
+        if b[1] > x_cut >= a[1]:
+            f = (x_cut - a[1]) / (b[1] - a[1])
+            out.append(
+                (
+                    a[0],
+                    x_cut,
+                    a[2] + f * (b[2] - a[2]),
+                    a[3] + f * (b[3] - a[3]),
+                    a[4] + f * (b[4] - a[4]),
+                    a[5],
+                    a[6],
+                )
+            )
+            return out
+    return traj
+
+
+def _route_in_travel_direction(conn, route_name: str, taxi_geom):
+    """The merged route line turned to the direction of travel: from the stand for a departure route, to the
+    stand for an arrival route (the end nearer the route's gate polygon decides). Unchanged without a gate.
+    """
+    if taxi_geom is None:
+        return None
+    row = conn.execute(
+        "SELECT gate, departure_arrival FROM user_taxiroute_taxiways WHERE route_name=?",
+        (route_name,),
+    ).fetchone()
+    if not row or not row[0]:
+        return taxi_geom
+    g = conn.execute(
+        "SELECT ST_AsText(geometry) FROM shapes_gates WHERE gate_id=?", (row[0],)
+    ).fetchone()
+    if not g or not g[0]:
+        return taxi_geom
+    gate = _shapely_wkt.loads(g[0])
+    c = list(taxi_geom.coords)
+    first_nearer = gate.distance(Point(c[0])) < gate.distance(Point(c[-1]))
+    want_first_nearer = str(row[1]).upper().startswith("D")
+    return taxi_geom if first_nearer == want_first_nearer else LineString(c[::-1])
+
+
+def _departure_lineup_3857(runway: dict, taxi_geom) -> Optional[tuple]:
+    """ANP departure brake release: where the route last meets the runway in route order, on the centreline.
+    Last piece of the route inside the buffered runway; if it runs more than 30 m along the runway, its
+    point furthest along the route, else its centroid; projected onto the runway centreline.
+    """
+    if taxi_geom is None:
+        return None
+    inter = (
+        runway["geom_3857"]
+        .buffer(RUNWAY_BUFFER_M, quad_segs=10)
+        .intersection(taxi_geom)
+    )
+    pieces = [g for g in getattr(inter, "geoms", [inter]) if not g.is_empty]
+    if not pieces:
+        return None
+    last = max(pieces, key=lambda g: taxi_geom.project(g.centroid))
+    pts = (
+        [Point(c) for c in last.coords]
+        if last.geom_type == "LineString"
+        else [last.centroid]
+    )
+    span_m = (
+        _ground_distance_m(tuple(last.coords[0]), tuple(last.coords[-1]))
+        if len(pts) > 1
+        else 0.0
+    )
+    p = max(pts, key=taxi_geom.project) if span_m > 30.0 else last.centroid
+    c = runway["geom_3857"].interpolate(runway["geom_3857"].project(p))
+    return (c.x, c.y)
 
 
 def _get_taxi_route_linestring(
@@ -353,7 +506,7 @@ def _get_movement(conn, oid: int) -> Optional[dict]:
         """
         SELECT oid, runway_time, block_time, aircraft, departure_arrival,
                engine_name, profile_id, taxi_route, runway, taxi_fuel_ratio,
-               number_of_stop_and_gos
+               number_of_stop_and_gos, gate, tow_ratio
         FROM user_aircraft_movements WHERE oid=?
         """,
         (oid,),
@@ -372,6 +525,8 @@ def _get_movement(conn, oid: int) -> Optional[dict]:
         "runway_direction": int("".join(ch for ch in row[8] if ch.isdigit())),
         "taxi_fuel_ratio": row[9] if row[9] is not None else 1.0,
         "number_of_stop_and_gos": row[10] or 0,
+        "gate": row[11],
+        "tow_ratio": float(row[12]) if row[12] not in (None, "") else None,
     }
 
 
@@ -494,15 +649,13 @@ def _build_icao_eedb(engine_ei: dict) -> dict:
 
 
 def _segment_mach(tas_start: float, tas_end: float, T_K: float) -> float:
-    """Per-segment Mach number, per MovementEmissionCalculator line 941-944.
-
-    Uses the START point's TAS (consistent with the plugin) and corrects to
-    ISA reference via sqrt(288.15 / T).
+    """Per-segment flight Mach number TAS / a(T), at the START point's TAS
+    (as the plugin), with the speed of sound at the ambient temperature.
     """
     sos = 331.3 + 0.606 * (T_K - 273.15)
     if sos <= 0:
         return 0.0
-    return (tas_start / sos) * math.sqrt(288.15 / T_K)
+    return tas_start / sos
 
 
 def _segment_ei_bffm2(
@@ -554,6 +707,7 @@ def compute_for_movement(
     ctx: dict,
     method: str = "bymode",
     use_isa_meteo: bool = True,
+    apply_nox_corrections: bool = False,
 ) -> Optional[dict]:
     """Dispatch on method and aircraft type.
 
@@ -561,6 +715,8 @@ def compute_for_movement(
         conditions, matching the plugin's actual emission CSV output.  Set
         to False to use the meteo loaded into tbl_InvMeteo (the plugin's
         documented but currently un-applied behaviour).
+    apply_nox_corrections: bymode only, the ICCAIA ambient NOx correction on
+        take-off and climb-out segments (`_nox_ambient_factor`).
     """
     mov = _get_movement(conn, oid)
     if mov is None:
@@ -568,8 +724,15 @@ def compute_for_movement(
     # Helicopter: FOCA Appendix A is identical for all three fixed-wing
     # methods (FOCA doesn't go through BFFM2).
     if not mov["profile_id"]:
-        return _compute_helicopter_for_movement(conn, mov)
-    return _compute_fixed_wing(conn, mov, ctx, method, use_isa_meteo)
+        return _compute_helicopter_for_movement(conn, mov, ctx)
+    return _compute_fixed_wing(
+        conn,
+        mov,
+        ctx,
+        method,
+        use_isa_meteo,
+        apply_nox_corrections=apply_nox_corrections,
+    )
 
 
 # Backward-compat alias used by earlier callers / tests.
@@ -577,11 +740,153 @@ def compute_bymode_for_movement(conn, oid: int, ctx: dict) -> Optional[dict]:
     return compute_for_movement(conn, oid, ctx, method="bymode")
 
 
-def _compute_helicopter_for_movement(conn, mov: dict) -> Optional[dict]:
+def _heli_flight_path_local(category, is_dep: bool) -> list:
+    """The FOCA half-LTO flight path of a category as (x_m outbound from the
+    pad, z_m, seconds) legs of the active mode (TO or AP), written out from
+    the parameters in open_alaqs.core.tools.foca_heli_trajectory
+    (documents/HELICOPTER_TRAJECTORIES.md). Ground idle, hover and touchdown
+    are not part of the active mode and are left out.
+
+    Departure: climb from the hover height at the climb rate and TAS to the
+    LTO ceiling (3000 ft), then level at cruise TAS for the rest of the TO
+    time; if the TO time ends first, the climb stops there.
+    Arrival: level at the ceiling at the initial approach TAS for the AP
+    time left after the descent, descent at the initial rate and TAS to
+    500 ft, final at the final rate and TAS to the hover height; when the
+    two descents need more than the AP time both are shortened in the same
+    ratio (rates unchanged, so the path starts lower).
+    """
+    from open_alaqs.core.tools import foca_heli_trajectory as fht
+
+    prm = fht.TRAJECTORY_PARAMS[category]
+    prof = PROFILES[category]
+    ceiling, hover = fht.LTO_CEILING_M, fht.HOVER_ALT_M
+    legs = []  # ((x1, z1), (x2, z2), seconds)
+    if is_dep:
+        roc = prm.climb_roc_fpm * fht.M_PER_FT / 60.0
+        tas = prm.climb_tas_kt * fht.KT_TO_MS
+        to_s = prof.to_time_min * 60.0
+        t_climb = (ceiling - hover) / roc
+        if t_climb <= to_s:
+            x1 = tas * t_climb
+            legs.append(((0.0, hover), (x1, ceiling), t_climb))
+            if to_s - t_climb > 0:
+                cr = prm.cruise_tas_kt * fht.KT_TO_MS
+                legs.append(
+                    (
+                        (x1, ceiling),
+                        (x1 + cr * (to_s - t_climb), ceiling),
+                        to_s - t_climb,
+                    )
+                )
+        else:
+            legs.append(((0.0, hover), (tas * to_s, hover + roc * to_s), to_s))
+        return legs
+    ap_s = prof.ap_time_min * 60.0
+    tas_i = prm.approach_tas_initial_kt * fht.KT_TO_MS
+    tas_f = prm.approach_tas_final_kt * fht.KT_TO_MS
+    rod_i = prm.approach_rod_initial_fpm * fht.M_PER_FT / 60.0
+    rod_f = prm.approach_rod_final_fpm * fht.M_PER_FT / 60.0
+    brk = 500.0 * fht.M_PER_FT
+    t_desc = (ceiling - brk) / rod_i
+    t_final = (brk - hover) / rod_f
+    if t_desc + t_final > ap_s:
+        k = ap_s / (t_desc + t_final)
+        t_desc, t_final, t_cr = t_desc * k, t_final * k, 0.0
+    else:
+        t_cr = ap_s - t_desc - t_final
+    x_final = tas_f * t_final
+    x_desc = x_final + tas_i * t_desc
+    x_cr = x_desc + tas_i * t_cr
+    z_top = ceiling
+    z_brk = ceiling - rod_i * t_desc
+    if t_cr > 0:
+        legs.append(((x_cr, z_top), (x_desc, z_top), t_cr))
+    legs.append(((x_desc, z_top), (x_final, z_brk), t_desc))
+    legs.append(((x_final, z_brk), (0.0, hover), t_final))
+    return legs
+
+
+def _heli_active_fraction(
+    conn, mov: dict, ctx: Optional[dict], category, is_dep: bool
+) -> float:
+    """Share of the active-mode time spent at or below the period's mixing
+    height and inside the grid, on the FOCA flight path placed as the plugin
+    places it: origin at the movement's gate centroid (the helipad), else
+    the active runway's named threshold; the path projected outbound along
+    the runway azimuth of the movement (for an arrival the bearing from the
+    opposite end to the threshold, i.e. back along the approach).
+
+    Each leg's time is spread uniformly along its length; a point exactly at
+    the limit is kept. Nothing is cut when ctx is None.
+    """
+    if ctx is None:
+        return 1.0
+    runway = ctx["runway"]
+    origin = None
+    if mov.get("gate"):
+        g = conn.execute(
+            "SELECT ST_AsText(geometry) FROM shapes_gates WHERE gate_id=?",
+            (mov["gate"],),
+        ).fetchone()
+        if g and g[0]:
+            c = _shapely_wkt.loads(g[0]).centroid
+            origin = (c.x, c.y)
+    if origin is None:
+        az_runway = _bearing_deg(runway["pt1_3857"], runway["pt2_3857"])
+        expected = {d: (d * 10) % 360 for d in runway["directions"]}
+        diffs = {
+            d: min(abs(az_runway - h), 360 - abs(az_runway - h))
+            for d, h in expected.items()
+        }
+        start_dir = min(diffs, key=diffs.get)
+        origin = (
+            runway["pt1_3857"]
+            if mov["runway_direction"] == start_dir
+            else runway["pt2_3857"]
+        )
+    az = _runway_azimuth_deg(runway, mov["runway_direction"], is_dep)
+    max_h = _mixing_height_at(conn, mov["runway_time"])
+    gb = ctx["grid_bounds"]
+    total, kept = 0.0, 0.0
+
+    def _world(x):
+        return origin if x == 0.0 else _project_anp(origin, az, x, 0.0)
+
+    for (x1, z1), (x2, z2), dt in _heli_flight_path_local(category, is_dep):
+        total += dt
+        w1, w2 = _world(x1), _world(x2)
+        full = math.hypot(w2[0] - w1[0], w2[1] - w1[1])  # the whole leg, before any cut
+        if full == 0.0:
+            continue
+        # vertical: the part of the leg at or below the limit, altitude linear
+        # along the projected (EPSG:3857) segment as for fixed-wing segments
+        if z1 > max_h and z2 > max_h:
+            continue
+        p1, p2 = w1, w2
+        if z1 > max_h or z2 > max_h:
+            f = (max_h - min(z1, z2)) / abs(z2 - z1)
+            lo, hi = (w1, w2) if z1 < z2 else (w2, w1)
+            cut = (lo[0] + f * (hi[0] - lo[0]), lo[1] + f * (hi[1] - lo[1]))
+            p1, p2 = (w1, cut) if z1 < z2 else (cut, w2)
+        clipped = _clip_segment_2d(p1, p2, gb)
+        if clipped is None:
+            continue
+        q1, q2 = clipped
+        kept += dt * math.hypot(q2[0] - q1[0], q2[1] - q1[1]) / full
+    return kept / total if total > 0 else 1.0
+
+
+def _compute_helicopter_for_movement(
+    conn, mov: dict, ctx: Optional[dict] = None
+) -> Optional[dict]:
     """FOCA Appendix A half-LTO totals for one helicopter movement.
 
     Departure half: TO (full time) + GI * GI_DEPARTURE_FRACTION (80%).
     Arrival half:   AP (full time) + GI * GI_ARRIVAL_FRACTION   (20%).
+    Since 5.3.2 the active mode (TO or AP) is scaled by the share of its
+    time below the period's mixing height and inside the grid, on the FOCA
+    flight path (`_heli_active_fraction`); ground idle is not cut.
     """
     heli = conn.execute(
         "SELECT mtow_kg, engine_count, engine_name, max_shp_per_engine "
@@ -620,13 +925,14 @@ def _compute_helicopter_for_movement(conn, mov: dict) -> Optional[dict]:
         active = _mode_result(
             "AP", profile.ap_power, profile.ap_time_min, ap_em, int(n_eng)
         )
+    a = _heli_active_fraction(conn, mov, ctx, category, is_dep)
     em = {
-        "co": (gi.co_g + active.co_g) / 1000.0,
-        "co2": (gi.co2_g + active.co2_g) / 1000.0,
-        "hc": (gi.hc_g + active.hc_g) / 1000.0,
-        "nox": (gi.nox_g + active.nox_g) / 1000.0,
+        "co": (gi.co_g + a * active.co_g) / 1000.0,
+        "co2": (gi.co2_g + a * active.co2_g) / 1000.0,
+        "hc": (gi.hc_g + a * active.hc_g) / 1000.0,
+        "nox": (gi.nox_g + a * active.nox_g) / 1000.0,
         "sox": 0.0,
-        "pm10": (gi.pm_g + active.pm_g) / 1000.0,
+        "pm10": (gi.pm_g + a * active.pm_g) / 1000.0,
         # FOCA 2015 writes helicopter PM mass only to PM10; PM1/PM2.5
         # are not split out (see open_alaqs/core/interfaces/Emissions.py
         # line 200 and its docstring). The earlier mirror into pm25 was
@@ -645,7 +951,7 @@ def _compute_helicopter_for_movement(conn, mov: dict) -> Optional[dict]:
         "brake_wear_pm10_kg": 0.0,
         "traj_fuel_by_mode_kg": {
             "GI": gi.fuel_kg,
-            active.mode: active.fuel_kg,
+            active.mode: a * active.fuel_kg,
         },
         "segments_included": 0,
         "segments_skipped_vertical": 0,
@@ -656,12 +962,43 @@ def _compute_helicopter_for_movement(conn, mov: dict) -> Optional[dict]:
     }
 
 
-def _compute_fixed_wing(
+def _airport_elevation_m(conn) -> float:
+    row = conn.execute(
+        "SELECT airport_elevation FROM user_study_setup LIMIT 1"
+    ).fetchone()
+    return float(row[0]) if row and row[0] is not None else 0.0
+
+
+def _nox_ambient_factor(meteo: dict, airport_elevation_m: float, tow_ratio) -> float:
+    """ICCAIA simple-method NOx correction for take-off and climb-out, written
+    out from ICAO Doc 9889 / Annex 16 Vol II App. 3 (plugin:
+    core/tools/nox_correction_ambient.py):
+
+        EI / EI_ref = (1 + 1.55 (W - 1) + 0.012 (T - T_ISA)) exp(19 (0.00634 - h))
+
+    T_ISA at the airport elevation (lapse 6.5 K/km), h the ambient humidity
+    ratio from the Magnus saturation pressure, W the take-off weight ratio
+    (1 when not given).
+    """
+    w = tow_ratio if tow_ratio not in (None, 0) and tow_ratio > 0 else 1.0
+    t = meteo["T_K"]
+    t_isa = 288.15 - 6.5 * airport_elevation_m / 1000.0
+    t_c = t - 273.15
+    p_sat_hpa = 6.1078 * 10.0 ** (7.5 * t_c / (237.3 + t_c))
+    p_hpa = meteo["P_Pa"] / 100.0
+    h = 0.62197058 * meteo["RH"] * p_sat_hpa / (p_hpa - meteo["RH"] * p_sat_hpa)
+    return (1.0 + 1.55 * (w - 1.0) + 0.012 * (t - t_isa)) * math.exp(
+        19.0 * (0.00634 - h)
+    )
+
+
+def _compute_fixed_wing(  # noqa: C901 — one segment loop per method, as the standalone
     conn,
     mov: dict,
     ctx: dict,
     method: str = "bymode",
     use_isa_meteo: bool = True,
+    apply_nox_corrections: bool = False,
 ) -> Optional[dict]:
     """Compute per-movement emissions for a fixed-wing aircraft.
 
@@ -696,7 +1033,7 @@ def _compute_fixed_wing(
     icao_eedb = _build_icao_eedb(engine_ei) if method != "bymode" else None
     meteo = (
         _get_meteo_at(conn, mov["runway_time"], use_isa=use_isa_meteo)
-        if method != "bymode"
+        if method != "bymode" or apply_nox_corrections
         else None
     )
     # Per-movement vertical ceiling. Reads `tbl_InvMeteo.MixingHeight`
@@ -706,10 +1043,45 @@ def _compute_fixed_wing(
     # `MAX_HEIGHT_M = 914.4` used in the segment-include check below.
     max_height_m = _mixing_height_at(conn, mov["runway_time"])
 
+    # ---- Trajectory (loaded first: an arrival's landing roll is taken out of its taxi time) ----
+    is_dep = mov["departure_arrival"] == "D"
+    traj = _get_trajectory(conn, mov["profile_id"])
+    if not traj:
+        return None
+    is_custom = traj[0][6] == "CUSTOM"
+    arrival_anchor = None
+    if not is_dep and not is_custom:
+        arrival_anchor, d_td, thr, far = _arrival_touchdown_3857(
+            ctx["runway"], mov["runway_direction"], traj
+        )
+        traj = _arrival_rollout_cut(
+            ctx["runway"],
+            _route_in_travel_direction(
+                conn,
+                mov["taxi_route"],
+                _get_taxi_route_linestring(conn, mov["taxi_route"]),
+            ),
+            traj,
+            d_td,
+            thr,
+            far,
+        )
+
     # ---- TX (taxi) ----
     taxi_time_s = abs(
         (_parse_dt(mov["runway_time"]) - _parse_dt(mov["block_time"])).total_seconds()
     )
+    if not is_dep:
+        # Arrival runway time = touchdown, so block - runway time contains the landing roll the profile
+        # counts: take out the profile's ground rows after its last point above 0.5 m (mean TAS per step).
+        air = [i for i, r in enumerate(traj) if r[3] > 0.5]
+        roll = traj[(air[-1] + 1 if air else 0) :]
+        roll_s = sum(
+            math.hypot(b[1] - a[1], b[2] - a[2]) / (0.5 * (a[4] + b[4]))
+            for a, b in zip(roll, roll[1:])
+            if a[4] + b[4] > 0
+        )
+        taxi_time_s = max(0.0, taxi_time_s - roll_s)
     tx = engine_ei["TX"]
     # For BFFM2 the plugin's TaxiingEmissionCalculator routes through
     # `Engine.getEmissionIndexByEngineState(power_setting, method=BFFM2)`
@@ -747,14 +1119,20 @@ def _compute_fixed_wing(
     intersection_3857 = _intersection_cached(ctx, conn, mov["taxi_route"])
     if intersection_3857 is None:
         intersection_3857 = ctx["runway"]["pt1_3857"]
-    is_dep = mov["departure_arrival"] == "D"
     az_deg = _runway_azimuth_deg(ctx["runway"], mov["runway_direction"], is_dep)
-
-    # ---- Trajectory ----
-    traj = _get_trajectory(conn, mov["profile_id"])
-    if not traj:
-        return None
-    is_custom = traj[0][6] == "CUSTOM"
+    if arrival_anchor is not None:
+        intersection_3857 = arrival_anchor
+    if is_dep and not is_custom:
+        lineup = _departure_lineup_3857(
+            ctx["runway"],
+            _route_in_travel_direction(
+                conn,
+                mov["taxi_route"],
+                _get_taxi_route_linestring(conn, mov["taxi_route"]),
+            ),
+        )
+        if lineup is not None:
+            intersection_3857 = lineup
     fuel_by_mode = {"TO": 0.0, "CL": 0.0, "AP": 0.0}
     segs_inc = segs_skip_v = segs_skip_g = segs_part = 0
 
@@ -821,7 +1199,14 @@ def _compute_fixed_wing(
             seg_ff_amb = eng["ff"]
         else:  # bffm2_traj
             seg_ff_amb = _bffm2_traj_ff_amb(
-                conn, mov, pt1, eng, engine_ei, meteo, mach, n_eng
+                conn,
+                mov,
+                pt1,
+                eng,
+                engine_ei,
+                meteo,
+                mach,
+                n_eng,
             )
 
         seg_fuel = seg_time * seg_ff_amb * n_eng
@@ -837,6 +1222,19 @@ def _compute_fixed_wing(
             bymode_fallback = _row is None or (_row[0] is None and _row[1] is None)
         if method == "bymode" or bymode_fallback:
             _add_em(em, seg_fuel, eng)
+            if method == "bymode" and apply_nox_corrections and mode1 in ("TO", "CL"):
+                # the segment's NOx, just added, times the ICCAIA factor
+                em["nox"] += (
+                    seg_fuel
+                    * eng["nox_ei"]
+                    / 1000.0
+                    * (
+                        _nox_ambient_factor(
+                            meteo, _airport_elevation_m(conn), mov.get("tow_ratio")
+                        )
+                        - 1.0
+                    )
+                )
         else:
             _bffm2_apply_segment(em, seg_ff_amb, seg_fuel, eng, icao_eedb, meteo, mach)
         fuel_by_mode[mode1] = fuel_by_mode.get(mode1, 0.0) + seg_fuel
@@ -1024,6 +1422,11 @@ def main(argv: Optional[list] = None) -> int:
     )
     parser.add_argument("--oid", type=int, default=None)
     parser.add_argument("--plugin-csv", default=None)
+    parser.add_argument(
+        "--apply-nox-corrections",
+        action="store_true",
+        help="bymode: ICCAIA ambient NOx correction on take-off and climb-out",
+    )
     parser.add_argument("--verbose-diag", action="store_true")
     args = parser.parse_args(argv)
 
@@ -1068,6 +1471,7 @@ def main(argv: Optional[list] = None) -> int:
                 ctx,
                 method=args.method,
                 use_isa_meteo=not args.use_meteo,
+                apply_nox_corrections=args.apply_nox_corrections,
             )
             if result is None:
                 print(f"{oid:>3}  (skipped: no profile or helicopter)")

@@ -44,8 +44,10 @@ Two output shapes, depending on which entry point is used.
 │                            geometry_wkt, geometry_kind, height_m,
 │                            extent_m2, length_m, in_study, extra_json
 ├── emissions_folder/
-│   └── emissions.parquet    schema: timestamp, source_id, pollutant,
-│                            kg_in_hour    (one row per source-pollutant-hour)
+│   ├── emissions.parquet    schema: timestamp, source_id, pollutant,
+│   │                        kg_in_hour    (one row per source-pollutant-hour)
+│   └── runway_checks.csv    route and profile check report (aircraft runs;
+│                            see runway_checks.py)
 ├── receptors_folder/
 │   └── receptors.csv        schema: name, x, y, z   (in target UTM)
 ├── meteo_folder/
@@ -154,6 +156,10 @@ orchestrate.py         builds the six-folder austal_prep structure;
                        function for embedding in other pipelines
 cli.py / __main__.py   `python -m openalaqs_standalone <command>`:
                        dispatches to `aircraft` or `austal`
+runway_placement.py    placement of flight profiles on the runway (rules shared
+                       with the plugin: open_alaqs/core/tools/runway_placement.py)
+runway_checks.py       route and profile check report; also
+                       `python -m openalaqs_standalone.runway_checks study.alaqs out.csv`
 ```
 
 ### Source coverage

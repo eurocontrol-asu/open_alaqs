@@ -60,6 +60,17 @@ ALAQS_FILES = [
     REPO_ROOT / "tests" / "data" / "AIRPORT_A" / "AIRPORT_A.alaqs",
     REPO_ROOT / "tests" / "data" / "AIRPORT_A" / "AIRPORT_A_out.alaqs",
     REPO_ROOT / "open_alaqs" / "core" / "templates" / "project.alaqs",
+    REPO_ROOT / "openalaqs_standalone" / "validation" / "data" / "training_v3.alaqs",
+    REPO_ROOT
+    / "openalaqs_standalone"
+    / "validation"
+    / "data"
+    / "training_v3_gatemovements.alaqs",
+    REPO_ROOT
+    / "openalaqs_standalone"
+    / "validation"
+    / "data"
+    / "training_v3_multisource.alaqs",
 ]
 
 # Catalogue profiles removed from the CSV: dropped from the fixtures too,

@@ -62,6 +62,7 @@ from open_alaqs.core.tools.bffm2 import calculate_emission_index as _bffm2_ei
 from openalaqs_standalone import geometry as geo
 from openalaqs_standalone import movements as mv
 from openalaqs_standalone import nox_correction as _nox_corr
+from openalaqs_standalone import runway_placement as rp
 
 # ---------------------------------------------------------------------------
 # Constants (must match the plugin and the CAEP14 reference)
@@ -190,18 +191,17 @@ def _build_icao_eedb(engine_ei: dict) -> dict:
 
 
 def _segment_mach(tas_start: float, tas_end: float, T_K: float) -> float:
-    """Per-segment Mach number.
+    """Per-segment flight Mach number TAS / a(T).
 
-    Uses the segment's START-point TAS (consistent with the plugin,
-    MovementEmissionCalculator lines 941-944) and corrects to ISA
-    reference via sqrt(288.15 / T). The `tas_end` argument is accepted
-    for signature parity with the reference but is not used, exactly
-    as in the reference. Ported verbatim.
+    Uses the segment's START-point TAS (as the plugin,
+    MovementEmissionCalculator.calculate_emissions_per_segment) and the
+    speed of sound at the ambient temperature. The `tas_end` argument is
+    accepted for signature parity with the reference but is not used.
     """
     sos = 331.3 + 0.606 * (T_K - 273.15)
     if sos <= 0:
         return 0.0
-    return (tas_start / sos) * math.sqrt(288.15 / T_K)
+    return tas_start / sos
 
 
 def _segment_ei_bffm2(
@@ -501,11 +501,13 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
     # behaviour degrades gracefully — the old all-in-tx_em layout —
     # rather than zero-ing out taxi emissions.
     natural_taxi_time_s = taxi_time_s
+    route_time_s = taxi_time_s  # the route's own time at its segment speeds (uncapped); total when unknown
     nat_cache = ctx.get("natural_taxi_times")
     if nat_cache is not None:
         cached = nat_cache.get(mov["taxi_route"])
         if cached is not None:
             natural_taxi_time_s = min(cached, taxi_time_s)
+            route_time_s = cached
     queuing_time_s = max(0.0, taxi_time_s - natural_taxi_time_s)
     # Stop-and-go: AVERAGE_DURATION = 9 s per stop (plugin constant).
     stop_and_go_time_s = AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S * float(
@@ -652,6 +654,12 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
     # The standalone now uses the same anchor for arrivals and departures
     # (taxi-runway intersection from _intersection_cached) to match.
     exit_3857 = _intersection_cached(ctx, conn, mov["taxi_route"], runway)
+    arrival_touchdown_m = None
+    arrival_touchdown_source = None
+    arrival_exit = None
+    rollout_cut_m = 0.0
+    departure_lineup_m = None
+    stretch = None  # runway taxiing between an ANP arrival's rollout end and its exit
 
     if is_dep:
         # Departure: anchor at taxi-runway intersection (matches plugin
@@ -663,6 +671,18 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             )
         else:
             intersection_3857 = exit_3857
+        if not is_custom and exit_3857 is not None:
+            # ANP: brake release at the line-up point, where the route last meets the runway in route order
+            # (the centroid of the whole overlap falls mid-runway for a route that backtracks or crosses
+            # twice). CUSTOM keeps the importer's point so its offsets round-trip.
+            lineup_m = rp.lineup_distance(
+                _route_crossings_cached(ctx, conn, mov, runway)
+            )
+            if lineup_m is not None:
+                intersection_3857 = rp.point_at(
+                    rp.runway_frame(runway, mov["runway_direction"]), lineup_m
+                )
+                departure_lineup_m = lineup_m
         az_deg = geo.runway_azimuth_deg(runway, mov["runway_direction"], is_dep)
     else:
         # Arrival: anchor at taxi-runway intersection (post rollout-shift
@@ -679,10 +699,88 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         )
         az_deg = (approach_az_deg + 180.0) % 360.0  # motion direction
 
-        if exit_3857 is None:
-            intersection_3857 = active_threshold_3857
+        if is_custom:
+            # ADS-B / CUSTOM: offsets were taken from this point by the importer; keep it so positions round-trip.
+            intersection_3857 = (
+                active_threshold_3857 if exit_3857 is None else exit_3857
+            )
         else:
-            intersection_3857 = exit_3857
+            # ANP: Doc 29 approach profiles have x = 0 at the touchdown and cross the landing threshold at the
+            # threshold crossing height. Touchdown = landing threshold + the runway's Touchdown Offset for this
+            # direction if set, else the profile's own 50 ft crossing distance. The taxi route no longer moves
+            # the profile (it is only where taxiing starts).
+            key = (mov["profile_id"], mov["runway_direction"], id(runway))
+            cache = ctx.setdefault("touchdown_cache", {})
+            if key not in cache:
+                frame = rp.runway_frame(runway, mov["runway_direction"])
+                d_td, td_src = rp.arrival_touchdown_distance(
+                    runway, mov["runway_direction"], traj
+                )
+                cache[key] = (rp.point_at(frame, d_td), d_td, td_src)
+            intersection_3857, arrival_touchdown_m, arrival_touchdown_source = cache[
+                key
+            ]
+            # The aircraft leaves the runway at the route's exit: the rollout ends there when the exit comes
+            # first (the rest is not flown; taxiing starts at the exit).
+            ex = _arrival_exit(ctx, conn, mov, runway, traj, arrival_touchdown_m)
+            if ex is not None:
+                arrival_exit = ex
+                if ex["x_m"] < traj[-1][1]:
+                    rollout_cut_m = traj[-1][1] - ex["x_m"]
+                    traj = rp.truncate_after(traj, ex["x_m"])
+                elif ex["x_m"] - traj[-1][1] > rp.STRETCH_MIN_M:
+                    # Exit past the rollout end: the aircraft rolls on along the runway to the exit. That
+                    # stretch is taxiing; it takes its share of the movement's taxi time (queuing shrinks
+                    # first), so the total taxi time stays as measured.
+                    frame = rp.runway_frame(runway, mov["runway_direction"])
+                    s0 = arrival_touchdown_m + traj[-1][1]
+                    length = ex["s_m"] - s0
+                    stretch = dict(
+                        length_m=length,
+                        time_unscaled_s=rp.stretch_time_s(length, traj[-1][4]),
+                        p1_3857=rp.point_at(frame, s0),
+                        p2_3857=rp.point_at(frame, ex["s_m"]),
+                    )
+
+    # Arrival runway time = touchdown (A-CDM ALDT: "the time that an aircraft lands on a runway"): the time
+    # from block to runway time then contains the landing roll, which the profile already counts. The taxi
+    # time is the rest (not below 0). ANP and CUSTOM profiles alike.
+    rollout_time_s = 0.0
+    block_to_runway_s = taxi_time_s
+    if not is_dep and ctx.get("arrival_runway_time_is_touchdown", True):
+        rollout_time_s = rp.rollout_duration_s(traj)
+    stretch_em = {p: 0.0 for p in POLLUTANTS}
+    if stretch is not None or rollout_time_s > 0.0:
+        # Re-split the taxi time: route, runway stretch, queue (runway_placement.split_taxi_time).
+        block_to_runway_s = taxi_time_s
+        taxi_time_s = max(0.0, taxi_time_s - rollout_time_s)
+        nat, t_st, que = rp.split_taxi_time(
+            taxi_time_s, route_time_s, stretch["time_unscaled_s"] if stretch else 0.0
+        )
+        natural_taxi_time_s, queuing_time_s = nat, que
+        nat_fuel = natural_taxi_time_s * tx_ff_amb * n_eng * mov["taxi_fuel_ratio"]
+        queue_fuel = queuing_time_s * tx_ff_amb * n_eng
+        tx_em, queue_em = _build_em(nat_fuel), _build_em(queue_fuel)
+        st_fuel_in = 0.0
+        if stretch is not None:
+            stretch["time_s"] = t_st
+            # All engines (the aircraft is still on the runway; no taxi fuel ratio, as in the plugin); only
+            # the part inside the grid counts, as for profile segments.
+            st_fuel = t_st * tx_ff_amb * n_eng
+            clipped = geo.clip_segment_2d(
+                stretch["p1_3857"], stretch["p2_3857"], ctx["grid_bounds"]
+            )
+            if clipped is not None:
+                full = geo.ground_distance_m(stretch["p1_3857"], stretch["p2_3857"])
+                f_in = geo.ground_distance_m(*clipped) / full if full > 0 else 0.0
+                st_fuel_in = st_fuel * f_in
+                stretch_em = _build_em(st_fuel_in)
+            stretch["fuel_kg"] = st_fuel_in
+        tx_fuel = nat_fuel + queue_fuel + stop_fuel + st_fuel_in
+        em = {
+            p: tx_em[p] + queue_em[p] + stop_em[p] + brake_wear_em[p]
+            for p in POLLUTANTS
+        }
 
     fuel_by_mode = {"TO": 0.0, "CL": 0.0, "AP": 0.0}
     segs_inc = segs_skip_v = segs_skip_g = segs_part = 0
@@ -770,7 +868,14 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             seg_ff_amb = eng["ff"]
         else:  # bffm2_traj
             seg_ff_amb = _bffm2_traj_ff_amb(
-                conn, mov, pt1, eng, engine_ei, meteo, mach, n_eng
+                conn,
+                mov,
+                pt1,
+                eng,
+                engine_ei,
+                meteo,
+                mach,
+                n_eng,
             )
 
         seg_fuel = seg_time * seg_ff_amb * n_eng
@@ -838,6 +943,29 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             }
         )
 
+    if stretch is not None and stretch["fuel_kg"] > 0.0:
+        # Runway taxiing segment (mode TX, on the ground). Its emission is part of the taxi emission, so it
+        # is added to the total here, like the taxi parts above; it is placed on the runway by distribute.py
+        # like any other segment.
+        p1, p2 = geo.clip_segment_2d(
+            stretch["p1_3857"], stretch["p2_3857"], ctx["grid_bounds"]
+        )
+        for p in POLLUTANTS:
+            em[p] += stretch_em[p]
+        segments.append(
+            {
+                "mode": "TX",
+                "taxi": True,
+                "p1_3857": p1,
+                "p2_3857": p2,
+                "z1_m": 0.0,
+                "z2_m": 0.0,
+                "ground_m": geo.ground_distance_m(p1, p2),
+                "fuel_kg": stretch["fuel_kg"],
+                "em_kg": stretch_em,
+            }
+        )
+
     return {
         "oid": mov["oid"],
         "aircraft": mov["aircraft"],
@@ -846,6 +974,15 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         "n_engines": n_eng,
         "method": method,
         "taxi_time_s": taxi_time_s,
+        "arrival_touchdown_m": arrival_touchdown_m,
+        "arrival_touchdown_source": arrival_touchdown_source,
+        "arrival_exit": arrival_exit,
+        "rollout_cut_m": rollout_cut_m,
+        "runway_stretch_m": stretch["length_m"] if stretch else 0.0,
+        "runway_stretch_time_s": stretch["time_s"] if stretch else 0.0,
+        "rollout_time_s": rollout_time_s,
+        "departure_lineup_m": departure_lineup_m,
+        "block_to_runway_time_s": block_to_runway_s,
         "natural_taxi_time_s": natural_taxi_time_s,
         "queuing_time_s": queuing_time_s,
         "stop_and_go_time_s": stop_and_go_time_s,
@@ -887,6 +1024,30 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         "brake_wear_em_kg": brake_wear_em,
         "total_em_kg": em,
     }
+
+
+def _route_crossings_cached(ctx: dict, conn, mov: dict, runway: dict) -> list:
+    """The movement's taxi route crossings with its runway, in route order (runway_placement.route_crossings)."""
+    cache = ctx.setdefault("crossings_cache", {})
+    key = (mov["taxi_route"], mov["runway_direction"], id(runway))
+    if key not in cache:
+        parts = (
+            rp.route_parts_from_study(conn, mov["taxi_route"])
+            if mov.get("taxi_route")
+            else None
+        )
+        frame = rp.runway_frame(runway, mov["runway_direction"])
+        cache[key] = (
+            rp.route_crossings(frame, runway["geom_3857"], parts) if parts else []
+        )
+    return cache[key]
+
+
+def _arrival_exit(ctx: dict, conn, mov: dict, runway: dict, traj, touchdown_m: float):
+    """Runway exit of an ANP arrival (runway_placement.select_exit over the route's crossings), or None."""
+    return rp.select_exit(
+        _route_crossings_cached(ctx, conn, mov, runway), touchdown_m, traj
+    )
 
 
 def _intersection_cached(

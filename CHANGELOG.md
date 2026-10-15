@@ -6,6 +6,148 @@ ISO 8601.
 
 ## [Unreleased]
 
+Runway placement of flight profiles. **Results change** for every study with
+ANP arrivals or block and runway times on arrivals: emissions move along the
+runway, arrival rollouts that ran past their exit are shorter, and arrival
+taxi times lose the landing roll. Plugin and standalone share the rules
+(`open_alaqs/core/tools/runway_placement.py`).
+
+### Changed
+
+- ANP arrivals touch down at the landing threshold plus the runway's
+  Touchdown Offset for that end, else the profile's own distance from its
+  50 ft (15.24 m) threshold crossing (Doc 29 approach profiles have x = 0 at
+  the touchdown). They were placed with the touchdown on the taxi route's
+  runway exit, which put approaches 60 to 90 m too high at a 2.2 km runway
+  and rollouts past the runway end.
+- The arrival rollout ends at the taxi route's exit when the exit comes
+  first: the first crossing past the touchdown at or below 50 kt (ICAO Doc
+  9157 Part 2, rapid-exit reference speed), else the first past the
+  touchdown. An exit past the rollout end leaves a runway stretch that is
+  taxied (all engines; 2 L / (v_end + v_x), v_x = min(v_end, 18 kt)); it
+  shares the movement's taxi time with the route, queuing shrinks first.
+- Arrival runway time is the touchdown (A-CDM ALDT): the profile's landing
+  roll is taken out of block time minus runway time. Departure runway time
+  is the start of the take-off roll (unchanged).
+- ANP departures brake-release where the taxi route last meets the runway
+  (line-up point), not at the centroid of the route/runway overlap; a route
+  that backtracks along the runway lines up where it leaves it.
+- Taxi routes are read in the direction of travel whatever the listing order
+  of their taxiways (turned by the stand).
+- ADS-B (CUSTOM) profiles and tracks are placed as before.
+- The plugin's runway trajectory cache moves to
+  `cache_runway_trajectories_v5`; older cache tables are no longer read.
+
+### Added
+
+- CAEP14 validation: the BFFM2 index step is pinned to two cases of the
+  CAEP14 calculation sheet, non-LTO lean burn and LTO
+  (`validation/tests/test_caep14_sheet_reference_case.py`).
+- CAEP14 reference tool: helicopter active mode cut at the mixing height
+  and the grid on the FOCA flight path, as the plugin and the standalone do
+  since 5.3.2 (`validation/tests/test_helicopter_caep14_reference.py`).
+- CAEP14 validation: pinned plugin outputs re-exported from the plugin of
+  this version, headlessly (`validation/tools/regenerate_plugin_csvs.py`:
+  the four method targets, the stationary sources); plugin = reference =
+  standalone on 15 of 15 training movements for the three methods and for
+  bymode with the NOx correction, study meteo applied
+  (`validation/tests/test_plugin_csv_vs_reference.py`). The validation
+  workbooks `validation/data/training_validation_reference.xlsx` and
+  `example/training/training_validation_reference.xlsx` are rebuilt from
+  them by the new `regenerate_training_validation_xlsx.py` (plugin beside
+  reference per movement, hourly plugin emissions, helicopters);
+  `compare_inventory_to_reference.py` reads it from its new location and no
+  longer carries hard-coded helicopter values. See
+  `validation/tools/CAEP14_VALIDATION.md`, "October 2026".
+- `documents/FUEL_FLOW_OPTIONS.md`: what an ADS-B comparison showed about the
+  fuel-flow step of the BFFM2 trajectory method, and proposed changes, none
+  implemented in this release (speed correction and similarity scaling of
+  the ICAO-curve fuel flow, reduced take-off thrust, runway rule and
+  plausibility floor for supplied fuel flows, fuel-flow source switch).
+- Runway: Touchdown Offset per end (`touchdown` for the first-named end, new
+  `touchdown_2` for the other; empty = the first value). Studies without
+  the column still load; `scripts/migrate_alaqs.py` adds it.
+- Standalone: route and profile check report (`runway_checks`,
+  `emissions_folder/runway_checks.csv`): exit before the touchdown, exit
+  above 50 kt, exit after the rollout end, rollout or lift-off past the
+  runway end, intersection line-up, ADS-B start of roll or exit away from
+  the route, each with the input change that fixes it. Never blocks the
+  run. The plugin logs the exit findings.
+
+### Fixed
+
+- Plugin: the ICCAIA NOx ambient correction (bymode, "Apply NOx
+  corrections") was applied to every flight segment, approach included;
+  it is defined for take-off and climb-out, which is what its module and
+  the standalone do. Now gated on the segment mode
+  (`MovementEmissionCalculator.NOX_CORRECTION_MODES`). **Results change**
+  for arrivals with the correction on: their NOx is no longer scaled by the
+  correction factor (1 to 6 % higher than before on the training fixture's
+  days); departures unchanged.
+- ADS-B import: with heights taken above the airport elevation (5.3.4), a
+  take-off roll reported a fraction of an altitude step above the field
+  (EHRD: −15 ft at a −5 m field, +0.43 m) became climb-out (`CL`). The run of
+  points within half an ADS-B altitude step (12.5 ft) of the field
+  elevation at the start of a departure, or the end of an arrival, is now
+  the ground: height 0, mode `TO` for departures
+  (`ads_b._snap_ground_heights`, `tests/test_adsb_airport_elevation.py`).
+  **Results change** only in the vertical position of those points for
+  ADS-B tracks imported at airports with a non-zero elevation; re-import to
+  apply.
+- `scripts/migrate_alaqs.py --refresh-include-user-extensible` stopped with
+  "CSVs missing" (it listed `default_helicopter_engine_ei`, removed in 5.x);
+  it now refreshes `default_helicopter` and `default_helicopter_engines`.
+- `tests/test_emission_calculation.py` (slow): the vector-layer comparison
+  never compared emission values (QGIS `checkLayersEqual(unordered=True)`
+  pairs the result's value with the expected layer's skipped `fid`), and
+  the four source-type cases selected nothing (class names instead of the
+  dialog's module names) and ran on all sources. The test now compares every
+  cell's value and fails on an unknown source type; the 16 references are
+  regenerated with `tools/test_fixtures/regenerate_emission_calculation_references.py`
+  (output grid in UTM since #316, 5.1.0; ANP CO2 and NOx moved with the
+  vertical-limit clipping of 5.3.1, ANP HC with release 5.2.0, whose notes
+  name the start-emission keying; AIRPORT_A with the runway placement above).
+- Example study: movement 11 flew `1677686160_DIETB`, a track carried in
+  `training.alaqs`, while `training_ads_b_data.csv` held two other tracks
+  that nothing used. Movement 11 now flies `1764584438_PHBBA` from that file
+  (as `training_v3.alaqs` does), `DIETB` is removed from `training.alaqs`,
+  and `training_out.alaqs` is rebuilt from `training.alaqs` and the CSVs
+  with the settings of `documents/TEST_CASE_STUDY.md` (new
+  `tools/test_fixtures/rebuild_training_example_inventory.py`). The shipped
+  inventory had been made from an older `training.alaqs` (airport at
+  51.96 / 4.44 and elevation 0 instead of 51.9574278 / 4.4417028 and −5 m,
+  no `custom_hourly` profile) on a 40 x 40 x 20 grid of 10 m layers (200 m
+  high); the tutorial's grid is 100 x 100 x 20 of 50 m. **Example results
+  change** (bymode CO2 of the 13 movements 5285 → 7693 kg: 5285 → 5915 kg
+  from the airport position and the PHBBA track on the old grid, 5915 →
+  7693 kg from the tutorial's larger grid);
+  `example/training/training_validation_reference.xlsx` is rebuilt.
+- Validation fixtures `training_v3*.alaqs` and `tests/data/AIRPORT_A/AIRPORT_A.alaqs`
+  migrated to the current schema (`touchdown_2`, `engine_test_events`,
+  `is_test_site`, ...; runway `capacity` dropped) and reference data
+  (`scripts/migrate_alaqs.py`, profiles with
+  `tools/test_fixtures/regenerate_default_aircraft_profiles.py`, which keeps
+  study rows and now lists the three `training_v3` files); PHBBA and PHRTM
+  re-imported into `training_v3*.alaqs` with the importer above. The pinned
+  plugin outputs reproduce to 2e-14 on the migrated fixture.
+- `documents/TEST_CASE_STUDY.md`: airport elevation −5 m (the form converts
+  the database's −15 ft), coordinates as populated, the ADS-B import step,
+  and the CUSTOM track of movement 11.
+- BFFM2 segment Mach: the plugin, the standalone and the CAEP14 reference
+  computed `(TAS / a) · √(288.15 / T)`, which is not a Mach number away from
+  ISA; they now compute the flight Mach `TAS / a`, as SAE AIR-5715, the CAEP
+  validation and `documents/BFFM2_validation/BFFM2.md` do
+  (`validation/tests/test_segment_mach.py`). **Results change** slightly
+  for `bffm2_anchor` and `bffm2_traj` away from ISA (Mach enters only through
+  `exp(0.2 M²)`): on the training fixture's days, at most 0.08 % on NOx
+  (`bffm2_anchor`) and 0.02 % on CO2 and NOx (`bffm2_traj`); `bymode`
+  unchanged. Pinned plugin outputs and both validation workbooks re-exported.
+
+### Removed
+
+- Runway Capacity (no code used it): removed from the form, the `Runway`
+  object and the templates. Older studies keep the column; it is ignored.
+
 ## [5.3.6] - 2026-10-13
 
 Aircraft profile catalogue (`default_aircraft_profiles.csv`) and default

@@ -61,9 +61,9 @@ example/training/training.alaqs project file
 example/training/training_out.alaqs canonical CAEP14 inventory
 example/training/training_movements.csv 13 movements
 example/training/training_meteo.csv 75 hourly meteo rows
-example/training/training_ads_b_data.csv ADS-B fragments (BFFM2-traj only)
+example/training/training_ads_b_data.csv ADS-B tracks, imported into the inventory (movement 11)
 example/training/training_validation_reference.xlsx reference NOx, CO, HC, PM, SO2
- per movement (the ground truth)
+ per movement (the plugin's results beside the CAEP14 reference implementation)
 ```
 
 ### Procedure (QGIS)
@@ -400,8 +400,8 @@ and the reviewer should report both.
 | `example/training/training_out.alaqs` | CAEP14 canonical inventory |
 | `example/training/training_movements.csv` | 13-movement CAEP14 set |
 | `example/training/training_meteo.csv` | 75 hourly meteo rows |
-| `example/training/training_ads_b_data.csv` | ADS-B fragments for `bffm2_traj` |
-| `example/training/training_validation_reference.xlsx` | Per-movement reference totals |
+| `example/training/training_ads_b_data.csv` | ADS-B tracks imported into the inventory; movement 11 flies `1764584438_PHBBA` (all methods) |
+| `example/training/training_validation_reference.xlsx` | Per-movement reference totals (plugin beside the CAEP14 reference) |
 | `openalaqs_standalone/validation/data/training_v3*.alaqs` | Derived multi-source CAEP14 variants |
 | `openalaqs_standalone/validation/data/plugin_output/training_movements_bymode.csv` | Pinned plugin output, `bymode` |
 | `openalaqs_standalone/validation/data/plugin_output/training_movements_bymode_nox_corr.csv` | Pinned plugin output, `bymode`+corr |

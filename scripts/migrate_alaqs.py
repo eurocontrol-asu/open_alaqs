@@ -65,7 +65,7 @@ Phase 2 options:
     --refresh-tables T1,T2,...     Comma-separated list of tables to refresh.
                                    Default: 9 "safe" reference tables.
     --refresh-include-user-extensible
-                                   Add the 7 user-extensible reference
+                                   Add the 8 user-extensible reference
                                    tables to the refresh list (LOSES
                                    user customizations to those tables).
 
@@ -166,7 +166,8 @@ USER_EXTENSIBLE_REFRESH_TABLES = (
     "default_aircraft_apu_ef",
     "default_aircraft_start_ef",
     "default_gate_profiles",
-    "default_helicopter_engine_ei",
+    "default_helicopter",
+    "default_helicopter_engines",
 )
 
 # Tables that hold user project data. Refreshing any of these would
@@ -1175,7 +1176,7 @@ def main(argv: list[str]) -> int:  # noqa: C901
     parser.add_argument(
         "--refresh-include-user-extensible",
         action="store_true",
-        help="Add the 7 user-extensible reference tables "
+        help="Add the 8 user-extensible reference tables "
         "(default_aircraft, default_aircraft_engine_ei, ...) "
         "to the refresh list. WILL OVERWRITE user customizations.",
     )

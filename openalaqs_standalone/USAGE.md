@@ -77,9 +77,9 @@ example/training/
 │                                           in the QGIS plugin)
 ├── training_movements.csv                  aircraft movements
 ├── training_meteo.csv                      hourly meteorology
-├── training_ads_b_data.csv                 ADS-B trajectory input
-│                                           (used by the BFFM2 trajectory
-│                                           method)
+├── training_ads_b_data.csv                 ADS-B tracks, imported into
+│                                           the inventory (movement 11
+│                                           flies 1764584438_PHBBA)
 └── training_validation_reference.xlsx      reference values for a
                                             self-check after running
 ```
@@ -339,10 +339,13 @@ subdirectories:
 
 - `validation/data/` — bundled fixtures. Three derived variants of the
   training study (`training_v3.alaqs`, `training_v3_gatemovements.alaqs`,
-  `training_v3_multisource.alaqs`) plus reference plugin-output CSVs for
-  each of the four bit-identity targets (bymode, bymode-with-NOx-correction,
-  bffm2_anchor, bffm2_traj) in `validation/data/plugin_output/`, and a
-  copy of `training_validation_reference.xlsx`. The `training_v3*` files
+  `training_v3_multisource.alaqs`) plus the plugin's own outputs on
+  `training_v3.alaqs` for the four bit-identity targets (bymode,
+  bymode-with-NOx-correction, bffm2_anchor, bffm2_traj) and the stationary
+  sources in `validation/data/plugin_output/` (re-exported headlessly with
+  `validation/tools/regenerate_plugin_csvs.py`), and
+  `training_validation_reference.xlsx`, plugin beside the CAEP14 reference
+  per movement (`validation/tools/regenerate_training_validation_xlsx.py`). The `training_v3*` files
   are evolved versions of `example/training/training.alaqs` carrying
   schema fixes and source variants that exercise the gate / multi-source
   code paths.

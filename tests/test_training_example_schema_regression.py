@@ -5,10 +5,11 @@ The runway form was simplified in the rebuild: the columns
 ``max_queue_speed`` and ``peak_queue_time`` were dropped from
 ``shapes_runways`` because no code path read them. The current templates
 (open_alaqs/core/templates/project.alaqs and inventory.alaqs) ship the
-6-column schema:
+6-column schema (13 Oct 2026: ``capacity`` removed, no code used it;
+``touchdown_2`` added, the Touchdown Offset of the second-named runway end):
 
-    oid INTEGER, runway_id TEXT, capacity INT, touchdown INT,
-    instudy DECIMAL, geometry LINESTRING
+    oid INTEGER, runway_id TEXT, touchdown INT, instudy DECIMAL,
+    geometry LINESTRING, touchdown_2 INT
 
 The example files in example/training/ MUST track that 6-column schema.
 If they drift back to the legacy 8-column schema, create_output.py
@@ -48,16 +49,16 @@ EXAMPLE_FILES = {
 EXPECTED_COLUMNS = [
     "oid",
     "runway_id",
-    "capacity",
     "touchdown",
     "instudy",
     "geometry",
+    "touchdown_2",
 ]
 
 # Columns dropped during the rebuild. If any of these reappears in a
 # shipped example, the file is stale and must be re-migrated via
 # scripts/migrate_alaqs.py --drop-extra-columns.
-DROPPED_COLUMNS = {"max_queue_speed", "peak_queue_time"}
+DROPPED_COLUMNS = {"max_queue_speed", "peak_queue_time", "capacity"}
 
 
 def _shapes_runways_columns(db_path: Path) -> list[str]:
@@ -113,21 +114,23 @@ def test_shapes_runways_has_no_legacy_columns(name, path):
 @pytest.mark.parametrize("name,path", EXAMPLE_FILES.items())
 def test_shapes_runways_data_intact_after_migration(name, path):
     """The migration script must not lose the runway row. Both files
-    should retain the single 06/24 runway with its known capacity and
-    touchdown values from the EHRD training-data study."""
+    should retain the single 06/24 runway with its known touchdown value
+    from the EHRD training-data study (touchdown_2 empty: same value for 24)."""
     con = sqlite3.connect(str(path))
     try:
         rows = con.execute(
-            "SELECT runway_id, capacity, touchdown, instudy " "FROM shapes_runways"
+            "SELECT runway_id, touchdown, touchdown_2, instudy " "FROM shapes_runways"
         ).fetchall()
     finally:
         con.close()
 
     assert len(rows) == 1, f"{name}: expected 1 runway, found {len(rows)}"
-    runway_id, capacity, touchdown, instudy = rows[0]
+    runway_id, touchdown, touchdown_2, instudy = rows[0]
     assert (
         runway_id == "06/24"
     ), f"{name}: runway_id drifted from '06/24' to {runway_id!r}"
-    assert capacity == 60, f"{name}: capacity drifted from 60 to {capacity}"
+    assert (
+        touchdown_2 is None
+    ), f"{name}: touchdown_2 drifted from empty to {touchdown_2}"
     assert touchdown == 250, f"{name}: touchdown drifted from 250 to {touchdown}"
     assert int(instudy) == 1, f"{name}: instudy drifted from 1 to {instudy}"

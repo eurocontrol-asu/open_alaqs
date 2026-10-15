@@ -154,5 +154,7 @@ exists only in later releases appears.
 
 * Modes of fixed-point departures are kept as they were (e.g. `777300-D-1`
   switches to CL at 1,565 ft, before its thrust cutback).
-* Arrival placement in the plugin (touchdown on the taxi-route exit) is a
-  code issue, not a data one.
+* Arrival placement: fixed in the code (13 Oct 2026). ANP arrivals now touch
+  down at the landing threshold plus the runway's Touchdown Offset, else the
+  profile's own 50 ft crossing distance; see the Runways section of the user
+  guide.

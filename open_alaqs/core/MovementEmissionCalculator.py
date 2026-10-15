@@ -23,7 +23,9 @@ from open_alaqs.core.interfaces.Emissions import (
 )
 from open_alaqs.core.interfaces.Engine import Engine
 from open_alaqs.core.interfaces.Movement import Movement, defaultEmissions
-from open_alaqs.core.tools import conversion, spatial
+from open_alaqs.core.tools import conversion
+from open_alaqs.core.tools import runway_placement as rp
+from open_alaqs.core.tools import spatial
 from open_alaqs.core.tools.nox_correction_ambient import (
     nox_correction_for_ambient_conditions,
 )
@@ -41,6 +43,14 @@ logger = get_logger(__name__)
 # from the climb-out point upwards), so an accepted fuel flow above the take-off
 # value needs no other guard.
 ADSB_FF_CEILING_FACTOR = 1.5
+# Modes the NOx ambient correction applies to (ICCAIA: take-off and climb-out).
+NOX_CORRECTION_MODES = frozenset({"TO", "CL"})
+
+# Arrival runway time = touchdown (A-CDM ALDT, "the time that an aircraft lands on a runway"): the time from
+# block to runway time then contains the landing roll, which the flight profile already counts, so the taxi
+# time is block - runway time minus the profile's roll. Departure runway time = start of the take-off roll.
+# The standalone has the same rule (ctx["arrival_runway_time_is_touchdown"]).
+ARRIVAL_RUNWAY_TIME_IS_TOUCHDOWN = True
 
 
 class EmissionsDict(TypedDict):
@@ -204,6 +214,23 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
         if self._block_time is not None and self._runway_time is not None:
             self._total_taxiing_time = abs(self._block_time - self._runway_time)
 
+        # Runway placement of the flight profile (GeoTransformation.TrajectoryTransformer): the arrival's
+        # landing roll (its runway time is the touchdown, so block - runway time contains the roll that the
+        # profile counts) and the runway stretch from the rollout end to the route's exit, which is taxied.
+        _traj = (
+            movement.getTrajectoryAtRunway()
+            if hasattr(movement, "getTrajectoryAtRunway")
+            else None
+        )
+        self._placement = getattr(_traj, "runway_placement", None) or {}
+        self._rollout_time_s = 0.0
+        if self._is_arrival() and ARRIVAL_RUNWAY_TIME_IS_TOUCHDOWN:
+            self._rollout_time_s = float(self._placement.get("rollout_time_s") or 0.0)
+        if self._total_taxiing_time is not None and self._rollout_time_s > 0.0:
+            self._total_taxiing_time = max(
+                0.0, self._total_taxiing_time - self._rollout_time_s
+            )
+
         # Start emissions are keyed by aircraft_group, not by engine.
         # The Engine instance can be shared across aircraft in different
         # groups, so the per-aircraft value is held on the Aircraft.
@@ -332,17 +359,24 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                 )
                 return emissions
 
-            # In m/s
-            taxiing_average_speed = conversion.convertToFloat(
-                taxiing_length
-            ) / conversion.convertToFloat(self._total_taxiing_time)
+            # Total taxiing time for calculating taxiing emissions is taken from the Movements Table.
+            # It is shared by the route (its segment times), the runway stretch of an arrival whose exit
+            # lies past the rollout end, and queuing (the rest); when route and stretch do not fit, both
+            # are compressed to the total and there is no queuing (runway_placement.split_taxi_time).
+            stretch = self._placement.get("stretch") if self._is_arrival() else None
+            route_time, stretch_time, queuing_time = rp.split_taxi_time(
+                self._total_taxiing_time,
+                init_taxiing_time_from_segments,
+                float(stretch["time_s"]) if stretch else 0.0,
+            )
+            route_compressed = route_time < init_taxiing_time_from_segments
 
-            # Total taxiing time for calculating taxiing emissions is taken from the Movements Table
-            # Queuing emissions are added when taxiing time (traffic log) is greater than user defined taxiroute info (speed, time, etc)
-            queuing_time = (
-                (self._total_taxiing_time - init_taxiing_time_from_segments)
-                if self._total_taxiing_time > init_taxiing_time_from_segments
-                else 0
+            # In m/s
+            taxiing_average_speed = (
+                conversion.convertToFloat(taxiing_length)
+                / conversion.convertToFloat(route_time)
+                if route_time > 0
+                else float("inf")
             )
 
             taxiing_time_while_aircraft_moving = 0.0
@@ -360,7 +394,7 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                 # Multiply by occupancy time and number of engines
 
                 # If time spent in segments < taxiing time in movement table
-                if self._total_taxiing_time <= init_taxiing_time_from_segments:
+                if route_compressed:
                     new_taxiway_segment_time = (
                         taxiway_segment_.getLength() / taxiing_average_speed
                     )
@@ -422,6 +456,21 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                         "emissions": [em_],
                         "distance_time": new_taxiway_segment_time + queuing_time,
                         "distance_space": taxiway_segment_.getLength(),
+                    }
+                )
+
+            if stretch and stretch_time > 0.0:
+                # Runway stretch: all engines (the aircraft has not left the runway), on the centreline
+                # from the rollout end to the exit.
+                em_ = Emission(defaultValues=defaultEmissions)
+                (x1, y1), (x2, y2) = stretch["p1_3857"], stretch["p2_3857"]
+                em_.setGeometryText(f"LINESTRING({x1} {y1}, {x2} {y2})")
+                em_.add(emission_index_, stretch_time * self._aircraft.getEngineCount())
+                emissions.append(
+                    {
+                        "emissions": [em_],
+                        "distance_time": stretch_time,
+                        "distance_space": float(stretch["length_m"]),
                     }
                 )
 
@@ -1070,9 +1119,11 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
             T = self._method["config"]["ambient_conditions"].getTemperature()
             # Celsius temperature: T − 273.15
             speed_of_sound = float(331.3 + 0.606 * (T - 273.15))  # in m/s
+            # Flight Mach number TAS / a(T), as BFFM2 (SAE AIR-5715) and the CAEP
+            # validation use it. Until October 2026 this was multiplied by
+            # sqrt(288.15 / T), which is not a Mach number away from ISA.
             mach_value = {
-                "mach_number": (start_point_.getTrueAirspeed() / speed_of_sound)
-                * ((288.15 / float(T)) ** (1.0 / 2))
+                "mach_number": start_point_.getTrueAirspeed() / speed_of_sound
             }
             ambient_temp_K = (
                 T  # Use the temperature directly from the ambient conditions
@@ -1277,7 +1328,11 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         if (
             self._method["config"]["apply_nox_corrections"]
             and self._method["name"].lower() != "bffm2"
+            and start_point_.getMode() in NOX_CORRECTION_MODES
         ):
+            # ICCAIA simple-method correction: take-off and climb-out only
+            # (nox_correction_ambient.py); approach and taxi segments were
+            # corrected as well before this change.
             self._apply_nox_corrections(emission_index_, start_point_.getMode())
 
         # Calculate the effective time (s)

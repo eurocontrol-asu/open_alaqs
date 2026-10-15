@@ -9,13 +9,15 @@ the canonical fixture, but the scripts work against any OpenALAQS
 study database.
 
 The reference was first developed and pinned against OpenALAQS 5.2.0 in
-May 2026.  Following the May 2026 patch round, all 15 of 15 movements in
-`training_v3.alaqs` match to 0.00 % across CO, CO₂, NOₓ and PM₁₀ for
-all three methods (`bymode`, `bffm2_anchor`, `bffm2_traj`); the prior
-+0.87 % offset on movement 11 (PHBBA CUSTOM departure) is gone once the
-movement's `profile_id` is set to the correct ADS-B import. Two
-implementation gaps closed in that round are noted under "May 2026
-patch round" below.
+May 2026. The pinned plugin outputs in `data/plugin_output/` were
+re-exported in October 2026 from the plugin of this version, headlessly
+(`tools/regenerate_plugin_csvs.py`): all 15 movements of
+`training_v3.alaqs`, the two helicopters included, agree between the
+plugin, the reference and the standalone for the three methods to
+floating-point noise, except the CUSTOM departure (movement 11, PHBBA) at
+1e-4. The plugin applies the study meteo (`tbl_InvMeteo`) to the BFFM2
+ambient corrections, so the comparison is run with `--use-meteo`; the
+5.2.0 exports were made at ISA. See "October 2026" at the end.
 
 ---
 
@@ -24,8 +26,9 @@ patch round" below.
 | File | Purpose |
 | --- | --- |
 | `compute_caep14_reference.py` | The reference implementation.  Produces per-movement CO, CO₂, HC, NOₓ, SOₓ, PM₁₀ totals for one method and either prints a table or compares against a plugin CSV. |
-| `regenerate_training_validation_xlsx.py` | Reads the plugin CSVs and runs the reference for all three methods, then writes plugin + reference values into `example/training/training_validation_reference.xlsx` for paired-column inspection. |
-| `compare_inventory_to_reference.py` | Standalone method-aware diff tool — useful when validating against a plugin output that is not in the standard CSV format. |
+| `regenerate_plugin_csvs.py` | Runs the plugin's calculation service headlessly (QGIS bindings, no GUI) on the fixture, all source types, for the three methods and for bymode with the NOx correction, and writes the pinned CSVs (`training_movements_*.csv`, `training_sources_bymode.csv`). |
+| `regenerate_training_validation_xlsx.py` | Reads the pinned plugin CSVs and runs the reference for the three methods and the NOx-correction run, then writes `data/training_validation_reference.xlsx`: plugin beside reference per movement, hourly plugin emissions of movements and stationary sources, the helicopter parameters. |
+| `compare_inventory_to_reference.py` | Diffs an exported per-movement CSV (QGIS Table View, or the pinned files) against the reference column of the workbook for one method; the installation check of `documents/VALIDATION_GUIDE.md`. |
 | `../tests/test_bffm2_ambient_propagation_regression.py` | Pure-Python pytest module that pins the BFFM2 ambient-correction behaviour (ISA, cold-dry, warm-humid, per-segment Mach) so a future change in `core/tools/bffm2.py` will surface immediately. |
 
 The reference is dependency-light: it requires `numpy`, `shapely`,
@@ -38,12 +41,21 @@ does not import QGIS and runs in any standard Python 3.12 environment.
 
 ### 1. Run the plugin against the training fixture
 
-In QGIS open `example/training/training.alaqs`, run an inventory with
+Headless (the pinned files were made this way, with the QGIS Python
+bindings and no display):
+
+```bash
+QT_QPA_PLATFORM=offscreen python3.12 \
+    openalaqs_standalone/validation/tools/regenerate_plugin_csvs.py
+```
+
+Or in QGIS: open `example/training/training.alaqs`, run an inventory with
 each of the three calculation methods, and export the per-movement
 emissions to CSV via the standard Output Module.  Save them as
 `training_movements_bymode.csv`, `training_movements_bffm2_anchor.csv`
 and `training_movements_bffm2_traj.csv` (the file names the regen
-script expects by default).
+script expects by default). Only `source_name` and the `*_kg` columns
+are read; rows of one movement are summed.
 
 For each method the plugin must run with the inventory grid set to
 50 × 50 × 20 cells of 250 × 250 × 50 m, mixing height 914.4 m
@@ -59,24 +71,33 @@ python3 compute_caep14_reference.py /path/to/training.alaqs \
     --plugin-csv=/path/to/training_movements_bymode.csv
 
 python3 compute_caep14_reference.py /path/to/training.alaqs \
-    --method=bffm2_anchor \
+    --method=bffm2_anchor --use-meteo \
     --plugin-csv=/path/to/training_movements_bffm2_anchor.csv
 
 python3 compute_caep14_reference.py /path/to/training.alaqs \
-    --method=bffm2_traj \
+    --method=bffm2_traj --use-meteo \
     --plugin-csv=/path/to/training_movements_bffm2_traj.csv
 ```
 
+(`--use-meteo` because the plugin applies `tbl_InvMeteo`; at ISA the
+BFFM2 methods differ from the plugin by 5 to 25 % on the fixture's cold
+and warm days. `bymode` has no ambient correction.)
+
 Each invocation prints a per-movement table with CO, CO₂, NOₓ and
 PM₁₀ from both reference (`_ref`) and plugin (`_plg`) plus a Δ%
-column.  The expected outcome for OpenALAQS 5.2.0 against
-`training_v3.alaqs`:
+column.  The expected outcome for this version against `training_v3.alaqs`
+(October 2026 export):
 
-| method | 14 of 15 movements | movement 11 (PHBBA) |
+| method | 14 of 15 movements | movement 11 (PHBBA, CUSTOM) |
 | --- | --- | --- |
-| `bymode` | 0.00 % on all pollutants | +0.07 / +0.87 / +0.87 / +0.87 % |
-| `bffm2_anchor` | 0.00 % | +0.07 / +0.87 / +0.87 / +0.87 % |
-| `bffm2_traj` | 0.00 % | +0.26 / +0.26 / +0.26 / +0.27 % |
+| `bymode` | 0.00 % on all pollutants | 0.00 % |
+| `bffm2_anchor` (`--use-meteo`) | 0.00 % | 0.00 % |
+| `bffm2_traj` (`--use-meteo`) | 0.00 % | +0.01 % |
+
+`tests/test_plugin_csv_vs_reference.py` pins this (2e-4 relative, plugin
+against reference and standalone, 15 movements, three methods). For
+OpenALAQS 5.2.0 the 5.2.0 exports gave 0.00 % on 14 movements at ISA and
++0.07 / +0.87 % (bymode, anchor) or +0.26 % (trajectory) on movement 11.
 
 Any plugin-vs-reference delta larger than these is a regression and
 should be investigated before release.
@@ -84,15 +105,35 @@ should be investigated before release.
 ### 3. Regenerate the validation workbook
 
 ```bash
-python3 tools/regenerate_training_validation_xlsx.py /path/to/training.alaqs \
-    --inputs-dir=/path/to/dir/containing/the/CSVs
+PYTHONPATH=. python3 openalaqs_standalone/validation/tools/regenerate_training_validation_xlsx.py
 ```
 
-This writes the paired plugin/reference columns into the Movement and
-Summary sheets of `example/training/training_validation_reference.xlsx`
-while preserving the structure (row 19 `=SUM(...)` formulas, sheet
-order, header rows, the unmodified Helicopter and other-source-type
-sheets).
+Reads the pinned plugin CSVs, runs the reference with the study meteo, and
+writes `data/training_validation_reference.xlsx` (sheets README, Summary,
+Movement, NOx_correction, Movement_Hourly, the four stationary-source
+sheets, Helicopter). The user-facing copy
+`example/training/training_validation_reference.xlsx` is made the same way
+from `example/training/training_out.alaqs` (13 movements, no helicopters).
+That inventory is itself rebuilt from `training.alaqs` and the example's
+CSVs (movements, meteo, ADS-B) with the settings of
+`documents/TEST_CASE_STUDY.md`:
+
+```bash
+QT_QPA_PLATFORM=offscreen python3.12 tools/test_fixtures/rebuild_training_example_inventory.py
+QT_QPA_PLATFORM=offscreen python3.12 openalaqs_standalone/validation/tools/regenerate_plugin_csvs.py \
+    --fixture example/training/training_out.alaqs --out-dir /tmp/ex
+PYTHONPATH=. python3 openalaqs_standalone/validation/tools/regenerate_training_validation_xlsx.py \
+    --fixture example/training/training_out.alaqs --plugin-dir /tmp/ex \
+    --out example/training/training_validation_reference.xlsx
+```
+
+On that inventory the plugin and the reference agree to 3e-10 on the ANP
+movements and 4e-5 on movement 11 (CUSTOM), every method. (With the
+200 m-tall grid the example carried before October 2026, 40 x 40 x 20
+cells of 10 m, the ANP movements agreed to 4e-6 only; the gap went with
+the grid.) `compare_inventory_to_reference.py <csv> --method=...`
+then checks any exported per-movement CSV against the workbook's reference
+column (0.5 % tolerance, exit code 0 when all movements pass).
 
 ### 4. Run the regression test
 
@@ -155,17 +196,26 @@ FOCA 2015 Appendix A is used identically for all three methods (FOCA
 does not go through BFFM2).  The reference re-uses the plugin's own
 `core/tools/foca_heli.py` / `foca_heli_utils.py` modules to guarantee
 that any future change to the FOCA implementation is picked up by the
-validation without separate maintenance.
+validation without separate maintenance. Since 5.3.2 the active mode (TO
+or AP) is scaled by the share of its time below the period's mixing height
+and inside the grid on the FOCA flight path (origin at the gate centroid,
+else the runway threshold; departure outbound along the runway, arrival
+back along the approach). The reference builds that path and the cut on
+its own from the parameters in `core/tools/foca_heli_trajectory.py`
+(`_heli_flight_path_local`, `_heli_active_fraction`);
+`tests/test_helicopter_caep14_reference.py` checks it against the
+standalone at 914.4, 600, 300 and 100 m, with and without a helipad gate.
 
 ---
 
 ## Ambient conditions: ISA vs `tbl_InvMeteo`
 
 The reference defaults to ISA conditions (T = 288.15 K, P = 101 325 Pa,
-RH = 0.6) for the BFFM2 ambient correction because that is what the
-plugin's emission CSV output currently uses.  Pass `--use-meteo` to
-override and read the actual meteo row at each movement's
-`runway_time` from `tbl_InvMeteo`:
+RH = 0.6) for the BFFM2 ambient correction, which is what the 5.2.0
+plugin's emission CSV output used. The plugin of 5.3.4 and later applies
+the study meteo, so pass `--use-meteo` to read the meteo row at each
+movement's `runway_time` from `tbl_InvMeteo` (the October 2026 exports
+need it):
 
 ```bash
 python3 compute_caep14_reference.py /path/to/training.alaqs \
@@ -192,29 +242,19 @@ otherwise unavailable.
 
 ---
 
-## Mov 11 PHBBA offset (known)
+## Mov 11 PHBBA track (re-imported October 2026)
 
-Movement 11 (A20N CUSTOM departure on runway 24, gate G2) shows a
-small systematic offset across all three methods because the imported
-PHBBA trajectory's `x_m` / `y_m` columns were computed against a
-runway-taxi-route intersection at EPSG:3857
-`(495 718.872, 6 793 260.579)`, which is 132 m EPSG:3857 / 81 m on the
-ground from the current G2 ∩ runway-24 intersection at
-`(495 829.780, 6 793 333.126)` derived from `training_v3.alaqs`.
-
-Resolution requires either re-importing PHBBA (the ADS-B importer
-recomputes `x_m` / `y_m` against the live alaqs geometry) or persisting
-the reference point at import time so calculators can use the value
-that the trajectory was generated against.  Neither is required for
-the validation to pass — the 14 / 15 movements that share the
-training geometry already verify everything but the imported-fixture
-edge case.
-
-`bffm2_traj` shows a smaller delta on movement 11 (+0.26 %) than
-`bymode` and `bffm2_anchor` (+0.87 %) because the per-segment fuel
-flow comes from `fuel_flow_kgm` rather than the mode anchor, so the
-reference-point offset has less leverage on the per-segment fuel
-computation.
+Movement 11 (A20N CUSTOM departure on runway 24, gate G2) flies the ADS-B
+track `1764584438_PHBBA` from `data/source_csvs/training_ads_b_data.csv`.
+The fixture's PHBBA and PHRTM rows were re-imported in October 2026 with
+the current importer (tier 1: reference point from the movement's runway
+and taxi route): heights above the airport elevation (−5 m) and the
+take-off roll at height 0 with mode TO. The horizontal positions equal
+the earlier import to 1e-9 m, so the offset reported here before (81 m
+on the ground) no longer exists. The emission totals of movement 11 do
+not change with the re-import (the track stays below the 914.4 m cut);
+the remaining plugin/reference gap on movement 11 (8e-5 on `bffm2_traj`)
+is not explained yet.
 
 ---
 
@@ -330,3 +370,77 @@ segment fuel mass and the BFFM2 EI lookup, in both the standalone
 After both fixes the standalone matches the plugin CSVs to within
 floating-point noise on all 14 fixed-wing + 2 helicopter movements
 across `bymode`, `bffm2_anchor`, and `bffm2_traj`.
+
+## October 2026: index step, re-export, helicopters
+
+### What the CAEP validation covers
+
+The CAEP validation (EUROCONTROL's CAEP/14 engine-emissions calculation;
+its results are reproduced in the tests, the workbook itself is not part of
+the repository) takes the engine fuel flow as an input and computes the
+BFFM2 reference fuel flow and the ambient emission indices. Note on
+independence: the reference implementation writes out the geometry, the
+fuel-flow step, the taxi, the NOx correction and the helicopter cut on its
+own, but imports the plugin's BFFM2 index function
+(`open_alaqs.core.tools.bffm2.calculate_emission_index`) and the FOCA
+helicopter tables (`foca_heli`, `foca_heli_utils`). Those two parts are what
+the CAEP validation cases and the FOCA Appendix A values check, not the
+plugin-vs-reference comparison.
+It has no view on how a fuel flow is derived from a thrust: that step is
+validated against the reference implementation, as the rest of the method;
+the index step is pinned to the CAEP validation.
+
+- `tests/test_caep14_sheet_reference_case.py`: BFFM2 index step against
+  two cases of the CAEP validation for engine 01P20CM127 (LEAP-1A24) at
+  fuel flow 1.1749 kg/s. The worked case, climb to cruise at 22 500 ft
+  (non-LTO, lean burn: v2 indices, exponent 0.3): reference fuel flow
+  1.657227 kg/s, EI NOx 60.20166, CO 0.459531, HC 0.0282788 g/kg. The LTO
+  path (standard indices, exponent 0.5), the same workbook recalculated
+  in LibreOffice 24.2 headless with altitude 1 000 ft, CLIMB OUT, 180 kt:
+  reference fuel flow 1.204590 kg/s, EI NOx 17.65248, CO 0.329654,
+  HC 0.0202864 g/kg. The code matches CO and HC to 1e-14 and NOx to 2e-6
+  from RH (the humidity ratio formula), exactly with the CAEP validation's
+  humidity ratio.
+
+### Re-export of the pinned plugin outputs
+
+The 5.2.0 exports in `data/plugin_output/` were stale on two counts:
+they were made at ISA while the plugin now applies `tbl_InvMeteo` (5 to
+25 % on the BFFM2 methods on the fixture's cold and warm days), and they
+predate the 5.3.2 helicopter placement and the runway placement of ANP
+arrivals of this version (+8 to +16 % on the seven ANP arrivals for all
+three methods). They were re-exported with `tools/regenerate_plugin_csvs.py`
+(the plugin's `EmissionCalculatorService`, the code path of the QGIS
+dialog, run without a display), and the comparison is now 0.00 % on 15 of
+15 movements for the three methods with `--use-meteo` (movement 11,
+CUSTOM, +0.01 % on `bffm2_traj`). The run with the ICCAIA NOx ambient
+correction (`training_movements_bymode_nox_corr.csv`) and the
+stationary-source rows (`training_sources_bymode.csv`) were re-exported the
+same way; the workbook `data/training_validation_reference.xlsx` was rebuilt
+from them (step 3). The plugin runs with the grid reference altitude set to
+the study's airport elevation, as the QGIS dialog does; the NOx correction
+reads it as the airport altitude (at the fixture's −5 m the corrected NOx is
+0.04 % lower than with a reference altitude of 0).
+
+### NOx ambient correction (bymode)
+
+The plugin applied the ICCAIA correction to every flight segment of a
+movement, approach included, while its own module and the standalone
+restrict it to take-off and climb-out, the modes the simple method is
+defined for. The plugin now gates on the segment mode (`NOX_CORRECTION_MODES`
+in `MovementEmissionCalculator`); arrivals are no longer corrected (they
+were 1 to 6 % low on the fixture's days). The reference carries the
+correction too (`--apply-nox-corrections`, `_nox_ambient_factor`, written
+out from Doc 9889 with the pressure in hPa); plugin = reference = standalone
+on 15 of 15 movements (`test_plugin_csv_vs_reference.py`).
+
+### Helicopter arrival (movement 15)
+
+Until this round the reference placed helicopters as 5.2.0 did (no cut),
+so it matched the 5.2.0 export and disagreed with the plugin and the
+standalone of 5.3.2 and later by 19 % on the arrival (its approach starts
+outside the 50 × 50 grid). The reference now builds the FOCA flight path
+and the cut on its own (see "Helicopters" above); it equals the plugin on
+the fixture at 914.4 m without gates and at 300 m with gate G4 as helipad
+(0.00 % on 15 of 15 for `bymode`), and the standalone at 914.4, 600, 300
+and 100 m with and without a gate (1e-10).

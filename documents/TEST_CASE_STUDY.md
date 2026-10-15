@@ -50,7 +50,7 @@ This guide walks through a complete OpenALAQS study using **Rotterdam The Hague 
 | `training.alaqs` | Pre-built study database (starting point) |
 | `training_out.alaqs` | Completed output file (reference result) |
 
-The study covers three days of operations at EHRD: 13 aircraft movements across three gates and two runway directions, combined with representative stationary sources (parking lot, roadway, power plant, terminal building). Twelve movements use standard ANP profiles from the internal database; one movement uses a CUSTOM ADS-B-derived profile (`1677686160_DIETB`) to illustrate the trajectory override mechanism.
+The study covers three days of operations at EHRD: 13 aircraft movements across three gates and two runway directions, combined with representative stationary sources (parking lot, roadway, power plant, terminal building). Twelve movements use standard ANP profiles from the internal database; one movement uses a CUSTOM ADS-B-derived profile (`1764584438_PHBBA`, imported from `training_ads_b_data.csv` when the inventory is generated) to illustrate the trajectory override mechanism.
 
 ---
 
@@ -71,11 +71,11 @@ The **ALAQS Project Properties** window opens automatically. Fill in the followi
 | ICAO Code | EHRD |
 | Airport Name | Rotterdam |
 | Country | NL |
-| Latitude | 51.96 |
-| Longitude | 4.44 |
-| Elevation (m) | -15 |
+| Latitude | 51.9574278 |
+| Longitude | 4.4417028 |
+| Elevation (m) | -5 |
 
-Once you enter the ICAO code `EHRD`, the remaining airport fields are populated automatically from the internal database. You can adjust them if needed.
+Once you enter the ICAO code `EHRD`, the remaining airport fields are populated automatically from the internal database (which holds the elevation in feet, −15 ft; the form converts it to metres, −5 m). You can adjust them if needed.
 
 **Roadways tab**
 
@@ -154,12 +154,12 @@ Create a single runway feature for EHRD. Draw a linestring from the threshold of
 | Field | Value |
 |---|---|
 | Runway ID | 06/24 |
-| Capacity | 60 departures/hour |
-| Touchdown offset | 250 m |
+| Touchdown Offset, Runway 1 | 250 m |
+| Touchdown Offset, Runway 2 | (empty: 250 m as well) |
 
 The runway ID `06/24` covers both directions of the same physical runway. OpenALAQS uses the runway direction specified in each movement record (either `06` or `24`) to determine the correct end for trajectory alignment.
 
-The **touchdown offset** sets the point on the runway where the LTO trajectory begins for arriving aircraft (250 m from the threshold is a typical default for Category C/D jets at a medium airport).
+The **touchdown offset** sets where arriving aircraft touch down, measured from the landing threshold of each runway end (Runway 1 = the first-named end, 06 here). Leave it empty or 0 to use each arrival profile's own touchdown distance (the profile crosses the threshold at 50 ft: about 290 m before touchdown on a 3° approach). 250 m puts the threshold crossing at about 13 m on a 3° approach.
 
 ##### Taxiways
 
@@ -179,7 +179,7 @@ Draw each taxiway segment as a linestring along the taxiway centreline. Use snap
 
 ##### Tracks
 
-Twelve of the thirteen EHRD movements use standard ANP profiles from `default_aircraft_profiles`. One movement (row 11, A20N departure on day 3) uses the CUSTOM ADS-B-derived profile `1677686160_DIETB` to illustrate the trajectory override mechanism. Profile IDs are referenced directly in the movements table via `profile_id`; the Tracks layer is not used in this study since CUSTOM profiles are read from `default_aircraft_profiles`, not from the Tracks layer.
+Twelve of the thirteen EHRD movements use standard ANP profiles from `default_aircraft_profiles`. One movement (row 11, A20N departure on day 3) uses the CUSTOM ADS-B-derived profile `1764584438_PHBBA` to illustrate the trajectory override mechanism. The profile is not in the study file: it is imported from `training_ads_b_data.csv` into the inventory when the inventory is generated (ADS-B Data, below), together with a second track (`1764583565_PHRTM`, an arrival) that no movement uses. Profile IDs are referenced directly in the movements table via `profile_id`; the Tracks layer is not used in this study since CUSTOM profiles are read from `default_aircraft_profiles`, not from the Tracks layer.
 
 ---
 
@@ -396,6 +396,14 @@ Click **Generate Emission Inventory** in the toolbar. Configure the following se
 |---|---|
 | Meteorological Table | Browse to `training_meteo.csv` |
 
+**ADS-B Data (Optional)**
+
+| Field | Value |
+|---|---|
+| ADS-B Table | Browse to `training_ads_b_data.csv` |
+
+The two tracks in this file are imported into the inventory as CUSTOM profiles (`1764584438_PHBBA`, used by movement 11, and `1764583565_PHRTM`, unused), placed from the runway and taxi route that the movement table gives for each flight. Heights are taken above the airport elevation; the take-off roll, reported at −15 ft, is set to the ground.
+
 **Modeled Domain** — these settings define the 3D grid used for spatial emission output and dispersion modelling.
 
 | Field | Value |
@@ -404,7 +412,7 @@ Click **Generate Emission Inventory** in the toolbar. Configure the following se
 | Y Resolution | 250 m, 100 cells |
 | Z Resolution | 50 m, 20 cells (up to 1000 m altitude) |
 
-The domain is centred on the EHRD reference point (51.96°N, 4.44°E).
+The domain is centred on the EHRD reference point (51.9574278°N, 4.4417028°E).
 
 **Vertical Limit:** Leave at the default 914.4 m (3000 ft). Emissions above this altitude are excluded from the LTO inventory.
 
@@ -422,12 +430,12 @@ The file `training_movements.csv` (semicolon-delimited) defines the 13 aircraft 
 | 2 | 2025-12-01 06:15 | A20N | G4 | D | 24 | 01P20CM128 (LEAP-1A26) | JET-SMALL-D-1 | G4/24/D/1 |
 | 3 | 2025-12-01 06:40 | E190 | G7 | A | 24 | 11GE144 (CF34-10E) | JET-REGIONAL-A-1 | G7/24/A/1 |
 | 8 | 2025-12-02 07:30 | E190 | G4 | D | 06 | 11GE144 (CF34-10E) | JET-REGIONAL-D-1 | G4/24/D/1 |
-| 11 | 2025-12-03 07:00 | A20N | G2 | D | 24 | 01P20CM128 (LEAP-1A26) | **1677686160_DIETB** (CUSTOM) | G2/24/D/1 |
+| 11 | 2025-12-03 07:00 | A20N | G2 | D | 24 | 01P20CM128 (LEAP-1A26) | **1764584438_PHBBA** (CUSTOM) | G2/24/D/1 |
 
 Key observations:
 
 - **Aircraft mix.** Two ICAO types: A20N (Airbus A320neo, JET SMALL, 8 movements) and E190 (Embraer ERJ-190, JET REGIONAL, 5 movements). Each is paired with its default engine: `01P20CM128` (CFM LEAP-1A26) and `11GE144` (CF34-10E) respectively.
-- **Profile mix.** Twelve movements use standard ANP profiles (`JET-SMALL-A-1`, `JET-SMALL-D-1`, `JET-REGIONAL-A-1`, `JET-REGIONAL-D-1`). Row 11 uses the CUSTOM ADS-B profile `1677686160_DIETB` — same A20N aircraft, but the trajectory is overridden by the CUSTOM points from `default_aircraft_profiles`.
+- **Profile mix.** Twelve movements use standard ANP profiles (`JET-SMALL-A-1`, `JET-SMALL-D-1`, `JET-REGIONAL-A-1`, `JET-REGIONAL-D-1`). Row 11 uses the CUSTOM ADS-B profile `1764584438_PHBBA` — same A20N aircraft, but the trajectory is overridden by the CUSTOM points from `default_aircraft_profiles`.
 - **Operation split.** 7 arrivals, 6 departures, distributed across the three days. Each day's activity is clustered in the early-morning hours.
 - **Runway direction.** Most movements use runway 24; three rows (6, 8, 13) use runway 06.
 - **APU and gate emissions suppressed.** All 13 rows have `apu_code = 0` and `gate_emissions_code = 0`, so APU and gate (GSE/GPU/MES) emissions are excluded in this study. This isolates the aircraft trajectory contribution for comparison against the bymode/BFFM2 methodology output.

@@ -94,11 +94,11 @@ default_stationary_category, default_stationary_substance,
 default_stationary_ef, default_emission_dynamics, default_apu_times
 ```
 
-Pass `--refresh-include-user-extensible` to also refresh the 7
+Pass `--refresh-include-user-extensible` to also refresh the 8
 user-extensible tables (`default_aircraft`, `default_aircraft_engine_ei`,
 `default_aircraft_profiles`, `default_aircraft_apu_ef`,
 `default_aircraft_start_ef`, `default_gate_profiles`,
-`default_helicopter_engine_ei`). User customizations to those tables
+`default_helicopter`, `default_helicopter_engines`). User customizations to those tables
 WILL BE OVERWRITTEN.
 
 Pass `--refresh-tables T1,T2,...` to override the list entirely.

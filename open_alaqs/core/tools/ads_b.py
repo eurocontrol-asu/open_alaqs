@@ -2,6 +2,7 @@ import csv
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 from pyproj import CRS, Transformer
 
@@ -351,6 +352,12 @@ def import_adsb_file(
             runway_alt,
         )
 
+        # Ground points: a reported altitude within half an ADS-B altitude step of the field elevation, at the
+        # start of a departure or the end of an arrival, is on the runway: height 0.
+        flight_data_x_y_z["z_m"] = _snap_ground_heights(
+            flight_data_x_y_z["z_m"].to_numpy(), is_arrival
+        )
+
         logger.info(
             f"ADS-B coordinate conversion: Profile {flight_id} ({runway_name}) - Total points: {len(flight_data_x_y_z)}, "
             f"X: [{flight_data_x_y_z['x_m'].min():.1f}, {flight_data_x_y_z['x_m'].max():.1f}] m, "
@@ -376,11 +383,8 @@ def import_adsb_file(
                 tas_metres = None
 
             # Determine mode based on arrival/departure and altitude.
-            # For departures, z_m <= 0 marks ground-level (or sub-MSL)
-            # points as TO; airborne points are CL. The previous check
-            # used `z_m == 0` (literal equality), which silently failed
-            # at airports below MSL — e.g. Rotterdam (EHRD) at z=-4.57 m
-            # never matched, so every ground-roll point became CL.
+            # For departures, ground points (height 0 after
+            # _snap_ground_heights, or below) are TO; airborne points are CL.
             if is_arrival:
                 mode = "AP"
             else:
@@ -452,6 +456,27 @@ def _airport_elevation_m(*db_paths: Optional[str]) -> float:
             except (TypeError, ValueError):
                 continue
     return 0.0
+
+
+# ADS-B barometric altitude is reported in 25 ft steps: a point on the runway can read up to half a step above or
+# below the field elevation.
+GROUND_TOLERANCE_M = 12.5 * 0.3048
+
+
+def _snap_ground_heights(z_m, is_arrival: bool):
+    """Heights with the ground run set to 0.
+
+    The ground run is the run of points within GROUND_TOLERANCE_M of the field
+    elevation at the start of a departure, or at the end of an arrival (the
+    landing roll); heights elsewhere are left as reported.
+    """
+    z = np.array(z_m, dtype=float)
+    order = range(len(z) - 1, -1, -1) if is_arrival else range(len(z))
+    for i in order:
+        if abs(z[i]) > GROUND_TOLERANCE_M:
+            break
+        z[i] = 0.0
+    return z
 
 
 def _geographic_to_relative_df(

@@ -78,3 +78,30 @@ def test_heights_relative_to_airport_elevation(tmp_path):
 def test_zero_elevation_unchanged(tmp_path):
     _, z = _import(tmp_path, 0.0, "ELEV02")
     assert z[0] == pytest.approx(-15 * FT, abs=1e-3)  # MSL, as before
+
+
+def test_ground_run_within_half_an_altitude_step_is_ground(tmp_path):
+    """EHRD: field elevation -5 m, the roll reports -15 ft (+0.43 m): height 0 and mode TO."""
+    dst, z = _import(tmp_path, -5.0, "ELEV03")
+    assert z[0] == 0.0
+    assert z[1] == pytest.approx(385 * FT + 5.0, abs=1e-3)  # airborne point unchanged
+    with sqlite3.connect(dst) as conn:
+        modes = [
+            r[0]
+            for r in conn.execute(
+                "SELECT mode FROM default_aircraft_profiles WHERE profile_id = 'ELEV03' "
+                "ORDER BY point"
+            )
+        ]
+    assert modes[0] == "TO" and set(modes[1:]) == {"CL"}
+
+
+def test_snap_ground_heights_departure_and_arrival():
+    from open_alaqs.core.tools.ads_b import GROUND_TOLERANCE_M, _snap_ground_heights
+
+    tol = GROUND_TOLERANCE_M
+    dep = _snap_ground_heights([0.43, -1.0, 3.0, 2.0, 50.0, 1.0], is_arrival=False)
+    assert list(dep) == [0.0, 0.0, 0.0, 0.0, 50.0, 1.0]  # only the leading run
+    arr = _snap_ground_heights([300.0, 2.0, 15.0, 3.5, -2.0], is_arrival=True)
+    assert list(arr) == [300.0, 2.0, 15.0, 0.0, 0.0]  # only the trailing run
+    assert list(_snap_ground_heights([tol + 0.01], False)) == [tol + 0.01]
