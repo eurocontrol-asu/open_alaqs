@@ -271,7 +271,7 @@ def truncate_after(traj, x_cut: float) -> list:
     return out
 
 
-STRETCH_EXIT_SPEED_KT = 18.0  # EHRD 1 s tracks: speed where arrivals leave the runway, median 18 kt (79 flights)
+STRETCH_EXIT_SPEED_KT = 18.0  # speed where arrivals leave the runway: median 18 kt over 79 flights (1 s ADS-B tracks)
 STRETCH_MIN_M = 0.5
 
 

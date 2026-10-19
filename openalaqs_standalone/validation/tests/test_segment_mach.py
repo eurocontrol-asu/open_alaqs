@@ -12,7 +12,7 @@ The speed of sound is a = sqrt(gamma R T) with gamma 1.4 and
 R 287.05287 J/(kg K) (ICAO Doc 7488), as the CAEP validation workbook
 computes it; the Mach of its two cases is reproduced to 1e-9. Until
 October 2026 the code used the linear form 331.3 + 0.606 (T - 273.15) m/s,
-0.03 % low at ISA and 0.16 % low at 243.6 K and at 307 K.
+0.03 % high at ISA and 0.16 % high at 243.6 K and at 307 K.
 """
 
 import importlib.util

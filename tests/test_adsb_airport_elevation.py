@@ -81,7 +81,7 @@ def test_zero_elevation_unchanged(tmp_path):
 
 
 def test_ground_run_within_half_an_altitude_step_is_ground(tmp_path):
-    """EHRD: field elevation -5 m, the roll reports -15 ft (+0.43 m): height 0 and mode TO."""
+    """Field elevation -5 m, the roll reports -15 ft (+0.43 m): height 0 and mode TO."""
     dst, z = _import(tmp_path, -5.0, "ELEV03")
     assert z[0] == 0.0
     assert z[1] == pytest.approx(385 * FT + 5.0, abs=1e-3)  # airborne point unchanged

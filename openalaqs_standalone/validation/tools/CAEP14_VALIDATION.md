@@ -452,8 +452,8 @@ R = 287.05287 J/(kg K) (ICAO Doc 7488), which is how the CAEP validation
 workbook computes it (`SQRT(Adiab_index_K * Gas_cst_R * T_ambient)`). The
 plugin and the standalone share `open_alaqs/core/tools/bffm2.py::speed_of_sound_m_s`;
 the reference writes the formula out. The linear form
-`331.3 + 0.606 (T − 273.15)` used before was 0.03 % low at ISA and 0.16 %
-low at 243.6 K and at 307 K; the pinned plugin outputs moved by at most
+`331.3 + 0.606 (T − 273.15)` used before was 0.03 % high at ISA and 0.16 %
+high at 243.6 K and at 307 K; the pinned plugin outputs moved by at most
 3.6 × 10⁻⁵ (`bffm2_anchor`) and 8.0 × 10⁻⁶ (`bffm2_traj`), `bymode` not at
 all. `test_segment_mach.py` reproduces the workbook's two Mach values to
 10⁻⁹ (with its rounded 1.94384 kt per m/s).

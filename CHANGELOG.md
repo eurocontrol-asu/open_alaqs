@@ -66,7 +66,10 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   plausibility floor for supplied fuel flows, fuel-flow source switch).
 - Runway: Touchdown Offset per end (`touchdown` for the first-named end, new
   `touchdown_2` for the other; empty = the first value). Studies without
-  the column still load; `scripts/migrate_alaqs.py` adds it.
+  the column still load; `scripts/migrate_alaqs.py` adds it. The
+  `touchdown` value was stored but not used before this release: check it
+  in existing studies (0 = the profile's own touchdown distance), since a
+  non-zero value now moves every ANP arrival on that runway end.
 - Standalone: route and profile check report (`runway_checks`,
   `emissions_folder/runway_checks.csv`): exit before the touchdown, exit
   above 50 kt, exit after the rollout end, rollout or lift-off past the
@@ -86,7 +89,7 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   days); departures unchanged.
 - ADS-B import: with heights taken above the airport elevation (5.3.4), a
   take-off roll reported a fraction of an altitude step above the field
-  (EHRD: −15 ft at a −5 m field, +0.43 m) became climb-out (`CL`). The run of
+  (e.g. −15 ft at a −5 m field, +0.43 m) became climb-out (`CL`). The run of
   points within half an ADS-B altitude step (12.5 ft) of the field
   elevation at the start of a departure, or the end of an arrival, is now
   the ground: height 0, mode `TO` for departures
@@ -146,8 +149,8 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   ICAO Doc 7488), shared by the plugin and the standalone
   (`open_alaqs/core/tools/bffm2.py::speed_of_sound_m_s`) and written out
   independently in the CAEP14 reference, as the CAEP validation workbook
-  computes it. The linear form `331.3 + 0.606 (T − 273.15)` was 0.03 % low at
-  ISA and 0.16 % low at 243 K and at 307 K. **Results change** below 0.01 %
+  computes it. The linear form `331.3 + 0.606 (T − 273.15)` was 0.03 % high at
+  ISA and 0.16 % high at 243 K and at 307 K. **Results change** below 0.01 %
   for the BFFM2 methods; `bymode` unchanged.
 - CAEP14 reference tool (`validation/tools/compute_caep14_reference.py`):
   engines are matched on `engine_name` exactly (or `engine_full_name` for

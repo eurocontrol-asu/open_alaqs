@@ -218,7 +218,7 @@ def test_truncate_after():
 
 def test_stretch_time():
     kt = rp.KT
-    # 737-800 at EHRD exit 2: 337 m from 30 kt to 18 kt -> 2 L / (v_end + v_x) = 27.3 s
+    # 737-800 at an exit 337 m past the rollout end, from 30 kt to 18 kt -> 2 L / (v_end + v_x) = 27.3 s
     assert rp.stretch_time_s(337.0, 30 * kt) == pytest.approx(
         2 * 337.0 / (48 * kt), rel=1e-12
     )

@@ -89,7 +89,7 @@ M = TAS / SOS
 Wf_ref_BFFM2 = (Wf_amb / δ) × θ^3.8 × exp(0.2 × M²)
 ```
 
-where `SOS = √(γ R T_amb)` (γ = 1.4, R = 287.05287 J/(kg K), ICAO Doc 7488; 340.29 m/s at ISA sea level) is the speed of sound at ambient temperature, as the CAEP validation workbook computes it, and M is the true Mach number at the start of the segment. Until October 2026 the code used the linear form `331.3 + 0.606 × (T_amb − 273.15)`, 0.03 % low at ISA and 0.16 % low at 243 K and at 307 K; the effect on M² is below 0.4 %, on the results below 0.01 %.
+where `SOS = √(γ R T_amb)` (γ = 1.4, R = 287.05287 J/(kg K), ICAO Doc 7488; 340.29 m/s at ISA sea level) is the speed of sound at ambient temperature, as the CAEP validation workbook computes it, and M is the true Mach number at the start of the segment. Until October 2026 the code used the linear form `331.3 + 0.606 × (T_amb − 273.15)`, 0.03 % high at ISA and 0.16 % high at 243 K and at 307 K; the effect on M² is below 0.4 %, on the results below 0.01 %.
 
 Until October 2026 the code (plugin, standalone and CAEP14 reference implementation) multiplied this by
 `√(288.15 / T_amb)`, which is not a Mach number away from ISA; it now computes `TAS / SOS` as written here
