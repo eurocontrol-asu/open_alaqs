@@ -38,7 +38,10 @@ aircraft's default engine (from `default_aircraft.engine`).
    the validation summary (5 valid rows, 0 errors, 0 warnings expected),
    click Apply.
 5. Save the source form (OK).
-6. Regenerate the emission inventory. In Results Analysis, select
+6. Regenerate the emission inventory with a period and meteo that cover
+   the events (for example 2025-01-15 00:00 to 2025-02-04 00:00; the
+   training example's own period, 2025-12-01 to 2025-12-03, contains
+   none of them). In Results Analysis, select
    `EngineTestSource` and `TESTPAD_A` to inspect per-hour emissions.
    Non-zero hours: 2025-01-15 09:00, 2025-01-15 10:00, 2025-01-16 08:00,
    2025-02-03 11:00, 2025-02-03 14:00.

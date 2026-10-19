@@ -137,8 +137,8 @@ See [`scripts/README.md`](scripts/README.md) for the full inventory of QGIS-boun
 [(Back to top)](#table-of-contents)
 
 1. Build the airport study (runways, taxiways, gates, stationary sources) in a QGIS project.
-2. Open *Create Output* to bake the study into an inventory database, supplying a movements CSV and a meteorological CSV (see [Meteorological data](#meteorological-data)).
-3. Run *Generate Emission Inventory* on the baked inventory to calculate emissions with the selected method.
+2. Open *Generate Emission Inventory* to bake the study into an inventory database (`*_out.alaqs`), supplying a movements CSV, a meteorological CSV (see [Meteorological data](#meteorological-data)) and, optionally, an ADS-B CSV.
+3. Open *Visualize Emission Calculation* on the inventory to calculate emissions with the selected method; they are calculated when an output (table, time series, vector layer) is requested.
 4. For dispersion runs, see [`documents/AUSTAL/AUSTAL_OPERATION.md`](documents/AUSTAL/AUSTAL_OPERATION.md).
 
 For engine test runs (run-ups), an extra step between 1 and 2: mark the area source(s) that represent the run-up pad as engine test sites via the QGIS form ("Engine test site" checkbox), then load the events via the *"Load engine test events CSV..."* button on the same form (or, for scripting workflows and multi-source bulk-load, [`scripts/import_engine_test_events.py`](scripts/README.md)). Per-event masses are then included in the inventory automatically; the source's `*_kg_unit` rate columns are ignored.

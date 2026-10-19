@@ -9,7 +9,7 @@
   "include_aircraft":          true,
   "_include_aircraft":         "true = fold per-movement aircraft emissions into the same parquet outputs as the stationary sources. false = stationary only.",
   "pollutants":                "co,hc,nox,sox,pm10,pm25",
-  "_pollutants":               "Comma-separated. Each name maps to an emissions.parquet pollutant column. Recognised: co, hc, nox, sox, pm10, pm25 (co2 is always emitted by the aircraft compute regardless).",
+  "_pollutants":               "Comma-separated. Each name maps to an emissions.parquet pollutant column. Recognised: co, hc, nox, sox, pm10, pm25. co2 is not accepted (the stationary computes have no co2 column), so the aircraft co2 is not written to emissions.parquet; the aircraft emissions are filtered to this list.",
   "start":                     null,
   "_start":                    "ISO timestamp ('YYYY-MM-DD' or 'YYYY-MM-DDTHH:MM[:SS]'). null = run the full inventory year. Half-open with --end.",
   "end":                       null,
@@ -27,7 +27,7 @@
 
   "_comment_section_meteo": "------- External meteo override -------",
   "meteo_year_shift":          null,
-  "_meteo_year_shift":         "Optional integer year offset for the meteo CSV. e.g. CSV is for 2023, target year is 2025 -> set to 2. null = no shift. Only used when an external meteo CSV is supplied via the meteo_folder_in input folder.",
+  "_meteo_year_shift":         "Optional target year: the meteo timestamps are re-stamped to this year (e.g. meteo for 2023, inventory year 2025 -> set to 2025). null = no re-stamping. Same as --meteo-year-shift; applies to the external meteo CSV when one is supplied, otherwise to tbl_InvMeteo.",
 
   "_comment_section_receptors": "------- External receptor CSV (optional) -------",
   "receptor_source_epsg":      null,

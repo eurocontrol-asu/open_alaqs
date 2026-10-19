@@ -78,7 +78,7 @@ The toolbar consists of the following functions:
 + **Generate Emission Inventory**: Prepares the OpenALAQS output file containing all study data.
 + **Visualize Emissions Calculation**: Manages the emissions calculation, visualization, and export modules.
 + **Calculate Dispersion**: Handles the dispersion calculation module.
-+ **Review Logs**: Opens the log file containing useful information about code execution. When running BFFM2, the log records a confirmation line per movement (`BFFM2 dispatch confirmed`) and per-segment diagnostics at DEBUG level. Warnings appear when ADS-B fuel flow estimates exceed the EEDB takeoff ceiling and the calculator falls back to power-setting interpolation.
++ **Review Logs**: Opens the log file containing useful information about code execution. A warning is written when an ADS-B fuel flow per engine exceeds 1.5 times the EEDB take-off fuel flow (the mode-anchor fuel flow is then used for those segments), and when an arrival's taxi route leaves the runway above 50 kt or meets the runway only before the touchdown.
 
 The order of the toolbar buttons generally follows the sequence of steps needed to conduct a study using OpenALAQS.
 
@@ -177,7 +177,7 @@ Draw the runway from threshold to threshold. For a displaced threshold, enter th
 + Arrivals (ANP profiles) touch down at the landing threshold plus the Touchdown Offset. The aircraft leaves the runway at the first point where its taxi route meets the runway past the touchdown at 50 kt or less (ICAO Doc 9157 Part 2: rapid-exit reference speed); if no crossing is that slow, at the first one past the touchdown. When that exit comes before the end of the profile's rollout, the rollout ends there. When it comes after, the aircraft rolls on along the runway to the exit; that stretch is taxiing (from the rollout-end speed down to at most 18 kt).
 + Departures (ANP profiles) start their take-off roll where the taxi route last meets the runway (the line-up point); a route that runs along the runway (backtracking) lines up where it leaves it.
 + ADS-B (CUSTOM) profiles keep their own positions.
-+ Taxi routes are read in the direction of travel, whichever order their taxiways are listed in: from the stand for a departure, to the stand for an arrival.
++ Taxi routes are read in the direction of travel, whichever way round their taxiways are listed (stand to runway or runway to stand); the taxiways must still be listed in sequence: from the stand for a departure, to the stand for an arrival.
 
 Nothing blocks the calculation. An exit above 50 kt, or a route that meets the runway only before the touchdown, is reported in the log. The standalone tool also writes a check report (`runway_checks.csv`), one line per route and profile with what to change.
 
@@ -226,16 +226,15 @@ When adding an airport parking lot, the following information is required:
   + **Speed**: Average travel speed in parking (in km/h)
   + **Travel distance**: Average travel distance in parking (in meters)
   + **Idle time**: Vehicle average idling time between entry and exit (in minutes)
-  + **Average parking time**: Average time a vehicle remains on parking (in minutes)
 + **Profiles**
   + Hourly, Daily or Monthly activity profiles
 + **Fleet mix**
   + **PC (Petrol) [in %]**: Passenger Cars (Petrol)
   + **PC (Diesel) [in %]**: Passenger Cars (Diesel)
-  + **LDV (Petrol) [in %]**: Light Duty Vehicles (Petrol)
-  + **LDV (Diesel) [in %]**: Light Duty Vehicles (Diesel)
-  + **HDV (Petrol) [in %]**: Heavy Duty Vehicles (Petrol)
-  + **HDV (Diesel) [in %]**: Heavy Duty Vehicles (Diesel)
+  + **LCV (Petrol) [in %]**: Light Commercial Vehicles (Petrol)
+  + **LCV (Diesel) [in %]**: Light Commercial Vehicles (Diesel)
+  + **HDT (Petrol) [in %]**: Heavy Duty Trucks (Petrol)
+  + **HDT (Diesel) [in %]**: Heavy Duty Trucks (Diesel)
   + **Motorcycles [in %]**
   + **Buses [in %]**
 
@@ -263,10 +262,10 @@ When adding a roadway, the following information is required:
 + **Fleet mix**
   + **PC (Petrol) [in %]**: Passenger Cars (Petrol)
   + **PC (Diesel) [in %]**: Passenger Cars (Diesel)
-  + **LDV (Petrol) [in %]**: Light Duty Vehicles (Petrol)
-  + **LDV (Diesel) [in %]**: Light Duty Vehicles (Diesel)
-  + **HDV (Petrol) [in %]**: Heavy Duty Vehicles (Petrol)
-  + **HDV (Diesel) [in %]**: Heavy Duty Vehicles (Diesel)
+  + **LCV (Petrol) [in %]**: Light Commercial Vehicles (Petrol)
+  + **LCV (Diesel) [in %]**: Light Commercial Vehicles (Diesel)
+  + **HDT (Petrol) [in %]**: Heavy Duty Trucks (Petrol)
+  + **HDT (Diesel) [in %]**: Heavy Duty Trucks (Diesel)
   + **Motorcycles [in %]**
   + **Buses [in %]**
 
@@ -493,7 +492,7 @@ The optional ADS-B file is also a comma-delimited `.csv`. The validator (`open_a
 
 > **Note:** Ground taxi emissions are handled separately via taxiway routes. ADS-B rows during ground taxi should not be included in this CSV — they would otherwise be imported as flight-trajectory points at zero altitude.
 
-> **Note:** All movements in a study share a single ambient condition record from the meteorological table. OpenALAQS does not model temporal variation in ambient conditions across the study period.
+> **Note:** Each calculation interval uses the meteorological record nearest to its start (temperature, pressure, humidity, mixing height), so movements in different hours can see different ambient conditions.
 
 ### [Movements table](#movements-table)
 
@@ -533,14 +532,14 @@ The following optional parameters can be left empty. They will only be used if t
 | `engine_name` | Engine identifier (from the internal database) | Active |
 | `profile_id` | Performance profile identifier. Standard ANP profiles use `course = ANP2.x`. ADS-B-derived profiles use `course = CUSTOM` with East/North coordinate offsets and an optional `fuel_flow_kgm` column for BFFM2. | Active |
 | `track_id` | Aircraft trajectory identifier | `not yet fully implemented` |
-| `tow_ratio` | Take-off gross weight divided by maximum take-off weight (≤ 1.0). Applied only when **Apply NOx Corrections** is enabled (Bymode method only). Default: 1.0. | Active (Bymode + NOx corrections only) |
+| `tow_ratio` | Take-off gross weight divided by maximum take-off weight (≤ 1.0). Applied only when **Apply NOx Corrections** is enabled (bymode method only), to the take-off and climb-out segments. Default: 1.0. | Active (Bymode + NOx corrections only) |
 | `taxi_engine_count` | Number of engines used during taxiing (single-engine taxi). Used together with the MES timing fields. | Active |
 | `set_time_of_main_engine_start_after_block_off_in_s` | Duration in seconds after block-off during which single-engine taxi applies (departure). Takes priority over `_before_takeoff` if both are set. | Active |
 | `set_time_of_main_engine_start_before_takeoff_in_s` | Duration in seconds before takeoff at which the remaining engines are started (departure). Used when `_after_block_off` is not set. | Active |
 | `set_time_of_main_engine_off_after_runway_exit_in_s` | Duration in seconds after runway exit during which full-engine taxi applies before engines are cut (arrival). | Active |
 | `engine_thrust_level_for_taxiing` | Taxi thrust level as a fraction (ICAO default: 0.07 = 7%). Only affects the BFFM2 emission index for the moving taxi phase; queuing always uses true idle (7%) regardless of this setting. | Active |
 | `taxi_fuel_ratio` | Ratio between actual fuel flow and idle fuel flow during taxi. Acts as a direct multiplier on taxi segment emissions. Default: 1.0. | Active |
-| `number_of_stop_and_gos` | Number of stop-and-go events during taxiing. Each event adds `AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S = 9.0` seconds at idle thrust per engine (`MovementEmissionCalculator.py:159, 403`). Added to the queuing segment only (last taxi segment). | Active |
+| `number_of_stop_and_gos` | Number of stop-and-go events during taxiing. Each event adds `AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S = 9.0` seconds at idle thrust per engine (`MovementEmissionCalculator.py:181, 449`). Added to the queuing segment only (last taxi segment). | Active |
 
 ### [Helicopters (FOCA 2015)](#helicopters-foca-2015)
 
@@ -600,7 +599,7 @@ The required meteorological parameters are:
 | `WindSpeed` | m/s | |
 | `WindDirection` | degrees | |
 | `ObukhovLength` | m | |
-| `MixingHeight` | m | Also used as the LTO ceiling in the emission calculator (default 914.4 m). Should match the **Vertical Limit** set on the **Configuration** tab when generating the inventory. |
+| `MixingHeight` | m | Used as the LTO ceiling for aircraft movements in each interval (914.4 m when absent). |
 
 If `Humidity` (specific humidity in kg/kg) is populated and non-zero, it is used directly. If it is empty or zero, specific humidity is derived from `RelativeHumidity`, `Temperature`, and `SeaLevelPressure`. When both fields are populated, `Humidity` takes precedence.
 
@@ -615,11 +614,12 @@ In the settings panel on the bottom left of the main window, the user can config
 
 In the **Configuration** tab, the user can specify the general settings for the emissions calculation:
 + **Start (incl.)** / **End (incl.)**: Define the emission calculation period (_optional_)
-+ **Method**: Select the calculation method — `ByMode` or `BFFM2`. See below for a description of each.
-+ **Apply NOx Corrections**: Applies the ICCAIA NOx correction for ambient temperature, humidity, and aircraft weight (via `tow_ratio`). **This option must only be used with the ByMode method.** Enabling it together with BFFM2 double-corrects ambient NOx, because BFFM2 already applies its own ambient correction internally.
++ **Method**: `bymode` or `BFFM2` (BFFM2 is offered for CO, HC and NOx only). See below for a description of each.
++ **Apply NOx Corrections**: Applies the ICCAIA NOx correction for ambient temperature, humidity and aircraft weight (via `tow_ratio`) to the take-off and climb-out segments of the bymode method; approach and taxi are not corrected. It has no effect with BFFM2, which applies its own ambient correction.
++ **BFFM2 Fuel-Flow Source**: `trajectory` (default: fuel flow from each segment's power setting) or `mode_anchor` (EEDB anchor fuel flow of the segment's mode, ambient corrections still applied). Only used with BFFM2.
 + **Source Dynamics**: Select source dynamics method (_set to "none" by default_)
 + **Time Interval**: Set the time interval for the calculation (_1 hour by default_)
-+ **Vertical Limit**: Specify the vertical limit in meters (_914.40 m by default_)
++ **Vertical Limit**: LTO ceiling in meters, used only when no ambient condition is available; otherwise the meteorological `MixingHeight` applies (_914.40 m by default_)
 + **Receptor Points**: Specify receptor points using a `.csv` file (_optional_)
 
 **Calculation methods:**
@@ -627,9 +627,9 @@ In the **Configuration** tab, the user can specify the general settings for the 
 | Method | Description |
 |---|---|
 | **ByMode** | Uses ICAO EEDB emission indices for each LTO mode (TO, CL, AP, TX) directly, based on the time-in-mode from the movement profile. Simple and fast. |
-| **BFFM2** | Boeing Fuel Flow Method 2. Uses the actual power setting from each profile segment to derive a fuel-flow-dependent emission index via log-log interpolation through the four EEDB breakpoints. Applies ambient corrections for temperature, pressure, and humidity. Typically gives 20–50% lower NOx and 15–30% higher CO for arrivals compared to ByMode. See [`BFFM2.md`](documents/BFFM2_validation/BFFM2.md) for the full methodology. |
+| **BFFM2** | Boeing Fuel Flow Method 2. Uses the actual power setting from each profile segment to derive a fuel-flow-dependent emission index via log-log interpolation through the four EEDB breakpoints. Applies ambient corrections for temperature, pressure, humidity and flight Mach number (TAS / a, a = √(1.4 · 287.05287 · T)). On the training example it gives 29 % less NOx and 8 % more CO than ByMode on the arrivals (per movement 2 to 52 % less NOx, 1 to 18 % more CO) and 50 % less NOx on the departures. See [`BFFM2.md`](BFFM2_validation/BFFM2.md) for the full methodology. |
 
-After changing the calculation method, click **Calculate** again before exporting results.
+Changing any setting discards the previous calculation; it is recalculated when an output (View Emissions Table, Plot Time Series, Plot Vector Layer) is next requested.
 
 ![emissions-calculation.png](./../open_alaqs/assets/emissions-calculation.png)
 
@@ -675,7 +675,7 @@ The following parameters need to be defined:
 + **Roughness Length**: Height above ground where wind speed theoretically becomes zero. Depends on terrain type (e.g., forests, urban areas, flat fields).
 + **Displacement Height**: Height at which the wind profile starts to be affected by obstacles on the ground, such as buildings or trees.
 + **Anemometer Height**: Height at which wind speed measurements are taken. Default: `10 + 6·z0` m, where `z0` is the roughness length (≈ 11.2 m at the typical airport value `z0 = 0.2`).
-+ **Quality Level**: Determines the number of simulation particles (range: −4 to +4). Higher values increase accuracy but also computation time.
++ **Quality Level**: Determines the number of simulation particles (+1 doubles them; 1 to 10 on the Dispersion Models tab, 1 to 3 in the Calculate Dispersion dialog). Higher values increase accuracy but also computation time.
 + **NOTALUFT** (per-hour series): when enabled, AUSTAL writes per-hour grid output (`<substance>-NNNa.dmna`) and, when receptor points are configured, per-receptor time-series files (`<substance>-tmpa.dmna`). Required for **Plot Time Series** and **Compliance Report**; optional for **Plot Vector Layer** with `annual mean`.
 + **PM10 fine fraction**: how PM10 emissions are split between AUSTAL's `pm-1` and `pm-2` substances (default 0.9, suitable for an airport mix dominated by aircraft non-volatile PM and combustion exhaust).
 + **Receptor Points**: Specify receptor points using a `.csv` file. In ALAQS mode the plugin will also auto-load any receptors defined in the `shapes_receptor_points` table of the `.alaqs` file if no CSV is given. Without receptors AUSTAL still produces grid output, but Plot Time Series and Compliance Report stay disabled.
@@ -693,7 +693,7 @@ The user is referred to the [`AUSTAL`](https://www.umweltbundesamt.de/en/topics/
 
 ### [Running AUSTAL](#running-austal)
 
-Click `Calculate Dispersion` in the OpenALAQS toolbar to open the dispersion dialog. The dialog has five sections, worked through in order:
+Click `Calculate Dispersion` in the OpenALAQS toolbar to open the dispersion dialog. The dialog has four sections, worked through in order:
 
 1. **AUSTAL Executable** — file-pick the path to `austal.exe` (Windows) or `austal` (Linux). One-time per machine.
 2. **Input File Strategy** — pick one of three radio buttons:

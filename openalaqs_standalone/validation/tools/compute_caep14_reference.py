@@ -1449,8 +1449,9 @@ def main(argv: Optional[list] = None) -> int:
         "--use-meteo",
         action="store_true",
         help="Use the actual meteo from tbl_InvMeteo for BFFM2 ambient "
-        "corrections.  Default is ISA conditions, matching the plugin's "
-        "current emission-CSV output behaviour.",
+        "corrections, as the plugin applies it (needed to match the pinned "
+        "plugin outputs).  Without it the reference uses ISA conditions, "
+        "as the 5.2.0 plugin exports did.",
     )
     parser.add_argument("--oid", type=int, default=None)
     parser.add_argument("--plugin-csv", default=None)

@@ -151,10 +151,10 @@ To skip Phase 3 entirely, pass `--skip-point-sources-v2`.
 
 - A `.bak-<timestamp>.alaqs` copy is made in the same directory before
   any write. Pass `--no-backup` to skip (NOT recommended).
-- Phase 1 runs in one transaction; Phase 2 in another. A failure in
-  either phase rolls back THAT phase only. If Phase 2 fails after
-  Phase 1 committed, the source has the new schema but the original
-  data; restore from backup if you want to undo Phase 1 too.
+- Phases 1, 2 and 3 each run in their own transaction. On a failure
+  the running phase is rolled back and, unless `--no-backup` was given,
+  the whole file is restored from the `.bak-<timestamp>` copy (exit
+  code 1), so phases already committed are undone too.
 - Pre-flight checks fail-fast: missing source file, missing reference
   template, missing CSVs for `--refresh-tables` → exit code 2 before
   any write.

@@ -46,7 +46,7 @@ This guide walks through a complete OpenALAQS study using **Rotterdam The Hague 
 | File | Description |
 |---|---|
 | `training_movements.csv` | Aircraft movements table (13 movements across 3 days) |
-| `training_meteo.csv` | Hourly meteorological data (75 hourly records, covering 2025-12-01 00:00 through 2025-12-04 00:00) |
+| `training_meteo.csv` | Hourly meteorological data (75 rows covering the 73 hours from 2025-12-01 00:00 through 2025-12-04 00:00; 00:00 on 2 and 3 December appears twice) |
 | `training.alaqs` | Pre-built study database (starting point) |
 | `training_out.alaqs` | Completed output file (reference result) |
 
@@ -153,7 +153,7 @@ Create a single runway feature for EHRD. Draw a linestring from the threshold of
 
 | Field | Value |
 |---|---|
-| Runway ID | 06/24 |
+| Runway 1 | 06 (Runway 2 = 24 and Runway Name = 06/24 are filled in) |
 | Touchdown Offset, Runway 1 | 250 m |
 | Touchdown Offset, Runway 2 | (empty: 250 m as well) |
 
@@ -163,17 +163,14 @@ The **touchdown offset** sets where arriving aircraft touch down, measured from 
 
 ##### Taxiways
 
-Create taxiways covering the main taxiway system at EHRD. For this study, the following taxiways are used. All operate at a default taxi speed of **15 km/h**.
+Create taxiways covering the main taxiway system at EHRD. For this study, the following taxiways are used.
 
-| Name | Description |
+| Name | Speed |
 |---|---|
-| B, C, D | Main apron taxiways |
-| E, F, G, H | Connector taxiways |
-| I, K, L, M | Northern taxiway system |
-| N, O, P, Q | Southern taxiway system |
-| R, T, U | Holding area and runway entry/exit |
+| B, F, N, V, V1, V2, V3, V6, Y | 15 km/h |
+| Y1, Y2 | 30 km/h |
 
-Draw each taxiway segment as a linestring along the taxiway centreline. Use snapping to ensure segments connect at junctions. Each segment is given a unique **Name** and a **Speed** of 15 km/h.
+Draw each taxiway segment as a linestring along the taxiway centreline. Use snapping to ensure segments connect at junctions. Each segment is given a unique **Name** and the **Speed** above.
 
 > The distinction between taxiways (geometric segments) and taxi-routes (operational paths) is important. Taxiways are individual line segments. Taxi-routes link several taxiway segments into the path an aircraft follows from gate to runway. You define taxi-routes in the Routes Editor, described in the [Taxi routes](#taxi-routes) section.
 
@@ -198,7 +195,6 @@ Create a polygon representing the car park adjacent to the terminal. In the attr
 | Speed (km/h) | 20 |
 | Travel distance (m) | 250 |
 | Idle time (min) | 0 |
-| Average parking time (min) | *(leave default)* |
 
 **Fleet mix** (must total 100%)
 
@@ -262,10 +258,10 @@ Create a point feature representing the airport power and heating plant, located
 | Category | Power/Heat Plant |
 | Substance | Solid |
 | Height (m) | 20 |
-| Stack temperature (°C) | 400 |
-| Stack diameter (m) | 1 |
-| Exit velocity (m/s) | 15 |
-| Units per year (operating hours) | 4380 |
+| Temperature [°C] | 400 |
+| Diameter [m] | 1 |
+| Gas Velocity [m/s] | 15 |
+| Activity per year (operating hours) | 4380 |
 
 The plant operates half the year (4380 of 8760 hours), giving an activity factor of 0.5 for any 1-hour calculation interval.
 
@@ -344,7 +340,7 @@ Create six taxi routes for this study — one arrival and one departure variant 
 | Runway | 24 |
 | Operation | Arrival |
 | Instance | 1 |
-| Taxiway sequence | K → Q → L → P |
+| Taxiway sequence | V3 → Y → Y1 |
 | Aircraft groups | All (JET BUSINESS, JET LARGE, JET MEDIUM, JET REGIONAL, JET SMALL, TURBOPROP, PROPELLER) |
 
 **Route G7/24/A/1** — Arrivals from runway 24 to gate G7
@@ -355,7 +351,7 @@ Create six taxi routes for this study — one arrival and one departure variant 
 | Runway | 24 |
 | Operation | Arrival |
 | Instance | 1 |
-| Taxiway sequence | B → R → M → P |
+| Taxiway sequence | V2 → Y → B → V1 → Y2 |
 | Aircraft groups | All |
 
 **Route G2/24/D/1** — Departures from gate G2 to runway 24
@@ -366,10 +362,10 @@ Create six taxi routes for this study — one arrival and one departure variant 
 | Runway | 24 |
 | Operation | Departure |
 | Instance | 1 |
-| Taxiway sequence | K → R → T → F → D → U → P |
+| Taxiway sequence | V6 → F → N → V |
 | Aircraft groups | All |
 
-> **Note:** EHRD has a single physical runway with directions 06 and 24. Departures to runway 06 follow the same ground path as departures to runway 24; the runway designator affects only the LTO flight profile, not the taxiway route. Each gate still gets its own arrival and departure routes because aircraft enter and exit the gate area along different segments.
+> **Note:** EHRD has a single physical runway with directions 06 and 24, and the movements on runway 06 (rows 6, 8, 13) use the routes named for 24. The taxi route sets where a departure lines up (where the route last meets the runway) and where an arrival leaves the runway, so a route drawn for one direction can fit the other badly: row 13 (arrival on 06, route G4/24/A/1) leaves the runway 757 m from the 06 threshold at 76 kt, which the log reports. Each gate's arrival and departure routes list the same taxiways; they are read in the direction of travel.
 
 #### Create output file
 
@@ -402,7 +398,7 @@ Click **Generate Emission Inventory** in the toolbar. Configure the following se
 |---|---|
 | ADS-B Table | Browse to `training_ads_b_data.csv` |
 
-The two tracks in this file are imported into the inventory as CUSTOM profiles (`1764584438_PHBBA`, used by movement 11, and `1764583565_PHRTM`, unused), placed from the runway and taxi route that the movement table gives for each flight. Heights are taken above the airport elevation; the take-off roll, reported at −15 ft, is set to the ground.
+The two tracks in this file are imported into the inventory as CUSTOM profiles (`1764584438_PHBBA`, used by movement 11, and `1764583565_PHRTM`, unused), placed from the runway and taxi route that the movement table gives for the flight (PHBBA); PHRTM, which no movement uses, is placed at the closest runway end. Heights are taken above the airport elevation; the take-off roll, reported at −15 ft, is set to the ground.
 
 **Modeled Domain** — these settings define the 3D grid used for spatial emission output and dispersion modelling.
 
@@ -414,7 +410,7 @@ The two tracks in this file are imported into the inventory as CUSTOM profiles (
 
 The domain is centred on the EHRD reference point (51.9574278°N, 4.4417028°E).
 
-**Vertical Limit:** Leave at the default 914.4 m (3000 ft). Emissions above this altitude are excluded from the LTO inventory.
+**Vertical Limit:** this dialog has no Vertical Limit field (the inventory records 914.4 m). For aircraft movements the ceiling of each hour is the meteorological `MixingHeight`: 914.4 m on 1 December, 1500 m on 2 December and 600 m on 3 December in `training_meteo.csv`.
 
 Click **Generate** to create `training_out.alaqs`. This file copies all source definitions from the study database, combines them with the movements and meteorological data, and pre-computes the calculation grid. All subsequent emission calculations and dispersion runs use this output file.
 
@@ -440,7 +436,7 @@ Key observations:
 - **Runway direction.** Most movements use runway 24; three rows (6, 8, 13) use runway 06.
 - **APU and gate emissions suppressed.** All 13 rows have `apu_code = 0` and `gate_emissions_code = 0`, so APU and gate (GSE/GPU/MES) emissions are excluded in this study. This isolates the aircraft trajectory contribution for comparison against the bymode/BFFM2 methodology output.
 
-The movements table supports many optional fields. For this study all optional fields (other than `apu_code` and `gate_emissions_code`, which are explicitly 0) are left empty, which causes the calculator to apply defaults:
+The movements table supports many optional fields. In this study `engine_name`, `profile_id`, `taxi_engine_count` (2), `engine_thrust_level_for_taxiing` (0.07), `taxi_fuel_ratio` (1) and `number_of_stop_and_gos` (0) are filled on every row, `apu_code` and `gate_emissions_code` are 0, and `track_id`, `tow_ratio` and the main-engine-start times are empty. When a field is empty the calculator applies these defaults:
 
 | Optional field | Default applied when empty |
 |---|---|
@@ -454,7 +450,7 @@ Note that the *system* default for `gate_emissions_code` when the field is empty
 
 #### Meteorology
 
-The file `training_meteo.csv` provides 75 hourly records covering 2025-12-01 00:00 through 2025-12-04 00:00. The format is comma-delimited with the following columns:
+The file `training_meteo.csv` provides 75 rows covering the 73 hours from 2025-12-01 00:00 through 2025-12-04 00:00 (00:00 on 2 and 3 December appears twice). The format is comma-delimited with the following columns:
 
 ```
 Scenario, DateTime(YYYY-mm-dd hh:mm:ss), Temperature(K), Humidity(kg_water/kg_dry_air),
@@ -475,7 +471,7 @@ Representative values for the 06:00 hour on 2025-12-01:
 | Obukhov length | 99 999 m (neutral stability) |
 | Mixing height | 914.4 m |
 
-The `Humidity` column (specific humidity) takes priority over `RelativeHumidity` when both are provided. The specific humidity of 0.00446 kg/kg is **below** the ISA reference day humidity (0.00634 kg/kg), so the BFFM2 NOx humidity correction factor is **less than 1.0** for this dataset — drier air shifts NOx emission indices downward.
+The `Humidity` column (specific humidity) takes priority over `RelativeHumidity` when both are provided. On 1 and 2 December the specific humidity (0.00446 and 0.00381 kg/kg) is **below** the ISA reference day humidity (0.00634 kg/kg), so the BFFM2 NOx humidity factor exp(−19 (h − 0.00634)) is **above 1.0** (drier air raises NOx); on 3 December (0.01463 kg/kg) it is 0.85.
 
 If the meteorology file is omitted, OpenALAQS falls back to ISA default conditions (T = 288.15 K, P = 101 325 Pa, H = 0.00634 kg/kg).
 
@@ -493,29 +489,29 @@ Click **Visualize Emission Calculation** in the toolbar and browse to `training_
 | Start | 2025-12-01 06:00:00 |
 | End | 2025-12-03 08:00:00 |
 | Method | BFFM2 |
-| Apply NOx Corrections | ☐ (unchecked — must not be used with BFFM2) |
+| Apply NOx Corrections | ☐ (unchecked; it has no effect with BFFM2) |
 | Source Dynamics | none |
 | Time Interval | 1 hour |
 | Vertical Limit | 914.40 m |
 
-> **Important:** Do not enable *Apply NOx Corrections* when using BFFM2. The BFFM2 method already applies P₃T₃ ambient corrections internally. Enabling both would double-correct the NOx emission index.
+> **Note:** *Apply NOx Corrections* applies to the bymode method only (take-off and climb-out segments); with BFFM2 it is ignored, since BFFM2 applies its own ambient correction.
 
 **Suggested exercises:**
 
-1. **Parking CO emissions** — select *ParkingSource* from the source dropdown, choose CO as the pollutant. Click **View Emissions Table** to see the 0.1248 kg CO for the 06:00–07:00 interval. Then click **Plot Vector Layer** to see the spatial distribution on the grid.
+1. **Parking CO emissions**: select *ParkingSource* from the source dropdown, choose CO as the pollutant. Click **View Emissions Table** to see the 0.1248 kg CO for the 06:00–07:00 interval. Then click **Plot Vector Layer** to see the spatial distribution on the grid.
 
-2. **Movement NOx by method** — select *MovementSource*, NOx. Run with **ByMode** and export the CSV. Re-run with **BFFM2** and export again. Compare the total NOx:
-   - ByMode gives higher NOx for departures (TO and CL modes use certified thrust EI values).
-   - BFFM2 gives 20–50% lower NOx for arrivals (actual approach power is far below the 30% AP mode assumption).
-   - BFFM2 gives 15–30% higher CO for arrivals (near-idle approach power has high CO EI).
+2. **Movement NOx by method**: select *MovementSource*, NOx. Run with **ByMode** and export the CSV. Re-run with **BFFM2** and export again. Compare the total NOx:
+   - ByMode gives higher NOx for departures (BFFM2: 50 % less on the six departures).
+   - BFFM2 gives 29 % less NOx for the arrivals (2 to 52 % per movement).
+   - BFFM2 gives 8 % more CO for the arrivals (1 to 18 % per movement).
 
-3. **Per-aircraft method drift** — extend exercise 2 by splitting the per-movement CSV by aircraft type. Compare the BFFM2-minus-ByMode NOx delta for the eight A20N movements versus the five E190 movements. Because the two aircraft have different engine power schedules and different default ANP profiles, the BFFM2 correction shifts them differently. Expect larger relative drift on the regional jet (E190) approach segments, where actual approach thrust is further below the 30% AP-mode default than on the narrowbody. This illustrates that BFFM2 vs ByMode differences are aircraft-type dependent, not just mode dependent.
+3. **Per-aircraft method drift**: extend exercise 2 by splitting the per-movement CSV by aircraft type. Compare the BFFM2-minus-ByMode NOx delta for the eight A20N movements versus the five E190 movements. Because the two aircraft have different engine power schedules and different default ANP profiles, the BFFM2 correction shifts them differently. On this study the drift is larger on the A20N arrivals (NOx 40 % below ByMode) than on the E190 arrivals (12 % below). This illustrates that BFFM2 vs ByMode differences are aircraft-type dependent, not just mode dependent.
 
-4. **PM10 sub-components** — select *MovementSource*, examine the `pm10_nonvol_kg`, `pm10_sul_kg`, and `pm10_organic_kg` output columns alongside `pm10_kg`. For departures, `pm10_kg = pm10_nonvol_kg + pm10_sul_kg + pm10_organic_kg` exactly. For arrivals, `pm10_kg` also includes the FOA3 brake-wear contribution (`MTOW × 0.000476 − 8.74` grams per movement), visible as a surplus in `pm10_kg` relative to the sub-component sum. Verify that `p1_kg = p2_kg = pm10_kg` for all movements.
+4. **PM10 sub-components**: select *MovementSource*, examine the `pm10_nonvol_kg`, `pm10_sul_kg`, and `pm10_organic_kg` output columns alongside `pm10_kg`. For departures, `pm10_kg = pm10_nonvol_kg + pm10_sul_kg + pm10_organic_kg` exactly. For arrivals, `pm10_kg` also includes the FOA3 brake-wear contribution (`MTOW × 0.000476 − 8.74` grams per movement), visible as a surplus in `pm10_kg` relative to the sub-component sum. Verify that `p1_kg = p2_kg = pm10_kg` for all movements.
 
-5. **Smooth & Shift** — enable Source Dynamics in the Configuration tab. Re-run the Vector Layer visualisation. Observe how the taxi emission distribution widens and shifts downwind compared to the raw linestring geometry.
+5. **Smooth & Shift**: enable Source Dynamics in the Configuration tab. Re-run the Vector Layer visualisation. Observe how the taxi emission distribution widens and shifts downwind compared to the raw linestring geometry.
 
-The log file (accessible via **Review Logs**) records one `BFFM2 dispatch confirmed` line per movement when BFFM2 is active, and WARNING messages if an ADS-B movement's fuel flow estimate exceeds the EEDB takeoff ceiling. No such warnings are expected for this study since all movements use standard ANP profiles.
+The log file (accessible via **Review Logs**) reports an ADS-B fuel flow above 1.5 times the EEDB take-off value (none here: movement 11's ADS-B fuel flow stays far below it) and runway exits that do not fit. For this study it reports three: route G2/24/A/1 meets runway 24 only before the touchdown, for profile JET-SMALL-A-1 (row 5) and for JET-REGIONAL-A-1 (row 12), and profile JET-SMALL-A-1 on route G4/24/A/1 leaves the runway at 76 kt, 757 m from the threshold (row 13, runway 06).
 
 ---
 
@@ -546,7 +542,7 @@ To prepare the input files:
 | Is Enabled | ☑ checked |
 | Options String | *(leave blank for standard run)* |
 
-2. Tick **Is Enabled** and select an output module (**View Emissions Table** is fastest). Click **Calculate**. OpenALAQS will compute emissions and write the three AUSTAL input files to the output directory.
+2. Tick **Is Enabled** and click an output button (**View Emissions Table** is fastest). OpenALAQS will compute emissions and write the three AUSTAL input files to the output directory.
 
 **Quality Level** controls the number of simulation particles in AUSTAL:
 - Level 1 (default) — fast, ~10% statistical uncertainty, suitable for training
@@ -571,7 +567,7 @@ A progress log (`austal.log`) is written to the Work Directory. AUSTAL can also 
 austal /path/to/work/directory/austal.txt
 ```
 
-The calculation time for the EHRD 25-hour study at Quality Level 1 on a modern laptop is typically 2–10 minutes.
+The calculation time for the EHRD 50-hour study period at Quality Level 1 on a modern laptop is typically 2–10 minutes.
 
 #### Output data
 
@@ -591,14 +587,13 @@ Key interpretation note: this study spans a 50-hour window across three days, bu
 
 To display AUSTAL results on the QGIS map canvas:
 
-1. Click **Calculate Dispersion** and open the results viewer.
-2. Select `training_out.alaqs` as the reference file.
-3. Choose the pollutant (e.g. NOx) and averaging interval (annual mean).
-4. Click **Visualise Results** to load the concentration grid as a QGIS vector layer.
+1. Click **Calculate Dispersion**; after a run, section 4 (Result Visualisation) is filled in (or use **Load Existing Results** with the Work Directory).
+2. Choose the pollutant (e.g. NOx) and the averaging (annual mean).
+3. Click **Plot Vector Layer** to load the concentration grid as a QGIS vector layer.
 
-The layer can be styled using QGIS symbology (graduated colour ramp) to produce a concentration contour map. Peak NOx concentrations will be visible near the runway threshold and along the departure climb track, with the plume extending downwind in the 225° south-west wind direction.
+The layer can be styled using QGIS symbology (graduated colour ramp) to produce a concentration contour map. Peak NOx concentrations will be visible near the runway threshold and along the departure climb track, with the plume extending downwind of each day's wind (from 225° on 1 December, 270° on 2 December, 180° on 3 December).
 
-To inspect specific grid cells, use the **Results Table** option to export concentrations as a CSV, or use QGIS to query individual cell values by clicking on the layer.
+To inspect specific grid cells, query individual cell values by clicking on the layer, or open its attribute table.
 
 ---
 

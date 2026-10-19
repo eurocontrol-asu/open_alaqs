@@ -34,7 +34,7 @@ def speed_of_sound_m_s(temperature_k: float) -> float:
     corrections (plugin, standalone and the CAEP validation). ISA sea level
     (288.15 K) gives 340.294 m/s. Until October 2026 the plugin and the
     standalone used the linear form 331.3 + 0.606 (T - 273.15), which is
-    0.03% high at ISA and 0.16% high at 243 K and at 307 K.
+    0.03% high at ISA and 0.16% high at 243.6 K and at 307 K.
     """
     if temperature_k <= 0:
         return 0.0

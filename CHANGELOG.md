@@ -150,7 +150,7 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   (`open_alaqs/core/tools/bffm2.py::speed_of_sound_m_s`) and written out
   independently in the CAEP14 reference, as the CAEP validation workbook
   computes it. The linear form `331.3 + 0.606 (T − 273.15)` was 0.03 % high at
-  ISA and 0.16 % high at 243 K and at 307 K. **Results change** below 0.01 %
+  ISA and 0.16 % high at 243.6 K and at 307 K. **Results change** below 0.01 %
   for the BFFM2 methods; `bymode` unchanged.
 - CAEP14 reference tool (`validation/tools/compute_caep14_reference.py`):
   engines are matched on `engine_name` exactly (or `engine_full_name` for

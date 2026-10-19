@@ -10,7 +10,7 @@ In QGIS, click the **Calculate Dispersion** button on the OpenALAQS toolbar:
 
 <img src="../../open_alaqs/icons/dispersion_model.png" alt="Calculate Dispersion toolbar icon" width="32" />
 
-The dialog opens with five collapsible sections, numbered roughly in execution order.
+The dialog opens with four numbered sections, in execution order.
 
 ![AUSTAL Dispersion Analysis dialog](../../open_alaqs/assets/running-austal.png)
 
@@ -51,7 +51,7 @@ Both Generate modes show start/end datetime pickers. They default to a placehold
 
 Two grid sections appear inside step 2. They are **separate**:
 
-### Calculation Configuration / Grid Management (`gridManagementGroupBox`)
+### Grid Configuration (`gridManagementGroupBox`)
 Sets the receptor grid that AUSTAL will compute concentrations on. Either:
 - pull it from an OpenALAQS `*_out.alaqs` file (the plugin reads `grid_3d_definition`), or
 - type it manually in the **Grid Details** sub-section (x_cells, y_cells, x_resolution, y_resolution, ref lat/lon).
@@ -60,16 +60,16 @@ The grid you set here is the one written into AUSTAL's input file. Cell size is 
 
 The status panel below the inputs reports the active grid: number of cells, resolution, and reference lat/lon.
 
+This section also has a **Save Grid as CSV** button (`saveGridCsvBtn`) that writes the current grid out to a CSV, and an **Update File** button (`updateFileBtn`) that re-reads the grid file if you've edited it externally.
+
 ### Grid Management for visualisation (`alaqsGridGroupBox`, inside section 4)
 A **second** grid pointer used **only for plotting**. When AUSTAL writes its result `.dmna` files, they reference cell indices, not lat/lon. To draw them on the map you also need a grid definition. This second selector lets you pick an `*_out.alaqs` or grid CSV that matches the run. In the common case where you generated inputs from an `*_out.alaqs`, point both sections at the same file.
 
-There's also a **Save Grid as CSV** button (`saveGridCsvBtn`) that writes the current grid out to a CSV, and an **Update File** button (`updateFileBtn`) that re-reads the grid file if you've edited it externally.
-
 ---
 
-## Receptor points, NOTALUFT, and PM10 split
+## Receptor points, NOTALUFT, mixing height, and PM10 split
 
-Three controls inside step 2 affect what AUSTAL produces and which result modules are usable afterwards.
+Four controls inside step 2 affect what AUSTAL produces and which result modules are usable afterwards.
 
 ### Receptor points
 
@@ -93,6 +93,10 @@ NOTALUFT is required for:
 
 NOTALUFT is **not** required for Plot Vector Layer with `annual mean` averaging.
 
+### Include Mixing Height
+
+The **Include Mixing Height** checkbox writes `hm ?` in `austal.txt` and the mixing height of each period in `series.dmna`, so AUSTAL uses the inventory's mixing height in every hour. The plugin always sets `NOSTANDARD` in the options string, which AUSTAL requires for `hm ?` (`AUSTALOutputModule.py:1905-1912`, `DispersionAnalysis.py:1367-1370`). Unticked, AUSTAL applies its own mixing height.
+
 ### PM10 fine fraction
 
 The **PM10 fine fraction** spinbox (default 0.9) controls how PM10 emissions are split into AUSTAL's `pm-1` and `pm-2` substances when the writer expands a PM10 emission line. The default of 0.9 reflects an airport mix dominated by aircraft non-volatile PM and combustion exhaust (mostly fine particles); set lower (0.6–0.7) for studies dominated by re-suspended dust or brake wear.
@@ -107,11 +111,11 @@ The third section, `runGroupBox`. One button: **Run AUSTAL** (`RunA2K`).
 
 When you click it, the plugin:
 1. Validates that all upstream sections are green (executable, input strategy, grid). If anything is missing, a popup names the gap and the run is cancelled.
-2. Updates `executionStatusLabel` to `Running AUSTAL...` and disables the button.
-3. Spawns the AUSTAL executable as a subprocess in the work directory you configured. AUSTAL processes the inputs and writes its results (a `.dmna` file per pollutant per averaging period) into a sub-folder of the work directory.
+2. Sets `executionStatusLabel` to `Running AUSTAL...`.
+3. Spawns the AUSTAL executable as a subprocess in the work directory you configured. AUSTAL processes the inputs and writes its results (a `.dmna` file per pollutant per averaging period) and `austal.log` into the same folder as `austal.txt`. For the two Generate modes this folder is `AUSTAL/` inside the work directory you selected.
 4. On exit, parses the AUSTAL log; success makes the status label green, any non-zero exit code shows the AUSTAL error verbatim.
 
-AUSTAL is single-threaded and CPU-bound; even modest grids take several minutes to a few hours. The QGIS UI stays responsive (the subprocess runs in the background) but you cannot start a second run from the same dialog until the first finishes.
+AUSTAL is single-threaded and CPU-bound; even modest grids take several minutes to a few hours. QGIS waits for AUSTAL to finish (`DispersionAnalysis.py:2418-2419`); progress appears in AUSTAL's own console window.
 
 ---
 
@@ -155,7 +159,7 @@ Threshold values are hardcoded against the official directive ([EU 2024/2881 Ann
 4. **§2 / Grid Configuration**: confirm the grid was inherited from the inventory file. If not, fill in the details manually.
 5. **§2 / Receptors + NOTALUFT** *(only if you want per-receptor results)*: provide a Receptors CSV (or rely on the auto-load from `shapes_receptor_points`) and tick **NOTALUFT**.
 6. **§3**: click **Run AUSTAL**. Wait for green status.
-7. **§4 / Grid Management**: point at the same `*_out.alaqs` so the plot has a grid.
+7. **§4 / Grid Management** *(optional when the §2 Grid Configuration is set)*: point at the same `*_out.alaqs`.
 8. **§4**: click **Plot Vector Layer** (annual mean concentration map), or, if you ran with NOTALUFT + receptors, **Plot Time Series** / **Compliance Report**.
 
 ---
@@ -164,7 +168,7 @@ Threshold values are hardcoded against the official directive ([EU 2024/2881 Ann
 
 - **`No Executable Loaded` even after picking the file** - the file picker doesn't accept anything not named `austal.exe` or `austal`. If you have `austal_3.3.exe`, rename it.
 - **Run completes but the `.dmna` files are missing** - check that the AUSTAL installation has the `austal.settings` file from this OpenALAQS folder copied in. The default `austal.settings` shipped with AUSTAL writes to a different output schema and the plugin won't find the results.
-- **`Plot Vector Layer` button stays disabled** - the visualisation grid (`alaqsGridGroupBox`) is unset. The execution grid and the visualisation grid are independent fields; both must be filled, even when they point at the same file.
+- **`Plot Vector Layer` button stays disabled** - no grid is configured (Grid Configuration cells are 0, no grid file and no visualisation grid) or no results exist yet (`DispersionAnalysis.py:503-539`).
 - **`Plot Time Series` and `Compliance Report` stay disabled** - no `*-tmpa.dmna` files in the work directory. Both modules need receptors AND NOTALUFT set before the AUSTAL run; if either was missing, only the grid output (`-y00a.dmna`) was produced. The status label below the buttons names the missing piece. Re-run with both controls set.
 - **Plot Vector Layer fails with "can't aggregate to '<period>'"** - you selected an averaging period (daily / hourly / 8-hours) that the file's time interval doesn't support. Switch the averaging combo to `annual mean` for grid plotting; for hourly/daily analysis use Plot Time Series or Compliance Report at receptor points.
 - **Polygons appear in the wrong place on the map** - the visualisation grid does not match the run's grid. AUSTAL output cells are indexed; if you give the plotter a different reference lat/lon or cell size, it will draw cells at the wrong coordinates. Re-select the same `*_out.alaqs` for both grid sections.
@@ -174,21 +178,20 @@ Threshold values are hardcoded against the official directive ([EU 2024/2881 Ann
 
 ## Files written by a successful run
 
-In the work directory after a green run:
+For the two Generate modes the plugin writes the inputs into `AUSTAL/` inside the selected work directory (`DispersionAnalysis.py:1582`) and runs AUSTAL there; AUSTAL writes its log and results into the same folder. In "use existing" mode the folder is the one you selected.
 
 ```
-work/
+<work dir>/AUSTAL/
 ├── austal.txt                 # input file the plugin generated (or yours, if "use existing")
 ├── series.dmna                # combined emissions + meteo time series (AUSTAL 3.x format)
 ├── <source_id>/               # per-source subdirectories (01/, 02/, ...) with eNNNN.dmna files
-└── work/                      # AUSTAL's own output sub-folder
-    ├── austal.log             # run log
-    ├── <substance>-y00a.dmna  # annual-mean grid (always produced)
-    ├── <substance>-NNNa.dmna  # per-hour grid (NNN = hour index, NOTALUFT only)
-    ├── <substance>-tmpa.dmna  # per-receptor time series (receptors + NOTALUFT only)
-    └── ...
+├── austal.log                 # run log
+├── <substance>-y00a.dmna      # annual-mean grid (always produced)
+├── <substance>-NNNa.dmna      # per-hour grid (NNN = hour index, NOTALUFT only)
+├── <substance>-tmpa.dmna      # per-receptor time series (receptors + NOTALUFT only)
+└── ...
 ```
 
-`<substance>` is the AUSTAL substance code (e.g. `co`, `nox`, `pm`, `pm25`, `so2`). The plugin writes `pm` for PM10 (split into `pm-1` + `pm-2` internally) and `pm25` for PM2.5; the readers map back automatically.
+`<substance>` is the AUSTAL substance code: `co2`, `co`, `hc`, `nox`, `sox` (defined in the supplied `austal.settings`) and `pm` for PM10, which the plugin writes as `pm-1` + `pm-2` emission lines (`AUSTALOutputModule.py:1819-1848`); the readers map back automatically.
 
-The visualisation buttons read from `work/` (the inner one). If you move the folder, point the Results Directory at the new location and the same buttons will still work.
+The visualisation buttons read from that folder (`DispersionAnalysis.py:2832`). If you move the folder, point the Results Directory at the new location and the same buttons will still work.

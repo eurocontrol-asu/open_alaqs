@@ -135,13 +135,14 @@ repository. Output md5 for the inputs above: profiles `16160d7c...`, aircraft
 `4e36bcc1...`. Checks that need only the committed CSVs are in
 `tests/test_default_aircraft_profiles_anp22.py`.
 
-The fixture scripts update the seven `.alaqs` files listed in them. They keep
-study-specific rows (CUSTOM ADS-B profiles, HELIPROF rows, extra types) and
-drop the removed ANP 2.1 profiles. The
+The fixture scripts update the `.alaqs` files listed in them: ten for the
+profiles (including the three standalone validation databases
+`openalaqs_standalone/validation/data/training_v3*.alaqs`), seven for
+`default_aircraft`. They keep study-specific rows (CUSTOM ADS-B profiles,
+HELIPROF rows, extra types) and drop the removed ANP 2.1 profiles. The
 ANP and AIRPORT_A fixtures have their own `default_aircraft` (other engines
 and names), so only their profile tables are updated. The standalone
-validation databases (`openalaqs_standalone/validation/data/`) are snapshots
-and are not changed.
+validation databases get the profile table only.
 
 ## 5. Use of ANP data
 

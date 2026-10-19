@@ -81,11 +81,11 @@ python-qgis scripts\emissions_austal\run_emissions_austal.py "C:\path\to\config.
  - `time_interval_seconds` (required): integer number of seconds between timesteps, e.g. `3600`
  - `pollutant` (required): pollutant code. Accepted values: `CO`, `CO2`, `HC`, `NOx`, `PM10`, `SOx`.
 - `method` (optional): calculation method, accepted values `bymode` or `BFFM2` (default `bymode`)
- - `source_type` (optional): source filtering (string or `all`). Accepted values: `AreaSource`, `MovementSource`, `ParkingSource`, `PointSource`, `RoadwaySource`, or `all` (default).
+ - `source_type` (optional): source filtering (string or `all`). Accepted values: `AreaSource`, `EngineTestSource`, `MovementSource`, `ParkingSource`, `PointSource`, `RoadwaySource` (case-insensitive aliases `area`, `movement`, `parking`, `point`, `roadway` also work), or `all` (default).
 - `source_names` (optional): comma-separated list of source names to include, e.g. `GateA,GateB`
-- `source_dynamics` (optional): handling mode for source dynamics; default `none` (accepted values include `none`, `default`, `smooth & shift`)
+- `source_dynamics` (optional): handling mode for source dynamics; `none` (default) or `default` (see the notes on `source_dynamics` below)
 - `vertical_limit_m` (optional): vertical limit in meters (float), default `914.4`
-- `should_apply_nox_corrections` (optional): `True` or `False` (case-insensitive)
+- `should_apply_nox_corrections` (optional): `True` to enable (exact spelling; any other value, including `true`, means False)
 - `show_logs` (optional): `True` or `False` — when `True`, external logs are shown
 - `austal_output_path` (optional): output directory for AUSTAL files (overrides default)
 - `emissions_output_path` (optional): output directory for CSV/GeoJSON (overrides default)
@@ -99,30 +99,30 @@ python-qgis scripts\emissions_austal\run_emissions_austal.py "C:\path\to\config.
 `pollutant` (required): pollutant identifier (string). Accepted values: `CO`, `CO2`, `HC`, `NOx`, `PM10`, `SOx` — must match pollutant keys used by your database/calculation modules.
 - `method` (optional): calculation method. Accepted values: `bymode` (default) or `BFFM2`.
 - `source_type` (optional): filter by source type (string) or `all` (default).
- - `source_type` (optional): high-level type filter. Accepted values: `AreaSource`, `MovementSource`, `ParkingSource`, `PointSource`, `RoadwaySource`, or `all` (default).
+ - `source_type` (optional): high-level type filter. Accepted values: `AreaSource`, `EngineTestSource`, `MovementSource`, `ParkingSource`, `PointSource`, `RoadwaySource` (case-insensitive aliases `area`, `movement`, `parking`, `point`, `roadway` also work), or `all` (default).
 - `source_names` (optional): comma-separated list of source names to include, e.g. `GateA,GateB`.
 - `vertical_limit_m` (optional): float, vertical calculation limit in metres (default `914.4`).
- - `source_dynamics` (optional): string controlling source dynamics handling; accepted values include `none`, `default`, `smooth & shift` (various synonyms accepted, parser normalises them).
-- `should_apply_nox_corrections` (optional): boolean `True` or `False`.
+ - `source_dynamics` (optional): string controlling source dynamics handling; `none` (default) or `default` (see the notes below).
+- `should_apply_nox_corrections` (optional): `True` to enable (exact spelling; any other value, including `true`, means False).
 - `show_logs` (optional): boolean `True` or `False` — when `True`, logs and external output are not suppressed.
 - `emissions_output_name` (optional): base name for CSV/GeoJSON files (default `emissions`).
 - `emissions_output_path` / `austal_output_path` (optional): output directories. If omitted, defaults are used (see below) and the script will create the directories if missing.
 - `view_type` (optional, used for CSV export): values accepted (case-insensitive) - `by aggregation`, `aggregation`, `aggregate` (all map to aggregation) or `by source`, `source` (maps to per-source view).
-- `austal_settings` (optional): additional settings passed to the AUSTAL module (module-specific structure).
+- `austal_settings`: not usable from the txt config (only from Python callers passing a dict).
 
 **Source filtering options**
-- `source_type` (optional): high-level filter by source type (string), for example `all`, `ground`, `terminal`, etc. When not provided the script defaults to `all`.
+- `source_type` (optional): high-level filter by source type (string), for example `all` or `MovementSource`. When not provided the script defaults to `all`.
 - `source_names` (optional): comma-separated list of specific source names to include. Example: `source_names=GateA,GateB`. If omitted or empty, and `source_type` is not used to filter, the calculation will include all sources.
-- `source_dynamics` (optional): how to handle source dynamics. Accepted, case-insensitive values include:
-  - `none` — no dynamics handling (default)
-  - `default` — use module default dynamics behaviour
-  - `smooth & shift`, `smooth_shift`, `smooth&shift` — enable smooth-and-shift dynamics handling
+- `source_dynamics` (optional): how to handle source dynamics. Case-insensitive values:
+  - `none`: no dynamics handling (default)
+  - `default`: smooth-and-shift dynamics with the default extents
+  - The smooth-and-shift spellings (`smooth & shift`, `smooth_shift`, `smooth&shift`) are currently normalised to `smooth_shift`, which the movement module does not recognise, so they run without source dynamics; use `default`.
 
 Examples:
 ```
 source_type=all
 source_names=GateA,GateB
-source_dynamics=smooth_shift
+source_dynamics=default
 ```
 
 If you want to include all sources explicitly:
@@ -137,11 +137,10 @@ Notes on `source_names` / `source_dynamics`:
 - `source_dynamics` is passed through to the emission calculation;
 
 Accepted `source_dynamics` values (case-insensitive):
-- `none` — no dynamics handling (default)
-- `default` — use module default dynamics behaviour
-- `smooth & shift` (also accepted as `smooth_shift`, `smooth&shift`) — enable smooth-and-shift dynamics handling
+- `none`: no dynamics handling (default)
+- `default`: smooth-and-shift dynamics with the default extents
 
-The parser normalises common synonyms to the canonical values `none`, `default`, `smooth`, `shift`, or `smooth_shift` before building the calculation config.
+The parser normalises common synonyms to `none`, `default`, `smooth`, `shift` or `smooth_shift` before building the calculation config. Only `none` and `default` have an effect: the movement module enables source dynamics for `default` (and for the literal `smooth & shift`, which the parser never passes through), so `smooth`, `shift` and `smooth_shift` run without source dynamics.
 
 Notes on defaults and creation:
 - When `emissions_output_path` or `austal_output_path` are provided in the config they are used as-is (environment variables expanded) and will be created if missing.

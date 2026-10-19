@@ -21,16 +21,10 @@ internal architecture; this file is task-oriented.
 
 ## Install
 
-The package is shipped as a top-level directory in the Open-ALAQS repository.
-From a checkout of the repository, install in editable mode so changes are
-picked up immediately:
-
-```bash
-cd openalaqs_standalone/
-pip install -e .
-```
-
-Or, without installation, by setting `PYTHONPATH` to the repository root:
+The package is shipped as a top-level directory in the Open-ALAQS repository
+and imports BFFM2, FOCA and runway-placement code from the plugin tree
+(`open_alaqs/core/tools/`), so run it from the repository root with the root
+on `PYTHONPATH`:
 
 ```bash
 cd /path/to/openalaqs/
@@ -42,15 +36,18 @@ and `pyproj`. The package never imports QGIS, PyQt, or `mod_spatialite`.
 
 ### Quick smoke test
 
-Once installed, the official training fixture should run end-to-end in
+From the repository root, the official training fixture should run end-to-end in
 under a minute. Expected aircraft NOx total (13 movements, year 2025):
 
 | `--method` value                | NOx (kg) |
 | ------------------------------- | -------- |
-| `bymode`                        |   24.815 |
-| `bymode` + `--apply-nox-corrections` |   23.964 |
-| `bffm2_anchor`                  |   22.537 |
-| `bffm2_traj`                    |   15.396 |
+| `bymode`                        |   31.804 |
+| `bymode` + `--apply-nox-corrections` |   30.661 |
+| `bffm2_anchor`                  |   30.024 |
+| `bffm2_traj`                    |   17.419 |
+
+(CO 22.442 / 22.442 / 21.989 / 23.691 kg; the same with `--aircraft-only`,
+since the example has no gate, APU or start emissions.)
 
 ```bash
 python -m openalaqs_standalone aircraft \
@@ -115,10 +112,10 @@ python -m openalaqs_standalone aircraft example/training/training_out.alaqs \
     --out movement_totals.csv
 ```
 
-This writes `movement_totals.csv` with one row per movement, six pollutant
-columns (`co_kg`, `hc_kg`, `nox_kg`, `sox_kg`, `pm10_kg`, `pm25_kg`), plus
-metadata (movement oid, aircraft icao, departure/arrival flag, profile id,
-method).
+This writes `movement_totals.csv` with one row per movement, seven pollutant
+columns (`co_kg`, `co2_kg`, `hc_kg`, `nox_kg`, `sox_kg`, `pm10_kg`,
+`pm25_kg`), plus metadata (`oid`, `aircraft`, `departure_arrival`,
+`profile_id`, `method`).
 
 Add `--method` to pick the emission method (next section), `--processes N`
 to parallelise (later section), or `--oids 4,12,73` to compute only a
@@ -151,19 +148,19 @@ inputs/
 │   └── sources.parquet            one row per source (id, type, geometry,
 │                                  height, in_study, ...)
 ├── emissions_folder/
-│   └── emissions.parquet          one row per (source, pollutant, hour)
-│                                  carrying kg/hour
+│   ├── emissions.parquet          one row per (source, pollutant, hour)
+│   │                              carrying kg/hour
+│   ├── co_emissions.gpkg, ...     one gpkg per pollutant, polygon features
+│   │                              per inventory grid cell
+│   └── runway_checks.csv          route and profile checks (with
+│                                  --include-aircraft); never blocks the run
 ├── receptors_folder/
 │   └── receptors.csv              receptors in target UTM
 ├── meteo_folder/
 │   └── meteo.csv                  hourly meteorology
 ├── config_folder/
 │   └── config.json                AUSTAL writer settings + grid + flags
-└── inventory_gpkgs/               (optional, written when emissions exist)
-    ├── nox.gpkg
-    ├── co.gpkg
-    └── ...                        one gpkg per pollutant, polygon
-                                   features per inventory grid cell
+└── austal_folder/                 (empty; filled by austal_prep)
 ```
 
 The pair `sources.parquet` + `emissions.parquet` is the input contract that
@@ -181,6 +178,10 @@ Three methods are supported, all from the same trajectory and EI database:
 | `bffm2_anchor`    | EEDB mode-anchor fuel flow, BFFM2 EI on the log-log curve        | BFFM2 SAE AIR-5715 (built-in)                   |
 | `bffm2_traj`      | Per-segment trajectory fuel flow via twin-quadratic fit          | BFFM2 SAE AIR-5715 (built-in)                   |
 
+The BFFM2 ambient correction uses the study meteo in `tbl_InvMeteo` by
+default (`--use-meteo`), as the plugin does; `--isa-meteo` (`austal`:
+`--use-isa-meteo`) forces ISA and only reproduces older runs.
+
 Set the method on the `aircraft` subcommand:
 
 ```bash
@@ -196,7 +197,8 @@ python -m openalaqs_standalone austal $ALAQS --year 2025 --out ./inputs/ \
     --aircraft-method bffm2_traj
 ```
 
-`bymode` is the default and is bit-identical to the QGIS plugin's bymode path.
+`bymode` is the default and matches the QGIS plugin's bymode path to
+floating-point noise (3.9e-11 relative on `training_v3.alaqs`).
 
 ## The NOx ambient correction
 
@@ -267,30 +269,31 @@ downstream AUSTAL pipeline reads. The keys that affect computation:
 
 ```json
 {
-  "title": "EHRD training",
+  "title": "Rotterdam",
   "qs": 3,
   "z0": 0.3,
   "d0": 1.2,
   "ha": 11.2,
   "os_options": "NOSTANDARD;NOTALUFT;SCINOTAT;Kmax=1",
   "mixing_height_included": true,
-  "grid_writer_mode": "time_indexed",
+  "grid_writer_mode": "hybrid",
   "source_offset_cells": 2,
   "max_receptors": 20,
   "source_aggregation": "by_type_per_pollutant",
   "apply_nox_corrections": false,
   "grid": {
     "dd": 250.0,
-    "nx": 79,
-    "ny": 79,
-    "x0": -9875.0,
-    "y0": -9875.0,
+    "nx": 104,
+    "ny": 104,
+    "x0": -13000.0,
+    "y0": -13000.0,
     "sk": [0, 3, 6, 10, 16, 25, 40, 65, 100, 150, 200, 300, 400, 500,
            600, 700, 800, 1000, 1200, 1500],
-    "reference_x": 575678.4,
-    "reference_y": 5760123.7,
+    "reference_x": 599065.0372562435,
+    "reference_y": 5757284.894734611,
     "utm_epsg": 32631
   },
+  "selected_pollutants": ["co", "hc", "nox", "sox", "pm10", "pm25"],
   "start_dt": "2025-01-01T00:00:00",
   "end_dt": "2025-12-31T23:00:00"
 }
@@ -304,9 +307,10 @@ downstream AUSTAL pipeline reads. The keys that affect computation:
 | `ha`                   | anemometer reference height (m)                                     |
 | `os_options`           | AUSTAL `os` line                                                    |
 | `mixing_height_included`| feed mixing-height column to AUSTAL meteo                          |
-| `grid_writer_mode`     | `time_indexed` (one series) or `legacy` (per-hour files)            |
+| `grid_writer_mode`     | `hybrid` (default: one e-file per hour for aircraft sub-sources, one time-invariant e-file for stationary sources), `time_indexed` (one time-invariant e-file for all) or `legacy` (per-hour files for all) |
 | `source_aggregation`   | `by_type_per_pollutant` (recommended) or `by_type` (legacy)          |
 | `apply_nox_corrections`| record of the `--apply-nox-corrections` choice                      |
+| `selected_pollutants`  | pollutants written                                                  |
 | `grid.*`               | AUSTAL calc grid: cell size, count, origin, vertical layers, ref pt |
 | `start_dt` / `end_dt`  | run window (from `--year` or `--start`/`--end`)                     |
 
@@ -349,12 +353,17 @@ subdirectories:
   are evolved versions of `example/training/training.alaqs` carrying
   schema fixes and source variants that exercise the gate / multi-source
   code paths.
-- `validation/tests/` — pytest module
-  (`test_bffm2_ambient_propagation_regression.py`) that exercises the
-  BFFM2 EI calculator with pinned ambient inputs.
-- `validation/tools/` — the CAEP14 reference computation itself
-  (`compute_caep14_reference.py`), the plugin-vs-standalone comparison
-  driver (`compare_inventory_to_reference.py`), and the methodology doc
+- `validation/tests/`: pytest modules, among them
+  `test_plugin_csv_vs_reference.py` (plugin = reference = standalone on the
+  15 movements), `test_bffm2_ambient_propagation_regression.py` (BFFM2 EI
+  with pinned ambient inputs), `test_runway_placement.py` and
+  `test_segment_mach.py`.
+- `validation/tools/`: the CAEP14 reference computation itself
+  (`compute_caep14_reference.py`), the headless plugin re-export
+  (`regenerate_plugin_csvs.py`), the workbook builder
+  (`regenerate_training_validation_xlsx.py`), the diff of a plugin
+  per-movement CSV against the workbook's reference column
+  (`compare_inventory_to_reference.py`), and the methodology doc
   (`CAEP14_VALIDATION.md`).
 
 Run the validation tests:
@@ -363,16 +372,19 @@ Run the validation tests:
 PYTHONPATH=. pytest openalaqs_standalone/validation/tests/ -v
 ```
 
-Generate a CAEP14 reference run and compare to the plugin output:
+Run the CAEP14 reference against the pinned plugin output (add
+`--use-meteo` for the BFFM2 methods), and check a plugin CSV against the
+workbook:
 
 ```bash
 PYTHONPATH=. python openalaqs_standalone/validation/tools/compute_caep14_reference.py \
     openalaqs_standalone/validation/data/training_v3.alaqs \
-    --method bymode --out reference_bymode.csv
+    --method bymode \
+    --plugin-csv openalaqs_standalone/validation/data/plugin_output/training_movements_bymode.csv
 
 PYTHONPATH=. python openalaqs_standalone/validation/tools/compare_inventory_to_reference.py \
-    reference_bymode.csv \
-    openalaqs_standalone/validation/data/plugin_output/training_movements_bymode.csv
+    openalaqs_standalone/validation/data/plugin_output/training_movements_bymode.csv \
+    --method=bymode openalaqs_standalone/validation/data/training_validation_reference.xlsx
 ```
 
 The harness is the right place to extend whenever you add a new emission
@@ -400,7 +412,7 @@ for the training study.
 python -m openalaqs_standalone austal $ALAQS \
     --year 2025 --out ./inputs/ \
     --include-aircraft \
-    --start 2025-01-01 --end 2025-01-08
+    --start 2025-12-01 --end 2025-12-02
 ```
 
 The interval is half-open `[start, end)`. Stationary emissions are filtered
@@ -413,9 +425,8 @@ follow the window.
 ## Troubleshooting
 
 **`ModuleNotFoundError: No module named 'open_alaqs.core.tools.bffm2'`** —
-the standalone imports BFFM2 from the QGIS plugin tree. Make sure
-`open_alaqs/` is on `PYTHONPATH` (run from the repository root, or `pip
-install -e .` from the repository root).
+the standalone imports BFFM2 from the QGIS plugin tree. Run from the
+repository root with `PYTHONPATH=.`.
 
 **`shapely.errors.GEOSException` on a particular movement** — likely a
 self-intersecting taxi route in the source `.alaqs`. Identify the offending

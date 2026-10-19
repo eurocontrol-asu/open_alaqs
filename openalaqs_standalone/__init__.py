@@ -75,7 +75,7 @@ Entry points:
                        (Phase A4). `austal` builds the six-folder
                        input structure for stationary sources, and
                        writes per-pollutant gpkgs to
-                       <out>/inventory_gpkgs/.
+                       <out>/emissions_folder/<pollutant>_emissions.gpkg.
     orchestrate        the austal_prep pipeline driver (the `austal`
                        command); also importable as a Python function
                        for embedding in external pipelines. With

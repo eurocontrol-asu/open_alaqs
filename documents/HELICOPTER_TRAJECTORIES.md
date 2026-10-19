@@ -3,8 +3,10 @@
 This document records the source of every per-category trajectory
 parameter used by `open_alaqs/core/tools/foca_heli_trajectory.py`. The
 trajectory generator builds the 3D geometry of a helicopter LTO from
-these parameters; the FOCA 2015 emission method (in `foca_heli.py`)
-then maps that geometry to fuel burn and emissions.
+these parameters. The FOCA 2015 method (`foca_heli.py`) gives the mode
+masses, and the geometry places them: ground idle as a point at the
+take-off / touchdown spot, the active mode along the flight path, cut
+at the vertical limit and the grid.
 
 The four helicopter categories below match the FOCA 2015 classification
 in section 2.4: PISTON, SINGLE_TURBOSHAFT, TWIN_TURBOSHAFT_LIGHT (twin
@@ -113,26 +115,38 @@ here are the post-2015 corrected values, as documented in the
 
 ## Approach geometry
 
-For all four categories the approach is modelled as two segments:
+The arrival (`build_arrival`) fills the FOCA approach time
+(5.5 min):
 
-1. `approach_start_nm` → 500 ft AGL: initial descent at
-   `approach_tas_initial_kt` and `approach_rod_initial_fpm`.
-2. 500 ft AGL → hover (5 ft AGL): final descent at
-   `approach_tas_final_kt` and `approach_rod_final_fpm`.
+1. a level segment at the LTO ceiling at `approach_tas_initial_kt`,
+   when the two descents take less than the approach time;
+2. a descent at `approach_tas_initial_kt` and
+   `approach_rod_initial_fpm` to 500 ft AGL (`FINAL_BREAK_ALT_FT`);
+3. a final descent at `approach_tas_final_kt` and
+   `approach_rod_final_fpm` to hover (5 ft AGL).
 
-The 500-ft intermediate altitude (`FINAL_BREAK_ALT_FT` in
-`foca_heli_trajectory.py`) represents a typical final-approach
-altitude for the deceleration profile. Hover is held for
+When the two descents take longer than the approach time, both are
+shortened in proportion and the arrival starts below the ceiling:
+PISTON breaks at about 1030 ft and SINGLE_TURBOSHAFT at about 520 ft
+instead of 500 ft. The arrival then starts about 8.7 km (PISTON),
+8.4 km (SINGLE_TURBOSHAFT), 11.5 km (TWIN_TURBOSHAFT_LIGHT) and
+10.4 km (TWIN_TURBOSHAFT_HEAVY) from the touchdown spot.
+`approach_start_nm` is not used by the generator. Hover is held for
 `HOVER_DURATION_S` (18 s) before touchdown.
 
 ## Departure geometry
 
-Symmetric with approach: takeoff hover for `HOVER_DURATION_S` at
-`HOVER_ALT_FT`, then translational-lift acceleration into climb at
-`climb_tas_kt` and `climb_roc_fpm`. Climb continues until
-`LTO_CEILING_FT` (3000 ft AGL). The horizontal distance covered
-during climb depends on the climb angle (climb_tas vs climb_roc) and
-is computed by the trajectory generator.
+Ground idle at the origin for 80 % of the GI time, hover for
+`HOVER_DURATION_S` at `HOVER_ALT_FT`, then climb at `climb_tas_kt`
+and `climb_roc_fpm` until the LTO ceiling (3000 ft AGL) or the end of
+the FOCA take-off time (PISTON stops at about 2000 ft); any remaining
+take-off time is flown level at `cruise_tas_kt`
+(`foca_heli_trajectory.py:168-209`).
+
+The origin is the centroid of the movement's gate (helipad), else the
+runway end; arrivals approach from the approach side along the runway
+heading (`GeoTransformation.py`, `runway_alignment_for_helicopter`).
+Ground idle after landing is 20 % of the GI time.
 
 ## What is not parameterised
 
@@ -146,17 +160,15 @@ elsewhere:
   per-pollutant fuel-flow and emission-index helpers
   (`piston_fuel_flow_kg_s`, `turboshaft_ei_nox_g_kg`, etc.) live in
   `foca_heli.py`.
-- **Mode time-in-mode allocation**. The trajectory generator emits
-  per-segment timing (`t_s` field on each `TrajectoryPoint`); the
-  emission calculator integrates fuel flow over these times.
-- **APU and gate emissions**. APU is skipped because the helicopter
-  taxi branch (`_apply_taxiing_emissions_for_helicopters` in
-  `MovementEmissionCalculator.py`) does not call the APU code path
-  — `apu_code` is not consulted on this branch. For gate emissions,
-  `gate_emissions_code` is still respected (the gate function returns
-  early if it is 0); when gate emissions are enabled, GSE and GPU
-  sub-components are explicitly skipped for helicopters, but MES (Main
-  Engine Start) is computed normally.
+- **Mode time-in-mode allocation**. The builder's `t_s` times are
+  used only to cut the active mode: the FOCA mode mass is scaled by
+  the share of its time spent below the vertical limit and inside the
+  grid (`active_mode_retained` in `foca_heli_trajectory.py`).
+- **APU, gate and MES emissions**. None are computed for
+  helicopters: the gate is used only as the helipad (trajectory
+  origin), the gate calculator is not run for helicopter movements
+  (`MovementSourceModule.py:362-372`), and helicopters have no taxi
+  route, so there are no APU, GSE, GPU or MES emissions.
 
 ## Adding a new category
 

@@ -4,9 +4,11 @@ This directory contains a self-contained CAEP14 v14 reference implementation
 of OpenALAQS emission calculations.  The reference is used to validate
 plugin output across all three calculation methods (`bymode`,
 `bffm2_anchor`, `bffm2_traj`) and across fixed-wing and helicopter
-aircraft.  The training dataset (`example/training/training.alaqs`) is
-the canonical fixture, but the scripts work against any OpenALAQS
-study database.
+aircraft.  The training study is the canonical fixture: its inventory
+`validation/data/training_v3.alaqs` (15 movements, two helicopters
+included) for the pinned outputs, and `example/training/training_out.alaqs`
+(13 movements) for the user-facing workbook; the scripts work against any
+OpenALAQS inventory (`_out.alaqs`) database.
 
 The reference was first developed and pinned against OpenALAQS 5.2.0 in
 May 2026. The pinned plugin outputs in `data/plugin_output/` were
@@ -14,8 +16,8 @@ re-exported in October 2026 from the plugin of this version, headlessly
 (`tools/regenerate_plugin_csvs.py`): all 15 movements of
 `training_v3.alaqs`, the two helicopters included, agree between the
 plugin, the reference and the standalone for the three methods to
-floating-point noise, except the CUSTOM departure (movement 11, PHBBA) at
-1e-4. The plugin applies the study meteo (`tbl_InvMeteo`) to the BFFM2
+floating-point noise, except the CUSTOM departure (movement 11, PHBBA) on
+`bffm2_traj`, at 8e-5. The plugin applies the study meteo (`tbl_InvMeteo`) to the BFFM2
 ambient corrections, so the comparison is run with `--use-meteo`; the
 5.2.0 exports were made at ISA. See "October 2026" at the end.
 
@@ -49,34 +51,37 @@ QT_QPA_PLATFORM=offscreen python3.12 \
     openalaqs_standalone/validation/tools/regenerate_plugin_csvs.py
 ```
 
-Or in QGIS: open `example/training/training.alaqs`, run an inventory with
-each of the three calculation methods, and export the per-movement
+Or in QGIS: open the inventory
+`openalaqs_standalone/validation/data/training_v3.alaqs`, run *Calculate
+Emissions* with each of the three calculation methods and once with
+`bymode` and *Apply NOx corrections* on, and export the per-movement
 emissions to CSV via the standard Output Module.  Save them as
-`training_movements_bymode.csv`, `training_movements_bffm2_anchor.csv`
-and `training_movements_bffm2_traj.csv` (the file names the regen
-script expects by default). Only `source_name` and the `*_kg` columns
-are read; rows of one movement are summed.
+`training_movements_bymode.csv`, `training_movements_bffm2_anchor.csv`,
+`training_movements_bffm2_traj.csv` and `training_movements_bymode_nox_corr.csv`
+(the file names the regen script expects by default). Only `source_name`
+and the `*_kg` columns are read; rows of one movement are summed.
 
-For each method the plugin must run with the inventory grid set to
+On `training_v3.alaqs` the plugin runs with the inventory grid of the file,
 50 × 50 × 20 cells of 250 × 250 × 50 m, mixing height 914.4 m
-(3000 ft), apply-NOₓ-corrections off, and the bffm2_ff_source set to
-`trajectory` (the CAEP14 v14 default).
+(3000 ft), apply-NOₓ-corrections off (on for the `_nox_corr` file), and the
+bffm2_ff_source set to `trajectory` (the CAEP14 v14 default).
 
 ### 2. Run the reference for each method
 
+From the repository root:
+
 ```bash
-cd tools/
-python3 compute_caep14_reference.py /path/to/training.alaqs \
-    --method=bymode \
-    --plugin-csv=/path/to/training_movements_bymode.csv
+PYTHONPATH=. python3 openalaqs_standalone/validation/tools/compute_caep14_reference.py \
+    openalaqs_standalone/validation/data/training_v3.alaqs --method=bymode \
+    --plugin-csv=openalaqs_standalone/validation/data/plugin_output/training_movements_bymode.csv
 
-python3 compute_caep14_reference.py /path/to/training.alaqs \
-    --method=bffm2_anchor --use-meteo \
-    --plugin-csv=/path/to/training_movements_bffm2_anchor.csv
+PYTHONPATH=. python3 openalaqs_standalone/validation/tools/compute_caep14_reference.py \
+    openalaqs_standalone/validation/data/training_v3.alaqs --method=bffm2_anchor --use-meteo \
+    --plugin-csv=openalaqs_standalone/validation/data/plugin_output/training_movements_bffm2_anchor.csv
 
-python3 compute_caep14_reference.py /path/to/training.alaqs \
-    --method=bffm2_traj --use-meteo \
-    --plugin-csv=/path/to/training_movements_bffm2_traj.csv
+PYTHONPATH=. python3 openalaqs_standalone/validation/tools/compute_caep14_reference.py \
+    openalaqs_standalone/validation/data/training_v3.alaqs --method=bffm2_traj --use-meteo \
+    --plugin-csv=openalaqs_standalone/validation/data/plugin_output/training_movements_bffm2_traj.csv
 ```
 
 (`--use-meteo` because the plugin applies `tbl_InvMeteo`; at ISA the
@@ -127,8 +132,10 @@ PYTHONPATH=. python3 openalaqs_standalone/validation/tools/regenerate_training_v
     --out example/training/training_validation_reference.xlsx
 ```
 
-On that inventory the plugin and the reference agree to 3e-10 on the ANP
-movements and 4e-5 on movement 11 (CUSTOM), every method. (With the
+On that inventory the plugin and the reference agree to 3e-10 on every
+movement for `bymode` and `bffm2_anchor` and on the ANP movements for
+`bffm2_traj`; movement 11 (CUSTOM) differs by 4e-5 on `bffm2_traj`, and the
+NOx-corrected run by 3e-6 on movements 10 and 11. (With the
 200 m-tall grid the example carried before October 2026, 40 x 40 x 20
 cells of 10 m, the ANP movements agreed to 4e-6 only; the gap went with
 the grid.) `compare_inventory_to_reference.py <csv> --method=...`
@@ -138,7 +145,7 @@ column (0.5 % tolerance, exit code 0 when all movements pass).
 ### 4. Run the regression test
 
 ```bash
-pytest tests/test_bffm2_ambient_propagation_regression.py -v
+PYTHONPATH=. pytest openalaqs_standalone/validation/tests/test_bffm2_ambient_propagation_regression.py -v
 ```
 
 Five tests must pass.  These pin the BFFM2 module's ambient-condition
@@ -218,7 +225,8 @@ movement's `runway_time` from `tbl_InvMeteo` (the October 2026 exports
 need it):
 
 ```bash
-python3 compute_caep14_reference.py /path/to/training.alaqs \
+PYTHONPATH=. python3 openalaqs_standalone/validation/tools/compute_caep14_reference.py \
+    openalaqs_standalone/validation/data/training_v3.alaqs \
     --method=bffm2_anchor \
     --use-meteo
 ```
@@ -261,16 +269,18 @@ is not explained yet.
 ## Reference vs plugin: data flow
 
 ```
-   training.alaqs (sqlite)
+   training_v3.alaqs / <study>_out.alaqs (sqlite inventory)
           │
           │  read engine EI, trajectories, taxi route, meteo
           ▼
    compute_caep14_reference.py
           │
-          ├── grid clip in EPSG:3857 (50×50 cells, 250 m)
+          ├── grid clip in EPSG:3857 (grid_3d_definition; 50×50 cells of 250 m on training_v3)
           ├── vertical clip at 914.4 m ±1 µm
           ├── runway alignment via pyproj.Geod
-          ├── runway/taxi intersection via Shapely buffer(1 m).intersection
+          ├── ANP arrivals: landing threshold + Touchdown Offset, rollout cut at the route exit
+          ├── ANP departures: brake release at the line-up point
+          ├── CUSTOM tracks: runway/taxi intersection via Shapely buffer(1 m)
           ├── per-segment fuel/time/EI per method
           ├── brake-wear PM10 for arrivals > 18 632 kg MTOW
           ├── FOCA Appendix A for helicopters
@@ -298,7 +308,10 @@ default, a fix in `twin_quadratic_fit_method.py`), the workflow is:
 1. Make the same change in `compute_caep14_reference.py` (and add a
    short comment pointing at the plugin commit hash that motivated it).
 2. Re-run the three validation invocations from step 2 above and
-   confirm that 14 of 15 movements still match to 0.00 %.
+   confirm that 15 of 15 movements still match to 0.00 % (movement 11 at
+   +0.01 % on `bffm2_traj`); `tests/test_plugin_csv_vs_reference.py`
+   checks this at 2e-4. When the plugin result itself changes, re-export
+   the pinned plugin CSVs first with `regenerate_plugin_csvs.py` (step 1).
 3. Regenerate the workbook via step 3 above.
 4. Update the pinned values in
    `tests/test_bffm2_ambient_propagation_regression.py` if BFFM2
@@ -368,7 +381,7 @@ segment fuel mass and the BFFM2 EI lookup, in both the standalone
 (`compute_caep14_reference._compute_fixed_wing`).
 
 After both fixes the standalone matches the plugin CSVs to within
-floating-point noise on all 14 fixed-wing + 2 helicopter movements
+floating-point noise on all 13 fixed-wing + 2 helicopter movements
 across `bymode`, `bffm2_anchor`, and `bffm2_traj`.
 
 ## October 2026: index step, re-export, helicopters
@@ -408,8 +421,9 @@ The 5.2.0 exports in `data/plugin_output/` were stale on two counts:
 they were made at ISA while the plugin now applies `tbl_InvMeteo` (5 to
 25 % on the BFFM2 methods on the fixture's cold and warm days), and they
 predate the 5.3.2 helicopter placement and the runway placement of ANP
-arrivals of this version (+8 to +16 % on the seven ANP arrivals for all
-three methods). They were re-exported with `tools/regenerate_plugin_csvs.py`
+arrivals of this version (the 5.2.0 exports were 2 to 17 % higher on the
+seven ANP arrivals, by pollutant: NOx 11 to 17 %, CO2 10 to 14 %, CO and
+HC 7 to 9 %, PM10 2 to 4 %, `bymode`). They were re-exported with `tools/regenerate_plugin_csvs.py`
 (the plugin's `EmissionCalculatorService`, the code path of the QGIS
 dialog, run without a display), and the comparison is now 0.00 % on 15 of
 15 movements for the three methods with `--use-meteo` (movement 11,
