@@ -142,6 +142,13 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   `exp(0.2 M²)`): on the training fixture's days, at most 0.08 % on NOx
   (`bffm2_anchor`) and 0.02 % on CO2 and NOx (`bffm2_traj`); `bymode`
   unchanged. Pinned plugin outputs and both validation workbooks re-exported.
+- Speed of sound for that Mach: `a = √(γ R T)` (γ 1.4, R 287.05287 J/(kg K),
+  ICAO Doc 7488), shared by the plugin and the standalone
+  (`open_alaqs/core/tools/bffm2.py::speed_of_sound_m_s`) and written out
+  independently in the CAEP14 reference, as the CAEP validation workbook
+  computes it. The linear form `331.3 + 0.606 (T − 273.15)` was 0.03 % low at
+  ISA and 0.16 % low at 243 K and at 307 K. **Results change** below 0.01 %
+  for the BFFM2 methods; `bymode` unchanged.
 
 ### Removed
 

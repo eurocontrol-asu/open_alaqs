@@ -626,7 +626,7 @@ def _get_meteo_at(conn, runway_time: str, use_isa: bool = True) -> dict:
         "P_Pa": float(row[1]),
         "RH": float(row[2]),
         "Humidity": float(row[3]) if row[3] is not None else None,
-        "speed_of_sound_m_s": 331.3 + 0.606 * (T_K - 273.15),
+        "speed_of_sound_m_s": math.sqrt(1.4 * 287.05287 * T_K),
     }
 
 
@@ -650,9 +650,12 @@ def _build_icao_eedb(engine_ei: dict) -> dict:
 
 def _segment_mach(tas_start: float, tas_end: float, T_K: float) -> float:
     """Per-segment flight Mach number TAS / a(T), at the START point's TAS
-    (as the plugin), with the speed of sound at the ambient temperature.
+    (as the plugin), with the speed of sound a = sqrt(gamma R T) at the
+    ambient temperature (gamma 1.4, R 287.05287 J/(kg K), ICAO Doc 7488, as
+    the CAEP validation workbook). Written out here on purpose: the
+    reference does not import the implementation it checks.
     """
-    sos = 331.3 + 0.606 * (T_K - 273.15)
+    sos = math.sqrt(1.4 * 287.05287 * T_K) if T_K > 0 else 0.0
     if sos <= 0:
         return 0.0
     return tas_start / sos

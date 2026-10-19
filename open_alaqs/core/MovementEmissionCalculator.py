@@ -23,7 +23,7 @@ from open_alaqs.core.interfaces.Emissions import (
 )
 from open_alaqs.core.interfaces.Engine import Engine
 from open_alaqs.core.interfaces.Movement import Movement, defaultEmissions
-from open_alaqs.core.tools import conversion
+from open_alaqs.core.tools import bffm2, conversion
 from open_alaqs.core.tools import runway_placement as rp
 from open_alaqs.core.tools import spatial
 from open_alaqs.core.tools.nox_correction_ambient import (
@@ -1117,8 +1117,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         # ToDo : Permanent definition
         try:
             T = self._method["config"]["ambient_conditions"].getTemperature()
-            # Celsius temperature: T − 273.15
-            speed_of_sound = float(331.3 + 0.606 * (T - 273.15))  # in m/s
+            speed_of_sound = bffm2.speed_of_sound_m_s(T)  # sqrt(gamma R T), m/s
             # Flight Mach number TAS / a(T), as BFFM2 (SAE AIR-5715) and the CAEP
             # validation use it. Until October 2026 this was multiplied by
             # sqrt(288.15 / T), which is not a Mach number away from ISA.

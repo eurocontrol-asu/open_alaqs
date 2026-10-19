@@ -43,6 +43,7 @@ from typing import Optional
 from shapely.geometry import LineString
 from shapely.ops import linemerge
 
+from open_alaqs.core.tools.bffm2 import speed_of_sound_m_s as _speed_of_sound_m_s
 from openalaqs_standalone.geometry import spatialite_blob_to_shapely
 
 # ---------------------------------------------------------------------------
@@ -669,7 +670,7 @@ def get_meteo_at(
         "P_Pa": float(row[1]),
         "RH": float(row[2]),
         "Humidity": float(row[3]) if row[3] is not None else None,
-        "speed_of_sound_m_s": 331.3 + 0.606 * (T_K - 273.15),
+        "speed_of_sound_m_s": _speed_of_sound_m_s(T_K),
     }
 
 

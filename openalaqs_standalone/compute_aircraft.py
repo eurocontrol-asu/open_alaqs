@@ -59,6 +59,7 @@ from datetime import datetime
 from typing import Optional
 
 from open_alaqs.core.tools.bffm2 import calculate_emission_index as _bffm2_ei
+from open_alaqs.core.tools.bffm2 import speed_of_sound_m_s as _speed_of_sound_m_s
 from openalaqs_standalone import geometry as geo
 from openalaqs_standalone import movements as mv
 from openalaqs_standalone import nox_correction as _nox_corr
@@ -195,10 +196,11 @@ def _segment_mach(tas_start: float, tas_end: float, T_K: float) -> float:
 
     Uses the segment's START-point TAS (as the plugin,
     MovementEmissionCalculator.calculate_emissions_per_segment) and the
-    speed of sound at the ambient temperature. The `tas_end` argument is
-    accepted for signature parity with the reference but is not used.
+    speed of sound a = sqrt(gamma R T) at the ambient temperature
+    (`bffm2.speed_of_sound_m_s`). The `tas_end` argument is accepted for
+    signature parity with the reference but is not used.
     """
-    sos = 331.3 + 0.606 * (T_K - 273.15)
+    sos = _speed_of_sound_m_s(T_K)
     if sos <= 0:
         return 0.0
     return tas_start / sos
