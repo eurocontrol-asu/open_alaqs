@@ -44,6 +44,7 @@ from shapely.geometry import LineString
 from shapely.ops import linemerge
 
 from open_alaqs.core.tools.bffm2 import speed_of_sound_m_s as _speed_of_sound_m_s
+from open_alaqs.core.tools.fuel_sulphur import sox_ei_g_kg
 from openalaqs_standalone.geometry import spatialite_blob_to_shapely
 
 # ---------------------------------------------------------------------------
@@ -448,6 +449,12 @@ def get_mtow_kg(conn: sqlite3.Connection, icao: str) -> Optional[float]:
         return None
 
 
+def _fuel_type_column(conn) -> str:
+    """`fuel_type` when default_aircraft_engine_ei has it, else NULL (jet fuel)."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(default_aircraft_engine_ei)")}
+    return "fuel_type" if "fuel_type" in cols else "NULL"
+
+
 def get_engine_ei(conn: sqlite3.Connection, engine_name: str) -> dict:
     """Per-mode EEDB fuel flow and emission indices for an engine.
 
@@ -475,11 +482,13 @@ def get_engine_ei(conn: sqlite3.Connection, engine_name: str) -> dict:
     result: dict = {}
     for r in conn.execute(
         """
-        SELECT mode, fuel_kg_sec, co_ei, hc_ei, nox_ei, sox_ei, pm10_ei
+        SELECT mode, fuel_kg_sec, co_ei, hc_ei, nox_ei, sox_ei, pm10_ei, {fuel}
         FROM default_aircraft_engine_ei
         WHERE engine_name = ?
            OR ((engine_name IS NULL OR engine_name = '') AND engine_full_name = ?)
-        """,
+        """.format(
+            fuel=_fuel_type_column(conn)
+        ),
         (engine_name, engine_name),
     ):
         result[r[0]] = {
@@ -487,7 +496,7 @@ def get_engine_ei(conn: sqlite3.Connection, engine_name: str) -> dict:
             "co_ei": r[2] or 0.0,
             "hc_ei": r[3] or 0.0,
             "nox_ei": r[4] or 0.0,
-            "sox_ei": r[5] or 0.0,
+            "sox_ei": sox_ei_g_kg(r[5], r[7]),
             "pm10_ei": r[6] or 0.0,
         }
     return result

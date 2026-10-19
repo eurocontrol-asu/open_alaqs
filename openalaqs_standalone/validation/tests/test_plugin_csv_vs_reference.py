@@ -29,7 +29,7 @@ from openalaqs_standalone.compute_movements import build_context, compute_for_mo
 DATA = Path(__file__).resolve().parents[1] / "data"
 FIXTURE = DATA / "training_v3.alaqs"
 TOOLS = Path(__file__).resolve().parents[1] / "tools"
-POLLUTANTS = ("co", "co2", "hc", "nox", "pm10")
+POLLUTANTS = ("co", "co2", "hc", "nox", "sox", "pm10")
 METHODS = ("bymode", "bffm2_anchor", "bffm2_traj", "bymode_nox_corr")
 
 

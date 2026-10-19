@@ -47,7 +47,7 @@ The engine EI table contains one row per engine per LTO mode (TX, AP, CL, TO). T
 | `mode` | LTO mode: TX, AP, CL, TO |
 | `fuel_kg_sec` | Reference fuel flow (kg/s per engine, SLS) |
 | `nox_ei`, `co_ei`, `hc_ei` | EEDB gas-phase emission indices (g/kg) |
-| `sox_ei` | SOx emission index (g/kg); 0.0 in all rows of the shipped data, so aircraft SOx is zero unless filled |
+| `sox_ei` | SOx (as SO2) emission index (g/kg): 1.32736 for the Jet Fuel rows and 0.2 for the AvGas rows of the shipped data (see below); a 0 or empty value is replaced by the value of the row's fuel |
 | `pm10_ei` | Total combustion PM10 EI (g/kg) = `pm10_nonvol` + `pm10_sul` + `pm10_organic` |
 | `pm10_nonvol` | Non-volatile PM (nvPM) mass EI (g/kg) from ICAO EEDB |
 | `pm10_sul` | Sulphate vPM EI (g/kg); see PM10 breakdown below |
@@ -72,7 +72,17 @@ Aircraft PM10 emissions are decomposed into three physical components, stored se
 pm10_sul (mg/kg) = FSC (kg/kg) × ε × 3 062 500
 ```
 
-The database uses **FSC ≈ 667 ppm (0.000667 kg/kg)** and **ε = 0.024** (CAEP14 default), giving a constant value of **~48.96 mg/kg** for all engines and all modes.
+The database holds a constant **48.96 mg/kg** for the Jet Fuel engines with PM data (0 for the AvGas rows). It equals FSC 0.068 % (680 ppm) × ε 0.024 × 3 000 000 (SO4/S = 96/32, the FOA3 values); with the 98/32 factor above it would correspond to FSC ≈ 667 ppm.
+
+**SOx (`sox_ei`)**: the rest of the fuel sulphur leaves as SO2, by fuel (`open_alaqs/core/tools/fuel_sulphur.py`):
+
+```
+SOx EI (g/kg) = 1000 × FSC × (1 − ε) × 64/32
+Jet fuel: FSC 0.00068, ε 0.024  →  1.32736   (the FSC and ε behind pm10_sul)
+AvGas:    FSC 0.0001,  ε 0      →  0.2       (measured AvGas sulphur at most 100 ppm, CRC AV-30-22 2025)
+```
+
+The CAEP14 calculation sheet (v14) has no SOx calculation; it uses FSC and ε for the sulphate vPM only (default FSC 0.0005, ε 0.024). The row's `fuel_type` decides (engine tests use their engine's row): Jet Fuel rows and turboshaft helicopters take the jet fuel value, AvGas rows and piston helicopters the AvGas value (FOCA gives no SOx for helicopters: mode fuel × the value). APU and GSE SOx come from their own tables. For comparison, the EUROCONTROL fuel burn and emissions tools (EMEP/EEA 2023 Annex 5) use 0.84 g/kg for all engines, about 420 ppm.
 
 **Organic vPM (`pm10_organic`)** — volatile organic particles from unburned hydrocarbons, calculated by the parameterised vPM method from ICAO Doc 9889 Appendix D:
 

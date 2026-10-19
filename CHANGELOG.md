@@ -79,6 +79,21 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 
 ### Fixed
 
+- Aircraft SOx was zero: `sox_ei` was 1.0 g/kg in every row of
+  `default_aircraft_engine_ei` until the 5.0.0 rebuild, which set it to 0.0
+  without a note. SOx (as SO2) now comes from the fuel sulphur,
+  1000 × FSC × (1 − ε) × 64/32 (`open_alaqs/core/tools/fuel_sulphur.py`):
+  1.32736 g/kg for jet fuel (FSC 0.068 %, ε 2.4 %, the FOA3 values behind
+  the stored `pm10_sul`) and 0.2 g/kg for AvGas (FSC 0.01 %, no sulphate),
+  by the row's `fuel_type`. The shipped table and the bundled `.alaqs`
+  files carry these values; a 0 or empty `sox_ei` in an existing study is
+  replaced by the fuel's value at run time. Helicopters (FOCA gives no
+  SOx) get mode fuel × the value (PISTON: AvGas). Plugin, standalone and
+  CAEP14 reference alike; the plugin/reference gate now compares SOx.
+  APU and GSE keep their own tables. **Results change**: aircraft SOx
+  goes from 0 to about 1.33 g per kg of jet fuel (training example:
+  3.24 kg for the 13 movements, `bymode`). Docs: `pm10_sul` corresponds
+  to FSC 680 ppm with SO4/S = 96/32 (the docs said 667 ppm).
 - Plugin: the ICCAIA NOx ambient correction (bymode, "Apply NOx
   corrections") was applied to every flight segment, approach included;
   it is defined for take-off and climb-out, which is what its module and

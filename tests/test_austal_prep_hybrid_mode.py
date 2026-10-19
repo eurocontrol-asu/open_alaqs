@@ -223,8 +223,8 @@ def test_hybrid_aircraft_uses_per_hour_efiles(tmp_path: Path):
     # iq columns are '01.iq' ... '23.iq'. Source dir indices are 1-based.
     iq_cols = sorted(c for c in cols if c.endswith(".iq"))
     n_sources = len(iq_cols)
-    assert n_sources >= 5, (
-        f"expected at least 5 sources (5 aircraft sub-sources for "
+    assert n_sources >= 6, (
+        f"expected at least 6 sources (6 aircraft sub-sources for "
         f"training_v3), got {n_sources}"
     )
 
@@ -248,11 +248,11 @@ def test_hybrid_aircraft_uses_per_hour_efiles(tmp_path: Path):
                 f"(expected [1] or [1..{N_HOURS_EXPECTED}])"
             )
 
-    # training_v3 emits 5 pollutants from aircraft (bymode: co, hc,
-    # nox, pm10, pm25; no sox), so expect 5 aircraft sub-sources.
-    assert len(aircraft_dirs) == 5, (
-        f"expected exactly 5 aircraft sub-sources in training_v3 bymode "
-        f"(co, hc, nox, pm10, pm25), found {len(aircraft_dirs)}: "
+    # training_v3 emits 6 pollutants from aircraft (bymode: co, hc,
+    # nox, sox, pm10, pm25), so expect 6 aircraft sub-sources.
+    assert len(aircraft_dirs) == 6, (
+        f"expected exactly 6 aircraft sub-sources in training_v3 bymode "
+        f"(co, hc, nox, sox, pm10, pm25), found {len(aircraft_dirs)}: "
         f"dirs {aircraft_dirs}"
     )
     assert (

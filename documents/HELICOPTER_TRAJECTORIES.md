@@ -159,7 +159,9 @@ elsewhere:
   Approach). See `compute_lto()` in `foca_heli_utils.py`. The
   per-pollutant fuel-flow and emission-index helpers
   (`piston_fuel_flow_kg_s`, `turboshaft_ei_nox_g_kg`, etc.) live in
-  `foca_heli.py`.
+  `foca_heli.py`. FOCA gives no SOx: it is the mode fuel times
+  1.32736 g/kg for turboshaft engines (jet fuel) or 0.2 g/kg for
+  PISTON engines (AvGas), from `fuel_sulphur.py`.
 - **Mode time-in-mode allocation**. The builder's `t_s` times are
   used only to cut the active mode: the FOCA mode mass is scaled by
   the share of its time spent below the vertical limit and inside the

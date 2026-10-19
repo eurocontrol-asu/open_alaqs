@@ -74,6 +74,13 @@ from shapely.ops import linemerge
 
 # Plugin-side FOCA helicopter math (pure Python, no QGIS dependency)
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+# SOx (as SO2) per kg fuel when the engine table gives none: written out here,
+# independently of open_alaqs/core/tools/fuel_sulphur.py. Jet fuel: the FOA3
+# fuel sulphur behind the stored pm10_sul (FSC 0.068 %, 2.4 % to S(VI));
+# AvGas (and PISTON helicopters): FSC 0.01 %, no sulphate.
+SOX_EI_JET_G_KG = 1000.0 * 0.00068 * (1.0 - 0.024) * 2.0
+SOX_EI_AVGAS_G_KG = 1000.0 * 0.0001 * 2.0
 from open_alaqs.core.tools.bffm2 import (  # noqa: E402
     calculate_emission_index as bffm2_ei,
 )
@@ -567,6 +574,12 @@ def _get_mtow_kg(conn, icao: str) -> Optional[float]:
         return None
 
 
+def _fuel_type_column(conn) -> str:
+    """`fuel_type` when default_aircraft_engine_ei has it, else NULL (jet fuel)."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(default_aircraft_engine_ei)")}
+    return "fuel_type" if "fuel_type" in cols else "NULL"
+
+
 def _get_engine_ei(conn, engine_name: str) -> dict:
     """Per-mode EEDB values of the movement's engine.
 
@@ -581,11 +594,13 @@ def _get_engine_ei(conn, engine_name: str) -> dict:
     result = {}
     for r in conn.execute(
         """
-        SELECT mode, fuel_kg_sec, co_ei, hc_ei, nox_ei, sox_ei, pm10_ei
+        SELECT mode, fuel_kg_sec, co_ei, hc_ei, nox_ei, sox_ei, pm10_ei, {fuel}
         FROM default_aircraft_engine_ei
         WHERE engine_name = ?
            OR ((engine_name IS NULL OR engine_name = '') AND engine_full_name = ?)
-        """,
+        """.format(
+            fuel=_fuel_type_column(conn)
+        ),
         (engine_name, engine_name),
     ):
         result[r[0]] = {
@@ -593,7 +608,12 @@ def _get_engine_ei(conn, engine_name: str) -> dict:
             "co_ei": r[2] or 0.0,
             "hc_ei": r[3] or 0.0,
             "nox_ei": r[4] or 0.0,
-            "sox_ei": r[5] or 0.0,
+            "sox_ei": r[5]
+            or (
+                SOX_EI_AVGAS_G_KG
+                if str(r[7] or "").replace(" ", "").lower().startswith("avgas")
+                else SOX_EI_JET_G_KG
+            ),
             "pm10_ei": r[6] or 0.0,
         }
     return result
@@ -963,7 +983,9 @@ def _compute_helicopter_for_movement(
         "co2": (gi.co2_g + a * active.co2_g) / 1000.0,
         "hc": (gi.hc_g + a * active.hc_g) / 1000.0,
         "nox": (gi.nox_g + a * active.nox_g) / 1000.0,
-        "sox": 0.0,
+        "sox": (gi.fuel_kg + a * active.fuel_kg)
+        * (SOX_EI_AVGAS_G_KG if engine_type == "PISTON" else SOX_EI_JET_G_KG)
+        / 1000.0,
         "pm10": (gi.pm_g + a * active.pm_g) / 1000.0,
         # FOCA 2015 writes helicopter PM mass only to PM10; PM1/PM2.5
         # are not split out (see open_alaqs/core/interfaces/Emissions.py

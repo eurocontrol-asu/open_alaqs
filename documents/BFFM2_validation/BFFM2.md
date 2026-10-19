@@ -153,10 +153,10 @@ BFFM2 does not interpolate PM or SOx on a gas-phase log-log curve. Instead, afte
 
 - **`pm10_g_kg`** = `pm10_ei` (total combustion PM10: nonvol + sulphate + organic)
 - **`pm10_nonvol_g_kg`** = `pm10_nonvol` (stored value; the MEEM V1 result is computed but not written to any output column, see [MEEM V1](#meem-v1--nvpm-ambient-correction))
-- **`pm10_sul_g_kg`** = `pm10_sul` (~0.04896 g/kg stored value; back-calculates to FSC ≈ 667 ppm with ε = 0.024)
+- **`pm10_sul_g_kg`** = `pm10_sul` (0.04896 g/kg stored value = FSC 0.068 % × ε 0.024 × 96/32)
 - **`pm10_organic_g_kg`** = `pm10_organic`
 - **`nvpm_number_kg`** = MEEM V1 value (not written to any output column)
-- **`sox_g_kg`** = `sox_ei` (0.0 in all rows of the shipped `default_aircraft_engine_ei`, so aircraft SOx is zero unless the study fills this column)
+- **`sox_g_kg`** = `sox_ei` (1.32736 g/kg for jet fuel, 0.2 g/kg for AvGas in the shipped `default_aircraft_engine_ei`; 0 or empty is replaced by the fuel's value, `fuel_sulphur.py`)
 - **`p1_g_kg`**, **`p2_g_kg`** = `p1_ei` = `p2_ei` = `pm10_ei` (PM1.0 / PM2.5 placeholders, currently equal to PM10)
 
 The MEEM V1 result is stored in `nvpm_g_kg` and `nvpm_number_kg` (`Engine.py:294-295`), which `Emission.add` does not read (`Emissions.py:167-171`); `pm10_kg` and `pm10_nonvol_kg` use the stored EIs.
@@ -405,7 +405,7 @@ MovementSourceModule.process()
 | `default_aircraft_engine_ei` | `fuel_kg_sec` | EEDB reference fuel flow (kg/s per engine, SLS) |
 | `default_aircraft_engine_ei` | `nox_ei`, `co_ei`, `hc_ei` | EEDB emission indices (g/kg) |
 | `default_aircraft_engine_ei` | `pm10_nonvol` | nvPM mass EI (g/kg) |
-| `default_aircraft_engine_ei` | `pm10_sul` | Sulphate vPM EI (g/kg); ~0.04896 g/kg stored constant (FSC ≈ 667 ppm, ε = 0.024) |
+| `default_aircraft_engine_ei` | `pm10_sul` | Sulphate vPM EI (g/kg); 0.04896 g/kg stored constant (FSC 680 ppm, ε = 0.024, SO4/S = 96/32) |
 | `default_aircraft_engine_ei` | `pm10_organic` | Organic vPM EI (g/kg) |
 | `default_aircraft_engine_ei` | `pm10_ei` | Total PM10 EI = nonvol + sul + organic (g/kg) |
 | `default_aircraft_engine_ei` | `p1_ei`, `p2_ei` | PM1.0 / PM2.5 placeholders; currently = `pm10_ei` |

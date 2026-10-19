@@ -53,6 +53,7 @@ from open_alaqs.core.tools.foca_heli_utils import (
     _mode_result,
     compute_mode_emissions,
 )
+from open_alaqs.core.tools.fuel_sulphur import helicopter_sox_ei_g_kg
 from openalaqs_standalone import movements as mv
 
 # The six pollutants the per-movement totals carry. Kept as a module
@@ -144,13 +145,14 @@ def compute_helicopter(conn, mov: dict, ctx: Optional[dict] = None) -> Optional[
         )
 
     # Half-LTO totals: GI plus the active mode, converted g -> kg.
-    # SOx is not modelled by FOCA; it is zero, matching the reference.
+    # FOCA gives no SOx: fuel times the fuel's SOx EI, as the plugin does.
+    sox_ei = helicopter_sox_ei_g_kg(category.value)
     em = {
         "co": (gi.co_g + a * active.co_g) / 1000.0,
         "co2": (gi.co2_g + a * active.co2_g) / 1000.0,
         "hc": (gi.hc_g + a * active.hc_g) / 1000.0,
         "nox": (gi.nox_g + a * active.nox_g) / 1000.0,
-        "sox": 0.0,
+        "sox": (gi.fuel_kg + a * active.fuel_kg) * sox_ei / 1000.0,
         "pm10": (gi.pm_g + a * active.pm_g) / 1000.0,
         # Helicopter PM is written to PM10 only, matching the plugin's
         # FOCA 2015 behaviour (interfaces/Emissions.py writes the FOCA
@@ -201,7 +203,7 @@ def compute_helicopter(conn, mov: dict, ctx: Optional[dict] = None) -> Optional[
             "co2": gi.co2_g / 1000.0,
             "hc": gi.hc_g / 1000.0,
             "nox": gi.nox_g / 1000.0,
-            "sox": 0.0,
+            "sox": gi.fuel_kg * sox_ei / 1000.0,
             "pm10": gi.pm_g / 1000.0,
             "pm25": 0.0,
         }

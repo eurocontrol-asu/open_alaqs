@@ -26,6 +26,7 @@ from open_alaqs.core.interfaces.Movement import Movement, defaultEmissions
 from open_alaqs.core.tools import bffm2, conversion
 from open_alaqs.core.tools import runway_placement as rp
 from open_alaqs.core.tools import spatial
+from open_alaqs.core.tools.fuel_sulphur import helicopter_sox_ei_g_kg
 from open_alaqs.core.tools.nox_correction_ambient import (
     nox_correction_for_ambient_conditions,
 )
@@ -967,7 +968,8 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         # gi_fraction above (matching the standalone's
         # compute_helicopter.compute_helicopter line-by-line).
         gi_emissions = Emission(defaultValues=defaultEmissions)
-        gi_emissions.add_from_mode_result(gi, scale=1.0)
+        sox_ei = helicopter_sox_ei_g_kg(category.value)
+        gi_emissions.add_from_mode_result(gi, scale=1.0, sox_ei_g_kg=sox_ei)
         # The take-off / touchdown spot: the trajectory's ground-idle point.
         gi_point_wkt = None
         for point_ in self._trajectory.getPoints():
@@ -1015,7 +1017,9 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 if LineString([q1, q2]).length > 0.0
             ]
         active_emissions = Emission(defaultValues=defaultEmissions)
-        active_emissions.add_from_mode_result(active, scale=active_scale)
+        active_emissions.add_from_mode_result(
+            active, scale=active_scale, sox_ei_g_kg=sox_ei
+        )
 
         flight_wkt = None
         space_in_segment_ = 0.0

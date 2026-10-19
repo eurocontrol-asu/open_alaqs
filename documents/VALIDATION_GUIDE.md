@@ -223,9 +223,10 @@ the totals must match `USAGE.md` § "Quick smoke test" (31.841 / 30.698 /
   Tolerance bands per V1. Expected: PASS at 1e-6 everywhere except
   `bffm2_traj` movement 11 (CUSTOM, PHBBA), PASS-WITH-DRIFT at 8e-5 on
   every pollutant.
-- Cross-method sanity (no aircraft should produce zero CO, CO2, HC, NOx or
-  PM10; SOx is 0 for every movement of this fixture, plugin and reference
-  alike; all 15 movements should appear in each output).
+- Cross-method sanity (no aircraft should produce zero CO, CO2, HC, NOx,
+  SOx or PM10; SOx is fuel × 1.32736 g/kg for every movement of this
+  fixture (jet fuel), helicopters included; all 15 movements should appear
+  in each output).
 - Compare the aggregate NOx totals against the expected table above.
 
 ---

@@ -170,7 +170,9 @@ class Emission(Store):
                 pollutant_type, PollutantUnit.GRAM, pollutant_ei * fuel_burned
             )
 
-    def add_from_mode_result(self, mode_result, scale: float = 1.0) -> None:
+    def add_from_mode_result(
+        self, mode_result, scale: float = 1.0, sox_ei_g_kg: float = 0.0
+    ) -> None:
         """Add emissions from a FOCA-helicopter ``ModeResult`` (Phase 1).
 
         ``ModeResult`` carries pre-totalled values for one LTO mode (GI/TO/AP)
@@ -188,6 +190,9 @@ class Emission(Store):
         callers pass scale=0.8 for departure GI and scale=0.2 for arrival
         GI. For TO and AP modes the convention is scale=1.0 (the default).
 
+        SOx is the mode fuel times ``sox_ei_g_kg`` (FOCA gives none; the
+        caller passes the fuel's value, open_alaqs/core/tools/fuel_sulphur.py).
+
         PM mass is written to PM10 (helicopters' soot is total PM in FOCA's
         definition). PM1/PM2/PM10Organic/PM10Nonvol/PM10Sul are not split out;
         future enhancement can populate the size-fractionated buckets from
@@ -199,6 +204,12 @@ class Emission(Store):
         self.add_value(PollutantType.CO, PollutantUnit.GRAM, mode_result.co_g * scale)
         self.add_value(PollutantType.PM10, PollutantUnit.GRAM, mode_result.pm_g * scale)
         self.add_value(PollutantType.CO2, PollutantUnit.GRAM, mode_result.co2_g * scale)
+        # FOCA gives no SOx: from the fuel sulphur, as for fixed-wing engines.
+        self.add_value(
+            PollutantType.SOx,
+            PollutantUnit.GRAM,
+            mode_result.fuel_kg * sox_ei_g_kg * scale,
+        )
 
     def addGeneric(self, emission_index_, factor, unit, new_unit=""):
         for key in list(emission_index_.getObjects().keys()):

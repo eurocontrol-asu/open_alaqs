@@ -38,6 +38,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from open_alaqs.core.tools.fuel_sulphur import sox_ei_g_kg
+
 # Mode-keys shared with the plugin. Order preserved so downstream tables
 # have a stable column order.
 _MODE_KEYS: Tuple[str, ...] = ("TX", "AP", "CL", "TO")
@@ -586,8 +588,17 @@ def _load_ei_lookup(conn: sqlite3.Connection) -> Dict[Tuple[str, str], Dict[str,
     cur.execute(
         "SELECT engine_name, mode, thrust, fuel_kg_sec, "
         "co_ei, hc_ei, nox_ei, sox_ei, pm10_ei, p1_ei, p2_ei, "
-        "pm10_nonvol, pm10_sul, pm10_organic "
-        "FROM default_aircraft_engine_ei"
+        "pm10_nonvol, pm10_sul, pm10_organic, "
+        + (
+            "fuel_type"
+            if "fuel_type"
+            in {
+                r[1]
+                for r in conn.execute("PRAGMA table_info(default_aircraft_engine_ei)")
+            }
+            else "NULL"
+        )
+        + " FROM default_aircraft_engine_ei"
     )
     out: Dict[Tuple[str, str], Dict[str, Any]] = {}
     for row in cur.fetchall():
@@ -602,7 +613,7 @@ def _load_ei_lookup(conn: sqlite3.Connection) -> Dict[Tuple[str, str], Dict[str,
             "co_ei": row[4],
             "hc_ei": row[5],
             "nox_ei": row[6],
-            "sox_ei": row[7],
+            "sox_ei": sox_ei_g_kg(row[7], row[14]),
             "pm10_ei": row[8],
             "p1_ei": row[9],
             "p2_ei": row[10],

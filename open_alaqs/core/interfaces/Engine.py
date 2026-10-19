@@ -5,6 +5,7 @@ from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import EmissionIndex, PollutantType
 from open_alaqs.core.interfaces.Store import Store
 from open_alaqs.core.tools.bffm2 import calculate_emission_index
+from open_alaqs.core.tools.fuel_sulphur import sox_ei_g_kg
 from open_alaqs.core.tools.twin_quadratic_fit_method import (
     calculate_fuel_flow_from_power_setting,
 )
@@ -772,6 +773,10 @@ class EngineEmissionIndex(Store):
             # Set the values with not update values with empty strings
             if val_key in val and isinstance(val.get(val_key), (int, float)):
                 ei_val[ei_val_key] = val[val_key]
+
+        # SOx from the fuel sulphur when the table gives none (the shipped
+        # default_aircraft_engine_ei had sox_ei 0.0 in every row up to 5.3.6).
+        ei_val["sox_g_kg"] = sox_ei_g_kg(ei_val.get("sox_g_kg"), val.get("fuel_type"))
 
         # Create the emission index
         emission_index = EmissionIndex(initValues=ei_val, defaultValues=defaultEI)
