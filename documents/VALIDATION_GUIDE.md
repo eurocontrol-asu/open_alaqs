@@ -205,8 +205,8 @@ the V2 result.)
 
 If you are running the 13-movement example inventory
 `example/training/training_out.alaqs` (no helicopters) as a smoke test,
-the totals must match `USAGE.md` § "Quick smoke test" (31.804 / 30.661 /
-30.024 / 17.419 kg NOx for the four methods, with or without
+the totals must match `USAGE.md` § "Quick smoke test" (31.841 / 30.698 /
+30.056 / 17.461 kg NOx for the four methods, with or without
 `--aircraft-only`).
 
 ### Outputs to send

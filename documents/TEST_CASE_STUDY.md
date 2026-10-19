@@ -167,10 +167,10 @@ Create taxiways covering the main taxiway system at EHRD. For this study, the fo
 
 | Name | Speed |
 |---|---|
-| B, F, N, V, V1, V2, V3, V6, Y | 15 km/h |
+| B, F, N, V, V0, V1, V1E, V2, V3, V6, Y | 15 km/h |
 | Y1, Y2 | 30 km/h |
 
-Draw each taxiway segment as a linestring along the taxiway centreline. Use snapping to ensure segments connect at junctions. Each segment is given a unique **Name** and the **Speed** above.
+Draw each taxiway segment as a linestring along the taxiway centreline. Use snapping to ensure segments connect at junctions. Each segment is given a unique **Name** and the **Speed** above. V0 joins the end of V to the V1/V3/Y junction, and V1E continues V1 to the runway 06 threshold; both are drawn for this example, not taken from the aerodrome chart.
 
 > The distinction between taxiways (geometric segments) and taxi-routes (operational paths) is important. Taxiways are individual line segments. Taxi-routes link several taxiway segments into the path an aircraft follows from gate to runway. You define taxi-routes in the Routes Editor, described in the [Taxi routes](#taxi-routes) section.
 
@@ -330,9 +330,9 @@ Taxi routes define the sequence of taxiway segments an aircraft follows between 
 
 For each route, select the **Gate**, **Runway direction**, and **Operation type** (Arrival or Departure), then choose the ordered sequence of taxiway segment names. Finally, select the **aircraft groups** that use this route (for EHRD all groups share the same routes).
 
-Create six taxi routes for this study — one arrival and one departure variant for each of the three gates G2, G4, G7. Three are detailed below as representative examples; create the other three (G2 arrival, G4 departure, G7 departure) by analogous taxiway-segment selection. The `training_movements.csv` file references all six route names.
+Create twelve taxi routes for this study: for each of the three gates G2, G4 and G7, one arrival and one departure route per runway direction (06 and 24). List a departure route's taxiways from the stand to the runway, and an arrival route's from the runway to the stand. One route is detailed below; the table after it lists all twelve. Each row of `training_movements.csv` references the route of its runway direction.
 
-**Route G4/24/A/1** — Arrivals from runway 24 to gate G4
+**Route G4/24/A/1**: arrivals from runway 24 to gate G4
 
 | Field | Value |
 |---|---|
@@ -343,29 +343,24 @@ Create six taxi routes for this study — one arrival and one departure variant 
 | Taxiway sequence | V3 → Y → Y1 |
 | Aircraft groups | All (JET BUSINESS, JET LARGE, JET MEDIUM, JET REGIONAL, JET SMALL, TURBOPROP, PROPELLER) |
 
-**Route G7/24/A/1** — Arrivals from runway 24 to gate G7
+| Route | Taxiway sequence | Where it meets the runway |
+|---|---|---|
+| G2/24/D/1 | F → N → V → V6 | line-up 82 m from the 24 threshold |
+| G4/24/D/1 | Y1 → Y → V0 → V → V6 | line-up 82 m from the 24 threshold |
+| G7/24/D/1 | B → Y2 → Y → V0 → V → V6 | line-up 82 m from the 24 threshold |
+| G2/24/A/1 | V3 → V0 → N → F | exit 1441 m from the 24 threshold |
+| G4/24/A/1 | V3 → Y → Y1 | exit 1441 m from the 24 threshold |
+| G7/24/A/1 | V3 → Y → Y2 → B | exit 1441 m from the 24 threshold |
+| G2/06/D/1 | F → N → V0 → V1 → V1E | line-up at the 06 threshold |
+| G4/06/D/1 | Y1 → Y → V1 → V1E | line-up at the 06 threshold |
+| G7/06/D/1 | B → Y2 → Y → V1 → V1E | line-up at the 06 threshold |
+| G2/06/A/1 | V6 → V → N → F | exit 2116 m from the 06 threshold |
+| G4/06/A/1 | V6 → V → V0 → Y → Y1 | exit 2116 m from the 06 threshold |
+| G7/06/A/1 | V6 → V → V0 → Y → Y2 → B | exit 2116 m from the 06 threshold |
 
-| Field | Value |
-|---|---|
-| Gate | G7 |
-| Runway | 24 |
-| Operation | Arrival |
-| Instance | 1 |
-| Taxiway sequence | V2 → Y → B → V1 → Y2 |
-| Aircraft groups | All |
+All routes use instance 1 and all aircraft groups.
 
-**Route G2/24/D/1** — Departures from gate G2 to runway 24
-
-| Field | Value |
-|---|---|
-| Gate | G2 |
-| Runway | 24 |
-| Operation | Departure |
-| Instance | 1 |
-| Taxiway sequence | V6 → F → N → V |
-| Aircraft groups | All |
-
-> **Note:** EHRD has a single physical runway with directions 06 and 24, and the movements on runway 06 (rows 6, 8, 13) use the routes named for 24. The taxi route sets where a departure lines up (where the route last meets the runway) and where an arrival leaves the runway, so a route drawn for one direction can fit the other badly: row 13 (arrival on 06, route G4/24/A/1) leaves the runway 757 m from the 06 threshold at 76 kt, which the log reports. Each gate's arrival and departure routes list the same taxiways; they are read in the direction of travel.
+> **Note:** The taxi route sets where a departure lines up (where the route last meets the runway) and where an arrival leaves the runway, so each runway direction needs its own routes. Routes drawn for the other direction would line departures up partway along the runway and make arrivals leave it at high speed; the runway checks in the log (see Results Analysis) report such cases.
 
 #### Create output file
 
@@ -425,7 +420,7 @@ The file `training_movements.csv` (semicolon-delimited) defines the 13 aircraft 
 | 1 | 2025-12-01 06:05 | A20N | G4 | A | 24 | 01P20CM128 (LEAP-1A26) | JET-SMALL-A-1 | G4/24/A/1 |
 | 2 | 2025-12-01 06:15 | A20N | G4 | D | 24 | 01P20CM128 (LEAP-1A26) | JET-SMALL-D-1 | G4/24/D/1 |
 | 3 | 2025-12-01 06:40 | E190 | G7 | A | 24 | 11GE144 (CF34-10E) | JET-REGIONAL-A-1 | G7/24/A/1 |
-| 8 | 2025-12-02 07:30 | E190 | G4 | D | 06 | 11GE144 (CF34-10E) | JET-REGIONAL-D-1 | G4/24/D/1 |
+| 8 | 2025-12-02 07:30 | E190 | G4 | D | 06 | 11GE144 (CF34-10E) | JET-REGIONAL-D-1 | G4/06/D/1 |
 | 11 | 2025-12-03 07:00 | A20N | G2 | D | 24 | 01P20CM128 (LEAP-1A26) | **1764584438_PHBBA** (CUSTOM) | G2/24/D/1 |
 
 Key observations:
@@ -502,16 +497,16 @@ Click **Visualize Emission Calculation** in the toolbar and browse to `training_
 
 2. **Movement NOx by method**: select *MovementSource*, NOx. Run with **ByMode** and export the CSV. Re-run with **BFFM2** and export again. Compare the total NOx:
    - ByMode gives higher NOx for departures (BFFM2: 50 % less on the six departures).
-   - BFFM2 gives 29 % less NOx for the arrivals (2 to 52 % per movement).
+   - BFFM2 gives 29 % less NOx for the arrivals (2 to 50 % per movement).
    - BFFM2 gives 8 % more CO for the arrivals (1 to 18 % per movement).
 
-3. **Per-aircraft method drift**: extend exercise 2 by splitting the per-movement CSV by aircraft type. Compare the BFFM2-minus-ByMode NOx delta for the eight A20N movements versus the five E190 movements. Because the two aircraft have different engine power schedules and different default ANP profiles, the BFFM2 correction shifts them differently. On this study the drift is larger on the A20N arrivals (NOx 40 % below ByMode) than on the E190 arrivals (12 % below). This illustrates that BFFM2 vs ByMode differences are aircraft-type dependent, not just mode dependent.
+3. **Per-aircraft method drift**: extend exercise 2 by splitting the per-movement CSV by aircraft type. Compare the BFFM2-minus-ByMode NOx delta for the eight A20N movements versus the five E190 movements. Because the two aircraft have different engine power schedules and different default ANP profiles, the BFFM2 correction shifts them differently. On this study the drift is larger on the A20N arrivals (NOx 39 % below ByMode) than on the E190 arrivals (12 % below). This illustrates that BFFM2 vs ByMode differences are aircraft-type dependent, not just mode dependent.
 
 4. **PM10 sub-components**: select *MovementSource*, examine the `pm10_nonvol_kg`, `pm10_sul_kg`, and `pm10_organic_kg` output columns alongside `pm10_kg`. For departures, `pm10_kg = pm10_nonvol_kg + pm10_sul_kg + pm10_organic_kg` exactly. For arrivals, `pm10_kg` also includes the FOA3 brake-wear contribution (`MTOW × 0.000476 − 8.74` grams per movement), visible as a surplus in `pm10_kg` relative to the sub-component sum. Verify that `p1_kg = p2_kg = pm10_kg` for all movements.
 
 5. **Smooth & Shift**: enable Source Dynamics in the Configuration tab. Re-run the Vector Layer visualisation. Observe how the taxi emission distribution widens and shifts downwind compared to the raw linestring geometry.
 
-The log file (accessible via **Review Logs**) reports an ADS-B fuel flow above 1.5 times the EEDB take-off value (none here: movement 11's ADS-B fuel flow stays far below it) and runway exits that do not fit. For this study it reports three: route G2/24/A/1 meets runway 24 only before the touchdown, for profile JET-SMALL-A-1 (row 5) and for JET-REGIONAL-A-1 (row 12), and profile JET-SMALL-A-1 on route G4/24/A/1 leaves the runway at 76 kt, 757 m from the threshold (row 13, runway 06).
+The log file (accessible via **Review Logs**) reports an ADS-B fuel flow above 1.5 times the EEDB take-off value (none here: movement 11's ADS-B fuel flow stays far below it) and taxi routes that do not fit the runway (an arrival leaving the runway above 50 kt, or a route that meets the runway only before the touchdown). For this study it reports none.
 
 ---
 

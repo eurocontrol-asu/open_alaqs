@@ -132,7 +132,7 @@ PYTHONPATH=. python3 openalaqs_standalone/validation/tools/regenerate_training_v
     --out example/training/training_validation_reference.xlsx
 ```
 
-On that inventory the plugin and the reference agree to 3e-10 on every
+On that inventory the plugin and the reference agree to 3e-13 on every
 movement for `bymode` and `bffm2_anchor` and on the ANP movements for
 `bffm2_traj`; movement 11 (CUSTOM) differs by 4e-5 on `bffm2_traj`, and the
 NOx-corrected run by 3e-6 on movements 10 and 11. (With the

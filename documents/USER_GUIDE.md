@@ -627,7 +627,7 @@ In the **Configuration** tab, the user can specify the general settings for the 
 | Method | Description |
 |---|---|
 | **ByMode** | Uses ICAO EEDB emission indices for each LTO mode (TO, CL, AP, TX) directly, based on the time-in-mode from the movement profile. Simple and fast. |
-| **BFFM2** | Boeing Fuel Flow Method 2. Uses the actual power setting from each profile segment to derive a fuel-flow-dependent emission index via log-log interpolation through the four EEDB breakpoints. Applies ambient corrections for temperature, pressure, humidity and flight Mach number (TAS / a, a = √(1.4 · 287.05287 · T)). On the training example it gives 29 % less NOx and 8 % more CO than ByMode on the arrivals (per movement 2 to 52 % less NOx, 1 to 18 % more CO) and 50 % less NOx on the departures. See [`BFFM2.md`](BFFM2_validation/BFFM2.md) for the full methodology. |
+| **BFFM2** | Boeing Fuel Flow Method 2. Uses the actual power setting from each profile segment to derive a fuel-flow-dependent emission index via log-log interpolation through the four EEDB breakpoints. Applies ambient corrections for temperature, pressure, humidity and flight Mach number (TAS / a, a = √(1.4 · 287.05287 · T)). On the training example it gives 29 % less NOx and 8 % more CO than ByMode on the arrivals (per movement 2 to 50 % less NOx, 1 to 18 % more CO) and 50 % less NOx on the departures. See [`BFFM2.md`](BFFM2_validation/BFFM2.md) for the full methodology. |
 
 Changing any setting discards the previous calculation; it is recalculated when an output (View Emissions Table, Plot Time Series, Plot Vector Layer) is next requested.
 

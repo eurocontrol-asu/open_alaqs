@@ -160,6 +160,18 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   and let short names match several rows; helicopters are the types listed in
   `default_helicopter`, not the movements without a `profile_id`. No change
   on the training fixture; see `CAEP14_VALIDATION.md`.
+- Training example (EHRD) taxi routes: the six routes were drawn for runway
+  24 but also used by the runway 06 movements, and taxiway V stopped 84 m
+  short of the V1/V3/Y junction, so departures lined up 757 to 2116 m along
+  the runway and lifted off up to 1.2 km past its end, and two arrival
+  routes met the runway only before the touchdown. Taxiways V0 (closing the
+  gap) and V1E (V1 to the 06 threshold) added; twelve routes, one per gate,
+  operation and runway direction; movements 6, 8 and 13 use the 06 routes.
+  The runway checks report no errors or warnings. Example NOx totals
+  +0.1 % (`bymode`, `bffm2_anchor`) and +0.2 % (`bffm2_traj`), all from
+  movement 13; the `training_v3` validation fixtures got the same routes
+  (pinned outputs unchanged, 6e-13). `training_out.alaqs` and the example
+  workbook rebuilt.
 
 ### Removed
 
