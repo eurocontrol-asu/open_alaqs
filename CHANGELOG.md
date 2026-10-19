@@ -37,6 +37,10 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - ADS-B (CUSTOM) profiles and tracks are placed as before.
 - The plugin's runway trajectory cache moves to
   `cache_runway_trajectories_v5`; older cache tables are no longer read.
+- MEEM V2 (CAEP14 v12+) is implemented in `meem_v2.py` but not used; its
+  adoption is to be decided. The emission calculation runs MEEM V1 for any
+  `meem_version` value and logs a warning when another one is requested
+  (`MovementSourceModule`).
 
 ### Added
 
@@ -83,17 +87,50 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   `default_aircraft_engine_ei` until the 5.0.0 rebuild, which set it to 0.0
   without a note. SOx (as SO2) now comes from the fuel sulphur,
   1000 × FSC × (1 − ε) × 64/32 (`open_alaqs/core/tools/fuel_sulphur.py`):
-  1.32736 g/kg for jet fuel (FSC 0.068 %, ε 2.4 %, the FOA3 values behind
-  the stored `pm10_sul`) and 0.2 g/kg for AvGas (FSC 0.01 %, no sulphate),
+  0.758 g/kg for jet fuel (the fuel selected in the CAEP14 sheet v14 inputs (FSC 0.000383, ε 0.01, its ICAO vPM parameterisation example);
+  the stored `pm10_sul` stays at the FOA3 value, FSC 680 ppm) and 0.2 g/kg
+  for AvGas (FSC 0.01 %, no sulphate),
   by the row's `fuel_type`. The shipped table and the bundled `.alaqs`
   files carry these values; a 0 or empty `sox_ei` in an existing study is
   replaced by the fuel's value at run time. Helicopters (FOCA gives no
   SOx) get mode fuel × the value (PISTON: AvGas). Plugin, standalone and
   CAEP14 reference alike; the plugin/reference gate now compares SOx.
   APU and GSE keep their own tables. **Results change**: aircraft SOx
-  goes from 0 to about 1.33 g per kg of jet fuel (training example:
-  3.24 kg for the 13 movements, `bymode`). Docs: `pm10_sul` corresponds
+  goes from 0 to 0.758 g per kg of jet fuel (training example:
+  1.849 kg for the 13 movements, `bymode`). Docs: `pm10_sul` corresponds
   to FSC 680 ppm with SO4/S = 96/32 (the docs said 667 ppm).
+- MEEM V1 nvPM now follows the MEEM_V1 tab of the CAEP14 calculation
+  sheet v14 and reaches the output. Its result went to `nvpm_g_kg` /
+  `nvpm_number_kg`, which no output column reads, and it interpolated
+  log-log at the segment's ANP power setting below 3000 ft, used the
+  ground ambient and a pressure-ratio thrust mapping above it, and a T3
+  ratio as enrichment factor. Now (`open_alaqs/core/tools/meem_v1.py`,
+  `Engine.getEmissionIndexByModeWithMEEM`): at or below 3000 ft above MSL
+  (segment start height plus airport elevation) the nvPM EI is the
+  certification value of the mode, unchanged; above, the sheet's chain
+  (ISA at the segment altitude, Mach from the segment TAS, phase "CLIMB TO
+  CRUISE" for departures and "DESCENT TO APPROACH" for arrivals, P3/T3,
+  ground-reference thrust from T3, linear interpolation of the EEDB nvPM
+  points, × (P3/P3_GR)^1.35 × 1.1^2.5). The mass EI replaces
+  `pm10_nonvol` and `pm10`, `p1`, `p2` move by the same amount, so
+  pm10 = nonvol + sul + organic still holds; nothing else changes. OPR is
+  `press_ratio`, 30 when empty (as in the shipped data; the sheet has no
+  value for this case); the climb pressure coefficient uses a 38000 ft
+  cruise altitude (the sheet's stored value). The port matches the sheet's
+  stored example (0.944536653843135 mg/kg, 2.58597485320693e13 #/kg) and
+  seven cases recalculated in LibreOffice to 1e-15 (`tests/test_meem_v1.py`).
+  The standalone (shared module) and the CAEP14 reference (written out
+  from the sheet) do the same (`validation/tests/test_meem_v1_reference.py`).
+  **Results change** only for segments above 3000 ft above MSL, i.e. in
+  hours whose mixing height is above 3000 ft minus the airport elevation.
+  Training example (`example/training`, 1500 m on 2 December): the two
+  departures of 2 December, one segment each (start 1280 m and 1246 m above
+  MSL, CL): nvPM EI 1.235 to 1.524 mg/kg (A20N, id 6) and 53.30 to
+  66.64 mg/kg (E190, id 8); `bymode` pm10_nonvol +1.24 % and +1.69 %, pm10
+  +0.031 % and +0.81 %; 13-movement totals pm10_nonvol 31.456 to 31.724 g
+  (+0.85 %), pm10 321.741 to 322.010 g (+0.084 %) (BFFM2 trajectory: +0.77 %
+  and +0.061 %). `training_v3`, AIRPORT_A and ANP references: no change
+  (no segment above 3000 ft).
 - Plugin: the ICCAIA NOx ambient correction (bymode, "Apply NOx
   corrections") was applied to every flight segment, approach included;
   it is defined for take-off and climb-out, which is what its module and

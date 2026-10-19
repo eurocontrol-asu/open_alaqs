@@ -1212,10 +1212,14 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         engine_thrust = start_point_.getEngineThrust()
         fuel_flow = start_point_.getFuelFlow()
         mode = start_point_.getMode() or "AP"  # guard empty string (Bug #23 residual)
-        # Segment altitude above MSL (metres) — needed by MEEM V1 for the
-        # LTO/non-LTO branch.  getZ() returns None for points without an
-        # explicit elevation; default to 0.
-        altitude_m = float(start_point_.getZ() or 0.0)
+        # Segment altitude above MSL (metres) for the MEEM V1 LTO/non-LTO
+        # branch: the trajectory height above the airport (getZ, None for
+        # points without an explicit height) plus the airport elevation.
+        altitude_m = float(start_point_.getZ() or 0.0) + float(
+            self._method["config"].get("airport_altitude") or 0.0
+        )
+        # True airspeed (m/s) for the MEEM V1 Mach number above 3000 ft.
+        self._segment_tas_m_s = start_point_.getTrueAirspeed()
 
         # Bug #22: None engine_thrust would crash calculate_fuel_flow_from_power_setting
         # inside the BFFM2 path. Fall back to bymode for that segment so one bad
@@ -1470,6 +1474,8 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 altitude_m=altitude_m,
                 T_amb_K=T_amb,
                 meem_version=mver,
+                tas_m_s=getattr(self, "_segment_tas_m_s", None),
+                climbing=self._is_departure(),
             )
         except Exception:
             src = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)
@@ -1528,6 +1534,8 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 altitude_m=altitude_m,
                 T_amb_K=T_amb,
                 meem_version=mver,
+                tas_m_s=getattr(self, "_segment_tas_m_s", None),
+                climbing=self._is_departure(),
             )
         except Exception:
             mode_ei = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)

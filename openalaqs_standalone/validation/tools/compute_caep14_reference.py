@@ -52,6 +52,10 @@ For each fixed-wing movement:
        seg_fuel = seg_time * ff[mode] * n_engines
        em[p]   += seg_fuel * EI[mode][p] / 1000
        CO2     += seg_fuel * 3.16
+    6. Above 3000 ft above MSL (start point height + airport elevation) the
+       PM10 EI moves by the MEEM V1 nvPM mass EI minus the mode's
+       pm10_nonvol (`_meem_v1_mass_mgkg`, written out from the CAEP14 v14
+       sheet's MEEM_V1 tab).
 
 Stop-and-go is zero in the training fixture; not implemented yet.
 Helicopters (no profile_id) are skipped: handled by FOCA module
@@ -76,10 +80,10 @@ from shapely.ops import linemerge
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 # SOx (as SO2) per kg fuel when the engine table gives none: written out here,
-# independently of open_alaqs/core/tools/fuel_sulphur.py. Jet fuel: the FOA3
-# fuel sulphur behind the stored pm10_sul (FSC 0.068 %, 2.4 % to S(VI));
+# independently of open_alaqs/core/tools/fuel_sulphur.py. Jet fuel: the fuel
+# of the CAEP14 sheet v14 inputs (FSC 0.000383, 1 % to S(VI));
 # AvGas (and PISTON helicopters): FSC 0.01 %, no sulphate.
-SOX_EI_JET_G_KG = 1000.0 * 0.00068 * (1.0 - 0.024) * 2.0
+SOX_EI_JET_G_KG = 1000.0 * 0.000383 * (1.0 - 0.01) * 2.0
 SOX_EI_AVGAS_G_KG = 1000.0 * 0.0001 * 2.0
 from open_alaqs.core.tools.bffm2 import (  # noqa: E402
     calculate_emission_index as bffm2_ei,
@@ -619,6 +623,103 @@ def _get_engine_ei(conn, engine_name: str) -> dict:
     return result
 
 
+# ---------------------------------------------------------------------------
+# MEEM V1 nvPM mass EI above 3000 ft, written out from the "MEEM_V1",
+# "USER INPUTS" and "Constants" tabs of the CAEP14 FBE Engines Emissions
+# Calculation Sheet v14 (cell references in the comments). Independent of
+# open_alaqs.core.tools.meem_v1. At or below 3000 ft (USER INPUTS!B36) the
+# EI is the certification value of the mode, i.e. the table's pm10_nonvol.
+# ---------------------------------------------------------------------------
+
+_MEEM_FT2M = 0.3048000097536  # Constants!B17
+_MEEM_LTO_CEILING_FT = 3000.0  # USER INPUTS!B36
+_MEEM_CRUISE_ALT_FT = 38000.0  # USER INPUTS!B20 (stored value; OpenALAQS has none)
+_MEEM_DEFAULT_OPR = 30.0  # the sheet has no value for a missing PRESS_RATIO
+# Constants!A6:F8, segment_constants of the non-LTO phases:
+# phase -> (eta_comp, Pi_alt, Pi_alt at 3000 ft, Pi_alt at cruise)
+_MEEM_SEGMENT_CONSTANTS = {
+    "CLIMB TO CRUISE": (0.88, None, 0.85, 1.15),
+    "DESCENT TO APPROACH": (0.7, 0.12, None, None),
+}
+_MEEM_MODE_THRUST = (("TO", 1.0), ("CL", 0.85), ("AP", 0.3), ("TX", 0.07))
+
+
+def _get_engine_meem(conn, engine_name: str) -> dict:
+    """MEEM V1 inputs of an engine: the nvPM mass points (thrust, mg/kg;
+    the plugin's nvPM mass EI is the table's pm10_nonvol) and the pressure
+    ratio (press_ratio, else 30). Empty dict when a mode is missing."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(default_aircraft_engine_ei)")}
+    extra = [
+        c if c in cols else "NULL"
+        for c in ("press_ratio", "meem_nvpm_m_i_f00_avg", "nvpm_m_max_mgkg")
+    ]
+    rows = conn.execute(
+        f"""
+        SELECT mode, pm10_nonvol, {", ".join(extra)}
+        FROM default_aircraft_engine_ei
+        WHERE engine_name = ?
+           OR ((engine_name IS NULL OR engine_name = '') AND engine_full_name = ?)
+        """,
+        (engine_name, engine_name),
+    ).fetchall()
+    by_mode = {r[0]: r for r in rows}
+    if any(m not in by_mode for m, _ in _MEEM_MODE_THRUST):
+        return {}
+    points = [(t, float(by_mode[m][1] or 0.0) * 1000.0) for m, t in _MEEM_MODE_THRUST]
+    any_row = rows[-1]
+    opr = float(any_row[2]) if any_row[2] else _MEEM_DEFAULT_OPR
+    if any_row[3] and float(any_row[3]) > 0 and any_row[4] is not None:
+        points.append((float(any_row[3]), float(any_row[4])))  # 5th point
+    nonvol = {m: float(by_mode[m][1] or 0.0) for m, _ in _MEEM_MODE_THRUST}
+    return {"points": points, "opr": opr, "pm10_nonvol": nonvol}
+
+
+def _meem_v1_mass_mgkg(
+    alt_ft: float, tas_m_s: float, climbing: bool, points: list, opr: float
+) -> float:
+    """MEEM_V1!B119 (nvPM mass EI at the segment, fossil fuel) of a non-LTO
+    segment, ISA (USER INPUTS!B5 delta_t = 0)."""
+    t0, p0, g0, lapse, gam, r_air = 288.15, 101325.0, 9.80665, -0.0065, 1.4, 287.05287
+    alt_trop_ft = 11000.0 / _MEEM_FT2M  # Constants!B32
+    # USER INPUTS!B44, B45, B46, B39 (TAS in kt with Constants!B19)
+    t_amb = t0 + min(alt_ft, alt_trop_ft) * lapse * _MEEM_FT2M
+    if alt_ft <= alt_trop_ft:
+        p_amb = p0 * math.pow(t_amb / t0, g0 / (-lapse * r_air))
+    else:
+        t_trop = t0 + lapse * 11000.0
+        p_trop = p0 * math.pow(t_trop / t0, -g0 / (lapse * r_air))
+        p_amb = p_trop * math.exp(
+            -g0 * (alt_ft * _MEEM_FT2M - 11000.0) / (r_air * t_trop)
+        )
+    sos_kt = math.sqrt(gam * r_air * t_amb) * 1.94384
+    mach = (tas_m_s * 1.94384) / sos_kt
+    phase = "CLIMB TO CRUISE" if climbing else "DESCENT TO APPROACH"
+    eta, pi_alt, pi_3000, pi_cruise = _MEEM_SEGMENT_CONSTANTS[phase]  # B25
+    if phase == "CLIMB TO CRUISE":  # B26
+        pi_alt = pi_3000 + (alt_ft - 3000.0) * (pi_cruise - pi_3000) / (
+            _MEEM_CRUISE_ALT_FT - 3000.0
+        )
+    tt = t_amb * (1 + ((gam - 1) / 2) * mach**2)  # B50
+    pt = p_amb * math.pow(1 + ((gam - 1) / 2) * mach**2, gam / (gam - 1))  # B51
+    p3 = pt * (1 + pi_alt * (opr - 1))  # B66
+    t3 = tt * (1 + (1 / eta) * (math.pow(p3 / pt, (gam - 1) / gam) - 1))  # B65
+    p3_gr = p0 * math.pow(1 + eta * ((t3 / t0) - 1), gam / (gam - 1))  # B77
+    f_gr = ((p3_gr / p0) - 1) / (opr - 1)  # B83
+    pts = sorted(points, key=lambda q: q[0])  # MEEM_V1!C88 SORT
+    if f_gr > 1:  # B101
+        ei_gr = next(v for t, v in pts if t == 1)
+    elif f_gr < 0.07:
+        ei_gr = next(v for t, v in pts if t == 0.07)
+    else:
+        k = max(i for i, (t, _) in enumerate(pts) if t <= f_gr)  # MATCH(,,1)
+        if k == len(pts) - 1:
+            ei_gr = pts[k][1]
+        else:
+            (xa, ya), (xb, yb) = pts[k], pts[k + 1]  # FORECAST on two points
+            ei_gr = ya + (f_gr - xa) * (yb - ya) / (xb - xa)
+    return ei_gr * math.pow(p3 / p3_gr, 1.35) * math.pow(1.1, 2.5)  # B109, B119
+
+
 def _get_trajectory(conn, profile_id: str) -> list:
     return list(
         conn.execute(
@@ -1082,6 +1183,8 @@ def _compute_fixed_wing(  # noqa: C901 — one segment loop per method, as the s
     n_eng = _get_engine_count(conn, mov["aircraft"])
     if n_eng <= 0:
         return None
+    meem = _get_engine_meem(conn, mov["engine_name"])
+    elevation_m = _airport_elevation_m(conn)
 
     # BFFM2 setup: build the icao_eedb dict once per movement, fetch meteo.
     icao_eedb = _build_icao_eedb(engine_ei) if method != "bymode" else None
@@ -1264,6 +1367,18 @@ def _compute_fixed_wing(  # noqa: C901 — one segment loop per method, as the s
             )
 
         seg_fuel = seg_time * seg_ff_amb * n_eng
+        # MEEM V1 above 3000 ft above MSL (start point of the segment): the
+        # nvPM mass EI replaces the mode's pm10_nonvol, and pm10 moves by the
+        # same amount. At or below, the mode values are used unchanged.
+        alt_ft = (z1 + elevation_m) / _MEEM_FT2M
+        if meem and alt_ft > _MEEM_LTO_CEILING_FT:
+            nvpm_g_kg = (
+                _meem_v1_mass_mgkg(alt_ft, tas1, is_dep, meem["points"], meem["opr"])
+                / 1000.0
+            )
+            eng = dict(
+                eng, pm10_ei=eng["pm10_ei"] + nvpm_g_kg - meem["pm10_nonvol"][mode1]
+            )
         # Plugin guard ("Bug #22"): under BFFM2 a segment whose start point
         # has neither power nor fuel flow uses the Bymode indices.
         bymode_fallback = False

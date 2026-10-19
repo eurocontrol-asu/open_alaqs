@@ -3,14 +3,16 @@
 All fuel sulphur leaves the engine as SO2 except the fraction eps that is
 converted to sulphate. The CAEP14 calculation sheet (v14) uses FSC and eps
 only for the sulphate vPM; SOx (as SO2, SO2/S = 64/32) is written here with
-the same parameters, so the sulphur in the two adds up:
+the same two parameters:
 
     SOx EI = 1000 x FSC x (1 - eps) x 64/32   [g per kg fuel]
 
 Jet fuel (turbofans, turboprops and turboshaft helicopters burning Jet A/A-1,
-and their engine tests): FSC 0.068 % and eps 2.4 %, the FOA3 values behind the
-stored `pm10_sul` of the Jet Fuel rows of `default_aircraft_engine_ei`
-(1000 x 0.00068 x 0.024 x 96/32 = 0.04896 g/kg), so SOx EI = 1.32736 g/kg.
+and their engine tests): FSC 0.000383 and eps 0.01, the fuel selected in the
+CAEP14 calculation sheet v14 inputs (its ICAO vPM parameterisation example;
+the sheet's Constants default is 0.0005 / 0.024), so SOx EI = 0.75834 g/kg. (The
+stored `pm10_sul` of the Jet Fuel rows, 0.04896 g/kg, was built with the FOA3
+example FSC 0.068 % and is kept as it is.)
 
 AvGas (piston aircraft and piston helicopters): FSC 0.01 % (100 ppm, the upper
 end of measured AvGas sulphur, CRC AV-30-22 2025) and eps 0 (the AvGas rows
@@ -20,8 +22,10 @@ These values replace a missing SOx (`sox_ei` 0 or empty); a value in the
 engine table is used as it is. APU and GSE SOx come from their own tables.
 """
 
-JET_FUEL_SULPHUR_CONTENT = 0.00068  # mass fraction (680 ppm), FOA3
-JET_SULPHUR_CONVERSION_EFFICIENCY = 0.024  # fraction converted to S(VI), FOA3
+JET_FUEL_SULPHUR_CONTENT = 0.000383  # mass fraction (383 ppm), CAEP14 sheet v14 input
+JET_SULPHUR_CONVERSION_EFFICIENCY = (
+    0.01  # fraction converted to S(VI), CAEP14 sheet v14 input
+)
 AVGAS_SULPHUR_CONTENT = 0.0001  # mass fraction (100 ppm)
 AVGAS_SULPHUR_CONVERSION_EFFICIENCY = 0.0
 

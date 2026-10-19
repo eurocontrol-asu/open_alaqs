@@ -110,15 +110,11 @@ class TestMEEMV2Reference:
         from open_alaqs.core.tools.meem_v1 import calculate_nvpm_ei
 
         v1 = calculate_nvpm_ei(
-            power_setting=0.85,
+            phase="CLIMB OUT",
+            altitude_ft=253.0,
             thrust_settings=[0.07, 0.30, 0.85, 1.00],
             ei_mass_mgkg=_EI_MASS_MGKG,
             ei_number_nkg=_EI_NUMBER_NKG,
-            altitude_m=77.1144,
-            mach=0.22834519,
-            opr=_OPR,
-            phase="CLIMB OUT",
-            apply_altitude_correction=False,
         )
         v2 = calculate_nvpm_ei_v2(
             ffadj_target_kgs=0.582649335838304,

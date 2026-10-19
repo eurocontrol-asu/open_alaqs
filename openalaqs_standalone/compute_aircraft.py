@@ -21,8 +21,10 @@ for any of the three methods:
                 ADS-B) or a twin-quadratic fit on the segment power
                 setting (ANP), with BFFM2 ambient corrections.
 
-SOx and PM10 always use the EEDB-table EI; the plugin's BFFM2
-implementation has no BFFM2 path for them.
+SOx and PM10 use the EEDB-table EI (the plugin's BFFM2 implementation
+has no BFFM2 path for them), except that above 3000 ft above MSL the nvPM
+part of PM10 is the MEEM V1 value (shared `open_alaqs.core.tools.meem_v1`,
+as the plugin).
 
 This module is the per-movement-totals core: the "(a)" output mode in
 the strategy document. It computes one movement to a totals dict. The
@@ -58,6 +60,7 @@ import math
 from datetime import datetime
 from typing import Optional
 
+from open_alaqs.core.tools import meem_v1 as _meem_v1
 from open_alaqs.core.tools.bffm2 import calculate_emission_index as _bffm2_ei
 from open_alaqs.core.tools.bffm2 import speed_of_sound_m_s as _speed_of_sound_m_s
 from openalaqs_standalone import geometry as geo
@@ -204,6 +207,41 @@ def _segment_mach(tas_start: float, tas_end: float, T_K: float) -> float:
     if sos <= 0:
         return 0.0
     return tas_start / sos
+
+
+def _meem_v1_segment_ei(
+    eng: dict, meem: dict, mode: str, alt_msl_m: float, tas_m_s: float, climbing: bool
+) -> dict:
+    """The segment's EI with the MEEM V1 nvPM mass EI (shared
+    `open_alaqs.core.tools.meem_v1`, the plugin's code) as the plugin's
+    Engine.getEmissionIndexByModeWithMEEM applies it: at or below 3000 ft
+    above MSL `eng` unchanged; above, pm10_ei moves by the MEEM mass EI
+    minus the mode's pm10_nonvol."""
+    alt_ft = alt_msl_m / _meem_v1.FT_TO_M
+    if not meem or _meem_v1.section_of_flight(alt_ft) == "LTO":
+        return eng
+    ts = [t for t in _meem_v1.MODE_THRUST.values()]
+    mass = [meem["pm10_nonvol"][m] * 1000.0 for m in _meem_v1.MODE_THRUST]
+    number = [meem["nvpm_number"][m] for m in _meem_v1.MODE_THRUST]
+    ts_num = list(ts)
+    if meem["m_f00"] and meem["m_f00"] > 0 and meem["m_max_mgkg"] is not None:
+        ts.append(meem["m_f00"])
+        mass.append(meem["m_max_mgkg"])
+    if meem["n_f00"] and meem["n_f00"] > 0 and meem["n_max_nkg"] is not None:
+        ts_num.append(meem["n_f00"])
+        number.append(meem["n_max_nkg"])
+    result = _meem_v1.calculate_nvpm_ei(
+        phase="CLIMB TO CRUISE" if climbing else "DESCENT TO APPROACH",
+        altitude_ft=alt_ft,
+        thrust_settings=ts,
+        ei_mass_mgkg=mass,
+        ei_number_nkg=number,
+        opr=meem["press_ratio"] or _meem_v1.DEFAULT_OPR,
+        tas_kt=tas_m_s * _meem_v1.MS_TO_KT,
+        number_thrust_settings=ts_num,
+    )
+    delta = result.nvpm_mass_ei_mgkg / 1000.0 - meem["pm10_nonvol"][mode]
+    return dict(eng, pm10_ei=eng["pm10_ei"] + delta)
 
 
 def _segment_ei_bffm2(
@@ -461,6 +499,7 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
     n_eng = mv.get_engine_count(conn, mov["aircraft"])
     if n_eng <= 0:
         return None
+    meem = mv.get_engine_meem(conn, mov["engine_name"])
 
     # Decide whether to load the meteo row. BFFM2 always needs it; bymode
     # also needs it when the NOx ambient correction is requested.
@@ -807,6 +846,9 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         pt2 = traj[i + 1]
         _, x1, y1, z1, tas1, mode1, _ = pt1
         _, x2, y2, z2, tas2, mode2, _ = pt2
+        # Start-point altitude before the clip, for MEEM V1 (the plugin uses
+        # the unclipped start point).
+        z1_start = z1
 
         # Vertical clip: match the plugin's apply_height_limits
         # (MovementEmissionCalculator.py lines 1042-1078). Three cases:
@@ -881,6 +923,15 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             )
 
         seg_fuel = seg_time * seg_ff_amb * n_eng
+        # MEEM V1 nvPM above 3000 ft above MSL (pm10 only; fuel unchanged).
+        eng = _meem_v1_segment_ei(
+            eng,
+            meem,
+            mode1,
+            z1_start + ctx.get("airport_elevation_m", 0.0),
+            tas1,
+            is_dep,
+        )
         # Plugin guard ("Bug #22" in MovementEmissionCalculator): under
         # BFFM2, a segment whose start point has neither power nor fuel
         # flow uses the Bymode emission indices (mode anchor). Piston and

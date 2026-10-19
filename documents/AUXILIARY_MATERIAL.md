@@ -47,24 +47,24 @@ The engine EI table contains one row per engine per LTO mode (TX, AP, CL, TO). T
 | `mode` | LTO mode: TX, AP, CL, TO |
 | `fuel_kg_sec` | Reference fuel flow (kg/s per engine, SLS) |
 | `nox_ei`, `co_ei`, `hc_ei` | EEDB gas-phase emission indices (g/kg) |
-| `sox_ei` | SOx (as SO2) emission index (g/kg): 1.32736 for the Jet Fuel rows and 0.2 for the AvGas rows of the shipped data (see below); a 0 or empty value is replaced by the value of the row's fuel |
+| `sox_ei` | SOx (as SO2) emission index (g/kg): 0.758 for the Jet Fuel rows and 0.2 for the AvGas rows of the shipped data (see below); a 0 or empty value is replaced by the value of the row's fuel |
 | `pm10_ei` | Total combustion PM10 EI (g/kg) = `pm10_nonvol` + `pm10_sul` + `pm10_organic` |
 | `pm10_nonvol` | Non-volatile PM (nvPM) mass EI (g/kg) from ICAO EEDB |
 | `pm10_sul` | Sulphate vPM EI (g/kg); see PM10 breakdown below |
 | `pm10_organic` | Organic vPM EI (g/kg); see PM10 breakdown below |
 | `p1_ei`, `p2_ei` | PM1.0 and PM2.5 EI placeholders (g/kg); currently equal to `pm10_ei` |
 | `nvpm_number_ei` | nvPM number EI (#/kg) from ICAO EEDB |
-| `press_ratio` | Overall pressure ratio (OPR) for MEEM V1 above 914 m (empty in the shipped data; 30 is used) |
-| `meem_nvpm_m_i_f00_avg` | Average nvPM mass EI at F00 (mg/kg); empty in the shipped data, not used by the calculation |
+| `press_ratio` | Overall pressure ratio (OPR) for MEEM V1 above 3000 ft above MSL (empty in the shipped data; 30 is used) |
+| `meem_nvpm_m_i_f00_avg` | Thrust of the 5th nvPM mass point for MEEM V1 (used when above 0, with `nvpm_m_max_mgkg`); empty in the shipped data |
 | `nvpm_m_max_mgkg` | Maximum nvPM mass EI (mg/kg); empty in the shipped data, not used by the calculation |
-| `meem_nvpm_n_i_f00_avg` | Average nvPM number EI at F00 (#/kg); empty in the shipped data, not used by the calculation |
+| `meem_nvpm_n_i_f00_avg` | Thrust of the 5th nvPM number point for MEEM V1 (used when above 0, with `nvpm_n_max_nkg`); empty in the shipped data |
 | `nvpm_n_max_nkg` | Maximum nvPM number EI (#/kg); empty in the shipped data, not used by the calculation |
 
 ##### PM10 breakdown
 
 Aircraft PM10 emissions are decomposed into three physical components, stored separately to allow independent reporting and future updating:
 
-**Non-volatile PM (`pm10_nonvol`)**: carbonaceous (soot) particles measured at ICAO SLS conditions and stored in the EEDB. Not changed by MEEM in the output (see below).
+**Non-volatile PM (`pm10_nonvol`)**: carbonaceous (soot) particles measured at ICAO SLS conditions and stored in the EEDB. Above 3000 ft above MSL, replaced by the MEEM V1 value (see below).
 
 **Sulphate PM (`pm10_sul`)** — volatile sulphate particles formed from sulphur in the fuel. Computed from the fuel sulphur content (FSC) and a conversion efficiency ε using ICAO Doc 9889 Appendix D:
 
@@ -78,11 +78,11 @@ The database holds a constant **48.96 mg/kg** for the Jet Fuel engines with PM d
 
 ```
 SOx EI (g/kg) = 1000 × FSC × (1 − ε) × 64/32
-Jet fuel: FSC 0.00068, ε 0.024  →  1.32736   (the FSC and ε behind pm10_sul)
+Jet fuel: FSC 0.000383, ε 0.01  →  0.75834   (CAEP14 sheet v14 inputs; pm10_sul keeps the FOA3 FSC 0.00068)
 AvGas:    FSC 0.0001,  ε 0      →  0.2       (measured AvGas sulphur at most 100 ppm, CRC AV-30-22 2025)
 ```
 
-The CAEP14 calculation sheet (v14) has no SOx calculation; it uses FSC and ε for the sulphate vPM only (default FSC 0.0005, ε 0.024). The row's `fuel_type` decides (engine tests use their engine's row): Jet Fuel rows and turboshaft helicopters take the jet fuel value, AvGas rows and piston helicopters the AvGas value (FOCA gives no SOx for helicopters: mode fuel × the value). APU and GSE SOx come from their own tables. For comparison, the EUROCONTROL fuel burn and emissions tools (EMEP/EEA 2023 Annex 5) use 0.84 g/kg for all engines, about 420 ppm.
+The CAEP14 calculation sheet (v14) has no SOx calculation; it uses FSC and ε for the sulphate vPM only (Constants: default FSC 0.0005 with ε 0.024; the inputs select FSC 0.000383 with ε 0.01, the values used here for SOx). The stored `pm10_sul` stays at the FOA3 value (680 ppm). The row's `fuel_type` decides (engine tests use their engine's row): Jet Fuel rows and turboshaft helicopters take the jet fuel value, AvGas rows and piston helicopters the AvGas value (FOCA gives no SOx for helicopters: mode fuel × the value). APU and GSE SOx come from their own tables. For comparison, the EUROCONTROL fuel burn and emissions tools (EMEP/EEA 2023 Annex 5) use 0.84 g/kg for all engines, about 420 ppm.
 
 **Organic vPM (`pm10_organic`)** — volatile organic particles from unburned hydrocarbons, calculated by the parameterised vPM method from ICAO Doc 9889 Appendix D:
 
@@ -111,13 +111,15 @@ This is added to the PM10, P1, and P2 output columns, but does not appear in the
 
 **P1 / P2.** These output columns are placeholders for PM1.0 and PM2.5 respectively. They are currently set equal to PM10 (including brake wear for arrivals) because dedicated sub-micron EEDB emission indices are not yet available. They will be updated as the data becomes available.
 
-##### MEEM V1 — nvPM ambient correction
+##### MEEM V1: nvPM above 3000 ft
 
-The ICAO EEDB nvPM emission indices are measured at SLS conditions (T = 288.15 K, P = 101 325 Pa, Mach = 0). The nvPM EI varies with combustor inlet pressure. The **MEEM V1** correction from CAEP14 / ICAO Doc 9889 Appendix C accounts for this.
+The ICAO EEDB nvPM emission indices are certification values at ground level. Above 3000 ft the nvPM EI depends on the combustor inlet conditions. OpenALAQS follows the MEEM V1 tab of the ICAO CAEP14 FBE Engines Emissions Calculation Sheet v14 (`open_alaqs/core/tools/meem_v1.py`), for both Bymode and BFFM2:
 
-MEEM V1 (`open_alaqs/core/tools/meem_v1.py`) interpolates the nvPM mass EI log-log and the number EI linearly on the four EEDB modes at the segment power setting, for both Bymode and BFFM2. Above 914 m it first converts the thrust to a ground-reference thrust, `F_GR = F × P3_GR / P3_alt` with `P3 = P_total × OPR` (OPR from `press_ratio`, 30 when empty, as in the shipped data), and applies the enrichment factor. The four 5-point columns are loaded but not used.
+- At or below 3000 ft (914.4 m) above MSL (segment start height plus airport elevation), the nvPM EI is the certification value of the segment's mode: the stored `pm10_nonvol`, unchanged.
+- Above 3000 ft, with ISA at the segment altitude and the Mach number from the segment's true airspeed: combustor inlet pressure and temperature at the segment (phase "CLIMB TO CRUISE" for departures, "DESCENT TO APPROACH" for arrivals), the ground-reference thrust with the same combustor inlet temperature, linear interpolation of the EEDB nvPM points at that thrust, and the correction `(P3 / P3_GR)^1.35 × 1.1^2.5`. OPR is `press_ratio` (30 when empty, as in the shipped data; the sheet has no value for this case) and the cruise altitude of the climb pressure coefficient is 38000 ft (the sheet's stored value).
+- The result replaces `pm10_nonvol` for that segment; `pm10`, `p1` and `p2` move by the same amount, so `pm10 = pm10_nonvol + pm10_sul + pm10_organic` still holds. The nvPM number EI is computed but is not an output column.
 
-The MEEM V1 result is stored in `nvpm_g_kg` / `nvpm_number_kg` (`open_alaqs/core/interfaces/Engine.py:294-295`) and is not written to any output column: `Emission.add` adds only the `PollutantType` keys (`open_alaqs/core/interfaces/Emissions.py:167-171`), so `pm10_nonvol_kg` and `pm10_kg` use the stored EIs.
+Segments above 3000 ft above MSL enter the calculation only in hours whose mixing height is above 3000 ft minus the airport elevation. MEEM V2 (CAEP14 v12+) is implemented in `meem_v2.py` but not used; its adoption is to be decided.
 
 **APU emissions** are calculated separately as a function of the APU model (`apu_id`) indicated for each aircraft in [`default_aircraft`](./../open_alaqs/database/data/default_aircraft.csv). The default APU emission factors and operating times are given in [`default_aircraft_apu_ef`](./../open_alaqs/database/data/default_aircraft_apu_ef.csv) and [`default_apu_times`](./../open_alaqs/database/data/default_apu_times.csv) respectively. Whether APU emissions are included for a given movement is controlled by the `apu_code` field in the movements table:
 
@@ -185,7 +187,7 @@ Where Bymode assigns a fixed emission index per LTO mode (TX, AP, CL, TO) based 
 3. Interpolates the emission index on a log-log curve through the four EEDB data points.
 4. Computes the emission mass as `EI × FF × n_engines × time_in_segment / 1000`.
 
-PM, SOx, and P1/P2 are not interpolated on the gas-phase curve. Instead, both Bymode and BFFM2 inject the mode-level EI values directly from the database (stored EIs; the MEEM V1 result is not written to the output). BFFM2 therefore produces the same per-mode PM and SOx EI values as Bymode; differences in total PM between the two methods arise solely from differences in fuel burn driven by the different power-setting interpolation.
+PM, SOx, and P1/P2 are not interpolated on the gas-phase curve. Instead, both Bymode and BFFM2 inject the mode-level EI values directly from the database (above 3000 ft above MSL with the MEEM V1 nvPM, see above). BFFM2 therefore produces the same per-mode PM and SOx EI values as Bymode; differences in total PM between the two methods arise solely from differences in fuel burn driven by the different power-setting interpolation.
 
 ### Installation correction factors
 

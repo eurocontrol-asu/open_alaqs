@@ -502,6 +502,53 @@ def get_engine_ei(conn: sqlite3.Connection, engine_name: str) -> dict:
     return result
 
 
+def get_engine_meem(conn: sqlite3.Connection, engine_name: str) -> dict:
+    """MEEM V1 inputs of an engine, as the plugin loads them
+    (Engine.getEmissionIndexByModeWithMEEM, EngineDatabases._load_meem_metadata).
+
+    Returns {} when a mode is missing, else a dict with `pm10_nonvol`
+    ({mode: g/kg}, the plugin's nvPM mass EI), `nvpm_number` ({mode: #/kg}),
+    `press_ratio` and the optional 5th point (`m_f00`, `m_max_mgkg`, `n_f00`,
+    `n_max_nkg`; None when the column is absent or empty).
+    """
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(default_aircraft_engine_ei)")}
+    optional = (
+        "nvpm_number_ei",
+        "press_ratio",
+        "meem_nvpm_m_i_f00_avg",
+        "nvpm_m_max_mgkg",
+        "meem_nvpm_n_i_f00_avg",
+        "nvpm_n_max_nkg",
+    )
+    select = ", ".join(c if c in cols else "NULL" for c in optional)
+    rows = conn.execute(
+        f"""
+        SELECT mode, pm10_nonvol, {select}
+        FROM default_aircraft_engine_ei
+        WHERE engine_name = ?
+           OR ((engine_name IS NULL OR engine_name = '') AND engine_full_name = ?)
+        """,
+        (engine_name, engine_name),
+    ).fetchall()
+    by_mode = {r[0]: r for r in rows}
+    if not rows or any(m not in by_mode for m in ("TO", "CL", "AP", "TX")):
+        return {}
+
+    def _f(v):
+        return float(v) if v not in (None, "") else None
+
+    last = rows[-1]
+    return {
+        "pm10_nonvol": {m: float(r[1] or 0.0) for m, r in by_mode.items()},
+        "nvpm_number": {m: float(r[2] or 0.0) for m, r in by_mode.items()},
+        "press_ratio": _f(last[3]),
+        "m_f00": _f(last[4]),
+        "m_max_mgkg": _f(last[5]),
+        "n_f00": _f(last[6]),
+        "n_max_nkg": _f(last[7]),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Trajectories
 # ---------------------------------------------------------------------------

@@ -359,7 +359,7 @@ Then close and reopen the project in QGIS.
 
 - `snap` — plain ICAO EEDB EI for each mode, no ambient corrections. This is the default.
 - `meem` — nvPM correction (MEEM V1). Accepted for consistency with the wider ALAQS methodology, but numerically identical to `snap` for engine-test events because engine test modes correspond to ICAO EEDB anchor thrust settings.
-- `bffm2`: gas-phase EIs (NOx, CO, HC) corrected with ambient conditions from `tbl_InvMeteo` at each event's midpoint (SAE AIR-5715 / CAEP14). PM10 and SOx pass through from the engine table per mode (SOx: 1.32736 g/kg for jet fuel, 0.2 g/kg for AvGas when the table gives none). If `tbl_InvMeteo` is empty or has no data at the event's midpoint, `bffm2` falls back to ISA defaults with a one-per-run warning in the run log.
+- `bffm2`: gas-phase EIs (NOx, CO, HC) corrected with ambient conditions from `tbl_InvMeteo` at each event's midpoint (SAE AIR-5715 / CAEP14). PM10 and SOx pass through from the engine table per mode (SOx: 0.758 g/kg for jet fuel, the fuel selected in the CAEP14 sheet v14 inputs (FSC 0.000383, ε 0.01, its ICAO vPM parameterisation example), and 0.2 g/kg for AvGas when the table gives none). If `tbl_InvMeteo` is empty or has no data at the event's midpoint, `bffm2` falls back to ISA defaults with a one-per-run warning in the run log.
 
 **Emission math.** For each event and each of the four ICAO modes with a non-zero running time,
 
@@ -640,8 +640,8 @@ The emission output CSV contains the following PM-related columns for aircraft m
 | Column | Contents |
 |---|---|
 | `pm10_kg` | Total PM10 = combustion PM10 + brake wear (arrivals only) |
-| `pm10_nonvol_kg` | Non-volatile PM (nvPM mass), MEEM V1 ambient-corrected where 5-point EEDB data are available |
-| `pm10_sul_kg` | Sulphate vPM = ~48.96 mg/kg × fuel burned (FSC 680 ppm, ε = 0.024, SO4/S = 96/32; stored as a constant in the `pm10_sul` column) |
+| `pm10_nonvol_kg` | Non-volatile PM (nvPM mass): the EEDB value of the mode at or below 3000 ft above MSL; above, MEEM V1 (CAEP14 v14 MEEM_V1, see [`Auxiliary Material`](AUXILIARY_MATERIAL.md#meem-v1-nvpm-above-3000-ft)) |
+| `pm10_sul_kg` | Sulphate vPM = ~48.96 mg/kg × fuel burned (FSC 680 ppm, the FOA3 value, ε = 0.024, SO4/S = 96/32; stored as a constant in the `pm10_sul` column; SOx uses FSC 383 ppm, ε 0.01) |
 | `pm10_organic_kg` | Organic vPM = δ_k × HC_EI × fuel burned |
 | `p1_kg` | PM1.0 placeholder; currently equal to `pm10_kg` |
 | `p2_kg` | PM2.5 placeholder; currently equal to `pm10_kg` |

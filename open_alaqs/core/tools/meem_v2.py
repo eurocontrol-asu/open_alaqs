@@ -5,6 +5,10 @@ Implements the Main Engine Emission Model version 2 (MEEM V2) as specified
 in ICAO CAEP/13-WG3 and validated against CAEP14 FBE Calculation Sheet v12
 tab "MEEM_V2" for engine 10GE129.
 
+Not used by the emission calculation: MEEM V2 (CAEP14 v12+) is kept for
+evaluation, its adoption is to be decided (MovementSourceModule runs MEEM V1).
+The comparison with V1 below refers to the earlier V1 implementation.
+
 MEEM V2 differs from MEEM V1 in the interpolation variable:
 
   V1 (ICAO CAEP/13-MDG):
@@ -73,20 +77,137 @@ import math
 from dataclasses import dataclass
 from typing import Optional
 
-# Reuse ISA constants, phase η_comp, altitude correction, and the atmosphere
-# helpers from V1 — they are spec-identical between versions.
-from open_alaqs.core.tools.meem_v1 import (
-    _N_MASS,
-    _N_NUMBER,
-    ISA,
-    PHASE_ETA_COMP,
-    _altitude_correction_factor,
-    combustor_inlet_conditions,
-    isa_conditions,
-    total_conditions,
-)
-
 logger = logging.getLogger(__name__)
+
+# ── Atmosphere and altitude-chain helpers ─────────────────────────────────────
+# Copied from the earlier meem_v1.py (before the V1 port to the CAEP14 v14
+# MEEM_V1 tab) so that MEEM V2 keeps its behaviour unchanged.
+
+
+@dataclass(frozen=True)
+class _ISA:
+    T0: float = 288.15  # Sea-level temperature (K)
+    P0: float = 101_325.0  # Sea-level pressure (Pa)
+    lapse: float = -0.0065  # Temperature lapse rate (K/m), troposphere
+    tropo_m: float = 11_000.0  # Tropopause altitude (m)
+    gamma: float = 1.4  # Ratio of specific heats for dry air
+    R: float = 287.05287  # Gas constant for air (J/kg·K)
+    g: float = 9.80665  # Gravitational acceleration (m/s²)
+
+
+ISA = _ISA()
+
+# Exponent for ISA pressure model: g / (R × |lapse|)
+_ISA_PRESSURE_EXPONENT = ISA.g / (ISA.R * abs(ISA.lapse))  # ≈ 5.2561
+
+# Phase-specific compressor efficiency (ηcomp) from CAEP14 Constants tab.
+# LTO modes use the climb-out value (conservative; true LTO efficiency is not
+# explicitly given in the CAEP14 sheet for ground-level operations).
+PHASE_ETA_COMP: dict[str, float] = {
+    "TAKE OFF": 0.88,
+    "CLIMB OUT": 0.88,
+    "CLIMB TO CRUISE": 0.88,
+    "CRUISE": 0.88,
+    "DESCENT": 0.70,
+    "APPROACH": 0.88,
+    "TAXI": 0.88,
+}
+
+# DLR enrichment model exponents (CAEP14 MEEM_V1 sheet, section 7).
+# Typical values from the literature; both exponents are ~1 for standard engines.
+_N_MASS: float = 1.0  # enrichment exponent for nvPM mass EI
+_N_NUMBER: float = 1.0  # enrichment exponent for nvPM number EI
+
+
+def isa_conditions(altitude_m: float) -> tuple[float, float]:
+    """
+    Compute ISA temperature (K) and pressure (Pa) at a given altitude.
+
+    Valid up to the tropopause (11 000 m / 36 089 ft). Above the tropopause
+    the temperature is held constant and pressure follows the isothermal law.
+
+    :param altitude_m: Geometric altitude above MSL (m).
+    :return: (T_K, P_Pa)
+    """
+    h = max(0.0, float(altitude_m))
+
+    if h <= ISA.tropo_m:
+        T = ISA.T0 + ISA.lapse * h
+        P = ISA.P0 * (T / ISA.T0) ** _ISA_PRESSURE_EXPONENT
+    else:
+        # Stratosphere: isothermal above 11 km
+        T_tropo = ISA.T0 + ISA.lapse * ISA.tropo_m
+        P_tropo = ISA.P0 * (T_tropo / ISA.T0) ** _ISA_PRESSURE_EXPONENT
+        T = T_tropo
+        P = P_tropo * math.exp(-ISA.g * (h - ISA.tropo_m) / (ISA.R * T_tropo))
+
+    return T, P
+
+
+def total_conditions(
+    T_static: float, P_static: float, mach: float
+) -> tuple[float, float]:
+    """
+    Compute total (stagnation) temperature TT and pressure PT at the engine
+    inlet from static conditions and Mach number.
+
+    :param T_static: Static temperature (K).
+    :param P_static: Static pressure (Pa).
+    :param mach:     Flight Mach number (dimensionless, ≥ 0).
+    :return: (TT_K, PT_Pa)
+    """
+    M = max(0.0, float(mach))
+    factor = 1.0 + (ISA.gamma - 1.0) / 2.0 * M**2
+    TT = T_static * factor
+    PT = P_static * factor ** (ISA.gamma / (ISA.gamma - 1.0))
+    return TT, PT
+
+
+def combustor_inlet_conditions(
+    TT: float, PT: float, opr: float, eta_comp: float
+) -> tuple[float, float]:
+    """
+    Estimate combustor inlet total temperature T3 and pressure P3 from engine
+    inlet total conditions, overall pressure ratio (OPR), and isentropic
+    compressor efficiency.
+
+    The isentropic relation with efficiency η is:
+        T3 = TT × OPR^((γ-1)/(γ×η))
+        P3 = PT × OPR
+
+    :param TT:       Engine inlet total temperature (K).
+    :param PT:       Engine inlet total pressure (Pa).
+    :param opr:      Overall pressure ratio (dimensionless, > 1).
+    :param eta_comp: Isentropic compressor efficiency (0 < η ≤ 1).
+    :return: (T3_K, P3_Pa)
+    """
+    exponent = (ISA.gamma - 1.0) / (ISA.gamma * max(eta_comp, 1e-6))
+    T3 = TT * opr**exponent
+    P3 = PT * opr
+    return T3, P3
+
+
+def _altitude_correction_factor(
+    T3_alt: float, T3_gr: float, exponent: float = _N_MASS
+) -> float:
+    """
+    Compute the DLR enrichment correction factor φ^n for translating the
+    ground-reference nvPM EI to altitude conditions.
+
+    φ = T3_alt / T3_GR  (combustor inlet temperature ratio)
+
+    For LTO altitudes (<914 m) φ ≈ 1 and the correction is negligible.
+
+    :param T3_alt:  Combustor inlet temperature at altitude (K).
+    :param T3_gr:   Combustor inlet temperature at ground reference (K).
+    :param exponent: DLR model exponent (1.0 for mass, 1.0 for number by default).
+    :return: Correction factor φ^n (dimensionless, 1.0 for LTO).
+    """
+    if T3_gr <= 0:
+        return 1.0
+    phi = T3_alt / T3_gr
+    return phi**exponent
+
 
 _EPSILON: float = 1e-9
 

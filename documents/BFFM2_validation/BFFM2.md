@@ -17,7 +17,7 @@
     - [Piecewise-linear interpolation (CAEP14 / ICAO)](#piecewise-linear-interpolation-caep14--icao)
   - [Installation corrections](#installation-corrections)
   - [Humidity correction](#humidity-correction)
-  - [MEEM V1 — nvPM ambient correction](#meem-v1--nvpm-ambient-correction)
+  - [MEEM V1: nvPM above 3000 ft](#meem-v1-nvpm-above-3000-ft)
   - [Comparison with the Bymode method](#comparison-with-the-bymode-method)
   - [ADS-B profile specifics](#ads-b-profile-specifics)
   - [Implementation in OpenALAQS](#implementation-in-openalaqs)
@@ -152,14 +152,14 @@ EI_HC_corr  = EI_HC  × (θ^3.3 / δ^1.02)
 BFFM2 does not interpolate PM or SOx on a gas-phase log-log curve. Instead, after the gas-phase interpolation in Steps 3–4, the following quantities are injected directly from the mode-level EI stored in the database:
 
 - **`pm10_g_kg`** = `pm10_ei` (total combustion PM10: nonvol + sulphate + organic)
-- **`pm10_nonvol_g_kg`** = `pm10_nonvol` (stored value; the MEEM V1 result is computed but not written to any output column, see [MEEM V1](#meem-v1--nvpm-ambient-correction))
-- **`pm10_sul_g_kg`** = `pm10_sul` (0.04896 g/kg stored value = FSC 0.068 % × ε 0.024 × 96/32)
+- **`pm10_nonvol_g_kg`** = `pm10_nonvol` at or below 3000 ft above MSL; above, the MEEM V1 nvPM mass EI (see [MEEM V1](#meem-v1-nvpm-above-3000-ft))
+- **`pm10_sul_g_kg`** = `pm10_sul` (0.04896 g/kg stored value = FSC 0.068 % (FOA3, 680 ppm) × ε 0.024 × 96/32; kept as it is)
 - **`pm10_organic_g_kg`** = `pm10_organic`
-- **`nvpm_number_kg`** = MEEM V1 value (not written to any output column)
-- **`sox_g_kg`** = `sox_ei` (1.32736 g/kg for jet fuel, 0.2 g/kg for AvGas in the shipped `default_aircraft_engine_ei`; 0 or empty is replaced by the fuel's value, `fuel_sulphur.py`)
+- **`nvpm_number_kg`** = `nvpm_number_ei`, above 3000 ft the MEEM V1 number EI (not written to any output column: there is no nvPM number output)
+- **`sox_g_kg`** = `sox_ei` (0.758 g/kg for jet fuel, the fuel selected in the CAEP14 sheet v14 inputs (FSC 0.000383, ε 0.01, its ICAO vPM parameterisation example); 0.2 g/kg for AvGas in the shipped `default_aircraft_engine_ei`; 0 or empty is replaced by the fuel's value, `fuel_sulphur.py`)
 - **`p1_g_kg`**, **`p2_g_kg`** = `p1_ei` = `p2_ei` = `pm10_ei` (PM1.0 / PM2.5 placeholders, currently equal to PM10)
 
-The MEEM V1 result is stored in `nvpm_g_kg` and `nvpm_number_kg` (`Engine.py:294-295`), which `Emission.add` does not read (`Emissions.py:167-171`); `pm10_kg` and `pm10_nonvol_kg` use the stored EIs.
+Above 3000 ft above MSL, `pm10_g_kg`, `p1_g_kg` and `p2_g_kg` move by the same amount as `pm10_nonvol_g_kg` (MEEM V1), so pm10 = nonvol + sul + organic still holds.
 
 ---
 
@@ -245,20 +245,28 @@ CO and HC are not corrected for humidity.
 
 ---
 
-#### MEEM V1 — nvPM ambient correction
+#### MEEM V1: nvPM above 3000 ft
 
-The EEDB nvPM mass and number emission indices are measured at SLS conditions (T = 288.15 K, P = 101 325 Pa, Mach = 0). MEEM V1 (`core/tools/meem_v1.py`, called from `Engine.getEmissionIndexByModeWithMEEM()`) is computed for both Bymode and BFFM2 as follows:
+MEEM V1 (`core/tools/meem_v1.py`, called from `Engine.getEmissionIndexByModeWithMEEM()`, `Engine._meem_v1`) is a port of the MEEM_V1 tab of the ICAO CAEP14 FBE Engines Emissions Calculation Sheet v14 (with its Constants and USER INPUTS tabs). It is applied for Bymode and BFFM2 to every flight segment. The segment altitude is the start point's height plus the airport elevation (above MSL, `MovementEmissionCalculator.py:1218`).
 
-1. The nvPM mass EI is interpolated log-log, and the number EI linearly, on the four EEDB modes (TX, AP, CL, TO; `pm10_nonvol` and `nvpm_number_ei`) at the segment power setting.
-2. Above 914 m (`Engine.py:210`) the thrust is first converted to a ground-reference thrust and the enrichment factor is applied:
-   ```
-   F_GR = F × P3_GR / P3_alt,   P3 = P_total × OPR   (meem_v1.py:154-157, 284-306)
-   ```
-   OPR is read from `press_ratio`; when it is empty, as in the shipped data, 30 is used (`Engine.py:192`). At or below 914 m the interpolation is at the segment power setting itself, with no pressure dependence (`meem_v1.py:417-442`).
+- **At or below 3000 ft (914.4 m) above MSL: LTO.** The sheet returns the certification nvPM value of the mode (EEDB nvPM at 7, 30, 85 or 100 % thrust, no interpolation, no ambient correction). The mode EI is used unchanged (`Engine.py:310`).
+- **Above 3000 ft: non-LTO.** Phase "CLIMB TO CRUISE" for departures, "DESCENT TO APPROACH" for arrivals (`Engine.py:351`), ISA at the segment altitude (delta T 0), Mach from the segment's start-point TAS and the local speed of sound:
+  ```
+  TT = T (1 + 0.2 M²),  PT = P (1 + 0.2 M²)^3.5
+  P3 = PT (1 + Π (OPR - 1)),  T3 = TT (1 + ((P3/PT)^(0.4/1.4) - 1) / η)
+  P3_GR = 101325 (1 + η (T3/288.15 - 1))^3.5
+  F_GR = (P3_GR / 101325 - 1) / (OPR - 1)
+  EI_GR = linear interpolation of the EEDB nvPM points at F_GR (7 % value below 0.07, 100 % value above 1)
+  EI_mass = EI_GR,mass × (P3 / P3_GR)^1.35 × 1.1^2.5,  EI_number = EI_mass × EI_GR,number / EI_GR,mass
+  ```
+  η = 0.88 and Π = 0.85 at 3000 ft rising linearly to 1.15 at the cruise altitude (climb); η = 0.7 and Π = 0.12 (descent). OpenALAQS has no cruise altitude: 38000 ft, the sheet's stored value, is used. The fuel-composition factors are 1 (fossil fuel).
+- OPR is read from `press_ratio`. The column is empty in the shipped data; the sheet has no value for a missing pressure ratio (its formulas then return an error), so 30 is used, with one warning in the log (`Engine.py:347`).
+- The 5th point (`meem_nvpm_m_i_f00_avg` with `nvpm_m_max_mgkg`, `meem_nvpm_n_i_f00_avg` with `nvpm_n_max_nkg`) is used when the thrust is above 0, as in the sheet; the columns are empty in the shipped data.
+- The non-LTO mass EI replaces `pm10_nonvol_g_kg` (and `nvpm_g_kg`); `pm10_g_kg`, `p1_g_kg` and `p2_g_kg` move by the same amount (`Engine.py:374`). The number EI goes to `nvpm_number_kg`, which no output column reads. Fuel flow and the gas-phase EIs are not changed.
 
-The four 5-point columns (`meem_nvpm_m_i_f00_avg`, `nvpm_m_max_mgkg`, `meem_nvpm_n_i_f00_avg`, `nvpm_n_max_nkg`) are loaded (`EngineDatabases.py:277-280`) but not used by the calculation; they are empty in the shipped data.
+Segments above 3000 ft above MSL are calculated only when the hour's mixing height (the LTO ceiling) is above 3000 ft minus the airport elevation. The port reproduces the sheet's stored example and seven recalculated cases to 1e-15 (`tests/test_meem_v1.py`).
 
-The MEEM V1 result is stored in `nvpm_g_kg` and `nvpm_number_kg` (`Engine.py:294-295`). `Emission.add` adds only the `PollutantType` keys (`Emissions.py:167-171`), so this result is not written to any output column; `pm10_nonvol_kg` and `pm10_kg` use the stored EIs.
+MEEM V2 (CAEP14 v12+) is implemented in `meem_v2.py` but not used; its adoption is to be decided. `MovementSourceModule` runs MEEM V1 for any `meem_version` value and logs a warning when another one is requested.
 
 ---
 
@@ -323,7 +331,7 @@ The BFFM2 implementation is spread across the following files:
 |------|------|
 | `core/tools/bffm2.py` | Core formula: ambient corrections, log–log interpolation, CO/HC slope-to-mean-value logic, installation corrections |
 | `core/tools/twin_quadratic_fit_method.py` | Power setting → reference fuel flow via twin-quadratic polynomial (Step 1, ALAQS default) |
-| `core/tools/meem_v1.py` | MEEM V1 nvPM EI: interpolation on the four EEDB modes; above 914 m, P3 computation and F_GR conversion |
+| `core/tools/meem_v1.py` | MEEM V1 nvPM EI, port of the CAEP14 v14 MEEM_V1 tab: mode value at or below 3000 ft; above, ISA, P3/T3, ground-reference thrust, linear interpolation and the (P3/P3_GR)^1.35 φ^2.5 correction |
 | `core/interfaces/Engine.py` (`EngineEmissionIndex` class) | Orchestrates Steps 1–5: twin-quad call, ambient correction, cache, call to `bffm2.py`; `getEmissionIndexByModeWithMEEM()` applies MEEM V1 |
 | `core/MovementEmissionCalculator.py` (`FlightEmissionCalculator` class) | Segment loop: reads profile points, computes Mach, calls `_get_emission_index_bffm2`, computes `t_seg`, calls `Emission.add()` |
 | `core/MovementEmissionCalculator.py` (`TaxiingEmissionCalculator` class) | Taxi loop: calls `getEmissionIndexByEngineState()` for gas-phase NOx/CO/HC, then injects PM/SOx/P1/P2 from mode EI |
@@ -381,12 +389,12 @@ MovementSourceModule.process()
                 │                       └── ambient correction  →  EI_corr (NOx/CO/HC)
                 │
                 ├── _get_emission_index_bffm2(mode, emission_index_bffm2)
-                │       ├── mode_ei = getEmissionIndexByModeWithMEEM(mode, P_amb, Mach)
-                │       │       └── MEEM V1 (F_GR conversion above 914 m only):
-                │       │               log-log interpolation → nvpm_g_kg
-                │       │               linear interpolation  → nvpm_number_kg
+                │       ├── mode_ei = getEmissionIndexByModeWithMEEM(mode, ..., altitude MSL, TAS)
+                │       │       └── MEEM V1: mode EI at or below 3000 ft; above,
+                │       │               CAEP14 v14 MEEM_V1 → pm10_nonvol (= nvpm_g_kg),
+                │       │               pm10/p1/p2 moved by the same amount, nvpm_number_kg
                 │       └── inject into copy of BFFM2 result:
-                │               pm10, pm10_nonvol (stored), pm10_sul, pm10_organic,
+                │               pm10, pm10_nonvol, pm10_sul, pm10_organic,
                 │               nvpm_g_kg, nvpm_number_kg (not read by Emission.add),
                 │               sox, p1, p2
                 │
@@ -409,11 +417,11 @@ MovementSourceModule.process()
 | `default_aircraft_engine_ei` | `pm10_organic` | Organic vPM EI (g/kg) |
 | `default_aircraft_engine_ei` | `pm10_ei` | Total PM10 EI = nonvol + sul + organic (g/kg) |
 | `default_aircraft_engine_ei` | `p1_ei`, `p2_ei` | PM1.0 / PM2.5 placeholders; currently = `pm10_ei` |
-| `default_aircraft_engine_ei` | `press_ratio` | OPR for MEEM V1 above 914 m (empty in the shipped data; 30 is used) |
-| `default_aircraft_engine_ei` | `meem_nvpm_m_i_f00_avg` | nvPM mass EI at F00 (mg/kg); loaded, not used, empty in the shipped data |
-| `default_aircraft_engine_ei` | `nvpm_m_max_mgkg` | max nvPM mass EI (mg/kg); loaded, not used, empty in the shipped data |
-| `default_aircraft_engine_ei` | `meem_nvpm_n_i_f00_avg` | nvPM number EI at F00 (#/kg); loaded, not used, empty in the shipped data |
-| `default_aircraft_engine_ei` | `nvpm_n_max_nkg` | max nvPM number EI (#/kg); loaded, not used, empty in the shipped data |
+| `default_aircraft_engine_ei` | `press_ratio` | OPR for MEEM V1 above 3000 ft above MSL (empty in the shipped data; 30 is used) |
+| `default_aircraft_engine_ei` | `meem_nvpm_m_i_f00_avg` | thrust of the 5th nvPM mass point (MEEM V1, used when above 0); empty in the shipped data |
+| `default_aircraft_engine_ei` | `nvpm_m_max_mgkg` | nvPM mass EI of the 5th point (mg/kg); empty in the shipped data |
+| `default_aircraft_engine_ei` | `meem_nvpm_n_i_f00_avg` | thrust of the 5th nvPM number point (MEEM V1, used when above 0); empty in the shipped data |
+| `default_aircraft_engine_ei` | `nvpm_n_max_nkg` | nvPM number EI of the 5th point (#/kg); empty in the shipped data |
 | `default_aircraft_profiles` | `power` | Thrust ratio (0–1) at each profile point |
 | `default_aircraft_profiles` | `tas_metres` | True Airspeed (m/s) at each profile point |
 | `default_aircraft_profiles` | `z_m` | Altitude above runway (m) at each profile point |
@@ -437,7 +445,7 @@ Only profile segments within the LTO ceiling (default 914.4 m above the runway, 
 
 - **Installation corrections are not user-configurable via the UI.** The SAE AIR-5715 defaults are always applied. Custom values require a Python call with an explicit `installation_corrections` dict.
 
-- **MEEM V1 result not in the output.** The MEEM V1 nvPM EIs are stored in `nvpm_g_kg` and `nvpm_number_kg` (`Engine.py:294-295`), which `Emission.add` does not read (`Emissions.py:167-171`). The output uses the stored `pm10_nonvol` and `pm10_ei`.
+- **MEEM V1 inputs not in the data.** The shipped `press_ratio` column is empty, so MEEM V1 above 3000 ft uses OPR 30 for every engine, and the climb pressure coefficient uses a 38000 ft cruise altitude. The nvPM number EI is computed but there is no nvPM number output column.
 
 - **ADS-B fuel flow accuracy.** The fuel flow stored in `fuel_flow_kgm` for ADS-B profiles is an estimate derived from aircraft performance models, not a direct measurement. For some engine types the estimate can be significantly higher than the EEDB TO value; above 1.5 × that value the plugin uses the mode-anchor fuel flow for the segment. Users should verify the QGIS log for warning messages after any BFFM2 run involving ADS-B profiles.
 

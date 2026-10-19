@@ -91,7 +91,16 @@ class MovementSourceModule(SourceModule):
         self._ambient_conditions = AmbientCondition()
 
         self._method = {"name": values_dict.get("method", "")}
-        self._meem_version = values_dict.get("meem_version", "v1")
+        # MEEM V2 (meem_v2.py) is not used by the calculation; its adoption is
+        # to be decided. Any other version runs MEEM V1.
+        meem_version = str(values_dict.get("meem_version", "v1") or "v1").lower()
+        if meem_version != "v1":
+            logger.warning(
+                "MEEM version '%s' is not available for the emission "
+                "calculation; MEEM V1 is used.",
+                meem_version,
+            )
+        self._meem_version = "v1"
         self._bffm2_ff_source = values_dict.get("bffm2_ff_source", "trajectory")
         self._nox_correction = values_dict.get("should_apply_nox_corrections", False)
         self._smooth_and_shift = values_dict.get("source_dynamics", "none")
