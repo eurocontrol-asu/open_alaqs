@@ -542,6 +542,19 @@ def _get_engine_count(conn, icao: str) -> int:
         return 0
 
 
+def _is_helicopter(conn, icao: str) -> bool:
+    if not conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='default_helicopter'"
+    ).fetchone():
+        return False
+    return (
+        conn.execute(
+            "SELECT 1 FROM default_helicopter WHERE icao=?", (icao,)
+        ).fetchone()
+        is not None
+    )
+
+
 def _get_mtow_kg(conn, icao: str) -> Optional[float]:
     row = conn.execute(
         "SELECT mtow FROM default_aircraft WHERE icao=?", (icao,)
@@ -555,13 +568,25 @@ def _get_mtow_kg(conn, icao: str) -> Optional[float]:
 
 
 def _get_engine_ei(conn, engine_name: str) -> dict:
+    """Per-mode EEDB values of the movement's engine.
+
+    Exact match on `engine_name`, or on `engine_full_name` for rows whose
+    `engine_name` is empty: the plugin's key (EngineEmissionIndicesDatabase)
+    and the standalone's (`movements.get_engine_ei`). Until October 2026 the
+    reference matched `engine_full_name LIKE %engine_name%`, which found
+    nothing in a study whose engine table carries the real designation in
+    `engine_full_name` (e.g. "CFM56-7B26" for engine "8CM051") and could
+    match several rows for short names (FOI-1 inside FOI-10 to FOI-19).
+    """
     result = {}
     for r in conn.execute(
         """
         SELECT mode, fuel_kg_sec, co_ei, hc_ei, nox_ei, sox_ei, pm10_ei
-        FROM default_aircraft_engine_ei WHERE engine_full_name LIKE ?
+        FROM default_aircraft_engine_ei
+        WHERE engine_name = ?
+           OR ((engine_name IS NULL OR engine_name = '') AND engine_full_name = ?)
         """,
-        (f"%{engine_name}%",),
+        (engine_name, engine_name),
     ):
         result[r[0]] = {
             "ff": r[1],
@@ -725,8 +750,12 @@ def compute_for_movement(
     if mov is None:
         return None
     # Helicopter: FOCA Appendix A is identical for all three fixed-wing
-    # methods (FOCA doesn't go through BFFM2).
-    if not mov["profile_id"]:
+    # methods (FOCA doesn't go through BFFM2). A helicopter is a type listed
+    # in `default_helicopter`, as the plugin and the standalone decide it;
+    # until October 2026 the reference went by an empty profile_id, which
+    # misroutes studies that give helicopters a profile_id (and blank-profile
+    # fixed-wing movements).
+    if _is_helicopter(conn, mov["aircraft"]):
         return _compute_helicopter_for_movement(conn, mov, ctx)
     return _compute_fixed_wing(
         conn,

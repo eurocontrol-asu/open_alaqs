@@ -457,3 +457,30 @@ low at 243.6 K and at 307 K; the pinned plugin outputs moved by at most
 3.6 × 10⁻⁵ (`bffm2_anchor`) and 8.0 × 10⁻⁶ (`bffm2_traj`), `bymode` not at
 all. `test_segment_mach.py` reproduces the workbook's two Mach values to
 10⁻⁹ (with its rounded 1.94384 kt per m/s).
+
+### Engine lookup and helicopter dispatch on other studies (19 October 2026)
+
+Two rules of the reference only held on the training fixture:
+
+- the engine was looked up with `engine_full_name LIKE %engine_name%`. On a
+  study whose engine table carries the real designation in
+  `engine_full_name` (e.g. "CFM56-7B26" for engine `8CM051`) nothing matched
+  and the movement was skipped; short names (`FOI-1`, `PF02`) matched several
+  rows and the last one won. The reference now matches `engine_name` exactly
+  (or `engine_full_name` for rows without an `engine_name`), the plugin's
+  key and the standalone's since 5.3.1;
+- a helicopter was a movement without `profile_id`. A study that gives its
+  helicopters a profile (`HELIPROF-*`) sent them to the fixed-wing path. The
+  reference now dispatches on membership in `default_helicopter`, as the
+  plugin and the standalone do.
+
+On `training_v3` nothing changes (its engine table has
+`engine_name = engine_full_name`; its helicopters carry no `profile_id`).
+Checked on an operational study of 159 movements and 33 engines (jets,
+turboprops, pistons, EC35 helicopters, 77 CUSTOM profiles; study meteo):
+before the fixes the reference skipped 115 movements; after them it equals
+the standalone net of the gate emissions (APU, GSE, engine start, which the
+reference does not model) to 7 × 10⁻¹⁰ (`bymode`), 6.5 × 10⁻¹⁰
+(`bffm2_anchor`) and 4 × 10⁻⁸ on the CUSTOM movements of `bffm2_traj`; one
+ANP departure of `bffm2_traj` differs by 6 × 10⁻⁴ on NOx (0.02 % of its
+take-off fuel, in an hour with a 400 m mixing height; cause not isolated).

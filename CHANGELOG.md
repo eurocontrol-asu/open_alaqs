@@ -149,6 +149,14 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   computes it. The linear form `331.3 + 0.606 (T − 273.15)` was 0.03 % low at
   ISA and 0.16 % low at 243 K and at 307 K. **Results change** below 0.01 %
   for the BFFM2 methods; `bymode` unchanged.
+- CAEP14 reference tool (`validation/tools/compute_caep14_reference.py`):
+  engines are matched on `engine_name` exactly (or `engine_full_name` for
+  rows without a name), as the plugin and the standalone do, instead of
+  `engine_full_name LIKE %engine_name%`, which skipped every movement of a
+  study whose engine table holds the real designation in `engine_full_name`
+  and let short names match several rows; helicopters are the types listed in
+  `default_helicopter`, not the movements without a `profile_id`. No change
+  on the training fixture; see `CAEP14_VALIDATION.md`.
 
 ### Removed
 
