@@ -220,3 +220,59 @@ def test_e190_default_engine():
             ("EEA-J10",),
         ).fetchone()[0]
     assert n == 4
+
+
+_FOCA = (
+    ["P001", "P002", "P003", "P004", "P011", "P111", "P121", "P131"]
+    + [f"PF{i:02d}" for i in range(1, 15)]
+    + ["B601", "B602", "B603", "B004", "B134"]
+    + ["T601", "T602", "T603", "T717", "T790"]
+)
+_FOCA_SOURCE = "ACT_PRF 2.6.3 (CAEP14 FOCA 2026-10-09)"
+
+
+def test_foca_engines_from_act_prf_2_6_3(ei):
+    rows = ei[ei.engine_name.isin(_FOCA)]
+    assert len(rows) == 4 * len(_FOCA) == 128
+    assert (rows.source == _FOCA_SOURCE).all()
+    assert (ei.source == _FOCA_SOURCE).sum() == 128
+    for c in (
+        "press_ratio",
+        "meem_nvpm_m_i_f00_avg",
+        "meem_nvpm_n_i_f00_avg",
+        "nvpm_m_max_mgkg",
+        "nvpm_n_max_nkg",
+    ):
+        assert rows[c].isna().all(), c
+
+
+def test_foca_values():
+    """B601 TO, B004 and P001 TX: rate / fuel of ACT_PRF 2.6.3 (CAEP14 FOCA,
+    2026-10-09). B004 and B134 take the file's sulphate and organic vPM
+    (their parts sum to PMtotal); B601 to B603 keep 0 (the file's parts
+    exceed PMtotal for them)."""
+    ei = pd.read_csv(CSV).set_index(["engine_name", "mode"])
+    b = ei.loc[("B601", "TO")]
+    assert b.fuel_kg_sec == pytest.approx(0.121)
+    assert b.pm10_ei == pytest.approx(0.25, rel=1e-9)
+    for e in ("B601", "B602", "B603"):
+        g = ei.loc[e]
+        assert (g.pm10_sul == 0.0).all() and (g.pm10_organic == 0.0).all(), e
+    for e in ("B004", "B134"):
+        g = ei.loc[e]
+        assert (g.pm10_sul > 0).all(), e
+        parts = g.pm10_nonvol + g.pm10_sul + g.pm10_organic
+        assert ((parts - g.pm10_ei).abs() <= 1e-5 * g.pm10_ei).all(), e
+    assert b.nvpm_number_ei == pytest.approx(8.83e13 / 0.121, rel=1e-9)
+    p = ei.loc[("P001", "TX")]
+    assert p.fuel_kg_sec == pytest.approx(0.0012)
+    assert p.pm10_sul == 0.0 and p.pm10_organic == 0.0
+
+
+def test_foca_turboprops_burn_jet_fuel(ei):
+    """FOCA turboprops: jet fuel and its SOx EI; no turboprop is AvGas."""
+    tp = ei[ei.engine_name.isin(["T601", "T602", "T603", "T717", "T790"])]
+    assert len(tp) == 20
+    assert (tp.fuel_type == "Jet Fuel").all()
+    assert (tp.sox_ei == 0.75834).all()
+    assert not (ei[ei.engine_type == "T"].fuel_type == "AvGas").any()

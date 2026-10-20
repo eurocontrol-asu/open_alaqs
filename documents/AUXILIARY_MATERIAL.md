@@ -48,7 +48,7 @@ The engine EI table contains one row per engine per LTO mode (TX, AP, CL, TO). T
 | `fuel_kg_sec` | Reference fuel flow (kg/s per engine, SLS) |
 | `nox_ei`, `co_ei`, `hc_ei` | EEDB gas-phase emission indices (g/kg) |
 | `sox_ei` | SOx (as SO2) emission index (g/kg): 0.758 for the Jet Fuel rows and 0.2 for the AvGas rows of the shipped data (see below); a 0 or empty value is replaced by the value of the row's fuel |
-| `pm10_ei` | Total combustion PM10 EI (g/kg) = `pm10_nonvol` + `pm10_sul` + `pm10_organic` |
+| `pm10_ei` | Total combustion PM10 EI (g/kg) = `pm10_nonvol` + `pm10_sul` + `pm10_organic` (to rounding), except for the 32 FOCA engines (P*, PF*, B*, T601 to T603, T717, T790; `source` "ACT_PRF 2.6.3 (CAEP14 FOCA 2026-10-09)"), whose `pm10_ei` is the FOCA total PM of the file and not the sum of the stored parts: the pistons and turboprops carry no `pm10_sul` and `pm10_organic`; B004 and B134 take the file's split, which sums to the total; B601, B602 and B603 keep `pm10_sul` and `pm10_organic` at 0 because the file's nvPM + volatile + sulphate exceeds its total for them (B601 approach 1.6 times) |
 | `pm10_nonvol` | Non-volatile PM (nvPM) mass EI (g/kg) from ICAO EEDB |
 | `pm10_sul` | Sulphate vPM EI (g/kg); see PM10 breakdown below |
 | `pm10_organic` | Organic vPM EI (g/kg); see PM10 breakdown below |

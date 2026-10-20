@@ -14,6 +14,21 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 
 ### Changed
 
+- `default_aircraft_engine_ei`: the 32 FOCA engines (P001 to P004, P011,
+  P111, P121, P131, PF01 to PF14, B601 to B603, B004, B134, T601 to T603,
+  T717, T790) come from ACT_PRF 2.6.3 (CAEP14 FOCA, 2026-10-09), `source`
+  "ACT_PRF 2.6.3 (CAEP14 FOCA 2026-10-09)": fuel, gases, `pm10_ei` and
+  `pm10_nonvol` unchanged; `nvpm_number_ei` within 0.42 % (3 significant
+  digits in the file); B004 and B134 get the file's sulphate (0.04896 g/kg)
+  and organic vPM, which were 0 (`pm10_sul_kg` and `pm10_organic_kg` output
+  columns); B601, B602 and B603 keep 0, since the file's parts exceed its
+  PMtotal for them (B601 approach 1.6 times). `pm10_ei` is the FOCA total. No bundled movement uses them,
+  so no pinned output changes. In the CSV and the bundled `.alaqs` files.
+- `default_aircraft_engine_ei`: the FOCA turboprops T601, T602, T603, T717
+  and T790 had `fuel_type` AvGas; they are now Jet Fuel, so `sox_ei`
+  0.75834 g/kg instead of 0.2 (no turboprop of the table is AvGas any
+  more). In the CSV and the bundled `.alaqs` files; no bundled movement
+  uses them.
 - Training example ADS-B tracks (`example/training/training_ads_b_data.csv`
   and its copy in `validation/data/source_csvs`, the CUSTOM profiles of
   `training_out.alaqs` and `training_v3*.alaqs`): `fuel_flow` was 0.083 to
