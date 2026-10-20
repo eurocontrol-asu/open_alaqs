@@ -3175,8 +3175,10 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
                 )
 
                 if not alaqs_f.isValid():
+                    # "full_id" is not an attribute of every OSM layer
+                    osm_ref = osm_f.attributeMap().get("full_id") or osm_f.id()
                     logger.warning(
-                        f'Invalid new feature in layer "{layer_config["name"]}" from OSM: {osm_f["full_id"]}'
+                        f'Invalid new feature in layer "{layer_config["name"]}" from OSM: {osm_ref}'
                     )
 
                 alaqs_features.append(alaqs_f)

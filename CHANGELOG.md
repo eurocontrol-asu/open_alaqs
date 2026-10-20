@@ -41,6 +41,24 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   adoption is to be decided. The emission calculation runs MEEM V1 for any
   `meem_version` value and logs a warning when another one is requested
   (`MovementSourceModule`).
+- UI field names harmonised: one name per field in the forms, the attribute
+  table and the documentation, Title Case with units as "Name [unit]" (for
+  example **Touchdown Offset, Runway 1 [m]**, **Vehicles per Year** for
+  parkings and roadways, **Runway Direction** and **Operation Type** for
+  tracks, **Hourly Profile**, **Heat Flux [MW]**). The names are set as
+  attribute-table aliases from the new per-layer `fields` map in
+  `alaqs_config.py`, applied each time a study opens
+  (`openalaqsuitoolkit.apply_layer_field_config`); database column names
+  are unchanged. New features get defaults (heights and touchdown offsets
+  0, profiles `default`, gate type PIER, in study 1); the attribute table
+  hides the OID column and lists **In Study** last, as a check box ("1" /
+  "0") on parkings, roadways, point sources and area sources, and hidden on
+  the layers that do not use it (runways, taxiways, gates, tracks,
+  buildings). OID, taxiway **Time [min]** and **Heat Flux [MW]** are
+  read-only; the emission factors filled in by Recalculate, **Method** and
+  **Activity Unit** are no longer editable in the forms. Validation messages
+  of the parking and roadway forms use the field names. Typos fixed
+  ("Buiding", "Mw", the building name tooltip).
 
 ### Added
 
@@ -227,6 +245,33 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   movement 13; the `training_v3` validation fixtures got the same routes
   (pinned outputs unchanged, 6e-13). `training_out.alaqs` and the example
   workbook rebuilt.
+- Point sources: the **Type** was never saved (the form combo box was
+  named `type`, the column is `point_type`).
+- Taxiways: the form wrote the text "Calculated" into the DECIMAL `time`
+  column; it now only shows it as placeholder text. The value is cleared
+  (NULL) in the bundled studies; it was not read by any calculation.
+- Runways: a new runway left at the default selection (01) had no
+  **Runway Name** (it was only built when a combo box changed); the form now
+  builds it (01/19) when it opens empty.
+- Runways: the touchdown offsets are INT columns but the form accepted
+  decimals; it now accepts whole metres only.
+- Point sources: "1000_m3 (legacy default)" was saved into `activity_unit`
+  when the emission factor row has no unit; it is now placeholder text only
+  and the field stays empty.
+- OSM import: the attribute mappings of buildings, gates and parkings were
+  written {ALAQS column: OSM attribute} while the import reads {OSM
+  attribute: ALAQS column} (as runways, taxiways and roadways), so gate
+  names from the OSM `ref` tag were never imported.
+- Forms of existing features showed the first entry of their combo boxes
+  instead of the stored value: the profiles (parkings, roadways, point and
+  area sources), the point-source **Category** and **Type** and the
+  **Gate Type** (shown as "(CARGO)", which blocked OK). The stored values
+  are selected now; for point sources without changing the stored
+  parameters and emission factors.
+- A NULL name, shown by QGIS as "NULL" in a new feature's form, passed the
+  validation; an empty or NULL name now blocks OK on every form.
+- Removed a debug `print` from the track form; the OSM import warning for
+  an invalid feature no longer fails on layers without `full_id`.
 
 ### Removed
 

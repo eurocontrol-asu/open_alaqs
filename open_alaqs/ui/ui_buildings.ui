@@ -39,14 +39,14 @@
    <item row="1" column="1">
     <widget class="QLineEdit" name="building_id">
      <property name="toolTip">
-      <string>Enter a unique name for your gate</string>
+      <string>Enter a unique name for your building</string>
      </property>
     </widget>
    </item>
    <item row="3" column="0">
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Buiding Height [m]</string>
+      <string>Height [m]</string>
      </property>
     </widget>
    </item>

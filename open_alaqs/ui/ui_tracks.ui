@@ -47,7 +47,7 @@
    <item row="3" column="0">
     <widget class="QLabel" name="label_5">
      <property name="text">
-      <string>Runway</string>
+      <string>Runway Direction</string>
      </property>
     </widget>
    </item>
@@ -61,7 +61,7 @@
    <item row="4" column="0">
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Arrival/Departure</string>
+      <string>Operation Type</string>
      </property>
     </widget>
    </item>

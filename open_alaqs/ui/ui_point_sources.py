@@ -2,9 +2,25 @@ from qgis.PyQt import QtWidgets
 
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.openalaqsuitoolkit import validate_field
+from open_alaqs.openalaqsuitoolkit import (
+    feature_value,
+    select_combo_value,
+    validate_field,
+)
 
 logger = get_logger(__name__)
+
+# Shown, never saved, when the selected emission factor has no unit
+ACTIVITY_UNIT_PLACEHOLDER = "1000_m3 (legacy default)"
+
+
+def activity_unit_text(activity_unit) -> str:
+    """Text written into the Activity Unit field for an emission factor
+    row: its unit, or an empty string when the row has none (the field
+    then shows ACTIVITY_UNIT_PLACEHOLDER as placeholder text)."""
+    if activity_unit is None:
+        return ""
+    return str(activity_unit).strip()
 
 
 def run_once(f):
@@ -64,14 +80,15 @@ def form_open(form, layer, feature):
         diameter=form.findChild(QtWidgets.QLineEdit, "diameter"),
         velocity=form.findChild(QtWidgets.QLineEdit, "velocity"),
         ops_year=form.findChild(QtWidgets.QLineEdit, "ops_year"),
-        # Read-only "Activity unit" field (added in the point-sources v2
+        # Read-only "Activity Unit" field (added in the point-sources v2
         # schema migration). Populated from the selected EF row's
-        # `activity_unit` column by `change_type_field`. Legacy .alaqs
-        # files predate the v2 columns; the form handler falls back to
-        # "1000_m3 (legacy default)" when the column is missing or NULL.
+        # `activity_unit` column by `change_type_field`. Legacy EF rows
+        # have no unit; the field is then left empty and shows the
+        # historical default "1000_m3 (legacy default)" as placeholder
+        # text only, so that text is never saved.
         activity_unit=form.findChild(QtWidgets.QLineEdit, "activity_unit"),
         category=form.findChild(QtWidgets.QComboBox, "category"),
-        type=form.findChild(QtWidgets.QComboBox, "type"),
+        point_type=form.findChild(QtWidgets.QComboBox, "point_type"),
         hour_profile=form.findChild(QtWidgets.QComboBox, "hour_profile"),
         daily_profile=form.findChild(QtWidgets.QComboBox, "daily_profile"),
         month_profile=form.findChild(QtWidgets.QComboBox, "month_profile"),
@@ -82,6 +99,11 @@ def form_open(form, layer, feature):
     # Hide the instudy field
     fields["instudy"].setHidden(True)
 
+    # The Activity Unit comes from the selected Type; it is not typed in
+    if fields["activity_unit"] is not None:
+        fields["activity_unit"].setEnabled(False)
+        fields["activity_unit"].setPlaceholderText(ACTIVITY_UNIT_PLACEHOLDER)
+
     # Seed the category field once
     populate_categories_once(fields["category"])
 
@@ -90,13 +112,20 @@ def form_open(form, layer, feature):
     populate_daily_profiles(fields["daily_profile"])
     populate_monthly_profiles(fields["month_profile"])
 
+    # Show the stored category, type and profiles. Done before the change
+    # handlers are connected, so the stored parameters and emission factors
+    # are not replaced by the defaults of the type.
+    restore_stored_selection(fields, feature)
+
     # Seed the type field if the category field changes
     fields["category"].currentTextChanged.connect(
         lambda v: change_category_field(fields, v)
     )
 
     # Set all fields to default if the type field changes
-    fields["type"].currentTextChanged.connect(lambda v: change_type_field(fields, v))
+    fields["point_type"].currentTextChanged.connect(
+        lambda v: change_type_field(fields, v)
+    )
 
     # Add input validation to text fields in the form
     for key, value in fields.items():
@@ -111,7 +140,7 @@ def form_open(form, layer, feature):
     # Connect all QComboBoxes and the instudy checkbox on save
     def on_save():
         form.changeAttribute("category", fields["category"].currentText())
-        form.changeAttribute("type", fields["type"].currentText())
+        form.changeAttribute("point_type", fields["point_type"].currentText())
         form.changeAttribute("hour_profile", fields["hour_profile"].currentText())
         form.changeAttribute("daily_profile", fields["daily_profile"].currentText())
         form.changeAttribute("month_profile", fields["month_profile"].currentText())
@@ -120,6 +149,35 @@ def form_open(form, layer, feature):
     fields["button_box"].accepted.connect(on_save)
 
     return form
+
+
+def restore_stored_selection(fields: dict, feature) -> None:
+    """Select the feature's stored category, type and profiles in the
+    combo boxes that form_open has just filled."""
+    category = feature_value(feature, "category")
+    select_combo_value(fields["category"], category)
+    if category is not None:
+        category_name = str(category).strip()
+        if category_name == "Other":
+            change_category_field(fields, category_name)
+        else:
+            row = alaqs.get_point_category(category_name)
+            if row:
+                fields["point_type"].clear()
+                for category_type in alaqs.get_point_types(row["category"]) or []:
+                    fields["point_type"].addItem(category_type["description"])
+        point_type = feature_value(feature, "point_type")
+        if point_type is None:
+            # Keep "no type" rather than showing (and saving) the first one
+            fields["point_type"].insertItem(0, "")
+            fields["point_type"].setCurrentIndex(0)
+        else:
+            select_combo_value(fields["point_type"], point_type)
+    else:
+        # No category: only drop the "(NULL)" item QGIS adds for the type
+        select_combo_value(fields["point_type"], None)
+    for key in ("hour_profile", "daily_profile", "month_profile"):
+        select_combo_value(fields[key], feature_value(feature, key))
 
 
 @run_once
@@ -161,8 +219,8 @@ def change_category_field(fields: dict, category: str):
 
     if category_name == "Other":
         # Edit the form fields
-        fields["type"].clear()
-        fields["type"].addItem("")
+        fields["point_type"].clear()
+        fields["point_type"].addItem("")
 
         fields["height"].setEnabled(True)
         fields["substance"].setEnabled(True)
@@ -174,7 +232,7 @@ def change_category_field(fields: dict, category: str):
 
     if category_name == "":
         # Edit the form fields
-        fields["type"].clear()
+        fields["point_type"].clear()
         fields["height"].setText("")
         fields["temperature"].setText("")
         fields["diameter"].setText("")
@@ -187,9 +245,9 @@ def change_category_field(fields: dict, category: str):
     category_types = alaqs.get_point_types(category["category"])
 
     # Add all category types to the list
-    fields["type"].clear()
+    fields["point_type"].clear()
     for category_type in category_types:
-        fields["type"].addItem(category_type["description"])
+        fields["point_type"].addItem(category_type["description"])
 
 
 @catch_errors
@@ -242,13 +300,11 @@ def change_type_field(fields: dict, type_name: str):
     # Activity unit (point-sources v2). Pulled from the selected EF
     # row's `activity_unit` column. Legacy rows from pre-v2 .alaqs
     # files have NULL here; the historical default was 1000 m^3 of
-    # fuel gas, so we surface that as the displayed fallback to
-    # preserve compatibility with existing studies.
+    # fuel gas. That default is only shown as placeholder text (set in
+    # form_open), so the field stays empty and nothing is saved for it.
     activity_unit_field = fields.get("activity_unit")
     if activity_unit_field is not None:
-        activity_unit_field.setText(
-            str(data.get("activity_unit") or "1000_m3 (legacy default)")
-        )
+        activity_unit_field.setText(activity_unit_text(data.get("activity_unit")))
 
     # Recommended temporal profiles (point-sources v2). When the EF
     # row carries `recommended_*_profile`, pre-select that profile in

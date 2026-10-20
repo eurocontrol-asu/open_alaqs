@@ -140,6 +140,8 @@ Attribute values can also be modified after an object's creation via the `Attrib
 
 The `Open Attribute Table` functionality can be accessed through the `Attributes` toolbar or via the `Layers` panel (by right-clicking on the appropriate layer).
 
+The attribute table uses the same field names as the forms and this guide (for example **Touchdown Offset, Runway 1 [m]** or **Vehicles per Year**); the database column names are unchanged. The internal **OID** column is hidden. **In Study** is the last column: it is a check box on parkings, roadways, point sources and area sources (unticked sources are left out of the emission calculation) and is hidden on the other layers, which do not use it. New features start with the defaults of the forms: heights and offsets 0, profiles `default`, **Gate Type** PIER and **In Study** ticked.
+
 ### [Aircraft related Sources](#aircraft-related-sources)
 Calculating aircraft emissions requires the definition of three distinct layers: runways, taxiways, gates. For each of these features, the user must provide the required attributes. Defining Tracks (i.e., aircraft trajectories) is also possible; however, this functionality is `not yet fully implemented`.
 
@@ -153,8 +155,9 @@ Calculating gate emissions requires establishing the sum of four emission source
 ![gates.png](./../open_alaqs/assets/gates.png)
 
 When adding a gate, the following information is required:
-+ Gate type (PIER, REMOTE or CARGO)
-+ Gate height `not yet fully implemented`
++ **Gate Name**
++ **Gate Type** (PIER, REMOTE or CARGO)
++ **Height [m]** `not yet fully implemented`
 
 In OpenALAQS, GSE and GPU emission factors, expressed in terms of grams of pollutant per hour, are assigned to each gate as a function of:
 + The gate type (PIER, REMOTE or CARGO)
@@ -168,8 +171,11 @@ More information on the corresponding GSE/GPU, APU and MES emission factors and 
 Runways are linear features that define the vertical plane where approach, landing, take-off, and climb-out operations occur. Each end of the runway is designated as a specific runway, depending on the direction of movement.
 
 When adding a runway, the following information can be given:
-+ Touchdown Offset, Runway 1 (meters): distance from the Runway 1 end (its landing threshold) to the touchdown of arrivals landing on Runway 1. Empty or 0: each arrival profile's own distance, i.e. where the profile descends through 50 ft (15.24 m, the ILS reference datum height), about 290 m before touchdown on a 3° approach.
-+ Touchdown Offset, Runway 2 (meters): the same for Runway 2, independently of Runway 1. Empty or 0: each arrival profile's own distance.
++ **Runway Name**: built from the runway ends chosen in the form (Runway 1 and the opposite Runway 2, for example 06/24).
++ **Touchdown Offset, Runway 1 [m]**: distance from the Runway 1 end (its landing threshold) to the touchdown of arrivals landing on Runway 1. Empty or 0: each arrival profile's own distance, i.e. where the profile descends through 50 ft (15.24 m, the ILS reference datum height), about 290 m before touchdown on a 3° approach.
++ **Touchdown Offset, Runway 2 [m]**: the same for Runway 2, independently of Runway 1. Empty or 0: each arrival profile's own distance.
+
+Both offsets are whole metres (the form accepts integers only).
 
 Draw the runway from threshold to threshold. For a displaced threshold, enter the displacement plus about 290 m.
 
@@ -194,8 +200,10 @@ The runway emissions are calculated based on the aircraft trajectories (profiles
 #### [Taxiways](#taxiways)
 
 An airport taxiway is a designated path that connects runways with terminals, gates, or other parts of the airport. When adding a taxiway in an OpenALAQS study, the following information is mandatory:
-+ Name
-+ Speed (km/h)
++ **Taxiway Name**
++ **Speed [km/h]**
+
+**Time [min]** is not entered (the form shows "Calculated").
 
 ![taxiways-layer.png](./../open_alaqs/assets/taxiways-layer.png)
 
@@ -206,9 +214,9 @@ It is important to distinguish between taxiways and taxi-routes. Taxi-routes des
 #### [Tracks](#tracks)
 
 Aircraft tracks define custom aircraft trajectories. When adding aircraft tracks, the following information is mandatory:
-+ Track Name
-+ Runway (from the list of previously defined runways)
-+ Operation Type (Arrival or Departure)
++ **Track Name**
++ **Runway Direction** (from the list of previously defined runways)
++ **Operation Type** (Arrival or Departure)
 
 ![tracks-layer.png](./../open_alaqs/assets/tracks-layer.png)
 
@@ -224,23 +232,24 @@ For non-aircraft emissions four additional emission sources can be considered: p
 Emissions from parking areas for vehicles are estimated based on the [`COPERT`](AUXILIARY_MATERIAL.md#copert) methodology.
 
 When adding an airport parking lot, the following information is required:
++ **Parking Name**
 + **Parameters**
-  + **Number per year**: Total number of vehicles per year
-  + **Height**: Height at which emissions are released (in meters) `not yet fully implemented`
-  + **Speed**: Average travel speed in parking (in km/h)
-  + **Travel distance**: Average travel distance in parking (in meters)
-  + **Idle time**: Vehicle average idling time between entry and exit (in minutes)
+  + **Vehicles per Year**: Total number of vehicles per year
+  + **Height [m]**: Height at which emissions are released `not yet fully implemented`
+  + **Speed [km/h]**: Average travel speed in parking
+  + **Travel Distance [m]**: Average travel distance in parking
+  + **Idle Time [min]**: Vehicle average idling time between entry and exit
 + **Profiles**
-  + Hourly, Daily or Monthly activity profiles
+  + **Hourly Profile**, **Daily Profile** and **Monthly Profile** (activity profiles)
 + **Fleet mix**
-  + **PC (Petrol) [in %]**: Passenger Cars (Petrol)
-  + **PC (Diesel) [in %]**: Passenger Cars (Diesel)
-  + **LCV (Petrol) [in %]**: Light Commercial Vehicles (Petrol)
-  + **LCV (Diesel) [in %]**: Light Commercial Vehicles (Diesel)
-  + **HDT (Petrol) [in %]**: Heavy Duty Trucks (Petrol)
-  + **HDT (Diesel) [in %]**: Heavy Duty Trucks (Diesel)
-  + **Motorcycles [in %]**
-  + **Buses [in %]**
+  + **PC (Petrol) [%]**: Passenger Cars (Petrol)
+  + **PC (Diesel) [%]**: Passenger Cars (Diesel)
+  + **LCV (Petrol) [%]**: Light Commercial Vehicles (Petrol)
+  + **LCV (Diesel) [%]**: Light Commercial Vehicles (Diesel)
+  + **HDT (Petrol) [%]**: Heavy Duty Trucks (Petrol)
+  + **HDT (Diesel) [%]**: Heavy Duty Trucks (Diesel)
+  + **Motorcycle [%]**
+  + **Bus [%]**
 
 <p align="center">
   <img src="./../open_alaqs/assets/parkings-layer.png" alt="Parking Layer" width="33%" />
@@ -250,6 +259,8 @@ When adding an airport parking lot, the following information is required:
 
 The user should ensure that the fleet mix totals 100% (see the `Fleet Mix` tab). Custom emission factors are calculated (using the `Recalculate` button in the `Emissions` tab) for each parking area using [`COPERT`](AUXILIARY_MATERIAL.md#copert) version 5.4.52, based on the parameters indicated above, as well as the average fleet year and country specified at the beginning of the study setup.
 
+The emission factors (**CO [g/vehicle]**, **HC [g/vehicle]**, **NOx [g/vehicle]**, **SOx [g/vehicle]**, **PM10 [g/vehicle]**, **P1 [g/vehicle]**, **P2 [g/vehicle]**) and **Method** are filled in by `Recalculate` and cannot be typed in the form.
+
 Custom activity profiles can also be defined for each parking area (see [`Activity Profiles`](#activity-profiles)).
 
 #### [Roadways](#roadways)
@@ -257,21 +268,24 @@ Custom activity profiles can also be defined for each parking area (see [`Activi
 Airside or landside emissions are calculated using the same methodology as described above.
 
 When adding a roadway, the following information is required:
++ **Roadway Name**
 + **Parameters**
-  + **Movements per year**: Number of annual movements
-  + **Height**: Height at which emissions are released (in meters) `not yet fully implemented`
-  + **Speed**: Vehicle speed on roadway (in km/h)
+  + **Vehicles per Year**: Number of vehicles per year on the roadway
+  + **Height [m]**: Height at which emissions are released `not yet fully implemented`
+  + **Speed [km/h]**: Vehicle speed on roadway
 + **Profiles**:
-  + Hourly, Daily or Monthly activity profiles
+  + **Hourly Profile**, **Daily Profile** and **Monthly Profile** (activity profiles)
 + **Fleet mix**
-  + **PC (Petrol) [in %]**: Passenger Cars (Petrol)
-  + **PC (Diesel) [in %]**: Passenger Cars (Diesel)
-  + **LCV (Petrol) [in %]**: Light Commercial Vehicles (Petrol)
-  + **LCV (Diesel) [in %]**: Light Commercial Vehicles (Diesel)
-  + **HDT (Petrol) [in %]**: Heavy Duty Trucks (Petrol)
-  + **HDT (Diesel) [in %]**: Heavy Duty Trucks (Diesel)
-  + **Motorcycles [in %]**
-  + **Buses [in %]**
+  + **PC (Petrol) [%]**: Passenger Cars (Petrol)
+  + **PC (Diesel) [%]**: Passenger Cars (Diesel)
+  + **LCV (Petrol) [%]**: Light Commercial Vehicles (Petrol)
+  + **LCV (Diesel) [%]**: Light Commercial Vehicles (Diesel)
+  + **HDT (Petrol) [%]**: Heavy Duty Trucks (Petrol)
+  + **HDT (Diesel) [%]**: Heavy Duty Trucks (Diesel)
+  + **Motorcycle [%]**
+  + **Bus [%]**
+
+As for parking lots, `Recalculate` fills in the emission factors (**CO [g/km]**, **HC [g/km]**, **NOx [g/km]**, **SOx [g/km]**, **PM10 [g/km]**, **P1 [g/km]**, **P2 [g/km]**).
 
 ![roadways-layer.png](./../open_alaqs/assets/roadways-layer.png)
 
@@ -280,17 +294,18 @@ When adding a roadway, the following information is required:
 Stationary or infrastructure-related emissions from airport facilities, such as power and heating plants, incinerators, training fires, fuel storage tanks, and stationary internal-combustion engines, are represented as point sources in OpenALAQS.
 
 When adding a point source, the following information is required:
++ **Source Name**
 + **Parameters**
   + **Category**: Source category. Seven categories ship by default: *Other* (0), *Incinerator* (1), *Power/Heat Plant* (2), *Fuel Tank* (3), *Solvent Degreaser* (4), *Surface Coating* (5), *Stationary IC Engine* (6).
   + **Type**: Category-specific type. The full set is in [`default_stationary_ef`](./../open_alaqs/database/data/default_stationary_ef.csv); examples include natural gas, light/heavy fuel oil, JP-4, JP-5, JET A, automobile gasoline, aviation gasoline.
-  + **Height**: Height at which emissions are released (in metres). `Not yet fully implemented`.
-  + **Activity per year**: How much the source operates in one inventory year. The numeric value of throughput, fuel consumed, or hours run.
-  + **Activity unit** (read-only): Unit paired with *Activity per year*. Inherited from the selected emission factor row (`default_stationary_ef.activity_unit`). Examples: `1000_m3` (natural gas throughput), `1000_L` (liquid-fuel throughput), `hr` (engine operating hours), `1000_kg` (solid waste / coating).
-+ **Profiles**: Each point source carries one *hour*, one *day*, and one *month* profile. The profiles split the *Activity per year* total into a per-hour timeline across the inventory year. The `default_stationary_ef` table recommends profile names per source type (e.g. `business_hours` for stationary IC engines, `heating_season` for power/heat plants); these names refer to profiles you must define yourself via the OpenALAQS Toolbar → *Activity Profiles* panel, since the user profile tables in the project template ship empty. Until you create them, sources fall back to the default uniform profile.
+  + **Height [m]**: Height at which emissions are released. `Not yet fully implemented`.
+  + **Activity per Year**: How much the source operates in one inventory year. The numeric value of throughput, fuel consumed, or hours run.
+  + **Activity Unit** (read-only): Unit paired with **Activity per Year**. Inherited from the selected emission factor row (`default_stationary_ef.activity_unit`); left empty when that row has no unit (the field then shows the legacy default `1000_m3` as a hint only). Examples: `1000_m3` (natural gas throughput), `1000_L` (liquid-fuel throughput), `hr` (engine operating hours), `1000_kg` (solid waste / coating).
++ **Profiles**: Each point source carries one **Hourly Profile**, one **Daily Profile** and one **Monthly Profile**. The profiles split the **Activity per Year** total into a per-hour timeline across the inventory year. The `default_stationary_ef` table recommends profile names per source type (e.g. `business_hours` for stationary IC engines, `heating_season` for power/heat plants); these names refer to profiles you must define yourself via the OpenALAQS Toolbar → *Activity Profiles* panel, since the user profile tables in the project template ship empty. Until you create them, sources fall back to the default uniform profile.
 
 ![points-layer.png](./../open_alaqs/assets/points-layer.png)
 
-The internal OpenALAQS database contains default emission factors for each category and type (see [`default_stationary_ef`](./../open_alaqs/database/data/default_stationary_ef.csv)). Each emission factor (CO, HC, NOx, SOx, PM10, P1, P2) is in kilograms per *Activity unit*. The per-hour emission is:
+The internal OpenALAQS database contains default emission factors for each category and type (see [`default_stationary_ef`](./../open_alaqs/database/data/default_stationary_ef.csv)). Each emission factor (**CO [kg/unit]**, **HC [kg/unit]**, **NOx [kg/unit]**, **SOx [kg/unit]**, **PM10 [kg/unit]**, **P1 [kg/unit]**, **P2 [kg/unit]**) is in kilograms per **Activity Unit**. The per-hour emission is:
 
 ```
 emission_kg_per_hour
@@ -306,10 +321,10 @@ where the three profile factors are dimensionless and average to 1.0 across the 
 
 **Worked examples**:
 
-+ *Heating plant on natural gas* (Category 2): 850 000 m³ consumed per year → enter `Activity per year = 850`. The selected type's row has `activity_unit = 1000_m3` (read-only). With `nox_kg_k = 1.9`, annual NOx = 850 × 1.9 = 1 615 kg.
-+ *Diesel backup generator* (Category 6, Stationary IC Engine): 400 operating hours per year → enter `Activity per year = 400`, `activity_unit = hr`. With `nox_kg_k = 0.012`, annual NOx = 400 × 0.012 = 4.8 kg.
-+ *Incinerator* (Category 1): 3 200 tonnes of waste per year → enter `Activity per year = 3200`, `activity_unit = 1000_kg`. The EF applies to the 3 200 figure directly.
-+ *Fuel storage tank* (Category 3): 1 800 000 L throughput per year → enter `Activity per year = 1800`, `activity_unit = 1000_L`. The EF here represents evaporative VOC losses per thousand litres throughput.
++ *Heating plant on natural gas* (Category 2): 850 000 m³ consumed per year → enter `Activity per Year = 850`. The selected type's row has `activity_unit = 1000_m3` (read-only). With `nox_kg_k = 1.9`, annual NOx = 850 × 1.9 = 1 615 kg.
++ *Diesel backup generator* (Category 6, Stationary IC Engine): 400 operating hours per year → enter `Activity per Year = 400`, `activity_unit = hr`. With `nox_kg_k = 0.012`, annual NOx = 400 × 0.012 = 4.8 kg.
++ *Incinerator* (Category 1): 3 200 tonnes of waste per year → enter `Activity per Year = 3200`, `activity_unit = 1000_kg`. The EF applies to the 3 200 figure directly.
++ *Fuel storage tank* (Category 3): 1 800 000 L throughput per year → enter `Activity per Year = 1800`, `activity_unit = 1000_L`. The EF here represents evaporative VOC losses per thousand litres throughput.
 
 **Schema migration note**: studies produced by older plugin versions used a single `units_per_year` field (hours per year only) without an explicit activity unit. The `scripts/migrate_alaqs.py` tool upgrades legacy `.alaqs` files in place, renames `units_per_year` to `annual_activity`, adds the `activity_unit` column to `shapes_point_sources`, and reports any source pinned to an emission-factor row that has since been deprecated. See `documents/AUXILIARY_MATERIAL.md` for the v2 schema reference.
 
@@ -320,12 +335,13 @@ where the three profile factors are dimensionless and average to 1.0 across the 
 This layer allows users to include emissions from custom, user-defined sources not covered by the standard OpenALAQS sources, as long as they have the relevant emission factor information.
 
 When adding an area source, the following information is required:
++ **Source Name**
 + Parameters:
-  + Units per year: Number of operating hours per year
-  + Height: Height at which emissions are released (in meters) `not yet fully implemented`
-  + Heat Flux: Heat flux (in Megawatts) `not yet fully implemented`
-+ Emissions: Emission factors for CO, HC, NOX, SOX, PM10 (in kg/unit)
-+ Profiles: Hourly, Daily or Monthly activity profiles (default or custom)
+  + **Units per Year**: Number of operating hours per year
+  + **Height [m]**: Height at which emissions are released `not yet fully implemented`
+  + **Heat Flux [MW]**: read-only, 0 for new area sources `not yet fully implemented`
++ Emissions: **CO [kg/unit]**, **HC [kg/unit]**, **NOx [kg/unit]**, **SOx [kg/unit]**, **PM10 [kg/unit]**, **P1 [kg/unit]**, **P2 [kg/unit]**
++ Profiles: **Hourly Profile**, **Daily Profile** and **Monthly Profile** (default or custom)
 
 ![area-sources-layer.png](./../open_alaqs/assets/area-sources-layer.png)
 
@@ -333,7 +349,7 @@ The emission calculation is: `emission (kg) = EF (kg/unit) × units_per_year × 
 
 Beyond the standard pollutants, two additional pollutants **P1** and **P2** can be defined by the user. For aircraft movements, P1 and P2 are placeholders for PM1.0 and PM2.5 respectively, currently set equal to PM10 until dedicated emission indices become available in the EEDB (see [`PM10 output columns`](#pm10-output-columns)).
 
-The area-source form also has an **Engine test site** checkbox. When enabled, the source's `*_kg_unit` emission-rate fields above are ignored at compute time; per-mode emissions come from rows in the `engine_test_events` table instead. See the next subsection for the setup workflow.
+The area-source form also has an **Engine Test Site** checkbox. When enabled, the source's `*_kg_unit` emission-rate fields above are ignored at compute time; per-mode emissions come from rows in the `engine_test_events` table instead. See the next subsection for the setup workflow.
 
 #### [Engine test sites](#engine-test-sites)
 
@@ -342,10 +358,10 @@ An engine test site (run-up pad) is an area source flagged for special treatment
 **Setup workflow:**
 
 1. Draw the area source in QGIS covering the extent of the run-up pad. Fill in name and height as for a regular area source.
-2. In the source's edit form, tick the **Engine test site** checkbox. When ticked, the Units per Year, Emissions tab, and Profiles fields gray out — they are ignored at compute time for test sites. Only Source Name and Height are required.
+2. In the source's edit form, tick the **Engine Test Site** checkbox. When ticked, **Units per Year** and the Emissions and Profiles tabs gray out: they are ignored at compute time for test sites. Only **Source Name** and **Height [m]** are required.
 3. Prepare a CSV of events. Each row is one engine test run. Required columns: `start_datetime`, `end_datetime`, `aircraft_type`, and per-mode running times in seconds (`t_TX_s`, `t_AP_s`, `t_CL_s`, `t_TO_s`). Optional columns: `source_id` (auto-filled from the current source), `test_id`, `engine_uid`, `engine_count`. See [`scripts/README.md`](../scripts/README.md#import_engine_test_eventspy) for the full CSV specification. If your CSV includes events for multiple sources (a "master CSV"), the dialog silently skips rows for other sources when opened from a specific source's form.
 4. Load the events. Two ways, functionally identical:
-   * **From the source form (default):** click *"Load engine test events CSV..."* in the area-source dialog (the button is only enabled when "Engine test site" is ticked). Browse to the CSV, review the validation summary, pick the insert mode (`Append` or `Replace`), tick "Tolerate warnings" if needed, and click Apply. The dialog is scoped to the current source; the `source_id` column becomes optional in the CSV.
+   * **From the source form (default):** click *"Load engine test events CSV..."* in the area-source dialog (the button is only enabled when **Engine Test Site** is ticked). Browse to the CSV, review the validation summary, pick the insert mode (`Append` or `Replace`), tick "Tolerate warnings" if needed, and click Apply. The dialog is scoped to the current source; the `source_id` column becomes optional in the CSV.
    * **From the terminal (for scripting or multi-source bulk-load):**
      ```bash
      python scripts/import_engine_test_events.py study.alaqs events.csv
@@ -380,7 +396,8 @@ mass_g[pollutant] = EI_g_per_kg[pollutant] × fuel_burned_kg
 Buildings are not currently considered emission sources. However, they can significantly impact dispersion modelling by affecting wind patterns and turbulence. While this functionality is `not yet fully implemented`, it is included in the layers list for future use.
 
 When adding a building, the following detail is required:
-+ Building height (Height of building above ground, in meters) `not yet fully implemented`
++ **Building Name**
++ **Height [m]**: height of the building above ground `not yet fully implemented`
 
 ![buildings-layer.png](./../open_alaqs/assets/buildings-layer.png)
 

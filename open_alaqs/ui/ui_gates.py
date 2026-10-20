@@ -1,7 +1,11 @@
 from qgis.PyQt import QtWidgets
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.openalaqsuitoolkit import validate_field
+from open_alaqs.openalaqsuitoolkit import (
+    feature_value,
+    select_combo_value,
+    validate_field,
+)
 
 logger = get_logger(__name__)
 
@@ -43,6 +47,9 @@ def form_open(form, layer, feature):
 
     # Seed the combo boxes only once
     populate_combo_boxes(fields)
+
+    # Show the stored gate type (QGIS adds it as an extra "(TYPE)" item)
+    select_combo_value(fields["type_field"], feature_value(feature, "gate_type"))
 
     # Add input validation to text fields in the form
     for key, value in fields.items():

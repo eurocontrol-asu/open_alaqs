@@ -2,13 +2,36 @@ from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import Qt
 from qgis.utils import OverrideCursor
 
+from open_alaqs.alaqs_config import field_alias
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools import copert5
 from open_alaqs.core.tools.copert5_utils import VEHICLE_CATEGORIES
-from open_alaqs.openalaqsuitoolkit import validate_field
+from open_alaqs.enums import AlaqsLayerType
+from open_alaqs.openalaqsuitoolkit import (
+    feature_value,
+    select_combo_value,
+    validate_field,
+)
 
 logger = get_logger("open_alaqs.ui.ui_parkings")
+
+
+# Keys of the `fields` dict built in form_open that are not column names,
+# mapped to their column, so messages can use the field display names.
+FIELD_COLUMNS = {
+    "name_field": "parking_id",
+    "vehicle_year_field": "vehicle_year",
+    "height_field": "height",
+    "speed_field": "speed",
+    "distance_field": "distance",
+    "idle_time_field": "idle_time",
+}
+
+
+def display_name(field_key: str) -> str:
+    """Display name (as on the form) of an entry of the `fields` dict."""
+    return field_alias(AlaqsLayerType.PARKING, FIELD_COLUMNS.get(field_key, field_key))
 
 
 def catch_errors(f):
@@ -77,12 +100,23 @@ def form_open(form, layer, feature):
     populate_daily_profiles(fields["daily_profile_field"])
     populate_monthly_profiles(fields["month_profile_field"])
 
+    # Show the stored profiles (the lists above start at "default")
+    for key, column in (
+        ("hour_profile_field", "hour_profile"),
+        ("daily_profile_field", "daily_profile"),
+        ("month_profile_field", "month_profile"),
+    ):
+        select_combo_value(fields[key], feature_value(feature, column))
+
     # Connect the recalculate button with the recalculate_emissions method
     fields["recalculate"].clicked.connect(lambda: recalculate_emissions(fields, form))
 
-    # Disable various fields
+    # Disable various fields. The emission factors are filled in by
+    # Recalculate only.
     fields["method_field"].setText("COPERT5")
     fields["method_field"].setEnabled(False)
+    for pollutant in ("co", "hc", "nox", "sox", "pm10", "p1", "p2"):
+        fields[f"{pollutant}_gm_vh_field"].setEnabled(False)
 
     # Connect the comboboxes to validation
     fields["hour_profile_field"].currentTextChanged.connect(lambda: validate(fields))
@@ -151,7 +185,7 @@ def recalculate_emissions(fields: dict, form):
                     f"{field_name} should be of type {field_type}, "
                     f"the current value is {field_value}"
                 )
-                validation_errors.append(field_name)
+                validation_errors.append(display_name(field_name))
             else:
                 valid_fields[field_name] = field_value
         if validation_errors:

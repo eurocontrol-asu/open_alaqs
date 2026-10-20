@@ -24,8 +24,10 @@ def form_open(form, layer, feature):
     # Hide the instudy field
     fields["instudy"].setHidden(True)
 
-    # Disable the time field
-    fields["time_field"].setText("Calculated")
+    # The taxiing time is not entered: it is calculated from the taxiway
+    # length and the speed. The column is DECIMAL, so only a placeholder is
+    # shown and nothing is written into it.
+    fields["time_field"].setPlaceholderText("Calculated")
     fields["time_field"].setEnabled(False)
 
     # Add input validation to text fields in the form

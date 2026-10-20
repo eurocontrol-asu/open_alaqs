@@ -71,7 +71,7 @@
         <layout class="QGridLayout" name="gridLayout"/>
        </item>
        <item row="1" column="1">
-        <widget class="QComboBox" name="type">
+        <widget class="QComboBox" name="point_type">
          <property name="editable">
           <bool>false</bool>
          </property>
@@ -133,14 +133,14 @@
        <item row="3" column="0">
         <widget class="QLabel" name="label_2">
          <property name="text">
-          <string>Activity per year</string>
+          <string>Activity per Year</string>
          </property>
         </widget>
        </item>
        <item row="5" column="0">
         <widget class="QLabel" name="label_activity_unit">
          <property name="text">
-          <string>Activity unit</string>
+          <string>Activity Unit</string>
          </property>
         </widget>
        </item>
@@ -150,7 +150,7 @@
           <bool>true</bool>
          </property>
          <property name="toolTip">
-          <string>Unit pairing for the Activity per year value. Inherited from the selected emission factor (default_stationary_ef.activity_unit). Examples: 1000_m3 (natural gas), 1000_L (liquid fuel), hr (engine operating hours), 1000_kg (solid waste / coating).</string>
+          <string>Unit pairing for the Activity per Year value. Inherited from the selected emission factor (default_stationary_ef.activity_unit). Examples: 1000_m3 (natural gas), 1000_L (liquid fuel), hr (engine operating hours), 1000_kg (solid waste / coating).</string>
          </property>
         </widget>
        </item>
@@ -164,7 +164,7 @@
        <item row="0" column="0">
         <widget class="QLabel" name="label_9">
          <property name="text">
-          <string>Hourly</string>
+          <string>Hourly Profile</string>
          </property>
         </widget>
        </item>
@@ -174,7 +174,7 @@
        <item row="1" column="0">
         <widget class="QLabel" name="label_10">
          <property name="text">
-          <string>Daily</string>
+          <string>Daily Profile</string>
          </property>
         </widget>
        </item>
@@ -184,7 +184,7 @@
        <item row="2" column="0">
         <widget class="QLabel" name="label_11">
          <property name="text">
-          <string>Monthly</string>
+          <string>Monthly Profile</string>
          </property>
         </widget>
        </item>
@@ -309,7 +309,7 @@
   <tabstop>source_id</tabstop>
   <tabstop>tabWidget</tabstop>
   <tabstop>category</tabstop>
-  <tabstop>type</tabstop>
+  <tabstop>point_type</tabstop>
   <tabstop>substance</tabstop>
   <tabstop>ops_year</tabstop>
   <tabstop>height</tabstop>

@@ -1,5 +1,6 @@
 import re
 
+from qgis.core import QgsApplication
 from qgis.PyQt import QtWidgets
 
 from open_alaqs.core.alaqslogging import get_logger
@@ -80,6 +81,17 @@ def form_open(form, layer, feature):
         logger.debug(f"first_runway_number set to {runway_1_number}")
         logger.debug(f"first_runway_letter set to {runway_1_letter}")
 
+        # Show the stored second runway end too (the second combo boxes are
+        # only updated when the first ones change, so they showed 01)
+        regex_search_2 = re.search(r"^(\d{2})([LCR]?)$", runway_2)
+        if regex_search_2 is not None:
+            fields["second_runway_number"].setCurrentIndex(
+                fields["second_runway_number"].findText(regex_search_2.group(1))
+            )
+            fields["second_runway_letter"].setCurrentIndex(
+                fields["second_runway_letter"].findText(regex_search_2.group(2))
+            )
+
     except ValueError:
         # Not enough values to unpack
         pass
@@ -106,6 +118,18 @@ def form_open(form, layer, feature):
     fields["button_box"].button(fields["button_box"].StandardButton.Ok).blockSignals(
         True
     )
+
+    # A new runway has no name yet. Build it from the default selection
+    # (01/19), after the validation is connected, so that the name is set
+    # and validated without touching the combo boxes (runway_id stayed
+    # empty before).
+    # QGIS shows a NULL runway_id as the NULL representation text ("NULL").
+    current_name = fields["name_field"].text().strip()
+    if (
+        current_name in ("", QgsApplication.nullRepresentation())
+        and fields["first_runway_number"].currentText()
+    ):
+        first_runway_number_changed(fields)
 
     # Connect the instudy checkbox on save
     def on_save():
@@ -230,12 +254,13 @@ def validate(fields: dict):
     button_box = fields["button_box"]
 
     # Validate all fields. The Touchdown Offsets may be empty (empty = the profile's own distance, for
-    # each runway end independently); when filled they must be numbers.
+    # each runway end independently); when filled they must be whole metres, as the touchdown and
+    # touchdown_2 columns are INT.
     results = [validate_field(fields["name_field"], "str")]
     for key in ("offset_field", "offset_2_field"):
         field = fields.get(key)
         if field is not None and field.text().strip():
-            results.append(validate_field(field, "float"))
+            results.append(validate_field(field, "int"))
         elif field is not None:
             color_ui_background(field, None)
 

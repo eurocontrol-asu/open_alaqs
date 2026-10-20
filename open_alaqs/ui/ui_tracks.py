@@ -51,7 +51,6 @@ def form_open(form, layer, feature):
 
         # Get the current value of the feature
         current_feature_value = feature.attribute("departure_arrival")
-        print(current_feature_value)
 
         # Get the current value of the form
         current_field_value = fields["arrdep_field"].currentText()

@@ -18,6 +18,30 @@ class OsmFilter(TypedDict, total=False):
     tags: dict[str, str]
 
 
+class FieldConfig(TypedDict, total=False):
+    """Display settings of one column of an ALAQS layer.
+
+    alias: the field name shown everywhere (form label, attribute table
+        header, documentation). Title Case, units as "Name [unit]".
+    default: QGIS expression string used as the default value of new
+        features, or None for no default.
+    read_only: True when the column is not editable in QGIS (form and
+        attribute table). Only used for columns that no form writes;
+        values that a custom form fills in itself (emission factors from
+        Recalculate, Method, Activity Unit) must stay writable, because
+        QGIS drops the value of a read-only field when the form is saved.
+    hidden_in_table: True to hide the column in the attribute table.
+    widget: "checkbox" to edit the column as a check box storing "1" or
+        "0"; None keeps the QGIS default widget.
+    """
+
+    alias: str
+    default: Optional[str]
+    read_only: bool
+    hidden_in_table: bool
+    widget: Optional[str]
+
+
 class ALAQSLayerConfig(TypedDict, total=False):
     name: str
     table_name: str
@@ -32,8 +56,72 @@ class ALAQSLayerConfig(TypedDict, total=False):
     label_font_family: str
     label_font_size: int
     osm_filters: list[OsmFilter]
+    # {OSM attribute name: ALAQS column name}, read by
+    # OpenAlaqsOsmImport._import_osm_data in openalaqsdialog.py.
     osm_attribute_mapping: dict[str, str]
     osm_import_default_values: dict[str, str]
+    # Ordered {column name: FieldConfig}; the order is the attribute-table
+    # column order. Applied by openalaqsuitoolkit.apply_layer_field_config
+    # each time a study is opened.
+    fields: dict[str, FieldConfig]
+
+
+def _field(
+    alias: str,
+    default: Optional[str] = None,
+    read_only: bool = False,
+    hidden_in_table: bool = False,
+    widget: Optional[str] = None,
+) -> FieldConfig:
+    return {
+        "alias": alias,
+        "default": default,
+        "read_only": read_only,
+        "hidden_in_table": hidden_in_table,
+        "widget": widget,
+    }
+
+
+def _oid() -> FieldConfig:
+    return _field("OID", read_only=True, hidden_in_table=True)
+
+
+def _instudy(default: str, used: bool) -> FieldConfig:
+    """The in-study flag. `default` is typed like the column ("1" for INT
+    and DECIMAL columns, "'1'" for TEXT columns). The flag is honoured by
+    parkings, roadways, point sources and area sources only; on the other
+    layers it is kept but hidden in the attribute table."""
+    return _field("In Study", default, hidden_in_table=not used, widget="checkbox")
+
+
+def _fleet_mix() -> dict[str, FieldConfig]:
+    return {
+        "pc_p_percentage": _field("PC (Petrol) [%]"),
+        "pc_d_percentage": _field("PC (Diesel) [%]"),
+        "lcv_p_percentage": _field("LCV (Petrol) [%]"),
+        "lcv_d_percentage": _field("LCV (Diesel) [%]"),
+        "hdt_p_percentage": _field("HDT (Petrol) [%]"),
+        "hdt_d_percentage": _field("HDT (Diesel) [%]"),
+        "motorcycle_p_percentage": _field("Motorcycle [%]"),
+        "bus_d_percentage": _field("Bus [%]"),
+    }
+
+
+def _profiles(hour: str, day: str, month: str) -> dict[str, FieldConfig]:
+    return {
+        hour: _field("Hourly Profile", "'default'"),
+        day: _field("Daily Profile", "'default'"),
+        month: _field("Monthly Profile", "'default'"),
+    }
+
+
+def _emission_factors(suffix: str, unit: str) -> dict[str, FieldConfig]:
+    names = ("co", "hc", "nox", "sox", "pm10", "p1", "p2")
+    labels = ("CO", "HC", "NOx", "SOx", "PM10", "P1", "P2")
+    return {
+        f"{name}_{suffix}": _field(f"{label} [{unit}]")
+        for name, label in zip(names, labels)
+    }
 
 
 LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
@@ -42,6 +130,17 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "table_name": "shapes_area_sources",
         "ui_filename": "ui_area_sources.ui",
         "py_filename": "ui_area_sources.py",
+        "fields": {
+            "oid": _oid(),
+            "source_id": _field("Source Name"),
+            "is_test_site": _field("Engine Test Site", "'0'"),
+            "unit_year": _field("Units per Year"),
+            "height": _field("Height [m]", "0"),
+            "heat_flux": _field("Heat Flux [MW]", "0", read_only=True),
+            **_profiles("hourly_profile", "daily_profile", "monthly_profile"),
+            **_emission_factors("kg_unit", "kg/unit"),
+            "instudy": _instudy("'1'", used=True),
+        },
         "fill_color": "255,51,51",
         "border_color": "0,0,0,100",
         "line_width": None,
@@ -56,6 +155,12 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "table_name": "shapes_buildings",
         "ui_filename": "ui_buildings.ui",
         "py_filename": "ui_buildings.py",
+        "fields": {
+            "oid": _oid(),
+            "building_id": _field("Building Name"),
+            "height": _field("Height [m]", "0"),
+            "instudy": _instudy("1", used=False),
+        },
         "fill_color": "168,168,168",
         "border_color": "0,0,0,255",
         "line_width": None,
@@ -121,7 +226,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
             },
         ],
         "osm_attribute_mapping": {
-            "building_id": "full_id",
+            "full_id": "building_id",
             "height": "height",
         },
         "osm_import_default_values": {
@@ -133,6 +238,13 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "table_name": "shapes_gates",
         "ui_filename": "ui_gates.ui",
         "py_filename": "ui_gates.py",
+        "fields": {
+            "oid": _oid(),
+            "gate_id": _field("Gate Name"),
+            "gate_type": _field("Gate Type", "'PIER'"),
+            "gate_height": _field("Height [m]", "0"),
+            "instudy": _instudy("'1'", used=False),
+        },
         "fill_color": "255,153,51",
         "border_color": "0,0,0,255",
         "line_width": None,
@@ -149,7 +261,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
                 },
             }
         ],
-        "osm_attribute_mapping": {"gate_id": "ref"},
+        "osm_attribute_mapping": {"ref": "gate_id"},
         "osm_import_default_values": {
             "instudy": 1,
         },
@@ -159,6 +271,20 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "table_name": "shapes_parking",
         "ui_filename": "ui_parkings.ui",
         "py_filename": "ui_parkings.py",
+        "fields": {
+            "oid": _oid(),
+            "parking_id": _field("Parking Name"),
+            "vehicle_year": _field("Vehicles per Year"),
+            "height": _field("Height [m]", "0"),
+            "speed": _field("Speed [km/h]"),
+            "distance": _field("Travel Distance [m]"),
+            "idle_time": _field("Idle Time [min]"),
+            **_fleet_mix(),
+            **_profiles("hour_profile", "daily_profile", "month_profile"),
+            **_emission_factors("gm_vh", "g/vehicle"),
+            "method": _field("Method"),
+            "instudy": _instudy("'1'", used=True),
+        },
         "fill_color": "100,149,237",
         "border_color": "0,0,0,255",
         "line_width": None,
@@ -176,7 +302,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
             }
         ],
         "osm_attribute_mapping": {
-            "parking_id": "full_id",
+            "full_id": "parking_id",
         },
         "osm_import_default_values": {
             "hour_profile": "default",
@@ -190,6 +316,22 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "table_name": "shapes_point_sources",
         "ui_filename": "ui_point_sources.ui",
         "py_filename": "ui_point_sources.py",
+        "fields": {
+            "oid": _oid(),
+            "source_id": _field("Source Name"),
+            "category": _field("Category"),
+            "point_type": _field("Type"),
+            "substance": _field("Substance"),
+            "ops_year": _field("Activity per Year"),
+            "height": _field("Height [m]", "0"),
+            "activity_unit": _field("Activity Unit"),
+            "temperature": _field("Temperature [°C]"),
+            "diameter": _field("Diameter [m]"),
+            "velocity": _field("Gas Velocity [m/s]"),
+            **_profiles("hour_profile", "daily_profile", "month_profile"),
+            **_emission_factors("kg_k", "kg/unit"),
+            "instudy": _instudy("'1'", used=True),
+        },
         "fill_color": None,
         "border_color": None,
         "line_color": None,
@@ -204,6 +346,20 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "table_name": "shapes_roadways",
         "ui_filename": "ui_roadways.ui",
         "py_filename": "ui_roadways.py",
+        "fields": {
+            "oid": _oid(),
+            "roadway_id": _field("Roadway Name"),
+            "vehicle_year": _field("Vehicles per Year"),
+            "height": _field("Height [m]", "0"),
+            "speed": _field("Speed [km/h]"),
+            "distance": _field("Distance [m]"),
+            "scenario": _field("Scenario"),
+            **_fleet_mix(),
+            **_profiles("hour_profile", "daily_profile", "month_profile"),
+            **_emission_factors("gm_km", "g/km"),
+            "method": _field("Method"),
+            "instudy": _instudy("'1'", used=True),
+        },
         "fill_color": None,
         "border_color": None,
         "line_color": "255,255,0",
@@ -264,6 +420,13 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "table_name": "shapes_taxiways",
         "ui_filename": "ui_taxiways.ui",
         "py_filename": "ui_taxiways.py",
+        "fields": {
+            "oid": _oid(),
+            "taxiway_id": _field("Taxiway Name"),
+            "speed": _field("Speed [km/h]"),
+            "time": _field("Time [min]", read_only=True),
+            "instudy": _instudy("1", used=False),
+        },
         "fill_color": None,
         "border_color": None,
         "line_color": "46,255,53",
@@ -292,6 +455,13 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "table_name": "shapes_tracks",
         "ui_filename": "ui_tracks.ui",
         "py_filename": "ui_tracks.py",
+        "fields": {
+            "oid": _oid(),
+            "track_id": _field("Track Name"),
+            "runway": _field("Runway Direction"),
+            "departure_arrival": _field("Operation Type"),
+            "instudy": _instudy("1", used=False),
+        },
         "fill_color": None,
         "border_color": None,
         "line_color": None,
@@ -306,6 +476,13 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "table_name": "shapes_runways",
         "ui_filename": "ui_runways.ui",
         "py_filename": "ui_runways.py",
+        "fields": {
+            "oid": _oid(),
+            "runway_id": _field("Runway Name"),
+            "touchdown": _field("Touchdown Offset, Runway 1 [m]", "0"),
+            "touchdown_2": _field("Touchdown Offset, Runway 2 [m]", "0"),
+            "instudy": _instudy("1", used=False),
+        },
         "fill_color": None,
         "border_color": None,
         "line_color": "235,235,235",
@@ -335,3 +512,10 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
 
 ALAQS_ROOT_PATH = Path(__file__).absolute().parent
 ALAQS_TEMPLATE_DB_FILENAME = "core/templates/project.alaqs"
+
+
+def field_alias(alaqs_layer: AlaqsLayerType, column: str) -> str:
+    """Return the display name of a column (form label, attribute-table
+    header, documentation name), or the column name when it has none."""
+    spec = LAYERS_CONFIG[alaqs_layer].get("fields", {}).get(column)
+    return spec["alias"] if spec else column

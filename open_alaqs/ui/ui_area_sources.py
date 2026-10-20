@@ -2,7 +2,12 @@ from qgis.PyQt import QtWidgets
 
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.openalaqsuitoolkit import validate_field
+from open_alaqs.openalaqsuitoolkit import (
+    feature_value,
+    is_empty_text,
+    select_combo_value,
+    validate_field,
+)
 from open_alaqs.ui._area_sources_helpers import (
     seed_is_test_site_from_feature,
     write_is_test_site_to_feature,
@@ -58,8 +63,7 @@ def _apply_test_site_field_state(fields, is_test_site: bool) -> None:
 
     Height and Source Name stay enabled regardless (height matters
     for dispersion positioning; name is the source identifier).
-    Heat flux stays disabled with '0' (already the default for all
-    area sources).
+    Heat flux stays disabled (read-only, 0 for new area sources).
     """
     # Individual field on the always-visible Parameters tab.
     unit_field = fields.get("unit_field")
@@ -96,7 +100,7 @@ def _open_load_events_dialog(form, fields, feature):
     from open_alaqs.openalaqsdialog import OpenAlaqsImportEngineTestEvents
 
     source_id = (fields["name_field"].text() or "").strip()
-    if not source_id:
+    if is_empty_text(source_id):
         QMessageBox.warning(
             form,
             "Missing source name",
@@ -188,14 +192,21 @@ def form_open(form, layer, feature):
         lambda checked: _apply_test_site_field_state(fields, checked)
     )
 
-    # Disable heat flux fields
-    fields["heat_flux_field"].setText("0")
+    # Heat Flux is not entered (read-only, 0 for new sources)
     fields["heat_flux_field"].setEnabled(False)
 
     # Seed the profiles
     populate_hourly_profiles(fields["hour_profile_field"])
     populate_daily_profiles(fields["daily_profile_field"])
     populate_monthly_profiles(fields["month_profile_field"])
+
+    # Show the stored profiles (the lists above start at "default")
+    for key, column in (
+        ("hour_profile_field", "hourly_profile"),
+        ("daily_profile_field", "daily_profile"),
+        ("month_profile_field", "monthly_profile"),
+    ):
+        select_combo_value(fields[key], feature_value(feature, column))
 
     # Add input validation to text fields in the form
     for key, value in fields.items():
@@ -338,10 +349,10 @@ def validate(fields: dict):
     without filling in numbers that will never be used. ``on_save()``
     auto-fills them with ``"0"`` so the DB stores something valid.
 
-    Source name, height, and heat flux are validated regardless — they
-    matter for both regular area sources AND test sites (height for
-    dispersion positioning, name for the source_id, heat flux is
-    already 0 and disabled).
+    Source name and height are validated regardless: they matter for
+    both regular area sources AND test sites (height for dispersion
+    positioning, name for the source_id). Heat flux is read-only, so it
+    is only checked when it holds a value.
     """
 
     # Get the button box
@@ -351,8 +362,9 @@ def validate(fields: dict):
     results = [
         validate_field(fields["name_field"], "str"),
         validate_field(fields["height_field"], "float"),
-        validate_field(fields["heat_flux_field"], "float"),
     ]
+    if fields["heat_flux_field"].text().strip():
+        results.append(validate_field(fields["heat_flux_field"], "float"))
 
     # Fields validated only for regular area sources. Skipped when the
     # source is a test site.

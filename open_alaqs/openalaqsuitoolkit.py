@@ -3,9 +3,12 @@ from typing import Optional
 
 from qgis.core import (
     Qgis,
+    QgsApplication,
+    QgsAttributeTableConfig,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsDataSourceUri,
+    QgsDefaultValue,
     QgsEditFormConfig,
     QgsEditorWidgetSetup,
     QgsFillSymbol,
@@ -28,6 +31,65 @@ from open_alaqs.core.utils.qt import color_ui_background
 from open_alaqs.enums import AlaqsLayerType
 
 logger = get_logger(__name__)
+
+
+def is_empty_text(text) -> bool:
+    """True for an empty text or the QGIS NULL representation ("NULL"),
+    which QGIS writes into a form line edit for a NULL attribute."""
+    text = "" if text is None else str(text).strip()
+    return text == "" or text == QgsApplication.nullRepresentation()
+
+
+def is_null_value(value) -> bool:
+    """True for None, a NULL QVariant and empty or NULL-representation text."""
+    if value is None:
+        return True
+    if hasattr(value, "isNull") and value.isNull():
+        return True
+    return is_empty_text(value)
+
+
+def feature_value(feature, name):
+    """The attribute `name` of `feature`, or None when the layer has no
+    such field (older study) or the value is NULL."""
+    try:
+        if feature.fields().indexFromName(name) == -1:
+            return None
+        value = feature.attribute(name)
+    except (KeyError, AttributeError):
+        return None
+    return None if is_null_value(value) else value
+
+
+def select_combo_value(combo, value) -> None:
+    """Show the stored `value` in a form combo box after the form filled it.
+
+    QGIS binds a combo box named after a field with a value-map wrapper,
+    which shows a value missing from its (empty) map as an extra item
+    "(value)". The forms then refill the combo boxes and select their
+    first entry, so the stored value was lost. This drops those "(value)"
+    items, then selects `value`, adding it when the list lacks it (for
+    example a profile that no longer exists). A NULL value leaves the
+    current selection (the form's default) unchanged.
+    """
+    if combo is None:
+        return
+    for i in reversed(range(combo.count())):
+        # The NULL item carries the value map's NULL marker as its data
+        text = combo.itemText(i)
+        data = combo.itemData(i)
+        if text == f"({QgsApplication.nullRepresentation()})" or (
+            not is_null_value(data) and text == f"({data})"
+        ):
+            combo.removeItem(i)
+    if is_null_value(value):
+        return
+    text = str(value)
+    idx = combo.findText(text)
+    if idx == -1:
+        combo.addItem(text)
+        idx = combo.count() - 1
+    combo.setCurrentIndex(idx)
 
 
 def validate_field(ui_element, var_type):
@@ -55,7 +117,8 @@ def validate_field(ui_element, var_type):
 
     value = value.strip()
 
-    if value == "":
+    # QGIS shows a NULL attribute as the NULL representation text ("NULL")
+    if is_empty_text(value):
         color_ui_background(ui_element, "red")
         ui_element.setToolTip("This value should not be empty")
 
@@ -83,7 +146,10 @@ def validate_field(ui_element, var_type):
         return value
     except Exception:
         color_ui_background(ui_element, "red")
-        ui_element.setToolTip("This value should be a float")
+        if var_type == "int":
+            ui_element.setToolTip("This value should be a whole number")
+        else:
+            ui_element.setToolTip("This value should be a number")
         return False
 
 
@@ -126,12 +192,7 @@ def load_spatialite_layer(
     layer.setEditFormConfig(lconfig)
     layer.setCrs(QgsCoordinateReferenceSystem.fromEpsgId(3857))
 
-    instudy_idx = layer.fields().indexFromName("instudy")
-    if instudy_idx != -1:
-        editor_widget_setup = QgsEditorWidgetSetup(
-            "ValueMap", {"map": {"1": 1, "0": 0}}
-        )
-        layer.setEditorWidgetSetup(instudy_idx, editor_widget_setup)
+    apply_layer_field_config(layer, alaqs_layer)
 
     set_layer_style(layer, alaqs_layer)
 
@@ -139,6 +200,64 @@ def load_spatialite_layer(
 
     tree_root = project.layerTreeRoot()
     tree_root.addLayer(layer)
+
+
+CHECKBOX_WIDGET_CONFIG = {
+    "CheckedState": "1",
+    "UncheckedState": "0",
+    # Show the stored "1" / "0" values, not "true" / "false", in the table.
+    "TextDisplayMethod": 1,
+}
+
+
+def apply_layer_field_config(layer: QgsVectorLayer, alaqs_layer: AlaqsLayerType):
+    """Apply the `fields` settings of LAYERS_CONFIG to a loaded layer.
+
+    Sets, per column: the alias (attribute-table header and the name used
+    in the documentation), the default value expression for new features,
+    the read-only flag, the check-box widget of the in-study flag, and the
+    attribute-table column order and visibility. The layers are rebuilt
+    from the .alaqs file every time a study is opened, so this runs at each
+    load. Columns missing from an older study are skipped.
+    """
+    fields_config = LAYERS_CONFIG[alaqs_layer].get("fields", {})
+    if not fields_config:
+        return
+
+    fields = layer.fields()
+    form_config = layer.editFormConfig()
+    for name, spec in fields_config.items():
+        idx = fields.indexFromName(name)
+        if idx == -1:
+            continue
+        layer.setFieldAlias(idx, spec["alias"])
+        if spec.get("default") is not None:
+            layer.setDefaultValueDefinition(idx, QgsDefaultValue(spec["default"]))
+        form_config.setReadOnly(idx, bool(spec.get("read_only")))
+        if spec.get("widget") == "checkbox":
+            layer.setEditorWidgetSetup(
+                idx, QgsEditorWidgetSetup("CheckBox", dict(CHECKBOX_WIDGET_CONFIG))
+            )
+    layer.setEditFormConfig(form_config)
+
+    table_config = layer.attributeTableConfig()
+    table_config.update(layer.fields())
+    columns = list(table_config.columns())
+    configured = []
+    for name, spec in fields_config.items():
+        for column in columns:
+            if (
+                column.name == name
+                and column.type == QgsAttributeTableConfig.Type.Field
+            ):
+                column.hidden = bool(spec.get("hidden_in_table"))
+                configured.append(column)
+                columns.remove(column)
+                break
+    # Columns not in the configuration (for example the actions column)
+    # keep their relative order after the configured ones.
+    table_config.setColumns(configured + columns)
+    layer.setAttributeTableConfig(table_config)
 
 
 def load_basemap_layers(project: Optional[QgsProject] = None) -> None:

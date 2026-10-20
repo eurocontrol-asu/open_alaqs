@@ -98,9 +98,9 @@ OpenALAQS can import airport geometry directly from OpenStreetMap to speed up so
 
 Choose **Runways** and **Taxiways** as the layers to import. Review the imported features in the attribute table and verify:
 
-- Each taxiway has a unique name (no duplicates)
-- All taxiway speeds are set to a reasonable value (default ~15–30 km/h for EHRD)
-- The runway is labelled `06/24` to match both operational directions
+- Each taxiway has a unique **Taxiway Name** (no duplicates)
+- Every **Speed [km/h]** is set to a reasonable value (about 15 to 30 for EHRD)
+- The **Runway Name** is `06/24` to match both operational directions
 
 > **Note:** OSM data quality varies. Always check imported features against charts or published aerodrome data before use. You may need to delete duplicates, rename features, or adjust geometry.
 
@@ -127,7 +127,7 @@ Select one or more features using the **Select Features by area or single click*
 
 #### Visualize and Edit Attribute Values
 
-Open the attribute table via the **Attributes** toolbar or by right-clicking the layer in the Layers panel. All attribute values can be edited directly in the table when editing mode is active.
+Open the attribute table via the **Attributes** toolbar or by right-clicking the layer in the Layers panel. All attribute values can be edited directly in the table when editing mode is active. The table headers use the field names of the forms (the names in bold below); the internal **OID** column is hidden, and **In Study** is shown as the last column on parkings, roadways, point sources and area sources only.
 
 ---
 
@@ -137,13 +137,13 @@ Open the attribute table via the **Attributes** toolbar or by right-clicking the
 
 For the EHRD test case, create **three gates** at locations corresponding to the actual stands at Rotterdam airport. Each gate is a polygon enclosing one or more aircraft stands.
 
-| Gate ID | Gate Type | Description |
+| Gate Name | Gate Type | Description |
 |---|---|---|
 | G2 | CARGO | Cargo apron, south of the terminal |
 | G4 | REMOTE | Remote stand, accessed by bus |
 | G7 | PIER | Pier-connected stand, terminal building |
 
-When adding each gate, draw a polygon around the stand area and fill in the **gate_id** and **gate_type** attributes. Ensure each gate polygon is adjacent to at least one taxiway — the taxi route editor will connect them.
+When adding each gate, draw a polygon around the stand area and fill in the **Gate Name** and **Gate Type** fields. Ensure each gate polygon is adjacent to at least one taxiway: the taxi route editor will connect them.
 
 Gate type drives the GSE/GPU emission factors (from `default_gate_profiles`): PIER gates typically have lower GPU usage because a fixed electrical supply is available, while REMOTE and CARGO gates rely more on mobile GPU equipment.
 
@@ -153,24 +153,24 @@ Create a single runway feature for EHRD. Draw a linestring from the threshold of
 
 | Field | Value |
 |---|---|
-| Runway 1 | 06 (Runway 2 = 24 and Runway Name = 06/24 are filled in) |
-| Touchdown Offset, Runway 1 | 250 m |
-| Touchdown Offset, Runway 2 | 250 m |
+| Runway 1 | 06 (Runway 2 = 24 and **Runway Name** = 06/24 are filled in) |
+| **Touchdown Offset, Runway 1 [m]** | 250 |
+| **Touchdown Offset, Runway 2 [m]** | 250 |
 
 The runway ID `06/24` covers both directions of the same physical runway. OpenALAQS uses the runway direction specified in each movement record (either `06` or `24`) to determine the correct end for trajectory alignment.
 
-The **touchdown offset** sets where arriving aircraft touch down, measured from the landing threshold of each runway end (Runway 1 = the first-named end, 06 here). Leave it empty or 0 to use each arrival profile's own touchdown distance (the profile crosses the threshold at 50 ft: about 290 m before touchdown on a 3° approach). 250 m puts the threshold crossing at about 13 m on a 3° approach.
+The touchdown offset (**Touchdown Offset, Runway 1 [m]** and **Touchdown Offset, Runway 2 [m]**, whole metres) sets where arriving aircraft touch down, measured from the landing threshold of each runway end (Runway 1 = the first-named end, 06 here). Leave it empty or 0 to use each arrival profile's own touchdown distance (the profile crosses the threshold at 50 ft: about 290 m before touchdown on a 3° approach). 250 m puts the threshold crossing at about 13 m on a 3° approach.
 
 ##### Taxiways
 
 Create taxiways covering the main taxiway system at EHRD. For this study, the following taxiways are used.
 
-| Name | Speed |
+| Taxiway Name | Speed [km/h] |
 |---|---|
-| B, F, N, V, V0, V1, V1E, V2, V3, V6, Y | 15 km/h |
-| Y1, Y2 | 30 km/h |
+| B, F, N, V, V0, V1, V1E, V2, V3, V6, Y | 15 |
+| Y1, Y2 | 30 |
 
-Draw each taxiway segment as a linestring along the taxiway centreline. Use snapping to ensure segments connect at junctions. Each segment is given a unique **Name** and the **Speed** above. V0 joins the end of V to the V1/V3/Y junction, and V1E continues V1 to the runway 06 threshold; both are drawn for this example, not taken from the aerodrome chart.
+Draw each taxiway segment as a linestring along the taxiway centreline. Use snapping to ensure segments connect at junctions. Each segment is given a unique **Taxiway Name** and the **Speed [km/h]** above. V0 joins the end of V to the V1/V3/Y junction, and V1E continues V1 to the runway 06 threshold; both are drawn for this example, not taken from the aerodrome chart.
 
 > The distinction between taxiways (geometric segments) and taxi-routes (operational paths) is important. Taxiways are individual line segments. Taxi-routes link several taxiway segments into the path an aircraft follows from gate to runway. You define taxi-routes in the Routes Editor, described in the [Taxi routes](#taxi-routes) section.
 
@@ -190,34 +190,35 @@ Create a polygon representing the car park adjacent to the terminal. In the attr
 
 | Field | Value |
 |---|---|
-| Parking ID | ParkingLot |
-| Number per year (vehicles) | 20 000 |
-| Speed (km/h) | 20 |
-| Travel distance (m) | 250 |
-| Idle time (min) | 0 |
+| **Parking Name** | ParkingLot |
+| **Vehicles per Year** | 20 000 |
+| **Height [m]** | 0 |
+| **Speed [km/h]** | 20 |
+| **Travel Distance [m]** | 250 |
+| **Idle Time [min]** | 0 |
 
 **Fleet mix** (must total 100%)
 
-| Vehicle category | Share |
+| Field | Value |
 |---|---|
-| PC Petrol | 35% |
-| PC Diesel | 30% |
-| LCV Petrol | 10% |
-| LCV Diesel | 5% |
-| HDV Petrol | 3% |
-| HDV Diesel | 2% |
-| Motorcycles | 10% |
-| Buses Diesel | 5% |
+| **PC (Petrol) [%]** | 35 |
+| **PC (Diesel) [%]** | 30 |
+| **LCV (Petrol) [%]** | 10 |
+| **LCV (Diesel) [%]** | 5 |
+| **HDT (Petrol) [%]** | 3 |
+| **HDT (Diesel) [%]** | 2 |
+| **Motorcycle [%]** | 10 |
+| **Bus [%]** | 5 |
 
 After entering these values, click **Recalculate** in the **Emissions** tab to compute the COPERT emission factors. The resulting factors for this fleet mix and fleet year 2020 in the Netherlands are:
 
-| Pollutant | EF (g/vehicle) |
+| Field | Value |
 |---|---|
-| CO | 54.66 |
-| HC | 4.05 |
-| NOx | 95.82 |
-| SOx | 0.286 |
-| PM10 | 0.800 |
+| **CO [g/vehicle]** | 54.66 |
+| **HC [g/vehicle]** | 4.05 |
+| **NOx [g/vehicle]** | 95.82 |
+| **SOx [g/vehicle]** | 0.286 |
+| **PM10 [g/vehicle]** | 0.800 |
 
 These pre-computed factors are stored in the `.alaqs` database and used directly in the emission calculation.
 
@@ -229,24 +230,25 @@ Draw a polyline representing the main access road from the motorway to the termi
 
 | Field | Value |
 |---|---|
-| Roadway ID | Roadway |
-| Movements per year | 20 000 |
-| Speed (km/h) | 30 |
+| **Roadway Name** | Roadway |
+| **Vehicles per Year** | 20 000 |
+| **Height [m]** | 0 |
+| **Speed [km/h]** | 30 |
 
 **Fleet mix** (must total 100%)
 
-| Vehicle category | Share |
+| Field | Value |
 |---|---|
-| PC Petrol | 35% |
-| PC Diesel | 30% |
-| LCV Petrol | 15% |
-| LCV Diesel | 5% |
-| HDV Petrol | 3% |
-| HDV Diesel | 2% |
-| Motorcycles | 5% |
-| Buses Diesel | 5% |
+| **PC (Petrol) [%]** | 35 |
+| **PC (Diesel) [%]** | 30 |
+| **LCV (Petrol) [%]** | 15 |
+| **LCV (Diesel) [%]** | 5 |
+| **HDT (Petrol) [%]** | 3 |
+| **HDT (Diesel) [%]** | 2 |
+| **Motorcycle [%]** | 5 |
+| **Bus [%]** | 5 |
 
-Click **Recalculate** in the Emissions tab. The resulting COPERT emission factors include CO 0.181 g/km, NOx 0.341 g/km, HC 0.0118 g/km. These scale with the road length during the emission calculation.
+Click **Recalculate** in the Emissions tab. The resulting COPERT emission factors include **CO [g/km]** 0.181, **NOx [g/km]** 0.341 and **HC [g/km]** 0.0118. These scale with the road length during the emission calculation.
 
 ##### Point sources
 
@@ -254,26 +256,26 @@ Create a point feature representing the airport power and heating plant, located
 
 | Field | Value |
 |---|---|
-| Source ID | Power |
-| Category | Power/Heat Plant |
-| Substance | Solid |
-| Height (m) | 20 |
-| Temperature [°C] | 400 |
-| Diameter [m] | 1 |
-| Gas Velocity [m/s] | 15 |
-| Activity per year (operating hours) | 4380 |
+| **Source Name** | Power |
+| **Category** | Power/Heat Plant |
+| **Substance** | Solid |
+| **Height [m]** | 20 |
+| **Temperature [°C]** | 400 |
+| **Diameter [m]** | 1 |
+| **Gas Velocity [m/s]** | 15 |
+| **Activity per Year** | 4380 (operating hours) |
 
 The plant operates half the year (4380 of 8760 hours), giving an activity factor of 0.5 for any 1-hour calculation interval.
 
-**Emission factors** — modify the default values for the *Power/Heat Plant / Solid* category:
+**Emission factors**: modify the default values for the *Power/Heat Plant / Solid* category (one unit is one operating hour here):
 
-| Pollutant | EF (kg / operating hour) |
+| Field | Value |
 |---|---|
-| CO | 0.3002 |
-| HC | 0.55 |
-| NOx | 10.51 |
-| SOx | 39.03 |
-| PM10 | 60.04 |
+| **CO [kg/unit]** | 0.3002 |
+| **HC [kg/unit]** | 0.55 |
+| **NOx [kg/unit]** | 10.51 |
+| **SOx [kg/unit]** | 39.03 |
+| **PM10 [kg/unit]** | 60.04 |
 
 > Emission factors for stationary sources can be edited directly in the default database table `default_stationary_ef` using DB Browser for SQLite, or overridden per source in the attribute form.
 
@@ -283,22 +285,22 @@ Create a polygon covering the terminal building footprint. Area sources represen
 
 | Field | Value |
 |---|---|
-| Source ID | Terminal |
-| Units per year (operating hours) | 8760 |
-| Height (m) | 10 |
+| **Source Name** | Terminal |
+| **Units per Year** | 8760 (operating hours) |
+| **Height [m]** | 10 |
 
-**Emission factors** — enter only a CO emission factor for this source to represent minor solvent or fuel handling emissions:
+**Emission factors**: enter only a CO emission factor for this source to represent minor solvent or fuel handling emissions (one unit is one operating hour):
 
-| Pollutant | EF (kg / operating hour) |
+| Field | Value |
 |---|---|
-| CO | 0.1 |
+| **CO [kg/unit]** | 0.1 |
 | All others | 0 |
 
 With 8760 operating hours per year and an activity factor of 1.0, this produces exactly **0.1 kg CO per hour** in each calculation interval.
 
 ##### Buildings
 
-The terminal building can optionally be digitized as a polygon in the Buildings layer to improve dispersion modelling accuracy. Set the **Building height** to approximately 12 m. Buildings have no associated emission factors — they affect only the wind field in AUSTAL.
+The terminal building can optionally be digitized as a polygon in the Buildings layer to improve dispersion modelling accuracy. Set **Height [m]** to approximately 12. Buildings have no associated emission factors: they affect only the wind field in AUSTAL.
 
 ---
 
@@ -309,7 +311,7 @@ Activity profiles scale source emissions by time of day, day of week, and month 
 
 Access the **Activity Profiles Editor** via the toolbar. Click **Add Profile** to create a new profile.
 
-**Exercise — car park closure:** Create a profile named `parking_hours` that reflects a car park closed from 23:00 to 04:00 (hours 23–04 = multiplier 0, all other hours = multiplier 1.0). Apply this profile to the `ParkingLot` source in its **Profiles** tab.
+**Exercise (car park closure):** Create a profile named `parking_hours` that reflects a car park closed from 23:00 to 04:00 (hours 23 to 04 = multiplier 0, all other hours = multiplier 1.0). Apply this profile to the `ParkingLot` source as its **Hourly Profile** (Profiles tab).
 
 | Hour (local) | Multiplier |
 |---|---|

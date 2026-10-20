@@ -107,28 +107,28 @@
    <item row="4" column="0">
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Touchdown Offset, Runway 1 (m)</string>
+      <string>Touchdown Offset, Runway 1 [m]</string>
      </property>
     </widget>
    </item>
    <item row="4" column="1">
     <widget class="QLineEdit" name="touchdown">
      <property name="toolTip">
-      <string>Distance from the Runway 1 end (its landing threshold) to the touchdown of arrivals landing on Runway 1. Leave empty or 0 to use each arrival profile's own distance (the profile crosses the threshold at 50 ft, about 290 m before touchdown on a 3 degree approach). Enter displacement + 290 for a displaced threshold.</string>
+      <string>Distance from the Runway 1 end (its landing threshold) to the touchdown of arrivals landing on Runway 1. Leave empty or 0 to use each arrival profile's own distance (the profile crosses the threshold at 50 ft, about 290 m before touchdown on a 3 degree approach). Enter displacement + 290 for a displaced threshold. Whole metres only.</string>
      </property>
     </widget>
    </item>
    <item row="5" column="0">
     <widget class="QLabel" name="label_5">
      <property name="text">
-      <string>Touchdown Offset, Runway 2 (m)</string>
+      <string>Touchdown Offset, Runway 2 [m]</string>
      </property>
     </widget>
    </item>
    <item row="5" column="1">
     <widget class="QLineEdit" name="touchdown_2">
      <property name="toolTip">
-      <string>Distance from the Runway 2 end (its landing threshold) to the touchdown of arrivals landing on Runway 2. Leave empty or 0 to use each arrival profile's own distance (independent of Runway 1).</string>
+      <string>Distance from the Runway 2 end (its landing threshold) to the touchdown of arrivals landing on Runway 2. Leave empty or 0 to use each arrival profile's own distance (independent of Runway 1). Whole metres only.</string>
      </property>
     </widget>
    </item>
