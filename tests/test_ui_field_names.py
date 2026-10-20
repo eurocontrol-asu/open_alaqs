@@ -245,9 +245,9 @@ def test_osm_attribute_mapping_is_osm_to_alaqs(layer):
     cfg = LAYERS_CONFIG[layer]
     columns = _template_columns(cfg["table_name"])
     for osm_name, alaqs_name in cfg["osm_attribute_mapping"].items():
-        assert alaqs_name in columns, (
-            f"{cfg['name']}: mapping value {alaqs_name!r} is not a column"
-        )
+        assert (
+            alaqs_name in columns
+        ), f"{cfg['name']}: mapping value {alaqs_name!r} is not a column"
         assert osm_name not in columns or osm_name == alaqs_name, (
             f"{cfg['name']}: mapping key {osm_name!r} is an ALAQS column; "
             "the mapping must be {OSM attribute: ALAQS column}"

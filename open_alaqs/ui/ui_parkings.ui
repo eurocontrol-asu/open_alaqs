@@ -29,11 +29,8 @@
    </item>
    <item row="4" column="1">
     <widget class="QCheckBox" name="instudy">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
      <property name="toolTip">
-      <string>Enable to include the source in the study</string>
+      <string>Untick to leave this source out of the emission calculation</string>
      </property>
      <property name="text">
       <string>In Study</string>

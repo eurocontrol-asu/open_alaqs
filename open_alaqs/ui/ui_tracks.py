@@ -3,7 +3,11 @@ from qgis.PyQt import QtWidgets
 from open_alaqs.core import alaqs
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.utils.qt import populate_combobox
-from open_alaqs.openalaqsuitoolkit import validate_field
+from open_alaqs.openalaqsuitoolkit import (
+    feature_value,
+    select_combo_value,
+    validate_field,
+)
 
 logger = get_logger(__name__)
 
@@ -46,57 +50,13 @@ def form_open(form, layer, feature):
     # Seed the combo boxes
     populate_combo_boxes(fields)
 
-    # Remove brackets from the departure/arrival field when it's already set
-    try:
-
-        # Get the current value of the feature
-        current_feature_value = feature.attribute("departure_arrival")
-
-        # Get the current value of the form
-        current_field_value = fields["arrdep_field"].currentText()
-
-        # If the form value is with brackets, replace the value in the combobox
-        if current_field_value == f"({current_feature_value})":
-            # Set the value without brackets
-            fields["arrdep_field"].setCurrentText(current_feature_value)
-            # Get the index of the value with brackets
-            arrdep_index = fields["arrdep_field"].findText(current_field_value)
-            # Remove the value with brackets
-            fields["arrdep_field"].removeItem(arrdep_index)
-        else:
-            arrdep_index = fields["arrdep_field"].findText(current_feature_value)
-            fields["arrdep_field"].setCurrentIndex(arrdep_index)
-
-    except KeyError:
-        pass
-    except Exception as e:
-        raise e
-
-    # Remove brackets from the runway field when it's already set
-    try:
-
-        # Get the current value of the feature
-        current_feature_value = feature.attribute("runway")
-
-        # Get the current value of the form
-        current_field_value = fields["runway_field"].currentText()
-
-        # If the form value is with brackets, replace the value in the combobox
-        if current_field_value == f"({current_feature_value})":
-            # Set the value without brackets
-            fields["runway_field"].setCurrentText(current_feature_value)
-            # Get the index of the value with brackets
-            rwy_index = fields["runway_field"].findText(current_field_value)
-            # Remove the value with brackets
-            fields["runway_field"].removeItem(rwy_index)
-        else:
-            rwy_index = fields["runway_field"].findText(current_feature_value)
-            fields["runway_field"].setCurrentIndex(rwy_index)
-
-    except KeyError:
-        pass
-    except Exception as e:
-        raise e
+    # Show the stored runway direction and operation type. QGIS adds a
+    # stored value as an extra "(value)" item; select_combo_value drops it
+    # and selects the value (a NULL value keeps the empty entry).
+    select_combo_value(
+        fields["arrdep_field"], feature_value(feature, "departure_arrival")
+    )
+    select_combo_value(fields["runway_field"], feature_value(feature, "runway"))
 
     # Add input validation to text fields in the form
     for key, value in fields.items():
@@ -110,11 +70,10 @@ def form_open(form, layer, feature):
         True
     )
 
-    # Connect all QComboBoxes and the instudy checkbox on save
+    # Write the QComboBox values on save
     def on_save():
         form.changeAttribute("runway", fields["runway_field"].currentText())
         form.changeAttribute("departure_arrival", fields["arrdep_field"].currentText())
-        feature["instudy"] = str(int(fields["instudy"].isChecked()))
 
     fields["button_box"].accepted.connect(on_save)
 

@@ -33,12 +33,6 @@ def form_open(form, layer, feature):
         True
     )
 
-    # Connect all QComboBoxes and the instudy checkbox on save
-    def on_save():
-        feature["instudy"] = str(int(fields["instudy"].isChecked()))
-
-    fields["button_box"].accepted.connect(on_save)
-
     return form
 
 

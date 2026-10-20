@@ -80,9 +80,10 @@ def form_open(form, layer, feature):
         diameter=form.findChild(QtWidgets.QLineEdit, "diameter"),
         velocity=form.findChild(QtWidgets.QLineEdit, "velocity"),
         ops_year=form.findChild(QtWidgets.QLineEdit, "ops_year"),
-        # Read-only "Activity Unit" field (added in the point-sources v2
-        # schema migration). Populated from the selected EF row's
-        # `activity_unit` column by `change_type_field`. Legacy EF rows
+        # "Activity Unit" field (added in the point-sources v2 schema
+        # migration, a per-source override of the EF row's unit). Filled in
+        # from the selected EF row's `activity_unit` column by
+        # `change_type_field`, editable. Legacy EF rows
         # have no unit; the field is then left empty and shows the
         # historical default "1000_m3 (legacy default)" as placeholder
         # text only, so that text is never saved.
@@ -96,12 +97,15 @@ def form_open(form, layer, feature):
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
     )
 
-    # Hide the instudy field
-    fields["instudy"].setHidden(True)
+    # The In Study check box is bound to the instudy column by QGIS (CheckBox
+    # widget, "1" / "0", set in alaqs_config.py): it shows the stored value
+    # and QGIS saves what the user sets, so the form does not write it.
 
-    # The Activity Unit comes from the selected Type; it is not typed in
+    # The Activity Unit is filled in from the selected Type when the Type
+    # changes and can be overridden per source (it is saved as typed). An
+    # existing source keeps its stored unit: the Type is restored below
+    # before the change handlers are connected.
     if fields["activity_unit"] is not None:
-        fields["activity_unit"].setEnabled(False)
         fields["activity_unit"].setPlaceholderText(ACTIVITY_UNIT_PLACEHOLDER)
 
     # Seed the category field once
@@ -137,14 +141,13 @@ def form_open(form, layer, feature):
         True
     )
 
-    # Connect all QComboBoxes and the instudy checkbox on save
+    # Write the QComboBox values on save
     def on_save():
         form.changeAttribute("category", fields["category"].currentText())
         form.changeAttribute("point_type", fields["point_type"].currentText())
         form.changeAttribute("hour_profile", fields["hour_profile"].currentText())
         form.changeAttribute("daily_profile", fields["daily_profile"].currentText())
         form.changeAttribute("month_profile", fields["month_profile"].currentText())
-        feature["instudy"] = str(int(fields["instudy"].isChecked()))
 
     fields["button_box"].accepted.connect(on_save)
 
@@ -242,6 +245,10 @@ def change_category_field(fields: dict, category: str):
         return
 
     category = alaqs.get_point_category(category_name)
+    if not category:
+        # Not a category name, e.g. the "(value)" item QGIS shows after a
+        # save: leave the form as it is
+        return
     category_types = alaqs.get_point_types(category["category"])
 
     # Add all category types to the list
@@ -273,6 +280,9 @@ def change_type_field(fields: dict, type_name: str):
 
     # Extract the data
     data = alaqs.get_point_type(type_name)
+    if not data:
+        # Not a type name (see change_category_field): keep the values
+        return None
 
     # Edit the form fields
     fields["height"].setText(str(data["z"]))

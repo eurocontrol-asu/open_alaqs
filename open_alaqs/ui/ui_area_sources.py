@@ -10,7 +10,6 @@ from open_alaqs.openalaqsuitoolkit import (
 )
 from open_alaqs.ui._area_sources_helpers import (
     seed_is_test_site_from_feature,
-    write_is_test_site_to_feature,
 )
 
 logger = get_logger(__name__)
@@ -77,6 +76,25 @@ def _apply_test_site_field_state(fields, is_test_site: bool) -> None:
     if tab_widget is not None:
         for tab_index in (1, 2):
             tab_widget.setTabEnabled(tab_index, not is_test_site)
+
+
+def _zero_fill_test_site_fields(fields) -> None:
+    """Fill "0" into the blank Units per Year and *_kg_unit fields, so a
+    test site stores numbers rather than NULL (which some downstream code
+    does not handle). Values the user entered are kept."""
+    for f_name in (
+        "unit_field",
+        "co_kg_unit_field",
+        "hc_kg_unit_field",
+        "nox_kg_unit_field",
+        "sox_kg_unit_field",
+        "pm10_kg_unit_field",
+        "p1_kg_unit_field",
+        "p2_kg_unit_field",
+    ):
+        widget = fields.get(f_name)
+        if widget is not None and is_empty_text(widget.text()):
+            widget.setText("0")
 
 
 def _open_load_events_dialog(form, fields, feature):
@@ -160,8 +178,9 @@ def form_open(form, layer, feature):
         tab_widget=form.findChild(QtWidgets.QTabWidget, "tabWidget"),
     )
 
-    # Hide the instudy field
-    fields["instudy"].setHidden(True)
+    # The In Study check box is bound to the instudy column by QGIS (CheckBox
+    # widget, "1" / "0", set in alaqs_config.py): it shows the stored value
+    # and QGIS saves what the user sets, so the form does not write it.
 
     # Seed the is_test_site checkbox from the feature. Values arrive as
     # TEXT '1' / '0' (matching the DB), NULL (from ALTER TABLE ADD COLUMN
@@ -178,6 +197,15 @@ def form_open(form, layer, feature):
         fields["load_events_csv"].clicked.connect(
             lambda: _open_load_events_dialog(form, fields, feature)
         )
+
+    # For test sites the compute path ignores unit_year and the *_kg_unit
+    # rate columns: fill "0" into the blank ones when the box is ticked
+    # (and at open for a test site), before the form is saved.
+    if fields["is_test_site"].isChecked():
+        _zero_fill_test_site_fields(fields)
+    fields["is_test_site"].toggled.connect(
+        lambda checked: checked and _zero_fill_test_site_fields(fields)
+    )
 
     # Re-run validation whenever the test-site toggle changes: the set
     # of required fields differs between test-site and regular modes.
@@ -218,7 +246,7 @@ def form_open(form, layer, feature):
         True
     )
 
-    # Connect all QComboBoxes and the instudy checkbox on save
+    # Write the QComboBox values on save
     def on_save():
         form.changeAttribute(
             "hourly_profile", fields["hour_profile_field"].currentText()
@@ -229,33 +257,10 @@ def form_open(form, layer, feature):
         form.changeAttribute(
             "monthly_profile", fields["month_profile_field"].currentText()
         )
-        feature["instudy"] = str(int(fields["instudy"].isChecked()))
-        # is_test_site as TEXT '1' / '0' to match the DB column type
-        # (see EngineTestEvents.py schema). AreaSources.isTestSite()
-        # reads by string comparison.
-        write_is_test_site_to_feature(fields["is_test_site"], feature)
-
-        # For test sites, the compute path ignores unit_year and the
-        # *_kg_unit rate columns. Auto-fill "0" on any that the user
-        # left blank so the DB stores a valid numeric rather than NULL
-        # (which some downstream code doesn't handle). Users who care
-        # can override these values, but there's no reason to force
-        # them to.
-        if fields["is_test_site"].isChecked():
-            fields_to_zero_fill = [
-                "unit_field",
-                "co_kg_unit_field",
-                "hc_kg_unit_field",
-                "nox_kg_unit_field",
-                "sox_kg_unit_field",
-                "pm10_kg_unit_field",
-                "p1_kg_unit_field",
-                "p2_kg_unit_field",
-            ]
-            for f_name in fields_to_zero_fill:
-                widget = fields.get(f_name)
-                if widget is not None and not widget.text().strip():
-                    widget.setText("0")
+        # is_test_site is not written here: the Engine Test Site check box
+        # is bound to the column by QGIS (CheckBox widget, '1' / '0', set
+        # in alaqs_config.py) and saved with the other fields. This slot
+        # runs after QGIS has saved, so a write here had no effect.
 
     fields["button_box"].accepted.connect(on_save)
 

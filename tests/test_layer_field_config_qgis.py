@@ -142,7 +142,10 @@ def _open_form(layer_type, layer, texts=None, values=None):
         form.findChild(QtWidgets.QLineEdit, name).setText(text)
     init_file = UI_DIR / cfg["py_filename"]
     namespace = {"__name__": f"_qgis_form_{init_file.stem}"}
-    exec(compile(init_file.read_text(encoding="utf-8"), str(init_file), "exec"), namespace)
+    exec(
+        compile(init_file.read_text(encoding="utf-8"), str(init_file), "exec"),
+        namespace,
+    )
     feature = QgsFeature(layer.fields())
     for name, value in (values or {}).items():
         feature[name] = value
@@ -178,7 +181,10 @@ def test_existing_runway_shows_both_ends(layers):
     form, _ = _open_form(
         AlaqsLayerType.RUNWAY, layers[AlaqsLayerType.RUNWAY], {"runway_id": "06L/24R"}
     )
-    combo = lambda name: form.findChild(QtWidgets.QComboBox, name).currentText()  # noqa: E731
+
+    def combo(name):
+        return form.findChild(QtWidgets.QComboBox, name).currentText()
+
     assert (combo("first_runway_number"), combo("first_runway_letter")) == ("06", "L")
     assert (combo("second_runway_number"), combo("second_runway_letter")) == ("24", "R")
     assert form.findChild(QtWidgets.QLineEdit, "runway_id").text() == "06L/24R"
@@ -244,7 +250,6 @@ def test_point_source_type_saved_and_unit_not_invented(layers, point_study):
     unit = form.findChild(QtWidgets.QLineEdit, "activity_unit")
     assert unit.text() == ""
     assert unit.placeholderText() == ACTIVITY_UNIT_PLACEHOLDER
-    assert not unit.isEnabled()
     form.findChild(QtWidgets.QDialogButtonBox, "buttonBox").accepted.emit()
     assert ("point_type", point_study["type"]) in form.changes
     assert all(field != "type" for field, _ in form.changes)
@@ -294,7 +299,11 @@ def test_gate_form_shows_stored_type(layers, study_db):
     )
     combo = _combo(form, "gate_type")
     assert combo.currentText() == "CARGO"
-    assert [combo.itemText(i) for i in range(combo.count())] == ["PIER", "REMOTE", "CARGO"]
+    assert [combo.itemText(i) for i in range(combo.count())] == [
+        "PIER",
+        "REMOTE",
+        "CARGO",
+    ]
 
 
 @pytest.mark.parametrize(
@@ -302,7 +311,10 @@ def test_gate_form_shows_stored_type(layers, study_db):
     [
         (AlaqsLayerType.PARKING, ("hour_profile", "daily_profile", "month_profile")),
         (AlaqsLayerType.ROADWAY, ("hour_profile", "daily_profile", "month_profile")),
-        (AlaqsLayerType.POINT_SOURCE, ("hour_profile", "daily_profile", "month_profile")),
+        (
+            AlaqsLayerType.POINT_SOURCE,
+            ("hour_profile", "daily_profile", "month_profile"),
+        ),
         (AlaqsLayerType.AREA, ("hourly_profile", "daily_profile", "monthly_profile")),
     ],
     ids=lambda v: v.value if isinstance(v, AlaqsLayerType) else "",
@@ -412,3 +424,277 @@ def test_new_point_source_type_has_no_null_item(layers, study_db):
         values={"point_type": None},
     )
     assert _combo(form, "point_type").findText("(NULL)") == -1
+
+
+# In Study and Activity Unit through a real QgsAttributeForm ------------------
+
+INSTUDY_LAYERS = [
+    AlaqsLayerType.PARKING,
+    AlaqsLayerType.ROADWAY,
+    AlaqsLayerType.POINT_SOURCE,
+    AlaqsLayerType.AREA,
+]
+_KEEP = []  # forms stay alive: deleting them while connected crashes
+
+
+@pytest.fixture
+def form_layer(tmp_path):
+    """Open one layer of a fresh training copy; yields an opener that
+    builds a QgsAttributeForm (custom .ui, field config, widget wrappers)
+    and runs the layer's form_open on it, as QGIS does once the feature
+    is set. QGIS's own Python init needs the application's Python runner,
+    so the init code is disabled in the form config and run explicitly."""
+    from qgis.core import QgsEditFormConfig, QgsSettings
+    from qgis.gui import QgsAttributeEditorContext, QgsAttributeForm, QgsGui
+
+    from open_alaqs.core.alaqsdblite import ProjectDatabase
+
+    QgsSettings().setValue("qgis/enableMacros", "Never")
+    if not QgsGui.editorWidgetRegistry().factories():
+        QgsGui.editorWidgetRegistry().initEditors()
+    db = tmp_path / "study.alaqs"
+    shutil.copy(TRAINING, db)
+    previous = getattr(ProjectDatabase(), "path", None)
+    ProjectDatabase().path = str(db)
+    opened = []
+
+    def open_layer(layer_type, instudy=None, is_test_site=None):
+        table = LAYERS_CONFIG[layer_type]["table_name"]
+        con = sqlite3.connect(db)
+        oid = con.execute(f"SELECT min(oid) FROM {table}").fetchone()[0]
+        if instudy is not None:
+            con.execute(f"UPDATE {table} SET instudy = ? WHERE oid = ?", [instudy, oid])
+            con.commit()
+        if is_test_site is not None:
+            # The training study predates the column (migrate_alaqs.py adds it)
+            columns = [r[1] for r in con.execute(f"PRAGMA table_info({table})")]
+            if "is_test_site" not in columns:
+                con.execute(f"ALTER TABLE {table} ADD COLUMN is_test_site TEXT")
+            con.execute(
+                f"UPDATE {table} SET is_test_site = ? WHERE oid = ?",
+                [is_test_site, oid],
+            )
+            con.commit()
+        con.close()
+        load_spatialite_layer(None, str(db), layer_type)
+        # The module fixture holds layers of the same name: pick this copy's
+        (layer,) = [
+            lyr
+            for lyr in QgsProject.instance().mapLayersByName(
+                LAYERS_CONFIG[layer_type]["name"]
+            )
+            if str(db) in lyr.source()
+        ]
+        opened.append(layer)
+        layer.startEditing()
+
+        def open_form(feature, add=False):
+            cfg = LAYERS_CONFIG[layer_type]
+            form_cfg = layer.editFormConfig()
+            keep = (form_cfg.initFunction(), form_cfg.initCodeSource())
+            form_cfg.setInitFunction("")
+            form_cfg.setInitCodeSource(
+                QgsEditFormConfig.PythonInitCodeSource.CodeSourceNone
+            )
+            layer.setEditFormConfig(form_cfg)
+            form = QgsAttributeForm(layer, feature, QgsAttributeEditorContext())
+            form.setMode(
+                QgsAttributeEditorContext.Mode.AddFeatureMode
+                if add
+                else QgsAttributeEditorContext.Mode.SingleEditMode
+            )
+            form_cfg.setInitFunction(keep[0])
+            form_cfg.setInitCodeSource(keep[1])
+            layer.setEditFormConfig(form_cfg)
+            init_file = UI_DIR / cfg["py_filename"]
+            namespace = {"__name__": f"_qgis_form_{init_file.stem}"}
+            code = compile(
+                init_file.read_text(encoding="utf-8"), str(init_file), "exec"
+            )
+            exec(code, namespace)
+            namespace["form_open"](form, layer, form.feature())
+            _KEEP.append(form)
+            return form
+
+        def save(form):
+            form.findChild(QtWidgets.QDialogButtonBox, "buttonBox").accepted.emit()
+            assert layer.commitChanges()
+            layer.startEditing()
+
+        def stored(column, row_oid=None):
+            con = sqlite3.connect(db)
+            row = con.execute(
+                f"SELECT {column} FROM {table} WHERE oid = ?",
+                [row_oid if row_oid is not None else oid],
+            ).fetchone()
+            con.close()
+            return row[0]
+
+        return layer, oid, open_form, save, stored
+
+    yield open_layer
+    for layer in opened:
+        if layer.isEditable():
+            layer.rollBack()
+    ProjectDatabase().path = previous
+
+
+def _instudy_box(form):
+    return form.findChild(QtWidgets.QCheckBox, "instudy")
+
+
+@pytest.mark.parametrize("layer_type", INSTUDY_LAYERS, ids=lambda t: t.value)
+def test_in_study_stored_0_shown_unticked_and_kept(form_layer, layer_type):
+    layer, oid, open_form, save, stored = form_layer(layer_type, instudy="0")
+    form = open_form(layer.getFeature(oid))
+    box = _instudy_box(form)
+    assert box.isVisibleTo(form) and box.isEnabled()
+    assert not box.isChecked()
+    save(form)
+    assert stored("instudy") == "0"
+
+
+@pytest.mark.parametrize("layer_type", INSTUDY_LAYERS, ids=lambda t: t.value)
+def test_in_study_untick_saves_0_and_tick_saves_1(form_layer, layer_type):
+    layer, oid, open_form, save, stored = form_layer(layer_type)
+    form = open_form(layer.getFeature(oid))
+    assert _instudy_box(form).isChecked()
+    _instudy_box(form).setChecked(False)
+    save(form)
+    assert stored("instudy") == "0"
+    form = open_form(layer.getFeature(oid))
+    assert not _instudy_box(form).isChecked()
+    _instudy_box(form).setChecked(True)
+    save(form)
+    assert stored("instudy") == "1"
+
+
+@pytest.mark.parametrize("layer_type", INSTUDY_LAYERS, ids=lambda t: t.value)
+def test_in_study_new_feature_defaults_to_1(form_layer, layer_type):
+    layer, oid, open_form, save, stored = form_layer(layer_type)
+    geometry = layer.getFeature(oid).geometry()
+    form = open_form(QgsVectorLayerUtils.createFeature(layer, geometry), add=True)
+    assert _instudy_box(form).isChecked()
+    save(form)
+    con_oid = max(f.id() for f in layer.getFeatures())
+    assert stored("instudy", con_oid) == "1"
+
+
+@pytest.mark.parametrize(
+    "layer_type",
+    # Tracks and Buildings have no feature in the training study
+    [AlaqsLayerType.RUNWAY, AlaqsLayerType.TAXIWAY, AlaqsLayerType.GATE],
+    ids=lambda t: t.value,
+)
+def test_in_study_hidden_in_forms_that_ignore_it(form_layer, layer_type):
+    layer, oid, open_form, save, stored = form_layer(layer_type, instudy="0")
+    form = open_form(layer.getFeature(oid))
+    assert not _instudy_box(form).isVisibleTo(form)
+    save(form)
+    assert str(stored("instudy")) == "0"
+
+
+def test_point_source_activity_unit_kept_and_editable(form_layer):
+    layer, oid, open_form, save, stored = form_layer(AlaqsLayerType.POINT_SOURCE)
+    con = sqlite3.connect(TRAINING)
+    expected_type, expected_unit = con.execute(
+        "SELECT point_type, activity_unit FROM shapes_point_sources WHERE oid = ?",
+        [oid],
+    ).fetchone()
+    con.close()
+    form = open_form(layer.getFeature(oid))
+    unit = form.findChild(QtWidgets.QLineEdit, "activity_unit")
+    assert unit.isEnabled() and not unit.isReadOnly()
+    assert form.findChild(QtWidgets.QComboBox, "point_type").currentText() == (
+        expected_type or ""
+    )
+    assert unit.text() == (expected_unit or "")
+    save(form)
+    assert stored("activity_unit") == expected_unit
+    assert stored("point_type") == expected_type
+    form = open_form(layer.getFeature(oid))
+    form.findChild(QtWidgets.QLineEdit, "activity_unit").setText("1000_kg")
+    save(form)
+    assert stored("activity_unit") == "1000_kg"
+    form = open_form(layer.getFeature(oid))
+    assert form.findChild(QtWidgets.QLineEdit, "activity_unit").text() == "1000_kg"
+
+
+def _test_site_box(form):
+    return form.findChild(QtWidgets.QCheckBox, "is_test_site")
+
+
+def test_engine_test_site_stored_1_shown_ticked_and_kept(form_layer):
+    layer, oid, open_form, save, stored = form_layer(
+        AlaqsLayerType.AREA, is_test_site="1"
+    )
+    form = open_form(layer.getFeature(oid))
+    assert _test_site_box(form).isChecked()
+    assert form.findChild(QtWidgets.QPushButton, "load_events_csv").isEnabled()
+    save(form)
+    assert stored("is_test_site") == "1"
+
+
+def test_engine_test_site_tick_and_untick_saved(form_layer):
+    layer, oid, open_form, save, stored = form_layer(
+        AlaqsLayerType.AREA, is_test_site="0"
+    )
+    form = open_form(layer.getFeature(oid))
+    assert not _test_site_box(form).isChecked()
+    assert not form.findChild(QtWidgets.QPushButton, "load_events_csv").isEnabled()
+    _test_site_box(form).setChecked(True)
+    assert form.findChild(QtWidgets.QPushButton, "load_events_csv").isEnabled()
+    save(form)
+    assert stored("is_test_site") == "1"
+    form = open_form(layer.getFeature(oid))
+    assert _test_site_box(form).isChecked()
+    _test_site_box(form).setChecked(False)
+    save(form)
+    assert stored("is_test_site") == "0"
+
+
+def test_engine_test_site_new_feature_defaults_to_0(form_layer):
+    layer, oid, open_form, save, stored = form_layer(
+        AlaqsLayerType.AREA, is_test_site="0"
+    )
+    geometry = layer.getFeature(oid).geometry()
+    form = open_form(QgsVectorLayerUtils.createFeature(layer, geometry), add=True)
+    assert not _test_site_box(form).isChecked()
+    save(form)
+    assert stored("is_test_site", max(f.id() for f in layer.getFeatures())) == "0"
+
+
+def test_engine_test_site_zero_fills_blank_rates_before_save(form_layer):
+    layer, oid, open_form, save, stored = form_layer(
+        AlaqsLayerType.AREA, is_test_site="0"
+    )
+    form = open_form(layer.getFeature(oid))
+    form.findChild(QtWidgets.QLineEdit, "hc_kg_unit").setText("")
+    _test_site_box(form).setChecked(True)
+    assert form.findChild(QtWidgets.QLineEdit, "hc_kg_unit").text() == "0"
+    assert form.findChild(QtWidgets.QLineEdit, "co_kg_unit").text() == "0.1"
+    save(form)
+    assert stored("hc_kg_unit") == 0
+    assert stored("co_kg_unit") == 0.1
+
+
+def test_engine_test_events_button_opens_dialog_for_the_source(form_layer, monkeypatch):
+    import open_alaqs.openalaqsdialog as dialog_module
+    from open_alaqs.core.alaqsdblite import ProjectDatabase
+
+    opened = []
+
+    class _Dialog:
+        def __init__(self, iface=None, database_path=None, source_id=None):
+            opened.append((database_path, source_id))
+
+        def exec(self):
+            return 0
+
+    monkeypatch.setattr(dialog_module, "OpenAlaqsImportEngineTestEvents", _Dialog)
+    layer, oid, open_form, save, stored = form_layer(
+        AlaqsLayerType.AREA, is_test_site="1"
+    )
+    form = open_form(layer.getFeature(oid))
+    form.findChild(QtWidgets.QPushButton, "load_events_csv").click()
+    assert opened == [(ProjectDatabase().path, layer.getFeature(oid)["source_id"])]

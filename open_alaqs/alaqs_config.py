@@ -28,7 +28,7 @@ class FieldConfig(TypedDict, total=False):
     read_only: True when the column is not editable in QGIS (form and
         attribute table). Only used for columns that no form writes;
         values that a custom form fills in itself (emission factors from
-        Recalculate, Method, Activity Unit) must stay writable, because
+        Recalculate, Method) must stay writable, because
         QGIS drops the value of a read-only field when the form is saved.
     hidden_in_table: True to hide the column in the attribute table.
     widget: "checkbox" to edit the column as a check box storing "1" or
@@ -133,7 +133,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "fields": {
             "oid": _oid(),
             "source_id": _field("Source Name"),
-            "is_test_site": _field("Engine Test Site", "'0'"),
+            "is_test_site": _field("Engine Test Site", "'0'", widget="checkbox"),
             "unit_year": _field("Units per Year"),
             "height": _field("Height [m]", "0"),
             "heat_flux": _field("Heat Flux [MW]", "0", read_only=True),

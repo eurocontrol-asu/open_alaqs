@@ -140,7 +140,7 @@ Attribute values can also be modified after an object's creation via the `Attrib
 
 The `Open Attribute Table` functionality can be accessed through the `Attributes` toolbar or via the `Layers` panel (by right-clicking on the appropriate layer).
 
-The attribute table uses the same field names as the forms and this guide (for example **Touchdown Offset, Runway 1 [m]** or **Vehicles per Year**); the database column names are unchanged. The internal **OID** column is hidden. **In Study** is the last column: it is a check box on parkings, roadways, point sources and area sources (unticked sources are left out of the emission calculation) and is hidden on the other layers, which do not use it. New features start with the defaults of the forms: heights and offsets 0, profiles `default`, **Gate Type** PIER and **In Study** ticked.
+The attribute table uses the same field names as the forms and this guide (for example **Touchdown Offset, Runway 1 [m]** or **Vehicles per Year**); the database column names are unchanged. The internal **OID** column is hidden. **In Study** is the last column, shown as true / false: on parkings, roadways, point sources and area sources it is also a check box in the form, right under the name (unticked sources are left out of the emission calculation); it is hidden on the other layers, which do not use it. New features start with the defaults of the forms: heights and offsets 0, profiles `default`, **Gate Type** PIER and **In Study** ticked.
 
 ### [Aircraft related Sources](#aircraft-related-sources)
 Calculating aircraft emissions requires the definition of three distinct layers: runways, taxiways, gates. For each of these features, the user must provide the required attributes. Defining Tracks (i.e., aircraft trajectories) is also possible; however, this functionality is `not yet fully implemented`.
@@ -300,7 +300,7 @@ When adding a point source, the following information is required:
   + **Type**: Category-specific type. The full set is in [`default_stationary_ef`](./../open_alaqs/database/data/default_stationary_ef.csv); examples include natural gas, light/heavy fuel oil, JP-4, JP-5, JET A, automobile gasoline, aviation gasoline.
   + **Height [m]**: Height at which emissions are released. `Not yet fully implemented`.
   + **Activity per Year**: How much the source operates in one inventory year. The numeric value of throughput, fuel consumed, or hours run.
-  + **Activity Unit** (read-only): Unit paired with **Activity per Year**. Inherited from the selected emission factor row (`default_stationary_ef.activity_unit`); left empty when that row has no unit (the field then shows the legacy default `1000_m3` as a hint only). Examples: `1000_m3` (natural gas throughput), `1000_L` (liquid-fuel throughput), `hr` (engine operating hours), `1000_kg` (solid waste / coating).
+  + **Activity Unit**: Unit paired with **Activity per Year**. Filled in from the selected emission factor row (`default_stationary_ef.activity_unit`) when the **Type** changes, and can be overridden for the source (the emission factors must then be per that unit); left empty when the row has no unit (the field then shows the legacy default `1000_m3` as a hint only). Examples: `1000_m3` (natural gas throughput), `1000_L` (liquid-fuel throughput), `hr` (engine operating hours), `1000_kg` (solid waste / coating).
 + **Profiles**: Each point source carries one **Hourly Profile**, one **Daily Profile** and one **Monthly Profile**. The profiles split the **Activity per Year** total into a per-hour timeline across the inventory year. The `default_stationary_ef` table recommends profile names per source type (e.g. `business_hours` for stationary IC engines, `heating_season` for power/heat plants); these names refer to profiles you must define yourself via the OpenALAQS Toolbar → *Activity Profiles* panel, since the user profile tables in the project template ship empty. Until you create them, sources fall back to the default uniform profile.
 
 ![points-layer.png](./../open_alaqs/assets/points-layer.png)
@@ -321,7 +321,7 @@ where the three profile factors are dimensionless and average to 1.0 across the 
 
 **Worked examples**:
 
-+ *Heating plant on natural gas* (Category 2): 850 000 m³ consumed per year → enter `Activity per Year = 850`. The selected type's row has `activity_unit = 1000_m3` (read-only). With `nox_kg_k = 1.9`, annual NOx = 850 × 1.9 = 1 615 kg.
++ *Heating plant on natural gas* (Category 2): 850 000 m³ consumed per year → enter `Activity per Year = 850`. The selected type's row fills in `activity_unit = 1000_m3`. With `nox_kg_k = 1.9`, annual NOx = 850 × 1.9 = 1 615 kg.
 + *Diesel backup generator* (Category 6, Stationary IC Engine): 400 operating hours per year → enter `Activity per Year = 400`, `activity_unit = hr`. With `nox_kg_k = 0.012`, annual NOx = 400 × 0.012 = 4.8 kg.
 + *Incinerator* (Category 1): 3 200 tonnes of waste per year → enter `Activity per Year = 3200`, `activity_unit = 1000_kg`. The EF applies to the 3 200 figure directly.
 + *Fuel storage tank* (Category 3): 1 800 000 L throughput per year → enter `Activity per Year = 1800`, `activity_unit = 1000_L`. The EF here represents evaporative VOC losses per thousand litres throughput.

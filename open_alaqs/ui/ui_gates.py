@@ -62,10 +62,9 @@ def form_open(form, layer, feature):
         True
     )
 
-    # Connect the instudy checkbox on save
+    # Write the QComboBox values on save
     def on_save():
         form.changeAttribute("gate_type", fields["type_field"].currentText())
-        feature["instudy"] = str(int(fields["instudy"].isChecked()))
 
     fields["button_box"].accepted.connect(on_save)
 

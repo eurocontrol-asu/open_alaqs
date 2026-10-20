@@ -55,8 +55,10 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   "0") on parkings, roadways, point sources and area sources, and hidden on
   the layers that do not use it (runways, taxiways, gates, tracks,
   buildings). OID, taxiway **Time [min]** and **Heat Flux [MW]** are
-  read-only; the emission factors filled in by Recalculate, **Method** and
-  **Activity Unit** are no longer editable in the forms. Validation messages
+  read-only; the emission factors filled in by Recalculate and **Method**
+  are no longer editable in the forms. **Activity Unit** (point sources) is
+  filled in from the selected Type and can be overridden per source; an
+  existing source keeps its stored unit. Validation messages
   of the parking and roadway forms use the field names. Typos fixed
   ("Buiding", "Mw", the building name tooltip).
 
@@ -270,6 +272,24 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   parameters and emission factors.
 - A NULL name, shown by QGIS as "NULL" in a new feature's form, passed the
   validation; an empty or NULL name now blocks OK on every form.
+- In Study on parkings, roadways, point sources and area sources: the form
+  check box was hidden and disabled, and its form code wrote the flag after
+  QGIS had saved, so it had no effect; on the previous version the check box
+  also showed a stored 1 unticked and unticking it saved nothing, and a new
+  source drawn through the form got a NULL flag (left out of the
+  calculation). The check box is now shown under the name and bound to the
+  column: it shows the stored value, saves what is set, and is ticked for a
+  new source. The attribute table shows the flag as true / false.
+- Area sources: ticking or unticking **Engine Test Site** in the form and
+  pressing OK did not change `is_test_site` (written after QGIS had saved,
+  like In Study); a stored value was shown correctly. The check box is now
+  bound to the column ('1' / '0', '0' for a new source), and the blank
+  Units per Year and emission rates are set to 0 when it is ticked, before
+  the save (they were also filled after it). The other layers' forms no
+  longer carry the ineffective in-study write.
+- Point sources: **Activity Unit** can be edited (per-source override of
+  the emission factor row's unit); it is filled in when the **Type** changes
+  and an existing source keeps its stored unit.
 - Removed a debug `print` from the track form; the OSM import warning for
   an invalid feature no longer fails on layers without `full_id`.
 

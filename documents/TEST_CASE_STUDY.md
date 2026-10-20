@@ -127,7 +127,7 @@ Select one or more features using the **Select Features by area or single click*
 
 #### Visualize and Edit Attribute Values
 
-Open the attribute table via the **Attributes** toolbar or by right-clicking the layer in the Layers panel. All attribute values can be edited directly in the table when editing mode is active. The table headers use the field names of the forms (the names in bold below); the internal **OID** column is hidden, and **In Study** is shown as the last column on parkings, roadways, point sources and area sources only.
+Open the attribute table via the **Attributes** toolbar or by right-clicking the layer in the Layers panel. All attribute values can be edited directly in the table when editing mode is active. The table headers use the field names of the forms (the names in bold below); the internal **OID** column is hidden, and **In Study** is shown (as true / false in the table, as a check box in the form) on parkings, roadways, point sources and area sources only. All training sources are in study.
 
 ---
 
@@ -258,12 +258,14 @@ Create a point feature representing the airport power and heating plant, located
 |---|---|
 | **Source Name** | Power |
 | **Category** | Power/Heat Plant |
+| **Type** | Bituminous Coal : Pulverized (> 10^8 BTU/HR) |
 | **Substance** | Solid |
 | **Height [m]** | 20 |
 | **Temperature [°C]** | 400 |
 | **Diameter [m]** | 1 |
 | **Gas Velocity [m/s]** | 15 |
 | **Activity per Year** | 4380 (operating hours) |
+| **Activity Unit** | hr |
 
 The plant operates half the year (4380 of 8760 hours), giving an activity factor of 0.5 for any 1-hour calculation interval.
 

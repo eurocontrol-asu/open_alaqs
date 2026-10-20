@@ -89,8 +89,9 @@ def form_open(form, layer, feature):
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
     )
 
-    # Hide the instudy field
-    fields["instudy"].setHidden(True)
+    # The In Study check box is bound to the instudy column by QGIS (CheckBox
+    # widget, "1" / "0", set in alaqs_config.py): it shows the stored value
+    # and QGIS saves what the user sets, so the form does not write it.
 
     # Seed the profiles
     populate_hourly_profiles(fields["hour_profile_field"])
@@ -132,7 +133,7 @@ def form_open(form, layer, feature):
         True
     )
 
-    # Connect all QComboBoxes and the instudy checkbox on save
+    # Write the QComboBox values on save
     def on_save():
         form.changeAttribute("hour_profile", fields["hour_profile_field"].currentText())
         form.changeAttribute(
@@ -141,7 +142,6 @@ def form_open(form, layer, feature):
         form.changeAttribute(
             "month_profile", fields["month_profile_field"].currentText()
         )
-        feature["instudy"] = str(int(fields["instudy"].isChecked()))
 
     fields["button_box"].accepted.connect(on_save)
 

@@ -205,8 +205,9 @@ def load_spatialite_layer(
 CHECKBOX_WIDGET_CONFIG = {
     "CheckedState": "1",
     "UncheckedState": "0",
-    # Show the stored "1" / "0" values, not "true" / "false", in the table.
-    "TextDisplayMethod": 1,
+    # The attribute table of QGIS 3.34 shows a check-box field as text, not
+    # as a tick: "true" / "false" (0) reads better than the stored "1" / "0".
+    "TextDisplayMethod": 0,
 }
 
 
