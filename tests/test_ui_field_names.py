@@ -265,3 +265,29 @@ def test_osm_import_reads_mapping_as_osm_to_alaqs():
     )
     assert "osm_f.attributeMap().get(osm_attr_name)" in src
     assert "alaqs_fields.indexFromName(alaqs_attr_name)" in src
+
+
+@pytest.mark.parametrize("layer", LAYERS, ids=lambda t: t.value)
+def test_every_bound_combo_box_is_a_value_map(layer):
+    """A combo box named after a column gets a value map, so QGIS fills it,
+    shows the stored value (not "(value)") on every refresh and saves the
+    choice."""
+    cfg = LAYERS_CONFIG[layer]
+    root = ET.parse(UI_DIR / cfg["ui_filename"]).getroot()
+    for widget in root.iter("widget"):
+        if widget.get("class") == "QComboBox" and widget.get("name") in cfg["fields"]:
+            spec = cfg["fields"][widget.get("name")]
+            assert spec["widget"] == "value_map", widget.get("name")
+            assert (
+                spec["value_map"].get("values")
+                or spec["value_map"].get("from")
+                or spec["value_map"].get("null_text")
+            )
+
+
+def test_required_names_default_to_empty_text():
+    for layer in LAYERS:
+        fields = LAYERS_CONFIG[layer]["fields"]
+        names = [c for c in fields if c.endswith("_id") and c != "oid"]
+        assert len(names) == 1, names
+        assert fields[names[0]]["default"] == "''"

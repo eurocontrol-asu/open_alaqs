@@ -54,8 +54,8 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   hides the OID column and lists **In Study** last, as a check box ("1" /
   "0") on parkings, roadways, point sources and area sources, and hidden on
   the layers that do not use it (runways, taxiways, gates, tracks,
-  buildings). OID, taxiway **Time [min]** and **Heat Flux [MW]** are
-  read-only; the emission factors filled in by Recalculate and **Method**
+  buildings). OID and **Heat Flux [MW]** are read-only; the taxiway `time`
+  column, which no calculation reads, is hidden and not in the form; the emission factors filled in by Recalculate and **Method**
   are no longer editable in the forms. **Activity Unit** (point sources) is
   filled in from the selected Type and can be overridden per source; an
   existing source keeps its stored unit. Validation messages
@@ -250,8 +250,9 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - Point sources: the **Type** was never saved (the form combo box was
   named `type`, the column is `point_type`).
 - Taxiways: the form wrote the text "Calculated" into the DECIMAL `time`
-  column; it now only shows it as placeholder text. The value is cleared
-  (NULL) in the bundled studies; it was not read by any calculation.
+  column; the Time field is removed from the form (the calculation takes
+  the time from the taxiway length and speed). The value is cleared (NULL)
+  in the bundled studies; it was not read by any calculation.
 - Runways: a new runway left at the default selection (01) had no
   **Runway Name** (it was only built when a combo box changed); the form now
   builds it (01/19) when it opens empty.
@@ -290,6 +291,22 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - Point sources: **Activity Unit** can be edited (per-source override of
   the emission factor row's unit); it is filled in when the **Type** changes
   and an existing source keeps its stored unit.
+- Combo boxes of an existing feature (Gate Type, the profiles, the
+  point-source Category and Type, the track Runway Direction and Operation
+  Type, the roadway Scenario) showed the stored value as "(value)" whenever
+  QGIS refreshed the form, for example when editing was toggled in the
+  attribute table's form view. These fields now have a value map in the
+  field configuration, built when the study opens (fixed lists, the study's
+  profiles, stationary categories and types, runway directions, plus any
+  value already stored), so QGIS fills the lists, shows the plain value
+  and saves the choice; the forms no longer refill or write them. The
+  point-source Type list shows the types of the selected category, and a
+  type's defaults are only filled in when the user picks a category or
+  type.
+- The forms' OK button looked enabled while the form was invalid (the
+  click was ignored); it is now greyed out until the form is valid, and
+  its tooltip names the missing or invalid fields. New features start
+  with an empty name instead of "NULL".
 - Removed a debug `print` from the track form; the OSM import warning for
   an invalid feature no longer fails on layers without `full_id`.
 

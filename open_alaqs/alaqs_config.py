@@ -32,7 +32,14 @@ class FieldConfig(TypedDict, total=False):
         QGIS drops the value of a read-only field when the form is saved.
     hidden_in_table: True to hide the column in the attribute table.
     widget: "checkbox" to edit the column as a check box storing "1" or
-        "0"; None keeps the QGIS default widget.
+        "0"; "value_map" for a list of values (combo box), see value_map;
+        None keeps the QGIS default widget.
+    value_map: the values of a "value_map" widget: "values" (fixed list),
+        "from" (a list read from the study when the layer is loaded, see
+        openalaqsuitoolkit.VALUE_MAP_SOURCES) and "null_text" (the text
+        shown for NULL, empty by default). Values already
+        stored in the layer are always added, so none is shown as
+        "(value)". Text and stored value are the same.
     """
 
     alias: str
@@ -40,6 +47,7 @@ class FieldConfig(TypedDict, total=False):
     read_only: bool
     hidden_in_table: bool
     widget: Optional[str]
+    value_map: dict
 
 
 class ALAQSLayerConfig(TypedDict, total=False):
@@ -72,14 +80,25 @@ def _field(
     read_only: bool = False,
     hidden_in_table: bool = False,
     widget: Optional[str] = None,
+    value_map: Optional[dict] = None,
 ) -> FieldConfig:
-    return {
+    spec: FieldConfig = {
         "alias": alias,
         "default": default,
         "read_only": read_only,
         "hidden_in_table": hidden_in_table,
         "widget": widget,
     }
+    if value_map is not None:
+        spec["widget"] = "value_map"
+        spec["value_map"] = value_map
+    return spec
+
+
+def _name(alias: str) -> FieldConfig:
+    """A required name: empty (not NULL) for a new feature, so the form
+    shows an empty box; the forms reject an empty name."""
+    return _field(alias, "''")
 
 
 def _oid() -> FieldConfig:
@@ -109,9 +128,13 @@ def _fleet_mix() -> dict[str, FieldConfig]:
 
 def _profiles(hour: str, day: str, month: str) -> dict[str, FieldConfig]:
     return {
-        hour: _field("Hourly Profile", "'default'"),
-        day: _field("Daily Profile", "'default'"),
-        month: _field("Monthly Profile", "'default'"),
+        hour: _field(
+            "Hourly Profile", "'default'", value_map={"from": "hour_profiles"}
+        ),
+        day: _field("Daily Profile", "'default'", value_map={"from": "day_profiles"}),
+        month: _field(
+            "Monthly Profile", "'default'", value_map={"from": "month_profiles"}
+        ),
     }
 
 
@@ -132,7 +155,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "py_filename": "ui_area_sources.py",
         "fields": {
             "oid": _oid(),
-            "source_id": _field("Source Name"),
+            "source_id": _name("Source Name"),
             "is_test_site": _field("Engine Test Site", "'0'", widget="checkbox"),
             "unit_year": _field("Units per Year"),
             "height": _field("Height [m]", "0"),
@@ -157,7 +180,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "py_filename": "ui_buildings.py",
         "fields": {
             "oid": _oid(),
-            "building_id": _field("Building Name"),
+            "building_id": _name("Building Name"),
             "height": _field("Height [m]", "0"),
             "instudy": _instudy("1", used=False),
         },
@@ -240,8 +263,10 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "py_filename": "ui_gates.py",
         "fields": {
             "oid": _oid(),
-            "gate_id": _field("Gate Name"),
-            "gate_type": _field("Gate Type", "'PIER'"),
+            "gate_id": _name("Gate Name"),
+            "gate_type": _field(
+                "Gate Type", "'PIER'", value_map={"values": ["PIER", "REMOTE", "CARGO"]}
+            ),
             "gate_height": _field("Height [m]", "0"),
             "instudy": _instudy("'1'", used=False),
         },
@@ -273,7 +298,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "py_filename": "ui_parkings.py",
         "fields": {
             "oid": _oid(),
-            "parking_id": _field("Parking Name"),
+            "parking_id": _name("Parking Name"),
             "vehicle_year": _field("Vehicles per Year"),
             "height": _field("Height [m]", "0"),
             "speed": _field("Speed [km/h]"),
@@ -318,9 +343,10 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "py_filename": "ui_point_sources.py",
         "fields": {
             "oid": _oid(),
-            "source_id": _field("Source Name"),
-            "category": _field("Category"),
-            "point_type": _field("Type"),
+            "source_id": _name("Source Name"),
+            "category": _field("Category", value_map={"from": "stationary_categories"}),
+            # All types; the form shows those of the selected category
+            "point_type": _field("Type", value_map={"from": "stationary_types"}),
             "substance": _field("Substance"),
             "ops_year": _field("Activity per Year"),
             "height": _field("Height [m]", "0"),
@@ -348,12 +374,12 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "py_filename": "ui_roadways.py",
         "fields": {
             "oid": _oid(),
-            "roadway_id": _field("Roadway Name"),
+            "roadway_id": _name("Roadway Name"),
             "vehicle_year": _field("Vehicles per Year"),
             "height": _field("Height [m]", "0"),
             "speed": _field("Speed [km/h]"),
             "distance": _field("Distance [m]"),
-            "scenario": _field("Scenario"),
+            "scenario": _field("Scenario", value_map={"null_text": "Not Applicable"}),
             **_fleet_mix(),
             **_profiles("hour_profile", "daily_profile", "month_profile"),
             **_emission_factors("gm_km", "g/km"),
@@ -422,9 +448,11 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "py_filename": "ui_taxiways.py",
         "fields": {
             "oid": _oid(),
-            "taxiway_id": _field("Taxiway Name"),
+            "taxiway_id": _name("Taxiway Name"),
             "speed": _field("Speed [km/h]"),
-            "time": _field("Time [min]", read_only=True),
+            # Not read by the calculation (the time comes from length and
+            # speed): not in the form, hidden in the attribute table
+            "time": _field("Time [min]", read_only=True, hidden_in_table=True),
             "instudy": _instudy("1", used=False),
         },
         "fill_color": None,
@@ -457,9 +485,13 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "py_filename": "ui_tracks.py",
         "fields": {
             "oid": _oid(),
-            "track_id": _field("Track Name"),
-            "runway": _field("Runway Direction"),
-            "departure_arrival": _field("Operation Type"),
+            "track_id": _name("Track Name"),
+            "runway": _field(
+                "Runway Direction", value_map={"from": "runway_directions"}
+            ),
+            "departure_arrival": _field(
+                "Operation Type", value_map={"values": ["Arrival", "Departure"]}
+            ),
             "instudy": _instudy("1", used=False),
         },
         "fill_color": None,
@@ -478,7 +510,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
         "py_filename": "ui_runways.py",
         "fields": {
             "oid": _oid(),
-            "runway_id": _field("Runway Name"),
+            "runway_id": _name("Runway Name"),
             "touchdown": _field("Touchdown Offset, Runway 1 [m]", "0"),
             "touchdown_2": _field("Touchdown Offset, Runway 2 [m]", "0"),
             "instudy": _instudy("1", used=False),

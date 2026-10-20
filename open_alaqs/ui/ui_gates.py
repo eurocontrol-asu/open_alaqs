@@ -1,30 +1,13 @@
 from qgis.PyQt import QtWidgets
 
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.enums import AlaqsLayerType
 from open_alaqs.openalaqsuitoolkit import (
-    feature_value,
-    select_combo_value,
+    update_ok_button,
     validate_field,
 )
 
 logger = get_logger(__name__)
-
-
-def run_once(f):
-    """
-    Decorator to make sure the function is executed only once.
-
-    :param f: function to execute
-    :return:
-    """
-
-    def wrapper(*args, **kwargs):
-        if not wrapper.has_run:
-            wrapper.has_run = True
-            return f(*args, **kwargs)
-
-    wrapper.has_run = False
-    return wrapper
 
 
 def form_open(form, layer, feature):
@@ -45,11 +28,8 @@ def form_open(form, layer, feature):
     # Hide the instudy field
     fields["instudy"].setHidden(True)
 
-    # Seed the combo boxes only once
-    populate_combo_boxes(fields)
-
-    # Show the stored gate type (QGIS adds it as an extra "(TYPE)" item)
-    select_combo_value(fields["type_field"], feature_value(feature, "gate_type"))
+    # Gate Type is a value map (PIER, REMOTE, CARGO) set in alaqs_config.py:
+    # QGIS fills the combo box, shows the stored value and saves the choice.
 
     # Add input validation to text fields in the form
     for key, value in fields.items():
@@ -57,16 +37,9 @@ def form_open(form, layer, feature):
             fields[key].textChanged.connect(lambda: validate(fields))
     fields["type_field"].currentTextChanged.connect(lambda: validate(fields))
 
-    # Block the ok button (will be overwritten after validation)
-    fields["button_box"].button(fields["button_box"].StandardButton.Ok).blockSignals(
-        True
-    )
-
-    # Write the QComboBox values on save
-    def on_save():
-        form.changeAttribute("gate_type", fields["type_field"].currentText())
-
-    fields["button_box"].accepted.connect(on_save)
+    # OK is enabled only while the form is valid: validate now, then on
+    # every change
+    validate(fields)
 
 
 def validate(fields: dict):
@@ -82,19 +55,10 @@ def validate(fields: dict):
 
     # Validate all fields
     results = [
-        validate_field(fields["name_field"], "str"),
-        validate_field(fields["type_field"], "str"),
-        validate_field(fields["height_field"], "float"),
+        (fields["name_field"], validate_field(fields["name_field"], "str")),
+        (fields["type_field"], validate_field(fields["type_field"], "str")),
+        (fields["height_field"], validate_field(fields["height_field"], "float")),
     ]
 
-    # Block signals if any of the fields is invalid
-    button_box.button(button_box.StandardButton.Ok).blockSignals(
-        ("False" in str(results)) or (results[1] not in ("PIER", "REMOTE", "CARGO"))
-    )
-
-
-@run_once
-def populate_combo_boxes(fields: dict):
-    fields["type_field"].addItem("PIER")
-    fields["type_field"].addItem("REMOTE")
-    fields["type_field"].addItem("CARGO")
+    # OK enabled only when every field is valid
+    update_ok_button(button_box, results, AlaqsLayerType.GATE)

@@ -20,10 +20,12 @@ from qgis.core import (
     QgsRasterLayer,
     QgsRectangle,
     QgsSingleSymbolRenderer,
+    QgsValueMapFieldFormatter,
     QgsVectorLayer,
 )
 from qgis.gui import QgsFileWidget, QgsMapCanvas
 from qgis.PyQt import QtWidgets
+from qgis.PyQt.QtCore import QLocale
 
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core.alaqslogging import get_logger
@@ -49,47 +51,32 @@ def is_null_value(value) -> bool:
     return is_empty_text(value)
 
 
-def feature_value(feature, name):
-    """The attribute `name` of `feature`, or None when the layer has no
-    such field (older study) or the value is NULL."""
-    try:
-        if feature.fields().indexFromName(name) == -1:
-            return None
-        value = feature.attribute(name)
-    except (KeyError, AttributeError):
-        return None
-    return None if is_null_value(value) else value
+def parse_number(text: str, integer: bool):
+    """Parse a number as QGIS shows it in a form, raising ValueError.
 
-
-def select_combo_value(combo, value) -> None:
-    """Show the stored `value` in a form combo box after the form filled it.
-
-    QGIS binds a combo box named after a field with a value-map wrapper,
-    which shows a value missing from its (empty) map as an extra item
-    "(value)". The forms then refill the combo boxes and select their
-    first entry, so the stored value was lost. This drops those "(value)"
-    items, then selects `value`, adding it when the list lacks it (for
-    example a profile that no longer exists). A NULL value leaves the
-    current selection (the form's default) unchanged.
+    QGIS writes numbers into the form with the locale's separators, for
+    example 20000 as "20,000" (English) or "20.000" (German), and 30.3 as
+    "30,3" under European locales (GitHub #159); the locale is tried first,
+    then plain Python syntax, then (floats) the tolerant convertToFloat.
     """
-    if combo is None:
-        return
-    for i in reversed(range(combo.count())):
-        # The NULL item carries the value map's NULL marker as its data
-        text = combo.itemText(i)
-        data = combo.itemData(i)
-        if text == f"({QgsApplication.nullRepresentation()})" or (
-            not is_null_value(data) and text == f"({data})"
-        ):
-            combo.removeItem(i)
-    if is_null_value(value):
-        return
-    text = str(value)
-    idx = combo.findText(text)
-    if idx == -1:
-        combo.addItem(text)
-        idx = combo.count() - 1
-    combo.setCurrentIndex(idx)
+    locale = QLocale()
+    if integer:
+        number, ok = locale.toLongLong(text)
+        if ok:
+            return int(number)
+        return int(text)
+    number, ok = locale.toDouble(text)
+    if ok:
+        return number
+    try:
+        return float(text)
+    except ValueError:
+        from open_alaqs.core.tools.conversion import convertToFloat
+
+        converted = convertToFloat(text, default=None)
+        if converted is None:
+            raise ValueError(f"cannot parse {text!r} as a number")
+        return converted
 
 
 def validate_field(ui_element, var_type):
@@ -128,18 +115,9 @@ def validate_field(ui_element, var_type):
         if var_type == "str":
             value = str(value)
         elif var_type == "int":
-            value = int(value)
+            value = parse_number(value, integer=True)
         elif var_type == "float":
-            # Locale-tolerant float parsing (GitHub #159). Qt can display
-            # DB-stored "30.3" as "30,3" under European locales; bare
-            # float() would reject that. convertToFloat handles both
-            # conventions and returns None on genuine failure.
-            from open_alaqs.core.tools.conversion import convertToFloat
-
-            converted = convertToFloat(value, default=None)
-            if converted is None:
-                raise ValueError(f"cannot parse {value!r} as float")
-            value = converted
+            value = parse_number(value, integer=False)
 
         color_ui_background(ui_element, None)
 
@@ -211,6 +189,125 @@ CHECKBOX_WIDGET_CONFIG = {
 }
 
 
+def _study_values(database_path: str, sql: str) -> list[str]:
+    """First column of `sql` on the study, as text; [] when the table or
+    the file is missing (older studies, memory layers in tests)."""
+    import sqlite3
+
+    try:
+        con = sqlite3.connect(f"file:{database_path}?mode=ro", uri=True)
+        try:
+            rows = con.execute(sql).fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return []
+    return [str(r[0]) for r in rows if r[0] is not None and str(r[0]).strip()]
+
+
+def _runway_directions(database_path: str) -> list[str]:
+    directions = []
+    for runway_id in _study_values(
+        database_path,
+        "SELECT runway_id FROM shapes_runways ORDER BY runway_id COLLATE NOCASE",
+    ):
+        directions += [d.strip() for d in runway_id.split("/") if d.strip()]
+    return directions
+
+
+def _profile_names(table: str):
+    def names(database_path: str) -> list[str]:
+        return ["default"] + _study_values(
+            database_path,
+            f"SELECT profile_name FROM {table} ORDER BY profile_name COLLATE NOCASE",
+        )
+
+    return names
+
+
+# Lists read from the study for the "from" key of a value map
+VALUE_MAP_SOURCES = {
+    "hour_profiles": _profile_names("user_hour_profile"),
+    "day_profiles": _profile_names("user_day_profile"),
+    "month_profiles": _profile_names("user_month_profile"),
+    "stationary_categories": lambda db: _study_values(
+        db,
+        "SELECT category_name FROM default_stationary_category "
+        "ORDER BY category_name COLLATE NOCASE",
+    ),
+    "stationary_types": lambda db: _study_values(
+        db, "SELECT description FROM default_stationary_ef ORDER BY oid"
+    ),
+    "runway_directions": _runway_directions,
+}
+
+
+def value_map_values(layer: QgsVectorLayer, idx: int, spec: dict) -> list[str]:
+    """The values of a value-map field: the fixed ones, those read from
+    the study, then any other value already stored in the layer (so QGIS
+    never shows a stored value as "(value)"), without duplicates."""
+    values = list(spec.get("values", []))
+    source = spec.get("from")
+    if source:
+        database = QgsDataSourceUri(layer.source()).database()
+        values += VALUE_MAP_SOURCES[source](database)
+    stored = sorted(str(v) for v in layer.uniqueValues(idx) if not is_null_value(v))
+    unique = []
+    for value in values + stored:
+        if value not in unique:
+            unique.append(value)
+    return unique
+
+
+def value_map_config(values: list[str], spec: dict) -> dict:
+    """ValueMap editor config: the text shown is the stored value. NULL is
+    listed first, shown as "null_text" (empty by default), so a NULL value
+    is not shown as "(NULL)"; the forms reject an empty choice where a
+    value is required."""
+    entries = [{spec.get("null_text", ""): QgsValueMapFieldFormatter.NULL_VALUE}]
+    entries += [{value: value} for value in values]
+    return {"map": entries}
+
+
+def add_combo_values(combo, values) -> None:
+    """Add `values` missing from a value-map combo box (for example a
+    profile or runway created after the study was opened). Items are added
+    with the value as data, as QGIS's value-map widget expects, so they are
+    selected and saved like the configured ones; nothing is removed."""
+    if combo is None:
+        return
+    for value in values:
+        if value is None or str(value).strip() == "":
+            continue
+        if combo.findData(str(value)) == -1:
+            combo.addItem(str(value), str(value))
+
+
+def update_ok_button(button_box, checks, alaqs_layer=None, extra=()) -> bool:
+    """Enable the form's OK button only when every check passed.
+
+    checks: (widget, result) pairs, result as returned by validate_field
+    (False when invalid). extra: display names of other failed checks.
+    The disabled button's tooltip names the fields to fix. Returns True
+    when the form is valid.
+    """
+    invalid = []
+    for widget, result in checks:
+        if isinstance(result, bool) and not result:
+            name = widget.objectName()
+            if alaqs_layer is not None:
+                from open_alaqs.alaqs_config import field_alias
+
+                name = field_alias(alaqs_layer, name)
+            invalid.append(name)
+    invalid += list(extra)
+    ok = button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok)
+    ok.blockSignals(False)
+    ok.setEnabled(not invalid)
+    ok.setToolTip("" if not invalid else "Missing or invalid: " + ", ".join(invalid))
+    return not invalid
+
+
 def apply_layer_field_config(layer: QgsVectorLayer, alaqs_layer: AlaqsLayerType):
     """Apply the `fields` settings of LAYERS_CONFIG to a loaded layer.
 
@@ -238,6 +335,14 @@ def apply_layer_field_config(layer: QgsVectorLayer, alaqs_layer: AlaqsLayerType)
         if spec.get("widget") == "checkbox":
             layer.setEditorWidgetSetup(
                 idx, QgsEditorWidgetSetup("CheckBox", dict(CHECKBOX_WIDGET_CONFIG))
+            )
+        elif spec.get("widget") == "value_map":
+            values = value_map_values(layer, idx, spec.get("value_map", {}))
+            layer.setEditorWidgetSetup(
+                idx,
+                QgsEditorWidgetSetup(
+                    "ValueMap", value_map_config(values, spec["value_map"])
+                ),
             )
     layer.setEditFormConfig(form_config)
 

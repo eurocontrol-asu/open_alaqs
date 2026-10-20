@@ -4,7 +4,12 @@ from qgis.core import QgsApplication
 from qgis.PyQt import QtWidgets
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.openalaqsuitoolkit import color_ui_background, validate_field
+from open_alaqs.enums import AlaqsLayerType
+from open_alaqs.openalaqsuitoolkit import (
+    color_ui_background,
+    update_ok_button,
+    validate_field,
+)
 
 logger = get_logger(__name__)
 
@@ -114,10 +119,9 @@ def form_open(form, layer, feature):
         if isinstance(value, QtWidgets.QLineEdit):
             fields[key].textChanged.connect(lambda: validate(fields))
 
-    # Block the ok button (will be overwritten after validation)
-    fields["button_box"].button(fields["button_box"].StandardButton.Ok).blockSignals(
-        True
-    )
+    # OK is enabled only while the form is valid: validate now, then on
+    # every change
+    validate(fields)
 
     # A new runway has no name yet. Build it from the default selection
     # (01/19), after the validation is connected, so that the name is set
@@ -255,15 +259,13 @@ def validate(fields: dict):
     # Validate all fields. The Touchdown Offsets may be empty (empty = the profile's own distance, for
     # each runway end independently); when filled they must be whole metres, as the touchdown and
     # touchdown_2 columns are INT.
-    results = [validate_field(fields["name_field"], "str")]
+    results = [(fields["name_field"], validate_field(fields["name_field"], "str"))]
     for key in ("offset_field", "offset_2_field"):
         field = fields.get(key)
         if field is not None and field.text().strip():
-            results.append(validate_field(field, "int"))
+            results.append((field, validate_field(field, "int")))
         elif field is not None:
             color_ui_background(field, None)
 
-    # Block signals if any of the fields is invalid
-    button_box.button(button_box.StandardButton.Ok).blockSignals(
-        "False" in str(results)
-    )
+    # OK enabled only when every field is valid
+    update_ok_button(button_box, results, AlaqsLayerType.RUNWAY)

@@ -203,7 +203,7 @@ An airport taxiway is a designated path that connects runways with terminals, ga
 + **Taxiway Name**
 + **Speed [km/h]**
 
-**Time [min]** is not entered (the form shows "Calculated").
+The time spent on a taxiway is not entered: it is calculated from the taxiway length and **Speed [km/h]**.
 
 ![taxiways-layer.png](./../open_alaqs/assets/taxiways-layer.png)
 

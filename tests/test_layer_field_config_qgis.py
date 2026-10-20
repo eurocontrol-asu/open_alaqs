@@ -24,6 +24,7 @@ start_app()
 
 from qgis.core import (  # noqa: E402
     QgsAttributeTableConfig,
+    QgsDataSourceUri,
     QgsFeature,
     QgsProject,
     QgsVectorLayerUtils,
@@ -34,6 +35,7 @@ from open_alaqs.alaqs_config import LAYERS_CONFIG  # noqa: E402
 from open_alaqs.enums import AlaqsLayerType  # noqa: E402
 from open_alaqs.openalaqsuitoolkit import (  # noqa: E402
     get_alaqs_layer,
+    is_null_value,
     load_spatialite_layer,
 )
 
@@ -85,6 +87,13 @@ def test_layer_has_configured_aliases_defaults_and_flags(layers, layer_type):
             assert setup.type() == "CheckBox"
             assert setup.config()["CheckedState"] == "1"
             assert setup.config()["UncheckedState"] == "0"
+        elif spec["widget"] == "value_map":
+            assert setup.type() == "ValueMap"
+            mapped = [v for entry in setup.config()["map"] for v in entry.values()]
+            for value in spec["value_map"].get("values", []):
+                assert value in mapped
+            stored = {str(v) for v in layer.uniqueValues(idx) if not is_null_value(v)}
+            assert stored <= set(mapped), name
         else:
             assert setup.type() != "ValueMap"
 
@@ -149,18 +158,14 @@ def _open_form(layer_type, layer, texts=None, values=None):
     feature = QgsFeature(layer.fields())
     for name, value in (values or {}).items():
         feature[name] = value
-        # What the QGIS value-map wrapper shows for a value of a bound combo
-        combo = form.findChild(QtWidgets.QComboBox, name)
-        if combo is not None:
-            combo.addItem(f"({value})", value)
-            combo.setCurrentIndex(combo.count() - 1)
     namespace["form_open"](form, layer, feature)
     return form, namespace
 
 
 def _ok_blocked(form):
+    """OK is greyed out (disabled) while the form is invalid."""
     box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
-    return box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).signalsBlocked()
+    return not box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).isEnabled()
 
 
 @pytest.mark.parametrize("shown", ["", "NULL"])
@@ -202,59 +207,6 @@ def test_runway_touchdown_offset_is_whole_metres(layers, text, blocked):
     assert _ok_blocked(form) is blocked
 
 
-def test_taxiway_time_is_placeholder_only(layers):
-    form, _ = _open_form(AlaqsLayerType.TAXIWAY, layers[AlaqsLayerType.TAXIWAY])
-    time = form.findChild(QtWidgets.QLineEdit, "time")
-    assert time.text() == ""
-    assert time.placeholderText() == "Calculated"
-    assert not time.isEnabled()
-
-
-@pytest.fixture
-def point_study(tmp_path):
-    """Training copy with one emission factor row without activity unit."""
-    from open_alaqs.core.alaqsdblite import ProjectDatabase
-
-    path = tmp_path / "points.alaqs"
-    shutil.copy(TRAINING, path)
-    con = sqlite3.connect(path)
-    row = con.execute(
-        "SELECT ef.description, c.category_name FROM default_stationary_ef ef "
-        "JOIN default_stationary_category c ON c.category = ef.category "
-        "ORDER BY ef.oid LIMIT 1"
-    ).fetchone()
-    con.execute(
-        "UPDATE default_stationary_ef SET activity_unit = NULL WHERE description = ?",
-        [row[0]],
-    )
-    con.commit()
-    con.close()
-    previous = getattr(ProjectDatabase(), "path", None)
-    ProjectDatabase().path = str(path)
-    yield {"type": row[0], "category": row[1]}
-    ProjectDatabase().path = previous
-
-
-def test_point_source_type_saved_and_unit_not_invented(layers, point_study):
-    from open_alaqs.ui.ui_point_sources import ACTIVITY_UNIT_PLACEHOLDER
-
-    form, _ = _open_form(
-        AlaqsLayerType.POINT_SOURCE, layers[AlaqsLayerType.POINT_SOURCE]
-    )
-    category = form.findChild(QtWidgets.QComboBox, "category")
-    point_type = form.findChild(QtWidgets.QComboBox, "point_type")
-    assert point_type is not None
-    category.setCurrentText(point_study["category"])
-    point_type.setCurrentText(point_study["type"])
-    assert point_type.currentText() == point_study["type"]
-    unit = form.findChild(QtWidgets.QLineEdit, "activity_unit")
-    assert unit.text() == ""
-    assert unit.placeholderText() == ACTIVITY_UNIT_PLACEHOLDER
-    form.findChild(QtWidgets.QDialogButtonBox, "buttonBox").accepted.emit()
-    assert ("point_type", point_study["type"]) in form.changes
-    assert all(field != "type" for field, _ in form.changes)
-
-
 def test_activity_unit_text():
     from open_alaqs.ui.ui_point_sources import activity_unit_text
 
@@ -273,115 +225,6 @@ def test_validation_messages_use_display_names():
     assert ui_roadways.display_name("vehicle_year_field") == "Vehicles per Year"
 
 
-# Stored combo values, NULL names, helpers ------------------------------------
-
-
-@pytest.fixture
-def study_db(study):
-    from open_alaqs.core.alaqsdblite import ProjectDatabase
-
-    previous = getattr(ProjectDatabase(), "path", None)
-    ProjectDatabase().path = str(study)
-    yield study
-    ProjectDatabase().path = previous
-
-
-def _combo(form, name):
-    return form.findChild(QtWidgets.QComboBox, name)
-
-
-def test_gate_form_shows_stored_type(layers, study_db):
-    form, _ = _open_form(
-        AlaqsLayerType.GATE,
-        layers[AlaqsLayerType.GATE],
-        texts={"gate_id": "G2", "gate_height": "0"},
-        values={"gate_type": "CARGO"},
-    )
-    combo = _combo(form, "gate_type")
-    assert combo.currentText() == "CARGO"
-    assert [combo.itemText(i) for i in range(combo.count())] == [
-        "PIER",
-        "REMOTE",
-        "CARGO",
-    ]
-
-
-@pytest.mark.parametrize(
-    "layer_type, columns",
-    [
-        (AlaqsLayerType.PARKING, ("hour_profile", "daily_profile", "month_profile")),
-        (AlaqsLayerType.ROADWAY, ("hour_profile", "daily_profile", "month_profile")),
-        (
-            AlaqsLayerType.POINT_SOURCE,
-            ("hour_profile", "daily_profile", "month_profile"),
-        ),
-        (AlaqsLayerType.AREA, ("hourly_profile", "daily_profile", "monthly_profile")),
-    ],
-    ids=lambda v: v.value if isinstance(v, AlaqsLayerType) else "",
-)
-def test_forms_show_stored_profiles(layers, study_db, layer_type, columns):
-    """A profile that is not in the list (e.g. deleted) is still shown,
-    instead of the form falling back to "default"."""
-    values = dict(zip(columns, ("night_shift", "weekdays", "summer")))
-    form, _ = _open_form(layer_type, layers[layer_type], values=values)
-    for column, value in values.items():
-        assert _combo(form, column).currentText() == value, column
-
-
-def test_point_source_form_keeps_stored_type_and_factors(layers, study_db):
-    con = sqlite3.connect(study_db)
-    category, description = con.execute(
-        "SELECT c.category_name, ef.description FROM default_stationary_ef ef "
-        "JOIN default_stationary_category c ON c.category = ef.category "
-        "WHERE c.category_name != 'Other' ORDER BY ef.oid DESC LIMIT 1"
-    ).fetchone()
-    con.close()
-    form, _ = _open_form(
-        AlaqsLayerType.POINT_SOURCE,
-        layers[AlaqsLayerType.POINT_SOURCE],
-        texts={"co_kg_k": "123.4", "height": "7"},
-        values={"category": category, "point_type": description},
-    )
-    assert _combo(form, "category").currentText() == category
-    assert _combo(form, "point_type").currentText() == description
-    # The type defaults did not replace the stored values
-    assert form.findChild(QtWidgets.QLineEdit, "co_kg_k").text() == "123.4"
-    assert form.findChild(QtWidgets.QLineEdit, "height").text() == "7"
-
-
-def test_point_source_form_without_stored_type_keeps_it_empty(layers, study_db):
-    form, _ = _open_form(
-        AlaqsLayerType.POINT_SOURCE,
-        layers[AlaqsLayerType.POINT_SOURCE],
-        values={"category": "Power/Heat Plant"},
-    )
-    assert _combo(form, "category").currentText() == "Power/Heat Plant"
-    assert _combo(form, "point_type").currentText() == ""
-
-
-@pytest.mark.parametrize(
-    "layer_type, name, others",
-    [
-        (AlaqsLayerType.TAXIWAY, "taxiway_id", {"speed": "15"}),
-        (AlaqsLayerType.BUILDING, "building_id", {"height": "12"}),
-        (AlaqsLayerType.GATE, "gate_id", {"gate_height": "0"}),
-    ],
-    ids=lambda v: v.value if isinstance(v, AlaqsLayerType) else "",
-)
-def test_null_name_blocks_ok(layers, study_db, layer_type, name, others):
-    from qgis.core import QgsApplication
-
-    form, _ = _open_form(layer_type, layers[layer_type])
-    for field, text in others.items():
-        form.findChild(QtWidgets.QLineEdit, field).setText(text)
-    line = form.findChild(QtWidgets.QLineEdit, name)
-    for text in ("", QgsApplication.nullRepresentation()):
-        line.setText(text)
-        assert _ok_blocked(form), repr(text)
-    line.setText("A1")
-    assert not _ok_blocked(form)
-
-
 def test_validate_field_rejects_null_representation():
     from qgis.core import QgsApplication
 
@@ -394,36 +237,9 @@ def test_validate_field_rejects_null_representation():
     assert validate_field(edit, "str") == "NAME"
 
 
-def test_select_combo_value():
-    from open_alaqs.openalaqsuitoolkit import select_combo_value
-
-    combo = QtWidgets.QComboBox()
-    combo.addItem("(CARGO)", "CARGO")
-    combo.addItems(["PIER", "REMOTE", "CARGO", "(x) real item"])
-    select_combo_value(combo, "CARGO")
-    assert combo.currentText() == "CARGO" and combo.count() == 4
-    select_combo_value(combo, "MISSING")
-    assert combo.currentText() == "MISSING"
-    combo.setCurrentIndex(0)
-    select_combo_value(combo, None)
-    assert combo.currentText() == "PIER"
-    combo.insertItem(0, "(NULL)", "{2839923C-8B7D-419E-B84B-CA2FE9B80EC7}")
-    select_combo_value(combo, None)
-    assert combo.findText("(NULL)") == -1
-
-
 def test_osm_import_warning_does_not_index_full_id():
     src = (REPO / "open_alaqs" / "openalaqsdialog.py").read_text(encoding="utf-8")
     assert 'osm_f["full_id"]' not in src
-
-
-def test_new_point_source_type_has_no_null_item(layers, study_db):
-    form, _ = _open_form(
-        AlaqsLayerType.POINT_SOURCE,
-        layers[AlaqsLayerType.POINT_SOURCE],
-        values={"point_type": None},
-    )
-    assert _combo(form, "point_type").findText("(NULL)") == -1
 
 
 # In Study and Activity Unit through a real QgsAttributeForm ------------------
@@ -698,3 +514,397 @@ def test_engine_test_events_button_opens_dialog_for_the_source(form_layer, monke
     form = open_form(layer.getFeature(oid))
     form.findChild(QtWidgets.QPushButton, "load_events_csv").click()
     assert opened == [(ProjectDatabase().path, layer.getFeature(oid)["source_id"])]
+
+
+# Combo boxes are value maps: refreshes, feature changes, saves ---------------
+
+MULTISOURCE = (
+    REPO
+    / "openalaqs_standalone"
+    / "validation"
+    / "data"
+    / ("training_v3_multisource.alaqs")
+)
+COMBO_LAYERS = [
+    AlaqsLayerType.GATE,
+    AlaqsLayerType.PARKING,
+    AlaqsLayerType.ROADWAY,
+    AlaqsLayerType.POINT_SOURCE,
+    AlaqsLayerType.AREA,
+    AlaqsLayerType.TRACK,
+]
+
+
+def _attribute_form_of(widget):
+    from qgis.gui import QgsAttributeForm
+    from qgis.PyQt import sip
+
+    (form,) = [
+        sip.cast(w, QgsAttributeForm)
+        for w in widget.findChildren(QtWidgets.QWidget)
+        if w.metaObject().className() == "QgsAttributeForm"
+    ]
+    return form
+
+
+@pytest.fixture
+def dual_view(tmp_path):
+    """An attribute table in form view (QgsDualView, AttributeEditor) on a
+    copy of the multi-source study, two sample tracks added. Yields an
+    opener returning (layer, view, form, run_init); run_init runs the
+    layer's form_open as QGIS's legacy init does on each feature change."""
+    from qgis.core import QgsEditFormConfig, QgsFeatureRequest, QgsSettings
+    from qgis.gui import QgsAttributeEditorContext, QgsDualView, QgsGui, QgsMapCanvas
+
+    from open_alaqs.core.alaqsdblite import ProjectDatabase
+
+    QgsSettings().setValue("qgis/enableMacros", "Never")
+    if not QgsGui.editorWidgetRegistry().factories():
+        QgsGui.editorWidgetRegistry().initEditors()
+    db = tmp_path / "multisource.alaqs"
+    shutil.copy(MULTISOURCE, db)
+    previous = getattr(ProjectDatabase(), "path", None)
+    ProjectDatabase().path = str(db)
+    canvas = QgsMapCanvas()
+    _KEEP.append(canvas)
+    opened = []
+
+    def _own(layer_type):
+        load_spatialite_layer(None, str(db), layer_type)
+        (layer,) = [
+            lyr
+            for lyr in QgsProject.instance().mapLayersByName(
+                LAYERS_CONFIG[layer_type]["name"]
+            )
+            if str(db) in lyr.source()
+        ]
+        opened.append(layer)
+        return layer
+
+    def open_view(layer_type, sql=None):
+        if sql:
+            con = sqlite3.connect(db)
+            con.execute(sql)
+            con.commit()
+            con.close()
+        if layer_type == AlaqsLayerType.TRACK:
+            runway = _own(AlaqsLayerType.RUNWAY)
+            tracks = _own(AlaqsLayerType.TRACK)
+            for name, direction, op in (
+                ("T1", "06", "Departure"),
+                ("T2", "24", "Arrival"),
+            ):
+                feature = QgsFeature(tracks.fields())
+                feature.setGeometry(next(runway.getFeatures()).geometry())
+                feature["track_id"] = name
+                feature["runway"] = direction
+                feature["departure_arrival"] = op
+                feature["instudy"] = 1
+                assert tracks.dataProvider().addFeatures([feature])[0]
+            QgsProject.instance().removeMapLayers([tracks.id()])
+            opened.remove(tracks)
+        if layer_type == AlaqsLayerType.BUILDING:
+            area = _own(AlaqsLayerType.AREA)
+            buildings = _own(AlaqsLayerType.BUILDING)
+            feature = QgsFeature(buildings.fields())
+            feature.setGeometry(next(area.getFeatures()).geometry())
+            feature["building_id"] = "B1"
+            feature["height"] = 12
+            feature["instudy"] = 1
+            assert buildings.dataProvider().addFeatures([feature])[0]
+            QgsProject.instance().removeMapLayers([buildings.id()])
+            opened.remove(buildings)
+        layer = _own(layer_type)
+        form_cfg = layer.editFormConfig()
+        form_cfg.setInitFunction("")
+        form_cfg.setInitCodeSource(
+            QgsEditFormConfig.PythonInitCodeSource.CodeSourceNone
+        )
+        layer.setEditFormConfig(form_cfg)
+        view = QgsDualView()
+        view.init(layer, canvas, QgsFeatureRequest(), QgsAttributeEditorContext())
+        view.setView(QgsDualView.ViewMode.AttributeEditor)
+        _KEEP.append(view)
+        fids = sorted(f.id() for f in layer.getFeatures())
+        view.setCurrentEditSelection([fids[0]])
+        form = _attribute_form_of(view)
+        init_file = UI_DIR / LAYERS_CONFIG[layer_type]["py_filename"]
+        namespace = {"__name__": f"_qgis_form_{init_file.stem}"}
+        code = compile(init_file.read_text(encoding="utf-8"), str(init_file), "exec")
+        exec(code, namespace)
+
+        def run_init():
+            namespace["form_open"](form, layer, form.feature())
+
+        run_init()
+        return layer, view, form, run_init, fids
+
+    yield open_view
+    for layer in opened:
+        if layer.isEditable():
+            layer.rollBack()
+    ProjectDatabase().path = previous
+
+
+def _bound_combos(layer, form):
+    return [
+        c
+        for c in form.findChildren(QtWidgets.QComboBox)
+        if layer.fields().indexFromName(c.objectName()) != -1
+    ]
+
+
+def _assert_plain(layer, form):
+    """Every bound combo shows the stored value (or its NULL text) and no
+    "(value)" placeholder item exists."""
+    feature = form.feature()
+    for combo in _bound_combos(layer, form):
+        items = [combo.itemText(i) for i in range(combo.count())]
+        assert not [t for t in items if t.startswith("(") and t.endswith(")")], (
+            combo.objectName(),
+            items,
+        )
+        stored = feature[combo.objectName()]
+        null_text = (
+            LAYERS_CONFIG_BY_LAYER[layer.name()]["fields"][combo.objectName()]
+            .get("value_map", {})
+            .get("null_text", "")
+        )
+        expected = null_text if is_null_value(stored) else str(stored)
+        assert combo.currentText() == expected, (combo.objectName(), stored)
+
+
+LAYERS_CONFIG_BY_LAYER = {cfg["name"]: cfg for cfg in LAYERS_CONFIG.values()}
+
+
+@pytest.mark.parametrize("layer_type", COMBO_LAYERS, ids=lambda t: t.value)
+def test_combos_show_plain_values_on_refresh(dual_view, layer_type):
+    layer, view, form, run_init, fids = dual_view(layer_type)
+    assert _bound_combos(layer, form)
+    _assert_plain(layer, form)
+    layer.startEditing()  # QGIS refreshes the form
+    _assert_plain(layer, form)
+    for fid in (fids[-1], fids[0]):
+        view.setCurrentEditSelection([fid])
+        run_init()
+        _assert_plain(layer, form)
+    layer.rollBack()
+    _assert_plain(layer, form)
+
+
+def test_gate_type_change_saved_as_plain_value(dual_view):
+    layer, view, form, run_init, fids = dual_view(AlaqsLayerType.GATE)
+    layer.startEditing()
+    combo = form.findChild(QtWidgets.QComboBox, "gate_type")
+    new_value = "CARGO" if combo.currentText() != "CARGO" else "REMOTE"
+    combo.setCurrentIndex(combo.findText(new_value))
+    assert form.save()
+    assert layer.commitChanges()
+    assert layer.getFeature(fids[0])["gate_type"] == new_value
+    _assert_plain(layer, form)
+
+
+def test_profile_change_saved_and_new_profile_listed(dual_view):
+    layer, view, form, run_init, fids = dual_view(AlaqsLayerType.PARKING)
+    con = sqlite3.connect(QgsDataSourceUri(layer.source()).database())
+    con.execute("INSERT INTO user_hour_profile (profile_name) VALUES ('night_shift')")
+    con.commit()
+    con.close()
+    run_init()  # the form adds profiles created after the study was opened
+    layer.startEditing()
+    combo = form.findChild(QtWidgets.QComboBox, "hour_profile")
+    combo.setCurrentIndex(combo.findText("night_shift"))
+    assert form.save()
+    assert layer.commitChanges()
+    assert layer.getFeature(fids[0])["hour_profile"] == "night_shift"
+    layer.startEditing()
+    _assert_plain(layer, form)
+
+
+def test_point_source_refresh_keeps_values_and_type_list_follows_category(dual_view):
+    from open_alaqs.core import alaqs
+
+    # Custom emission factors: a type's defaults filled in on a refresh would
+    # replace them
+    layer, view, form, run_init, fids = dual_view(
+        AlaqsLayerType.POINT_SOURCE, "UPDATE shapes_point_sources SET co_kg_k = 123.4"
+    )
+    category = form.findChild(QtWidgets.QComboBox, "category")
+    point_type = form.findChild(QtWidgets.QComboBox, "point_type")
+    co = form.findChild(QtWidgets.QLineEdit, "co_kg_k")
+    for step in ("start editing", "switch", "switch back", "stop editing"):
+        if step == "start editing":
+            layer.startEditing()
+        elif step == "stop editing":
+            layer.rollBack()
+        else:
+            view.setCurrentEditSelection([fids[-1] if step == "switch" else fids[0]])
+            run_init()
+        assert float(co.text()) == 123.4, step
+    layer.startEditing()
+    # Visible types are those of the category shown
+    row = alaqs.get_point_category(category.currentText())
+    allowed = {t["description"] for t in alaqs.get_point_types(row["category"])}
+    visible = {
+        point_type.itemText(i)
+        for i in range(point_type.count())
+        if not point_type.view().isRowHidden(i)
+    }
+    assert visible <= allowed | {point_type.currentText()}
+    # The user picks another category: its first type and that type's
+    # defaults are filled in, and the plain values are saved
+    others = [
+        category.itemText(i)
+        for i in range(category.count())
+        if category.itemText(i) not in ("Other", category.currentText())
+    ]
+    target = next(c for c in others if c)
+    category.setCurrentIndex(category.findText(target))
+    category.activated.emit(category.currentIndex())
+    row = alaqs.get_point_category(target)
+    first_type = alaqs.get_point_types(row["category"])[0]
+    assert point_type.currentText() == first_type["description"]
+    assert co.text() == str(first_type["co_kg_k"])
+    assert form.save()
+    assert layer.commitChanges()
+    saved = layer.getFeature(fids[0])
+    assert saved["category"] == target
+    assert saved["point_type"] == first_type["description"]
+
+
+# OK button -------------------------------------------------------------------
+
+NAME_COLUMNS = {
+    AlaqsLayerType.RUNWAY: "runway_id",
+    AlaqsLayerType.TAXIWAY: "taxiway_id",
+    AlaqsLayerType.GATE: "gate_id",
+    AlaqsLayerType.TRACK: "track_id",
+    AlaqsLayerType.BUILDING: "building_id",
+    AlaqsLayerType.PARKING: "parking_id",
+    AlaqsLayerType.ROADWAY: "roadway_id",
+    AlaqsLayerType.POINT_SOURCE: "source_id",
+    AlaqsLayerType.AREA: "source_id",
+}
+
+
+def _ok(form):
+    box = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox")
+    return box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok)
+
+
+@pytest.mark.parametrize(
+    "layer_type",
+    [t for t in AlaqsLayerType if t != AlaqsLayerType.RUNWAY],
+    ids=lambda t: t.value,
+)
+def test_new_feature_form_has_empty_name_and_ok_disabled(dual_view, layer_type):
+    """A new feature shows an empty name box (default '') and OK greyed
+    out, its tooltip naming the field; "NULL" is rejected too."""
+    from qgis.core import QgsApplication
+    from qgis.gui import QgsAttributeEditorContext, QgsAttributeForm
+
+    from open_alaqs.alaqs_config import field_alias
+
+    layer, view, _, _, fids = dual_view(layer_type)
+    layer.startEditing()
+    feature = QgsVectorLayerUtils.createFeature(
+        layer, layer.getFeature(fids[0]).geometry()
+    )
+    form = QgsAttributeForm(layer, feature, QgsAttributeEditorContext())
+    form.setMode(QgsAttributeEditorContext.Mode.AddFeatureMode)
+    _KEEP.append(form)
+    init_file = UI_DIR / LAYERS_CONFIG[layer_type]["py_filename"]
+    namespace = {"__name__": f"_qgis_form_{init_file.stem}"}
+    exec(
+        compile(init_file.read_text(encoding="utf-8"), str(init_file), "exec"),
+        namespace,
+    )
+    namespace["form_open"](form, layer, form.feature())
+    column = NAME_COLUMNS[layer_type]
+    name = form.findChild(QtWidgets.QLineEdit, column)
+    assert name.text() == ""
+    assert not _ok(form).isEnabled()
+    assert field_alias(layer_type, column) in _ok(form).toolTip()
+    name.setText(QgsApplication.nullRepresentation())
+    assert not _ok(form).isEnabled()
+    name.setText("A1")
+    assert field_alias(layer_type, column) not in _ok(form).toolTip()
+
+
+@pytest.mark.parametrize(
+    "layer_type, fill",
+    [
+        (AlaqsLayerType.TAXIWAY, {"speed": "15"}),
+        (AlaqsLayerType.BUILDING, {}),
+        (AlaqsLayerType.GATE, {}),
+    ],
+    ids=lambda v: v.value if isinstance(v, AlaqsLayerType) else "",
+)
+def test_ok_enabled_once_the_new_feature_is_valid(dual_view, layer_type, fill):
+    from qgis.gui import QgsAttributeEditorContext, QgsAttributeForm
+
+    layer, view, _, _, fids = dual_view(layer_type)
+    layer.startEditing()
+    feature = QgsVectorLayerUtils.createFeature(
+        layer, layer.getFeature(fids[0]).geometry()
+    )
+    form = QgsAttributeForm(layer, feature, QgsAttributeEditorContext())
+    form.setMode(QgsAttributeEditorContext.Mode.AddFeatureMode)
+    _KEEP.append(form)
+    init_file = UI_DIR / LAYERS_CONFIG[layer_type]["py_filename"]
+    namespace = {"__name__": f"_qgis_form_{init_file.stem}"}
+    exec(
+        compile(init_file.read_text(encoding="utf-8"), str(init_file), "exec"),
+        namespace,
+    )
+    namespace["form_open"](form, layer, form.feature())
+    assert not _ok(form).isEnabled()
+    for column, text in fill.items():
+        form.findChild(QtWidgets.QLineEdit, column).setText(text)
+    form.findChild(QtWidgets.QLineEdit, NAME_COLUMNS[layer_type]).setText("NEW1")
+    assert _ok(form).isEnabled()
+    assert _ok(form).toolTip() == ""
+
+
+def test_taxiway_form_has_no_time_field():
+    root = UI_DIR / "ui_taxiways.ui"
+    assert 'name="time"' not in root.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "text, integer, expected",
+    [
+        ("20000", True, 20000),
+        (None, True, None),
+        ("30.3", False, 30.3),
+        ("30,3", False, 30.3),
+        ("1e3", False, 1000.0),
+    ],
+)
+def test_parse_number_accepts_the_form_display(text, integer, expected):
+    from qgis.PyQt.QtCore import QLocale
+
+    from open_alaqs.openalaqsuitoolkit import parse_number
+
+    if text is None:  # 20000 as QGIS shows it with the locale's separator
+        text = QLocale().toString(20000)
+        expected = 20000
+    assert parse_number(text, integer) == expected
+
+
+def test_parse_number_rejects_decimals_for_integers():
+    from open_alaqs.openalaqsuitoolkit import parse_number
+
+    with pytest.raises(ValueError):
+        parse_number("12.5", integer=True)
+
+
+@pytest.mark.parametrize("layer_type", list(AlaqsLayerType), ids=lambda t: t.value)
+def test_existing_training_feature_can_be_saved(form_layer, layer_type):
+    """An unchanged valid feature opens with OK enabled (numbers such as
+    20000 vehicles are shown with the locale's group separator)."""
+    if layer_type in (AlaqsLayerType.TRACK, AlaqsLayerType.BUILDING):
+        pytest.skip("no feature in the training study")
+    layer, oid, open_form, save, stored = form_layer(layer_type)
+    form = open_form(layer.getFeature(oid))
+    assert _ok(form).isEnabled(), _ok(form).toolTip()

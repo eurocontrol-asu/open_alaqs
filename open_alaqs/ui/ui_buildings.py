@@ -1,7 +1,11 @@
 from qgis.PyQt import QtWidgets
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.openalaqsuitoolkit import validate_field
+from open_alaqs.enums import AlaqsLayerType
+from open_alaqs.openalaqsuitoolkit import (
+    update_ok_button,
+    validate_field,
+)
 
 logger = get_logger(__name__)
 
@@ -28,10 +32,9 @@ def form_open(form, layer, feature):
         if isinstance(value, QtWidgets.QLineEdit):
             fields[key].textChanged.connect(lambda: validate(fields))
 
-    # Block the ok button (will be overwritten after validation)
-    fields["button_box"].button(fields["button_box"].StandardButton.Ok).blockSignals(
-        True
-    )
+    # OK is enabled only while the form is valid: validate now, then on
+    # every change
+    validate(fields)
 
     return form
 
@@ -49,11 +52,9 @@ def validate(fields: dict):
 
     # Validate all fields
     results = [
-        validate_field(fields["name_field"], "str"),
-        validate_field(fields["height_field"], "float"),
+        (fields["name_field"], validate_field(fields["name_field"], "str")),
+        (fields["height_field"], validate_field(fields["height_field"], "float")),
     ]
 
-    # Block signals if any of the fields is invalid
-    button_box.button(button_box.StandardButton.Ok).blockSignals(
-        "False" in str(results)
-    )
+    # OK enabled only when every field is valid
+    update_ok_button(button_box, results, AlaqsLayerType.BUILDING)
