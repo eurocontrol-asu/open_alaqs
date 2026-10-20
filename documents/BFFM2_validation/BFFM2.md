@@ -260,8 +260,8 @@ MEEM V1 (`core/tools/meem_v1.py`, called from `Engine.getEmissionIndexByModeWith
   EI_mass = EI_GR,mass × (P3 / P3_GR)^1.35 × 1.1^2.5,  EI_number = EI_mass × EI_GR,number / EI_GR,mass
   ```
   η = 0.88 and Π = 0.85 at 3000 ft rising linearly to 1.15 at the cruise altitude (climb); η = 0.7 and Π = 0.12 (descent). OpenALAQS has no cruise altitude (none of `default_aircraft`, `default_aircraft_engine_ei`, `default_aircraft_profiles` has one; `bada_id` is only an identifier): 38000 ft, the sheet's stored value (USER INPUTS!B20), is used. The fuel-composition factors are 1 (fossil fuel).
-- OPR is read from `press_ratio` (the CAEP14 sheet v14 `Engines_Database`, EEDB v31, ACT_PRF for engines not in it; 863 jet engines). Where it is empty (pistons, turboprops and 13 jets: B004, B134, B601 to B603, ECTL_2, 4, 6, 7, 8, 10, 12, 13) the sheet has no value (its formulas then return an error), so 30 is used, with one warning in the log (`Engine.py:347`).
-- The 5th point (`meem_nvpm_m_i_f00_avg` with `nvpm_m_max_mgkg`, `meem_nvpm_n_i_f00_avg` with `nvpm_n_max_nkg`) is used when the thrust is above 0, as in the sheet (51 engines marked 5PT in the sheet).
+- OPR is read from `press_ratio` (the CAEP14 sheet v14 `Engines_Database`, EEDB v31, ACT_PRF for engines not in it; 890 jet engines). Where it is empty (pistons, turboprops and 14 jets: B004, B134, B601 to B603, ECTL_2, 4, 6, 7, 8, 10, 12, 13, EEA-J9) the sheet has no value (its formulas then return an error), so 30 is used, with one warning in the log (`Engine.py:347`).
+- The 5th point (`meem_nvpm_m_i_f00_avg` with `nvpm_m_max_mgkg`, `meem_nvpm_n_i_f00_avg` with `nvpm_n_max_nkg`) is used when the thrust is above 0, as in the sheet (77 engines for mass, 75 for number: the 51 marked 5PT in the sheet and ACT_PRF 5-point engines).
 - The non-LTO mass EI replaces `pm10_nonvol_g_kg` (and `nvpm_g_kg`); `pm10_g_kg`, `p1_g_kg` and `p2_g_kg` move by the same amount (`Engine.py:374`). The number EI goes to `nvpm_number_kg`, which no output column reads. Fuel flow and the gas-phase EIs are not changed.
 
 Segments above 3000 ft above MSL are calculated only when the hour's mixing height (the LTO ceiling) is above 3000 ft minus the airport elevation. The port reproduces the sheet's stored example and nine recalculated cases (four with ΔT ≠ 0) to 1e-15 (`tests/test_meem_v1.py`).
@@ -418,10 +418,10 @@ MovementSourceModule.process()
 | `default_aircraft_engine_ei` | `pm10_ei` | Total PM10 EI = nonvol + sul + organic (g/kg) |
 | `default_aircraft_engine_ei` | `p1_ei`, `p2_ei` | PM1.0 / PM2.5 placeholders; currently = `pm10_ei` |
 | `default_aircraft_engine_ei` | `nvpm_number_ei` | nvPM number EI (#/kg) |
-| `default_aircraft_engine_ei` | `press_ratio` | OPR for MEEM V1 above 3000 ft above MSL (CAEP14 sheet v14 / EEDB v31, ACT_PRF fallback; 863 jet engines; 30 when empty) |
-| `default_aircraft_engine_ei` | `meem_nvpm_m_i_f00_avg` | thrust of the 5th nvPM mass point (MEEM V1, used when above 0; 51 engines) |
+| `default_aircraft_engine_ei` | `press_ratio` | OPR for MEEM V1 above 3000 ft above MSL (CAEP14 sheet v14 / EEDB v31, ACT_PRF fallback; 890 jet engines; 30 when empty) |
+| `default_aircraft_engine_ei` | `meem_nvpm_m_i_f00_avg` | thrust of the 5th nvPM mass point (MEEM V1, used when above 0; 77 engines) |
 | `default_aircraft_engine_ei` | `nvpm_m_max_mgkg` | nvPM mass EI of the 5th point (mg/kg) |
-| `default_aircraft_engine_ei` | `meem_nvpm_n_i_f00_avg` | thrust of the 5th nvPM number point (MEEM V1, used when above 0; 51 engines) |
+| `default_aircraft_engine_ei` | `meem_nvpm_n_i_f00_avg` | thrust of the 5th nvPM number point (MEEM V1, used when above 0; 75 engines) |
 | `default_aircraft_engine_ei` | `nvpm_n_max_nkg` | nvPM number EI of the 5th point (#/kg) |
 | `default_aircraft_profiles` | `power` | Thrust ratio (0–1) at each profile point |
 | `default_aircraft_profiles` | `tas_metres` | True Airspeed (m/s) at each profile point |
@@ -446,7 +446,7 @@ Only profile segments within the LTO ceiling (default 914.4 m above the runway, 
 
 - **Installation corrections are not user-configurable via the UI.** The SAE AIR-5715 defaults are always applied. Custom values require a Python call with an explicit `installation_corrections` dict.
 
-- **MEEM V1 inputs not in the data.** Engines without `press_ratio` (pistons, turboprops, 13 jets) use OPR 30 above 3000 ft, and the climb pressure coefficient uses a 38000 ft cruise altitude for every aircraft. The nvPM number EI is computed but there is no nvPM number output column.
+- **MEEM V1 inputs not in the data.** Engines without `press_ratio` (pistons, turboprops, 14 jets) use OPR 30 above 3000 ft, and the climb pressure coefficient uses a 38000 ft cruise altitude for every aircraft. The nvPM number EI is computed but there is no nvPM number output column.
 
 - **ADS-B fuel flow accuracy.** The fuel flow stored in `fuel_flow_kgm` for ADS-B profiles is an estimate derived from aircraft performance models, not a direct measurement. For some engine types the estimate can be significantly higher than the EEDB TO value; above 1.5 × that value the plugin uses the mode-anchor fuel flow for the segment. Users should verify the QGIS log for warning messages after any BFFM2 run involving ADS-B profiles.
 

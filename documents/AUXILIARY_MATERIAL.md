@@ -54,8 +54,8 @@ The engine EI table contains one row per engine per LTO mode (TX, AP, CL, TO). T
 | `pm10_organic` | Organic vPM EI (g/kg); see PM10 breakdown below |
 | `p1_ei`, `p2_ei` | PM1.0 and PM2.5 EI placeholders (g/kg); currently equal to `pm10_ei` |
 | `nvpm_number_ei` | nvPM number EI (#/kg) from ICAO EEDB (until the October 2026 data fix the column held the ACT_PRF number rate in #/s) |
-| `press_ratio` | Overall pressure ratio (OPR) for MEEM V1 above 3000 ft above MSL: the CAEP14 sheet v14 `Engines_Database` (EEDB v31) value, ACT_PRF for engines not in it; set for 863 jet engines, empty for the others (30 is then used) |
-| `meem_nvpm_m_i_f00_avg` | Thrust of the 5th nvPM mass point for MEEM V1 (used when above 0, with `nvpm_m_max_mgkg`); same sources; above 0 for the 51 engines the sheet marks 5PT, 0 for its 4PT engines |
+| `press_ratio` | Overall pressure ratio (OPR) for MEEM V1 above 3000 ft above MSL: the CAEP14 sheet v14 `Engines_Database` (EEDB v31) value, ACT_PRF for engines not in it; set for 890 jet engines, empty for the others (30 is then used) |
+| `meem_nvpm_m_i_f00_avg` | Thrust of the 5th nvPM mass point for MEEM V1 (used when above 0, with `nvpm_m_max_mgkg`); same sources; above 0 for 77 engines (the 51 the sheet marks 5PT and 26 ACT_PRF 5-point engines), 0 for the sheet's 4PT engines |
 | `nvpm_m_max_mgkg` | Maximum nvPM mass EI (mg/kg), same sources; the 5th mass point when `meem_nvpm_m_i_f00_avg` is above 0, otherwise not used |
 | `meem_nvpm_n_i_f00_avg` | Thrust of the 5th nvPM number point for MEEM V1 (used when above 0, with `nvpm_n_max_nkg`); same sources as the mass point |
 | `nvpm_n_max_nkg` | Maximum nvPM number EI (#/kg), same sources; the 5th number point when `meem_nvpm_n_i_f00_avg` is above 0, otherwise not used |

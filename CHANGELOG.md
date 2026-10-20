@@ -64,6 +64,16 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 
 ### Added
 
+- `default_aircraft_engine_ei`: 28 ACT_PRF engines that were missing and
+  have no twin in the table (08P28CM141 to 08P28CM156, 08P28RR154 to
+  08P28RR163, EEA-J9, EEA-J10; 112 rows, composed as the other ACT_PRF
+  rows, OPR and 5th nvPM point from ACT_PRF), so 1065 engines; with them
+  890 jet engines carry an OPR. The other 48 ACT_PRF engines missing from
+  the table duplicate rows under other ids (FOCA-n, EEA-*, 01P21RR124) or,
+  for EEA-J6, differ from 1RR016 only by a zero nvPM, and are not added.
+  E190's default engine is now EEA-J10 (ACT_PRF "E190-A"; was 11GE144) in
+  `default_aircraft` and the bundled studies; movements that name their
+  engine, as all bundled ones do, are unchanged (pinned outputs identical).
 - CAEP14 validation: the BFFM2 index step is pinned to two cases of the
   CAEP14 calculation sheet, non-LTO lean burn and LTO
   (`validation/tests/test_caep14_sheet_reference_case.py`).
