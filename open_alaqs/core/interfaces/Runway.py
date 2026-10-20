@@ -30,8 +30,8 @@ class Runway:
         self._name = str(val["runway_id"]) if "runway_id" in val else ""
         self._directions = self.getDirectionsByName(self._name)
         # Touchdown Offset (m) per landing direction: `touchdown` for the first-named end (e.g. 06 of
-        # "06/24"), `touchdown_2` for the other; `touchdown_2` empty (or absent in older studies) = the value
-        # of `touchdown`. 0 = each arrival profile's own threshold-crossing distance (50 ft point).
+        # "06/24"), `touchdown_2` for the other, independently. Empty or 0 (or `touchdown_2` absent in older
+        # studies) = each arrival profile's own threshold-crossing distance (50 ft point).
         self._touchdown_offset = _offset(val.get("touchdown")) or 0.0
         self._touchdown_offset_2 = _offset(val.get("touchdown_2"))
 
@@ -106,12 +106,8 @@ class Runway:
     def getTouchdownOffsetFor(self, direction) -> float:
         """Touchdown Offset (m) for landings on `direction` (a name such as "24"); 0 = profile's own."""
         dirs = self.getDirections()
-        if (
-            len(dirs) > 1
-            and str(direction) == dirs[-1]
-            and self._touchdown_offset_2 is not None
-        ):
-            return self._touchdown_offset_2
+        if len(dirs) > 1 and str(direction) == dirs[-1]:
+            return self._touchdown_offset_2 or 0.0
         return self._touchdown_offset or 0.0
 
     def getGeometryText(self):

@@ -159,11 +159,14 @@ def test_get_runways_touchdown_columns(tmp_path):
     rid, geom = blob_src.execute(
         "SELECT runway_id, geometry FROM shapes_runways"
     ).fetchone()
-    for cols, vals, expect in (
-        (["touchdown"], [250], (250.0, 250.0)),
-        (["touchdown", "touchdown_2"], [0, 300], (0.0, 300.0)),
+    for k, (cols, vals, expect) in enumerate(
+        (
+            (["touchdown"], [250], (250.0, 0.0)),
+            (["touchdown", "touchdown_2"], [250, None], (250.0, 0.0)),
+            (["touchdown", "touchdown_2"], [0, 300], (0.0, 300.0)),
+        )
     ):
-        db = tmp_path / f"r{len(cols)}.sqlite"
+        db = tmp_path / f"r{k}.sqlite"
         c = sqlite3.connect(db)
         c.execute(
             f"CREATE TABLE shapes_runways (runway_id TEXT, geometry BLOB, {', '.join(c_ + ' INT' for c_ in cols)})"

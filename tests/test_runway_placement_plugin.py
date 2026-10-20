@@ -149,7 +149,9 @@ def _touchdown_s(out):
 
 
 def test_touchdown_offset_per_direction():
-    assert _runway(250).getTouchdownOffsetFor("24") == 250.0
+    # Runway 2 is independent: empty = the profile's own distance (0), not the Runway 1 value.
+    assert _runway(250).getTouchdownOffsetFor("24") == 0.0
+    assert _runway(250).getTouchdownOffsetFor("06") == 250.0
     r = _runway(250, 300)
     assert (r.getTouchdownOffsetFor("06"), r.getTouchdownOffsetFor("24")) == (
         250.0,
@@ -184,7 +186,9 @@ def test_old_study_without_touchdown_2_loads(tmp_path):
         )
         r = Runway(rows[0])
         assert (
-            r.getTouchdownOffsetFor("24") == 250.0 and r.getTouchdownOffset2() is None
+            r.getTouchdownOffsetFor("06") == 250.0
+            and r.getTouchdownOffsetFor("24") == 0.0
+            and r.getTouchdownOffset2() is None
         )
     finally:
         RunwayDatabase.instance = saved

@@ -114,9 +114,9 @@ def get_runways(conn: sqlite3.Connection) -> dict:
             "directions": dirs,
         }
         # Touchdown Offset (m) per landing direction: `touchdown` for the first-named end, `touchdown_2` for the
-        # other (when the study has it, else `touchdown` for both). Empty or 0 = the profile's own distance.
+        # other, independently (a study without `touchdown_2`: 0). Empty or 0 = the profile's own distance.
         t1 = float(touchdown_1 or 0.0)
-        t2 = float(touchdown_2) if touchdown_2 is not None else t1
+        t2 = float(touchdown_2 or 0.0)
         rwy["touchdown_offset_m"] = (
             {dirs[0]: t1, dirs[-1]: t2} if len(dirs) > 1 else {dirs[0]: t1}
         )

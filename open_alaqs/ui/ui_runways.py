@@ -229,8 +229,8 @@ def validate(fields: dict):
     # Get the button box
     button_box = fields["button_box"]
 
-    # Validate all fields. The Touchdown Offsets may be empty (empty = the profile's own distance for
-    # Runway 1, the Runway 1 value for Runway 2); when filled they must be numbers.
+    # Validate all fields. The Touchdown Offsets may be empty (empty = the profile's own distance, for
+    # each runway end independently); when filled they must be numbers.
     results = [validate_field(fields["name_field"], "str")]
     for key in ("offset_field", "offset_2_field"):
         field = fields.get(key)

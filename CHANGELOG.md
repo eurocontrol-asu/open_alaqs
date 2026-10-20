@@ -69,11 +69,14 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   the ICAO-curve fuel flow, reduced take-off thrust, runway rule and
   plausibility floor for supplied fuel flows, fuel-flow source switch).
 - Runway: Touchdown Offset per end (`touchdown` for the first-named end, new
-  `touchdown_2` for the other; empty = the first value). Studies without
-  the column still load; `scripts/migrate_alaqs.py` adds it. The
-  `touchdown` value was stored but not used before this release: check it
-  in existing studies (0 = the profile's own touchdown distance), since a
-  non-zero value now moves every ANP arrival on that runway end.
+  `touchdown_2` for the other; each independent, empty or 0 = the
+  profile's own touchdown distance). Studies without the column still load
+  (their second end uses the profile's own distance); `scripts/migrate_alaqs.py`
+  adds it empty. The `touchdown` value was stored but not used before this
+  release: check it in existing studies, since a non-zero value now moves
+  every ANP arrival landing on the first-named end; for the same touchdown
+  on both ends, enter it in `touchdown_2` too. The bundled studies carry
+  250 m on both ends.
 - Standalone: route and profile check report (`runway_checks`,
   `emissions_folder/runway_checks.csv`): exit before the touchdown, exit
   above 50 kt, exit after the rollout end, rollout or lift-off past the

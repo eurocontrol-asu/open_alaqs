@@ -115,7 +115,7 @@ def test_shapes_runways_has_no_legacy_columns(name, path):
 def test_shapes_runways_data_intact_after_migration(name, path):
     """The migration script must not lose the runway row. Both files
     should retain the single 06/24 runway with its known touchdown value
-    from the EHRD training-data study (touchdown_2 empty: same value for 24)."""
+    from the EHRD training-data study (250 m for both ends: 06 and 24)."""
     con = sqlite3.connect(str(path))
     try:
         rows = con.execute(
@@ -129,8 +129,6 @@ def test_shapes_runways_data_intact_after_migration(name, path):
     assert (
         runway_id == "06/24"
     ), f"{name}: runway_id drifted from '06/24' to {runway_id!r}"
-    assert (
-        touchdown_2 is None
-    ), f"{name}: touchdown_2 drifted from empty to {touchdown_2}"
+    assert touchdown_2 == 250, f"{name}: touchdown_2 drifted from 250 to {touchdown_2}"
     assert touchdown == 250, f"{name}: touchdown drifted from 250 to {touchdown}"
     assert int(instudy) == 1, f"{name}: instudy drifted from 1 to {instudy}"

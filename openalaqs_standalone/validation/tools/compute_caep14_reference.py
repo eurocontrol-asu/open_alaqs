@@ -228,7 +228,7 @@ def _get_runway(conn: sqlite3.Connection) -> dict:
     coords = list(geom.coords)
     dirs = [int("".join(ch for ch in d if ch.isdigit())) for d in runway_id.split("/")]
     t1 = float(touchdown_1 or 0.0)
-    t2 = float(touchdown_2) if touchdown_2 is not None else t1
+    t2 = float(touchdown_2 or 0.0)
     return {
         "runway_id": runway_id,
         "geom_3857": geom,

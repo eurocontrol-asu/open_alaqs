@@ -169,11 +169,11 @@ Runways are linear features that define the vertical plane where approach, landi
 
 When adding a runway, the following information can be given:
 + Touchdown Offset, Runway 1 (meters): distance from the Runway 1 end (its landing threshold) to the touchdown of arrivals landing on Runway 1. Empty or 0: each arrival profile's own distance, i.e. where the profile descends through 50 ft (15.24 m, the ILS reference datum height), about 290 m before touchdown on a 3° approach.
-+ Touchdown Offset, Runway 2 (meters): the same for Runway 2. Empty: the Runway 1 value.
++ Touchdown Offset, Runway 2 (meters): the same for Runway 2, independently of Runway 1. Empty or 0: each arrival profile's own distance.
 
 Draw the runway from threshold to threshold. For a displaced threshold, enter the displacement plus about 290 m.
 
-Each offset is measured from its own landing threshold, along the landing direction. An empty Runway 2 field takes the Runway 1 value, so one value covers both directions; enter 0 in the Runway 2 field to keep the profile's own touchdown for that direction only.
+Each offset is measured from its own landing threshold, along the landing direction, and applies to that direction only: for the same touchdown on both ends, enter the value in both fields.
 
 ![runway-touchdown-offset.svg](./../open_alaqs/assets/runway-touchdown-offset.svg)
 

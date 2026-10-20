@@ -155,7 +155,7 @@ Create a single runway feature for EHRD. Draw a linestring from the threshold of
 |---|---|
 | Runway 1 | 06 (Runway 2 = 24 and Runway Name = 06/24 are filled in) |
 | Touchdown Offset, Runway 1 | 250 m |
-| Touchdown Offset, Runway 2 | (empty: 250 m as well) |
+| Touchdown Offset, Runway 2 | 250 m |
 
 The runway ID `06/24` covers both directions of the same physical runway. OpenALAQS uses the runway direction specified in each movement record (either `06` or `24`) to determine the correct end for trajectory alignment.
 
