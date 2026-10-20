@@ -9,7 +9,7 @@ training_meteo.csv, then imports training_ads_b_data.csv into the inventory
 and taxi route in the movement CSV), as the dialog does when an ADS-B file is
 given. Settings as in documents/TEST_CASE_STUDY.md ("Generate Emissions
 Inventory"): 100 x 100 x 20 cells of 250 x 250 x 50 m, movements 2025-12-01
-06:00 to 2025-12-03 08:00, vertical limit 914.4 m; study setup from training.alaqs.
+06:00 to 2025-12-03 09:00, vertical limit 914.4 m; study setup from training.alaqs.
 
 Usage, from the repository root:
 
@@ -33,7 +33,7 @@ EX = REPO / "example" / "training"
 MODEL_PARAMETERS = {
     "movement_path": str(EX / "training_movements.csv"),
     "study_start_date": "2025-12-01 06:00:00",
-    "study_end_date": "2025-12-03 08:00:00",
+    "study_end_date": "2025-12-03 09:00:00",
     "towing_speed": 10.0,
     "vertical_limit": 914.4,
     "x_resolution": 250,

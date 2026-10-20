@@ -379,7 +379,7 @@ Click **Generate Emission Inventory** in the toolbar. Configure the following se
 |---|---|
 | Movements Table | Browse to `training_movements.csv` |
 | Filter Start Date | 2025-12-01 06:00:00 |
-| Filter End Date | 2025-12-03 08:00:00 |
+| Filter End Date | 2025-12-03 09:00:00 (the dialog's default: the last movement's hour + 1 h) |
 
 **Meteorological Data**
 
@@ -482,7 +482,7 @@ Click **Visualize Emission Calculation** in the toolbar and browse to `training_
 | Setting | Value |
 |---|---|
 | Start | 2025-12-01 06:00:00 |
-| End | 2025-12-03 08:00:00 |
+| End | 2025-12-03 09:00:00 (filled in from the inventory) |
 | Method | BFFM2 |
 | Apply NOx Corrections | ☐ (unchecked; it has no effect with BFFM2) |
 | Source Dynamics | none |
@@ -562,7 +562,7 @@ A progress log (`austal.log`) is written to the Work Directory. AUSTAL can also 
 austal /path/to/work/directory/austal.txt
 ```
 
-The calculation time for the EHRD 50-hour study period at Quality Level 1 on a modern laptop is typically 2–10 minutes.
+The calculation time for the EHRD 51-hour study period at Quality Level 1 on a modern laptop is typically 2–10 minutes.
 
 #### Output data
 
@@ -574,9 +574,9 @@ AUSTAL writes concentration output files in `.dmna` format, one file per polluta
 | `co-y00a.dmna` | CO period mean concentration |
 | `nox-y00s.dmna` | Statistical uncertainty for NOx |
 
-The values represent the **mean concentration over the simulated period** (2025-12-01 06:00 through 2025-12-03 08:00, ≈50 hours), not an annual mean. Each file is a plain-text matrix of concentration values on the model grid. The grid is north-oriented; the first value in the matrix corresponds to the south-west corner of the domain.
+The values represent the **mean concentration over the simulated period** (2025-12-01 06:00 through 2025-12-03 09:00, 51 hours), not an annual mean. Each file is a plain-text matrix of concentration values on the model grid. The grid is north-oriented; the first value in the matrix corresponds to the south-west corner of the domain.
 
-Key interpretation note: this study spans a 50-hour window across three days, but actual aircraft activity is clustered in early-morning hours (~06:00–08:00 daily, ~6 hours of operations total). Concentrations from this run are illustrative only and cannot be compared directly to air quality limit values, which require full annual averaging.
+Key interpretation note: this study spans a 51-hour window across three days, but actual aircraft activity is clustered in early-morning hours (~06:00–08:00 daily, ~6 hours of operations total). Concentrations from this run are illustrative only and cannot be compared directly to air quality limit values, which require full annual averaging.
 
 #### Visualize results
 
