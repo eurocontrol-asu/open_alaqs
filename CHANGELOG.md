@@ -134,6 +134,9 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - OSM import: one warning listing the imported gate names already in the
   Gates layer or repeated in the import; the features are kept as
   imported. With a duplicate name the movements use one of the gates only.
+- Gates: the gate form colours the name when another gate has the same
+  name, with a tooltip saying why; advisory only (OK and the saved values
+  are unchanged).
 
 ### Fixed
 

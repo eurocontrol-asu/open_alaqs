@@ -163,6 +163,8 @@ When adding a gate, the following information is required:
 + **Gate Type** (PIER, REMOTE or CARGO)
 + **Height [m]** `not yet fully implemented`
 
+Gate names should be unique: movements refer to gates by name, and with two gates of the same name the calculation uses only one of them. When another gate already has the name, the form colours the **Gate Name** box yellow and its tooltip says so; the gate can still be saved.
+
 In OpenALAQS, GSE and GPU emission factors, expressed in terms of grams of pollutant per hour, are assigned to each gate as a function of:
 + The gate type (PIER, REMOTE or CARGO)
 + The aircraft category (JET BUSINESS/REGIONAL/SMALL/MEDIUM/LARGE, TURBOPROPS, PISTON)
