@@ -214,7 +214,7 @@ LAYERS_CONFIG: dict[AlaqsLayerType, ALAQSLayerConfig] = {
             {
                 "within_aerodrome": True,
                 "tags": {
-                    "building": "commerical",
+                    "building": "commercial",
                 },
             },
             {

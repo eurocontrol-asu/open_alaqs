@@ -131,6 +131,9 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   0 m; with the bundled `osmconf.ini` the tag is not a column, so 0 m).
 - `rebuild_training_example_inventory.py`: `--input-dir` and `--end`
   (defaults: `example/training`, `2025-12-03 09:00:00`).
+- OSM import: one warning listing the imported gate names already in the
+  Gates layer or repeated in the import; the features are kept as
+  imported. With a duplicate name the movements use one of the gates only.
 
 ### Fixed
 
@@ -380,6 +383,8 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - `compute_caep14_reference.py` puts the repository root
   (`parents[3]`, was `parents[1]`) on `sys.path`, so it runs from any
   working directory.
+- OSM import: the building filter value "commerical" is now "commercial",
+  so OSM commercial buildings are downloaded and imported.
 
 ### Removed
 

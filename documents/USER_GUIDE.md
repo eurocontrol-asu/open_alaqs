@@ -78,7 +78,7 @@ The toolbar consists of the following functions:
 + **Generate Emission Inventory**: Prepares the OpenALAQS output file containing all study data.
 + **Visualize Emissions Calculation**: Manages the emissions calculation, visualization, and export modules.
 + **Calculate Dispersion**: Handles the dispersion calculation module.
-+ **Review Logs**: Opens the log file containing useful information about code execution. A warning is written when an ADS-B fuel flow per engine exceeds 1.5 times the EEDB take-off fuel flow (the mode-anchor fuel flow is then used for those segments), at ADS-B import for each flight with `fuel_flow` points below the ICAO idle fuel flow of its engine (the values are kept), and when an arrival's taxi route leaves the runway above 50 kt or meets the runway only before the touchdown. An OSM import logs the number of buildings added and where their heights come from.
++ **Review Logs**: Opens the log file containing useful information about code execution. A warning is written when an ADS-B fuel flow per engine exceeds 1.5 times the EEDB take-off fuel flow (the mode-anchor fuel flow is then used for those segments), at ADS-B import for each flight with `fuel_flow` points below the ICAO idle fuel flow of its engine (the values are kept), and when an arrival's taxi route leaves the runway above 50 kt or meets the runway only before the touchdown. An OSM import logs the number of buildings added and where their heights come from, and warns about imported gate names that are already in the Gates layer or repeated in the import.
 
 The order of the toolbar buttons generally follows the sequence of steps needed to conduct a study using OpenALAQS.
 
@@ -114,6 +114,8 @@ Using Nominatim, a search engine that uses the data from OpenStreetMap to provid
 ![import-osm-data-ex2.png](./../open_alaqs/assets/import-osm-data-ex2.png)
 
 The log reports the number of buildings imported and where their heights come from: the OSM `height` column when the feature has one, else the layer default (0 m). With the bundled OSM reader configuration the `height` tag is not exposed as a column, so imported buildings get 0 m; enter the heights by hand.
+
+Gate names come from the OSM `ref` tag of the aprons. When an imported name is already in the Gates layer, or occurs twice in the import, the log warns with the names, for example `OSM import: gate name(s) already in layer "Gates": G7; check and rename before calculating.` The features are imported as they are. Rename or delete the duplicates before calculating: movements refer to gates by name, and with two gates of the same name the calculation uses only one of them.
 
 ## [Define emission sources](#define-emission-sources)
 [(Back to top)](#table-of-contents)
