@@ -10,7 +10,10 @@ above 3000 ft (mixing height 914.4 m), so this is checked here.
 
 Sheet values: the stored example (01P20CM127, 22500 ft) and the sheet
 recalculated in LibreOffice 24.2 for the other inputs (see
-tests/test_meem_v1.py); ISA (delta T 0), cruise altitude 38000 ft.
+tests/test_meem_v1.py); cruise altitude 38000 ft, ISA (delta T 0) for
+_CASES, delta T USER INPUTS!B5 for _DT_CASES (the plugin, the standalone and
+the reference take it from the movement's meteo temperature minus ISA at the
+airport elevation).
 """
 
 from __future__ import annotations
@@ -48,6 +51,13 @@ _CASES = [
     (("11GE144", 4500, True, 220), 61.22075397785308),
     (("11GE144", 5000, False, 210), 5.588363301978656),
     (("01P20CM128", 3500, True, 200), 1.5260688609694564),
+]
+
+
+# (engine, altitude ft, climbing, TAS kt, delta T K) -> MEEM_V1!B119 (mg/kg)
+_DT_CASES = [
+    (("11GE144", 4500, True, 220, -5.1825), 60.52925750077077),
+    (("11GE144", 5000, False, 210, 12.0), 4.55684516335939),
 ]
 
 
@@ -91,6 +101,44 @@ def test_standalone_matches_sheet(inputs, expected):
         eng, meem, mode, alt_ft * FT2M, tas_kt / 1.94384, climbing
     )
     assert out["pm10_ei"] - 0.05 == pytest.approx(expected / 1000.0, rel=1e-12)
+
+
+@pytest.mark.parametrize("inputs, expected", _DT_CASES)
+def test_reference_delta_t_matches_sheet(ref, inputs, expected):
+    engine, alt_ft, climbing, tas_kt, dt = inputs
+    opr, mass = _ENGINES[engine]
+    v = ref._meem_v1_mass_mgkg(
+        alt_ft, tas_kt / 1.94384, climbing, list(zip(_TS, mass)), opr, dt
+    )
+    assert v == pytest.approx(expected, rel=1e-12)
+
+
+@pytest.mark.parametrize("inputs, expected", _DT_CASES)
+def test_standalone_delta_t_matches_sheet(inputs, expected):
+    engine, alt_ft, climbing, tas_kt, dt = inputs
+    opr, mass = _ENGINES[engine]
+    modes = ("TO", "CL", "AP", "TX")
+    meem = {
+        "pm10_nonvol": {m: v / 1000.0 for m, v in zip(modes, mass)},
+        "nvpm_number": {m: 1.0e14 for m in modes},
+        "press_ratio": opr,
+        "m_f00": None,
+        "m_max_mgkg": None,
+        "n_f00": None,
+        "n_max_nkg": None,
+    }
+    mode = "CL" if climbing else "AP"
+    eng = {"pm10_ei": meem["pm10_nonvol"][mode] + 0.05}
+    out = _meem_v1_segment_ei(
+        eng, meem, mode, alt_ft * FT2M, tas_kt / 1.94384, climbing, delta_t=dt
+    )
+    assert out["pm10_ei"] - 0.05 == pytest.approx(expected / 1000.0, rel=1e-12)
+
+
+def test_reference_delta_t_from_meteo(ref):
+    """Meteo temperature minus ISA at the airport elevation; 0 without meteo."""
+    assert ref._meem_delta_t({"T_K": 283.0}, -5.0) == pytest.approx(-5.1825)
+    assert ref._meem_delta_t(None, 100.0) == 0.0
 
 
 def test_lto_unchanged(ref):

@@ -1452,6 +1452,16 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
 
         return emission_index_
 
+    def _meem_delta_t(self, T_amb) -> float:
+        """MEEM V1 ISA deviation (K): the meteo temperature of the period (the
+        one BFFM2 uses) minus ISA at the airport elevation, constant aloft;
+        0 without meteo."""
+        from open_alaqs.core.tools.meem_v1 import delta_t_from_ground
+
+        return delta_t_from_ground(
+            T_amb, self._method["config"].get("airport_altitude") or 0.0
+        )
+
     def _get_emission_index_bymode(
         self,
         mode: str,
@@ -1476,6 +1486,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 meem_version=mver,
                 tas_m_s=getattr(self, "_segment_tas_m_s", None),
                 climbing=self._is_departure(),
+                delta_t=self._meem_delta_t(T_amb),
             )
         except Exception:
             src = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)
@@ -1536,6 +1547,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 meem_version=mver,
                 tas_m_s=getattr(self, "_segment_tas_m_s", None),
                 climbing=self._is_departure(),
+                delta_t=self._meem_delta_t(T_amb),
             )
         except Exception:
             mode_ei = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)

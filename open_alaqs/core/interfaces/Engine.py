@@ -101,6 +101,7 @@ class EngineEmissionIndex(Store):
         meem_version="v1",
         tas_m_s=None,
         climbing=None,
+        delta_t=0.0,
     ):
         """
         Per-mode EI with the MEEM nvPM emission index of the segment.
@@ -113,8 +114,8 @@ class EngineEmissionIndex(Store):
           given: LTO. The nvPM EI is the certification value of the mode,
           so the mode EI is returned unchanged.
         - Above: non-LTO. Phase "CLIMB TO CRUISE" for a climbing segment,
-          "DESCENT TO APPROACH" otherwise; ISA atmosphere at the segment
-          altitude, Mach from ``tas_m_s`` (else ``mach``), the engine
+          "DESCENT TO APPROACH" otherwise; ISA + ``delta_t`` atmosphere at
+          the segment altitude, Mach from ``tas_m_s`` (else ``mach``), the engine
           pressure ratio (DEFAULT_OPR when the table has none). The nvPM
           mass EI replaces pm10_nonvol_g_kg (and nvpm_g_kg), pm10_g_kg,
           p1_g_kg and p2_g_kg move by the same amount, and nvpm_number_kg
@@ -140,6 +141,9 @@ class EngineEmissionIndex(Store):
         :param tas_m_s:       segment true airspeed (m/s), V1 non-LTO.
         :param climbing:      True for a climbing segment (V1 non-LTO phase);
                               None: True for TO and CL modes.
+        :param delta_t:       ISA temperature deviation (K) of the V1 non-LTO
+                              atmosphere, constant aloft (meem_v1.delta_t_from_ground
+                              of the meteo temperature; 0 without meteo).
         :return: EmissionIndex.
         """
         base_ei = self.getEmissionIndexByMode(mode)
@@ -147,7 +151,9 @@ class EngineEmissionIndex(Store):
             return None
 
         if str(meem_version or "v1").lower() != "v2":
-            return self._meem_v1(base_ei, mode, altitude_m, mach, tas_m_s, climbing)
+            return self._meem_v1(
+                base_ei, mode, altitude_m, mach, tas_m_s, climbing, delta_t
+            )
 
         try:
             # Build anchor arrays from every mode on the engine that has
@@ -268,7 +274,9 @@ class EngineEmissionIndex(Store):
                     P_ambient_Pa=float(p_amb_Pa) if p_amb_Pa else None,
                 )
             else:
-                return self._meem_v1(base_ei, mode, altitude_m, mach, tas_m_s, climbing)
+                return self._meem_v1(
+                    base_ei, mode, altitude_m, mach, tas_m_s, climbing, delta_t
+                )
 
             corrected = EmissionIndex(
                 initValues=dict(base_ei._objects), defaultValues=defaultEI
@@ -296,7 +304,7 @@ class EngineEmissionIndex(Store):
         "Idle": "TX",
     }
 
-    def _meem_v1(self, base_ei, mode, altitude_m, mach, tas_m_s, climbing):
+    def _meem_v1(self, base_ei, mode, altitude_m, mach, tas_m_s, climbing, delta_t=0.0):
         """MEEM V1 (CAEP14 v14 MEEM_V1 tab) applied to a mode EI; see
         getEmissionIndexByModeWithMEEM."""
         from open_alaqs.core.tools import meem_v1
@@ -360,6 +368,7 @@ class EngineEmissionIndex(Store):
                     float(tas_m_s) * meem_v1.MS_TO_KT if tas_m_s is not None else None
                 ),
                 number_thrust_settings=ts_num,
+                delta_t=float(delta_t or 0.0),
             )
 
             corrected = EmissionIndex(

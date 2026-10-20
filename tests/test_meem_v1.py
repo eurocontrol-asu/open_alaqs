@@ -12,7 +12,8 @@ Reference values:
     tables MEEM_V1!C88:D91 and C96:D99 were replaced by the fixed 4-point
     order (7 %, 30 %, 85 %, 100 %) for the recalculation; all the other cells
     are the sheet's formulas. The recalculation reproduces the stored example
-    to 1e-15.
+    to 1e-15. Four cases have a temperature deviation (USER INPUTS!B5); the
+    -5.1825 K one is the delta T of the training example (283 K at -5 m).
 
 At or below 3000 ft (LTO) the sheet returns the certification value of the
 mode (no interpolation, no correction): the anchor tests.
@@ -22,6 +23,7 @@ import pytest
 
 from open_alaqs.core.tools.meem_v1 import (
     calculate_nvpm_ei,
+    delta_t_from_ground,
     interpolate_ei,
     isa_ambient,
     pressure_coefficient,
@@ -83,6 +85,14 @@ _SHEET_CASES = [
     (
         ("11GE144", 30000, "CLIMB TO CRUISE", 420, -5.0, 35000),
         (0.6446938481236183, 27.083099737453495, 206951650850677.44),
+    ),
+    (
+        ("11GE144", 4500, "CLIMB TO CRUISE", 220, -5.1825, 38000),
+        (0.7849739365883964, 60.52925750077077, 400236880720932.9),
+    ),
+    (
+        ("11GE144", 5000, "DESCENT TO APPROACH", 210, 12.0, 38000),
+        (0.13248463510116748, 4.55684516335939, 229810399546587.56),
     ),
 ]
 
@@ -296,3 +306,84 @@ class TestMEEMV1EngineWiring:
         assert ei.getObject("pm10_nonvol_g_kg") == pytest.approx(
             r.nvpm_mass_ei_mgkg / 1000.0, rel=1e-14
         )
+
+
+class TestMEEMV1DeltaT:
+    """ISA + delta T above 3000 ft: delta T is the meteo temperature minus
+    ISA at the airport elevation (USER INPUTS!B5, constant aloft)."""
+
+    def test_delta_t_from_ground(self):
+        assert delta_t_from_ground(None, 120.0) == 0.0
+        assert delta_t_from_ground(288.15, 0.0) == 0.0
+        assert delta_t_from_ground(288.15 - 0.0065 * 500.0, 500.0) == pytest.approx(
+            0.0, abs=1e-12
+        )
+        # training example: 283 K at -5 m
+        assert delta_t_from_ground(283.0, -5.0) == pytest.approx(-5.1825, abs=1e-12)
+        assert delta_t_from_ground(300.0, None) == pytest.approx(11.85, abs=1e-12)
+
+    def test_ambient_temperature_at_elevation_is_the_meteo_value(self):
+        from open_alaqs.core.tools.meem_v1 import FT_TO_M, isa_ambient
+
+        elev_m, t_ground = 450.0, 279.4
+        t_amb, _ = isa_ambient(elev_m / FT_TO_M, delta_t_from_ground(t_ground, elev_m))
+        assert t_amb == pytest.approx(t_ground, abs=1e-9)
+
+    def _engine(self):
+        return TestMEEMV1EngineWiring()._build_engine()
+
+    def test_engine_delta_t_zero_is_isa(self):
+        kw = dict(altitude_m=4500 * 0.3048000097536, tas_m_s=220 / 1.94384)
+        a = self._engine().getEmissionIndexByModeWithMEEM(
+            "CL", 101325.0, 0.0, climbing=True, **kw
+        )
+        b = self._engine().getEmissionIndexByModeWithMEEM(
+            "CL", 101325.0, 0.0, climbing=True, delta_t=0.0, **kw
+        )
+        assert a.getObject("pm10_nonvol_g_kg") == b.getObject("pm10_nonvol_g_kg")
+        assert a.getObject("nvpm_number_kg") == b.getObject("nvpm_number_kg")
+        assert a.getObject("pm10_nonvol_g_kg") == pytest.approx(
+            61.22075397785308 / 1000.0, rel=1e-12
+        )
+
+    @pytest.mark.parametrize(
+        "mode, alt_ft, tas_kt, climbing, delta_t, mass, number",
+        [
+            ("CL", 4500, 220, True, -5.1825, 60.52925750077077, 400236880720932.9),
+            ("AP", 5000, 210, False, 12.0, 4.55684516335939, 229810399546587.56),
+        ],
+    )
+    def test_engine_delta_t_matches_sheet(
+        self, mode, alt_ft, tas_kt, climbing, delta_t, mass, number
+    ):
+        """11GE144, the sheet recalculated in LibreOffice with USER INPUTS!B5
+        = delta T (cruise altitude 38000 ft)."""
+        ei = self._engine().getEmissionIndexByModeWithMEEM(
+            mode,
+            101325.0,
+            0.0,
+            altitude_m=alt_ft * 0.3048000097536,
+            tas_m_s=tas_kt / 1.94384,
+            climbing=climbing,
+            delta_t=delta_t,
+        )
+        assert ei.getObject("pm10_nonvol_g_kg") == pytest.approx(
+            mass / 1000.0, rel=1e-12
+        )
+        assert ei.getObject("nvpm_number_kg") == pytest.approx(number, rel=1e-12)
+
+    def test_calculator_delta_t_from_meteo(self):
+        """FlightEmissionCalculator._meem_delta_t: the period's temperature
+        (the one BFFM2 uses) and the airport altitude of the method config."""
+        from types import SimpleNamespace
+
+        from open_alaqs.core.MovementEmissionCalculator import (
+            FlightEmissionCalculator,
+        )
+
+        calc = SimpleNamespace(_method={"config": {"airport_altitude": -5.0}})
+        f = FlightEmissionCalculator._meem_delta_t
+        assert f(calc, 283.0) == pytest.approx(-5.1825, abs=1e-12)
+        assert f(calc, None) == 0.0
+        calc._method["config"]["airport_altitude"] = None
+        assert f(calc, 290.0) == pytest.approx(1.85, abs=1e-12)

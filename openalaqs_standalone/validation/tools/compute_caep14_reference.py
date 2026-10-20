@@ -55,7 +55,8 @@ For each fixed-wing movement:
     6. Above 3000 ft above MSL (start point height + airport elevation) the
        PM10 EI moves by the MEEM V1 nvPM mass EI minus the mode's
        pm10_nonvol (`_meem_v1_mass_mgkg`, written out from the CAEP14 v14
-       sheet's MEEM_V1 tab).
+       sheet's MEEM_V1 tab), ISA + dT with dT (USER INPUTS!B5) the meteo
+       temperature minus the ISA temperature at the airport elevation.
 
 Stop-and-go is zero in the training fixture; not implemented yet.
 Helicopters (no profile_id) are skipped: handled by FOCA module
@@ -676,20 +677,34 @@ def _get_engine_meem(conn, engine_name: str) -> dict:
     return {"points": points, "opr": opr, "pm10_nonvol": nonvol}
 
 
+def _meem_delta_t(meteo, elevation_m: float) -> float:
+    """USER INPUTS!B5 (delta T at 0 ft MSL, K) of a movement: the meteo
+    temperature minus the ISA temperature at the airport elevation
+    (288.15 K - 6.5 K/km), constant aloft; 0 without meteo."""
+    if not meteo or meteo.get("T_K") is None:
+        return 0.0
+    return float(meteo["T_K"]) - (288.15 - 0.0065 * float(elevation_m or 0.0))
+
+
 def _meem_v1_mass_mgkg(
-    alt_ft: float, tas_m_s: float, climbing: bool, points: list, opr: float
+    alt_ft: float,
+    tas_m_s: float,
+    climbing: bool,
+    points: list,
+    opr: float,
+    delta_t: float = 0.0,
 ) -> float:
     """MEEM_V1!B119 (nvPM mass EI at the segment, fossil fuel) of a non-LTO
-    segment, ISA (USER INPUTS!B5 delta_t = 0)."""
+    segment, ISA + delta_t (USER INPUTS!B5)."""
     t0, p0, g0, lapse, gam, r_air = 288.15, 101325.0, 9.80665, -0.0065, 1.4, 287.05287
     alt_trop_ft = 11000.0 / _MEEM_FT2M  # Constants!B32
     # USER INPUTS!B44, B45, B46, B39 (TAS in kt with Constants!B19)
-    t_amb = t0 + min(alt_ft, alt_trop_ft) * lapse * _MEEM_FT2M
+    t_amb = t0 + delta_t + min(alt_ft, alt_trop_ft) * lapse * _MEEM_FT2M
     if alt_ft <= alt_trop_ft:
-        p_amb = p0 * math.pow(t_amb / t0, g0 / (-lapse * r_air))
+        p_amb = p0 * math.pow((t_amb - delta_t) / t0, g0 / (-lapse * r_air))
     else:
-        t_trop = t0 + lapse * 11000.0
-        p_trop = p0 * math.pow(t_trop / t0, -g0 / (lapse * r_air))
+        t_trop = delta_t + t0 + lapse * 11000.0  # B41
+        p_trop = p0 * math.pow((t_trop - delta_t) / t0, -g0 / (lapse * r_air))
         p_amb = p_trop * math.exp(
             -g0 * (alt_ft * _MEEM_FT2M - 11000.0) / (r_air * t_trop)
         )
@@ -1190,11 +1205,13 @@ def _compute_fixed_wing(  # noqa: C901 — one segment loop per method, as the s
 
     # BFFM2 setup: build the icao_eedb dict once per movement, fetch meteo.
     icao_eedb = _build_icao_eedb(engine_ei) if method != "bymode" else None
+    # Meteo also for bymode with MEEM (the dT of the MEEM V1 atmosphere).
     meteo = (
         _get_meteo_at(conn, mov["runway_time"], use_isa=use_isa_meteo)
-        if method != "bymode" or apply_nox_corrections
+        if method != "bymode" or apply_nox_corrections or meem
         else None
     )
+    meem_dt = _meem_delta_t(meteo, elevation_m)
     # Per-movement vertical ceiling. Reads `tbl_InvMeteo.MixingHeight`
     # for the period containing `runway_time`, with `vertical_limit`
     # fallback. Matches the plugin's behaviour and the standalone's
@@ -1375,7 +1392,9 @@ def _compute_fixed_wing(  # noqa: C901 — one segment loop per method, as the s
         alt_ft = (z1 + elevation_m) / _MEEM_FT2M
         if meem and alt_ft > _MEEM_LTO_CEILING_FT:
             nvpm_g_kg = (
-                _meem_v1_mass_mgkg(alt_ft, tas1, is_dep, meem["points"], meem["opr"])
+                _meem_v1_mass_mgkg(
+                    alt_ft, tas1, is_dep, meem["points"], meem["opr"], meem_dt
+                )
                 / 1000.0
             )
             eng = dict(

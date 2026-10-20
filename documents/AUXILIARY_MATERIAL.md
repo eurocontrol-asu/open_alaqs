@@ -53,12 +53,12 @@ The engine EI table contains one row per engine per LTO mode (TX, AP, CL, TO). T
 | `pm10_sul` | Sulphate vPM EI (g/kg); see PM10 breakdown below |
 | `pm10_organic` | Organic vPM EI (g/kg); see PM10 breakdown below |
 | `p1_ei`, `p2_ei` | PM1.0 and PM2.5 EI placeholders (g/kg); currently equal to `pm10_ei` |
-| `nvpm_number_ei` | nvPM number EI (#/kg) from ICAO EEDB |
-| `press_ratio` | Overall pressure ratio (OPR) for MEEM V1 above 3000 ft above MSL (empty in the shipped data; 30 is used) |
-| `meem_nvpm_m_i_f00_avg` | Thrust of the 5th nvPM mass point for MEEM V1 (used when above 0, with `nvpm_m_max_mgkg`); empty in the shipped data |
-| `nvpm_m_max_mgkg` | Maximum nvPM mass EI (mg/kg); empty in the shipped data, not used by the calculation |
-| `meem_nvpm_n_i_f00_avg` | Thrust of the 5th nvPM number point for MEEM V1 (used when above 0, with `nvpm_n_max_nkg`); empty in the shipped data |
-| `nvpm_n_max_nkg` | Maximum nvPM number EI (#/kg); empty in the shipped data, not used by the calculation |
+| `nvpm_number_ei` | nvPM number EI (#/kg) from ICAO EEDB (until the October 2026 data fix the column held the ACT_PRF number rate in #/s) |
+| `press_ratio` | Overall pressure ratio (OPR) for MEEM V1 above 3000 ft above MSL: the CAEP14 sheet v14 `Engines_Database` (EEDB v31) value, ACT_PRF for engines not in it; set for 863 jet engines, empty for the others (30 is then used) |
+| `meem_nvpm_m_i_f00_avg` | Thrust of the 5th nvPM mass point for MEEM V1 (used when above 0, with `nvpm_m_max_mgkg`); same sources; above 0 for the 51 engines the sheet marks 5PT, 0 for its 4PT engines |
+| `nvpm_m_max_mgkg` | Maximum nvPM mass EI (mg/kg), same sources; the 5th mass point when `meem_nvpm_m_i_f00_avg` is above 0, otherwise not used |
+| `meem_nvpm_n_i_f00_avg` | Thrust of the 5th nvPM number point for MEEM V1 (used when above 0, with `nvpm_n_max_nkg`); same sources as the mass point |
+| `nvpm_n_max_nkg` | Maximum nvPM number EI (#/kg), same sources; the 5th number point when `meem_nvpm_n_i_f00_avg` is above 0, otherwise not used |
 
 ##### PM10 breakdown
 
@@ -116,7 +116,7 @@ This is added to the PM10, P1, and P2 output columns, but does not appear in the
 The ICAO EEDB nvPM emission indices are certification values at ground level. Above 3000 ft the nvPM EI depends on the combustor inlet conditions. OpenALAQS follows the MEEM V1 tab of the ICAO CAEP14 FBE Engines Emissions Calculation Sheet v14 (`open_alaqs/core/tools/meem_v1.py`), for both Bymode and BFFM2:
 
 - At or below 3000 ft (914.4 m) above MSL (segment start height plus airport elevation), the nvPM EI is the certification value of the segment's mode: the stored `pm10_nonvol`, unchanged.
-- Above 3000 ft, with ISA at the segment altitude and the Mach number from the segment's true airspeed: combustor inlet pressure and temperature at the segment (phase "CLIMB TO CRUISE" for departures, "DESCENT TO APPROACH" for arrivals), the ground-reference thrust with the same combustor inlet temperature, linear interpolation of the EEDB nvPM points at that thrust, and the correction `(P3 / P3_GR)^1.35 × 1.1^2.5`. OPR is `press_ratio` (30 when empty, as in the shipped data; the sheet has no value for this case) and the cruise altitude of the climb pressure coefficient is 38000 ft (the sheet's stored value).
+- Above 3000 ft, with ISA + ΔT at the segment altitude and the Mach number from the segment's true airspeed: combustor inlet pressure and temperature at the segment (phase "CLIMB TO CRUISE" for departures, "DESCENT TO APPROACH" for arrivals), the ground-reference thrust with the same combustor inlet temperature, linear interpolation of the EEDB nvPM points at that thrust, and the correction `(P3 / P3_GR)^1.35 × 1.1^2.5`. OPR is `press_ratio` (30 when empty; the sheet has no value for this case). ΔT (the sheet's "ΔT at 0 ft MSL", USER INPUTS!B5) is the temperature of the movement's meteo period (`tbl_InvMeteo`, the one BFFM2 uses) minus the ISA temperature at the airport elevation, 288.15 K − 0.0065 K/m × elevation, constant aloft; 0 without meteo. The cruise altitude of the climb pressure coefficient is 38000 ft, the sheet's stored value (USER INPUTS!B20): OpenALAQS has no cruise altitude (no column of `default_aircraft`, `default_aircraft_engine_ei` or `default_aircraft_profiles` holds one, `bada_id` is only an identifier, and the ANP profiles end at about 10000 ft).
 - The result replaces `pm10_nonvol` for that segment; `pm10`, `p1` and `p2` move by the same amount, so `pm10 = pm10_nonvol + pm10_sul + pm10_organic` still holds. The nvPM number EI is computed but is not an output column.
 
 Segments above 3000 ft above MSL enter the calculation only in hours whose mixing height is above 3000 ft minus the airport elevation. MEEM V2 (CAEP14 v12+) is implemented in `meem_v2.py` but not used; its adoption is to be decided.

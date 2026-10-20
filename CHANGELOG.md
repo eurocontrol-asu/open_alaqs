@@ -145,8 +145,7 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   points, × (P3/P3_GR)^1.35 × 1.1^2.5). The mass EI replaces
   `pm10_nonvol` and `pm10`, `p1`, `p2` move by the same amount, so
   pm10 = nonvol + sul + organic still holds; nothing else changes. OPR is
-  `press_ratio`, 30 when empty (as in the shipped data; the sheet has no
-  value for this case); the climb pressure coefficient uses a 38000 ft
+  `press_ratio`, 30 when empty (the sheet has no value for this case); the climb pressure coefficient uses a 38000 ft
   cruise altitude (the sheet's stored value). The port matches the sheet's
   stored example (0.944536653843135 mg/kg, 2.58597485320693e13 #/kg) and
   seven cases recalculated in LibreOffice to 1e-15 (`tests/test_meem_v1.py`).
@@ -162,6 +161,38 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   (+0.85 %), pm10 321.741 to 322.010 g (+0.084 %) (BFFM2 trajectory: +0.77 %
   and +0.061 %). `training_v3`, AIRPORT_A and ANP references: no change
   (no segment above 3000 ft).
+- `nvpm_number_ei` of `default_aircraft_engine_ei` held the ACT_PRF
+  nvPM number rate of the mode (#/s) while the code
+  reads it as #/kg; it is now #/kg (ACT_PRF rate / fuel flow, equal to the
+  CAEP14 sheet v14 NVPM_N_*_N/KG; for the FOCA piston and ECTL engines,
+  which are in neither, the stored value / fuel flow). In the shipped table
+  and the bundled `.alaqs` files. No output column carries nvPM number, so
+  no output changes; the MEEM V1 number EI and the 5th number point now
+  have consistent units (training example nvPM number, bymode, computed
+  internally: 2.01e17 to 4.61e17).
+- `default_aircraft_engine_ei`: 1ZM001 (D-36) TX had fuel flow 0 and all
+  EIs 0 (EEDB v31 FF_ID is 0); it now has the ACT_PRF idle values (fuel
+  0.092 kg/s, NOx 5.5, CO 20.7, HC 5.4 g/kg, nvPM 0.0767 g/kg,
+  3.87e15 #/kg), composed as the engine's other modes.
+- MEEM V1 inputs: `press_ratio` and the 5th nvPM point
+  (`meem_nvpm_m_i_f00_avg`, `meem_nvpm_n_i_f00_avg`, `nvpm_m_max_mgkg`,
+  `nvpm_n_max_nkg`) were empty in every row; they now come from the CAEP14
+  sheet v14 `Engines_Database` (EEDB v31), ACT_PRF for engines not in it:
+  OPR for 863 jet engines (the others keep 30), 5th point for the 51
+  engines the sheet marks 5PT. The bundled `.alaqs` files get the columns
+  where they lacked them.
+- MEEM V1 above 3000 ft used ISA; it now uses ISA + ΔT, ΔT the
+  temperature of the movement's meteo period (the one BFFM2 uses) minus
+  ISA at the airport elevation (288.15 K − 0.0065 K/m × elevation),
+  constant aloft, the sheet's "ΔT at 0 ft MSL" (USER INPUTS!B5); 0 without
+  meteo. Plugin (`Engine.getEmissionIndexByModeWithMEEM(delta_t=...)`),
+  standalone and CAEP14 reference alike; checked against two more
+  LibreOffice recalculations of the sheet. **Results change** above
+  3000 ft only. Training example (283 K at −5 m, ΔT −5.18 K, with the OPR
+  above): `bymode` pm10_nonvol id 6 +0.86 %, id 8 −0.20 %, 13-movement
+  totals pm10_nonvol 31.724 to 31.695 g (−0.09 %), pm10 322.010 to
+  321.981 g (−0.009 %); BFFM2 trajectory pm10 285.444 to 285.425 g. The
+  OPR alone moves pm10 by less than 1e-5. `training_v3`: no change.
 - Plugin: the ICCAIA NOx ambient correction (bymode, "Apply NOx
   corrections") was applied to every flight segment, approach included;
   it is defined for take-off and climb-out, which is what its module and

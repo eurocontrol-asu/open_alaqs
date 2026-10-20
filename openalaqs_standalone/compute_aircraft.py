@@ -210,13 +210,20 @@ def _segment_mach(tas_start: float, tas_end: float, T_K: float) -> float:
 
 
 def _meem_v1_segment_ei(
-    eng: dict, meem: dict, mode: str, alt_msl_m: float, tas_m_s: float, climbing: bool
+    eng: dict,
+    meem: dict,
+    mode: str,
+    alt_msl_m: float,
+    tas_m_s: float,
+    climbing: bool,
+    delta_t: float = 0.0,
 ) -> dict:
     """The segment's EI with the MEEM V1 nvPM mass EI (shared
     `open_alaqs.core.tools.meem_v1`, the plugin's code) as the plugin's
     Engine.getEmissionIndexByModeWithMEEM applies it: at or below 3000 ft
     above MSL `eng` unchanged; above, pm10_ei moves by the MEEM mass EI
-    minus the mode's pm10_nonvol."""
+    minus the mode's pm10_nonvol. `delta_t`: ISA deviation (K) from the
+    movement's meteo (`meem_v1.delta_t_from_ground`), 0 without meteo."""
     alt_ft = alt_msl_m / _meem_v1.FT_TO_M
     if not meem or _meem_v1.section_of_flight(alt_ft) == "LTO":
         return eng
@@ -239,6 +246,7 @@ def _meem_v1_segment_ei(
         opr=meem["press_ratio"] or _meem_v1.DEFAULT_OPR,
         tas_kt=tas_m_s * _meem_v1.MS_TO_KT,
         number_thrust_settings=ts_num,
+        delta_t=delta_t,
     )
     delta = result.nvpm_mass_ei_mgkg / 1000.0 - meem["pm10_nonvol"][mode]
     return dict(eng, pm10_ei=eng["pm10_ei"] + delta)
@@ -502,8 +510,10 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
     meem = mv.get_engine_meem(conn, mov["engine_name"])
 
     # Decide whether to load the meteo row. BFFM2 always needs it; bymode
-    # also needs it when the NOx ambient correction is requested.
-    needs_meteo = (method != "bymode") or apply_nox_corrections
+    # also needs it when the NOx ambient correction is requested, and for
+    # the MEEM V1 temperature deviation above 3000 ft (the plugin always
+    # has the period's meteo).
+    needs_meteo = (method != "bymode") or apply_nox_corrections or bool(meem)
 
     # BFFM2 setup: build the icao_eedb dict once per movement, fetch
     # the meteo row. Skipped entirely for bymode unless the NOx ambient
@@ -923,7 +933,8 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             )
 
         seg_fuel = seg_time * seg_ff_amb * n_eng
-        # MEEM V1 nvPM above 3000 ft above MSL (pm10 only; fuel unchanged).
+        # MEEM V1 nvPM above 3000 ft above MSL (pm10 only; fuel unchanged),
+        # ISA + delta_t with delta_t from the movement's meteo temperature.
         eng = _meem_v1_segment_ei(
             eng,
             meem,
@@ -931,6 +942,9 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             z1_start + ctx.get("airport_elevation_m", 0.0),
             tas1,
             is_dep,
+            delta_t=_meem_v1.delta_t_from_ground(
+                meteo["T_K"] if meteo else None, ctx.get("airport_elevation_m", 0.0)
+            ),
         )
         # Plugin guard ("Bug #22" in MovementEmissionCalculator): under
         # BFFM2, a segment whose start point has neither power nor fuel

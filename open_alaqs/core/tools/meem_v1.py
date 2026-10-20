@@ -43,8 +43,15 @@ above mean sea level, as the sheet's USER INPUTS!B36 does ("LTO" up to
 The sheet has no value for an engine without a pressure ratio (its formulas
 then return an error); OpenALAQS uses DEFAULT_OPR for such engines (see
 Engine.getEmissionIndexByModeWithMEEM). The sheet's CLIMB TO CRUISE pressure
-coefficient needs a cruise altitude (USER INPUTS!B20); OpenALAQS has none and
-uses DEFAULT_CRUISE_ALTITUDE_FT, the sheet's stored value.
+coefficient needs a cruise altitude (USER INPUTS!B20); OpenALAQS has no
+cruise altitude (no aircraft, engine or profile column holds one) and uses
+DEFAULT_CRUISE_ALTITUDE_FT, the sheet's stored value.
+
+The temperature deviation delta_t (USER INPUTS!B5, "delta T at 0 ft MSL") is
+taken from the meteo of the movement's period: the ground temperature minus
+the ISA temperature at the airport elevation (delta_t_from_ground), constant
+aloft, so that the ISA+dT temperature at the airport elevation equals the
+meteo temperature. 0 (ISA) without meteo.
 
 References:
   ICAO CAEP/13-MDG, MEEM V1.
@@ -113,6 +120,18 @@ _THRUST_MIN: float = 0.07
 
 
 # ── Atmosphere (USER INPUTS!B41:B46) ─────────────────────────────────────────
+
+
+def delta_t_from_ground(
+    t_ground_k: Optional[float], airport_elevation_m: Optional[float]
+) -> float:
+    """ISA temperature deviation (K) from the ground ambient temperature (K)
+    at the airport: T_ground - (T0 + L h), L = -0.0065 K/m, h the airport
+    elevation above MSL (m). 0 when no temperature is given."""
+    if t_ground_k is None:
+        return 0.0
+    h = float(airport_elevation_m or 0.0)
+    return float(t_ground_k) - (T0_K + LAPSE_K_PER_M * h)
 
 
 def isa_ambient(altitude_ft: float, delta_t: float = 0.0) -> tuple[float, float]:

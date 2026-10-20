@@ -498,3 +498,29 @@ reference does not model) to 7 × 10⁻¹⁰ (`bymode`), 6.5 × 10⁻¹⁰
 (`bffm2_anchor`) and 4 × 10⁻⁸ on the CUSTOM movements of `bffm2_traj`; one
 ANP departure of `bffm2_traj` differs by 6 × 10⁻⁴ on NOx (0.02 % of its
 take-off fuel, in an hour with a 400 m mixing height; cause not isolated).
+
+### MEEM V1 temperature and engine data (20 October 2026)
+
+Above 3000 ft above MSL the reference's `_meem_v1_mass_mgkg` now runs the
+sheet's ISA + ΔT atmosphere (USER INPUTS!B5 "ΔT at 0 ft MSL", B41 to B45)
+with ΔT = meteo temperature of the movement minus ISA at the airport
+elevation (288.15 K − 0.0065 K/m × elevation), constant aloft
+(`_meem_delta_t`); the plugin (`Engine.getEmissionIndexByModeWithMEEM`,
+`delta_t`) and the standalone (`compute_aircraft._meem_v1_segment_ei`) do
+the same with `meem_v1.delta_t_from_ground`. For `bymode` the reference and
+the standalone now read the meteo row as well when the engine has MEEM
+inputs. `validation/tests/test_meem_v1_reference.py` checks both against
+two more LibreOffice recalculations of the sheet (11GE144, ΔT −5.1825 K and
++12 K).
+
+`training_v3` has no segment above 3000 ft (mixing height 914.4 m), so its
+pinned outputs are unchanged. On `example/training/training_out.alaqs`
+(1500 m mixing height on 2 December, 283 K at −5 m: ΔT −5.18 K) plugin,
+reference and standalone agree as before the change (`bymode` and
+`bffm2_anchor` 2e-13 / 5e-11, `bffm2_traj` 4.4e-5 on movement 11, the NOx
+correction run 3e-6); this check is not part of the test suite.
+
+The engine table now carries `press_ratio` and the 5th nvPM point from the
+CAEP14 sheet v14 `Engines_Database` (ACT_PRF for engines not in it), and
+`nvpm_number_ei` in #/kg (it held the ACT_PRF rate in #/s); the reference
+reads `press_ratio` and the 5th mass point, as before.
