@@ -17,7 +17,7 @@ re-exported in October 2026 from the plugin of this version, headlessly
 `training_v3.alaqs`, the two helicopters included, agree between the
 plugin, the reference and the standalone for the three methods to
 floating-point noise, except the CUSTOM departure (movement 11, PHBBA) on
-`bffm2_traj`, at 8e-5. The plugin applies the study meteo (`tbl_InvMeteo`) to the BFFM2
+`bffm2_traj`, at 1.3e-5. The plugin applies the study meteo (`tbl_InvMeteo`) to the BFFM2
 ambient corrections, so the comparison is run with `--use-meteo`; the
 5.2.0 exports were made at ISA. See "October 2026" at the end.
 
@@ -97,7 +97,7 @@ column.  The expected outcome for this version against `training_v3.alaqs`
 | --- | --- | --- |
 | `bymode` | 0.00 % on all pollutants | 0.00 % |
 | `bffm2_anchor` (`--use-meteo`) | 0.00 % | 0.00 % |
-| `bffm2_traj` (`--use-meteo`) | 0.00 % | +0.01 % |
+| `bffm2_traj` (`--use-meteo`) | 0.00 % | 0.00 % (1.3e-5) |
 
 `tests/test_plugin_csv_vs_reference.py` pins this (2e-4 relative, plugin
 against reference and standalone, 15 movements, three methods). For
@@ -134,7 +134,7 @@ PYTHONPATH=. python3 openalaqs_standalone/validation/tools/regenerate_training_v
 
 On that inventory the plugin and the reference agree to 3e-13 on every
 movement for `bymode` and `bffm2_anchor` and on the ANP movements for
-`bffm2_traj`; movement 11 (CUSTOM) differs by 4e-5 on `bffm2_traj`, and the
+`bffm2_traj`; movement 11 (CUSTOM) differs by 4e-6 on `bffm2_traj`, and the
 NOx-corrected run by 3e-6 on movements 10 and 11. (With the
 200 m-tall grid the example carried before October 2026, 40 x 40 x 20
 cells of 10 m, the ANP movements agreed to 4e-6 only; the gap went with
@@ -261,8 +261,9 @@ take-off roll at height 0 with mode TO. The horizontal positions equal
 the earlier import to 1e-9 m, so the offset reported here before (81 m
 on the ground) no longer exists. The emission totals of movement 11 do
 not change with the re-import (the track stays below the 914.4 m cut);
-the remaining plugin/reference gap on movement 11 (8e-5 on `bffm2_traj`)
-is not explained yet.
+the remaining plugin/reference gap on movement 11 (8e-5 on `bffm2_traj`
+then, 1.3e-5 with the fuel flows of 20 October 2026, see below) is not
+explained yet.
 
 ---
 
@@ -309,7 +310,7 @@ default, a fix in `twin_quadratic_fit_method.py`), the workflow is:
    short comment pointing at the plugin commit hash that motivated it).
 2. Re-run the three validation invocations from step 2 above and
    confirm that 15 of 15 movements still match to 0.00 % (movement 11 at
-   +0.01 % on `bffm2_traj`); `tests/test_plugin_csv_vs_reference.py`
+   1.3e-5 on `bffm2_traj`); `tests/test_plugin_csv_vs_reference.py`
    checks this at 2e-4. When the plugin result itself changes, re-export
    the pinned plugin CSVs first with `regenerate_plugin_csvs.py` (step 1).
 3. Regenerate the workbook via step 3 above.
@@ -524,3 +525,25 @@ The engine table now carries `press_ratio` and the 5th nvPM point from the
 CAEP14 sheet v14 `Engines_Database` (ACT_PRF for engines not in it), and
 `nvpm_number_ei` in #/kg (it held the ACT_PRF rate in #/s); the reference
 reads `press_ratio` and the 5th mass point, as before.
+
+### ADS-B fuel flows of the training tracks (20 October 2026)
+
+The `fuel_flow` column of `training_ads_b_data.csv` (both copies, and the
+CUSTOM profiles of `training_out.alaqs` and the three `training_v3*.alaqs`)
+held 0.083 to 0.119 kg/s for PHBBA at power 0.40 to 0.92, below the
+aircraft's ICAO idle (2 × 0.091 kg/s). It is now 2 × the ICAO fuel flow of
+01P20CM128 (the A20N engine of movement 11) interpolated linearly on its four
+(thrust, fuel flow) points at the row's `power_setting`, rounded to 4
+decimals: 0.65 to 1.57 kg/s for PHBBA. PHRTM (no movement uses it) gets the
+same A20N curve, with its power below idle raised to 0.07 (0.182 to
+0.207 kg/s). Positions, heights, speeds and times are unchanged; the
+tracks remain an example, not measured fuel flows.
+
+Only `bffm2_traj` uses the supplied fuel flow, so only it changes, and only
+movement 11: NOx 0.265 to 1.865 kg on `training_v3` (15-movement total
+15.2745 to 16.8743 kg), 0.244 to 1.504 kg on the example inventory
+(13-movement total 17.4610 to 18.7213 kg). The supplied values stay below
+1.5 × the take-off fuel flow per engine (0.78 against 1.29 kg/s), so no
+point falls back to the mode anchor. Plugin, reference and standalone agree
+on movement 11 to 1.3e-5 (`training_v3`) and 4e-6 (example inventory),
+closer than the 8e-5 before.

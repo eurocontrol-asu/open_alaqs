@@ -8,7 +8,9 @@ naming the flight and the number of points.
 Fixture: the training example. Flight 1764584438_PHBBA is in the
 movement CSV (A20N, engine 01P20CM128, 2 engines, TX 0.091 kg/s per
 engine, so 0.182 kg/s for the aircraft); flight 1764583565_PHRTM is not,
-so its check is skipped.
+so its check is skipped. The shipped fuel flows are at or above idle (2 x
+the engine's ICAO curve at the row's power setting), so the warning case
+uses a copy with PHBBA's fuel flows divided by 10.
 """
 
 import logging
@@ -58,11 +60,32 @@ def test_idle_lookup_resolves_engine_and_engine_count(training_db):
     assert idle == pytest.approx(IDLE_TOTAL)
 
 
+def test_shipped_tracks_are_not_below_idle():
+    adsb = pd.read_csv(EX / "training_ads_b_data.csv")
+    assert (adsb.fuel_flow >= IDLE_TOTAL - 1e-9).all()
+
+
+def test_shipped_import_has_no_sub_idle_warning(training_db, caplog):
+    with caplog.at_level(logging.INFO):
+        ok, msg = import_adsb_file(
+            str(EX / "training_ads_b_data.csv"),
+            str(training_db),
+            str(EX / "training_movements.csv"),
+        )
+    assert ok, msg
+    assert not [
+        m for m in _ads_b_messages(caplog, logging.WARNING) if "idle fuel flow" in m
+    ]
+
+
 def test_sub_idle_fuel_flow_warns_once_per_flight_and_is_not_clamped(
-    training_db, caplog
+    training_db, tmp_path, caplog
 ):
-    csv = EX / "training_ads_b_data.csv"
-    adsb = pd.read_csv(csv)
+    adsb = pd.read_csv(EX / "training_ads_b_data.csv")
+    sel = adsb.flight_id == FLIGHT
+    adsb.loc[sel, "fuel_flow"] = adsb.loc[sel, "fuel_flow"] / 10.0
+    csv = tmp_path / "adsb_sub_idle.csv"
+    adsb.to_csv(csv, index=False)
     expected_below = int(
         (adsb.loc[adsb.flight_id == FLIGHT, "fuel_flow"] < IDLE_TOTAL).sum()
     )

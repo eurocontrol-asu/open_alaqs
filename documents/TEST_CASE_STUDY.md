@@ -397,7 +397,7 @@ Click **Generate Emission Inventory** in the toolbar. Configure the following se
 |---|---|
 | ADS-B Table | Browse to `training_ads_b_data.csv` |
 
-The two tracks in this file are imported into the inventory as CUSTOM profiles (`1764584438_PHBBA`, used by movement 11, and `1764583565_PHRTM`, unused), placed from the runway and taxi route that the movement table gives for the flight (PHBBA); PHRTM, which no movement uses, is placed at the closest runway end. Heights are taken above the airport elevation; the take-off roll, reported at −15 ft, is set to the ground.
+The two tracks in this file are imported into the inventory as CUSTOM profiles (`1764584438_PHBBA`, used by movement 11, and `1764583565_PHRTM`, unused), placed from the runway and taxi route that the movement table gives for the flight (PHBBA); PHRTM, which no movement uses, is placed at the closest runway end. Heights are taken above the airport elevation; the take-off roll, reported at −15 ft, is set to the ground. The tracks are an example: their `fuel_flow` (aircraft total) is twice the ICAO fuel flow of the A20N engine 01P20CM128 interpolated at the row's `power_setting` (0.65 to 1.57 kg/s for PHBBA; PHRTM, with the same curve and its power raised to idle where it was below, 0.18 to 0.21 kg/s). Only the BFFM2 trajectory method uses it.
 
 **Modeled Domain** — these settings define the 3D grid used for spatial emission output and dispersion modelling.
 
@@ -510,7 +510,7 @@ Click **Visualize Emission Calculation** in the toolbar and browse to `training_
 
 5. **Smooth & Shift**: enable Source Dynamics in the Configuration tab. Re-run the Vector Layer visualisation. Observe how the taxi emission distribution widens and shifts downwind compared to the raw linestring geometry.
 
-The log file (accessible via **Review Logs**) reports an ADS-B fuel flow above 1.5 times the EEDB take-off value (none here: movement 11's ADS-B fuel flow stays far below it) and taxi routes that do not fit the runway (an arrival leaving the runway above 50 kt, or a route that meets the runway only before the touchdown). For this study it reports none.
+The log file (accessible via **Review Logs**) reports an ADS-B fuel flow above 1.5 times the EEDB take-off value (none here: movement 11's ADS-B fuel flow is at most 0.78 kg/s per engine, against 1.5 × 0.861 kg/s) and taxi routes that do not fit the runway (an arrival leaving the runway above 50 kt, or a route that meets the runway only before the touchdown). For this study it reports none.
 
 ---
 

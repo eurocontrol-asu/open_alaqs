@@ -44,9 +44,9 @@ under a minute. Expected aircraft NOx total (13 movements, year 2025):
 | `bymode`                        |   31.841 |
 | `bymode` + `--apply-nox-corrections` |   30.698 |
 | `bffm2_anchor`                  |   30.056 |
-| `bffm2_traj`                    |   17.461 |
+| `bffm2_traj`                    |   18.721 |
 
-(CO 22.414 / 22.414 / 21.949 / 23.651 kg; the same with `--aircraft-only`,
+(CO 22.414 / 22.414 / 21.949 / 23.338 kg; the same with `--aircraft-only`,
 since the example has no gate, APU or start emissions.)
 
 ```bash

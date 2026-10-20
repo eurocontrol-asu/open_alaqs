@@ -14,6 +14,16 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 
 ### Changed
 
+- Training example ADS-B tracks (`example/training/training_ads_b_data.csv`
+  and its copy in `validation/data/source_csvs`, the CUSTOM profiles of
+  `training_out.alaqs` and `training_v3*.alaqs`): `fuel_flow` was 0.083 to
+  0.119 kg/s for PHBBA at power 0.40 to 0.92, below the A20N's idle; it is
+  now 2 × the ICAO fuel flow of 01P20CM128 interpolated at the row's
+  `power_setting` (0.65 to 1.57 kg/s; PHRTM, unused, the same curve with
+  its power raised to idle, 0.18 to 0.21 kg/s). **Example results change**
+  for `bffm2_traj` only, movement 11: NOx 0.244 to 1.504 kg (13 movements
+  17.461 to 18.721 kg), `training_v3` 15.2745 to 16.8743 kg; pinned
+  `bffm2_traj` CSV and both validation workbooks regenerated.
 - ANP arrivals touch down at the landing threshold plus the runway's
   Touchdown Offset for that end, else the profile's own distance from its
   50 ft (15.24 m) threshold crossing (Doc 29 approach profiles have x = 0 at

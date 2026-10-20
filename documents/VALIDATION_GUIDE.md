@@ -206,7 +206,7 @@ the V2 result.)
 If you are running the 13-movement example inventory
 `example/training/training_out.alaqs` (no helicopters) as a smoke test,
 the totals must match `USAGE.md` § "Quick smoke test" (31.841 / 30.698 /
-30.056 / 17.461 kg NOx for the four methods, with or without
+30.056 / 18.721 kg NOx for the four methods, with or without
 `--aircraft-only`).
 
 ### Outputs to send
@@ -221,7 +221,7 @@ the totals must match `USAGE.md` § "Quick smoke test" (31.841 / 30.698 /
 - For each `v2_*.csv`, per-row diff against the matching pinned file at
   `openalaqs_standalone/validation/data/plugin_output/training_movements_*.csv`.
   Tolerance bands per V1. Expected: PASS at 1e-6 everywhere except
-  `bffm2_traj` movement 11 (CUSTOM, PHBBA), PASS-WITH-DRIFT at 8e-5 on
+  `bffm2_traj` movement 11 (CUSTOM, PHBBA), PASS-WITH-DRIFT at 1.3e-5 on
   every pollutant.
 - Cross-method sanity (no aircraft should produce zero CO, CO2, HC, NOx,
   SOx or PM10; SOx is fuel × 0.758 g/kg for every movement of this
