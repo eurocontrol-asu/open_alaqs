@@ -1,4 +1,5 @@
 import csv
+import sqlite3
 from pathlib import Path
 from typing import Optional
 
@@ -229,12 +230,18 @@ def import_adsb_file(
 
     # Optional: read Movement CSV for per-flight runway/taxi_route lookup.
     mdf_triples = None
+    mdf = None
     if movement_path:
         try:
             mdf = pd.read_csv(movement_path, sep=";")
             mdf_triples = mdf.groupby(["profile_id", "runway", "taxi_route"])
         except Exception as e:
             return False, f"Error reading the Movement CSV file. Details: {e}"
+
+    # ICAO idle (TX) fuel flow per flight, aircraft total, for the
+    # sub-idle warning below. Values are imported unchanged either way.
+    idle_ff_by_flight = _idle_fuel_flow_by_flight(mdf, inventory_path)
+    n_flights_no_idle_check = 0
 
     # Resolve which column holds the engine power-setting fraction.
     # Canonical name is `power_setting`. Legacy `thrust` is accepted with
@@ -365,6 +372,25 @@ def import_adsb_file(
             f"Z: [{flight_data_x_y_z['z_m'].min():.1f}, {flight_data_x_y_z['z_m'].max():.1f}] m"
         )
 
+        # 1.3b. Supplied fuel flows below the engine's ICAO idle fuel flow
+        # are kept as given (no clamp); one warning per affected flight.
+        if "fuel_flow" in flight_data.columns:
+            idle = idle_ff_by_flight.get(str(flight_id))
+            if idle is None:
+                n_flights_no_idle_check += 1
+            else:
+                engine_name, idle_ff_total = idle
+                ff = pd.to_numeric(flight_data["fuel_flow"], errors="coerce")
+                n_below = int((ff < idle_ff_total).sum())
+                if n_below:
+                    logger.warning(
+                        f"ADS-B flight {flight_id}: {n_below} of "
+                        f"{int(ff.notna().sum())} fuel_flow points are below "
+                        f"the ICAO idle fuel flow of engine {engine_name} "
+                        f"({idle_ff_total:.4f} kg/s for the aircraft); "
+                        "imported unchanged."
+                    )
+
         # 1.4. Extract mode + build ANP-format rows
         # Process each point in the trajectory (in order from dataframe)
         # Reset point counter for each new profile_id
@@ -423,6 +449,13 @@ def import_adsb_file(
             ]
             anp_profiles.append(anp_row)
 
+    if n_flights_no_idle_check:
+        logger.info(
+            f"ADS-B import: idle fuel-flow check skipped for "
+            f"{n_flights_no_idle_check} flight(s) with no aircraft/engine "
+            "found for their flight_id in the Movement CSV."
+        )
+
     # 3. Import data to Inventory DB
     result_import = import_ads_b_data(anp_profiles, inventory_path)
 
@@ -430,6 +463,71 @@ def import_adsb_file(
         return True, "ADS-B successfully imported!"
     else:
         return False, "ADS-B could not be imported into the database!"
+
+
+def _idle_fuel_flow_by_flight(
+    mdf: Optional[pd.DataFrame], inventory_path: str
+) -> dict[str, tuple[str, float]]:
+    """Map each flight_id (= movement profile_id) to (engine, idle fuel flow).
+
+    The engine is the movement's engine_name when the engine table has it,
+    else the aircraft's default engine, as the movement loader resolves it.
+    The idle fuel flow is the ICAO TX fuel_kg_sec times the aircraft's
+    engine count, i.e. the aircraft total, in the unit of the ADS-B
+    `fuel_flow` column (kg/s). Flights without a usable movement row,
+    aircraft or engine are left out.
+    """
+    if mdf is None or "profile_id" not in mdf.columns:
+        return {}
+    out: dict[str, tuple[str, float]] = {}
+    try:
+        conn = sqlite3.connect(inventory_path)
+    except Exception:
+        return {}
+    try:
+
+        def _idle(engine):
+            if not engine:
+                return None
+            row = conn.execute(
+                "SELECT fuel_kg_sec FROM default_aircraft_engine_ei "
+                "WHERE engine_name = ? AND mode = 'TX'",
+                (engine,),
+            ).fetchone()
+            return float(row[0]) if row and row[0] is not None else None
+
+        for profile_id, rows in mdf.groupby("profile_id", sort=False):
+            first = rows.iloc[0]
+            aircraft = first.get("aircraft")
+            if pd.isna(aircraft):
+                continue
+            ac = conn.execute(
+                "SELECT engine_count, engine, engine_name FROM default_aircraft "
+                "WHERE icao = ?",
+                (str(aircraft),),
+            ).fetchone()
+            if ac is None:
+                continue
+            try:
+                n_eng = int(float(ac[0]))
+            except (TypeError, ValueError):
+                continue
+            engine = first.get("engine_name")
+            engine = None if pd.isna(engine) else str(engine).strip()
+            idle = _idle(engine)
+            for fallback in (ac[1], ac[2]):
+                if idle is not None:
+                    break
+                engine, idle = fallback, _idle(fallback)
+            if idle is None or n_eng <= 0:
+                continue
+            out[str(profile_id)] = (str(engine), idle * n_eng)
+    except sqlite3.Error as e:
+        logger.debug(f"ADS-B idle fuel-flow lookup failed: {e}")
+        return {}
+    finally:
+        conn.close()
+    return out
 
 
 def _airport_elevation_m(*db_paths: Optional[str]) -> float:

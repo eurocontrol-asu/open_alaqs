@@ -76,8 +76,10 @@ from shapely import wkt as _shapely_wkt
 from shapely.geometry import LineString, Point, box
 from shapely.ops import linemerge
 
-# Plugin-side FOCA helicopter math (pure Python, no QGIS dependency)
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# Plugin-side FOCA helicopter math (pure Python, no QGIS dependency): put the
+# repository root (parents[3]: tools -> validation -> openalaqs_standalone ->
+# repo) on sys.path so `open_alaqs` imports from any working directory.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 # SOx (as SO2) per kg fuel when the engine table gives none: written out here,
 # independently of open_alaqs/core/tools/fuel_sulphur.py. Jet fuel: the fuel

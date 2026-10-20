@@ -189,6 +189,35 @@ def _write_runway_checks(alaqs_path, emissions_folder, summary: dict) -> None:
         print(f"  runway checks skipped: {e}")
 
 
+def _stationary_pollutants(pollutants: list, include_aircraft: bool) -> list:
+    """The requested pollutants the stationary computes are asked for.
+
+    CO2 is an aircraft-only pollutant here: the stationary sources have no
+    CO2 emission factors, so they contribute 0 and are not asked for it.
+    Prints one info line when co2 is dropped.
+    """
+    stationary = [p for p in pollutants if p.lower() != "co2"]
+    if len(stationary) != len(pollutants):
+        print(
+            "  co2: stationary sources contribute 0 (no CO2 emission factors); "
+            + (
+                "CO2 comes from the aircraft movements"
+                if include_aircraft
+                else "add --include-aircraft for the aircraft CO2"
+            )
+        )
+    return stationary
+
+
+def _compute_stationary(compute_fn, alaqs_path, year, pollutants, time_window):
+    """One stationary compute; an empty pollutant list gives no rows."""
+    if not pollutants:
+        return pd.DataFrame(
+            columns=["timestamp", "source_id", "pollutant", "kg_in_hour"]
+        )
+    return compute_fn(alaqs_path, year, pollutants, time_window=time_window)
+
+
 def orchestrate(
     alaqs_path: Path,
     output_root: Path,
@@ -354,10 +383,14 @@ def orchestrate(
         (compute_engine_test_emissions, "engine_test"),
     ]
 
+    stationary_pollutants = _stationary_pollutants(pollutants, include_aircraft)
+
     em_chunks: list[pd.DataFrame] = []
     by_type_summary: dict[str, int] = {}
     for compute_fn, label in stationary_computes:
-        df = compute_fn(alaqs_path, year, pollutants, time_window=time_window)
+        df = _compute_stationary(
+            compute_fn, alaqs_path, year, stationary_pollutants, time_window
+        )
         n = len(df)
         by_type_summary[label] = n
         if n > 0:

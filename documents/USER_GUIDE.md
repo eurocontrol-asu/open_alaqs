@@ -78,7 +78,7 @@ The toolbar consists of the following functions:
 + **Generate Emission Inventory**: Prepares the OpenALAQS output file containing all study data.
 + **Visualize Emissions Calculation**: Manages the emissions calculation, visualization, and export modules.
 + **Calculate Dispersion**: Handles the dispersion calculation module.
-+ **Review Logs**: Opens the log file containing useful information about code execution. A warning is written when an ADS-B fuel flow per engine exceeds 1.5 times the EEDB take-off fuel flow (the mode-anchor fuel flow is then used for those segments), and when an arrival's taxi route leaves the runway above 50 kt or meets the runway only before the touchdown.
++ **Review Logs**: Opens the log file containing useful information about code execution. A warning is written when an ADS-B fuel flow per engine exceeds 1.5 times the EEDB take-off fuel flow (the mode-anchor fuel flow is then used for those segments), at ADS-B import for each flight with `fuel_flow` points below the ICAO idle fuel flow of its engine (the values are kept), and when an arrival's taxi route leaves the runway above 50 kt or meets the runway only before the touchdown. An OSM import logs the number of buildings added and where their heights come from.
 
 The order of the toolbar buttons generally follows the sequence of steps needed to conduct a study using OpenALAQS.
 
@@ -112,6 +112,8 @@ An additional functionality is added to OpenALAQS to facilitate the creation of 
 Using Nominatim, a search engine that uses the data from OpenStreetMap to provide geocoding (address to coordinates), directly from the OpenALAQS toolbar the user can select and import airport related geographical data to the study. The image below illustrates the information that can be collected from OpenStreetMap.
 
 ![import-osm-data-ex2.png](./../open_alaqs/assets/import-osm-data-ex2.png)
+
+The log reports the number of buildings imported and where their heights come from: the OSM `height` column when the feature has one, else the layer default (0 m). With the bundled OSM reader configuration the `height` tag is not exposed as a column, so imported buildings get 0 m; enter the heights by hand.
 
 ## [Define emission sources](#define-emission-sources)
 [(Back to top)](#table-of-contents)
@@ -508,7 +510,7 @@ The optional ADS-B file is also a comma-delimited `.csv`. The validator (`open_a
 | `altitude` | feet | yes | |
 | `tas` | knots | yes | True airspeed. |
 | `power_setting` | fraction 0–1 | one of `power_setting` or `fuel_flow` per row | Engine power setting fraction used by the BFFM2 twin-quadratic fit. The legacy column name `thrust` is accepted as an alias for old files; values are still treated as a fraction. |
-| `fuel_flow` | kg/s, aircraft total | one of `power_setting` or `fuel_flow` per row | Total-aircraft ambient fuel flow. Divided by the engine count before BFFM2 dispatch. |
+| `fuel_flow` | kg/s, aircraft total | one of `power_setting` or `fuel_flow` per row | Total-aircraft ambient fuel flow. Divided by the engine count before BFFM2 dispatch. Values below the ICAO idle (TX) fuel flow of the flight's engine times its engine count are imported unchanged; the log names each such flight and its number of points (engine from the Movement CSV row with the same `profile_id`; flights not found there are not checked). |
 | `timestamp` | YYYY-MM-DD HH:MM:SS | optional | Read for human readability only; flight time is taken from the movement table's `runway_time` / `block_time` matched by `profile_id`. |
 
 > **Note:** Ground taxi emissions are handled separately via taxiway routes. ADS-B rows during ground taxi should not be included in this CSV — they would otherwise be imported as flight-trajectory points at zero altitude.

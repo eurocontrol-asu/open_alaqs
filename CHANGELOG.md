@@ -103,6 +103,14 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   runway end, intersection line-up, ADS-B start of roll or exit away from
   the route, each with the input change that fixes it. Never blocks the
   run. The plugin logs the exit findings.
+- ADS-B import: one warning per flight whose `fuel_flow` points are below
+  the ICAO idle fuel flow of its engine (aircraft total), with the number
+  of points; the values are imported unchanged.
+- OSM import: a log line with the number of buildings added and where
+  their heights come from (OSM `height` column, else the layer default,
+  0 m; with the bundled `osmconf.ini` the tag is not a column, so 0 m).
+- `rebuild_training_example_inventory.py`: `--input-dir` and `--end`
+  (defaults: `example/training`, `2025-12-03 09:00:00`).
 
 ### Fixed
 
@@ -309,6 +317,18 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   with an empty name instead of "NULL".
 - Removed a debug `print` from the track form; the OSM import warning for
   an invalid feature no longer fails on layers without `full_id`.
+- `scripts/emissions_austal`: `smooth & shift` spellings reach the module
+  as `smooth & shift` (were `smooth_shift`, run without source dynamics)
+  and unknown `source_dynamics` values are an error;
+  `should_apply_nox_corrections` takes true/false, 1/0, yes/no in any case
+  (only `True` enabled it) and errors otherwise; `austal_settings` is read
+  as a JSON object (a txt value failed in `dict.update`).
+- Standalone `austal --pollutants co2` stopped with `KeyError: 'co2'`; the
+  stationary sources now contribute 0 (one info line) and the aircraft CO2
+  is written.
+- `compute_caep14_reference.py` puts the repository root
+  (`parents[3]`, was `parents[1]`) on `sys.path`, so it runs from any
+  working directory.
 
 ### Removed
 

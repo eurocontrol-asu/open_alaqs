@@ -204,7 +204,8 @@ The AUSTAL grid is read from the study's `grid_3d_definition`;
 
 `--pollutants` defaults to the full stationary set
 (`co,hc,nox,sox,pm10,pm25`); pass an explicit comma-separated list to
-narrow it.
+narrow it. `co2` is also accepted; it comes from the aircraft only (see
+[Pollutants](#pollutants)).
 
 ### The whole study, stationary + aircraft, in one run
 
@@ -385,10 +386,11 @@ default pollutant list for the stationary computes and for the
 The aircraft core supports `co, co2, hc, nox, sox, pm10, pm25`. The
 stationary source tables carry no co2. When `--include-aircraft` is
 used, the aircraft emissions are filtered to the requested pollutant
-list so the combined `emissions.parquet` is coherent. co2 cannot be
-requested from the `austal` command (the stationary computes have no
-co2 column and stop with `KeyError: 'co2'`), so the aircraft co2 is not
-written there; the `aircraft` command reports it.
+list so the combined `emissions.parquet` is coherent. `--pollutants`
+of the `austal` command accepts co2: the stationary sources contribute
+0 for it (they are not asked for co2, and one info line says so), and
+with `--include-aircraft` the aircraft co2 is written to
+`emissions.parquet` and `co2_emissions.gpkg`.
 
 These lowercase labels are what `austal_prep` maps to AUSTAL's `pm-1`
 (PM2.5) and `pm-2` (PM10) on output.

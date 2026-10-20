@@ -47,16 +47,18 @@ pollutant=NOx
 # source_names=
 
 # Source dynamics handling
-# Accepted values: none (default), default
-# (smooth & shift / smooth_shift are normalised to smooth_shift, which
-# currently runs without source dynamics; use default)
+# Accepted values: none (default), default, smooth & shift
+# (also smooth_shift, smooth&shift, sas); anything else is an error
 # source_dynamics=none
 
 # Vertical calculation limit (metres)
 # vertical_limit_m=914.4
 
-# Apply NOx corrections (True/False)
+# Apply NOx corrections: true/false, 1/0 or yes/no (any case)
 # should_apply_nox_corrections=False
+
+# AUSTAL module settings as a one-line JSON object (used with --austal)
+# austal_settings={"quality_level": 1, "options_string": "SCINOTAT"}
 
 # View type for CSV export: by aggregation (default) or by source
 # (use by source when the CSV feeds scripts/austal_from_csv)

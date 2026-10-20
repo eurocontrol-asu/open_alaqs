@@ -2994,6 +2994,28 @@ class OpenAlaqsEnabledMacros(QtWidgets.QDialog):
         self.ui.pushButton.clicked.connect(self.close)
 
 
+def _osm_building_import_message(
+    buildings_layer: QgsVectorLayer, n_buildings: int, n_with_osm_height: int
+) -> str:
+    """Log line for the OSM building import: count and where heights come from.
+
+    A height is taken from the OSM feature's `height` column when it has one
+    (osm_attribute_mapping); every other building gets the layer's default
+    value for the height field.
+    """
+    idx = buildings_layer.fields().indexFromName("height")
+    default = (
+        buildings_layer.defaultValueDefinition(idx).expression() if idx >= 0 else ""
+    )
+    default_txt = f"the layer default ({default} m)" if default else "no value (NULL)"
+    n_default = n_buildings - n_with_osm_height
+    return (
+        f'OSM import: {n_buildings} building(s) added to layer "Buildings"; '
+        f"height from the OSM height tag for {n_with_osm_height}, "
+        f"{default_txt} for {n_default}."
+    )
+
+
 class OpenAlaqsOsmImport(QtWidgets.QDialog):
     def __init__(self):
         QtWidgets.QDialog.__init__(self)
@@ -3144,6 +3166,8 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
             expression = QgsExpression(" OR ".join(tmp_or_expressions))
             osm_features = osm_layer.getFeatures(QgsFeatureRequest(expression))
             alaqs_features = []
+            # Buildings: how many got a height from the OSM data (for the log)
+            n_with_osm_height = 0
 
             for osm_f in osm_features:  # type: ignore
                 alaqs_f_attrs = {}
@@ -3159,6 +3183,8 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
 
                     alaqs_attr_idx = alaqs_fields.indexFromName(alaqs_attr_name)
                     alaqs_f_attrs[alaqs_attr_idx] = value
+                    if alaqs_attr_name == "height":
+                        n_with_osm_height += 1
 
                 for alaqs_attr_name, alaqs_attr_value in layer_config.get(
                     "osm_import_default_values", {}
@@ -3190,10 +3216,18 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
                 continue
 
             with edit(alaqs_layer):
-                if not alaqs_layer.addFeatures(alaqs_features):
+                added = alaqs_layer.addFeatures(alaqs_features)
+                if not added:
                     logger.warning(
                         f'Failed to add new OSM features to layer "{layer_config["name"]}"!'
                     )
+
+            if added and layer_type == AlaqsLayerType.BUILDING:
+                logger.info(
+                    _osm_building_import_message(
+                        alaqs_layer, len(alaqs_features), n_with_osm_height
+                    )
+                )
 
     def _get_layer_types_to_download(self) -> list[AlaqsLayerType]:
         """Returns a list of ALAQS layer types to be downloaded based on the UI checkbox selection.
