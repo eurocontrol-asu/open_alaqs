@@ -173,6 +173,10 @@ When adding a runway, the following information can be given:
 
 Draw the runway from threshold to threshold. For a displaced threshold, enter the displacement plus about 290 m.
 
+Each offset is measured from its own landing threshold, along the landing direction. An empty Runway 2 field takes the Runway 1 value, so one value covers both directions; enter 0 in the Runway 2 field to keep the profile's own touchdown for that direction only.
+
+![runway-touchdown-offset.svg](./../open_alaqs/assets/runway-touchdown-offset.svg)
+
 **Placement of the flight profiles on the runway.** The taxi route does not move the flight profile; it is checked against it.
 + Arrivals (ANP profiles) touch down at the landing threshold plus the Touchdown Offset. The aircraft leaves the runway at the first point where its taxi route meets the runway past the touchdown at 50 kt or less (ICAO Doc 9157 Part 2: rapid-exit reference speed); if no crossing is that slow, at the first one past the touchdown. When that exit comes before the end of the profile's rollout, the rollout ends there. When it comes after, the aircraft rolls on along the runway to the exit; that stretch is taxiing (from the rollout-end speed down to at most 18 kt).
 + Departures (ANP profiles) start their take-off roll where the taxi route last meets the runway (the line-up point); a route that runs along the runway (backtracking) lines up where it leaves it.
