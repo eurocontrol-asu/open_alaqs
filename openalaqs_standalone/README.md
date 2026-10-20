@@ -392,6 +392,15 @@ of the `austal` command accepts co2: the stationary sources contribute
 with `--include-aircraft` the aircraft co2 is written to
 `emissions.parquet` and `co2_emissions.gpkg`.
 
+`austal_prep` writes co2 to `austal.txt` and `series.dmna` as the
+substance `co2` (source strength in g/s), the same name the plugin
+writes. `co2` (like `co`, `hc` and `sox`) is not one of the substances
+of the standard AUSTAL 3.3 settings; it is defined in the
+`austal.settings` shipped with OpenALAQS (`documents/AUSTAL/`, section
+`[CO2]`, concentration in mg/m3). Replace the `austal.settings` of the
+AUSTAL installation with that copy before running AUSTAL on these
+inputs (see `documents/AUSTAL/AUSTAL.md`).
+
 These lowercase labels are what `austal_prep` maps to AUSTAL's `pm-1`
 (PM2.5) and `pm-2` (PM10) on output.
 
