@@ -13,7 +13,7 @@
   - [Assign GSE Window](#assign-gse-window)
   - [Emissions Calculator](#emissions-calculator-window)
 - [Notes](#notes)
-- [Contact/License](#license)
+- [Contact/License](#contact--license)
 
 
 ## [Introduction](#introduction)

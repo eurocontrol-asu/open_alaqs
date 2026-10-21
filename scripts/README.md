@@ -114,10 +114,11 @@ Two small post-migration steps tied to the point-sources v2 schema:
 1. INSERT-OR-IGNOREs three named temporal profiles (`heating_season`,
    `cooling_season`, `business_hours`) into each of
    `user_month_profile`, `user_day_profile`, `user_hour_profile`.
-   These three profiles are shipped in the canonical templates
-   (`open_alaqs/core/templates/{project,inventory}.alaqs`) so new
-   studies inherit them automatically. The Phase 3 INSERT-OR-IGNORE
-   step backfills them into legacy studies migrated through Phase 1.
+   The `user_*_profile` tables of the canonical templates
+   (`open_alaqs/core/templates/{project,inventory}.alaqs`) ship empty, so
+   a new study does not have these profiles; the Phase 3
+   INSERT-OR-IGNORE step adds them to every study migrated with this
+   script.
    The user's existing custom profiles (e.g. `parking`, `roadways`)
    are never modified. Idempotent on `profile_name`; running Phase 3
    on an already-migrated study is a no-op.

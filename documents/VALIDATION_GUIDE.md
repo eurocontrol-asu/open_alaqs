@@ -69,8 +69,10 @@ example/training/training_validation_reference.xlsx reference NOx, CO, HC, PM, S
 ### Procedure (QGIS)
 
 1. Open QGIS 3.40 with the Open-ALAQS plugin installed from the package.
-2. Project → Open → `example/training/training.alaqs`.
-3. Open-ALAQS Toolbar → *Generate Emissions Inventory* with the settings of
+2. Open `example/training/training.alaqs` with the plugin's toolbar button
+ *Load an Open ALAQS project* (QGIS Project → Open does not open an `.alaqs`).
+3. Open-ALAQS Toolbar → *Calculate Emissions Inventory* (window *Generate
+ Emission Inventory*) with the settings of
  `documents/TEST_CASE_STUDY.md`: `training_movements.csv` for movements,
  `training_meteo.csv` for meteorology, `training_ads_b_data.csv` as ADS-B
  table, grid 100 x 100 x 20 cells of 250 x 250 x 50 m. Save as
@@ -79,7 +81,11 @@ example/training/training_validation_reference.xlsx reference NOx, CO, HC, PM, S
  `QT_QPA_PLATFORM=offscreen python3.12 tools/test_fixtures/rebuild_training_example_inventory.py --out example/training/training_out_REBUILT.alaqs`.)
 4. Open-ALAQS Toolbar → *Visualize Emission Calculation* on `training_out_REBUILT.alaqs`.
  Method: **bymode** (default). NOx ambient correction: **off** (default).
-5. Export the per-movement table to CSV (table output, *Export CSV*).
+ Emission Source Type: **MovementSource**. In the **Output Formats** tab,
+ set the Emissions table *Output view type* to **by source** (the default,
+ *by aggregation*, gives one total row; *by source* gives the rows of each
+ movement, which the reviewer sums by `source_name`).
+5. Click *View Emissions Table* and export it with *Export CSV*.
 
 ### Outputs to send
 
@@ -249,11 +255,15 @@ expected is bit-identity against the prior validated build.
 ### Procedure (QGIS)
 
 1. Open QGIS 3.40 with the **new** plugin installed.
-2. Project → Open → `<campaign_study>.alaqs`.
-3. Open-ALAQS Toolbar → *Visualize Emission Calculation*. Run for the inventory year
+2. Open `<campaign_study>.alaqs` with the plugin's toolbar button *Load an
+ Open ALAQS project*.
+3. Open-ALAQS Toolbar → *Visualize Emission Calculation* on the study's
+ inventory (`*_out.alaqs`). Run for the inventory year
  declared in `user_study_setup`. Method as previously validated
  (typically `bymode`).
-4. Export the per-movement table to CSV (table output, *Export CSV*).
+4. Export the per-movement table to CSV: Emission Source Type
+ **MovementSource**, Emissions table *Output view type* **by source**,
+ *View Emissions Table*, *Export CSV*.
 
 ### Outputs to send
 
@@ -487,7 +497,7 @@ in `AUSTALOutputModule.py`.
 AttributeError: 'Aircraft' object has no attribute 'getStartEmissions'.
 Did you mean: 'getApuEmissions'?
 ```
-at `MovementEmissionCalculator.__init__` line ~237.
+in `TaxiingEmissionCalculator.__init__` (`MovementEmissionCalculator.py`), where it reads `self._aircraft.getStartEmissions()`.
 
 **Root cause**: `MovementEmissionCalculator.py` calls
 `self._aircraft.getStartEmissions()` (aircraft-keyed start emissions,
@@ -511,11 +521,11 @@ without the other breaks the plugin.
 
 **Symptom**: the plugin's helicopter feature emits zero (or duplicate)
 emissions; `default_aircraft.csv` has more rows than the expected 1919
-(post-refactor count: the 60 helicopters were extracted to their own
-table).
+(post-refactor count: 61 helicopter rows were removed, 1980 to 1919).
 
-**Root cause**: 60 helicopter rows were moved out of
-`default_aircraft.csv` and into `default_helicopter.csv` as part of
+**Root cause**: 61 helicopter rows were removed from
+`default_aircraft.csv`, and `default_helicopter.csv` (60 rows, with
+variants per type; not a one-to-one move) was added, as part of
 the FOCA 2015 helicopter dispatch refactor introduced in the 5.2.0
 release. A rebuild that uses an upstream `default_aircraft.csv` from
 before that refactor (instead of the current canonical version)
@@ -604,7 +614,9 @@ build doesn't include them, sub-class symptoms will show up:
 
 ### 7. recipe_config.json parameter coverage
 
-The Dataiku recipe parses `recipe_config.json` via `_resolve_config(...)`.
+The Dataiku recipe parses `recipe_config.json` via its `_resolve_config(...)`
+(in the recipe file `openalaqs_standalone_recipe.txt` of the Dataiku update
+package, not in this repository).
 A parameter that exists in the CLI but is not in `_resolve_config` will be
 silently ignored when set via the JSON. This happened with
 `apply_nox_corrections` (CLI accepted it, JSON did not). The current

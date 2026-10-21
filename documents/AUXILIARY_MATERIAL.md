@@ -1,9 +1,9 @@
 # OpenALAQS User Guide - Auxiliary Material
 
 ## [Table of Contents](#table-of-contents)
-- [OpenALAQS Database](#OpenALAQS-database)
+- [OpenALAQS Database](#openalaqs-database)
   - [Aircraft and airport data](#aircraft-and-airport-data)
-  - [Emissions factors](#emission-factors)
+  - [Emissions factors](#emissions-factors)
     - [Aircraft emissions](#aircraft-emissions)
     - [Non-aircraft emissions](#non-aircraft-emissions)
 - [ANP](#anp)
@@ -14,10 +14,10 @@
 - [COPERT](#copert)
 - [Smooth and Shift](#smooth-and-shift)
 
-## [OpenALAQS Database](#OpenALAQS-database)
+## [OpenALAQS Database](#openalaqs-database)
 [(Back to top)](#table-of-contents)
 
-The internal [`OpenALAQS database`](./../open_alaqs/database/data/) contains default emission factors for all airport sources. When the user creates a new study, these files are copied to the new `.alaqs` file. If the user has access to more up-to-date information, they can update the default data as described in the [`README`](./../README.md#updating-the-open-alaqs-database-templates) file.
+The internal [`OpenALAQS database`](./../open_alaqs/database/data/) contains default emission factors for all airport sources. When the user creates a new study, these files are copied to the new `.alaqs` file. The study keeps its copy: a study made with an older version keeps the older tables until they are refreshed (see [Upgrading from 5.3.x](USER_GUIDE.md#upgrading-from-53x)). If the user has access to more up-to-date information, they can update the default data as described in the [`README`](./../README.md#updating-the-open-alaqs-database-templates) file.
 
 Alternatively, OpenALAQS files can be easily viewed and edited with [`DB Browser for SQLite`](https://sqlitebrowser.org/) an open source tool designed for manipulating SQLite database files.
 
@@ -27,7 +27,7 @@ The internal database contains an extensive list of aircraft (see [`default_airc
 
 A list of airports is also available (see [`default_airports`](./../open_alaqs/database/data/default_airports.csv)) with information on their location and elevation (feet above mean sea level).
 
-### [Emissions factors](#emission-factors)
+### [Emissions factors](#emissions-factors)
 
 #### Aircraft emissions
 
@@ -129,7 +129,7 @@ Segments more than 3000 ft above the aerodrome enter the calculation only in hou
 | 1 | APU running at gate/stand only |
 | 2 | APU running during full taxi |
 
-**MES (Main Engine Start) emissions** are given in [`default_aircraft_start_ef`](./../open_alaqs/database/data/default_aircraft_start_ef.csv) per aircraft group. The stored values (unit `gram/aircraft` in the CSV) are applied once per engine started: all engines by default, split between the single-engine-taxi engines and the others when a main-engine-start time is set (`open_alaqs/core/MovementEmissionCalculator.py:656-658, 663-685`). MES emissions are calculated for departure movements only. Whether MES emissions are included is controlled by the `gate_emissions_code` field in the movements table:
+**MES (Main Engine Start) emissions** are given in [`default_aircraft_start_ef`](./../open_alaqs/database/data/default_aircraft_start_ef.csv) per aircraft group. The stored values (unit `gram/aircraft` in the CSV) are applied once per engine started: all engines by default, split between the single-engine-taxi engines and the others when a main-engine-start time is set (`TaxiingEmissionCalculator._do_apply_single_engine_taxiing_emissions` for the single-engine-taxi engines, `TaxiingEmissionCalculator._apply_start_engine_emissions` for the others, in `open_alaqs/core/MovementEmissionCalculator.py`). MES emissions are calculated for departure movements only. Whether MES emissions are included is controlled by the `gate_emissions_code` field in the movements table:
 
 | `gate_emissions_code` | Meaning |
 |---|---|
@@ -159,7 +159,7 @@ Two profile types are supported:
 
 **ADS-B / CUSTOM profiles** (`course = CUSTOM`): coordinates are geodesic East/North offsets (in metres) from the runway intersection. These are generated from ADS-B recordings and represent the actual flown trajectory. The `fuel_flow_kgm` column, if populated, contains the estimated total-aircraft ambient fuel flow in kg/s for use by the BFFM2 method. Before BFFM2 uses this value, it divides by the engine count to obtain a per-engine estimate. If the per-engine estimate exceeds 1.5 × the EEDB takeoff fuel flow, the segment uses the EEDB fuel flow of its mode and a warning is logged.
 
-> **Note:** The standard test case files (`training.alaqs`, `training_out.alaqs`) use only standard ANP profiles. ADS-B / CUSTOM profile support is available but requires the user to populate `default_aircraft_profiles` with custom entries before use.
+> **Note:** In the training example, movement 11 flies the CUSTOM profile `1764584438_PHBBA`, imported from `example/training/training_ads_b_data.csv` into `training_out.alaqs` when the inventory is generated; the other movements use standard ANP profiles. CUSTOM profiles come from an ADS-B file given in the **ADS-B Table** field of the inventory dialog, or from rows added to `default_aircraft_profiles`.
 
 <img src="./../open_alaqs/assets/anp_profiles_example.png" alt="Aircraft trajectories" width="70%">
 

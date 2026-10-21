@@ -17,7 +17,7 @@
 
   "_comment_section_method": "------- Aircraft emission method + NOx ambient correction -------",
   "aircraft_method":           "bymode",
-  "_aircraft_method":          "One of: bymode, bffm2_anchor, bffm2_traj. Only effective when include_aircraft=true. bymode = EEDB mode-anchor EI (bit-identical to QGIS plugin). bffm2_anchor = BFFM2 EI at mode-anchor fuel flow. bffm2_traj = BFFM2 EI with per-segment trajectory fuel flow.",
+  "_aircraft_method":          "One of: bymode, bffm2_anchor, bffm2_traj. Only effective when include_aircraft=true. bymode = EEDB mode-anchor EI (agrees with the QGIS plugin to 5e-11 per movement on the bundled training studies). bffm2_anchor = BFFM2 EI at mode-anchor fuel flow. bffm2_traj = BFFM2 EI with per-segment trajectory fuel flow.",
   "use_isa_meteo":             false,
   "_use_isa_meteo":            "true = force ISA (288.15 K, 101325 Pa, RH 0.6) for the BFFM2 ambient correction. false = use tbl_InvMeteo (matches QGIS plugin output). Ignored when aircraft_method=bymode and for helicopter movements.",
   "apply_nox_corrections":     false,

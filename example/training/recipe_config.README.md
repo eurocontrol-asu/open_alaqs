@@ -10,9 +10,9 @@ study live alongside the data rather than in a CLI history.
 - `recipe_config.minimal.json` - a short, real example (the 6 most common
  parameters). Copy this, rename to `recipe_config.json`, edit values, drop
  alongside your `.alaqs`. Done.
-- `recipe_config.example.json` - every parameter the orchestrator
- understands, with each parameter's value followed by a `_<name>`
- documentation key explaining what it does. The `_`-prefixed keys are
+- `recipe_config.example.json` - the parameters of the CLI table below
+ plus `alaqs_filename` and `clear_output_folders`, with each parameter's
+ value followed by a `_<name>` documentation key explaining what it does. The `_`-prefixed keys are
  documentation only; they are ignored at runtime. Use this as a reference,
  then copy the lines you actually want into your real `recipe_config.json`.
 
@@ -47,7 +47,9 @@ with `--method` and `--isa-meteo` in place of `--aircraft-method` and
 | `grid_step` | `--grid-step` (DEPRECATED) |
 
 The `austal` flag `--grid-writer-mode` (default `hybrid`) has no key in
-this file.
+this file. The Dataiku recipe of the Dataiku update package reads three
+more keys that are not in it: `grid_writer_mode`, `tag_outputs` and
+`alaqs_names` (the last two are described in the recipe's header).
 
 Two keys have no CLI equivalent and are honoured only by external
 orchestrators that manage their own input / output staging:

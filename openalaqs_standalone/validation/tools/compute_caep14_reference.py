@@ -771,12 +771,11 @@ def _get_meteo_at(conn, runway_time: str, use_isa: bool = True) -> dict:
 
     Two modes:
       - use_isa=True (default): return ISA conditions (288.15 K, 1013.25 hPa,
-        RH=0.6).  This matches the plugin's current emission-calc output,
-        which was generated with ISA conditions rather than the loaded
-        meteo (see the validation notes for plugin behaviour).
+        RH=0.6), as in the 5.2.0 plugin exports.
       - use_isa=False: look up the meteo row whose DateTime is the closest
-        bucket <= runway_time (matches the plugin's intended meteo lookup
-        per EmissionCalculation.getAmbientCondition).
+        bucket <= runway_time, as the plugin does
+        (EmissionCalculation.getAmbientCondition); this matches the pinned
+        plugin outputs.
     """
     if use_isa:
         return {
@@ -888,10 +887,11 @@ def compute_for_movement(
 ) -> Optional[dict]:
     """Dispatch on method and aircraft type.
 
-    use_isa_meteo: when True (default), BFFM2 ambient corrections use ISA
-        conditions, matching the plugin's actual emission CSV output.  Set
-        to False to use the meteo loaded into tbl_InvMeteo (the plugin's
-        documented but currently un-applied behaviour).
+    use_isa_meteo: when True (default), the ambient conditions (BFFM2
+        corrections, the NOx correction and the MEEM V1 delta T) are ISA,
+        as in the 5.2.0 plugin exports.  The plugin applies the meteo
+        loaded into tbl_InvMeteo: set to False (CLI --use-meteo) to use it
+        and match the plugin's emission CSV output.
     apply_nox_corrections: bymode only, the ICCAIA ambient NOx correction on
         take-off and climb-out segments (`_nox_ambient_factor`).
     """
