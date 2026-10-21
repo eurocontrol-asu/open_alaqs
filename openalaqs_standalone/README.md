@@ -401,8 +401,9 @@ of the standard AUSTAL 3.3 settings; it is defined in the
 AUSTAL installation with that copy before running AUSTAL on these
 inputs (see `documents/AUSTAL/AUSTAL.md`).
 
-These lowercase labels are what `austal_prep` maps to AUSTAL's `pm-1`
-(PM2.5) and `pm-2` (PM10) on output.
+`austal_prep` writes pm10 as two AUSTAL components, `pm-1` (the fine
+fraction, `pm10_fine_fraction`) and `pm-2` (the rest), which AUSTAL sums
+into substance `pm`; pm25 is written as `pm25-1` (substance `pm25`).
 
 ### Emission factor columns (stationary)
 

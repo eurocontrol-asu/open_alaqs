@@ -429,8 +429,8 @@ The file `training_movements.csv` (semicolon-delimited) defines the 13 aircraft 
 
 Key observations:
 
-- **Aircraft mix.** Two ICAO types: A20N (Airbus A320neo, JET SMALL, 8 movements) and E190 (Embraer ERJ-190, JET REGIONAL, 5 movements). Each is paired with its default engine: `01P20CM128` (CFM LEAP-1A26) and `11GE144` (CF34-10E) respectively.
-- **Profile mix.** Twelve movements use standard ANP profiles (`JET-SMALL-A-1`, `JET-SMALL-D-1`, `JET-REGIONAL-A-1`, `JET-REGIONAL-D-1`). Row 11 uses the CUSTOM ADS-B profile `1764584438_PHBBA` — same A20N aircraft, but the trajectory is overridden by the CUSTOM points from `default_aircraft_profiles`.
+- **Aircraft mix.** Two ICAO types: A20N (Airbus A320neo, JET SMALL, 8 movements) and E190 (Embraer ERJ-190, JET REGIONAL, 5 movements). The A20N flies its default engine `01P20CM128` (CFM LEAP-1A26). The E190 flies `11GE144` (CF34-10E), set in `engine_name`; its default in `default_aircraft` is `EEA-J10`.
+- **Profile mix.** Twelve movements use standard ANP profiles (`JET-SMALL-A-1`, `JET-SMALL-D-1`, `JET-REGIONAL-A-1`, `JET-REGIONAL-D-1`). Row 11 uses the CUSTOM ADS-B profile `1764584438_PHBBA`: same A20N aircraft, but the trajectory is overridden by the CUSTOM points from `default_aircraft_profiles`.
 - **Operation split.** 7 arrivals, 6 departures, distributed across the three days. Each day's activity is clustered in the early-morning hours.
 - **Runway direction.** Most movements use runway 24; three rows (6, 8, 13) use runway 06.
 - **APU and gate emissions suppressed.** All 13 rows have `apu_code = 0` and `gate_emissions_code = 0`, so APU and gate (GSE/GPU/MES) emissions are excluded in this study. This isolates the aircraft trajectory contribution for comparison against the bymode/BFFM2 methodology output.
@@ -500,7 +500,7 @@ Click **Visualize Emission Calculation** in the toolbar and browse to `training_
 1. **Parking CO emissions**: select *ParkingSource* from the source dropdown, choose CO as the pollutant. Click **View Emissions Table** to see the 0.1248 kg CO for the 06:00–07:00 interval. Then click **Plot Vector Layer** to see the spatial distribution on the grid.
 
 2. **Movement NOx by method**: select *MovementSource*, NOx. Run with **ByMode** and export the CSV. Re-run with **BFFM2** and export again. Compare the total NOx:
-   - ByMode gives higher NOx for departures (BFFM2: 50 % less on the six departures).
+   - ByMode gives higher NOx for departures (BFFM2: 45 % less on the six departures, 33 to 61 % per movement).
    - BFFM2 gives 29 % less NOx for the arrivals (2 to 50 % per movement).
    - BFFM2 gives 8 % more CO for the arrivals (1 to 18 % per movement).
 

@@ -135,7 +135,8 @@ PYTHONPATH=. python3 openalaqs_standalone/validation/tools/regenerate_training_v
 On that inventory the plugin and the reference agree to 3e-13 on every
 movement for `bymode` and `bffm2_anchor` and on the ANP movements for
 `bffm2_traj`; movement 11 (CUSTOM) differs by 4e-6 on `bffm2_traj`, and the
-NOx-corrected run by 3e-6 on movements 10 and 11. (With the
+NOx-corrected run by 1e-6 to 3e-6 on the six departures (largest on
+movements 10 and 11). (With the
 200 m-tall grid the example carried before October 2026, 40 x 40 x 20
 cells of 10 m, the ANP movements agreed to 4e-6 only; the gap went with
 the grid.) `compare_inventory_to_reference.py <csv> --method=...`
@@ -428,7 +429,7 @@ HC 7 to 9 %, PM10 2 to 4 %, `bymode`). They were re-exported with `tools/regener
 (the plugin's `EmissionCalculatorService`, the code path of the QGIS
 dialog, run without a display), and the comparison is now 0.00 % on 15 of
 15 movements for the three methods with `--use-meteo` (movement 11,
-CUSTOM, +0.01 % on `bffm2_traj`). The run with the ICCAIA NOx ambient
+CUSTOM, +0.0013 % on `bffm2_traj`). The run with the ICCAIA NOx ambient
 correction (`training_movements_bymode_nox_corr.csv`) and the
 stationary-source rows (`training_sources_bymode.csv`) were re-exported the
 same way; the workbook `data/training_validation_reference.xlsx` was rebuilt
@@ -518,7 +519,7 @@ two more LibreOffice recalculations of the sheet (11GE144, ΔT −5.1825 K and
 pinned outputs are unchanged. On `example/training/training_out.alaqs`
 (1500 m mixing height on 2 December, 283 K at −5 m: ΔT −5.18 K) plugin,
 reference and standalone agree as before the change (`bymode` and
-`bffm2_anchor` 2e-13 / 5e-11, `bffm2_traj` 4.4e-5 on movement 11, the NOx
+`bffm2_anchor` 2e-13 / 5e-11, `bffm2_traj` 4e-6 on movement 11, the NOx
 correction run 3e-6); this check is not part of the test suite.
 
 The engine table now carries `press_ratio` and the 5th nvPM point from the

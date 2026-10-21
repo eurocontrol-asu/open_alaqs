@@ -93,7 +93,10 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   have no twin in the table (08P28CM141 to 08P28CM156, 08P28RR154 to
   08P28RR163, EEA-J9, EEA-J10; 112 rows, composed as the other ACT_PRF
   rows, OPR and 5th nvPM point from ACT_PRF), so 1065 engines; with them
-  890 jet engines carry an OPR. The other 48 ACT_PRF engines missing from
+  890 jet engines carry an OPR. EEA-J9 has no PM data in ACT_PRF (all PM
+  values 0 there) and is kept as in the source: its PM10, nvPM and
+  sulphate PM are 0, so a study that uses it reports no PM for it (no
+  default aircraft uses it). The other 48 ACT_PRF engines missing from
   the table duplicate rows under other ids (FOCA-n, EEA-*, 01P21RR124) or,
   for EEA-J6, differ from 1RR016 only by a zero nvPM, and are not added.
   E190's default engine is now EEA-J10 (ACT_PRF "E190-A"; was 11GE144) in
@@ -199,8 +202,8 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   MSL, CL): nvPM EI 1.235 to 1.524 mg/kg (A20N, id 6) and 53.30 to
   66.64 mg/kg (E190, id 8); `bymode` pm10_nonvol +1.24 % and +1.69 %, pm10
   +0.031 % and +0.81 %; 13-movement totals pm10_nonvol 31.456 to 31.724 g
-  (+0.85 %), pm10 321.741 to 322.010 g (+0.084 %) (BFFM2 trajectory: +0.77 %
-  and +0.061 %). `training_v3`, AIRPORT_A and ANP references: no change
+  (+0.85 %), pm10 321.741 to 322.010 g (+0.084 %) (BFFM2 trajectory: +0.76 %
+  and +0.060 %). `training_v3`, AIRPORT_A and ANP references: no change
   (no segment above 3000 ft).
 - `nvpm_number_ei` of `default_aircraft_engine_ei` held the ACT_PRF
   nvPM number rate of the mode (#/s) while the code
@@ -232,7 +235,7 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   3000 ft only. Training example (283 K at −5 m, ΔT −5.18 K, with the OPR
   above): `bymode` pm10_nonvol id 6 +0.86 %, id 8 −0.20 %, 13-movement
   totals pm10_nonvol 31.724 to 31.695 g (−0.09 %), pm10 322.010 to
-  321.981 g (−0.009 %); BFFM2 trajectory pm10 285.444 to 285.425 g. The
+  321.981 g (−0.009 %); BFFM2 trajectory pm10 291.630 to 291.611 g. The
   OPR alone moves pm10 by less than 1e-5. `training_v3`: no change.
 - Plugin: the ICCAIA NOx ambient correction (bymode, "Apply NOx
   corrections") was applied to every flight segment, approach included;
@@ -276,10 +279,15 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   51.96 / 4.44 and elevation 0 instead of 51.9574278 / 4.4417028 and −5 m,
   no `custom_hourly` profile) on a 40 x 40 x 20 grid of 10 m layers (200 m
   high); the tutorial's grid is 100 x 100 x 20 of 50 m. **Example results
-  change** (bymode CO2 of the 13 movements 5285 → 7693 kg: 5285 → 5915 kg
-  from the airport position and the PHBBA track on the old grid, 5915 →
-  7693 kg from the tutorial's larger grid);
+  change** (bymode CO2 of the 13 movements, with this release's code: 5291 kg
+  on the old inventory, 7703 kg on the rebuilt one, from the airport
+  position, the PHBBA track and the tutorial's larger grid);
   `example/training/training_validation_reference.xlsx` is rebuilt.
+- Tutorial study `example/training/training.alaqs` migrated to the current
+  project schema with `scripts/migrate_alaqs.py` (`engine_test_events`,
+  `shapes_area_sources.is_test_site`, and the three named point-source
+  profiles the other bundled studies carry), so the "Engine Test Site" flag
+  can be set and saved in the tutorial. No other table changes.
 - Validation fixtures `training_v3*.alaqs` and `tests/data/AIRPORT_A/AIRPORT_A.alaqs`
   migrated to the current schema (`touchdown_2`, `engine_test_events`,
   `is_test_site`, ...; runway `capacity` dropped) and reference data

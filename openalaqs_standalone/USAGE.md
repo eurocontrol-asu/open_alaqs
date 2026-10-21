@@ -166,7 +166,7 @@ inputs/
 The pair `sources.parquet` + `emissions.parquet` is the input contract that
 the sibling `austal_prep` package consumes to produce
 `austal.txt` + `series.dmna` + per-source grid files for an actual AUSTAL run.
-That step is documented in the `austal_prep` README.
+That step is `python -m austal_prep` (see `python -m austal_prep --help` and the docstring of `austal_prep/__init__.py`).
 
 ## Selecting the emission method
 
@@ -438,6 +438,6 @@ movement.
 methods (which include their own ambient correction) and for helicopter
 movements.
 
-**Output `emissions.parquet` is empty** — usually means `instudy='N'`
+**Output `emissions.parquet` is empty**: usually means `instudy` is not `'1'` (for example `'0'`)
 on every source, or a time window with no movements. Run with `--year`
 only first to confirm the study has emissions, then narrow.

@@ -26,9 +26,12 @@ cd C:\path\to\openalaqs   # the directory containing scripts/, open_alaqs/, etc.
 python-qgis scripts\emissions_austal\run_emissions_austal.py "C:\path\to\my_config.txt" --csv --geojson --austal --timing
 ```
 
-The script imports the Open-ALAQS plugin code via the `open_alaqs/`
-subdirectory in the same repo, or via the QGIS user-plugin install if
-the plugin is also installed via Plugin Manager.
+The script looks for the Open-ALAQS plugin code in this order: an
+`open_alaqs/` folder next to the repository folder (three levels above the
+script, as in a QGIS plugins directory), the `open_alaqs/` subdirectory of
+this repository, then the QGIS user-plugin install. From a git checkout,
+make sure the folder that contains the checkout has no other `open_alaqs`
+directory, or the script imports that one first.
 
 ## Advanced: Alternative Execution Methods
 
