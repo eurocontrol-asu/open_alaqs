@@ -4,29 +4,33 @@
 
 [general]
 name=open_alaqs
-qgisMinimumVersion=3.0
+qgisMinimumVersion=3.34
 qgisMaximumVersion=4.99
 supportsQt6=True
 description=An open-source local air quality model
 
-version=5.3.6
+version=5.4.0
 author=Eurocontrol
 email=open-alaqs@eurocontrol.int
 
 about=The main objective of Open-ALAQS is to provide a four-dimensional emissions inventory for an airport in which the emissions from the various fixed and mobile sources are aggregated and subsequently displayed for analysis.
 
-tracker=https://gitlab.aerlabs.nl/eurocontrol/open_alaqs/-/issues
-repository=https://gitlab.aerlabs.nl/eurocontrol/open_alaqs
+tracker=https://github.com/eurocontrol-asu/open_alaqs/issues
+repository=https://github.com/eurocontrol-asu/open_alaqs
 # End of mandatory metadata
 
 # Recommended items:
 
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
-changelog=5.3.6
-    Aircraft profiles corrected against ANP v2.2; results change for movements without a profile_id and for the corrected profiles (see CHANGELOG.md).
-    Fixed: 47 missing ANP v2.2 type profiles restored (GIIB, HS748A and PA30 had none); 757300-A-1 complete again; power of the CNT (%) aircraft is a thrust fraction (was a percentage divided by the static thrust), RPM aircraft have no power, values capped at 1.0; three groups of the wrong propulsion class corrected; ANP 2.1 profiles removed; pyarrow pinned below 26 (pyarrow 26 needs NumPy 2).
-    Changed: 658 aircraft types default to a type-specific ANP v2.2 profile instead of a group; BFFM2 trajectory rejects a supplied fuel flow only above 1.5 times the ICAO take-off value.
+changelog=5.4.0
+    Results change for many studies: read "Upgrading from 5.3.x" in the user guide before recalculating an existing study. Existing studies keep their own engine, aircraft and profile tables until they are refreshed.
+    Runway placement: arrivals touch down at the landing threshold plus the Touchdown Offset (set per runway end) and leave the runway at their taxi route's exit; departures line up where their taxi route meets the runway; the arrival taxi time no longer counts the landing roll.
+    Aircraft SOx from the fuel sulphur (0.758 g/kg jet fuel, 0.2 g/kg AvGas); it was 0.
+    MEEM V1 nvPM follows the CAEP14 sheet above 3000 ft above the aerodrome; BFFM2 uses the flight Mach number; the NOx ambient correction applies to take-off and climb-out only.
+    Engine table: 28 ACT_PRF engines added, OPR and 5th nvPM point for MEEM, nvPM number per kg, FOCA engines from ACT_PRF 2.6.3.
+    Forms: In Study and Engine Test Site are saved; numbers are read as QGIS saves them; studies in folders whose path holds "#", "?" or a percent sign work.
+    Standalone and AUSTAL preparation: same UTM zone as the plugin, AUSTAL configuration centred on the grid reference, receptors clipped to the study grid.
     See CHANGELOG.md for details.
 
 # Tags are comma separated with spaces allowed
@@ -46,7 +50,7 @@ deprecated=False
 # Check the documentation for more information.
 plugin_dependencies=qpip==1.2.0
 
-Category of the plugin: Raster, Vector, Database or Web
+# Category of the plugin: Raster, Vector, Database or Web
 # category=
 
 # If the plugin can run on QGIS Server.

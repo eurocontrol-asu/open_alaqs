@@ -92,4 +92,4 @@ run produces the combined stationary + aircraft AUSTAL input.
 """
 
 # Follows the OpenALAQS plugin release (open_alaqs/metadata.txt).
-__version__ = "5.3.6"
+__version__ = "5.4.0"
