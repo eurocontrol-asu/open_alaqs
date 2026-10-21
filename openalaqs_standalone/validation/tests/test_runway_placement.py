@@ -219,6 +219,17 @@ def test_truncate_after():
     )
 
 
+def test_truncate_after_on_a_profile_row_ends_there():
+    traj = _rollout()
+    # a cut exactly on the touchdown row ends at that row, without a duplicate
+    assert rp.truncate_after(traj, 0.0) == traj[:2]
+    # a cut on the last row keeps the profile
+    assert rp.truncate_after(traj, 1500.0) == traj
+    # rows sharing the cut distance are all kept, the last one ends the profile
+    step = traj[:2] + [(2, 0.0, 0.0, 0.0, 130 * rp.KT, "AP", "ANP"), traj[2]]
+    assert rp.truncate_after(step, 0.0) == step[:3]
+
+
 def test_stretch_time():
     kt = rp.KT
     # 737-800 at an exit 337 m past the rollout end, from 30 kt to 18 kt -> 2 L / (v_end + v_x) = 27.3 s
@@ -250,6 +261,13 @@ def test_split_taxi_time():
         and st / nat == pytest.approx(27.0 / 181.0)
     )
     assert rp.split_taxi_time(0.0, 181.0, 27.0) == (0.0, 0.0, 0.0)
+
+
+def test_split_taxi_time_negative_total_is_zero():
+    for route_s, stretch_s in [(100.0, 0.0), (100.0, 20.0), (0.0, 0.0)]:
+        parts = rp.split_taxi_time(-10.0, route_s, stretch_s)
+        assert parts == (0.0, 0.0, 0.0)
+        assert all(p >= 0.0 and str(p) != "-0.0" for p in parts)
 
 
 def test_rollout_duration():

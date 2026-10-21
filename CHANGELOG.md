@@ -502,6 +502,11 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   different line-up or exit crossing. The plugin now uses the route's flag
   too (the runway trajectory is cached per route); the movement's flag
   only when the route has none.
+- `runway_placement.split_taxi_time` counts a negative total taxi time as
+  0 s (it returned a negative route time; both callers already clamp, so
+  not reachable), and `truncate_after` with the cut exactly on a profile
+  row ends at that row instead of appending a duplicate end row (a 0 m
+  last segment). Bundled outputs unchanged.
 
 ### Removed
 
