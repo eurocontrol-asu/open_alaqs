@@ -543,6 +543,11 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   incompatible dtype is deprecated" (an error in a future pandas), plus a
   "Downcasting object dtype arrays on .fillna" warning. The columns are
   now object columns; no warning, bundled outputs byte-identical.
+- Standalone and `austal_prep` `make_config`, and `orchestrate`, stop
+  with a ValueError ("no reference point") when the study has neither a
+  grid reference (`grid_3d_definition` reference_latitude/longitude) nor
+  airport coordinates (`user_study_setup`); 5.3.6 silently used (0, 0)
+  and EPSG:32631. `orchestrate` stops even without a receptor CSV.
 
 ### Removed
 
