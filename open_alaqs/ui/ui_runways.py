@@ -259,13 +259,22 @@ def validate(fields: dict):
 
     # Validate all fields. The Touchdown Offsets may be empty (empty = the profile's own distance, for
     # each runway end independently); when filled they must be whole metres, as the touchdown and
-    # touchdown_2 columns are INT. A NULL offset (touchdown_2 added to a 5.3.6 study) is shown as the
-    # NULL representation ("NULL") and counts as empty.
+    # touchdown_2 columns are INT, and not negative (0, like empty, is the profile's own distance; the
+    # runway placement ignores a value <= 0). A NULL offset (touchdown_2 added to a 5.3.6 study) is
+    # shown as the NULL representation ("NULL") and counts as empty.
     results = [(fields["name_field"], validate_field(fields["name_field"], "str"))]
     for key in ("offset_field", "offset_2_field"):
         field = fields.get(key)
         if field is not None and not is_empty_text(field.text()):
-            results.append((field, validate_field(field, "int")))
+            value = validate_field(field, "int")
+            if not isinstance(value, bool) and value < 0:
+                color_ui_background(field, "red")
+                field.setToolTip(
+                    "The Touchdown Offset cannot be negative "
+                    "(0 or empty = the profile's own distance)"
+                )
+                value = False
+            results.append((field, value))
         elif field is not None:
             color_ui_background(field, None)
 

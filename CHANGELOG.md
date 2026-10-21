@@ -515,6 +515,10 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   as in the plugin; a movement that names a plain "06" gets the first
   runway of the table (was the last), as the plugin's name match does.
   The runway checks (`runway_checks`) use the same lookup.
+- Runway form: a negative Touchdown Offset was accepted, but the runway
+  placement ignores values of 0 or less and silently used the profile's
+  own touchdown distance. The form now rejects it (OK disabled); 0 or
+  empty still means the profile's own distance.
 
 ### Removed
 
