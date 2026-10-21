@@ -183,7 +183,7 @@ When adding a runway, the following information can be given:
 
 Both offsets are whole metres (the form accepts integers only).
 
-Draw the runway from threshold to threshold. For a displaced threshold, enter the displacement plus about 290 m.
+Draw the runway along the full pavement used for take-off (end to end): departures line up and start the take-off roll at the drawn end. The touchdown offset is measured from the drawn end: where the landing threshold is displaced, enter the displacement plus about 290 m; otherwise leave it empty (the profile's own 50 ft crossing, about 290 m).
 
 Each offset is measured from its own landing threshold, along the landing direction, and applies to that direction only: for the same touchdown on both ends, enter the value in both fields.
 

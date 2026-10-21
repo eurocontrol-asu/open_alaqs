@@ -21,8 +21,12 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   `pm10_nonvol` unchanged; `nvpm_number_ei` within 0.42 % (3 significant
   digits in the file); B004 and B134 get the file's sulphate (0.04896 g/kg)
   and organic vPM, which were 0 (`pm10_sul_kg` and `pm10_organic_kg` output
-  columns); B601, B602 and B603 keep 0, since the file's parts exceed its
-  PMtotal for them (B601 approach 1.6 times). `pm10_ei` is the FOCA total. No bundled movement uses them,
+  columns); for B601, B602 and B603 the file's parts do not sum to its
+  PMtotal (0.84 to 1.60 times, by mode), and they take the parts with
+  `pm10_ei` (and `p1_ei`, `p2_ei`) = nvPM + volatile + sulphate (B601
+  approach 0.24 to 0.385 g/kg, taxi 0.23 to 0.294; B602 taxi 0.35 to
+  0.295). For the other FOCA engines `pm10_ei` is the FOCA total (the file
+  has no parts for the pistons and turboprops). No bundled movement uses them,
   so no pinned output changes. In the CSV and the bundled `.alaqs` files.
 - `default_aircraft_engine_ei`: the FOCA turboprops T601, T602, T603, T717
   and T790 had `fuel_type` AvGas; they are now Jet Fuel, so `sox_ei`

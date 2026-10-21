@@ -248,21 +248,24 @@ def test_foca_engines_from_act_prf_2_6_3(ei):
 
 def test_foca_values():
     """B601 TO, B004 and P001 TX: rate / fuel of ACT_PRF 2.6.3 (CAEP14 FOCA,
-    2026-10-09). B004 and B134 take the file's sulphate and organic vPM
-    (their parts sum to PMtotal); B601 to B603 keep 0 (the file's parts
-    exceed PMtotal for them)."""
+    2026-10-09). B004, B134 and B601 to B603 take the file's sulphate and
+    organic vPM; PM10 (= p1 = p2) is the sum of the parts. For B004 and B134
+    that is the file's PMtotal; for B601 to B603 the file's parts do not sum
+    to its PMtotal and the sum of the parts is used."""
     ei = pd.read_csv(CSV).set_index(["engine_name", "mode"])
     b = ei.loc[("B601", "TO")]
     assert b.fuel_kg_sec == pytest.approx(0.121)
-    assert b.pm10_ei == pytest.approx(0.25, rel=1e-9)
-    for e in ("B601", "B602", "B603"):
+    assert b.pm10_ei == pytest.approx(0.11 + 0.092 + 0.04896, rel=1e-9)
+    # B601 AP: nvPM 0.06, volatile 1.15763e-5 / 0.042 kg/s, sulphate 0.04896
+    assert ei.loc[("B601", "AP")].pm10_ei == pytest.approx(
+        0.06 + 1.15763e-5 / 0.042 * 1000 + 0.04896, rel=1e-9
+    )
+    for e in ("B601", "B602", "B603", "B004", "B134"):
         g = ei.loc[e]
-        assert (g.pm10_sul == 0.0).all() and (g.pm10_organic == 0.0).all(), e
-    for e in ("B004", "B134"):
-        g = ei.loc[e]
-        assert (g.pm10_sul > 0).all(), e
+        assert (g.pm10_sul > 0).all() and (g.pm10_organic > 0).all(), e
         parts = g.pm10_nonvol + g.pm10_sul + g.pm10_organic
         assert ((parts - g.pm10_ei).abs() <= 1e-5 * g.pm10_ei).all(), e
+        assert (g.p1_ei == g.pm10_ei).all() and (g.p2_ei == g.pm10_ei).all(), e
     assert b.nvpm_number_ei == pytest.approx(8.83e13 / 0.121, rel=1e-9)
     p = ei.loc[("P001", "TX")]
     assert p.fuel_kg_sec == pytest.approx(0.0012)
