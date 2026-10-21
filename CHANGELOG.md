@@ -497,7 +497,9 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - Test fixtures `tests/data/AIRPORT_A/AIRPORT_A_out.alaqs` and
   `tests/data/ANP/ANP_out.alaqs` no longer carry runway trajectory caches
   (`cache_runway_trajectories`, `_v4`, `_v5`), and
-  `tests/test_emission_calculation.py` runs on copies of its studies, so a
+  `tests/test_emission_calculation.py` and
+  `tests/test_emission_calculator_service.py` run on copies of their
+  studies, so a
   test run no longer writes into tracked files nor reads a committed
   trajectory back (`tests/test_bundled_fixture_hygiene.py`).
 - `scripts/migrate_alaqs.py --drop-extra-columns` rebuilt the table from
