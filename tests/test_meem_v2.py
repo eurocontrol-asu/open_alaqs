@@ -258,3 +258,22 @@ class TestMEEMV2EngineWiring:
         assert default.getObject("nvpm_g_kg") == pytest.approx(
             v1.getObject("nvpm_g_kg"), rel=1e-12
         )
+
+    def test_engine_v2_without_fuel_flow_falls_back_to_v1(self, monkeypatch):
+        """MEEM V2 needs the fuel flow of every mode; with one missing the
+        version is reset to V1 inside the V2 block and the `else` branch
+        returns `_meem_v1` (that branch is reachable: removing it would
+        return the unscaled mode EI instead)."""
+        eei = self._build_engine()
+        eei.getObject("AP")["emission_index"].setObject("fuel_kg_sec", 0.0)
+        sentinel = object()
+        monkeypatch.setattr(eei, "_meem_v1", lambda *a, **k: sentinel)
+        got = eei.getEmissionIndexByModeWithMEEM(
+            "CL",
+            101325.0,
+            0.22834519,
+            power_setting=0.85,
+            altitude_m=77.1144,
+            meem_version="v2",
+        )
+        assert got is sentinel
