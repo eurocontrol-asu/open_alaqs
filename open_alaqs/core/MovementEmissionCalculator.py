@@ -357,14 +357,15 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                 self._total_taxiing_time = init_taxiing_time_from_segments
                 self._block_to_runway_time = self._total_taxiing_time
 
+            # A taxi time of 0 s skips only the route and queuing time (the segments get 0 s); APU,
+            # stop-and-go and brake wear are still counted, as in the standalone.
             if self._block_to_runway_time <= self.TAXIING_TIME_THRESHOLD:
                 logger.warning(
-                    "The movement '%s' has no taxi emissions: its taxi time is 0 s (block time equal to "
-                    "runway time, or no times and a taxi route without time)."
-                    % self._movement_name
+                    "The movement '%s': its taxi time is 0 s (block time equal to runway time, or no times "
+                    "and a taxi route without time), so there is no route or queuing time; APU, stop-and-go "
+                    "and brake wear are still counted." % self._movement_name
                 )
-                return emissions
-            if self._total_taxiing_time <= 0.0:
+            elif self._total_taxiing_time <= 0.0:
                 logger.warning(
                     "The arrival '%s': the block to runway time (%.0f s) is no longer than the landing roll "
                     "(%.0f s), so its taxi time is 0 s (no route or queuing time); APU, stop-and-go and "

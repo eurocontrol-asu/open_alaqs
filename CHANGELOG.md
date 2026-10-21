@@ -465,8 +465,7 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   roll got a taxi time of 0 s and lost all its taxi emissions (queuing,
   stop-and-go, APU, brake wear) with the warning "taxi route not defined
   properly". The plugin now keeps a 0 s taxi time and these emissions,
-  as the standalone does, with a warning naming the two times; only a
-  movement whose block time equals its runway time is still skipped.
+  as the standalone does, with a warning naming the two times.
 - Aircraft movements take the airport altitude (NOx ambient correction,
   MEEM V1 ISA temperature, LTO cut) from the study's airport elevation
   (`user_study_setup.airport_elevation`), as the standalone and the
@@ -485,6 +484,16 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   the point-source Category and Type then offered only the values already
   stored. The URI is now built with `Path.as_uri()` (Windows drive and UNC
   paths included).
+- **Results change** for studies with movements whose block time equals
+  their runway time: the plugin dropped all their taxi emissions (APU,
+  stop-and-go, brake wear) with "no taxi emissions", while the standalone
+  kept them (training_v3 movement 1 with block = runway time: PM10 0.0030
+  against 0.0320 kg). The plugin now keeps them. Rule (plugin and
+  standalone): the taxi time is |block time - runway time|, less the
+  landing roll for an arrival, not below 0 s; at 0 s the route segments
+  and the queue get no time, while APU, stop-and-go and brake wear are
+  counted as for any taxi time. A movement without a block time still
+  stops the calculation in both.
 
 ### Removed
 
