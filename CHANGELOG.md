@@ -512,8 +512,15 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   value (also the one Recalculate uses in parkings and roadways) is the
   saved one. Whole-number fields must also read as an integer with the
   locale (group separators as QGIS shows them, "20.000" German, "20,000"
-  English); "12.5", which QGIS would round, is rejected. Under an English
-  locale "30,3" is now read as 303, as QGIS saves it.
+  English); "12.5", which QGIS would round, is rejected.
+- Form number check, decimal separator (rc6 review F2): `convertCompatible`
+  falls back to the C locale, so under an English locale "30,3" passed the
+  check silently as 303 (which QGIS saves) and "1,5" as 15; under a German
+  locale "0.125" passed as 0.125 although the locale reads 125. The text
+  must now also read as the same number with the current locale
+  (`QLocale.toDouble`): otherwise the field is red and the tooltip names
+  the decimal separator of the locale ("use the decimal separator of your
+  locale (.)"). "30,3" stays 30.3 under a German, Dutch or French locale.
 - Runway form: a NULL Touchdown Offset (touchdown_2 is added as NULL when
   a 5.3.6 study is migrated), shown as "NULL", kept OK disabled ("Missing
   or invalid: Touchdown Offset, Runway 2 [m]"); it now counts as empty,
