@@ -924,7 +924,11 @@ def test_taxiway_form_has_no_time_field():
         ("20000", True, 20000),
         (None, True, None),
         ("30.3", False, 30.3),
-        ("30,3", False, 30.3),
+        # The test locale has English separators: QGIS saves "30,3" as 303
+        # (the comma is a group separator), so the check reads 303. The
+        # GH#159 comma decimal (30.3) holds under de/fr/nl
+        # (test_form_number_qgis_save_rule.py).
+        ("30,3", False, 303.0),
         ("1e3", False, 1000.0),
     ],
 )

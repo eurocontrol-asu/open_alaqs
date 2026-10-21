@@ -454,9 +454,21 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   so OSM commercial buildings are downloaded and imported.
 - Forms under a German or Dutch locale: a decimal such as "0.125" was
   read as 125 by the field check (the locale reads "." as a group
-  separator) while QGIS saves 0.125. Decimals are now read as QGIS saves
-  them (plain syntax first, then the locale), and the parking and roadway
-  Recalculate use the checked values (the fleet mix as "12,5" raised).
+  separator) while QGIS saves 0.125. Numbers are now read as QGIS saves
+  them (see the next entry), and the parking and roadway Recalculate use
+  the checked values (the fleet mix as "12,5" raised).
+- Form number check: it still fell back to the tolerant reading of
+  `convertToFloat` (and `int()`), so it accepted texts that QGIS saves
+  differently or as NULL: German "1,234.5" checked as 1234.5 and saved as
+  1.2345, French "1.234,5" and "1_000" saved as NULL, English "30,3"
+  checked as 30.3 and saved as 303, "nan" and "inf" stored as such. The
+  check now uses QGIS's own rule (`QgsField.convertCompatible`) and
+  disables OK when it fails or gives a non-finite value, so the checked
+  value (also the one Recalculate uses in parkings and roadways) is the
+  saved one. Whole-number fields must also read as an integer with the
+  locale (group separators as QGIS shows them, "20.000" German, "20,000"
+  English); "12.5", which QGIS would round, is rejected. Under an English
+  locale "30,3" is now read as 303, as QGIS saves it.
 - Runway form: a NULL Touchdown Offset (touchdown_2 is added as NULL when
   a 5.3.6 study is migrated), shown as "NULL", kept OK disabled ("Missing
   or invalid: Touchdown Offset, Runway 2 [m]"); it now counts as empty,
