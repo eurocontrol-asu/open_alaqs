@@ -41,3 +41,30 @@ def test_study_info_counts_the_movements(name):
         (info,) = conn.execute("SELECT study_info FROM user_study_setup").fetchone()
         (n,) = conn.execute("SELECT COUNT(*) FROM user_aircraft_movements").fetchone()
     assert f"{n} movements" in info
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "training_v3.alaqs",
+        "training_v3_gatemovements.alaqs",
+        "training_v3_multisource.alaqs",
+    ],
+)
+def test_no_unused_custom_profile(name):
+    # The unused CUSTOM track 1677686160_DIETB was removed; the profiles are
+    # those of the example inventory (which also has the two helicopter
+    # profiles).
+    example = DATA.parents[2] / "example" / "training" / "training_out.alaqs"
+    with sqlite3.connect(f"file:{example}?mode=ro", uri=True) as conn:
+        ref = {
+            r[0]
+            for r in conn.execute("SELECT profile_id FROM default_aircraft_profiles")
+        }
+    with _connect(name) as conn:
+        ids = {
+            r[0]
+            for r in conn.execute("SELECT profile_id FROM default_aircraft_profiles")
+        }
+    assert "1677686160_DIETB" not in ids
+    assert ids <= ref
