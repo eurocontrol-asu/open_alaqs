@@ -1,6 +1,6 @@
 import math
 import os
-from pathlib import Path, PurePath
+from pathlib import Path, PurePath, PureWindowsPath
 from typing import Optional
 
 from qgis.core import (
@@ -53,20 +53,40 @@ def is_null_value(value) -> bool:
     return is_empty_text(value)
 
 
+class NumberLocaleError(ValueError):
+    """The text is not a number for the current locale (the wrong decimal
+    separator), although QGIS would save a number from it."""
+
+    def __init__(self, text: str):
+        self.separator = QLocale().decimalPoint()
+        super().__init__(
+            f"{text!r} is not a number for the locale: use the decimal "
+            f"separator of your locale ({self.separator})"
+        )
+
+
 def parse_number(text: str, integer: bool, field=None):
     """Parse a number of a form line edit exactly as QGIS saves it, raising
     ValueError when QGIS would not save a number.
 
     QGIS saves the text of a line edit with QgsField.convertCompatible, so
     the check uses it too: decimals get the value QGIS stores, for example
-    "0.125" stays 0.125 and "30,3" is 30.3 under a German, Dutch or French
-    locale (GitHub #159), while "30,3" is 303 under an English locale (the
-    comma is the group separator there) and "1.234,5" (French) or "1_000"
-    are rejected (QGIS stores NULL). A result that is not finite ("nan",
-    "inf") is rejected. An integer must also read as a whole number with
-    the locale (QLocale.toLongLong, with the group separators QGIS shows,
-    "20,000" English or "20.000" German), to the same value: "12.5", which
-    QGIS would round, is rejected.
+    "30,3" is 30.3 under a German, Dutch or French locale (GitHub #159) and
+    "1.234,5" (French) or "1_000" are rejected (QGIS stores NULL). A result
+    that is not finite ("nan", "inf") is rejected.
+
+    The text must also be a number for the current locale (QLocale.toDouble
+    succeeds): convertCompatible falls back to the C locale, so "30,3" under
+    an English locale is saved as 303 (the comma is the group separator
+    there) and "30.3" under a German locale as 30.3, which the locale cannot
+    read. These are rejected with a NumberLocaleError naming the decimal
+    separator of the locale, instead of silently passing a value ten times
+    off. A text the locale reads differently from QGIS ("0.125" under a
+    German locale: 125 for the locale, 0.125 saved, GitHub #159) is
+    accepted with the saved value. An integer must likewise read as a whole
+    number with the locale (QLocale.toLongLong, with the group separators
+    QGIS shows, "20,000" English or "20.000" German), to the same value:
+    "12.5", which QGIS would round, is rejected.
 
     `field` is the layer's own numeric QgsField when the layer is known, so
     the check converts with the field QGIS saves with: on a study whose
@@ -94,6 +114,8 @@ def parse_number(text: str, integer: bool, field=None):
     value = float(value)
     if not math.isfinite(value):
         raise ValueError(f"{text!r} is not a finite number")
+    if not QLocale().toDouble(text)[1]:
+        raise NumberLocaleError(text)
     return value
 
 
@@ -163,9 +185,14 @@ def validate_field(ui_element, var_type, layer=None):
         color_ui_background(ui_element, None)
 
         return value
-    except Exception:
+    except Exception as exc:
         color_ui_background(ui_element, "red")
-        if var_type == "int":
+        if isinstance(exc, NumberLocaleError):
+            ui_element.setToolTip(
+                "This value should be a number: use the decimal separator "
+                f"of your locale ({exc.separator})"
+            )
+        elif var_type == "int":
             ui_element.setToolTip("This value should be a whole number")
         else:
             ui_element.setToolTip("This value should be a number")
@@ -299,7 +326,16 @@ def _sqlite_read_only_uri(path: PurePath) -> str:
     or escape. A Windows UNC path (as_uri gives "file://server/share/...")
     is written "file:////server/share/...": SQLite rejects a URI authority
     other than "localhost", and reads the path "//server/share/..." as UNC.
+    A Windows extended-length path (a "\\\\?\\" prefix, as Path.resolve gives
+    for a long path, or "\\\\?\\UNC\\server\\share\\...") is first stripped of
+    its prefix: as_uri would otherwise put the "?" in the authority.
     """
+    if isinstance(path, PureWindowsPath):
+        text = str(path)
+        if text.startswith("\\\\?\\UNC\\"):
+            path = PureWindowsPath("\\\\" + text[len("\\\\?\\UNC\\") :])
+        elif text.startswith("\\\\?\\"):
+            path = PureWindowsPath(text[len("\\\\?\\") :])
     uri = path.as_uri()
     if uri.startswith("file://") and not uri.startswith("file:///"):
         uri = "file:////" + uri[len("file://") :]

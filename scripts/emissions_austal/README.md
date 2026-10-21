@@ -202,8 +202,8 @@ Using AUSTAL/GeoJSON outputs in QGIS
   `example/training/training_out.alaqs` and is not rebuilt from it. It
   keeps the old airport position (51.96 N, 4.44 E, elevation 0 m), the old
   runway table (with `capacity`, `max_queue_speed`, `peak_queue_time`, no
-  `touchdown_2`), the old taxi routes (the runway 06 movements 6, 8 and 13
-  use runway 24 routes) and the E190 default engine 11GE144. Reference
+  `touchdown_2`) and the old taxi routes (the runway 06 movements 6, 8 and 13
+  use runway 24 routes). Reference
   data tables (`default_aircraft`, `default_aircraft_engine_ei`, etc.)
   are pruned to the demo's two aircraft; vehicle/road tables and
   helicopter EI are dropped. `default_aircraft_profiles` holds only

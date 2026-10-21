@@ -85,6 +85,17 @@ def test_missing_or_empty_path_gives_no_values(tmp_path):
             r"\\server\share\dir #2\s.alaqs",
             "file:////server/share/dir%20%232/s.alaqs?mode=ro",
         ),
+        # extended-length paths (Path.resolve on Windows gives them for long
+        # paths): the prefix is stripped, as_uri would put the "?" in the
+        # authority ("file://%3F/C%3A/...")
+        (
+            r"\\?\C:\Users\me\dir #2\training.alaqs",
+            "file:///C:/Users/me/dir%20%232/training.alaqs?mode=ro",
+        ),
+        (
+            r"\\?\UNC\server\share\dir #2\s.alaqs",
+            "file:////server/share/dir%20%232/s.alaqs?mode=ro",
+        ),
     ],
 )
 def test_windows_uris(path, uri):

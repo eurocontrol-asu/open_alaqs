@@ -164,6 +164,42 @@ class RunwayStore(Store, metaclass=Singleton):
     def getRunwayDatabase(self):
         return self._runway_db
 
+    @staticmethod
+    def normalisedEnd(direction) -> str:
+        """A runway end as written, normalised: two-digit number and the
+        L/C/R letter, upper case ("6l" is "06L", "24" is "24")."""
+        text = str(direction or "").strip().upper()
+        digits = "".join(ch for ch in text if ch.isdigit())
+        letters = "".join(ch for ch in text if ch.isalpha())
+        return f"{int(digits):02d}{letters}" if digits else text
+
+    def runwaysWithEnd(self, direction, by_number=False) -> list:
+        """The runways that have the runway end `direction` as one of their
+        named ends, as (store key, Runway, end as named in the runway table).
+
+        The match is on the full designator of the end: "24" is an end of
+        "06/24" but not of "06L/24R" (whose ends are "06L" and "24R"), so a
+        plain number on a study with parallel runways matches nothing and
+        a letter on a study without it neither. A single digit is padded
+        ("6" is "06") and the case is ignored ("6l" is "06L"). With
+        `by_number`, the ends are matched on their number only ("24" and
+        "24R" match the end "24R"), to name the runways a plain number is
+        ambiguous between.
+        """
+        wanted = self.normalisedEnd(direction)
+        if by_number:
+            wanted = "".join(ch for ch in wanted if ch.isdigit())
+        found = []
+        for key, runway in self.getObjects().items():
+            for end in runway.getDirections():
+                candidate = self.normalisedEnd(end)
+                if by_number:
+                    candidate = "".join(ch for ch in candidate if ch.isdigit())
+                if wanted and candidate == wanted:
+                    found.append((key, runway, end))
+                    break
+        return found
+
 
 class RunwayDatabase(SQLSerializable, metaclass=Singleton):
     """

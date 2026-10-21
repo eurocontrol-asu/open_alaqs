@@ -512,8 +512,7 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   value (also the one Recalculate uses in parkings and roadways) is the
   saved one. Whole-number fields must also read as an integer with the
   locale (group separators as QGIS shows them, "20.000" German, "20,000"
-  English); "12.5", which QGIS would round, is rejected. Under an English
-  locale "30,3" is now read as 303, as QGIS saves it.
+  English); "12.5", which QGIS would round, is rejected.
 - Decimals typed into the layer forms were rounded or stored as text: the
   numeric columns of the shapes layers (height, speed, distance,
   idle_time, temperature, diameter, velocity, the `*_percentage` columns,
@@ -542,6 +541,26 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   cells of `default_aircraft_engine_ei` now equal the CSVs exactly (up to
   1e-12 relative from the earlier values; the training studies carry their
   own tables and their results do not change).
+- Form number check, decimal separator (rc6 review F2): `convertCompatible`
+  falls back to the C locale, so under an English locale "30,3" passed the
+  check silently as 303 (which QGIS saves) and "1,5" as 15. A text that is
+  not a number for the current locale (`QLocale.toDouble` fails) is now
+  refused even when QGIS would save a number from it: the field is red and
+  the tooltip names the decimal separator of the locale ("use the decimal
+  separator of your locale (.)"). "30,3" stays 30.3 under a German, Dutch
+  or French locale, and "0.125" under a German locale stays 0.125 as QGIS
+  saves it (GitHub #159).
+- Form value lists on Windows: a study under an extended-length path
+  (`\\?\C:\...`, as `Path.resolve` gives for a long path, or
+  `\\?\UNC\server\share\...`) gave an SQLite URI with the "?" in the
+  authority, so the runway and profile lists of the forms were empty. The
+  prefix is now stripped before the URI is built.
+- Taxi route without segments (rc6 review M7): queuing, APU, engine start,
+  stop-and-go and brake wear are added to the last segment of the route,
+  so a route none of whose taxiways exists added nothing and the movement
+  lost them silently. They are now placed at the gate on a stand-in
+  segment of 0 m and 0 s, with a warning. Not reachable with the bundled
+  studies.
 - Runway form: a NULL Touchdown Offset (touchdown_2 is added as NULL when
   a 5.3.6 study is migrated), shown as "NULL", kept OK disabled ("Missing
   or invalid: Touchdown Offset, Runway 2 [m]"); it now counts as empty,
@@ -603,9 +622,24 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   both runways had the keys 6 and 24, the second row of `shapes_runways`
   won, and every movement was placed on it with its Touchdown Offsets.
   Runways are now keyed by the full designator (`movements.runway_of`),
-  as in the plugin; a movement that names a plain "06" gets the first
-  runway of the table (was the last), as the plugin's name match does.
-  The runway checks (`runway_checks`) use the same lookup.
+  as in the plugin. The runway checks (`runway_checks`) use the same
+  lookup.
+- **Results change**, parallel runways with a plain designator (rc6 review
+  F3): a movement naming a plain "24" on a study with 06L/24R and 06R/24L
+  was computed on the first runway by the standalone, and dropped silently
+  by the plugin (it matched the first runway whose name contained "24",
+  then "24" was not an end of it: "Could not find runway direction", the
+  movement absent from the results); a "24R" on a plain 06/24 study was
+  dropped silently by the plugin and fell back to 06/24 in the standalone.
+  Both now stop the calculation with an error naming the movement
+  ("movement id 1: A20N A 2025-12-01 06:05: runway '24' matches 06L/24R
+  and 06R/24L; name the runway end with its letter", or "matches no runway
+  end of the study"); in the plugin it is the "Calculation Failed" message
+  of the inventory dialog. Movements that were silently dropped now stop
+  the calculation until the runway is named fully. The ADS-B import's
+  runway lookup (`get_runway_by_direction`) gives no runway for an
+  ambiguous end instead of the first, and falls back to the closest track
+  point. The standalone's runway dict has no plain-number keys any more.
 - Runway form: a negative Touchdown Offset was accepted, but the runway
   placement ignores values of 0 or less and silently used the profile's
   own touchdown distance. The form now rejects it (OK disabled); 0 or
@@ -679,7 +713,7 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   (`AIRPORT_A_movements.csv`, row 12) and inventory use it.
 - Docs: `scripts/emissions_austal/README.md` describes the AUSTAL demo
   `sample_data/Inventory.alaqs` as it is (an early training inventory: old
-  airport position, runway table and routes, E190 11GE144, six movements
+  airport position, runway table and routes, six movements
   naming profiles absent from the file), not as derived from the current
   `training_out.alaqs`; `example/training/training_engine_test_events.README.md`
   no longer asks to migrate the training study, which ships with the

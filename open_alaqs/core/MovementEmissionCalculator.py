@@ -401,25 +401,44 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
 
             apu_t, apu_em = self._load_apu_info()
 
+            # A route without segments (none of its taxiways exists) has no route time, but queuing, APU,
+            # engine start, stop-and-go and brake wear are still counted: they are placed at the gate,
+            # on a single stand-in segment of 0 m and 0 s (the loop added them to the last segment, so a
+            # route without segments added nothing). Not reachable with the bundled studies.
+            segments = list(self._taxi_route.getSegments())
+            if not segments:
+                logger.warning(
+                    "The movement '%s': its taxi route '%s' has no segments, so there is no route time; "
+                    "queuing, APU, engine start, stop-and-go and brake wear are placed at the gate."
+                    % (self._movement_name, self._taxi_route.getName())
+                )
+                segments = [None]
+
             # Set the geometry as line with linear interpolation between start and endpoint
-            for index_segment_, taxiway_segment_ in enumerate(
-                self._taxi_route.getSegments()
-            ):
+            for index_segment_, taxiway_segment_ in enumerate(segments):
                 em_ = Emission(defaultValues=defaultEmissions)
-                em_.setGeometryText(taxiway_segment_.getGeometryText())
-
-                # Add emission factors,
-                # Multiply by occupancy time and number of engines
-
-                # If time spent in segments < taxiing time in movement table
-                if route_compressed:
-                    new_taxiway_segment_time = (
-                        taxiway_segment_.getLength() / taxiing_average_speed
+                if taxiway_segment_ is None:
+                    em_.setGeometryText(
+                        self._gate.getGeometryText() if self._gate is not None else None
                     )
+                    new_taxiway_segment_time = 0.0
+                    segment_length = 0.0
                 else:
-                    new_taxiway_segment_time = (
-                        taxiway_segment_.getLength() / taxiway_segment_.getSpeed()
-                    )
+                    em_.setGeometryText(taxiway_segment_.getGeometryText())
+                    segment_length = taxiway_segment_.getLength()
+
+                    # Add emission factors,
+                    # Multiply by occupancy time and number of engines
+
+                    # If time spent in segments < taxiing time in movement table
+                    if route_compressed:
+                        new_taxiway_segment_time = (
+                            taxiway_segment_.getLength() / taxiing_average_speed
+                        )
+                    else:
+                        new_taxiway_segment_time = (
+                            taxiway_segment_.getLength() / taxiway_segment_.getSpeed()
+                        )
 
                 taxiing_time_while_aircraft_moving += new_taxiway_segment_time
 
@@ -448,7 +467,7 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                 )
 
                 # Queuing emissions
-                if index_segment_ == len(self._taxi_route.getSegments()) - 1:
+                if index_segment_ == len(segments) - 1:
                     em_.add(emission_index_, queuing_time * number_of_engines)
 
                     # Stop & Go emissions
@@ -473,7 +492,7 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                     {
                         "emissions": [em_],
                         "distance_time": new_taxiway_segment_time + queuing_time,
-                        "distance_space": taxiway_segment_.getLength(),
+                        "distance_space": segment_length,
                     }
                 )
 

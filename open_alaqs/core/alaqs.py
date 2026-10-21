@@ -211,9 +211,11 @@ def get_runways() -> list[dict[str, Any]]:
 
 def get_runway_by_direction(runway_direction, runway_store=None):
     """
-    Gets a Runway object by direction.
-    Logs messages if multiple runways were found for the given direction of if the
-    Runway couldn't be found.
+    Gets a Runway object by the full designator of one of its ends ("24" of
+    "06/24", "24R" of "06L/24R"; see RunwayStore.runwaysWithEnd).
+    Logs a warning and returns no runway when no runway or several runways
+    (a plain "24" on a study with 06L/24R and 06R/24L) have that end; it
+    used to return the first of them.
 
     Args:
         runway_direction (str): Direction of the runway
@@ -222,27 +224,24 @@ def get_runway_by_direction(runway_direction, runway_store=None):
     Returns:
         Tuple[bool, Runway]: Whether a Runway was found along with the Runway object (or None).
     """
-    # Make sure runways are always 2 characters or more
-    runway_direction = runway_direction.zfill(2)
-
     if not runway_store:
         runway_store = RunwayStore(ProjectDatabase().path)
 
-    if runway_store.isinKey(runway_direction):
-        runway_found = [
-            runway
-            for runway in runway_store.getObjects().values()
-            if runway_direction in runway.getName()
-        ]
-        if len(runway_found) > 1:
-            logger.warning(
-                f"Runway {runway_direction} was found in the DB multiple times."
-            )
-        return True, runway_found[0]
-
+    found = runway_store.runwaysWithEnd(runway_direction)
+    if len(found) == 1:
+        return True, found[0][1]
+    if not found:  # the runways a plain number is ambiguous between
+        found = runway_store.runwaysWithEnd(runway_direction, by_number=True)
+        found = found if len(found) > 1 else []
+    if found:
+        logger.warning(
+            f"Runway '{runway_direction}' matches "
+            f"{' and '.join(runway.getName() for _, runway, _ in found)}; "
+            "name the runway end with its letter"
+        )
     else:
         logger.warning(f"Runway '{runway_direction}' wasn't found in the DB")
-        return False, None
+    return False, None
 
 
 # ############################

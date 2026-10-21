@@ -177,10 +177,11 @@ def test_get_runways_touchdown_columns(tmp_path):
         )
         c.commit()
         r = mv.get_runways(c)
-        d1, d2 = r[r[list(r)[0]]["directions"][0]]["directions"]
+        rwy = r[list(r)[0]]
+        d1, d2 = rwy["directions"]
         assert (
-            r[d1]["touchdown_offset_m"][d1],
-            r[d1]["touchdown_offset_m"][d2],
+            rwy["touchdown_offset_m"][d1],
+            rwy["touchdown_offset_m"][d2],
         ) == expect
 
 

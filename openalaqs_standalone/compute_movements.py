@@ -73,7 +73,7 @@ def build_context(conn) -> dict:
 
     Returns a dict with:
       runways         dict from `movements.get_runways`, mapping each
-                      runway-designator integer to its runway dict.
+                      runway end ("06L", "24") to its runway dict.
                       A single-runway study still produces a 2-key
                       dict; both keys point at the same runway.
       grid_bounds     the dict from `geometry.grid_bounds_3857`
@@ -93,7 +93,9 @@ def build_context(conn) -> dict:
     Multi-runway studies (a study with both 07/25 and 33/15 active) are supported
     by reading `runways` (plural) instead of a single `runway`.
     Single-runway studies are unaffected; the lookup
-    `ctx["runways"][mov["runway_direction"]]` works for both cases.
+    `movements.runway_of(ctx["runways"], mov)` (by the full designator of
+    the movement's runway end, refusing an ambiguous plain number on
+    parallel runways) works for both cases.
     """
     runways = _mv.get_runways(conn)
     gd = _mv.get_grid_definition(conn)

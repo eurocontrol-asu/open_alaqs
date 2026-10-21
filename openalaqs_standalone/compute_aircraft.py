@@ -465,7 +465,7 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         The movement dict from `movements.get_movement`.
     ctx
         Shared per-study context. Must carry:
-          ctx["runways"]       dict from movements.get_runways, keyed by direction
+          ctx["runways"]       dict from movements.get_runways, keyed by runway end
           ctx["grid_bounds"]   the dict from `geometry.grid_bounds_3857`
         and may carry:
           ctx["intersection_cache"]  a dict, populated lazily here, of
@@ -649,10 +649,11 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
     tx_fuel = nat_fuel + queue_fuel + stop_fuel
 
     # ---- Spatial setup ----
-    # Multi-runway: pick the runway this movement uses, keyed by the
-    # designator integer parsed from mov["runway"]. For a single-
-    # runway study ctx["runways"] still has every designator from the
-    # one runway as a key, so this lookup works for both cases.
+    # Multi-runway: pick the runway this movement uses, by the full
+    # designator of its runway end (mov["runway_designator"], "24R");
+    # `runway_of` refuses a plain "24" on parallel runways and a "24R"
+    # on a plain 06/24. For a single-runway study ctx["runways"] has
+    # both ends of the one runway as keys, so the lookup works for both.
     runway = mv.runway_of(ctx["runways"], mov)
     is_dep = mov["departure_arrival"] == "D"
 

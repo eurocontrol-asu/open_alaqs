@@ -924,11 +924,11 @@ def test_taxiway_form_has_no_time_field():
         ("20000", True, 20000),
         (None, True, None),
         ("30.3", False, 30.3),
-        # The test locale has English separators: QGIS saves "30,3" as 303
-        # (the comma is a group separator), so the check reads 303. The
-        # GH#159 comma decimal (30.3) holds under de/fr/nl
+        # The test locale has English separators: QGIS would save "30,3" as
+        # 303 (the comma is a group separator), so the check refuses it (rc6
+        # review F2). The GH#159 comma decimal (30.3) holds under de/fr/nl
         # (test_form_number_qgis_save_rule.py).
-        ("30,3", False, 303.0),
+        ("30,3", False, ValueError),
         ("1e3", False, 1000.0),
     ],
 )
@@ -940,6 +940,10 @@ def test_parse_number_accepts_the_form_display(text, integer, expected):
     if text is None:  # 20000 as QGIS shows it with the locale's separator
         text = QLocale().toString(20000)
         expected = 20000
+    if expected is ValueError:
+        with pytest.raises(ValueError, match=r"decimal separator .*\(\.\)"):
+            parse_number(text, integer)
+        return
     assert parse_number(text, integer) == expected
 
 

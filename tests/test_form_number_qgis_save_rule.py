@@ -8,6 +8,14 @@ NULL (QgsField.convertCompatible, the rule of QGIS's text edit widget): de
 were accepted. The check now uses convertCompatible itself and rejects a
 failed or non-finite conversion; an integer must also be a whole number
 for the locale.
+
+rc6 external review F2: convertCompatible falls back to the C locale, so
+under an English locale "30,3" passed the check silently as 303 (QGIS
+saves 303). The text must now also be a number for the current locale
+(QLocale.toDouble succeeds): en "30,3", "1,5", de "30.3" are rejected, the
+field is red and the tooltip names the decimal separator of the locale.
+de "0.125" (125 for the locale, 0.125 saved; GitHub #159) stays accepted
+with the saved value.
 """
 
 import math
@@ -72,18 +80,25 @@ def _saved(text, field_type):
 @pytest.mark.parametrize(
     "loc, text, expected",
     [
-        ("de_DE", "1,234.5", 1.2345),
-        ("en_US", "1.234,5", 1.2345),
+        # F2: the locale cannot read these as the number QGIS saves
+        ("de_DE", "1,234.5", False),  # QGIS saves 1.2345
+        ("en_US", "1.234,5", False),  # QGIS saves 1.2345
         ("fr_FR", "1.234,5", False),
         ("de_DE", "1_000", False),
         ("en_US", "1_000", False),
-        ("en_US", "1,5", 15.0),
-        ("en_US", "30,3", 303.0),
-        ("en_US", "-1,5", -15.0),
+        ("en_US", "1,5", False),  # QGIS saves 15
+        ("en_US", "30,3", False),  # QGIS saves 303
+        ("en_US", "-1,5", False),  # QGIS saves -15
+        ("en_US", "1,234.5", 1234.5),
+        ("en_US", "30.3", 30.3),
+        ("en_US", "0.125", 0.125),
         ("de_DE", "30,3", 30.3),
         ("fr_FR", "30,3", 30.3),
         ("nl_NL", "30,3", 30.3),
-        ("de_DE", "0.125", 0.125),
+        ("de_DE", "30.3", False),  # QGIS saves 30.3, the locale reads nothing
+        ("de_DE", "0.125", 0.125),  # QGIS saves 0.125 (GH#159), locale 125
+        ("de_DE", "0,125", 0.125),
+        ("de_DE", "20.000", 20.0),  # QGIS saves 20, the locale reads 20000
         ("nl_NL", "1.234,5", 1234.5),
         ("en_US", "nan", False),
         ("de_DE", "inf", False),
@@ -102,11 +117,37 @@ def test_float_table(loc, text, expected):
         assert got == pytest.approx(expected, rel=1e-12)
 
 
+@pytest.mark.parametrize(
+    "loc, text, separator",
+    [("en_US", "30,3", "."), ("en_US", "1,5", "."), ("de_DE", "30.3", ",")],
+)
+def test_wrong_decimal_separator_is_red_with_the_locale_separator(loc, text, separator):
+    """F2: a decimal separator the locale cannot read is refused (QGIS would
+    save 303 for "30,3" in English) and the tooltip names the expected one."""
+    from open_alaqs.openalaqsuitoolkit import validate_field
+
+    previous = QLocale()
+    QLocale.setDefault(QLocale(loc))
+    try:
+        edit = QtWidgets.QLineEdit()
+        edit.setText(text)
+        assert validate_field(edit, "float") is False
+        assert edit.toolTip() == (
+            "This value should be a number: use the decimal separator of "
+            f"your locale ({separator})"
+        )
+        assert "background-color: rgba(255, 107, 107" in edit.styleSheet()
+    finally:
+        QLocale.setDefault(previous)
+
+
 @pytest.mark.parametrize("text", TEXTS)
 def test_float_check_is_what_qgis_saves(locale, text):
+    """An accepted value is what QGIS saves, and it is accepted only when
+    the text is a number for the locale (F2)."""
     saved = _saved(text, QVariant.Double)
     got = _check(text, "float")
-    if saved is None or not math.isfinite(saved):
+    if saved is None or not math.isfinite(saved) or not QLocale().toDouble(text)[1]:
         assert got is False
     else:
         assert got is not False and got == saved
