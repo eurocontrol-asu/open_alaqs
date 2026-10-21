@@ -93,13 +93,15 @@ class _Study:
         }
         self._cr, self._parts = {}, {}
 
-    def runway(self, rd):
-        return self.ctx["runways"].get(rd)
+    def runway(self, rd, des=None):
+        """The runway of end `des` ("06L"), else of designator number `rd`."""
+        rw = self.ctx["runways"].get(des) if des else None
+        return rw if rw is not None else self.ctx["runways"].get(rd)
 
-    def crossings(self, route, rd):
-        key = (route, rd)
+    def crossings(self, route, rd, des=None):
+        key = (route, rd, des)
         if key not in self._cr:
-            rw = self.runway(rd)
+            rw = self.runway(rd, des)
             parts = rp.route_parts_from_study(self.conn, route) if route else None
             self._parts[key] = parts
             self._cr[key] = (
@@ -109,7 +111,7 @@ class _Study:
             )
         return self._cr[key]
 
-    def siblings(self, route, ad, rd):
+    def siblings(self, route, ad, rd, des=None):
         r = self.routes.get(route)
         if not r:
             return []
@@ -119,11 +121,15 @@ class _Study:
             if n != route
             and q["gate"] == r["gate"]
             and q["ad"] == ad
-            and q["runway"].lstrip("0") == str(rd)
+            and (
+                mv.runway_designator(q["runway"]) == des
+                if des
+                else q["runway"].lstrip("0") == str(rd)
+            )
         ]
 
-    def custom_anchor(self, route, rd):
-        rw = self.runway(rd)
+    def custom_anchor(self, route, rd, des=None):
+        rw = self.runway(rd, des)
         parts = rp.route_parts_from_study(self.conn, route) if route else None
         p = None
         if parts:
@@ -157,7 +163,8 @@ def _row(code, sev, mov, n, value, message, calc, sugg):
 
 def _arrival_anp(st, mov, traj, n):
     rd, route = mov["runway_direction"], mov["taxi_route"]
-    rw = st.runway(rd)
+    des = mov.get("runway_designator")
+    rw = st.runway(rd, des)
     frame = rp.runway_frame(rw, rd)
     out = []
     td, src = rp.arrival_touchdown_distance(rw, rd, traj)
@@ -177,7 +184,7 @@ def _arrival_anp(st, mov, traj, n):
                     f"{rp.threshold_crossing_distance(traj) or 0:.0f} m",
                 )
             )
-    cr = st.crossings(route, rd)
+    cr = st.crossings(route, rd, des)
     roll_end = traj[-1][1]
     if not cr:
         out.append(
@@ -211,8 +218,8 @@ def _arrival_anp(st, mov, traj, n):
 
     def passing(cond):
         ok = []
-        for s in st.siblings(route, "A", rd):
-            e = rp.select_exit(st.crossings(s, rd), td, traj)
+        for s in st.siblings(route, "A", rd, des):
+            e = rp.select_exit(st.crossings(s, rd, des), td, traj)
             if e is not None and cond(e):
                 ok.append(s)
         return ok
@@ -295,8 +302,9 @@ def _arrival_anp(st, mov, traj, n):
 
 def _departure_anp(st, mov, traj, n):
     rd, route = mov["runway_direction"], mov["taxi_route"]
-    frame = rp.runway_frame(st.runway(rd), rd)
-    cr = st.crossings(route, rd)
+    des = mov.get("runway_designator")
+    frame = rp.runway_frame(st.runway(rd, des), rd)
+    cr = st.crossings(route, rd, des)
     if not cr:
         return [
             _row(
@@ -315,8 +323,8 @@ def _departure_anp(st, mov, traj, n):
     lo = _liftoff_x(traj)
     if lo is not None and lu + lo > frame.length_m:
         fits = []
-        for s in st.siblings(route, "D", rd):
-            l2 = rp.lineup_distance(st.crossings(s, rd))
+        for s in st.siblings(route, "D", rd, des):
+            l2 = rp.lineup_distance(st.crossings(s, rd, des))
             if l2 is not None and l2 + lo <= frame.length_m:
                 fits.append((l2, s))
         out.append(
@@ -367,24 +375,25 @@ def _departure_anp(st, mov, traj, n):
 
 def _custom(st, mov, traj, n):
     rd, route = mov["runway_direction"], mov["taxi_route"]
-    rw = st.runway(rd)
+    des = mov.get("runway_designator")
+    rw = st.runway(rd, des)
     if rw is None or not route:
         return []
     frame = rp.runway_frame(rw, rd)
-    anchor = st.custom_anchor(route, rd)
+    anchor = st.custom_anchor(route, rd, des)
     utm = st.ctx["grid_bounds"]["utm_epsg"]
 
     def s_of(r):
         return rp.along(frame, geo.project_custom(anchor, utm, r[1], r[2]))[0]
 
-    cr = st.crossings(route, rd)
+    cr = st.crossings(route, rd, des)
     if mov["departure_arrival"] == "D":
         gnd = [r for r in traj if r[3] <= rp.GROUND_M]
         if not gnd or not cr:
             return []
         s_obs, s_route = s_of(gnd[0]), rp.lineup_distance(cr)
         what = "start of roll"
-        near = lambda s: rp.lineup_distance(st.crossings(s, rd))  # noqa: E731
+        near = lambda s: rp.lineup_distance(st.crossings(s, rd, des))  # noqa: E731
     else:
         air = [i for i, r in enumerate(traj) if r[3] > rp.GROUND_M]
         gnd = traj[(air[-1] + 1 if air else 0) :]
@@ -397,7 +406,7 @@ def _custom(st, mov, traj, n):
         what = "runway exit"
 
         def near(s):
-            c2 = [c for c in st.crossings(s, rd) if c["s_mid"] > s_td]
+            c2 = [c for c in st.crossings(s, rd, des) if c["s_mid"] > s_td]
             return c2[0]["s_mid"] if c2 else None
 
     if abs(s_obs - s_route) <= CUSTOM_TOLERANCE_M:
@@ -407,7 +416,7 @@ def _custom(st, mov, traj, n):
     else:
         cands = [
             (abs(v - s_obs), s)
-            for s in st.siblings(route, mov["departure_arrival"], rd)
+            for s in st.siblings(route, mov["departure_arrival"], rd, des)
             for v in [near(s)]
             if v is not None
         ]
@@ -448,15 +457,16 @@ def check_study(conn) -> pd.DataFrame:
             m["runway_direction"],
             m["taxi_route"],
             m["profile_id"],
+            m.get("runway_designator"),
         )
         groups.setdefault(key, [m, 0])
         groups[key][1] += 1
     rows = []
-    for (ad, rd, route, pid), (m, n) in sorted(
+    for (ad, rd, route, pid, des), (m, n) in sorted(
         groups.items(), key=lambda kv: tuple(map(str, kv[0]))
     ):
         traj = mv.get_trajectory(conn, pid)
-        if not traj or st.runway(rd) is None:
+        if not traj or st.runway(rd, des) is None:
             continue
         m = dict(m, gate=st.routes.get(route, {}).get("gate", ""))
         if traj[0][6] == "CUSTOM":

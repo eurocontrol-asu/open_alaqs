@@ -5,6 +5,10 @@ taken out of block - runway time and the taxi time can reach 0 s. The plugin
 then skipped every taxi emission (stop-and-go, brake wear, APU) with "taxi
 route not defined properly", while the standalone clamps the taxi time to 0
 and keeps them. Both now agree for such a movement.
+
+A movement whose block time equals its runway time (taxi time 0 s before the
+roll is taken out) was still skipped by the plugin; it now keeps APU,
+stop-and-go and brake wear too, with no route or queuing time.
 """
 
 import shutil
@@ -103,23 +107,61 @@ def short_arrival(tmp_path):
     return db
 
 
-def test_short_arrival_keeps_taxi_emissions_like_the_standalone(short_arrival):
+def _standalone(db, oid: int) -> dict:
     from openalaqs_standalone.compute_movements import (
         build_context,
         compute_for_movement,
     )
 
-    plugin = _plugin_totals(str(short_arrival))
-    with sqlite3.connect(short_arrival) as conn:
+    with sqlite3.connect(db) as conn:
         sa = compute_for_movement(
             conn,
-            OID,
+            oid,
             build_context(conn),
             method="bymode",
             use_isa_meteo=False,
             apply_nox_corrections=False,
         )
     assert sa is not None
+    return sa
+
+
+def test_short_arrival_keeps_taxi_emissions_like_the_standalone(short_arrival):
+    plugin = _plugin_totals(str(short_arrival))
+    sa = _standalone(short_arrival, OID)
     assert sa["rollout_time_s"] > 5.0  # the roll is longer than block - runway time
     for p in POLLUTANTS:
         assert plugin[p] == pytest.approx(sa["total_em_kg"][p], rel=2e-4, abs=1e-9), p
+
+
+@pytest.mark.parametrize("oid", [OID, 2])  # the A20N arrival and a departure
+def test_block_time_equal_to_runway_time_keeps_taxi_emissions(tmp_path, oid):
+    db = tmp_path / "equal.alaqs"
+    shutil.copy(FIXTURE, db)
+    with sqlite3.connect(db) as conn:
+        conn.execute("DELETE FROM user_aircraft_movements WHERE oid <> ?", (oid,))
+        conn.execute(
+            "UPDATE user_aircraft_movements SET block_time = runway_time, "
+            "number_of_stop_and_gos = 2 WHERE oid = ?",
+            (oid,),
+        )
+    plugin = _plugin_totals(str(db))
+    sa = _standalone(db, oid)
+    assert sa["taxi_time_s"] == 0.0
+    assert sa["stop_em_kg"]["co"] > 0.0
+    for p in POLLUTANTS:
+        assert plugin[p] == pytest.approx(sa["total_em_kg"][p], rel=2e-4, abs=1e-9), p
+
+
+def test_movement_without_block_time_is_refused_by_both(tmp_path):
+    """No block time: neither implementation guesses a taxi time (the plugin's
+    calculation fails, the standalone raises), so they cannot disagree."""
+    db = tmp_path / "noblock.alaqs"
+    shutil.copy(FIXTURE, db)
+    with sqlite3.connect(db) as conn:
+        conn.execute("DELETE FROM user_aircraft_movements WHERE oid <> ?", (OID,))
+        conn.execute("UPDATE user_aircraft_movements SET block_time = NULL")
+    with pytest.raises(AssertionError, match="Not supported value"):
+        _plugin_totals(str(db))
+    with pytest.raises(TypeError):
+        _standalone(db, OID)

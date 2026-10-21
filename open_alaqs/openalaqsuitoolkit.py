@@ -1,4 +1,6 @@
+import math
 import os
+from pathlib import Path, PurePath
 from typing import Optional
 
 from qgis.core import (
@@ -25,7 +27,7 @@ from qgis.core import (
 )
 from qgis.gui import QgsFileWidget, QgsMapCanvas
 from qgis.PyQt import QtWidgets
-from qgis.PyQt.QtCore import QLocale
+from qgis.PyQt.QtCore import QLocale, QVariant
 
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core.alaqslogging import get_logger
@@ -52,36 +54,38 @@ def is_null_value(value) -> bool:
 
 
 def parse_number(text: str, integer: bool):
-    """Parse a number as QGIS shows it in a form, raising ValueError.
+    """Parse a number of a form line edit exactly as QGIS saves it, raising
+    ValueError when QGIS would not save a number.
 
-    QGIS writes numbers into the form with the locale's separators, for
-    example 20000 as "20,000" (English) or "20.000" (German), and 30.3 as
-    "30,3" under European locales (GitHub #159). Integers are read with the
-    locale first, then plain Python syntax. Decimals are read the way QGIS
-    saves them (QgsField.convertCompatible): plain "C" syntax first, so
-    "0.125" stays 0.125 under a German or Dutch locale (where the locale
-    alone would read the dot as a group separator and give 125), then the
-    locale, then the tolerant convertToFloat.
+    QGIS saves the text of a line edit with QgsField.convertCompatible, so
+    the check uses it too: decimals get the value QGIS stores, for example
+    "0.125" stays 0.125 and "30,3" is 30.3 under a German, Dutch or French
+    locale (GitHub #159), while "30,3" is 303 under an English locale (the
+    comma is the group separator there) and "1.234,5" (French) or "1_000"
+    are rejected (QGIS stores NULL). A result that is not finite ("nan",
+    "inf") is rejected. An integer must also read as a whole number with
+    the locale (QLocale.toLongLong, with the group separators QGIS shows,
+    "20,000" English or "20.000" German), to the same value: "12.5", which
+    QGIS would round, is rejected.
     """
-    locale = QLocale()
-    if integer:
-        number, ok = locale.toLongLong(text)
-        if ok:
-            return int(number)
-        return int(text)
-    try:
-        return float(text)
-    except ValueError:
-        pass
-    number, ok = locale.toDouble(text)
-    if ok:
-        return number
-    from open_alaqs.core.tools.conversion import convertToFloat
+    from qgis.core import QgsField
 
-    converted = convertToFloat(text, default=None)
-    if converted is None:
-        raise ValueError(f"cannot parse {text!r} as a number")
-    return converted
+    field = QgsField("value", QVariant.LongLong if integer else QVariant.Double)
+    try:
+        value = field.convertCompatible(text)
+    except Exception as exc:
+        raise ValueError(f"QGIS cannot save {text!r} as a number") from exc
+    if value is None or (hasattr(value, "isNull") and value.isNull()):
+        raise ValueError(f"QGIS cannot save {text!r} as a number")
+    if integer:
+        number, ok = QLocale().toLongLong(text)
+        if not ok or int(number) != int(value):
+            raise ValueError(f"{text!r} is not a whole number")
+        return int(value)
+    value = float(value)
+    if not math.isfinite(value):
+        raise ValueError(f"{text!r} is not a finite number")
+    return value
 
 
 def validate_field(ui_element, var_type):
@@ -194,18 +198,36 @@ CHECKBOX_WIDGET_CONFIG = {
 }
 
 
+def _sqlite_read_only_uri(path: PurePath) -> str:
+    """SQLite URI that opens the absolute `path` read-only.
+
+    The path is percent-encoded (as_uri), so a "#", "?" or "%" in a folder
+    or file name is read as part of the name, not as a URI fragment, query
+    or escape. A Windows UNC path (as_uri gives "file://server/share/...")
+    is written "file:////server/share/...": SQLite rejects a URI authority
+    other than "localhost", and reads the path "//server/share/..." as UNC.
+    """
+    uri = path.as_uri()
+    if uri.startswith("file://") and not uri.startswith("file:///"):
+        uri = "file:////" + uri[len("file://") :]
+    return uri + "?mode=ro"
+
+
 def _study_values(database_path: str, sql: str) -> list[str]:
     """First column of `sql` on the study, as text; [] when the table or
     the file is missing (older studies, memory layers in tests)."""
     import sqlite3
 
     try:
-        con = sqlite3.connect(f"file:{database_path}?mode=ro", uri=True)
+        if not database_path:
+            return []
+        uri = _sqlite_read_only_uri(Path(database_path).resolve())
+        con = sqlite3.connect(uri, uri=True)
         try:
             rows = con.execute(sql).fetchall()
         finally:
             con.close()
-    except sqlite3.Error:
+    except (sqlite3.Error, OSError, ValueError):
         return []
     return [str(r[0]) for r in rows if r[0] is not None and str(r[0]).strip()]
 

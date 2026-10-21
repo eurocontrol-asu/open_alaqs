@@ -291,6 +291,7 @@ class EngineEmissionIndex(Store):
                     P_ambient_Pa=float(p_amb_Pa) if p_amb_Pa else None,
                 )
             else:
+                # Reached when V2 was asked but a mode has no fuel flow (version reset to "v1" above)
                 return self._meem_v1(
                     base_ei,
                     mode,

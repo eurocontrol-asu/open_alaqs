@@ -1095,7 +1095,7 @@ def distribute_to_grid(  # noqa: C901 — top-level spatial+temporal distributio
             ):
                 if runways is None:
                     runways = _mv.get_runways(conn)
-                runway = runways[mov["runway_direction"]]
+                runway = _mv.runway_of(runways, mov)
                 from openalaqs_standalone import geometry as _geo
 
                 rn = mov["taxi_route"]
@@ -1656,7 +1656,7 @@ def distribute_to_grid(  # noqa: C901 — top-level spatial+temporal distributio
             if pos is None:
                 if runways is None:
                     runways = _mv.get_runways(conn)
-                runway = runways[mov["runway_direction"]]
+                runway = _mv.runway_of(runways, mov)
                 from openalaqs_standalone import geometry as _geo
 
                 pos = _geo.runway_threshold_3857(runway, mov["runway_direction"])

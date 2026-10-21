@@ -249,12 +249,15 @@ def select_exit(
 def truncate_after(traj, x_cut: float) -> list:
     """Profile rows up to profile distance x_cut; the segment that straddles x_cut ends there (x, z and TAS
     interpolated; the new end row keeps the point index of the segment start, which only matters for a segment
-    start, and this row is the last)."""
+    start, and this row is the last). A cut exactly on a profile row ends at that row (no zero-length end
+    segment)."""
     out = []
     for a, b in zip(traj, traj[1:]):
         out.append(a)
         if b[1] > x_cut >= a[1]:
-            f = (x_cut - a[1]) / (b[1] - a[1]) if b[1] > a[1] else 0.0
+            if x_cut == a[1]:
+                return out
+            f = (x_cut - a[1]) / (b[1] - a[1])
             out.append(
                 (
                     a[0],
@@ -294,8 +297,10 @@ def split_taxi_time(total_s: float, route_s: float, stretch_s: float) -> tuple:
     """(route time, stretch time, queuing time) for a movement with total taxi time total_s.
 
     The route and the runway stretch keep their own times when they fit and the rest is queuing; when they do
-    not fit, both are scaled down to the total (as the route alone is today) and there is no queuing.
+    not fit, both are scaled down to the total (as the route alone is today) and there is no queuing. A
+    negative total counts as 0 s.
     """
+    total_s = max(0.0, total_s)
     need = route_s + stretch_s
     if need <= 0:
         return 0.0, 0.0, max(0.0, total_s)

@@ -199,6 +199,16 @@ def test_make_config_without_any_reference_raises(tmp_path, module):
         module.make_config(alaqs, tmp_path / "config.json")
 
 
+def test_orchestrate_without_any_reference_raises(tmp_path):
+    """orchestrate stops too (5.3.6 used 0, 0), with or without receptors."""
+    from openalaqs_standalone import orchestrate as orch
+
+    alaqs = _study(tmp_path / "study.alaqs", airport=(None, None), grid_ref=None)
+    meta = orch._airport_metadata(alaqs)
+    with pytest.raises(ValueError, match="no reference point"):
+        orch._reference_lat_lon(alaqs, meta)
+
+
 def test_orchestrate_reference_and_zone(tmp_path):
     """orchestrate takes its receptor CRS and domain centre from the same reference as make_config."""
     from openalaqs_standalone import orchestrate as orch

@@ -73,3 +73,59 @@ def test_route_is_oriented_by_the_route_gate(tmp_path, monkeypatch):
         assert seen[0] != gates.getObject("G7").getGeometryText()
     finally:
         Singleton.reset_all()
+
+
+def test_route_is_oriented_by_its_own_flag_like_the_standalone(tmp_path, monkeypatch):
+    """A departure that takes an arrival route: the route is oriented as an
+    arrival route (towards its gate), by the route's departure_arrival flag,
+    as the standalone does; the plugin used the movement's flag."""
+    from open_alaqs.core import GeoTransformation
+    from open_alaqs.core.alaqsdblite import ProjectDatabase
+    from open_alaqs.core.interfaces.Movement import MovementStore
+    from open_alaqs.core.tools.Singleton import Singleton
+    from openalaqs_standalone.runway_placement import route_parts_from_study
+
+    db = tmp_path / "study.alaqs"
+    shutil.copy(FIXTURE, db)
+    route = "G4/06/A/1"
+    with sqlite3.connect(db) as conn:
+        conn.execute("DELETE FROM user_aircraft_movements WHERE oid <> 2")
+        assert conn.execute(
+            "SELECT departure_arrival FROM user_aircraft_movements"
+        ).fetchone() == ("D",)
+        assert conn.execute(
+            "SELECT departure_arrival FROM user_taxiroute_taxiways WHERE route_name = ?",
+            (route,),
+        ).fetchone() == ("A",)
+        conn.execute("UPDATE user_aircraft_movements SET taxi_route = ?", (route,))
+        table = MovementStore._TRAJ_CACHE_TABLE
+        if conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = ?", (table,)
+        ).fetchone():
+            conn.execute(f"DELETE FROM {table}")
+        standalone = route_parts_from_study(conn, route)
+
+    seen = []
+    original = GeoTransformation.TrajectoryTransformer._route_lines
+
+    def spy(self, is_dep):
+        lines = original(self, is_dep)
+        seen.append((is_dep, lines))
+        return lines
+
+    monkeypatch.setattr(GeoTransformation.TrajectoryTransformer, "_route_lines", spy)
+    Singleton.reset_all()
+    ProjectDatabase().path = str(db)
+    try:
+        MovementStore(str(db), show_progress=False)
+    finally:
+        Singleton.reset_all()
+    assert seen, "no runway alignment was computed"
+    is_dep, plugin = seen[0]
+    assert is_dep  # the movement is a departure
+    assert len(plugin) == len(standalone) > 1
+
+    def coords(lines):
+        return [[tuple(round(v, 3) for v in c[:2]) for c in ln.coords] for ln in lines]
+
+    assert coords(plugin) == coords(standalone)

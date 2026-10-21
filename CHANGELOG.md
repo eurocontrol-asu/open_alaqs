@@ -454,9 +454,21 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   so OSM commercial buildings are downloaded and imported.
 - Forms under a German or Dutch locale: a decimal such as "0.125" was
   read as 125 by the field check (the locale reads "." as a group
-  separator) while QGIS saves 0.125. Decimals are now read as QGIS saves
-  them (plain syntax first, then the locale), and the parking and roadway
-  Recalculate use the checked values (the fleet mix as "12,5" raised).
+  separator) while QGIS saves 0.125. Numbers are now read as QGIS saves
+  them (see the next entry), and the parking and roadway Recalculate use
+  the checked values (the fleet mix as "12,5" raised).
+- Form number check: it still fell back to the tolerant reading of
+  `convertToFloat` (and `int()`), so it accepted texts that QGIS saves
+  differently or as NULL: German "1,234.5" checked as 1234.5 and saved as
+  1.2345, French "1.234,5" and "1_000" saved as NULL, English "30,3"
+  checked as 30.3 and saved as 303, "nan" and "inf" stored as such. The
+  check now uses QGIS's own rule (`QgsField.convertCompatible`) and
+  disables OK when it fails or gives a non-finite value, so the checked
+  value (also the one Recalculate uses in parkings and roadways) is the
+  saved one. Whole-number fields must also read as an integer with the
+  locale (group separators as QGIS shows them, "20.000" German, "20,000"
+  English); "12.5", which QGIS would round, is rejected. Under an English
+  locale "30,3" is now read as 303, as QGIS saves it.
 - Runway form: a NULL Touchdown Offset (touchdown_2 is added as NULL when
   a 5.3.6 study is migrated), shown as "NULL", kept OK disabled ("Missing
   or invalid: Touchdown Offset, Runway 2 [m]"); it now counts as empty,
@@ -465,8 +477,7 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   roll got a taxi time of 0 s and lost all its taxi emissions (queuing,
   stop-and-go, APU, brake wear) with the warning "taxi route not defined
   properly". The plugin now keeps a 0 s taxi time and these emissions,
-  as the standalone does, with a warning naming the two times; only a
-  movement whose block time equals its runway time is still skipped.
+  as the standalone does, with a warning naming the two times.
 - Aircraft movements take the airport altitude (NOx ambient correction,
   MEEM V1 ISA temperature, LTO cut) from the study's airport elevation
   (`user_study_setup.airport_elevation`), as the standalone and the
@@ -478,6 +489,65 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   reference; it used the gate of the first movement of the route, while
   the runway trajectory is shared (and cached) by every movement of the
   route whatever its gate.
+- Forms of a study whose path holds "#", "?" or "%" (since the value maps
+  read from the study): the lists read from the study (point-source
+  Category and Type, profiles, runway directions) were empty, because the
+  read-only SQLite URI was not percent-encoded and opened the wrong file;
+  the point-source Category and Type then offered only the values already
+  stored. The URI is now built with `Path.as_uri()` (Windows drive and UNC
+  paths included).
+- **Results change** for studies with movements whose block time equals
+  their runway time: the plugin dropped all their taxi emissions (APU,
+  stop-and-go, brake wear) with "no taxi emissions", while the standalone
+  kept them (training_v3 movement 1 with block = runway time: PM10 0.0030
+  against 0.0320 kg). The plugin now keeps them. Rule (plugin and
+  standalone): the taxi time is |block time - runway time|, less the
+  landing roll for an arrival, not below 0 s; at 0 s the route segments
+  and the queue get no time, while APU, stop-and-go and brake wear are
+  counted as for any taxi time. A movement without a block time still
+  stops the calculation in both.
+- **Results change** for studies with a movement whose taxi route is
+  flagged for the other operation (a departure on an arrival route or the
+  reverse) and meets the runway more than once: the plugin oriented the
+  route by the movement's D/A, the standalone by the route's own
+  `user_taxiroute_taxiways.departure_arrival`, so they could pick a
+  different line-up or exit crossing. The plugin now uses the route's flag
+  too (the runway trajectory is cached per route); the movement's flag
+  only when the route has none.
+- `runway_placement.split_taxi_time` counts a negative total taxi time as
+  0 s (it returned a negative route time; both callers already clamp, so
+  not reachable), and `truncate_after` with the cut exactly on a profile
+  row ends at that row instead of appending a duplicate end row (a 0 m
+  last segment). Bundled outputs unchanged.
+- **Results change** in the standalone for studies with parallel runways
+  (06L/24R and 06R/24L): runways were keyed by the designator number, so
+  both runways had the keys 6 and 24, the second row of `shapes_runways`
+  won, and every movement was placed on it with its Touchdown Offsets.
+  Runways are now keyed by the full designator (`movements.runway_of`),
+  as in the plugin; a movement that names a plain "06" gets the first
+  runway of the table (was the last), as the plugin's name match does.
+  The runway checks (`runway_checks`) use the same lookup.
+- Runway form: a negative Touchdown Offset was accepted, but the runway
+  placement ignores values of 0 or less and silently used the profile's
+  own touchdown distance. The form now rejects it (OK disabled); 0 or
+  empty still means the profile's own distance.
+- OSM import: a NULL OSM attribute (a NULL QVariant, not None) counted as
+  a value: with an OSM source that has a `height` column (custom
+  `osmconf.ini`) the import log counted every building as having an OSM
+  height. NULL attributes are now skipped before the feature is created
+  (the layer default applies, as it already did in a headless check) and
+  the log counts only real heights.
+- Plugin movement set-up (`MovementStore.initMovements`): the
+  per-movement table was built with float64 columns, so every name or
+  object put in it raised the pandas FutureWarning "Setting an item of
+  incompatible dtype is deprecated" (an error in a future pandas), plus a
+  "Downcasting object dtype arrays on .fillna" warning. The columns are
+  now object columns; no warning, bundled outputs byte-identical.
+- Standalone and `austal_prep` `make_config`, and `orchestrate`, stop
+  with a ValueError ("no reference point") when the study has neither a
+  grid reference (`grid_3d_definition` reference_latitude/longitude) nor
+  airport coordinates (`user_study_setup`); 5.3.6 silently used (0, 0)
+  and EPSG:32631. `orchestrate` stops even without a receptor CSV.
 
 ### Removed
 

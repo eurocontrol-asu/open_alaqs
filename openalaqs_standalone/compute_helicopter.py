@@ -230,7 +230,7 @@ def _active_retained_fraction(
     )
     from openalaqs_standalone import geometry as geo
 
-    runway = ctx["runways"][mov["runway_direction"]]
+    runway = mv.runway_of(ctx["runways"], mov)
     origin = None
     if mov.get("gate"):
         gate = mv.get_gate(conn, mov["gate"])

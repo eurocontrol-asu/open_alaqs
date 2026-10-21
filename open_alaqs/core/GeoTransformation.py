@@ -793,7 +793,13 @@ class TrajectoryTransformer:
                 gate = _force_2d(_shapely_wkt.loads(self._gate_geometry_text))
             except Exception:
                 gate = None
-        return rp.orient_route(rp.chain_lines(parts), gate, start_at_gate=is_dep)
+        # Oriented by the route's own departure_arrival flag, as in the standalone
+        # (runway_placement.route_parts_from_study): the runway trajectory is cached per
+        # route, whatever the D/A of the movement. The movement's flag only when the
+        # route has none.
+        flag = self._taxi_route.getDepartureArrivalFlag()
+        start_at_gate = str(flag).upper().startswith("D") if flag else is_dep
+        return rp.orient_route(rp.chain_lines(parts), gate, start_at_gate=start_at_gate)
 
     def _place_on_runway(self, pts, is_dep: bool, is_custom: bool):
         """(placement info, origin (EPSG:3857) or None to keep the intersection, cut points or None)."""

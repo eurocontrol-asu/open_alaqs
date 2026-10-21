@@ -68,13 +68,34 @@ def connect(alaqs_path: str) -> sqlite3.Connection:
 # ---------------------------------------------------------------------------
 
 
+def runway_designator(text) -> str:
+    """A runway end as written in the study, normalised: two-digit number
+    and the L/C/R letter, upper case ("6l" -> "06L", "24" -> "24")."""
+    t = str(text or "").strip().upper()
+    digits = "".join(ch for ch in t if ch.isdigit())
+    letters = "".join(ch for ch in t if ch.isalpha())
+    return f"{int(digits):02d}{letters}" if digits else t
+
+
+def runway_of(runways: dict, mov: dict) -> dict:
+    """The runway of a movement: by its full designator ("06L"), else by
+    the designator number (`runway_direction`, KeyError if unknown)."""
+    runway = runways.get(mov.get("runway_designator"))
+    return runway if runway is not None else runways[mov["runway_direction"]]
+
+
 def get_runways(conn: sqlite3.Connection) -> dict:
     """Read every runway in `shapes_runways`, keyed by direction.
 
-    Returns a dict mapping each runway-designator integer (e.g. 15, 33,
-    7, 25) to the runway dict that direction belongs to. For a runway
-    "33/15" both keys 33 and 15 point at the SAME runway dict, so the
-    caller can look up by either end.
+    Returns a dict mapping each runway end to the runway dict it belongs
+    to, by its full designator (`runway_designator`, e.g. "06L", "24")
+    and by its designator integer (e.g. 6, 24). For a runway "33/15" the
+    keys "33", "15", 33 and 15 point at the SAME runway dict, so the
+    caller can look up by either end. Parallel runways (06L/24R and
+    06R/24L) have their own designator keys; the integer key goes to the
+    first of them in the table, as the plugin takes the first runway
+    whose name contains a plain "06". Look a movement's runway up with
+    `runway_of`.
 
     Each runway dict has the same shape as `get_runway`'s return:
       runway_id, geom_3857, pt1_3857, pt2_3857, directions.
@@ -120,8 +141,9 @@ def get_runways(conn: sqlite3.Connection) -> dict:
         rwy["touchdown_offset_m"] = (
             {dirs[0]: t1, dirs[-1]: t2} if len(dirs) > 1 else {dirs[0]: t1}
         )
-        for d in dirs:
-            out[d] = rwy
+        for name, d in zip(runway_id.split("/"), dirs):
+            out[runway_designator(name)] = rwy
+            out.setdefault(d, rwy)
     return out
 
 
@@ -305,6 +327,8 @@ def get_movement(conn: sqlite3.Connection, oid: int) -> Optional[dict]:
         "runway_direction": int(
             "".join(ch for ch in (row[8] or "") if ch.isdigit()) or "0"
         ),
+        # The full runway end ("06L"), which tells parallel runways apart
+        "runway_designator": runway_designator(row[8]),
         "taxi_fuel_ratio": _as_float(row[9], 1.0),
         "number_of_stop_and_gos": _as_int(row[10], 0),
         "gate": row[11],

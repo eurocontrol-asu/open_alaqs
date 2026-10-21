@@ -3229,7 +3229,9 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
                 ).items():
                     value = osm_f.attributeMap().get(osm_attr_name)
 
-                    if value is None:
+                    # A NULL attribute is a NULL QVariant, not None: missing
+                    # too (the layer default applies, and it is not counted)
+                    if value is None or (hasattr(value, "isNull") and value.isNull()):
                         continue
 
                     alaqs_attr_idx = alaqs_fields.indexFromName(alaqs_attr_name)

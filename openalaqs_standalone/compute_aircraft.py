@@ -653,7 +653,7 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
     # designator integer parsed from mov["runway"]. For a single-
     # runway study ctx["runways"] still has every designator from the
     # one runway as a key, so this lookup works for both cases.
-    runway = ctx["runways"][mov["runway_direction"]]
+    runway = mv.runway_of(ctx["runways"], mov)
     is_dep = mov["departure_arrival"] == "D"
 
     # ---- Trajectory ----
