@@ -53,7 +53,7 @@ def is_null_value(value) -> bool:
     return is_empty_text(value)
 
 
-def parse_number(text: str, integer: bool):
+def parse_number(text: str, integer: bool, field=None):
     """Parse a number of a form line edit exactly as QGIS saves it, raising
     ValueError when QGIS would not save a number.
 
@@ -67,10 +67,19 @@ def parse_number(text: str, integer: bool):
     the locale (QLocale.toLongLong, with the group separators QGIS shows,
     "20,000" English or "20.000" German), to the same value: "12.5", which
     QGIS would round, is rejected.
+
+    `field` is the layer's own numeric QgsField when the layer is known, so
+    the check converts with the field QGIS saves with: on a study whose
+    numeric columns are not yet REAL (scripts/migrate_alaqs.py), the
+    provider types a column of whole numbers as an integer and "2.5" is
+    saved, and checked, as 3. Without it (or for a non-numeric field, the
+    provider's type of an empty DECIMAL column) a Double or LongLong field
+    is used.
     """
     from qgis.core import QgsField
 
-    field = QgsField("value", QVariant.LongLong if integer else QVariant.Double)
+    if field is None or not field.isNumeric():
+        field = QgsField("value", QVariant.LongLong if integer else QVariant.Double)
     try:
         value = field.convertCompatible(text)
     except Exception as exc:
@@ -88,12 +97,35 @@ def parse_number(text: str, integer: bool):
     return value
 
 
-def validate_field(ui_element, var_type):
+def layer_field(ui_element, layer=None):
+    """The QgsField of `layer` named like `ui_element` (the form widgets are
+    named after their column), or None. Without `layer`, the layer of the
+    QgsAttributeForm the widget belongs to (QGIS builds the custom form
+    inside it), when there is one."""
+    if layer is None:
+        from qgis.gui import QgsAttributeForm
+
+        parent = ui_element.parent() if hasattr(ui_element, "parent") else None
+        while parent is not None and not isinstance(parent, QgsAttributeForm):
+            parent = parent.parent()
+        if parent is None:
+            return None
+        layer = parent.layer()
+    if layer is None:
+        return None
+    idx = layer.fields().indexOf(ui_element.objectName())
+    return layer.fields()[idx] if idx >= 0 else None
+
+
+def validate_field(ui_element, var_type, layer=None):
     """
     Evaluates the text in a UI text field, returning the value if it is valid,
     or returning none and highlighting the field red if it is incorrect.
 
     :param ui_element:
+    :param layer: the layer the form edits, when known; a number is then
+        converted with the layer's own field (see parse_number). Without
+        it the layer is taken from the attribute form the widget is in.
     :return: value if field is correct, False if value is not correct
 
     TODO OPENGIS.ch: Do not return `False` when invalid, but return `None`. In the future one might want to validate boolean fields too.
@@ -124,9 +156,9 @@ def validate_field(ui_element, var_type):
         if var_type == "str":
             value = str(value)
         elif var_type == "int":
-            value = parse_number(value, integer=True)
+            value = parse_number(value, True, layer_field(ui_element, layer))
         elif var_type == "float":
-            value = parse_number(value, integer=False)
+            value = parse_number(value, False, layer_field(ui_element, layer))
 
         color_ui_background(ui_element, None)
 
@@ -171,6 +203,8 @@ def load_spatialite_layer(
         )
         return
 
+    warn_unmigrated_numeric_fields(layer, database_path, layer_config["table_name"])
+
     lconfig = layer.editFormConfig()
     lconfig.setInitCodeSource(QgsEditFormConfig.PythonInitCodeSource.CodeSourceFile)
     lconfig.setUiForm(os.path.join(plugin_dir, "ui", layer_config["ui_filename"]))
@@ -187,6 +221,65 @@ def load_spatialite_layer(
 
     tree_root = project.layerTreeRoot()
     tree_root.addLayer(layer)
+
+
+def template_real_columns(table_name: str) -> list[str]:
+    """The columns of `table_name` declared REAL in the project template:
+    the numeric columns of the shapes layers (height, speed, distance,
+    temperature, the percentages, the emission factors, ...)."""
+    import sqlite3
+
+    from open_alaqs.alaqs_config import ALAQS_ROOT_PATH, ALAQS_TEMPLATE_DB_FILENAME
+
+    template = ALAQS_ROOT_PATH.joinpath(ALAQS_TEMPLATE_DB_FILENAME)
+    try:
+        con = sqlite3.connect(_sqlite_read_only_uri(template.resolve()), uri=True)
+        try:
+            rows = con.execute(f'PRAGMA table_info("{table_name}")').fetchall()
+        finally:
+            con.close()
+    except (sqlite3.Error, OSError, ValueError):
+        return []
+    return [r[1] for r in rows if (r[2] or "").strip().upper() == "REAL"]
+
+
+def unmigrated_numeric_fields(layer: QgsVectorLayer, table_name: str) -> list[str]:
+    """The numeric columns of the layer (REAL in the project template) that
+    the provider does not type as Double. A study whose shapes columns are
+    still DECIMAL (created before 5.4.0 and not migrated) has its columns
+    typed from their data: integer when the stored values are whole
+    numbers, text when the layer is empty."""
+    fields = layer.fields()
+    return [
+        name
+        for name in template_real_columns(table_name)
+        if fields.indexOf(name) >= 0
+        and fields[fields.indexOf(name)].type() != QVariant.Double
+    ]
+
+
+_warned_unmigrated: set[str] = set()
+
+
+def warn_unmigrated_numeric_fields(
+    layer: QgsVectorLayer, database_path: str, table_name: str
+) -> list[str]:
+    """Log one warning per study (the first layer that shows it) when a
+    shapes layer still has numeric columns the provider types as integer
+    or text, naming the migration. Returns those columns."""
+    columns = unmigrated_numeric_fields(layer, table_name)
+    if columns and database_path not in _warned_unmigrated:
+        _warned_unmigrated.add(database_path)
+        logger.warning(
+            "Layer '%s': the numeric columns %s of this study are not declared "
+            "REAL, so QGIS types them as integer or text and a decimal typed in "
+            "a form is rounded or stored as text (the same holds for the other "
+            "layers of the study). Upgrade the study with "
+            "scripts/migrate_alaqs.py (User Guide, 'Upgrading from 5.3.x').",
+            layer.name(),
+            ", ".join(columns),
+        )
+    return columns
 
 
 CHECKBOX_WIDGET_CONFIG = {
@@ -491,6 +584,7 @@ def set_layer_style(layer: QgsVectorLayer, alaqs_layer: AlaqsLayerType):
 
 
 def load_layers(iface, database_path):
+    _warned_unmigrated.discard(database_path)
     for alaqs_layer in AlaqsLayerType:
         load_spatialite_layer(iface, database_path, alaqs_layer)
 
