@@ -29,7 +29,7 @@ changelog=5.4.0
     Aircraft SOx from the fuel sulphur (0.758 g/kg jet fuel, 0.2 g/kg AvGas); it was 0.
     MEEM V1 nvPM follows the CAEP14 sheet above 3000 ft above the aerodrome; BFFM2 uses the flight Mach number; the NOx ambient correction applies to take-off and climb-out only.
     Engine table: 28 ACT_PRF engines added, OPR and 5th nvPM point for MEEM, nvPM number per kg, FOCA engines from ACT_PRF 2.6.3.
-    Forms: In Study and Engine Test Site are saved; numbers are read as QGIS saves them; studies in folders whose path holds "#", "?" or a percent sign work.
+    Forms: In Study and Engine Test Site are saved; the numeric layer columns are REAL, so a typed decimal is saved as typed, not rounded (existing studies: scripts/migrate_alaqs.py); the number check reads what QGIS saves; studies in folders whose path holds "#", "?" or a percent sign work.
     Standalone and AUSTAL preparation: same UTM zone as the plugin, AUSTAL configuration centred on the grid reference, receptors clipped to the study grid.
     See CHANGELOG.md for details.
 
