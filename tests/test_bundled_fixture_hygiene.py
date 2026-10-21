@@ -4,7 +4,10 @@
   time, and a committed one would be read back instead of the current
   runway placement.
 - shapes_runways.oid is the INTEGER PRIMARY KEY (rowid alias), as in the
-  templates: a runway added in QGIS gets an oid.
+  templates: a runway added in QGIS gets an oid. The one tracked .alaqs
+  without a shapes_runways table is tools/template_build/spatialite_base.alaqs,
+  the bare SpatiaLite scaffold the templates are generated from (no study
+  tables at all); it is the only expected skip.
 """
 
 import sqlite3
@@ -14,6 +17,8 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[1]
+# The bare SpatiaLite scaffold the templates are generated from: no study tables
+NO_STUDY_TABLES = {"tools/template_build/spatialite_base.alaqs"}
 
 
 def _tracked_alaqs():
@@ -51,6 +56,7 @@ def test_runway_oid_is_the_primary_key(rel):
     with _connect(rel) as conn:
         info = {r[1]: r for r in conn.execute("PRAGMA table_info(shapes_runways)")}
     if not info:
-        pytest.skip("no shapes_runways")
+        assert rel in NO_STUDY_TABLES, f"{rel} has no shapes_runways table"
+        pytest.skip(f"{rel}: the bare SpatiaLite scaffold has no shapes_runways")
     oid = info["oid"]
     assert oid[2].upper() == "INTEGER" and oid[5] == 1
