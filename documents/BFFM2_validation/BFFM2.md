@@ -7,7 +7,7 @@
   - [Overview](#overview)
   - [Method description](#method-description)
     - [Step 1 — Fuel flow at reference conditions](#step-1--fuel-flow-at-reference-conditions)
-    - [Step 2 — Convert to ambient fuel flow](#step-2--convert-to-ambient-fuel-flow)
+    - [Step 2 — Convert to BFFM2 reference fuel flow](#step-2--convert-to-bffm2-reference-fuel-flow)
     - [Step 3 — Emission index interpolation on the log–log curve](#step-3--emission-index-interpolation-on-the-loglog-curve)
     - [Step 4 — Ambient corrections](#step-4--ambient-corrections)
     - [Step 5 — PM, SOx and P1/P2 injection](#step-5--pm-sox-and-p1p2-injection)
@@ -247,7 +247,7 @@ CO and HC are not corrected for humidity.
 
 #### MEEM V1: nvPM above 3000 ft
 
-MEEM V1 (`core/tools/meem_v1.py`, called from `Engine.getEmissionIndexByModeWithMEEM()`, `Engine._meem_v1`) is a port of the MEEM_V1 tab of the ICAO CAEP14 FBE Engines Emissions Calculation Sheet v14 (with its Constants and USER INPUTS tabs). It is applied for Bymode and BFFM2 to every flight segment. The LTO / non-LTO cut is on the start point's height above the aerodrome (3000 ft, the ICAO LTO cycle); the non-LTO chain runs at the segment altitude above MSL, the start point's height plus the airport elevation (`MovementEmissionCalculator.py:1220`, `airport_elevation_m` of `getEmissionIndexByModeWithMEEM`).
+MEEM V1 (`core/tools/meem_v1.py`, called from `Engine.getEmissionIndexByModeWithMEEM()`, `Engine._meem_v1`) is a port of the MEEM_V1 tab of the ICAO CAEP14 FBE Engines Emissions Calculation Sheet v14 (with its Constants and USER INPUTS tabs). It is applied for Bymode and BFFM2 to every flight segment. The LTO / non-LTO cut is on the start point's height above the aerodrome (3000 ft, the ICAO LTO cycle); the non-LTO chain runs at the segment altitude above MSL, the start point's height plus the airport elevation (`MovementEmissionCalculator.calculate_emissions_per_segment`, `airport_elevation_m` of `getEmissionIndexByModeWithMEEM`).
 
 - **At or below 3000 ft (914.4 m) above the aerodrome: LTO.** The sheet returns the certification nvPM value of the mode (EEDB nvPM at 7, 30, 85 or 100 % thrust, no interpolation, no ambient correction). The mode EI is used unchanged (`Engine._meem_v1`).
 - **More than 3000 ft above the aerodrome: non-LTO.** Phase "CLIMB TO CRUISE" for departures, "DESCENT TO APPROACH" for arrivals (`Engine._meem_v1`), ISA + ΔT at the segment altitude above MSL, Mach from the segment's start-point TAS and the local speed of sound. ΔT (USER INPUTS!B5, "ΔT at 0 ft MSL") is the temperature of the movement's meteo period, the one BFFM2 uses (`AmbientCondition.getTemperature()`), minus the ISA temperature at the airport elevation (288.15 K − 0.0065 K/m × elevation), constant aloft (`meem_v1.delta_t_from_ground`, `MovementEmissionCalculator._meem_delta_t`); without meteo the ISA sea-level 288.15 K is used, so ΔT = 0.0065 K/m × elevation:
@@ -313,7 +313,7 @@ OpenALAQS supports profiles derived from ADS-B recordings in addition to standar
 1. The value is divided by the aircraft engine count to obtain the per-engine ambient fuel flow.
 2. The per-engine value is compared to 1.5 × the EEDB Takeoff fuel flow (`MovementEmissionCalculator.ADSB_FF_CEILING_FACTOR`).
 3. At or below it, the value is passed directly to the BFFM2 interpolation, bypassing the power-setting → twin-quad step.
-4. Above it, the segment uses the EEDB fuel flow of its mode (mode anchor), and one warning per movement reports the number of segments (`MovementEmissionCalculator.py:815-824`).
+4. Above it, the segment uses the EEDB fuel flow of its mode (mode anchor), and one warning per movement reports the number of segments (`MovementEmissionCalculator.calculate_emissions`).
 
 Standard ICAO profiles have `fuel_flow_kgm = 0`, so this logic is inert for those profiles.
 

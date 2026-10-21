@@ -70,7 +70,7 @@ source, so one austal_prep run covers the whole study.
 
 **The `aircraft` command** runs the aircraft core directly and writes:
 
-- a per-movement totals CSV (one row per movement per pollutant), and
+- a per-movement totals CSV (one row per movement, one column per pollutant), and
 - optionally, with `--austal-out`, the AUSTAL `emissions.parquet` +
   `sources.parquet` pair for the aircraft sources alone.
 
@@ -199,8 +199,10 @@ python -m openalaqs_standalone austal \
     --out ./inputs/
 ```
 
-The AUSTAL grid is read from the study's `grid_3d_definition`;
-`--grid-size`/`--grid-step` only set the receptor clipping domain.
+The AUSTAL grid is read from the study's `grid_3d_definition`. Receptors
+outside that grid are dropped (with their IDs in the log);
+`--grid-size`/`--grid-step` override only this clipping square, not the
+AUSTAL grid.
 
 `--pollutants` defaults to the full stationary set
 (`co,hc,nox,sox,pm10,pm25`); pass an explicit comma-separated list to
@@ -480,7 +482,7 @@ Together they cover, among other things:
 - the plugin-output gate: the CAEP14 reference and the standalone
   reproduce the pinned plugin CSVs (`validation/data/plugin_output/`)
   for all 15 movements and the three methods, within 2e-4 relative
-  (movement 11, the ADS-B track, differs by 1e-4)
+  (movement 11, the ADS-B track, differs by 1.3e-5 on `bffm2_traj`)
   (`test_plugin_csv_vs_reference.py`)
 - the CAEP14 reference itself (`test_caep14_sheet_reference_case.py`,
   `test_caep14_reference_lookups.py`, `test_helicopter_caep14_reference.py`)

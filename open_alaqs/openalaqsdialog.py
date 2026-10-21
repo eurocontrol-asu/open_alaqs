@@ -2229,9 +2229,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             "widget_type": QtWidgets.QCheckBox,
             "initial_value": False,
             "tooltip": (
-                "Apply BFFM2 ambient-condition NOx correction (delta/theta/"
-                "humidity) to the mode-anchor NOx EI when the method is "
-                "'bymode'. Default OFF for compatibility with ICAO-standard "
+                "Apply the ICCAIA ambient NOx correction (take-off weight "
+                "ratio, temperature, humidity) to the take-off and climb-out "
+                "segments when the method is 'bymode'. Default OFF for compatibility with ICAO-standard "
                 "LTO inventory reports (AEDT, EDMS, ALAQS legacy). Turn ON "
                 "for site-specific studies where actual meteorology differs "
                 "materially from ISA sea level. Has no effect on BFFM2, "

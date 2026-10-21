@@ -19,15 +19,19 @@ Output layout:
 
 Steps:
     1. extract_sources  .alaqs -> sources.parquet
-    2. compute_road     .alaqs -> road emissions
-    3. compute_parking  .alaqs -> parking emissions
-       (concatenate to a single emissions.parquet)
-    4. adapt_meteo      .alaqs (or external CSV) -> meteo.csv
-    5. adapt_receptors  external CSV -> receptors.csv
-    6. make_config      .alaqs -> config.json
+    2. stationary sources (road, parking, point, area, engine test)
+       .alaqs -> emissions; with --include-aircraft the aircraft
+       movements are added (and the runway checks written); all
+       concatenated to a single emissions.parquet, plus one
+       <pollutant>_emissions.gpkg per pollutant
+    3. adapt_meteo      .alaqs (or external CSV) -> meteo.csv
+    4. adapt_receptors  external CSV -> receptors.csv, clipped to the
+       study grid
+    5. make_config      .alaqs -> config.json
 
-Steps 4 and 5 require external inputs; they're optional. Steps 1-3
-and 6 are derived entirely from the .alaqs file.
+The meteo and receptor CSVs are optional external inputs; everything
+else is derived from the .alaqs file. See "What it produces" in
+openalaqs_standalone/README.md for the full list of outputs.
 """
 
 from __future__ import annotations
@@ -56,6 +60,7 @@ from openalaqs_standalone.compute_road import compute_road_emissions
 from openalaqs_standalone.extract_sources import extract_sources
 from openalaqs_standalone.make_config import (
     _airport_metadata,
+    _grid_from_alaqs,
     _reference_lat_lon,
     make_config,
 )
@@ -191,6 +196,28 @@ def _write_runway_checks(alaqs_path, emissions_folder, summary: dict) -> None:
         print(f"  runway checks skipped: {e}")
 
 
+def _receptor_clip_grid(
+    alaqs_path: Path, grid_size: int | None, grid_step_m: float | None
+) -> tuple[int, float]:
+    """(cells per side, cell size in m) of the square receptors are clipped to.
+
+    Default: the study grid as make_config reads it for AUSTAL
+    (grid_3d_definition x_cells and x_resolution; 75 x 250 m when the table
+    is missing). grid_size / grid_step_m, when given, override it.
+    """
+    grid = _grid_from_alaqs(alaqs_path)
+    cells = grid["x_cells"] if grid is not None else 75
+    step = grid["x_resolution"] if grid is not None else 250.0
+    if grid_size is not None or grid_step_m is not None:
+        cells = grid_size if grid_size is not None else cells
+        step = grid_step_m if grid_step_m is not None else step
+        print(
+            f"  receptor clipping: {cells} x {step:g} m set by grid_size / "
+            f"grid_step (the AUSTAL grid still comes from grid_3d_definition)"
+        )
+    return int(cells), float(step)
+
+
 def _stationary_pollutants(pollutants: list, include_aircraft: bool) -> list:
     """The requested pollutants the stationary computes are asked for.
 
@@ -234,8 +261,8 @@ def orchestrate(
     receptor_x_col: str | None = None,
     receptor_y_col: str | None = None,
     title: str | None = None,
-    grid_size: int = 75,
-    grid_step_m: float = 250.0,
+    grid_size: int | None = None,
+    grid_step_m: float | None = None,
     qs: int = 3,
     include_aircraft: bool = False,
     aircraft_method: str = "bymode",
@@ -532,7 +559,8 @@ def orchestrate(
         always_xy=True,
     )
     ref_x, ref_y = tx.transform(lon, lat)
-    half = grid_size * grid_step_m / 2.0
+    clip_cells, clip_step = _receptor_clip_grid(alaqs_path, grid_size, grid_step_m)
+    half = clip_cells * clip_step / 2.0
     domain_bounds = (
         ref_x - half,
         ref_x + half,
@@ -565,8 +593,6 @@ def orchestrate(
         alaqs_path,
         config_folder / "config.json",
         title=title,
-        grid_size=grid_size,
-        grid_step_m=grid_step_m,
         qs=qs,
         pollutants=pollutants,
         year=year,
@@ -640,8 +666,21 @@ def main(argv=None):
     )
 
     parser.add_argument("--title", default=None)
-    parser.add_argument("--grid-size", type=int, default=75)
-    parser.add_argument("--grid-step", type=float, default=250.0)
+    parser.add_argument(
+        "--grid-size",
+        type=int,
+        default=None,
+        help="Receptor clipping only: cells per side of the square around the "
+        "grid reference (default: the study grid, grid_3d_definition x_cells). "
+        "The AUSTAL grid always comes from grid_3d_definition.",
+    )
+    parser.add_argument(
+        "--grid-step",
+        type=float,
+        default=None,
+        help="Receptor clipping only: cell size in m (default: the study grid, "
+        "grid_3d_definition x_resolution).",
+    )
     parser.add_argument("--qs", type=int, default=3)
 
     parser.add_argument(

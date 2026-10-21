@@ -199,7 +199,7 @@ def run_aircraft(argv: list | None = None) -> int:
         description=(
             "Compute per-movement aircraft emission totals from an "
             ".alaqs file (the Phase A0 core). Writes one CSV row per "
-            "movement per pollutant."
+            "movement, one column per pollutant."
         ),
     )
     parser.add_argument(

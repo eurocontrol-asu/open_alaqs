@@ -208,3 +208,41 @@ def test_orchestrate_reference_and_zone(tmp_path):
     lat, lon = orch._reference_lat_lon(alaqs, meta)
     assert (lat, lon) == (51.5, 0.0)
     assert orch._utm_epsg(lat, lon) == 32630
+
+
+def test_receptor_clip_defaults_to_study_grid(tmp_path, capsys):
+    """Receptors are clipped to the study grid (100 x 250 m here), not 75 x 250 m."""
+    from openalaqs_standalone import orchestrate as orch
+
+    alaqs = _study(tmp_path / "study.alaqs", grid_ref=AIRPORT, cells=100, res=250.0)
+    assert orch._receptor_clip_grid(alaqs, None, None) == (100, 250.0)
+    assert "receptor clipping" not in capsys.readouterr().out
+
+
+def test_receptor_clip_override_and_fallback(tmp_path, capsys):
+    from openalaqs_standalone import orchestrate as orch
+
+    alaqs = _study(tmp_path / "study.alaqs", grid_ref=AIRPORT, cells=100, res=250.0)
+    assert orch._receptor_clip_grid(alaqs, 40, None) == (40, 250.0)
+    assert "receptor clipping: 40 x 250 m" in capsys.readouterr().out
+    no_grid = _study(tmp_path / "nogrid.alaqs", grid_ref=None)
+    assert orch._receptor_clip_grid(no_grid, None, None) == (75, 250.0)
+
+
+def test_orchestrate_does_not_pass_grid_args_to_make_config(tmp_path, monkeypatch):
+    """make_config warns when given grid_size / grid_step_m; orchestrate must not pass them."""
+    import inspect
+
+    from openalaqs_standalone import orchestrate as orch
+
+    src = (
+        inspect.getsource(orch.run) if hasattr(orch, "run") else inspect.getsource(orch)
+    )
+    call = src[src.index("cfg = make_config(") :]
+    call = call[: call.index(")\n")]
+    assert "grid_size" not in call and "grid_step_m" not in call
+    parser_src = inspect.getsource(orch)
+    assert (
+        'add_argument(\n        "--grid-size",\n        type=int,\n        default=None'
+        in parser_src
+    )

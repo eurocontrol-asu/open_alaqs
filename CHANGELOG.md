@@ -100,7 +100,8 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   the table duplicate rows under other ids (FOCA-n, EEA-*, 01P21RR124) or,
   for EEA-J6, differ from 1RR016 only by a zero nvPM, and are not added.
   E190's default engine is now EEA-J10 (ACT_PRF "E190-A"; was 11GE144) in
-  `default_aircraft` and the bundled studies; movements that name their
+  `default_aircraft` and the bundled studies (not the trimmed demo
+  `scripts/emissions_austal/sample_data/Inventory.alaqs`); movements that name their
   engine, as all bundled ones do, are unchanged (pinned outputs identical).
 - CAEP14 validation: the BFFM2 index step is pinned to two cases of the
   CAEP14 calculation sheet, non-LTO lean burn and LTO
@@ -158,6 +159,16 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 
 ### Fixed
 
+- Standalone `austal` receptor clipping (since 5.3.6): receptors were
+  clipped to 75 x 250 m around the grid reference whatever the study grid
+  (`--grid-size`/`--grid-step` defaults), so receptors inside a larger
+  AUSTAL grid were dropped (training example: grid 100 x 250 m, receptors
+  9.4 to 12.5 km out); every run also printed a "grid_size / grid_step_m
+  ignored" warning. Receptors are now clipped to the study grid
+  (`grid_3d_definition`, as the AUSTAL grid); `--grid-size`/`--grid-step`
+  (and the recipe keys `grid_size`/`grid_step`, now null in
+  `recipe_config.example.json`) only override that square. Bundled outputs
+  unchanged.
 - UTM zone and AUSTAL reference point (since 5.3.6): the standalone (`geometry`, both `make_config`,
   `orchestrate`, the CAEP14 reference script) chose the UTM zone by formula, `make_config` always in the
   northern hemisphere and with 32631 when the longitude was 0.0 (`orchestrate --receptor-input` then stopped),

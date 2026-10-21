@@ -470,7 +470,7 @@ Representative values for the 06:00 hour on 2025-12-01:
 | Obukhov length | 99 999 m (neutral stability) |
 | Mixing height | 914.4 m |
 
-The `Humidity` column (specific humidity) takes priority over `RelativeHumidity` when both are provided. On 1 and 2 December the specific humidity (0.00446 and 0.00381 kg/kg) is **below** the ISA reference day humidity (0.00634 kg/kg), so the BFFM2 NOx humidity factor exp(−19 (h − 0.00634)) is **above 1.0** (drier air raises NOx); on 3 December (0.01463 kg/kg) it is 0.85.
+OpenALAQS computes the humidity ratio from `RelativeHumidity`, `Temperature` and `SeaLevelPressure`; the `Humidity` column is not used. On 1 and 2 December the humidity ratio (0.0045 and 0.0038 kg/kg, as in the `Humidity` column) is **below** the ISA reference day humidity (0.00634 kg/kg), so the BFFM2 NOx humidity factor exp(−19 (h − 0.00634)) is **above 1.0** (drier air raises NOx); on 3 December (0.0148 kg/kg) it is 0.85.
 
 If the meteorology file is omitted, OpenALAQS falls back to ISA default conditions (T = 288.15 K, P = 101 325 Pa, H = 0.00634 kg/kg).
 

@@ -126,9 +126,10 @@ The arrival (`build_arrival`) fills the FOCA approach time
    `approach_rod_final_fpm` to hover (5 ft AGL).
 
 When the two descents take longer than the approach time, both are
-shortened in proportion and the arrival starts below the ceiling:
-PISTON breaks at about 1030 ft and SINGLE_TURBOSHAFT at about 520 ft
-instead of 500 ft. The arrival then starts about 8.7 km (PISTON),
+shortened in proportion: the arrival still starts at the LTO ceiling, the
+break between the two descents moves up (PISTON about 1030 ft,
+SINGLE_TURBOSHAFT about 520 ft instead of 500 ft) and the final descent is
+steeper than `approach_rod_final_fpm`. The arrival then starts about 8.7 km (PISTON),
 8.4 km (SINGLE_TURBOSHAFT), 11.5 km (TWIN_TURBOSHAFT_LIGHT) and
 10.4 km (TWIN_TURBOSHAFT_HEAVY) from the touchdown spot.
 `approach_start_nm` is not used by the generator. Hover is held for
@@ -169,7 +170,7 @@ elsewhere:
 - **APU, gate and MES emissions**. None are computed for
   helicopters: the gate is used only as the helipad (trajectory
   origin), the gate calculator is not run for helicopter movements
-  (`MovementSourceModule.py:362-372`), and helicopters have no taxi
+  (`MovementSourceModule.process`, before `GateEmissionCalculator`), and helicopters have no taxi
   route, so there are no APU, GSE, GPU or MES emissions.
 
 ## Adding a new category

@@ -9,8 +9,8 @@ two helicopters, must agree for the three methods and for bymode with the
 ICCAIA ambient NOx correction (take-off and climb-out segments).
 
 Tolerance: 2e-4 relative. The CUSTOM (ADS-B) departure, movement 11, differs
-by 1.3e-5 between the plugin and the Python implementations (projection of the
-supplied track). With the NOx correction the six departures differ by 1e-6
+by 1.3e-5 between the plugin and the Python implementations (cause not
+isolated, see CAEP14_VALIDATION.md). With the NOx correction the six departures differ by 1e-6
 to 3e-6 between the plugin and the reference. Every other row agrees to
 floating-point noise.
 """

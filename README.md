@@ -154,7 +154,7 @@ Open-ALAQS ships three aircraft emission methods selectable at run time:
 - **BFFM2 (mode_anchor)** — uses the mode anchor fuel flow (IDLE/APP/CL/TO EEDB values) as the BFFM2 input, still applying ambient corrections. Useful when trajectories lack per-segment sub-mode fidelity.
 - **Helicopters (FOCA 2015)** — separate dispatch for movements flagged as helicopters. Four FOCA categories (PISTON, SINGLE_TURBOSHAFT, TWIN_TURBOSHAFT_LIGHT/HEAVY) with per-category trajectories and emission indices. APU and gate emissions are suppressed; airborne emissions only. See [`documents/USER_GUIDE.md`](documents/USER_GUIDE.md) for category derivation and [`documents/HELICOPTER_TRAJECTORIES.md`](documents/HELICOPTER_TRAJECTORIES.md) for the data sources.
 
-PM is via MEEM V1: the certified EEDB nvPM values in the LTO cycle and the MEEM V1 altitude chain above it. MEEM V2 (ICAO CAEP/13-WG3) is implemented in `meem_v2.py` for evaluation only and is not used by the calculation. The MDG4 / Staged Combustion update is not implemented.
+PM is via MEEM V1: the certified EEDB nvPM values in the LTO cycle and the MEEM V1 altitude chain above it. MEEM V2 (CAEP14 v12+) is implemented in `meem_v2.py` for evaluation only and is not used by the calculation. The MDG4 / Staged Combustion update is not implemented.
 
 For BFFM2 implementation details see [`documents/BFFM2_validation/BFFM2.md`](documents/BFFM2_validation/BFFM2.md).
 

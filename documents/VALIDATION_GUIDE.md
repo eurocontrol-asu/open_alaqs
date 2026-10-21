@@ -76,17 +76,17 @@ example/training/training_validation_reference.xlsx reference NOx, CO, HC, PM, S
  table, grid 100 x 100 x 20 cells of 250 x 250 x 50 m. Save as
  `training_out_REBUILT.alaqs` next to the original so the original is
  preserved. (Headless equivalent:
- `QT_QPA_PLATFORM=offscreen python3.12 tools/test_fixtures/rebuild_training_example_inventory.py --out training_out_REBUILT.alaqs`.)
-4. Open-ALAQS Toolbar → *Calculate Emissions* on `training_out_REBUILT.alaqs`.
+ `QT_QPA_PLATFORM=offscreen python3.12 tools/test_fixtures/rebuild_training_example_inventory.py --out example/training/training_out_REBUILT.alaqs`.)
+4. Open-ALAQS Toolbar → *Visualize Emission Calculation* on `training_out_REBUILT.alaqs`.
  Method: **bymode** (default). NOx ambient correction: **off** (default).
-5. Export emissions to CSV via *Save to CSV*.
+5. Export the per-movement table to CSV (table output, *Export CSV*).
 
 ### Outputs to send
 
 - `training_out_REBUILT.alaqs` (the regenerated inventory) - or the md5 if
  the file is too large.
 - The exported per-movement CSV.
-- The Open-ALAQS log lines from the *Calculate Emissions* run.
+- The Open-ALAQS log lines from the *Visualize Emission Calculation* run.
 
 ### What the reviewer does
 
@@ -222,7 +222,7 @@ the totals must match `USAGE.md` § "Quick smoke test" (31.841 / 30.698 /
   `openalaqs_standalone/validation/data/plugin_output/training_movements_*.csv`.
   Tolerance bands per V1. Expected: PASS at 1e-6 everywhere except
   `bffm2_traj` movement 11 (CUSTOM, PHBBA), PASS-WITH-DRIFT up to 1.3e-5
-  (NOx; CO stays within 1e-6).
+  (NOx 1.3e-5; CO2, SOx and PM10 9e-6; HC 2e-6; CO within 1e-6).
 - Cross-method sanity (no aircraft should produce zero CO, CO2, HC, NOx,
   SOx or PM10; SOx is fuel × 0.758 g/kg for every movement of this
   fixture (jet fuel), helicopters included; all 15 movements should appear
@@ -250,10 +250,10 @@ expected is bit-identity against the prior validated build.
 
 1. Open QGIS 3.40 with the **new** plugin installed.
 2. Project → Open → `<campaign_study>.alaqs`.
-3. Open-ALAQS Toolbar → *Calculate Emissions*. Run for the inventory year
+3. Open-ALAQS Toolbar → *Visualize Emission Calculation*. Run for the inventory year
  declared in `user_study_setup`. Method as previously validated
  (typically `bymode`).
-4. Save to CSV.
+4. Export the per-movement table to CSV (table output, *Export CSV*).
 
 ### Outputs to send
 

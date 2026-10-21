@@ -46,8 +46,9 @@ This builds `project.alaqs` and `inventory.alaqs` in
 `SQLSerializable` interface classes, the 10 `sql/*.sql` tables, then the
 reference data from `open_alaqs/database/data/*.csv`. It overwrites the
 checked-in templates, so review the diff before committing (a rebuild
-currently differs from the shipped files only in the column order of
-`shapes_runways`).
+currently differs from the shipped files in the column order of
+`shapes_runways`, the creation timestamps of `user_study_setup`,
+`spatialite_history`, and the last digit of 132 `nvpm_number_ei` values).
 
 ## What this directory is still useful for
 
