@@ -27,12 +27,15 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   approach 0.24 to 0.385 g/kg, taxi 0.23 to 0.294; B602 taxi 0.35 to
   0.295). For the other FOCA engines `pm10_ei` is the FOCA total (the file
   has no parts for the pistons and turboprops). No bundled movement uses them,
-  so no pinned output changes. In the CSV and the bundled `.alaqs` files.
+  so no pinned output changes. In the CSV and the bundled `.alaqs` files
+  (the old test fixtures `tests/data/generic/generic_out.alaqs` and
+  `gse_application/tests/example_db.alaqs` have no FOCA rows).
 - `default_aircraft_engine_ei`: the FOCA turboprops T601, T602, T603, T717
   and T790 had `fuel_type` AvGas; they are now Jet Fuel, so `sox_ei`
   0.75834 g/kg instead of 0.2 (no turboprop of the table is AvGas any
-  more). In the CSV and the bundled `.alaqs` files; no bundled movement
-  uses them.
+  more). In the CSV and the bundled `.alaqs` files (not in
+  `generic_out.alaqs` and `example_db.alaqs`, which have no FOCA rows); no
+  bundled movement uses them.
 - Training example ADS-B tracks (`example/training/training_ads_b_data.csv`
   and its copy in `validation/data/source_csvs`, the CUSTOM profiles of
   `training_out.alaqs` and `training_v3*.alaqs`): `fuel_flow` was 0.083 to
@@ -193,7 +196,11 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   the stored `pm10_sul` stays at the FOA3 value, FSC 680 ppm) and 0.2 g/kg
   for AvGas (FSC 0.01 %, no sulphate),
   by the row's `fuel_type`. The shipped table and the bundled `.alaqs`
-  files carry these values; a 0 or empty `sox_ei` in an existing study is
+  files carry these values, except the old test fixtures
+  `tests/data/generic/generic_out.alaqs` and
+  `gse_application/tests/example_db.alaqs`, whose AEM-era rows keep
+  `sox_ei` 1.0 (only their 112 rows of the 28 added engines have 0.75834;
+  the tests that read them do not check SOx); a 0 or empty `sox_ei` in an existing study is
   replaced by the fuel's value at run time. Helicopters (FOCA gives no
   SOx) get mode fuel × the value (PISTON: AvGas). Plugin, standalone and
   CAEP14 reference alike; the plugin/reference gate now compares SOx.
