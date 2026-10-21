@@ -72,7 +72,7 @@ Aircraft PM10 emissions are decomposed into three physical components, stored se
 pm10_sul (mg/kg) = FSC (kg/kg) × ε × 3 062 500
 ```
 
-The database holds a constant **48.96 mg/kg** for the Jet Fuel engines with PM data (0 for the AvGas rows). It equals FSC 0.068 % (680 ppm) × ε 0.024 × 3 000 000 (SO4/S = 96/32, the FOA3 values); with the 98/32 factor above it would correspond to FSC ≈ 667 ppm.
+The database holds a constant **48.96 mg/kg** for the Jet Fuel engines with PM data (0 for the AvGas rows). It equals FSC 0.068 % (680 ppm) × ε 0.024 × 3 000 000 (SO4/S = 96/32, the FOA3 values); with the 98/32 factor above it would correspond to FSC ≈ 666 ppm.
 
 **SOx (`sox_ei`)**: the rest of the fuel sulphur leaves as SO2, by fuel (`open_alaqs/core/tools/fuel_sulphur.py`):
 
@@ -211,7 +211,7 @@ where θ = T / 288.15, δ = P / 101 325, and ω is the specific humidity (kg wat
 
 ### Important notes
 
-+ **Apply NOx Corrections** has no effect with BFFM2, which applies its own correction. With Bymode it corrects the NOx EI of take-off and climb-out segments only (`open_alaqs/core/MovementEmissionCalculator.py:47, 1327-1335`).
++ **Apply NOx Corrections** has no effect with BFFM2, which applies its own correction. With Bymode it corrects the NOx EI of take-off and climb-out segments only (`NOX_CORRECTION_MODES` in `open_alaqs/core/MovementEmissionCalculator.py`, applied in `calculate_emissions_per_segment`).
 + For the taxi phase, BFFM2 uses `engine_thrust_level_for_taxiing` (default 7%) for the moving segments. Queuing and stop-and-go use the same emission index.
 + For ADS-B / CUSTOM profiles, the `fuel_flow_kgm` column is used as the total-aircraft ambient fuel flow per segment. It is divided by the engine count before BFFM2 dispatch.
 
@@ -397,7 +397,7 @@ z_lower = z_trajectory + s_v
 z_upper = z_lower + d_v
 ```
 
-**`sas`**: the volume is centred on the trajectory point and spans `d_v` below and above it; `s_v` is not used (`open_alaqs/core/GeoTransformation.py:111-113`):
+**`sas`**: the volume is centred on the trajectory point and spans `d_v` below and above it; `s_v` is not used (`GeoTransformation._compute_z_envelope`):
 
 ```
 z_lower = z_trajectory − d_v

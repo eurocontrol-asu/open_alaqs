@@ -1164,7 +1164,7 @@ def _nox_ambient_factor(meteo: dict, airport_elevation_m: float, tow_ratio) -> f
     )
 
 
-def _compute_fixed_wing(  # noqa: C901 — one segment loop per method, as the standalone
+def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the standalone)
     conn,
     mov: dict,
     ctx: dict,

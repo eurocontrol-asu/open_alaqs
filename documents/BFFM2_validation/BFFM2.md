@@ -262,7 +262,7 @@ MEEM V1 (`core/tools/meem_v1.py`, called from `Engine.getEmissionIndexByModeWith
   η = 0.88 and Π = 0.85 at 3000 ft rising linearly to 1.15 at the cruise altitude (climb); η = 0.7 and Π = 0.12 (descent). OpenALAQS has no cruise altitude (none of `default_aircraft`, `default_aircraft_engine_ei`, `default_aircraft_profiles` has one; `bada_id` is only an identifier): 38000 ft, the sheet's stored value (USER INPUTS!B20), is used. The fuel-composition factors are 1 (fossil fuel).
 - OPR is read from `press_ratio` (the CAEP14 sheet v14 `Engines_Database`, EEDB v31, ACT_PRF for engines not in it; 890 jet engines). Where it is empty (pistons, turboprops and 14 jets: B004, B134, B601 to B603, ECTL_2, 4, 6, 7, 8, 10, 12, 13, EEA-J9) the sheet has no value (its formulas then return an error), so 30 is used, with one warning in the log (`Engine.py:347`).
 - The 5th point (`meem_nvpm_m_i_f00_avg` with `nvpm_m_max_mgkg`, `meem_nvpm_n_i_f00_avg` with `nvpm_n_max_nkg`) is used when the thrust is above 0, as in the sheet (77 engines for mass, 75 for number: the 51 marked 5PT in the sheet and ACT_PRF 5-point engines).
-- The non-LTO mass EI replaces `pm10_nonvol_g_kg` (and `nvpm_g_kg`); `pm10_g_kg`, `p1_g_kg` and `p2_g_kg` move by the same amount (`Engine.py:374`). The number EI goes to `nvpm_number_kg`, which no output column reads. Fuel flow and the gas-phase EIs are not changed.
+- The non-LTO mass EI replaces `pm10_nonvol_g_kg` (and `nvpm_g_kg`); `pm10_g_kg`, `p1_g_kg` and `p2_g_kg` move by the same amount (`Engine._meem_v1`). The number EI goes to `nvpm_number_kg`, which no output column reads. Fuel flow and the gas-phase EIs are not changed.
 
 Segments above 3000 ft above MSL are calculated only when the hour's mixing height (the LTO ceiling) is above 3000 ft minus the airport elevation. The port reproduces the sheet's stored example and nine recalculated cases (four with ΔT ≠ 0) to 1e-15 (`tests/test_meem_v1.py`).
 
@@ -311,7 +311,7 @@ OpenALAQS supports profiles derived from ADS-B recordings in addition to standar
 **fuel_flow_kgm column.** ADS-B profiles may have the `fuel_flow_kgm` column populated with the estimated total-aircraft fuel flow in kg/s (sum over all engines), as recorded or derived from the ADS-B data. When this value is non-zero, OpenALAQS uses it in the BFFM2 calculation as follows:
 
 1. The value is divided by the aircraft engine count to obtain the per-engine ambient fuel flow.
-2. The per-engine value is compared to 1.5 × the EEDB Takeoff fuel flow (`ADSB_FF_CEILING_FACTOR`, `MovementEmissionCalculator.py:45`).
+2. The per-engine value is compared to 1.5 × the EEDB Takeoff fuel flow (`MovementEmissionCalculator.ADSB_FF_CEILING_FACTOR`).
 3. At or below it, the value is passed directly to the BFFM2 interpolation, bypassing the power-setting → twin-quad step.
 4. Above it, the segment uses the EEDB fuel flow of its mode (mode anchor), and one warning per movement reports the number of segments (`MovementEmissionCalculator.py:815-824`).
 
@@ -462,4 +462,4 @@ Only profile segments within the LTO ceiling (default 914.4 m above the runway, 
   arbitrary curved trajectories, including SID/STAR turns recorded
   in the source ADS-B data.
 
-- **Meteo per period.** Each time period uses the `tbl_InvMeteo` record nearest in time (`EmissionCalculation.py:122-136`); conditions are constant within a period.
+- **Meteo per period.** Each time period uses the `tbl_InvMeteo` record nearest in time (`EmissionCalculation.getAmbientCondition`); conditions are constant within a period.

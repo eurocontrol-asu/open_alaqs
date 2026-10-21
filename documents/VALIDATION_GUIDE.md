@@ -195,7 +195,7 @@ in training_v3.alaqs: 13 fixed-wing + 2 helicopter, kg):
 | bymode                              | 29.197 | 21.812 | 1.456 |
 | bymode + `--apply-nox-corrections`  | 27.963 | 21.812 | 1.456 |
 | bffm2_anchor                        | 27.745 | 21.532 | 1.468 |
-| bffm2_traj                          | 15.274 | 22.488 | 1.469 |
+| bffm2_traj                          | 16.874 | 22.057 | 1.466 |
 
 (Measured with the standalone of this version, default meteo and
 `--aircraft-only`, on `training_v3.alaqs`; equal to the sums of the pinned
@@ -221,8 +221,8 @@ the totals must match `USAGE.md` § "Quick smoke test" (31.841 / 30.698 /
 - For each `v2_*.csv`, per-row diff against the matching pinned file at
   `openalaqs_standalone/validation/data/plugin_output/training_movements_*.csv`.
   Tolerance bands per V1. Expected: PASS at 1e-6 everywhere except
-  `bffm2_traj` movement 11 (CUSTOM, PHBBA), PASS-WITH-DRIFT at 1.3e-5 on
-  every pollutant.
+  `bffm2_traj` movement 11 (CUSTOM, PHBBA), PASS-WITH-DRIFT up to 1.3e-5
+  (NOx; CO stays within 1e-6).
 - Cross-method sanity (no aircraft should produce zero CO, CO2, HC, NOx,
   SOx or PM10; SOx is fuel × 0.758 g/kg for every movement of this
   fixture (jet fuel), helicopters included; all 15 movements should appear
@@ -345,7 +345,7 @@ standalone's `aircraft` CSV to within float64 noise, on the same study
 - Build the row-aligned diff table keyed by `(oid, departure_arrival)`.
 - Tolerance bands: 1e-6 / 1e-4 / >1e-4 relative per pollutant.
 - For CAEP14: expect 100 % PASS at 1e-6, except `bffm2_traj` movement 11
- (CUSTOM): PASS-WITH-DRIFT, 4.4e-5 on the example and 8e-5 on
+ (CUSTOM): PASS-WITH-DRIFT, about 4e-6 on the example and 1.3e-5 on
  `training_v3.alaqs`. Any other row outside is a regression.
 - For campaign: report the band distribution. Investigate any 1e-4-band
  rows that did not exist in the prior build's V5 result.
@@ -574,9 +574,9 @@ OperationalError: no such table: default_helicopter
 
 **Root cause**: `openalaqs_standalone/movements.py` queries
 `default_helicopter` unconditionally to decide whether each movement is
-fixed-wing or helicopter. Inventories made by plugin versions before the
-FOCA 2015 helicopter implementation (such as the
-`example/training/training_out.alaqs` shipped before 5.3.x) have no
+fixed-wing or helicopter. Inventories made by plugin versions before 5.2.0
+(the FOCA 2015 helicopter release), such as older copies of
+`example/training/training_out.alaqs`, have no
 `default_helicopter` table.
 
 **Fix**: `movements.get_helicopter()` and `movements.get_helicopter_engine_type()`

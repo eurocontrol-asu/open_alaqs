@@ -502,9 +502,9 @@ The corresponding interface allows the user to set the path for saving the outpu
 
 ![generate-emissions-inventory.png](./../open_alaqs/assets/generate-emissions-inventory.png)
 
-The user must provide a comma-delimited `.csv` file containing aircraft operations (see [`Movements table`](#movements-table)). An automatic check is performed to ensure that all fields in the movements and meteorology files are in the correct format (e.g., dates should follow the format YYYY-MM-DD HH:MM:SS). The meteorology file is optional; if it is missing or contains invalid data, default values based on ISA conditions will be used.
+The user must provide a semicolon-delimited `.csv` file containing aircraft operations (as `example/training/training_movements.csv`) (see [`Movements table`](#movements-table)). An automatic check is performed to ensure that all fields in the movements and meteorology files are in the correct format (e.g., dates should follow the format YYYY-MM-DD HH:MM:SS). The meteorology file is optional; if it is missing or contains invalid data, default values based on ISA conditions will be used.
 
-The optional ADS-B file is also a comma-delimited `.csv`. The validator (`open_alaqs/core/tools/ads_b.py`) checks the columns below; any other columns in the CSV are passed through unchanged.
+The optional ADS-B file is a `.csv` whose delimiter (comma, semicolon or tab) is detected automatically. The validator (`open_alaqs/core/tools/ads_b.py`) checks the columns below; any other columns in the CSV are passed through unchanged.
 
 | Field | Type / Unit | Required | Notes |
 |---|---|---|---|
@@ -566,7 +566,7 @@ The following optional parameters can be left empty. They will only be used if t
 | `set_time_of_main_engine_off_after_runway_exit_in_s` | Duration in seconds after runway exit during which full-engine taxi applies before engines are cut (arrival). | Active |
 | `engine_thrust_level_for_taxiing` | Taxi thrust level as a fraction (ICAO default: 0.07 = 7%). Only affects the BFFM2 emission index for the moving taxi phase; queuing always uses true idle (7%) regardless of this setting. | Active |
 | `taxi_fuel_ratio` | Ratio between actual fuel flow and idle fuel flow during taxi. Acts as a direct multiplier on taxi segment emissions. Default: 1.0. | Active |
-| `number_of_stop_and_gos` | Number of stop-and-go events during taxiing. Each event adds `AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S = 9.0` seconds at idle thrust per engine (`MovementEmissionCalculator.py:181, 449`). Added to the queuing segment only (last taxi segment). | Active |
+| `number_of_stop_and_gos` | Number of stop-and-go events during taxiing. Each event adds `AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S = 9.0` seconds at idle thrust per engine (`MovementEmissionCalculator.AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S`, used in `calculate_emissions`). Added to the queuing segment only (last taxi segment). | Active |
 
 ### [Helicopters (FOCA 2015)](#helicopters-foca-2015)
 
@@ -654,7 +654,7 @@ In the **Configuration** tab, the user can specify the general settings for the 
 | Method | Description |
 |---|---|
 | **ByMode** | Uses ICAO EEDB emission indices for each LTO mode (TO, CL, AP, TX) directly, based on the time-in-mode from the movement profile. Simple and fast. |
-| **BFFM2** | Boeing Fuel Flow Method 2. Uses the actual power setting from each profile segment to derive a fuel-flow-dependent emission index via log-log interpolation through the four EEDB breakpoints. Applies ambient corrections for temperature, pressure, humidity and flight Mach number (TAS / a, a = √(1.4 · 287.05287 · T)). On the training example it gives 29 % less NOx and 8 % more CO than ByMode on the arrivals (per movement 2 to 50 % less NOx, 1 to 18 % more CO) and 50 % less NOx on the departures. See [`BFFM2.md`](BFFM2_validation/BFFM2.md) for the full methodology. |
+| **BFFM2** | Boeing Fuel Flow Method 2. Uses the actual power setting from each profile segment to derive a fuel-flow-dependent emission index via log-log interpolation through the four EEDB breakpoints. Applies ambient corrections for temperature, pressure, humidity and flight Mach number (TAS / a, a = √(1.4 · 287.05287 · T)). On the training example it gives 29 % less NOx and 8 % more CO than ByMode on the arrivals (per movement 2 to 50 % less NOx, 1 to 18 % more CO) and 45 % less NOx on the departures. See [`BFFM2.md`](BFFM2_validation/BFFM2.md) for the full methodology. |
 
 Changing any setting discards the previous calculation; it is recalculated when an output (View Emissions Table, Plot Time Series, Plot Vector Layer) is next requested.
 
