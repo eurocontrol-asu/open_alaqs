@@ -418,6 +418,12 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   properly". The plugin now keeps a 0 s taxi time and these emissions,
   as the standalone does, with a warning naming the two times; only a
   movement whose block time equals its runway time is still skipped.
+- Aircraft movements take the airport altitude (NOx ambient correction,
+  MEEM V1 ISA temperature, LTO cut) from the study's airport elevation
+  (`user_study_setup.airport_elevation`), as the standalone and the
+  CAEP14 reference do; it came from the grid reference altitude of the
+  Dispersion dialog, which can differ. The grid altitude is the fallback
+  for a study without an elevation.
 
 ### Removed
 

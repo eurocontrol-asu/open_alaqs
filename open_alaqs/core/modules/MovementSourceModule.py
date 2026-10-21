@@ -53,6 +53,27 @@ def _placement_key(movement):
     )
 
 
+def _study_airport_elevation(db_path):
+    """user_study_setup.airport_elevation (m) of the study, None if missing or unreadable."""
+    if not db_path:
+        return None
+    import sqlite3
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            row = conn.execute(
+                "SELECT airport_elevation FROM user_study_setup"
+            ).fetchone()
+    except sqlite3.Error:
+        return None
+    if not row or row[0] in (None, ""):
+        return None
+    try:
+        return float(row[0])
+    except (TypeError, ValueError):
+        return None
+
+
 class MovementSourceModule(SourceModule):
     # Aircraft movements (plus gates and taxiways consumed via routes)
     # have time-varying geometry. stays on legacy time-major
@@ -104,7 +125,12 @@ class MovementSourceModule(SourceModule):
         self._bffm2_ff_source = values_dict.get("bffm2_ff_source", "trajectory")
         self._nox_correction = values_dict.get("should_apply_nox_corrections", False)
         self._smooth_and_shift = values_dict.get("source_dynamics", "none")
+        # Airport altitude (NOx correction, MEEM V1 ISA temperature, LTO cut): the study's airport elevation,
+        # as in the standalone and the reference; the grid's reference altitude only when the study has none.
         self._reference_altitude = values_dict.get("reference_altitude", 0.0)
+        elevation = _study_airport_elevation(self.getDatabasePath())
+        if elevation is not None:
+            self._reference_altitude = elevation
         self._grid_bounds = values_dict.get("grid_bounds", None)
 
     def getMethod(self):
