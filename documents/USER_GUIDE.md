@@ -1,12 +1,13 @@
 # OpenALAQS User Guide
 
 ## Table of Contents
-- [OpenALAQS User Guide](#OpenALAQS-user-guide)
+- [OpenALAQS User Guide](#openalaqs-user-guide)
   - [Table of contents](#table-of-contents)
   - [Introduction](#introduction)
     - [General Information](#general-information)
     - [Installation](#installation)
-  - [The OpenALAQS Toolbar](#the-OpenALAQS-toolbar)
+  - [Upgrading from 5.3.x](#upgrading-from-53x)
+  - [The OpenALAQS Toolbar](#the-openalaqs-toolbar)
   - [Starting a Study](#starting-a-study)
     - [Setup a new study](#setup-a-new-study)
     - [Open an existing study](#open-an-existing-study)
@@ -60,25 +61,83 @@ It is developed as a plugin for the open-source geographic information system [`
 
 For installation instructions, check the [`Installation Instructions`](../README.md#installation).
 
-## [The OpenALAQS Toolbar](#the-OpenALAQS-toolbar)
+## [Upgrading from 5.3.x](#upgrading-from-53x)
+[(Back to top)](#table-of-contents)
+
+This section is for users who open a study made with OpenALAQS 5.3.x in this version. The full list of changes is in the [`CHANGELOG`](../CHANGELOG.md).
+
+### Results that change
+
+Recalculate a study after the upgrade if any of these applies to it:
+
+| Change | Studies affected |
+|---|---|
+| Runway placement of ANP profiles: arrivals touch down at the landing threshold plus the runway's **Touchdown Offset** (else the profile's own 50 ft crossing), departures start their take-off roll where the taxi route last meets the runway (see [Runways](#runways)) | every study with ANP arrivals or departures |
+| The **Touchdown Offset** of the first-named runway end (`touchdown`) was stored but not used; it is now used, and the second end has its own offset (`touchdown_2`) | studies with a non-zero `touchdown` |
+| Arrival `runway_time` is the touchdown (A-CDM ALDT); the landing roll of the profile is taken out of the arrival taxi time (block time minus runway time) | every study with arrivals; check how `runway_time` was filled in |
+| A movement whose taxi time comes out at 0 s (block time equal to runway time, or an arrival whose block to runway time is no longer than its landing roll) keeps its APU, stop-and-go and brake-wear emissions; only the route and queuing get no time. It lost all its taxi emissions before | studies with such movements |
+| Aircraft SOx comes from the fuel sulphur: 0.758 g/kg for jet fuel, 0.2 g/kg for AvGas (it was 0) | every study with aircraft |
+| BFFM2 segment Mach is TAS / a, with a = √(γ R T) | `BFFM2` studies with meteo away from ISA |
+| MEEM V1 nvPM above 3000 ft above the aerodrome follows the CAEP14 calculation sheet v14 (OPR from `press_ratio`, ISA + ΔT) | hours whose `MixingHeight` is above 914.4 m |
+| The NOx ambient correction (**Apply NOx Corrections**, bymode) applies to take-off and climb-out segments only; it was applied to every flight segment | bymode with the correction on: arrival NOx goes up |
+| **In Study** (parkings, roadways, point and area sources) is saved from the form; a source drawn through the form in 5.3.x got an empty flag and was left out of the calculation, and unticking the box saved nothing | studies with sources created or edited through the form |
+| **Engine Test Site** (area sources) is saved from the form; ticking or unticking it had no effect | studies with engine test sites |
+| The airport altitude of aircraft movements (NOx correction, MEEM V1) comes from the study's airport elevation (`user_study_setup`), not from the grid reference altitude | studies where the two differ |
+| A taxi route is oriented by its own gate, not by the gate of the first movement that uses it | studies where movements use a route defined for another gate |
+| Engine data (`default_aircraft_engine_ei`): FOCA engines from ACT_PRF 2.6.3 (B601 to B603 PM10; turboprops T601, T602, T603, T717 and T790 now jet fuel, SOx 0.758 g/kg), 1ZM001 taxi values (were 0), OPR and 5th nvPM point for MEEM V1 | studies with these engines, once the engine table is refreshed (see below) |
+| Standalone `austal`: receptors are clipped to the study grid (they were clipped to a 75 x 250 m square, which dropped receptors inside a larger grid); the UTM zone is the plugin's; the AUSTAL reference point is the grid reference, not the airport | standalone runs with receptors outside that square, in the southern hemisphere or on a zone boundary, or with the grid reference away from the airport |
+| `scripts/emissions_austal`: `smooth & shift` and `should_apply_nox_corrections` are read as documented (they could be ignored before) | runs of that script with these settings |
+
+### A study keeps its own engine, aircraft and profile tables
+
+A project `.alaqs` carries its own copies of the reference tables, among them `default_aircraft`, `default_aircraft_engine_ei` and `default_aircraft_profiles`. **Calculate Emissions Inventory** copies them from the open project into every new inventory (`create_output.inventory_copy_aircraft`, `inventory_copy_aircraft_engine_ei`, `inventory_copy_aircraft_profiles`); the inventory template has none. A study made with 5.3.6 therefore keeps the 5.3.6 engine data after the upgrade:
+
++ `press_ratio` and the 5th nvPM point are empty, so MEEM V1 uses OPR 30 above 3000 ft;
++ the old FOCA rows (B601 to B603 PM10, turboprops as AvGas) and 1ZM001 with fuel flow and EIs 0 in taxi;
++ `nvpm_number_ei` in #/s instead of #/kg (no output column carries nvPM number).
+
+Only a 0 or empty `sox_ei` is replaced at run time (by 0.758 g/kg for jet fuel, 0.2 g/kg for AvGas, from the row's `fuel_type`).
+
+### How to update a study
+
+1. For a new study, create a new project (**Create an Open ALAQS project**): it is made from the template of this version and has the current tables.
+2. For an existing study, update the `.alaqs` with `scripts/migrate_alaqs.py`. The script is not in the plugin zip: run it with Python 3 from a checkout of the repository at this version (it reads the templates and CSVs of that checkout). Close the study in QGIS first. The script writes a backup (`<name>.bak-<timestamp>.alaqs`) unless `--no-backup` is given.
+   + Schema only (adds `touchdown_2`, `engine_test_events`, `is_test_site` and the other missing tables and columns, empty, and the three named point-source profiles `heating_season`, `cooling_season` and `business_hours`):
+     ```bash
+     python scripts/migrate_alaqs.py study.alaqs
+     ```
+   + Schema and the engine table (replaces every row of `default_aircraft_engine_ei`, including rows you added or edited):
+     ```bash
+     python scripts/migrate_alaqs.py study.alaqs --refresh-reference-data --refresh-tables default_aircraft_engine_ei
+     ```
+   + Schema and all reference tables, including the user-extensible ones (`default_aircraft`, `default_aircraft_engine_ei`, `default_aircraft_profiles`, `default_aircraft_apu_ef`, `default_aircraft_start_ef`, `default_gate_profiles`, `default_helicopter`, `default_helicopter_engines`):
+     ```bash
+     python scripts/migrate_alaqs.py study.alaqs --refresh-reference-data --refresh-include-user-extensible
+     ```
+     This overwrites every row you added or edited in those tables, CUSTOM (ADS-B) profiles stored in the project's `default_aircraft_profiles` included (see [`scripts/README.md`](../scripts/README.md#migrate_alaqspy)). Add `--dry-run` to see the plan first.
+3. Check **Touchdown Offset, Runway 1 [m]** and **Touchdown Offset, Runway 2 [m]** of each runway (`touchdown_2` is empty after the migration: each arrival profile's own distance), **In Study** of the stationary sources and **Engine Test Site** of the area sources.
+4. Generate the inventory again (**Calculate Emissions Inventory**) with the ADS-B file, if any: the ADS-B tracks are imported into the new inventory, and at an airport with a non-zero elevation the points of the take-off roll and of the landing are now set to the ground (height 0).
+5. Recalculate (**Visualize Emission Calculation**).
+
+## [The OpenALAQS Toolbar](#the-openalaqs-toolbar)
 [(Back to top)](#table-of-contents)
 
 ![toolbar.png](./../open_alaqs/assets/toolbar.png)
 
-The toolbar consists of the following functions:
+The toolbar consists of the following functions (the names are the button tooltips):
 
-+ **About**: General information about the current OpenALAQS version.
-+ **Create Study**: Create a new OpenALAQS project.
-+ **Open Study**: Open an existing OpenALAQS project.
-+ **Close Study**: Close the current project.
-+ **Study Setup**: Contains general information about the study.
-+ **Import OSM Data**: Download and import data from OpenStreetMap (OSM).
-+ **Profile Editor**: Create activity profiles (hourly, daily, monthly).
-+ **Routes Editor**: Create taxi routes based on user-defined airport elements (gates, runways, taxiways).
-+ **Generate Emission Inventory**: Prepares the OpenALAQS output file containing all study data.
-+ **Visualize Emissions Calculation**: Manages the emissions calculation, visualization, and export modules.
-+ **Calculate Dispersion**: Handles the dispersion calculation module.
-+ **Review Logs**: Opens the log file containing useful information about code execution. A warning is written when an ADS-B fuel flow per engine exceeds 1.5 times the EEDB take-off fuel flow (the mode-anchor fuel flow is then used for those segments), at ADS-B import for each flight with `fuel_flow` points below the ICAO idle fuel flow of its engine (the values are kept), and when an arrival's taxi route leaves the runway above 50 kt or meets the runway only before the touchdown. An OSM import logs the number of buildings added and where their heights come from, and warns about imported gate names that are already in the Gates layer or repeated in the import.
++ **About Open ALAQS**: General information about the current OpenALAQS version.
++ **Create an Open ALAQS project**: Create a new OpenALAQS project.
++ **Load an Open ALAQS project**: Open an existing OpenALAQS project.
++ **Close all Open ALAQS projects**: Close the current project.
++ **Airport Study Setup**: Contains general information about the study (window `ALAQS Project Properties`).
++ **Import OSM data**: Download and import data from OpenStreetMap (OSM).
++ **Edit profiles**: Create activity profiles (hourly, daily, monthly; window `Open ALAQS - Activity Profiles`).
++ **Define taxi routes**: Create taxi routes based on user-defined airport elements (gates, runways, taxiways; window `Taxiway Routes Editor`).
++ **Calculate Emissions Inventory**: Prepares the OpenALAQS output file containing all study data (window `Generate Emission Inventory`).
++ **Visualize Emission Calculation**: Manages the emissions calculation, visualization, and export modules (window `Emission Inventory Analysis`).
++ **Calculate Dispersion**: Handles the dispersion calculation module (window `AUSTAL Dispersion Analysis`).
++ **Review Open ALAQS logs**: Opens the log file containing useful information about code execution. A warning is written when an ADS-B fuel flow per engine exceeds 1.5 times the EEDB take-off fuel flow (the mode-anchor fuel flow is then used for those segments), at ADS-B import for each flight with `fuel_flow` points below the ICAO idle fuel flow of its engine (the values are kept), and when an arrival's taxi route leaves the runway above 50 kt or meets the runway only before the touchdown. An OSM import logs the number of buildings added and where their heights come from, and warns about imported gate names that are already in the Gates layer or repeated in the import.
 
 The order of the toolbar buttons generally follows the sequence of steps needed to conduct a study using OpenALAQS.
 
@@ -88,7 +147,7 @@ The order of the toolbar buttons generally follows the sequence of steps needed 
 This section describes the initial steps required to create an OpenALAQS study.
 
 ### [Setup a new study](#setup-a-new-study)
-To create a new project, click on the `CREATE` button in the OpenALAQS toolbar. This action opens a pop-up window named `Create an Open ALAQS project file`, where the user is required to select a `File name` for saving the new study (`.alaqs`).
+To create a new project, click on the **Create an Open ALAQS project** button in the OpenALAQS toolbar. This action opens a pop-up window named `Create an Open ALAQS project file`, where the user is required to select a `File name` for saving the new study (`.alaqs`).
 
 After creating a project, the `ALAQS Project Properties` window opens automatically. In this window (tab `Airport`), the user must provide a project name and at least the ICAO code of the airport. The remaining fields (airport name, country, latitude, longitude, etc.) will be automatically filled based on the information in the internal database (see `default_airports.csv`). However, the user can manually edit this default information if needed.
 
@@ -99,10 +158,10 @@ After creating a project, the `ALAQS Project Properties` window opens automatica
 
 The second tab (`Roadways`) contains the settings for calculating road traffic emissions with [`COPERT`](https://copert.emisia.com/). Users are required to specify the average fleet year (values range from 1990 to 2030 in steps of 5) and select a country for country-specific emissions factors (or alternatively EU27). It should be noted that the average fleet year should be viewed as a proxy between the average fleet age and the Euro 1, Euro 2, Euro 3, Euro 4, Euro 5, and Euro 6 vehicle emission standards.
 
-The `ALAQS Project Properties` window can also be accessed by clicking on the `Setup` button in the OpenALAQS toolbar.
+The `ALAQS Project Properties` window can also be accessed by clicking on the **Airport Study Setup** button in the OpenALAQS toolbar.
 
 ### [Open an existing study](#open-an-existing-study)
-To open a previously created project, click on the `OPEN` button in the OpenALAQS toolbar. This action opens a pop-up window (`Open an ALAQS database file`), allowing you to select an existing OpenALAQS database (`.alaqs`) file.
+To open a previously created project, click on the **Load an Open ALAQS project** button in the OpenALAQS toolbar. This action opens a pop-up window (`Open an ALAQS database file`), allowing you to select an existing OpenALAQS database (`.alaqs`) file.
 
 ### [Import OpenStreetMap data](#import-openstreetmap-data)
 An additional functionality is added to OpenALAQS to facilitate the creation of emission sources based on the geographic data (roads, buildings, points of interest, and more) provided by OpenStreetMap.
@@ -170,7 +229,7 @@ In OpenALAQS, GSE and GPU emission factors, expressed in terms of grams of pollu
 + The aircraft category (JET BUSINESS/REGIONAL/SMALL/MEDIUM/LARGE, TURBOPROPS, PISTON)
 + The operation type (Arrival or Departure)
 
-More information on the corresponding GSE/GPU, APU and MES emission factors and activity time is available in [`OpenALAQS database`](AUXILIARY_MATERIAL.md#OpenALAQS-database).
+More information on the corresponding GSE/GPU, APU and MES emission factors and activity time is available in [`OpenALAQS database`](AUXILIARY_MATERIAL.md#openalaqs-database).
 
 #### [Runways](#runways)
 
@@ -183,7 +242,7 @@ When adding a runway, the following information can be given:
 
 Both offsets are whole metres (the form accepts integers only).
 
-Draw the runway along the full pavement used for take-off (end to end): departures line up and start the take-off roll at the drawn end. The touchdown offset is measured from the drawn end: where the landing threshold is displaced, enter the displacement plus about 290 m; otherwise leave it empty (the profile's own 50 ft crossing, about 290 m).
+Draw the runway along the full pavement, from one end to the other (the drawing direction does not matter). The touchdown offset is measured from the drawn end: where the landing threshold is displaced, enter the displacement plus about 290 m; otherwise leave it empty (the profile's own 50 ft crossing, about 290 m). A profile that never descends through 50 ft touches down at the drawn end. Departures line up where their taxi route last meets the runway (see below), not at the drawn end.
 
 Each offset is measured from its own landing threshold, along the landing direction, and applies to that direction only: for the same touchdown on both ends, enter the value in both fields.
 
@@ -307,7 +366,7 @@ When adding a point source, the following information is required:
   + **Height [m]**: Height at which emissions are released. `Not yet fully implemented`.
   + **Activity per Year**: How much the source operates in one inventory year. The numeric value of throughput, fuel consumed, or hours run.
   + **Activity Unit**: Unit paired with **Activity per Year**. Filled in from the selected emission factor row (`default_stationary_ef.activity_unit`) when the **Type** changes, and can be overridden for the source (the emission factors must then be per that unit); left empty when the row has no unit (the field then shows the legacy default `1000_m3` as a hint only). Examples: `1000_m3` (natural gas throughput), `1000_L` (liquid-fuel throughput), `hr` (engine operating hours), `1000_kg` (solid waste / coating).
-+ **Profiles**: Each point source carries one **Hourly Profile**, one **Daily Profile** and one **Monthly Profile**. The profiles split the **Activity per Year** total into a per-hour timeline across the inventory year. The `default_stationary_ef` table recommends profile names per source type (e.g. `business_hours` for stationary IC engines, `heating_season` for power/heat plants); these names refer to profiles you must define yourself via the OpenALAQS Toolbar → *Activity Profiles* panel, since the user profile tables in the project template ship empty. Until you create them, sources fall back to the default uniform profile.
++ **Profiles**: Each point source carries one **Hourly Profile**, one **Daily Profile** and one **Monthly Profile**. The profiles split the **Activity per Year** total into a per-hour timeline across the inventory year. The `default_stationary_ef` table recommends profile names per source type (e.g. `business_hours` for stationary IC engines, `heating_season` for power/heat plants); these names refer to profiles you must define yourself with the OpenALAQS toolbar button **Edit profiles**, since the user profile tables in the project template ship empty. Until you create them, sources fall back to the default uniform profile.
 
 ![points-layer.png](./../open_alaqs/assets/points-layer.png)
 
@@ -365,7 +424,7 @@ An engine test site (run-up pad) is an area source flagged for special treatment
 
 1. Draw the area source in QGIS covering the extent of the run-up pad. Fill in name and height as for a regular area source.
 2. In the source's edit form, tick the **Engine Test Site** checkbox. When ticked, **Units per Year** and the Emissions and Profiles tabs gray out: they are ignored at compute time for test sites. Only **Source Name** and **Height [m]** are required.
-3. Prepare a CSV of events. Each row is one engine test run. Required columns: `start_datetime`, `end_datetime`, `aircraft_type`, and per-mode running times in seconds (`t_TX_s`, `t_AP_s`, `t_CL_s`, `t_TO_s`). Optional columns: `source_id` (auto-filled from the current source), `test_id`, `engine_uid`, `engine_count`. See [`scripts/README.md`](../scripts/README.md#import_engine_test_eventspy) for the full CSV specification. If your CSV includes events for multiple sources (a "master CSV"), the dialog silently skips rows for other sources when opened from a specific source's form.
+3. Prepare a CSV of events. Each row is one engine test run. Required columns (`engine_test_import.REQUIRED_COLUMNS`): `source_id`, `start_datetime`, `end_datetime`, `aircraft_type`; when the CSV is loaded from a source's form, `source_id` is optional (filled from the current source). Optional columns: `test_id`, `engine_uid`, `engine_count`, the per-mode running times in seconds (`t_TX_s`, `t_AP_s`, `t_CL_s`, `t_TO_s`) and `instudy`. See [`scripts/README.md`](../scripts/README.md#import_engine_test_eventspy) for the full CSV specification. If your CSV includes events for multiple sources (a "master CSV"), the dialog silently skips rows for other sources when opened from a specific source's form.
 4. Load the events. Two ways, functionally identical:
    * **From the source form (default):** click *"Load engine test events CSV..."* in the area-source dialog (the button is only enabled when **Engine Test Site** is ticked). Browse to the CSV, review the validation summary, pick the insert mode (`Append` or `Replace`), tick "Tolerate warnings" if needed, and click Apply. The dialog is scoped to the current source; the `source_id` column becomes optional in the CSV.
    * **From the terminal (for scripting or multi-source bulk-load):**
@@ -375,7 +434,7 @@ An engine test site (run-up pad) is an area source flagged for special treatment
      Run without `--apply` first to validate. Add `--apply` when the summary looks clean. The CLI has an extra `replace-all` mode for global operations.
 5. Save the area source form (OK button). Then regenerate the emission inventory. Test-site emissions appear alongside regular sources.
 
-**Note on pre-existing `.alaqs` files:** if your study was created by a plugin version older than the one that added engine-test-site support, running the migration is required before step 2 works — the checkbox has no place to write to otherwise. Run:
+**Note on pre-existing `.alaqs` files:** if your study was created by a plugin version older than the one that added engine-test-site support, running the migration is required before step 2 works: the checkbox has no place to write to otherwise. Run, from a checkout of the repository (the script is not in the plugin zip; see [Upgrading from 5.3.x](#upgrading-from-53x)):
 ```bash
 python scripts/migrate_alaqs.py study.alaqs
 ```
@@ -410,7 +469,7 @@ When adding a building, the following detail is required:
 ## [Activity Profiles](#activity-profiles)
 [(Back to top)](#table-of-contents)
 
-Activity Profiles are used to describe the relative hourly/daily/monthly operational mode for each airport emission source. The `Activity Profiles Editor` in the OpenALAQS toolbar can be used to review, edit, and create custom profiles.
+Activity Profiles are used to describe the relative hourly/daily/monthly operational mode for each airport emission source. The **Edit profiles** button in the OpenALAQS toolbar opens the activity profiles window (`Open ALAQS - Activity Profiles`), which can be used to review, edit, and create custom profiles.
 
 ![activity-profiles.png](./../open_alaqs/assets/activity-profiles.png)
 
@@ -430,7 +489,7 @@ Each factor is a non-negative decimal number. Values are not capped at 1.0; what
 
 ### [Worked example — defining and using named profiles](#worked-example--defining-and-using-named-profiles)
 
-The names `heating_season`, `cooling_season`, and `business_hours` are recommended in `default_stationary_ef` but must be defined by the user in the Activity Profiles Editor (see [Point Sources](#point-sources)). Suggested factor values, intended as a starting point for a temperate European airport:
+The names `heating_season`, `cooling_season`, and `business_hours` are recommended in `default_stationary_ef` but must be defined by the user in the activity profiles window (**Edit profiles**; see [Point Sources](#point-sources)). Suggested factor values, intended as a starting point for a temperate European airport:
 
 **`heating_season` — month profile, winter-weighted** (peaks Jan/Feb/Dec):
 
@@ -470,7 +529,7 @@ This section covers all the necessary steps for preparing an emission inventory 
 
 As explained in the section [`Taxiways`](#taxiways), taxi-routes describe the operational path of an aircraft between the runway and the gate (or vice versa).
 
-Taxi-routes can be defined using the Taxiway Routes Editor.
+Taxi-routes can be defined in the `Taxiway Routes Editor` (toolbar button **Define taxi routes**).
 
 <p align="center">
   <img src="./../open_alaqs/assets/taxiroutes-editor-1.png" alt="Taxiroutes Editor" width="45%" />
@@ -483,7 +542,7 @@ To define a taxi route in OpenALAQS, the user has to first create the taxi-route
 
 Before calculating emissions, the user must generate an OpenALAQS file that includes all user-defined elements of the study (e.g., emission sources) and the default internal database (e.g., emission factors).
 
-The corresponding interface allows the user to set the path for saving the output file, select movements and meteorological data, optionally provide an ADS-B file, set time filters, and define the domain and its spatial resolution:
+The toolbar button **Calculate Emissions Inventory** opens the window `Generate Emission Inventory`, which allows the user to set the path for saving the output file, select movements and meteorological data, optionally provide an ADS-B file, set time filters, and define the domain and its spatial resolution:
 + **Emission Inventory Output**:
   + **Directory**: The path (directory) to the output file
   + **File Name**: The name of the output file to be generated
@@ -495,12 +554,14 @@ The corresponding interface allows the user to set the path for saving the outpu
   + **ADS-B Table**: A placeholder to select a CSV file with ADS-B trajectory data. When provided, the file is validated on selection and a status line below the field indicates whether the file is valid, the number of flights detected, and any warnings. ADS-B trajectories override the corresponding standard ANP profile for movements whose `profile_id` references a `course = CUSTOM` entry in `default_aircraft_profiles`. See [Movements table](#movements-table) and the [`Auxiliary Material`](AUXILIARY_MATERIAL.md#aircraft-trajectories) for the relationship between the ADS-B file and the movement records.
 + **Meteorological Data**:
   + **Meteorological Table**: A placeholder for importing meteorological data
-+ **Modeled Domain**:
++ **Modelled Domain**:
   + **X Resolution**: The spatial resolution in the X-axis, set by default to 250 meters and split into 50 cells.
   + **Y Resolution**: The spatial resolution in the Y-axis, also set by default to 250 meters with 50 cells.
   + **Z Resolution**: The vertical spatial resolution, set by default to 50 meters with 20 cells.
 
 ![generate-emissions-inventory.png](./../open_alaqs/assets/generate-emissions-inventory.png)
+
+Click **Create Inventory** to write the inventory file (`<File Name>_out.alaqs` in the chosen directory); **Close** closes the window.
 
 The user must provide a semicolon-delimited `.csv` file containing aircraft operations (as `example/training/training_movements.csv`) (see [`Movements table`](#movements-table)). An automatic check is performed to ensure that all fields in the movements and meteorology files are in the correct format (e.g., dates should follow the format YYYY-MM-DD HH:MM:SS). The meteorology file is optional; if it is missing or contains invalid data, default values based on ISA conditions will be used.
 
@@ -564,9 +625,9 @@ The following optional parameters can be left empty. They will only be used if t
 | `set_time_of_main_engine_start_after_block_off_in_s` | Duration in seconds after block-off during which single-engine taxi applies (departure). Takes priority over `_before_takeoff` if both are set. | Active |
 | `set_time_of_main_engine_start_before_takeoff_in_s` | Duration in seconds before takeoff at which the remaining engines are started (departure). Used when `_after_block_off` is not set. | Active |
 | `set_time_of_main_engine_off_after_runway_exit_in_s` | Duration in seconds after runway exit during which full-engine taxi applies before engines are cut (arrival). | Active |
-| `engine_thrust_level_for_taxiing` | Taxi thrust level as a fraction (ICAO default: 0.07 = 7%). Only affects the BFFM2 emission index for the moving taxi phase; queuing always uses true idle (7%) regardless of this setting. | Active |
-| `taxi_fuel_ratio` | Ratio between actual fuel flow and idle fuel flow during taxi. Acts as a direct multiplier on taxi segment emissions. Default: 1.0. | Active |
-| `number_of_stop_and_gos` | Number of stop-and-go events during taxiing. Each event adds `AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S = 9.0` seconds at idle thrust per engine (`MovementEmissionCalculator.AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S`, used in `calculate_emissions`). Added to the queuing segment only (last taxi segment). | Active |
+| `engine_thrust_level_for_taxiing` | Taxi thrust level as a fraction (ICAO default: 0.07 = 7%). Used by BFFM2 only: it sets the emission index of the taxi phase, which the moving taxi, queuing and stop-and-go all use (`TaxiingEmissionCalculator.calculate_emissions`). Bymode uses the TX mode values. | Active |
+| `taxi_fuel_ratio` | Ratio between actual fuel flow and idle fuel flow during taxi. Acts as a direct multiplier on the emissions of the moving taxi segments (not on queuing or stop-and-go). Default: 1.0. | Active |
+| `number_of_stop_and_gos` | Number of stop-and-go events during taxiing. Each event adds `AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S = 9.0` seconds per engine at the taxi emission index (`MovementEmissionCalculator.AVERAGE_DURATION_OF_STOP_AND_GOS_IN_S`, used in `TaxiingEmissionCalculator.calculate_emissions`). Added to the queuing segment only (last taxi segment). | Active |
 
 ### [Helicopters (FOCA 2015)](#helicopters-foca-2015)
 
@@ -605,7 +666,7 @@ The 3400 kg threshold is defined in FOCA 2015 section 2.4. The category drives b
 
 To add a helicopter type that is not in the default catalog, insert a row into `default_helicopter` referencing an existing engine in `default_helicopter_engines` (or insert a new engine row first). The minimum fields are `icao`, `variant_label`, `mtow_kg`, `engine_count`, `engine`, `engine_name`, `max_shp_per_engine`, `is_default`. Once the row is in place, any movement whose `aircraft` field matches that ICAO will be routed through the FOCA path automatically.
 
-**What is suppressed for helicopters.** APU emissions are skipped because the helicopter taxi branch (`_apply_taxiing_emissions_for_helicopters` in `MovementEmissionCalculator.py`) does not call the APU code path — `apu_code` is not consulted on this branch. For gate emissions, `gate_emissions_code` is still respected (the gate function returns early if it is 0); when gate emissions are enabled, GSE and GPU sub-components are explicitly skipped for helicopters but MES (Main Engine Start) is computed normally. The FOCA 2015 LTO cycle covers ground idle, takeoff, climb-out, approach, and landing on its own, avoiding double-counting against the suppressed sub-components. Taxi emissions themselves are handled by the helicopter taxi function; helicopters typically taxi minimally (ground idle on the spot or air-taxi).
+**What is suppressed for helicopters.** No APU, GSE, GPU or MES (Main Engine Start) emissions are computed for helicopters, whatever `apu_code` and `gate_emissions_code` say. The gate calculation is not run for a helicopter movement (`MovementSourceModule.process` skips it; the gate is only the helipad, the origin of the FOCA trajectory), and the helicopter taxi branch (`TaxiingEmissionCalculator._apply_taxiing_emissions_for_helicopters`) adds ground idle only, with no APU or engine start. The FOCA 2015 LTO cycle covers ground idle, takeoff, climb-out, approach, and landing on its own, avoiding double-counting against the suppressed sub-components. Taxi emissions themselves are handled by the helicopter taxi function; helicopters typically taxi minimally (ground idle on the spot or air-taxi).
 
 **Limitations.** The 3000 ft AGL LTO ceiling is per the ICAO LTO definition; emissions above that altitude are not modelled. Two known FOCA 2015 PDF inconsistencies were resolved during implementation (piston fuel-flow leading coefficient and twin-heavy Appendix C power settings) and are recorded in the docstring of `open_alaqs/core/tools/foca_heli.py`.
 
@@ -620,15 +681,15 @@ The required meteorological parameters are:
 | `Scenario` | — | Simulation name identifier |
 | `DateTime` | YYYY-MM-DD HH:MM:SS | |
 | `Temperature` | K | |
-| `Humidity` | kg water / kg dry air | Used directly if non-zero; takes priority over `RelativeHumidity` |
-| `RelativeHumidity` | fraction (0–1) | Used to derive specific humidity if `Humidity` is zero or empty |
+| `Humidity` | kg water / kg dry air | Not used by the emission calculation (see below) |
+| `RelativeHumidity` | fraction (0–1) | Used to derive the humidity ratio (BFFM2, NOx correction); 0.6 when the column is missing or empty |
 | `SeaLevelPressure` | Pa | |
 | `WindSpeed` | m/s | |
 | `WindDirection` | degrees | |
 | `ObukhovLength` | m | |
 | `MixingHeight` | m | Used as the LTO ceiling for aircraft movements in each interval (914.4 m when absent). |
 
-If `Humidity` (specific humidity in kg/kg) is populated and non-zero, it is used directly. If it is empty or zero, specific humidity is derived from `RelativeHumidity`, `Temperature`, and `SeaLevelPressure`. When both fields are populated, `Humidity` takes precedence.
+The humidity ratio used by BFFM2 and by the NOx ambient correction is always derived from `RelativeHumidity`, `Temperature` and `SeaLevelPressure` (`bffm2.calculate_emission_index`, `nox_correction_ambient.nox_correction_for_ambient_conditions`); the `Humidity` column is not used, so a value given only in `Humidity` has no effect. When `RelativeHumidity` is missing or empty, 0.6 is used (`AmbientCondition`).
 
 Input data may come from local or national data providers (e.g., METAR, SYNOP) or reanalysis data. If the meteorology file is missing or contains invalid data, default ISA conditions are used.
 
@@ -706,7 +767,7 @@ The following parameters need to be defined:
 + **NOTALUFT** (per-hour series): when enabled, AUSTAL writes per-hour grid output (`<substance>-NNNa.dmna`) and, when receptor points are configured, per-receptor time-series files (`<substance>-tmpa.dmna`). Required for **Plot Time Series** and **Compliance Report**; optional for **Plot Vector Layer** with `annual mean`.
 + **PM10 fine fraction**: how PM10 emissions are split between AUSTAL's `pm-1` and `pm-2` substances (default 0.9, suitable for an airport mix dominated by aircraft non-volatile PM and combustion exhaust).
 + **Receptor Points**: Specify receptor points using a `.csv` file. In ALAQS mode the plugin will also auto-load any receptors defined in the `shapes_receptor_points` table of the `.alaqs` file if no CSV is given. Without receptors AUSTAL still produces grid output, but Plot Time Series and Compliance Report stay disabled.
-+ **Options String**:
++ **Options String** (default `NOSTANDARD;SCINOTAT;Kmax=1`):
   + `NOSTANDARD`: Activates non-standard calculation configurations.
   + `SCINOTAT`: Forces output in scientific notation with four significant decimal places.
   + `Kmax=1`: Limits the simulation to near-ground (surface-level) calculations.
@@ -728,16 +789,16 @@ Click `Calculate Dispersion` in the OpenALAQS toolbar to open the dispersion dia
    + `Generate AUSTAL Input Files from OpenALAQS Emission Inventory File` — drive the run from an `*_out.alaqs` file (most common path).
    + `Generate AUSTAL Input Files from CSV` — drive the run from emissions and meteo CSV files prepared outside OpenALAQS.
 
-   In the two Generate modes, set the **Work Directory** where the input files (`austal.txt`, `series.dmna`, etc.) and AUSTAL's outputs will be written. The same section also exposes the **Receptors CSV** picker, the **NOTALUFT** checkbox, and the **PM10 fine fraction** spinbox (described above). For Generate-from-`.alaqs`, the plugin auto-loads receptor points from the `shapes_receptor_points` table if the Receptors CSV picker is empty.
+   In the two Generate modes, set the output folder (**Output Work Directory** for the `.alaqs` mode, **Output Directory** for the CSV mode) where the input files (`austal.txt`, `series.dmna`, etc.) and AUSTAL's outputs will be written. The same section also exposes the **Receptors CSV** picker, the **NOTALUFT** checkbox, and the **PM10 fine fraction** spinbox (described above). For Generate-from-`.alaqs`, the plugin auto-loads receptor points from the `shapes_receptor_points` table if the Receptors CSV picker is empty.
 
-3. **Execution** — click `Run AUSTAL`. The optional `Erase Log File at the Start of the Calculation` checkbox deletes any existing `austal.log` before the run.
+3. **Execution**: click `Run AUSTAL`. The optional `Erase Log File at Start of Calculation` checkbox deletes any existing `austal.log` before the run.
 4. **Result Visualisation** — populated after a successful run. See [Visualize results](#visualize-results) below.
 
 AUSTAL can also be run independently outside OpenALAQS. For a step-by-step operational walkthrough, see [`documents/AUSTAL/AUSTAL_OPERATION.md`](./AUSTAL/AUSTAL_OPERATION.md).
 
 ![running-austal.png](./../open_alaqs/assets/running-austal.png)
 
-By default, a file named `austal.log` is generated at the end of the dispersion calculation. Option `Erase Log File at the Start of the Calculation` deletes any existing log file before the calculation.
+By default, a file named `austal.log` is generated at the end of the dispersion calculation. Option `Erase Log File at Start of Calculation` deletes any existing log file before the calculation.
 
 ### [Output data](#output-data)
 

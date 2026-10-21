@@ -36,7 +36,7 @@ not deprecated, just redundant.
   non-volatile PM mass emission index, in g/kg).
 - 3692 of 3692 rows in ANP_out.alaqs have non-null `nvpm_ei`.
 - `nvpm_ei` is declared in the schema dict, marked DEPRECATED
-  (`EngineDatabases.py:179-182`), but no calculation reads it.
+  (column list of `EngineEmissionIndicesDatabase.__init__` in `EngineDatabases.py`), but no calculation reads it.
 - But production code reads the non-volatile PM mass EI via
   `ei_.getObject("nvpm_g_kg")`, and the `key_mapping` in `Engine.py` (`EngineEmissionIndex`)
   remaps `nvpm_g_kg` to the DB column `pm10_nonvol`. So the MEEM V1/V2 call
@@ -55,7 +55,7 @@ doesn't affect any calculation.
 2. schema-v2 (future release):
    - Drop columns from `EngineDatabases.py` schema dict:
      * all 12 deprecated columns and `nvpm_ei` (annotated DEPRECATED in the
-       current schema, `EngineDatabases.py:142-182`)
+       current schema, column list of `EngineEmissionIndicesDatabase.__init__`)
    - Regenerate `default_aircraft_engine_ei.csv` without these 12 fields (25 cols remaining).
    - Resolve the `nvpm_ei` vs `pm10_nonvol` redundancy (see the nvpm_ei
      finding above). Recommended: keep `nvpm_ei`, drop `pm10_nonvol`, update
@@ -158,7 +158,7 @@ production code path.
 `--refresh-tables default_helicopter,default_helicopter_engines`) to fill
 the new `default_helicopter` / `default_helicopter_engines` tables from the
 CSVs. Without the refresh, Phase 1 creates them empty
-(`scripts/migrate_alaqs.py:33-34, 162-171`).
+(`scripts/migrate_alaqs.py`: Phase 1 in the module docstring, `USER_EXTENSIBLE_REFRESH_TABLES`).
 
 ## Added in 5.2.0: 5 MEEM v1 / nvPM columns in `default_aircraft_engine_ei`
 

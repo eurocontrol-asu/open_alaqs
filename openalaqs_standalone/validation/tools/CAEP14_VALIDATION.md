@@ -52,10 +52,11 @@ QT_QPA_PLATFORM=offscreen python3.12 \
 ```
 
 Or in QGIS: open the inventory
-`openalaqs_standalone/validation/data/training_v3.alaqs`, run *Calculate
-Emissions* with each of the three calculation methods and once with
-`bymode` and *Apply NOx corrections* on, and export the per-movement
-emissions to CSV via the standard Output Module.  Save them as
+`openalaqs_standalone/validation/data/training_v3.alaqs` in *Visualize
+Emission Calculation*, run it with each of the three calculation methods
+and once with `bymode` and *Apply NOx Corrections* on, and export the
+per-movement emissions to CSV (Emission Source Type `MovementSource`,
+Emissions table view *by source*, *View Emissions Table*, *Export CSV*).  Save them as
 `training_movements_bymode.csv`, `training_movements_bffm2_anchor.csv`,
 `training_movements_bffm2_traj.csv` and `training_movements_bymode_nox_corr.csv`
 (the file names the regen script expects by default). Only `source_name`
@@ -85,8 +86,10 @@ PYTHONPATH=. python3 openalaqs_standalone/validation/tools/compute_caep14_refere
 ```
 
 (`--use-meteo` because the plugin applies `tbl_InvMeteo`; at ISA the
-BFFM2 methods differ from the plugin by 5 to 25 % on the fixture's cold
-and warm days. `bymode` has no ambient correction.)
+largest per-movement NOx difference from the plugin is 22 % with
+`bffm2_anchor`, 34 % with `bffm2_traj` and 8 % for `bymode` with the NOx
+correction, measured with the standalone's `--isa-meteo` against the
+pinned CSVs. `bymode` without the correction has no ambient correction.)
 
 Each invocation prints a per-movement table with CO, CO₂, NOₓ and
 PM₁₀ from both reference (`_ref`) and plugin (`_plg`) plus a Δ%
@@ -178,8 +181,9 @@ SOₓ stay at the table EI.
 ### `bffm2_traj`
 
 Per-segment fuel flow is resolved either from `fuel_flow_kgm` (CUSTOM
-/ ADS-B profiles, divided by `engine_count` and clamped to the TO
-anchor as a ceiling) or from the segment's `power` setting via the
+/ ADS-B profiles, divided by `engine_count`; above
+`ADSB_FF_CEILING_FACTOR` = 1.5 × the TO anchor fuel flow the segment
+falls back to the anchor fuel flow of its mode, as in the plugin) or from the segment's `power` setting via the
 piecewise three-point quadratic fit from
 `core/tools/twin_quadratic_fit_method.py`, then converted to ambient
 fuel flow via the inverse SAE AIR-5715 / CAEP14 correction:
@@ -420,8 +424,9 @@ the index step is pinned to the CAEP validation.
 ### Re-export of the pinned plugin outputs
 
 The 5.2.0 exports in `data/plugin_output/` were stale on two counts:
-they were made at ISA while the plugin now applies `tbl_InvMeteo` (5 to
-25 % on the BFFM2 methods on the fixture's cold and warm days), and they
+they were made at ISA while the plugin now applies `tbl_InvMeteo` (at
+ISA the per-movement NOx differs by up to 22 % with `bffm2_anchor` and
+34 % with `bffm2_traj` with this version), and they
 predate the 5.3.2 helicopter placement and the runway placement of ANP
 arrivals of this version (the 5.2.0 exports were 2 to 17 % higher on the
 seven ANP arrivals, by pollutant: NOx 11 to 17 %, CO2 10 to 14 %, CO and

@@ -6,6 +6,12 @@ ISO 8601.
 
 ## [Unreleased]
 
+Upgrading a 5.3.x study: see
+[Upgrading from 5.3.x](documents/USER_GUIDE.md#upgrading-from-53x) in the
+User Guide: which results change for which studies, and how to bring a
+study's own engine, aircraft and profile tables up to date (a project
+`.alaqs` keeps its own copies, which are copied into every new inventory).
+
 Runway placement of flight profiles. **Results change** for every study with
 ANP arrivals or block and runway times on arrivals: emissions move along the
 runway, arrival rollouts that ran past their exit are shorter, and arrival
@@ -28,11 +34,17 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   0.295). For the other FOCA engines `pm10_ei` is the FOCA total (the file
   has no parts for the pistons and turboprops). No bundled movement uses them,
   so no pinned output changes. In the CSV and the bundled `.alaqs` files.
+  **Results change** for movements with B601, B602 or B603 (PM10; the
+  default engine of 49 aircraft types, among them C25B, C56X and E55P)
+  and with B004 or B134 (`pm10_sul_kg`, `pm10_organic_kg`), in a study
+  whose engine table is refreshed (an existing study keeps its own copy).
 - `default_aircraft_engine_ei`: the FOCA turboprops T601, T602, T603, T717
   and T790 had `fuel_type` AvGas; they are now Jet Fuel, so `sox_ei`
   0.75834 g/kg instead of 0.2 (no turboprop of the table is AvGas any
   more). In the CSV and the bundled `.alaqs` files; no bundled movement
-  uses them.
+  uses them. **Results change** (SOx) for movements with these engines
+  (the default engine of 30 aircraft types), in a study whose engine
+  table is refreshed.
 - Training example ADS-B tracks (`example/training/training_ads_b_data.csv`
   and its copy in `validation/data/source_csvs`, the CUSTOM profiles of
   `training_out.alaqs` and `training_v3*.alaqs`): `fuel_flow` was 0.083 to
@@ -84,8 +96,9 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   "0") on parkings, roadways, point sources and area sources, and hidden on
   the layers that do not use it (runways, taxiways, gates, tracks,
   buildings). OID and **Heat Flux [MW]** are read-only; the taxiway `time`
-  column, which no calculation reads, is hidden and not in the form; the emission factors filled in by Recalculate and **Method**
-  are no longer editable in the forms. **Activity Unit** (point sources) is
+  column, which no calculation reads, is hidden and not in the form; the
+  emission factors filled in by Recalculate and **Method** are no longer
+  editable in the forms. **Activity Unit** (point sources) is
   filled in from the selected Type and can be overridden per source; an
   existing source keeps its stored unit. Validation messages
   of the parking and roadway forms use the field names. Typos fixed
@@ -166,13 +179,16 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - Standalone `austal` receptor clipping (since 5.3.6): receptors were
   clipped to 75 x 250 m around the grid reference whatever the study grid
   (`--grid-size`/`--grid-step` defaults), so receptors inside a larger
-  AUSTAL grid were dropped (training example: grid 100 x 250 m, receptors
+  AUSTAL grid were dropped (training example: grid 100 x 100 x 20 cells of
+  250 x 250 x 50 m, receptors
   9.4 to 12.5 km out); every run also printed a "grid_size / grid_step_m
   ignored" warning. Receptors are now clipped to the study grid
   (`grid_3d_definition`, as the AUSTAL grid); `--grid-size`/`--grid-step`
   (and the recipe keys `grid_size`/`grid_step`, now null in
   `recipe_config.example.json`) only override that square. Bundled outputs
-  unchanged.
+  unchanged. **Results change** for standalone `austal` runs with
+  receptors outside that 75 x 250 m square and inside the study grid:
+  they are now kept.
 - UTM zone and AUSTAL reference point (since 5.3.6): the standalone (`geometry`, both `make_config`,
   `orchestrate`, the CAEP14 reference script) chose the UTM zone by formula, `make_config` always in the
   northern hemisphere and with 32631 when the longitude was 0.0 (`orchestrate --receptor-input` then stopped),
@@ -185,12 +201,15 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   so with the two apart aircraft cells were shifted against stationary sources and receptors (1374 m for a
   reference 0.02 deg east of Rotterdam); they now use the grid reference (the airport only when the grid
   definition has none, with a warning). No bundled result changes: the training studies have both points
-  equal, in zone 32631 either way.
+  equal, in zone 32631 either way. **Results change** for standalone runs (`make_config`, `orchestrate`,
+  the CAEP14 reference) in the southern hemisphere, on a UTM zone boundary or at longitude 0.0, and for
+  the standalone's AUSTAL inputs of studies whose grid reference differs from the airport position.
 - Aircraft SOx was zero: `sox_ei` was 1.0 g/kg in every row of
   `default_aircraft_engine_ei` until the 5.0.0 rebuild, which set it to 0.0
   without a note. SOx (as SO2) now comes from the fuel sulphur,
   1000 × FSC × (1 − ε) × 64/32 (`open_alaqs/core/tools/fuel_sulphur.py`):
-  0.758 g/kg for jet fuel (the fuel selected in the CAEP14 sheet v14 inputs (FSC 0.000383, ε 0.01, its ICAO vPM parameterisation example);
+  0.758 g/kg for jet fuel (the fuel selected in the CAEP14 sheet v14
+  inputs (FSC 0.000383, ε 0.01, its ICAO vPM parameterisation example);
   the stored `pm10_sul` stays at the FOA3 value, FSC 680 ppm) and 0.2 g/kg
   for AvGas (FSC 0.01 %, no sulphate),
   by the row's `fuel_type`. The shipped table and the bundled `.alaqs`
@@ -218,10 +237,11 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   points, × (P3/P3_GR)^1.35 × 1.1^2.5). The mass EI replaces
   `pm10_nonvol` and `pm10`, `p1`, `p2` move by the same amount, so
   pm10 = nonvol + sul + organic still holds; nothing else changes. OPR is
-  `press_ratio`, 30 when empty (the sheet has no value for this case); the climb pressure coefficient uses a 38000 ft
-  cruise altitude (the sheet's stored value). The port matches the sheet's
-  stored example (0.944536653843135 mg/kg, 2.58597485320693e13 #/kg) and
-  seven cases recalculated in LibreOffice to 1e-15 (`tests/test_meem_v1.py`).
+  `press_ratio`, 30 when empty (the sheet has no value for this case);
+  the climb pressure coefficient uses a 38000 ft cruise altitude (the
+  sheet's stored value). The port matches the sheet's stored example
+  (0.944536653843135 mg/kg, 2.58597485320693e13 #/kg) and seven cases
+  recalculated in LibreOffice to 1e-15 (`tests/test_meem_v1.py`).
   The standalone (shared module) and the CAEP14 reference (written out
   from the sheet) do the same (`validation/tests/test_meem_v1_reference.py`).
   **Results change** only for segments more than 3000 ft above the
@@ -247,14 +267,22 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - `default_aircraft_engine_ei`: 1ZM001 (D-36) TX had fuel flow 0 and all
   EIs 0 (EEDB v31 FF_ID is 0); it now has the ACT_PRF idle values (fuel
   0.092 kg/s, NOx 5.5, CO 20.7, HC 5.4 g/kg, nvPM 0.0767 g/kg,
-  3.87e15 #/kg), composed as the engine's other modes.
+  3.87e15 #/kg), composed as the engine's other modes. **Results change**
+  for the taxi of movements with 1ZM001 (the default engine of A124,
+  A225, A743, AN72 and YK42), in a study whose engine table is
+  refreshed.
 - MEEM V1 inputs: `press_ratio` and the 5th nvPM point
   (`meem_nvpm_m_i_f00_avg`, `meem_nvpm_n_i_f00_avg`, `nvpm_m_max_mgkg`,
   `nvpm_n_max_nkg`) were empty in every row; they now come from the CAEP14
   sheet v14 `Engines_Database` (EEDB v31), ACT_PRF for engines not in it:
-  OPR for 863 jet engines (the others keep 30), 5th point for the 51
-  engines the sheet marks 5PT. The bundled `.alaqs` files get the columns
-  where they lacked them.
+  OPR for 863 jet engines at this step, 5th point for the 51 engines the
+  sheet marks 5PT; with the ACT_PRF engines (see Added) the table now
+  has an OPR for 890 jet engines (the others keep 30) and a 5th point for
+  77 engines (mass) and 75 (number). The bundled `.alaqs` files get the
+  columns where they lacked them. **Results change** for segments more
+  than 3000 ft above the aerodrome (hours whose mixing height is above
+  914.4 m), in a study whose engine table is refreshed (a 5.3.x engine
+  table has no `press_ratio`, so MEEM V1 uses OPR 30).
 - MEEM V1 LTO / non-LTO cut: at 3000 ft (914.4 m) above the aerodrome
   (ICAO LTO cycle) in the plugin (`Engine._meem_v1`, new
   `airport_elevation_m` argument of `getEmissionIndexByModeWithMEEM`), the
@@ -270,9 +298,10 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   ISA at the airport elevation (288.15 K − 0.0065 K/m × elevation),
   constant aloft, the sheet's "ΔT at 0 ft MSL" (USER INPUTS!B5). Without
   meteo the temperature is ISA sea level (288.15 K), so ΔT = 0.0065 K/m ×
-  elevation (10.76 K at 1655 m), 0 only at sea level. Plugin (`Engine.getEmissionIndexByModeWithMEEM(delta_t=...)`),
-  standalone and CAEP14 reference alike; checked against two more
-  LibreOffice recalculations of the sheet. **Results change** above
+  elevation (10.76 K at 1655 m), 0 only at sea level. Plugin
+  (`Engine.getEmissionIndexByModeWithMEEM(delta_t=...)`), standalone and
+  CAEP14 reference alike; checked against two more LibreOffice
+  recalculations of the sheet. **Results change** above
   3000 ft only. Training example (283 K at −5 m, ΔT −5.18 K, with the OPR
   above): `bymode` pm10_nonvol id 6 +0.86 %, id 8 −0.20 %, 13-movement
   totals pm10_nonvol 31.724 to 31.695 g (−0.09 %), pm10 322.010 to
@@ -319,7 +348,7 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   inventory had been made from an older `training.alaqs` (airport at
   51.96 / 4.44 and elevation 0 instead of 51.9574278 / 4.4417028 and −5 m,
   no `custom_hourly` profile) on a 40 x 40 x 20 grid of 10 m layers (200 m
-  high); the tutorial's grid is 100 x 100 x 20 of 50 m. **Example results
+  high); the tutorial's grid is 100 x 100 x 20 cells of 250 x 250 x 50 m. **Example results
   change** (bymode CO2 of the 13 movements, with this release's code: 5291 kg
   on the old inventory, 7703 kg on the rebuilt one, from the airport
   position, the PHBBA track and the tutorial's larger grid);
@@ -410,13 +439,20 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   calculation). The check box is now shown under the name and bound to the
   column: it shows the stored value, saves what is set, and is ticked for a
   new source. The attribute table shows the flag as true / false.
+  **Results change** for studies with sources created or edited through
+  the form in 5.3.x: a source with an empty flag is still left out until
+  its box is ticked and saved, and a source unticked in 5.3.x may still be
+  in the study; check the flag.
 - Area sources: ticking or unticking **Engine Test Site** in the form and
   pressing OK did not change `is_test_site` (written after QGIS had saved,
   like In Study); a stored value was shown correctly. The check box is now
   bound to the column ('1' / '0', '0' for a new source), and the blank
   Units per Year and emission rates are set to 0 when it is ticked, before
   the save (they were also filled after it). The other layers' forms no
-  longer carry the ineffective in-study write.
+  longer carry the ineffective in-study write. **Results change** for
+  area sources whose **Engine Test Site** box was ticked or unticked in
+  5.3.x: check the flag, which decides whether the source emits its
+  rates or its engine-test events.
 - Point sources: **Activity Unit** can be edited (per-source override of
   the emission factor row's unit); it is filled in when the **Type** changes
   and an existing source keeps its stored unit.
@@ -443,7 +479,10 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   and unknown `source_dynamics` values are an error;
   `should_apply_nox_corrections` takes true/false, 1/0, yes/no in any case
   (only `True` enabled it) and errors otherwise; `austal_settings` is read
-  as a JSON object (a txt value failed in `dict.update`).
+  as a JSON object (a txt value failed in `dict.update`). **Results
+  change** for runs of the script with `smooth & shift` or with
+  `should_apply_nox_corrections` given in another spelling than `True`:
+  these settings are now applied.
 - Standalone `austal --pollutants co2` stopped with `KeyError: 'co2'`; the
   stationary sources now contribute 0 (one info line) and the aircraft CO2
   is written.
@@ -478,17 +517,23 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   stop-and-go, APU, brake wear) with the warning "taxi route not defined
   properly". The plugin now keeps a 0 s taxi time and these emissions,
   as the standalone does, with a warning naming the two times.
+  **Results change** for such arrivals: APU, stop-and-go and brake wear
+  are counted (movements whose block time equals their runway time: see
+  below).
 - Aircraft movements take the airport altitude (NOx ambient correction,
   MEEM V1 ISA temperature, LTO cut) from the study's airport elevation
   (`user_study_setup.airport_elevation`), as the standalone and the
   CAEP14 reference do; it came from the grid reference altitude of the
   Dispersion dialog, which can differ. The grid altitude is the fallback
-  for a study without an elevation.
+  for a study without an elevation. **Results change** for studies where
+  the two altitudes differ (NOx correction; MEEM V1 above 3000 ft).
 - Runway placement: the taxi route is oriented by its own gate
   (`user_taxiroute_taxiways.gate`), as in the standalone and the CAEP14
   reference; it used the gate of the first movement of the route, while
   the runway trajectory is shared (and cached) by every movement of the
-  route whatever its gate.
+  route whatever its gate. **Results change** (placement on the runway)
+  where the first movement of a route is at another gate than the
+  route's own.
 - Forms of a study whose path holds "#", "?" or "%" (since the value maps
   read from the study): the lists read from the study (point-source
   Category and Type, profiles, runway directions) were empty, because the

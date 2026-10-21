@@ -2212,24 +2212,26 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         Visit: <a href="https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download">
         AUSTAL Download Page</a><br><br>
 
-        <b>Available Versions:</b><br>
-        • Windows: AUSTAL_3.3.0.zip<br>
-        • Linux: AUSTAL_3.3.0.zip<br><br>
+        <b>Base packages (AUSTAL 3.3.0):</b><br>
+        • Windows: AUSTAL_3.3.0_Windows.zip<br>
+        • Linux: AUSTAL_3.3.0_Linux.zip<br><br>
 
         <b>Installation Steps:</b><br>
         1. Download the AUSTAL base package for your OS<br>
         2. Extract the package to your desired location<br>
-        3. Replace austal.settings with the one provided here: <a href="https://github.com/eurocontrol-asu/open_alaqs/tree/main/documents/AUSTAL/austal.settings"> austal.settings </a> <br>
-        4. Ensure the AUSTAL executable is in your system PATH<br>
-        5. Select the austal.exe (or austal) file above<br><br>
+        3. Replace austal.settings in the AUSTAL folder with the OpenALAQS copy:
+        <a href="https://github.com/eurocontrol-asu/open_alaqs/blob/main/documents/AUSTAL/austal.settings">austal.settings</a><br>
+        4. Select the austal.exe (Windows) or austal (Linux) file in section 1 of this dialog
+        (the path is remembered)<br><br>
 
-        <b>Configuration Files:</b><br>
-        • <a href="https://github.com/eurocontrol-asu/open_alaqs/tree/main/documents/AUSTAL/austal.settings">
-        austal.settings</a> - Main AUSTAL configuration file<br>
-        • AST_en and DIA_en - English language files (included in AUSTAL distribution)<br><br>
+        <b>Language Files:</b><br>
+        • AST_en@latin1.nls and DIA_en@latin1.nls (English messages) are in the separate
+        AUSTAL language pack on the download page; copies are in
+        <a href="https://github.com/eurocontrol-asu/open_alaqs/tree/main/documents/AUSTAL">documents/AUSTAL</a>
+        of the OpenALAQS repository<br><br>
 
         <b>For More Information:</b><br>
-        See <a href="https://github.com/eurocontrol-asu/open_alaqs/tree/main/documents/AUSTAL//AUSTAL.md">
+        See <a href="https://github.com/eurocontrol-asu/open_alaqs/blob/main/documents/AUSTAL/AUSTAL.md">
         AUSTAL.md</a> in the OpenALAQS documentation folder.
         """
 

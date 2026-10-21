@@ -83,7 +83,7 @@ python-qgis scripts\emissions_austal\run_emissions_austal.py "C:\path\to\config.
 - `time_interval_seconds` (required): integer number of seconds between timesteps, e.g. `3600`
  - `time_interval_seconds` (required): integer number of seconds between timesteps, e.g. `3600`
  - `pollutant` (required): pollutant code. Accepted values: `CO`, `CO2`, `HC`, `NOx`, `PM10`, `SOx`.
-- `method` (optional): calculation method, accepted values `bymode` or `BFFM2` (default `bymode`)
+- `method` (optional): calculation method, accepted values `bymode` or `BFFM2` (default `bymode`). `BFFM2` is always the trajectory variant (fuel flow from each segment's power setting): the script has no key for the BFFM2 fuel-flow source, so `mode_anchor` cannot be selected
  - `source_type` (optional): source filtering (string or `all`). Accepted values: `AreaSource`, `EngineTestSource`, `MovementSource`, `ParkingSource`, `PointSource`, `RoadwaySource` (case-insensitive aliases `area`, `movement`, `parking`, `point`, `roadway` also work), or `all` (default).
 - `source_names` (optional): comma-separated list of source names to include, e.g. `GateA,GateB`
 - `source_dynamics` (optional): handling mode for source dynamics; `none` (default), `default` or `smooth & shift` (see the notes on `source_dynamics` below)
@@ -100,7 +100,7 @@ python-qgis scripts\emissions_austal\run_emissions_austal.py "C:\path\to\config.
 - `start_dt_inclusive` / `end_dt_inclusive` (required): ISO 8601 datetimes, e.g. `2024-01-01T00:00:00`.
 - `time_interval_seconds` (required): integer seconds, e.g. `3600`.
 `pollutant` (required): pollutant identifier (string). Accepted values: `CO`, `CO2`, `HC`, `NOx`, `PM10`, `SOx` — must match pollutant keys used by your database/calculation modules.
-- `method` (optional): calculation method. Accepted values: `bymode` (default) or `BFFM2`.
+- `method` (optional): calculation method. Accepted values: `bymode` (default) or `BFFM2` (trajectory fuel flow; see above).
 - `source_type` (optional): filter by source type (string) or `all` (default).
  - `source_type` (optional): high-level type filter. Accepted values: `AreaSource`, `EngineTestSource`, `MovementSource`, `ParkingSource`, `PointSource`, `RoadwaySource` (case-insensitive aliases `area`, `movement`, `parking`, `point`, `roadway` also work), or `all` (default).
 - `source_names` (optional): comma-separated list of source names to include, e.g. `GateA,GateB`.

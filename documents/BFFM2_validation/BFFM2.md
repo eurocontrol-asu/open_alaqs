@@ -89,7 +89,7 @@ M = TAS / SOS
 Wf_ref_BFFM2 = (Wf_amb / δ) × θ^3.8 × exp(0.2 × M²)
 ```
 
-where `SOS = √(γ R T_amb)` (γ = 1.4, R = 287.05287 J/(kg K), ICAO Doc 7488; 340.29 m/s at ISA sea level) is the speed of sound at ambient temperature, as the CAEP validation workbook computes it, and M is the true Mach number at the start of the segment. Until October 2026 the code used the linear form `331.3 + 0.606 × (T_amb − 273.15)`, 0.03 % high at ISA and 0.16 % high at 243.6 K and at 307 K (the coldest and warmest hours of the training meteo); the effect on M² is below 0.4 %, on the results below 0.01 %.
+where `SOS = √(γ R T_amb)` (γ = 1.4, R = 287.05287 J/(kg K), ICAO Doc 7488; 340.29 m/s at ISA sea level) is the speed of sound at ambient temperature, as the CAEP validation workbook computes it, and M is the true Mach number at the start of the segment. Until October 2026 the code used the linear form `331.3 + 0.606 × (T_amb − 273.15)`, 0.03 % high at ISA and 0.16 % high at 243.6 K and at 307 K (0.002 to 0.07 % over the training meteo, 280.5 to 295 K); the effect on M² is below 0.4 %, on the results below 0.01 %.
 
 Until October 2026 the code (plugin, standalone and CAEP14 reference implementation) multiplied this by
 `√(288.15 / T_amb)`, which is not a Mach number away from ISA; it now computes `TAS / SOS` as written here
@@ -97,7 +97,7 @@ Until October 2026 the code (plugin, standalone and CAEP14 reference implementat
 change is small: on the training fixture's days (280.5 to 295 K) up to 0.08 % on NOx with `bffm2_anchor` and 0.02 % with
 `bffm2_traj`, nothing at ISA and nothing for `bymode`.
 
-`Wf_ref_BFFM2` is the value used for the log-log interpolation in Step 3. CAEP14 prescribes this universal form for all flight phases; the older ICAO Doc 9889 Appendix 2 decomposition (separate `δ/√θ` ambient correction at LTO only, followed by a Mach correction at high altitude) is not used. See the inline comments at `bffm2.py:95-99` and `bffm2.py:236-239` for the rationale.
+`Wf_ref_BFFM2` is the value used for the log-log interpolation in Step 3. CAEP14 prescribes this universal form for all flight phases; the older ICAO Doc 9889 Appendix 2 decomposition (separate `δ/√θ` ambient correction at LTO only, followed by a Mach correction at high altitude) is not used. See the docstring of `bffm2.calculate_emission_index` ("Formula conventions") and the comment above its `ff_ref` line for the rationale.
 
 ---
 
@@ -239,7 +239,7 @@ exp(−19 × (ω − 0.00634))
 - **ω > 0.00634** (more humid than standard): `exp(h) < 1` → NOx correction is negative
 - **ω = 0.00634** (standard humidity): no correction
 
-The specific humidity ω is computed from the ambient conditions stored in the `tbl_InvMeteo` table of the `.alaqs` database: always from `RelativeHumidity` (0 to 1), `Temperature` (K) and `SeaLevelPressure` (Pa) with the Magnus saturation vapour pressure formula (`bffm2.py:220-221`). The `Humidity` column is not used by BFFM2 (`Engine.getEmissionIndexByFuelFlow` passes temperature, pressure, Mach and relative humidity only).
+The specific humidity ω is computed from the ambient conditions stored in the `tbl_InvMeteo` table of the `.alaqs` database: always from `RelativeHumidity` (0 to 1), `Temperature` (K) and `SeaLevelPressure` (Pa) with the Magnus saturation vapour pressure formula (`bffm2.calculate_emission_index`, when no humidity ratio is passed, which is always the case outside the tests). `RelativeHumidity` is 0.6 when the column is missing or empty (`AmbientCondition`). The `Humidity` column is not used by BFFM2 (`Engine.getEmissionIndexByFuelFlow` passes temperature, pressure, Mach and relative humidity only).
 
 CO and HC are not corrected for humidity.
 
@@ -278,27 +278,27 @@ The two methods produce systematically different results because they handle the
 
 The EEDB NOx curve is steep: EI rises from ~5 g/kg at idle to ~25 g/kg at takeoff. Bymode assigns the nominal mode EI (e.g. the AP value, ~9–14 g/kg) to all approach segments regardless of the actual thrust in the profile. BFFM2 sees the actual profile power, which for approach segments is typically far below the nominal 30% AP thrust, mapping to the idle region of the NOx curve (~5 g/kg). The cumulative result is that BFFM2 NOx is substantially lower for arrival movements and moderately lower for departures.
 
-For the EHRD test case:
+For the EHRD training example (`example/training/training_out.alaqs`, 13 movements, BFFM2 trajectory (`bffm2_traj`) against `bymode`, per movement, with the study meteo; plugin outputs of this version):
 
-| Movement type | Typical NOx: BFFM2 vs Bymode | Primary driver |
+| Movement type | NOx: BFFM2 vs Bymode | Primary driver |
 |---------------|------------------------------|----------------|
-| Arrivals | −5% to −53% | Profile approach power near idle → low NOx EI in BFFM2 |
-| Departures | −21% to −36% | Intermediate climb power below CL nominal |
+| Arrivals (7) | −2.3 % to −49.9 % (all arrivals together −28.8 %) | Profile approach power near idle → low NOx EI in BFFM2 |
+| Departures (6) | −32.5 % to −60.8 % (together −44.7 %) | Intermediate climb power below CL nominal |
 
 **CO: BFFM2 is higher for arrivals, similar for departures**
 
 The EEDB CO curve is U-shaped: high at idle (~20–24 g/kg), dropping to a minimum (`lin_av` ~0.2–0.6 g/kg) near Climbout/Takeoff power. Near-idle approach segments get CO EI ≈ idle level in BFFM2, whereas bymode uses the lower AP value (~2–4 g/kg). For departures, both methods give similar CO because most departure segments are at or near TO/CL power where CO EI is at the `lin_av` floor. HC follows the same qualitative pattern.
 
-| Movement type | Typical CO: BFFM2 vs Bymode |
+| Movement type | CO: BFFM2 vs Bymode (same study) |
 |---------------|------------------------------|
-| Arrivals | +18% to +30% |
-| Departures | ±2% |
+| Arrivals | +1.2 % to +18.4 % (together +8.0 %) |
+| Departures | −2.9 % to +1.1 % (together −1.1 %) |
 
-**PM: BFFM2 is lower than Bymode for all movements**
+**Fuel, SOx and PM: BFFM2 is lower for nearly all movements**
 
-PM and SOx are fuel-proportional (EI is injected from the mode database, not interpolated). BFFM2 computes a different total fuel burn than Bymode because it uses the actual power schedule rather than fixed mode fractions, typically resulting in 12–25% less LTO fuel for EHRD movements. PM and SOx totals scale accordingly.
+SOx and the PM components are fuel-proportional (their EI comes from the mode database, not interpolated); arrival PM10 also carries the brake wear, which does not depend on the method. BFFM2 computes a different total fuel burn than Bymode because it uses the actual power schedule rather than fixed mode fractions. On the same study the fuel (CO2) is 0.3 % to 25.5 % lower on the arrivals and 3.6 % to 35.2 % lower on the departures; PM10 is 3.6 % to 35.2 % lower on the departures and between 5.3 % lower and 0.2 % higher on the arrivals (movement 3, an E190 arrival, +0.2 %).
 
-**Interpretation guideline.** A BFFM2–bymode NOx difference of 20–55% is normal and expected for LTO. A difference outside this range should be investigated. For CO, +15–35% on arrivals and ±2% on departures is normal.
+**Interpretation guideline.** The ranges above are those of one small study (one airport, two aircraft types, 13 movements, one of them on an ADS-B profile: movement 11, the −60.8 % NOx departure); they depend on the profiles, the engines and the meteo, and are no acceptance band. A large NOx difference on its own is expected (BFFM2 follows the profile power); investigate when the sign is unexpected (BFFM2 NOx above Bymode on an LTO movement, or arrival CO below it), or when one movement differs strongly from others of the same type and profile.
 
 ---
 
@@ -431,7 +431,7 @@ MovementSourceModule.process()
 | `tbl_InvMeteo` | `Temperature` | Ambient temperature (K) |
 | `tbl_InvMeteo` | `SeaLevelPressure` | Ambient pressure (Pa) |
 | `tbl_InvMeteo` | `RelativeHumidity` | Relative humidity (0–1) |
-| `tbl_InvMeteo` | `Humidity` | Specific humidity (kg/kg); used directly if populated |
+| `tbl_InvMeteo` | `Humidity` | Specific humidity (kg/kg); not used (ω comes from `RelativeHumidity`, `Temperature` and `SeaLevelPressure`) |
 | `tbl_InvMeteo` | `MixingHeight` | LTO ceiling (m); default 914.4 m (3 000 ft) |
 
 ##### LTO ceiling and segment clipping

@@ -31,11 +31,11 @@ Last updated: 2026-06-05.
 ## 2. Source COPERT version
 
 **Documented version**: COPERT 5.4.52. Cited in
-`open_alaqs/core/tools/copert5_utils.py` at line 35 and in
+the module comments of `open_alaqs/core/tools/copert5_utils.py` and in
 `documents/AUXILIARY_MATERIAL.md`.
 
 **Source Guidebook**: EMEP/EEA air pollutant emission inventory guidebook
-2019, Update October 2020. Cited at `copert5_utils.py:3`. This is the
+2019, Update October 2020. Cited in the module docstring of `copert5_utils.py`. This is the
 generation of the Guidebook the bulk methodology in `copert5*.py` was
 implemented against. Specific items verified against the 2023 Update 2025
 chapter as part of the 2026 review are cited inline in `copert5.py`,
@@ -92,7 +92,7 @@ Parity with the CSV is checked only for `project.alaqs`
 After any edit to the CSV, re-sync the caches with
 `tools/data_integrity_fixes/sync_csv_into_alaqs_caches.py`, which updates
 the first seven files of the table above
-(`sync_csv_into_alaqs_caches.py:26-32`); the AIRPORT_A and standalone
+(its `TARGETS` list); the AIRPORT_A and standalone
 validation files must be updated separately.
 
 ## 4. Data integrity status (as of 2026-06-05)

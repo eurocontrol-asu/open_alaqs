@@ -142,7 +142,7 @@ Ground idle at the origin for 80 % of the GI time, hover for
 and `climb_roc_fpm` until the LTO ceiling (3000 ft AGL) or the end of
 the FOCA take-off time (PISTON stops at about 2000 ft); any remaining
 take-off time is flown level at `cruise_tas_kt`
-(`foca_heli_trajectory.py:168-209`).
+(`foca_heli_trajectory.build_departure`).
 
 The origin is the centroid of the movement's gate (helipad), else the
 runway end; arrivals approach from the approach side along the runway

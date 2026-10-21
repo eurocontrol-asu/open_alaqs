@@ -59,7 +59,7 @@ The study covers three days of operations at EHRD: 13 aircraft movements across 
 
 #### Setup a new study
 
-Click the **CREATE** button in the OpenALAQS toolbar. In the *Create an Open ALAQS project file* dialog, choose a location and filename for your new study (e.g. `training.alaqs`).
+Click the **Create an Open ALAQS project** button in the OpenALAQS toolbar. In the *Create an Open ALAQS project file* dialog, choose a location and filename for your new study (e.g. `training.alaqs`).
 
 The **ALAQS Project Properties** window opens automatically. Fill in the following values for the EHRD test case:
 
@@ -86,15 +86,15 @@ Once you enter the ICAO code `EHRD`, the remaining airport fields are populated 
 
 The average fleet year is used as a proxy for the Euro emission standard mix in the COPERT calculation. For a 2020 study at a Dutch airport, select 2020 and Netherlands.
 
-Click **OK** to save the project properties. The study is now created and the QGIS layers panel will show all the OpenALAQS source layers (Gates, Runways, Taxiways, etc.), initially empty.
+Click **Save** to save the project properties. The study is now created and the QGIS layers panel will show all the OpenALAQS source layers (Gates, Runways, Taxiways, etc.), initially empty.
 
 #### Open an existing study
 
-To open the pre-built EHRD study provided with the training material, click the **OPEN** button in the OpenALAQS toolbar and navigate to `training.alaqs`. All previously defined sources, profiles, and study settings will be restored.
+To open the pre-built EHRD study provided with the training material, click the **Load an Open ALAQS project** button in the OpenALAQS toolbar and navigate to `training.alaqs`. All previously defined sources, profiles, and study settings will be restored.
 
 #### Import OpenStreetMap data
 
-OpenALAQS can import airport geometry directly from OpenStreetMap to speed up source definition. In the toolbar, click **Import OSM Data**, search for *Rotterdam The Hague Airport* using the Nominatim search box, and select the result.
+OpenALAQS can import airport geometry directly from OpenStreetMap to speed up source definition. In the toolbar, click **Import OSM data**, search for *Rotterdam The Hague Airport* using the Nominatim search box, and select the result.
 
 Choose **Runways** and **Taxiways** as the layers to import. Review the imported features in the attribute table and verify:
 
@@ -149,7 +149,7 @@ Gate type drives the GSE/GPU emission factors (from `default_gate_profiles`): PI
 
 ##### Runways
 
-Create a single runway feature for EHRD. Draw a linestring from the threshold of runway 06 to the threshold of runway 24, following the runway centreline.
+Create a single runway feature for EHRD. Draw a linestring along the runway centreline over the full pavement, from one runway end to the other (the direction does not matter; the bundled geometry runs from the 24 end to the 06 end). The touchdown offsets below are measured from the drawn ends, and departures line up where their taxi route last meets the runway.
 
 | Field | Value |
 |---|---|
@@ -159,7 +159,7 @@ Create a single runway feature for EHRD. Draw a linestring from the threshold of
 
 The runway ID `06/24` covers both directions of the same physical runway. OpenALAQS uses the runway direction specified in each movement record (either `06` or `24`) to determine the correct end for trajectory alignment.
 
-The touchdown offset (**Touchdown Offset, Runway 1 [m]** and **Touchdown Offset, Runway 2 [m]**, whole metres) sets where arriving aircraft touch down, measured from the landing threshold of each runway end (Runway 1 = the first-named end, 06 here). Leave it empty or 0 to use each arrival profile's own touchdown distance (the profile crosses the threshold at 50 ft: about 290 m before touchdown on a 3° approach). 250 m puts the threshold crossing at about 13 m on a 3° approach.
+The touchdown offset (**Touchdown Offset, Runway 1 [m]** and **Touchdown Offset, Runway 2 [m]**, whole metres) sets where arriving aircraft touch down, measured from the landing threshold of each runway end (Runway 1 = the first-named end, 06 here). Leave it empty or 0 to use each arrival profile's own touchdown distance (the profile crosses the threshold at 50 ft: about 290 m before touchdown on a 3° approach; a profile that never descends through 50 ft touches down at the threshold). 250 m puts the threshold crossing at about 13 m on a 3° approach.
 
 ##### Taxiways
 
@@ -172,7 +172,7 @@ Create taxiways covering the main taxiway system at EHRD. For this study, the fo
 
 Draw each taxiway segment as a linestring along the taxiway centreline. Use snapping to ensure segments connect at junctions. Each segment is given a unique **Taxiway Name** and the **Speed [km/h]** above. V0 joins the end of V to the V1/V3/Y junction, and V1E continues V1 to the runway 06 threshold; both are drawn for this example, not taken from the aerodrome chart.
 
-> The distinction between taxiways (geometric segments) and taxi-routes (operational paths) is important. Taxiways are individual line segments. Taxi-routes link several taxiway segments into the path an aircraft follows from gate to runway. You define taxi-routes in the Routes Editor, described in the [Taxi routes](#taxi-routes) section.
+> The distinction between taxiways (geometric segments) and taxi-routes (operational paths) is important. Taxiways are individual line segments. Taxi-routes link several taxiway segments into the path an aircraft follows from gate to runway. You define taxi-routes in the `Taxiway Routes Editor` (toolbar button **Define taxi routes**), described in the [Taxi routes](#taxi-routes) section.
 
 ##### Tracks
 
@@ -311,9 +311,9 @@ The terminal building can optionally be digitized as a polygon in the Buildings 
 
 Activity profiles scale source emissions by time of day, day of week, and month of year. The default profile applies a multiplier of 1.0 for every hour, day, and month, meaning the source operates at full capacity throughout the year.
 
-Access the **Activity Profiles Editor** via the toolbar. Click **Add Profile** to create a new profile.
+Open the activity profiles window with the toolbar button **Edit profiles**. Click **New** on the hourly, daily or monthly tab to create a new profile, and **Save** to store it.
 
-**Exercise (car park closure):** Create a profile named `parking_hours` that reflects a car park closed from 23:00 to 04:00 (hours 23 to 04 = multiplier 0, all other hours = multiplier 1.0). Apply this profile to the `ParkingLot` source as its **Hourly Profile** (Profiles tab).
+**Exercise (car park closure):** Create a profile named `parking_hours` that reflects a car park closed from 23:00 to 05:00 (hours 23 and 00 to 04 = multiplier 0, all other hours = multiplier 1.0; each hour runs to the next, so hour 04 ends at 05:00). Apply this profile to the `ParkingLot` source as its **Hourly Profile** (Profiles tab).
 
 | Hour (local) | Multiplier |
 |---|---|
@@ -330,7 +330,7 @@ For this training study all sources use the **default** profile (all multipliers
 
 #### Taxi routes
 
-Taxi routes define the sequence of taxiway segments an aircraft follows between a gate and the runway. They are required for calculating taxiway emissions. Open the **Routes Editor** from the toolbar.
+Taxi routes define the sequence of taxiway segments an aircraft follows between a gate and the runway. They are required for calculating taxiway emissions. Open the `Taxiway Routes Editor` with the toolbar button **Define taxi routes**.
 
 For each route, select the **Gate**, **Runway direction**, and **Operation type** (Arrival or Departure), then choose the ordered sequence of taxiway segment names. Finally, select the **aircraft groups** that use this route (for EHRD all groups share the same routes).
 
@@ -368,7 +368,7 @@ All routes use instance 1 and all aircraft groups.
 
 #### Create output file
 
-Click **Generate Emission Inventory** in the toolbar. Configure the following settings:
+Click **Calculate Emissions Inventory** in the toolbar (window `Generate Emission Inventory`). Configure the following settings:
 
 **Emission Inventory Output**
 
@@ -399,7 +399,7 @@ Click **Generate Emission Inventory** in the toolbar. Configure the following se
 
 The two tracks in this file are imported into the inventory as CUSTOM profiles (`1764584438_PHBBA`, used by movement 11, and `1764583565_PHRTM`, unused), placed from the runway and taxi route that the movement table gives for the flight (PHBBA); PHRTM, which no movement uses, is placed at the closest runway end. Heights are taken above the airport elevation; the take-off roll, reported at −15 ft, is set to the ground. The tracks are an example: their `fuel_flow` (aircraft total) is twice the ICAO fuel flow of the A20N engine 01P20CM128 interpolated at the row's `power_setting` (0.65 to 1.57 kg/s for PHBBA; PHRTM, with the same curve and its power raised to idle where it was below, 0.18 to 0.21 kg/s). Only the BFFM2 trajectory method uses it. The tracks are illustrative: their speeds, climb rate and power are those of a light aircraft (lift-off at about 74 kt, 400 to 900 ft/min, power 0.40 in climb), not of a typical A20N; only the fuel flow follows the power setting on the A20N's ICAO curve.
 
-**Modeled Domain** — these settings define the 3D grid used for spatial emission output and dispersion modelling.
+**Modelled Domain**: these settings define the 3D grid used for spatial emission output and dispersion modelling.
 
 | Field | Value |
 |---|---|
@@ -411,7 +411,7 @@ The domain is centred on the EHRD reference point (51.9574278°N, 4.4417028°E).
 
 **Vertical Limit:** this dialog has no Vertical Limit field (the inventory records 914.4 m). For aircraft movements the ceiling of each hour is the meteorological `MixingHeight`: 914.4 m on 1 December, 1500 m on 2 December and 600 m on 3 December in `training_meteo.csv`.
 
-Click **Generate** to create `training_out.alaqs`. This file copies all source definitions from the study database, combines them with the movements and meteorological data, and pre-computes the calculation grid. All subsequent emission calculations and dispersion runs use this output file.
+Click **Create Inventory** to create `training_out.alaqs`. This file copies all source definitions from the study database, combines them with the movements and meteorological data, and pre-computes the calculation grid. All subsequent emission calculations and dispersion runs use this output file.
 
 > The computation time depends on domain size and resolution. The 100 × 100 × 20 grid used here is a reasonable balance between spatial detail and performance for a training exercise.
 
@@ -510,7 +510,7 @@ Click **Visualize Emission Calculation** in the toolbar and browse to `training_
 
 5. **Smooth & Shift**: enable Source Dynamics in the Configuration tab. Re-run the Vector Layer visualisation. Observe how the taxi emission distribution widens and shifts downwind compared to the raw linestring geometry.
 
-The log file (accessible via **Review Logs**) reports an ADS-B fuel flow above 1.5 times the EEDB take-off value (none here: movement 11's ADS-B fuel flow is at most 0.78 kg/s per engine, against 1.5 × 0.861 kg/s) and taxi routes that do not fit the runway (an arrival leaving the runway above 50 kt, or a route that meets the runway only before the touchdown). For this study it reports none.
+The log file (toolbar button **Review Open ALAQS logs**) reports an ADS-B fuel flow above 1.5 times the EEDB take-off value (none here: movement 11's ADS-B fuel flow is at most 0.78 kg/s per engine, against 1.5 × 0.861 kg/s) and taxi routes that do not fit the runway (an arrival leaving the runway above 50 kt, or a route that meets the runway only before the touchdown). For this study it reports none.
 
 ---
 
@@ -539,7 +539,7 @@ To prepare the input files:
 | Title | EHRD_training |
 | Quality Level | 1 |
 | Is Enabled | ☑ checked |
-| Options String | *(leave blank for standard run)* |
+| Options String | `NOSTANDARD;SCINOTAT;Kmax=1` (the default; clear it for a standard run) |
 
 2. Tick **Is Enabled** and click an output button (**View Emissions Table** is fastest). OpenALAQS will compute emissions and write the three AUSTAL input files to the output directory.
 
@@ -557,10 +557,10 @@ To prepare the input files:
 Click **Calculate Dispersion** in the toolbar. In the dialog:
 
 1. Set the **AUSTAL executable path** to the location of your AUSTAL installation (e.g. `C:/AUSTAL/austal.exe` on Windows or `/opt/austal/austal` on Linux).
-2. Set the **Work Directory** to the folder where the AUSTAL input files were written.
+2. Select **Use Existing AUSTAL Input Files** and set its **Work Directory** to the folder where the AUSTAL input files were written.
 3. Click **Run AUSTAL**.
 
-A progress log (`austal.log`) is written to the Work Directory. AUSTAL can also be run independently from a terminal using:
+A progress log (`austal.log`) is written to that folder. AUSTAL can also be run independently from a terminal using:
 
 ```bash
 austal /path/to/work/directory/austal.txt

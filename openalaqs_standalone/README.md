@@ -21,10 +21,13 @@ SpatiaLite extension: it reads the `.alaqs` SQLite directly and parses
 geometry BLOBs with shapely.
 
 It ships as a top-level package in the Open-ALAQS repository, as a
-sibling of the QGIS plugin at `open_alaqs/`. It can also be installed
-on its own (`pip install -e .` from this directory) without needing the
-plugin to be present. The AUSTAL writer helpers it depends on live in
-the sibling `austal_prep/` package.
+sibling of the QGIS plugin at `open_alaqs/`. It imports QGIS-free
+modules of the plugin tree (`open_alaqs.core.tools`: BFFM2, MEEM, FOCA,
+fuel sulphur, UTM and runway placement; `open_alaqs.core.interfaces.Emissions`), and its `pyproject.toml` packages
+`openalaqs_standalone` only, so it is not usable without the plugin tree:
+run it from the repository root with the root on `PYTHONPATH` (see
+[USAGE.md](USAGE.md#install)). The AUSTAL writer helpers it depends on
+live in the sibling `austal_prep/` package.
 
 For a task-oriented walk-through of running the package from a terminal
 (installation, CLI subcommands, method selection, NOx ambient correction,
@@ -331,8 +334,8 @@ integrates the emissions itself.
 1. Build the inventory in QGIS using the OpenALAQS plugin (5.0.0 or
    later, which includes the PR2 fixes such as parking cold start at
    trip scale).
-2. The plugin's "Calculate Emissions" step writes EFs into
-   `shapes_roadways` and `shapes_parking`.
+2. The plugin's `Recalculate` button of the parking and roadway forms
+   writes the EFs into `shapes_roadways` and `shapes_parking`.
 3. Save the resulting `.alaqs` file.
 4. Run the `austal` command against that file.
 
@@ -351,15 +354,20 @@ the validation reference.
 
 ### Verifying your .alaqs has the right stationary EFs
 
-The PR2-applied EHRD baseline for parking is:
+For an EHRD study used when this check was written (5.2.0; it is not
+shipped with the repository), the PR2-applied parking baseline was:
 
 - NOx 31.26 kg/yr
 - PM10 3.27 kg/yr
 - PM2.5 1.79 kg/yr (PM10/PM2.5 ratio 1.83)
 
-If `compute_parking` against an `.alaqs` file gives NOx around 20.25
-kg/yr instead of 31.26, the cold-start fix was not applied upstream;
-rebuild the inventory with the PR2 patches.
+and an inventory without the cold-start fix gave NOx around 20.25 kg/yr
+instead of 31.26. These figures do not apply to the bundled training
+study: its single `ParkingLot` (20 000 vehicles per year, NOx 95.82
+g/vehicle) gives NOx 1916.33 kg and PM10 15.99 kg for 2025
+(`python -m openalaqs_standalone.compute_parking
+example/training/training_out.alaqs --year 2025 --out parking.parquet`
+from the repository root).
 
 ## Conventions
 
@@ -421,8 +429,9 @@ column holds PM2.5 versus total PM10:
 
 The pollutant-column dict in each compute module encodes this. For
 point and area sources the `p2_*` = PM2.5 assumption is empirically
-unverified, because the EHRD study has no point or area sources to
-test against. If a study uses these types and the PM10/PM2.5 ratio
+unverified: the training study has one point source (`Power`, PM10
+60.04 kg/unit but P1 and P2 0) and one area source (`Terminal`, no PM),
+so no bundled study has a PM2.5 factor for these types to test against. If a study uses these types and the PM10/PM2.5 ratio
 looks wrong, verify the upstream conventions.
 
 ### Activity profiles (stationary)
@@ -460,8 +469,8 @@ What is not yet built:
   conversion basis for the ground case, the multi-species column
   order, the altitude datum/sign convention).
 - **Point and area PM column convention** is assumed, not verified
-  (see "Emission factor columns" above): no test study exercises
-  those source types.
+  (see "Emission factor columns" above): no bundled study has a
+  non-zero PM2.5 factor for those source types.
 - **Shared-import refactor of the stationary half.** The stationary
   computes still read pre-computed EFs rather than calling shared
   COPERT5 logic; see "Why the stationary half is structured this

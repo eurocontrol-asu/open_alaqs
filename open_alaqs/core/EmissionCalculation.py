@@ -450,8 +450,9 @@ class EmissionCalculation:
             "Year %d has %d hours; the [start_dt=%s, end_dt=%s, interval=%ss] "
             "interval yields %d periods (%d %s, ~%.2f%%). Per-hour profile mean "
             "is computed against the full calendar year, so this run will "
-            "%s annual totals by approximately that fraction. Set end_dt to "
-            "%s-01-01 00:00:00 for a full leap-year-aware coverage.",
+            "%s annual totals by approximately that fraction. To cover the "
+            "whole year, set end_dt to %s-01-01 00:00:00 (start_dt at the "
+            "start of the year).",
             year,
             hours_per_year,
             start.isoformat(),
