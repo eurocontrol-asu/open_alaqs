@@ -5,8 +5,9 @@
 - press_ratio and the 5th MEEM point come from the CAEP14 FBE calculation
   sheet v14 (Engines_Database, EEDB v31), ACT_PRF for engines not in it.
 - 28 ACT_PRF engines without a twin in the table were added in October
-  2026 (08P28CM141 to 156, 08P28RR154 to 163, EEA-J9, EEA-J10); E190's
-  default engine is EEA-J10 (ACT_PRF aircraft_engine E190-A). The other 48
+  2026 (08P28CM141 to 156, 08P28RR154 to 163, EEA-J9, EEA-J10); EEA-J10
+  (ACT_PRF aircraft_engine E190-A) is selectable, but E190's default engine
+  stays 11GE144 (EEDB CF34-10E, as in 5.3.6). The other 48
   ACT_PRF engines missing from the table are duplicates of rows under other
   ids and are not added.
 - 1ZM001 (D-36) TX carries the ACT_PRF idle fuel flow and EIs (the EEDB has
@@ -209,17 +210,40 @@ def test_duplicates_not_added(ei):
 def test_e190_default_engine():
     ac = pd.read_csv(REPO / "open_alaqs/database/data/default_aircraft.csv")
     e190 = ac[ac.icao == "E190"].iloc[0]
-    assert e190.engine == "EEA-J10" and e190.engine_name == "EEA-J10"
+    assert e190.engine == "11GE144" and e190.engine_name == "11GE144"
     assert int(e190.engine_count) == 2
     with sqlite3.connect(TEMPLATE) as conn:
         assert conn.execute(
             "SELECT engine, engine_name FROM default_aircraft WHERE icao='E190'"
-        ).fetchone() == ("EEA-J10", "EEA-J10")
-        n = conn.execute(
-            "SELECT COUNT(*) FROM default_aircraft_engine_ei WHERE engine_name=?",
-            ("EEA-J10",),
-        ).fetchone()[0]
-    assert n == 4
+        ).fetchone() == ("11GE144", "11GE144")
+        for engine in ("11GE144", "EEA-J10"):
+            n = conn.execute(
+                "SELECT COUNT(*) FROM default_aircraft_engine_ei WHERE engine_name=?",
+                (engine,),
+            ).fetchone()[0]
+            assert n == 4, engine
+
+
+_E190_STUDIES = [
+    "example/training/training.alaqs",
+    "example/training/training_out.alaqs",
+    "openalaqs_standalone/validation/data/training_v3.alaqs",
+    "openalaqs_standalone/validation/data/training_v3_gatemovements.alaqs",
+    "openalaqs_standalone/validation/data/training_v3_multisource.alaqs",
+    "tests/data/AIRPORT_A/AIRPORT_A.alaqs",
+    "tests/data/AIRPORT_A/AIRPORT_A_out.alaqs",
+    "tests/data/ANP/ANP.alaqs",
+    "tests/data/ANP/ANP_out.alaqs",
+    "scripts/emissions_austal/sample_data/Inventory.alaqs",
+]
+
+
+@pytest.mark.parametrize("rel", _E190_STUDIES)
+def test_e190_default_engine_in_bundled_studies(rel):
+    with sqlite3.connect(f"file:{REPO / rel}?mode=ro", uri=True) as conn:
+        assert conn.execute(
+            "SELECT engine, engine_name FROM default_aircraft WHERE icao='E190'"
+        ).fetchone() == ("11GE144", "11GE144")
 
 
 _FOCA = (

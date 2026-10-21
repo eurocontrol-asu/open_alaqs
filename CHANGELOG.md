@@ -103,10 +103,9 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   default aircraft uses it). The other 48 ACT_PRF engines missing from
   the table duplicate rows under other ids (FOCA-n, EEA-*, 01P21RR124) or,
   for EEA-J6, differ from 1RR016 only by a zero nvPM, and are not added.
-  E190's default engine is now EEA-J10 (ACT_PRF "E190-A"; was 11GE144) in
-  `default_aircraft` and the bundled studies (not the trimmed demo
-  `scripts/emissions_austal/sample_data/Inventory.alaqs`); movements that name their
-  engine, as all bundled ones do, are unchanged (pinned outputs identical).
+  EEA-J10 (ACT_PRF "E190-A") is selectable for the E190; the E190's
+  default engine in `default_aircraft` stays 11GE144 (EEDB CF34-10E, as in
+  5.3.6), in the CSV, the templates and every bundled study.
 - CAEP14 validation: the BFFM2 index step is pinned to two cases of the
   CAEP14 calculation sheet, non-LTO lean burn and LTO
   (`validation/tests/test_caep14_sheet_reference_case.py`).
