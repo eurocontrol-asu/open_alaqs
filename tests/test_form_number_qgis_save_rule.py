@@ -11,10 +11,11 @@ for the locale.
 
 rc6 external review F2: convertCompatible falls back to the C locale, so
 under an English locale "30,3" passed the check silently as 303 (QGIS
-saves 303). The text must now also read as the same number with the
-current locale (QLocale.toDouble): en "30,3", "1,5", de "30.3", "0.125"
-(the locale reads 125) are rejected, the field is red and the tooltip
-names the decimal separator of the locale.
+saves 303). The text must now also be a number for the current locale
+(QLocale.toDouble succeeds): en "30,3", "1,5", de "30.3" are rejected, the
+field is red and the tooltip names the decimal separator of the locale.
+de "0.125" (125 for the locale, 0.125 saved; GitHub #159) stays accepted
+with the saved value.
 """
 
 import math
@@ -95,9 +96,9 @@ def _saved(text, field_type):
         ("fr_FR", "30,3", 30.3),
         ("nl_NL", "30,3", 30.3),
         ("de_DE", "30.3", False),  # QGIS saves 30.3, the locale reads nothing
-        ("de_DE", "0.125", False),  # QGIS saves 0.125, the locale reads 125
+        ("de_DE", "0.125", 0.125),  # QGIS saves 0.125 (GH#159), locale 125
         ("de_DE", "0,125", 0.125),
-        ("de_DE", "20.000", False),  # QGIS saves 20, the locale reads 20000
+        ("de_DE", "20.000", 20.0),  # QGIS saves 20, the locale reads 20000
         ("nl_NL", "1.234,5", 1234.5),
         ("en_US", "nan", False),
         ("de_DE", "inf", False),
@@ -143,11 +144,10 @@ def test_wrong_decimal_separator_is_red_with_the_locale_separator(loc, text, sep
 @pytest.mark.parametrize("text", TEXTS)
 def test_float_check_is_what_qgis_saves(locale, text):
     """An accepted value is what QGIS saves, and it is accepted only when
-    the locale reads the same number from the text (F2)."""
+    the text is a number for the locale (F2)."""
     saved = _saved(text, QVariant.Double)
     got = _check(text, "float")
-    number, ok = QLocale().toDouble(text)
-    if saved is None or not math.isfinite(saved) or not ok or number != saved:
+    if saved is None or not math.isfinite(saved) or not QLocale().toDouble(text)[1]:
         assert got is False
     else:
         assert got is not False and got == saved

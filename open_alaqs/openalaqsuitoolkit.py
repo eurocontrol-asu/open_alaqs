@@ -75,17 +75,18 @@ def parse_number(text: str, integer: bool):
     "1.234,5" (French) or "1_000" are rejected (QGIS stores NULL). A result
     that is not finite ("nan", "inf") is rejected.
 
-    The text must also read as the same number with the current locale
-    (QLocale.toDouble): convertCompatible falls back to the C locale, so
-    "30,3" under an English locale is saved as 303 (the comma is the group
-    separator there), "30.3" or "0.125" under a German locale as 30.3 and
-    0.125 although the locale reads 125 for the latter. These are rejected
-    with a NumberLocaleError naming the decimal separator of the locale,
-    instead of silently passing a value ten times off. An integer must
-    likewise read as a whole number with the locale (QLocale.toLongLong,
-    with the group separators QGIS shows, "20,000" English or "20.000"
-    German), to the same value: "12.5", which QGIS would round, is
-    rejected.
+    The text must also be a number for the current locale (QLocale.toDouble
+    succeeds): convertCompatible falls back to the C locale, so "30,3" under
+    an English locale is saved as 303 (the comma is the group separator
+    there) and "30.3" under a German locale as 30.3, which the locale cannot
+    read. These are rejected with a NumberLocaleError naming the decimal
+    separator of the locale, instead of silently passing a value ten times
+    off. A text the locale reads differently from QGIS ("0.125" under a
+    German locale: 125 for the locale, 0.125 saved, GitHub #159) is
+    accepted with the saved value. An integer must likewise read as a whole
+    number with the locale (QLocale.toLongLong, with the group separators
+    QGIS shows, "20,000" English or "20.000" German), to the same value:
+    "12.5", which QGIS would round, is rejected.
     """
     from qgis.core import QgsField
 
@@ -104,8 +105,7 @@ def parse_number(text: str, integer: bool):
     value = float(value)
     if not math.isfinite(value):
         raise ValueError(f"{text!r} is not a finite number")
-    number, ok = QLocale().toDouble(text)
-    if not ok or not math.isclose(number, value, rel_tol=1e-12, abs_tol=0.0):
+    if not QLocale().toDouble(text)[1]:
         raise NumberLocaleError(text)
     return value
 

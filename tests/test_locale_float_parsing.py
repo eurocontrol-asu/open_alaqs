@@ -146,9 +146,11 @@ class TestIssue159ValidateFieldAcceptsComma:
             for name in ("de_DE", "fr_FR", "nl_NL"):
                 QLocale.setDefault(QLocale(name))
                 assert validate_field(w, "float") == 30.3, name
-            # English separators: QGIS saves 303, and the check reads that
+            # English separators: QGIS would save 303, so the check refuses
+            # the text (rc6 review F2) and names the decimal separator
             QLocale.setDefault(QLocale("en_US"))
-            assert validate_field(w, "float") == 303.0
+            assert validate_field(w, "float") is False
+            assert "decimal separator of your locale (.)" in w.toolTip()
         finally:
             QLocale.setDefault(previous)
 

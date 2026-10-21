@@ -515,12 +515,13 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   English); "12.5", which QGIS would round, is rejected.
 - Form number check, decimal separator (rc6 review F2): `convertCompatible`
   falls back to the C locale, so under an English locale "30,3" passed the
-  check silently as 303 (which QGIS saves) and "1,5" as 15; under a German
-  locale "0.125" passed as 0.125 although the locale reads 125. The text
-  must now also read as the same number with the current locale
-  (`QLocale.toDouble`): otherwise the field is red and the tooltip names
-  the decimal separator of the locale ("use the decimal separator of your
-  locale (.)"). "30,3" stays 30.3 under a German, Dutch or French locale.
+  check silently as 303 (which QGIS saves) and "1,5" as 15. A text that is
+  not a number for the current locale (`QLocale.toDouble` fails) is now
+  refused even when QGIS would save a number from it: the field is red and
+  the tooltip names the decimal separator of the locale ("use the decimal
+  separator of your locale (.)"). "30,3" stays 30.3 under a German, Dutch
+  or French locale, and "0.125" under a German locale stays 0.125 as QGIS
+  saves it (GitHub #159).
 - Form value lists on Windows: a study under an extended-length path
   (`\\?\C:\...`, as `Path.resolve` gives for a long path, or
   `\\?\UNC\server\share\...`) gave an SQLite URI with the "?" in the
