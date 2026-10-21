@@ -81,7 +81,7 @@ Open-ALAQS is published as a QGIS plugin. The plugin is the `open_alaqs/` folder
 - **macOS**: `~/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins/open_alaqs/`
 - **Linux**: `~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/open_alaqs/`
 
-Then enable Open-ALAQS in the QGIS Plugin Manager (Plugins → Manage and Install Plugins → Installed → tick "Open-ALAQS").
+Then enable the plugin in the QGIS Plugin Manager (Plugins → Manage and Install Plugins → Installed → tick "open_alaqs", the name of the plugin folder).
 
 The first time the plugin loads, QPIP will detect missing dependencies and offer to install them in the QGIS Python environment:
 
@@ -106,7 +106,7 @@ Several results change with this version, and a study made with 5.3.x keeps its 
 Two example studies ship with the repository:
 
 - `example/training/` — a self-contained study used for tutorials and validation, including pre-computed reference values to compare your run against.
-- `tests/data/AIRPORT_A/` — the same study used by the regression test suite, with full pre-computed emissions tables and APU/CAEP14 comparison spreadsheets.
+- `tests/data/AIRPORT_A/` — the same study used by the regression test suite, with full pre-computed emissions tables and APU/CAEP14 comparison spreadsheets. The two spreadsheets (`AIRPORT_A_APU_comparison.xlsx`, `AIRPORT_A_CAEP14_comparison.xlsx`) date from the 5.0.0 rebuild and predate the 5.4.0 changes to aircraft SOx, MEEM V1 and runway placement: their numbers are not those of a current run.
 
 ### Training example study
 

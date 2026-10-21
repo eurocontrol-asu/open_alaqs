@@ -98,6 +98,8 @@ A project `.alaqs` carries its own copies of the reference tables, among them `d
 
 Only a 0 or empty `sox_ei` is replaced at run time (by 0.758 g/kg for jet fuel, 0.2 g/kg for AvGas, from the row's `fuel_type`).
 
+A study made with 5.3.0 to 5.3.5 also lacks the 5.3.6 corrections of `default_aircraft` and `default_aircraft_profiles` (the ANP v2.2 type profiles and default profiles, see the 5.3.6 entry of the `CHANGELOG`): refreshing the engine table alone (step 2, second command) is enough only for a 5.3.6 study; a 5.3.0 to 5.3.5 study needs the full refresh (step 2, third command), or at least those three tables (`--refresh-reference-data --refresh-tables default_aircraft,default_aircraft_engine_ei,default_aircraft_profiles`).
+
 ### How to update a study
 
 1. For a new study, create a new project (**Create an Open ALAQS project**): it is made from the template of this version and has the current tables.

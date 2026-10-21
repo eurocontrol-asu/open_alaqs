@@ -673,7 +673,7 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   (`AIRPORT_A_movements.csv`, row 12) and inventory use it.
 - Docs: `scripts/emissions_austal/README.md` describes the AUSTAL demo
   `sample_data/Inventory.alaqs` as it is (an early training inventory: old
-  airport position, runway table and routes, E190 11GE144, six movements
+  airport position, runway table and routes, six movements
   naming profiles absent from the file), not as derived from the current
   `training_out.alaqs`; `example/training/training_engine_test_events.README.md`
   no longer asks to migrate the training study, which ships with the
