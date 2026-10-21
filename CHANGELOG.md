@@ -424,6 +424,11 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   CAEP14 reference do; it came from the grid reference altitude of the
   Dispersion dialog, which can differ. The grid altitude is the fallback
   for a study without an elevation.
+- Runway placement: the taxi route is oriented by its own gate
+  (`user_taxiroute_taxiways.gate`), as in the standalone and the CAEP14
+  reference; it used the gate of the first movement of the route, while
+  the runway trajectory is shared (and cached) by every movement of the
+  route whatever its gate.
 
 ### Removed
 
