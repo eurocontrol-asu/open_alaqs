@@ -115,9 +115,7 @@ def runway_of(runways: dict, mov: dict) -> dict:
             f"{' and '.join(r['runway_id'] for r in matched.values())}; "
             "name the runway end with its letter"
         )
-    runway_ids = ", ".join(
-        dict.fromkeys(r["runway_id"] for r in runways.values())
-    )
+    runway_ids = ", ".join(dict.fromkeys(r["runway_id"] for r in runways.values()))
     raise ValueError(
         f"movement {name}: runway '{mov.get('runway', designator)}' matches no "
         f"runway end of the study (runways: {runway_ids or 'none'}); name the "

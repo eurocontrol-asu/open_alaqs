@@ -120,9 +120,7 @@ def test_float_table(loc, text, expected):
     "loc, text, separator",
     [("en_US", "30,3", "."), ("en_US", "1,5", "."), ("de_DE", "30.3", ",")],
 )
-def test_wrong_decimal_separator_is_red_with_the_locale_separator(
-    loc, text, separator
-):
+def test_wrong_decimal_separator_is_red_with_the_locale_separator(loc, text, separator):
     """F2: a decimal separator the locale cannot read is refused (QGIS would
     save 303 for "30,3" in English) and the tooltip names the expected one."""
     from open_alaqs.openalaqsuitoolkit import validate_field

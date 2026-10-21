@@ -56,8 +56,12 @@ def _parallel(tmp_path) -> Path:
     designator (06 on 06L, 24 on 24R): the plugin checks the whole study."""
     db = make_parallel(SRC, tmp_path / "parallel.alaqs")
     with sqlite3.connect(db) as conn:
-        conn.execute("UPDATE user_aircraft_movements SET runway = '06L' WHERE runway = '06'")
-        conn.execute("UPDATE user_aircraft_movements SET runway = '24R' WHERE runway = '24'")
+        conn.execute(
+            "UPDATE user_aircraft_movements SET runway = '06L' WHERE runway = '06'"
+        )
+        conn.execute(
+            "UPDATE user_aircraft_movements SET runway = '24R' WHERE runway = '24'"
+        )
     return db
 
 
