@@ -494,6 +494,14 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   and the queue get no time, while APU, stop-and-go and brake wear are
   counted as for any taxi time. A movement without a block time still
   stops the calculation in both.
+- **Results change** for studies with a movement whose taxi route is
+  flagged for the other operation (a departure on an arrival route or the
+  reverse) and meets the runway more than once: the plugin oriented the
+  route by the movement's D/A, the standalone by the route's own
+  `user_taxiroute_taxiways.departure_arrival`, so they could pick a
+  different line-up or exit crossing. The plugin now uses the route's flag
+  too (the runway trajectory is cached per route); the movement's flag
+  only when the route has none.
 
 ### Removed
 

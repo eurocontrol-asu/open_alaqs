@@ -75,6 +75,10 @@ class TaxiwayRoute:
     def setAircraftGroups(self, var):
         self._groups = var
 
+    def getDepartureArrivalFlag(self):
+        """The route's own departure_arrival flag (None when not set)."""
+        return self._departure_arrival
+
     def isDeparture(self):
         return self._departure_arrival.lower() == "d"
 
