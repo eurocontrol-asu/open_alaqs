@@ -104,6 +104,7 @@ from open_alaqs.core.tools.foca_heli_utils import (  # noqa: E402
     _mode_result,
     compute_mode_emissions,
 )
+from open_alaqs.core.tools.utm import utm_epsg as _utm_epsg  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants (must match the plugin)
@@ -494,8 +495,8 @@ def _grid_bounds_3857(conn: sqlite3.Connection) -> dict:
         "reference_latitude, reference_longitude FROM grid_3d_definition"
     ).fetchone()
     x_cells, y_cells, x_res, y_res, ref_lat, ref_lon = row
-    utm_zone = int((ref_lon + 180) // 6) + 1
-    utm_epsg = utm_zone + (32600 if ref_lat >= 0 else 32700)
+    # UTM zone as the plugin's Grid3D chooses it (shared helper).
+    utm_epsg = _utm_epsg(ref_lat, ref_lon)
     to_utm = pyproj.Transformer.from_crs(4326, utm_epsg, always_xy=True)
     to_3857 = pyproj.Transformer.from_crs(utm_epsg, 3857, always_xy=True)
     ref_x_utm, ref_y_utm = to_utm.transform(ref_lon, ref_lat)

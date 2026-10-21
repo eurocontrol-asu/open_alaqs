@@ -39,6 +39,8 @@ from pathlib import Path
 import pandas as pd
 from pyproj import Transformer
 
+from open_alaqs.core.tools.utm import utm_epsg as _utm_epsg
+
 # Aircraft pipeline, used only when include_aircraft is requested.
 from openalaqs_standalone import austal_aircraft as _aa
 from openalaqs_standalone import compute_movements as _cm
@@ -54,7 +56,7 @@ from openalaqs_standalone.compute_road import compute_road_emissions
 from openalaqs_standalone.extract_sources import extract_sources
 from openalaqs_standalone.make_config import (
     _airport_metadata,
-    _utm_zone_for_lon,
+    _reference_lat_lon,
     make_config,
 )
 
@@ -507,49 +509,38 @@ def orchestrate(
 
     # 5. Receptors (optional)
     #
-    # Read airport metadata once; reused for target EPSG derivation
-    # AND for the absolute-UTM domain bounds against which receptors
-    # get clipped. The grid CRS and the receptor CRS must be identical
-    # (AUSTAL reads receptor x/y in the same metric frame the grid is
-    # anchored in), so we derive a single value here and pass it to
-    # both adapt_receptors and make_config.
+    # Read the grid reference point once (grid_3d_definition, the
+    # airport of user_study_setup as fallback, as make_config does);
+    # reused for target EPSG derivation AND for the absolute-UTM domain
+    # bounds against which receptors get clipped. The grid CRS and the
+    # receptor CRS must be identical (AUSTAL reads receptor x/y in the
+    # same metric frame the grid is anchored in), so we derive a single
+    # value here and pass it to both adapt_receptors and make_config.
     meta = _airport_metadata(alaqs_path)
-    lon = float(meta.get("airport_longitude") or 0.0)
-    lat = float(meta.get("airport_latitude") or 0.0)
+    lat, lon = _reference_lat_lon(alaqs_path, meta)
 
     if receptor_target_epsg is None:
-        if lon != 0.0:
-            receptor_target_epsg = _utm_zone_for_lon(lon)
-        # else: leave None; make_config falls back to 32631 internally,
-        # but if a receptor CSV is present that case is an error (raised
-        # below).
+        receptor_target_epsg = _utm_epsg(lat, lon)
 
     # Compute the AUSTAL domain bounds in absolute UTM (target_epsg).
     # AUSTAL stops with "Outside computational area" when fed receptors
     # outside the grid; adapt_receptors uses these bounds to drop them
     # up front and log the dropped IDs.
-    domain_bounds = None
-    if receptor_target_epsg is not None and lon != 0.0 and lat != 0.0:
-        tx = Transformer.from_crs(
-            "EPSG:4326",
-            f"EPSG:{receptor_target_epsg}",
-            always_xy=True,
-        )
-        ref_x, ref_y = tx.transform(lon, lat)
-        half = grid_size * grid_step_m / 2.0
-        domain_bounds = (
-            ref_x - half,
-            ref_x + half,
-            ref_y - half,
-            ref_y + half,
-        )
+    tx = Transformer.from_crs(
+        "EPSG:4326",
+        f"EPSG:{receptor_target_epsg}",
+        always_xy=True,
+    )
+    ref_x, ref_y = tx.transform(lon, lat)
+    half = grid_size * grid_step_m / 2.0
+    domain_bounds = (
+        ref_x - half,
+        ref_x + half,
+        ref_y - half,
+        ref_y + half,
+    )
 
     if receptor_input is not None:
-        if receptor_target_epsg is None:
-            raise ValueError(
-                "Cannot derive receptor target EPSG: user_study_setup has no "
-                "airport_longitude. Set receptor_target_epsg explicitly."
-            )
         n_rec = adapt_receptors(
             receptor_input,
             receptors_folder / "receptors.csv",
@@ -627,8 +618,8 @@ def main(argv=None):
         type=int,
         default=None,
         help="Target CRS for receptor reprojection. If "
-        "omitted, derived from the airport longitude "
-        "(matches the QGIS plugin behaviour).",
+        "omitted, the UTM zone of the grid reference point "
+        "(grid_3d_definition), chosen as the QGIS plugin does.",
     )
     parser.add_argument(
         "--receptor-name-col",
