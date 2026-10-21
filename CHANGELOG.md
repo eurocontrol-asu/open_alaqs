@@ -412,6 +412,12 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   a 5.3.6 study is migrated), shown as "NULL", kept OK disabled ("Missing
   or invalid: Touchdown Offset, Runway 2 [m]"); it now counts as empty,
   like "". The area source form treats a NULL heat flux the same way.
+- An arrival whose block to runway time was no longer than its landing
+  roll got a taxi time of 0 s and lost all its taxi emissions (queuing,
+  stop-and-go, APU, brake wear) with the warning "taxi route not defined
+  properly". The plugin now keeps a 0 s taxi time and these emissions,
+  as the standalone does, with a warning naming the two times; only a
+  movement whose block time equals its runway time is still skipped.
 
 ### Removed
 
