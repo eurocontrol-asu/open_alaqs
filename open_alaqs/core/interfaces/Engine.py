@@ -102,6 +102,7 @@ class EngineEmissionIndex(Store):
         tas_m_s=None,
         climbing=None,
         delta_t=0.0,
+        airport_elevation_m=0.0,
     ):
         """
         Per-mode EI with the MEEM nvPM emission index of the segment.
@@ -110,12 +111,13 @@ class EngineEmissionIndex(Store):
         the MEEM_V1 tab of the CAEP14 v14 calculation sheet
         (open_alaqs.core.tools.meem_v1):
 
-        - Segment at or below 3000 ft (914.4 m) above MSL, or no altitude
+        - Segment at or below 3000 ft (914.4 m) above the aerodrome (ICAO
+          LTO cycle: ``altitude_m - airport_elevation_m``), or no altitude
           given: LTO. The nvPM EI is the certification value of the mode,
           so the mode EI is returned unchanged.
         - Above: non-LTO. Phase "CLIMB TO CRUISE" for a climbing segment,
           "DESCENT TO APPROACH" otherwise; ISA + ``delta_t`` atmosphere at
-          the segment altitude, Mach from ``tas_m_s`` (else ``mach``), the engine
+          the segment altitude above MSL (``altitude_m``), Mach from ``tas_m_s`` (else ``mach``), the engine
           pressure ratio (DEFAULT_OPR when the table has none). The nvPM
           mass EI replaces pm10_nonvol_g_kg (and nvpm_g_kg), pm10_g_kg,
           p1_g_kg and p2_g_kg move by the same amount, and nvpm_number_kg
@@ -135,7 +137,8 @@ class EngineEmissionIndex(Store):
         :param mach:          flight Mach number, used by V1 when tas_m_s is
                               None.
         :param power_setting: segment thrust F/F00 (V2 only).
-        :param altitude_m:    segment altitude above MSL (m).
+        :param altitude_m:    segment altitude above MSL (m): the ISA
+                              altitude of the non-LTO chain.
         :param T_amb_K:       ambient static temperature in K (V2 only).
         :param meem_version:  "v1" (default) or "v2".
         :param tas_m_s:       segment true airspeed (m/s), V1 non-LTO.
@@ -144,6 +147,8 @@ class EngineEmissionIndex(Store):
         :param delta_t:       ISA temperature deviation (K) of the V1 non-LTO
                               atmosphere, constant aloft (meem_v1.delta_t_from_ground
                               of the meteo temperature; 0 without meteo).
+        :param airport_elevation_m: airport elevation above MSL (m); the
+                              LTO / non-LTO cut is at 3000 ft above it.
         :return: EmissionIndex.
         """
         base_ei = self.getEmissionIndexByMode(mode)
@@ -152,7 +157,14 @@ class EngineEmissionIndex(Store):
 
         if str(meem_version or "v1").lower() != "v2":
             return self._meem_v1(
-                base_ei, mode, altitude_m, mach, tas_m_s, climbing, delta_t
+                base_ei,
+                mode,
+                altitude_m,
+                mach,
+                tas_m_s,
+                climbing,
+                delta_t,
+                airport_elevation_m,
             )
 
         try:
@@ -209,7 +221,11 @@ class EngineEmissionIndex(Store):
                 "TX": "IDLE",
             }.get(mode, "CLIMB OUT")
 
-            apply_alt = altitude_m is not None and float(altitude_m) > 914.0
+            # Height above the aerodrome (ICAO LTO ceiling 3000 ft).
+            apply_alt = (
+                altitude_m is not None
+                and float(altitude_m) - float(airport_elevation_m or 0.0) > 914.0
+            )
 
             version = str(meem_version or "v1").lower()
             if version == "v2":
@@ -275,7 +291,14 @@ class EngineEmissionIndex(Store):
                 )
             else:
                 return self._meem_v1(
-                    base_ei, mode, altitude_m, mach, tas_m_s, climbing, delta_t
+                    base_ei,
+                    mode,
+                    altitude_m,
+                    mach,
+                    tas_m_s,
+                    climbing,
+                    delta_t,
+                    airport_elevation_m,
                 )
 
             corrected = EmissionIndex(
@@ -304,16 +327,31 @@ class EngineEmissionIndex(Store):
         "Idle": "TX",
     }
 
-    def _meem_v1(self, base_ei, mode, altitude_m, mach, tas_m_s, climbing, delta_t=0.0):
+    def _meem_v1(
+        self,
+        base_ei,
+        mode,
+        altitude_m,
+        mach,
+        tas_m_s,
+        climbing,
+        delta_t=0.0,
+        airport_elevation_m=0.0,
+    ):
         """MEEM V1 (CAEP14 v14 MEEM_V1 tab) applied to a mode EI; see
-        getEmissionIndexByModeWithMEEM."""
+        getEmissionIndexByModeWithMEEM. LTO / non-LTO cut at 3000 ft above
+        the aerodrome; ``altitude_m`` (above MSL) is the ISA altitude of the
+        non-LTO chain."""
         from open_alaqs.core.tools import meem_v1
 
         try:
             if altitude_m is None:
                 return base_ei
             altitude_ft = float(altitude_m) / meem_v1.FT_TO_M
-            if meem_v1.section_of_flight(altitude_ft) == "LTO":
+            height_ft = (
+                float(altitude_m) - float(airport_elevation_m or 0.0)
+            ) / meem_v1.FT_TO_M
+            if meem_v1.section_of_flight(height_ft) == "LTO":
                 # Certification value of the mode: the stored EI.
                 return base_ei
 

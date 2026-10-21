@@ -387,3 +387,128 @@ class TestMEEMV1DeltaT:
         assert f(calc, None) == 0.0
         calc._method["config"]["airport_altitude"] = None
         assert f(calc, 290.0) == pytest.approx(1.85, abs=1e-12)
+
+
+class TestMEEMV1LTOCutAboveAerodrome:
+    """The LTO / non-LTO cut is at 3000 ft (914.4 m) above the aerodrome
+    (ICAO LTO cycle), not above MSL; the airport elevation only sets the ISA
+    altitude of the non-LTO chain. Airport at 1655 m: a segment at 0 or
+    500 m above it keeps the certified mode EI (the cut above MSL sent the
+    01P20CM128 approach to the chain, 1.189 instead of 2.989 mg/kg)."""
+
+    ELEV_M = 1655.0
+    FT2M = 0.3048000097536
+
+    def _engine(self):
+        eei = TestMEEMV1EngineWiring()._build_engine()
+        opr, mass, number = _ENGINES["01P20CM128"]
+        for i, m in enumerate(("TO", "CL", "AP", "TX")):
+            ei = eei.getEmissionIndexByMode(m)
+            ei.setObject("nvpm_g_kg", mass[i] / 1000.0)
+            ei.setObject("pm10_nonvol_g_kg", mass[i] / 1000.0)
+            ei.setObject("nvpm_number_kg", number[i])
+        eei._press_ratio = opr
+        return eei
+
+    @pytest.mark.parametrize("height_m", [0.0, 500.0, 914.4])
+    @pytest.mark.parametrize("mode, climbing", [("TO", True), ("AP", False)])
+    def test_lto_up_to_3000_ft_above_airport(self, height_m, mode, climbing):
+        eei = self._engine()
+        base = eei.getEmissionIndexByMode(mode)
+        ei = eei.getEmissionIndexByModeWithMEEM(
+            mode,
+            101325.0,
+            0.0,
+            altitude_m=self.ELEV_M + height_m,
+            tas_m_s=70.0,
+            climbing=climbing,
+            airport_elevation_m=self.ELEV_M,
+        )
+        assert ei is base
+        if mode == "AP":
+            assert ei.getObject("pm10_nonvol_g_kg") == pytest.approx(
+                2.98855587397408 / 1000.0, rel=1e-14
+            )
+
+    def test_non_lto_above_3000_ft_above_airport_uses_msl_altitude(self):
+        eei = self._engine()
+        height_m, tas, dt = 1000.0, 120.0, -3.0
+        ei = eei.getEmissionIndexByModeWithMEEM(
+            "AP",
+            101325.0,
+            0.0,
+            altitude_m=self.ELEV_M + height_m,
+            tas_m_s=tas,
+            climbing=False,
+            delta_t=dt,
+            airport_elevation_m=self.ELEV_M,
+        )
+        opr, mass, number = _ENGINES["01P20CM128"]
+        r = calculate_nvpm_ei(
+            "DESCENT TO APPROACH",
+            (self.ELEV_M + height_m) / self.FT2M,
+            _TS,
+            mass,
+            number,
+            opr=opr,
+            tas_kt=tas * 1.94384,
+            delta_t=dt,
+        )
+        assert ei.getObject("pm10_nonvol_g_kg") == pytest.approx(
+            r.nvpm_mass_ei_mgkg / 1000.0, rel=1e-14
+        )
+        assert ei.getObject("pm10_nonvol_g_kg") != pytest.approx(
+            2.98855587397408 / 1000.0, rel=1e-3
+        )
+
+    def _calc(self, eei):
+        from types import SimpleNamespace
+
+        from open_alaqs.core.MovementEmissionCalculator import (
+            FlightEmissionCalculator,
+        )
+
+        ac = SimpleNamespace(getPressure=lambda: 82000.0, getTemperature=lambda: 280.0)
+        calc = SimpleNamespace(
+            _method={
+                "name": "bymode",
+                "config": {
+                    "ambient_conditions": ac,
+                    "mach_number": 0.0,
+                    "meem_version": "v1",
+                    "airport_altitude": self.ELEV_M,
+                },
+            },
+            _engine=SimpleNamespace(getEmissionIndex=lambda: eei),
+            _segment_tas_m_s=70.0,
+            _is_departure=lambda: False,
+            _movement_name="test",
+        )
+        calc._meem_delta_t = lambda t: FlightEmissionCalculator._meem_delta_t(calc, t)
+        return calc, FlightEmissionCalculator
+
+    @pytest.mark.parametrize("method", ["bymode", "bffm2"])
+    @pytest.mark.parametrize("height_m", [0.0, 500.0])
+    def test_calculator_passes_airport_elevation(self, method, height_m):
+        """FlightEmissionCalculator passes the airport altitude of the method
+        config, so the segment's altitude above MSL (height + elevation) is
+        cut at 3000 ft above the airport."""
+        eei = self._engine()
+        calc, fec = self._calc(eei)
+        alt = self.ELEV_M + height_m
+        if method == "bymode":
+            ei = fec._get_emission_index_bymode(calc, "AP", altitude_m=alt)
+        else:
+            eei.getEmissionIndexByEngineState = lambda *a, **k: None
+            ei = fec._get_emission_index_bffm2(calc, "AP", 0.3, altitude_m=alt)
+        assert ei.getObject("pm10_nonvol_g_kg") == pytest.approx(
+            2.98855587397408 / 1000.0, rel=1e-14
+        )
+
+    def test_calculator_non_lto_above_3000_ft_above_airport(self):
+        eei = self._engine()
+        calc, fec = self._calc(eei)
+        ei = fec._get_emission_index_bymode(calc, "AP", altitude_m=self.ELEV_M + 1000.0)
+        assert ei.getObject("pm10_nonvol_g_kg") != pytest.approx(
+            2.98855587397408 / 1000.0, rel=1e-3
+        )

@@ -667,7 +667,7 @@ The emission output CSV contains the following PM-related columns for aircraft m
 | Column | Contents |
 |---|---|
 | `pm10_kg` | Total PM10 = combustion PM10 + brake wear (arrivals only) |
-| `pm10_nonvol_kg` | Non-volatile PM (nvPM mass): the EEDB value of the mode at or below 3000 ft above MSL; above, MEEM V1 (CAEP14 v14 MEEM_V1, see [`Auxiliary Material`](AUXILIARY_MATERIAL.md#meem-v1-nvpm-above-3000-ft)) |
+| `pm10_nonvol_kg` | Non-volatile PM (nvPM mass): the EEDB value of the mode at or below 3000 ft above the aerodrome; above, MEEM V1 (CAEP14 v14 MEEM_V1, see [`Auxiliary Material`](AUXILIARY_MATERIAL.md#meem-v1-nvpm-above-3000-ft)) |
 | `pm10_sul_kg` | Sulphate vPM = ~48.96 mg/kg × fuel burned (FSC 680 ppm, the FOA3 value, ε = 0.024, SO4/S = 96/32; stored as a constant in the `pm10_sul` column; SOx uses FSC 383 ppm, ε 0.01) |
 | `pm10_organic_kg` | Organic vPM = δ_k × HC_EI × fuel burned |
 | `p1_kg` | PM1.0 placeholder; currently equal to `pm10_kg` |

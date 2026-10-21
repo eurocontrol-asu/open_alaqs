@@ -52,11 +52,13 @@ For each fixed-wing movement:
        seg_fuel = seg_time * ff[mode] * n_engines
        em[p]   += seg_fuel * EI[mode][p] / 1000
        CO2     += seg_fuel * 3.16
-    6. Above 3000 ft above MSL (start point height + airport elevation) the
-       PM10 EI moves by the MEEM V1 nvPM mass EI minus the mode's
+    6. Above 3000 ft above the aerodrome (start point height, ICAO LTO
+       cycle) the PM10 EI moves by the MEEM V1 nvPM mass EI minus the mode's
        pm10_nonvol (`_meem_v1_mass_mgkg`, written out from the CAEP14 v14
-       sheet's MEEM_V1 tab), ISA + dT with dT (USER INPUTS!B5) the meteo
-       temperature minus the ISA temperature at the airport elevation.
+       sheet's MEEM_V1 tab), ISA + dT at the segment altitude above MSL
+       (start point height + airport elevation), with dT (USER INPUTS!B5)
+       the meteo temperature minus the ISA temperature at the airport
+       elevation.
 
 Stop-and-go is zero in the training fixture; not implemented yet.
 Helicopters (no profile_id) are skipped: handled by FOCA module
@@ -630,8 +632,9 @@ def _get_engine_ei(conn, engine_name: str) -> dict:
 # MEEM V1 nvPM mass EI above 3000 ft, written out from the "MEEM_V1",
 # "USER INPUTS" and "Constants" tabs of the CAEP14 FBE Engines Emissions
 # Calculation Sheet v14 (cell references in the comments). Independent of
-# open_alaqs.core.tools.meem_v1. At or below 3000 ft (USER INPUTS!B36) the
-# EI is the certification value of the mode, i.e. the table's pm10_nonvol.
+# open_alaqs.core.tools.meem_v1. At or below 3000 ft above the aerodrome
+# (USER INPUTS!B36, ICAO LTO cycle) the EI is the certification value of the
+# mode, i.e. the table's pm10_nonvol.
 # ---------------------------------------------------------------------------
 
 _MEEM_FT2M = 0.3048000097536  # Constants!B17
@@ -675,6 +678,13 @@ def _get_engine_meem(conn, engine_name: str) -> dict:
         points.append((float(any_row[3]), float(any_row[4])))  # 5th point
     nonvol = {m: float(by_mode[m][1] or 0.0) for m, _ in _MEEM_MODE_THRUST}
     return {"points": points, "opr": opr, "pm10_nonvol": nonvol}
+
+
+def _meem_non_lto(height_m: float) -> bool:
+    """USER INPUTS!B36: True ("NON_LTO") for a segment start point more than
+    3000 ft above the aerodrome (ICAO LTO cycle). `height_m` is the height
+    above the airport, not the altitude above MSL."""
+    return float(height_m) / _MEEM_FT2M > _MEEM_LTO_CEILING_FT
 
 
 def _meem_delta_t(meteo, elevation_m: float) -> float:
@@ -1386,11 +1396,13 @@ def _compute_fixed_wing(  # noqa: C901 — one segment loop per method, as the s
             )
 
         seg_fuel = seg_time * seg_ff_amb * n_eng
-        # MEEM V1 above 3000 ft above MSL (start point of the segment): the
-        # nvPM mass EI replaces the mode's pm10_nonvol, and pm10 moves by the
-        # same amount. At or below, the mode values are used unchanged.
+        # MEEM V1 above 3000 ft above the aerodrome (start point of the
+        # segment, ICAO LTO cycle): the nvPM mass EI replaces the mode's
+        # pm10_nonvol, and pm10 moves by the same amount. At or below, the
+        # mode values are used unchanged. The chain's ISA altitude is above
+        # MSL (height + airport elevation).
         alt_ft = (z1 + elevation_m) / _MEEM_FT2M
-        if meem and alt_ft > _MEEM_LTO_CEILING_FT:
+        if meem and _meem_non_lto(z1):
             nvpm_g_kg = (
                 _meem_v1_mass_mgkg(
                     alt_ft, tas1, is_dep, meem["points"], meem["opr"], meem_dt

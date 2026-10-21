@@ -502,7 +502,7 @@ take-off fuel, in an hour with a 400 m mixing height; cause not isolated).
 
 ### MEEM V1 temperature and engine data (20 October 2026)
 
-Above 3000 ft above MSL the reference's `_meem_v1_mass_mgkg` now runs the
+Above 3000 ft above the aerodrome the reference's `_meem_v1_mass_mgkg` now runs the
 sheet's ISA + ΔT atmosphere (USER INPUTS!B5 "ΔT at 0 ft MSL", B41 to B45)
 with ΔT = meteo temperature of the movement minus ISA at the airport
 elevation (288.15 K − 0.0065 K/m × elevation), constant aloft

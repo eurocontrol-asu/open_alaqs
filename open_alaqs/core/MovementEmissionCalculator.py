@@ -1212,9 +1212,11 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         engine_thrust = start_point_.getEngineThrust()
         fuel_flow = start_point_.getFuelFlow()
         mode = start_point_.getMode() or "AP"  # guard empty string (Bug #23 residual)
-        # Segment altitude above MSL (metres) for the MEEM V1 LTO/non-LTO
-        # branch: the trajectory height above the airport (getZ, None for
-        # points without an explicit height) plus the airport elevation.
+        # Segment altitude above MSL (metres), the ISA altitude of the MEEM V1
+        # non-LTO chain: the trajectory height above the airport (getZ, None
+        # for points without an explicit height) plus the airport elevation.
+        # The LTO/non-LTO cut itself is at 3000 ft above the aerodrome (ICAO
+        # LTO cycle): Engine._meem_v1 subtracts the airport elevation again.
         altitude_m = float(start_point_.getZ() or 0.0) + float(
             self._method["config"].get("airport_altitude") or 0.0
         )
@@ -1487,6 +1489,9 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 tas_m_s=getattr(self, "_segment_tas_m_s", None),
                 climbing=self._is_departure(),
                 delta_t=self._meem_delta_t(T_amb),
+                airport_elevation_m=float(
+                    self._method["config"].get("airport_altitude") or 0.0
+                ),
             )
         except Exception:
             src = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)
@@ -1548,6 +1553,9 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 tas_m_s=getattr(self, "_segment_tas_m_s", None),
                 climbing=self._is_departure(),
                 delta_t=self._meem_delta_t(T_amb),
+                airport_elevation_m=float(
+                    self._method["config"].get("airport_altitude") or 0.0
+                ),
             )
         except Exception:
             mode_ei = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)
