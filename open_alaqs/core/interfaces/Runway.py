@@ -97,7 +97,9 @@ class Runway:
         self._touchdown_offset = val
 
     def getTouchdownOffset2(self):
-        """Touchdown Offset of the second-named end; None when not set (the first end's value applies)."""
+        """Touchdown Offset of the second-named end; None when not set (then the profile's own touchdown
+        distance applies at that end, see getTouchdownOffsetFor: 0, not the first end's value).
+        """
         return self._touchdown_offset_2
 
     def setTouchdownOffset2(self, val):

@@ -1022,7 +1022,6 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         segments.append(
             {
                 "mode": "TX",
-                "taxi": True,
                 "p1_3857": p1,
                 "p2_3857": p2,
                 "z1_m": 0.0,

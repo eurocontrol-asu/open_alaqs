@@ -188,7 +188,8 @@ def _arrival_anp(st, mov, traj, n):
                 n,
                 None,
                 "arrival route does not meet the runway",
-                "touchdown at the threshold rule; taxiing starts at the route's first point",
+                "touchdown at the landing threshold + Touchdown Offset (else the profile's "
+                "50 ft crossing distance); taxiing starts at the route's first point",
                 "fix the route geometry so that it meets the runway centreline",
             )
         )
