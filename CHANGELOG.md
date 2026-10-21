@@ -519,6 +519,15 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   checked by `validation/tests/test_source_csvs_match_fixture.py`. The
   study description of the three `training_v3*.alaqs` files says 15
   movements (was 13).
+- Template build (`tools/template_build/generate_templates.py`) reads the
+  CSVs with `float_precision="round_trip"`: a rebuild stores the CSV
+  values exactly (the default parser was up to a few ulp off). The
+  shipped templates are not rebuilt; `tools/template_build/README.md`
+  lists what a rebuild changes (column order of `shapes_runways`, row order
+  of the geometry metadata, timestamps, and in `project.alaqs` 1 to a few
+  ulp in 26780 `default_vehicle_ef_copert5` rows and 17
+  `default_aircraft_engine_ei` cells, where the shipped files are not the
+  CSV text values).
 
 ### Removed
 
