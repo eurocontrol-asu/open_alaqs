@@ -155,6 +155,19 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 
 ### Fixed
 
+- UTM zone and AUSTAL reference point (since 5.3.6): the standalone (`geometry`, both `make_config`,
+  `orchestrate`, the CAEP14 reference script) chose the UTM zone by formula, `make_config` always in the
+  northern hemisphere and with 32631 when the longitude was 0.0 (`orchestrate --receptor-input` then stopped),
+  while the plugin's Grid3D queries the PROJ database; they disagreed in the southern hemisphere and on zone
+  boundaries (Sydney 32656 against 32756, lon 0.0 32631 against 32630). All now call one QGIS-free helper,
+  `open_alaqs/core/tools/utm.py` `utm_epsg(lat, lon)`, the plugin's query (first result; no Norway 32V or
+  Svalbard exceptions, the Grid3D docstring said otherwise); a missing coordinate is checked with `is None`.
+  Both `make_config` and `orchestrate` took the AUSTAL config reference from the airport of
+  `user_study_setup` while the emission grid is centred on `grid_3d_definition` reference_latitude/longitude,
+  so with the two apart aircraft cells were shifted against stationary sources and receptors (1374 m for a
+  reference 0.02 deg east of Rotterdam); they now use the grid reference (the airport only when the grid
+  definition has none, with a warning). No bundled result changes: the training studies have both points
+  equal, in zone 32631 either way.
 - Aircraft SOx was zero: `sox_ei` was 1.0 g/kg in every row of
   `default_aircraft_engine_ei` until the 5.0.0 rebuild, which set it to 0.0
   without a note. SOx (as SO2) now comes from the fuel sulphur,
