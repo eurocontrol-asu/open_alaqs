@@ -3,6 +3,8 @@
 - No runway trajectory cache is committed: the plugin rebuilds it at run
   time, and a committed one would be read back instead of the current
   runway placement.
+- shapes_runways.oid is the INTEGER PRIMARY KEY (rowid alias), as in the
+  templates: a runway added in QGIS gets an oid.
 """
 
 import sqlite3
@@ -42,3 +44,13 @@ def test_no_committed_runway_trajectory_cache(rel):
             )
         ]
     assert names == []
+
+
+@pytest.mark.parametrize("rel", _tracked_alaqs())
+def test_runway_oid_is_the_primary_key(rel):
+    with _connect(rel) as conn:
+        info = {r[1]: r for r in conn.execute("PRAGMA table_info(shapes_runways)")}
+    if not info:
+        pytest.skip("no shapes_runways")
+    oid = info["oid"]
+    assert oid[2].upper() == "INTEGER" and oid[5] == 1

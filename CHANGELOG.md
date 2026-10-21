@@ -493,6 +493,17 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   `tests/test_emission_calculation.py` runs on copies of its studies, so a
   test run no longer writes into tracked files nor reads a committed
   trajectory back (`tests/test_bundled_fixture_hygiene.py`).
+- `scripts/migrate_alaqs.py --drop-extra-columns` rebuilt the table from
+  column names and types only, so PRIMARY KEY, NOT NULL and defaults were
+  lost (dropping `capacity` left `shapes_runways.oid` without its key, and
+  a runway added in QGIS then got no oid). It now uses `ALTER TABLE ...
+  DROP COLUMN` (SQLite 3.35 or later); where SQLite refuses, the table is
+  rebuilt with the reference definitions of the kept columns, rowids,
+  indexes and triggers kept (`tests/test_migrate_drop_columns_keeps_keys.py`).
+  `shapes_runways.oid INTEGER PRIMARY KEY NOT NULL` restored in
+  `validation/data/training_v3.alaqs`, `training_v3_gatemovements.alaqs`,
+  `training_v3_multisource.alaqs` and `tests/data/AIRPORT_A/AIRPORT_A.alaqs`
+  (rows, geometry triggers and geometry registration unchanged).
 
 ### Removed
 
