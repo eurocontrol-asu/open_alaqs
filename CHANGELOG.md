@@ -507,6 +507,14 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   not reachable), and `truncate_after` with the cut exactly on a profile
   row ends at that row instead of appending a duplicate end row (a 0 m
   last segment). Bundled outputs unchanged.
+- **Results change** in the standalone for studies with parallel runways
+  (06L/24R and 06R/24L): runways were keyed by the designator number, so
+  both runways had the keys 6 and 24, the second row of `shapes_runways`
+  won, and every movement was placed on it with its Touchdown Offsets.
+  Runways are now keyed by the full designator (`movements.runway_of`),
+  as in the plugin; a movement that names a plain "06" gets the first
+  runway of the table (was the last), as the plugin's name match does.
+  The runway checks (`runway_checks`) use the same lookup.
 
 ### Removed
 
