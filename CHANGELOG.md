@@ -521,6 +521,11 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   (`QLocale.toDouble`): otherwise the field is red and the tooltip names
   the decimal separator of the locale ("use the decimal separator of your
   locale (.)"). "30,3" stays 30.3 under a German, Dutch or French locale.
+- Form value lists on Windows: a study under an extended-length path
+  (`\\?\C:\...`, as `Path.resolve` gives for a long path, or
+  `\\?\UNC\server\share\...`) gave an SQLite URI with the "?" in the
+  authority, so the runway and profile lists of the forms were empty. The
+  prefix is now stripped before the URI is built.
 - Taxi route without segments (rc6 review M7): queuing, APU, engine start,
   stop-and-go and brake wear are added to the last segment of the route,
   so a route none of whose taxiways exists added nothing and the movement

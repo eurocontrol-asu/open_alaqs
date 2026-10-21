@@ -1,6 +1,6 @@
 import math
 import os
-from pathlib import Path, PurePath
+from pathlib import Path, PurePath, PureWindowsPath
 from typing import Optional
 
 from qgis.core import (
@@ -233,7 +233,16 @@ def _sqlite_read_only_uri(path: PurePath) -> str:
     or escape. A Windows UNC path (as_uri gives "file://server/share/...")
     is written "file:////server/share/...": SQLite rejects a URI authority
     other than "localhost", and reads the path "//server/share/..." as UNC.
+    A Windows extended-length path (a "\\\\?\\" prefix, as Path.resolve gives
+    for a long path, or "\\\\?\\UNC\\server\\share\\...") is first stripped of
+    its prefix: as_uri would otherwise put the "?" in the authority.
     """
+    if isinstance(path, PureWindowsPath):
+        text = str(path)
+        if text.startswith("\\\\?\\UNC\\"):
+            path = PureWindowsPath("\\\\" + text[len("\\\\?\\UNC\\") :])
+        elif text.startswith("\\\\?\\"):
+            path = PureWindowsPath(text[len("\\\\?\\") :])
     uri = path.as_uri()
     if uri.startswith("file://") and not uri.startswith("file:///"):
         uri = "file:////" + uri[len("file://") :]
