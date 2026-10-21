@@ -521,6 +521,12 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   (`QLocale.toDouble`): otherwise the field is red and the tooltip names
   the decimal separator of the locale ("use the decimal separator of your
   locale (.)"). "30,3" stays 30.3 under a German, Dutch or French locale.
+- Taxi route without segments (rc6 review M7): queuing, APU, engine start,
+  stop-and-go and brake wear are added to the last segment of the route,
+  so a route none of whose taxiways exists added nothing and the movement
+  lost them silently. They are now placed at the gate on a stand-in
+  segment of 0 m and 0 s, with a warning. Not reachable with the bundled
+  studies.
 - Runway form: a NULL Touchdown Offset (touchdown_2 is added as NULL when
   a 5.3.6 study is migrated), shown as "NULL", kept OK disabled ("Missing
   or invalid: Touchdown Offset, Runway 2 [m]"); it now counts as empty,
