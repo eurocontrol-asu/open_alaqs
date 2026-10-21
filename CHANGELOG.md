@@ -582,9 +582,24 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   both runways had the keys 6 and 24, the second row of `shapes_runways`
   won, and every movement was placed on it with its Touchdown Offsets.
   Runways are now keyed by the full designator (`movements.runway_of`),
-  as in the plugin; a movement that names a plain "06" gets the first
-  runway of the table (was the last), as the plugin's name match does.
-  The runway checks (`runway_checks`) use the same lookup.
+  as in the plugin. The runway checks (`runway_checks`) use the same
+  lookup.
+- **Results change**, parallel runways with a plain designator (rc6 review
+  F3): a movement naming a plain "24" on a study with 06L/24R and 06R/24L
+  was computed on the first runway by the standalone, and dropped silently
+  by the plugin (it matched the first runway whose name contained "24",
+  then "24" was not an end of it: "Could not find runway direction", the
+  movement absent from the results); a "24R" on a plain 06/24 study was
+  dropped silently by the plugin and fell back to 06/24 in the standalone.
+  Both now stop the calculation with an error naming the movement
+  ("movement id 1: A20N A 2025-12-01 06:05: runway '24' matches 06L/24R
+  and 06R/24L; name the runway end with its letter", or "matches no runway
+  end of the study"); in the plugin it is the "Calculation Failed" message
+  of the inventory dialog. Movements that were silently dropped now stop
+  the calculation until the runway is named fully. The ADS-B import's
+  runway lookup (`get_runway_by_direction`) gives no runway for an
+  ambiguous end instead of the first, and falls back to the closest track
+  point. The standalone's runway dict has no plain-number keys any more.
 - Runway form: a negative Touchdown Offset was accepted, but the runway
   placement ignores values of 0 or less and silently used the profile's
   own touchdown distance. The form now rejects it (OK disabled); 0 or

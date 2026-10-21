@@ -77,25 +77,65 @@ def runway_designator(text) -> str:
     return f"{int(digits):02d}{letters}" if digits else t
 
 
+def movement_name(mov: dict) -> str:
+    """A movement as named in messages: "id 3: A20N A 2023-06-01 06:15"."""
+    return "id %s: %s %s %s" % (
+        mov.get("oid", "?"),
+        mov.get("aircraft", ""),
+        mov.get("departure_arrival", ""),
+        str(mov.get("runway_time", ""))[:16],
+    )
+
+
 def runway_of(runways: dict, mov: dict) -> dict:
-    """The runway of a movement: by its full designator ("06L"), else by
-    the designator number (`runway_direction`, KeyError if unknown)."""
-    runway = runways.get(mov.get("runway_designator"))
-    return runway if runway is not None else runways[mov["runway_direction"]]
+    """The runway of a movement, by the full designator of its runway end
+    ("24" is an end of "06/24", "24R" of "06L/24R").
+
+    Raises ValueError, naming the movement, when the end matches no
+    runway or several runways: a plain "24" on a study with 06L/24R and
+    06R/24L ("name the runway end with its letter"), or "24R" on a study
+    with a plain 06/24. The plugin (MovementStore.initMovements) refuses
+    the same cases; neither falls back to the first runway any more.
+    """
+    designator = mov.get("runway_designator")
+    if designator is None:
+        designator = runway_designator(mov.get("runway"))
+    runway = runways.get(designator)
+    if runway is not None:
+        return runway
+    number = "".join(ch for ch in designator if ch.isdigit())
+    matched: dict = {}
+    for key, rwy in runways.items():
+        if number and "".join(ch for ch in key if ch.isdigit()) == number:
+            matched.setdefault(id(rwy), rwy)
+    name = movement_name(mov)
+    if len(matched) > 1:
+        raise ValueError(
+            f"movement {name}: runway '{mov.get('runway', designator)}' matches "
+            f"{' and '.join(r['runway_id'] for r in matched.values())}; "
+            "name the runway end with its letter"
+        )
+    runway_ids = ", ".join(
+        dict.fromkeys(r["runway_id"] for r in runways.values())
+    )
+    raise ValueError(
+        f"movement {name}: runway '{mov.get('runway', designator)}' matches no "
+        f"runway end of the study (runways: {runway_ids or 'none'}); name the "
+        "runway end as in the runway table"
+    )
 
 
 def get_runways(conn: sqlite3.Connection) -> dict:
-    """Read every runway in `shapes_runways`, keyed by direction.
+    """Read every runway in `shapes_runways`, keyed by runway end.
 
-    Returns a dict mapping each runway end to the runway dict it belongs
-    to, by its full designator (`runway_designator`, e.g. "06L", "24")
-    and by its designator integer (e.g. 6, 24). For a runway "33/15" the
-    keys "33", "15", 33 and 15 point at the SAME runway dict, so the
-    caller can look up by either end. Parallel runways (06L/24R and
-    06R/24L) have their own designator keys; the integer key goes to the
-    first of them in the table, as the plugin takes the first runway
-    whose name contains a plain "06". Look a movement's runway up with
-    `runway_of`.
+    Returns a dict mapping each runway end, by its full designator
+    (`runway_designator`, e.g. "06L", "24"), to the runway dict it
+    belongs to. For a runway "33/15" the keys "33" and "15" point at the
+    SAME runway dict, so the caller can look up by either end. Parallel
+    runways (06L/24R and 06R/24L) have their own designator keys and no
+    plain-number key: look a movement's runway up with `runway_of`, which
+    refuses a plain "06" there (and a "06L" on a plain 06/24), as the
+    plugin does.
 
     Each runway dict has the same shape as `get_runway`'s return:
       runway_id, geom_3857, pt1_3857, pt2_3857, directions.
@@ -104,8 +144,8 @@ def get_runways(conn: sqlite3.Connection) -> dict:
 
     Multi-runway support. Plugin-shaped studies with two or more
     runways (a study with 07/25 and 33/15 active) need per-movement runway
-    selection, since `mov["runway_direction"]` identifies one of the
-    two thresholds. The earlier `get_runway` reader was single-runway
+    selection, since `mov["runway_designator"]` identifies one of the
+    thresholds. The earlier `get_runway` reader was single-runway
     only and would silently pick whichever row sqlite returned first,
     making azimuth lookup fail with KeyError on movements that named
     a direction on a different runway. `get_runways` covers both
@@ -141,9 +181,8 @@ def get_runways(conn: sqlite3.Connection) -> dict:
         rwy["touchdown_offset_m"] = (
             {dirs[0]: t1, dirs[-1]: t2} if len(dirs) > 1 else {dirs[0]: t1}
         )
-        for name, d in zip(runway_id.split("/"), dirs):
+        for name in runway_id.split("/"):
             out[runway_designator(name)] = rwy
-            out.setdefault(d, rwy)
     return out
 
 

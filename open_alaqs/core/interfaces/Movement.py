@@ -1025,28 +1025,60 @@ class MovementStore(Store, metaclass=Singleton):
         if stage_1:
             stage_1.nextValue()
 
+        # The runway of a movement is the runway whose named end is the
+        # movement's runway (its full designator: "24" is an end of "06/24",
+        # "24R" of "06L/24R"). A runway that matches no end or several
+        # runways (a plain "24" on a study with 06L/24R and 06R/24L) stops
+        # the calculation with a readable error, like the other input
+        # errors; it used to take the first runway whose name contained
+        # the text ("24" in "06L/24R") or NaN, and the movement was then
+        # dropped silently ("Could not find runway direction"). The
+        # standalone (openalaqs_standalone.movements.runway_of) refuses the
+        # same cases.
         runway_store = self.getRunwayStore()
+        runway_names = ", ".join(
+            runway.getName() for runway in runway_store.getObjects().values()
+        )
         for rwy in mdf["runway"].unique():
 
             indices = mdf["runway"] == rwy
-
-            # Make sure runways are always 2 characters or more
-            rwy = rwy.zfill(2)
-
-            if runway_store.isinKey(rwy):
-                eq_mdf.loc[indices, "runway_direction"] = rwy
-                rwy_used = [
-                    key for key in list(runway_store.getObjects().keys()) if rwy in key
-                ]
-                if len(rwy_used) > 1:
-                    logger.warning(
-                        f"Runway {rwy} was found in the DB multiple " "times."
+            found = runway_store.runwaysWithEnd(rwy)
+            if len(found) != 1:
+                if not found:  # the runways a plain number is ambiguous between
+                    found = runway_store.runwaysWithEnd(rwy, by_number=True)
+                    found = found if len(found) > 1 else []
+                names = [
+                    "id %s: %s %s %s"
+                    % (
+                        oid,
+                        row.get("aircraft", ""),
+                        row.get("departure_arrival", ""),
+                        str(row.get("runway_time", ""))[:16],
                     )
-                eq_mdf.loc[indices, "runway"] = rwy_used[0]
-
-            else:
-                eq_mdf.loc[indices, "runway"] = np.nan
-                logger.warning(f"Runway '{rwy}' wasn't found in the DB")
+                    for oid, row in mdf[indices].head(3).iterrows()
+                ]
+                if indices.sum() > 3:
+                    names.append(f"{indices.sum() - 3} more")
+                movements = ("movements " if indices.sum() > 1 else "movement ") + (
+                    "; ".join(names)
+                )
+                if len(found) > 1:
+                    matched = " and ".join(runway.getName() for _, runway, _ in found)
+                    message = (
+                        f"{movements}: runway '{rwy}' matches {matched}; "
+                        "name the runway end with its letter"
+                    )
+                else:
+                    message = (
+                        f"{movements}: runway '{rwy}' matches no runway end "
+                        f"of the study (runways: {runway_names or 'none'}); "
+                        "name the runway end as in the runway table"
+                    )
+                logger.error(message)
+                raise ValueError(message)
+            key, _, end = found[0]
+            eq_mdf.loc[indices, "runway_direction"] = end
+            eq_mdf.loc[indices, "runway"] = key
 
         # Check if gates exist in the database
         if stage_1:

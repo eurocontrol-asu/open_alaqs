@@ -94,9 +94,16 @@ class _Study:
         self._cr, self._parts = {}, {}
 
     def runway(self, rd, des=None):
-        """The runway of end `des` ("06L"), else of designator number `rd`."""
+        """The runway of end `des` ("06L", "24"), else of the designator number
+        `rd` when exactly one runway has that number (None otherwise: a
+        plain number on parallel runways, see `movements.runway_of`)."""
         rw = self.ctx["runways"].get(des) if des else None
-        return rw if rw is not None else self.ctx["runways"].get(rd)
+        if rw is not None:
+            return rw
+        by_number = {
+            id(r): r for r in self.ctx["runways"].values() if rd in r["directions"]
+        }
+        return next(iter(by_number.values())) if len(by_number) == 1 else None
 
     def crossings(self, route, rd, des=None):
         key = (route, rd, des)
@@ -466,7 +473,8 @@ def check_study(conn) -> pd.DataFrame:
         groups.items(), key=lambda kv: tuple(map(str, kv[0]))
     ):
         traj = mv.get_trajectory(conn, pid)
-        if not traj or st.runway(rd, des) is None:
+        mv.runway_of(st.ctx["runways"], m)  # refuses an ambiguous or unknown end
+        if not traj:
             continue
         m = dict(m, gate=st.routes.get(route, {}).get("gate", ""))
         if traj[0][6] == "CUSTOM":
