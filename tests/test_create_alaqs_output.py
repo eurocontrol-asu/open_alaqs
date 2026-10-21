@@ -124,7 +124,15 @@ def test_create_output(plugin_instance, datasets_to_test):
                 _conn.row_factory = sqlite.Row
                 _cursor = _conn.cursor()
                 _res = _cursor.execute(f"SELECT * FROM {table_name}")
-                _rows = _res.fetchone() if fetchone else _res.fetchall()
+                # Compared by column name: the column order of
+                # shapes_runways differs between the inventory template
+                # (touchdown_2 after touchdown) and the old-schema expected
+                # file (touchdown_2 last, added by a migration).
+                if fetchone:
+                    _row = _res.fetchone()
+                    _rows = dict(_row) if _row is not None else _row
+                else:
+                    _rows = [dict(r) for r in _res.fetchall()]
                 _cursor.close()
 
             return _rows

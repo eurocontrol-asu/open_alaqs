@@ -297,8 +297,8 @@ class TaxiwaySegmentsDatabase(SQLSerializable, metaclass=Singleton):
                 [
                     ("oid", "INTEGER PRIMARY KEY NOT NULL"),
                     ("taxiway_id", "TEXT"),
-                    ("speed", "DECIMAL"),
-                    ("time", "DECIMAL"),
+                    ("speed", "REAL"),
+                    ("time", "REAL"),
                     ("instudy", "DECIMAL"),
                 ]
             )

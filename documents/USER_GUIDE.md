@@ -102,10 +102,11 @@ Only a 0 or empty `sox_ei` is replaced at run time (by 0.758 g/kg for jet fuel, 
 
 1. For a new study, create a new project (**Create an Open ALAQS project**): it is made from the template of this version and has the current tables.
 2. For an existing study, update the `.alaqs` with `scripts/migrate_alaqs.py`. The script is not in the plugin zip: run it with Python 3 from a checkout of the repository at this version (it reads the templates and CSVs of that checkout). Close the study in QGIS first. The script writes a backup (`<name>.bak-<timestamp>.alaqs`) unless `--no-backup` is given.
-   + Schema only (adds `touchdown_2`, `engine_test_events`, `is_test_site` and the other missing tables and columns, empty, and the three named point-source profiles `heating_season`, `cooling_season` and `business_hours`):
+   + Schema only (adds `touchdown_2`, `engine_test_events`, `is_test_site` and the other missing tables and columns, empty, and the three named point-source profiles `heating_season`, `cooling_season` and `business_hours`; converts the numeric columns of the layers to `REAL`, see below):
      ```bash
      python scripts/migrate_alaqs.py study.alaqs
      ```
+     The numeric columns of the layers (height, speed, distance, idle time, temperature, diameter, velocity, the fleet percentages, the emission factors, ...) were declared `DECIMAL` in 5.3.x. QGIS types such a column from the values it holds: whole numbers made it an integer field, so a decimal typed in a form was rounded (2.5 saved as 3, or 25 under a German locale), and an empty layer made it a text field, so the typed text was stored as it was ("30,3"). The script rebuilds these tables with `REAL` columns (the values are kept; a text value that reads as a number becomes that number) and reports, as `WARNING: <table> rowid <n>, column <c>: '...' is not a number; left as text`, any text it cannot read as a number, for you to correct in QGIS. A study that still has the old columns is reported in the log when it is opened ("Upgrade the study with scripts/migrate_alaqs.py"); it opens and calculates as before, and the forms check a number as QGIS saves it in that study (2.5 is checked, and saved, as 3 in an integer column).
    + Schema and the engine table (replaces every row of `default_aircraft_engine_ei`, including rows you added or edited):
      ```bash
      python scripts/migrate_alaqs.py study.alaqs --refresh-reference-data --refresh-tables default_aircraft_engine_ei

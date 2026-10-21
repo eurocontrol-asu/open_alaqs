@@ -514,6 +514,34 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   locale (group separators as QGIS shows them, "20.000" German, "20,000"
   English); "12.5", which QGIS would round, is rejected. Under an English
   locale "30,3" is now read as 303, as QGIS saves it.
+- Decimals typed into the layer forms were rounded or stored as text: the
+  numeric columns of the shapes layers (height, speed, distance,
+  idle_time, temperature, diameter, velocity, the `*_percentage` columns,
+  `vehicle_year`, the emission factors, `gate_height`, taxiway `speed` and
+  `time`, receptor `xcoord`, `ycoord`, 65 columns of 8 tables) were
+  declared `DECIMAL`, which the QGIS SpatiaLite provider does not map to
+  Double: it types the column from its stored data, so a column of whole
+  numbers was an integer field (a typed 2.5 was saved as 3, and as 25
+  under a German locale) and an empty layer a text field (the text "30,3"
+  was stored). The templates now declare these columns `REAL`, typed
+  Double with or without data (2.5 is saved as 2.5). `instudy`, the
+  touchdown offsets (whole metres) and the year/text columns are unchanged.
+  `scripts/migrate_alaqs.py` converts existing studies (the tables are
+  rebuilt with the reference definitions, rowids, keys and geometry
+  triggers kept; text values that read as a number, "2.5" or "30,3",
+  become numbers; other text is reported and left), and every bundled
+  `.alaqs` with layers is converted (values unchanged; results of the
+  training studies byte-identical). Opening a study whose layers still
+  have the old columns logs one warning naming the migration. The form
+  check converts a number with the layer's own field when the layer is
+  known (`parse_number(text, integer, field)`, `validate_field(widget,
+  type, layer)`, else the attribute form's layer), so it equals the save
+  on an unmigrated study too (2.5 checked and saved as 3 in an integer
+  column); without a numeric field it uses a Double field as before. The
+  project template is a fresh rebuild: `default_vehicle_ef_copert5` and 17
+  cells of `default_aircraft_engine_ei` now equal the CSVs exactly (up to
+  1e-12 relative from the earlier values; the training studies carry their
+  own tables and their results do not change).
 - Runway form: a NULL Touchdown Offset (touchdown_2 is added as NULL when
   a 5.3.6 study is migrated), shown as "NULL", kept OK disabled ("Missing
   or invalid: Touchdown Offset, Runway 2 [m]"); it now counts as empty,
