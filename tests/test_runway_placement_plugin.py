@@ -243,3 +243,50 @@ def test_departure_lineup_is_last_runway_contact():
     out = _place(_runway(0), backtrack, _departure_profile(), "D")
     assert _s(out.getPoints()[0]) == pytest.approx(50.0, abs=0.5)
     assert out.runway_placement["lineup_m"] == pytest.approx(50.0, abs=0.5)
+
+
+def test_route_lines_drop_z_of_route_and_gate():
+    """_route_lines works in 2D (shapely.force_2d) whatever Z the taxiway
+    and gate geometries carry; the route is oriented towards the gate."""
+    from open_alaqs.core.GeoTransformation import _force_2d
+
+    a, b, c = _pt(1000.0, 0.0), _pt(1050.0, -150.0), _pt(310.0, -400.0)
+    route = TaxiwayRoute(
+        {
+            "route_name": "G1/06/A/1",
+            "gate": "G1",
+            "runway": "06",
+            "departure_arrival": "A",
+        }
+    )
+    # listed gate first, with heights: an arrival runs towards the gate
+    for i, (p, q) in enumerate([(c, b), (b, a)]):
+        route.addSegment(
+            TaxiwaySegment(
+                {
+                    "taxiway_id": f"T{i}",
+                    "speed": 30,
+                    "geometry": f"LINESTRING Z({p[0]} {p[1]} 5, {q[0]} {q[1]} 5)",
+                }
+            )
+        )
+    gate_z = _gate_wkt().replace("POLYGON((", "POLYGON Z((")
+    gate_z = ", ".join(f"{xy} 7" for xy in gate_z.split(", "))
+    gate_z = gate_z.replace(")) 7", " 7))")
+    t = TrajectoryTransformer(
+        _arrival_profile(),
+        None,
+        _runway(0),
+        "2025-01-01 00:00:00",
+        "06",
+        route,
+        "A",
+        gate_geometry_text=gate_z,
+    )
+    lines = t._route_lines(is_dep=False)
+    assert lines and not any(line.has_z for line in lines)
+    assert lines[0].coords[0] == pytest.approx(a, abs=1e-6)
+    assert lines[-1].coords[-1] == pytest.approx(c, abs=1e-6)
+    from shapely import wkt
+
+    assert not _force_2d(wkt.loads(gate_z)).has_z

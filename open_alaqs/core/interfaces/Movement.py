@@ -133,6 +133,8 @@ class Movement:
 
         self._gate_name = str(val.get("gate", ""))
         self._gate = None
+        # The gate of the taxi route (user_taxiroute_taxiways.gate), which orients the route
+        self._route_gate = None
         self._taxi_route = None
         self._taxi_engine_count = conversion.convertToInt(
             val.get("taxi_engine_count"), 2
@@ -468,8 +470,10 @@ class Movement:
                 return
 
         # Fixed-wing (and legacy helicopter Aircraft without HelicopterStore
-        # registration) path: unchanged.
-        gate = self.getGate()
+        # registration) path. The taxi route is oriented by its own gate
+        # (user_taxiroute_taxiways.gate), as in the standalone: the trajectory
+        # is shared by every movement of the route (the cache key has no gate).
+        gate = self.getRouteGate()
         self.setTrajectoryAtRunway(
             TrajectoryTransformer(
                 self.getTrajectory(),
@@ -600,6 +604,12 @@ class Movement:
 
     def setGate(self, var):
         self._gate = var
+
+    def getRouteGate(self):
+        return self._route_gate
+
+    def setRouteGate(self, var):
+        self._route_gate = var
 
     def getGateName(self):
         return self._gate_name
@@ -1367,7 +1377,11 @@ class MovementStore(Store, metaclass=Singleton):
                 _proxy0.setRunway(runway_store.getObject(fm0["runway"]))
                 _proxy0.setRunwayDirection(fm0["runway_direction"])
                 _proxy0.setTrack(track_store.getObject(fm0["track_id"]))
-                _proxy0.setTaxiRoute(taxi_route_store.getObject(fm0["taxi_route"]))
+                _route0 = taxi_route_store.getObject(fm0["taxi_route"])
+                _proxy0.setTaxiRoute(_route0)
+                # The route is oriented by its own gate (not the movement's).
+                if _route0 is not None and _route0.getGate():
+                    _proxy0.setRouteGate(gate_store.getObject(_route0.getGate()))
                 # The gate is the helipad origin of a helicopter trajectory
                 # (see updateTrajectoryAtRunway); unused for fixed-wing.
                 _proxy0.setGate(gate_store.getObject(fm0["gate"]))

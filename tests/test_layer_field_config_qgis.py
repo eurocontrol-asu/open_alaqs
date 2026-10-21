@@ -207,6 +207,45 @@ def test_runway_touchdown_offset_is_whole_metres(layers, text, blocked):
     assert _ok_blocked(form) is blocked
 
 
+def test_runway_null_touchdown_offset_counts_as_empty(layers):
+    """A 5.3.6 study migrated to 5.4.0 gets touchdown_2 as NULL, which QGIS
+    shows as the NULL representation; it is an empty (optional) offset."""
+    from qgis.core import QgsApplication
+
+    null_text = QgsApplication.nullRepresentation()
+    form, _ = _open_form(
+        AlaqsLayerType.RUNWAY,
+        layers[AlaqsLayerType.RUNWAY],
+        {"runway_id": "06L/24R", "touchdown": "250", "touchdown_2": null_text},
+    )
+    assert not _ok_blocked(form)
+    form.findChild(QtWidgets.QLineEdit, "touchdown").setText(null_text)
+    assert not _ok_blocked(form)
+
+
+def test_area_null_heat_flux_counts_as_empty(layers):
+    """The read-only heat flux is checked only when it holds a value: the
+    NULL representation is no value."""
+    from qgis.core import QgsApplication
+
+    form, _ = _open_form(
+        AlaqsLayerType.AREA,
+        layers[AlaqsLayerType.AREA],
+        {"source_id": "A1", "height": "0"},
+    )
+    from open_alaqs.alaqs_config import field_alias
+
+    alias = field_alias(AlaqsLayerType.AREA, "heat_flux")
+    ok = form.findChild(QtWidgets.QDialogButtonBox, "buttonBox").button(
+        QtWidgets.QDialogButtonBox.StandardButton.Ok
+    )
+    heat_flux = form.findChild(QtWidgets.QLineEdit, "heat_flux")
+    heat_flux.setText("abc")
+    assert alias in ok.toolTip()
+    heat_flux.setText(QgsApplication.nullRepresentation())
+    assert alias not in ok.toolTip()
+
+
 def test_activity_unit_text():
     from open_alaqs.ui.ui_point_sources import activity_unit_text
 

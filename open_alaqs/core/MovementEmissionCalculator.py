@@ -214,6 +214,9 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
         self._total_taxiing_time = None
         if self._block_time is not None and self._runway_time is not None:
             self._total_taxiing_time = abs(self._block_time - self._runway_time)
+        # Block to runway time before the landing roll is taken out: the skip test below uses it, so an
+        # arrival whose taxi time is only the roll keeps a 0 s taxi (as in the standalone).
+        self._block_to_runway_time = self._total_taxiing_time
 
         # Runway placement of the flight profile (GeoTransformation.TrajectoryTransformer): the arrival's
         # landing roll (its runway time is the touchdown, so block - runway time contains the roll that the
@@ -352,13 +355,26 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
 
             if self._total_taxiing_time is None:
                 self._total_taxiing_time = init_taxiing_time_from_segments
+                self._block_to_runway_time = self._total_taxiing_time
 
-            if self._total_taxiing_time <= self.TAXIING_TIME_THRESHOLD:
+            if self._block_to_runway_time <= self.TAXIING_TIME_THRESHOLD:
                 logger.warning(
-                    "The movement '%s' was skipped as the taxi route was not defined properly."
+                    "The movement '%s' has no taxi emissions: its taxi time is 0 s (block time equal to "
+                    "runway time, or no times and a taxi route without time)."
                     % self._movement_name
                 )
                 return emissions
+            if self._total_taxiing_time <= 0.0:
+                logger.warning(
+                    "The arrival '%s': the block to runway time (%.0f s) is no longer than the landing roll "
+                    "(%.0f s), so its taxi time is 0 s (no route or queuing time); APU, stop-and-go and "
+                    "brake wear are still counted."
+                    % (
+                        self._movement_name,
+                        self._block_to_runway_time,
+                        self._rollout_time_s,
+                    )
+                )
 
             # Total taxiing time for calculating taxiing emissions is taken from the Movements Table.
             # It is shared by the route (its segment times), the runway stretch of an arrival whose exit
@@ -1456,8 +1472,8 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
 
     def _meem_delta_t(self, T_amb) -> float:
         """MEEM V1 ISA deviation (K): the meteo temperature of the period (the
-        one BFFM2 uses) minus ISA at the airport elevation, constant aloft;
-        0 without meteo."""
+        one BFFM2 uses) minus ISA at the airport elevation, constant aloft.
+        Without meteo the temperature is 288.15 K, so 0.0065 K/m x elevation."""
         from open_alaqs.core.tools.meem_v1 import delta_t_from_ground
 
         return delta_t_from_ground(

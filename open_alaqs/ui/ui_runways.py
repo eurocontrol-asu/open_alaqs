@@ -7,6 +7,7 @@ from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.enums import AlaqsLayerType
 from open_alaqs.openalaqsuitoolkit import (
     color_ui_background,
+    is_empty_text,
     update_ok_button,
     validate_field,
 )
@@ -258,11 +259,12 @@ def validate(fields: dict):
 
     # Validate all fields. The Touchdown Offsets may be empty (empty = the profile's own distance, for
     # each runway end independently); when filled they must be whole metres, as the touchdown and
-    # touchdown_2 columns are INT.
+    # touchdown_2 columns are INT. A NULL offset (touchdown_2 added to a 5.3.6 study) is shown as the
+    # NULL representation ("NULL") and counts as empty.
     results = [(fields["name_field"], validate_field(fields["name_field"], "str"))]
     for key in ("offset_field", "offset_2_field"):
         field = fields.get(key)
-        if field is not None and field.text().strip():
+        if field is not None and not is_empty_text(field.text()):
             results.append((field, validate_field(field, "int")))
         elif field is not None:
             color_ui_background(field, None)

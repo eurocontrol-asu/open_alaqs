@@ -53,7 +53,10 @@ The temperature deviation delta_t (USER INPUTS!B5, "delta T at 0 ft MSL") is
 taken from the meteo of the movement's period: the ground temperature minus
 the ISA temperature at the airport elevation (delta_t_from_ground), constant
 aloft, so that the ISA+dT temperature at the airport elevation equals the
-meteo temperature. 0 (ISA) without meteo.
+meteo temperature. Without meteo the ground temperature is the ISA sea-level
+288.15 K (AmbientCondition default, standalone ISA meteo), so delta_t is
+0.0065 K/m x the airport elevation (10.76 K at 1655 m), not 0; it is 0 only
+for an airport at sea level or when no temperature is given.
 
 References:
   ICAO CAEP/13-MDG, MEEM V1.
@@ -129,7 +132,9 @@ def delta_t_from_ground(
 ) -> float:
     """ISA temperature deviation (K) from the ground ambient temperature (K)
     at the airport: T_ground - (T0 + L h), L = -0.0065 K/m, h the airport
-    elevation above MSL (m). 0 when no temperature is given."""
+    elevation above MSL (m). 0 when no temperature is given (None). Without
+    meteo the plugin and the standalone pass the ISA sea-level 288.15 K, which
+    gives 0.0065 K/m x h (delta_t_from_ground(288.15, 1655) = 10.76 K), not 0."""
     if t_ground_k is None:
         return 0.0
     h = float(airport_elevation_m or 0.0)

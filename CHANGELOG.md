@@ -253,8 +253,9 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - MEEM V1 above 3000 ft used ISA; it now uses ISA + ΔT, ΔT the
   temperature of the movement's meteo period (the one BFFM2 uses) minus
   ISA at the airport elevation (288.15 K − 0.0065 K/m × elevation),
-  constant aloft, the sheet's "ΔT at 0 ft MSL" (USER INPUTS!B5); 0 without
-  meteo. Plugin (`Engine.getEmissionIndexByModeWithMEEM(delta_t=...)`),
+  constant aloft, the sheet's "ΔT at 0 ft MSL" (USER INPUTS!B5). Without
+  meteo the temperature is ISA sea level (288.15 K), so ΔT = 0.0065 K/m ×
+  elevation (10.76 K at 1655 m), 0 only at sea level. Plugin (`Engine.getEmissionIndexByModeWithMEEM(delta_t=...)`),
   standalone and CAEP14 reference alike; checked against two more
   LibreOffice recalculations of the sheet. **Results change** above
   3000 ft only. Training example (283 K at −5 m, ΔT −5.18 K, with the OPR
@@ -436,6 +437,32 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   working directory.
 - OSM import: the building filter value "commerical" is now "commercial",
   so OSM commercial buildings are downloaded and imported.
+- Forms under a German or Dutch locale: a decimal such as "0.125" was
+  read as 125 by the field check (the locale reads "." as a group
+  separator) while QGIS saves 0.125. Decimals are now read as QGIS saves
+  them (plain syntax first, then the locale), and the parking and roadway
+  Recalculate use the checked values (the fleet mix as "12,5" raised).
+- Runway form: a NULL Touchdown Offset (touchdown_2 is added as NULL when
+  a 5.3.6 study is migrated), shown as "NULL", kept OK disabled ("Missing
+  or invalid: Touchdown Offset, Runway 2 [m]"); it now counts as empty,
+  like "". The area source form treats a NULL heat flux the same way.
+- An arrival whose block to runway time was no longer than its landing
+  roll got a taxi time of 0 s and lost all its taxi emissions (queuing,
+  stop-and-go, APU, brake wear) with the warning "taxi route not defined
+  properly". The plugin now keeps a 0 s taxi time and these emissions,
+  as the standalone does, with a warning naming the two times; only a
+  movement whose block time equals its runway time is still skipped.
+- Aircraft movements take the airport altitude (NOx ambient correction,
+  MEEM V1 ISA temperature, LTO cut) from the study's airport elevation
+  (`user_study_setup.airport_elevation`), as the standalone and the
+  CAEP14 reference do; it came from the grid reference altitude of the
+  Dispersion dialog, which can differ. The grid altitude is the fallback
+  for a study without an elevation.
+- Runway placement: the taxi route is oriented by its own gate
+  (`user_taxiroute_taxiways.gate`), as in the standalone and the CAEP14
+  reference; it used the gate of the first movement of the route, while
+  the runway trajectory is shared (and cached) by every movement of the
+  route whatever its gate.
 
 ### Removed
 

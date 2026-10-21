@@ -18,7 +18,15 @@ from qgis.core import (
 )
 from shapely import wkt as _shapely_wkt
 from shapely.geometry import LineString
-from shapely.ops import transform as _shapely_transform
+
+try:
+    from shapely import force_2d as _force_2d
+except ImportError:  # shapely < 2.0 (force_2d is new in 2.0)
+    from shapely.ops import transform as _shapely_transform
+
+    def _force_2d(geom):
+        return _shapely_transform(lambda x, y, z=None: (x, y), geom)
+
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft
@@ -774,18 +782,15 @@ class TrajectoryTransformer:
         """The taxi route in the direction of travel (2D EPSG:3857 LineStrings)."""
         if self._taxi_route is None:
             return []
-        flat = lambda x, y, z=None: (x, y)  # noqa: E731
         parts = []
         for seg in self._taxi_route.getSegments():
             wkt = seg.getGeometryText()
             if wkt:
-                parts.append(_shapely_transform(flat, _shapely_wkt.loads(wkt)))
+                parts.append(_force_2d(_shapely_wkt.loads(wkt)))
         gate = None
         if self._gate_geometry_text:
             try:
-                gate = _shapely_transform(
-                    flat, _shapely_wkt.loads(self._gate_geometry_text)
-                )
+                gate = _force_2d(_shapely_wkt.loads(self._gate_geometry_text))
             except Exception:
                 gate = None
         return rp.orient_route(rp.chain_lines(parts), gate, start_at_gate=is_dep)
