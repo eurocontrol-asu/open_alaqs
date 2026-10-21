@@ -477,6 +477,16 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   reference; it used the gate of the first movement of the route, while
   the runway trajectory is shared (and cached) by every movement of the
   route whatever its gate.
+- Tutorial study `example/training/training.alaqs`: the area source's
+  `is_test_site` is '0' (was NULL after the migration), as in the template
+  and the other studies.
+- `example/training/training_out.alaqs` rebuilt from the final
+  `training.alaqs` and the example's CSVs
+  (`tools/test_fixtures/rebuild_training_example_inventory.py`): it now
+  carries the study's five day, hour and month profiles (heating_season,
+  cooling_season and business_hours were missing) and E190 default engine
+  11GE144; plugin results on it are byte-identical, and so is the content
+  of `example/training/training_validation_reference.xlsx` (kept).
 
 ### Removed
 
