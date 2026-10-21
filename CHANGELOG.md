@@ -504,6 +504,14 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   `validation/data/training_v3.alaqs`, `training_v3_gatemovements.alaqs`,
   `training_v3_multisource.alaqs` and `tests/data/AIRPORT_A/AIRPORT_A.alaqs`
   (rows, geometry triggers and geometry registration unchanged).
+- `openalaqs_standalone/validation/data/source_csvs/training_movements.csv`
+  was the example's movement set plus the two helicopters, not the
+  movements of the validation fixtures: it is now the movement table of
+  `training_v3.alaqs` (15 movements; runways, gates and routes differ from
+  the example on 7 rows), described in `openalaqs_standalone/USAGE.md` and
+  checked by `validation/tests/test_source_csvs_match_fixture.py`. The
+  study description of the three `training_v3*.alaqs` files says 15
+  movements (was 13).
 
 ### Removed
 
