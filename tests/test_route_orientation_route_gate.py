@@ -11,9 +11,21 @@ import shutil
 import sqlite3
 from pathlib import Path
 
+import pytest
 from qgis.testing import start_app
 
 start_app()
+
+
+@pytest.fixture(autouse=True)
+def _restore_project_database():
+    """Leave the ProjectDatabase singleton (and its path) as other tests set it."""
+    from open_alaqs.core.alaqsdblite import ProjectDatabase
+
+    previous = getattr(ProjectDatabase(), "path", None)
+    yield
+    ProjectDatabase().path = previous
+
 
 FIXTURE = (
     Path(__file__).resolve().parents[1]
@@ -27,7 +39,6 @@ FIXTURE = (
 def test_route_is_oriented_by_the_route_gate(tmp_path, monkeypatch):
     from open_alaqs.core import GeoTransformation
     from open_alaqs.core.alaqsdblite import ProjectDatabase
-    from open_alaqs.core.alaqsdblite import Singleton as DbSingleton
     from open_alaqs.core.interfaces.Gate import GateStore
     from open_alaqs.core.interfaces.Movement import MovementStore
     from open_alaqs.core.tools.Singleton import Singleton
@@ -53,7 +64,6 @@ def test_route_is_oriented_by_the_route_gate(tmp_path, monkeypatch):
 
     monkeypatch.setattr(GeoTransformation.TrajectoryTransformer, "__init__", spy)
     Singleton.reset_all()
-    DbSingleton._instances.clear()
     ProjectDatabase().path = str(db)
     try:
         MovementStore(str(db), show_progress=False)

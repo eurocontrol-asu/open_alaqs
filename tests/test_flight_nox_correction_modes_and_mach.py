@@ -16,6 +16,17 @@ from qgis.testing import start_app
 
 start_app()
 
+
+@pytest.fixture(autouse=True)
+def _restore_project_database():
+    """Leave the ProjectDatabase singleton (and its path) as other tests set it."""
+    from open_alaqs.core.alaqsdblite import ProjectDatabase
+
+    previous = getattr(ProjectDatabase(), "path", None)
+    yield
+    ProjectDatabase().path = previous
+
+
 FIXTURE = (
     Path(__file__).resolve().parents[1]
     / "openalaqs_standalone"
@@ -26,10 +37,13 @@ FIXTURE = (
 T_K = 268.15  # cold, so that the NOx correction is not 1
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def movements(tmp_path_factory):
+    # GeoTransformation before Movement: imported the other way round (Movement
+    # imports it lazily) the process aborts at exit (free(): invalid pointer)
+    # when this file runs alone.
+    from open_alaqs.core import GeoTransformation  # noqa: F401
     from open_alaqs.core.alaqsdblite import ProjectDatabase
-    from open_alaqs.core.alaqsdblite import Singleton as DbSingleton
     from open_alaqs.core.interfaces.Movement import MovementStore
     from open_alaqs.core.tools.Singleton import Singleton
 
@@ -37,13 +51,23 @@ def movements(tmp_path_factory):
     shutil.copy(FIXTURE, db)
     with sqlite3.connect(db) as conn:
         conn.execute("DELETE FROM user_aircraft_movements WHERE oid NOT IN (1, 2)")
+        table = MovementStore._TRAJ_CACHE_TABLE
+        if conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = ?", (table,)
+        ).fetchone():
+            conn.execute(f"DELETE FROM {table}")
     Singleton.reset_all()
-    DbSingleton._instances.clear()
+    previous = getattr(ProjectDatabase(), "path", None)
     ProjectDatabase().path = str(db)
     store = MovementStore(str(db), show_progress=False)
     by_flag = {m.getDepartureArrivalFlag(): m for m in store.getObjects().values()}
     yield by_flag
+    import gc
+
+    del store, by_flag
     Singleton.reset_all()
+    gc.collect()
+    ProjectDatabase().path = previous
 
 
 def _run(movement, nox_corr, spy=None):

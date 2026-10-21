@@ -17,6 +17,17 @@ from qgis.testing import start_app
 
 start_app()
 
+
+@pytest.fixture(autouse=True)
+def _restore_project_database():
+    """Leave the ProjectDatabase singleton (and its path) as other tests set it."""
+    from open_alaqs.core.alaqsdblite import ProjectDatabase
+
+    previous = getattr(ProjectDatabase(), "path", None)
+    yield
+    ProjectDatabase().path = previous
+
+
 REPO = Path(__file__).resolve().parents[1]
 FIXTURE = REPO / "openalaqs_standalone" / "validation" / "data" / "training_v3.alaqs"
 POLLUTANTS = ("co", "co2", "hc", "nox", "sox", "pm10")
@@ -26,7 +37,7 @@ OID = 1  # A20N arrival, JET-SMALL-A-1, runway time 06:05:00
 def _plugin_totals(db: str) -> dict:
     import datetime
 
-    from open_alaqs.core.alaqsdblite import ProjectDatabase, Singleton
+    from open_alaqs.core.alaqsdblite import ProjectDatabase
     from open_alaqs.core.EmissionCalculatorService import (
         EmissionCalculationConfig,
         EmissionCalculatorService,
@@ -50,7 +61,6 @@ def _plugin_totals(db: str) -> dict:
         "reference_longitude",
     ]
     grid = dict(zip(keys, g), reference_altitude=float(elev[0]))
-    Singleton._instances.clear()
     ProjectDatabase().path = db
     start = datetime.datetime(2025, 12, 1)
     result = EmissionCalculatorService().calculate_emissions(

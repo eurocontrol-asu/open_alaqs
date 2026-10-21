@@ -11,9 +11,21 @@ import shutil
 import sqlite3
 from pathlib import Path
 
+import pytest
 from qgis.testing import start_app
 
 start_app()
+
+
+@pytest.fixture(autouse=True)
+def _restore_project_database():
+    """Leave the ProjectDatabase singleton (and its path) as other tests set it."""
+    from open_alaqs.core.alaqsdblite import ProjectDatabase
+
+    previous = getattr(ProjectDatabase(), "path", None)
+    yield
+    ProjectDatabase().path = previous
+
 
 FIXTURE = (
     Path(__file__).resolve().parents[1]
@@ -25,10 +37,9 @@ FIXTURE = (
 
 
 def _module(db, reference_altitude):
-    from open_alaqs.core.alaqsdblite import ProjectDatabase, Singleton
+    from open_alaqs.core.alaqsdblite import ProjectDatabase
     from open_alaqs.core.modules.MovementSourceModule import MovementSourceModule
 
-    Singleton._instances.clear()
     ProjectDatabase().path = str(db)
     return MovementSourceModule(
         {
