@@ -1,4 +1,5 @@
 import os
+from pathlib import Path, PurePath
 from typing import Optional
 
 from qgis.core import (
@@ -194,18 +195,36 @@ CHECKBOX_WIDGET_CONFIG = {
 }
 
 
+def _sqlite_read_only_uri(path: PurePath) -> str:
+    """SQLite URI that opens the absolute `path` read-only.
+
+    The path is percent-encoded (as_uri), so a "#", "?" or "%" in a folder
+    or file name is read as part of the name, not as a URI fragment, query
+    or escape. A Windows UNC path (as_uri gives "file://server/share/...")
+    is written "file:////server/share/...": SQLite rejects a URI authority
+    other than "localhost", and reads the path "//server/share/..." as UNC.
+    """
+    uri = path.as_uri()
+    if uri.startswith("file://") and not uri.startswith("file:///"):
+        uri = "file:////" + uri[len("file://") :]
+    return uri + "?mode=ro"
+
+
 def _study_values(database_path: str, sql: str) -> list[str]:
     """First column of `sql` on the study, as text; [] when the table or
     the file is missing (older studies, memory layers in tests)."""
     import sqlite3
 
     try:
-        con = sqlite3.connect(f"file:{database_path}?mode=ro", uri=True)
+        if not database_path:
+            return []
+        uri = _sqlite_read_only_uri(Path(database_path).resolve())
+        con = sqlite3.connect(uri, uri=True)
         try:
             rows = con.execute(sql).fetchall()
         finally:
             con.close()
-    except sqlite3.Error:
+    except (sqlite3.Error, OSError, ValueError):
         return []
     return [str(r[0]) for r in rows if r[0] is not None and str(r[0]).strip()]
 

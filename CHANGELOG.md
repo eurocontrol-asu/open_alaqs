@@ -478,6 +478,13 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   reference; it used the gate of the first movement of the route, while
   the runway trajectory is shared (and cached) by every movement of the
   route whatever its gate.
+- Forms of a study whose path holds "#", "?" or "%" (since the value maps
+  read from the study): the lists read from the study (point-source
+  Category and Type, profiles, runway directions) were empty, because the
+  read-only SQLite URI was not percent-encoded and opened the wrong file;
+  the point-source Category and Type then offered only the values already
+  stored. The URI is now built with `Path.as_uri()` (Windows drive and UNC
+  paths included).
 
 ### Removed
 
