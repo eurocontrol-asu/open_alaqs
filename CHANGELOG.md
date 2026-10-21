@@ -408,6 +408,10 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   separator) while QGIS saves 0.125. Decimals are now read as QGIS saves
   them (plain syntax first, then the locale), and the parking and roadway
   Recalculate use the checked values (the fleet mix as "12,5" raised).
+- Runway form: a NULL Touchdown Offset (touchdown_2 is added as NULL when
+  a 5.3.6 study is migrated), shown as "NULL", kept OK disabled ("Missing
+  or invalid: Touchdown Offset, Runway 2 [m]"); it now counts as empty,
+  like "". The area source form treats a NULL heat flux the same way.
 
 ### Removed
 

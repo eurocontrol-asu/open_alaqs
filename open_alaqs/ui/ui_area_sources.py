@@ -296,7 +296,7 @@ def validate(fields: dict):
         (fields["name_field"], validate_field(fields["name_field"], "str")),
         (fields["height_field"], validate_field(fields["height_field"], "float")),
     ]
-    if fields["heat_flux_field"].text().strip():
+    if not is_empty_text(fields["heat_flux_field"].text()):
         results.append(
             (
                 fields["heat_flux_field"],
