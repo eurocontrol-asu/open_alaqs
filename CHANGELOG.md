@@ -180,10 +180,11 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   log-log at the segment's ANP power setting below 3000 ft, used the
   ground ambient and a pressure-ratio thrust mapping above it, and a T3
   ratio as enrichment factor. Now (`open_alaqs/core/tools/meem_v1.py`,
-  `Engine.getEmissionIndexByModeWithMEEM`): at or below 3000 ft above MSL
-  (segment start height plus airport elevation) the nvPM EI is the
-  certification value of the mode, unchanged; above, the sheet's chain
-  (ISA at the segment altitude, Mach from the segment TAS, phase "CLIMB TO
+  `Engine.getEmissionIndexByModeWithMEEM`): at or below 3000 ft (914.4 m)
+  above the aerodrome (segment start height, the ICAO LTO cycle) the nvPM
+  EI is the certification value of the mode, unchanged; above, the sheet's
+  chain (ISA at the segment altitude above MSL, i.e. start height plus
+  airport elevation, Mach from the segment TAS, phase "CLIMB TO
   CRUISE" for departures and "DESCENT TO APPROACH" for arrivals, P3/T3,
   ground-reference thrust from T3, linear interpolation of the EEDB nvPM
   points, × (P3/P3_GR)^1.35 × 1.1^2.5). The mass EI replaces
@@ -195,11 +196,12 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   seven cases recalculated in LibreOffice to 1e-15 (`tests/test_meem_v1.py`).
   The standalone (shared module) and the CAEP14 reference (written out
   from the sheet) do the same (`validation/tests/test_meem_v1_reference.py`).
-  **Results change** only for segments above 3000 ft above MSL, i.e. in
-  hours whose mixing height is above 3000 ft minus the airport elevation.
+  **Results change** only for segments more than 3000 ft above the
+  aerodrome, i.e. in hours whose mixing height (height above the airport,
+  like the segment heights) is above 3000 ft (914.4 m).
   Training example (`example/training`, 1500 m on 2 December): the two
-  departures of 2 December, one segment each (start 1280 m and 1246 m above
-  MSL, CL): nvPM EI 1.235 to 1.524 mg/kg (A20N, id 6) and 53.30 to
+  departures of 2 December, one segment each (start 1285 m and 1251 m above
+  the airport, 1280 m and 1246 m above MSL, CL): nvPM EI 1.235 to 1.524 mg/kg (A20N, id 6) and 53.30 to
   66.64 mg/kg (E190, id 8); `bymode` pm10_nonvol +1.24 % and +1.69 %, pm10
   +0.031 % and +0.81 %; 13-movement totals pm10_nonvol 31.456 to 31.724 g
   (+0.85 %), pm10 321.741 to 322.010 g (+0.084 %) (BFFM2 trajectory: +0.76 %
@@ -225,6 +227,16 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   OPR for 863 jet engines (the others keep 30), 5th point for the 51
   engines the sheet marks 5PT. The bundled `.alaqs` files get the columns
   where they lacked them.
+- MEEM V1 LTO / non-LTO cut: at 3000 ft (914.4 m) above the aerodrome
+  (ICAO LTO cycle) in the plugin (`Engine._meem_v1`, new
+  `airport_elevation_m` argument of `getEmissionIndexByModeWithMEEM`), the
+  standalone (`compute_aircraft._meem_v1_segment_ei`) and the CAEP14
+  reference (`_meem_non_lto`); a development build compared the altitude
+  above MSL, so at an airport above 914 m every segment, the take-off roll
+  included, went through the non-LTO chain (01P20CM128 approach at 1655 m:
+  nvPM 1.189 instead of the certified 2.989 mg/kg). The airport elevation
+  still sets the ISA altitude of the chain. Bundled studies (about −5 m):
+  no pinned output changes.
 - MEEM V1 above 3000 ft used ISA; it now uses ISA + ΔT, ΔT the
   temperature of the movement's meteo period (the one BFFM2 uses) minus
   ISA at the airport elevation (288.15 K − 0.0065 K/m × elevation),

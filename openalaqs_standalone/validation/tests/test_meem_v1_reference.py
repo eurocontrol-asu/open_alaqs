@@ -142,7 +142,7 @@ def test_reference_delta_t_from_meteo(ref):
 
 
 def test_lto_unchanged(ref):
-    """At or below 3000 ft above MSL the mode EI is used unchanged."""
+    """At or below 3000 ft above the aerodrome the mode EI is used unchanged."""
     meem = {
         "pm10_nonvol": {"TO": 0.07, "CL": 0.05, "AP": 0.003, "TX": 0.005},
         "nvpm_number": {"TO": 1e14, "CL": 1e14, "AP": 1e14, "TX": 1e14},
@@ -154,3 +154,73 @@ def test_lto_unchanged(ref):
     }
     eng = {"pm10_ei": 0.1}
     assert _meem_v1_segment_ei(eng, meem, "CL", 914.4, 120.0, True) is eng
+
+
+# LTO / non-LTO cut at 3000 ft above the aerodrome (ICAO LTO cycle), not above
+# MSL; the airport elevation only sets the ISA altitude of the chain. Airport
+# at 1655 m: the cut above MSL sent every segment, the take-off roll
+# included, to the chain (01P20CM128 approach 1.189 instead of 2.989 mg/kg).
+_ELEV_M = 1655.0
+
+
+def _meem_128():
+    opr, mass = _ENGINES["01P20CM128"]
+    modes = ("TO", "CL", "AP", "TX")
+    return {
+        "pm10_nonvol": {m: v / 1000.0 for m, v in zip(modes, mass)},
+        "nvpm_number": {m: 1.0e14 for m in modes},
+        "press_ratio": opr,
+        "m_f00": None,
+        "m_max_mgkg": None,
+        "n_f00": None,
+        "n_max_nkg": None,
+    }
+
+
+@pytest.mark.parametrize("height_m", [0.0, 500.0, 914.4])
+@pytest.mark.parametrize("mode, climbing", [("TO", True), ("AP", False)])
+def test_standalone_lto_cut_above_airport(height_m, mode, climbing):
+    eng = {"pm10_ei": 0.1}
+    out = _meem_v1_segment_ei(
+        eng,
+        _meem_128(),
+        mode,
+        _ELEV_M + height_m,
+        70.0,
+        climbing,
+        airport_elevation_m=_ELEV_M,
+    )
+    assert out is eng
+
+
+def test_standalone_non_lto_above_airport_uses_msl_altitude(ref):
+    """1000 m above a 1655 m airport: the chain, with ISA at 2655 m MSL; the
+    reference gives the same EI."""
+    meem = _meem_128()
+    eng = {"pm10_ei": meem["pm10_nonvol"]["AP"] + 0.05}
+    alt_msl = _ELEV_M + 1000.0
+    out = _meem_v1_segment_ei(
+        eng,
+        meem,
+        "AP",
+        alt_msl,
+        120.0,
+        False,
+        delta_t=-3.0,
+        airport_elevation_m=_ELEV_M,
+    )
+    opr, mass = _ENGINES["01P20CM128"]
+    v = ref._meem_v1_mass_mgkg(
+        alt_msl / FT2M, 120.0, False, list(zip(_TS, mass)), opr, -3.0
+    )
+    assert out["pm10_ei"] - 0.05 == pytest.approx(v / 1000.0, rel=1e-12)
+    assert v != pytest.approx(2.98855587397408, rel=1e-3)
+
+
+def test_reference_lto_cut_above_airport(ref):
+    """The reference's cut takes the start point's height above the airport."""
+    assert not ref._meem_non_lto(0.0)
+    assert not ref._meem_non_lto(500.0)
+    assert not ref._meem_non_lto(914.4)
+    assert ref._meem_non_lto(914.5)
+    assert ref._meem_non_lto(1000.0)

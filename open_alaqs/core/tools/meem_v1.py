@@ -7,9 +7,11 @@ Calculation Sheet v14 (MEEM V1, ICAO CAEP/13-MDG), with the constants of its
 in the comments below point to that workbook.
 
 Two branches, chosen by the phase of flight (MEEM_V1!B16, from the
-segment_constants table). OpenALAQS picks the phase from the segment altitude
-above mean sea level, as the sheet's USER INPUTS!B36 does ("LTO" up to
-3000 ft, "NON_LTO" above):
+segment_constants table). OpenALAQS picks the section with the sheet's
+USER INPUTS!B36 rule ("LTO" up to 3000 ft, "NON_LTO" above), applied to the
+segment height above the aerodrome as in the ICAO LTO cycle
+(section_of_flight takes that height); the non-LTO chain itself works at the
+segment altitude above mean sea level (height plus airport elevation):
 
   LTO (TAKE OFF, CLIMB OUT, APPROACH, TAXI; segment at or below 3000 ft):
     The nvPM mass and number EIs are the certification values of the mode
@@ -167,7 +169,9 @@ def mach_from_tas(tas_kt: float, t_amb_k: float) -> float:
 
 
 def section_of_flight(altitude_ft: float) -> str:
-    """'LTO' at or below 3000 ft, else 'NON_LTO' (USER INPUTS!B36)."""
+    """'LTO' at or below 3000 ft, else 'NON_LTO' (USER INPUTS!B36).
+    ``altitude_ft`` is the segment height above the aerodrome (ICAO LTO
+    cycle), not the altitude above MSL."""
     return "NON_LTO" if float(altitude_ft) > LTO_CEILING_FT else "LTO"
 
 

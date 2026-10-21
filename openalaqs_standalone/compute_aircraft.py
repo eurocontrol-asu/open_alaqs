@@ -22,8 +22,8 @@ for any of the three methods:
                 setting (ANP), with BFFM2 ambient corrections.
 
 SOx and PM10 use the EEDB-table EI (the plugin's BFFM2 implementation
-has no BFFM2 path for them), except that above 3000 ft above MSL the nvPM
-part of PM10 is the MEEM V1 value (shared `open_alaqs.core.tools.meem_v1`,
+has no BFFM2 path for them), except that above 3000 ft above the aerodrome
+(ICAO LTO cycle) the nvPM part of PM10 is the MEEM V1 value (shared `open_alaqs.core.tools.meem_v1`,
 as the plugin).
 
 This module is the per-movement-totals core: the "(a)" output mode in
@@ -217,15 +217,19 @@ def _meem_v1_segment_ei(
     tas_m_s: float,
     climbing: bool,
     delta_t: float = 0.0,
+    airport_elevation_m: float = 0.0,
 ) -> dict:
     """The segment's EI with the MEEM V1 nvPM mass EI (shared
     `open_alaqs.core.tools.meem_v1`, the plugin's code) as the plugin's
     Engine.getEmissionIndexByModeWithMEEM applies it: at or below 3000 ft
-    above MSL `eng` unchanged; above, pm10_ei moves by the MEEM mass EI
-    minus the mode's pm10_nonvol. `delta_t`: ISA deviation (K) from the
-    movement's meteo (`meem_v1.delta_t_from_ground`), 0 without meteo."""
+    above the aerodrome (`alt_msl_m - airport_elevation_m`, ICAO LTO cycle)
+    `eng` unchanged; above, pm10_ei moves by the MEEM mass EI minus the
+    mode's pm10_nonvol, with the chain's ISA atmosphere at `alt_msl_m`
+    (above MSL). `delta_t`: ISA deviation (K) from the movement's meteo
+    (`meem_v1.delta_t_from_ground`), 0 without meteo."""
     alt_ft = alt_msl_m / _meem_v1.FT_TO_M
-    if not meem or _meem_v1.section_of_flight(alt_ft) == "LTO":
+    height_ft = (alt_msl_m - (airport_elevation_m or 0.0)) / _meem_v1.FT_TO_M
+    if not meem or _meem_v1.section_of_flight(height_ft) == "LTO":
         return eng
     ts = [t for t in _meem_v1.MODE_THRUST.values()]
     mass = [meem["pm10_nonvol"][m] * 1000.0 for m in _meem_v1.MODE_THRUST]
@@ -511,8 +515,8 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
 
     # Decide whether to load the meteo row. BFFM2 always needs it; bymode
     # also needs it when the NOx ambient correction is requested, and for
-    # the MEEM V1 temperature deviation above 3000 ft (the plugin always
-    # has the period's meteo).
+    # the MEEM V1 temperature deviation above 3000 ft above the aerodrome
+    # (the plugin always has the period's meteo).
     needs_meteo = (method != "bymode") or apply_nox_corrections or bool(meem)
 
     # BFFM2 setup: build the icao_eedb dict once per movement, fetch
@@ -933,8 +937,9 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             )
 
         seg_fuel = seg_time * seg_ff_amb * n_eng
-        # MEEM V1 nvPM above 3000 ft above MSL (pm10 only; fuel unchanged),
-        # ISA + delta_t with delta_t from the movement's meteo temperature.
+        # MEEM V1 nvPM above 3000 ft above the aerodrome (pm10 only; fuel
+        # unchanged), ISA + delta_t at the segment altitude above MSL, with
+        # delta_t from the movement's meteo temperature.
         eng = _meem_v1_segment_ei(
             eng,
             meem,
@@ -945,6 +950,7 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             delta_t=_meem_v1.delta_t_from_ground(
                 meteo["T_K"] if meteo else None, ctx.get("airport_elevation_m", 0.0)
             ),
+            airport_elevation_m=ctx.get("airport_elevation_m", 0.0),
         )
         # Plugin guard ("Bug #22" in MovementEmissionCalculator): under
         # BFFM2, a segment whose start point has neither power nor fuel
