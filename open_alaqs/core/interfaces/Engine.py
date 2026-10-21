@@ -146,7 +146,8 @@ class EngineEmissionIndex(Store):
                               None: True for TO and CL modes.
         :param delta_t:       ISA temperature deviation (K) of the V1 non-LTO
                               atmosphere, constant aloft (meem_v1.delta_t_from_ground
-                              of the meteo temperature; 0 without meteo).
+                              of the meteo temperature; without meteo the ISA sea-level 288.15 K
+                              is used, so 0.0065 K/m x elevation).
         :param airport_elevation_m: airport elevation above MSL (m); the
                               LTO / non-LTO cut is at 3000 ft above it.
         :return: EmissionIndex.

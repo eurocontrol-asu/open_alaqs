@@ -226,7 +226,8 @@ def _meem_v1_segment_ei(
     `eng` unchanged; above, pm10_ei moves by the MEEM mass EI minus the
     mode's pm10_nonvol, with the chain's ISA atmosphere at `alt_msl_m`
     (above MSL). `delta_t`: ISA deviation (K) from the movement's meteo
-    (`meem_v1.delta_t_from_ground`), 0 without meteo."""
+    (`meem_v1.delta_t_from_ground`); without meteo the ISA sea-level
+    288.15 K is used, so 0.0065 K/m x elevation."""
     alt_ft = alt_msl_m / _meem_v1.FT_TO_M
     height_ft = (alt_msl_m - (airport_elevation_m or 0.0)) / _meem_v1.FT_TO_M
     if not meem or _meem_v1.section_of_flight(height_ft) == "LTO":
