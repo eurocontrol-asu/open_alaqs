@@ -519,6 +519,12 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   placement ignores values of 0 or less and silently used the profile's
   own touchdown distance. The form now rejects it (OK disabled); 0 or
   empty still means the profile's own distance.
+- OSM import: a NULL OSM attribute (a NULL QVariant, not None) counted as
+  a value: with an OSM source that has a `height` column (custom
+  `osmconf.ini`) the import log counted every building as having an OSM
+  height. NULL attributes are now skipped before the feature is created
+  (the layer default applies, as it already did in a headless check) and
+  the log counts only real heights.
 
 ### Removed
 

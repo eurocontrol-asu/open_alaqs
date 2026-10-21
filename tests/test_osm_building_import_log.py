@@ -97,3 +97,58 @@ def test_building_import_logs_count_and_height_source(
     ]
     heights = sorted(f["height"] for f in buildings_layer.getFeatures())
     assert heights == [0, 0]
+
+
+def test_null_osm_height_is_not_counted_nor_written(buildings_layer, caplog):
+    """An OSM source with a `height` column (a custom osmconf.ini): a NULL
+    height is a NULL QVariant, not None. It was counted as "from the OSM
+    height tag" and written over the layer default; it is now skipped."""
+    from qgis.core import QgsFeature, QgsGeometry
+    from qgis.PyQt.QtCore import QVariant
+
+    polygons = QgsVectorLayer(
+        "Polygon?crs=EPSG:4326&field=full_id:string&field=building:string"
+        "&field=height:double",
+        "multipolygons",
+        "memory",
+    )
+    features = []
+    for i, (full_id, height) in enumerate([("w10", 12.0), ("w11", None)]):
+        f = QgsFeature(polygons.fields())
+        x = 4.437 + 0.001 * i
+        f.setGeometry(
+            QgsGeometry.fromWkt(
+                f"POLYGON(({x} 51.956, {x + 0.001} 51.956, {x + 0.001} 51.957, "
+                f"{x} 51.957, {x} 51.956))"
+            )
+        )
+        f["full_id"] = full_id
+        f["building"] = "office"
+        f["height"] = height
+        features.append(f)
+    assert polygons.dataProvider().addFeatures(features)[0]
+    null_height = [
+        f.attributeMap().get("height")
+        for f in polygons.getFeatures()
+        if f["full_id"] == "w11"
+    ][0]
+    assert null_height is not None and isinstance(null_height, QVariant)
+    empty = QgsVectorLayer("Point?crs=EPSG:4326", "empty", "memory")
+
+    with caplog.at_level(logging.INFO):
+        OpenAlaqsOsmImport._import_osm_data(
+            None,
+            {
+                Qgis.GeometryType.Point: empty,
+                Qgis.GeometryType.Line: empty,
+                Qgis.GeometryType.Polygon: polygons,
+            },
+        )
+
+    lines = [r.getMessage() for r in caplog.records if "OSM import:" in r.getMessage()]
+    assert lines == [
+        'OSM import: 2 building(s) added to layer "Buildings"; height from the '
+        "OSM height tag for 1, the layer default (0 m) for 1."
+    ]
+    heights = {f["building_id"]: f["height"] for f in buildings_layer.getFeatures()}
+    assert heights == {"w10": 12.0, "w11": 0}
