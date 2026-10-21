@@ -56,8 +56,12 @@ def parse_number(text: str, integer: bool):
 
     QGIS writes numbers into the form with the locale's separators, for
     example 20000 as "20,000" (English) or "20.000" (German), and 30.3 as
-    "30,3" under European locales (GitHub #159); the locale is tried first,
-    then plain Python syntax, then (floats) the tolerant convertToFloat.
+    "30,3" under European locales (GitHub #159). Integers are read with the
+    locale first, then plain Python syntax. Decimals are read the way QGIS
+    saves them (QgsField.convertCompatible): plain "C" syntax first, so
+    "0.125" stays 0.125 under a German or Dutch locale (where the locale
+    alone would read the dot as a group separator and give 125), then the
+    locale, then the tolerant convertToFloat.
     """
     locale = QLocale()
     if integer:
@@ -65,18 +69,19 @@ def parse_number(text: str, integer: bool):
         if ok:
             return int(number)
         return int(text)
-    number, ok = locale.toDouble(text)
-    if ok:
-        return number
     try:
         return float(text)
     except ValueError:
-        from open_alaqs.core.tools.conversion import convertToFloat
+        pass
+    number, ok = locale.toDouble(text)
+    if ok:
+        return number
+    from open_alaqs.core.tools.conversion import convertToFloat
 
-        converted = convertToFloat(text, default=None)
-        if converted is None:
-            raise ValueError(f"cannot parse {text!r} as a number")
-        return converted
+    converted = convertToFloat(text, default=None)
+    if converted is None:
+        raise ValueError(f"cannot parse {text!r} as a number")
+    return converted
 
 
 def validate_field(ui_element, var_type):

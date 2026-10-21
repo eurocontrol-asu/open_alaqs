@@ -403,6 +403,11 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   working directory.
 - OSM import: the building filter value "commerical" is now "commercial",
   so OSM commercial buildings are downloaded and imported.
+- Forms under a German or Dutch locale: a decimal such as "0.125" was
+  read as 125 by the field check (the locale reads "." as a group
+  separator) while QGIS saves 0.125. Decimals are now read as QGIS saves
+  them (plain syntax first, then the locale), and the parking and roadway
+  Recalculate use the checked values (the fleet mix as "12,5" raised).
 
 ### Removed
 

@@ -176,9 +176,7 @@ def recalculate_emissions(fields: dict):
             return False
 
         # Calculate the total
-        fleet_percentage_total = sum(
-            [float(fields[f].text()) for f in fleet_percentage_fields]
-        )
+        fleet_percentage_total = sum([valid_fields[f] for f in fleet_percentage_fields])
 
         if fleet_percentage_total != 100:
             msg_box = QtWidgets.QMessageBox()
@@ -202,7 +200,7 @@ def recalculate_emissions(fields: dict):
             "parking": False,
         }
         for field_name in fleet_percentage_fields:
-            form_data[field_name] = float(fields[field_name].text())
+            form_data[field_name] = valid_fields[field_name]
 
         # Get the study data for additional information needed
         study_data = alaqs.load_study_setup()
