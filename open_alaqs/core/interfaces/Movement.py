@@ -950,8 +950,10 @@ class MovementStore(Store, metaclass=Singleton):
             "runway_trajectory",
             "track_id",
         ]
-        eq_mdf = pd.DataFrame(index=mdf.index, columns=df_cols)
-        eq_mdf = eq_mdf.fillna(np.nan)  # fill with None rather than NaNs
+        # Object columns, all NaN: they receive names and objects below. (A
+        # fillna(np.nan) here downcast them to float64, and every later
+        # assignment of a string or object raised a pandas FutureWarning.)
+        eq_mdf = pd.DataFrame(np.nan, index=mdf.index, columns=df_cols, dtype=object)
 
         # Check if aircraft exist in the database
         if stage_1:

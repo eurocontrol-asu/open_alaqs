@@ -537,6 +537,12 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   height. NULL attributes are now skipped before the feature is created
   (the layer default applies, as it already did in a headless check) and
   the log counts only real heights.
+- Plugin movement set-up (`MovementStore.initMovements`): the
+  per-movement table was built with float64 columns, so every name or
+  object put in it raised the pandas FutureWarning "Setting an item of
+  incompatible dtype is deprecated" (an error in a future pandas), plus a
+  "Downcasting object dtype arrays on .fillna" warning. The columns are
+  now object columns; no warning, bundled outputs byte-identical.
 
 ### Removed
 
