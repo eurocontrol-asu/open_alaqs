@@ -487,6 +487,12 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   cooling_season and business_hours were missing) and E190 default engine
   11GE144; plugin results on it are byte-identical, and so is the content
   of `example/training/training_validation_reference.xlsx` (kept).
+- Test fixtures `tests/data/AIRPORT_A/AIRPORT_A_out.alaqs` and
+  `tests/data/ANP/ANP_out.alaqs` no longer carry runway trajectory caches
+  (`cache_runway_trajectories`, `_v4`, `_v5`), and
+  `tests/test_emission_calculation.py` runs on copies of its studies, so a
+  test run no longer writes into tracked files nor reads a committed
+  trajectory back (`tests/test_bundled_fixture_hygiene.py`).
 
 ### Removed
 
