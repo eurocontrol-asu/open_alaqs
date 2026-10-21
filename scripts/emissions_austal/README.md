@@ -197,9 +197,19 @@ Using AUSTAL/GeoJSON outputs in QGIS
 **Source**
 - Script location: `scripts/emissions_austal/run_emissions_austal.py`
 - Demo input: `scripts/emissions_austal/sample_data/Inventory.alaqs` is a
-  trimmed EHRD example (13 movements, 2 aircraft types) derived from
-  `example/training/training_out.alaqs`. Reference data tables
-  (`default_aircraft`, `default_aircraft_engine_ei`, etc.) are pruned
-  to only what's needed by the demo movements; vehicle/road tables and
-  helicopter EI are dropped. To use the full reference catalogue, point
-  `db_path` at your own `*_out.alaqs` instead.
+  trimmed EHRD inventory (13 movements, A20N and E190) made from an
+  early version of the training example; it is not the current
+  `example/training/training_out.alaqs` and is not rebuilt from it. It
+  keeps the old airport position (51.96 N, 4.44 E, elevation 0 m), the old
+  runway table (with `capacity`, `max_queue_speed`, `peak_queue_time`, no
+  `touchdown_2`), the old taxi routes (the runway 06 movements 6, 8 and 13
+  use runway 24 routes) and the E190 default engine 11GE144. Reference
+  data tables (`default_aircraft`, `default_aircraft_engine_ei`, etc.)
+  are pruned to the demo's two aircraft; vehicle/road tables and
+  helicopter EI are dropped. `default_aircraft_profiles` holds only
+  JET-SMALL-A-1, JET-SMALL-D-4, JET-REGIONAL-A-1 and JET-REGIONAL-D-3, so
+  movements 2, 4, 6, 8 and 10 (JET-SMALL-D-1, JET-REGIONAL-D-1) and 11
+  (CUSTOM `1677686160_DIETB`) name profiles that are not in the file. It
+  serves as input to the AUSTAL export demo only, not for emission
+  results. To use the full reference catalogue, point `db_path` at your
+  own `*_out.alaqs` instead.

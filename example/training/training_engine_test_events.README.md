@@ -25,21 +25,22 @@ aircraft's default engine (from `default_aircraft.engine`).
 
 ## How to load
 
-1. Migrate the training study if it predates engine-test-site support
-   (from a checkout of the repository; the script is not in the plugin zip):
-   ```
-   python scripts/migrate_alaqs.py example/training/training.alaqs
-   ```
-2. In QGIS, open `example/training/training.alaqs`. Create an area source
+The shipped `example/training/training.alaqs` already has the
+engine-test-site schema (`shapes_area_sources.is_test_site`, the
+`engine_test_events` table); an older study needs
+`python scripts/migrate_alaqs.py <study>.alaqs` first (from a checkout of
+the repository; the script is not in the plugin zip).
+
+1. In QGIS, open `example/training/training.alaqs`. Create an area source
    named `TESTPAD_A` at the desired location, or edit an existing area
    source and rename its `source_id` to `TESTPAD_A`.
-3. Tick the **Engine Test Site** checkbox on the source form. The rate
+2. Tick the **Engine Test Site** checkbox on the source form. The rate
    fields on the Emissions tab and the Profiles combo boxes gray out.
-4. Click **Load engine test events CSV...**. Browse to this file, review
+3. Click **Load engine test events CSV...**. Browse to this file, review
    the validation summary (5 valid rows, 0 errors, 0 warnings expected),
    click Apply.
-5. Save the source form (OK).
-6. Regenerate the emission inventory with a period and meteo that cover
+4. Save the source form (OK).
+5. Regenerate the emission inventory with a period and meteo that cover
    the events (for example 2025-01-15 00:00 to 2025-02-04 00:00; the
    training example's own period, 2025-12-01 to 2025-12-03, contains
    none of them). In *Visualize Emission Calculation*, select

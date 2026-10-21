@@ -44,11 +44,29 @@ python3 -m tools.template_build.generate_templates
 This builds `project.alaqs` and `inventory.alaqs` in
 `open_alaqs/core/templates/` in three phases: tables owned by the
 `SQLSerializable` interface classes, the 10 `sql/*.sql` tables, then the
-reference data from `open_alaqs/database/data/*.csv`. It overwrites the
-checked-in templates, so review the diff before committing (a rebuild
-currently differs from the shipped files in the column order of
-`shapes_runways`, the creation timestamps of `user_study_setup`,
-`spatialite_history`, and the last digit of 132 `nvpm_number_ei` values).
+reference data from `open_alaqs/database/data/*.csv`. The CSVs are read
+with `float_precision="round_trip"`, so every stored REAL is the CSV text
+value exactly (pandas' default parser is up to a few ulp off). It
+overwrites the checked-in templates, so review the diff before committing.
+A rebuild (checked October 2026, pandas 2.2.1, SQLite 3.45.1, into a copy
+of the tree, compared table by table) differs from the shipped files in:
+
+- the column order of `shapes_runways` (`touchdown_2` after `touchdown`
+  in a rebuild, last in the shipped files, which were migrated);
+- the rowid order of the `shapes_buildings` and `shapes_receptor_points`
+  rows of `geometry_columns`, `geometry_columns_auth`,
+  `geometry_columns_statistics` and `geometry_columns_time` (same content);
+- the timestamps and SQLite version of `spatialite_history` and the
+  creation dates of `user_study_setup`;
+- `project.alaqs` only: `default_vehicle_ef_copert5`, 26780 of 46435 rows
+  by 1 to a few ulp (the shipped table was loaded with the default parser;
+  the CSV holds 17-digit values such as 0.17500000000000004, the shipped
+  table 0.175), and 17 cells of `default_aircraft_engine_ei` by 1 ulp (the
+  shipped table holds, for example, 31.57 where the CSV has
+  31.569999999999997: 6BR010 and 01P06BR014 TX `co_ei`, 4GE081 TO
+  `nox_ei`, 07P27GE236 TO `pm10_nonvol` and `nvpm_ei`, ...). The rebuild
+  equals the CSVs; `tests/test_database.py::test_template_data` accepts
+  either. Every other table is identical.
 
 ## What this directory is still useful for
 

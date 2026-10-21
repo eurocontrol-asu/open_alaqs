@@ -414,7 +414,10 @@ if __name__ == "__main__":
         if not alaqsdb_df.empty:
             raise ValueError("What to do when the database is not empty?")
 
-        csv_df = pd.read_csv(csv_filename)
+        # round_trip: the stored REALs are the CSV text values exactly (the
+        # default parser can be 1 ulp off), so a rebuild reproduces the
+        # shipped templates.
+        csv_df = pd.read_csv(csv_filename, float_precision="round_trip")
 
         if csv_df.empty:
             logging.warning('Nothing to import from CSV "%s"', csv_filename.stem)

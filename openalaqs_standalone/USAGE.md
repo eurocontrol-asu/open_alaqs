@@ -352,7 +352,15 @@ subdirectories:
   per movement (`validation/tools/regenerate_training_validation_xlsx.py`). The `training_v3*` files
   are evolved versions of `example/training/training.alaqs` carrying
   schema fixes and source variants that exercise the gate / multi-source
-  code paths.
+  code paths. `validation/data/source_csvs/` holds their text inputs:
+  `training_movements.csv` is the movement table of `training_v3.alaqs`
+  (and of `training_v3_multisource.alaqs`), 15 movements with the two AS50
+  helicopters, in the plugin's import format; `training_v3_gatemovements.alaqs`
+  differs from it in the gate and `gate_emissions_code` of movements 1, 2,
+  3, 5 and 14. It is not the example's `training_movements.csv` (13
+  movements, other runways and gates on some rows). `training_meteo.csv`
+  and `training_ads_b_data.csv` are the example's files. No code reads
+  this folder.
 - `validation/tests/`: pytest modules, among them
   `test_plugin_csv_vs_reference.py` (plugin = reference = standalone on the
   15 movements), `test_bffm2_ambient_propagation_regression.py` (BFFM2 EI

@@ -1,4 +1,6 @@
 import datetime
+import shutil
+from pathlib import Path
 
 import pytest
 from qgis.core import QgsMapLayer, QgsVectorLayer
@@ -54,7 +56,7 @@ def plugin_instance(request):
 
 
 @pytest.fixture(scope="class")
-def datasets_to_test(request) -> list:
+def datasets_to_test(request, tmp_path_factory) -> list:
     print("\nINFO: Get datasets to test...")
     request.cls.datasets = [
         ##################################
@@ -254,6 +256,19 @@ def datasets_to_test(request) -> list:
             ),
         },
     ]
+    # The calculation writes its runway trajectory cache into the inventory
+    # (and may touch the study): run on copies so that the tracked fixtures
+    # stay as committed and no committed cache is read back.
+    tmp = tmp_path_factory.mktemp("emission_calculation")
+    copies = {}
+    for dataset in request.cls.datasets:
+        for key in ("db_path", "inventory_path"):
+            src = dataset[key]
+            if src not in copies:
+                dst = tmp / f"{len(copies)}_{Path(src).name}"
+                shutil.copy(src, dst)
+                copies[src] = str(dst)
+            dataset[key] = copies[src]
 
 
 @pytest.mark.slow

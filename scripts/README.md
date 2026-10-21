@@ -68,7 +68,7 @@ What Phase 1 handles:
 | Table in REFERENCE but not in SOURCE | `CREATE TABLE` using REFERENCE's schema (empty table). | — |
 | Table in SOURCE but not in REFERENCE | Reported as "extra"; left in place. | `--drop-extra-tables` to remove. |
 | Column in REFERENCE but not in SOURCE | `ALTER TABLE ... ADD COLUMN` with REFERENCE's declared type, NULL default. | — |
-| Column in SOURCE but not in REFERENCE | Reported as "extra"; left in place. | `--drop-extra-columns` to remove. |
+| Column in SOURCE but not in REFERENCE | Reported as "extra"; left in place. | `--drop-extra-columns` to remove: `ALTER TABLE ... DROP COLUMN` (SQLite 3.35 or later), which keeps the table's keys, NOT NULL, defaults, indexes and triggers; where SQLite refuses it, the table is rebuilt with the REFERENCE definitions of the kept columns (source order, rowids kept) and its indexes and triggers are recreated. |
 | Type/affinity differences on common columns | Warned, never auto-rewritten (SQLite is dynamically typed). | — |
 | Virtual tables (SpatialIndex, KNN2, ElementaryGeometries) | Filtered from both sides of the diff (they need the SpatiaLite extension to introspect; the runtime recreates them). | — |
 

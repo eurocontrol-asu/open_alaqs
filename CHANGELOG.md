@@ -4,7 +4,7 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
-## [Unreleased]
+## [5.4.0] - 2026-10-21
 
 Upgrading a 5.3.x study: see
 [Upgrading from 5.3.x](documents/USER_GUIDE.md#upgrading-from-53x) in the
@@ -33,7 +33,9 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   approach 0.24 to 0.385 g/kg, taxi 0.23 to 0.294; B602 taxi 0.35 to
   0.295). For the other FOCA engines `pm10_ei` is the FOCA total (the file
   has no parts for the pistons and turboprops). No bundled movement uses them,
-  so no pinned output changes. In the CSV and the bundled `.alaqs` files.
+  so no pinned output changes. In the CSV and the bundled `.alaqs` files
+  (the old test fixtures `tests/data/generic/generic_out.alaqs` and
+  `gse_application/tests/example_db.alaqs` have no FOCA rows).
   **Results change** for movements with B601, B602 or B603 (PM10; the
   default engine of 49 aircraft types, among them C25B, C56X and E55P)
   and with B004 or B134 (`pm10_sul_kg`, `pm10_organic_kg`), in a study
@@ -41,10 +43,11 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - `default_aircraft_engine_ei`: the FOCA turboprops T601, T602, T603, T717
   and T790 had `fuel_type` AvGas; they are now Jet Fuel, so `sox_ei`
   0.75834 g/kg instead of 0.2 (no turboprop of the table is AvGas any
-  more). In the CSV and the bundled `.alaqs` files; no bundled movement
-  uses them. **Results change** (SOx) for movements with these engines
-  (the default engine of 30 aircraft types), in a study whose engine
-  table is refreshed.
+  more). In the CSV and the bundled `.alaqs` files (not in
+  `generic_out.alaqs` and `example_db.alaqs`, which have no FOCA rows); no
+  bundled movement uses them. **Results change** (SOx) for movements with
+  these engines (the default engine of 30 aircraft types), in a study
+  whose engine table is refreshed.
 - Training example ADS-B tracks (`example/training/training_ads_b_data.csv`
   and its copy in `validation/data/source_csvs`, the CUSTOM profiles of
   `training_out.alaqs` and `training_v3*.alaqs`): `fuel_flow` was 0.083 to
@@ -116,10 +119,9 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   default aircraft uses it). The other 48 ACT_PRF engines missing from
   the table duplicate rows under other ids (FOCA-n, EEA-*, 01P21RR124) or,
   for EEA-J6, differ from 1RR016 only by a zero nvPM, and are not added.
-  E190's default engine is now EEA-J10 (ACT_PRF "E190-A"; was 11GE144) in
-  `default_aircraft` and the bundled studies (not the trimmed demo
-  `scripts/emissions_austal/sample_data/Inventory.alaqs`); movements that name their
-  engine, as all bundled ones do, are unchanged (pinned outputs identical).
+  EEA-J10 (ACT_PRF "E190-A") is selectable for the E190; the E190's
+  default engine in `default_aircraft` stays 11GE144 (EEDB CF34-10E, as in
+  5.3.6), in the CSV, the templates and every bundled study.
 - CAEP14 validation: the BFFM2 index step is pinned to two cases of the
   CAEP14 calculation sheet, non-LTO lean burn and LTO
   (`validation/tests/test_caep14_sheet_reference_case.py`).
@@ -213,7 +215,11 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   the stored `pm10_sul` stays at the FOA3 value, FSC 680 ppm) and 0.2 g/kg
   for AvGas (FSC 0.01 %, no sulphate),
   by the row's `fuel_type`. The shipped table and the bundled `.alaqs`
-  files carry these values; a 0 or empty `sox_ei` in an existing study is
+  files carry these values, except the old test fixtures
+  `tests/data/generic/generic_out.alaqs` and
+  `gse_application/tests/example_db.alaqs`, whose AEM-era rows keep
+  `sox_ei` 1.0 (only their 112 rows of the 28 added engines have 0.75834;
+  the tests that read them do not check SOx); a 0 or empty `sox_ei` in an existing study is
   replaced by the fuel's value at run time. Helicopters (FOCA gives no
   SOx) get mode fuel × the value (PISTON: AvGas). Plugin, standalone and
   CAEP14 reference alike; the plugin/reference gate now compares SOx.
@@ -593,6 +599,63 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   grid reference (`grid_3d_definition` reference_latitude/longitude) nor
   airport coordinates (`user_study_setup`); 5.3.6 silently used (0, 0)
   and EPSG:32631. `orchestrate` stops even without a receptor CSV.
+- Tutorial study `example/training/training.alaqs`: the area source's
+  `is_test_site` is '0' (was NULL after the migration), as in the template
+  and the other studies.
+- `example/training/training_out.alaqs` rebuilt from the final
+  `training.alaqs` and the example's CSVs
+  (`tools/test_fixtures/rebuild_training_example_inventory.py`): it now
+  carries the study's five day, hour and month profiles (heating_season,
+  cooling_season and business_hours were missing) and E190 default engine
+  11GE144; plugin results on it are byte-identical, and so is the content
+  of `example/training/training_validation_reference.xlsx` (kept).
+- Test fixtures `tests/data/AIRPORT_A/AIRPORT_A_out.alaqs` and
+  `tests/data/ANP/ANP_out.alaqs` no longer carry runway trajectory caches
+  (`cache_runway_trajectories`, `_v4`, `_v5`), and
+  `tests/test_emission_calculation.py` and
+  `tests/test_emission_calculator_service.py` run on copies of their
+  studies, so a
+  test run no longer writes into tracked files nor reads a committed
+  trajectory back (`tests/test_bundled_fixture_hygiene.py`).
+- `scripts/migrate_alaqs.py --drop-extra-columns` rebuilt the table from
+  column names and types only, so PRIMARY KEY, NOT NULL and defaults were
+  lost (dropping `capacity` left `shapes_runways.oid` without its key, and
+  a runway added in QGIS then got no oid). It now uses `ALTER TABLE ...
+  DROP COLUMN` (SQLite 3.35 or later); where SQLite refuses, the table is
+  rebuilt with the reference definitions of the kept columns, rowids,
+  indexes and triggers kept (`tests/test_migrate_drop_columns_keeps_keys.py`).
+  `shapes_runways.oid INTEGER PRIMARY KEY NOT NULL` restored in
+  `validation/data/training_v3.alaqs`, `training_v3_gatemovements.alaqs`,
+  `training_v3_multisource.alaqs` and `tests/data/AIRPORT_A/AIRPORT_A.alaqs`
+  (rows, geometry triggers and geometry registration unchanged).
+- `openalaqs_standalone/validation/data/source_csvs/training_movements.csv`
+  was the example's movement set plus the two helicopters, not the
+  movements of the validation fixtures: it is now the movement table of
+  `training_v3.alaqs` (15 movements; runways, gates and routes differ from
+  the example on 7 rows), described in `openalaqs_standalone/USAGE.md` and
+  checked by `validation/tests/test_source_csvs_match_fixture.py`. The
+  study description of the three `training_v3*.alaqs` files says 15
+  movements (was 13).
+- Template build (`tools/template_build/generate_templates.py`) reads the
+  CSVs with `float_precision="round_trip"`: a rebuild stores the CSV
+  values exactly (the default parser was up to a few ulp off). The
+  shipped templates are not rebuilt; `tools/template_build/README.md`
+  lists what a rebuild changes (column order of `shapes_runways`, row order
+  of the geometry metadata, timestamps, and in `project.alaqs` 1 to a few
+  ulp in 26780 `default_vehicle_ef_copert5` rows and 17
+  `default_aircraft_engine_ei` cells, where the shipped files are not the
+  CSV text values).
+- `validation/data/training_v3*.alaqs`: the unused CUSTOM profile
+  `1677686160_DIETB` (9 rows, no movement uses it) removed. It stays in
+  `tests/data/AIRPORT_A/AIRPORT_A.alaqs`, whose movement CSV
+  (`AIRPORT_A_movements.csv`, row 12) and inventory use it.
+- Docs: `scripts/emissions_austal/README.md` describes the AUSTAL demo
+  `sample_data/Inventory.alaqs` as it is (an early training inventory: old
+  airport position, runway table and routes, E190 11GE144, six movements
+  naming profiles absent from the file), not as derived from the current
+  `training_out.alaqs`; `example/training/training_engine_test_events.README.md`
+  no longer asks to migrate the training study, which ships with the
+  engine-test-site schema.
 
 ### Removed
 

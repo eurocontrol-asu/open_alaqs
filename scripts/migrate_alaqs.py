@@ -375,26 +375,160 @@ def apply_add_column(conn: sqlite3.Connection, table: str, col: str, typ: str) -
     conn.execute(f'ALTER TABLE "{table}" ADD COLUMN "{col}" {typ}')
 
 
+def _sqlite_version(conn: sqlite3.Connection) -> tuple[int, ...]:
+    v = conn.execute("SELECT sqlite_version()").fetchone()[0]
+    return tuple(int(x) for x in v.split(".")[:3])
+
+
+def _split_table_body(create_sql: str) -> list[tuple[str | None, str]]:
+    """Split a CREATE TABLE statement into its top-level items.
+
+    Returns [(column name lower-cased, text)] for column definitions and
+    [(None, text)] for table constraints (PRIMARY KEY (...), UNIQUE, CHECK,
+    FOREIGN KEY, CONSTRAINT). Commas inside parentheses or quotes do not
+    split.
+    """
+    body = create_sql[create_sql.index("(") + 1 : create_sql.rindex(")")]
+    items, depth, quote, start = [], 0, None, 0
+    closing = {'"': '"', "'": "'", "`": "`", "[": "]"}
+    for i, ch in enumerate(body):
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in closing:
+            quote = closing[ch]
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            items.append(body[start:i])
+            start = i + 1
+    items.append(body[start:])
+    out: list[tuple[str | None, str]] = []
+    for text in (t.strip() for t in items):
+        if not text:
+            continue
+        if text[0] in closing:
+            name = text[1 : text.index(closing[text[0]], 1)]
+        else:
+            name = text.split()[0]
+        if name.upper() in ("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN"):
+            out.append((None, text))
+        else:
+            out.append((name.lower(), text))
+    return out
+
+
+def _mentions_any(text: str, names: list[str]) -> bool:
+    import re
+
+    return any(
+        re.search(rf"(?<![A-Za-z0-9_]){re.escape(n)}(?![A-Za-z0-9_])", text, re.I)
+        for n in names
+    )
+
+
+def rebuild_table(
+    conn: sqlite3.Connection,
+    table: str,
+    cols_to_drop: list[str],
+    ref: sqlite3.Connection | None,
+) -> None:
+    """Rebuild `table` without `cols_to_drop` (create-copy-rename).
+
+    The kept columns stay in source order, each with its definition from the
+    reference table's CREATE statement when the reference has the column
+    (PRIMARY KEY, NOT NULL, DEFAULT, ...), else from the source's own CREATE
+    statement. Table constraints come from the reference (or, without a
+    reference table, from the source when they name no dropped column).
+    Rows keep their rowid. Indexes and triggers on the table that are still
+    in sqlite_master (the SpatiaLite ones are handled by apply_plan) are
+    recreated; one that names a dropped column is skipped with a warning.
+    """
+    src_sql = get_create_sql(conn, table)
+    src_items = _split_table_body(src_sql)
+    src_defs = {n: t for n, t in src_items if n}
+    ref_sql = get_create_sql(ref, table) if ref is not None else None
+    ref_items = _split_table_body(ref_sql) if ref_sql else []
+    ref_defs = {n: t for n, t in ref_items if n}
+
+    drop = {c.lower() for c in cols_to_drop}
+    keep = [c for c in get_columns(conn, table) if c.lower() not in drop]
+    defs = [ref_defs.get(c.lower()) or src_defs[c.lower()] for c in keep]
+    if ref_sql:
+        constraints = [t for n, t in ref_items if n is None]
+    else:
+        constraints = [
+            t for n, t in src_items if n is None and not _mentions_any(t, cols_to_drop)
+        ]
+    dependents = conn.execute(
+        "SELECT type, name, sql FROM sqlite_master "
+        "WHERE tbl_name = ? AND type IN ('index', 'trigger') AND sql IS NOT NULL",
+        (table,),
+    ).fetchall()
+
+    tmp = f"{table}__migtmp"
+    conn.execute(f'DROP TABLE IF EXISTS "{tmp}"')
+    conn.execute(f'CREATE TABLE "{tmp}" ({", ".join(defs + constraints)})')
+    info = list(conn.execute(f'PRAGMA table_info("{tmp}")'))
+    pk = [r for r in info if r[5]]
+    has_rowid_alias = len(pk) == 1 and (pk[0][2] or "").upper() == "INTEGER"
+    without_rowid = "WITHOUT ROWID" in (src_sql or "").upper()
+    cols_csv = ", ".join(f'"{c}"' for c in keep)
+    if has_rowid_alias or without_rowid:
+        conn.execute(
+            f'INSERT INTO "{tmp}" ({cols_csv}) SELECT {cols_csv} FROM "{table}"'
+        )
+    else:
+        conn.execute(
+            f'INSERT INTO "{tmp}" (rowid, {cols_csv}) '
+            f'SELECT rowid, {cols_csv} FROM "{table}"'
+        )
+    conn.execute(f'DROP TABLE "{table}"')
+    conn.execute(f'ALTER TABLE "{tmp}" RENAME TO "{table}"')
+    for kind, name, sql in dependents:
+        if cols_to_drop and _mentions_any(sql, cols_to_drop):
+            print(
+                f"WARNING: {kind} '{name}' names a dropped column of "
+                f"'{table}'; not recreated",
+                file=sys.stderr,
+            )
+            continue
+        try:
+            conn.execute(sql)
+        except sqlite3.OperationalError as exc:
+            print(
+                f"WARNING: could not recreate {kind} '{name}': {exc}", file=sys.stderr
+            )
+
+
 def apply_drop_columns(
     conn: sqlite3.Connection,
     table: str,
     cols_to_drop: list[str],
     ref: sqlite3.Connection,
 ) -> None:
-    """SQLite < 3.35 has no DROP COLUMN; use the create-copy-rename pattern."""
-    keep_cols = OrderedDict(
-        (c, t) for c, t in get_columns(conn, table).items() if c not in cols_to_drop
-    )
-    cols_csv = ", ".join(f'"{c}"' for c in keep_cols)
-    new_def = ", ".join(f'"{c}" {t}' for c, t in keep_cols.items())
-    conn.execute(f"DROP TABLE IF EXISTS {table}__migtmp")
-    conn.execute(f'CREATE TABLE "{table}__migtmp" ({new_def})')
-    conn.execute(
-        f'INSERT INTO "{table}__migtmp" ({cols_csv}) '
-        f'SELECT {cols_csv} FROM "{table}"'
-    )
-    conn.execute(f'DROP TABLE "{table}"')
-    conn.execute(f'ALTER TABLE "{table}__migtmp" RENAME TO "{table}"')
+    """Drop columns and keep the table's keys, NOT NULL, defaults and triggers.
+
+    SQLite >= 3.35: ALTER TABLE ... DROP COLUMN, which leaves the rest of the
+    table definition, its indexes and triggers as they are. When SQLite
+    refuses (older version, or the column is a key, indexed, or named by a
+    view or trigger), the table is rebuilt from the reference definition of
+    the kept columns (`rebuild_table`).
+    """
+    if _sqlite_version(conn) >= (3, 35, 0):
+        conn.execute("SAVEPOINT migrate_drop_columns")
+        try:
+            for col in cols_to_drop:
+                conn.execute(f'ALTER TABLE "{table}" DROP COLUMN "{col}"')
+        except sqlite3.OperationalError:
+            conn.execute("ROLLBACK TO migrate_drop_columns")
+            conn.execute("RELEASE migrate_drop_columns")
+        else:
+            conn.execute("RELEASE migrate_drop_columns")
+            return
+    rebuild_table(conn, table, cols_to_drop, ref)
 
 
 def apply_transformation(

@@ -1,4 +1,5 @@
 import datetime
+import shutil
 from datetime import timedelta
 
 import pytest
@@ -46,6 +47,26 @@ ANP_GRID_CONFIG = {
 # Relative tolerance for all of the tests that need this constant
 REL_TOL = 1e-6
 
+# The calculation writes its runway trajectory cache into the inventory:
+# the tests run on copies of the tracked fixtures (one per module run).
+_COPIES: dict = {}
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _inventory_copies(tmp_path_factory):
+    _COPIES["dir"] = tmp_path_factory.mktemp("inventories")
+    yield
+    _COPIES.clear()
+
+
+def _inventory(study: str) -> str:
+    """Path of a copy of tests/data/<study>/<study>_out.alaqs."""
+    if study not in _COPIES:
+        dst = _COPIES["dir"] / f"{study}_out.alaqs"
+        shutil.copy(get_data_path(study) / f"{study}_out.alaqs", dst)
+        _COPIES[study] = str(dst)
+    return _COPIES[study]
+
 
 # =============================================================================
 # Validation Tests
@@ -63,7 +84,7 @@ class TestEmissionCalculatorServiceValidation:
     def test_validate_valid_config(self):
         """Test validation passes with valid config."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -93,7 +114,7 @@ class TestEmissionCalculatorServiceValidation:
     def test_validate_start_after_end(self):
         """Test validation fails when start time is after end time."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 8, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -108,7 +129,7 @@ class TestEmissionCalculatorServiceValidation:
     def test_validate_zero_time_interval(self):
         """Test validation fails when time interval is zero."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=0),
@@ -123,7 +144,7 @@ class TestEmissionCalculatorServiceValidation:
     def test_validate_invalid_pollutant(self):
         """Test validation fails for unsupported pollutant."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -138,7 +159,7 @@ class TestEmissionCalculatorServiceValidation:
     def test_validate_invalid_method(self):
         """Test validation fails for unsupported method."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -154,7 +175,7 @@ class TestEmissionCalculatorServiceValidation:
     def test_validate_missing_grid_config(self):
         """Test validation fails when grid config is missing."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -170,7 +191,7 @@ class TestEmissionCalculatorServiceValidation:
         """Test that all supported pollutants pass validation."""
         for pollutant in ["CO2", "CO", "HC", "NOx", "SOx", "PM10"]:
             config = EmissionCalculationConfig(
-                db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+                db_path=_inventory("AIRPORT_A"),
                 start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
                 end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
                 time_interval=timedelta(seconds=3600),
@@ -200,7 +221,7 @@ class TestAirportAEmissions:
     def test_airport_a_co_emissions_match_expected(self):
         """Test AIRPORT_A CO emissions match expected CSV values."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -234,7 +255,7 @@ class TestAirportAEmissions:
     def test_airport_a_co2_emissions_match_expected(self):
         """Test AIRPORT_A CO2 emissions match expected CSV values."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -266,7 +287,7 @@ class TestAirportAEmissions:
     def test_airport_a_nox_emissions_match_expected(self):
         """Test AIRPORT_A NOx emissions match expected CSV values."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -298,7 +319,7 @@ class TestAirportAEmissions:
     def test_airport_a_hc_emissions_match_expected(self):
         """Test AIRPORT_A HC emissions match expected CSV values."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -330,7 +351,7 @@ class TestAirportAEmissions:
     def test_airport_a_pm10_emissions_match_expected(self):
         """Test AIRPORT_A PM10 emissions match expected CSV values."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -362,7 +383,7 @@ class TestAirportAEmissions:
     def test_airport_a_all_pollutants_match_expected(self):
         """Test AIRPORT_A all pollutants match expected CSV values in a single calculation."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -395,7 +416,7 @@ class TestAirportAEmissions:
     def test_airport_a_movement_source_only(self):
         """Test AIRPORT_A calculation with MovementSource only produces valid emissions."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -435,7 +456,7 @@ class TestANPEmissions:
     def test_anp_co_emissions_match_expected(self):
         """Test ANP CO emissions over full time range match expected CSV totals."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("ANP") / "ANP_out.alaqs"),
+            db_path=_inventory("ANP"),
             start_dt_inclusive=datetime.datetime(2023, 3, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2023, 3, 1, 22, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -464,7 +485,7 @@ class TestANPEmissions:
     def test_anp_all_pollutants_match_expected(self):
         """Test ANP all pollutants match expected CSV values."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("ANP") / "ANP_out.alaqs"),
+            db_path=_inventory("ANP"),
             start_dt_inclusive=datetime.datetime(2023, 3, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2023, 3, 1, 22, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -493,7 +514,7 @@ class TestANPEmissions:
     def test_anp_single_hour_emissions(self):
         """Test ANP emissions for a single hour match expected CSV row."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("ANP") / "ANP_out.alaqs"),
+            db_path=_inventory("ANP"),
             start_dt_inclusive=datetime.datetime(2023, 3, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2023, 3, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -523,7 +544,7 @@ class TestANPEmissions:
     def test_anp_calculation_succeeds(self):
         """Test ANP calculation completes successfully."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("ANP") / "ANP_out.alaqs"),
+            db_path=_inventory("ANP"),
             start_dt_inclusive=datetime.datetime(2023, 3, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2023, 3, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -562,7 +583,7 @@ class TestEmissionCalculatorServiceIntegration:
     def test_metadata_returned_correctly(self):
         """Test that calculation result includes correct metadata."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -601,7 +622,7 @@ class TestEmissionCalculatorServiceIntegration:
     def test_service_getters(self):
         """Test service getter methods return correct values after calculation."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -617,15 +638,13 @@ class TestEmissionCalculatorServiceIntegration:
         assert self.service.get_emissions() is not None
         assert self.service.get_emissions() == result.emissions_data
         assert self.service.get_3d_grid() is not None
-        assert self.service.get_database_path() == str(
-            get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"
-        )
+        assert self.service.get_database_path() == _inventory("AIRPORT_A")
 
     def test_multiple_calculations_independent(self):
         """Test that multiple calculations are independent and don't share state."""
         # First calculation with AIRPORT_A
         config1 = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -638,7 +657,7 @@ class TestEmissionCalculatorServiceIntegration:
 
         # Second calculation with ANP (different dataset)
         config2 = EmissionCalculationConfig(
-            db_path=str(get_data_path("ANP") / "ANP_out.alaqs"),
+            db_path=_inventory("ANP"),
             start_dt_inclusive=datetime.datetime(2023, 3, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2023, 3, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -669,7 +688,7 @@ class TestEmissionCalculatorServiceBFFM2:
     def test_bffm2_produces_emissions(self):
         """Test emission calculation using BFFM2 method produces emissions."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -691,7 +710,7 @@ class TestEmissionCalculatorServiceBFFM2:
     def test_bffm2_nox_corrections_warning(self):
         """Test that BFFM2 with NOx corrections generates a warning."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -712,7 +731,7 @@ class TestEmissionCalculatorServiceBFFM2:
         """Test that both BFFM2 and bymode methods successfully produce emissions."""
         # Calculate with bymode method
         config_bymode = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -728,7 +747,7 @@ class TestEmissionCalculatorServiceBFFM2:
 
         # Calculate with BFFM2 method
         config_bffm2 = EmissionCalculationConfig(
-            db_path=str(get_data_path("AIRPORT_A") / "AIRPORT_A_out.alaqs"),
+            db_path=_inventory("AIRPORT_A"),
             start_dt_inclusive=datetime.datetime(2025, 12, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2025, 12, 1, 7, 0, 0),
             time_interval=timedelta(seconds=3600),
@@ -749,7 +768,7 @@ class TestEmissionCalculatorServiceBFFM2:
     def test_bffm2_anp_dataset(self):
         """Test BFFM2 method with ANP dataset."""
         config = EmissionCalculationConfig(
-            db_path=str(get_data_path("ANP") / "ANP_out.alaqs"),
+            db_path=_inventory("ANP"),
             start_dt_inclusive=datetime.datetime(2023, 3, 1, 6, 0, 0),
             end_dt_inclusive=datetime.datetime(2023, 3, 1, 10, 0, 0),
             time_interval=timedelta(seconds=3600),

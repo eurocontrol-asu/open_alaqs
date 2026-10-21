@@ -429,7 +429,7 @@ The file `training_movements.csv` (semicolon-delimited) defines the 13 aircraft 
 
 Key observations:
 
-- **Aircraft mix.** Two ICAO types: A20N (Airbus A320neo, JET SMALL, 8 movements) and E190 (Embraer ERJ-190, JET REGIONAL, 5 movements). The A20N flies its default engine `01P20CM128` (CFM LEAP-1A26). The E190 flies `11GE144` (CF34-10E), set in `engine_name`; its default in `default_aircraft` is `EEA-J10`.
+- **Aircraft mix.** Two ICAO types: A20N (Airbus A320neo, JET SMALL, 8 movements) and E190 (Embraer ERJ-190, JET REGIONAL, 5 movements). The A20N flies its default engine `01P20CM128` (CFM LEAP-1A26). The E190 flies its default engine `11GE144` (CF34-10E).
 - **Profile mix.** Twelve movements use standard ANP profiles (`JET-SMALL-A-1`, `JET-SMALL-D-1`, `JET-REGIONAL-A-1`, `JET-REGIONAL-D-1`). Row 11 uses the CUSTOM ADS-B profile `1764584438_PHBBA`: same A20N aircraft, but the trajectory is overridden by the CUSTOM points from `default_aircraft_profiles`.
 - **Operation split.** 7 arrivals, 6 departures, distributed across the three days. Each day's activity is clustered in the early-morning hours.
 - **Runway direction.** Most movements use runway 24; three rows (6, 8, 13) use runway 06.
