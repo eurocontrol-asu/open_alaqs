@@ -135,7 +135,7 @@ class TestIssue159ValidateFieldAcceptsComma:
         assert validate_field(w, "float") == 30.3
 
     def test_validate_field_float_accepts_comma(self):
-        """GitHub #159 — this was the failing case (European locale)."""
+        """GitHub #159: this was the failing case (European locale)."""
         from qgis.PyQt.QtCore import QLocale
 
         from open_alaqs.openalaqsuitoolkit import validate_field
