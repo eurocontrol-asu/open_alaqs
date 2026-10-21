@@ -225,8 +225,9 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - MEEM V1 above 3000 ft used ISA; it now uses ISA + ΔT, ΔT the
   temperature of the movement's meteo period (the one BFFM2 uses) minus
   ISA at the airport elevation (288.15 K − 0.0065 K/m × elevation),
-  constant aloft, the sheet's "ΔT at 0 ft MSL" (USER INPUTS!B5); 0 without
-  meteo. Plugin (`Engine.getEmissionIndexByModeWithMEEM(delta_t=...)`),
+  constant aloft, the sheet's "ΔT at 0 ft MSL" (USER INPUTS!B5). Without
+  meteo the temperature is ISA sea level (288.15 K), so ΔT = 0.0065 K/m ×
+  elevation (10.76 K at 1655 m), 0 only at sea level. Plugin (`Engine.getEmissionIndexByModeWithMEEM(delta_t=...)`),
   standalone and CAEP14 reference alike; checked against two more
   LibreOffice recalculations of the sheet. **Results change** above
   3000 ft only. Training example (283 K at −5 m, ΔT −5.18 K, with the OPR

@@ -1470,8 +1470,8 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
 
     def _meem_delta_t(self, T_amb) -> float:
         """MEEM V1 ISA deviation (K): the meteo temperature of the period (the
-        one BFFM2 uses) minus ISA at the airport elevation, constant aloft;
-        0 without meteo."""
+        one BFFM2 uses) minus ISA at the airport elevation, constant aloft.
+        Without meteo the temperature is 288.15 K, so 0.0065 K/m x elevation."""
         from open_alaqs.core.tools.meem_v1 import delta_t_from_ground
 
         return delta_t_from_ground(
