@@ -309,7 +309,7 @@ Options:
 - `--plots-dir <path>` if set, write the stability and windrose HTML plots
   into this directory after the CSV.  Files are named
   `{station}_{year}_stability.html` and `{station}_{year}_windrose.html`
-  (year is the year of `--start`).  Stability requires `--lat/--lon` for
+  (station code in lower case; year is the year of `--start`).  Stability requires `--lat/--lon` for
   PG classification; without them only the windrose is produced and a
   notice is logged to stderr.
 - `--input -` (default) read from stdin.

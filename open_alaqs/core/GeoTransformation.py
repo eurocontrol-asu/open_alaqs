@@ -16,7 +16,17 @@ from qgis.core import (
     QgsPolygon,
     QgsWkbTypes,
 )
+from shapely import wkt as _shapely_wkt
 from shapely.geometry import LineString
+
+try:
+    from shapely import force_2d as _force_2d
+except ImportError:  # shapely < 2.0 (force_2d is new in 2.0)
+    from shapely.ops import transform as _shapely_transform
+
+    def _force_2d(geom):
+        return _shapely_transform(lambda x, y, z=None: (x, y), geom)
+
 
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Aircraft import Aircraft
@@ -29,6 +39,7 @@ from open_alaqs.core.interfaces.Runway import Runway
 from open_alaqs.core.interfaces.Taxiway import TaxiwayRoute
 from open_alaqs.core.interfaces.Track import Track
 from open_alaqs.core.MovementEmissionCalculator import EmissionsDict
+from open_alaqs.core.tools import runway_placement as rp
 from open_alaqs.core.tools import spatial
 
 logger = get_logger(__name__)
@@ -401,6 +412,7 @@ class TrajectoryTransformer:
         runway_direction: str,
         taxi_route: TaxiwayRoute,
         departure_arrival: str,
+        gate_geometry_text: Optional[str] = None,
     ):
         self._trajectory = trajectory
         self._track = track
@@ -409,6 +421,7 @@ class TrajectoryTransformer:
         self._runway_direction = runway_direction
         self._taxi_route = taxi_route
         self._departure_arrival = departure_arrival
+        self._gate_geometry_text = gate_geometry_text
 
     def runway_alignment(self):
         if self._trajectory is None:
@@ -533,6 +546,46 @@ class TrajectoryTransformer:
             else:
                 runway_intersection_projected = exit_point_projected
 
+        # Runway placement of ANP profiles (open_alaqs.core.tools.runway_placement, shared with the
+        # standalone): arrivals touch down at the landing threshold + the runway's Touchdown Offset for the
+        # direction (else the profile's own 50 ft crossing distance), the rollout ends at the route's exit
+        # when the exit comes first, and an exit past the rollout end leaves a runway stretch that is taxied;
+        # departures brake-release where the route last meets the runway. CUSTOM (ADS-B) profiles keep the
+        # importer's anchor so their offsets round-trip. Taxiing uses `placement` (landing roll, stretch).
+        placement = {"rollout_time_s": 0.0, "stretch": None}
+        if (
+            not self._has_track()
+            and self._trajectory is not None
+            and self._trajectory.getPoints()
+        ):
+            pts = self._trajectory.getPoints()
+            is_custom = pts[0].getCourse() == "CUSTOM"
+            try:
+                placement, origin_3857, new_pts = self._place_on_runway(
+                    pts, is_dep, is_custom
+                )
+            except Exception as _e:  # placement must never stop the calculation
+                logger.warning(
+                    "Runway placement failed for movement at runway time '%s' (%s); "
+                    "using the taxi-route intersection.",
+                    self._runway_time,
+                    _e,
+                )
+                origin_3857, new_pts = None, None
+            if origin_3857 is not None:
+                runway_intersection_projected = QgsPointXY(
+                    origin_3857[0], origin_3857[1]
+                )
+            if new_pts is not None:
+                _cut = AircraftTrajectory(
+                    self._trajectory, skipPointInitialization=True
+                )
+                _cut._course = getattr(self._trajectory, "_course", "")
+                _cut._touchdown = getattr(self._trajectory, "_touchdown", "")
+                for _p in new_pts:
+                    _cut._points.append(_p)
+                self._trajectory = _cut
+
         runway_intersection_geographic = coord_tr.transform(
             runway_intersection_projected
         )
@@ -624,6 +677,7 @@ class TrajectoryTransformer:
                     )
 
                     _add_trajectory_point(point, target_point_projected)
+            ac_trajectory.runway_placement = placement
         else:
             # Process track
             # ToDo: from track prepare trajectory points
@@ -711,6 +765,125 @@ class TrajectoryTransformer:
             ac_trajectory.updateGeometryText()
 
         return ac_trajectory
+
+    # ------------------------------------------------------------------ runway placement
+    def _runway_frame(self) -> "rp.RunwayFrame":
+        coords = list(self._runway.getGeometry().coords)
+        pt1, pt2 = tuple(coords[0][:2]), tuple(coords[-1][:2])
+        names = self._runway.getDirections()
+        heading = {n: int("".join(filter(str.isdigit, n)) or 0) for n in names}
+        thr = rp.threshold_points(pt1, pt2, [heading[n] for n in names])
+        me = heading[self._runway_direction]
+        other = [heading[n] for n in names if n != self._runway_direction]
+        far = thr[other[0]] if other else (pt2 if thr[me] == pt1 else pt1)
+        return rp.frame_from_ends(me, thr[me], far)
+
+    def _route_lines(self, is_dep: bool) -> list:
+        """The taxi route in the direction of travel (2D EPSG:3857 LineStrings)."""
+        if self._taxi_route is None:
+            return []
+        parts = []
+        for seg in self._taxi_route.getSegments():
+            wkt = seg.getGeometryText()
+            if wkt:
+                parts.append(_force_2d(_shapely_wkt.loads(wkt)))
+        gate = None
+        if self._gate_geometry_text:
+            try:
+                gate = _force_2d(_shapely_wkt.loads(self._gate_geometry_text))
+            except Exception:
+                gate = None
+        # Oriented by the route's own departure_arrival flag, as in the standalone
+        # (runway_placement.route_parts_from_study): the runway trajectory is cached per
+        # route, whatever the D/A of the movement. The movement's flag only when the
+        # route has none.
+        flag = self._taxi_route.getDepartureArrivalFlag()
+        start_at_gate = str(flag).upper().startswith("D") if flag else is_dep
+        return rp.orient_route(rp.chain_lines(parts), gate, start_at_gate=start_at_gate)
+
+    def _place_on_runway(self, pts, is_dep: bool, is_custom: bool):
+        """(placement info, origin (EPSG:3857) or None to keep the intersection, cut points or None)."""
+        rows = [
+            (
+                i,
+                p.getX() or 0.0,
+                p.getY() or 0.0,
+                p.getZ() or 0.0,
+                p.getTrueAirspeed() or 0.0,
+                p.getMode(),
+                p.getCourse(),
+            )
+            for i, p in enumerate(pts)
+        ]
+        info = {
+            "rollout_time_s": 0.0,
+            "stretch": None,
+            "touchdown_m": None,
+            "exit": None,
+            "rollout_cut_m": 0.0,
+            "lineup_m": None,
+        }
+        if is_custom:
+            if not is_dep:
+                info["rollout_time_s"] = rp.rollout_duration_s(rows)
+            return info, None, None
+        frame = self._runway_frame()
+        runway_line = LineString(
+            [tuple(c[:2]) for c in self._runway.getGeometry().coords]
+        )
+        crossings = rp.route_crossings(frame, runway_line, self._route_lines(is_dep))
+        if is_dep:
+            lu = rp.lineup_distance(crossings)
+            if lu is None:
+                return info, None, None  # no crossing: the threshold fallback applies
+            info["lineup_m"] = lu
+            return info, rp.point_at(frame, lu), None
+        offset = self._runway.getTouchdownOffsetFor(self._runway_direction)
+        d_td, src = rp.touchdown_distance(offset, rows)
+        info.update(touchdown_m=d_td, touchdown_source=src)
+        origin = rp.point_at(frame, d_td)
+        new_pts = None
+        ex = rp.select_exit(crossings, d_td, rows)
+        if ex is not None:
+            info["exit"] = ex
+            if ex["x_m"] < rows[-1][1]:
+                info["rollout_cut_m"] = rows[-1][1] - ex["x_m"]
+                cut_rows = rp.truncate_after(rows, ex["x_m"])
+                new_pts = [pts[r[0]] for r in cut_rows[:-1]]
+                last = AircraftTrajectoryPoint(pts[cut_rows[-1][0]])
+                last.setX(cut_rows[-1][1])
+                last.setY(cut_rows[-1][2])
+                last.setZ(cut_rows[-1][3])
+                last.setTrueAirspeed(cut_rows[-1][4])
+                new_pts.append(last)
+                rows = cut_rows
+            elif ex["x_m"] - rows[-1][1] > rp.STRETCH_MIN_M:
+                s0 = d_td + rows[-1][1]
+                length = ex["s_m"] - s0
+                info["stretch"] = {
+                    "length_m": length,
+                    "time_s": rp.stretch_time_s(length, rows[-1][4]),
+                    "p1_3857": rp.point_at(frame, s0),
+                    "p2_3857": rp.point_at(frame, ex["s_m"]),
+                }
+            if ex["speed_kt"] > rp.EXIT_SPEED_LIMIT_KT:
+                logger.warning(
+                    "Arrival profile '%s' on route '%s': %.0f kt at the exit (%.0f m from the threshold).",
+                    self._trajectory.getIdentifier(),
+                    self._taxi_route.getName(),
+                    ex["speed_kt"],
+                    ex["s_m"],
+                )
+        elif crossings:
+            logger.warning(
+                "Arrival route '%s' meets the runway only before the touchdown of profile '%s' (%.0f m); "
+                "rollout kept whole.",
+                self._taxi_route.getName(),
+                self._trajectory.getIdentifier(),
+                d_td,
+            )
+        info["rollout_time_s"] = rp.rollout_duration_s(rows)
+        return info, origin, new_pts
 
     def _get_runway_dir_azimuth(
         self,

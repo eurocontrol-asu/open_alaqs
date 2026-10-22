@@ -40,6 +40,40 @@ class CalcMethodDict(TypedDict):
     config: CalcMethodConfigDict
 
 
+def _placement_key(movement):
+    """Cache-key part for the runway placement of a movement's flight profile (landing roll, runway stretch)."""
+    t = movement.getTrajectoryAtRunway()
+    pl = getattr(t, "runway_placement", None) or {}
+    st = pl.get("stretch") or {}
+    return (
+        round(float(pl.get("rollout_time_s") or 0.0), 6),
+        round(float(st.get("time_s") or 0.0), 6),
+        tuple(round(v, 3) for v in st.get("p1_3857", ())),
+        tuple(round(v, 3) for v in st.get("p2_3857", ())),
+    )
+
+
+def _study_airport_elevation(db_path):
+    """user_study_setup.airport_elevation (m) of the study, None if missing or unreadable."""
+    if not db_path:
+        return None
+    import sqlite3
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            row = conn.execute(
+                "SELECT airport_elevation FROM user_study_setup"
+            ).fetchone()
+    except sqlite3.Error:
+        return None
+    if not row or row[0] in (None, ""):
+        return None
+    try:
+        return float(row[0])
+    except (TypeError, ValueError):
+        return None
+
+
 class MovementSourceModule(SourceModule):
     # Aircraft movements (plus gates and taxiways consumed via routes)
     # have time-varying geometry. stays on legacy time-major
@@ -78,11 +112,25 @@ class MovementSourceModule(SourceModule):
         self._ambient_conditions = AmbientCondition()
 
         self._method = {"name": values_dict.get("method", "")}
-        self._meem_version = values_dict.get("meem_version", "v1")
+        # MEEM V2 (meem_v2.py) is not used by the calculation; its adoption is
+        # to be decided. Any other version runs MEEM V1.
+        meem_version = str(values_dict.get("meem_version", "v1") or "v1").lower()
+        if meem_version != "v1":
+            logger.warning(
+                "MEEM version '%s' is not available for the emission "
+                "calculation; MEEM V1 is used.",
+                meem_version,
+            )
+        self._meem_version = "v1"
         self._bffm2_ff_source = values_dict.get("bffm2_ff_source", "trajectory")
         self._nox_correction = values_dict.get("should_apply_nox_corrections", False)
         self._smooth_and_shift = values_dict.get("source_dynamics", "none")
+        # Airport altitude (NOx correction, MEEM V1 ISA temperature, LTO cut): the study's airport elevation,
+        # as in the standalone and the reference; the grid's reference altitude only when the study has none.
         self._reference_altitude = values_dict.get("reference_altitude", 0.0)
+        elevation = _study_airport_elevation(self.getDatabasePath())
+        if elevation is not None:
+            self._reference_altitude = elevation
         self._grid_bounds = values_dict.get("grid_bounds", None)
 
     def getMethod(self):
@@ -537,6 +585,9 @@ class MovementSourceModule(SourceModule):
                     and movement.getRunwayTime() is not None
                     else None
                 ),
+                # The flight profile's runway placement (landing roll, runway stretch) changes the taxi
+                # split for arrivals: movements on different profiles must not share a cached result.
+                _placement_key(movement),
             )
 
         _taxi_cache: dict = {}

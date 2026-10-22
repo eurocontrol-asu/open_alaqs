@@ -20,7 +20,7 @@ Current version: AUSTAL 3.3.0 (released 22.03.2024)
 
 1. Download the AUSTAL base package for your operating system from the link above
 2. Extract the package to your desired location
-3. Ensure the AUSTAL executable is accessible from your system PATH or configure the path in OpenALAQS settings
+3. Select the AUSTAL executable in section 1 of the Calculate Dispersion dialog (the path is remembered)
 
 ### Important: Configuration File Setup
 

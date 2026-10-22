@@ -1,9 +1,9 @@
 # OpenALAQS User Guide - Auxiliary Material
 
 ## [Table of Contents](#table-of-contents)
-- [OpenALAQS Database](#OpenALAQS-database)
+- [OpenALAQS Database](#openalaqs-database)
   - [Aircraft and airport data](#aircraft-and-airport-data)
-  - [Emissions factors](#emission-factors)
+  - [Emissions factors](#emissions-factors)
     - [Aircraft emissions](#aircraft-emissions)
     - [Non-aircraft emissions](#non-aircraft-emissions)
 - [ANP](#anp)
@@ -14,10 +14,10 @@
 - [COPERT](#copert)
 - [Smooth and Shift](#smooth-and-shift)
 
-## [OpenALAQS Database](#OpenALAQS-database)
+## [OpenALAQS Database](#openalaqs-database)
 [(Back to top)](#table-of-contents)
 
-The internal [`OpenALAQS database`](./../open_alaqs/database/data/) contains default emission factors for all airport sources. When the user creates a new study, these files are copied to the new `.alaqs` file. If the user has access to more up-to-date information, they can update the default data as described in the [`README`](./../README.md#updating-the-openalaqs-database-templates) file.
+The internal [`OpenALAQS database`](./../open_alaqs/database/data/) contains default emission factors for all airport sources. When the user creates a new study, these files are copied to the new `.alaqs` file. The study keeps its copy: a study made with an older version keeps the older tables until they are refreshed (see [Upgrading from 5.3.x](USER_GUIDE.md#upgrading-from-53x)). If the user has access to more up-to-date information, they can update the default data as described in the [`README`](./../README.md#updating-the-open-alaqs-database-templates) file.
 
 Alternatively, OpenALAQS files can be easily viewed and edited with [`DB Browser for SQLite`](https://sqlitebrowser.org/) an open source tool designed for manipulating SQLite database files.
 
@@ -25,9 +25,9 @@ Alternatively, OpenALAQS files can be easily viewed and edited with [`DB Browser
 
 The internal database contains an extensive list of aircraft (see [`default_aircraft`](./../open_alaqs/database/data/default_aircraft.csv)) along with information on the most representative engine, APU, departure/arrival profiles and other characteristics.
 
-A list of airports is also available (see [`default_airports`](./../open_alaqs/database/data/default_airports.csv)) with information on their location and elevation above ground.
+A list of airports is also available (see [`default_airports`](./../open_alaqs/database/data/default_airports.csv)) with information on their location and elevation (feet above mean sea level).
 
-### [Emissions factors](#emission-factors)
+### [Emissions factors](#emissions-factors)
 
 #### Aircraft emissions
 
@@ -47,24 +47,24 @@ The engine EI table contains one row per engine per LTO mode (TX, AP, CL, TO). T
 | `mode` | LTO mode: TX, AP, CL, TO |
 | `fuel_kg_sec` | Reference fuel flow (kg/s per engine, SLS) |
 | `nox_ei`, `co_ei`, `hc_ei` | EEDB gas-phase emission indices (g/kg) |
-| `sox_ei` | SOx emission index (g/kg); default 1.0 for jet fuel |
-| `pm10_ei` | Total combustion PM10 EI (g/kg) = `pm10_nonvol` + `pm10_sul` + `pm10_organic` |
+| `sox_ei` | SOx (as SO2) emission index (g/kg): 0.758 for the Jet Fuel rows and 0.2 for the AvGas rows of the shipped data (see below); a 0 or empty value is replaced by the value of the row's fuel |
+| `pm10_ei` | Total combustion PM10 EI (g/kg) = `pm10_nonvol` + `pm10_sul` + `pm10_organic` (to rounding), except for the FOCA pistons and turboprops (P*, PF*, T601 to T603, T717, T790; `source` "ACT_PRF 2.6.3 (CAEP14 FOCA 2026-10-09)"), whose `pm10_ei` is the FOCA total PM of the file: the file gives no volatile and sulphate parts for them, so they carry no `pm10_sul` and `pm10_organic`. For the FOCA business jets the file gives the parts: B004 and B134 take them (they sum to the file's total); for B601, B602 and B603 the file's parts do not sum to its total (0.84 to 1.60 times, by mode), and `pm10_ei` is the sum of the parts, nvPM + volatile + sulphate |
 | `pm10_nonvol` | Non-volatile PM (nvPM) mass EI (g/kg) from ICAO EEDB |
 | `pm10_sul` | Sulphate vPM EI (g/kg); see PM10 breakdown below |
 | `pm10_organic` | Organic vPM EI (g/kg); see PM10 breakdown below |
 | `p1_ei`, `p2_ei` | PM1.0 and PM2.5 EI placeholders (g/kg); currently equal to `pm10_ei` |
-| `nvpm_number_ei` | nvPM number EI (#/kg) from ICAO EEDB |
-| `press_ratio` | Overall pressure ratio (OPR) for MEEM V1 correction |
-| `meem_nvpm_m_i_f00_avg` | MEEM V1: average nvPM mass EI at F00 (mg/kg) |
-| `nvpm_m_max_mgkg` | MEEM V1: maximum nvPM mass EI (mg/kg) |
-| `meem_nvpm_n_i_f00_avg` | MEEM V1: average nvPM number EI at F00 (#/kg) |
-| `nvpm_n_max_nkg` | MEEM V1: maximum nvPM number EI (#/kg) |
+| `nvpm_number_ei` | nvPM number EI (#/kg) from ICAO EEDB (until the October 2026 data fix the column held the ACT_PRF number rate in #/s) |
+| `press_ratio` | Overall pressure ratio (OPR) for MEEM V1 above 3000 ft above the aerodrome: the CAEP14 sheet v14 `Engines_Database` (EEDB v31) value, ACT_PRF for engines not in it; set for 890 jet engines, empty for the others (30 is then used) |
+| `meem_nvpm_m_i_f00_avg` | Thrust of the 5th nvPM mass point for MEEM V1 (used when above 0, with `nvpm_m_max_mgkg`); same sources; above 0 for 77 engines (the 51 the sheet marks 5PT and 26 ACT_PRF 5-point engines), 0 for the sheet's 4PT engines |
+| `nvpm_m_max_mgkg` | Maximum nvPM mass EI (mg/kg), same sources; the 5th mass point when `meem_nvpm_m_i_f00_avg` is above 0, otherwise not used |
+| `meem_nvpm_n_i_f00_avg` | Thrust of the 5th nvPM number point for MEEM V1 (used when above 0, with `nvpm_n_max_nkg`); same sources as the mass point |
+| `nvpm_n_max_nkg` | Maximum nvPM number EI (#/kg), same sources; the 5th number point when `meem_nvpm_n_i_f00_avg` is above 0, otherwise not used |
 
 ##### PM10 breakdown
 
 Aircraft PM10 emissions are decomposed into three physical components, stored separately to allow independent reporting and future updating:
 
-**Non-volatile PM (`pm10_nonvol`)** — carbonaceous (soot) particles measured at ICAO SLS conditions and stored in the EEDB. Subject to MEEM V1 ambient correction if 5-point data is available (see below).
+**Non-volatile PM (`pm10_nonvol`)**: carbonaceous (soot) particles measured at ICAO SLS conditions and stored in the EEDB. Above 3000 ft above the aerodrome, replaced by the MEEM V1 value (see below).
 
 **Sulphate PM (`pm10_sul`)** — volatile sulphate particles formed from sulphur in the fuel. Computed from the fuel sulphur content (FSC) and a conversion efficiency ε using ICAO Doc 9889 Appendix D:
 
@@ -72,7 +72,17 @@ Aircraft PM10 emissions are decomposed into three physical components, stored se
 pm10_sul (mg/kg) = FSC (kg/kg) × ε × 3 062 500
 ```
 
-The database uses **FSC ≈ 667 ppm (0.000667 kg/kg)** and **ε = 0.024** (CAEP14 default), giving a constant value of **~48.96 mg/kg** for all engines and all modes.
+The database holds a constant **48.96 mg/kg** for the Jet Fuel engines with PM data (0 for the AvGas rows). It equals FSC 0.068 % (680 ppm) × ε 0.024 × 3 000 000 (SO4/S = 96/32, the FOA3 values); with the 98/32 factor above it would correspond to FSC ≈ 666 ppm.
+
+**SOx (`sox_ei`)**: the rest of the fuel sulphur leaves as SO2, by fuel (`open_alaqs/core/tools/fuel_sulphur.py`):
+
+```
+SOx EI (g/kg) = 1000 × FSC × (1 − ε) × 64/32
+Jet fuel: FSC 0.000383, ε 0.01  →  0.75834   (CAEP14 sheet v14 inputs; pm10_sul keeps the FOA3 FSC 0.00068)
+AvGas:    FSC 0.0001,  ε 0      →  0.2       (measured AvGas sulphur at most 100 ppm, CRC AV-30-22 2025)
+```
+
+The CAEP14 calculation sheet (v14) has no SOx calculation; it uses FSC and ε for the sulphate vPM only (Constants: default FSC 0.0005 with ε 0.024; the inputs select FSC 0.000383 with ε 0.01, the values used here for SOx). The stored `pm10_sul` stays at the FOA3 value (680 ppm). The row's `fuel_type` decides (engine tests use their engine's row): Jet Fuel rows and turboshaft helicopters take the jet fuel value, AvGas rows and piston helicopters the AvGas value (FOCA gives no SOx for helicopters: mode fuel × the value). APU and GSE SOx come from their own tables. For comparison, the EUROCONTROL fuel burn and emissions tools (EMEP/EEA 2023 Annex 5) use 0.84 g/kg for all engines, about 420 ppm.
 
 **Organic vPM (`pm10_organic`)** — volatile organic particles from unburned hydrocarbons, calculated by the parameterised vPM method from ICAO Doc 9889 Appendix D:
 
@@ -101,17 +111,15 @@ This is added to the PM10, P1, and P2 output columns, but does not appear in the
 
 **P1 / P2.** These output columns are placeholders for PM1.0 and PM2.5 respectively. They are currently set equal to PM10 (including brake wear for arrivals) because dedicated sub-micron EEDB emission indices are not yet available. They will be updated as the data becomes available.
 
-##### MEEM V1 — nvPM ambient correction
+##### MEEM V1: nvPM above 3000 ft
 
-The ICAO EEDB nvPM emission indices are measured at SLS conditions (T = 288.15 K, P = 101 325 Pa, Mach = 0). The nvPM EI varies with combustor inlet pressure. The **MEEM V1** correction from CAEP14 / ICAO Doc 9889 Appendix C accounts for this.
+The ICAO EEDB nvPM emission indices are certification values at ground level. Above 3000 ft the nvPM EI depends on the combustor inlet conditions. OpenALAQS follows the MEEM V1 tab of the ICAO CAEP14 FBE Engines Emissions Calculation Sheet v14 (`open_alaqs/core/tools/meem_v1.py`), for both Bymode and BFFM2:
 
-When 5-point nvPM data is available for an engine (columns `meem_nvpm_m_i_f00_avg`, `nvpm_m_max_mgkg`, `meem_nvpm_n_i_f00_avg`, `nvpm_n_max_nkg`), OpenALAQS applies the following procedure at every profile segment:
+- At or below 3000 ft (914.4 m) above the aerodrome (segment start height above the airport, the ICAO LTO cycle), the nvPM EI is the certification value of the segment's mode: the stored `pm10_nonvol`, unchanged.
+- Above 3000 ft above the aerodrome, with ISA + ΔT at the segment altitude above MSL (start height plus airport elevation) and the Mach number from the segment's true airspeed: combustor inlet pressure and temperature at the segment (phase "CLIMB TO CRUISE" for departures, "DESCENT TO APPROACH" for arrivals), the ground-reference thrust with the same combustor inlet temperature, linear interpolation of the EEDB nvPM points at that thrust, and the correction `(P3 / P3_GR)^1.35 × 1.1^2.5`. OPR is `press_ratio` (30 when empty; the sheet has no value for this case). ΔT (the sheet's "ΔT at 0 ft MSL", USER INPUTS!B5) is the temperature of the movement's meteo period (`tbl_InvMeteo`, the one BFFM2 uses) minus the ISA temperature at the airport elevation, 288.15 K − 0.0065 K/m × elevation, constant aloft. Without meteo the ISA sea-level 288.15 K is used, so ΔT = 0.0065 K/m × elevation (0 at sea level). The cruise altitude of the climb pressure coefficient is 38000 ft, the sheet's stored value (USER INPUTS!B20): OpenALAQS has no cruise altitude (no column of `default_aircraft`, `default_aircraft_engine_ei` or `default_aircraft_profiles` holds one, `bada_id` is only an identifier, and the ANP profiles end at about 10000 ft).
+- The result replaces `pm10_nonvol` for that segment; `pm10`, `p1` and `p2` move by the same amount, so `pm10 = pm10_nonvol + pm10_sul + pm10_organic` still holds. The nvPM number EI is computed but is not an output column.
 
-1. Compute the ISA and ambient combustor inlet pressures P3_ISA and P3_amb from the OPR (`press_ratio`) and the ambient conditions in `tbl_InvMeteo`.
-2. Convert the actual thrust setting to a ground-reference (ISA) equivalent: `F_GR = F_act × (P3_ISA / P3_amb)`.
-3. Interpolate the corrected nvPM mass EI from the 5-point curve using log-log interpolation; the number EI uses linear interpolation.
-
-The correction applies to both Bymode and BFFM2. Engines without 5-point MEEM data fall back to the stored EEDB nvPM EI without correction.
+Segments more than 3000 ft above the aerodrome enter the calculation only in hours whose mixing height (a height above the airport, like the segment heights) is above 3000 ft (914.4 m). MEEM V2 (CAEP14 v12+) is implemented in `meem_v2.py` but not used; its adoption is to be decided.
 
 **APU emissions** are calculated separately as a function of the APU model (`apu_id`) indicated for each aircraft in [`default_aircraft`](./../open_alaqs/database/data/default_aircraft.csv). The default APU emission factors and operating times are given in [`default_aircraft_apu_ef`](./../open_alaqs/database/data/default_aircraft_apu_ef.csv) and [`default_apu_times`](./../open_alaqs/database/data/default_apu_times.csv) respectively. Whether APU emissions are included for a given movement is controlled by the `apu_code` field in the movements table:
 
@@ -121,7 +129,7 @@ The correction applies to both Bymode and BFFM2. Engines without 5-point MEEM da
 | 1 | APU running at gate/stand only |
 | 2 | APU running during full taxi |
 
-**MES (Main Engine Start) emissions** are given in [`default_aircraft_start_ef`](./../open_alaqs/database/data/default_aircraft_start_ef.csv) per aircraft group. The unit of the stored values is **grams per aircraft per start event** — that is, the value represents the total emission for all engines on the aircraft for one engine-start event. No per-engine multiplication is applied in the code. MES emissions are calculated for departure movements only. Whether MES emissions are included is controlled by the `gate_emissions_code` field in the movements table:
+**MES (Main Engine Start) emissions** are given in [`default_aircraft_start_ef`](./../open_alaqs/database/data/default_aircraft_start_ef.csv) per aircraft group. The stored values (unit `gram/aircraft` in the CSV) are applied once per engine started: all engines by default, split between the single-engine-taxi engines and the others when a main-engine-start time is set (`TaxiingEmissionCalculator._do_apply_single_engine_taxiing_emissions` for the single-engine-taxi engines, `TaxiingEmissionCalculator._apply_start_engine_emissions` for the others, in `open_alaqs/core/MovementEmissionCalculator.py`). MES emissions are calculated for departure movements only. Whether MES emissions are included is controlled by the `gate_emissions_code` field in the movements table:
 
 | `gate_emissions_code` | Meaning |
 |---|---|
@@ -143,15 +151,15 @@ We note that in the context of EASA having a legal mandate to collect and verify
 
 ### [Aircraft trajectories](#aircraft-trajectories)
 
-In OpenALAQS, the ANP fixed-point profiles (see [`default_aircraft_profiles`](./../open_alaqs/database/data/default_aircraft_profiles.csv)) are used to calculate aircraft emissions. Each profile contains a series of points describing the aircraft trajectory (horizontal and vertical distance, true airspeed, power setting, and LTO mode). These points are converted into an aircraft trajectory for a given runway based on its geographic coordinates. Currently, only straight-line trajectories are supported.
+In OpenALAQS, the ANP fixed-point profiles (see [`default_aircraft_profiles`](./../open_alaqs/database/data/default_aircraft_profiles.csv)) are used to calculate aircraft emissions. Each profile contains a series of points describing the aircraft trajectory (horizontal and vertical distance, true airspeed, power setting, and LTO mode). These points are converted into an aircraft trajectory for a given runway based on its geographic coordinates. Without a track, ANP profiles are straight along the runway axis; with a track assigned to the movement they follow it, and ADS-B (CUSTOM) profiles follow their own path.
 
 Two profile types are supported:
 
-**Standard ANP profiles** (`course = ANP2.x` or similar): coordinates are along-runway distances. The `x_m` and `y_m` columns represent the horizontal distance from the runway threshold along the runway axis and lateral offset respectively.
+**Standard ANP profiles** (`course = ANP2.x` or similar): coordinates are along-runway distances. `x_m` is the distance along the runway axis from the touchdown (arrivals) or brake release (departures), `y_m` the lateral offset. Arrivals touch down at the landing threshold plus the runway Touchdown Offset, else the profile's 50 ft crossing distance, and the rollout ends at the taxi route's exit; departures brake-release where the taxi route last meets the runway (`open_alaqs/core/tools/runway_placement.py`).
 
-**ADS-B / CUSTOM profiles** (`course = CUSTOM`): coordinates are geodesic East/North offsets (in metres) from the runway intersection. These are generated from ADS-B recordings and represent the actual flown trajectory. The `fuel_flow_kgm` column, if populated, contains the estimated total-aircraft ambient fuel flow in kg/s for use by the BFFM2 method. Before BFFM2 uses this value, it divides by the engine count to obtain a per-engine estimate. If the per-engine estimate exceeds the EEDB takeoff fuel flow (indicating an unreliable ADS-B estimate), the calculator automatically falls back to power-setting interpolation and logs a warning.
+**ADS-B / CUSTOM profiles** (`course = CUSTOM`): coordinates are geodesic East/North offsets (in metres) from the runway intersection. These are generated from ADS-B recordings and represent the actual flown trajectory. The `fuel_flow_kgm` column, if populated, contains the estimated total-aircraft ambient fuel flow in kg/s for use by the BFFM2 method. Before BFFM2 uses this value, it divides by the engine count to obtain a per-engine estimate. If the per-engine estimate exceeds 1.5 × the EEDB takeoff fuel flow, the segment uses the EEDB fuel flow of its mode and a warning is logged.
 
-> **Note:** The standard test case files (`training.alaqs`, `training_out.alaqs`) use only standard ANP profiles. ADS-B / CUSTOM profile support is available but requires the user to populate `default_aircraft_profiles` with custom entries before use.
+> **Note:** In the training example, movement 11 flies the CUSTOM profile `1764584438_PHBBA`, imported from `example/training/training_ads_b_data.csv` into `training_out.alaqs` when the inventory is generated; the other movements use standard ANP profiles. CUSTOM profiles come from an ADS-B file given in the **ADS-B Table** field of the inventory dialog, or from rows added to `default_aircraft_profiles`.
 
 <img src="./../open_alaqs/assets/anp_profiles_example.png" alt="Aircraft trajectories" width="70%">
 
@@ -168,18 +176,18 @@ The following figure illustrates this approach. For more information the user is
 
 The Boeing Fuel Flow Method 2 (BFFM2) is an advanced aircraft emission calculation method defined in SAE AIR-5715 and ICAO Doc. 9889. It is available as an alternative to the standard Bymode method in OpenALAQS.
 
-For full technical details including the step-by-step procedure, ambient correction formulas, and validation results for the EHRD test case, see [`BFFM2.md`](documents/BFFM2_validation/BFFM2.md).
+For full technical details including the step-by-step procedure, ambient correction formulas, and validation results for the EHRD test case, see [`BFFM2.md`](./BFFM2_validation/BFFM2.md).
 
 ### Principle
 
 Where Bymode assigns a fixed emission index per LTO mode (TX, AP, CL, TO) based on EEDB reference conditions, BFFM2 uses the actual power setting from each profile segment to derive a fuel-flow-dependent emission index. The method:
 
-1. Converts the power setting to a reference fuel flow using twin-quadratic or piecewise-linear interpolation through the four EEDB breakpoints.
-2. Applies ambient corrections (θ, δ, Mach number, humidity) to obtain the in-flight fuel flow.
+1. Converts the power setting to a reference fuel flow by twin-quadratic interpolation through the four EEDB breakpoints (or takes the mode's EEDB fuel flow with the `mode_anchor` option).
+2. Converts it to the in-flight fuel flow with δ / θ^3.8 / exp(0.2 M²).
 3. Interpolates the emission index on a log-log curve through the four EEDB data points.
 4. Computes the emission mass as `EI × FF × n_engines × time_in_segment / 1000`.
 
-PM, SOx, and P1/P2 are not interpolated on the gas-phase curve. Instead, both Bymode and BFFM2 inject the mode-level EI values directly from the database (including MEEM V1 ambient correction for nvPM where 5-point data are available). BFFM2 therefore produces the same per-mode PM and SOx EI values as Bymode; differences in total PM between the two methods arise solely from differences in fuel burn driven by the different power-setting interpolation.
+PM, SOx, and P1/P2 are not interpolated on the gas-phase curve. Instead, both Bymode and BFFM2 inject the mode-level EI values directly from the database (above 3000 ft above the aerodrome with the MEEM V1 nvPM, see above). BFFM2 therefore produces the same per-mode PM and SOx EI values as Bymode; differences in total PM between the two methods arise solely from differences in fuel burn driven by the different power-setting interpolation.
 
 ### Installation correction factors
 
@@ -197,14 +205,14 @@ These corrections account for installation losses not captured in the engine-onl
 ### Ambient corrections
 
 + **NOx**: `EI_corrected = EI_ref × exp(−19 × (ω − 0.00634)) × (δ^1.02 / θ^3.3)^0.5`
-+ **CO and HC**: `EI_corrected = EI_ref × θ^3.3 / δ`
++ **CO and HC**: `EI_corrected = EI_ref × θ^3.3 / δ^1.02`
 
 where θ = T / 288.15, δ = P / 101 325, and ω is the specific humidity (kg water / kg dry air). Ambient conditions are taken from `tbl_InvMeteo`.
 
 ### Important notes
 
-+ **Do not enable Apply NOx Corrections together with BFFM2.** The BFFM2 formula already includes NOx ambient corrections internally. Enabling that option with BFFM2 active will double-correct the NOx emission index.
-+ For the taxi phase, BFFM2 uses `engine_thrust_level_for_taxiing` (default 7%) for the moving segments. Queuing and stop-and-go idle phases always use true idle (7%) regardless of this setting.
++ **Apply NOx Corrections** has no effect with BFFM2, which applies its own correction. With Bymode it corrects the NOx EI of take-off and climb-out segments only (`NOX_CORRECTION_MODES` in `open_alaqs/core/MovementEmissionCalculator.py`, applied in `calculate_emissions_per_segment`).
++ For the taxi phase, BFFM2 uses `engine_thrust_level_for_taxiing` (default 7%) for the moving segments. Queuing and stop-and-go use the same emission index.
 + For ADS-B / CUSTOM profiles, the `fuel_flow_kgm` column is used as the total-aircraft ambient fuel flow per segment. It is divided by the engine count before BFFM2 dispatch.
 
 ## [AUSTAL](#austal)
@@ -244,7 +252,7 @@ The full calculation pipeline has two distinct stages: **EF computation at study
 
 #### Stage 1 — Fleet-averaged EF computation (study setup)
 
-When the user saves a roadway or parking feature in the study, OpenALAQS calls [`copert5.roadway_emission_factors()`](./../open_alaqs/core/tools/copert5.py) (COPERT 5 path, enabled by default) or [`lib_alaqs_method.roadway_emission_factors_alaqs_method()`](./../open_alaqs/core/tools/lib_alaqs_method.py) (legacy COPERT III path). The result — a fleet-mean EF in g/km per vehicle for each pollutant — is stored directly in the roadway's database row as `co_gm_km`, `nox_gm_km`, `pm10_gm_km`, `hc_gm_km`, `sox_gm_km`, `p1_gm_km`, and `p2_gm_km` in `shapes_roadways`.
+When the user saves a roadway or parking feature in the study, OpenALAQS calls [`copert5.roadway_emission_factors()`](./../open_alaqs/core/tools/copert5.py) (COPERT 5 path). The result, a fleet-mean EF in g/km per vehicle for each pollutant, is stored directly in the roadway's database row as `co_gm_km`, `nox_gm_km`, `pm10_gm_km`, `hc_gm_km`, `sox_gm_km`, `p1_gm_km`, and `p2_gm_km` in `shapes_roadways`.
 
 **COPERT 5 path** (`copert5.py` + `copert5_utils.py`, Tier 3 method from EMEP/EEA Guidebook 2019):
 
@@ -281,8 +289,6 @@ When the user saves a roadway or parking feature in the study, OpenALAQS calls [
    ```
    hc_gm_km = e_avg_VOC [g/km] × travel_distance [km] + VOC_evap [g/vehicle]
    ```
-
-**Legacy ALAQS path** (`lib_alaqs_method.py`, modified COPERT III): follows the same fleet-averaging structure but uses speed-dependent polynomial EFs from the `default_vehicle_nox_ef`, `default_vehicle_co_ef`, and `default_vehicle_hc_ef` tables (eight-parameter formula: `EF = a + b×v + c×v² + d×v^e + f×ln(v) + g×exp(h×v)`). SOx, p1, and p2 are set to zero in this path.
 
 #### Stage 2 — Emission mass calculation (run time)
 
@@ -325,7 +331,7 @@ The resulting `Emission` object (with `co_kg`, `nox_kg`, `pm10_kg`, etc.) is ass
 | `p1_kg` | `ePM0.1[g/km]` | PM0.1 from COPERT 5 |
 | `p2_kg` | `ePM2.5[g/km]` | Same as pm10 |
 
-> **Note on PM mapping:** COPERT 5 provides PM2.5 and PM0.1 emission factors. OpenALAQS maps PM2.5 to both `pm10_kg` and `p2_kg`, and PM0.1 to `p1_kg`. This is a simplification that overestimates PM10 relative to a dedicated coarse-fraction estimate. The legacy ALAQS path does not compute SOx, p1, or p2 (set to zero).
+> **Note on PM mapping:** COPERT 5 provides PM2.5 and PM0.1 emission factors. OpenALAQS maps PM2.5 to both `pm10_kg` and `p2_kg`, and PM0.1 to `p1_kg`. This is a simplification that overestimates PM10 relative to a dedicated coarse-fraction estimate.
 
 > **Note on CO2:** CO2 is not computed by the COPERT module. The `co2_kg` output column remains zero for roadway and parking sources.
 
@@ -391,11 +397,11 @@ z_lower = z_trajectory + s_v
 z_upper = z_lower + d_v
 ```
 
-**`sas`** — the volume is centred on the trajectory point (consistent with a Gaussian exhaust plume centred on the trajectory), with `d_v` controlling the full vertical spread:
+**`sas`**: the volume is centred on the trajectory point and spans `d_v` below and above it; `s_v` is not used (`GeoTransformation._compute_z_envelope`):
 
 ```
-z_lower = z_trajectory − d_v / 2
-z_upper = z_trajectory + d_v / 2
+z_lower = z_trajectory − d_v
+z_upper = z_trajectory + d_v
 ```
 
 > In both cases `z_lower` is clamped to zero (ground level cannot be negative).
@@ -423,7 +429,7 @@ The figure below shows the full SaS volume geometry for a departure and an appro
 
 Key observations:
 - Under the **default** method, approach (AP) segments have a downward-shifted volume (`s_v = −100 m` for JET LARGE), representing the exhaust plume below the glide slope centreline.
-- Under the **sas** method, AP volumes are centred on the trajectory but vertically spread by `d_v = 100 m` and shifted by `s_v = −138 m`.
+- Under the **sas** method, AP volumes are centred on the trajectory and extend `d_v = 100 m` above and below it (`vertical_shift_m_sas` is not used).
 - The z-envelope of the full departure trajectory spans from ground level to well above 900 m under the sas method.
 
 ### Parameter values (training_out.alaqs)

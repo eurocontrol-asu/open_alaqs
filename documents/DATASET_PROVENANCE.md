@@ -31,11 +31,11 @@ Last updated: 2026-06-05.
 ## 2. Source COPERT version
 
 **Documented version**: COPERT 5.4.52. Cited in
-`open_alaqs/core/tools/copert5_utils.py` at line 35 and in
+the module comments of `open_alaqs/core/tools/copert5_utils.py` and in
 `documents/AUXILIARY_MATERIAL.md`.
 
 **Source Guidebook**: EMEP/EEA air pollutant emission inventory guidebook
-2019, Update October 2020. Cited at `copert5_utils.py:3`. This is the
+2019, Update October 2020. Cited in the module docstring of `copert5_utils.py`. This is the
 generation of the Guidebook the bulk methodology in `copert5*.py` was
 implemented against. Specific items verified against the 2023 Update 2025
 chapter as part of the 2026 review are cited inline in `copert5.py`,
@@ -62,9 +62,9 @@ is the right opportunity to re-record them.
 
 ## 3. Embedded SQLite caches
 
-The CSV is the source of truth. Seven `.alaqs` files in the repo embed a
-copy of the table `default_vehicle_ef_copert5` and must remain consistent
-with the CSV:
+The CSV is the source of truth. Twelve tracked `.alaqs` files embed a
+copy of the table `default_vehicle_ef_copert5` (all 46435 rows) and must
+remain consistent with the CSV:
 
 | `.alaqs` file | Purpose |
 | --- | --- |
@@ -75,17 +75,25 @@ with the CSV:
 | `tests/data/ANP/ANP.alaqs` | ANP regression fixture, pre-run. |
 | `tests/data/ANP/ANP_out.alaqs` | ANP regression fixture, post-inventory. |
 | `gse_application/tests/example_db.alaqs` | GSE application test fixture. |
+| `tests/data/AIRPORT_A/AIRPORT_A.alaqs` | AIRPORT_A regression fixture, pre-run. |
+| `tests/data/AIRPORT_A/AIRPORT_A_out.alaqs` | AIRPORT_A regression fixture, post-inventory. |
+| `openalaqs_standalone/validation/data/training_v3.alaqs` | Standalone validation database. |
+| `openalaqs_standalone/validation/data/training_v3_gatemovements.alaqs` | Standalone validation database. |
+| `openalaqs_standalone/validation/data/training_v3_multisource.alaqs` | Standalone validation database. |
 
 Two `.alaqs` files have the table schema present but with zero rows
 (treated as fresh templates filled at runtime): `open_alaqs/core/templates/
 inventory.alaqs` and `scripts/emissions_austal/sample_data/Inventory.alaqs`.
 These are left alone during data refresh.
 
-Parity between CSV and the seven populated caches is checked by
-`tests/test_database.py::test_example_csv` and
-`tests/test_database.py::test_template_data`. After any edit to the CSV,
-re-sync the caches with `tools/data_integrity_fixes/sync_csv_into_alaqs_caches.py`
-or both parity tests will fail.
+Parity with the CSV is checked only for `project.alaqs`
+(`tests/test_database.py::test_template_data`) and for
+`example/**/*_out.alaqs` (`tests/test_database.py::test_example_csv`).
+After any edit to the CSV, re-sync the caches with
+`tools/data_integrity_fixes/sync_csv_into_alaqs_caches.py`, which updates
+the first seven files of the table above
+(its `TARGETS` list); the AIRPORT_A and standalone
+validation files must be updated separately.
 
 ## 4. Data integrity status (as of 2026-06-05)
 
@@ -118,7 +126,8 @@ The expected refresh procedure, when undertaken:
    them in a follow-on.
 4. **Replace `default_vehicle_ef_copert5.csv`** with the new file.
 5. **Run `tools/data_integrity_fixes/sync_csv_into_alaqs_caches.py`** to
-   propagate the new data into the seven embedded `.alaqs` caches.
+   propagate the new data into the embedded `.alaqs` caches (the script
+   covers seven of the twelve; update the other five as well).
 6. **Re-run `tests/test_copert5.py` and `tests/test_database.py`**;
    update expected values in the former where appropriate (numerical
    regressions will need new pinned values with documenting comments).
@@ -135,7 +144,8 @@ The expected refresh procedure, when undertaken:
 Other vehicle / aircraft / GSE emission factor datasets in
 `open_alaqs/database/data/` (`default_aircraft_engine_ei.csv`,
 `default_aircraft_apu_ef.csv`, `default_aircraft_start_ef.csv`,
-`default_helicopter_engine_ei.csv`, `default_gse_emission_factors.csv`,
+`default_helicopter.csv`, `default_helicopter_engines.csv`,
+`default_gate_profiles.csv`,
 `default_stationary_*.csv`) are separately maintained and are not part
 of the COPERT road traffic data. See `DEPRECATIONS.md` for aircraft
 engine EI column-level deprecations.

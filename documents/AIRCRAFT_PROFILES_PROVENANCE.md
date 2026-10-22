@@ -135,13 +135,14 @@ repository. Output md5 for the inputs above: profiles `16160d7c...`, aircraft
 `4e36bcc1...`. Checks that need only the committed CSVs are in
 `tests/test_default_aircraft_profiles_anp22.py`.
 
-The fixture scripts update the seven `.alaqs` files listed in them. They keep
-study-specific rows (CUSTOM ADS-B profiles, HELIPROF rows, extra types) and
-drop the removed ANP 2.1 profiles. The
+The fixture scripts update the `.alaqs` files listed in them: ten for the
+profiles (including the three standalone validation databases
+`openalaqs_standalone/validation/data/training_v3*.alaqs`), seven for
+`default_aircraft`. They keep study-specific rows (CUSTOM ADS-B profiles,
+HELIPROF rows, extra types) and drop the removed ANP 2.1 profiles. The
 ANP and AIRPORT_A fixtures have their own `default_aircraft` (other engines
 and names), so only their profile tables are updated. The standalone
-validation databases (`openalaqs_standalone/validation/data/`) are snapshots
-and are not changed.
+validation databases get the profile table only.
 
 ## 5. Use of ANP data
 
@@ -154,5 +155,7 @@ exists only in later releases appears.
 
 * Modes of fixed-point departures are kept as they were (e.g. `777300-D-1`
   switches to CL at 1,565 ft, before its thrust cutback).
-* Arrival placement in the plugin (touchdown on the taxi-route exit) is a
-  code issue, not a data one.
+* Arrival placement: fixed in the code (13 Oct 2026). ANP arrivals now touch
+  down at the landing threshold plus the runway's Touchdown Offset, else the
+  profile's own 50 ft crossing distance; see the Runways section of the user
+  guide.

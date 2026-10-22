@@ -45,6 +45,8 @@ import pyproj
 from shapely import wkb as _shapely_wkb
 from shapely.geometry import LineString, box
 
+from open_alaqs.core.tools.utm import utm_epsg as _utm_epsg
+
 # ---------------------------------------------------------------------------
 # Shared transformers and constants (match the CAEP14 reference)
 # ---------------------------------------------------------------------------
@@ -417,7 +419,8 @@ def grid_bounds_3857(
     verbatim.
 
     Returns a dict with `x_min`, `y_min`, `x_max`, `y_max` (EPSG:3857)
-    and `utm_epsg` (the derived UTM zone EPSG code).
+    and `utm_epsg` (the UTM zone EPSG code, chosen as the plugin's Grid3D
+    does: `open_alaqs.core.tools.utm.utm_epsg`).
 
     Ported from the reference's `_grid_bounds_3857`. The signature
     takes the six grid-definition fields directly rather than a SQLite
@@ -425,8 +428,7 @@ def grid_bounds_3857(
     the caller (the movements/DB layer) reads `grid_3d_definition` and
     passes the fields in.
     """
-    utm_zone = int((ref_lon + 180) // 6) + 1
-    utm_epsg = utm_zone + (32600 if ref_lat >= 0 else 32700)
+    utm_epsg = _utm_epsg(ref_lat, ref_lon)
     to_utm = pyproj.Transformer.from_crs(4326, utm_epsg, always_xy=True)
     to_3857 = pyproj.Transformer.from_crs(utm_epsg, 3857, always_xy=True)
     ref_x_utm, ref_y_utm = to_utm.transform(ref_lon, ref_lat)

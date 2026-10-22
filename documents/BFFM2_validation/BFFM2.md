@@ -7,7 +7,7 @@
   - [Overview](#overview)
   - [Method description](#method-description)
     - [Step 1 — Fuel flow at reference conditions](#step-1--fuel-flow-at-reference-conditions)
-    - [Step 2 — Convert to ambient fuel flow](#step-2--convert-to-ambient-fuel-flow)
+    - [Step 2 — Convert to BFFM2 reference fuel flow](#step-2--convert-to-bffm2-reference-fuel-flow)
     - [Step 3 — Emission index interpolation on the log–log curve](#step-3--emission-index-interpolation-on-the-loglog-curve)
     - [Step 4 — Ambient corrections](#step-4--ambient-corrections)
     - [Step 5 — PM, SOx and P1/P2 injection](#step-5--pm-sox-and-p1p2-injection)
@@ -17,7 +17,7 @@
     - [Piecewise-linear interpolation (CAEP14 / ICAO)](#piecewise-linear-interpolation-caep14--icao)
   - [Installation corrections](#installation-corrections)
   - [Humidity correction](#humidity-correction)
-  - [MEEM V1 — nvPM ambient correction](#meem-v1--nvpm-ambient-correction)
+  - [MEEM V1: nvPM above 3000 ft](#meem-v1-nvpm-above-3000-ft)
   - [Comparison with the Bymode method](#comparison-with-the-bymode-method)
   - [ADS-B profile specifics](#ads-b-profile-specifics)
   - [Implementation in OpenALAQS](#implementation-in-openalaqs)
@@ -64,7 +64,7 @@ The BFFM2 calculation for a single profile segment proceeds in six steps. Steps 
 
 ##### Step 1 — Fuel flow at reference conditions
 
-The power setting `P` (a dimensionless fraction from 0 to 1, where 1 = maximum takeoff thrust) is converted to a reference fuel flow `Wf_ref` at ICAO SLS conditions (T = 288.15 K, p = 101 325 Pa, M = 0) using one of the two interpolation methods described in [Fuel flow interpolation methods](#fuel-flow-interpolation-methods).
+The power setting `P` (a dimensionless fraction from 0 to 1, where 1 = maximum takeoff thrust) is converted to a reference fuel flow `Wf_ref` at ICAO SLS conditions (T = 288.15 K, p = 101 325 Pa, M = 0) using the twin-quadratic fit described in [Fuel flow interpolation methods](#fuel-flow-interpolation-methods).
 
 The twin-quadratic method applies an idle floor clamp only at very low power settings:
 
@@ -73,7 +73,7 @@ if P < 0.07:
     Wf_ref = max(parabola_value, Wf_TX)
 ```
 
-For P ≥ 0.07 the twin-quadratic value is used directly; the parabola passes through `(0.07, Wf_TX)` by construction, so the unclamped value rarely goes sub-idle in practice. The anchor method has no idle clamp.
+For P ≥ 0.07 the twin-quadratic value is used directly; the parabola passes through `(0.07, Wf_TX)` by construction, so the unclamped value rarely goes sub-idle in practice. The `mode_anchor` fuel-flow source uses the EEDB anchor fuel flow and needs no clamp.
 
 ---
 
@@ -89,9 +89,15 @@ M = TAS / SOS
 Wf_ref_BFFM2 = (Wf_amb / δ) × θ^3.8 × exp(0.2 × M²)
 ```
 
-where `SOS = 331.3 + 0.606 × (T_amb − 273.15) m/s` is the speed of sound at ambient temperature, and M is the true Mach number at the start of the segment.
+where `SOS = √(γ R T_amb)` (γ = 1.4, R = 287.05287 J/(kg K), ICAO Doc 7488; 340.29 m/s at ISA sea level) is the speed of sound at ambient temperature, as the CAEP validation workbook computes it, and M is the true Mach number at the start of the segment. Until October 2026 the code used the linear form `331.3 + 0.606 × (T_amb − 273.15)`, 0.03 % high at ISA and 0.16 % high at 243.6 K and at 307 K (0.002 to 0.07 % over the training meteo, 280.5 to 295 K); the effect on M² is below 0.4 %, on the results below 0.01 %.
 
-`Wf_ref_BFFM2` is the value used for the log–log interpolation in Step 3. CAEP14 prescribes this universal form for all flight phases; the older ICAO Doc 9889 Appendix 2 decomposition (separate `δ/√θ` ambient correction at LTO only, followed by a Mach correction at high altitude) is not used. See the inline comment at `bffm2.py:79-81` for the rationale.
+Until October 2026 the code (plugin, standalone and CAEP14 reference implementation) multiplied this by
+`√(288.15 / T_amb)`, which is not a Mach number away from ISA; it now computes `TAS / SOS` as written here
+(`openalaqs_standalone/validation/tests/test_segment_mach.py`). Mach enters only through `exp(0.2 × M²)`, so the
+change is small: on the training fixture's days (280.5 to 295 K) up to 0.08 % on NOx with `bffm2_anchor` and 0.02 % with
+`bffm2_traj`, nothing at ISA and nothing for `bymode`.
+
+`Wf_ref_BFFM2` is the value used for the log-log interpolation in Step 3. CAEP14 prescribes this universal form for all flight phases; the older ICAO Doc 9889 Appendix 2 decomposition (separate `δ/√θ` ambient correction at LTO only, followed by a Mach correction at high altitude) is not used. See the docstring of `bffm2.calculate_emission_index` ("Formula conventions") and the comment above its `ff_ref` line for the rationale.
 
 ---
 
@@ -106,9 +112,9 @@ log10(EI) = log10(EI_i) + [log10(EI_{i+1}) - log10(EI_i)] ×
              [log10(Wf) - log10(Wf_i)] / [log10(Wf_{i+1}) - log10(Wf_i)]
 ```
 
-**CO / HC special handling.** The CO and HC log–log curves are non-monotonic: EI is high at idle, drops steeply through Approach, and remains approximately flat through Climbout and Takeoff. OpenALAQS applies the CAEP14 v14 "HC_CO Slope To Mean Value" rule: for any fuel flow above the Approach anchor, the EI is snapped to `lin_av`, the linear average of the Climbout and Takeoff anchor EIs. This produces a step discontinuity at the Approach boundary. For engines where the standard shape is not detected (non-monotonic decrease from idle to approach), a simple linear interpolation is used throughout.
+**CO / HC special handling.** The CO and HC log-log curves are non-monotonic: EI is high at idle, drops steeply through Approach, and remains approximately flat through Climbout and Takeoff. OpenALAQS applies the CAEP14 v14 "HC_CO Slope To Mean Value" rule: for any fuel flow above the Approach anchor, the EI is snapped to `lin_av`, the linear average of the Climbout and Takeoff anchor EIs. This produces a step discontinuity at the Approach boundary. For engines where the standard shape is not detected (the intersection of the Idle to Approach line with the `lin_av` line falls outside [Approach, Climbout]), the EI is interpolated log-linearly from the Approach anchor to (Climbout FF, `lin_av`) and held at `lin_av` above Climbout.
 
-**Extrapolation capping.** If `Wf_ref_BFFM2` falls below the idle breakpoint, the idle EI is used. If it exceeds the takeoff breakpoint, the takeoff EI is used. No extrapolation beyond the EEDB range is performed.
+**Extrapolation capping.** If `Wf_ref_BFFM2` falls below the idle breakpoint, the idle EI is used. If it exceeds the takeoff breakpoint, NOx takes the takeoff EI and CO/HC stay at `lin_av` (mean of the Climbout and Takeoff EIs). No extrapolation beyond the EEDB range is performed.
 
 ---
 
@@ -146,14 +152,14 @@ EI_HC_corr  = EI_HC  × (θ^3.3 / δ^1.02)
 BFFM2 does not interpolate PM or SOx on a gas-phase log-log curve. Instead, after the gas-phase interpolation in Steps 3–4, the following quantities are injected directly from the mode-level EI stored in the database:
 
 - **`pm10_g_kg`** = `pm10_ei` (total combustion PM10: nonvol + sulphate + organic)
-- **`pm10_nonvol_g_kg`** = `pm10_nonvol`, subject to MEEM V1 ambient correction (see [MEEM V1](#meem-v1--nvpm-ambient-correction))
-- **`pm10_sul_g_kg`** = `pm10_sul` (~0.04896 g/kg stored value; back-calculates to FSC ≈ 667 ppm with ε = 0.024)
+- **`pm10_nonvol_g_kg`** = `pm10_nonvol` at or below 3000 ft above the aerodrome; above, the MEEM V1 nvPM mass EI (see [MEEM V1](#meem-v1-nvpm-above-3000-ft))
+- **`pm10_sul_g_kg`** = `pm10_sul` (0.04896 g/kg stored value = FSC 0.068 % (FOA3, 680 ppm) × ε 0.024 × 96/32; kept as it is)
 - **`pm10_organic_g_kg`** = `pm10_organic`
-- **`nvpm_number_kg`** = `nvpm_number_ei`, subject to MEEM V1 number correction
-- **`sox_g_kg`** = `sox_ei` (1.0 g/kg for jet fuel)
+- **`nvpm_number_kg`** = `nvpm_number_ei`, above 3000 ft the MEEM V1 number EI (not written to any output column: there is no nvPM number output)
+- **`sox_g_kg`** = `sox_ei` (0.758 g/kg for jet fuel, the fuel selected in the CAEP14 sheet v14 inputs (FSC 0.000383, ε 0.01, its ICAO vPM parameterisation example); 0.2 g/kg for AvGas in the shipped `default_aircraft_engine_ei`; 0 or empty is replaced by the fuel's value, `fuel_sulphur.py`)
 - **`p1_g_kg`**, **`p2_g_kg`** = `p1_ei` = `p2_ei` = `pm10_ei` (PM1.0 / PM2.5 placeholders, currently equal to PM10)
 
-The MEEM V1 correction updates `pm10_nonvol_g_kg` and `nvpm_number_kg` based on the ambient combustor inlet pressure relative to ISA SLS conditions. `pm10_g_kg` retains the stored sum (`pm10_ei`) rather than the MEEM-corrected total, so a small numerical difference between `pm10_kg` and `pm10_nonvol_kg + pm10_sul_kg + pm10_organic_kg` is expected when MEEM V1 changes the nonvol component. For departures this difference is less than 1%; for high-slope engines in the CL–TO range it can be a few percent.
+Above 3000 ft above the aerodrome, `pm10_g_kg`, `p1_g_kg` and `p2_g_kg` move by the same amount as `pm10_nonvol_g_kg` (MEEM V1), so pm10 = nonvol + sul + organic still holds.
 
 ---
 
@@ -181,7 +187,7 @@ The geodesic distance is the ellipsoidal ground distance computed by QGIS `QgsDi
 
 #### Fuel flow interpolation methods
 
-Two methods are available for converting the power setting to reference fuel flow in Step 1. The method is selected via the **FF Interpolation** combo box in the QGIS calculation panel.
+Step 1 always uses the twin-quadratic fit. The **BFFM2 Fuel-Flow Source** option of the calculation panel chooses between `trajectory` (twin-quadratic at the segment power) and `mode_anchor` (the EEDB fuel flow of the segment's mode).
 
 ##### Twin-quadratic fit (ALAQS default)
 
@@ -196,15 +202,9 @@ This is the original ALAQS method and is the backward-compatible default.
 
 ##### Piecewise-linear interpolation (CAEP14 / ICAO)
 
-The four EEDB breakpoints are connected by three straight line segments in P–Wf space:
+Piecewise-linear interpolation is not implemented.
 
-- TX (P = 0.07) → AP (P = 0.30)
-- AP (P = 0.30) → CL (P = 0.85)
-- CL (P = 0.85) → TO (P = 1.00)
-
-This is the interpolation assumed in the ICAO CAEP14 BFFM2 reference calculator and produces results that are generally within 1–2% of the twin-quadratic values for standard EHRD movements.
-
-> **Note.** For P < 0.07 the twin-quadratic method applies `max(parabola_value, Wf_TX)`. For 1.0 < P ≤ 1.05 the power setting is clamped to 1.0 (with a logged warning) and the high-range parabola is evaluated, effectively returning the TO fuel flow. For P > 1.05 a `ValueError` is raised — the method does **not** silently return TO.
+> **Note.** For P < 0.07 the twin-quadratic method applies `max(parabola_value, Wf_TX)`. For 1.0 < P ≤ 1.05 the power setting is clamped to 1.0 (with a logged warning) and the high-range parabola is evaluated, effectively returning the TO fuel flow. For P > 1.05 the fit raises `ValueError`; the calculator catches it, logs one warning per movement and uses the mode-anchor EI for that segment.
 
 ---
 
@@ -223,7 +223,7 @@ OpenALAQS applies the following default correction factors (CAEP14 default; orig
 
 These are applied internally in `bffm2.py` at the start of each call to `calculate_emission_index()` and cannot currently be overridden through the QGIS UI. Custom values can be passed programmatically via the `installation_corrections` dict argument.
 
-The corrections shift the reference fuel flow breakpoints to slightly higher values, which moves the interpolated EI marginally toward lower-fuel-flow (higher-EI for NOx) regions of the curve. The practical effect on total LTO NOx is small, typically 1–3%.
+The corrections shift the reference fuel flow breakpoints to slightly higher values, which moves the interpolated EI marginally toward lower-fuel-flow (lower-EI for NOx, higher-EI for CO/HC) regions of the curve. The practical effect on total LTO NOx is small, typically 1 to 3 %.
 
 ---
 
@@ -239,41 +239,34 @@ exp(−19 × (ω − 0.00634))
 - **ω > 0.00634** (more humid than standard): `exp(h) < 1` → NOx correction is negative
 - **ω = 0.00634** (standard humidity): no correction
 
-The specific humidity ω is computed from the ambient conditions stored in the `tbl_InvMeteo` table of the `.alaqs` database. If the `Humidity` column (specific humidity in kg/kg) is populated directly, it is used as-is. Otherwise ω is computed from `RelativeHumidity` (0–1), `Temperature` (K) and `SeaLevelPressure` (Pa) using the Magnus saturation vapour pressure formula.
+The specific humidity ω is computed from the ambient conditions stored in the `tbl_InvMeteo` table of the `.alaqs` database: always from `RelativeHumidity` (0 to 1), `Temperature` (K) and `SeaLevelPressure` (Pa) with the Magnus saturation vapour pressure formula (`bffm2.calculate_emission_index`, when no humidity ratio is passed, which is always the case outside the tests). `RelativeHumidity` is 0.6 when the column is missing or empty (`AmbientCondition`). The `Humidity` column is not used by BFFM2 (`Engine.getEmissionIndexByFuelFlow` passes temperature, pressure, Mach and relative humidity only).
 
 CO and HC are not corrected for humidity.
 
 ---
 
-#### MEEM V1 — nvPM ambient correction
+#### MEEM V1: nvPM above 3000 ft
 
-The EEDB nvPM mass and number emission indices are measured at SLS conditions (T = 288.15 K, P = 101 325 Pa, Mach = 0). The nvPM EI varies with combustor inlet pressure, which in turn depends on ambient pressure. The **MEEM V1** correction from CAEP14 / ICAO Doc 9889 Appendix C accounts for this by converting the actual thrust to a ground-reference (ISA-equivalent) thrust and re-interpolating the nvPM EI from the 5-point EEDB curve.
+MEEM V1 (`core/tools/meem_v1.py`, called from `Engine.getEmissionIndexByModeWithMEEM()`, `Engine._meem_v1`) is a port of the MEEM_V1 tab of the ICAO CAEP14 FBE Engines Emissions Calculation Sheet v14 (with its Constants and USER INPUTS tabs). It is applied for Bymode and BFFM2 to every flight segment. The LTO / non-LTO cut is on the start point's height above the aerodrome (3000 ft, the ICAO LTO cycle); the non-LTO chain runs at the segment altitude above MSL, the start point's height plus the airport elevation (`MovementEmissionCalculator.calculate_emissions_per_segment`, `airport_elevation_m` of `getEmissionIndexByModeWithMEEM`).
 
-The correction applies to both Bymode and BFFM2 and is computed as follows:
+- **At or below 3000 ft (914.4 m) above the aerodrome: LTO.** The sheet returns the certification nvPM value of the mode (EEDB nvPM at 7, 30, 85 or 100 % thrust, no interpolation, no ambient correction). The mode EI is used unchanged (`Engine._meem_v1`).
+- **More than 3000 ft above the aerodrome: non-LTO.** Phase "CLIMB TO CRUISE" for departures, "DESCENT TO APPROACH" for arrivals (`Engine._meem_v1`), ISA + ΔT at the segment altitude above MSL, Mach from the segment's start-point TAS and the local speed of sound. ΔT (USER INPUTS!B5, "ΔT at 0 ft MSL") is the temperature of the movement's meteo period, the one BFFM2 uses (`AmbientCondition.getTemperature()`), minus the ISA temperature at the airport elevation (288.15 K − 0.0065 K/m × elevation), constant aloft (`meem_v1.delta_t_from_ground`, `MovementEmissionCalculator._meem_delta_t`); without meteo the ISA sea-level 288.15 K is used, so ΔT = 0.0065 K/m × elevation:
+  ```
+  TT = T (1 + 0.2 M²),  PT = P (1 + 0.2 M²)^3.5
+  P3 = PT (1 + Π (OPR - 1)),  T3 = TT (1 + ((P3/PT)^(0.4/1.4) - 1) / η)
+  P3_GR = 101325 (1 + η (T3/288.15 - 1))^3.5
+  F_GR = (P3_GR / 101325 - 1) / (OPR - 1)
+  EI_GR = linear interpolation of the EEDB nvPM points at F_GR (7 % value below 0.07, 100 % value above 1)
+  EI_mass = EI_GR,mass × (P3 / P3_GR)^1.35 × 1.1^2.5,  EI_number = EI_mass × EI_GR,number / EI_GR,mass
+  ```
+  η = 0.88 and Π = 0.85 at 3000 ft rising linearly to 1.15 at the cruise altitude (climb); η = 0.7 and Π = 0.12 (descent). OpenALAQS has no cruise altitude (none of `default_aircraft`, `default_aircraft_engine_ei`, `default_aircraft_profiles` has one; `bada_id` is only an identifier): 38000 ft, the sheet's stored value (USER INPUTS!B20), is used. The fuel-composition factors are 1 (fossil fuel). Π is taken on the segment altitude above MSL, as in the sheet; at an airport below sea level a segment just above the LTO cut lies slightly below 3000 ft MSL and the same line gives Π slightly below 0.85 (0.8499 at the training airport, −5 m).
+- OPR is read from `press_ratio` (the CAEP14 sheet v14 `Engines_Database`, EEDB v31, ACT_PRF for engines not in it; 890 jet engines). Where it is empty (pistons, turboprops and 14 jets: B004, B134, B601 to B603, ECTL_2, 4, 6, 7, 8, 10, 12, 13, EEA-J9) the sheet has no value (its formulas then return an error), so 30 is used, with one warning in the log (`Engine._meem_v1`).
+- The 5th point (`meem_nvpm_m_i_f00_avg` with `nvpm_m_max_mgkg`, `meem_nvpm_n_i_f00_avg` with `nvpm_n_max_nkg`) is used when the thrust is above 0, as in the sheet (77 engines for mass, 75 for number: the 51 marked 5PT in the sheet and ACT_PRF 5-point engines).
+- The non-LTO mass EI replaces `pm10_nonvol_g_kg` (and `nvpm_g_kg`); `pm10_g_kg`, `p1_g_kg` and `p2_g_kg` move by the same amount (`Engine._meem_v1`). The number EI goes to `nvpm_number_kg`, which no output column reads. Fuel flow and the gas-phase EIs are not changed.
 
-1. Compute combustor inlet pressures at ISA and ambient conditions from the OPR (`press_ratio`) stored in `default_aircraft_engine_ei`:
-   ```
-   P3_ISA = P_ISA × OPR × η_c     (η_c = 0.88, compressor isentropic efficiency)
-   P3_amb = P_amb × OPR × η_c
-   ```
-2. Convert actual thrust to ISA-equivalent ground-reference thrust:
-   ```
-   F_GR = F_act × (P3_ISA / P3_amb)
-   ```
-3. Interpolate the corrected nvPM mass EI from the 5-point curve using log-log interpolation; the number EI uses linear interpolation. The 5-point data are stored in `meem_nvpm_m_i_f00_avg`, `nvpm_m_max_mgkg`, `meem_nvpm_n_i_f00_avg`, `nvpm_n_max_nkg`.
+Segments more than 3000 ft above the aerodrome are calculated only when the hour's mixing height (the LTO ceiling, a height above the airport like the segment heights) is above 3000 ft (914.4 m). The port reproduces the sheet's stored example and nine recalculated cases (four with ΔT ≠ 0) to 1e-15 (`tests/test_meem_v1.py`).
 
-At takeoff (F_act = 1.0, F_GR = 1.0) the correction is zero by definition. At other thrust settings the sign and magnitude depend on the local slope of the nvPM curve. For typical turbofan engines at EHRD ambient conditions (P = 97 600 Pa):
-
-| Engine | Mode | Stored EI (mg/kg) | MEEM corrected (mg/kg) | Δ |
-|---|---|---|---|---|
-| PW1133G | CL | 87.9 | 92.5 | +5.3% |
-| PW1133G | AP | 9.78 | 10.59 | +8.2% |
-| CF34-8E5 | CL | 4.70 | 7.47 | +58.9% |
-| CF34-8E5 | AP | 1.10 | 1.16 | +5.4% |
-
-The large CF34-8E5 CL correction (+59%) reflects the steep log-log slope between its CL (4.70 mg/kg) and TO (35.14 mg/kg) breakpoints; a small shift in thrust position produces a disproportionate EI change.
-
-Engines for which 5-point MEEM data are absent from the database fall back silently to the stored EEDB nvPM EI. The LEAP-1A26 (CFM LEAP-1A series) is currently in this category.
+MEEM V2 (CAEP14 v12+) is implemented in `meem_v2.py` but not used; its adoption is to be decided. `MovementSourceModule` runs MEEM V1 for any `meem_version` value and logs a warning when another one is requested.
 
 ---
 
@@ -285,27 +278,27 @@ The two methods produce systematically different results because they handle the
 
 The EEDB NOx curve is steep: EI rises from ~5 g/kg at idle to ~25 g/kg at takeoff. Bymode assigns the nominal mode EI (e.g. the AP value, ~9–14 g/kg) to all approach segments regardless of the actual thrust in the profile. BFFM2 sees the actual profile power, which for approach segments is typically far below the nominal 30% AP thrust, mapping to the idle region of the NOx curve (~5 g/kg). The cumulative result is that BFFM2 NOx is substantially lower for arrival movements and moderately lower for departures.
 
-For the EHRD test case:
+For the EHRD training example (`example/training/training_out.alaqs`, 13 movements, BFFM2 trajectory (`bffm2_traj`) against `bymode`, per movement, with the study meteo; plugin outputs of this version):
 
-| Movement type | Typical NOx: BFFM2 vs Bymode | Primary driver |
+| Movement type | NOx: BFFM2 vs Bymode | Primary driver |
 |---------------|------------------------------|----------------|
-| Arrivals | −5% to −53% | Profile approach power near idle → low NOx EI in BFFM2 |
-| Departures | −21% to −36% | Intermediate climb power below CL nominal |
+| Arrivals (7) | −2.3 % to −49.9 % (all arrivals together −28.8 %) | Profile approach power near idle → low NOx EI in BFFM2 |
+| Departures (6) | −32.5 % to −60.8 % (together −44.7 %) | Intermediate climb power below CL nominal |
 
 **CO: BFFM2 is higher for arrivals, similar for departures**
 
 The EEDB CO curve is U-shaped: high at idle (~20–24 g/kg), dropping to a minimum (`lin_av` ~0.2–0.6 g/kg) near Climbout/Takeoff power. Near-idle approach segments get CO EI ≈ idle level in BFFM2, whereas bymode uses the lower AP value (~2–4 g/kg). For departures, both methods give similar CO because most departure segments are at or near TO/CL power where CO EI is at the `lin_av` floor. HC follows the same qualitative pattern.
 
-| Movement type | Typical CO: BFFM2 vs Bymode |
+| Movement type | CO: BFFM2 vs Bymode (same study) |
 |---------------|------------------------------|
-| Arrivals | +18% to +30% |
-| Departures | ±2% |
+| Arrivals | +1.2 % to +18.4 % (together +8.0 %) |
+| Departures | −2.9 % to +1.1 % (together −1.1 %) |
 
-**PM: BFFM2 is lower than Bymode for all movements**
+**Fuel, SOx and PM: BFFM2 is lower for nearly all movements**
 
-PM and SOx are fuel-proportional (EI is injected from the mode database, not interpolated). BFFM2 computes a different total fuel burn than Bymode because it uses the actual power schedule rather than fixed mode fractions, typically resulting in 12–25% less LTO fuel for EHRD movements. PM and SOx totals scale accordingly.
+SOx and the PM components are fuel-proportional (their EI comes from the mode database, not interpolated); arrival PM10 also carries the brake wear, which does not depend on the method. BFFM2 computes a different total fuel burn than Bymode because it uses the actual power schedule rather than fixed mode fractions. On the same study the fuel (CO2) is 0.3 % to 25.5 % lower on the arrivals and 3.6 % to 35.2 % lower on the departures; PM10 is 3.6 % to 35.2 % lower on the departures and between 5.3 % lower and 0.2 % higher on the arrivals (movement 3, an E190 arrival, +0.2 %).
 
-**Interpretation guideline.** A BFFM2–bymode NOx difference of 20–55% is normal and expected for LTO. A difference outside this range should be investigated. For CO, +15–35% on arrivals and ±2% on departures is normal.
+**Interpretation guideline.** The ranges above are those of one small study (one airport, two aircraft types, 13 movements, one of them on an ADS-B profile: movement 11, the −60.8 % NOx departure); they depend on the profiles, the engines and the meteo, and are no acceptance band. A large NOx difference on its own is expected (BFFM2 follows the profile power); investigate when the sign is unexpected (BFFM2 NOx above Bymode on an LTO movement, or arrival CO below it), or when one movement differs strongly from others of the same type and profile.
 
 ---
 
@@ -318,13 +311,13 @@ OpenALAQS supports profiles derived from ADS-B recordings in addition to standar
 **fuel_flow_kgm column.** ADS-B profiles may have the `fuel_flow_kgm` column populated with the estimated total-aircraft fuel flow in kg/s (sum over all engines), as recorded or derived from the ADS-B data. When this value is non-zero, OpenALAQS uses it in the BFFM2 calculation as follows:
 
 1. The value is divided by the aircraft engine count to obtain the per-engine ambient fuel flow.
-2. The per-engine value is compared to the EEDB Takeoff fuel flow (`Wf_TO`).
-3. If the per-engine value is at or below `Wf_TO` (i.e. physically plausible), it is passed directly to the BFFM2 interpolation, bypassing the power-setting → twin-quad step.
-4. If the per-engine value exceeds `Wf_TO` (indicating an unreliable ADS-B fuel flow estimate), the plugin falls back to the standard twin-quad / power-setting path and logs a `WARNING`.
+2. The per-engine value is compared to 1.5 × the EEDB Takeoff fuel flow (`MovementEmissionCalculator.ADSB_FF_CEILING_FACTOR`).
+3. At or below it, the value is passed directly to the BFFM2 interpolation, bypassing the power-setting → twin-quad step.
+4. Above it, the segment uses the EEDB fuel flow of its mode (mode anchor), and one warning per movement reports the number of segments (`MovementEmissionCalculator.calculate_emissions`).
 
 Standard ICAO profiles have `fuel_flow_kgm = 0`, so this logic is inert for those profiles.
 
-> **Important.** The ADS-B fuel flow estimate is derived from aircraft performance models applied to ADS-B position/speed data, not from direct fuel measurement. Its accuracy varies with aircraft type. Always check the QGIS log for `WARNING: ADS-B ff/engine exceeds EEDB TO ceiling` messages, which indicate that the estimate is being ignored and twin-quad is used instead.
+> **Important.** The ADS-B fuel flow estimate is derived from aircraft performance models applied to ADS-B position/speed data, not from direct fuel measurement. Its accuracy varies with aircraft type. Always check the QGIS log for `ADS-B ff/engine exceeded the plausibility ceiling` messages, which indicate that the estimate was replaced by the mode-anchor fuel flow on the segments counted.
 
 ---
 
@@ -338,12 +331,12 @@ The BFFM2 implementation is spread across the following files:
 |------|------|
 | `core/tools/bffm2.py` | Core formula: ambient corrections, log–log interpolation, CO/HC slope-to-mean-value logic, installation corrections |
 | `core/tools/twin_quadratic_fit_method.py` | Power setting → reference fuel flow via twin-quadratic polynomial (Step 1, ALAQS default) |
-| `core/tools/meem_v1.py` | MEEM V1 nvPM ambient correction: ISA/ambient P3 computation, F_GR conversion, 5-point interpolation |
+| `core/tools/meem_v1.py` | MEEM V1 nvPM EI, port of the CAEP14 v14 MEEM_V1 tab: mode value at or below 3000 ft; above, ISA + ΔT, P3/T3, ground-reference thrust, linear interpolation and the (P3/P3_GR)^1.35 φ^2.5 correction |
 | `core/interfaces/Engine.py` (`EngineEmissionIndex` class) | Orchestrates Steps 1–5: twin-quad call, ambient correction, cache, call to `bffm2.py`; `getEmissionIndexByModeWithMEEM()` applies MEEM V1 |
 | `core/MovementEmissionCalculator.py` (`FlightEmissionCalculator` class) | Segment loop: reads profile points, computes Mach, calls `_get_emission_index_bffm2`, computes `t_seg`, calls `Emission.add()` |
 | `core/MovementEmissionCalculator.py` (`TaxiingEmissionCalculator` class) | Taxi loop: calls `getEmissionIndexByEngineState()` for gas-phase NOx/CO/HC, then injects PM/SOx/P1/P2 from mode EI |
-| `core/modules/MovementSourceModule.py` | Creates `FlightEmissionCalculator` instances, passes `calc_method` dict |
-| `core/EmissionCalculatorService.py` | Builds the `calc_method` dict, sets `method['name'] = 'BFFM2'` and ambient conditions |
+| `core/modules/MovementSourceModule.py` | `process()` builds the `calc_method` dict and creates the calculators |
+| `core/EmissionCalculatorService.py` | Passes `method`, `meem_version`, `bffm2_ff_source` to the source modules |
 
 ##### Calculation flow
 
@@ -351,20 +344,22 @@ The BFFM2 implementation is spread across the following files:
 User clicks "Calculate" (BFFM2 selected)
     │
     ▼
-EmissionCalculatorService.run()
+EmissionCalculatorService.calculate_emissions()
+    passes method = 'BFFM2', meem_version, bffm2_ff_source to the source modules
+    │
+    ▼
+MovementSourceModule.process()
     builds calc_method = {
         'name': 'BFFM2',
         'config': {
             'ambient_conditions': AmbientCondition(...),
             'apply_nox_corrections': False,
-            'ff_method': 'twin_quadratic'  # or 'linear'
+            'bffm2_ff_source': 'trajectory',  # or 'mode_anchor'
+            ...
         }
     }
-    │
-    ▼
-MovementSourceModule.calculate_emissions()
-    ├── TaxiingEmissionCalculator  (BFFM2 gas-phase FF; PM/SOx/P1/P2 from mode EI + MEEM V1)
-    ├── GateEmissionCalculator     (bymode; APU and GSE)
+    ├── TaxiingEmissionCalculator  (BFFM2 gas-phase FF; PM/SOx/P1/P2 from mode EI; APU added on taxi segments)
+    ├── GateEmissionCalculator     (GSE and GPU)
     └── FlightEmissionCalculator
             │
             ▼
@@ -378,14 +373,14 @@ MovementSourceModule.calculate_emissions()
                 │
                 ├── if BFFM2 and fuel_flow > 0:
                 │       ff_per_engine = fuel_flow / n_engines
-                │       if ff_per_engine ≤ Wf_TO:
+                │       if ff_per_engine ≤ 1.5 × Wf_TO:
                 │           use ff_per_engine directly  →  getEmissionIndexByFuelFlow()
                 │       else:
-                │           WARNING; fuel_flow = None  →  twin-quad path
+                │           use mode-anchor FF (summary warning per movement)
                 │
                 ├── getEmissionIndexByEngineState(engine_thrust, fuel_flow)
-                │       ├── Wf_ref  = twin_quad(engine_thrust, EEDB)   # or linear
-                │       ├── Wf_amb  = Wf_ref × δ / √θ
+                │       ├── Wf_ref  = twin_quad(engine_thrust, EEDB)
+                │       ├── Wf_amb  = Wf_ref × δ / θ^3.8 / exp(0.2 M²)
                 │       └── getEmissionIndexByFuelFlow(Wf_amb)
                 │               └── calculate_emission_index(pollutant, Wf_amb, EEDB, ambient)
                 │                       ├── install corrections → shift EEDB breakpoints
@@ -394,13 +389,14 @@ MovementSourceModule.calculate_emissions()
                 │                       └── ambient correction  →  EI_corr (NOx/CO/HC)
                 │
                 ├── _get_emission_index_bffm2(mode, emission_index_bffm2)
-                │       ├── mode_ei = getEmissionIndexByModeWithMEEM(mode, P_amb, Mach)
-                │       │       └── MEEM V1: F_GR = F_act × P3_ISA/P3_amb
-                │       │               log-log interpolation → nvPM_mass_corr
-                │       │               linear interpolation  → nvPM_num_corr
+                │       ├── mode_ei = getEmissionIndexByModeWithMEEM(mode, ..., altitude MSL, TAS)
+                │       │       └── MEEM V1: mode EI at or below 3000 ft; above,
+                │       │               CAEP14 v14 MEEM_V1 → pm10_nonvol (= nvpm_g_kg),
+                │       │               pm10/p1/p2 moved by the same amount, nvpm_number_kg
                 │       └── inject into copy of BFFM2 result:
-                │               pm10, pm10_nonvol (MEEM), pm10_sul, pm10_organic,
-                │               nvpm_number (MEEM), sox, p1, p2
+                │               pm10, pm10_nonvol, pm10_sul, pm10_organic,
+                │               nvpm_g_kg, nvpm_number_kg (not read by Emission.add),
+                │               sox, p1, p2
                 │
                 ├── d      = ellipsoidal_2d_distance(start_point, end_point)
                 ├── t_seg  = 2 × d / (TAS_start + TAS_end)
@@ -417,15 +413,16 @@ MovementSourceModule.calculate_emissions()
 | `default_aircraft_engine_ei` | `fuel_kg_sec` | EEDB reference fuel flow (kg/s per engine, SLS) |
 | `default_aircraft_engine_ei` | `nox_ei`, `co_ei`, `hc_ei` | EEDB emission indices (g/kg) |
 | `default_aircraft_engine_ei` | `pm10_nonvol` | nvPM mass EI (g/kg) |
-| `default_aircraft_engine_ei` | `pm10_sul` | Sulphate vPM EI (g/kg); ~0.04896 g/kg stored constant (FSC ≈ 667 ppm, ε = 0.024) |
+| `default_aircraft_engine_ei` | `pm10_sul` | Sulphate vPM EI (g/kg); 0.04896 g/kg stored constant (FSC 680 ppm, ε = 0.024, SO4/S = 96/32) |
 | `default_aircraft_engine_ei` | `pm10_organic` | Organic vPM EI (g/kg) |
 | `default_aircraft_engine_ei` | `pm10_ei` | Total PM10 EI = nonvol + sul + organic (g/kg) |
 | `default_aircraft_engine_ei` | `p1_ei`, `p2_ei` | PM1.0 / PM2.5 placeholders; currently = `pm10_ei` |
-| `default_aircraft_engine_ei` | `press_ratio` | OPR for MEEM V1 |
-| `default_aircraft_engine_ei` | `meem_nvpm_m_i_f00_avg` | MEEM V1: nvPM mass EI at F00 (mg/kg) |
-| `default_aircraft_engine_ei` | `nvpm_m_max_mgkg` | MEEM V1: max nvPM mass EI (mg/kg) |
-| `default_aircraft_engine_ei` | `meem_nvpm_n_i_f00_avg` | MEEM V1: nvPM number EI at F00 (#/kg) |
-| `default_aircraft_engine_ei` | `nvpm_n_max_nkg` | MEEM V1: max nvPM number EI (#/kg) |
+| `default_aircraft_engine_ei` | `nvpm_number_ei` | nvPM number EI (#/kg) |
+| `default_aircraft_engine_ei` | `press_ratio` | OPR for MEEM V1 above 3000 ft above the aerodrome (CAEP14 sheet v14 / EEDB v31, ACT_PRF fallback; 890 jet engines; 30 when empty) |
+| `default_aircraft_engine_ei` | `meem_nvpm_m_i_f00_avg` | thrust of the 5th nvPM mass point (MEEM V1, used when above 0; 77 engines) |
+| `default_aircraft_engine_ei` | `nvpm_m_max_mgkg` | nvPM mass EI of the 5th point (mg/kg) |
+| `default_aircraft_engine_ei` | `meem_nvpm_n_i_f00_avg` | thrust of the 5th nvPM number point (MEEM V1, used when above 0; 75 engines) |
+| `default_aircraft_engine_ei` | `nvpm_n_max_nkg` | nvPM number EI of the 5th point (#/kg) |
 | `default_aircraft_profiles` | `power` | Thrust ratio (0–1) at each profile point |
 | `default_aircraft_profiles` | `tas_metres` | True Airspeed (m/s) at each profile point |
 | `default_aircraft_profiles` | `z_m` | Altitude above runway (m) at each profile point |
@@ -434,7 +431,7 @@ MovementSourceModule.calculate_emissions()
 | `tbl_InvMeteo` | `Temperature` | Ambient temperature (K) |
 | `tbl_InvMeteo` | `SeaLevelPressure` | Ambient pressure (Pa) |
 | `tbl_InvMeteo` | `RelativeHumidity` | Relative humidity (0–1) |
-| `tbl_InvMeteo` | `Humidity` | Specific humidity (kg/kg); used directly if populated |
+| `tbl_InvMeteo` | `Humidity` | Specific humidity (kg/kg); not used (ω comes from `RelativeHumidity`, `Temperature` and `SeaLevelPressure`) |
 | `tbl_InvMeteo` | `MixingHeight` | LTO ceiling (m); default 914.4 m (3 000 ft) |
 
 ##### LTO ceiling and segment clipping
@@ -449,20 +446,20 @@ Only profile segments within the LTO ceiling (default 914.4 m above the runway, 
 
 - **Installation corrections are not user-configurable via the UI.** The SAE AIR-5715 defaults are always applied. Custom values require a Python call with an explicit `installation_corrections` dict.
 
-- **PM total vs sub-component sum.** The `pm10_g_kg` value in the emission index is taken from the stored `pm10_ei` (= nonvol_stored + sul + organic). When MEEM V1 changes the nonvol component, the corrected `pm10_nonvol_g_kg` will differ slightly from `pm10_nonvol` in the stored EI, producing a small discrepancy between `pm10_kg` and `pm10_nonvol_kg + pm10_sul_kg + pm10_organic_kg` in the output. This difference is less than 1% for most engines and modes.
+- **MEEM V1 inputs not in the data.** Engines without `press_ratio` (pistons, turboprops, 14 jets) use OPR 30 above 3000 ft, and the climb pressure coefficient uses a 38000 ft cruise altitude for every aircraft. The nvPM number EI is computed but there is no nvPM number output column.
 
-- **MEEM V1 data coverage.** MEEM V1 ambient correction is applied only where 5-point nvPM data are available in the database. Engines without this data (e.g. LEAP-1A26 at the time of writing) use the stored EEDB nvPM EI without ambient correction.
-
-- **ADS-B fuel flow accuracy.** The fuel flow stored in `fuel_flow_kgm` for ADS-B profiles is an estimate derived from aircraft performance models, not a direct measurement. For some engine types the estimate can be significantly higher than the EEDB TO value, in which case the plugin automatically falls back to the power-setting path. Users should verify the QGIS log for `WARNING` messages after any BFFM2 run involving ADS-B profiles.
+- **ADS-B fuel flow accuracy.** The fuel flow stored in `fuel_flow_kgm` for ADS-B profiles is an estimate derived from aircraft performance models, not a direct measurement. For some engine types the estimate can be significantly higher than the EEDB TO value; above 1.5 × that value the plugin uses the mode-anchor fuel flow for the segment. Users should verify the QGIS log for warning messages after any BFFM2 run involving ADS-B profiles.
 
 - **Straight-line ANP trajectories.** Standard ANP profiles
-  (`course = ANP2.x`) model departure and arrival tracks as straight
-  lines along the runway centerline; curved procedures (e.g. SID
-  turns) are approximated as straight lines in this case. ADS-B
+  (`course = ANP2.2`) without a track are placed along the runway
+  centreline (arrivals touch down at the landing threshold plus the
+  runway Touchdown Offset, else the profile's 50 ft crossing
+  distance; departures brake-release at the line-up point); with a
+  track assigned to the movement they follow the track. ADS-B
   derived profiles (`course = CUSTOM`) are not subject to this
   limitation: their `x_m` and `y_m` columns carry East/North
   geodesic offsets from the runway intersection and can describe
   arbitrary curved trajectories, including SID/STAR turns recorded
   in the source ADS-B data.
 
-- **Single meteo record per study.** All movements in a study share the same ambient conditions from `tbl_InvMeteo`. Variation in conditions across the study period is not modelled.
+- **Meteo per period.** Each time period uses the `tbl_InvMeteo` record nearest in time (`EmissionCalculation.getAmbientCondition`); conditions are constant within a period.

@@ -1,9 +1,16 @@
 import re
 
+from qgis.core import QgsApplication
 from qgis.PyQt import QtWidgets
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.openalaqsuitoolkit import validate_field
+from open_alaqs.enums import AlaqsLayerType
+from open_alaqs.openalaqsuitoolkit import (
+    color_ui_background,
+    is_empty_text,
+    update_ok_button,
+    validate_field,
+)
 
 logger = get_logger(__name__)
 
@@ -42,8 +49,8 @@ def form_open(form, layer, feature):
             QtWidgets.QComboBox, "second_runway_letter"
         ),
         name_field=form.findChild(QtWidgets.QLineEdit, "runway_id"),
-        capacity_field=form.findChild(QtWidgets.QLineEdit, "capacity"),
         offset_field=form.findChild(QtWidgets.QLineEdit, "touchdown"),
+        offset_2_field=form.findChild(QtWidgets.QLineEdit, "touchdown_2"),
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
     )
@@ -80,6 +87,17 @@ def form_open(form, layer, feature):
         logger.debug(f"first_runway_number set to {runway_1_number}")
         logger.debug(f"first_runway_letter set to {runway_1_letter}")
 
+        # Show the stored second runway end too (the second combo boxes are
+        # only updated when the first ones change, so they showed 01)
+        regex_search_2 = re.search(r"^(\d{2})([LCR]?)$", runway_2)
+        if regex_search_2 is not None:
+            fields["second_runway_number"].setCurrentIndex(
+                fields["second_runway_number"].findText(regex_search_2.group(1))
+            )
+            fields["second_runway_letter"].setCurrentIndex(
+                fields["second_runway_letter"].findText(regex_search_2.group(2))
+            )
+
     except ValueError:
         # Not enough values to unpack
         pass
@@ -102,12 +120,23 @@ def form_open(form, layer, feature):
         if isinstance(value, QtWidgets.QLineEdit):
             fields[key].textChanged.connect(lambda: validate(fields))
 
-    # Block the ok button (will be overwritten after validation)
-    fields["button_box"].button(fields["button_box"].StandardButton.Ok).blockSignals(
-        True
-    )
+    # OK is enabled only while the form is valid: validate now, then on
+    # every change
+    validate(fields)
 
-    # Connect the instudy checkbox on save
+    # A new runway has no name yet. Build it from the default selection
+    # (01/19), after the validation is connected, so that the name is set
+    # and validated without touching the combo boxes (runway_id stayed
+    # empty before).
+    # QGIS shows a NULL runway_id as the NULL representation text ("NULL").
+    current_name = fields["name_field"].text().strip()
+    if (
+        current_name in ("", QgsApplication.nullRepresentation())
+        and fields["first_runway_number"].currentText()
+    ):
+        first_runway_number_changed(fields)
+
+    # Write the QComboBox values on save
     def on_save():
         form.changeAttribute(
             "first_runway_number", fields["first_runway_number"].currentText()
@@ -121,7 +150,6 @@ def form_open(form, layer, feature):
         form.changeAttribute(
             "second_runway_letter", fields["second_runway_letter"].currentText()
         )
-        feature["instudy"] = str(int(fields["instudy"].isChecked()))
 
     fields["button_box"].accepted.connect(on_save)
 
@@ -229,14 +257,26 @@ def validate(fields: dict):
     # Get the button box
     button_box = fields["button_box"]
 
-    # Validate all fields
-    results = [
-        validate_field(fields["name_field"], "str"),
-        validate_field(fields["capacity_field"], "float"),
-        validate_field(fields["offset_field"], "float"),
-    ]
+    # Validate all fields. The Touchdown Offsets may be empty (empty = the profile's own distance, for
+    # each runway end independently); when filled they must be whole metres, as the touchdown and
+    # touchdown_2 columns are INT, and not negative (0, like empty, is the profile's own distance; the
+    # runway placement ignores a value <= 0). A NULL offset (touchdown_2 added to a 5.3.6 study) is
+    # shown as the NULL representation ("NULL") and counts as empty.
+    results = [(fields["name_field"], validate_field(fields["name_field"], "str"))]
+    for key in ("offset_field", "offset_2_field"):
+        field = fields.get(key)
+        if field is not None and not is_empty_text(field.text()):
+            value = validate_field(field, "int")
+            if not isinstance(value, bool) and value < 0:
+                color_ui_background(field, "red")
+                field.setToolTip(
+                    "The Touchdown Offset cannot be negative "
+                    "(0 or empty = the profile's own distance)"
+                )
+                value = False
+            results.append((field, value))
+        elif field is not None:
+            color_ui_background(field, None)
 
-    # Block signals if any of the fields is invalid
-    button_box.button(button_box.StandardButton.Ok).blockSignals(
-        "False" in str(results)
-    )
+    # OK enabled only when every field is valid
+    update_ok_button(button_box, results, AlaqsLayerType.RUNWAY)

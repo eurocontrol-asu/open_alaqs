@@ -4,7 +4,762 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
-## [Unreleased]
+## [5.4.0] - 2026-10-21
+
+Upgrading a 5.3.x study: see
+[Upgrading from 5.3.x](documents/USER_GUIDE.md#upgrading-from-53x) in the
+User Guide: which results change for which studies, and how to bring a
+study's own engine, aircraft and profile tables up to date (a project
+`.alaqs` keeps its own copies, which are copied into every new inventory).
+
+Runway placement of flight profiles. **Results change** for every study with
+ANP arrivals or block and runway times on arrivals: emissions move along the
+runway, arrival rollouts that ran past their exit are shorter, and arrival
+taxi times lose the landing roll. Plugin and standalone share the rules
+(`open_alaqs/core/tools/runway_placement.py`).
+
+### Changed
+
+- `default_aircraft_engine_ei`: the 32 FOCA engines (P001 to P004, P011,
+  P111, P121, P131, PF01 to PF14, B601 to B603, B004, B134, T601 to T603,
+  T717, T790) come from ACT_PRF 2.6.3 (CAEP14 FOCA, 2026-10-09), `source`
+  "ACT_PRF 2.6.3 (CAEP14 FOCA 2026-10-09)": fuel, gases, `pm10_ei` and
+  `pm10_nonvol` unchanged; `nvpm_number_ei` within 0.42 % (3 significant
+  digits in the file); B004 and B134 get the file's sulphate (0.04896 g/kg)
+  and organic vPM, which were 0 (`pm10_sul_kg` and `pm10_organic_kg` output
+  columns); for B601, B602 and B603 the file's parts do not sum to its
+  PMtotal (0.84 to 1.60 times, by mode), and they take the parts with
+  `pm10_ei` (and `p1_ei`, `p2_ei`) = nvPM + volatile + sulphate (B601
+  approach 0.24 to 0.385 g/kg, taxi 0.23 to 0.294; B602 taxi 0.35 to
+  0.295). For the other FOCA engines `pm10_ei` is the FOCA total (the file
+  has no parts for the pistons and turboprops). No bundled movement uses them,
+  so no pinned output changes. In the CSV and the bundled `.alaqs` files
+  (the old test fixtures `tests/data/generic/generic_out.alaqs` and
+  `gse_application/tests/example_db.alaqs` have no FOCA rows).
+  **Results change** for movements with B601, B602 or B603 (PM10; the
+  default engine of 49 aircraft types, among them C25B, C56X and E55P)
+  and with B004 or B134 (`pm10_sul_kg`, `pm10_organic_kg`), in a study
+  whose engine table is refreshed (an existing study keeps its own copy).
+- `default_aircraft_engine_ei`: the FOCA turboprops T601, T602, T603, T717
+  and T790 had `fuel_type` AvGas; they are now Jet Fuel, so `sox_ei`
+  0.75834 g/kg instead of 0.2 (no turboprop of the table is AvGas any
+  more). In the CSV and the bundled `.alaqs` files (not in
+  `generic_out.alaqs` and `example_db.alaqs`, which have no FOCA rows); no
+  bundled movement uses them. **Results change** (SOx) for movements with
+  these engines (the default engine of 30 aircraft types), in a study
+  whose engine table is refreshed.
+- Training example ADS-B tracks (`example/training/training_ads_b_data.csv`
+  and its copy in `validation/data/source_csvs`, the CUSTOM profiles of
+  `training_out.alaqs` and `training_v3*.alaqs`): `fuel_flow` was 0.083 to
+  0.119 kg/s for PHBBA at power 0.40 to 0.92, below the A20N's idle; it is
+  now 2 × the ICAO fuel flow of 01P20CM128 interpolated at the row's
+  `power_setting` (0.65 to 1.57 kg/s; PHRTM, unused, the same curve with
+  its power raised to idle, 0.18 to 0.21 kg/s). **Example results change**
+  for `bffm2_traj` only, movement 11: NOx 0.244 to 1.504 kg (13 movements
+  17.461 to 18.721 kg), `training_v3` 15.2745 to 16.8743 kg; pinned
+  `bffm2_traj` CSV and both validation workbooks regenerated.
+- ANP arrivals touch down at the landing threshold plus the runway's
+  Touchdown Offset for that end, else the profile's own distance from its
+  50 ft (15.24 m) threshold crossing (Doc 29 approach profiles have x = 0 at
+  the touchdown). They were placed with the touchdown on the taxi route's
+  runway exit, which put approaches 60 to 90 m too high at a 2.2 km runway
+  and rollouts past the runway end.
+- The arrival rollout ends at the taxi route's exit when the exit comes
+  first: the first crossing past the touchdown at or below 50 kt (ICAO Doc
+  9157 Part 2, rapid-exit reference speed), else the first past the
+  touchdown. An exit past the rollout end leaves a runway stretch that is
+  taxied (all engines; 2 L / (v_end + v_x), v_x = min(v_end, 18 kt)); it
+  shares the movement's taxi time with the route, queuing shrinks first.
+- Arrival runway time is the touchdown (A-CDM ALDT): the profile's landing
+  roll is taken out of block time minus runway time. Departure runway time
+  is the start of the take-off roll (unchanged).
+- ANP departures brake-release where the taxi route last meets the runway
+  (line-up point), not at the centroid of the route/runway overlap; a route
+  that backtracks along the runway lines up where it leaves it.
+- Taxi routes are read in the direction of travel whatever the listing order
+  of their taxiways (turned by the stand).
+- ADS-B (CUSTOM) profiles and tracks are placed as before.
+- The plugin's runway trajectory cache moves to
+  `cache_runway_trajectories_v5`; older cache tables are no longer read.
+- MEEM V2 (CAEP14 v12+) is implemented in `meem_v2.py` but not used; its
+  adoption is to be decided. The emission calculation runs MEEM V1 for any
+  `meem_version` value and logs a warning when another one is requested
+  (`MovementSourceModule`).
+- UI field names harmonised: one name per field in the forms, the attribute
+  table and the documentation, Title Case with units as "Name [unit]" (for
+  example **Touchdown Offset, Runway 1 [m]**, **Vehicles per Year** for
+  parkings and roadways, **Runway Direction** and **Operation Type** for
+  tracks, **Hourly Profile**, **Heat Flux [MW]**). The names are set as
+  attribute-table aliases from the new per-layer `fields` map in
+  `alaqs_config.py`, applied each time a study opens
+  (`openalaqsuitoolkit.apply_layer_field_config`); database column names
+  are unchanged. New features get defaults (heights and touchdown offsets
+  0, profiles `default`, gate type PIER, in study 1); the attribute table
+  hides the OID column and lists **In Study** last, as a check box ("1" /
+  "0") on parkings, roadways, point sources and area sources, and hidden on
+  the layers that do not use it (runways, taxiways, gates, tracks,
+  buildings). OID and **Heat Flux [MW]** are read-only; the taxiway `time`
+  column, which no calculation reads, is hidden and not in the form; the
+  emission factors filled in by Recalculate and **Method** are no longer
+  editable in the forms. **Activity Unit** (point sources) is
+  filled in from the selected Type and can be overridden per source; an
+  existing source keeps its stored unit. Validation messages
+  of the parking and roadway forms use the field names. Typos fixed
+  ("Buiding", "Mw", the building name tooltip).
+
+### Added
+
+- `default_aircraft_engine_ei`: 28 ACT_PRF engines that were missing and
+  have no twin in the table (08P28CM141 to 08P28CM156, 08P28RR154 to
+  08P28RR163, EEA-J9, EEA-J10; 112 rows, composed as the other ACT_PRF
+  rows, OPR and 5th nvPM point from ACT_PRF), so 1065 engines; with them
+  890 jet engines carry an OPR. EEA-J9 has no PM data in ACT_PRF (all PM
+  values 0 there) and is kept as in the source: its PM10, nvPM and
+  sulphate PM are 0, so a study that uses it reports no PM for it (no
+  default aircraft uses it). The other 48 ACT_PRF engines missing from
+  the table duplicate rows under other ids (FOCA-n, EEA-*, 01P21RR124) or,
+  for EEA-J6, differ from 1RR016 only by a zero nvPM, and are not added.
+  EEA-J10 (ACT_PRF "E190-A") is selectable for the E190; the E190's
+  default engine in `default_aircraft` stays 11GE144 (EEDB CF34-10E, as in
+  5.3.6), in the CSV, the templates and every bundled study.
+- CAEP14 validation: the BFFM2 index step is pinned to two cases of the
+  CAEP14 calculation sheet, non-LTO lean burn and LTO
+  (`validation/tests/test_caep14_sheet_reference_case.py`).
+- CAEP14 reference tool: helicopter active mode cut at the mixing height
+  and the grid on the FOCA flight path, as the plugin and the standalone do
+  since 5.3.2 (`validation/tests/test_helicopter_caep14_reference.py`).
+- CAEP14 validation: pinned plugin outputs re-exported from the plugin of
+  this version, headlessly (`validation/tools/regenerate_plugin_csvs.py`:
+  the four method targets, the stationary sources); plugin = reference =
+  standalone on 15 of 15 training movements for the three methods and for
+  bymode with the NOx correction, study meteo applied
+  (`validation/tests/test_plugin_csv_vs_reference.py`). The validation
+  workbooks `validation/data/training_validation_reference.xlsx` and
+  `example/training/training_validation_reference.xlsx` are rebuilt from
+  them by the new `regenerate_training_validation_xlsx.py` (plugin beside
+  reference per movement, hourly plugin emissions, helicopters);
+  `compare_inventory_to_reference.py` reads it from its new location and no
+  longer carries hard-coded helicopter values. See
+  `validation/tools/CAEP14_VALIDATION.md`, "October 2026".
+- `documents/FUEL_FLOW_OPTIONS.md`: what an ADS-B comparison showed about the
+  fuel-flow step of the BFFM2 trajectory method, and proposed changes, none
+  implemented in this release (speed correction and similarity scaling of
+  the ICAO-curve fuel flow, reduced take-off thrust, runway rule and
+  plausibility floor for supplied fuel flows, fuel-flow source switch).
+- Runway: Touchdown Offset per end (`touchdown` for the first-named end, new
+  `touchdown_2` for the other; each independent, empty or 0 = the
+  profile's own touchdown distance). Studies without the column still load
+  (their second end uses the profile's own distance); `scripts/migrate_alaqs.py`
+  adds it empty. The `touchdown` value was stored but not used before this
+  release: check it in existing studies, since a non-zero value now moves
+  every ANP arrival landing on the first-named end; for the same touchdown
+  on both ends, enter it in `touchdown_2` too. The bundled studies carry
+  250 m on both ends.
+- Standalone: route and profile check report (`runway_checks`,
+  `emissions_folder/runway_checks.csv`): exit before the touchdown, exit
+  above 50 kt, exit after the rollout end, rollout or lift-off past the
+  runway end, intersection line-up, ADS-B start of roll or exit away from
+  the route, each with the input change that fixes it. Never blocks the
+  run. The plugin logs the exit findings.
+- ADS-B import: one warning per flight whose `fuel_flow` points are below
+  the ICAO idle fuel flow of its engine (aircraft total), with the number
+  of points; the values are imported unchanged.
+- OSM import: a log line with the number of buildings added and where
+  their heights come from (OSM `height` column, else the layer default,
+  0 m; with the bundled `osmconf.ini` the tag is not a column, so 0 m).
+- `rebuild_training_example_inventory.py`: `--input-dir` and `--end`
+  (defaults: `example/training`, `2025-12-03 09:00:00`).
+- OSM import: one warning listing the imported gate names already in the
+  Gates layer or repeated in the import; the features are kept as
+  imported. With a duplicate name the movements use one of the gates only.
+- Gates: the gate form colours the name when another gate has the same
+  name, with a tooltip saying why; advisory only (OK and the saved values
+  are unchanged).
+
+### Fixed
+
+- Standalone `austal` receptor clipping (since 5.3.6): receptors were
+  clipped to 75 x 250 m around the grid reference whatever the study grid
+  (`--grid-size`/`--grid-step` defaults), so receptors inside a larger
+  AUSTAL grid were dropped (training example: grid 100 x 100 x 20 cells of
+  250 x 250 x 50 m, receptors
+  9.4 to 12.5 km out); every run also printed a "grid_size / grid_step_m
+  ignored" warning. Receptors are now clipped to the study grid
+  (`grid_3d_definition`, as the AUSTAL grid); `--grid-size`/`--grid-step`
+  (and the recipe keys `grid_size`/`grid_step`, now null in
+  `recipe_config.example.json`) only override that square. Bundled outputs
+  unchanged. **Results change** for standalone `austal` runs with
+  receptors outside that 75 x 250 m square and inside the study grid:
+  they are now kept.
+- UTM zone and AUSTAL reference point (since 5.3.6): the standalone (`geometry`, both `make_config`,
+  `orchestrate`, the CAEP14 reference script) chose the UTM zone by formula, `make_config` always in the
+  northern hemisphere and with 32631 when the longitude was 0.0 (`orchestrate --receptor-input` then stopped),
+  while the plugin's Grid3D queries the PROJ database; they disagreed in the southern hemisphere and on zone
+  boundaries (Sydney 32656 against 32756, lon 0.0 32631 against 32630). All now call one QGIS-free helper,
+  `open_alaqs/core/tools/utm.py` `utm_epsg(lat, lon)`, the plugin's query (first result; no Norway 32V or
+  Svalbard exceptions, the Grid3D docstring said otherwise); a missing coordinate is checked with `is None`.
+  Both `make_config` and `orchestrate` took the AUSTAL config reference from the airport of
+  `user_study_setup` while the emission grid is centred on `grid_3d_definition` reference_latitude/longitude,
+  so with the two apart aircraft cells were shifted against stationary sources and receptors (1374 m for a
+  reference 0.02 deg east of Rotterdam); they now use the grid reference (the airport only when the grid
+  definition has none, with a warning). No bundled result changes: the training studies have both points
+  equal, in zone 32631 either way. **Results change** for standalone runs (`make_config`, `orchestrate`,
+  the CAEP14 reference) in the southern hemisphere, on a UTM zone boundary or at longitude 0.0, and for
+  the standalone's AUSTAL inputs of studies whose grid reference differs from the airport position.
+- Aircraft SOx was zero: `sox_ei` was 1.0 g/kg in every row of
+  `default_aircraft_engine_ei` until the 5.0.0 rebuild, which set it to 0.0
+  without a note. SOx (as SO2) now comes from the fuel sulphur,
+  1000 × FSC × (1 − ε) × 64/32 (`open_alaqs/core/tools/fuel_sulphur.py`):
+  0.758 g/kg for jet fuel (the fuel selected in the CAEP14 sheet v14
+  inputs (FSC 0.000383, ε 0.01, its ICAO vPM parameterisation example);
+  the stored `pm10_sul` stays at the FOA3 value, FSC 680 ppm) and 0.2 g/kg
+  for AvGas (FSC 0.01 %, no sulphate),
+  by the row's `fuel_type`. The shipped table and the bundled `.alaqs`
+  files carry these values, except the old test fixtures
+  `tests/data/generic/generic_out.alaqs` and
+  `gse_application/tests/example_db.alaqs`, whose AEM-era rows keep
+  `sox_ei` 1.0 (only their 112 rows of the 28 added engines have 0.75834;
+  the tests that read them do not check SOx); a 0 or empty `sox_ei` in an existing study is
+  replaced by the fuel's value at run time. Helicopters (FOCA gives no
+  SOx) get mode fuel × the value (PISTON: AvGas). Plugin, standalone and
+  CAEP14 reference alike; the plugin/reference gate now compares SOx.
+  APU and GSE keep their own tables. **Results change**: aircraft SOx
+  goes from 0 to 0.758 g per kg of jet fuel (training example:
+  1.849 kg for the 13 movements, `bymode`). Docs: `pm10_sul` corresponds
+  to FSC 680 ppm with SO4/S = 96/32 (the docs said 667 ppm).
+- MEEM V1 nvPM now follows the MEEM_V1 tab of the CAEP14 calculation
+  sheet v14 and reaches the output. Its result went to `nvpm_g_kg` /
+  `nvpm_number_kg`, which no output column reads, and it interpolated
+  log-log at the segment's ANP power setting below 3000 ft, used the
+  ground ambient and a pressure-ratio thrust mapping above it, and a T3
+  ratio as enrichment factor. Now (`open_alaqs/core/tools/meem_v1.py`,
+  `Engine.getEmissionIndexByModeWithMEEM`): at or below 3000 ft (914.4 m)
+  above the aerodrome (segment start height, the ICAO LTO cycle) the nvPM
+  EI is the certification value of the mode, unchanged; above, the sheet's
+  chain (ISA at the segment altitude above MSL, i.e. start height plus
+  airport elevation, Mach from the segment TAS, phase "CLIMB TO
+  CRUISE" for departures and "DESCENT TO APPROACH" for arrivals, P3/T3,
+  ground-reference thrust from T3, linear interpolation of the EEDB nvPM
+  points, × (P3/P3_GR)^1.35 × 1.1^2.5). The mass EI replaces
+  `pm10_nonvol` and `pm10`, `p1`, `p2` move by the same amount, so
+  pm10 = nonvol + sul + organic still holds; nothing else changes. OPR is
+  `press_ratio`, 30 when empty (the sheet has no value for this case);
+  the climb pressure coefficient uses a 38000 ft cruise altitude (the
+  sheet's stored value). The port matches the sheet's stored example
+  (0.944536653843135 mg/kg, 2.58597485320693e13 #/kg) and seven cases
+  recalculated in LibreOffice to 1e-15 (`tests/test_meem_v1.py`).
+  The standalone (shared module) and the CAEP14 reference (written out
+  from the sheet) do the same (`validation/tests/test_meem_v1_reference.py`).
+  **Results change** only for segments more than 3000 ft above the
+  aerodrome, i.e. in hours whose mixing height (height above the airport,
+  like the segment heights) is above 3000 ft (914.4 m).
+  Training example (`example/training`, 1500 m on 2 December): the two
+  departures of 2 December, one segment each (start 1285 m and 1251 m above
+  the airport, 1280 m and 1246 m above MSL, CL): nvPM EI 1.235 to 1.524 mg/kg (A20N, id 6) and 53.30 to
+  66.64 mg/kg (E190, id 8); `bymode` pm10_nonvol +1.24 % and +1.69 %, pm10
+  +0.031 % and +0.81 %; 13-movement totals pm10_nonvol 31.456 to 31.724 g
+  (+0.85 %), pm10 321.741 to 322.010 g (+0.084 %) (BFFM2 trajectory: +0.76 %
+  and +0.060 %). `training_v3`, AIRPORT_A and ANP references: no change
+  (no segment above 3000 ft).
+- `nvpm_number_ei` of `default_aircraft_engine_ei` held the ACT_PRF
+  nvPM number rate of the mode (#/s) while the code
+  reads it as #/kg; it is now #/kg (ACT_PRF rate / fuel flow, equal to the
+  CAEP14 sheet v14 NVPM_N_*_N/KG; for the FOCA piston and ECTL engines,
+  which are in neither, the stored value / fuel flow). In the shipped table
+  and the bundled `.alaqs` files. No output column carries nvPM number, so
+  no output changes; the MEEM V1 number EI and the 5th number point now
+  have consistent units (training example nvPM number, bymode, computed
+  internally: 2.01e17 to 4.61e17).
+- `default_aircraft_engine_ei`: 1ZM001 (D-36) TX had fuel flow 0 and all
+  EIs 0 (EEDB v31 FF_ID is 0); it now has the ACT_PRF idle values (fuel
+  0.092 kg/s, NOx 5.5, CO 20.7, HC 5.4 g/kg, nvPM 0.0767 g/kg,
+  3.87e15 #/kg), composed as the engine's other modes. **Results change**
+  for the taxi of movements with 1ZM001 (the default engine of A124,
+  A225, A743, AN72 and YK42), in a study whose engine table is
+  refreshed.
+- MEEM V1 inputs: `press_ratio` and the 5th nvPM point
+  (`meem_nvpm_m_i_f00_avg`, `meem_nvpm_n_i_f00_avg`, `nvpm_m_max_mgkg`,
+  `nvpm_n_max_nkg`) were empty in every row; they now come from the CAEP14
+  sheet v14 `Engines_Database` (EEDB v31), ACT_PRF for engines not in it:
+  OPR for 863 jet engines at this step, 5th point for the 51 engines the
+  sheet marks 5PT; with the ACT_PRF engines (see Added) the table now
+  has an OPR for 890 jet engines (the others keep 30) and a 5th point for
+  77 engines (mass) and 75 (number). The bundled `.alaqs` files get the
+  columns where they lacked them. **Results change** for segments more
+  than 3000 ft above the aerodrome (hours whose mixing height is above
+  914.4 m), in a study whose engine table is refreshed (a 5.3.x engine
+  table has no `press_ratio`, so MEEM V1 uses OPR 30).
+- MEEM V1 LTO / non-LTO cut: at 3000 ft (914.4 m) above the aerodrome
+  (ICAO LTO cycle) in the plugin (`Engine._meem_v1`, new
+  `airport_elevation_m` argument of `getEmissionIndexByModeWithMEEM`), the
+  standalone (`compute_aircraft._meem_v1_segment_ei`) and the CAEP14
+  reference (`_meem_non_lto`); a development build compared the altitude
+  above MSL, so at an airport above 914 m every segment, the take-off roll
+  included, went through the non-LTO chain (01P20CM128 approach at 1655 m:
+  nvPM 1.189 instead of the certified 2.989 mg/kg). The airport elevation
+  still sets the ISA altitude of the chain. Bundled studies (about −5 m):
+  no pinned output changes.
+- MEEM V1 above 3000 ft used ISA; it now uses ISA + ΔT, ΔT the
+  temperature of the movement's meteo period (the one BFFM2 uses) minus
+  ISA at the airport elevation (288.15 K − 0.0065 K/m × elevation),
+  constant aloft, the sheet's "ΔT at 0 ft MSL" (USER INPUTS!B5). Without
+  meteo the temperature is ISA sea level (288.15 K), so ΔT = 0.0065 K/m ×
+  elevation (10.76 K at 1655 m), 0 only at sea level. Plugin
+  (`Engine.getEmissionIndexByModeWithMEEM(delta_t=...)`), standalone and
+  CAEP14 reference alike; checked against two more LibreOffice
+  recalculations of the sheet. **Results change** above
+  3000 ft only. Training example (283 K at −5 m, ΔT −5.18 K, with the OPR
+  above): `bymode` pm10_nonvol id 6 +0.86 %, id 8 −0.20 %, 13-movement
+  totals pm10_nonvol 31.724 to 31.695 g (−0.09 %), pm10 322.010 to
+  321.981 g (−0.009 %); BFFM2 trajectory pm10 291.630 to 291.611 g. The
+  OPR alone moves pm10 by less than 1e-5. `training_v3`: no change.
+- Plugin: the ICCAIA NOx ambient correction (bymode, "Apply NOx
+  corrections") was applied to every flight segment, approach included;
+  it is defined for take-off and climb-out, which is what its module and
+  the standalone do. Now gated on the segment mode
+  (`MovementEmissionCalculator.NOX_CORRECTION_MODES`). **Results change**
+  for arrivals with the correction on: their NOx is no longer scaled by the
+  correction factor (1 to 6 % higher than before on the training fixture's
+  days); departures unchanged.
+- ADS-B import: with heights taken above the airport elevation (5.3.4), a
+  take-off roll reported a fraction of an altitude step above the field
+  (e.g. −15 ft at a −5 m field, +0.43 m) became climb-out (`CL`). The run of
+  points within half an ADS-B altitude step (12.5 ft) of the field
+  elevation at the start of a departure, or the end of an arrival, is now
+  the ground: height 0, mode `TO` for departures
+  (`ads_b._snap_ground_heights`, `tests/test_adsb_airport_elevation.py`).
+  **Results change** only in the vertical position of those points for
+  ADS-B tracks imported at airports with a non-zero elevation; re-import to
+  apply.
+- `scripts/migrate_alaqs.py --refresh-include-user-extensible` stopped with
+  "CSVs missing" (it listed `default_helicopter_engine_ei`, removed in 5.x);
+  it now refreshes `default_helicopter` and `default_helicopter_engines`.
+- `tests/test_emission_calculation.py` (slow): the vector-layer comparison
+  never compared emission values (QGIS `checkLayersEqual(unordered=True)`
+  pairs the result's value with the expected layer's skipped `fid`), and
+  the four source-type cases selected nothing (class names instead of the
+  dialog's module names) and ran on all sources. The test now compares every
+  cell's value and fails on an unknown source type; the 16 references are
+  regenerated with `tools/test_fixtures/regenerate_emission_calculation_references.py`
+  (output grid in UTM since #316, 5.1.0; ANP CO2 and NOx moved with the
+  vertical-limit clipping of 5.3.1, ANP HC with release 5.2.0, whose notes
+  name the start-emission keying; AIRPORT_A with the runway placement above).
+- Example study: movement 11 flew `1677686160_DIETB`, a track carried in
+  `training.alaqs`, while `training_ads_b_data.csv` held two other tracks
+  that nothing used. Movement 11 now flies `1764584438_PHBBA` from that file
+  (as `training_v3.alaqs` does), `DIETB` is removed from `training.alaqs`,
+  and `training_out.alaqs` is rebuilt from `training.alaqs` and the CSVs
+  with the settings of `documents/TEST_CASE_STUDY.md` (new
+  `tools/test_fixtures/rebuild_training_example_inventory.py`). The shipped
+  inventory had been made from an older `training.alaqs` (airport at
+  51.96 / 4.44 and elevation 0 instead of 51.9574278 / 4.4417028 and −5 m,
+  no `custom_hourly` profile) on a 40 x 40 x 20 grid of 10 m layers (200 m
+  high); the tutorial's grid is 100 x 100 x 20 cells of 250 x 250 x 50 m. **Example results
+  change** (bymode CO2 of the 13 movements, with this release's code: 5291 kg
+  on the old inventory, 7703 kg on the rebuilt one, from the airport
+  position, the PHBBA track and the tutorial's larger grid);
+  `example/training/training_validation_reference.xlsx` is rebuilt.
+- Tutorial study `example/training/training.alaqs` migrated to the current
+  project schema with `scripts/migrate_alaqs.py` (`engine_test_events`,
+  `shapes_area_sources.is_test_site`, and the three named point-source
+  profiles the other bundled studies carry), so the "Engine Test Site" flag
+  can be set and saved in the tutorial. No other table changes.
+- Validation fixtures `training_v3*.alaqs` and `tests/data/AIRPORT_A/AIRPORT_A.alaqs`
+  migrated to the current schema (`touchdown_2`, `engine_test_events`,
+  `is_test_site`, ...; runway `capacity` dropped) and reference data
+  (`scripts/migrate_alaqs.py`, profiles with
+  `tools/test_fixtures/regenerate_default_aircraft_profiles.py`, which keeps
+  study rows and now lists the three `training_v3` files); PHBBA and PHRTM
+  re-imported into `training_v3*.alaqs` with the importer above. The pinned
+  plugin outputs reproduce to 2e-14 on the migrated fixture.
+- `documents/TEST_CASE_STUDY.md`: airport elevation −5 m (the form converts
+  the database's −15 ft), coordinates as populated, the ADS-B import step,
+  and the CUSTOM track of movement 11.
+- BFFM2 segment Mach: the plugin, the standalone and the CAEP14 reference
+  computed `(TAS / a) · √(288.15 / T)`, which is not a Mach number away from
+  ISA; they now compute the flight Mach `TAS / a`, as SAE AIR-5715, the CAEP
+  validation and `documents/BFFM2_validation/BFFM2.md` do
+  (`validation/tests/test_segment_mach.py`). **Results change** slightly
+  for `bffm2_anchor` and `bffm2_traj` away from ISA (Mach enters only through
+  `exp(0.2 M²)`): on the training fixture's days, at most 0.08 % on NOx
+  (`bffm2_anchor`) and 0.02 % on CO2 and NOx (`bffm2_traj`); `bymode`
+  unchanged. Pinned plugin outputs and both validation workbooks re-exported.
+- Speed of sound for that Mach: `a = √(γ R T)` (γ 1.4, R 287.05287 J/(kg K),
+  ICAO Doc 7488), shared by the plugin and the standalone
+  (`open_alaqs/core/tools/bffm2.py::speed_of_sound_m_s`) and written out
+  independently in the CAEP14 reference, as the CAEP validation workbook
+  computes it. The linear form `331.3 + 0.606 (T − 273.15)` was 0.03 % high at
+  ISA and 0.16 % high at 243.6 K and at 307 K. **Results change** below 0.01 %
+  for the BFFM2 methods; `bymode` unchanged.
+- CAEP14 reference tool (`validation/tools/compute_caep14_reference.py`):
+  engines are matched on `engine_name` exactly (or `engine_full_name` for
+  rows without a name), as the plugin and the standalone do, instead of
+  `engine_full_name LIKE %engine_name%`, which skipped every movement of a
+  study whose engine table holds the real designation in `engine_full_name`
+  and let short names match several rows; helicopters are the types listed in
+  `default_helicopter`, not the movements without a `profile_id`. No change
+  on the training fixture; see `CAEP14_VALIDATION.md`.
+- Training example (EHRD) taxi routes: the six routes were drawn for runway
+  24 but also used by the runway 06 movements, and taxiway V stopped 84 m
+  short of the V1/V3/Y junction, so departures lined up 757 to 2116 m along
+  the runway and lifted off up to 1.2 km past its end, and two arrival
+  routes met the runway only before the touchdown. Taxiways V0 (closing the
+  gap) and V1E (V1 to the 06 threshold) added; twelve routes, one per gate,
+  operation and runway direction; movements 6, 8 and 13 use the 06 routes.
+  The runway checks report no errors or warnings. Example NOx totals
+  +0.1 % (`bymode`, `bffm2_anchor`) and +0.2 % (`bffm2_traj`), all from
+  movement 13; the `training_v3` validation fixtures got the same routes
+  (pinned outputs unchanged, 6e-13). `training_out.alaqs` and the example
+  workbook rebuilt.
+- Point sources: the **Type** was never saved (the form combo box was
+  named `type`, the column is `point_type`).
+- Taxiways: the form wrote the text "Calculated" into the DECIMAL `time`
+  column; the Time field is removed from the form (the calculation takes
+  the time from the taxiway length and speed). The value is cleared (NULL)
+  in the bundled studies; it was not read by any calculation.
+- Runways: a new runway left at the default selection (01) had no
+  **Runway Name** (it was only built when a combo box changed); the form now
+  builds it (01/19) when it opens empty.
+- Runways: the touchdown offsets are INT columns but the form accepted
+  decimals; it now accepts whole metres only.
+- Point sources: "1000_m3 (legacy default)" was saved into `activity_unit`
+  when the emission factor row has no unit; it is now placeholder text only
+  and the field stays empty.
+- OSM import: the attribute mappings of buildings, gates and parkings were
+  written {ALAQS column: OSM attribute} while the import reads {OSM
+  attribute: ALAQS column} (as runways, taxiways and roadways), so gate
+  names from the OSM `ref` tag were never imported.
+- Forms of existing features showed the first entry of their combo boxes
+  instead of the stored value: the profiles (parkings, roadways, point and
+  area sources), the point-source **Category** and **Type** and the
+  **Gate Type** (shown as "(CARGO)", which blocked OK). The stored values
+  are selected now; for point sources without changing the stored
+  parameters and emission factors.
+- A NULL name, shown by QGIS as "NULL" in a new feature's form, passed the
+  validation; an empty or NULL name now blocks OK on every form.
+- In Study on parkings, roadways, point sources and area sources: the form
+  check box was hidden and disabled, and its form code wrote the flag after
+  QGIS had saved, so it had no effect; on the previous version the check box
+  also showed a stored 1 unticked and unticking it saved nothing, and a new
+  source drawn through the form got a NULL flag (left out of the
+  calculation). The check box is now shown under the name and bound to the
+  column: it shows the stored value, saves what is set, and is ticked for a
+  new source. The attribute table shows the flag as true / false.
+  **Results change** for studies with sources created or edited through
+  the form in 5.3.x: a source with an empty flag is still left out until
+  its box is ticked and saved, and a source unticked in 5.3.x may still be
+  in the study; check the flag.
+- Area sources: ticking or unticking **Engine Test Site** in the form and
+  pressing OK did not change `is_test_site` (written after QGIS had saved,
+  like In Study); a stored value was shown correctly. The check box is now
+  bound to the column ('1' / '0', '0' for a new source), and the blank
+  Units per Year and emission rates are set to 0 when it is ticked, before
+  the save (they were also filled after it). The other layers' forms no
+  longer carry the ineffective in-study write. **Results change** for
+  area sources whose **Engine Test Site** box was ticked or unticked in
+  5.3.x: check the flag, which decides whether the source emits its
+  rates or its engine-test events.
+- Point sources: **Activity Unit** can be edited (per-source override of
+  the emission factor row's unit); it is filled in when the **Type** changes
+  and an existing source keeps its stored unit.
+- Combo boxes of an existing feature (Gate Type, the profiles, the
+  point-source Category and Type, the track Runway Direction and Operation
+  Type, the roadway Scenario) showed the stored value as "(value)" whenever
+  QGIS refreshed the form, for example when editing was toggled in the
+  attribute table's form view. These fields now have a value map in the
+  field configuration, built when the study opens (fixed lists, the study's
+  profiles, stationary categories and types, runway directions, plus any
+  value already stored), so QGIS fills the lists, shows the plain value
+  and saves the choice; the forms no longer refill or write them. The
+  point-source Type list shows the types of the selected category, and a
+  type's defaults are only filled in when the user picks a category or
+  type.
+- The forms' OK button looked enabled while the form was invalid (the
+  click was ignored); it is now greyed out until the form is valid, and
+  its tooltip names the missing or invalid fields. New features start
+  with an empty name instead of "NULL".
+- Removed a debug `print` from the track form; the OSM import warning for
+  an invalid feature no longer fails on layers without `full_id`.
+- `scripts/emissions_austal`: `smooth & shift` spellings reach the module
+  as `smooth & shift` (were `smooth_shift`, run without source dynamics)
+  and unknown `source_dynamics` values are an error;
+  `should_apply_nox_corrections` takes true/false, 1/0, yes/no in any case
+  (only `True` enabled it) and errors otherwise; `austal_settings` is read
+  as a JSON object (a txt value failed in `dict.update`). **Results
+  change** for runs of the script with `smooth & shift` or with
+  `should_apply_nox_corrections` given in another spelling than `True`:
+  these settings are now applied.
+- Standalone `austal --pollutants co2` stopped with `KeyError: 'co2'`; the
+  stationary sources now contribute 0 (one info line) and the aircraft CO2
+  is written.
+- `compute_caep14_reference.py` puts the repository root
+  (`parents[3]`, was `parents[1]`) on `sys.path`, so it runs from any
+  working directory.
+- OSM import: the building filter value "commerical" is now "commercial",
+  so OSM commercial buildings are downloaded and imported.
+- Forms under a German or Dutch locale: a decimal such as "0.125" was
+  read as 125 by the field check (the locale reads "." as a group
+  separator) while QGIS saves 0.125. Numbers are now read as QGIS saves
+  them (see the next entry), and the parking and roadway Recalculate use
+  the checked values (the fleet mix as "12,5" raised).
+- Form number check: it still fell back to the tolerant reading of
+  `convertToFloat` (and `int()`), so it accepted texts that QGIS saves
+  differently or as NULL: German "1,234.5" checked as 1234.5 and saved as
+  1.2345, French "1.234,5" and "1_000" saved as NULL, English "30,3"
+  checked as 30.3 and saved as 303, "nan" and "inf" stored as such. The
+  check now uses QGIS's own rule (`QgsField.convertCompatible`) and
+  disables OK when it fails or gives a non-finite value, so the checked
+  value (also the one Recalculate uses in parkings and roadways) is the
+  saved one. Whole-number fields must also read as an integer with the
+  locale (group separators as QGIS shows them, "20.000" German, "20,000"
+  English); "12.5", which QGIS would round, is rejected.
+- Decimals typed into the layer forms were rounded or stored as text: the
+  numeric columns of the shapes layers (height, speed, distance,
+  idle_time, temperature, diameter, velocity, the `*_percentage` columns,
+  `vehicle_year`, the emission factors, `gate_height`, taxiway `speed` and
+  `time`, receptor `xcoord`, `ycoord`, 65 columns of 8 tables) were
+  declared `DECIMAL`, which the QGIS SpatiaLite provider does not map to
+  Double: it types the column from its stored data, so a column of whole
+  numbers was an integer field (a typed 2.5 was saved as 3, and as 25
+  under a German locale) and an empty layer a text field (the text "30,3"
+  was stored). The templates now declare these columns `REAL`, typed
+  Double with or without data (2.5 is saved as 2.5). `instudy`, the
+  touchdown offsets (whole metres) and the year/text columns are unchanged.
+  `scripts/migrate_alaqs.py` converts existing studies (the tables are
+  rebuilt with the reference definitions, rowids, keys and geometry
+  triggers kept; text values that read as a number, "2.5" or "30,3",
+  become numbers; other text is reported and left), and every bundled
+  `.alaqs` with layers is converted (values unchanged; results of the
+  training studies byte-identical). Opening a study whose layers still
+  have the old columns logs one warning naming the migration. The form
+  check converts a number with the layer's own field when the layer is
+  known (`parse_number(text, integer, field)`, `validate_field(widget,
+  type, layer)`, else the attribute form's layer), so it equals the save
+  on an unmigrated study too (2.5 checked and saved as 3 in an integer
+  column); without a numeric field it uses a Double field as before. The
+  project template is a fresh rebuild: `default_vehicle_ef_copert5` and 17
+  cells of `default_aircraft_engine_ei` now equal the CSVs exactly (up to
+  1e-12 relative from the earlier values; the training studies carry their
+  own tables and their results do not change).
+- Form number check, decimal separator (rc6 review F2): `convertCompatible`
+  falls back to the C locale, so under an English locale "30,3" passed the
+  check silently as 303 (which QGIS saves) and "1,5" as 15. A text that is
+  not a number for the current locale (`QLocale.toDouble` fails) is now
+  refused even when QGIS would save a number from it: the field is red and
+  the tooltip names the decimal separator of the locale ("use the decimal
+  separator of your locale (.)"). "30,3" stays 30.3 under a German, Dutch
+  or French locale, and "0.125" under a German locale stays 0.125 as QGIS
+  saves it (GitHub #159).
+- Form value lists on Windows: a study under an extended-length path
+  (`\\?\C:\...`, as `Path.resolve` gives for a long path, or
+  `\\?\UNC\server\share\...`) gave an SQLite URI with the "?" in the
+  authority, so the runway and profile lists of the forms were empty. The
+  prefix is now stripped before the URI is built.
+- Taxi route without segments (rc6 review M7): queuing, APU, engine start,
+  stop-and-go and brake wear are added to the last segment of the route,
+  so a route none of whose taxiways exists added nothing and the movement
+  lost them silently. They are now placed at the gate on a stand-in
+  segment of 0 m and 0 s, with a warning. Not reachable with the bundled
+  studies.
+- Standalone, the same case (rc7 review R4): a route naming taxiways that
+  do not exist in `shapes_taxiways` was treated as unresolved, so the
+  movement's whole taxi time counted as natural taxiing (times
+  `taxi_fuel_ratio`) and the mass went to the runway intersection, where
+  the plugin counts the existing taxiways only, and with none the whole
+  taxi time as queuing (no fuel ratio) at the gate. The standalone now does
+  the same (`compute_movements._build_natural_taxi_times`, one warning per
+  route naming the missing taxiways; `distribute_to_grid` puts the stand
+  phases over the gate polygon). **Results change**, standalone only, for
+  studies whose taxi routes name taxiways that do not exist; none of the
+  bundled studies does.
+- Forms, a study not yet migrated (rc7 review R1): on a 5.3.x study whose
+  numeric layer columns are still `DECIMAL`, QGIS types a column of whole
+  numbers as an integer and saves "2.5" as 3; rc7 made the form check agree
+  with the save, so the rounding stayed silent. A decimal typed into such a
+  column is now refused, the field red with a tooltip naming the value QGIS
+  would save and the migration (`UnmigratedColumnError`); a whole number is
+  accepted. Studies migrated to `REAL` columns are unaffected.
+- Visualize Emission Calculation, Source type list (rc7 review R3): choosing
+  "MovementSource" builds the movement store, which raises on the same input
+  errors as the calculation (a runway designator matching several or no
+  runway end, an unknown gate or engine); the slot let the exception out as
+  a raw QGIS Python error. It is now reported in the message bar ("Invalid
+  Study Input") with the names list left at "all".
+- Runway designator messages (rc7 review N1, N2): a designator with a letter
+  that matches no runway end ("24C" on 06L/24R and 06R/24L) is reported as
+  unknown ("matches no runway end of the study"), no longer as ambiguous
+  with the advice to add a letter; the end is echoed normalised ("6" as
+  "06") in the plugin and the standalone alike.
+- `scripts/migrate_alaqs.py` (rc7 review N4, N5): texts left in a retyped
+  column are reported once per column with their count and three examples,
+  not once per row; a text with a decimal comma and exactly three decimals
+  ("1,234", which is also a grouped 1234) is left as text and reported
+  instead of being read as 1.234. The migration also removes
+  `geometry_columns_auth` rows of tables that no longer exist (an orphan
+  `shapes_aircraft_tracks` row in three bundled fixtures), as it did for
+  the other SpatiaLite metadata tables.
+- Runway form: a NULL Touchdown Offset (touchdown_2 is added as NULL when
+  a 5.3.6 study is migrated), shown as "NULL", kept OK disabled ("Missing
+  or invalid: Touchdown Offset, Runway 2 [m]"); it now counts as empty,
+  like "". The area source form treats a NULL heat flux the same way.
+- An arrival whose block to runway time was no longer than its landing
+  roll got a taxi time of 0 s and lost all its taxi emissions (queuing,
+  stop-and-go, APU, brake wear) with the warning "taxi route not defined
+  properly". The plugin now keeps a 0 s taxi time and these emissions,
+  as the standalone does, with a warning naming the two times.
+  **Results change** for such arrivals: APU, stop-and-go and brake wear
+  are counted (movements whose block time equals their runway time: see
+  below).
+- Aircraft movements take the airport altitude (NOx ambient correction,
+  MEEM V1 ISA temperature, LTO cut) from the study's airport elevation
+  (`user_study_setup.airport_elevation`), as the standalone and the
+  CAEP14 reference do; it came from the grid reference altitude of the
+  Dispersion dialog, which can differ. The grid altitude is the fallback
+  for a study without an elevation. **Results change** for studies where
+  the two altitudes differ (NOx correction; MEEM V1 above 3000 ft).
+- Runway placement: the taxi route is oriented by its own gate
+  (`user_taxiroute_taxiways.gate`), as in the standalone and the CAEP14
+  reference; it used the gate of the first movement of the route, while
+  the runway trajectory is shared (and cached) by every movement of the
+  route whatever its gate. **Results change** (placement on the runway)
+  where the first movement of a route is at another gate than the
+  route's own.
+- Forms of a study whose path holds "#", "?" or "%" (since the value maps
+  read from the study): the lists read from the study (point-source
+  Category and Type, profiles, runway directions) were empty, because the
+  read-only SQLite URI was not percent-encoded and opened the wrong file;
+  the point-source Category and Type then offered only the values already
+  stored. The URI is now built with `Path.as_uri()` (Windows drive and UNC
+  paths included).
+- **Results change** for studies with movements whose block time equals
+  their runway time: the plugin dropped all their taxi emissions (APU,
+  stop-and-go, brake wear) with "no taxi emissions", while the standalone
+  kept them (training_v3 movement 1 with block = runway time: PM10 0.0030
+  against 0.0320 kg). The plugin now keeps them. Rule (plugin and
+  standalone): the taxi time is |block time - runway time|, less the
+  landing roll for an arrival, not below 0 s; at 0 s the route segments
+  and the queue get no time, while APU, stop-and-go and brake wear are
+  counted as for any taxi time. A movement without a block time still
+  stops the calculation in both.
+- **Results change** for studies with a movement whose taxi route is
+  flagged for the other operation (a departure on an arrival route or the
+  reverse) and meets the runway more than once: the plugin oriented the
+  route by the movement's D/A, the standalone by the route's own
+  `user_taxiroute_taxiways.departure_arrival`, so they could pick a
+  different line-up or exit crossing. The plugin now uses the route's flag
+  too (the runway trajectory is cached per route); the movement's flag
+  only when the route has none.
+- `runway_placement.split_taxi_time` counts a negative total taxi time as
+  0 s (it returned a negative route time; both callers already clamp, so
+  not reachable), and `truncate_after` with the cut exactly on a profile
+  row ends at that row instead of appending a duplicate end row (a 0 m
+  last segment). Bundled outputs unchanged.
+- **Results change** in the standalone for studies with parallel runways
+  (06L/24R and 06R/24L): runways were keyed by the designator number, so
+  both runways had the keys 6 and 24, the second row of `shapes_runways`
+  won, and every movement was placed on it with its Touchdown Offsets.
+  Runways are now keyed by the full designator (`movements.runway_of`),
+  as in the plugin. The runway checks (`runway_checks`) use the same
+  lookup.
+- **Results change**, parallel runways with a plain designator (rc6 review
+  F3): a movement naming a plain "24" on a study with 06L/24R and 06R/24L
+  was computed on the first runway by the standalone, and dropped silently
+  by the plugin (it matched the first runway whose name contained "24",
+  then "24" was not an end of it: "Could not find runway direction", the
+  movement absent from the results); a "24R" on a plain 06/24 study was
+  dropped silently by the plugin and fell back to 06/24 in the standalone.
+  Both now stop the calculation with an error naming the movement
+  ("movement id 1: A20N A 2025-12-01 06:05: runway '24' matches 06L/24R
+  and 06R/24L; name the runway end with its letter", or "matches no runway
+  end of the study"); in the plugin it is the "Calculation Failed" message
+  of the inventory dialog. Movements that were silently dropped now stop
+  the calculation until the runway is named fully. The ADS-B import's
+  runway lookup (`get_runway_by_direction`) gives no runway for an
+  ambiguous end instead of the first, and falls back to the closest track
+  point. The standalone's runway dict has no plain-number keys any more.
+- Runway form: a negative Touchdown Offset was accepted, but the runway
+  placement ignores values of 0 or less and silently used the profile's
+  own touchdown distance. The form now rejects it (OK disabled); 0 or
+  empty still means the profile's own distance.
+- OSM import: a NULL OSM attribute (a NULL QVariant, not None) counted as
+  a value: with an OSM source that has a `height` column (custom
+  `osmconf.ini`) the import log counted every building as having an OSM
+  height. NULL attributes are now skipped before the feature is created
+  (the layer default applies, as it already did in a headless check) and
+  the log counts only real heights.
+- Plugin movement set-up (`MovementStore.initMovements`): the
+  per-movement table was built with float64 columns, so every name or
+  object put in it raised the pandas FutureWarning "Setting an item of
+  incompatible dtype is deprecated" (an error in a future pandas), plus a
+  "Downcasting object dtype arrays on .fillna" warning. The columns are
+  now object columns; no warning, bundled outputs byte-identical.
+- Standalone and `austal_prep` `make_config`, and `orchestrate`, stop
+  with a ValueError ("no reference point") when the study has neither a
+  grid reference (`grid_3d_definition` reference_latitude/longitude) nor
+  airport coordinates (`user_study_setup`); 5.3.6 silently used (0, 0)
+  and EPSG:32631. `orchestrate` stops even without a receptor CSV.
+- Tutorial study `example/training/training.alaqs`: the area source's
+  `is_test_site` is '0' (was NULL after the migration), as in the template
+  and the other studies.
+- `example/training/training_out.alaqs` rebuilt from the final
+  `training.alaqs` and the example's CSVs
+  (`tools/test_fixtures/rebuild_training_example_inventory.py`): it now
+  carries the study's five day, hour and month profiles (heating_season,
+  cooling_season and business_hours were missing) and E190 default engine
+  11GE144; plugin results on it are byte-identical, and so is the content
+  of `example/training/training_validation_reference.xlsx` (kept).
+- Test fixtures `tests/data/AIRPORT_A/AIRPORT_A_out.alaqs` and
+  `tests/data/ANP/ANP_out.alaqs` no longer carry runway trajectory caches
+  (`cache_runway_trajectories`, `_v4`, `_v5`), and
+  `tests/test_emission_calculation.py` and
+  `tests/test_emission_calculator_service.py` run on copies of their
+  studies, so a
+  test run no longer writes into tracked files nor reads a committed
+  trajectory back (`tests/test_bundled_fixture_hygiene.py`).
+- `scripts/migrate_alaqs.py --drop-extra-columns` rebuilt the table from
+  column names and types only, so PRIMARY KEY, NOT NULL and defaults were
+  lost (dropping `capacity` left `shapes_runways.oid` without its key, and
+  a runway added in QGIS then got no oid). It now uses `ALTER TABLE ...
+  DROP COLUMN` (SQLite 3.35 or later); where SQLite refuses, the table is
+  rebuilt with the reference definitions of the kept columns, rowids,
+  indexes and triggers kept (`tests/test_migrate_drop_columns_keeps_keys.py`).
+  `shapes_runways.oid INTEGER PRIMARY KEY NOT NULL` restored in
+  `validation/data/training_v3.alaqs`, `training_v3_gatemovements.alaqs`,
+  `training_v3_multisource.alaqs` and `tests/data/AIRPORT_A/AIRPORT_A.alaqs`
+  (rows, geometry triggers and geometry registration unchanged).
+- `openalaqs_standalone/validation/data/source_csvs/training_movements.csv`
+  was the example's movement set plus the two helicopters, not the
+  movements of the validation fixtures: it is now the movement table of
+  `training_v3.alaqs` (15 movements; runways, gates and routes differ from
+  the example on 7 rows), described in `openalaqs_standalone/USAGE.md` and
+  checked by `validation/tests/test_source_csvs_match_fixture.py`. The
+  study description of the three `training_v3*.alaqs` files says 15
+  movements (was 13).
+- Template build (`tools/template_build/generate_templates.py`) reads the
+  CSVs with `float_precision="round_trip"`: a rebuild stores the CSV
+  values exactly (the default parser was up to a few ulp off). The
+  shipped templates are not rebuilt; `tools/template_build/README.md`
+  lists what a rebuild changes (column order of `shapes_runways`, row order
+  of the geometry metadata, timestamps, and in `project.alaqs` 1 to a few
+  ulp in 26780 `default_vehicle_ef_copert5` rows and 17
+  `default_aircraft_engine_ei` cells, where the shipped files are not the
+  CSV text values).
+- `validation/data/training_v3*.alaqs`: the unused CUSTOM profile
+  `1677686160_DIETB` (9 rows, no movement uses it) removed. It stays in
+  `tests/data/AIRPORT_A/AIRPORT_A.alaqs`, whose movement CSV
+  (`AIRPORT_A_movements.csv`, row 12) and inventory use it.
+- Docs: `scripts/emissions_austal/README.md` describes the AUSTAL demo
+  `sample_data/Inventory.alaqs` as it is (an early training inventory: old
+  airport position, runway table and routes, six movements
+  naming profiles absent from the file), not as derived from the current
+  `training_out.alaqs`; `example/training/training_engine_test_events.README.md`
+  no longer asks to migrate the training study, which ships with the
+  engine-test-site schema.
+
+### Removed
+
+- Runway Capacity (no code used it): removed from the form, the `Runway`
+  object and the templates. Older studies keep the column; it is ignored.
 
 ## [5.3.6] - 2026-10-13
 

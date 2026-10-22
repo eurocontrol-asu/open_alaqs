@@ -28,12 +28,10 @@ class EmissionCalculationConfig:
     #   "twin_quadratic"  — ALAQS parabolic fit (default, backward-compatible)
     #   "linear"   — ICAO/CAEP14 piecewise-linear between EEDB breakpoints
 
-    # MEEM version selector — controls which spec is used for nvPM EI.
-    #   "v1" (default): ICAO CAEP/13-MDG, interpolates on % max thrust.
-    #   "v2":            ICAO CAEP/13-WG3, interpolates on BFFM2-adjusted FF.
-    # V2 is CAEP14 v12's preferred method but is NOT compatible with V1 at LTO
-    # under real ambient conditions (~16% gap at the CAEP14 reference case).
-    # Keeping V1 as default preserves reproducibility of historical studies.
+    # MEEM version for the nvPM EI. Only "v1" (ICAO CAEP/13-MDG, CAEP14 v14
+    # MEEM_V1 tab) is used: MEEM V2 (CAEP14 v12+, meem_v2.py) is implemented
+    # but not used, its adoption is to be decided; MovementSourceModule logs a
+    # warning and runs V1 for any other value.
     meem_version: str = "v1"
 
     # BFFM2 fuel-flow source — what FF to use when the segment has no explicit

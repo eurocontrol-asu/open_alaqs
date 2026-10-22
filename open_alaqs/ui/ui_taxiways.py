@@ -1,7 +1,11 @@
 from qgis.PyQt import QtWidgets
 
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.openalaqsuitoolkit import validate_field
+from open_alaqs.enums import AlaqsLayerType
+from open_alaqs.openalaqsuitoolkit import (
+    update_ok_button,
+    validate_field,
+)
 
 logger = get_logger(__name__)
 
@@ -15,7 +19,6 @@ def form_open(form, layer, feature):
     # Get all the fields from the form
     fields = dict(
         name_field=form.findChild(QtWidgets.QLineEdit, "taxiway_id"),
-        time_field=form.findChild(QtWidgets.QLineEdit, "time"),
         speed_field=form.findChild(QtWidgets.QLineEdit, "speed"),
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
@@ -24,25 +27,17 @@ def form_open(form, layer, feature):
     # Hide the instudy field
     fields["instudy"].setHidden(True)
 
-    # Disable the time field
-    fields["time_field"].setText("Calculated")
-    fields["time_field"].setEnabled(False)
+    # No Time field: the calculation takes the taxiing time from the
+    # taxiway length and the speed (Taxiway.py); the time column is unused.
 
     # Add input validation to text fields in the form
     for key, value in fields.items():
         if isinstance(value, QtWidgets.QLineEdit):
             fields[key].textChanged.connect(lambda: validate(fields))
 
-    # Block the ok button (will be overwritten after validation)
-    fields["button_box"].button(fields["button_box"].StandardButton.Ok).blockSignals(
-        True
-    )
-
-    # Connect the instudy checkbox on save
-    def on_save():
-        feature["instudy"] = str(int(fields["instudy"].isChecked()))
-
-    fields["button_box"].accepted.connect(on_save)
+    # OK is enabled only while the form is valid: validate now, then on
+    # every change
+    validate(fields)
 
 
 def validate(fields: dict):
@@ -58,11 +53,9 @@ def validate(fields: dict):
 
     # Validate all fields
     results = [
-        validate_field(fields["name_field"], "str"),
-        validate_field(fields["speed_field"], "float"),
+        (fields["name_field"], validate_field(fields["name_field"], "str")),
+        (fields["speed_field"], validate_field(fields["speed_field"], "float")),
     ]
 
-    # Block signals if any of the fields is invalid
-    button_box.button(button_box.StandardButton.Ok).blockSignals(
-        "False" in str(results)
-    )
+    # OK enabled only when every field is valid
+    update_ok_button(button_box, results, AlaqsLayerType.TAXIWAY)

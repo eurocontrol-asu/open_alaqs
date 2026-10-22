@@ -65,7 +65,13 @@ class TaxiwayRoute:
         if self.getSegments():
             return MultiLineString([x.getGeometry() for x in self.getSegments()])
         else:
-            logger.error("Cannot create MultiLineString from segments.")
+            # TaxiingEmissionCalculator warns once per movement about a route
+            # without segments; this is reached twice per movement on that path
+            logger.debug(
+                "Taxi route '%s' has no segments (none of its taxiways exists): "
+                "empty geometry.",
+                self.getName(),
+            )
             return MultiLineString()
         # return self._segments
 
@@ -74,6 +80,10 @@ class TaxiwayRoute:
 
     def setAircraftGroups(self, var):
         self._groups = var
+
+    def getDepartureArrivalFlag(self):
+        """The route's own departure_arrival flag (None when not set)."""
+        return self._departure_arrival
 
     def isDeparture(self):
         return self._departure_arrival.lower() == "d"
@@ -293,8 +303,8 @@ class TaxiwaySegmentsDatabase(SQLSerializable, metaclass=Singleton):
                 [
                     ("oid", "INTEGER PRIMARY KEY NOT NULL"),
                     ("taxiway_id", "TEXT"),
-                    ("speed", "DECIMAL"),
-                    ("time", "DECIMAL"),
+                    ("speed", "REAL"),
+                    ("time", "REAL"),
                     ("instudy", "DECIMAL"),
                 ]
             )

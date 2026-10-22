@@ -2,10 +2,15 @@ from qgis.PyQt import QtWidgets
 
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.openalaqsuitoolkit import validate_field
+from open_alaqs.enums import AlaqsLayerType
+from open_alaqs.openalaqsuitoolkit import (
+    add_combo_values,
+    is_empty_text,
+    update_ok_button,
+    validate_field,
+)
 from open_alaqs.ui._area_sources_helpers import (
     seed_is_test_site_from_feature,
-    write_is_test_site_to_feature,
 )
 
 logger = get_logger(__name__)
@@ -58,8 +63,7 @@ def _apply_test_site_field_state(fields, is_test_site: bool) -> None:
 
     Height and Source Name stay enabled regardless (height matters
     for dispersion positioning; name is the source identifier).
-    Heat flux stays disabled with '0' (already the default for all
-    area sources).
+    Heat flux stays disabled (read-only, 0 for new area sources).
     """
     # Individual field on the always-visible Parameters tab.
     unit_field = fields.get("unit_field")
@@ -73,6 +77,25 @@ def _apply_test_site_field_state(fields, is_test_site: bool) -> None:
     if tab_widget is not None:
         for tab_index in (1, 2):
             tab_widget.setTabEnabled(tab_index, not is_test_site)
+
+
+def _zero_fill_test_site_fields(fields) -> None:
+    """Fill "0" into the blank Units per Year and *_kg_unit fields, so a
+    test site stores numbers rather than NULL (which some downstream code
+    does not handle). Values the user entered are kept."""
+    for f_name in (
+        "unit_field",
+        "co_kg_unit_field",
+        "hc_kg_unit_field",
+        "nox_kg_unit_field",
+        "sox_kg_unit_field",
+        "pm10_kg_unit_field",
+        "p1_kg_unit_field",
+        "p2_kg_unit_field",
+    ):
+        widget = fields.get(f_name)
+        if widget is not None and is_empty_text(widget.text()):
+            widget.setText("0")
 
 
 def _open_load_events_dialog(form, fields, feature):
@@ -96,7 +119,7 @@ def _open_load_events_dialog(form, fields, feature):
     from open_alaqs.openalaqsdialog import OpenAlaqsImportEngineTestEvents
 
     source_id = (fields["name_field"].text() or "").strip()
-    if not source_id:
+    if is_empty_text(source_id):
         QMessageBox.warning(
             form,
             "Missing source name",
@@ -156,14 +179,17 @@ def form_open(form, layer, feature):
         tab_widget=form.findChild(QtWidgets.QTabWidget, "tabWidget"),
     )
 
-    # Hide the instudy field
-    fields["instudy"].setHidden(True)
+    # The In Study check box is bound to the instudy column by QGIS (CheckBox
+    # widget, "1" / "0", set in alaqs_config.py): it shows the stored value
+    # and QGIS saves what the user sets, so the form does not write it.
 
     # Seed the is_test_site checkbox from the feature. Values arrive as
     # TEXT '1' / '0' (matching the DB), NULL (from ALTER TABLE ADD COLUMN
     # on migrated projects), or absent entirely (pre-v1b schema — the
     # widget still exists on the form but has nothing to read).
     seed_is_test_site_from_feature(fields["is_test_site"], feature)
+    # The check box is also bound to is_test_site by QGIS (CheckBox widget,
+    # '1' / '0', set in alaqs_config.py), which saves it with the form.
 
     # Wire the "Load engine test events CSV..." button. It is enabled
     # only when the source is flagged as a test site. Clicking it opens
@@ -174,6 +200,15 @@ def form_open(form, layer, feature):
         fields["load_events_csv"].clicked.connect(
             lambda: _open_load_events_dialog(form, fields, feature)
         )
+
+    # For test sites the compute path ignores unit_year and the *_kg_unit
+    # rate columns: fill "0" into the blank ones when the box is ticked
+    # (and at open for a test site), before the form is saved.
+    if fields["is_test_site"].isChecked():
+        _zero_fill_test_site_fields(fields)
+    fields["is_test_site"].toggled.connect(
+        lambda checked: checked and _zero_fill_test_site_fields(fields)
+    )
 
     # Re-run validation whenever the test-site toggle changes: the set
     # of required fields differs between test-site and regular modes.
@@ -188,8 +223,7 @@ def form_open(form, layer, feature):
         lambda checked: _apply_test_site_field_state(fields, checked)
     )
 
-    # Disable heat flux fields
-    fields["heat_flux_field"].setText("0")
+    # Heat Flux is not entered (read-only, 0 for new sources)
     fields["heat_flux_field"].setEnabled(False)
 
     # Seed the profiles
@@ -202,126 +236,36 @@ def form_open(form, layer, feature):
         if isinstance(value, QtWidgets.QLineEdit):
             fields[key].textChanged.connect(lambda: validate(fields))
 
-    # Block the ok button (will be overwritten after validation)
-    fields["button_box"].button(fields["button_box"].StandardButton.Ok).blockSignals(
-        True
-    )
-
-    # Connect all QComboBoxes and the instudy checkbox on save
-    def on_save():
-        form.changeAttribute(
-            "hourly_profile", fields["hour_profile_field"].currentText()
-        )
-        form.changeAttribute(
-            "daily_profile", fields["daily_profile_field"].currentText()
-        )
-        form.changeAttribute(
-            "monthly_profile", fields["month_profile_field"].currentText()
-        )
-        feature["instudy"] = str(int(fields["instudy"].isChecked()))
-        # is_test_site as TEXT '1' / '0' to match the DB column type
-        # (see EngineTestEvents.py schema). AreaSources.isTestSite()
-        # reads by string comparison.
-        write_is_test_site_to_feature(fields["is_test_site"], feature)
-
-        # For test sites, the compute path ignores unit_year and the
-        # *_kg_unit rate columns. Auto-fill "0" on any that the user
-        # left blank so the DB stores a valid numeric rather than NULL
-        # (which some downstream code doesn't handle). Users who care
-        # can override these values, but there's no reason to force
-        # them to.
-        if fields["is_test_site"].isChecked():
-            fields_to_zero_fill = [
-                "unit_field",
-                "co_kg_unit_field",
-                "hc_kg_unit_field",
-                "nox_kg_unit_field",
-                "sox_kg_unit_field",
-                "pm10_kg_unit_field",
-                "p1_kg_unit_field",
-                "p2_kg_unit_field",
-            ]
-            for f_name in fields_to_zero_fill:
-                widget = fields.get(f_name)
-                if widget is not None and not widget.text().strip():
-                    widget.setText("0")
-
-    fields["button_box"].accepted.connect(on_save)
+    # OK is enabled only while the form is valid: validate now, then on
+    # every change
+    validate(fields)
 
 
 @catch_errors
 def populate_hourly_profiles(field):
-    # Make sure the field is empty
-    field.clear()
-
-    # Set the default field
-    field.addItem("default")
-
-    # Get the available hourly profiles
-    hourly_profiles = alaqs.get_hourly_profiles()
-
-    if (hourly_profiles is None) or (hourly_profiles == []):
-        logger.debug("No hourly profiles were found.")
-        return
-
-    # Add all the hourly profiles to the list (except the default profile)
-    for profile in hourly_profiles:
-        if profile[1] != "default":
-            field.addItem(profile[1])
-
-    # Set the default category to 0 and make the list un-editable
-    field.setCurrentIndex(0)
-    field.setEditable(False)
+    """Add the study's hourly profiles missing from the list (profiles created
+    after the study was opened). The list itself is a value map set when
+    the study opens; QGIS shows the stored value and saves the choice."""
+    profiles = alaqs.get_hourly_profiles() or []
+    add_combo_values(field, ["default"] + [profile[1] for profile in profiles])
 
 
 @catch_errors
 def populate_daily_profiles(field):
-    # Make sure the field is empty
-    field.clear()
-
-    # Set the default field
-    field.addItem("default")
-
-    # Get the available daily profiles
-    daily_profiles = alaqs.get_daily_profiles()
-
-    if (daily_profiles is None) or (daily_profiles == []):
-        logger.debug("No daily profiles were found.")
-        return
-
-    # Add all the daily profiles to the list (except the default profile)
-    for profile in daily_profiles:
-        if profile[1] != "default":
-            field.addItem(profile[1])
-
-    # Set the default category to 0 and make the list un-editable
-    field.setCurrentIndex(0)
-    field.setEditable(False)
+    """Add the study's daily profiles missing from the list (profiles created
+    after the study was opened). The list itself is a value map set when
+    the study opens; QGIS shows the stored value and saves the choice."""
+    profiles = alaqs.get_daily_profiles() or []
+    add_combo_values(field, ["default"] + [profile[1] for profile in profiles])
 
 
 @catch_errors
 def populate_monthly_profiles(field):
-    # Make sure the field is empty
-    field.clear()
-
-    # Set the default field
-    field.addItem("default")
-
-    # Get the available monthly profiles
-    monthly_profiles = alaqs.get_monthly_profiles()
-
-    if (monthly_profiles is None) or (monthly_profiles == []):
-        logger.debug("No monthly profiles were found.")
-        return
-
-    # Add all the monthly profiles to the list (except the default profile)
-    for profile in monthly_profiles:
-        if profile[1] != "default":
-            field.addItem(profile[1])
-
-    # Set the default category to 0 and make the list un-editable
-    field.setCurrentIndex(0)
-    field.setEditable(False)
+    """Add the study's monthly profiles missing from the list (profiles created
+    after the study was opened). The list itself is a value map set when
+    the study opens; QGIS shows the stored value and saves the choice."""
+    profiles = alaqs.get_monthly_profiles() or []
+    add_combo_values(field, ["default"] + [profile[1] for profile in profiles])
 
 
 def validate(fields: dict):
@@ -338,10 +282,10 @@ def validate(fields: dict):
     without filling in numbers that will never be used. ``on_save()``
     auto-fills them with ``"0"`` so the DB stores something valid.
 
-    Source name, height, and heat flux are validated regardless — they
-    matter for both regular area sources AND test sites (height for
-    dispersion positioning, name for the source_id, heat flux is
-    already 0 and disabled).
+    Source name and height are validated regardless: they matter for
+    both regular area sources AND test sites (height for dispersion
+    positioning, name for the source_id). Heat flux is read-only, so it
+    is only checked when it holds a value.
     """
 
     # Get the button box
@@ -349,10 +293,16 @@ def validate(fields: dict):
 
     # Fields validated for every area source.
     results = [
-        validate_field(fields["name_field"], "str"),
-        validate_field(fields["height_field"], "float"),
-        validate_field(fields["heat_flux_field"], "float"),
+        (fields["name_field"], validate_field(fields["name_field"], "str")),
+        (fields["height_field"], validate_field(fields["height_field"], "float")),
     ]
+    if not is_empty_text(fields["heat_flux_field"].text()):
+        results.append(
+            (
+                fields["heat_flux_field"],
+                validate_field(fields["heat_flux_field"], "float"),
+            )
+        )
 
     # Fields validated only for regular area sources. Skipped when the
     # source is a test site.
@@ -362,17 +312,36 @@ def validate(fields: dict):
     if not is_test_site:
         results.extend(
             [
-                validate_field(fields["co_kg_unit_field"], "float"),
-                validate_field(fields["hc_kg_unit_field"], "float"),
-                validate_field(fields["nox_kg_unit_field"], "float"),
-                validate_field(fields["sox_kg_unit_field"], "float"),
-                validate_field(fields["pm10_kg_unit_field"], "float"),
-                validate_field(fields["p1_kg_unit_field"], "float"),
-                validate_field(fields["p2_kg_unit_field"], "float"),
+                (
+                    fields["co_kg_unit_field"],
+                    validate_field(fields["co_kg_unit_field"], "float"),
+                ),
+                (
+                    fields["hc_kg_unit_field"],
+                    validate_field(fields["hc_kg_unit_field"], "float"),
+                ),
+                (
+                    fields["nox_kg_unit_field"],
+                    validate_field(fields["nox_kg_unit_field"], "float"),
+                ),
+                (
+                    fields["sox_kg_unit_field"],
+                    validate_field(fields["sox_kg_unit_field"], "float"),
+                ),
+                (
+                    fields["pm10_kg_unit_field"],
+                    validate_field(fields["pm10_kg_unit_field"], "float"),
+                ),
+                (
+                    fields["p1_kg_unit_field"],
+                    validate_field(fields["p1_kg_unit_field"], "float"),
+                ),
+                (
+                    fields["p2_kg_unit_field"],
+                    validate_field(fields["p2_kg_unit_field"], "float"),
+                ),
             ]
         )
 
-    # Block signals if any of the fields is invalid
-    button_box.button(button_box.StandardButton.Ok).blockSignals(
-        "False" in str(results)
-    )
+    # OK enabled only when every field is valid
+    update_ok_button(button_box, results, AlaqsLayerType.AREA)

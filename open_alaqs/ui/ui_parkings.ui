@@ -29,11 +29,8 @@
    </item>
    <item row="4" column="1">
     <widget class="QCheckBox" name="instudy">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
      <property name="toolTip">
-      <string>Enable to include the source in the study</string>
+      <string>Untick to leave this source out of the emission calculation</string>
      </property>
      <property name="text">
       <string>In Study</string>
@@ -72,7 +69,7 @@
        <item row="0" column="0">
         <widget class="QLabel" name="label">
          <property name="text">
-          <string>Number per Year</string>
+          <string>Vehicles per Year</string>
          </property>
         </widget>
        </item>
@@ -132,7 +129,7 @@
        <item row="0" column="0">
         <widget class="QLabel" name="label_9">
          <property name="text">
-          <string>Hourly</string>
+          <string>Hourly Profile</string>
          </property>
         </widget>
        </item>
@@ -142,7 +139,7 @@
        <item row="1" column="0">
         <widget class="QLabel" name="label_10">
          <property name="text">
-          <string>Daily</string>
+          <string>Daily Profile</string>
          </property>
         </widget>
        </item>
@@ -152,7 +149,7 @@
        <item row="2" column="0">
         <widget class="QLabel" name="label_11">
          <property name="text">
-          <string>Monthly</string>
+          <string>Monthly Profile</string>
          </property>
         </widget>
        </item>

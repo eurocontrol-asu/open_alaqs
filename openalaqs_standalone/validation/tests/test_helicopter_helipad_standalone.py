@@ -108,7 +108,7 @@ def test_helicopter_with_gate_is_placed_at_the_gate(tmp_path):
 
 def test_helicopter_without_gate_starts_at_the_threshold(tmp_path):
     conn, bounds, grid_def, heli, grid = _run(tmp_path, "nogate.alaqs", "", "")
-    runway = _mv.get_runways(conn)[24]
+    runway = _mv.get_runways(conn)["24"]
     pos = runway_threshold_3857(runway, 24)
     for res in heli.values():
         assert res["heli_origin_3857"] == pytest.approx(tuple(pos))

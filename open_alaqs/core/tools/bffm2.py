@@ -21,6 +21,25 @@ class _Constants:
 
 constants = _Constants()
 
+# Dry air as an ideal gas (ICAO Doc 7488 constants, as the CAEP validation
+# workbook): ratio of specific heats and specific gas constant.
+GAMMA_AIR = 1.4
+R_AIR_J_KG_K = 287.05287
+
+
+def speed_of_sound_m_s(temperature_k: float) -> float:
+    """Speed of sound in air at `temperature_k`, a = sqrt(gamma R T).
+
+    Used for the flight Mach number TAS / a of the BFFM2 ambient
+    corrections (plugin, standalone and the CAEP validation). ISA sea level
+    (288.15 K) gives 340.294 m/s. Until October 2026 the plugin and the
+    standalone used the linear form 331.3 + 0.606 (T - 273.15), which is
+    0.03% high at ISA and 0.16% high at 243.6 K and at 307 K.
+    """
+    if temperature_k <= 0:
+        return 0.0
+    return float(np.sqrt(GAMMA_AIR * R_AIR_J_KG_K * temperature_k))
+
 
 def perp(a):
     b = empty_like(a)

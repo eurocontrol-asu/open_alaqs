@@ -1,0 +1,226 @@
+"""MEEM V1 above 3000 ft in the CAEP14 reference and the standalone.
+
+The reference (`tools/compute_caep14_reference.py`, `_meem_v1_mass_mgkg`) is
+written out from the MEEM_V1 tab of the CAEP14 FBE Engines Emissions
+Calculation Sheet v14 without the plugin's code; the standalone
+(`compute_aircraft._meem_v1_segment_ei`) uses the plugin's
+`open_alaqs.core.tools.meem_v1`. Both must give the sheet's nvPM mass EI
+(MEEM_V1!B119). The training_v3 fixture of the parity gate has no segment
+above 3000 ft (mixing height 914.4 m), so this is checked here.
+
+Sheet values: the stored example (01P20CM127, 22500 ft) and the sheet
+recalculated in LibreOffice 24.2 for the other inputs (see
+tests/test_meem_v1.py); cruise altitude 38000 ft, ISA (delta T 0) for
+_CASES, delta T USER INPUTS!B5 for _DT_CASES (the plugin, the standalone and
+the reference take it from the movement's meteo temperature minus ISA at the
+airport elevation).
+"""
+
+from __future__ import annotations
+
+import importlib.util
+from pathlib import Path
+
+import pytest
+
+from openalaqs_standalone.compute_aircraft import _meem_v1_segment_ei
+
+TOOLS = Path(__file__).resolve().parents[1] / "tools"
+FT2M = 0.3048000097536
+
+_TS = (1.0, 0.85, 0.30, 0.07)
+_ENGINES = {
+    "01P20CM127": (
+        30.0,
+        (1.35458150221701, 1.03598718120316, 1.85003357629324, 0.788067430941943),
+    ),
+    "01P20CM128": (
+        33.3,
+        (1.6270256714414, 1.23517541065843, 2.98855587397408, 0.683860589780375),
+    ),
+    "11GE144": (
+        27.2,
+        (73.7415341769357, 53.301741608788, 2.79689622305639, 5.3325761855363),
+    ),
+}
+# (engine, altitude ft, climbing, TAS kt) -> MEEM_V1!B119 (mg/kg)
+_CASES = [
+    (("01P20CM127", 22500, True, 428.49), 0.944536653843135),
+    (("01P20CM127", 8000, True, 280), 1.169462798467009),
+    (("01P20CM127", 12000, False, 300), 0.9340576233694476),
+    (("11GE144", 4500, True, 220), 61.22075397785308),
+    (("11GE144", 5000, False, 210), 5.588363301978656),
+    (("01P20CM128", 3500, True, 200), 1.5260688609694564),
+]
+
+
+# (engine, altitude ft, climbing, TAS kt, delta T K) -> MEEM_V1!B119 (mg/kg)
+_DT_CASES = [
+    (("11GE144", 4500, True, 220, -5.1825), 60.52925750077077),
+    (("11GE144", 5000, False, 210, 12.0), 4.55684516335939),
+]
+
+
+@pytest.fixture(scope="module")
+def ref():
+    spec = importlib.util.spec_from_file_location(
+        "compute_caep14_reference", TOOLS / "compute_caep14_reference.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+@pytest.mark.parametrize("inputs, expected", _CASES)
+def test_reference_matches_sheet(ref, inputs, expected):
+    engine, alt_ft, climbing, tas_kt = inputs
+    opr, mass = _ENGINES[engine]
+    v = ref._meem_v1_mass_mgkg(
+        alt_ft, tas_kt / 1.94384, climbing, list(zip(_TS, mass)), opr
+    )
+    assert v == pytest.approx(expected, rel=1e-12)
+
+
+@pytest.mark.parametrize("inputs, expected", _CASES)
+def test_standalone_matches_sheet(inputs, expected):
+    engine, alt_ft, climbing, tas_kt = inputs
+    opr, mass = _ENGINES[engine]
+    modes = ("TO", "CL", "AP", "TX")
+    meem = {
+        "pm10_nonvol": {m: v / 1000.0 for m, v in zip(modes, mass)},
+        "nvpm_number": {m: 1.0e14 for m in modes},
+        "press_ratio": opr,
+        "m_f00": None,
+        "m_max_mgkg": None,
+        "n_f00": None,
+        "n_max_nkg": None,
+    }
+    mode = "CL" if climbing else "AP"
+    eng = {"pm10_ei": meem["pm10_nonvol"][mode] + 0.05}
+    out = _meem_v1_segment_ei(
+        eng, meem, mode, alt_ft * FT2M, tas_kt / 1.94384, climbing
+    )
+    assert out["pm10_ei"] - 0.05 == pytest.approx(expected / 1000.0, rel=1e-12)
+
+
+@pytest.mark.parametrize("inputs, expected", _DT_CASES)
+def test_reference_delta_t_matches_sheet(ref, inputs, expected):
+    engine, alt_ft, climbing, tas_kt, dt = inputs
+    opr, mass = _ENGINES[engine]
+    v = ref._meem_v1_mass_mgkg(
+        alt_ft, tas_kt / 1.94384, climbing, list(zip(_TS, mass)), opr, dt
+    )
+    assert v == pytest.approx(expected, rel=1e-12)
+
+
+@pytest.mark.parametrize("inputs, expected", _DT_CASES)
+def test_standalone_delta_t_matches_sheet(inputs, expected):
+    engine, alt_ft, climbing, tas_kt, dt = inputs
+    opr, mass = _ENGINES[engine]
+    modes = ("TO", "CL", "AP", "TX")
+    meem = {
+        "pm10_nonvol": {m: v / 1000.0 for m, v in zip(modes, mass)},
+        "nvpm_number": {m: 1.0e14 for m in modes},
+        "press_ratio": opr,
+        "m_f00": None,
+        "m_max_mgkg": None,
+        "n_f00": None,
+        "n_max_nkg": None,
+    }
+    mode = "CL" if climbing else "AP"
+    eng = {"pm10_ei": meem["pm10_nonvol"][mode] + 0.05}
+    out = _meem_v1_segment_ei(
+        eng, meem, mode, alt_ft * FT2M, tas_kt / 1.94384, climbing, delta_t=dt
+    )
+    assert out["pm10_ei"] - 0.05 == pytest.approx(expected / 1000.0, rel=1e-12)
+
+
+def test_reference_delta_t_from_meteo(ref):
+    """Meteo temperature minus ISA at the airport elevation; 0 without meteo."""
+    assert ref._meem_delta_t({"T_K": 283.0}, -5.0) == pytest.approx(-5.1825)
+    assert ref._meem_delta_t(None, 100.0) == 0.0
+
+
+def test_lto_unchanged(ref):
+    """At or below 3000 ft above the aerodrome the mode EI is used unchanged."""
+    meem = {
+        "pm10_nonvol": {"TO": 0.07, "CL": 0.05, "AP": 0.003, "TX": 0.005},
+        "nvpm_number": {"TO": 1e14, "CL": 1e14, "AP": 1e14, "TX": 1e14},
+        "press_ratio": 27.2,
+        "m_f00": None,
+        "m_max_mgkg": None,
+        "n_f00": None,
+        "n_max_nkg": None,
+    }
+    eng = {"pm10_ei": 0.1}
+    assert _meem_v1_segment_ei(eng, meem, "CL", 914.4, 120.0, True) is eng
+
+
+# LTO / non-LTO cut at 3000 ft above the aerodrome (ICAO LTO cycle), not above
+# MSL; the airport elevation only sets the ISA altitude of the chain. Airport
+# at 1655 m: the cut above MSL sent every segment, the take-off roll
+# included, to the chain (01P20CM128 approach 1.189 instead of 2.989 mg/kg).
+_ELEV_M = 1655.0
+
+
+def _meem_128():
+    opr, mass = _ENGINES["01P20CM128"]
+    modes = ("TO", "CL", "AP", "TX")
+    return {
+        "pm10_nonvol": {m: v / 1000.0 for m, v in zip(modes, mass)},
+        "nvpm_number": {m: 1.0e14 for m in modes},
+        "press_ratio": opr,
+        "m_f00": None,
+        "m_max_mgkg": None,
+        "n_f00": None,
+        "n_max_nkg": None,
+    }
+
+
+@pytest.mark.parametrize("height_m", [0.0, 500.0, 914.4])
+@pytest.mark.parametrize("mode, climbing", [("TO", True), ("AP", False)])
+def test_standalone_lto_cut_above_airport(height_m, mode, climbing):
+    eng = {"pm10_ei": 0.1}
+    out = _meem_v1_segment_ei(
+        eng,
+        _meem_128(),
+        mode,
+        _ELEV_M + height_m,
+        70.0,
+        climbing,
+        airport_elevation_m=_ELEV_M,
+    )
+    assert out is eng
+
+
+def test_standalone_non_lto_above_airport_uses_msl_altitude(ref):
+    """1000 m above a 1655 m airport: the chain, with ISA at 2655 m MSL; the
+    reference gives the same EI."""
+    meem = _meem_128()
+    eng = {"pm10_ei": meem["pm10_nonvol"]["AP"] + 0.05}
+    alt_msl = _ELEV_M + 1000.0
+    out = _meem_v1_segment_ei(
+        eng,
+        meem,
+        "AP",
+        alt_msl,
+        120.0,
+        False,
+        delta_t=-3.0,
+        airport_elevation_m=_ELEV_M,
+    )
+    opr, mass = _ENGINES["01P20CM128"]
+    v = ref._meem_v1_mass_mgkg(
+        alt_msl / FT2M, 120.0, False, list(zip(_TS, mass)), opr, -3.0
+    )
+    assert out["pm10_ei"] - 0.05 == pytest.approx(v / 1000.0, rel=1e-12)
+    assert v != pytest.approx(2.98855587397408, rel=1e-3)
+
+
+def test_reference_lto_cut_above_airport(ref):
+    """The reference's cut takes the start point's height above the airport."""
+    assert not ref._meem_non_lto(0.0)
+    assert not ref._meem_non_lto(500.0)
+    assert not ref._meem_non_lto(914.4)
+    assert ref._meem_non_lto(914.5)
+    assert ref._meem_non_lto(1000.0)

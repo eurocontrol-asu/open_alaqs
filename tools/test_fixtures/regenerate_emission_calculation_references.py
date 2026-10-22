@@ -345,9 +345,11 @@ def regenerate_one(dataset: dict, plugin: OpenALAQS) -> None:
 
     if "source_type" in dataset:
         idx = dlg.ui.source_types.findText(dataset["source_type"])
-        if idx != -1:
-            dlg.ui.source_types.setCurrentIndex(idx)
-            print(f"  source type = {dataset['source_type']}")
+        if idx == -1:
+            # The dialog lists the modules' getModuleName(); an unknown name would leave "all" selected.
+            raise RuntimeError(f"unknown source type {dataset['source_type']!r}")
+        dlg.ui.source_types.setCurrentIndex(idx)
+        print(f"  source type = {dataset['source_type']}")
 
     # Set pollutant
     poll_idx = dlg.ui.pollutants_names.findText(dataset["pollutant"])

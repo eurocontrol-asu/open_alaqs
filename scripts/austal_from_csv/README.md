@@ -217,8 +217,8 @@ reference_longitude=9.2220
 The script generates the following AUSTAL input files inside the `output_path` directory:
 
 - `austal.txt` — main AUSTAL configuration file
-- `series.dmna` / `series.dmna` header + data — meteorology time series
-- Source emission files — one per active source/timestep
+- `series.dmna`: meteorology time series
+- `NN/eNNNN.dmna`: per-source-group emission grid files (one folder per source group, one file per time step)
 
 These files can be used directly with the AUSTAL executable or loaded back via the QGIS plugin's "Use Existing AUSTAL Input Files" option.
 
@@ -238,7 +238,7 @@ The script will **fail** if AUSTAL output files (`austal.txt`, `series.dmna`, et
 
 A typical two-step workflow:
 
-1. **Generate emissions** using the `run_emissions_austal.py` script (in `scripts/emissions_austal/`), which exports a CSV file with `--csv` flag.
+1. **Generate emissions** using `run_emissions_austal.py` (in `scripts/emissions_austal/`) with the `--csv` flag and `view_type=by source` in its config; the default `by aggregation` view has no geometry and is rejected here.
 2. **Generate AUSTAL input files** using this script, pointing `emissions_csv_path` to the CSV output from step 1.
 
 This separation allows you to:
@@ -253,11 +253,13 @@ This separation allows you to:
 The script lives in the source repository at `scripts/austal_from_csv/`
 and is **not** part of the QGIS plugin install. You need a clone of the
 Open-ALAQS repository to run it. The script imports from
-`open_alaqs/...` in the same repository, and additionally searches:
-1. Workspace root (the directory two levels up from the script)
-2. QGIS user-plugins directory
-   (`%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins`) as a
-   fallback when the plugin is also installed via Plugin Manager
+`open_alaqs/...` and searches, in order:
+1. the directory three levels up from the script
+2. the workspace root (the directory two levels up from the script)
+3. the QGIS user-plugins directory of the default profile (Windows
+   `%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins`, with the
+   macOS and Linux equivalents), as a fallback when the plugin is also
+   installed via Plugin Manager
 
 ---
 

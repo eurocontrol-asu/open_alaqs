@@ -68,8 +68,9 @@ What Phase 1 handles:
 | Table in REFERENCE but not in SOURCE | `CREATE TABLE` using REFERENCE's schema (empty table). | — |
 | Table in SOURCE but not in REFERENCE | Reported as "extra"; left in place. | `--drop-extra-tables` to remove. |
 | Column in REFERENCE but not in SOURCE | `ALTER TABLE ... ADD COLUMN` with REFERENCE's declared type, NULL default. | — |
-| Column in SOURCE but not in REFERENCE | Reported as "extra"; left in place. | `--drop-extra-columns` to remove. |
-| Type/affinity differences on common columns | Warned, never auto-rewritten (SQLite is dynamically typed). | — |
+| Column in SOURCE but not in REFERENCE | Reported as "extra"; left in place. | `--drop-extra-columns` to remove: `ALTER TABLE ... DROP COLUMN` (SQLite 3.35 or later), which keeps the table's keys, NOT NULL, defaults, indexes and triggers; where SQLite refuses it, the table is rebuilt with the REFERENCE definitions of the kept columns (source order, rowids kept) and its indexes and triggers are recreated. |
+| Numeric column of a `shapes_*` layer declared `REAL` in REFERENCE and otherwise in SOURCE (`DECIMAL` in studies made with 5.3.x: height, speed, distance, idle_time, temperature, diameter, velocity, the `*_percentage` columns, `vehicle_year`, the emission factors, `gate_height`, taxiway `speed` and `time`, receptor `xcoord`, `ycoord`) | Converted (plan line `~ RETYPE`): the table is rebuilt with the REFERENCE definitions (source column order, rowids, keys, defaults, indexes and geometry triggers kept) and the values are kept numerically; a text value that reads as a number (`"2.5"`, `"30,3"`) becomes that number, an empty text becomes NULL, any other text (for example `Calculated` in the unused taxiway `time` of old studies, or `"1,234"`, which is 1.234 with a decimal comma but a grouped 1234) is reported on stderr, once per column with the count and three examples (`WARNING: <table>.<column>: <n> value(s) are not numbers and are left as text: ...`), and left as it is. Why: the QGIS SpatiaLite provider types a `DECIMAL` column from its stored data (integer when the values are whole numbers, text when the layer is empty), so a decimal typed in a form was rounded (2.5 saved as 3, 25 under a German locale) or stored as text; a `REAL` column is typed Double. | none |
+| Other type/affinity differences on common columns | Warned, never auto-rewritten (SQLite is dynamically typed). | none |
 | Virtual tables (SpatialIndex, KNN2, ElementaryGeometries) | Filtered from both sides of the diff (they need the SpatiaLite extension to introspect; the runtime recreates them). | — |
 
 Registered data-preserving transforms are run for special rename pairs.
@@ -94,11 +95,11 @@ default_stationary_category, default_stationary_substance,
 default_stationary_ef, default_emission_dynamics, default_apu_times
 ```
 
-Pass `--refresh-include-user-extensible` to also refresh the 7
+Pass `--refresh-include-user-extensible` to also refresh the 8
 user-extensible tables (`default_aircraft`, `default_aircraft_engine_ei`,
 `default_aircraft_profiles`, `default_aircraft_apu_ef`,
 `default_aircraft_start_ef`, `default_gate_profiles`,
-`default_helicopter_engine_ei`). User customizations to those tables
+`default_helicopter`, `default_helicopter_engines`). User customizations to those tables
 WILL BE OVERWRITTEN.
 
 Pass `--refresh-tables T1,T2,...` to override the list entirely.
@@ -114,10 +115,11 @@ Two small post-migration steps tied to the point-sources v2 schema:
 1. INSERT-OR-IGNOREs three named temporal profiles (`heating_season`,
    `cooling_season`, `business_hours`) into each of
    `user_month_profile`, `user_day_profile`, `user_hour_profile`.
-   These three profiles are shipped in the canonical templates
-   (`open_alaqs/core/templates/{project,inventory}.alaqs`) so new
-   studies inherit them automatically. The Phase 3 INSERT-OR-IGNORE
-   step backfills them into legacy studies migrated through Phase 1.
+   The `user_*_profile` tables of the canonical templates
+   (`open_alaqs/core/templates/{project,inventory}.alaqs`) ship empty, so
+   a new study does not have these profiles; the Phase 3
+   INSERT-OR-IGNORE step adds them to every study migrated with this
+   script.
    The user's existing custom profiles (e.g. `parking`, `roadways`)
    are never modified. Idempotent on `profile_name`; running Phase 3
    on an already-migrated study is a no-op.
@@ -151,10 +153,10 @@ To skip Phase 3 entirely, pass `--skip-point-sources-v2`.
 
 - A `.bak-<timestamp>.alaqs` copy is made in the same directory before
   any write. Pass `--no-backup` to skip (NOT recommended).
-- Phase 1 runs in one transaction; Phase 2 in another. A failure in
-  either phase rolls back THAT phase only. If Phase 2 fails after
-  Phase 1 committed, the source has the new schema but the original
-  data; restore from backup if you want to undo Phase 1 too.
+- Phases 1, 2 and 3 each run in their own transaction. On a failure
+  the running phase is rolled back and, unless `--no-backup` was given,
+  the whole file is restored from the `.bak-<timestamp>` copy (exit
+  code 1), so phases already committed are undone too.
 - Pre-flight checks fail-fast: missing source file, missing reference
   template, missing CSVs for `--refresh-tables` → exit code 2 before
   any write.

@@ -412,6 +412,90 @@ def ensure_qt_app():
 # ============================================================================
 
 
+_TRUE_STRINGS = ("true", "1", "yes")
+_FALSE_STRINGS = ("false", "0", "no")
+
+
+def parse_strict_bool(value, key):
+    """Parse a boolean setting: true/false, 1/0, yes/no (any case).
+
+    A bool passes through. Any other value raises ValueError.
+    """
+    if isinstance(value, bool):
+        return value
+    s = str(value).strip().lower()
+    if s in _TRUE_STRINGS:
+        return True
+    if s in _FALSE_STRINGS:
+        return False
+    raise ValueError(f"{key}={value!r} is not a boolean; use true/false, 1/0 or yes/no")
+
+
+# Config spelling -> value MovementSourceModule recognises
+# (smoothAndShiftEnabled: "default" or "smooth & shift"; "none" disables).
+_SOURCE_DYNAMICS = {
+    "none": "none",
+    "no": "none",
+    "off": "none",
+    "0": "none",
+    "default": "default",
+    "def": "default",
+    "smooth & shift": "smooth & shift",
+    "smooth&shift": "smooth & shift",
+    "smooth_shift": "smooth & shift",
+    "smooth and shift": "smooth & shift",
+    "sas": "smooth & shift",
+}
+
+
+def parse_source_dynamics(value):
+    """Map a source_dynamics spelling (any case) to the module value.
+
+    Returns "none", "default" or "smooth & shift"; raises ValueError for
+    anything else (an unknown value used to run without source dynamics).
+    """
+    s = str(value or "none").strip().lower()
+    if s not in _SOURCE_DYNAMICS:
+        raise ValueError(
+            f"source_dynamics={value!r} is not recognised; use none, default "
+            "or smooth & shift (also smooth_shift, smooth&shift, sas)"
+        )
+    return _SOURCE_DYNAMICS[s]
+
+
+def parse_austal_settings(value):
+    """AUSTAL module settings as a dict.
+
+    A dict (Python callers) is returned as a copy; a string must be a JSON
+    object, e.g. {"quality_level": 2, "options_string": "SCINOTAT"}. Empty
+    means no settings.
+    """
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return dict(value)
+    s = str(value).strip()
+    if not s:
+        return {}
+    try:
+        parsed = json.loads(s)
+    except json.JSONDecodeError as e:
+        raise ValueError(
+            f"austal_settings is not valid JSON ({e}); write a JSON object "
+            'with double quotes, e.g. {"quality_level": 2}'
+        ) from None
+    if not isinstance(parsed, dict):
+        raise ValueError(
+            f"austal_settings must be a JSON object, got {type(parsed).__name__}"
+        )
+    return parsed
+
+
+def format_austal_settings(settings):
+    """Serialise AUSTAL settings as the one-line JSON parse_config reads."""
+    return json.dumps(parse_austal_settings(settings), sort_keys=True)
+
+
 def parse_config(txt_path):
     """
     Parse configuration from a text file with key=value format.
@@ -439,8 +523,9 @@ def parse_config(txt_path):
     config["time_interval"] = timedelta(seconds=int(config["time_interval_seconds"]))
 
     # Parse boolean fields
-    config["should_apply_nox_corrections"] = (
-        config.get("should_apply_nox_corrections", "False") == "True"
+    config["should_apply_nox_corrections"] = parse_strict_bool(
+        config.get("should_apply_nox_corrections", False),
+        "should_apply_nox_corrections",
     )
 
     # Parse show_logs flag (default False)
@@ -454,20 +539,13 @@ def parse_config(txt_path):
     config["vertical_limit_m"] = float(config.get("vertical_limit_m", 914.4))
 
     # Parse source dynamics (string) and source names (comma-separated)
-    raw_dynamics = str(config.get("source_dynamics", "none") or "none").strip()
-    sd = raw_dynamics.lower()
-    # Accept common synonyms and normalise to canonical values used by modules
-    if sd in ("none", "no", "off", "0"):
-        config["source_dynamics"] = "none"
-    elif sd in ("default", "def"):
-        config["source_dynamics"] = "default"
-    elif sd in ("smooth", "shift"):
-        config["source_dynamics"] = sd
-    elif sd in ("smooth & shift", "smooth&shift", "smooth_shift", "smooth and shift"):
-        config["source_dynamics"] = "smooth_shift"
-    else:
-        # Unknown value — keep as provided but lowercased; modules may validate further
-        config["source_dynamics"] = sd
+    config["source_dynamics"] = parse_source_dynamics(
+        config.get("source_dynamics", "none")
+    )
+
+    # AUSTAL settings: a JSON object on one line
+    if "austal_settings" in config:
+        config["austal_settings"] = parse_austal_settings(config["austal_settings"])
 
     raw_names = config.get("source_names", "")
     if isinstance(raw_names, str):
@@ -1054,8 +1132,7 @@ def run_calculation(
 
         if args.austal:
             austal_cfg = {"is_enabled": True, "output_path": austal_output_path}
-            if config_dict.get("austal_settings"):
-                austal_cfg.update(config_dict.get("austal_settings"))
+            austal_cfg.update(parse_austal_settings(config_dict.get("austal_settings")))
             config.dispersion_modules_config = {"AUSTAL": austal_cfg}
 
         announce("=" * 60)

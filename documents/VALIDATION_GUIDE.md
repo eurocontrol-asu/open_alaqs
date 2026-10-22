@@ -61,35 +61,45 @@ example/training/training.alaqs project file
 example/training/training_out.alaqs canonical CAEP14 inventory
 example/training/training_movements.csv 13 movements
 example/training/training_meteo.csv 75 hourly meteo rows
-example/training/training_ads_b_data.csv ADS-B fragments (BFFM2-traj only)
+example/training/training_ads_b_data.csv ADS-B tracks, imported into the inventory (movement 11)
 example/training/training_validation_reference.xlsx reference NOx, CO, HC, PM, SO2
- per movement (the ground truth)
+ per movement (the plugin's results beside the CAEP14 reference implementation)
 ```
 
 ### Procedure (QGIS)
 
 1. Open QGIS 3.40 with the Open-ALAQS plugin installed from the package.
-2. Project → Open → `example/training/training.alaqs`.
-3. Open-ALAQS Toolbar → *Generate Emissions Inventory* → use
- `training_movements.csv` for movements and `training_meteo.csv` for
- meteorology. Save as `training_out_REBUILT.alaqs` next to the original
- so the original is preserved.
-4. Open-ALAQS Toolbar → *Calculate Emissions* on `training_out_REBUILT.alaqs`.
+2. Open `example/training/training.alaqs` with the plugin's toolbar button
+ *Load an Open ALAQS project* (QGIS Project → Open does not open an `.alaqs`).
+3. Open-ALAQS Toolbar → *Calculate Emissions Inventory* (window *Generate
+ Emission Inventory*) with the settings of
+ `documents/TEST_CASE_STUDY.md`: `training_movements.csv` for movements,
+ `training_meteo.csv` for meteorology, `training_ads_b_data.csv` as ADS-B
+ table, grid 100 x 100 x 20 cells of 250 x 250 x 50 m. Save as
+ `training_out_REBUILT.alaqs` next to the original so the original is
+ preserved. (Headless equivalent:
+ `QT_QPA_PLATFORM=offscreen python3.12 tools/test_fixtures/rebuild_training_example_inventory.py --out example/training/training_out_REBUILT.alaqs`.)
+4. Open-ALAQS Toolbar → *Visualize Emission Calculation* on `training_out_REBUILT.alaqs`.
  Method: **bymode** (default). NOx ambient correction: **off** (default).
-5. Export emissions to CSV via *Save to CSV*.
+ Emission Source Type: **MovementSource**. In the **Output Formats** tab,
+ set the Emissions table *Output view type* to **by source** (the default,
+ *by aggregation*, gives one total row; *by source* gives the rows of each
+ movement, which the reviewer sums by `source_name`).
+5. Click *View Emissions Table* and export it with *Export CSV*.
 
 ### Outputs to send
 
 - `training_out_REBUILT.alaqs` (the regenerated inventory) - or the md5 if
  the file is too large.
 - The exported per-movement CSV.
-- The Open-ALAQS log lines from the *Calculate Emissions* run.
+- The Open-ALAQS log lines from the *Visualize Emission Calculation* run.
 
 ### What the reviewer does
 
-- md5-compare `training_out_REBUILT.alaqs` against
- `example/training/training_out.alaqs` (this is the canonical CAEP14
- inventory; bit-identity here means the inventory pipeline is correct).
+- Compare the plugin results on `training_out_REBUILT.alaqs` with those on
+ `example/training/training_out.alaqs` (the canonical inventory): they must
+ be bit-identical per movement. The files themselves are not md5-identical
+ (a rebuild differs in bytes), so do not md5-compare them.
 - For each movement (13 total), read the plugin CSV and read
  `training_validation_reference.xlsx`. Diff per pollutant.
 - Report per-movement deltas with three thresholds:
@@ -154,56 +164,56 @@ From the repository root, with `PYTHONPATH=.`:
 python -m openalaqs_standalone aircraft \
  openalaqs_standalone/validation/data/training_v3.alaqs \
  --out v2_bymode.csv --method bymode \
- --isa-meteo --aircraft-only
+ --aircraft-only
 
 # 2. bymode + NOx ambient correction on
 python -m openalaqs_standalone aircraft \
  openalaqs_standalone/validation/data/training_v3.alaqs \
  --out v2_bymode_nox_corr.csv --method bymode \
- --apply-nox-corrections --isa-meteo --aircraft-only
+ --apply-nox-corrections --aircraft-only
 
 # 3. BFFM2 anchor
 python -m openalaqs_standalone aircraft \
  openalaqs_standalone/validation/data/training_v3.alaqs \
  --out v2_bffm2_anchor.csv --method bffm2_anchor \
- --isa-meteo --aircraft-only
+ --aircraft-only
 
 # 4. BFFM2 trajectory
 python -m openalaqs_standalone aircraft \
  openalaqs_standalone/validation/data/training_v3.alaqs \
  --out v2_bffm2_traj.csv --method bffm2_traj \
- --isa-meteo --aircraft-only
+ --aircraft-only
 ```
 
-**Why `--isa-meteo`**: the pinned plugin CSVs were generated under
-ISA atmospheric conditions for the BFFM2 ambient correction (the
-plugin emission-CSV pathway hard-codes ISA, while the standalone CLI
-defaults to using loaded `tbl_InvMeteo` meteo). For V2 / V5 bit-identity
-against the pinned plugin CSVs, `--isa-meteo` is required on every
-method except bymode (bymode and helicopters are immune to ambient
-conditions; BFFM2 methods show 5-34 % spurious deltas without the
-flag).
+**Meteo**: the pinned plugin CSVs were made with the study meteo
+(`tbl_InvMeteo`), which the plugin applies to the BFFM2 ambient correction
+and to the NOx correction. The standalone uses it by default
+(`--use-meteo`); do not pass `--isa-meteo`, which puts the BFFM2 methods
+and the NOx-corrected run off the pinned files (largest per-movement NOx
+delta 8 % with the NOx correction, 22 % `bffm2_anchor`, 34 % `bffm2_traj`;
+bymode without correction and the helicopters are unaffected).
 
 Expected per-movement aircraft-only totals (sum across 15 movements
 in training_v3.alaqs: 13 fixed-wing + 2 helicopter, kg):
 
 | Method                              | NOx    | CO     | HC    |
 | ----------------------------------- | -----: | -----: | ----: |
-| bymode                              | 29.885 | 22.762 | 1.519 |
-| bymode + `--apply-nox-corrections`  | 29.874 | 22.762 | 1.519 |
-| bffm2_anchor                        | 29.621 | 22.791 | 1.525 |
-| bffm2_traj                          | 15.477 | 23.437 | 1.527 |
+| bymode                              | 29.197 | 21.812 | 1.456 |
+| bymode + `--apply-nox-corrections`  | 27.963 | 21.812 | 1.456 |
+| bffm2_anchor                        | 27.745 | 21.532 | 1.468 |
+| bffm2_traj                          | 16.874 | 22.057 | 1.466 |
 
-(Confirmed against the shipped standalone 5.1.2 with `--isa-meteo
---aircraft-only` on `training_v3.alaqs`. Any drift here for the
-shipped standalone indicates a regression. For a NEW build of the
-standalone, drift is expected and is the V2 result.)
+(Measured with the standalone of this version, default meteo and
+`--aircraft-only`, on `training_v3.alaqs`; equal to the sums of the pinned
+plugin CSVs. Any drift here for the shipped standalone indicates a
+regression. For a NEW build of the standalone, drift is expected and is
+the V2 result.)
 
-If you are running the older 13-movement fixture
-`example/training/training_out.alaqs` (no helicopters) and want the
-historical merged-total summary as a smoke test, drop `--aircraft-only`
-and confirm the totals match `USAGE.md` § "Quick smoke test"
-(24.815 / 23.964 / 22.537 / 15.396 kg NOx for the four methods).
+If you are running the 13-movement example inventory
+`example/training/training_out.alaqs` (no helicopters) as a smoke test,
+the totals must match `USAGE.md` § "Quick smoke test" (31.841 / 30.698 /
+30.056 / 18.721 kg NOx for the four methods, with or without
+`--aircraft-only`).
 
 ### Outputs to send
 
@@ -216,9 +226,13 @@ and confirm the totals match `USAGE.md` § "Quick smoke test"
 
 - For each `v2_*.csv`, per-row diff against the matching pinned file at
   `openalaqs_standalone/validation/data/plugin_output/training_movements_*.csv`.
-  Tolerance bands per V1.
-- Cross-method sanity (no aircraft should produce zero emissions;
-  all 15 movements should appear in each output).
+  Tolerance bands per V1. Expected: PASS at 1e-6 everywhere except
+  `bffm2_traj` movement 11 (CUSTOM, PHBBA), PASS-WITH-DRIFT up to 1.3e-5
+  (NOx 1.3e-5; CO2, SOx and PM10 9e-6; HC 2e-6; CO within 1e-6).
+- Cross-method sanity (no aircraft should produce zero CO, CO2, HC, NOx,
+  SOx or PM10; SOx is fuel × 0.758 g/kg for every movement of this
+  fixture (jet fuel), helicopters included; all 15 movements should appear
+  in each output).
 - Compare the aggregate NOx totals against the expected table above.
 
 ---
@@ -241,11 +255,15 @@ expected is bit-identity against the prior validated build.
 ### Procedure (QGIS)
 
 1. Open QGIS 3.40 with the **new** plugin installed.
-2. Project → Open → `<campaign_study>.alaqs`.
-3. Open-ALAQS Toolbar → *Calculate Emissions*. Run for the inventory year
+2. Open `<campaign_study>.alaqs` with the plugin's toolbar button *Load an
+ Open ALAQS project*.
+3. Open-ALAQS Toolbar → *Visualize Emission Calculation* on the study's
+ inventory (`*_out.alaqs`). Run for the inventory year
  declared in `user_study_setup`. Method as previously validated
  (typically `bymode`).
-4. Save to CSV.
+4. Export the per-movement table to CSV: Emission Source Type
+ **MovementSource**, Emissions table *Output view type* **by source**,
+ *View Emissions Table*, *Export CSV*.
 
 ### Outputs to send
 
@@ -327,14 +345,18 @@ standalone's `aircraft` CSV to within float64 noise, on the same study
 
 ### Inputs
 
-- For CAEP14: V1 plugin CSV + V2 standalone `bymode` CSV.
+- For CAEP14: the V1 plugin CSV and a standalone run on the same inventory
+ (`aircraft training_out_REBUILT.alaqs --aircraft-only`), or the pinned
+ plugin CSVs and the V2 outputs on `training_v3.alaqs`.
 - For campaign: V3 plugin CSV + V4 standalone `aircraft` CSV.
 
 ### What the reviewer does
 
 - Build the row-aligned diff table keyed by `(oid, departure_arrival)`.
 - Tolerance bands: 1e-6 / 1e-4 / >1e-4 relative per pollutant.
-- For CAEP14: expect 100 % PASS at 1e-6. Any row outside is a regression.
+- For CAEP14: expect 100 % PASS at 1e-6, except `bffm2_traj` movement 11
+ (CUSTOM): PASS-WITH-DRIFT, about 4e-6 on the example and 1.3e-5 on
+ `training_v3.alaqs`. Any other row outside is a regression.
 - For campaign: report the band distribution. Investigate any 1e-4-band
  rows that did not exist in the prior build's V5 result.
 
@@ -400,13 +422,18 @@ and the reviewer should report both.
 | `example/training/training_out.alaqs` | CAEP14 canonical inventory |
 | `example/training/training_movements.csv` | 13-movement CAEP14 set |
 | `example/training/training_meteo.csv` | 75 hourly meteo rows |
-| `example/training/training_ads_b_data.csv` | ADS-B fragments for `bffm2_traj` |
-| `example/training/training_validation_reference.xlsx` | Per-movement reference totals |
+| `example/training/training_ads_b_data.csv` | ADS-B tracks imported into the inventory; movement 11 flies `1764584438_PHBBA` (all methods) |
+| `example/training/training_validation_reference.xlsx` | Per-movement reference totals (plugin beside the CAEP14 reference) |
 | `openalaqs_standalone/validation/data/training_v3*.alaqs` | Derived multi-source CAEP14 variants |
 | `openalaqs_standalone/validation/data/plugin_output/training_movements_bymode.csv` | Pinned plugin output, `bymode` |
 | `openalaqs_standalone/validation/data/plugin_output/training_movements_bymode_nox_corr.csv` | Pinned plugin output, `bymode`+corr |
 | `openalaqs_standalone/validation/data/plugin_output/training_movements_bffm2_anchor.csv` | Pinned plugin output, `bffm2_anchor` |
 | `openalaqs_standalone/validation/data/plugin_output/training_movements_bffm2_traj.csv` | Pinned plugin output, `bffm2_traj` |
+| `openalaqs_standalone/validation/data/plugin_output/training_sources_bymode.csv` | Pinned plugin output, stationary sources, `bymode` |
+| `openalaqs_standalone/validation/data/training_validation_reference.xlsx` | Plugin beside the CAEP14 reference on `training_v3.alaqs` (15 movements, helicopters included) |
+
+The pinned plugin outputs are made by the plugin of this version, run
+headlessly (`regenerate_plugin_csvs.py`), with the study meteo.
 
 The campaign study is the user's local artifact and is not shipped.
 
@@ -417,7 +444,11 @@ The campaign study is the user's local artifact and is not shipped.
 | Code path | Use |
 | ---------------------------------------------------------------------------------- | -------------------------------------------- |
 | `openalaqs_standalone/validation/tools/compute_caep14_reference.py` | Compute the CAEP14 reference from scratch |
-| `openalaqs_standalone/validation/tools/compare_inventory_to_reference.py` | Per-movement diff with tolerance bands |
+| `openalaqs_standalone/validation/tools/compare_inventory_to_reference.py` | Per-movement diff of a plugin CSV against the workbook reference column (0.5 % threshold, exit 0 when all pass) |
+| `openalaqs_standalone/validation/tools/regenerate_plugin_csvs.py` | Re-export the pinned plugin CSVs headlessly (QGIS bindings, no GUI) |
+| `openalaqs_standalone/validation/tools/regenerate_training_validation_xlsx.py` | Rebuild the validation workbooks |
+| `tools/test_fixtures/rebuild_training_example_inventory.py` | Rebuild `example/training/training_out.alaqs` from the example inputs |
+| `openalaqs_standalone/validation/tests/test_plugin_csv_vs_reference.py` | Plugin = reference = standalone, 15 movements, 2e-4 |
 | `openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md` | Methodology + earlier validation history |
 | `openalaqs_standalone/validation/tests/test_bffm2_ambient_propagation_regression.py` | BFFM2 EI regression pytest |
 | `scripts/migrate_alaqs.py` | Upgrade a legacy `.alaqs` to current schema |
@@ -466,7 +497,7 @@ in `AUSTALOutputModule.py`.
 AttributeError: 'Aircraft' object has no attribute 'getStartEmissions'.
 Did you mean: 'getApuEmissions'?
 ```
-at `MovementEmissionCalculator.__init__` line ~198.
+in `TaxiingEmissionCalculator.__init__` (`MovementEmissionCalculator.py`), where it reads `self._aircraft.getStartEmissions()`.
 
 **Root cause**: `MovementEmissionCalculator.py` calls
 `self._aircraft.getStartEmissions()` (aircraft-keyed start emissions,
@@ -490,11 +521,11 @@ without the other breaks the plugin.
 
 **Symptom**: the plugin's helicopter feature emits zero (or duplicate)
 emissions; `default_aircraft.csv` has more rows than the expected 1919
-(post-refactor count: the 60 helicopters were extracted to their own
-table).
+(post-refactor count: 61 helicopter rows were removed, 1980 to 1919).
 
-**Root cause**: 60 helicopter rows were moved out of
-`default_aircraft.csv` and into `default_helicopter.csv` as part of
+**Root cause**: 61 helicopter rows were removed from
+`default_aircraft.csv`, and `default_helicopter.csv` (60 rows, with
+variants per type; not a one-to-one move) was added, as part of
 the FOCA 2015 helicopter dispatch refactor introduced in the 5.2.0
 release. A rebuild that uses an upstream `default_aircraft.csv` from
 before that refactor (instead of the current canonical version)
@@ -553,9 +584,10 @@ OperationalError: no such table: default_helicopter
 
 **Root cause**: `openalaqs_standalone/movements.py` queries
 `default_helicopter` unconditionally to decide whether each movement is
-fixed-wing or helicopter. The upstream `example/training/training_out.alaqs`
-fixture pre-dates the FOCA 2015 helicopter implementation and does not
-have a `default_helicopter` table.
+fixed-wing or helicopter. Inventories made by plugin versions before 5.2.0
+(the FOCA 2015 helicopter release), such as older copies of
+`example/training/training_out.alaqs`, have no
+`default_helicopter` table.
 
 **Fix**: `movements.get_helicopter()` and `movements.get_helicopter_engine_type()`
 now check `_table_exists(conn, ...)` first and return `None` when the
@@ -574,7 +606,7 @@ build doesn't include them, sub-class symptoms will show up:
 | Fix | File | Symptom if reverted |
 | -------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------- |
 | COPERT 5 parking distance `m → km` | `core/tools/copert5.py` | All parking COPERT 5 emissions ~1000x too high |
-| ADS-B `z_m <= 0` for mode classification | `core/tools/ads_b.py` | Sub-MSL airports (e.g. EHRD at -15 m per `default_airports.csv`) misclassify TO as CL |
+| ADS-B `z_m <= 0` for mode classification | `core/tools/ads_b.py` | Sub-MSL airports (e.g. EHRD at -15 ft, -5 m) misclassify TO as CL (ground points are snapped to height 0 by `_snap_ground_heights` before the `z_m <= 0` test) |
 | BFFM2 1.05 power-setting tolerance clamp | `core/tools/twin_quadratic_fit_method.py` | Small floating-point overshoots abort the whole movement |
 | BFFM2 `ValueError` fallback to mode-anchor EI| `core/MovementEmissionCalculator.py` | BFFM2 failures abort the study instead of degrading |
 | Geodetic length for `MultiLineString` | `core/tools/spatial.py` | Mass silently dropped for clipped polylines re-entering the same cell |
@@ -582,7 +614,9 @@ build doesn't include them, sub-class symptoms will show up:
 
 ### 7. recipe_config.json parameter coverage
 
-The Dataiku recipe parses `recipe_config.json` via `_resolve_config(...)`.
+The Dataiku recipe parses `recipe_config.json` via its `_resolve_config(...)`
+(in the recipe file `openalaqs_standalone_recipe.txt` of the Dataiku update
+package, not in this repository).
 A parameter that exists in the CLI but is not in `_resolve_config` will be
 silently ignored when set via the JSON. This happened with
 `apply_nox_corrections` (CLI accepted it, JSON did not). The current
@@ -621,7 +655,7 @@ NOx ambient correction: off | on
 Time window (if any): ____
 
 === V1 deliverables ===
- training_out_REBUILT.alaqs md5: ____
+ Per-movement results, rebuilt vs shipped inventory: identical | differ
  V1 per-movement CSV: attached
  Plugin log excerpt: attached
 
@@ -651,7 +685,7 @@ Time window (if any): ____
 
 === Request to the reviewer ===
 Please:
- 1. md5 check inventory bit-identity (V1).
+ 1. Check per-movement results on the rebuilt vs the shipped inventory (V1).
  2. Per-movement diff with 1e-6 / 1e-4 tolerance bands for V1, V2, V3, V4.
  3. V5 cross-check (plugin vs. standalone bit-identity).
  4. Failure triage on any FAIL rows using the rules in

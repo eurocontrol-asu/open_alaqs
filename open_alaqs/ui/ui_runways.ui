@@ -105,30 +105,30 @@
     </widget>
    </item>
    <item row="4" column="0">
-    <widget class="QLabel" name="label_5">
+    <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Capacity (departures/h)</string>
+      <string>Touchdown Offset, Runway 1 [m]</string>
      </property>
     </widget>
    </item>
    <item row="4" column="1">
-    <widget class="QLineEdit" name="capacity">
+    <widget class="QLineEdit" name="touchdown">
      <property name="toolTip">
-      <string>Enter the hourly capacity as number of departures per hour</string>
+      <string>Touchdown distance from the Runway 1 threshold, whole metres. Empty or 0: the profile's own (about 290 m).</string>
      </property>
     </widget>
    </item>
    <item row="5" column="0">
-    <widget class="QLabel" name="label_2">
+    <widget class="QLabel" name="label_5">
      <property name="text">
-      <string>Touchdown Offset (m)</string>
+      <string>Touchdown Offset, Runway 2 [m]</string>
      </property>
     </widget>
    </item>
    <item row="5" column="1">
-    <widget class="QLineEdit" name="touchdown">
+    <widget class="QLineEdit" name="touchdown_2">
      <property name="toolTip">
-      <string>Enter the distance between the runway end and the point of touchdown</string>
+      <string>Touchdown distance from the Runway 2 threshold, whole metres. Empty or 0: the profile's own (about 290 m).</string>
      </property>
     </widget>
    </item>
@@ -163,8 +163,8 @@
   <tabstop>second_runway_number</tabstop>
   <tabstop>second_runway_letter</tabstop>
   <tabstop>runway_id</tabstop>
-  <tabstop>capacity</tabstop>
   <tabstop>touchdown</tabstop>
+  <tabstop>touchdown_2</tabstop>
  </tabstops>
  <resources/>
  <connections>

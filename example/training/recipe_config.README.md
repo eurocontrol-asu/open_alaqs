@@ -10,17 +10,19 @@ study live alongside the data rather than in a CLI history.
 - `recipe_config.minimal.json` - a short, real example (the 6 most common
  parameters). Copy this, rename to `recipe_config.json`, edit values, drop
  alongside your `.alaqs`. Done.
-- `recipe_config.example.json` - every parameter the orchestrator
- understands, with each parameter's value followed by a `_<name>`
- documentation key explaining what it does. The `_`-prefixed keys are
+- `recipe_config.example.json` - the parameters of the CLI table below
+ plus `alaqs_filename` and `clear_output_folders`, with each parameter's
+ value followed by a `_<name>` documentation key explaining what it does. The `_`-prefixed keys are
  documentation only; they are ignored at runtime. Use this as a reference,
  then copy the lines you actually want into your real `recipe_config.json`.
 
 ## Mapping to the standalone CLI
 
 Every parameter in this file corresponds to a CLI flag on the
-`openalaqs_standalone austal` subcommand (and most also on the
-`openalaqs_standalone aircraft` subcommand):
+`openalaqs_standalone austal` subcommand (a few also on the `aircraft`
+subcommand: `--processes`, `--source-dynamics`, `--apply-nox-corrections`,
+with `--method` and `--isa-meteo` in place of `--aircraft-method` and
+`--use-isa-meteo`):
 
 | `recipe_config.json` key | CLI flag |
 | -------------------------- | ------------------------------ |
@@ -44,6 +46,11 @@ Every parameter in this file corresponds to a CLI flag on the
 | `grid_size` | `--grid-size` (DEPRECATED) |
 | `grid_step` | `--grid-step` (DEPRECATED) |
 
+The `austal` flag `--grid-writer-mode` (default `hybrid`) has no key in
+this file. The Dataiku recipe of the Dataiku update package reads three
+more keys that are not in it: `grid_writer_mode`, `tag_outputs` and
+`alaqs_names` (the last two are described in the recipe's header).
+
 Two keys have no CLI equivalent and are honoured only by external
 orchestrators that manage their own input / output staging:
 
@@ -59,7 +66,7 @@ directly:
 python -m openalaqs_standalone austal training_out.alaqs \
  --year 2025 --include-aircraft --aircraft-method bymode \
  --apply-nox-corrections --processes 8 \
- --start 2025-07-17 --end 2025-07-23 \
+ --start 2025-12-01 --end 2025-12-04 \
  --pollutants co,hc,nox,pm10,pm25 \
  --out ./inputs/
 ```

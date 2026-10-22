@@ -43,6 +43,8 @@ from typing import Optional
 from shapely.geometry import LineString
 from shapely.ops import linemerge
 
+from open_alaqs.core.tools.bffm2 import speed_of_sound_m_s as _speed_of_sound_m_s
+from open_alaqs.core.tools.fuel_sulphur import sox_ei_g_kg
 from openalaqs_standalone.geometry import spatialite_blob_to_shapely
 
 # ---------------------------------------------------------------------------
@@ -66,13 +68,74 @@ def connect(alaqs_path: str) -> sqlite3.Connection:
 # ---------------------------------------------------------------------------
 
 
-def get_runways(conn: sqlite3.Connection) -> dict:
-    """Read every runway in `shapes_runways`, keyed by direction.
+def runway_designator(text) -> str:
+    """A runway end as written in the study, normalised: two-digit number
+    and the L/C/R letter, upper case ("6l" -> "06L", "24" -> "24")."""
+    t = str(text or "").strip().upper()
+    digits = "".join(ch for ch in t if ch.isdigit())
+    letters = "".join(ch for ch in t if ch.isalpha())
+    return f"{int(digits):02d}{letters}" if digits else t
 
-    Returns a dict mapping each runway-designator integer (e.g. 15, 33,
-    7, 25) to the runway dict that direction belongs to. For a runway
-    "33/15" both keys 33 and 15 point at the SAME runway dict, so the
-    caller can look up by either end.
+
+def movement_name(mov: dict) -> str:
+    """A movement as named in messages: "id 3: A20N A 2023-06-01 06:15"."""
+    return "id %s: %s %s %s" % (
+        mov.get("oid", "?"),
+        mov.get("aircraft", ""),
+        mov.get("departure_arrival", ""),
+        str(mov.get("runway_time", ""))[:16],
+    )
+
+
+def runway_of(runways: dict, mov: dict) -> dict:
+    """The runway of a movement, by the full designator of its runway end
+    ("24" is an end of "06/24", "24R" of "06L/24R").
+
+    Raises ValueError, naming the movement, when the end matches no
+    runway or several runways: a plain "24" on a study with 06L/24R and
+    06R/24L ("name the runway end with its letter"), or "24R" on a study
+    with a plain 06/24. The plugin (MovementStore.initMovements) refuses
+    the same cases; neither falls back to the first runway any more.
+    """
+    designator = mov.get("runway_designator")
+    if designator is None:
+        designator = runway_designator(mov.get("runway"))
+    runway = runways.get(designator)
+    if runway is not None:
+        return runway
+    matched: dict = {}
+    if designator.isdigit():
+        # the runways a plain number is ambiguous between (a designator with
+        # a letter that matches nothing is not ambiguous: it is unknown)
+        for key, rwy in runways.items():
+            if "".join(ch for ch in key if ch.isdigit()) == designator:
+                matched.setdefault(id(rwy), rwy)
+    name = movement_name(mov)
+    if len(matched) > 1:
+        raise ValueError(
+            f"movement {name}: runway '{designator}' matches "
+            f"{' and '.join(r['runway_id'] for r in matched.values())}; "
+            "name the runway end with its letter"
+        )
+    runway_ids = ", ".join(dict.fromkeys(r["runway_id"] for r in runways.values()))
+    raise ValueError(
+        f"movement {name}: runway '{designator}' matches no "
+        f"runway end of the study (runways: {runway_ids or 'none'}); name the "
+        "runway end as in the runway table"
+    )
+
+
+def get_runways(conn: sqlite3.Connection) -> dict:
+    """Read every runway in `shapes_runways`, keyed by runway end.
+
+    Returns a dict mapping each runway end, by its full designator
+    (`runway_designator`, e.g. "06L", "24"), to the runway dict it
+    belongs to. For a runway "33/15" the keys "33" and "15" point at the
+    SAME runway dict, so the caller can look up by either end. Parallel
+    runways (06L/24R and 06R/24L) have their own designator keys and no
+    plain-number key: look a movement's runway up with `runway_of`, which
+    refuses a plain "06" there (and a "06L" on a plain 06/24), as the
+    plugin does.
 
     Each runway dict has the same shape as `get_runway`'s return:
       runway_id, geom_3857, pt1_3857, pt2_3857, directions.
@@ -81,19 +144,24 @@ def get_runways(conn: sqlite3.Connection) -> dict:
 
     Multi-runway support. Plugin-shaped studies with two or more
     runways (a study with 07/25 and 33/15 active) need per-movement runway
-    selection, since `mov["runway_direction"]` identifies one of the
-    two thresholds. The earlier `get_runway` reader was single-runway
+    selection, since `mov["runway_designator"]` identifies one of the
+    thresholds. The earlier `get_runway` reader was single-runway
     only and would silently pick whichever row sqlite returned first,
     making azimuth lookup fail with KeyError on movements that named
     a direction on a different runway. `get_runways` covers both
     cases; for single-runway studies the result is a 2-key dict
     pointing at one runway, identical-behavior under the lookup.
     """
-    rows = conn.execute("SELECT runway_id, geometry FROM shapes_runways").fetchall()
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(shapes_runways)")}
+    td1 = "touchdown" if "touchdown" in cols else "NULL"
+    td2 = "touchdown_2" if "touchdown_2" in cols else "NULL"
+    rows = conn.execute(
+        f"SELECT runway_id, geometry, {td1}, {td2} FROM shapes_runways"
+    ).fetchall()
     if not rows:
         raise RuntimeError("No runway found in shapes_runways")
     out: dict = {}
-    for runway_id, geom_blob in rows:
+    for runway_id, geom_blob, touchdown_1, touchdown_2 in rows:
         geom = spatialite_blob_to_shapely(geom_blob)
         coords = list(geom.coords)
         dirs = [
@@ -106,8 +174,15 @@ def get_runways(conn: sqlite3.Connection) -> dict:
             "pt2_3857": (coords[-1][0], coords[-1][1]),
             "directions": dirs,
         }
-        for d in dirs:
-            out[d] = rwy
+        # Touchdown Offset (m) per landing direction: `touchdown` for the first-named end, `touchdown_2` for the
+        # other, independently (a study without `touchdown_2`: 0). Empty or 0 = the profile's own distance.
+        t1 = float(touchdown_1 or 0.0)
+        t2 = float(touchdown_2 or 0.0)
+        rwy["touchdown_offset_m"] = (
+            {dirs[0]: t1, dirs[-1]: t2} if len(dirs) > 1 else {dirs[0]: t1}
+        )
+        for name in runway_id.split("/"):
+            out[runway_designator(name)] = rwy
     return out
 
 
@@ -291,6 +366,8 @@ def get_movement(conn: sqlite3.Connection, oid: int) -> Optional[dict]:
         "runway_direction": int(
             "".join(ch for ch in (row[8] or "") if ch.isdigit()) or "0"
         ),
+        # The full runway end ("06L"), which tells parallel runways apart
+        "runway_designator": runway_designator(row[8]),
         "taxi_fuel_ratio": _as_float(row[9], 1.0),
         "number_of_stop_and_gos": _as_int(row[10], 0),
         "gate": row[11],
@@ -435,6 +512,12 @@ def get_mtow_kg(conn: sqlite3.Connection, icao: str) -> Optional[float]:
         return None
 
 
+def _fuel_type_column(conn) -> str:
+    """`fuel_type` when default_aircraft_engine_ei has it, else NULL (jet fuel)."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(default_aircraft_engine_ei)")}
+    return "fuel_type" if "fuel_type" in cols else "NULL"
+
+
 def get_engine_ei(conn: sqlite3.Connection, engine_name: str) -> dict:
     """Per-mode EEDB fuel flow and emission indices for an engine.
 
@@ -462,11 +545,13 @@ def get_engine_ei(conn: sqlite3.Connection, engine_name: str) -> dict:
     result: dict = {}
     for r in conn.execute(
         """
-        SELECT mode, fuel_kg_sec, co_ei, hc_ei, nox_ei, sox_ei, pm10_ei
+        SELECT mode, fuel_kg_sec, co_ei, hc_ei, nox_ei, sox_ei, pm10_ei, {fuel}
         FROM default_aircraft_engine_ei
         WHERE engine_name = ?
            OR ((engine_name IS NULL OR engine_name = '') AND engine_full_name = ?)
-        """,
+        """.format(
+            fuel=_fuel_type_column(conn)
+        ),
         (engine_name, engine_name),
     ):
         result[r[0]] = {
@@ -474,10 +559,57 @@ def get_engine_ei(conn: sqlite3.Connection, engine_name: str) -> dict:
             "co_ei": r[2] or 0.0,
             "hc_ei": r[3] or 0.0,
             "nox_ei": r[4] or 0.0,
-            "sox_ei": r[5] or 0.0,
+            "sox_ei": sox_ei_g_kg(r[5], r[7]),
             "pm10_ei": r[6] or 0.0,
         }
     return result
+
+
+def get_engine_meem(conn: sqlite3.Connection, engine_name: str) -> dict:
+    """MEEM V1 inputs of an engine, as the plugin loads them
+    (Engine.getEmissionIndexByModeWithMEEM, EngineDatabases._load_meem_metadata).
+
+    Returns {} when a mode is missing, else a dict with `pm10_nonvol`
+    ({mode: g/kg}, the plugin's nvPM mass EI), `nvpm_number` ({mode: #/kg}),
+    `press_ratio` and the optional 5th point (`m_f00`, `m_max_mgkg`, `n_f00`,
+    `n_max_nkg`; None when the column is absent or empty).
+    """
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(default_aircraft_engine_ei)")}
+    optional = (
+        "nvpm_number_ei",
+        "press_ratio",
+        "meem_nvpm_m_i_f00_avg",
+        "nvpm_m_max_mgkg",
+        "meem_nvpm_n_i_f00_avg",
+        "nvpm_n_max_nkg",
+    )
+    select = ", ".join(c if c in cols else "NULL" for c in optional)
+    rows = conn.execute(
+        f"""
+        SELECT mode, pm10_nonvol, {select}
+        FROM default_aircraft_engine_ei
+        WHERE engine_name = ?
+           OR ((engine_name IS NULL OR engine_name = '') AND engine_full_name = ?)
+        """,
+        (engine_name, engine_name),
+    ).fetchall()
+    by_mode = {r[0]: r for r in rows}
+    if not rows or any(m not in by_mode for m in ("TO", "CL", "AP", "TX")):
+        return {}
+
+    def _f(v):
+        return float(v) if v not in (None, "") else None
+
+    last = rows[-1]
+    return {
+        "pm10_nonvol": {m: float(r[1] or 0.0) for m, r in by_mode.items()},
+        "nvpm_number": {m: float(r[2] or 0.0) for m, r in by_mode.items()},
+        "press_ratio": _f(last[3]),
+        "m_f00": _f(last[4]),
+        "m_max_mgkg": _f(last[5]),
+        "n_f00": _f(last[6]),
+        "n_max_nkg": _f(last[7]),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -657,7 +789,7 @@ def get_meteo_at(
         "P_Pa": float(row[1]),
         "RH": float(row[2]),
         "Humidity": float(row[3]) if row[3] is not None else None,
-        "speed_of_sound_m_s": 331.3 + 0.606 * (T_K - 273.15),
+        "speed_of_sound_m_s": _speed_of_sound_m_s(T_K),
     }
 
 

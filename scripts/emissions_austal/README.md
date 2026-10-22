@@ -26,9 +26,12 @@ cd C:\path\to\openalaqs   # the directory containing scripts/, open_alaqs/, etc.
 python-qgis scripts\emissions_austal\run_emissions_austal.py "C:\path\to\my_config.txt" --csv --geojson --austal --timing
 ```
 
-The script imports the Open-ALAQS plugin code via the `open_alaqs/`
-subdirectory in the same repo, or via the QGIS user-plugin install if
-the plugin is also installed via Plugin Manager.
+The script looks for the Open-ALAQS plugin code in this order: an
+`open_alaqs/` folder next to the repository folder (three levels above the
+script, as in a QGIS plugins directory), the `open_alaqs/` subdirectory of
+this repository, then the QGIS user-plugin install. From a git checkout,
+make sure the folder that contains the checkout has no other `open_alaqs`
+directory, or the script imports that one first.
 
 ## Advanced: Alternative Execution Methods
 
@@ -80,12 +83,12 @@ python-qgis scripts\emissions_austal\run_emissions_austal.py "C:\path\to\config.
 - `time_interval_seconds` (required): integer number of seconds between timesteps, e.g. `3600`
  - `time_interval_seconds` (required): integer number of seconds between timesteps, e.g. `3600`
  - `pollutant` (required): pollutant code. Accepted values: `CO`, `CO2`, `HC`, `NOx`, `PM10`, `SOx`.
-- `method` (optional): calculation method, accepted values `bymode` or `BFFM2` (default `bymode`)
- - `source_type` (optional): source filtering (string or `all`). Accepted values: `AreaSource`, `MovementSource`, `ParkingSource`, `PointSource`, `RoadwaySource`, or `all` (default).
+- `method` (optional): calculation method, accepted values `bymode` or `BFFM2` (default `bymode`). `BFFM2` is always the trajectory variant (fuel flow from each segment's power setting): the script has no key for the BFFM2 fuel-flow source, so `mode_anchor` cannot be selected
+ - `source_type` (optional): source filtering (string or `all`). Accepted values: `AreaSource`, `EngineTestSource`, `MovementSource`, `ParkingSource`, `PointSource`, `RoadwaySource` (case-insensitive aliases `area`, `movement`, `parking`, `point`, `roadway` also work), or `all` (default).
 - `source_names` (optional): comma-separated list of source names to include, e.g. `GateA,GateB`
-- `source_dynamics` (optional): handling mode for source dynamics; default `none` (accepted values include `none`, `default`, `smooth & shift`)
+- `source_dynamics` (optional): handling mode for source dynamics; `none` (default), `default` or `smooth & shift` (see the notes on `source_dynamics` below)
 - `vertical_limit_m` (optional): vertical limit in meters (float), default `914.4`
-- `should_apply_nox_corrections` (optional): `True` or `False` (case-insensitive)
+- `should_apply_nox_corrections` (optional): `true`/`false`, `1`/`0` or `yes`/`no`, any case (default `false`); any other value stops the script with an error
 - `show_logs` (optional): `True` or `False` — when `True`, external logs are shown
 - `austal_output_path` (optional): output directory for AUSTAL files (overrides default)
 - `emissions_output_path` (optional): output directory for CSV/GeoJSON (overrides default)
@@ -97,32 +100,33 @@ python-qgis scripts\emissions_austal\run_emissions_austal.py "C:\path\to\config.
 - `start_dt_inclusive` / `end_dt_inclusive` (required): ISO 8601 datetimes, e.g. `2024-01-01T00:00:00`.
 - `time_interval_seconds` (required): integer seconds, e.g. `3600`.
 `pollutant` (required): pollutant identifier (string). Accepted values: `CO`, `CO2`, `HC`, `NOx`, `PM10`, `SOx` — must match pollutant keys used by your database/calculation modules.
-- `method` (optional): calculation method. Accepted values: `bymode` (default) or `BFFM2`.
+- `method` (optional): calculation method. Accepted values: `bymode` (default) or `BFFM2` (trajectory fuel flow; see above).
 - `source_type` (optional): filter by source type (string) or `all` (default).
- - `source_type` (optional): high-level type filter. Accepted values: `AreaSource`, `MovementSource`, `ParkingSource`, `PointSource`, `RoadwaySource`, or `all` (default).
+ - `source_type` (optional): high-level type filter. Accepted values: `AreaSource`, `EngineTestSource`, `MovementSource`, `ParkingSource`, `PointSource`, `RoadwaySource` (case-insensitive aliases `area`, `movement`, `parking`, `point`, `roadway` also work), or `all` (default).
 - `source_names` (optional): comma-separated list of source names to include, e.g. `GateA,GateB`.
 - `vertical_limit_m` (optional): float, vertical calculation limit in metres (default `914.4`).
- - `source_dynamics` (optional): string controlling source dynamics handling; accepted values include `none`, `default`, `smooth & shift` (various synonyms accepted, parser normalises them).
-- `should_apply_nox_corrections` (optional): boolean `True` or `False`.
+ - `source_dynamics` (optional): string controlling source dynamics handling; `none` (default), `default` or `smooth & shift` (see the notes below).
+- `should_apply_nox_corrections` (optional): `true`/`false`, `1`/`0` or `yes`/`no`, any case (default `false`); any other value stops the script with an error.
 - `show_logs` (optional): boolean `True` or `False` — when `True`, logs and external output are not suppressed.
 - `emissions_output_name` (optional): base name for CSV/GeoJSON files (default `emissions`).
 - `emissions_output_path` / `austal_output_path` (optional): output directories. If omitted, defaults are used (see below) and the script will create the directories if missing.
 - `view_type` (optional, used for CSV export): values accepted (case-insensitive) - `by aggregation`, `aggregation`, `aggregate` (all map to aggregation) or `by source`, `source` (maps to per-source view).
-- `austal_settings` (optional): additional settings passed to the AUSTAL module (module-specific structure).
+- `austal_settings` (optional): AUSTAL module settings as a JSON object on one line, e.g. `austal_settings={"quality_level": 2, "options_string": "NOSTANDARD;SCINOTAT"}` (double quotes; keys as read by `AUSTALOutputModule`, such as `quality_level`, `options_string`, `mixing_height_enabled`, `roughness_length_m`). Invalid JSON or a value that is not an object stops the script with an error. Python callers can still pass a dict.
 
 **Source filtering options**
-- `source_type` (optional): high-level filter by source type (string), for example `all`, `ground`, `terminal`, etc. When not provided the script defaults to `all`.
+- `source_type` (optional): high-level filter by source type (string), for example `all` or `MovementSource`. When not provided the script defaults to `all`.
 - `source_names` (optional): comma-separated list of specific source names to include. Example: `source_names=GateA,GateB`. If omitted or empty, and `source_type` is not used to filter, the calculation will include all sources.
-- `source_dynamics` (optional): how to handle source dynamics. Accepted, case-insensitive values include:
-  - `none` — no dynamics handling (default)
-  - `default` — use module default dynamics behaviour
-  - `smooth & shift`, `smooth_shift`, `smooth&shift` — enable smooth-and-shift dynamics handling
+- `source_dynamics` (optional): how to handle source dynamics. Case-insensitive values:
+  - `none`: no dynamics handling (default); also `no`, `off`, `0`
+  - `default`: smooth-and-shift dynamics with the default extents; also `def`
+  - `smooth & shift`: smooth-and-shift dynamics with the smooth-and-shift extents; also `smooth_shift`, `smooth&shift`, `smooth and shift`, `sas`
+  - Any other value (including `smooth` or `shift` alone) stops the script with an error.
 
 Examples:
 ```
 source_type=all
 source_names=GateA,GateB
-source_dynamics=smooth_shift
+source_dynamics=default
 ```
 
 If you want to include all sources explicitly:
@@ -137,11 +141,11 @@ Notes on `source_names` / `source_dynamics`:
 - `source_dynamics` is passed through to the emission calculation;
 
 Accepted `source_dynamics` values (case-insensitive):
-- `none` — no dynamics handling (default)
-- `default` — use module default dynamics behaviour
-- `smooth & shift` (also accepted as `smooth_shift`, `smooth&shift`) — enable smooth-and-shift dynamics handling
+- `none`: no dynamics handling (default)
+- `default`: smooth-and-shift dynamics with the default extents
+- `smooth & shift`: smooth-and-shift dynamics with the smooth-and-shift extents
 
-The parser normalises common synonyms to the canonical values `none`, `default`, `smooth`, `shift`, or `smooth_shift` before building the calculation config.
+The parser normalises the synonyms listed above to `none`, `default` or `smooth & shift`, the values the movement module recognises, and rejects anything else.
 
 Notes on defaults and creation:
 - When `emissions_output_path` or `austal_output_path` are provided in the config they are used as-is (environment variables expanded) and will be created if missing.
@@ -193,9 +197,19 @@ Using AUSTAL/GeoJSON outputs in QGIS
 **Source**
 - Script location: `scripts/emissions_austal/run_emissions_austal.py`
 - Demo input: `scripts/emissions_austal/sample_data/Inventory.alaqs` is a
-  trimmed EHRD example (13 movements, 2 aircraft types) derived from
-  `example/training/training_out.alaqs`. Reference data tables
-  (`default_aircraft`, `default_aircraft_engine_ei`, etc.) are pruned
-  to only what's needed by the demo movements; vehicle/road tables and
-  helicopter EI are dropped. To use the full reference catalogue, point
-  `db_path` at your own `*_out.alaqs` instead.
+  trimmed EHRD inventory (13 movements, A20N and E190) made from an
+  early version of the training example; it is not the current
+  `example/training/training_out.alaqs` and is not rebuilt from it. It
+  keeps the old airport position (51.96 N, 4.44 E, elevation 0 m), the old
+  runway table (with `capacity`, `max_queue_speed`, `peak_queue_time`, no
+  `touchdown_2`) and the old taxi routes (the runway 06 movements 6, 8 and 13
+  use runway 24 routes). Reference
+  data tables (`default_aircraft`, `default_aircraft_engine_ei`, etc.)
+  are pruned to the demo's two aircraft; vehicle/road tables and
+  helicopter EI are dropped. `default_aircraft_profiles` holds only
+  JET-SMALL-A-1, JET-SMALL-D-4, JET-REGIONAL-A-1 and JET-REGIONAL-D-3, so
+  movements 2, 4, 6, 8 and 10 (JET-SMALL-D-1, JET-REGIONAL-D-1) and 11
+  (CUSTOM `1677686160_DIETB`) name profiles that are not in the file. It
+  serves as input to the AUSTAL export demo only, not for emission
+  results. To use the full reference catalogue, point `db_path` at your
+  own `*_out.alaqs` instead.

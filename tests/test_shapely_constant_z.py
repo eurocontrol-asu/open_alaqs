@@ -42,8 +42,7 @@ def test_runway_geometry_gets_its_height():
     runway = Runway(
         {
             "runway_id": "06/24",
-            "capacity": 30,
-            "offset": "0/0",
+            "touchdown": 0,
             "instudy": 1,
             "geometry": "LINESTRING (495941 6793406, 492953 6791467)",
         }

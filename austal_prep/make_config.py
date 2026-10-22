@@ -1,16 +1,18 @@
 """
 make_config: scaffold a config.json from .alaqs metadata.
 
-Reads the airport reference point and basic study metadata from
-user_study_setup, computes a default calculation grid centred on the
-airport, and writes a config.json template consumed by `austal_prep`.
+Reads the grid reference point from grid_3d_definition (the airport
+reference point in user_study_setup if the grid definition is absent)
+and basic study metadata from user_study_setup, computes a default
+calculation grid centred on the grid reference point, and writes a config.json template consumed by `austal_prep`.
 
 The output sets sensible defaults:
     qs                          = 3   (quality level)
     z0                          = 0.3 (urban/light forest)
-    d0                          = 1.2 (= 4*z0)
+    d0                          = 4*z0 unless given (1.2 for z0 = 0.3)
     ha                          = 11.2 (anemometer height with displacement)
-    grid                        75 x 75 cells of 250 m centred on airport
+    grid                        75 x 75 cells of 250 m centred on the
+                                grid reference point
     sk                          AUSTAL default vertical layers
     max_receptors               = 20  (AUSTAL hard cap)
     source_aggregation          = "by_type_per_pollutant"
@@ -28,6 +30,8 @@ import sqlite3
 from pathlib import Path
 
 from pyproj import Transformer
+
+from open_alaqs.core.tools.utm import utm_epsg as _utm_epsg
 
 # AUSTAL default vertical grid (sk values, m above ground)
 DEFAULT_SK = [
@@ -68,10 +72,62 @@ def _airport_metadata(alaqs_path: Path) -> dict:
         conn.close()
 
 
-def _utm_zone_for_lon(lon_deg: float) -> int:
-    """Compute the UTM zone for a longitude. EPSG = 32600 + zone for north."""
-    zone = int((lon_deg + 180.0) // 6.0) + 1
-    return 32600 + zone
+def _coord(value) -> float | None:
+    """A latitude/longitude column value as float, None when missing."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    return float(value)
+
+
+def _grid_reference_from_alaqs(alaqs_path: Path) -> tuple[float, float] | None:
+    """(reference_latitude, reference_longitude) of grid_3d_definition.
+
+    None if the table is missing or empty or either value is missing.
+    """
+    try:
+        conn = sqlite3.connect(str(alaqs_path))
+        try:
+            row = conn.execute(
+                "SELECT reference_latitude, reference_longitude "
+                "FROM grid_3d_definition LIMIT 1"
+            ).fetchone()
+        finally:
+            conn.close()
+    except sqlite3.OperationalError:
+        return None
+    if row is None:
+        return None
+    lat, lon = _coord(row[0]), _coord(row[1])
+    if lat is None or lon is None:
+        return None
+    return lat, lon
+
+
+def _reference_lat_lon(alaqs_path: Path, meta: dict) -> tuple[float, float]:
+    """WGS84 point the AUSTAL calculation grid is centred on.
+
+    The emission grid is centred on grid_3d_definition
+    reference_latitude/longitude, so the config uses the same point. The
+    airport reference point of user_study_setup is used only when the
+    grid definition carries none.
+    """
+    ref = _grid_reference_from_alaqs(alaqs_path)
+    if ref is not None:
+        return ref
+    lat = _coord(meta.get("airport_latitude"))
+    lon = _coord(meta.get("airport_longitude"))
+    if lat is None or lon is None:
+        raise ValueError(
+            f"{alaqs_path}: no reference point: grid_3d_definition has no "
+            f"reference_latitude/reference_longitude and user_study_setup "
+            f"has no airport_latitude/airport_longitude."
+        )
+    print(
+        "  WARNING: grid_3d_definition has no reference point; using the "
+        "airport reference point of user_study_setup "
+        f"({lat:.7f}, {lon:.7f})."
+    )
+    return lat, lon
 
 
 def make_config(
@@ -91,14 +147,13 @@ def make_config(
     meta = _airport_metadata(alaqs_path)
     title = title or meta.get("airport_name") or meta.get("project_name") or "Untitled"
 
-    lat = float(meta.get("airport_latitude") or 0.0)
-    lon = float(meta.get("airport_longitude") or 0.0)
+    lat, lon = _reference_lat_lon(alaqs_path, meta)
     if utm_epsg is None:
-        utm_epsg = _utm_zone_for_lon(lon) if lon != 0.0 else 32631
+        utm_epsg = _utm_epsg(lat, lon)
     transformer = Transformer.from_crs("EPSG:4326", f"EPSG:{utm_epsg}", always_xy=True)
     ref_x, ref_y = transformer.transform(lon, lat)
 
-    # Centre the calc grid on the airport with a halo on the SW side
+    # Centre the calc grid on the grid reference point with a halo on the SW side
     # so source bboxes (anchored at xq = x0 + source_offset_cells * dd)
     # sit strictly inside the calc grid. Matches the QGIS plugin
     # convention (DEFAULT_CONCENTRATION_GRID_FACTOR = 2) and the
@@ -184,7 +239,10 @@ def main(argv=None):
         help="Sets start_dt/end_dt to this calendar year",
     )
     parser.add_argument(
-        "--utm-epsg", type=int, default=None, help="Override auto-detected UTM zone"
+        "--utm-epsg",
+        type=int,
+        default=None,
+        help="Override the UTM zone derived from the grid reference point",
     )
     args = parser.parse_args(argv)
 

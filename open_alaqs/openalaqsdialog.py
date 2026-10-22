@@ -2229,9 +2229,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             "widget_type": QtWidgets.QCheckBox,
             "initial_value": False,
             "tooltip": (
-                "Apply BFFM2 ambient-condition NOx correction (delta/theta/"
-                "humidity) to the mode-anchor NOx EI when the method is "
-                "'bymode'. Default OFF for compatibility with ICAO-standard "
+                "Apply the ICCAIA ambient NOx correction (take-off weight "
+                "ratio, temperature, humidity) to the take-off and climb-out "
+                "segments when the method is 'bymode'. Default OFF for compatibility with ICAO-standard "
                 "LTO inventory reports (AEDT, EDMS, ALAQS legacy). Turn ON "
                 "for site-specific studies where actual meteorology differs "
                 "materially from ISA sea level. Has no effect on BFFM2, "
@@ -2830,11 +2830,22 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             em_config.update(widget_values)
             em_config["receptors"] = self._receptor_points
 
-        mod_ = EmissionSourceModule(em_config)
-        mod_.loadSources()
-
         self.ui.source_names.clear()
         self.ui.source_names.addItem("all")
+        try:
+            mod_ = EmissionSourceModule(em_config)
+            mod_.loadSources()
+        except Exception as exc:
+            # The same input errors as the calculation (a runway designator
+            # that matches several or no runway, an unknown gate or engine):
+            # a Qt slot cannot propagate them, so report them in the message
+            # bar as the calculation does, with the names list left at "all".
+            logger.error(
+                f"Could not list the {module_name} sources of '{inventory_path}': {exc}",
+                exc_info=True,
+            )
+            self.message_bar.pushWarning("Invalid Study Input", str(exc))
+            return
         for source_name_ in mod_.getSourceNames():
             self.ui.source_names.addItem(source_name_)
 
@@ -2994,6 +3005,66 @@ class OpenAlaqsEnabledMacros(QtWidgets.QDialog):
         self.ui.pushButton.clicked.connect(self.close)
 
 
+def _osm_building_import_message(
+    buildings_layer: QgsVectorLayer, n_buildings: int, n_with_osm_height: int
+) -> str:
+    """Log line for the OSM building import: count and where heights come from.
+
+    A height is taken from the OSM feature's `height` column when it has one
+    (osm_attribute_mapping); every other building gets the layer's default
+    value for the height field.
+    """
+    idx = buildings_layer.fields().indexFromName("height")
+    default = (
+        buildings_layer.defaultValueDefinition(idx).expression() if idx >= 0 else ""
+    )
+    default_txt = f"the layer default ({default} m)" if default else "no value (NULL)"
+    n_default = n_buildings - n_with_osm_height
+    return (
+        f'OSM import: {n_buildings} building(s) added to layer "Buildings"; '
+        f"height from the OSM height tag for {n_with_osm_height}, "
+        f"{default_txt} for {n_default}."
+    )
+
+
+def _gate_name(value) -> Optional[str]:
+    """A gate name as text, or None for NULL / empty."""
+    if value is None or (hasattr(value, "isNull") and value.isNull()):
+        return None
+    name = str(value).strip()
+    return name or None
+
+
+def _osm_duplicate_gate_message(
+    existing_names: set, imported_names: list
+) -> Optional[str]:
+    """Warning for OSM-imported gate names that are not unique, else None.
+
+    Lists the imported names already in the Gates layer before the import,
+    then the names that occur more than once in the import itself.
+    """
+    already: list[str] = []
+    repeated: list[str] = []
+    seen: set = set()
+    for name in imported_names:
+        if name is None:
+            continue
+        if name in existing_names:
+            if name not in already:
+                already.append(name)
+        elif name in seen and name not in repeated:
+            repeated.append(name)
+        seen.add(name)
+    if not already and not repeated:
+        return None
+    parts = []
+    if already:
+        parts.append(f'gate name(s) already in layer "Gates": {", ".join(already)}')
+    if repeated:
+        parts.append(f"gate name(s) repeated in the import: {', '.join(repeated)}")
+    return f"OSM import: {'; '.join(parts)}; check and rename before calculating."
+
+
 class OpenAlaqsOsmImport(QtWidgets.QDialog):
     def __init__(self):
         QtWidgets.QDialog.__init__(self)
@@ -3144,6 +3215,21 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
             expression = QgsExpression(" OR ".join(tmp_or_expressions))
             osm_features = osm_layer.getFeatures(QgsFeatureRequest(expression))
             alaqs_features = []
+            # Buildings: how many got a height from the OSM data (for the log)
+            n_with_osm_height = 0
+            # Gates: names in the layer before the import (duplicate check)
+            existing_gate_names = (
+                {
+                    n
+                    for n in (
+                        _gate_name(f["gate_id"]) for f in alaqs_layer.getFeatures()
+                    )
+                    if n
+                }
+                if layer_type == AlaqsLayerType.GATE
+                and alaqs_layer.fields().indexFromName("gate_id") >= 0
+                else set()
+            )
 
             for osm_f in osm_features:  # type: ignore
                 alaqs_f_attrs = {}
@@ -3154,11 +3240,15 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
                 ).items():
                     value = osm_f.attributeMap().get(osm_attr_name)
 
-                    if value is None:
+                    # A NULL attribute is a NULL QVariant, not None: missing
+                    # too (the layer default applies, and it is not counted)
+                    if value is None or (hasattr(value, "isNull") and value.isNull()):
                         continue
 
                     alaqs_attr_idx = alaqs_fields.indexFromName(alaqs_attr_name)
                     alaqs_f_attrs[alaqs_attr_idx] = value
+                    if alaqs_attr_name == "height":
+                        n_with_osm_height += 1
 
                 for alaqs_attr_name, alaqs_attr_value in layer_config.get(
                     "osm_import_default_values", {}
@@ -3175,8 +3265,10 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
                 )
 
                 if not alaqs_f.isValid():
+                    # "full_id" is not an attribute of every OSM layer
+                    osm_ref = osm_f.attributeMap().get("full_id") or osm_f.id()
                     logger.warning(
-                        f'Invalid new feature in layer "{layer_config["name"]}" from OSM: {osm_f["full_id"]}'
+                        f'Invalid new feature in layer "{layer_config["name"]}" from OSM: {osm_ref}'
                     )
 
                 alaqs_features.append(alaqs_f)
@@ -3188,10 +3280,27 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
                 continue
 
             with edit(alaqs_layer):
-                if not alaqs_layer.addFeatures(alaqs_features):
+                added = alaqs_layer.addFeatures(alaqs_features)
+                if not added:
                     logger.warning(
                         f'Failed to add new OSM features to layer "{layer_config["name"]}"!'
                     )
+
+            if added and layer_type == AlaqsLayerType.BUILDING:
+                logger.info(
+                    _osm_building_import_message(
+                        alaqs_layer, len(alaqs_features), n_with_osm_height
+                    )
+                )
+
+            if added and layer_type == AlaqsLayerType.GATE:
+                gate_idx = alaqs_layer.fields().indexFromName("gate_id")
+                duplicate_msg = _osm_duplicate_gate_message(
+                    existing_gate_names,
+                    [_gate_name(f.attribute(gate_idx)) for f in alaqs_features],
+                )
+                if duplicate_msg:
+                    logger.warning(duplicate_msg)
 
     def _get_layer_types_to_download(self) -> list[AlaqsLayerType]:
         """Returns a list of ALAQS layer types to be downloaded based on the UI checkbox selection.

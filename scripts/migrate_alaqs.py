@@ -43,7 +43,19 @@ Differences handled in Phase 1
   4. Columns present in SOURCE but absent from REFERENCE
      -> Reported as "extra"; left in place by default. Pass --drop-extra-columns.
   5. Type/affinity differences
-     -> Reported but not corrected (SQLite is dynamically typed).
+     -> Numeric columns of the `shapes_*` layers that the reference declares
+        REAL (height, speed, distance, temperature, the percentages, the
+        emission factors, ...) and the source declares otherwise (DECIMAL in
+        studies up to 5.3.x) are converted: the table is rebuilt with the
+        reference definitions (`rebuild_table`: rowids, keys and triggers
+        kept) and text values such as "2.5" or "30,3" are cast to numbers.
+        The QGIS SpatiaLite provider types a DECIMAL column from its stored
+        data (integer when the values are whole numbers, text when the
+        layer is empty), so a decimal typed in a form was rounded or stored
+        as text; a REAL column is typed Double. Text values that cannot be
+        read as a number are reported and left as they are. Every other
+        type difference is reported but not corrected (SQLite is dynamically
+        typed).
 
 Usage
 =====
@@ -65,7 +77,7 @@ Phase 2 options:
     --refresh-tables T1,T2,...     Comma-separated list of tables to refresh.
                                    Default: 9 "safe" reference tables.
     --refresh-include-user-extensible
-                                   Add the 7 user-extensible reference
+                                   Add the 8 user-extensible reference
                                    tables to the refresh list (LOSES
                                    user customizations to those tables).
 
@@ -166,7 +178,8 @@ USER_EXTENSIBLE_REFRESH_TABLES = (
     "default_aircraft_apu_ef",
     "default_aircraft_start_ef",
     "default_gate_profiles",
-    "default_helicopter_engine_ei",
+    "default_helicopter",
+    "default_helicopter_engines",
 )
 
 # Tables that hold user project data. Refreshing any of these would
@@ -248,6 +261,8 @@ class EditPlan:
         self.add_columns: list[tuple[str, str, str]] = []  # (table, col, type)
         self.drop_columns: list[tuple[str, list[str]]] = []  # (table, cols)
         self.transformations: list[tuple[str, dict]] = []  # (table, rename_entry)
+        # (table, {column: (source type, reference type)})
+        self.retype_columns: list[tuple[str, dict[str, tuple[str, str]]]] = []
         self.warnings: list[str] = []
         self.extras: list[str] = []
 
@@ -258,6 +273,7 @@ class EditPlan:
             or self.add_columns
             or self.drop_columns
             or self.transformations
+            or self.retype_columns
         )
 
     def print_summary(self) -> None:
@@ -276,6 +292,9 @@ class EditPlan:
             print(f"  - DROP COLUMNS {tbl}: {sorted(cols)}")
         for tbl, entry in self.transformations:
             print(f"  ~ TRANSFORM {tbl}: {entry['legacy_cols']} -> {entry['new_cols']}")
+        for tbl, cols in self.retype_columns:
+            changes = ", ".join(f"{c} {s} -> {r}" for c, (s, r) in cols.items())
+            print(f"  ~ RETYPE {tbl}: {changes}")
         for w in self.warnings:
             print(f"  ! WARNING: {w}")
         for e in self.extras:
@@ -343,15 +362,23 @@ def diff_schemas(
                     f"left in place (use --drop-extra-columns to remove)"
                 )
 
-        # 5. Type differences (warning only)
-        for col in src_cols.keys() & ref_cols.keys():
+        # 5. Type differences: the REAL columns of the shapes layers are
+        #    converted (see the module docstring), the rest is a warning
+        retype: dict[str, tuple[str, str]] = {}
+        for col in sorted(src_cols.keys() & ref_cols.keys()):
             sa = src_cols[col].strip().upper().replace(" ", "")
             ra = ref_cols[col].strip().upper().replace(" ", "")
-            if sa != ra and sa and ra:
+            if sa == ra or not (sa and ra):
+                continue
+            if t.startswith("shapes_") and ra == "REAL":
+                retype[col] = (src_cols[col], ref_cols[col])
+            else:
                 plan.warnings.append(
                     f"{t}.{col}: source type '{src_cols[col]}' differs from "
                     f"reference '{ref_cols[col]}' (left unchanged)"
                 )
+        if retype:
+            plan.retype_columns.append((t, retype))
 
     return plan
 
@@ -374,26 +401,237 @@ def apply_add_column(conn: sqlite3.Connection, table: str, col: str, typ: str) -
     conn.execute(f'ALTER TABLE "{table}" ADD COLUMN "{col}" {typ}')
 
 
+def _sqlite_version(conn: sqlite3.Connection) -> tuple[int, ...]:
+    v = conn.execute("SELECT sqlite_version()").fetchone()[0]
+    return tuple(int(x) for x in v.split(".")[:3])
+
+
+def _split_table_body(create_sql: str) -> list[tuple[str | None, str]]:
+    """Split a CREATE TABLE statement into its top-level items.
+
+    Returns [(column name lower-cased, text)] for column definitions and
+    [(None, text)] for table constraints (PRIMARY KEY (...), UNIQUE, CHECK,
+    FOREIGN KEY, CONSTRAINT). Commas inside parentheses or quotes do not
+    split.
+    """
+    body = create_sql[create_sql.index("(") + 1 : create_sql.rindex(")")]
+    items, depth, quote, start = [], 0, None, 0
+    closing = {'"': '"', "'": "'", "`": "`", "[": "]"}
+    for i, ch in enumerate(body):
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in closing:
+            quote = closing[ch]
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            items.append(body[start:i])
+            start = i + 1
+    items.append(body[start:])
+    out: list[tuple[str | None, str]] = []
+    for text in (t.strip() for t in items):
+        if not text:
+            continue
+        if text[0] in closing:
+            name = text[1 : text.index(closing[text[0]], 1)]
+        else:
+            name = text.split()[0]
+        if name.upper() in ("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN"):
+            out.append((None, text))
+        else:
+            out.append((name.lower(), text))
+    return out
+
+
+def _mentions_any(text: str, names: list[str]) -> bool:
+    import re
+
+    return any(
+        re.search(rf"(?<![A-Za-z0-9_]){re.escape(n)}(?![A-Za-z0-9_])", text, re.I)
+        for n in names
+    )
+
+
+def rebuild_table(
+    conn: sqlite3.Connection,
+    table: str,
+    cols_to_drop: list[str],
+    ref: sqlite3.Connection | None,
+) -> None:
+    """Rebuild `table` without `cols_to_drop` (create-copy-rename).
+
+    The kept columns stay in source order, each with its definition from the
+    reference table's CREATE statement when the reference has the column
+    (PRIMARY KEY, NOT NULL, DEFAULT, ...), else from the source's own CREATE
+    statement. Table constraints come from the reference (or, without a
+    reference table, from the source when they name no dropped column).
+    Rows keep their rowid. Indexes and triggers on the table that are still
+    in sqlite_master (the SpatiaLite ones are handled by apply_plan) are
+    recreated; one that names a dropped column is skipped with a warning.
+    """
+    src_sql = get_create_sql(conn, table)
+    src_items = _split_table_body(src_sql)
+    src_defs = {n: t for n, t in src_items if n}
+    ref_sql = get_create_sql(ref, table) if ref is not None else None
+    ref_items = _split_table_body(ref_sql) if ref_sql else []
+    ref_defs = {n: t for n, t in ref_items if n}
+
+    drop = {c.lower() for c in cols_to_drop}
+    keep = [c for c in get_columns(conn, table) if c.lower() not in drop]
+    defs = [ref_defs.get(c.lower()) or src_defs[c.lower()] for c in keep]
+    if ref_sql:
+        constraints = [t for n, t in ref_items if n is None]
+    else:
+        constraints = [
+            t for n, t in src_items if n is None and not _mentions_any(t, cols_to_drop)
+        ]
+    dependents = conn.execute(
+        "SELECT type, name, sql FROM sqlite_master "
+        "WHERE tbl_name = ? AND type IN ('index', 'trigger') AND sql IS NOT NULL",
+        (table,),
+    ).fetchall()
+
+    tmp = f"{table}__migtmp"
+    conn.execute(f'DROP TABLE IF EXISTS "{tmp}"')
+    conn.execute(f'CREATE TABLE "{tmp}" ({", ".join(defs + constraints)})')
+    info = list(conn.execute(f'PRAGMA table_info("{tmp}")'))
+    pk = [r for r in info if r[5]]
+    has_rowid_alias = len(pk) == 1 and (pk[0][2] or "").upper() == "INTEGER"
+    without_rowid = "WITHOUT ROWID" in (src_sql or "").upper()
+    cols_csv = ", ".join(f'"{c}"' for c in keep)
+    if has_rowid_alias or without_rowid:
+        conn.execute(
+            f'INSERT INTO "{tmp}" ({cols_csv}) SELECT {cols_csv} FROM "{table}"'
+        )
+    else:
+        conn.execute(
+            f'INSERT INTO "{tmp}" (rowid, {cols_csv}) '
+            f'SELECT rowid, {cols_csv} FROM "{table}"'
+        )
+    conn.execute(f'DROP TABLE "{table}"')
+    conn.execute(f'ALTER TABLE "{tmp}" RENAME TO "{table}"')
+    for kind, name, sql in dependents:
+        if cols_to_drop and _mentions_any(sql, cols_to_drop):
+            print(
+                f"WARNING: {kind} '{name}' names a dropped column of "
+                f"'{table}'; not recreated",
+                file=sys.stderr,
+            )
+            continue
+        try:
+            conn.execute(sql)
+        except sqlite3.OperationalError as exc:
+            print(
+                f"WARNING: could not recreate {kind} '{name}': {exc}", file=sys.stderr
+            )
+
+
 def apply_drop_columns(
     conn: sqlite3.Connection,
     table: str,
     cols_to_drop: list[str],
     ref: sqlite3.Connection,
 ) -> None:
-    """SQLite < 3.35 has no DROP COLUMN; use the create-copy-rename pattern."""
-    keep_cols = OrderedDict(
-        (c, t) for c, t in get_columns(conn, table).items() if c not in cols_to_drop
-    )
-    cols_csv = ", ".join(f'"{c}"' for c in keep_cols)
-    new_def = ", ".join(f'"{c}" {t}' for c, t in keep_cols.items())
-    conn.execute(f"DROP TABLE IF EXISTS {table}__migtmp")
-    conn.execute(f'CREATE TABLE "{table}__migtmp" ({new_def})')
-    conn.execute(
-        f'INSERT INTO "{table}__migtmp" ({cols_csv}) '
-        f'SELECT {cols_csv} FROM "{table}"'
-    )
-    conn.execute(f'DROP TABLE "{table}"')
-    conn.execute(f'ALTER TABLE "{table}__migtmp" RENAME TO "{table}"')
+    """Drop columns and keep the table's keys, NOT NULL, defaults and triggers.
+
+    SQLite >= 3.35: ALTER TABLE ... DROP COLUMN, which leaves the rest of the
+    table definition, its indexes and triggers as they are. When SQLite
+    refuses (older version, or the column is a key, indexed, or named by a
+    view or trigger), the table is rebuilt from the reference definition of
+    the kept columns (`rebuild_table`).
+    """
+    if _sqlite_version(conn) >= (3, 35, 0):
+        conn.execute("SAVEPOINT migrate_drop_columns")
+        try:
+            for col in cols_to_drop:
+                conn.execute(f'ALTER TABLE "{table}" DROP COLUMN "{col}"')
+        except sqlite3.OperationalError:
+            conn.execute("ROLLBACK TO migrate_drop_columns")
+            conn.execute("RELEASE migrate_drop_columns")
+        else:
+            conn.execute("RELEASE migrate_drop_columns")
+            return
+    rebuild_table(conn, table, cols_to_drop, ref)
+
+
+def number_from_text(text: str) -> float | None:
+    """The number a stored text reads as, or None when it is not one.
+
+    Accepts what Python's float accepts ("2.5", "1e3", " 7 ") and a single
+    decimal comma without a dot ("30,3"); rejects grouped or ambiguous texts
+    ("1,234.5", "1.234,5", and "1,234", which is 1.234 with a decimal comma
+    but 1234 with an English group separator), "nan" and "inf".
+    """
+    text = text.strip()
+    if not text:
+        return None
+    candidates = [text]
+    if text.count(",") == 1 and "." not in text:
+        before, after = text.split(",")
+        if not (after.isdigit() and len(after) == 3 and before.lstrip("-").isdigit()):
+            candidates.append(text.replace(",", "."))
+    for candidate in candidates:
+        if "_" in candidate:
+            continue
+        try:
+            value = float(candidate)
+        except ValueError:
+            continue
+        if value == value and value not in (float("inf"), float("-inf")):
+            return value
+    return None
+
+
+def cast_text_numbers(
+    conn: sqlite3.Connection, table: str, columns: list[str]
+) -> tuple[int, list[tuple[int, str, str]]]:
+    """Replace the text values of the numeric `columns` of `table` by the
+    number they read as (`number_from_text`); an empty text becomes NULL.
+
+    Returns (number of cells changed, [(rowid, column, text)] of the
+    cells that are not numbers and were left as they are).
+    """
+    changed = 0
+    left: list[tuple[int, str, str]] = []
+    for col in columns:
+        rows = conn.execute(
+            f'SELECT rowid, "{col}" FROM "{table}" WHERE typeof("{col}") = \'text\''
+        ).fetchall()
+        for rowid, text in rows:
+            if not str(text).strip():
+                value = None
+            else:
+                value = number_from_text(str(text))
+                if value is None:
+                    left.append((rowid, col, str(text)))
+                    continue
+            conn.execute(
+                f'UPDATE "{table}" SET "{col}" = ? WHERE rowid = ?', (value, rowid)
+            )
+            changed += 1
+    return changed, left
+
+
+def apply_retype_columns(
+    conn: sqlite3.Connection,
+    table: str,
+    columns: list[str],
+    ref: sqlite3.Connection,
+) -> tuple[int, list[tuple[int, str, str]]]:
+    """Give `columns` of `table` the reference's declared type.
+
+    SQLite cannot change a column's type in place, so the table is rebuilt
+    with the reference definitions (`rebuild_table` with nothing to drop:
+    rowids, keys, defaults, indexes and triggers are kept). SQLite's REAL
+    affinity turns integers and well-formed numeric texts into REAL on the
+    copy; the remaining texts go through `cast_text_numbers`. Returns its
+    result.
+    """
+    rebuild_table(conn, table, [], ref)
+    return cast_text_numbers(conn, table, columns)
 
 
 def apply_transformation(
@@ -468,6 +706,25 @@ def apply_plan(
         apply_transformation(conn, tbl, entry, ref)
     for tbl, cols in plan.drop_columns:
         apply_drop_columns(conn, tbl, cols, ref)
+    for tbl, cols in plan.retype_columns:
+        changed, left = apply_retype_columns(conn, tbl, list(cols), ref)
+        if changed:
+            print(f"  {tbl}: {changed} text value(s) converted to numbers")
+        by_column: dict[str, list[tuple[int, str]]] = {}
+        for rowid, col, text in left:
+            by_column.setdefault(col, []).append((rowid, text))
+        for col, cells in by_column.items():
+            examples = ", ".join(
+                f"{text!r} (rowid {rowid})" for rowid, text in cells[:3]
+            )
+            more = f" and {len(cells) - 3} more" if len(cells) > 3 else ""
+            print(
+                f"WARNING: {tbl}.{col}: {len(cells)} value(s) are not numbers and "
+                f"are left as text: {examples}{more}. Correct them in QGIS (a "
+                f"number with a decimal comma and three decimals, such as "
+                f"'1,234', is left too: it also reads as a grouped 1234).",
+                file=sys.stderr,
+            )
     for name in plan.drop_tables:
         apply_drop_table(conn, name)
 
@@ -966,6 +1223,14 @@ def verify_after(
                 raise RuntimeError(
                     f"After transformation, '{tbl}' is still missing column '{c}'"
                 )
+    for tbl, cols in plan.retype_columns:
+        types = get_columns(conn, tbl)
+        for c, (_src, ref_type) in cols.items():
+            if types.get(c, "").strip().upper() != ref_type.strip().upper():
+                raise RuntimeError(
+                    f"After retyping, '{tbl}.{c}' is '{types.get(c)}', "
+                    f"not '{ref_type}'"
+                )
 
 
 # ---------------------------------------------------------------------------
@@ -1175,7 +1440,7 @@ def main(argv: list[str]) -> int:  # noqa: C901
     parser.add_argument(
         "--refresh-include-user-extensible",
         action="store_true",
-        help="Add the 7 user-extensible reference tables "
+        help="Add the 8 user-extensible reference tables "
         "(default_aircraft, default_aircraft_engine_ei, ...) "
         "to the refresh list. WILL OVERWRITE user customizations.",
     )

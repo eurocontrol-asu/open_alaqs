@@ -23,7 +23,10 @@ from open_alaqs.core.interfaces.Emissions import (
 )
 from open_alaqs.core.interfaces.Engine import Engine
 from open_alaqs.core.interfaces.Movement import Movement, defaultEmissions
-from open_alaqs.core.tools import conversion, spatial
+from open_alaqs.core.tools import bffm2, conversion
+from open_alaqs.core.tools import runway_placement as rp
+from open_alaqs.core.tools import spatial
+from open_alaqs.core.tools.fuel_sulphur import helicopter_sox_ei_g_kg
 from open_alaqs.core.tools.nox_correction_ambient import (
     nox_correction_for_ambient_conditions,
 )
@@ -41,6 +44,14 @@ logger = get_logger(__name__)
 # from the climb-out point upwards), so an accepted fuel flow above the take-off
 # value needs no other guard.
 ADSB_FF_CEILING_FACTOR = 1.5
+# Modes the NOx ambient correction applies to (ICCAIA: take-off and climb-out).
+NOX_CORRECTION_MODES = frozenset({"TO", "CL"})
+
+# Arrival runway time = touchdown (A-CDM ALDT, "the time that an aircraft lands on a runway"): the time from
+# block to runway time then contains the landing roll, which the flight profile already counts, so the taxi
+# time is block - runway time minus the profile's roll. Departure runway time = start of the take-off roll.
+# The standalone has the same rule (ctx["arrival_runway_time_is_touchdown"]).
+ARRIVAL_RUNWAY_TIME_IS_TOUCHDOWN = True
 
 
 class EmissionsDict(TypedDict):
@@ -203,6 +214,26 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
         self._total_taxiing_time = None
         if self._block_time is not None and self._runway_time is not None:
             self._total_taxiing_time = abs(self._block_time - self._runway_time)
+        # Block to runway time before the landing roll is taken out: the skip test below uses it, so an
+        # arrival whose taxi time is only the roll keeps a 0 s taxi (as in the standalone).
+        self._block_to_runway_time = self._total_taxiing_time
+
+        # Runway placement of the flight profile (GeoTransformation.TrajectoryTransformer): the arrival's
+        # landing roll (its runway time is the touchdown, so block - runway time contains the roll that the
+        # profile counts) and the runway stretch from the rollout end to the route's exit, which is taxied.
+        _traj = (
+            movement.getTrajectoryAtRunway()
+            if hasattr(movement, "getTrajectoryAtRunway")
+            else None
+        )
+        self._placement = getattr(_traj, "runway_placement", None) or {}
+        self._rollout_time_s = 0.0
+        if self._is_arrival() and ARRIVAL_RUNWAY_TIME_IS_TOUCHDOWN:
+            self._rollout_time_s = float(self._placement.get("rollout_time_s") or 0.0)
+        if self._total_taxiing_time is not None and self._rollout_time_s > 0.0:
+            self._total_taxiing_time = max(
+                0.0, self._total_taxiing_time - self._rollout_time_s
+            )
 
         # Start emissions are keyed by aircraft_group, not by engine.
         # The Engine instance can be shared across aircraft in different
@@ -324,50 +355,90 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
 
             if self._total_taxiing_time is None:
                 self._total_taxiing_time = init_taxiing_time_from_segments
+                self._block_to_runway_time = self._total_taxiing_time
 
-            if self._total_taxiing_time <= self.TAXIING_TIME_THRESHOLD:
+            # A taxi time of 0 s skips only the route and queuing time (the segments get 0 s); APU,
+            # stop-and-go and brake wear are still counted, as in the standalone.
+            if self._block_to_runway_time <= self.TAXIING_TIME_THRESHOLD:
                 logger.warning(
-                    "The movement '%s' was skipped as the taxi route was not defined properly."
-                    % self._movement_name
+                    "The movement '%s': its taxi time is 0 s (block time equal to runway time, or no times "
+                    "and a taxi route without time), so there is no route or queuing time; APU, stop-and-go "
+                    "and brake wear are still counted." % self._movement_name
                 )
-                return emissions
+            elif self._total_taxiing_time <= 0.0:
+                logger.warning(
+                    "The arrival '%s': the block to runway time (%.0f s) is no longer than the landing roll "
+                    "(%.0f s), so its taxi time is 0 s (no route or queuing time); APU, stop-and-go and "
+                    "brake wear are still counted."
+                    % (
+                        self._movement_name,
+                        self._block_to_runway_time,
+                        self._rollout_time_s,
+                    )
+                )
+
+            # Total taxiing time for calculating taxiing emissions is taken from the Movements Table.
+            # It is shared by the route (its segment times), the runway stretch of an arrival whose exit
+            # lies past the rollout end, and queuing (the rest); when route and stretch do not fit, both
+            # are compressed to the total and there is no queuing (runway_placement.split_taxi_time).
+            stretch = self._placement.get("stretch") if self._is_arrival() else None
+            route_time, stretch_time, queuing_time = rp.split_taxi_time(
+                self._total_taxiing_time,
+                init_taxiing_time_from_segments,
+                float(stretch["time_s"]) if stretch else 0.0,
+            )
+            route_compressed = route_time < init_taxiing_time_from_segments
 
             # In m/s
-            taxiing_average_speed = conversion.convertToFloat(
-                taxiing_length
-            ) / conversion.convertToFloat(self._total_taxiing_time)
-
-            # Total taxiing time for calculating taxiing emissions is taken from the Movements Table
-            # Queuing emissions are added when taxiing time (traffic log) is greater than user defined taxiroute info (speed, time, etc)
-            queuing_time = (
-                (self._total_taxiing_time - init_taxiing_time_from_segments)
-                if self._total_taxiing_time > init_taxiing_time_from_segments
-                else 0
+            taxiing_average_speed = (
+                conversion.convertToFloat(taxiing_length)
+                / conversion.convertToFloat(route_time)
+                if route_time > 0
+                else float("inf")
             )
 
             taxiing_time_while_aircraft_moving = 0.0
 
             apu_t, apu_em = self._load_apu_info()
 
+            # A route without segments (none of its taxiways exists) has no route time, but queuing, APU,
+            # engine start, stop-and-go and brake wear are still counted: they are placed at the gate,
+            # on a single stand-in segment of 0 m and 0 s (the loop added them to the last segment, so a
+            # route without segments added nothing). Not reachable with the bundled studies.
+            segments = list(self._taxi_route.getSegments())
+            if not segments:
+                logger.warning(
+                    "The movement '%s': its taxi route '%s' has no segments, so there is no route time; "
+                    "queuing, APU, engine start, stop-and-go and brake wear are placed at the gate."
+                    % (self._movement_name, self._taxi_route.getName())
+                )
+                segments = [None]
+
             # Set the geometry as line with linear interpolation between start and endpoint
-            for index_segment_, taxiway_segment_ in enumerate(
-                self._taxi_route.getSegments()
-            ):
+            for index_segment_, taxiway_segment_ in enumerate(segments):
                 em_ = Emission(defaultValues=defaultEmissions)
-                em_.setGeometryText(taxiway_segment_.getGeometryText())
-
-                # Add emission factors,
-                # Multiply by occupancy time and number of engines
-
-                # If time spent in segments < taxiing time in movement table
-                if self._total_taxiing_time <= init_taxiing_time_from_segments:
-                    new_taxiway_segment_time = (
-                        taxiway_segment_.getLength() / taxiing_average_speed
+                if taxiway_segment_ is None:
+                    em_.setGeometryText(
+                        self._gate.getGeometryText() if self._gate is not None else None
                     )
+                    new_taxiway_segment_time = 0.0
+                    segment_length = 0.0
                 else:
-                    new_taxiway_segment_time = (
-                        taxiway_segment_.getLength() / taxiway_segment_.getSpeed()
-                    )
+                    em_.setGeometryText(taxiway_segment_.getGeometryText())
+                    segment_length = taxiway_segment_.getLength()
+
+                    # Add emission factors,
+                    # Multiply by occupancy time and number of engines
+
+                    # If time spent in segments < taxiing time in movement table
+                    if route_compressed:
+                        new_taxiway_segment_time = (
+                            taxiway_segment_.getLength() / taxiing_average_speed
+                        )
+                    else:
+                        new_taxiway_segment_time = (
+                            taxiway_segment_.getLength() / taxiway_segment_.getSpeed()
+                        )
 
                 taxiing_time_while_aircraft_moving += new_taxiway_segment_time
 
@@ -396,7 +467,7 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                 )
 
                 # Queuing emissions
-                if index_segment_ == len(self._taxi_route.getSegments()) - 1:
+                if index_segment_ == len(segments) - 1:
                     em_.add(emission_index_, queuing_time * number_of_engines)
 
                     # Stop & Go emissions
@@ -421,7 +492,22 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                     {
                         "emissions": [em_],
                         "distance_time": new_taxiway_segment_time + queuing_time,
-                        "distance_space": taxiway_segment_.getLength(),
+                        "distance_space": segment_length,
+                    }
+                )
+
+            if stretch and stretch_time > 0.0:
+                # Runway stretch: all engines (the aircraft has not left the runway), on the centreline
+                # from the rollout end to the exit.
+                em_ = Emission(defaultValues=defaultEmissions)
+                (x1, y1), (x2, y2) = stretch["p1_3857"], stretch["p2_3857"]
+                em_.setGeometryText(f"LINESTRING({x1} {y1}, {x2} {y2})")
+                em_.add(emission_index_, stretch_time * self._aircraft.getEngineCount())
+                emissions.append(
+                    {
+                        "emissions": [em_],
+                        "distance_time": stretch_time,
+                        "distance_space": float(stretch["length_m"]),
                     }
                 )
 
@@ -918,7 +1004,8 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         # gi_fraction above (matching the standalone's
         # compute_helicopter.compute_helicopter line-by-line).
         gi_emissions = Emission(defaultValues=defaultEmissions)
-        gi_emissions.add_from_mode_result(gi, scale=1.0)
+        sox_ei = helicopter_sox_ei_g_kg(category.value)
+        gi_emissions.add_from_mode_result(gi, scale=1.0, sox_ei_g_kg=sox_ei)
         # The take-off / touchdown spot: the trajectory's ground-idle point.
         gi_point_wkt = None
         for point_ in self._trajectory.getPoints():
@@ -966,7 +1053,9 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 if LineString([q1, q2]).length > 0.0
             ]
         active_emissions = Emission(defaultValues=defaultEmissions)
-        active_emissions.add_from_mode_result(active, scale=active_scale)
+        active_emissions.add_from_mode_result(
+            active, scale=active_scale, sox_ei_g_kg=sox_ei
+        )
 
         flight_wkt = None
         space_in_segment_ = 0.0
@@ -1068,11 +1157,12 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         # ToDo : Permanent definition
         try:
             T = self._method["config"]["ambient_conditions"].getTemperature()
-            # Celsius temperature: T − 273.15
-            speed_of_sound = float(331.3 + 0.606 * (T - 273.15))  # in m/s
+            speed_of_sound = bffm2.speed_of_sound_m_s(T)  # sqrt(gamma R T), m/s
+            # Flight Mach number TAS / a(T), as BFFM2 (SAE AIR-5715) and the CAEP
+            # validation use it. Until October 2026 this was multiplied by
+            # sqrt(288.15 / T), which is not a Mach number away from ISA.
             mach_value = {
-                "mach_number": (start_point_.getTrueAirspeed() / speed_of_sound)
-                * ((288.15 / float(T)) ** (1.0 / 2))
+                "mach_number": start_point_.getTrueAirspeed() / speed_of_sound
             }
             ambient_temp_K = (
                 T  # Use the temperature directly from the ambient conditions
@@ -1158,10 +1248,16 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         engine_thrust = start_point_.getEngineThrust()
         fuel_flow = start_point_.getFuelFlow()
         mode = start_point_.getMode() or "AP"  # guard empty string (Bug #23 residual)
-        # Segment altitude above MSL (metres) — needed by MEEM V1 for the
-        # LTO/non-LTO branch.  getZ() returns None for points without an
-        # explicit elevation; default to 0.
-        altitude_m = float(start_point_.getZ() or 0.0)
+        # Segment altitude above MSL (metres), the ISA altitude of the MEEM V1
+        # non-LTO chain: the trajectory height above the airport (getZ, None
+        # for points without an explicit height) plus the airport elevation.
+        # The LTO/non-LTO cut itself is at 3000 ft above the aerodrome (ICAO
+        # LTO cycle): Engine._meem_v1 subtracts the airport elevation again.
+        altitude_m = float(start_point_.getZ() or 0.0) + float(
+            self._method["config"].get("airport_altitude") or 0.0
+        )
+        # True airspeed (m/s) for the MEEM V1 Mach number above 3000 ft.
+        self._segment_tas_m_s = start_point_.getTrueAirspeed()
 
         # Bug #22: None engine_thrust would crash calculate_fuel_flow_from_power_setting
         # inside the BFFM2 path. Fall back to bymode for that segment so one bad
@@ -1277,7 +1373,11 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         if (
             self._method["config"]["apply_nox_corrections"]
             and self._method["name"].lower() != "bffm2"
+            and start_point_.getMode() in NOX_CORRECTION_MODES
         ):
+            # ICCAIA simple-method correction: take-off and climb-out only
+            # (nox_correction_ambient.py); approach and taxi segments were
+            # corrected as well before this change.
             self._apply_nox_corrections(emission_index_, start_point_.getMode())
 
         # Calculate the effective time (s)
@@ -1390,6 +1490,16 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
 
         return emission_index_
 
+    def _meem_delta_t(self, T_amb) -> float:
+        """MEEM V1 ISA deviation (K): the meteo temperature of the period (the
+        one BFFM2 uses) minus ISA at the airport elevation, constant aloft.
+        Without meteo the temperature is 288.15 K, so 0.0065 K/m x elevation."""
+        from open_alaqs.core.tools.meem_v1 import delta_t_from_ground
+
+        return delta_t_from_ground(
+            T_amb, self._method["config"].get("airport_altitude") or 0.0
+        )
+
     def _get_emission_index_bymode(
         self,
         mode: str,
@@ -1412,6 +1522,12 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 altitude_m=altitude_m,
                 T_amb_K=T_amb,
                 meem_version=mver,
+                tas_m_s=getattr(self, "_segment_tas_m_s", None),
+                climbing=self._is_departure(),
+                delta_t=self._meem_delta_t(T_amb),
+                airport_elevation_m=float(
+                    self._method["config"].get("airport_altitude") or 0.0
+                ),
             )
         except Exception:
             src = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)
@@ -1470,6 +1586,12 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 altitude_m=altitude_m,
                 T_amb_K=T_amb,
                 meem_version=mver,
+                tas_m_s=getattr(self, "_segment_tas_m_s", None),
+                climbing=self._is_departure(),
+                delta_t=self._meem_delta_t(T_amb),
+                airport_elevation_m=float(
+                    self._method["config"].get("airport_altitude") or 0.0
+                ),
             )
         except Exception:
             mode_ei = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)

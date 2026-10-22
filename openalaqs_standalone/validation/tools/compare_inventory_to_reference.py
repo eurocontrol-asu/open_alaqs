@@ -22,7 +22,10 @@ Methods (must match the calculation method used in the plugin run):
     bffm2_traj    BFFM2 trajectory reference column
     bffm2_anchor  BFFM2 anchor reference column
 
-Default reference: example/training/training_validation_reference.xlsx
+Default reference: example/training/training_validation_reference.xlsx (made
+from example/training/training_out.alaqs by regenerate_training_validation_xlsx.py;
+the copy in openalaqs_standalone/validation/data is made from training_v3.alaqs
+and carries the two helicopters as well)
 
 Exit code 0 if all movements match within 0.5%, non-zero otherwise.
 """
@@ -33,12 +36,13 @@ import csv
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[3]
 DEFAULT_REF = REPO / "example" / "training" / "training_validation_reference.xlsx"
 
 # Column-offset within each 6-column pollutant block for each method.
-# Reference sheet layout per pollutant: bymode, CAEP14 LTO, BFFM2 traj,
-# CAEP14 BF(traj), BFFM2 anchor, CAEP14 BF(anch).
+# Movement sheet layout per pollutant: plugin bymode, reference bymode,
+# plugin BFFM2 traj, reference BFFM2 traj, plugin BFFM2 anchor, reference
+# BFFM2 anchor. The reference column of the chosen method is read.
 METHOD_OFFSET = {
     "bymode": 0,
     "bffm2_traj": 2,
@@ -74,7 +78,7 @@ def load_reference(xlsx_path: Path, method: str) -> dict[int, dict[str, float]]:
 
     if method not in METHOD_OFFSET:
         raise ValueError(f"Unknown method '{method}'. Valid: {list(METHOD_OFFSET)}")
-    offset = METHOD_OFFSET[method]
+    offset = METHOD_OFFSET[method] + 1  # the reference column of the pair
 
     wb = openpyxl.load_workbook(xlsx_path, data_only=True)
     refs: dict[int, dict[str, float]] = {}
@@ -84,7 +88,7 @@ def load_reference(xlsx_path: Path, method: str) -> dict[int, dict[str, float]]:
         p: 3 + 6 * i + offset
         for i, p in enumerate(["co", "co2", "hc", "nox", "sox", "pm10"])
     }
-    for r_idx in range(6, ws.max_row + 1):
+    for r_idx in range(1, ws.max_row + 1):
         row = list(ws.iter_rows(min_row=r_idx, max_row=r_idx, values_only=True))[0]
         mov_id = row[0]
         if not isinstance(mov_id, int):
@@ -96,24 +100,6 @@ def load_reference(xlsx_path: Path, method: str) -> dict[int, dict[str, float]]:
                 entry[p] = float(val)
         refs[mov_id] = entry
 
-    # Helicopter FOCA Appendix A canonical (AS50, SINGLE_TURBOSHAFT, 732 SHP).
-    # FOCA values are method-agnostic by construction.
-    refs[14] = {
-        "co": 0.20324,
-        "co2": 41.94,
-        "hc": 0.15886,
-        "nox": 0.08456,
-        "sox": 0.0,
-        "pm10": 0.00264,
-    }
-    refs[15] = {
-        "co": 0.13702,
-        "co2": 37.75,
-        "hc": 0.10879,
-        "nox": 0.06530,
-        "sox": 0.0,
-        "pm10": 0.00209,
-    }
     return refs
 
 

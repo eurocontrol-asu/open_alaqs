@@ -9,7 +9,11 @@ in validate_field rejects it.
 
 Fix covers:
 - `convertToFloat` accepts decimal comma + comma/dot thousands
-- `validate_field("float")` routes through convertToFloat
+- `validate_field("float")` reads the text as QGIS saves it
+  (QgsField.convertCompatible), so "30,3" is 30.3 under a European
+  locale; under an English locale QGIS saves it as 303 (the comma is the
+  group separator) and the form check reads 303 too (5.4.0; it read 30.3
+  through convertToFloat while QGIS stored 303)
 - `Source.py` base class + 8 interface files (Gate, Taxiway, Runway,
   Area, Parking, Point, Roadway, UserTimeProfiles) use convertToFloat
   for DB-sourced values
@@ -131,11 +135,24 @@ class TestIssue159ValidateFieldAcceptsComma:
         assert validate_field(w, "float") == 30.3
 
     def test_validate_field_float_accepts_comma(self):
-        """GitHub #159 — this was the failing case."""
+        """GitHub #159: this was the failing case (European locale)."""
+        from qgis.PyQt.QtCore import QLocale
+
         from open_alaqs.openalaqsuitoolkit import validate_field
 
         w = self._make_line_edit("30,3")
-        assert validate_field(w, "float") == 30.3
+        previous = QLocale()
+        try:
+            for name in ("de_DE", "fr_FR", "nl_NL"):
+                QLocale.setDefault(QLocale(name))
+                assert validate_field(w, "float") == 30.3, name
+            # English separators: QGIS would save 303, so the check refuses
+            # the text (rc6 review F2) and names the decimal separator
+            QLocale.setDefault(QLocale("en_US"))
+            assert validate_field(w, "float") is False
+            assert "decimal separator of your locale (.)" in w.toolTip()
+        finally:
+            QLocale.setDefault(previous)
 
     def test_validate_field_float_rejects_garbage(self):
         from open_alaqs.openalaqsuitoolkit import validate_field

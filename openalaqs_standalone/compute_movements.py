@@ -39,6 +39,7 @@ Differences from the reference, all deliberate:
 from __future__ import annotations
 
 import csv as _csv
+import logging
 import re
 from typing import Optional
 
@@ -53,6 +54,8 @@ from openalaqs_standalone import movements as _mv
 # The six pollutants carried in every per-movement result. Identical
 # to compute_aircraft.POLLUTANTS and compute_helicopter.POLLUTANTS.
 POLLUTANTS = _ca.POLLUTANTS
+
+_log = logging.getLogger(__name__)
 
 # The three calculation methods.
 METHODS = ("bymode", "bffm2_anchor", "bffm2_traj")
@@ -73,7 +76,7 @@ def build_context(conn) -> dict:
 
     Returns a dict with:
       runways         dict from `movements.get_runways`, mapping each
-                      runway-designator integer to its runway dict.
+                      runway end ("06L", "24") to its runway dict.
                       A single-runway study still produces a 2-key
                       dict; both keys point at the same runway.
       grid_bounds     the dict from `geometry.grid_bounds_3857`
@@ -93,7 +96,9 @@ def build_context(conn) -> dict:
     Multi-runway studies (a study with both 07/25 and 33/15 active) are supported
     by reading `runways` (plural) instead of a single `runway`.
     Single-runway studies are unaffected; the lookup
-    `ctx["runways"][mov["runway_direction"]]` works for both cases.
+    `movements.runway_of(ctx["runways"], mov)` (by the full designator of
+    the movement's runway end, refusing an ambiguous plain number on
+    parallel runways) works for both cases.
     """
     runways = _mv.get_runways(conn)
     gd = _mv.get_grid_definition(conn)
@@ -204,12 +209,32 @@ def _build_natural_taxi_times(conn) -> dict:
     except Exception:
         return natural
     for route_name, seq_str in route_rows:
-        if not seq_str:
-            continue
-        seq = [s.strip() for s in seq_str.split(",") if s.strip()]
+        # The plugin (TaxiwayRoutesStore.initTaxiwayRoutes) builds a route
+        # from the taxiways of its sequence that exist and skips the others,
+        # so the natural time is the sum over the existing taxiways. A route
+        # none of whose taxiways exists (or with an empty sequence) has no
+        # route time: its whole taxi time is queuing, placed at the gate, as
+        # TaxiingEmissionCalculator does on its stand-in segment.
+        seq = [s.strip() for s in (seq_str or "").split(",") if s.strip()]
+        missing = [tid for tid in seq if tid not in lengths]
+        if missing:
+            _log.warning(
+                "Taxi route '%s': taxiway(s) %s do not exist in shapes_taxiways and are "
+                "skipped, as the plugin does%s.",
+                route_name,
+                ", ".join(missing),
+                (
+                    "; the route has no segments left, so its taxi time is all queuing "
+                    "at the gate"
+                    if len(missing) == len(seq)
+                    else ""
+                ),
+            )
         total = 0.0
         ok = True
         for tid in seq:
+            if tid in missing:
+                continue
             sp = speeds.get(tid)
             lg = lengths.get(tid)
             if sp is None or sp <= 0 or lg is None:

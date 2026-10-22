@@ -5,6 +5,7 @@ from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.interfaces.Emissions import EmissionIndex, PollutantType
 from open_alaqs.core.interfaces.Store import Store
 from open_alaqs.core.tools.bffm2 import calculate_emission_index
+from open_alaqs.core.tools.fuel_sulphur import sox_ei_g_kg
 from open_alaqs.core.tools.twin_quadratic_fit_method import (
     calculate_fuel_flow_from_power_setting,
 )
@@ -98,64 +99,78 @@ class EngineEmissionIndex(Store):
         altitude_m=0.0,
         T_amb_K=None,
         meem_version="v1",
+        tas_m_s=None,
+        climbing=None,
+        delta_t=0.0,
+        airport_elevation_m=0.0,
     ):
         """
-        Per-mode EI with MEEM nvPM correction applied at actual segment
-        conditions.  Routes to MEEM V1 (ICAO CAEP/13-MDG) or MEEM V2
-        (ICAO CAEP/13-WG3) based on the ``meem_version`` kwarg.
+        Per-mode EI with the MEEM nvPM emission index of the segment.
 
-        V1 (default) — interpolates nvPM EI on % max thrust.  For the
-        LTO branch (altitude ≤ 914 m) this reduces to log-log mass
-        interpolation and linear number interpolation at the segment's
-        actual power setting.  For non-LTO it additionally applies the
-        ISA altitude-correction chain (T/P at engine inlet, combustor
-        inlet at altitude and at ground reference, GR-equivalent thrust)
-        and the DLR enrichment factor φ.
+        V1 (default, the method used by the emission calculation) follows
+        the MEEM_V1 tab of the CAEP14 v14 calculation sheet
+        (open_alaqs.core.tools.meem_v1):
 
-        V2 — interpolates nvPM EI on BFFM2-adjusted fuel flow (FFadj in
-        kg/s) per CAEP14 v12's preferred method.  FFadj anchor values are
-        derived from each EEDB mode's fuel_kg_sec (which at ISA+Mach=0
-        equals the reference FF).  The segment's target FFadj is computed
-        from the mode's reference FF and the current ambient θ/δ/Mach via
-        the BFFM2 formula.  The altitude-correction chain for non-LTO is
-        identical to V1 — only the interpolation step differs.
+        - Segment at or below 3000 ft (914.4 m) above the aerodrome (ICAO
+          LTO cycle: ``altitude_m - airport_elevation_m``), or no altitude
+          given: LTO. The nvPM EI is the certification value of the mode,
+          so the mode EI is returned unchanged.
+        - Above: non-LTO. Phase "CLIMB TO CRUISE" for a climbing segment,
+          "DESCENT TO APPROACH" otherwise; ISA + ``delta_t`` atmosphere at
+          the segment altitude above MSL (``altitude_m``), Mach from ``tas_m_s`` (else ``mach``), the engine
+          pressure ratio (DEFAULT_OPR when the table has none). The nvPM
+          mass EI replaces pm10_nonvol_g_kg (and nvpm_g_kg), pm10_g_kg,
+          p1_g_kg and p2_g_kg move by the same amount, and nvpm_number_kg
+          is the MEEM number EI.
 
-        At LTO under real ambient conditions, V1 and V2 produce different
-        numbers (~16% gap at the CAEP14 reference case for engine 10GE129
-        at climb-out 253 ft, Mach 0.228).  They coincide only at exact
-        ISA + Mach=0 + anchor-thrust conditions.
+        V2 (``meem_version="v2"``, MEEM V2 of CAEP14 v12+, open_alaqs.core.
+        tools.meem_v2) is kept for evaluation only; the emission calculation
+        does not use it (MovementSourceModule always passes "v1"). It sets
+        only nvpm_g_kg and nvpm_number_kg.
 
-        Falls back to plain getEmissionIndexByMode(mode) without raising
-        if any prerequisite is missing: fewer than 4 EEDB points, a mode
-        without a power setting, a mode whose nvpm_g_kg or nvpm_number_kg
-        is None, missing fuel_kg_sec for V2, or any exception in the MEEM
-        computation.
+        Falls back to plain getEmissionIndexByMode(mode) without raising if a
+        prerequisite is missing or the MEEM computation fails.
 
         :param mode:          operating mode ("T/O","C/O","App","Idle" or
-                              their aliases "TO","CL","AP","TX","Takeoff", ...).
-        :param p_amb_Pa:      ambient static pressure in Pa at the segment.
-        :param mach:          flight Mach number (≥ 0).
-        :param power_setting: segment thrust F/F00 (0..1 typical).  V1 uses
-                              this as the interpolation target.  For V2 it
-                              is used only as a fallback for identifying
-                              which mode's FF_ref to use when the requested
-                              mode lacks fuel_kg_sec.
-        :param altitude_m:    segment altitude above MSL (m).  >914 m
-                              triggers altitude correction chain.
-        :param T_amb_K:       optional ambient static temperature (K).  If
-                              None, ISA at altitude_m is used.
-        :param meem_version:  "v1" (default, CAEP/13-MDG) or "v2"
-                              (CAEP/13-WG3 / CAEP14 v12 preferred).
-        :return: EmissionIndex with MEEM-corrected nvpm_g_kg and
-                 nvpm_number_kg; other fields unchanged from base bymode.
+                              their aliases "TO","CL","AP","TX", ...).
+        :param p_amb_Pa:      ambient static pressure in Pa (V2 only).
+        :param mach:          flight Mach number, used by V1 when tas_m_s is
+                              None.
+        :param power_setting: segment thrust F/F00 (V2 only).
+        :param altitude_m:    segment altitude above MSL (m): the ISA
+                              altitude of the non-LTO chain.
+        :param T_amb_K:       ambient static temperature in K (V2 only).
+        :param meem_version:  "v1" (default) or "v2".
+        :param tas_m_s:       segment true airspeed (m/s), V1 non-LTO.
+        :param climbing:      True for a climbing segment (V1 non-LTO phase);
+                              None: True for TO and CL modes.
+        :param delta_t:       ISA temperature deviation (K) of the V1 non-LTO
+                              atmosphere, constant aloft (meem_v1.delta_t_from_ground
+                              of the meteo temperature; without meteo the ISA sea-level 288.15 K
+                              is used, so 0.0065 K/m x elevation).
+        :param airport_elevation_m: airport elevation above MSL (m); the
+                              LTO / non-LTO cut is at 3000 ft above it.
+        :return: EmissionIndex.
         """
         base_ei = self.getEmissionIndexByMode(mode)
         if base_ei is None:
             return None
 
+        if str(meem_version or "v1").lower() != "v2":
+            return self._meem_v1(
+                base_ei,
+                mode,
+                altitude_m,
+                mach,
+                tas_m_s,
+                climbing,
+                delta_t,
+                airport_elevation_m,
+            )
+
         try:
             # Build anchor arrays from every mode on the engine that has
-            # nvPM data. Sorted by thrust for V1, sorted by FFadj for V2.
+            # nvPM data (V2 below).
             ts, mass_mgkg, number_nkg, ff_ref_kgs = [], [], [], []
             for m_, obj_ in self.getObjects().items():
                 ei_ = obj_.get("emission_index") if isinstance(obj_, dict) else None
@@ -207,7 +222,11 @@ class EngineEmissionIndex(Store):
                 "TX": "IDLE",
             }.get(mode, "CLIMB OUT")
 
-            apply_alt = altitude_m is not None and float(altitude_m) > 914.0
+            # Height above the aerodrome (ICAO LTO ceiling 3000 ft).
+            apply_alt = (
+                altitude_m is not None
+                and float(altitude_m) - float(airport_elevation_m or 0.0) > 914.0
+            )
 
             version = str(meem_version or "v1").lower()
             if version == "v2":
@@ -272,20 +291,16 @@ class EngineEmissionIndex(Store):
                     P_ambient_Pa=float(p_amb_Pa) if p_amb_Pa else None,
                 )
             else:
-                from open_alaqs.core.tools.meem_v1 import calculate_nvpm_ei
-
-                result = calculate_nvpm_ei(
-                    power_setting=ps_target,
-                    thrust_settings=ts,
-                    ei_mass_mgkg=mass_mgkg,
-                    ei_number_nkg=number_nkg,
-                    altitude_m=float(altitude_m or 0.0),
-                    mach=float(mach),
-                    opr=opr,
-                    phase=phase,
-                    apply_altitude_correction=apply_alt,
-                    T_ambient_K=T_amb_K,
-                    P_ambient_Pa=float(p_amb_Pa) if p_amb_Pa else None,
+                # Reached when V2 was asked but a mode has no fuel flow (version reset to "v1" above)
+                return self._meem_v1(
+                    base_ei,
+                    mode,
+                    altitude_m,
+                    mach,
+                    tas_m_s,
+                    climbing,
+                    delta_t,
+                    airport_elevation_m,
                 )
 
             corrected = EmissionIndex(
@@ -298,6 +313,117 @@ class EngineEmissionIndex(Store):
             logger.debug(
                 "MEEM %s fall-through for mode %s: %s", meem_version, mode, exc
             )
+            return base_ei
+
+    _MEEM_MODE_ALIASES = {
+        "TO": "TO",
+        "T/O": "TO",
+        "Takeoff": "TO",
+        "CL": "CL",
+        "C/O": "CL",
+        "Climbout": "CL",
+        "AP": "AP",
+        "App": "AP",
+        "Approach": "AP",
+        "TX": "TX",
+        "Idle": "TX",
+    }
+
+    def _meem_v1(
+        self,
+        base_ei,
+        mode,
+        altitude_m,
+        mach,
+        tas_m_s,
+        climbing,
+        delta_t=0.0,
+        airport_elevation_m=0.0,
+    ):
+        """MEEM V1 (CAEP14 v14 MEEM_V1 tab) applied to a mode EI; see
+        getEmissionIndexByModeWithMEEM. LTO / non-LTO cut at 3000 ft above
+        the aerodrome; ``altitude_m`` (above MSL) is the ISA altitude of the
+        non-LTO chain."""
+        from open_alaqs.core.tools import meem_v1
+
+        try:
+            if altitude_m is None:
+                return base_ei
+            altitude_ft = float(altitude_m) / meem_v1.FT_TO_M
+            height_ft = (
+                float(altitude_m) - float(airport_elevation_m or 0.0)
+            ) / meem_v1.FT_TO_M
+            if meem_v1.section_of_flight(height_ft) == "LTO":
+                # Certification value of the mode: the stored EI.
+                return base_ei
+
+            canonical = self._MEEM_MODE_ALIASES.get(mode)
+            ts, mass_mgkg, number_nkg = [], [], []
+            for m_, thrust in meem_v1.MODE_THRUST.items():
+                ei_ = self.getEmissionIndexByMode(m_)
+                nvpm_m_g = ei_.getObject("nvpm_g_kg") if ei_ is not None else None
+                nvpm_n = ei_.getObject("nvpm_number_kg") if ei_ is not None else None
+                if nvpm_m_g is None or nvpm_n is None:
+                    return base_ei
+                ts.append(thrust)
+                mass_mgkg.append(float(nvpm_m_g) * 1000.0)
+                number_nkg.append(float(nvpm_n))
+            ts_num = list(ts)
+            # 5th point (MEEM_V1!J9:K9 and J17:K17) when the engine has one.
+            f00_m = getattr(self, "_meem_m_f00", None)
+            max_m = getattr(self, "_nvpm_m_max_mgkg", None)
+            if f00_m and f00_m > 0 and max_m is not None:
+                ts.append(float(f00_m))
+                mass_mgkg.append(float(max_m))
+            f00_n = getattr(self, "_meem_n_f00", None)
+            max_n = getattr(self, "_nvpm_n_max_nkg", None)
+            if f00_n and f00_n > 0 and max_n is not None:
+                ts_num.append(float(f00_n))
+                number_nkg.append(float(max_n))
+
+            opr = getattr(self, "_press_ratio", None)
+            if not opr:
+                if not getattr(self, "_meem_default_opr_warned", False):
+                    logger.warning(
+                        "MEEM V1: no engine pressure ratio in the engine table; "
+                        "using %.0f for segments above 3000 ft.",
+                        meem_v1.DEFAULT_OPR,
+                    )
+                    self._meem_default_opr_warned = True
+                opr = meem_v1.DEFAULT_OPR
+
+            if climbing is None:
+                climbing = canonical in ("TO", "CL")
+            phase = "CLIMB TO CRUISE" if climbing else "DESCENT TO APPROACH"
+
+            result = meem_v1.calculate_nvpm_ei(
+                phase=phase,
+                altitude_ft=altitude_ft,
+                thrust_settings=ts,
+                ei_mass_mgkg=mass_mgkg,
+                ei_number_nkg=number_nkg,
+                opr=float(opr),
+                mach=None if tas_m_s is not None else float(mach or 0.0),
+                tas_kt=(
+                    float(tas_m_s) * meem_v1.MS_TO_KT if tas_m_s is not None else None
+                ),
+                number_thrust_settings=ts_num,
+                delta_t=float(delta_t or 0.0),
+            )
+
+            corrected = EmissionIndex(
+                initValues=dict(base_ei._objects), defaultValues=defaultEI
+            )
+            nvpm_g_kg = result.nvpm_mass_ei_mgkg / 1000.0
+            delta = nvpm_g_kg - float(base_ei.getObject("pm10_nonvol_g_kg") or 0.0)
+            corrected.setObject("nvpm_g_kg", nvpm_g_kg)
+            corrected.setObject("nvpm_number_kg", result.nvpm_number_ei_nkg)
+            corrected.setObject("pm10_nonvol_g_kg", nvpm_g_kg)
+            for key in ("pm10_g_kg", "p1_g_kg", "p2_g_kg"):
+                corrected.setObject(key, float(corrected.getObject(key) or 0.0) + delta)
+            return corrected
+        except Exception as exc:
+            logger.debug("MEEM v1 fall-through for mode %s: %s", mode, exc)
             return base_ei
 
     def getEmissionIndexByModeWithBFFM2(
@@ -772,6 +898,10 @@ class EngineEmissionIndex(Store):
             # Set the values with not update values with empty strings
             if val_key in val and isinstance(val.get(val_key), (int, float)):
                 ei_val[ei_val_key] = val[val_key]
+
+        # SOx from the fuel sulphur when the table gives none (the shipped
+        # default_aircraft_engine_ei had sox_ei 0.0 in every row up to 5.3.6).
+        ei_val["sox_g_kg"] = sox_ei_g_kg(ei_val.get("sox_g_kg"), val.get("fuel_type"))
 
         # Create the emission index
         emission_index = EmissionIndex(initValues=ei_val, defaultValues=defaultEI)

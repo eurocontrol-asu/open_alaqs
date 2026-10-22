@@ -214,7 +214,7 @@ class GateDatabase(SQLSerializable, metaclass=Singleton):
                     ("oid", "INTEGER PRIMARY KEY NOT NULL"),
                     ("gate_id", "TEXT"),
                     ("gate_type", "TEXT"),
-                    ("gate_height", "DECIMAL"),
+                    ("gate_height", "REAL"),
                     ("instudy", "TEXT"),
                 ]
             )

@@ -2,13 +2,36 @@ from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import Qt
 from qgis.utils import OverrideCursor
 
+from open_alaqs.alaqs_config import field_alias
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.tools import copert5
 from open_alaqs.core.tools.copert5_utils import VEHICLE_CATEGORIES
-from open_alaqs.openalaqsuitoolkit import validate_field
+from open_alaqs.enums import AlaqsLayerType
+from open_alaqs.openalaqsuitoolkit import (
+    add_combo_values,
+    update_ok_button,
+    validate_field,
+)
 
 logger = get_logger("open_alaqs.ui.ui_parkings")
+
+
+# Keys of the `fields` dict built in form_open that are not column names,
+# mapped to their column, so messages can use the field display names.
+FIELD_COLUMNS = {
+    "name_field": "parking_id",
+    "vehicle_year_field": "vehicle_year",
+    "height_field": "height",
+    "speed_field": "speed",
+    "distance_field": "distance",
+    "idle_time_field": "idle_time",
+}
+
+
+def display_name(field_key: str) -> str:
+    """Display name (as on the form) of an entry of the `fields` dict."""
+    return field_alias(AlaqsLayerType.PARKING, FIELD_COLUMNS.get(field_key, field_key))
 
 
 def catch_errors(f):
@@ -69,8 +92,9 @@ def form_open(form, layer, feature):
         instudy=form.findChild(QtWidgets.QCheckBox, "instudy"),
     )
 
-    # Hide the instudy field
-    fields["instudy"].setHidden(True)
+    # The In Study check box is bound to the instudy column by QGIS (CheckBox
+    # widget, "1" / "0", set in alaqs_config.py): it shows the stored value
+    # and QGIS saves what the user sets, so the form does not write it.
 
     # Seed the profiles
     populate_hourly_profiles(fields["hour_profile_field"])
@@ -80,9 +104,12 @@ def form_open(form, layer, feature):
     # Connect the recalculate button with the recalculate_emissions method
     fields["recalculate"].clicked.connect(lambda: recalculate_emissions(fields, form))
 
-    # Disable various fields
+    # Disable various fields. The emission factors are filled in by
+    # Recalculate only.
     fields["method_field"].setText("COPERT5")
     fields["method_field"].setEnabled(False)
+    for pollutant in ("co", "hc", "nox", "sox", "pm10", "p1", "p2"):
+        fields[f"{pollutant}_gm_vh_field"].setEnabled(False)
 
     # Connect the comboboxes to validation
     fields["hour_profile_field"].currentTextChanged.connect(lambda: validate(fields))
@@ -94,23 +121,9 @@ def form_open(form, layer, feature):
         if isinstance(value, QtWidgets.QLineEdit):
             fields[key].textChanged.connect(lambda: validate(fields))
 
-    # Block the ok button (will be overwritten after validation)
-    fields["button_box"].button(fields["button_box"].StandardButton.Ok).blockSignals(
-        True
-    )
-
-    # Connect all QComboBoxes and the instudy checkbox on save
-    def on_save():
-        form.changeAttribute("hour_profile", fields["hour_profile_field"].currentText())
-        form.changeAttribute(
-            "daily_profile", fields["daily_profile_field"].currentText()
-        )
-        form.changeAttribute(
-            "month_profile", fields["month_profile_field"].currentText()
-        )
-        feature["instudy"] = str(int(fields["instudy"].isChecked()))
-
-    fields["button_box"].accepted.connect(on_save)
+    # OK is enabled only while the form is valid: validate now, then on
+    # every change
+    validate(fields)
 
 
 @catch_errors
@@ -151,7 +164,7 @@ def recalculate_emissions(fields: dict, form):
                     f"{field_name} should be of type {field_type}, "
                     f"the current value is {field_value}"
                 )
-                validation_errors.append(field_name)
+                validation_errors.append(display_name(field_name))
             else:
                 valid_fields[field_name] = field_value
         if validation_errors:
@@ -166,9 +179,7 @@ def recalculate_emissions(fields: dict, form):
             return False
 
         # Calculate the total
-        fleet_percentage_total = sum(
-            [float(fields[f].text()) for f in fleet_percentage_fields]
-        )
+        fleet_percentage_total = sum([valid_fields[f] for f in fleet_percentage_fields])
 
         if fleet_percentage_total != 100:
             msg_box = QtWidgets.QMessageBox()
@@ -198,7 +209,7 @@ def recalculate_emissions(fields: dict, form):
             "parking": True,
         }
         for field_name in fleet_percentage_fields:
-            form_data[field_name] = float(fields[field_name].text())
+            form_data[field_name] = valid_fields[field_name]
 
         # Get the study data for additional information needed
         study_data = alaqs.load_study_setup()
@@ -256,74 +267,29 @@ def recalculate_emissions(fields: dict, form):
 
 @catch_errors
 def populate_hourly_profiles(field):
-    # Make sure the field is empty
-    field.clear()
-
-    # Set the default field
-    field.addItem("default")
-
-    # Get the available hourly profiles
-    hourly_profiles = alaqs.get_hourly_profiles()
-
-    if (hourly_profiles is None) or (hourly_profiles == []):
-        logger.debug("No hourly profiles were found.")
-        return
-
-    # Add all the hourly profiles to the list (except the default profile)
-    for profile in hourly_profiles:
-        if profile[1] != "default":
-            field.addItem(profile[1])
-
-    # Set the default category to 0 and make the list un-editable
-    field.setCurrentIndex(0)
+    """Add the study's hourly profiles missing from the list (profiles created
+    after the study was opened). The list itself is a value map set when
+    the study opens; QGIS shows the stored value and saves the choice."""
+    profiles = alaqs.get_hourly_profiles() or []
+    add_combo_values(field, ["default"] + [profile[1] for profile in profiles])
 
 
 @catch_errors
 def populate_daily_profiles(field):
-    # Make sure the field is empty
-    field.clear()
-
-    # Set the default field
-    field.addItem("default")
-
-    # Get the available daily profiles
-    daily_profiles = alaqs.get_daily_profiles()
-
-    if (daily_profiles is None) or (daily_profiles == []):
-        logger.debug("No daily profiles were found.")
-        return
-
-    # Add all the daily profiles to the list (except the default profile)
-    for profile in daily_profiles:
-        if profile[1] != "default":
-            field.addItem(profile[1])
-
-    # Set the default category to 0 and make the list un-editable
-    field.setCurrentIndex(0)
+    """Add the study's daily profiles missing from the list (profiles created
+    after the study was opened). The list itself is a value map set when
+    the study opens; QGIS shows the stored value and saves the choice."""
+    profiles = alaqs.get_daily_profiles() or []
+    add_combo_values(field, ["default"] + [profile[1] for profile in profiles])
 
 
 @catch_errors
 def populate_monthly_profiles(field):
-    # Make sure the field is empty
-    field.clear()
-
-    # Set the default field
-    field.addItem("default")
-
-    # Get the available monthly profiles
-    monthly_profiles = alaqs.get_monthly_profiles()
-
-    if (monthly_profiles is None) or (monthly_profiles == []):
-        logger.debug("No monthly profiles were found.")
-        return
-
-    # Add all the monthly profiles to the list (except the default profile)
-    for profile in monthly_profiles:
-        if profile[1] != "default":
-            field.addItem(profile[1])
-
-    # Set the default category to 0 and make the list un-editable
-    field.setCurrentIndex(0)
+    """Add the study's monthly profiles missing from the list (profiles created
+    after the study was opened). The list itself is a value map set when
+    the study opens; QGIS shows the stored value and saves the choice."""
+    profiles = alaqs.get_monthly_profiles() or []
+    add_combo_values(field, ["default"] + [profile[1] for profile in profiles])
 
 
 def validate(fields: dict):
@@ -339,33 +305,64 @@ def validate(fields: dict):
 
     # Validate all fields
     results = [
-        validate_field(fields["name_field"], "str"),
-        validate_field(fields["vehicle_year_field"], "int"),
-        validate_field(fields["height_field"], "float"),
-        validate_field(fields["speed_field"], "float"),
-        validate_field(fields["distance_field"], "float"),
-        validate_field(fields["idle_time_field"], "float"),
-        validate_field(fields["pc_p_percentage"], "float"),
-        validate_field(fields["pc_d_percentage"], "float"),
-        validate_field(fields["lcv_p_percentage"], "float"),
-        validate_field(fields["lcv_d_percentage"], "float"),
-        validate_field(fields["hdt_p_percentage"], "float"),
-        validate_field(fields["hdt_d_percentage"], "float"),
-        validate_field(fields["motorcycle_p_percentage"], "float"),
-        validate_field(fields["bus_d_percentage"], "float"),
-        validate_field(fields["hour_profile_field"], "str"),
-        validate_field(fields["daily_profile_field"], "str"),
-        validate_field(fields["month_profile_field"], "str"),
-        validate_field(fields["co_gm_vh_field"], "float"),
-        validate_field(fields["hc_gm_vh_field"], "float"),
-        validate_field(fields["nox_gm_vh_field"], "float"),
-        validate_field(fields["sox_gm_vh_field"], "float"),
-        validate_field(fields["pm10_gm_vh_field"], "float"),
-        validate_field(fields["p1_gm_vh_field"], "float"),
-        validate_field(fields["p2_gm_vh_field"], "float"),
+        (fields["name_field"], validate_field(fields["name_field"], "str")),
+        (
+            fields["vehicle_year_field"],
+            validate_field(fields["vehicle_year_field"], "int"),
+        ),
+        (fields["height_field"], validate_field(fields["height_field"], "float")),
+        (fields["speed_field"], validate_field(fields["speed_field"], "float")),
+        (fields["distance_field"], validate_field(fields["distance_field"], "float")),
+        (fields["idle_time_field"], validate_field(fields["idle_time_field"], "float")),
+        (fields["pc_p_percentage"], validate_field(fields["pc_p_percentage"], "float")),
+        (fields["pc_d_percentage"], validate_field(fields["pc_d_percentage"], "float")),
+        (
+            fields["lcv_p_percentage"],
+            validate_field(fields["lcv_p_percentage"], "float"),
+        ),
+        (
+            fields["lcv_d_percentage"],
+            validate_field(fields["lcv_d_percentage"], "float"),
+        ),
+        (
+            fields["hdt_p_percentage"],
+            validate_field(fields["hdt_p_percentage"], "float"),
+        ),
+        (
+            fields["hdt_d_percentage"],
+            validate_field(fields["hdt_d_percentage"], "float"),
+        ),
+        (
+            fields["motorcycle_p_percentage"],
+            validate_field(fields["motorcycle_p_percentage"], "float"),
+        ),
+        (
+            fields["bus_d_percentage"],
+            validate_field(fields["bus_d_percentage"], "float"),
+        ),
+        (
+            fields["hour_profile_field"],
+            validate_field(fields["hour_profile_field"], "str"),
+        ),
+        (
+            fields["daily_profile_field"],
+            validate_field(fields["daily_profile_field"], "str"),
+        ),
+        (
+            fields["month_profile_field"],
+            validate_field(fields["month_profile_field"], "str"),
+        ),
+        (fields["co_gm_vh_field"], validate_field(fields["co_gm_vh_field"], "float")),
+        (fields["hc_gm_vh_field"], validate_field(fields["hc_gm_vh_field"], "float")),
+        (fields["nox_gm_vh_field"], validate_field(fields["nox_gm_vh_field"], "float")),
+        (fields["sox_gm_vh_field"], validate_field(fields["sox_gm_vh_field"], "float")),
+        (
+            fields["pm10_gm_vh_field"],
+            validate_field(fields["pm10_gm_vh_field"], "float"),
+        ),
+        (fields["p1_gm_vh_field"], validate_field(fields["p1_gm_vh_field"], "float")),
+        (fields["p2_gm_vh_field"], validate_field(fields["p2_gm_vh_field"], "float")),
     ]
 
-    # Block signals if any of the fields is invalid
-    button_box.button(button_box.StandardButton.Ok).blockSignals(
-        "False" in str(results)
-    )
+    # OK enabled only when every field is valid
+    update_ok_button(button_box, results, AlaqsLayerType.PARKING)

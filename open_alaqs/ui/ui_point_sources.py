@@ -2,26 +2,26 @@ from qgis.PyQt import QtWidgets
 
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
-from open_alaqs.openalaqsuitoolkit import validate_field
+from open_alaqs.enums import AlaqsLayerType
+from open_alaqs.openalaqsuitoolkit import (
+    add_combo_values,
+    update_ok_button,
+    validate_field,
+)
 
 logger = get_logger(__name__)
 
+# Shown, never saved, when the selected emission factor has no unit
+ACTIVITY_UNIT_PLACEHOLDER = "1000_m3 (legacy default)"
 
-def run_once(f):
-    """
-    Decorator to make sure the function is executed only once.
 
-    :param f: function to execute
-    :return:
-    """
-
-    def wrapper(*args, **kwargs):
-        if not wrapper.has_run:
-            wrapper.has_run = True
-            return f(*args, **kwargs)
-
-    wrapper.has_run = False
-    return wrapper
+def activity_unit_text(activity_unit) -> str:
+    """Text written into the Activity Unit field for an emission factor
+    row: its unit, or an empty string when the row has none (the field
+    then shows ACTIVITY_UNIT_PLACEHOLDER as placeholder text)."""
+    if activity_unit is None:
+        return ""
+    return str(activity_unit).strip()
 
 
 def catch_errors(f):
@@ -64,14 +64,16 @@ def form_open(form, layer, feature):
         diameter=form.findChild(QtWidgets.QLineEdit, "diameter"),
         velocity=form.findChild(QtWidgets.QLineEdit, "velocity"),
         ops_year=form.findChild(QtWidgets.QLineEdit, "ops_year"),
-        # Read-only "Activity unit" field (added in the point-sources v2
-        # schema migration). Populated from the selected EF row's
-        # `activity_unit` column by `change_type_field`. Legacy .alaqs
-        # files predate the v2 columns; the form handler falls back to
-        # "1000_m3 (legacy default)" when the column is missing or NULL.
+        # "Activity Unit" field (added in the point-sources v2 schema
+        # migration, a per-source override of the EF row's unit). Filled in
+        # from the selected EF row's `activity_unit` column by
+        # `change_type_field`, editable. Legacy EF rows
+        # have no unit; the field is then left empty and shows the
+        # historical default "1000_m3 (legacy default)" as placeholder
+        # text only, so that text is never saved.
         activity_unit=form.findChild(QtWidgets.QLineEdit, "activity_unit"),
         category=form.findChild(QtWidgets.QComboBox, "category"),
-        type=form.findChild(QtWidgets.QComboBox, "type"),
+        point_type=form.findChild(QtWidgets.QComboBox, "point_type"),
         hour_profile=form.findChild(QtWidgets.QComboBox, "hour_profile"),
         daily_profile=form.findChild(QtWidgets.QComboBox, "daily_profile"),
         month_profile=form.findChild(QtWidgets.QComboBox, "month_profile"),
@@ -79,117 +81,87 @@ def form_open(form, layer, feature):
         button_box=form.findChild(QtWidgets.QDialogButtonBox, "buttonBox"),
     )
 
-    # Hide the instudy field
-    fields["instudy"].setHidden(True)
+    # The In Study check box is bound to the instudy column by QGIS (CheckBox
+    # widget, "1" / "0", set in alaqs_config.py): it shows the stored value
+    # and QGIS saves what the user sets, so the form does not write it.
 
-    # Seed the category field once
-    populate_categories_once(fields["category"])
+    # The Activity Unit is filled in from the selected Type when the Type
+    # changes and can be overridden per source (it is saved as typed). An
+    # existing source keeps its stored unit: the Type is restored below
+    # before the change handlers are connected.
+    if fields["activity_unit"] is not None:
+        fields["activity_unit"].setPlaceholderText(ACTIVITY_UNIT_PLACEHOLDER)
 
-    # Seed the profiles
+    # Category, Type and the profiles are value maps set in alaqs_config.py:
+    # QGIS fills the combo boxes, shows the stored values (also when it
+    # refreshes the form) and saves the choice. Profiles created after the
+    # study was opened are added here.
     populate_hourly_profiles(fields["hour_profile"])
     populate_daily_profiles(fields["daily_profile"])
     populate_monthly_profiles(fields["month_profile"])
 
-    # Seed the type field if the category field changes
-    fields["category"].currentTextChanged.connect(
-        lambda v: change_category_field(fields, v)
-    )
+    # The Type list shows the types of the category shown, updated whenever
+    # the category changes (also on a refresh), without touching the other
+    # fields.
+    filter_types(fields)
+    fields["category"].currentIndexChanged.connect(lambda _i: filter_types(fields))
 
-    # Set all fields to default if the type field changes
-    fields["type"].currentTextChanged.connect(lambda v: change_type_field(fields, v))
+    # A category or type chosen by the user (activated, not a refresh)
+    # fills in the type's defaults; a stored source keeps its values.
+    fields["category"].activated.connect(lambda _i: category_chosen(fields))
+    fields["point_type"].activated.connect(
+        lambda _i: change_type_field(fields, fields["point_type"].currentText())
+    )
 
     # Add input validation to text fields in the form
     for key, value in fields.items():
         if isinstance(value, QtWidgets.QLineEdit):
             fields[key].textChanged.connect(lambda: validate(fields))
 
-    # Block the ok button (will be overwritten after validation)
-    fields["button_box"].button(fields["button_box"].StandardButton.Ok).blockSignals(
-        True
-    )
-
-    # Connect all QComboBoxes and the instudy checkbox on save
-    def on_save():
-        form.changeAttribute("category", fields["category"].currentText())
-        form.changeAttribute("type", fields["type"].currentText())
-        form.changeAttribute("hour_profile", fields["hour_profile"].currentText())
-        form.changeAttribute("daily_profile", fields["daily_profile"].currentText())
-        form.changeAttribute("month_profile", fields["month_profile"].currentText())
-        feature["instudy"] = str(int(fields["instudy"].isChecked()))
-
-    fields["button_box"].accepted.connect(on_save)
+    # OK is enabled only while the form is valid: validate now, then on
+    # every change
+    validate(fields)
 
     return form
 
 
-@run_once
-def populate_categories_once(field):
-    """
-    Populate the categories fields only once
-    """
+def types_of_category(category_name: str) -> list[str]:
+    """Descriptions of the emission factor rows of a category (by name)."""
+    row = alaqs.get_point_category(category_name) if category_name else None
+    if not row:
+        return []
+    return [t["description"] for t in alaqs.get_point_types(row["category"]) or []]
 
-    # Make sure the field is empty
-    field.clear()
-    field.addItem(None)
 
-    # Get the available categories
-    categories = alaqs.get_point_categories()
-
-    if (categories is None) or (categories == []):
-        logger.debug("No point source categories were found.")
-        return
-
-    # Add all categories to the list
-    for category in categories:
-        field.addItem(category["category_name"])
-
-    # Set the default category to 0
-    field.setCurrentIndex(0)
-
-    # Make the list un-editable
-    field.setEditable(False)
+def filter_types(fields: dict) -> None:
+    """Show in the Type list only the types of the selected category (the
+    value map holds all types). The type shown stays visible."""
+    combo = fields["point_type"]
+    allowed = set(types_of_category(fields["category"].currentText().strip()))
+    view = combo.view()
+    for i in range(combo.count()):
+        view.setRowHidden(
+            i, combo.itemText(i) not in allowed and i != combo.currentIndex()
+        )
 
 
 @catch_errors
-def change_category_field(fields: dict, category: str):
-    """
-    Function that's executed when the point source category changes
-    """
-
-    # Get the selected category name
-    category_name = category.strip()
-
+def category_chosen(fields: dict) -> None:
+    """The user chose a category: select its first type and fill in that
+    type's defaults; "Other" has no type and its parameters are typed in."""
+    category_name = fields["category"].currentText().strip()
+    combo = fields["point_type"]
     if category_name == "Other":
-        # Edit the form fields
-        fields["type"].clear()
-        fields["type"].addItem("")
-
-        fields["height"].setEnabled(True)
-        fields["substance"].setEnabled(True)
-        fields["temperature"].setEnabled(True)
-        fields["diameter"].setEnabled(True)
-        fields["velocity"].setEnabled(True)
-
+        combo.setCurrentIndex(-1)
+        for key in ("height", "substance", "temperature", "diameter", "velocity"):
+            fields[key].setEnabled(True)
+        filter_types(fields)
         return
-
-    if category_name == "":
-        # Edit the form fields
-        fields["type"].clear()
-        fields["height"].setText("")
-        fields["temperature"].setText("")
-        fields["diameter"].setText("")
-        fields["velocity"].setText("")
-        fields["substance"].setText("")
-
-        return
-
-    category = alaqs.get_point_category(category_name)
-    category_types = alaqs.get_point_types(category["category"])
-
-    # Add all category types to the list
-    fields["type"].clear()
-    for category_type in category_types:
-        fields["type"].addItem(category_type["description"])
+    types = types_of_category(category_name)
+    index = combo.findText(types[0]) if types else -1
+    combo.setCurrentIndex(index)
+    filter_types(fields)
+    change_type_field(fields, combo.currentText())
 
 
 @catch_errors
@@ -215,6 +187,9 @@ def change_type_field(fields: dict, type_name: str):
 
     # Extract the data
     data = alaqs.get_point_type(type_name)
+    if not data:
+        # Not a type name: keep the values
+        return None
 
     # Edit the form fields
     fields["height"].setText(str(data["z"]))
@@ -242,13 +217,11 @@ def change_type_field(fields: dict, type_name: str):
     # Activity unit (point-sources v2). Pulled from the selected EF
     # row's `activity_unit` column. Legacy rows from pre-v2 .alaqs
     # files have NULL here; the historical default was 1000 m^3 of
-    # fuel gas, so we surface that as the displayed fallback to
-    # preserve compatibility with existing studies.
+    # fuel gas. That default is only shown as placeholder text (set in
+    # form_open), so the field stays empty and nothing is saved for it.
     activity_unit_field = fields.get("activity_unit")
     if activity_unit_field is not None:
-        activity_unit_field.setText(
-            str(data.get("activity_unit") or "1000_m3 (legacy default)")
-        )
+        activity_unit_field.setText(activity_unit_text(data.get("activity_unit")))
 
     # Recommended temporal profiles (point-sources v2). When the EF
     # row carries `recommended_*_profile`, pre-select that profile in
@@ -273,77 +246,29 @@ def change_type_field(fields: dict, type_name: str):
 
 @catch_errors
 def populate_hourly_profiles(field):
-    # Make sure the field is empty
-    field.clear()
-
-    # Set the default field
-    field.addItem("default")
-
-    # Get the available hourly profiles
-    hourly_profiles = alaqs.get_hourly_profiles()
-
-    if (hourly_profiles is None) or (hourly_profiles == []):
-        logger.debug("No hourly profiles were found.")
-        return
-
-    # Add all the hourly profiles to the list (except the default profile)
-    for profile in hourly_profiles:
-        if profile[1] != "default":
-            field.addItem(profile[1])
-
-    # Set the default category to 0 and make the list un-editable
-    field.setCurrentIndex(0)
-    field.setEditable(False)
+    """Add the study's hourly profiles missing from the list (profiles created
+    after the study was opened). The list itself is a value map set when
+    the study opens; QGIS shows the stored value and saves the choice."""
+    profiles = alaqs.get_hourly_profiles() or []
+    add_combo_values(field, ["default"] + [profile[1] for profile in profiles])
 
 
 @catch_errors
 def populate_daily_profiles(field):
-    # Make sure the field is empty
-    field.clear()
-
-    # Set the default field
-    field.addItem("default")
-
-    # Get the available daily profiles
-    daily_profiles = alaqs.get_daily_profiles()
-
-    if (daily_profiles is None) or (daily_profiles == []):
-        logger.debug("No daily profiles were found.")
-        return
-
-    # Add all the daily profiles to the list (except the default profile)
-    for profile in daily_profiles:
-        if profile[1] != "default":
-            field.addItem(profile[1])
-
-    # Set the default category to 0 and make the list un-editable
-    field.setCurrentIndex(0)
-    field.setEditable(False)
+    """Add the study's daily profiles missing from the list (profiles created
+    after the study was opened). The list itself is a value map set when
+    the study opens; QGIS shows the stored value and saves the choice."""
+    profiles = alaqs.get_daily_profiles() or []
+    add_combo_values(field, ["default"] + [profile[1] for profile in profiles])
 
 
 @catch_errors
 def populate_monthly_profiles(field):
-    # Make sure the field is empty
-    field.clear()
-
-    # Set the default field
-    field.addItem("default")
-
-    # Get the available monthly profiles
-    monthly_profiles = alaqs.get_monthly_profiles()
-
-    if (monthly_profiles is None) or (monthly_profiles == []):
-        logger.debug("No monthly profiles were found.")
-        return
-
-    # Add all the monthly profiles to the list (except the default profile)
-    for profile in monthly_profiles:
-        if profile[1] != "default":
-            field.addItem(profile[1])
-
-    # Set the default category to 0 and make the list un-editable
-    field.setCurrentIndex(0)
-    field.setEditable(False)
+    """Add the study's monthly profiles missing from the list (profiles created
+    after the study was opened). The list itself is a value map set when
+    the study opens; QGIS shows the stored value and saves the choice."""
+    profiles = alaqs.get_monthly_profiles() or []
+    add_combo_values(field, ["default"] + [profile[1] for profile in profiles])
 
 
 def validate(fields: dict):
@@ -359,22 +284,20 @@ def validate(fields: dict):
 
     # Validate all fields
     results = [
-        validate_field(fields["name"], "str"),
-        validate_field(fields["height"], "float"),
-        validate_field(fields["ops_year"], "float"),
-        validate_field(fields["temperature"], "float"),
-        validate_field(fields["diameter"], "float"),
-        validate_field(fields["velocity"], "float"),
-        validate_field(fields["co_kg_k"], "float"),
-        validate_field(fields["hc_kg_k"], "float"),
-        validate_field(fields["nox_kg_k"], "float"),
-        validate_field(fields["sox_kg_k"], "float"),
-        validate_field(fields["pm10_kg_k"], "float"),
-        validate_field(fields["p1_kg_k"], "float"),
-        validate_field(fields["p2_kg_k"], "float"),
+        (fields["name"], validate_field(fields["name"], "str")),
+        (fields["height"], validate_field(fields["height"], "float")),
+        (fields["ops_year"], validate_field(fields["ops_year"], "float")),
+        (fields["temperature"], validate_field(fields["temperature"], "float")),
+        (fields["diameter"], validate_field(fields["diameter"], "float")),
+        (fields["velocity"], validate_field(fields["velocity"], "float")),
+        (fields["co_kg_k"], validate_field(fields["co_kg_k"], "float")),
+        (fields["hc_kg_k"], validate_field(fields["hc_kg_k"], "float")),
+        (fields["nox_kg_k"], validate_field(fields["nox_kg_k"], "float")),
+        (fields["sox_kg_k"], validate_field(fields["sox_kg_k"], "float")),
+        (fields["pm10_kg_k"], validate_field(fields["pm10_kg_k"], "float")),
+        (fields["p1_kg_k"], validate_field(fields["p1_kg_k"], "float")),
+        (fields["p2_kg_k"], validate_field(fields["p2_kg_k"], "float")),
     ]
 
-    # Block signals if any of the fields is invalid
-    button_box.button(button_box.StandardButton.Ok).blockSignals(
-        "False" in str(results)
-    )
+    # OK enabled only when every field is valid
+    update_ok_button(button_box, results, AlaqsLayerType.POINT_SOURCE)

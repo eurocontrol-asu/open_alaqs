@@ -12,18 +12,22 @@ AUSTAL-ready inputs. It covers both source families:
   gate GSE/GPU emissions those movements drive): a real emission
   *calculator*. It walks each movement's trajectory or taxi route and
   integrates per-segment fuel, time and emission indices, with three
-  selectable methods. This half is validated bit-for-bit against the
-  `openalaqs-validation` CAEP14 reference.
+  selectable methods. This half is validated against the CAEP14
+  reference and the pinned plugin outputs (see
+  `validation/tools/CAEP14_VALIDATION.md`).
 
 The package runs without QGIS, without PyQt, and without a native
 SpatiaLite extension: it reads the `.alaqs` SQLite directly and parses
 geometry BLOBs with shapely.
 
 It ships as a top-level package in the Open-ALAQS repository, as a
-sibling of the QGIS plugin at `open_alaqs/`. It can also be installed
-on its own (`pip install -e .` from this directory) without needing the
-plugin to be present. The AUSTAL writer helpers it depends on live in
-the sibling `austal_prep/` package.
+sibling of the QGIS plugin at `open_alaqs/`. It imports QGIS-free
+modules of the plugin tree (`open_alaqs.core.tools`: BFFM2, MEEM, FOCA,
+fuel sulphur, UTM and runway placement; `open_alaqs.core.interfaces.Emissions`), and its `pyproject.toml` packages
+`openalaqs_standalone` only, so it is not usable without the plugin tree:
+run it from the repository root with the root on `PYTHONPATH` (see
+[USAGE.md](USAGE.md#install)). The AUSTAL writer helpers it depends on
+live in the sibling `austal_prep/` package.
 
 For a task-oriented walk-through of running the package from a terminal
 (installation, CLI subcommands, method selection, NOx ambient correction,
@@ -43,9 +47,14 @@ Two output shapes, depending on which entry point is used.
 │   └── sources.parquet      schema: source_id, source_type, label,
 │                            geometry_wkt, geometry_kind, height_m,
 │                            extent_m2, length_m, in_study, extra_json
+│                            (+ delta_z_m when aircraft sources are included)
 ├── emissions_folder/
-│   └── emissions.parquet    schema: timestamp, source_id, pollutant,
-│                            kg_in_hour    (one row per source-pollutant-hour)
+│   ├── emissions.parquet    schema: timestamp, source_id, pollutant,
+│   │                        kg_in_hour    (one row per source-pollutant-hour)
+│   ├── <pollutant>_emissions.gpkg  plugin-style per-pollutant grid totals
+│   │                        (inventory_gpkg.py)
+│   └── runway_checks.csv    route and profile check report (only with
+│                            --include-aircraft; see runway_checks.py)
 ├── receptors_folder/
 │   └── receptors.csv        schema: name, x, y, z   (in target UTM)
 ├── meteo_folder/
@@ -59,14 +68,15 @@ Two output shapes, depending on which entry point is used.
 
 With `--include-aircraft`, the aircraft movement emissions are folded
 into the same `sources.parquet` and `emissions.parquet`: each occupied
-inventory grid cell becomes a synthetic `aircraft:cell:<ix>_<iy>` area
+inventory grid cell becomes a synthetic `aircraft:cell:<ix>_<iy>_<iz>`
 source, so one austal_prep run covers the whole study.
 
 **The `aircraft` command** runs the aircraft core directly and writes:
 
-- a per-movement totals CSV (one row per movement per pollutant), and
+- a per-movement totals CSV (one row per movement, one column per pollutant), and
 - optionally, with `--austal-out`, the AUSTAL `emissions.parquet` +
-  `sources.parquet` pair for the aircraft sources alone, and
+  `sources.parquet` pair for the aircraft sources alone.
+
 ## Architecture
 
 ### Stationary modules
@@ -109,6 +119,12 @@ compute_helicopter.py  FOCA helicopter per-movement emissions
 compute_gate_movements.py  per-movement gate (GSE + GPU) emissions,
                        driven by the movements and default_gate_profiles;
                        folded into each movement's total
+compute_apu_movements.py   per-movement APU emissions, folded into each
+                       movement's total
+compute_start_movements.py per-movement engine-start emissions (departures),
+                       folded into each movement's total
+source_dynamics.py     smooth-and-shift (--source-dynamics default/sas)
+                       spatial apportionment
 compute_engine_test.py per-event engine-test-run emissions from the
                        `engine_test_events` table. QGIS-free twin of
                        `EngineTestSourceModule`; same math bit-for-bit.
@@ -138,9 +154,8 @@ distribute.py          per-(time bucket, grid cell) emission
 austal_aircraft.py     gridded aircraft emissions -> the
                        emissions.parquet + sources.parquet pair
                        austal_prep consumes
-write_gpkg.py          total emission results -> GeoPackage, one
-                       feature per grid cell; hand-written via
-                       sqlite3, no GDAL dependency
+inventory_gpkg.py      emissions.parquet + sources.parquet -> plugin-style
+                       per-pollutant GeoPackages (<pollutant>_emissions.gpkg)
 ```
 
 ### Utilities and entry points
@@ -154,6 +169,10 @@ orchestrate.py         builds the six-folder austal_prep structure;
                        function for embedding in other pipelines
 cli.py / __main__.py   `python -m openalaqs_standalone <command>`:
                        dispatches to `aircraft` or `austal`
+runway_placement.py    placement of flight profiles on the runway (rules shared
+                       with the plugin: open_alaqs/core/tools/runway_placement.py)
+runway_checks.py       route and profile check report; also
+                       `python -m openalaqs_standalone.runway_checks study.alaqs out.csv`
 ```
 
 ### Source coverage
@@ -179,14 +198,19 @@ python -m openalaqs_standalone austal \
     --year 2025 \
     --meteo-year-shift 2025 \
     --receptor-target-epsg 32631 \
-    --grid-size 75 --grid-step 250 \
     --title "EHRD road and parking" \
     --out ./inputs/
 ```
 
+The AUSTAL grid is read from the study's `grid_3d_definition`. Receptors
+outside that grid are dropped (with their IDs in the log);
+`--grid-size`/`--grid-step` override only this clipping square, not the
+AUSTAL grid.
+
 `--pollutants` defaults to the full stationary set
 (`co,hc,nox,sox,pm10,pm25`); pass an explicit comma-separated list to
-narrow it.
+narrow it. `co2` is also accepted; it comes from the aircraft only (see
+[Pollutants](#pollutants)).
 
 ### The whole study, stationary + aircraft, in one run
 
@@ -307,10 +331,11 @@ integrates the emissions itself.
 
 ### Workflow for the stationary inputs
 
-1. Build the inventory in QGIS using the OpenALAQS plugin (with PR2
-   patches applied; see `openalaqs_pr2/` for the relevant files).
-2. The plugin's "Calculate Emissions" step writes EFs into
-   `shapes_roadways` and `shapes_parking`.
+1. Build the inventory in QGIS using the OpenALAQS plugin (5.0.0 or
+   later, which includes the PR2 fixes such as parking cold start at
+   trip scale).
+2. The plugin's `Recalculate` button of the parking and roadway forms
+   writes the EFs into `shapes_roadways` and `shapes_parking`.
 3. Save the resulting `.alaqs` file.
 4. Run the `austal` command against that file.
 
@@ -329,15 +354,20 @@ the validation reference.
 
 ### Verifying your .alaqs has the right stationary EFs
 
-The PR2-applied EHRD baseline for parking is:
+For an EHRD study used when this check was written (5.2.0; it is not
+shipped with the repository), the PR2-applied parking baseline was:
 
 - NOx 31.26 kg/yr
 - PM10 3.27 kg/yr
 - PM2.5 1.79 kg/yr (PM10/PM2.5 ratio 1.83)
 
-If `compute_parking` against an `.alaqs` file gives NOx around 20.25
-kg/yr instead of 31.26, the cold-start fix was not applied upstream;
-rebuild the inventory with the PR2 patches.
+and an inventory without the cold-start fix gave NOx around 20.25 kg/yr
+instead of 31.26. These figures do not apply to the bundled training
+study: its single `ParkingLot` (20 000 vehicles per year, NOx 95.82
+g/vehicle) gives NOx 1916.33 kg and PM10 15.99 kg for 2025
+(`python -m openalaqs_standalone.compute_parking
+example/training/training_out.alaqs --year 2025 --out parking.parquet`
+from the repository root).
 
 ## Conventions
 
@@ -353,8 +383,8 @@ aggregation and to keep namespaces distinct in a combined
 - `area:<area_id>`
 - `gate:<gate_id>` (the gate geometry; gate emissions are folded into
   the aircraft movement totals)
-- `aircraft:cell:<ix>_<iy>` (a synthetic per-grid-cell area source for
-  the gridded aircraft emissions)
+- `aircraft:cell:<ix>_<iy>_<iz>` (a synthetic per-grid-cell source for
+  the gridded aircraft emissions, one per occupied 3D cell)
 
 ### Pollutants
 
@@ -363,15 +393,27 @@ constant `STATIONARY_POLLUTANTS` in `_profiles.py`), which is the
 default pollutant list for the stationary computes and for the
 `austal` command.
 
-The aircraft core supports `co, co2, hc, nox, sox, pm10`. Note the two
-source families have different pollutant universes: the stationary
-source tables carry pm25 but no co2, while the aircraft core carries
-co2 but no pm25. When `--include-aircraft` is used, the aircraft
-emissions are filtered to the requested pollutant list so the combined
-`emissions.parquet` is coherent.
+The aircraft core supports `co, co2, hc, nox, sox, pm10, pm25`. The
+stationary source tables carry no co2. When `--include-aircraft` is
+used, the aircraft emissions are filtered to the requested pollutant
+list so the combined `emissions.parquet` is coherent. `--pollutants`
+of the `austal` command accepts co2: the stationary sources contribute
+0 for it (they are not asked for co2, and one info line says so), and
+with `--include-aircraft` the aircraft co2 is written to
+`emissions.parquet` and `co2_emissions.gpkg`.
 
-These lowercase labels are what `austal_prep` maps to AUSTAL's `pm-1`
-(PM2.5) and `pm-2` (PM10) on output.
+`austal_prep` writes co2 to `austal.txt` and `series.dmna` as the
+substance `co2` (source strength in g/s), the same name the plugin
+writes. `co2` (like `co`, `hc` and `sox`) is not one of the substances
+of the standard AUSTAL 3.3 settings; it is defined in the
+`austal.settings` shipped with OpenALAQS (`documents/AUSTAL/`, section
+`[CO2]`, concentration in mg/m3). Replace the `austal.settings` of the
+AUSTAL installation with that copy before running AUSTAL on these
+inputs (see `documents/AUSTAL/AUSTAL.md`).
+
+`austal_prep` writes pm10 as two AUSTAL components, `pm-1` (the fine
+fraction, `pm10_fine_fraction`) and `pm-2` (the rest), which AUSTAL sums
+into substance `pm`; pm25 is written as `pm25-1` (substance `pm25`).
 
 ### Emission factor columns (stationary)
 
@@ -387,8 +429,9 @@ column holds PM2.5 versus total PM10:
 
 The pollutant-column dict in each compute module encodes this. For
 point and area sources the `p2_*` = PM2.5 assumption is empirically
-unverified, because the EHRD study has no point or area sources to
-test against. If a study uses these types and the PM10/PM2.5 ratio
+unverified: the training study has one point source (`Power`, PM10
+60.04 kg/unit but P1 and P2 0) and one area source (`Terminal`, no PM),
+so no bundled study has a PM2.5 factor for these types to test against. If a study uses these types and the PM10/PM2.5 ratio
 looks wrong, verify the upstream conventions.
 
 ### Activity profiles (stationary)
@@ -421,14 +464,13 @@ What is not yet built:
 
 - **MESO-NH export.** An exporter to the MESO-NH ASCII emission
   formats (a ground-emissions case and an altitude-emissions case) is
-  scoped and its reference formats are documented in
-  `MESO_NH_TASK_NOTES.md`, but it is not implemented: a few
+  scoped but not implemented: a few
   conversion conventions still need to be confirmed (the molec/cm2/s
   conversion basis for the ground case, the multi-species column
   order, the altitude datum/sign convention).
 - **Point and area PM column convention** is assumed, not verified
-  (see "Emission factor columns" above): no test study exercises
-  those source types.
+  (see "Emission factor columns" above): no bundled study has a
+  non-zero PM2.5 factor for those source types.
 - **Shared-import refactor of the stationary half.** The stationary
   computes still read pre-computed EFs rather than calling shared
   COPERT5 logic; see "Why the stationary half is structured this
@@ -437,30 +479,40 @@ What is not yet built:
 ## Testing
 
 ```bash
-PYTHONPATH=. pytest validation/tests/ openalaqs_standalone/test_*.py -q
+PYTHONPATH=. pytest openalaqs_standalone/validation/tests/ -q
 ```
 
-The suite covers, among other things:
+A few more standalone tests live in the plugin suite under `tests/`.
+Together they cover, among other things:
 
-- the WKB / SpatiaLite blob decoder and the GeoPackage binary writer
-- activity-profile expansion (leap-year handling, normalisation)
-- source extraction (ID prefixes, geometry kinds, all-decoded check)
-- the stationary emission baseline (parking NOx/PM10/PM2.5 against the
-  PR2 EHRD reference) and stationary invariants (linearity,
-  additivity, per-hour closure)
-- the **Phase A0 acceptance gate**: the aircraft core reproduces the
-  `openalaqs-validation` plugin-output CSVs to 0.00% across all three
-  methods
-- the gate emission formula, suppression and helicopter rules
-- the time-and-grid distribution, with conservation checks
-- the AUSTAL aircraft tables and the GeoPackage writer, with
-  conservation checks
-- the parallel driver: results bit-identical to the serial driver for
-  every method, worker count and batch size
-- the `austal --include-aircraft` join: stationary and aircraft rows
-  combined with no source_id collisions and coherent pollutants
-- the CLI: both subcommands, exit codes, and output-file behaviour
+- source extraction: engine-test sites emitted as their own source type
+  (`test_phase1b_extract_sources_standalone.py`) and missing `shapes_*`
+  tables skipped (`tests/test_extract_sources_missing_tables.py`)
+- the plugin-output gate: the CAEP14 reference and the standalone
+  reproduce the pinned plugin CSVs (`validation/data/plugin_output/`)
+  for all 15 movements and the three methods, within 2e-4 relative
+  (movement 11, the ADS-B track, differs by 1.3e-5 on `bffm2_traj`)
+  (`test_plugin_csv_vs_reference.py`)
+- the CAEP14 reference itself (`test_caep14_sheet_reference_case.py`,
+  `test_caep14_reference_lookups.py`, `test_helicopter_caep14_reference.py`)
+- engine-start emissions and `gate_emissions_code` (`test_start_gate_code.py`;
+  plugin parity in `tests/test_zz_gate_code_start_parity.py`)
+- engine-test event extraction and emissions, all three thrust modes
+  (`test_phase3_engine_test_standalone.py`)
+- runway placement of flight profiles and the segment Mach number
+  (`test_runway_placement.py`, `test_segment_mach.py`)
+- the grid distribution: taxi split by segment time, helicopter helipad
+  cell, vertical layer fractions below ground
+  (`test_taxi_split_by_segment_time.py`,
+  `test_helicopter_helipad_standalone.py`,
+  `test_iz_layer_fractions_below_ground.py`)
+- the per-pollutant GeoPackages (`inventory_gpkg`): area, engine-test
+  and point sources are gridded along with the others, and the
+  GeoPackage total equals the `emissions.parquet` mass
+  (`test_inventory_gpkg_all_source_kinds.py`)
+- an `austal --include-aircraft` run on `training_v3.alaqs` through
+  `austal_prep`: per-hour e-files for the aircraft sources, per-pollutant
+  spatial weights, mass conservation (`tests/test_austal_prep_hybrid_mode.py`)
 
-A small number of tests are skipped by default: they are
-plugin-parity checks that need the private EHRD `.alaqs` study, which
-is not committed. They run when that file is present.
+Tests that need `mod_spatialite` (the CAEP14 reference) or a fixture
+that is not present are skipped with a message.

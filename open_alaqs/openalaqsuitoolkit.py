@@ -1,11 +1,16 @@
+import math
 import os
+from pathlib import Path, PurePath, PureWindowsPath
 from typing import Optional
 
 from qgis.core import (
     Qgis,
+    QgsApplication,
+    QgsAttributeTableConfig,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsDataSourceUri,
+    QgsDefaultValue,
     QgsEditFormConfig,
     QgsEditorWidgetSetup,
     QgsFillSymbol,
@@ -17,10 +22,12 @@ from qgis.core import (
     QgsRasterLayer,
     QgsRectangle,
     QgsSingleSymbolRenderer,
+    QgsValueMapFieldFormatter,
     QgsVectorLayer,
 )
 from qgis.gui import QgsFileWidget, QgsMapCanvas
 from qgis.PyQt import QtWidgets
+from qgis.PyQt.QtCore import QLocale, QVariant
 
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core.alaqslogging import get_logger
@@ -30,12 +37,154 @@ from open_alaqs.enums import AlaqsLayerType
 logger = get_logger(__name__)
 
 
-def validate_field(ui_element, var_type):
+def is_empty_text(text) -> bool:
+    """True for an empty text or the QGIS NULL representation ("NULL"),
+    which QGIS writes into a form line edit for a NULL attribute."""
+    text = "" if text is None else str(text).strip()
+    return text == "" or text == QgsApplication.nullRepresentation()
+
+
+def is_null_value(value) -> bool:
+    """True for None, a NULL QVariant and empty or NULL-representation text."""
+    if value is None:
+        return True
+    if hasattr(value, "isNull") and value.isNull():
+        return True
+    return is_empty_text(value)
+
+
+class NumberLocaleError(ValueError):
+    """The text is not a number for the current locale (the wrong decimal
+    separator), although QGIS would save a number from it."""
+
+    def __init__(self, text: str):
+        self.separator = QLocale().decimalPoint()
+        super().__init__(
+            f"{text!r} is not a number for the locale: use the decimal "
+            f"separator of your locale ({self.separator})"
+        )
+
+
+class UnmigratedColumnError(ValueError):
+    """The text is a decimal, but the layer's column is typed as an integer
+    by the provider (a study whose numeric columns are not yet REAL), so
+    QGIS would save it rounded."""
+
+    def __init__(self, text: str, rounded):
+        self.rounded = rounded
+        super().__init__(
+            f"{text!r} would be saved as {rounded}: this study's column holds "
+            "whole numbers only until it is upgraded with scripts/migrate_alaqs.py"
+        )
+
+
+def parse_number(text: str, integer: bool, field=None):
+    """Parse a number of a form line edit exactly as QGIS saves it, raising
+    ValueError when QGIS would not save a number.
+
+    QGIS saves the text of a line edit with QgsField.convertCompatible, so
+    the check uses it too: decimals get the value QGIS stores, for example
+    "30,3" is 30.3 under a German, Dutch or French locale (GitHub #159) and
+    "1.234,5" (French) or "1_000" are rejected (QGIS stores NULL). A result
+    that is not finite ("nan", "inf") is rejected.
+
+    The text must also be a number for the current locale (QLocale.toDouble
+    succeeds): convertCompatible falls back to the C locale, so "30,3" under
+    an English locale is saved as 303 (the comma is the group separator
+    there) and "30.3" under a German locale as 30.3, which the locale cannot
+    read. These are rejected with a NumberLocaleError naming the decimal
+    separator of the locale, instead of silently passing a value ten times
+    off. A text the locale reads differently from QGIS ("0.125" under a
+    German locale: 125 for the locale, 0.125 saved, GitHub #159) is
+    accepted with the saved value. An integer must likewise read as a whole
+    number with the locale (QLocale.toLongLong, with the group separators
+    QGIS shows, "20,000" English or "20.000" German), to the same value:
+    "12.5", which QGIS would round, is rejected.
+
+    `field` is the layer's own numeric QgsField when the layer is known, so
+    the check converts with the field QGIS saves with. On a study whose
+    numeric columns are not yet REAL (scripts/migrate_alaqs.py), the
+    provider types a column of whole numbers as an integer, and QGIS would
+    save "2.5" as 3: a decimal typed into such a column is refused with an
+    UnmigratedColumnError naming the migration, instead of being rounded
+    silently. Without `field` (or for a non-numeric field, the provider's
+    type of an empty DECIMAL column) a Double or LongLong field is used.
+    """
+    from qgis.core import QgsField
+
+    if field is None or not field.isNumeric():
+        field = QgsField("value", QVariant.LongLong if integer else QVariant.Double)
+    integer_typed = field.type() in (
+        QVariant.Int,
+        QVariant.LongLong,
+        QVariant.UInt,
+        QVariant.ULongLong,
+    )
+
+    def _decimal_in_integer_column(saved):
+        # a decimal for the locale, typed into a column QGIS types as integer
+        if integer or not integer_typed:
+            return False
+        number, ok = QLocale().toDouble(text)
+        return ok and number != int(number)
+
+    try:
+        value = field.convertCompatible(text)
+    except Exception as exc:
+        if _decimal_in_integer_column(None):
+            raise UnmigratedColumnError(text, "NULL") from exc
+        raise ValueError(f"QGIS cannot save {text!r} as a number") from exc
+    if value is None or (hasattr(value, "isNull") and value.isNull()):
+        if _decimal_in_integer_column(None):
+            raise UnmigratedColumnError(text, "NULL")
+        raise ValueError(f"QGIS cannot save {text!r} as a number")
+    if integer:
+        number, ok = QLocale().toLongLong(text)
+        if not ok or int(number) != int(value):
+            raise ValueError(f"{text!r} is not a whole number")
+        return int(value)
+    if not QLocale().toDouble(text)[1]:
+        raise NumberLocaleError(text)
+    if integer_typed:
+        # the column's own type rounds: refuse a decimal rather than agree with it
+        typed = QgsField("value", QVariant.Double).convertCompatible(text)
+        if typed is not None and float(typed) != float(value):
+            raise UnmigratedColumnError(text, value)
+    value = float(value)
+    if not math.isfinite(value):
+        raise ValueError(f"{text!r} is not a finite number")
+    return value
+
+
+def layer_field(ui_element, layer=None):
+    """The QgsField of `layer` named like `ui_element` (the form widgets are
+    named after their column), or None. Without `layer`, the layer of the
+    QgsAttributeForm the widget belongs to (QGIS builds the custom form
+    inside it), when there is one."""
+    if layer is None:
+        from qgis.gui import QgsAttributeForm
+
+        parent = ui_element.parent() if hasattr(ui_element, "parent") else None
+        while parent is not None and not isinstance(parent, QgsAttributeForm):
+            parent = parent.parent()
+        if parent is None:
+            return None
+        layer = parent.layer()
+    if layer is None:
+        return None
+    idx = layer.fields().indexOf(ui_element.objectName())
+    return layer.fields()[idx] if idx >= 0 else None
+
+
+def validate_field(ui_element, var_type, layer=None):
     """
     Evaluates the text in a UI text field, returning the value if it is valid,
     or returning none and highlighting the field red if it is incorrect.
 
     :param ui_element:
+    :param layer: the layer the form edits, when known; a number is then
+        converted with the layer's own field (see parse_number). Without
+        it the layer is taken from the attribute form the widget is in.
     :return: value if field is correct, False if value is not correct
 
     TODO OPENGIS.ch: Do not return `False` when invalid, but return `None`. In the future one might want to validate boolean fields too.
@@ -55,7 +204,8 @@ def validate_field(ui_element, var_type):
 
     value = value.strip()
 
-    if value == "":
+    # QGIS shows a NULL attribute as the NULL representation text ("NULL")
+    if is_empty_text(value):
         color_ui_background(ui_element, "red")
         ui_element.setToolTip("This value should not be empty")
 
@@ -65,25 +215,31 @@ def validate_field(ui_element, var_type):
         if var_type == "str":
             value = str(value)
         elif var_type == "int":
-            value = int(value)
+            value = parse_number(value, True, layer_field(ui_element, layer))
         elif var_type == "float":
-            # Locale-tolerant float parsing (GitHub #159). Qt can display
-            # DB-stored "30.3" as "30,3" under European locales; bare
-            # float() would reject that. convertToFloat handles both
-            # conventions and returns None on genuine failure.
-            from open_alaqs.core.tools.conversion import convertToFloat
-
-            converted = convertToFloat(value, default=None)
-            if converted is None:
-                raise ValueError(f"cannot parse {value!r} as float")
-            value = converted
+            value = parse_number(value, False, layer_field(ui_element, layer))
 
         color_ui_background(ui_element, None)
 
         return value
-    except Exception:
+    except Exception as exc:
         color_ui_background(ui_element, "red")
-        ui_element.setToolTip("This value should be a float")
+        if isinstance(exc, NumberLocaleError):
+            ui_element.setToolTip(
+                "This value should be a number: use the decimal separator "
+                f"of your locale ({exc.separator})"
+            )
+        elif isinstance(exc, UnmigratedColumnError):
+            ui_element.setToolTip(
+                f"QGIS would save this value as {exc.rounded}: the numeric "
+                "columns of this study are not yet REAL. Upgrade the study "
+                "with scripts/migrate_alaqs.py (User Guide, 'Upgrading from "
+                "5.3.x'), or enter a whole number."
+            )
+        elif var_type == "int":
+            ui_element.setToolTip("This value should be a whole number")
+        else:
+            ui_element.setToolTip("This value should be a number")
         return False
 
 
@@ -118,6 +274,8 @@ def load_spatialite_layer(
         )
         return
 
+    warn_unmigrated_numeric_fields(layer, database_path, layer_config["table_name"])
+
     lconfig = layer.editFormConfig()
     lconfig.setInitCodeSource(QgsEditFormConfig.PythonInitCodeSource.CodeSourceFile)
     lconfig.setUiForm(os.path.join(plugin_dir, "ui", layer_config["ui_filename"]))
@@ -126,12 +284,7 @@ def load_spatialite_layer(
     layer.setEditFormConfig(lconfig)
     layer.setCrs(QgsCoordinateReferenceSystem.fromEpsgId(3857))
 
-    instudy_idx = layer.fields().indexFromName("instudy")
-    if instudy_idx != -1:
-        editor_widget_setup = QgsEditorWidgetSetup(
-            "ValueMap", {"map": {"1": 1, "0": 0}}
-        )
-        layer.setEditorWidgetSetup(instudy_idx, editor_widget_setup)
+    apply_layer_field_config(layer, alaqs_layer)
 
     set_layer_style(layer, alaqs_layer)
 
@@ -139,6 +292,278 @@ def load_spatialite_layer(
 
     tree_root = project.layerTreeRoot()
     tree_root.addLayer(layer)
+
+
+def template_real_columns(table_name: str) -> list[str]:
+    """The columns of `table_name` declared REAL in the project template:
+    the numeric columns of the shapes layers (height, speed, distance,
+    temperature, the percentages, the emission factors, ...)."""
+    import sqlite3
+
+    from open_alaqs.alaqs_config import ALAQS_ROOT_PATH, ALAQS_TEMPLATE_DB_FILENAME
+
+    template = ALAQS_ROOT_PATH.joinpath(ALAQS_TEMPLATE_DB_FILENAME)
+    try:
+        con = sqlite3.connect(_sqlite_read_only_uri(template.resolve()), uri=True)
+        try:
+            rows = con.execute(f'PRAGMA table_info("{table_name}")').fetchall()
+        finally:
+            con.close()
+    except (sqlite3.Error, OSError, ValueError):
+        return []
+    return [r[1] for r in rows if (r[2] or "").strip().upper() == "REAL"]
+
+
+def unmigrated_numeric_fields(layer: QgsVectorLayer, table_name: str) -> list[str]:
+    """The numeric columns of the layer (REAL in the project template) that
+    the provider does not type as Double. A study whose shapes columns are
+    still DECIMAL (created before 5.4.0 and not migrated) has its columns
+    typed from their data: integer when the stored values are whole
+    numbers, text when the layer is empty."""
+    fields = layer.fields()
+    return [
+        name
+        for name in template_real_columns(table_name)
+        if fields.indexOf(name) >= 0
+        and fields[fields.indexOf(name)].type() != QVariant.Double
+    ]
+
+
+_warned_unmigrated: set[str] = set()
+
+
+def warn_unmigrated_numeric_fields(
+    layer: QgsVectorLayer, database_path: str, table_name: str
+) -> list[str]:
+    """Log one warning per study (the first layer that shows it) when a
+    shapes layer still has numeric columns the provider types as integer
+    or text, naming the migration. Returns those columns."""
+    columns = unmigrated_numeric_fields(layer, table_name)
+    if columns and database_path not in _warned_unmigrated:
+        _warned_unmigrated.add(database_path)
+        logger.warning(
+            "Layer '%s': the numeric columns %s of this study are not declared "
+            "REAL, so QGIS types them as integer or text and a decimal typed in "
+            "a form is rounded or stored as text (the same holds for the other "
+            "layers of the study). Upgrade the study with "
+            "scripts/migrate_alaqs.py (User Guide, 'Upgrading from 5.3.x').",
+            layer.name(),
+            ", ".join(columns),
+        )
+    return columns
+
+
+CHECKBOX_WIDGET_CONFIG = {
+    "CheckedState": "1",
+    "UncheckedState": "0",
+    # The attribute table of QGIS 3.34 shows a check-box field as text, not
+    # as a tick: "true" / "false" (0) reads better than the stored "1" / "0".
+    "TextDisplayMethod": 0,
+}
+
+
+def _sqlite_read_only_uri(path: PurePath) -> str:
+    """SQLite URI that opens the absolute `path` read-only.
+
+    The path is percent-encoded (as_uri), so a "#", "?" or "%" in a folder
+    or file name is read as part of the name, not as a URI fragment, query
+    or escape. A Windows UNC path (as_uri gives "file://server/share/...")
+    is written "file:////server/share/...": SQLite rejects a URI authority
+    other than "localhost", and reads the path "//server/share/..." as UNC.
+    A Windows extended-length path (a "\\\\?\\" prefix, as Path.resolve gives
+    for a long path, or "\\\\?\\UNC\\server\\share\\...") is first stripped of
+    its prefix: as_uri would otherwise put the "?" in the authority.
+    """
+    if isinstance(path, PureWindowsPath):
+        text = str(path)
+        if text.startswith("\\\\?\\UNC\\"):
+            path = PureWindowsPath("\\\\" + text[len("\\\\?\\UNC\\") :])
+        elif text.startswith("\\\\?\\"):
+            path = PureWindowsPath(text[len("\\\\?\\") :])
+    uri = path.as_uri()
+    if uri.startswith("file://") and not uri.startswith("file:///"):
+        uri = "file:////" + uri[len("file://") :]
+    return uri + "?mode=ro"
+
+
+def _study_values(database_path: str, sql: str) -> list[str]:
+    """First column of `sql` on the study, as text; [] when the table or
+    the file is missing (older studies, memory layers in tests)."""
+    import sqlite3
+
+    try:
+        if not database_path:
+            return []
+        uri = _sqlite_read_only_uri(Path(database_path).resolve())
+        con = sqlite3.connect(uri, uri=True)
+        try:
+            rows = con.execute(sql).fetchall()
+        finally:
+            con.close()
+    except (sqlite3.Error, OSError, ValueError):
+        return []
+    return [str(r[0]) for r in rows if r[0] is not None and str(r[0]).strip()]
+
+
+def _runway_directions(database_path: str) -> list[str]:
+    directions = []
+    for runway_id in _study_values(
+        database_path,
+        "SELECT runway_id FROM shapes_runways ORDER BY runway_id COLLATE NOCASE",
+    ):
+        directions += [d.strip() for d in runway_id.split("/") if d.strip()]
+    return directions
+
+
+def _profile_names(table: str):
+    def names(database_path: str) -> list[str]:
+        return ["default"] + _study_values(
+            database_path,
+            f"SELECT profile_name FROM {table} ORDER BY profile_name COLLATE NOCASE",
+        )
+
+    return names
+
+
+# Lists read from the study for the "from" key of a value map
+VALUE_MAP_SOURCES = {
+    "hour_profiles": _profile_names("user_hour_profile"),
+    "day_profiles": _profile_names("user_day_profile"),
+    "month_profiles": _profile_names("user_month_profile"),
+    "stationary_categories": lambda db: _study_values(
+        db,
+        "SELECT category_name FROM default_stationary_category "
+        "ORDER BY category_name COLLATE NOCASE",
+    ),
+    "stationary_types": lambda db: _study_values(
+        db, "SELECT description FROM default_stationary_ef ORDER BY oid"
+    ),
+    "runway_directions": _runway_directions,
+}
+
+
+def value_map_values(layer: QgsVectorLayer, idx: int, spec: dict) -> list[str]:
+    """The values of a value-map field: the fixed ones, those read from
+    the study, then any other value already stored in the layer (so QGIS
+    never shows a stored value as "(value)"), without duplicates."""
+    values = list(spec.get("values", []))
+    source = spec.get("from")
+    if source:
+        database = QgsDataSourceUri(layer.source()).database()
+        values += VALUE_MAP_SOURCES[source](database)
+    stored = sorted(str(v) for v in layer.uniqueValues(idx) if not is_null_value(v))
+    unique = []
+    for value in values + stored:
+        if value not in unique:
+            unique.append(value)
+    return unique
+
+
+def value_map_config(values: list[str], spec: dict) -> dict:
+    """ValueMap editor config: the text shown is the stored value. NULL is
+    listed first, shown as "null_text" (empty by default), so a NULL value
+    is not shown as "(NULL)"; the forms reject an empty choice where a
+    value is required."""
+    entries = [{spec.get("null_text", ""): QgsValueMapFieldFormatter.NULL_VALUE}]
+    entries += [{value: value} for value in values]
+    return {"map": entries}
+
+
+def add_combo_values(combo, values) -> None:
+    """Add `values` missing from a value-map combo box (for example a
+    profile or runway created after the study was opened). Items are added
+    with the value as data, as QGIS's value-map widget expects, so they are
+    selected and saved like the configured ones; nothing is removed."""
+    if combo is None:
+        return
+    for value in values:
+        if value is None or str(value).strip() == "":
+            continue
+        if combo.findData(str(value)) == -1:
+            combo.addItem(str(value), str(value))
+
+
+def update_ok_button(button_box, checks, alaqs_layer=None, extra=()) -> bool:
+    """Enable the form's OK button only when every check passed.
+
+    checks: (widget, result) pairs, result as returned by validate_field
+    (False when invalid). extra: display names of other failed checks.
+    The disabled button's tooltip names the fields to fix. Returns True
+    when the form is valid.
+    """
+    invalid = []
+    for widget, result in checks:
+        if isinstance(result, bool) and not result:
+            name = widget.objectName()
+            if alaqs_layer is not None:
+                from open_alaqs.alaqs_config import field_alias
+
+                name = field_alias(alaqs_layer, name)
+            invalid.append(name)
+    invalid += list(extra)
+    ok = button_box.button(QtWidgets.QDialogButtonBox.StandardButton.Ok)
+    ok.blockSignals(False)
+    ok.setEnabled(not invalid)
+    ok.setToolTip("" if not invalid else "Missing or invalid: " + ", ".join(invalid))
+    return not invalid
+
+
+def apply_layer_field_config(layer: QgsVectorLayer, alaqs_layer: AlaqsLayerType):
+    """Apply the `fields` settings of LAYERS_CONFIG to a loaded layer.
+
+    Sets, per column: the alias (attribute-table header and the name used
+    in the documentation), the default value expression for new features,
+    the read-only flag, the check-box widget of the in-study flag, and the
+    attribute-table column order and visibility. The layers are rebuilt
+    from the .alaqs file every time a study is opened, so this runs at each
+    load. Columns missing from an older study are skipped.
+    """
+    fields_config = LAYERS_CONFIG[alaqs_layer].get("fields", {})
+    if not fields_config:
+        return
+
+    fields = layer.fields()
+    form_config = layer.editFormConfig()
+    for name, spec in fields_config.items():
+        idx = fields.indexFromName(name)
+        if idx == -1:
+            continue
+        layer.setFieldAlias(idx, spec["alias"])
+        if spec.get("default") is not None:
+            layer.setDefaultValueDefinition(idx, QgsDefaultValue(spec["default"]))
+        form_config.setReadOnly(idx, bool(spec.get("read_only")))
+        if spec.get("widget") == "checkbox":
+            layer.setEditorWidgetSetup(
+                idx, QgsEditorWidgetSetup("CheckBox", dict(CHECKBOX_WIDGET_CONFIG))
+            )
+        elif spec.get("widget") == "value_map":
+            values = value_map_values(layer, idx, spec.get("value_map", {}))
+            layer.setEditorWidgetSetup(
+                idx,
+                QgsEditorWidgetSetup(
+                    "ValueMap", value_map_config(values, spec["value_map"])
+                ),
+            )
+    layer.setEditFormConfig(form_config)
+
+    table_config = layer.attributeTableConfig()
+    table_config.update(layer.fields())
+    columns = list(table_config.columns())
+    configured = []
+    for name, spec in fields_config.items():
+        for column in columns:
+            if (
+                column.name == name
+                and column.type == QgsAttributeTableConfig.Type.Field
+            ):
+                column.hidden = bool(spec.get("hidden_in_table"))
+                configured.append(column)
+                columns.remove(column)
+                break
+    # Columns not in the configuration (for example the actions column)
+    # keep their relative order after the configured ones.
+    table_config.setColumns(configured + columns)
+    layer.setAttributeTableConfig(table_config)
 
 
 def load_basemap_layers(project: Optional[QgsProject] = None) -> None:
@@ -239,6 +664,7 @@ def set_layer_style(layer: QgsVectorLayer, alaqs_layer: AlaqsLayerType):
 
 
 def load_layers(iface, database_path):
+    _warned_unmigrated.discard(database_path)
     for alaqs_layer in AlaqsLayerType:
         load_spatialite_layer(iface, database_path, alaqs_layer)
 

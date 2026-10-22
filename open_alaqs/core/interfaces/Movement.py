@@ -133,6 +133,8 @@ class Movement:
 
         self._gate_name = str(val.get("gate", ""))
         self._gate = None
+        # The gate of the taxi route (user_taxiroute_taxiways.gate), which orients the route
+        self._route_gate = None
         self._taxi_route = None
         self._taxi_engine_count = conversion.convertToInt(
             val.get("taxi_engine_count"), 2
@@ -468,7 +470,10 @@ class Movement:
                 return
 
         # Fixed-wing (and legacy helicopter Aircraft without HelicopterStore
-        # registration) path: unchanged.
+        # registration) path. The taxi route is oriented by its own gate
+        # (user_taxiroute_taxiways.gate), as in the standalone: the trajectory
+        # is shared by every movement of the route (the cache key has no gate).
+        gate = self.getRouteGate()
         self.setTrajectoryAtRunway(
             TrajectoryTransformer(
                 self.getTrajectory(),
@@ -478,6 +483,7 @@ class Movement:
                 self.getRunwayDirection(),
                 self.getTaxiRoute(),
                 self.getDepartureArrivalFlag(),
+                gate_geometry_text=gate.getGeometryText() if gate is not None else None,
             ).runway_alignment()
         )
 
@@ -598,6 +604,12 @@ class Movement:
 
     def setGate(self, var):
         self._gate = var
+
+    def getRouteGate(self):
+        return self._route_gate
+
+    def setRouteGate(self, var):
+        self._route_gate = var
 
     def getGateName(self):
         return self._gate_name
@@ -763,7 +775,12 @@ class MovementStore(Store, metaclass=Singleton):
     #   DROP TABLE IF EXISTS cache_runway_trajectories;
     #   DROP TABLE IF EXISTS cache_runway_trajectories_v2;
     #   DROP TABLE IF EXISTS cache_runway_trajectories_v3;
-    _TRAJ_CACHE_TABLE = "cache_runway_trajectories_v4"
+    # v5 (13 Oct 2026): ANP arrivals touch down at the landing threshold + Touchdown Offset (else the
+    #               profile's 50 ft point) and end their rollout at the route's exit; ANP departures
+    #               brake-release at the route's line-up point; the runway placement (landing roll, runway
+    #               stretch) is stored with the trajectory for the taxi calculation. The key adds the
+    #               runway's Touchdown Offsets.
+    _TRAJ_CACHE_TABLE = "cache_runway_trajectories_v5"
 
     @staticmethod
     def _ensure_traj_cache_table(db_path: str) -> None:
@@ -810,6 +827,13 @@ class MovementStore(Store, metaclass=Singleton):
         traj.setDepartureArrivalFlag(data.get("departure_arrival"))
         traj.setWeight(data.get("weight"))
         traj.setIsCartesian(data.get("is_cartesian", False))
+        if data.get("runway_placement") is not None:
+            rp_ = dict(data["runway_placement"])
+            if rp_.get("stretch"):
+                rp_["stretch"] = dict(rp_["stretch"])
+                for k in ("p1_3857", "p2_3857"):
+                    rp_["stretch"][k] = tuple(rp_["stretch"][k])
+            traj.runway_placement = rp_
         for pt_data in data.get("points", []):
             pt = AircraftTrajectoryPoint()
             pt.setCoordinates(pt_data["x"], pt_data["y"], pt_data["z"])
@@ -856,6 +880,7 @@ class MovementStore(Store, metaclass=Singleton):
             "weight": traj.getWeight(),
             "is_cartesian": traj.isCartesian(),
             "points": pts,
+            "runway_placement": getattr(traj, "runway_placement", None),
         }
         payload = json.dumps(data)
         conn = _sqlite3.connect(db_path)
@@ -925,8 +950,10 @@ class MovementStore(Store, metaclass=Singleton):
             "runway_trajectory",
             "track_id",
         ]
-        eq_mdf = pd.DataFrame(index=mdf.index, columns=df_cols)
-        eq_mdf = eq_mdf.fillna(np.nan)  # fill with None rather than NaNs
+        # Object columns, all NaN: they receive names and objects below. (A
+        # fillna(np.nan) here downcast them to float64, and every later
+        # assignment of a string or object raised a pandas FutureWarning.)
+        eq_mdf = pd.DataFrame(np.nan, index=mdf.index, columns=df_cols, dtype=object)
 
         # Check if aircraft exist in the database
         if stage_1:
@@ -998,28 +1025,64 @@ class MovementStore(Store, metaclass=Singleton):
         if stage_1:
             stage_1.nextValue()
 
+        # The runway of a movement is the runway whose named end is the
+        # movement's runway (its full designator: "24" is an end of "06/24",
+        # "24R" of "06L/24R"). A runway that matches no end or several
+        # runways (a plain "24" on a study with 06L/24R and 06R/24L) stops
+        # the calculation with a readable error, like the other input
+        # errors; it used to take the first runway whose name contained
+        # the text ("24" in "06L/24R") or NaN, and the movement was then
+        # dropped silently ("Could not find runway direction"). The
+        # standalone (openalaqs_standalone.movements.runway_of) refuses the
+        # same cases.
         runway_store = self.getRunwayStore()
+        runway_names = ", ".join(
+            runway.getName() for runway in runway_store.getObjects().values()
+        )
         for rwy in mdf["runway"].unique():
 
             indices = mdf["runway"] == rwy
-
-            # Make sure runways are always 2 characters or more
-            rwy = rwy.zfill(2)
-
-            if runway_store.isinKey(rwy):
-                eq_mdf.loc[indices, "runway_direction"] = rwy
-                rwy_used = [
-                    key for key in list(runway_store.getObjects().keys()) if rwy in key
-                ]
-                if len(rwy_used) > 1:
-                    logger.warning(
-                        f"Runway {rwy} was found in the DB multiple " "times."
+            found = runway_store.runwaysWithEnd(rwy)
+            if len(found) != 1:
+                shown = runway_store.normalisedEnd(rwy) or rwy
+                if not found and shown.isdigit():
+                    # the runways a plain number is ambiguous between (a
+                    # designator with a letter that matches nothing is not
+                    # ambiguous: it is unknown)
+                    found = runway_store.runwaysWithEnd(rwy, by_number=True)
+                    found = found if len(found) > 1 else []
+                names = [
+                    "id %s: %s %s %s"
+                    % (
+                        oid,
+                        row.get("aircraft", ""),
+                        row.get("departure_arrival", ""),
+                        str(row.get("runway_time", ""))[:16],
                     )
-                eq_mdf.loc[indices, "runway"] = rwy_used[0]
-
-            else:
-                eq_mdf.loc[indices, "runway"] = np.nan
-                logger.warning(f"Runway '{rwy}' wasn't found in the DB")
+                    for oid, row in mdf[indices].head(3).iterrows()
+                ]
+                if indices.sum() > 3:
+                    names.append(f"{indices.sum() - 3} more")
+                movements = ("movements " if indices.sum() > 1 else "movement ") + (
+                    "; ".join(names)
+                )
+                if len(found) > 1:
+                    matched = " and ".join(runway.getName() for _, runway, _ in found)
+                    message = (
+                        f"{movements}: runway '{shown}' matches {matched}; "
+                        "name the runway end with its letter"
+                    )
+                else:
+                    message = (
+                        f"{movements}: runway '{shown}' matches no runway end "
+                        f"of the study (runways: {runway_names or 'none'}); "
+                        "name the runway end as in the runway table"
+                    )
+                logger.error(message)
+                raise ValueError(message)
+            key, _, end = found[0]
+            eq_mdf.loc[indices, "runway_direction"] = end
+            eq_mdf.loc[indices, "runway"] = key
 
         # Check if gates exist in the database
         if stage_1:
@@ -1297,12 +1360,18 @@ class MovementStore(Store, metaclass=Singleton):
             #   1. In-memory cache (free after the first group in this invocation)
             #   2. Persistent DB cache (free on every re-run of the same study)
             #   3. Full runway_alignment() computation (only on true first run)
+            _rwy_obj = runway_store.getObject(rwy)
             _traj_cache_key = (
                 str(rwy),
                 str(rwy_dir),
                 str(tx_route) if tx_route else "",
                 str(prf_id),
                 str(trk_id) if trk_id else "",
+                (
+                    f"td={_rwy_obj.getTouchdownOffset()}/{_rwy_obj.getTouchdownOffset2()}"
+                    if _rwy_obj is not None
+                    else ""
+                ),
             )
             _db_cache_key = "|".join(_traj_cache_key)
 
@@ -1346,7 +1415,11 @@ class MovementStore(Store, metaclass=Singleton):
                 _proxy0.setRunway(runway_store.getObject(fm0["runway"]))
                 _proxy0.setRunwayDirection(fm0["runway_direction"])
                 _proxy0.setTrack(track_store.getObject(fm0["track_id"]))
-                _proxy0.setTaxiRoute(taxi_route_store.getObject(fm0["taxi_route"]))
+                _route0 = taxi_route_store.getObject(fm0["taxi_route"])
+                _proxy0.setTaxiRoute(_route0)
+                # The route is oriented by its own gate (not the movement's).
+                if _route0 is not None and _route0.getGate():
+                    _proxy0.setRouteGate(gate_store.getObject(_route0.getGate()))
                 # The gate is the helipad origin of a helicopter trajectory
                 # (see updateTrajectoryAtRunway); unused for fixed-wing.
                 _proxy0.setGate(gate_store.getObject(fm0["gate"]))
