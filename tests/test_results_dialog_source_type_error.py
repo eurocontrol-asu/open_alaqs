@@ -58,7 +58,9 @@ def _dialog(plugin, inventory):
 
 def _select(dlg, source_type):
     index = dlg.ui.source_types.findText(source_type)
-    assert index >= 0, [dlg.ui.source_types.itemText(i) for i in range(dlg.ui.source_types.count())]
+    assert index >= 0, [
+        dlg.ui.source_types.itemText(i) for i in range(dlg.ui.source_types.count())
+    ]
     with mock.patch.object(dlg.message_bar, "pushWarning") as push:
         dlg.ui.source_types.setCurrentIndex(index)
         if dlg.ui.source_types.currentIndex() == index:
@@ -76,9 +78,9 @@ def test_ambiguous_runway_is_reported_in_the_message_bar(plugin, tmp_path):
     title, text = push.call_args[0]
     assert title == "Invalid Study Input"
     assert "runway '24' matches 06L/24R and 06R/24L" in text
-    assert [dlg.ui.source_names.itemText(i) for i in range(dlg.ui.source_names.count())] == [
-        "all"
-    ]
+    assert [
+        dlg.ui.source_names.itemText(i) for i in range(dlg.ui.source_names.count())
+    ] == ["all"]
 
 
 def test_valid_study_lists_the_movements(plugin, tmp_path):
@@ -87,5 +89,7 @@ def test_valid_study_lists_the_movements(plugin, tmp_path):
     dlg = _dialog(plugin, db)
     push = _select(dlg, "MovementSource")
     assert push.call_count == 0
-    names = [dlg.ui.source_names.itemText(i) for i in range(dlg.ui.source_names.count())]
+    names = [
+        dlg.ui.source_names.itemText(i) for i in range(dlg.ui.source_names.count())
+    ]
     assert names[0] == "all" and len(names) > 1

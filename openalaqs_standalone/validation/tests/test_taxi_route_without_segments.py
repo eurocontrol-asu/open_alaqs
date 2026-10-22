@@ -124,10 +124,14 @@ def test_partial_route_counts_the_existing_taxiways(studies):
     with sqlite3.connect(studies["partial"]) as conn:
         route = _route_of(conn, OID)
         natural = _build_natural_taxi_times(conn)
-        first = conn.execute(
-            "SELECT sequence FROM user_taxiroute_taxiways WHERE route_name = ?",
-            (route,),
-        ).fetchone()[0].split(",")[0]
+        first = (
+            conn.execute(
+                "SELECT sequence FROM user_taxiroute_taxiways WHERE route_name = ?",
+                (route,),
+            )
+            .fetchone()[0]
+            .split(",")[0]
+        )
         with sqlite3.connect(studies["intact"]) as intact_conn:
             full = _build_natural_taxi_times(intact_conn)[route]
     assert 0.0 < natural[route] < full
@@ -155,7 +159,9 @@ def test_stand_emissions_go_to_the_gate_cells(studies):
         conn.close()
     # everything but the flight segments (the arrival's runway stretch and the
     # profile) is at the gate: the queuing NOx lands only in gate cells
-    stand_nox = res["queue_em_kg"]["nox"] + res["stop_em_kg"]["nox"] + res["apu_em_kg"]["nox"]
+    stand_nox = (
+        res["queue_em_kg"]["nox"] + res["stop_em_kg"]["nox"] + res["apu_em_kg"]["nox"]
+    )
     by_cell = grid[grid.pollutant == "nox"].groupby(["ix", "iy"])["kg"].sum()
     in_gate = sum(by_cell.get(cell, 0.0) for cell in gate_cells)
     assert in_gate >= stand_nox * (1 - 1e-9)
