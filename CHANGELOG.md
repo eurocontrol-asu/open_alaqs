@@ -4,7 +4,7 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
-## [5.4.0] - 2026-10-21
+## [5.4.0] - 2026-10-22
 
 Upgrading a 5.3.x study: see
 [Upgrading from 5.3.x](documents/USER_GUIDE.md#upgrading-from-53x) in the
