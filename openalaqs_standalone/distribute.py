@@ -1458,6 +1458,81 @@ def distribute_to_grid(  # noqa: C901 — top-level spatial+temporal distributio
                                         )
                             gate_handled = True
 
+                # --- Route without segments: the stand phases go to the gate.
+                # The plugin (TaxiingEmissionCalculator) puts queuing, APU,
+                # engine start, stop-and-go and brake wear of a route none of
+                # whose taxiways exists on a stand-in segment at the gate
+                # geometry; the same here, over the gate polygon's cells.
+                # (No natural taxi: compute_movements gives such a route a 0 s
+                # route time, so the whole taxi time is queuing.)
+                if not segments_data and (
+                    (has_apu and not apu_handled)
+                    or (has_start and not start_handled)
+                    or (has_queue and not queue_handled)
+                    or (has_stop and not stop_handled)
+                    or (has_brake_wear and not brake_wear_handled)
+                ):
+                    stand_fracs = None
+                    gate_id_raw = mov.get("gate")
+                    if gate_id_raw is not None and str(gate_id_raw).strip():
+                        gid = str(gate_id_raw)
+                        if gid not in gate_cell_cache:
+                            try:
+                                gate_row = conn.execute(
+                                    "SELECT geometry FROM shapes_gates "
+                                    "WHERE gate_id=?",
+                                    (gid,),
+                                ).fetchone()
+                            except Exception:
+                                gate_row = None
+                            gate_cell_cache[gid] = (
+                                _polygon_cell_fractions(
+                                    _geo.spatialite_blob_to_shapely(gate_row[0]),
+                                    grid_bounds,
+                                    grid_definition,
+                                )
+                                if gate_row
+                                else None
+                            )
+                        stand_fracs = gate_cell_cache[gid]
+                    if stand_fracs:
+                        stand_parts = [
+                            ("apu_stand", apu_em, has_apu and not apu_handled),
+                            ("start_stand", start_em, has_start and not start_handled),
+                            ("queue_stand", queue_em, has_queue and not queue_handled),
+                            ("stop_stand", stop_em, has_stop and not stop_handled),
+                            (
+                                "brake_wear_stand",
+                                brake_wear_em,
+                                has_brake_wear and not brake_wear_handled,
+                            ),
+                        ]
+                        for (gix, giy), gfrac in stand_fracs.items():
+                            in_diag = _diag_enabled and (gix, giy) in _diag_cells
+                            for kind, em, active in stand_parts:
+                                if not active:
+                                    continue
+                                for p in POLLUTANTS:
+                                    val = em.get(p, 0.0) * gfrac
+                                    _add(b_start, gix, giy, p, val)
+                                    if in_diag:
+                                        _diag_log(
+                                            mov["oid"],
+                                            mov.get("taxi_route"),
+                                            -1,
+                                            "_gate_polygon_",
+                                            gix,
+                                            giy,
+                                            kind,
+                                            p,
+                                            val,
+                                        )
+                        apu_handled = apu_handled or has_apu
+                        start_handled = start_handled or has_start
+                        queue_handled = queue_handled or has_queue
+                        stop_handled = stop_handled or has_stop
+                        brake_wear_handled = brake_wear_handled or has_brake_wear
+
                 # --- Fallback (intersection cell, else threshold) for any
                 # phase we could not place above. This runs only when the
                 # route data is missing or all segments degenerated; for a

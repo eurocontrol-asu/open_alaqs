@@ -562,14 +562,17 @@ def number_from_text(text: str) -> float | None:
 
     Accepts what Python's float accepts ("2.5", "1e3", " 7 ") and a single
     decimal comma without a dot ("30,3"); rejects grouped or ambiguous texts
-    ("1,234.5", "1.234,5"), "nan" and "inf".
+    ("1,234.5", "1.234,5", and "1,234", which is 1.234 with a decimal comma
+    but 1234 with an English group separator), "nan" and "inf".
     """
     text = text.strip()
     if not text:
         return None
     candidates = [text]
     if text.count(",") == 1 and "." not in text:
-        candidates.append(text.replace(",", "."))
+        before, after = text.split(",")
+        if not (after.isdigit() and len(after) == 3 and before.lstrip("-").isdigit()):
+            candidates.append(text.replace(",", "."))
     for candidate in candidates:
         if "_" in candidate:
             continue
@@ -707,10 +710,19 @@ def apply_plan(
         changed, left = apply_retype_columns(conn, tbl, list(cols), ref)
         if changed:
             print(f"  {tbl}: {changed} text value(s) converted to numbers")
+        by_column: dict[str, list[tuple[int, str]]] = {}
         for rowid, col, text in left:
+            by_column.setdefault(col, []).append((rowid, text))
+        for col, cells in by_column.items():
+            examples = ", ".join(
+                f"{text!r} (rowid {rowid})" for rowid, text in cells[:3]
+            )
+            more = f" and {len(cells) - 3} more" if len(cells) > 3 else ""
             print(
-                f"WARNING: {tbl} rowid {rowid}, column {col}: {text!r} is not a "
-                f"number; left as text, correct it in QGIS",
+                f"WARNING: {tbl}.{col}: {len(cells)} value(s) are not numbers and "
+                f"are left as text: {examples}{more}. Correct them in QGIS (a "
+                f"number with a decimal comma and three decimals, such as "
+                f"'1,234', is left too: it also reads as a grouped 1234).",
                 file=sys.stderr,
             )
     for name in plan.drop_tables:

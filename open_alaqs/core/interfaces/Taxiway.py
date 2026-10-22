@@ -65,7 +65,13 @@ class TaxiwayRoute:
         if self.getSegments():
             return MultiLineString([x.getGeometry() for x in self.getSegments()])
         else:
-            logger.error("Cannot create MultiLineString from segments.")
+            # TaxiingEmissionCalculator warns once per movement about a route
+            # without segments; this is reached twice per movement on that path
+            logger.debug(
+                "Taxi route '%s' has no segments (none of its taxiways exists): "
+                "empty geometry.",
+                self.getName(),
+            )
             return MultiLineString()
         # return self._segments
 

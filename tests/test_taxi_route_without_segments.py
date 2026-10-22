@@ -63,7 +63,9 @@ def _kg(emissions, pollutant):
     )
 
 
-def test_route_without_segments_keeps_stand_emissions(tmp_path):
+def test_route_without_segments_keeps_stand_emissions(tmp_path, caplog):
+    import logging
+
     from open_alaqs.core.interfaces.Taxiway import TaxiwayRoute
     from open_alaqs.core.MovementEmissionCalculator import TaxiingEmissionCalculator
 
@@ -82,7 +84,16 @@ def test_route_without_segments_keeps_stand_emissions(tmp_path):
     )
     assert empty.getSegments() == []
     movement.setTaxiRoute(empty)
-    emissions = TaxiingEmissionCalculator(movement).calculate_emissions()
+    with caplog.at_level(logging.DEBUG):
+        emissions = TaxiingEmissionCalculator(movement).calculate_emissions()
+    # one warning names the route; the empty geometry is not an error (rc7 N3)
+    records = [
+        r
+        for r in caplog.records
+        if r.levelno >= logging.WARNING and "Track" not in r.getMessage()
+    ]
+    assert [r.levelno for r in records] == [logging.WARNING]
+    assert "has no segments" in records[0].getMessage()
 
     # the stand-in segment (the arrival's runway stretch, from the placement
     # of the profile, is the other entry)

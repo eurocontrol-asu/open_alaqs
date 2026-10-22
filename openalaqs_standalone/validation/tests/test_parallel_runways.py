@@ -153,3 +153,30 @@ def test_plain_number_on_a_single_runway_still_works(single):
         assert mv.runway_of(ctx["runways"], mov)["runway_id"] == "06/24"
         assert rc._Study(conn).runway(24, "24")["runway_id"] == "06/24"
         assert rc._Study(conn).runway(24)["runway_id"] == "06/24"
+
+
+def test_letter_that_matches_no_parallel_runway_is_unknown_not_ambiguous(parallel):
+    """ "24C" is unknown, not ambiguous: the message must not ask for a letter
+    that was given (rc7 review N1). Same text as the plugin."""
+    _set_runway(parallel, "24C")
+    with sqlite3.connect(parallel) as conn:
+        runways = mv.get_runways(conn)
+        mov = mv.get_movement(conn, OID)
+    with pytest.raises(ValueError) as err:
+        mv.runway_of(runways, mov)
+    assert str(err.value) == (
+        "movement id 1: A20N A 2025-12-01 06:05: runway '24C' matches no runway "
+        "end of the study (runways: 06L/24R, 06R/24L); name the runway end as in "
+        "the runway table"
+    )
+
+
+def test_message_echoes_the_normalised_end(parallel):
+    """ "6" is echoed as "06", as the plugin does (rc7 review N2)."""
+    _set_runway(parallel, "6")
+    with sqlite3.connect(parallel) as conn:
+        runways = mv.get_runways(conn)
+        mov = mv.get_movement(conn, OID)
+    with pytest.raises(ValueError) as err:
+        mv.runway_of(runways, mov)
+    assert "runway '06' matches 06L/24R and 06R/24L" in str(err.value)

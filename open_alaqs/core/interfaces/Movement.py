@@ -1044,7 +1044,11 @@ class MovementStore(Store, metaclass=Singleton):
             indices = mdf["runway"] == rwy
             found = runway_store.runwaysWithEnd(rwy)
             if len(found) != 1:
-                if not found:  # the runways a plain number is ambiguous between
+                shown = runway_store.normalisedEnd(rwy) or rwy
+                if not found and shown.isdigit():
+                    # the runways a plain number is ambiguous between (a
+                    # designator with a letter that matches nothing is not
+                    # ambiguous: it is unknown)
                     found = runway_store.runwaysWithEnd(rwy, by_number=True)
                     found = found if len(found) > 1 else []
                 names = [
@@ -1065,12 +1069,12 @@ class MovementStore(Store, metaclass=Singleton):
                 if len(found) > 1:
                     matched = " and ".join(runway.getName() for _, runway, _ in found)
                     message = (
-                        f"{movements}: runway '{rwy}' matches {matched}; "
+                        f"{movements}: runway '{shown}' matches {matched}; "
                         "name the runway end with its letter"
                     )
                 else:
                     message = (
-                        f"{movements}: runway '{rwy}' matches no runway end "
+                        f"{movements}: runway '{shown}' matches no runway end "
                         f"of the study (runways: {runway_names or 'none'}); "
                         "name the runway end as in the runway table"
                     )

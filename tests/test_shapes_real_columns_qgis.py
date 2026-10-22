@@ -39,6 +39,7 @@ from qgis.PyQt.QtCore import QVariant  # noqa: E402
 from open_alaqs.alaqs_config import LAYERS_CONFIG  # noqa: E402
 from open_alaqs.enums import AlaqsLayerType  # noqa: E402
 from open_alaqs.openalaqsuitoolkit import (  # noqa: E402
+    UnmigratedColumnError,
     get_alaqs_layer,
     load_layers,
     parse_number,
@@ -180,10 +181,19 @@ def test_form_check_converts_with_the_layer_field(study, tmp_path):
     edit.setObjectName("height")
     edit.setText("2.5")
     assert validate_field(edit, "float", layer=migrated) == 2.5
-    # on the unmigrated study the check equals the save (3), not 2.5
+    # on the unmigrated study QGIS would save 3: the decimal is refused and
+    # the tooltip names the saved value and the migration (rc7 review R1)
+    assert validate_field(edit, "float", layer=unmigrated) is False
+    assert "save this value as 3" in edit.toolTip()
+    assert "scripts/migrate_alaqs.py" in edit.toolTip()
+    edit.setText("3")  # a whole number is saved as typed
     assert validate_field(edit, "float", layer=unmigrated) == 3
+    edit.setText("2.5")
     assert validate_field(edit, "float") == 2.5  # no layer: a Double field
-    assert parse_number("2.5", False, height_old) == 3
+    with pytest.raises(UnmigratedColumnError) as err:
+        parse_number("2.5", False, height_old)
+    assert err.value.rounded == 3
+    assert parse_number("3", False, height_old) == 3
     assert parse_number("2.5", False, None) == 2.5
     # a text-typed field (an empty unmigrated layer) falls back to Double
     assert parse_number("2.5", False, QgsField("height", QVariant.String)) == 2.5
@@ -205,7 +215,7 @@ def test_form_check_finds_the_layer_of_the_attribute_form(study, tmp_path):
     shutil.copy(study, old)
     unmigrate(old, ["shapes_parking"])
     _keep = []
-    for path, expected in ((old, 3), (study, 2.5)):
+    for path, expected in ((old, False), (study, 2.5)):
         layer = open_table(path, "shapes_parking")
         form = QgsAttributeForm(layer)
         box = QtWidgets.QWidget(form)  # the custom .ui sits inside the form
@@ -214,7 +224,32 @@ def test_form_check_finds_the_layer_of_the_attribute_form(study, tmp_path):
         edit.setText("2.5")
         _keep.append((layer, form))
         assert validate_field(edit, "float") == expected, path
+        if expected is False:  # the unmigrated study: refused, not rounded
+            assert "save this value as 3" in edit.toolTip()
     other = QtWidgets.QLineEdit()
     other.setObjectName("height")
     other.setText("2.5")
     assert validate_field(other, "float") == 2.5
+
+
+def test_decimal_comma_in_an_integer_column_names_the_migration(study, tmp_path):
+    """Under a comma locale, "2,5" in a column QGIS types as integer cannot
+    be saved at all: the tooltip names the migration, not just "a number"."""
+    from qgis.PyQt.QtCore import QLocale
+
+    old = tmp_path / "old.alaqs"
+    shutil.copy(study, old)
+    unmigrate(old, ["shapes_parking"])
+    unmigrated = open_table(old, "shapes_parking")
+    previous = QLocale()
+    QLocale.setDefault(QLocale("de_DE"))
+    try:
+        edit = QtWidgets.QLineEdit()
+        edit.setObjectName("height")
+        edit.setText("2,5")
+        assert validate_field(edit, "float", layer=unmigrated) is False
+        assert "scripts/migrate_alaqs.py" in edit.toolTip()
+        edit.setText("3")
+        assert validate_field(edit, "float", layer=unmigrated) == 3
+    finally:
+        QLocale.setDefault(previous)

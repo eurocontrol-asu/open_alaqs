@@ -39,6 +39,7 @@ Differences from the reference, all deliberate:
 from __future__ import annotations
 
 import csv as _csv
+import logging
 import re
 from typing import Optional
 
@@ -53,6 +54,8 @@ from openalaqs_standalone import movements as _mv
 # The six pollutants carried in every per-movement result. Identical
 # to compute_aircraft.POLLUTANTS and compute_helicopter.POLLUTANTS.
 POLLUTANTS = _ca.POLLUTANTS
+
+_log = logging.getLogger(__name__)
 
 # The three calculation methods.
 METHODS = ("bymode", "bffm2_anchor", "bffm2_traj")
@@ -206,12 +209,32 @@ def _build_natural_taxi_times(conn) -> dict:
     except Exception:
         return natural
     for route_name, seq_str in route_rows:
-        if not seq_str:
-            continue
-        seq = [s.strip() for s in seq_str.split(",") if s.strip()]
+        # The plugin (TaxiwayRoutesStore.initTaxiwayRoutes) builds a route
+        # from the taxiways of its sequence that exist and skips the others,
+        # so the natural time is the sum over the existing taxiways. A route
+        # none of whose taxiways exists (or with an empty sequence) has no
+        # route time: its whole taxi time is queuing, placed at the gate, as
+        # TaxiingEmissionCalculator does on its stand-in segment.
+        seq = [s.strip() for s in (seq_str or "").split(",") if s.strip()]
+        missing = [tid for tid in seq if tid not in lengths]
+        if missing:
+            _log.warning(
+                "Taxi route '%s': taxiway(s) %s do not exist in shapes_taxiways and are "
+                "skipped, as the plugin does%s.",
+                route_name,
+                ", ".join(missing),
+                (
+                    "; the route has no segments left, so its taxi time is all queuing "
+                    "at the gate"
+                    if len(missing) == len(seq)
+                    else ""
+                ),
+            )
         total = 0.0
         ok = True
         for tid in seq:
+            if tid in missing:
+                continue
             sp = speeds.get(tid)
             lg = lengths.get(tid)
             if sp is None or sp <= 0 or lg is None:

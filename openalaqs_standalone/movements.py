@@ -103,21 +103,23 @@ def runway_of(runways: dict, mov: dict) -> dict:
     runway = runways.get(designator)
     if runway is not None:
         return runway
-    number = "".join(ch for ch in designator if ch.isdigit())
     matched: dict = {}
-    for key, rwy in runways.items():
-        if number and "".join(ch for ch in key if ch.isdigit()) == number:
-            matched.setdefault(id(rwy), rwy)
+    if designator.isdigit():
+        # the runways a plain number is ambiguous between (a designator with
+        # a letter that matches nothing is not ambiguous: it is unknown)
+        for key, rwy in runways.items():
+            if "".join(ch for ch in key if ch.isdigit()) == designator:
+                matched.setdefault(id(rwy), rwy)
     name = movement_name(mov)
     if len(matched) > 1:
         raise ValueError(
-            f"movement {name}: runway '{mov.get('runway', designator)}' matches "
+            f"movement {name}: runway '{designator}' matches "
             f"{' and '.join(r['runway_id'] for r in matched.values())}; "
             "name the runway end with its letter"
         )
     runway_ids = ", ".join(dict.fromkeys(r["runway_id"] for r in runways.values()))
     raise ValueError(
-        f"movement {name}: runway '{mov.get('runway', designator)}' matches no "
+        f"movement {name}: runway '{designator}' matches no "
         f"runway end of the study (runways: {runway_ids or 'none'}); name the "
         "runway end as in the runway table"
     )

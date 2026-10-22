@@ -2830,11 +2830,22 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             em_config.update(widget_values)
             em_config["receptors"] = self._receptor_points
 
-        mod_ = EmissionSourceModule(em_config)
-        mod_.loadSources()
-
         self.ui.source_names.clear()
         self.ui.source_names.addItem("all")
+        try:
+            mod_ = EmissionSourceModule(em_config)
+            mod_.loadSources()
+        except Exception as exc:
+            # The same input errors as the calculation (a runway designator
+            # that matches several or no runway, an unknown gate or engine):
+            # a Qt slot cannot propagate them, so report them in the message
+            # bar as the calculation does, with the names list left at "all".
+            logger.error(
+                f"Could not list the {module_name} sources of '{inventory_path}': {exc}",
+                exc_info=True,
+            )
+            self.message_bar.pushWarning("Invalid Study Input", str(exc))
+            return
         for source_name_ in mod_.getSourceNames():
             self.ui.source_names.addItem(source_name_)
 

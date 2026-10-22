@@ -144,3 +144,27 @@ def test_get_runway_by_direction_refuses_an_ambiguous_end(tmp_path):
     assert get_runway_by_direction("6r", store)[1].getName() == "06R/24L"
     assert get_runway_by_direction("24", store) == (False, None)
     assert get_runway_by_direction("24C", store) == (False, None)
+
+
+def test_letter_that_matches_no_parallel_runway_is_unknown_not_ambiguous(tmp_path):
+    """ "24C" on 06L/24R + 06R/24L is unknown: the message must not ask for a
+    letter that was given (rc7 review N1)."""
+    db = _parallel(tmp_path)
+    _set_runway(db, "24C")
+    with pytest.raises(ValueError) as err:
+        _store(db)
+    assert str(err.value) == (
+        "movement id 1: A20N A 2025-12-01 06:05: runway '24C' matches no runway "
+        "end of the study (runways: 06L/24R, 06R/24L); name the runway end as in "
+        "the runway table"
+    )
+
+
+def test_message_echoes_the_normalised_end(tmp_path):
+    """A single-digit end is echoed as the two-digit end, as the standalone
+    does (rc7 review N2)."""
+    db = _parallel(tmp_path)
+    _set_runway(db, "6")
+    with pytest.raises(ValueError) as err:
+        _store(db)
+    assert "runway '06' matches 06L/24R and 06R/24L" in str(err.value)

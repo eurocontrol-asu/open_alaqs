@@ -561,6 +561,43 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   lost them silently. They are now placed at the gate on a stand-in
   segment of 0 m and 0 s, with a warning. Not reachable with the bundled
   studies.
+- Standalone, the same case (rc7 review R4): a route naming taxiways that
+  do not exist in `shapes_taxiways` was treated as unresolved, so the
+  movement's whole taxi time counted as natural taxiing (times
+  `taxi_fuel_ratio`) and the mass went to the runway intersection, where
+  the plugin counts the existing taxiways only, and with none the whole
+  taxi time as queuing (no fuel ratio) at the gate. The standalone now does
+  the same (`compute_movements._build_natural_taxi_times`, one warning per
+  route naming the missing taxiways; `distribute_to_grid` puts the stand
+  phases over the gate polygon). **Results change**, standalone only, for
+  studies whose taxi routes name taxiways that do not exist; none of the
+  bundled studies does.
+- Forms, a study not yet migrated (rc7 review R1): on a 5.3.x study whose
+  numeric layer columns are still `DECIMAL`, QGIS types a column of whole
+  numbers as an integer and saves "2.5" as 3; rc7 made the form check agree
+  with the save, so the rounding stayed silent. A decimal typed into such a
+  column is now refused, the field red with a tooltip naming the value QGIS
+  would save and the migration (`UnmigratedColumnError`); a whole number is
+  accepted. Studies migrated to `REAL` columns are unaffected.
+- Visualize Emission Calculation, Source type list (rc7 review R3): choosing
+  "MovementSource" builds the movement store, which raises on the same input
+  errors as the calculation (a runway designator matching several or no
+  runway end, an unknown gate or engine); the slot let the exception out as
+  a raw QGIS Python error. It is now reported in the message bar ("Invalid
+  Study Input") with the names list left at "all".
+- Runway designator messages (rc7 review N1, N2): a designator with a letter
+  that matches no runway end ("24C" on 06L/24R and 06R/24L) is reported as
+  unknown ("matches no runway end of the study"), no longer as ambiguous
+  with the advice to add a letter; the end is echoed normalised ("6" as
+  "06") in the plugin and the standalone alike.
+- `scripts/migrate_alaqs.py` (rc7 review N4, N5): texts left in a retyped
+  column are reported once per column with their count and three examples,
+  not once per row; a text with a decimal comma and exactly three decimals
+  ("1,234", which is also a grouped 1234) is left as text and reported
+  instead of being read as 1.234. The migration also removes
+  `geometry_columns_auth` rows of tables that no longer exist (an orphan
+  `shapes_aircraft_tracks` row in three bundled fixtures), as it did for
+  the other SpatiaLite metadata tables.
 - Runway form: a NULL Touchdown Offset (touchdown_2 is added as NULL when
   a 5.3.6 study is migrated), shown as "NULL", kept OK disabled ("Missing
   or invalid: Touchdown Offset, Runway 2 [m]"); it now counts as empty,

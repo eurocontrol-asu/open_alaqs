@@ -188,6 +188,11 @@ def test_number_from_text(mig):
     assert mig.number_from_text("-7") == -7.0
     for text in ("", "  ", "abc", "1,234.5", "1.234,5", "1,2,3", "nan", "inf", "1_000"):
         assert mig.number_from_text(text) is None, text
+    # a comma with three decimals is ambiguous (1.234 or a grouped 1234): left
+    assert mig.number_from_text("1,234") is None
+    assert mig.number_from_text("-1,234") is None
+    assert mig.number_from_text("1,23") == 1.23
+    assert mig.number_from_text("1,2345") == 1.2345
 
 
 def test_plan_retypes_shapes_columns_only(mig, tmp_path):
@@ -238,7 +243,10 @@ def test_retype_keeps_rows_keys_triggers_and_casts_text(mig, tmp_path, capsys):
     mig.verify_after(src, plan, ref)
     src.execute("COMMIT")
     err = capsys.readouterr().err
-    assert "shapes_t rowid 6, column v: 'abc' is not a number" in err
+    assert (
+        "shapes_t.v: 1 value(s) are not numbers and are left as text: 'abc' (rowid 6)"
+        in err
+    )
     info = [r[1:] for r in src.execute("PRAGMA table_info(shapes_t)")]
     assert info == [
         ("oid", "INTEGER", 1, None, 1),
@@ -385,11 +393,14 @@ def test_migrate_536_study(mig, study_536):
         text=True,
     )
     assert res.returncode == 0, res.stdout + res.stderr
-    for (rowid,) in calculated:
-        assert (
-            f"WARNING: shapes_taxiways rowid {rowid}, column time: 'Calculated' "
-            "is not a number; left as text, correct it in QGIS"
-        ) in res.stderr
+    # one warning per column, with the count and three examples, not one per row
+    warnings = [line for line in res.stderr.splitlines() if line.startswith("WARNING")]
+    assert len(warnings) == 1
+    assert warnings[0].startswith(
+        "WARNING: shapes_taxiways.time: 11 value(s) are not numbers and are left "
+        f"as text: 'Calculated' (rowid {calculated[0][0]}), "
+    )
+    assert "and 8 more" in warnings[0]
     with sqlite3.connect(db) as con:
         for table, columns in REAL_COLUMNS.items():
             types = declared_types(db, table)

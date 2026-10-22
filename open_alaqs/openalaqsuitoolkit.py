@@ -65,6 +65,19 @@ class NumberLocaleError(ValueError):
         )
 
 
+class UnmigratedColumnError(ValueError):
+    """The text is a decimal, but the layer's column is typed as an integer
+    by the provider (a study whose numeric columns are not yet REAL), so
+    QGIS would save it rounded."""
+
+    def __init__(self, text: str, rounded):
+        self.rounded = rounded
+        super().__init__(
+            f"{text!r} would be saved as {rounded}: this study's column holds "
+            "whole numbers only until it is upgraded with scripts/migrate_alaqs.py"
+        )
+
+
 def parse_number(text: str, integer: bool, field=None):
     """Parse a number of a form line edit exactly as QGIS saves it, raising
     ValueError when QGIS would not save a number.
@@ -89,33 +102,57 @@ def parse_number(text: str, integer: bool, field=None):
     "12.5", which QGIS would round, is rejected.
 
     `field` is the layer's own numeric QgsField when the layer is known, so
-    the check converts with the field QGIS saves with: on a study whose
+    the check converts with the field QGIS saves with. On a study whose
     numeric columns are not yet REAL (scripts/migrate_alaqs.py), the
-    provider types a column of whole numbers as an integer and "2.5" is
-    saved, and checked, as 3. Without it (or for a non-numeric field, the
-    provider's type of an empty DECIMAL column) a Double or LongLong field
-    is used.
+    provider types a column of whole numbers as an integer, and QGIS would
+    save "2.5" as 3: a decimal typed into such a column is refused with an
+    UnmigratedColumnError naming the migration, instead of being rounded
+    silently. Without `field` (or for a non-numeric field, the provider's
+    type of an empty DECIMAL column) a Double or LongLong field is used.
     """
     from qgis.core import QgsField
 
     if field is None or not field.isNumeric():
         field = QgsField("value", QVariant.LongLong if integer else QVariant.Double)
+    integer_typed = field.type() in (
+        QVariant.Int,
+        QVariant.LongLong,
+        QVariant.UInt,
+        QVariant.ULongLong,
+    )
+
+    def _decimal_in_integer_column(saved):
+        # a decimal for the locale, typed into a column QGIS types as integer
+        if integer or not integer_typed:
+            return False
+        number, ok = QLocale().toDouble(text)
+        return ok and number != int(number)
+
     try:
         value = field.convertCompatible(text)
     except Exception as exc:
+        if _decimal_in_integer_column(None):
+            raise UnmigratedColumnError(text, "NULL") from exc
         raise ValueError(f"QGIS cannot save {text!r} as a number") from exc
     if value is None or (hasattr(value, "isNull") and value.isNull()):
+        if _decimal_in_integer_column(None):
+            raise UnmigratedColumnError(text, "NULL")
         raise ValueError(f"QGIS cannot save {text!r} as a number")
     if integer:
         number, ok = QLocale().toLongLong(text)
         if not ok or int(number) != int(value):
             raise ValueError(f"{text!r} is not a whole number")
         return int(value)
+    if not QLocale().toDouble(text)[1]:
+        raise NumberLocaleError(text)
+    if integer_typed:
+        # the column's own type rounds: refuse a decimal rather than agree with it
+        typed = QgsField("value", QVariant.Double).convertCompatible(text)
+        if typed is not None and float(typed) != float(value):
+            raise UnmigratedColumnError(text, value)
     value = float(value)
     if not math.isfinite(value):
         raise ValueError(f"{text!r} is not a finite number")
-    if not QLocale().toDouble(text)[1]:
-        raise NumberLocaleError(text)
     return value
 
 
@@ -191,6 +228,13 @@ def validate_field(ui_element, var_type, layer=None):
             ui_element.setToolTip(
                 "This value should be a number: use the decimal separator "
                 f"of your locale ({exc.separator})"
+            )
+        elif isinstance(exc, UnmigratedColumnError):
+            ui_element.setToolTip(
+                f"QGIS would save this value as {exc.rounded}: the numeric "
+                "columns of this study are not yet REAL. Upgrade the study "
+                "with scripts/migrate_alaqs.py (User Guide, 'Upgrading from "
+                "5.3.x'), or enter a whole number."
             )
         elif var_type == "int":
             ui_element.setToolTip("This value should be a whole number")
