@@ -61,6 +61,7 @@ from datetime import datetime
 from typing import Optional
 
 from open_alaqs.core.tools import meem_v1 as _meem_v1
+from open_alaqs.core.tools import surface_layer_atmosphere as _sla
 from open_alaqs.core.tools.bffm2 import calculate_emission_index as _bffm2_ei
 from open_alaqs.core.tools.bffm2 import speed_of_sound_m_s as _speed_of_sound_m_s
 from openalaqs_standalone import geometry as geo
@@ -218,6 +219,7 @@ def _meem_v1_segment_ei(
     climbing: bool,
     delta_t: float = 0.0,
     airport_elevation_m: float = 0.0,
+    ambient: Optional[tuple] = None,
 ) -> dict:
     """The segment's EI with the MEEM V1 nvPM mass EI (shared
     `open_alaqs.core.tools.meem_v1`, the plugin's code) as the plugin's
@@ -227,7 +229,9 @@ def _meem_v1_segment_ei(
     mode's pm10_nonvol, with the chain's ISA atmosphere at `alt_msl_m`
     (above MSL). `delta_t`: ISA deviation (K) from the movement's meteo
     (`meem_v1.delta_t_from_ground`); without meteo the ISA sea-level
-    288.15 K is used, so 0.0065 K/m x elevation."""
+    288.15 K is used, so 0.0065 K/m x elevation. `ambient` (T K, P Pa):
+    the segment's local state of the atmosphere model, used instead of
+    the sheet's ISA + delta T (None: the sheet's atmosphere)."""
     alt_ft = alt_msl_m / _meem_v1.FT_TO_M
     height_ft = (alt_msl_m - (airport_elevation_m or 0.0)) / _meem_v1.FT_TO_M
     if not meem or _meem_v1.section_of_flight(height_ft) == "LTO":
@@ -252,6 +256,7 @@ def _meem_v1_segment_ei(
         tas_kt=tas_m_s * _meem_v1.MS_TO_KT,
         number_thrust_settings=ts_num,
         delta_t=delta_t,
+        ambient=ambient,
     )
     delta = result.nvpm_mass_ei_mgkg / 1000.0 - meem["pm10_nonvol"][mode]
     return dict(eng, pm10_ei=eng["pm10_ei"] + delta)
@@ -397,8 +402,15 @@ def _bffm2_traj_ff_amb(
         anchor fuel flow (plausibility limit).
       - Otherwise (ANP profiles): twin-quadratic fit on the segment's
         `power` setting to get the EEDB reference fuel flow, then the
-        SAE AIR-5715 / CAEP14 inverse ambient correction:
-            ff_amb = ff_ref * delta / theta^3.8 / exp(0.2 * M^2)
+        corrected-parameter scaling of gas-turbine performance (the corrected
+        fuel flow, fuel flow / (delta sqrt(theta)), is a function of the
+        corrected thrust, thrust / delta, and Mach):
+            ff_amb = ff_ref * delta * sqrt(theta)
+        `mach` is not used by this scaling.
+        The BFFM2 delta / theta^3.8 / exp(0.2 M^2) relation is not used here:
+        it converts a known fuel flow to reference conditions for the
+        emission-index lookup (done in `_bffm2_apply_segment`), it is not a
+        fuel-flow model.
 
     `power` and `fuel_flow_kgm` are re-read per point via
     `movements.get_trajectory_point_power_ff`, exactly as the reference
@@ -438,7 +450,7 @@ def _bffm2_traj_ff_amb(
         return eng["ff"]
     theta = meteo["T_K"] / 288.15
     delta = meteo["P_Pa"] / 101325.0
-    ff_amb = ff_ref * delta / (theta**3.8) / math.exp(0.2 * mach**2)
+    ff_amb = ff_ref * delta * math.sqrt(theta)
     return ff_amb
 
 
@@ -454,6 +466,7 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
     method: str = "bymode",
     use_isa_meteo: bool = True,
     apply_nox_corrections: bool = False,
+    atmosphere: Optional[dict] = None,
 ) -> Optional[dict]:
     """Compute per-movement emissions for one fixed-wing movement.
 
@@ -490,6 +503,24 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         correcting would be wrong). Mirrors the plugin's
         `_apply_nox_corrections` (MovementEmissionCalculator.py:1049-
         1053), which is gated by the same condition.
+    atmosphere
+        Ambient conditions aloft: {"model", "z0", "d0", "ha"} (all
+        optional). model "standard_lapse" (default): the row's 2 m
+        temperature and the station pressure (from QNH and the airport
+        elevation) carried up with the ISA lapse rate; "surface_layer":
+        AUSTAL's boundary-layer formulas from the hourly meteo row;
+        "ground_held" (the row at every height, the 5.4.0 ambient
+        conditions). z0, d0, ha: the site parameters of the AUSTAL run,
+        used by surface_layer (defaults 0.1 m, 6 z0, 10 m + d0, the one default of the
+        plugin's AUSTAL module, the austal subcommand and austal_prep; empty values are
+        derived from z0). See open_alaqs/core/tools/surface_layer_atmosphere.py.
+        Applies to the Mach number, the bffm2_traj fuel flow and the
+        BFFM2 indices and the MEEM V1 non-LTO ambient (T, P) of the flight
+        segments (start height) and of taxi (ground); the NOx correction
+        keeps the hourly row (the MEEM V1 delta T is then not used, since
+        MEEM V1 takes the local T and p directly). ISA meteo
+        (use_isa_meteo, or no tbl_InvMeteo row) stays ISA at every height.
+        Mirrors MovementEmissionCalculator.local_ambient_conditions.
 
     Returns
     -------
@@ -538,6 +569,49 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
     # and only falls back to vertical_limit_m on AttributeError.
     max_height_m = mv.get_mixing_height_at(conn, mov["runway_time"])
 
+    # Ambient conditions at a height above the airport (atmosphere_model). The hourly
+    # row `meteo` itself stays the source of the NOx correction (and of the MEEM V1 delta T,
+    # which only the ground_held sheet atmosphere uses).
+    _atm = atmosphere or {}
+    _atm_model = _sla.normalise_model(_atm.get("model"))
+
+    def _meteo_at_height(height_m: float):
+        # ISA meteo (use_isa_meteo, or no tbl_InvMeteo row; the ISA dict has no WindSpeed
+        # key): ISA conditions at every height, as before 5.4.1, whatever the model.
+        if (
+            meteo is None
+            or _atm_model == _sla.MODEL_GROUND_HELD
+            or "WindSpeed" not in meteo
+        ):
+            return meteo
+        try:
+            t_k, p_pa, rh = _sla.local_state(
+                _atm_model,
+                meteo["T_K"],
+                meteo["P_Pa"],
+                meteo["RH"],
+                height_m,
+                wind_speed_m_s=meteo.get("WindSpeed"),
+                obukhov_length_m=meteo.get("ObukhovLength"),
+                airport_elevation_m=ctx.get("airport_elevation_m", 0.0),
+                z0=_atm.get("z0"),
+                d0=_atm.get("d0"),
+                ha=_atm.get("ha"),
+                mixing_height_m=meteo.get("MixingHeight"),
+            )
+        except ValueError as exc:
+            raise ValueError(
+                f"Atmosphere aloft ({_atm_model}), tbl_InvMeteo row of "
+                f"{meteo.get('DateTime', 'unknown date')}: {exc}"
+            ) from None
+        out = dict(meteo)
+        out.update(
+            T_K=t_k, P_Pa=p_pa, RH=rh, speed_of_sound_m_s=_speed_of_sound_m_s(t_k)
+        )
+        return out
+
+    ground_meteo = _meteo_at_height(0.0)
+
     # ---- TX (taxi) ----
     # Total taxi time is the absolute gap between runway_time and block_time.
     # The plugin splits this into a "natural" portion (sum of segment
@@ -576,15 +650,18 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
     # `getEmissionIndexByEngineState(power_setting=engine_thrust_level_taxiing,
     # method=BFFM2)` with `fuel_flow=None`, which falls into the
     # twin-quadratic / power-setting branch in `Engine.getEmissionIndexByEngineState`
-    # and applies the SAE AIR-5715 inverse ambient correction:
-    #     ff_amb = ff_ref * delta / theta^3.8 / exp(0.2 * M^2)   (M=0 at taxi)
+    # and scales the reference fuel flow to ambient with the corrected-parameter
+    # scaling of gas-turbine performance:
+    #     ff_amb = ff_ref * delta * sqrt(theta)   (M=0 at taxi)
     # The standalone must match: the reference EEDB idle FF (`tx["ff"]`)
     # is corrected to ambient before the segment fuel is computed.
     # For bymode the plugin uses the table EI directly, no FF correction.
     if method != "bymode":
-        theta = meteo["T_K"] / 288.15
-        delta = meteo["P_Pa"] / 101325.0
-        tx_ff_amb = tx["ff"] * delta / (theta**3.8)  # mach=0 at taxi
+        theta = ground_meteo["T_K"] / 288.15
+        delta = ground_meteo["P_Pa"] / 101325.0
+        tx_ff_amb = (
+            tx["ff"] * delta * math.sqrt(theta)
+        )  # corrected-parameter scaling; idle
     else:
         tx_ff_amb = tx["ff"]
 
@@ -605,7 +682,7 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             _add_em(em_local, fuel_kg, tx)
         else:
             _bffm2_apply_segment(
-                em_local, tx_ff_amb, fuel_kg, tx, icao_eedb, meteo, mach=0.0
+                em_local, tx_ff_amb, fuel_kg, tx, icao_eedb, ground_meteo, mach=0.0
             )
         return em_local
 
@@ -922,7 +999,12 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
 
         # Per-segment Mach (BFFM2 only; bymode ignores it). The plugin
         # uses the start point's TAS, not the average.
-        mach = _segment_mach(tas1, tas2, meteo["T_K"]) if method != "bymode" else 0.0
+        # Ambient conditions at the segment's start height (atmosphere_model), as the
+        # plugin (MovementEmissionCalculator.calculate_emissions_per_segment).
+        seg_meteo = _meteo_at_height(z1_start) if meteo is not None else None
+        mach = (
+            _segment_mach(tas1, tas2, seg_meteo["T_K"]) if method != "bymode" else 0.0
+        )
 
         if method in ("bymode", "bffm2_anchor"):
             seg_ff_amb = eng["ff"]
@@ -933,15 +1015,16 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
                 pt1,
                 eng,
                 engine_ei,
-                meteo,
+                seg_meteo,
                 mach,
                 n_eng,
             )
 
         seg_fuel = seg_time * seg_ff_amb * n_eng
         # MEEM V1 nvPM above 3000 ft above the aerodrome (pm10 only; fuel
-        # unchanged), ISA + delta_t at the segment altitude above MSL, with
-        # delta_t from the movement's meteo temperature.
+        # unchanged): the local T and p of the atmosphere model at the
+        # segment's start height; for ground_held, ISA + delta_t at the segment
+        # altitude above MSL, with delta_t from the movement's meteo temperature.
         eng = _meem_v1_segment_ei(
             eng,
             meem,
@@ -953,6 +1036,15 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
                 meteo["T_K"] if meteo else None, ctx.get("airport_elevation_m", 0.0)
             ),
             airport_elevation_m=ctx.get("airport_elevation_m", 0.0),
+            # local T and p of the segment (atmosphere_model); None for ground_held:
+            # the CAEP sheet's ISA + delta T at altitude
+            ambient=(
+                (seg_meteo["T_K"], seg_meteo["P_Pa"])
+                if seg_meteo is not None
+                and _atm_model != _sla.MODEL_GROUND_HELD
+                and "WindSpeed" in seg_meteo
+                else None
+            ),
         )
         # Plugin guard ("Bug #22" in MovementEmissionCalculator): under
         # BFFM2, a segment whose start point has neither power nor fuel
@@ -994,7 +1086,7 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             _add_em(seg_em, seg_fuel, eng)
         else:
             _bffm2_apply_segment(
-                seg_em, seg_ff_amb, seg_fuel, eng, icao_eedb, meteo, mach
+                seg_em, seg_ff_amb, seg_fuel, eng, icao_eedb, seg_meteo, mach
             )
         for p in POLLUTANTS:
             em[p] += seg_em[p]

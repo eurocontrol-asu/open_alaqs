@@ -538,6 +538,20 @@ def parse_config(txt_path):
     # Parse numeric fields
     config["vertical_limit_m"] = float(config.get("vertical_limit_m", 914.4))
 
+    # BFFM2 options and the atmosphere aloft (5.4.1)
+    ff_source = str(config.get("bffm2_ff_source", "trajectory")).strip().lower()
+    if ff_source not in ("trajectory", "mode_anchor"):
+        raise ValueError(
+            f"bffm2_ff_source={ff_source!r} is not recognised; use trajectory or mode_anchor"
+        )
+    config["bffm2_ff_source"] = ff_source
+    from open_alaqs.core.tools.surface_layer_atmosphere import normalise_model
+
+    config["atmosphere_model"] = normalise_model(config.get("atmosphere_model"))
+    for _k in ("atmosphere_z0_m", "atmosphere_d0_m", "atmosphere_ha_m"):
+        _v = config.get(_k)
+        config[_k] = None if _v in (None, "") else float(_v)
+
     # Parse source dynamics (string) and source names (comma-separated)
     config["source_dynamics"] = parse_source_dynamics(
         config.get("source_dynamics", "none")
@@ -613,6 +627,11 @@ def create_emission_config(config_dict, grid_config):
             "should_apply_nox_corrections", False
         ),
         source_dynamics=config_dict.get("source_dynamics", "none"),
+        bffm2_ff_source=config_dict.get("bffm2_ff_source", "trajectory"),
+        atmosphere_model=config_dict.get("atmosphere_model", "standard_lapse"),
+        atmosphere_z0_m=config_dict.get("atmosphere_z0_m"),
+        atmosphere_d0_m=config_dict.get("atmosphere_d0_m"),
+        atmosphere_ha_m=config_dict.get("atmosphere_ha_m"),
         grid_config=grid_config,
     )
 

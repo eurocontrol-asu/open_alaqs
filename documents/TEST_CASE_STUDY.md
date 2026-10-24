@@ -533,9 +533,9 @@ To prepare the input files:
 
 | Parameter | Value |
 |---|---|
-| Roughness Length | 0.2 m |
-| Displacement Height | 1.2 m |
-| Anemometer Height | 11.2 m |
+| Roughness Length | 0.1 m (the default: TA Luft value for airports) |
+| Displacement Height | 0.6 m (the default, 6 z0; 0 derives it from z0) |
+| Anemometer Height | 10.6 m (the default, 10 m + d0; 0 derives it from z0) |
 | Title | EHRD_training |
 | Quality Level | 1 |
 | Is Enabled | ☑ checked |

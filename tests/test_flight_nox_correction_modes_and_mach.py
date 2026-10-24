@@ -82,7 +82,7 @@ def _run(movement, nox_corr, spy=None):
             "apply_nox_corrections": nox_corr,
             "airport_altitude": -5.0,
             "installation_corrections": {},
-            "ambient_conditions": AmbientCondition({"Temperature": T_K}),
+            "ambient_conditions": AmbientCondition({"id": 1, "Temperature": T_K}),
             "meem_version": "v1",
             "bffm2_ff_source": "trajectory",
         },
@@ -103,7 +103,14 @@ def _run(movement, nox_corr, spy=None):
         original = calc._get_emission_index
 
         def recording(mode, *args, **kwargs):
-            spy.append((mode, calc._segment_tas_m_s, method["config"]["mach_number"]))
+            spy.append(
+                (
+                    mode,
+                    calc._segment_tas_m_s,
+                    method["config"]["mach_number"],
+                    method["config"]["ambient_conditions"].getTemperature(),
+                )
+            )
             return original(mode, *args, **kwargs)
 
         calc._get_emission_index = recording
@@ -145,10 +152,14 @@ def test_departure_take_off_and_climb_are_corrected(movements):
 
 
 def test_segment_mach_is_tas_over_speed_of_sound(movements):
+    """Mach = TAS / a(T) with T the segment's local temperature (atmosphere_model,
+    default surface_layer, 5.4.1): the hourly temperature at the ground, lower aloft."""
     seen = []
     _run(movements["D"], nox_corr=True, spy=seen)
-    a = math.sqrt(1.4 * 287.05287 * T_K)
     assert seen
-    for _mode, tas, mach in seen:
-        assert mach == pytest.approx(tas / a, rel=1e-9)
-    assert any(mach > 0.1 for _, _, mach in seen)
+    for _mode, tas, mach, t_local in seen:
+        assert mach == pytest.approx(
+            tas / math.sqrt(1.4 * 287.05287 * t_local), rel=1e-9
+        )
+    assert any(mach > 0.1 for _, _, mach, _ in seen)
+    assert any(t_local < T_K - 1.0 for _, _, _, t_local in seen)

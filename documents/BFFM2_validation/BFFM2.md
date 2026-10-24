@@ -380,7 +380,7 @@ MovementSourceModule.process()
                 │
                 ├── getEmissionIndexByEngineState(engine_thrust, fuel_flow)
                 │       ├── Wf_ref  = twin_quad(engine_thrust, EEDB)
-                │       ├── Wf_amb  = Wf_ref × δ / θ^3.8 / exp(0.2 M²)
+                │       ├── Wf_amb  = Wf_ref × δ × √θ
                 │       └── getEmissionIndexByFuelFlow(Wf_amb)
                 │               └── calculate_emission_index(pollutant, Wf_amb, EEDB, ambient)
                 │                       ├── install corrections → shift EEDB breakpoints

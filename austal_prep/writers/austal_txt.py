@@ -76,7 +76,7 @@ def write_austal_config(
     n_sources = len(source_ids)
 
     # Format the floats: integers with no decimal point look cleaner
-    # in the AUSTAL file, so emit "11.2" but "0" not "0.0" where the
+    # in the AUSTAL file, so emit "10.6" but "0" not "0.0" where the
     # value is integer-valued. The reference uses both styles.
     def f(v: float) -> str:
         if v == int(v):

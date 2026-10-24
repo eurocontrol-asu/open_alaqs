@@ -16,8 +16,9 @@ re-exported in October 2026 from the plugin of this version, headlessly
 (`tools/regenerate_plugin_csvs.py`): all 15 movements of
 `training_v3.alaqs`, the two helicopters included, agree between the
 plugin, the reference and the standalone for the three methods to
-floating-point noise, except the CUSTOM departure (movement 11, PHBBA) on
-`bffm2_traj`, at 1.3e-5. The plugin applies the study meteo (`tbl_InvMeteo`) to the BFFM2
+floating-point noise (OpenALAQS 5.4.1, 23 October 2026: 3.4e-13 at most,
+the NOx-corrected run 3.1e-6; before, the CUSTOM departure, movement 11,
+differed by 1.3e-5 on `bffm2_traj`). The plugin applies the study meteo (`tbl_InvMeteo`) to the BFFM2
 ambient corrections, so the comparison is run with `--use-meteo`; the
 5.2.0 exports were made at ISA. See "October 2026" at the end.
 
@@ -100,7 +101,7 @@ column.  The expected outcome for this version against `training_v3.alaqs`
 | --- | --- | --- |
 | `bymode` | 0.00 % on all pollutants | 0.00 % |
 | `bffm2_anchor` (`--use-meteo`) | 0.00 % | 0.00 % |
-| `bffm2_traj` (`--use-meteo`) | 0.00 % | 0.00 % (1.3e-5) |
+| `bffm2_traj` (`--use-meteo`) | 0.00 % | 0.00 % |
 
 `tests/test_plugin_csv_vs_reference.py` pins this (2e-4 relative, plugin
 against reference and standalone, 15 movements, three methods). For
@@ -137,8 +138,9 @@ PYTHONPATH=. python3 openalaqs_standalone/validation/tools/regenerate_training_v
 
 On that inventory the plugin and the reference agree to 3e-13 on every
 movement for `bymode` and `bffm2_anchor` and on the ANP movements for
-`bffm2_traj`; movement 11 (CUSTOM) differs by 4e-6 on `bffm2_traj`, and the
-NOx-corrected run by 1e-6 to 3e-6 on the six departures (largest on
+`bffm2_traj`; with 5.4.1 (23 October 2026) movement 11 (CUSTOM) agrees as
+well (2.6e-13; before, 4e-6), and the NOx-corrected run by 1e-6 to 3e-6 on
+the six departures (largest on
 movements 10 and 11). (With the
 200 m-tall grid the example carried before October 2026, 40 x 40 x 20
 cells of 10 m, the ANP movements agreed to 4e-6 only; the gap went with
@@ -185,12 +187,37 @@ Per-segment fuel flow is resolved either from `fuel_flow_kgm` (CUSTOM
 `ADSB_FF_CEILING_FACTOR` = 1.5 × the TO anchor fuel flow the segment
 falls back to the anchor fuel flow of its mode, as in the plugin) or from the segment's `power` setting via the
 piecewise three-point quadratic fit from
-`core/tools/twin_quadratic_fit_method.py`, then converted to ambient
-fuel flow via the inverse SAE AIR-5715 / CAEP14 correction:
+`core/tools/twin_quadratic_fit_method.py`, then scaled to ambient fuel
+flow with the corrected-parameter scaling of gas-turbine performance (the
+corrected fuel flow, fuel flow / (δ √θ), is a function of the corrected
+thrust, thrust / δ, and Mach):
 
 ```
-Wf_amb = Wf_ref * δ / θ^3.8 / exp(0.2 * M^2)
+Wf_amb = Wf_ref * δ * sqrt(θ)
 ```
+
+δ and θ (and the Mach number and the BFFM2 ambient corrections) are those at
+the segment's start height, from the period's meteo row with the atmosphere
+model of the plugin (`--atmosphere-model`, default `standard_lapse`: the
+row's 2 m temperature and station pressure, from QNH, carried up with the ISA
+lapse rate; `surface_layer`: AUSTAL's boundary-layer temperature profile;
+`ground_held` reproduces the ambient conditions before 5.4.1, not the old
+fuel-flow scaling). The reference, the standalone and the plugin share
+`open_alaqs/core/tools/surface_layer_atmosphere.py`; the `surface_layer`
+formulas are checked against AUSTAL's C code in
+`tests/test_surface_layer_atmosphere.py`. The pinned outputs use the default
+`standard_lapse` (24 October 2026; `surface_layer` with the plugin's site
+defaults of the time, z0 0.2 m, d0 1.2 m, ha 11.2 m, until then; since 24
+October 2026 the shared defaults are z0 0.1 m, d0 0.6 m, ha 10.6 m, used by
+`surface_layer` only).
+
+Until 23 October 2026 the plugin, the standalone and this reference used
+the inverse of the BFFM2 reference conversion, `Wf_ref * δ / θ^3.8 /
+exp(0.2 M^2)`. BFFM2 (SAE AIR5715) converts a known fuel flow to reference
+conditions for the emission-index lookup; it is not a fuel-flow model, and
+its inverse lowered the fuel flow with rising temperature (−12 % at 25 °C,
+where the corrected-parameter scaling gives +1.7 %). The CAEP validation
+workbook takes the fuel flow as an input and is not affected.
 
 EI for NOₓ / CO / HC is then the BFFM2-ambient EI at that ambient
 fuel flow.  PM₁₀ and SOₓ remain at the table EI.
@@ -314,8 +341,8 @@ default, a fix in `twin_quadratic_fit_method.py`), the workflow is:
 1. Make the same change in `compute_caep14_reference.py` (and add a
    short comment pointing at the plugin commit hash that motivated it).
 2. Re-run the three validation invocations from step 2 above and
-   confirm that 15 of 15 movements still match to 0.00 % (movement 11 at
-   1.3e-5 on `bffm2_traj`); `tests/test_plugin_csv_vs_reference.py`
+   confirm that 15 of 15 movements still match to 0.00 %;
+   `tests/test_plugin_csv_vs_reference.py`
    checks this at 2e-4. When the plugin result itself changes, re-export
    the pinned plugin CSVs first with `regenerate_plugin_csvs.py` (step 1).
 3. Regenerate the workbook via step 3 above.
@@ -372,8 +399,9 @@ The plugin's `TaxiingEmissionCalculator` calls
 `Engine.getEmissionIndexByEngineState(power_setting, method=BFFM2)`
 **without** an explicit `fuel_flow` argument, which routes through the
 power-setting branch in `Engine.getEmissionIndexByEngineState` and
-applies the SAE AIR-5715 inverse correction
-`ff_amb = ff_ref · δ / θ^3.8 / exp(0.2 · M²)` (with `M = 0` at taxi)
+scaled the reference fuel flow to ambient (then with the inverse BFFM2
+conversion `ff_ref · δ / θ^3.8 / exp(0.2 · M²)`, `M = 0` at taxi; since
+23 October 2026 with `ff_ref · δ · √θ`)
 before the segment fuel is computed.  The standalone and the reference
 were both passing `tx["ff"]` (the EEDB reference idle fuel flow)
 unchanged into `_bffm2_apply_segment`.  On Day 1 of the EHRD fixture
@@ -381,7 +409,8 @@ unchanged into `_bffm2_apply_segment`.  On Day 1 of the EHRD fixture
 taxi fuel was systematically 6.6 % higher than standalone taxi fuel —
 which propagated to a ~1.9 % delta on per-movement CO₂ in `bffm2_anchor`
 and the BFFM2 EI lookup on `bffm2_traj`.  The fix computes
-`tx_ff_amb = tx["ff"] · δ / θ^3.8` (mach 0) and uses it for both the
+`tx_ff_amb = tx["ff"] · δ / θ^3.8` (mach 0; `tx["ff"] · δ · √θ` since
+23 October 2026) and uses it for both the
 segment fuel mass and the BFFM2 EI lookup, in both the standalone
 (`compute_aircraft.compute_fixed_wing`) and the reference
 (`compute_caep14_reference._compute_fixed_wing`).

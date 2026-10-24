@@ -76,10 +76,13 @@ def calculate_emission_index(  # noqa: C901
     :param pollutant: str either "NOx", "CO", or "HC"
     :param fuel_flow: float, AMBIENT fuel flow at segment conditions (kg/s).
                      This must be the actual in-flight FF, NOT the EEDB reference FF.
-                     Callers must convert beforehand using the CAEP14 inverse:
-                         FF_amb = FF_ref * delta / theta^3.8 / exp(0.2 * M^2)
-                     where FF_ref is the EEDB reference FF at the segment's
-                     power setting / mode.
+                     For a fuel flow derived from a thrust share on the EEDB curve,
+                     callers scale it to ambient with the corrected-parameter
+                     scaling of gas-turbine performance
+                     (Engine.getEmissionIndexByEngineState):
+                         FF_amb = FF_ref * delta * sqrt(theta)
+                     The conversion below (FF_amb -> reference) is the BFFM2
+                     emission-index step; its inverse is not a fuel-flow model.
     :param icao_eedb: dict with fuel_flow emission index values from ICAO EEDB,
                      structured as {pollutant: {mode: {ff_ref: ei}}}
     :param ambient_conditions: dict with parameters for ambient corrections.

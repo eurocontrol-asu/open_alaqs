@@ -183,7 +183,7 @@ For full technical details including the step-by-step procedure, ambient correct
 Where Bymode assigns a fixed emission index per LTO mode (TX, AP, CL, TO) based on EEDB reference conditions, BFFM2 uses the actual power setting from each profile segment to derive a fuel-flow-dependent emission index. The method:
 
 1. Converts the power setting to a reference fuel flow by twin-quadratic interpolation through the four EEDB breakpoints (or takes the mode's EEDB fuel flow with the `mode_anchor` option).
-2. Converts it to the in-flight fuel flow with δ / θ^3.8 / exp(0.2 M²).
+2. Converts it to the in-flight fuel flow with the corrected-parameter scaling of gas-turbine performance, δ √θ (until 5.4.0: δ / θ^3.8 / exp(0.2 M²), the inverse of the BFFM2 index conversion). δ and θ are those at the segment's start height (`atmosphere_model`, default `standard_lapse`: the hourly row's 2 m temperature and its station pressure, from QNH and the airport elevation, carried up with the ISA lapse rate and the hydrostatic law; `surface_layer`: AUSTAL's boundary-layer temperature profile from the hour's wind, Obukhov length and mixing height; `ground_held` = the hourly row at every height, the 5.4.0 ambient conditions; see [`ATMOSPHERE_ALOFT.md`](ATMOSPHERE_ALOFT.md)).
 3. Interpolates the emission index on a log-log curve through the four EEDB data points.
 4. Computes the emission mass as `EI × FF × n_engines × time_in_segment / 1000`.
 

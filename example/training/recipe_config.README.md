@@ -30,6 +30,8 @@ with `--method` and `--isa-meteo` in place of `--aircraft-method` and
 | `include_aircraft` | `--include-aircraft` |
 | `aircraft_method` | `--aircraft-method` |
 | `use_isa_meteo` | `--use-isa-meteo` |
+| `atmosphere_model` | `--atmosphere-model` (5.4.1) |
+| `z0` / `d0` / `ha` | `--z0` / `--d0` / `--ha` (AUSTAL config and atmosphere aloft; defaults z0 0.1 m, d0 6 z0, ha 10 m + d0, derived when null) |
 | `apply_nox_corrections` | `--apply-nox-corrections` |
 | `source_dynamics` | `--source-dynamics` |
 | `pollutants` | `--pollutants` |

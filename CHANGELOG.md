@@ -4,6 +4,159 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
+## [5.4.1] - 2026-10-24
+
+Upgrading a 5.4.0 study: see
+[Upgrading from 5.4.0](documents/USER_GUIDE.md#upgrading-from-540) in the
+User Guide. Every BFFM2 inventory changes and should be recalculated; `bymode`
+inventories change only in the PM10 of segments above 3,000 ft (MEEM V1).
+No option gives 5.4.0 BFFM2 results back: `ground_held` restores the 5.4.0
+ambient conditions only, the fuel-flow fix has no switch.
+
+BFFM2 trajectory fuel flow and ambient conditions aloft. **Results change**
+for the BFFM2 methods. The fuel-flow fix (Fixed) changes `bffm2_traj` with ANP
+profiles (the fuel flow from the thrust share), the BFFM2 taxi fuel flow
+(`bffm2_traj` and `bffm2_anchor`) and BFFM2 engine tests in every study whose
+meteo is not ISA, and `bffm2_traj` in flight also at ISA (the `e^(-0.2 M^2)`
+term goes: +3 % at Mach 0.4). The atmosphere aloft (Changed) changes the BFFM2
+indices of flight segments, the `bffm2_traj` fuel flow, the BFFM2 taxi and
+engine tests (station pressure) and, for every method including `bymode`, the
+MEEM V1 nvPM of segments above 3,000 ft (local T and p). `bymode` fuel, NOx,
+CO and HC are unchanged. Combined, on the example inventory
+(`example/training`, 13 movements): `bffm2_traj` NOx -11.3 %, CO2 -5.3 %,
+CO -1.7 %; `bffm2_anchor` NOx +0.3 %, CO -2.9 %, HC -4.9 %; `bymode` PM10
+-0.01 %. Warm or windy studies should expect BFFM2 NOx changes above 10 %.
+
+### Fixed
+
+- `scripts/migrate_alaqs.py`: a 5.3.x study that had been edited in QGIS kept
+  integer or text fields after the migration. QGIS writes per-column layer
+  statistics (`geometry_columns_field_infos`) each time a layer is edited and,
+  when they exist, types the fields from them rather than from the declared
+  column types; the script rebuilt the `shapes_*` tables with `REAL` columns
+  but left those rows, so the forms still refused a decimal with "Upgrade the
+  study with scripts/migrate_alaqs.py" and the study still logged the
+  unmigrated warning when opened. The rows of a rebuilt table are now
+  removed, and a study retyped by the 5.4.0 script gets a `~ STATISTICS`
+  plan step that removes them (run the script again). QGIS then types `REAL`
+  as Double on 3.34 and 3.44 and recomputes the statistics on its next edit;
+  the layer's extent and row count are kept (`tests/test_migrate_layer_statistics.py`).
+  The bundled example and test studies carry no such rows, which is why the
+  5.4.0 tests did not see it.
+- The fuel flow read on the ICAO curve at the thrust share is scaled to
+  ambient with `delta * sqrt(theta)`, the corrected-parameter scaling of
+  gas-turbine performance (the corrected fuel flow, fuel flow /
+  (delta sqrt(theta)), a function of the corrected thrust, thrust / delta, and
+  Mach), in the plugin (`Engine.getEmissionIndexByEngineState`) and the
+  standalone (`compute_aircraft`, taxi, `compute_engine_test`). It was
+  `delta / theta^3.8 / exp(0.2 M^2)`, the inverse of the BFFM2 conversion of a
+  known fuel flow to reference conditions (SAE AIR5715), which is an
+  emission-index step, not a fuel-flow model: the fuel flow fell with rising
+  temperature (-12 % at 25 C, where the scaling gives +1.7 %). The emission
+  indices are the standard BFFM2 lookup at the new ambient fuel flow, as for
+  a supplied (ADS-B / CUSTOM) fuel flow. Training fixture (280.5-295 K, 99 400 Pa), fix alone:
+  `bffm2_traj` CO2 -2.5 %, NOx -6.6 %; `bffm2_anchor` (taxi) CO2 -0.7 %,
+  NOx -0.3 %, CO -2.9 %, HC -4.1 %. The CAEP validation cases (index step) are
+  unchanged; the CAEP14 reference implementation, the pinned plugin outputs
+  and the training validation workbooks are updated. In the standalone
+  `austal` pipeline (and the Dataiku recipe) engine tests are computed with
+  the ICAO mode values ("snap") as in 5.4.0, so neither this fix nor the
+  atmosphere option reaches them there; it applies to engine tests in the
+  plugin and to direct calls of `compute_engine_test_for_period` with a
+  database connection.
+
+### Changed
+
+- AUSTAL site parameters: one default for the plugin's AUSTAL output module,
+  the standalone (`aircraft` and `austal` subcommands), `austal_prep` and the
+  Dataiku recipe (`open_alaqs/core/tools/surface_layer_atmosphere.site_parameters`):
+  z0 0.1 m, the TA Luft (2021, Anhang 2) roughness length of airports;
+  d0 6 z0 (0.6 m); ha 10 m + d0 (10.6 m), AUSTAL's own defaults. d0 and ha are
+  derived from z0 whenever they are left empty (None, "", `null`; 0 in the
+  plugin's spin boxes, which cannot be empty), so changing z0 alone keeps the
+  three consistent. They were 0.2 / 1.2 / 11.2 m in the plugin (three
+  independent fields) and 0.3 m / 4 z0 / 11.2 m in the standalone `austal`
+  pipeline and `austal_prep`. **Results change** for the AUSTAL concentrations
+  of studies that keep the defaults (dilution: AUSTAL derives its wind and
+  turbulence profiles from z0, d0, ha and the hourly wind); studies with
+  explicit values are unchanged. Emissions change only with the
+  `surface_layer` atmosphere (not the default): on `training_v3`,
+  `bffm2_traj` NOx -0.015 % against the old plugin defaults and -0.024 %
+  against the old standalone defaults (CO2 -0.004 % / -0.007 %). How to
+  choose the three values from the land cover (CORINE, TA Luft classes) and
+  the anemometer site: user guide, "Roughness length, displacement height and
+  anemometer height". The METAR converter still assigns the Obukhov length
+  independently of z0 (a known limitation; a separate, later change).
+- Ambient conditions aloft (`atmosphere_model`; `documents/ATMOSPHERE_ALOFT.md`,
+  `open_alaqs/core/tools/surface_layer_atmosphere.py`). The temperature,
+  pressure and humidity of each flight segment are those at its start height,
+  carried up from the hourly meteo row; until 5.4.0 the row was used at every
+  height, with its sea-level pressure (QNH) as the ambient pressure.
+  - `standard_lapse` (default): the station pressure from QNH and the airport
+    elevation and the 2 m temperature, carried up with the ISA lapse rate and
+    the hydrostatic law; humidity ratio of the ground air kept.
+  - `surface_layer` (option): the boundary-layer temperature profile of
+    AUSTAL 3.3 (`BlmTemp`, `TalBlm.c`) from the hour's wind, Obukhov length
+    and mixing height, T* from the hour's temperature, without AUSTAL's
+    -30/+40 C limits, the stability term up to the mixing height (stable hours:
+    at most AUSTAL's stable mixing height, `getHm`; a missing, NaN or
+    non-positive mixing height keeps that cap), -8.5 K/km above. The surface
+    sensible heat flux implied by the row's wind and Obukhov length is bounded
+    at 600 W/m2 (unstable) and 100 W/m2 (stable), OpenALAQS engineering limits:
+    above them L is replaced by the value that gives the bounded flux, with a
+    warning (the AUSTAL time series keeps the row's L for those hours).
+  - `ground_held`: the hourly row at every height, the 5.4.0 ambient
+    conditions (the fuel-flow fix still applies).
+  - Checked against the De Bilt radiosondes of 2025 (450 soundings; the
+    hourly METAR-derived rows of an airport about 50 km away as input; within
+    the emission ceiling): T(z) - T(surface)
+    bias / RMS for `standard_lapse` -1.3 / 2.9 K at 100 m, +0.3 / 1.4 K at
+    300 m, +2.0 / 3.1 K at 900 m; `surface_layer` -1.5 / 2.8, -1.2 / 1.7,
+    -2.7 / 3.5 K (too cold, not more accurate). The fuel-flow factor
+    delta sqrt(theta) at height is within 0.3 to 0.7 % RMS of the soundings for
+    both, against 1.2 % (100 m) to 12.9 % (900 m) for the ground row held.
+    `standard_lapse` is therefore the default (an earlier candidate had
+    `surface_layer`). In summer the AUSTAL profile is the closer one above
+    300 m (July and August, 600 m: 1.5 K RMS against 3.0 K, on 15 soundings);
+    see `documents/ATMOSPHERE_ALOFT.md`, section 6.
+  - Applies to the Mach number, the `bffm2_traj` fuel flow, the BFFM2 indices
+    and the MEEM V1 non-LTO ambient (all methods, `bymode` included; MEEM V1
+    then uses the local T and p instead of the sheet's ISA + delta T, and the
+    delta T is not used) of flight segments; the BFFM2 taxi and BFFM2 engine
+    tests use the station pressure. The ICCAIA NOx correction keeps the
+    hourly row. ISA meteo (standalone `--isa-meteo`, or a period without a
+    `tbl_InvMeteo` row) stays ISA at every height.
+  - A temperature or sea-level pressure that is not a positive number, a
+    profile temperature outside 180 to 340 K, or invalid site parameters
+    (z0 <= 0, d0 < 0, ha <= d0) stop the run with an error naming the meteo
+    row's date.
+  - Limitations: the humidity ratio is kept aloft, so the relative humidity
+    passed to BFFM2 can exceed 1 (in a layer that would be saturated, where
+    the lapse rate also stays dry or ISA); not validated against measured
+    fuel or NOx.
+  - Options: GUI "Atmosphere Aloft"; standalone `--atmosphere-model`, `--z0`,
+    `--d0`, `--ha` (`aircraft` and `austal` subcommands; `austal` uses one
+    setting for the AUSTAL config and the emissions; both default to the
+    shared site parameters above, z0 0.1 m, d0 6 z0, ha 10 m + d0; the site
+    parameters matter for `surface_layer` only);
+    headless runner (`scripts/emissions_austal`) keys `atmosphere_model`,
+    `atmosphere_z0_m`, `atmosphere_d0_m`, `atmosphere_ha_m`, `bffm2_ff_source`;
+    Dataiku recipe-config keys `atmosphere_model`,
+    `z0`, `d0`, `ha`.
+  - Training fixture (`training_v3`, MixingHeight 914.4 m), `standard_lapse`
+    against the ground row: `bffm2_traj` CO2 -1.4 %, NOx -2.9 %, CO +1.0 %;
+    `bffm2_anchor` NOx +1.2 % (per movement: `bffm2_traj` NOx down to -4.2 %,
+    `bffm2_anchor` up to +4.3 %). The two BFFM2
+    methods can move in opposite directions: `bffm2_anchor` keeps the ICAO
+    anchor fuel flow and converts it to reference conditions with theta^3.8,
+    so on a steep NOx curve colder air lowers the index more than the ambient
+    factor raises it (with `surface_layer`, which is colder, `bffm2_anchor`
+    NOx is -1.0 %). `bymode` totals unchanged on that fixture (no segment
+    above 3,000 ft). Plugin, standalone and CAEP14 reference agree; the
+    `surface_layer` formulas agree with AUSTAL's C code to 7e-5 K
+    (`tests/test_surface_layer_atmosphere.py`; bounds and degenerate inputs in
+    `tests/test_atmosphere_review_541.py`).
+
 ## [5.4.0] - 2026-10-22
 
 Upgrading a 5.3.x study: see

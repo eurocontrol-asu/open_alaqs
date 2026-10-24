@@ -6,6 +6,7 @@
   - [Introduction](#introduction)
     - [General Information](#general-information)
     - [Installation](#installation)
+  - [Upgrading from 5.4.0](#upgrading-from-540)
   - [Upgrading from 5.3.x](#upgrading-from-53x)
   - [The OpenALAQS Toolbar](#the-openalaqs-toolbar)
   - [Starting a Study](#starting-a-study)
@@ -40,6 +41,7 @@
   - [Calculate emissions and query results](#calculate-emissions-and-query-results)
   - [Dispersion modeling with AUSTAL](#dispersion-modeling-with-austal)
     - [Input data](#input-data)
+    - [Roughness length, displacement height and anemometer height](#roughness-length-displacement-height-and-anemometer-height)
     - [Running AUSTAL](#running-austal)
     - [Output data](#output-data)
     - [Visualize results](#visualize-results)
@@ -60,6 +62,24 @@ It is developed as a plugin for the open-source geographic information system [`
 ### [Installation](#installation)
 
 For installation instructions, check the [`Installation Instructions`](../README.md#installation).
+
+## [Upgrading from 5.4.0](#upgrading-from-540)
+[(Back to top)](#table-of-contents)
+
+OpenALAQS 5.4.1 changes the BFFM2 fuel flow and the ambient conditions used at each flight segment's height. The full list is in the [`CHANGELOG`](../CHANGELOG.md); the atmosphere models are described in [`ATMOSPHERE_ALOFT.md`](ATMOSPHERE_ALOFT.md).
+
+**Recalculate:**
+
+- **Every BFFM2 inventory** (`bffm2_traj` and `bffm2_anchor`). The fuel flow read on the ICAO curve at the thrust share is now scaled with delta sqrt(theta), and each segment uses the temperature and pressure at its height (default `standard_lapse`). On the example inventory, `bffm2_traj` NOx falls by 11 % and CO2 by 5 %; warm or windy studies can change by more than 10 % in NOx.
+- **`bymode` inventories with segments above 3,000 ft** (hours whose mixing height exceeds 914.4 m), for PM10 only: MEEM V1 nvPM now uses the local temperature and pressure (-0.01 % on the example). Fuel, NOx, CO, HC and SOx of `bymode` are unchanged.
+- **Engine tests computed with BFFM2** in the plugin (station pressure, fuel-flow scaling).
+- **AUSTAL dispersion runs that kept the default site parameters.** The AUSTAL module's defaults are now z0 0.1 m (the TA Luft value for airports), d0 6 z0 and ha 10 m + d0 (were 0.2 / 1.2 / 11.2 m), see [Roughness length, displacement height and anemometer height](#roughness-length-displacement-height-and-anemometer-height). Studies that saved explicit values keep them.
+
+**No setting gives 5.4.0 BFFM2 results back.** "Atmosphere Aloft" = `ground_held` restores the 5.4.0 ambient conditions (the hourly row at every height, the sea-level pressure as the ambient pressure) but not the old fuel-flow scaling, which was wrong and has no switch. Use `ground_held` to see how much of a change comes from the atmosphere.
+
+The new option "Atmosphere Aloft" is in the emission calculation dialog, see [Calculate emissions and query results](#calculate-emissions-and-query-results). Studies themselves need no migration.
+
+**A 5.3.x study migrated with the 5.4.0 script** whose forms still refuse a decimal (field red, "Upgrade the study with scripts/migrate_alaqs.py") or that still logs "the numeric columns ... are not declared REAL" when opened: run the script of this version on it once more (`python scripts/migrate_alaqs.py study.alaqs`). The 5.4.0 script converted the columns but left the layer statistics QGIS had written when the layers were edited, and QGIS types the fields from those statistics; the plan shows `~ STATISTICS <layer>` and removes them, see [Upgrading from 5.3.x](#upgrading-from-53x).
 
 ## [Upgrading from 5.3.x](#upgrading-from-53x)
 [(Back to top)](#table-of-contents)
@@ -108,7 +128,7 @@ A study made with 5.3.0 to 5.3.5 also lacks the 5.3.6 corrections of `default_ai
      ```bash
      python scripts/migrate_alaqs.py study.alaqs
      ```
-     The numeric columns of the layers (height, speed, distance, idle time, temperature, diameter, velocity, the fleet percentages, the emission factors, ...) were declared `DECIMAL` in 5.3.x. QGIS types such a column from the values it holds: whole numbers made it an integer field, so a decimal typed in a form was rounded (2.5 saved as 3, or 25 under a German locale), and an empty layer made it a text field, so the typed text was stored as it was ("30,3"). The script rebuilds these tables with `REAL` columns (the values are kept; a text value that reads as a number becomes that number) and reports, as `WARNING: <table>.<column>: <n> value(s) are not numbers and are left as text: ...`, the texts it cannot read as a number (a text with a decimal comma and three decimals, such as "1,234", is left too, since it also reads as a grouped 1234), for you to correct in QGIS. A study that still has the old columns is reported in the log when it is opened ("Upgrade the study with scripts/migrate_alaqs.py"); it opens and calculates as before. In its forms a whole number is saved as typed, and a decimal typed into a column QGIS types as integer is refused (field red, tooltip "QGIS would save this value as 3 ... Upgrade the study with scripts/migrate_alaqs.py"), since QGIS would round it.
+     The numeric columns of the layers (height, speed, distance, idle time, temperature, diameter, velocity, the fleet percentages, the emission factors, ...) were declared `DECIMAL` in 5.3.x. QGIS types such a column from the values it holds: whole numbers made it an integer field, so a decimal typed in a form was rounded (2.5 saved as 3, or 25 under a German locale), and an empty layer made it a text field, so the typed text was stored as it was ("30,3"). The script rebuilds these tables with `REAL` columns (the values are kept; a text value that reads as a number becomes that number) and reports, as `WARNING: <table>.<column>: <n> value(s) are not numbers and are left as text: ...`, the texts it cannot read as a number (a text with a decimal comma and three decimals, such as "1,234", is left too, since it also reads as a grouped 1234), for you to correct in QGIS. The script also removes the per-column layer statistics QGIS writes when a layer is edited (`geometry_columns_field_infos`): QGIS types the fields from them when they exist, so without this step a converted column stayed an integer or text field in QGIS (the 5.4.0 script left them; run this version's script on such a study once more, the plan shows `~ STATISTICS <layer>`). A study that still has the old columns is reported in the log when it is opened ("Upgrade the study with scripts/migrate_alaqs.py"); it opens and calculates as before. In its forms a whole number is saved as typed, and a decimal typed into a column QGIS types as integer is refused (field red, tooltip "QGIS would save this value as 3 ... Upgrade the study with scripts/migrate_alaqs.py"), since QGIS would round it.
    + Schema and the engine table (replaces every row of `default_aircraft_engine_ei`, including rows you added or edited):
      ```bash
      python scripts/migrate_alaqs.py study.alaqs --refresh-reference-data --refresh-tables default_aircraft_engine_ei
@@ -118,6 +138,8 @@ A study made with 5.3.0 to 5.3.5 also lacks the 5.3.6 corrections of `default_ai
      python scripts/migrate_alaqs.py study.alaqs --refresh-reference-data --refresh-include-user-extensible
      ```
      This overwrites every row you added or edited in those tables, CUSTOM (ADS-B) profiles stored in the project's `default_aircraft_profiles` included (see [`scripts/README.md`](../scripts/README.md#migrate_alaqspy)). Add `--dry-run` to see the plan first.
+   + A study made with 5.0.x to 5.2.x is updated the same way. The schema step creates its missing tables and columns empty (`default_helicopter` and `default_helicopter_engines`, the 5.2.0 columns of `default_aircraft_engine_ei` and `default_stationary_ef`, `shapes_point_sources.activity_unit`), so such a study needs the full refresh (third command) to get the current helicopter catalog, engine, aircraft and profile data; without it helicopter movements find an empty catalog (the log says "default_helicopter table missing" or lists no helicopters). The refresh reports row counts only ("9243 rows -> 9218 rows (-25)"), not which rows go: a movement file that names a removed CUSTOM profile falls back to the aircraft's default profile with a "Lack of profile_id" warning in the log, so export the profiles you added before refreshing.
+   + An existing inventory (`<name>_out.alaqs`) opens and calculates in **Visualize Emission Calculation** without migration (checked here for inventories made with 5.0.0 to 5.4.0; it keeps the engine and profile tables it was made with, and the results do not change with the migration). `python scripts/migrate_alaqs.py <name>_out.alaqs` updates it with the inventory template, selected from the `_out.alaqs` suffix; its `grid_3d_definition` and `cache_runway_trajectories` tables, which every inventory has and the template does not, are reported as extra and left in place.
 3. Check **Touchdown Offset, Runway 1 [m]** and **Touchdown Offset, Runway 2 [m]** of each runway (`touchdown_2` is empty after the migration: each arrival profile's own distance), **In Study** of the stationary sources and **Engine Test Site** of the area sources.
 4. Generate the inventory again (**Calculate Emissions Inventory**) with the ADS-B file, if any: the ADS-B tracks are imported into the new inventory, and at an airport with a non-zero elevation the points of the take-off roll and of the landing are now set to the ground (height 0).
 5. Recalculate (**Visualize Emission Calculation**).
@@ -708,6 +730,12 @@ In the **Configuration** tab, the user can specify the general settings for the 
 + **Method**: `bymode` or `BFFM2` (BFFM2 is offered for CO, HC and NOx only). See below for a description of each.
 + **Apply NOx Corrections**: Applies the ICCAIA NOx correction for ambient temperature, humidity and aircraft weight (via `tow_ratio`) to the take-off and climb-out segments of the bymode method; approach and taxi are not corrected. It has no effect with BFFM2, which applies its own ambient correction.
 + **BFFM2 Fuel-Flow Source**: `trajectory` (default: fuel flow from each segment's power setting) or `mode_anchor` (EEDB anchor fuel flow of the segment's mode, ambient corrections still applied). Only used with BFFM2.
++ **Atmosphere Aloft** (5.4.1): the temperature, pressure and humidity used at each flight segment's height, from the hourly meteo row.
+  + `standard_lapse` (default): the station pressure from the row's sea-level pressure (QNH) and the airport elevation, and the 2 m temperature, carried up with the ISA lapse rate (6.5 K/km) and the hydrostatic law; the humidity ratio of the ground air kept.
+  + `surface_layer`: the boundary-layer temperature profile of AUSTAL 3.3 (`BlmTemp`) from the hour's temperature, wind speed, Obukhov length and mixing height, with the site parameters (z0, d0, ha) of the AUSTAL module; pressure and humidity as above. The surface heat flux implied by the wind and Obukhov length is bounded at 600 W/m2 (unstable) and 100 W/m2 (stable); rows above the bound are logged. Against the De Bilt radiosondes of 2025 this profile is 1 to 3 K too cold and not more accurate than `standard_lapse`.
+  + `ground_held`: the hourly row at every height, the 5.4.0 ambient conditions (sea-level pressure used as the ambient pressure). The 5.4.1 fuel-flow fix still applies.
+
+  It applies to the Mach number, the BFFM2 indices and fuel flow of flight segments and the MEEM V1 nvPM above 3,000 ft (all methods); the BFFM2 taxi and BFFM2 engine tests use the station pressure. The ICCAIA NOx correction uses the hourly row. A period without meteo stays at ISA at every height. A meteo row with a temperature or pressure that is not a positive number stops the calculation with a message naming the row's date. Description and checks: [`ATMOSPHERE_ALOFT.md`](ATMOSPHERE_ALOFT.md).
 + **Source Dynamics**: Select source dynamics method (_set to "none" by default_)
 + **Time Interval**: Set the time interval for the calculation (_1 hour by default_)
 + **Vertical Limit**: LTO ceiling in meters, used only when no ambient condition is available; otherwise the meteorological `MixingHeight` applies (_914.40 m by default_)
@@ -763,9 +791,9 @@ The connection of OpenALAQS with AUSTAL was realized based on the existing archi
 The dispersion module will only be activated if the `Is Enabled` checkbox is checked. By default, this checkbox is unchecked.
 
 The following parameters need to be defined:
-+ **Roughness Length**: Height above ground where wind speed theoretically becomes zero. Depends on terrain type (e.g., forests, urban areas, flat fields).
-+ **Displacement Height**: Height at which the wind profile starts to be affected by obstacles on the ground, such as buildings or trees.
-+ **Anemometer Height**: Height at which wind speed measurements are taken. Default: `10 + 6·z0` m, where `z0` is the roughness length (≈ 11.2 m at the typical airport value `z0 = 0.2`).
++ **Roughness Length** (`z0`): aerodynamic roughness of the land cover around the sources. Default `0.1` m, the TA Luft value for airports. See [Roughness length, displacement height and anemometer height](#roughness-length-displacement-height-and-anemometer-height).
++ **Displacement Height** (`d0`): height by which the wind profile is shifted up over vegetation or buildings. Default `6 z0` (`0.6` m); the spin box cannot be empty, so `0` means "derive from z0".
++ **Anemometer Height** (`ha`): height at which the meteo file's wind applies for the roughness `z0`. Default `10 m + d0` (`10.6` m); `0` means "derive from z0".
 + **Quality Level**: Determines the number of simulation particles (+1 doubles them; 1 to 10 on the Dispersion Models tab, 1 to 3 in the Calculate Dispersion dialog). Higher values increase accuracy but also computation time.
 + **NOTALUFT** (per-hour series): when enabled, AUSTAL writes per-hour grid output (`<substance>-NNNa.dmna`) and, when receptor points are configured, per-receptor time-series files (`<substance>-tmpa.dmna`). Required for **Plot Time Series** and **Compliance Report**; optional for **Plot Vector Layer** with `annual mean`.
 + **PM10 fine fraction**: how PM10 emissions are split between AUSTAL's `pm-1` and `pm-2` substances (default 0.9, suitable for an airport mix dominated by aircraft non-volatile PM and combustion exhaust).
@@ -781,6 +809,78 @@ The necessary input files for a simulation with AUSTAL are:
 + **grid file** (e\*\*\*\*.dmna): Emission data on a three-dimensional grid.
 
 The user is referred to the [`AUSTAL`](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download) documentation for more information on the input parameters and data files.
+
+### [Roughness length, displacement height and anemometer height](#roughness-length-displacement-height-and-anemometer-height)
+
+The AUSTAL output module writes three site parameters into `austal.txt`. AUSTAL derives its wind and turbulence profiles, and so the dilution of every source, from them and the hourly wind. OpenALAQS also uses them for the `surface_layer` atmosphere aloft, where their effect on emissions is small: under 0.2 % in NOx on a test day.
+
+| Parameter | Meaning | How to set it |
+| --- | --- | --- |
+| `z0`, Roughness Length (m) | aerodynamic roughness of the area around the sources | from the land cover around the sources (step 1) |
+| `d0`, Displacement Height (m) | height by which the profiles are shifted up over vegetation or buildings | 6 × z0 (AUSTAL default) unless there is a reason to deviate |
+| `ha`, Anemometer Height (m) | the height at which the meteo file's wind applies, **for the roughness z0** | from the anemometer's real height and its own surroundings (step 2); 10 m + d0 only if the anemometer stands on ground as rough as z0 |
+
+#### Step 1: z0 from the land cover
+
+AUSTAL implements TA Luft (2021, Anhang 2). Its rule for z0:
+1. For each source, take the area-weighted mean of the TA Luft z0 values of the land cover within a circle around the source. The radius is 15 × the source height, at least 150 m.
+2. Average over the sources; for sources of different height, weight by the square of the height.
+3. Round to the nearest TA Luft class: 0.01, 0.02, 0.05, 0.10, 0.20, 0.50, 1.0, 1.5 or 2.0 m.
+
+Outside Germany AUSTAL has no roughness register, so z0 must be entered. CORINE Land Cover (EEA, 100 m) gives the land-cover class. TA Luft values for common classes:
+
+| CORINE class | z0 (m) |
+| --- | --- |
+| water bodies (512) | 0.01 |
+| sport and leisure (142) | 0.05 |
+| airports (124), meadows and pastures (231), arable land (211) | 0.10 |
+| roads and rail (122), urban green (141) | 0.20 |
+| port areas (123) | 0.50 |
+| discontinuous urban (112), industrial and commercial (121) | 1.0 |
+| continuous urban (111) | 2.0 |
+
+AUSTAL takes **one z0 for the whole domain**. When the sources sit on very different ground, choose for the question asked and say so in the report:
+- an airport-only study takes the airport's value;
+- a study that adds city road traffic takes the value over all sources, or runs both as a sensitivity.
+
+*Example (Rotterdam The Hague, 2025 sources, CORINE 2018):*
+- airport ground sources, emission-weighted: 0.105 m, class 0.10;
+- roads: 0.65 to 0.69 m, class 0.50.
+
+#### Step 2: ha for that z0
+
+The meteo file's wind was measured at a real height h over the anemometer site's own roughness z0s, normally 10 m over grass at an airfield. AUSTAL instead reads the wind as if measured at height `ha` over ground of roughness z0.
+- **Same roughness (z0s = z0):** ha = 10 m + d0, which is AUSTAL's default.
+- **Different roughness:** ha is the equivalent height at which the profile over z0 gives the measured speed. German DWD time series (AKTerm) carry one such height per roughness class for this reason (AUSTAL manual, section 3.5.1).
+
+Using 10 m + d0 when the site is smoother than z0 makes AUSTAL overestimate u* and the dilution, so concentrations come out low.
+
+*Order of magnitude* (neutral log profiles, equal wind at 100 to 200 m; an approximation, not the DWD procedure) for a 10 m anemometer over z0s = 0.03 to 0.10 m:
+
+| z0 of the study | d0 = 6 z0 | ha |
+| --- | --- | --- |
+| 0.10 | 0.6 | 10 to 15 m |
+| 0.20 | 1.2 | 13 to 20 m |
+| 0.50 | 3.0 | 19 to 28 m |
+| 1.0 | 6.0 | 25 to 37 m |
+
+Where the met service supplies equivalent anemometer heights, use those. In the Netherlands, KNMI also publishes "potential wind": hourly wind at 10 m, reduced to a standard roughness of 0.03 m. With that series z0s = 0.03 m by construction.
+
+#### Step 3: keep the meteo file consistent
+
+The Obukhov length L in `tbl_InvMeteo` describes stability for a roughness too. AUSTAL's own conversion from stability class to L (TA Luft, Klug/Manier classes) depends on z0. A meteo file whose L was made for another roughness, or without one, gives profiles that are inconsistent with z0. The METAR converter `scripts/metar_to_alaqs_meteo.py` assigns L independently of z0, a known limitation; amendments to the converter are a separate, later change.
+
+#### Where to set them
+
+| Tool | Setting | Default |
+| --- | --- | --- |
+| Plugin, AUSTAL output module (Dispersion Models tab and Calculate Dispersion dialog) | Roughness Length, Displacement Height, Anemometer Height | 0.1 / 0.6 / 10.6 m; `0` in Displacement Height or Anemometer Height derives it from z0 |
+| Standalone `austal` subcommand, `austal_prep`, Dataiku recipe | `--z0`, `--d0`, `--ha`; `z0`, `d0`, `ha` in `config.json` and `recipe_config.json` | 0.1 m / 6 z0 / 10 m + d0; an empty or `null` value is derived from z0 |
+| `surface_layer` without an AUSTAL module (plugin, standalone `aircraft`, headless runner) | `--z0`, `--d0`, `--ha`; `atmosphere_z0_m`, `atmosphere_d0_m`, `atmosphere_ha_m` | as the AUSTAL module |
+
+**Defaults.** Since 5.4.1 the plugin, the standalone and `austal_prep` share one default (`open_alaqs/core/tools/surface_layer_atmosphere.site_parameters`): z0 = 0.1 m, the TA Luft value for airports (class 124), the land use around most airport sources; d0 = 6 z0 and ha = 10 m + d0, AUSTAL's own defaults, consistent with each other when the anemometer stands on the airfield. d0 and ha are derived from z0 whenever they are left empty, so changing z0 alone keeps the three consistent. Before 5.4.1 the plugin used 0.2 / 1.2 / 11.2 m as three independent fields, and the standalone `austal` pipeline 0.3 m, 4 z0 and 11.2 m. AUSTAL concentrations of studies that keep the defaults change (dilution); emissions change only with the `surface_layer` atmosphere, and by well under 1 %.
+
+**Report the three values and how they were chosen** with every AUSTAL result.
 
 ### [Running AUSTAL](#running-austal)
 

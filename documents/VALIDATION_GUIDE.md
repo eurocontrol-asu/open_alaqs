@@ -200,8 +200,8 @@ in training_v3.alaqs: 13 fixed-wing + 2 helicopter, kg):
 | ----------------------------------- | -----: | -----: | ----: |
 | bymode                              | 29.197 | 21.812 | 1.456 |
 | bymode + `--apply-nox-corrections`  | 27.963 | 21.812 | 1.456 |
-| bffm2_anchor                        | 27.745 | 21.532 | 1.468 |
-| bffm2_traj                          | 16.874 | 22.057 | 1.466 |
+| bffm2_anchor                        | 27.990 | 20.908 | 1.407 |
+| bffm2_traj                          | 15.311 | 21.546 | 1.409 |
 
 (Measured with the standalone of this version, default meteo and
 `--aircraft-only`, on `training_v3.alaqs`; equal to the sums of the pinned
@@ -212,7 +212,7 @@ the V2 result.)
 If you are running the 13-movement example inventory
 `example/training/training_out.alaqs` (no helicopters) as a smoke test,
 the totals must match `USAGE.md` § "Quick smoke test" (31.841 / 30.698 /
-30.056 / 18.721 kg NOx for the four methods, with or without
+30.141 / 16.615 kg NOx for the four methods, with or without
 `--aircraft-only`).
 
 ### Outputs to send
@@ -226,9 +226,8 @@ the totals must match `USAGE.md` § "Quick smoke test" (31.841 / 30.698 /
 
 - For each `v2_*.csv`, per-row diff against the matching pinned file at
   `openalaqs_standalone/validation/data/plugin_output/training_movements_*.csv`.
-  Tolerance bands per V1. Expected: PASS at 1e-6 everywhere except
-  `bffm2_traj` movement 11 (CUSTOM, PHBBA), PASS-WITH-DRIFT up to 1.3e-5
-  (NOx 1.3e-5; CO2, SOx and PM10 9e-6; HC 2e-6; CO within 1e-6).
+  Tolerance bands per V1. Expected: PASS at 1e-6 everywhere (OpenALAQS
+  5.4.1: 3.9e-11 at most; the NOx-corrected run 2.9e-7).
 - Cross-method sanity (no aircraft should produce zero CO, CO2, HC, NOx,
   SOx or PM10; SOx is fuel × 0.758 g/kg for every movement of this
   fixture (jet fuel), helicopters included; all 15 movements should appear
@@ -354,9 +353,8 @@ standalone's `aircraft` CSV to within float64 noise, on the same study
 
 - Build the row-aligned diff table keyed by `(oid, departure_arrival)`.
 - Tolerance bands: 1e-6 / 1e-4 / >1e-4 relative per pollutant.
-- For CAEP14: expect 100 % PASS at 1e-6, except `bffm2_traj` movement 11
- (CUSTOM): PASS-WITH-DRIFT, about 4e-6 on the example and 1.3e-5 on
- `training_v3.alaqs`. Any other row outside is a regression.
+- For CAEP14: expect 100 % PASS at 1e-6 (5.4.1). Any row outside is a
+ regression.
 - For campaign: report the band distribution. Investigate any 1e-4-band
  rows that did not exist in the prior build's V5 result.
 
@@ -455,6 +453,15 @@ The campaign study is the user's local artifact and is not shipped.
 | `scripts/migrate_alaqs_gui.py` | Qt5 GUI wrapper around the migration tool |
 
 ---
+
+**Running the automated tests.** Run the two suites separately, from the repository root:
+
+```bash
+QT_QPA_PLATFORM=offscreen python -m pytest --run-slow tests
+python -m pytest openalaqs_standalone/validation/tests
+```
+
+Together on one command line, pytest takes `openalaqs_standalone/pyproject.toml` as its configuration, the repository's `conftest.py` is not loaded, and `--run-slow` is not recognised. Slow tests (`@pytest.mark.slow`, among them `tests/test_emission_calculation.py`) run only with `--run-slow`. Calculations run directly on the bundled `.alaqs` fixtures can write cache tables into them (`test_bundled_fixture_hygiene` then fails): run ad hoc calculations on copies, keep the test checkout clean, and give pytest a `--basetemp` with a few GB of space (the plugin suite used 3.5 GB).
 
 
 ---

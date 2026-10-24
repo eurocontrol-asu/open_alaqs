@@ -77,6 +77,7 @@ _WORKER_CTX = None
 _WORKER_METHOD = None
 _WORKER_USE_ISA = None
 _WORKER_APPLY_NOX = None
+_WORKER_ATMOSPHERE = None
 
 
 def _worker_init(
@@ -84,6 +85,7 @@ def _worker_init(
     method: str,
     use_isa_meteo: bool,
     apply_nox_corrections: bool = False,
+    atmosphere: Optional[dict] = None,
 ) -> None:
     """Pool initializer: set up this worker's per-process resources.
 
@@ -95,11 +97,13 @@ def _worker_init(
     the per-task payload is only the oid list.
     """
     global _WORKER_CONN, _WORKER_CTX, _WORKER_METHOD, _WORKER_USE_ISA, _WORKER_APPLY_NOX
+    global _WORKER_ATMOSPHERE
     _WORKER_CONN = _mv.connect(alaqs_path)
     _WORKER_CTX = _cm.build_context(_WORKER_CONN)
     _WORKER_METHOD = method
     _WORKER_USE_ISA = use_isa_meteo
     _WORKER_APPLY_NOX = apply_nox_corrections
+    _WORKER_ATMOSPHERE = atmosphere
 
 
 def _worker_compute_batch(oids: list) -> dict:
@@ -120,6 +124,7 @@ def _worker_compute_batch(oids: list) -> dict:
             method=_WORKER_METHOD,
             use_isa_meteo=_WORKER_USE_ISA,
             apply_nox_corrections=_WORKER_APPLY_NOX,
+            atmosphere=_WORKER_ATMOSPHERE,
         )
         if res is not None:
             out[oid] = res
@@ -139,6 +144,7 @@ def compute_all_movements_parallel(
     processes: Optional[int] = None,
     batch_size: int = DEFAULT_BATCH_SIZE,
     apply_nox_corrections: bool = False,
+    atmosphere: Optional[dict] = None,
 ) -> dict:
     """Compute every movement in the study, across a process pool.
 
@@ -207,7 +213,13 @@ def compute_all_movements_parallel(
     with _mp.Pool(
         processes=processes,
         initializer=_worker_init,
-        initargs=(alaqs_path, method, use_isa_meteo, apply_nox_corrections),
+        initargs=(
+            alaqs_path,
+            method,
+            use_isa_meteo,
+            apply_nox_corrections,
+            atmosphere,
+        ),
     ) as pool:
         for batch_result in pool.map(_worker_compute_batch, batches):
             results.update(batch_result)

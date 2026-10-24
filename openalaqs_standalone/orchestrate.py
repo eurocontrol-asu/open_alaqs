@@ -43,6 +43,7 @@ from pathlib import Path
 import pandas as pd
 from pyproj import Transformer
 
+from open_alaqs.core.tools import surface_layer_atmosphere as _sla
 from open_alaqs.core.tools.utm import utm_epsg as _utm_epsg
 
 # Aircraft pipeline, used only when include_aircraft is requested.
@@ -75,6 +76,7 @@ def _build_aircraft_tables(
     use_isa_meteo: bool = False,
     source_dynamics: str = "none",
     apply_nox_corrections: bool = False,
+    atmosphere: dict | None = None,
 ) -> tuple:
     """Compute the aircraft emissions and return the austal table pair.
 
@@ -133,6 +135,7 @@ def _build_aircraft_tables(
                 processes=processes,
                 use_isa_meteo=use_isa_meteo,
                 apply_nox_corrections=apply_nox_corrections,
+                atmosphere=atmosphere,
             )
         else:
             results = _cm.compute_all_movements(
@@ -141,6 +144,7 @@ def _build_aircraft_tables(
                 oids=oids,
                 use_isa_meteo=use_isa_meteo,
                 apply_nox_corrections=apply_nox_corrections,
+                atmosphere=atmosphere,
             )
 
         ctx = _cm.build_context(conn)
@@ -273,8 +277,18 @@ def orchestrate(
     grid_writer_mode: str = "hybrid",
     source_dynamics: str = "none",
     apply_nox_corrections: bool = False,
+    atmosphere_model: str = "standard_lapse",
+    z0: float | None = None,
+    d0: float | None = None,
+    ha: float | None = None,
 ) -> dict:
     """Build all six input folders. Returns a dict of {step: count}.
+
+    `z0`, `d0`, `ha` are the AUSTAL site parameters (austal.txt), used for the
+    AUSTAL config and for the `surface_layer` atmosphere aloft alike. None
+    takes the shared OpenALAQS default (open_alaqs.core.tools.
+    surface_layer_atmosphere.site_parameters): z0 0.1 m (TA Luft, airports),
+    d0 6 z0, ha 10 m + d0.
 
     When `include_aircraft` is True, the aircraft movement emissions
     are computed and folded into the same `sources.parquet` and
@@ -290,6 +304,10 @@ def orchestrate(
     """
     if pollutants is None:
         pollutants = list(STATIONARY_POLLUTANTS)
+
+    # One set of site parameters for the AUSTAL config and the emissions: the given
+    # values, d0 = 6 z0 and ha = 10 m + d0 when left empty.
+    z0, d0, ha = _sla.site_parameters(z0, d0, ha)
 
     # Validate the time window. Both ends, when given, must lie inside
     # the inventory year's hour span [year-01-01 00:00, year+1-01-01).
@@ -441,6 +459,14 @@ def orchestrate(
             use_isa_meteo=use_isa_meteo,
             source_dynamics=source_dynamics,
             apply_nox_corrections=apply_nox_corrections,
+            # Ambient conditions aloft with the same site parameters as this study's
+            # AUSTAL config (one setting for both).
+            atmosphere={
+                "model": atmosphere_model,
+                "z0": z0,
+                "d0": d0,
+                "ha": ha,
+            },
         )
         by_type_summary["aircraft"] = len(ac_emissions_df)
         if len(ac_emissions_df) > 0:
@@ -600,6 +626,10 @@ def orchestrate(
         time_window=time_window,
         grid_writer_mode=grid_writer_mode,
         apply_nox_corrections=apply_nox_corrections,
+        atmosphere_model=atmosphere_model,
+        z0=z0,
+        d0=d0,
+        ha=ha,
     )
     summary["config"] = cfg
     print("  config.json: written")
@@ -759,6 +789,36 @@ def main(argv=None):
         "identical across modes.",
     )
     parser.add_argument(
+        "--atmosphere-model",
+        default="standard_lapse",
+        choices=("standard_lapse", "surface_layer", "ground_held"),
+        dest="atmosphere_model",
+        help="Ambient conditions at each flight segment's height from the hourly "
+        "meteo row: standard_lapse (default, 2 m temperature and station pressure from "
+        "QNH carried up with the ISA lapse rate), surface_layer (AUSTAL's boundary-layer "
+        "temperature profile with this run's z0, d0, ha) or ground_held (the hourly row "
+        "at every height: the 5.4.0 ambient conditions; the fuel-flow fix still applies).",
+    )
+    parser.add_argument(
+        "--z0",
+        type=float,
+        default=None,
+        help="AUSTAL roughness length (m), default 0.1 (TA Luft value for airports, "
+        "as the plugin's AUSTAL module); also used by --atmosphere-model surface_layer",
+    )
+    parser.add_argument(
+        "--d0",
+        type=float,
+        default=None,
+        help="AUSTAL displacement height (m), default 6 z0 (0.6 for the default z0)",
+    )
+    parser.add_argument(
+        "--ha",
+        type=float,
+        default=None,
+        help="AUSTAL anemometer height (m), default 10 m + d0 (10.6 for the default z0)",
+    )
+    parser.add_argument(
         "--apply-nox-corrections",
         action="store_true",
         default=False,
@@ -825,6 +885,10 @@ def main(argv=None):
         processes=args.processes,
         source_dynamics=args.source_dynamics,
         apply_nox_corrections=args.apply_nox_corrections,
+        atmosphere_model=args.atmosphere_model,
+        z0=args.z0,
+        d0=args.d0,
+        ha=args.ha,
         grid_writer_mode=args.grid_writer_mode,
     )
     print()

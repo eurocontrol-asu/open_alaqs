@@ -720,6 +720,9 @@ class _FakeAmbientCondition:
     def getPressure(self):
         return self._P
 
+    def setPressure(self, var):
+        self._P = var
+
     def getRelativeHumidity(self):
         return self._RH
 
@@ -794,9 +797,13 @@ def test_process_bffm2_calls_engine_bffm2_wrapper():
     result = m.process(_dt(1, 9), _dt(1, 10))
     assert result, "expected a non-empty result"
 
-    # Wrapper invoked with the ambient we injected.
+    # Wrapper invoked with the ambient we injected (5.4.1: a copy with the station
+    # pressure; the module has no study elevation here, so the pressure is the row's).
     assert captured.get("mode") == "CL"
-    assert captured.get("ambient") is ambient
+    got = captured.get("ambient")
+    assert got.getTemperature() == ambient.getTemperature()
+    assert got.getPressure() == pytest.approx(ambient.getPressure(), rel=1e-12)
+    assert got.getRelativeHumidity() == ambient.getRelativeHumidity()
     assert captured.get("mach") == 0.0
 
     # NOx computed with BFFM2 EI: 50 g/kg * 900 kg = 45000 g

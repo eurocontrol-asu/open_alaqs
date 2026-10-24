@@ -247,6 +247,33 @@ def run_aircraft(argv: list | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--atmosphere-model",
+        default="standard_lapse",
+        choices=("standard_lapse", "surface_layer", "ground_held"),
+        dest="atmosphere_model",
+        help="Ambient conditions at each flight segment's height from the hourly meteo "
+        "row: standard_lapse (default, 2 m temperature and station pressure from QNH "
+        "carried up with the ISA lapse rate), surface_layer (AUSTAL's boundary-layer "
+        "temperature profile), or ground_held (the row at every height: the 5.4.0 "
+        "ambient conditions; the fuel-flow fix still applies).",
+    )
+    parser.add_argument(
+        "--z0",
+        type=float,
+        default=None,
+        help="roughness length (m), default 0.1 (TA Luft value for airports, as the "
+        "plugin's AUSTAL module and the austal subcommand)",
+    )
+    parser.add_argument(
+        "--d0", type=float, default=None, help="displacement height (m), default 6 z0"
+    )
+    parser.add_argument(
+        "--ha",
+        type=float,
+        default=None,
+        help="anemometer height (m), default 10 m + d0",
+    )
+    parser.add_argument(
         "--oids",
         default=None,
         help=(
@@ -367,6 +394,7 @@ def run_aircraft(argv: list | None = None) -> int:
     if args.processes > 1:
         print(f"  using {args.processes} worker processes")
 
+    _atm = {"model": args.atmosphere_model, "z0": args.z0, "d0": args.d0, "ha": args.ha}
     conn = mv.connect(str(args.alaqs_file))
     try:
         if args.processes > 1:
@@ -382,6 +410,7 @@ def run_aircraft(argv: list | None = None) -> int:
                 oids=oids,
                 processes=args.processes,
                 apply_nox_corrections=args.apply_nox_corrections,
+                atmosphere=_atm,
             )
         else:
             results = cm.compute_all_movements(
@@ -390,6 +419,7 @@ def run_aircraft(argv: list | None = None) -> int:
                 use_isa_meteo=not args.use_meteo,
                 oids=oids,
                 apply_nox_corrections=args.apply_nox_corrections,
+                atmosphere=_atm,
             )
 
         if not results:

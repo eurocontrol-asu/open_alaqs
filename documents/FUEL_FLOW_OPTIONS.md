@@ -2,9 +2,9 @@
 
 October 2026. This note records what an ADS-B comparison showed about the
 fuel-flow step of the `bffm2_traj` method and the changes proposed as a
-result. None of them is implemented in this release; the effects quoted for
-O1 and O2 were measured with a prototype in the standalone that is not
-shipped.
+result. O2 is implemented in 5.4.1 (section 3); the others are not. The
+effects quoted for O1 and O2 were measured with a prototype in the
+standalone.
 
 ## 1. The step in question
 
@@ -14,9 +14,12 @@ The trajectory method turns a profile point into emissions in three steps:
    the thrust supplied with an ADS-B (CUSTOM) track;
 2. fuel flow at the point: the ICAO engine databank curve (the four
    certification points, twin-quadratic interpolation) read at that thrust
-   share, then converted from the databank's reference conditions to ambient
-   with the inverse of the BFFM2 relation,
-   `ff_amb = ff_ref · δ / θ^3.8 / e^(0.2 M²)`; or, for a CUSTOM track that
+   share, then scaled to ambient with the corrected-parameter scaling of
+   gas-turbine performance, `ff_amb = ff_ref · δ · √θ` (until 5.4.0 the
+   inverse of the BFFM2 relation, `ff_ref · δ / θ^3.8 / e^(0.2 M²)`, see
+   section 3); δ and θ are those at the point's height
+   (`atmosphere_model`, default `standard_lapse`, from 5.4.1; see
+   `ATMOSPHERE_ALOFT.md`); or, for a CUSTOM track that
    carries `fuel_flow_kgm`, the supplied value (per engine, plausibility
    ceiling 1.5 × the take-off value);
 3. emission indices: BFFM2 (SAE AIR-5715 / CAEP), `ff_ref` from the ambient
@@ -63,7 +66,14 @@ project's own material; the findings that matter for the code:
   50 kt in 6 to 8 s of track time) that a thrust inversion turns into a
   large negative thrust and an implausible fuel flow.
 
-## 3. Proposed options O1 and O2 (prototype, not shipped)
+## 3. Options O1 and O2
+
+Status (5.4.1): O2 is the shipped behaviour, without a switch. It is a fix:
+the inverse BFFM2 relation is an emission-index conversion, not a fuel-flow
+model, and gave the wrong sign with temperature; `δ √θ` is the
+corrected-parameter scaling of gas-turbine performance (the corrected fuel
+flow, fuel flow / (δ √θ), is a function of the corrected thrust, thrust / δ,
+and Mach). O1 is not shipped. The table describes the prototype.
 
 | Option | What it would do |
 | --- | --- |
@@ -112,16 +122,16 @@ Why O1 and O2 are not defaults, nor shipped as options yet:
   reference fuel flow to 1e-9. Pinned in
   `openalaqs_standalone/validation/tests/test_caep14_sheet_reference_case.py`.
 - Fuel-flow step as shipped: plugin = reference = standalone on the 15
-  fixture movements (`test_plugin_csv_vs_reference.py`). O1 and O2, when
-  implemented, are to be validated the same way.
+  fixture movements (`test_plugin_csv_vs_reference.py`), O2 included since
+  5.4.1.
 
 Procedure and numbers: `openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md`.
 
-## 5. Proposed changes (not implemented)
+## 5. Proposed changes (O2 implemented in 5.4.1, the others not)
 
 | ID | Change | Default | Where |
 | --- | --- | --- | --- |
-| O1, O2 | the two options of section 3, in the plugin (`MovementEmissionCalculator`, a checkbox pair in the calculation dialog), the standalone and the reference implementation | off | `open_alaqs/core`, `open_alaqs/gui`, `openalaqs_standalone` |
+| O1, O2 | the two options of section 3 (O2 shipped in 5.4.1 as the behaviour, not an option), in the plugin (`MovementEmissionCalculator`, a checkbox pair in the calculation dialog), the standalone and the reference implementation | off | `open_alaqs/core`, `open_alaqs/gui`, `openalaqs_standalone` |
 | O3 reduced take-off thrust | scale the take-off roll and initial climb thrust of an ANP departure profile by a per-type factor (evidence: 0.74 for the 737-800), or use ANP reduced-thrust procedures where ANP has them; removes the second half of the cancelling pair of F3 | off | profile handling, a `default_aircraft` column |
 | O4 runway rule for supplied fuel flows | a CUSTOM point below Mach 0.2 with a fuel flow flagged out of range takes the ICAO curve at its thrust share with O1, capped at take-off (F6); today done upstream by the study that supplies the track | on for flagged points | ADS-B loader, `compute_aircraft` supplied-fuel-flow path |
 | O5 plausibility floor | a CUSTOM point with thrust share below −0.05 is marked unreliable: thrust 0, supplied fuel flow replaced by the near-idle value, counted in the run diagnostics; the delivered value is kept between −0.05 and 0 (idle at speed) (F7) | on | same loader, `runway_checks.csv`-style diagnostics |

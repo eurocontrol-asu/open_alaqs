@@ -2238,6 +2238,26 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 "which always applies its own ambient correction."
             ),
         },
+        "atmosphere_model": {
+            "label": "Atmosphere Aloft",
+            "widget_type": QtWidgets.QComboBox,
+            "initial_value": "standard_lapse",
+            "widget_config": {
+                "options": ["standard_lapse", "surface_layer", "ground_held"],
+            },
+            "tooltip": (
+                "Ambient temperature, pressure and humidity at each flight "
+                "segment's height, from the hourly meteo row. standard_lapse "
+                "(default): the 2 m temperature and the station pressure (from "
+                "QNH and the airport elevation) carried up with the ISA lapse "
+                "rate. surface_layer: AUSTAL 3.3's boundary-layer temperature "
+                "profile from the hour's wind and stability, site parameters "
+                "from the AUSTAL module (about 1 to 3 K too cold against the De "
+                "Bilt radiosondes of 2025). ground_held: the hourly row at every "
+                "height (the 5.4.0 ambient conditions; the 5.4.1 fuel-flow fix "
+                "still applies)."
+            ),
+        },
         "bffm2_ff_source": {
             "label": "BFFM2 Fuel-Flow Source",
             "widget_type": QtWidgets.QComboBox,
@@ -2963,6 +2983,7 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 ),
                 source_dynamics=em_config.get("source_dynamics", "none"),
                 bffm2_ff_source=em_config.get("bffm2_ff_source", "trajectory"),
+                atmosphere_model=em_config.get("atmosphere_model") or "standard_lapse",
                 grid_config=grid_config,
                 receptor_points=self._receptor_points,
                 dispersion_modules_config=self.getDispersionModulesConfiguration(),

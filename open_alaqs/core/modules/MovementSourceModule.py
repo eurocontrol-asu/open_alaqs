@@ -22,6 +22,7 @@ from open_alaqs.core.MovementEmissionCalculator import (
     GateEmissionCalculator,
     TaxiingEmissionCalculator,
 )
+from open_alaqs.core.tools import surface_layer_atmosphere as sla
 
 logger = get_logger(__name__)
 
@@ -123,6 +124,17 @@ class MovementSourceModule(SourceModule):
             )
         self._meem_version = "v1"
         self._bffm2_ff_source = values_dict.get("bffm2_ff_source", "trajectory")
+        # Ambient conditions aloft (core/tools/surface_layer_atmosphere.py): default
+        # standard_lapse (ISA lapse rate from the hourly row); surface_layer uses AUSTAL's
+        # boundary-layer formulas with the site parameters of the study's AUSTAL run.
+        self._atmosphere_model = sla.normalise_model(
+            values_dict.get("atmosphere_model")
+        )
+        self._atmosphere_site = sla.site_parameters(
+            values_dict.get("atmosphere_z0_m"),
+            values_dict.get("atmosphere_d0_m"),
+            values_dict.get("atmosphere_ha_m"),
+        )
         self._nox_correction = values_dict.get("should_apply_nox_corrections", False)
         self._smooth_and_shift = values_dict.get("source_dynamics", "none")
         # Airport altitude (NOx correction, MEEM V1 ISA temperature, LTO cut): the study's airport elevation,
@@ -363,6 +375,8 @@ class MovementSourceModule(SourceModule):
                 "ambient_conditions": ambient_conditions,
                 "meem_version": self._meem_version,
                 "bffm2_ff_source": self._bffm2_ff_source,
+                "atmosphere_model": self._atmosphere_model,
+                "atmosphere_site": self._atmosphere_site,
             },
         }
 

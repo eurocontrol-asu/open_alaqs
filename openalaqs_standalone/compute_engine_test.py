@@ -275,11 +275,9 @@ def _add_bffm2_ei_to_totals(
     the plugin's Engine.getEmissionIndexByModeWithBFFM2 composition:
     BFFM2 gas + EEDB PM (Design A per phase 5 memo).
     """
-    # Ambient fuel flow conversion: FF_ref → FF_amb via θ/δ/Mach.
-    #   FF_amb = FF_ref * δ / θ^3.8 / exp(0.2*M²)
-    # Matches Engine.getEmissionIndexByEngineState's pre-conversion so the
-    # bffm2 module's internal inverse correction cancels the pre-conversion
-    # and lands on the correct EEDB interpolation position.
+    # Ambient fuel flow: FF_amb = FF_ref * δ * √θ (corrected-parameter
+    # scaling), as Engine.getEmissionIndexByEngineState; the BFFM2 index step
+    # then converts FF_amb to its reference fuel flow.
     import math
 
     from open_alaqs.core.interfaces.Emissions import PollutantType
@@ -298,7 +296,9 @@ def _add_bffm2_ei_to_totals(
     mach = float(meteo.get("mach_number", 0.0))
     theta = T_K / 288.15
     delta = P_Pa / 101325.0
-    ff_amb = ff_ref * delta / (theta**3.8) / math.exp(0.2 * mach**2)
+    # Corrected-parameter scaling (mirrors Engine.getEmissionIndexByEngineState);
+    # engine tests are static (Mach 0).
+    ff_amb = ff_ref * delta * math.sqrt(theta)
 
     fuel_burned = ff_amb * t_effective_s
     totals["fuel"] += fuel_burned
@@ -346,6 +346,28 @@ def _add_bffm2_ei_to_totals(
     totals["co2"] += 3160.0 * fuel_burned
 
 
+def _station_pressure_meteo(conn, meteo: Dict, atmosphere_model: Optional[str]) -> Dict:
+    """meteo with P_Pa as the station pressure (QNH reduced to the study's airport elevation),
+    unless the model is ground_held or the dict is not a tbl_InvMeteo row."""
+    from open_alaqs.core.tools import surface_layer_atmosphere as _sla
+
+    if (
+        _sla.normalise_model(atmosphere_model) == _sla.MODEL_GROUND_HELD
+        or "WindSpeed" not in meteo
+    ):
+        return meteo
+    elev = 0.0
+    try:
+        row = conn.execute("SELECT airport_elevation FROM user_study_setup").fetchone()
+        if row and row[0] not in (None, ""):
+            elev = float(row[0])
+    except (sqlite3.Error, TypeError, ValueError):
+        elev = 0.0
+    out = dict(meteo)
+    out["P_Pa"] = _sla.station_pressure_from_qnh(meteo["P_Pa"], elev)
+    return out
+
+
 def compute_engine_test_for_period(
     events: Iterable[Dict],
     period_start: datetime,
@@ -354,6 +376,7 @@ def compute_engine_test_for_period(
     aircraft_lookup: Dict,
     diagnostics: Optional[List[str]] = None,
     conn: Optional[sqlite3.Connection] = None,
+    atmosphere_model: Optional[str] = None,
 ) -> Dict[str, Dict[str, float]]:
     """Compute per-source emission totals for one period.
 
@@ -494,6 +517,12 @@ def compute_engine_test_for_period(
                     else:
                         try:
                             bffm2_meteo = _mv.get_meteo_at(conn, mid_iso, use_isa=False)
+                            # 5.4.1: the station pressure at the airport elevation from the
+                            # row's QNH (as the plugin's EngineTestSource and the taxi);
+                            # ground_held keeps QNH (5.4.0). ISA fallbacks are left as they are.
+                            bffm2_meteo = _station_pressure_meteo(
+                                conn, bffm2_meteo, atmosphere_model
+                            )
                             # Warn once if the returned meteo is ISA
                             # (meaning tbl_InvMeteo had no <= mid_iso
                             # row, get_meteo_at recursively fell back).
@@ -639,8 +668,12 @@ def compute_engine_test_emissions(
     year: int,
     pollutants: Optional[list] = None,
     time_window: Optional[Tuple[Any, Any]] = None,
+    atmosphere_model: Optional[str] = None,
 ):
     """Compute hourly engine-test emissions for all in-study test sites.
+
+    ``atmosphere_model``: BFFM2 events use the station pressure (QNH at the airport
+    elevation) unless it is ``ground_held`` (QNH as the pressure, 5.4.0).
 
     Signature mirrors ``compute_area_emissions`` so ``orchestrate.py``
     can dispatch to it uniformly alongside road / parking / point /
@@ -755,6 +788,7 @@ def compute_engine_test_emissions(
             ei_lookup=ei_lookup,
             aircraft_lookup=aircraft_lookup,
             conn=None,
+            atmosphere_model=atmosphere_model,
         )
         for raw_source_id, totals in by_source.items():
             # Prefix with "engine_test:" to match extract_sources.py's

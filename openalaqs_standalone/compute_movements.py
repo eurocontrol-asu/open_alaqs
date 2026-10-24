@@ -261,6 +261,7 @@ def compute_for_movement(
     method: str = "bymode",
     use_isa_meteo: bool = True,
     apply_nox_corrections: bool = False,
+    atmosphere: Optional[dict] = None,
 ) -> Optional[dict]:
     """Compute one movement, dispatching on aircraft type.
 
@@ -377,6 +378,7 @@ def compute_for_movement(
             method,
             use_isa_meteo,
             apply_nox_corrections=apply_nox_corrections,
+            atmosphere=atmosphere,
         )
 
     # Gate emissions (Phase A2): per-movement GSE + GPU, computed
@@ -467,6 +469,7 @@ def compute_all_movements(
     use_isa_meteo: bool = True,
     oids: Optional[list] = None,
     apply_nox_corrections: bool = False,
+    atmosphere: Optional[dict] = None,
 ) -> dict:
     """Compute every movement in the study (or a given subset).
 
@@ -509,6 +512,7 @@ def compute_all_movements(
             method=method,
             use_isa_meteo=use_isa_meteo,
             apply_nox_corrections=apply_nox_corrections,
+            atmosphere=atmosphere,
         )
         if res is not None:
             results[oid] = res

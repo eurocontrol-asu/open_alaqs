@@ -127,9 +127,9 @@ The CSV must have a header row with columns: `x_cells`, `y_cells`, `z_cells`, `x
 | `quality_level`           | int    | `1`                             | AUSTAL quality level (1=fastest, 3=most accurate)|
 | `mixing_height_enabled`   | bool   | `False`                         | Include mixing height in AUSTAL series file      |
 | `options_string`          | string | `NOSTANDARD;SCINOTAT;Kmax=1`    | AUSTAL options flags                             |
-| `roughness_length_m`      | float  | `0.2`                           | Aerodynamic roughness length (m)                 |
-| `displacement_height_m`   | float  | `1.2`                           | Zero-plane displacement height (m)               |
-| `anemometer_height_m`     | float  | `11.2`                          | Anemometer height (m)                            |
+| `roughness_length_m`      | float  | `0.1`                           | Aerodynamic roughness length (m), TA Luft airports |
+| `displacement_height_m`   | float  | `0.6` (6 z0)                    | Zero-plane displacement height (m); empty or 0 derives from z0 |
+| `anemometer_height_m`     | float  | `10.6` (10 m + d0)              | Anemometer height (m); empty or 0 derives from z0 |
 | `show_logs`               | bool   | `False`                         | Show detailed logs during generation             |
 
 ### Accepted Pollutant Values
