@@ -9,7 +9,7 @@ qgisMaximumVersion=4.99
 supportsQt6=True
 description=An open-source local air quality model
 
-version=5.4.0
+version=5.4.1
 author=Eurocontrol
 email=open-alaqs@eurocontrol.int
 
@@ -22,7 +22,12 @@ repository=https://github.com/eurocontrol-asu/open_alaqs
 # Recommended items:
 
 hasProcessingProvider=no
-changelog=5.4.0
+changelog=5.4.1
+    Results change for BFFM2: the fuel flow read on the ICAO curve at the thrust share is scaled to ambient with delta * sqrt(theta) (corrected-parameter scaling), not the inverse of the BFFM2 index conversion, which lowered the fuel flow on warm days; affects bffm2_traj with ANP profiles, BFFM2 taxi and BFFM2 engine tests.
+    Results change: new option "Atmosphere Aloft" (default standard_lapse): temperature, pressure and humidity at each flight segment's height from the hourly meteo row (station pressure from QNH, ISA lapse rate; surface_layer = AUSTAL 3.3 boundary-layer profile as an option); affects the BFFM2 indices and fuel flow in flight, BFFM2 taxi and engine tests (station pressure), and MEEM V1 nvPM above 3000 ft for all methods. ground_held restores the 5.4.0 ambient conditions only; no option gives 5.4.0 BFFM2 results back. See "Upgrading from 5.4.0" in the user guide.
+    Results change for AUSTAL runs that keep the defaults: the AUSTAL site parameters default to z0 0.1 m (TA Luft value for airports), d0 6 z0 and ha 10 m + d0 (were 0.2 / 1.2 / 11.2 m), derived from z0 when left at 0; one default for the plugin, the standalone and austal_prep. See "Roughness length, displacement height and anemometer height" in the user guide.
+    scripts/migrate_alaqs.py: a 5.3.x study edited in QGIS kept integer or text fields after the 5.4.0 migration (QGIS types fields from the layer statistics it wrote); the statistics of a converted layer are now removed. Run the script of this version once more on a study migrated with 5.4.0 whose forms still refuse a decimal.
+    5.4.0
     Results change for many studies: read "Upgrading from 5.3.x" in the user guide before recalculating an existing study. Existing studies keep their own engine, aircraft and profile tables until they are refreshed.
     Runway placement: arrivals touch down at the landing threshold plus the Touchdown Offset (set per runway end) and leave the runway at their taxi route's exit; departures line up where their taxi route meets the runway; the arrival taxi time no longer counts the landing roll.
     Aircraft SOx from the fuel sulphur (0.758 g/kg jet fuel, 0.2 g/kg AvGas); it was 0.

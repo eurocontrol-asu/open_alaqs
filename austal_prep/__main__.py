@@ -60,9 +60,10 @@ def _build_study_config(cfg: dict) -> AustalStudyConfig:
         title=cfg["title"],
         grid=grid,
         qs=int(cfg.get("qs", 3)),
-        z0=float(cfg.get("z0", 0.3)),
-        d0=float(cfg.get("d0", 1.2)),
-        ha=float(cfg.get("ha", 11.2)),
+        # z0, d0, ha: missing or null derive from z0 (AustalStudyConfig.__post_init__)
+        z0=cfg.get("z0"),
+        d0=cfg.get("d0"),
+        ha=cfg.get("ha"),
         os_options=cfg.get("os_options", "NOSTANDARD;SCINOTAT;Kmax=1"),
         pm10_fine_fraction=float(cfg.get("pm10_fine_fraction", 0.9)),
         mixing_height_included=bool(cfg.get("mixing_height_included", True)),

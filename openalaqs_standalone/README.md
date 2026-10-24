@@ -31,7 +31,8 @@ live in the sibling `austal_prep/` package.
 
 For a task-oriented walk-through of running the package from a terminal
 (installation, CLI subcommands, method selection, NOx ambient correction,
-`config.json` keys, validation harness), see [USAGE.md](USAGE.md). The
+atmosphere aloft (5.4.1), `config.json` keys,
+validation harness), see [USAGE.md](USAGE.md). The
 sections below cover architecture, conventions, and limitations.
 
 ## What it produces
@@ -471,6 +472,9 @@ What is not yet built:
 - **Point and area PM column convention** is assumed, not verified
   (see "Emission factor columns" above): no bundled study has a
   non-zero PM2.5 factor for those source types.
+- **Engine tests in the `austal` pipeline** are computed with the ICAO
+  mode values ("snap"): `compute_engine_test_emissions` passes no database
+  connection, so BFFM2 events fall back to snap there (as in 5.4.0).
 - **Shared-import refactor of the stationary half.** The stationary
   computes still read pre-computed EFs rather than calling shared
   COPERT5 logic; see "Why the stationary half is structured this
@@ -491,7 +495,7 @@ Together they cover, among other things:
 - the plugin-output gate: the CAEP14 reference and the standalone
   reproduce the pinned plugin CSVs (`validation/data/plugin_output/`)
   for all 15 movements and the three methods, within 2e-4 relative
-  (movement 11, the ADS-B track, differs by 1.3e-5 on `bffm2_traj`)
+  (5.4.1: 3.4e-13 at most; the NOx-corrected run 3.1e-6)
   (`test_plugin_csv_vs_reference.py`)
 - the CAEP14 reference itself (`test_caep14_sheet_reference_case.py`,
   `test_caep14_reference_lookups.py`, `test_helicopter_caep14_reference.py`)

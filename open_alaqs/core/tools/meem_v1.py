@@ -21,6 +21,10 @@ segment altitude above mean sea level (height plus airport elevation):
 
   Non-LTO (CLIMB TO CRUISE, CRUISE, DESCENT TO APPROACH; above 3000 ft):
     1. ISA+dT ambient T and P at the segment altitude (USER INPUTS!B44/B45).
+       OpenALAQS 5.4.1: calculate_nvpm_ei(..., ambient=(T, P)) replaces them
+       with the local T and P of the atmosphere model (standard_lapse or
+       surface_layer); dT is then not used. The sheet's ISA+dT is used for
+       ground_held.
     2. Mach from the true airspeed and the local speed of sound
        (USER INPUTS!B39), unless a Mach number is given.
     3. Engine inlet total conditions (B50/B51):
@@ -67,7 +71,7 @@ References:
 import logging
 import math
 from dataclasses import dataclass
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -289,6 +293,7 @@ def calculate_nvpm_ei(
     k_saf_mass: float = 1.0,
     k_saf_number: float = 1.0,
     number_thrust_settings: Optional[Sequence[float]] = None,
+    ambient: Optional[Tuple[float, float]] = None,
 ) -> MEEMResult:
     """nvPM mass and number EIs at a segment, MEEM V1 as the CAEP14 v14 sheet.
 
@@ -308,6 +313,10 @@ def calculate_nvpm_ei(
     :param k_saf_number: fuel-composition factor for number (1 for fossil).
     :param number_thrust_settings: thrust settings of the number points when
         they differ from the mass points (5-point engines); default: the same.
+    :param ambient: (T in K, p in Pa) at the segment from the emission
+        calculation's atmosphere model (OpenALAQS 5.4.1, atmosphere_model);
+        replaces the sheet's ISA + delta_t atmosphere (B47, B48). None: the
+        sheet's atmosphere.
     """
     ts_num = (
         thrust_settings if number_thrust_settings is None else number_thrust_settings
@@ -336,7 +345,10 @@ def calculate_nvpm_ei(
     eta = SEGMENT_CONSTANTS[phase][0]  # B25
     pi_alt = pressure_coefficient(phase, altitude_ft, cruise_altitude_ft)  # B26
 
-    t_amb, p_amb = isa_ambient(altitude_ft, delta_t)  # B47, B48
+    if ambient is not None:
+        t_amb, p_amb = float(ambient[0]), float(ambient[1])
+    else:
+        t_amb, p_amb = isa_ambient(altitude_ft, delta_t)  # B47, B48
     if mach is None:
         if tas_kt is None:
             raise ValueError("MEEM V1 non-LTO branch needs a Mach number or a TAS")

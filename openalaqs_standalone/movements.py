@@ -775,12 +775,27 @@ def get_meteo_at(
     """
     if use_isa:
         return dict(ISA_AMBIENT)
-    row = conn.execute(
-        "SELECT Temperature, SeaLevelPressure, RelativeHumidity, Humidity "
-        "FROM tbl_InvMeteo WHERE DateTime <= ? "
-        "ORDER BY DateTime DESC LIMIT 1",
-        (runway_time,),
-    ).fetchone()
+    # The boundary-layer columns that exist (older or minimal studies may lack some); a
+    # missing column reads as NULL, as an empty cell does. The plugin's AmbientCondition
+    # takes the same defaults: no wind (0), neutral (L 99999), MixingHeight 3,000 ft.
+    try:
+        _cols = {r[1] for r in conn.execute("PRAGMA table_info(tbl_InvMeteo)")}
+    except sqlite3.Error:
+        _cols = set()
+    _bl = ", ".join(
+        c if c in _cols else "NULL"
+        for c in ("WindSpeed", "ObukhovLength", "MixingHeight")
+    )
+    try:
+        row = conn.execute(
+            "SELECT Temperature, SeaLevelPressure, RelativeHumidity, Humidity, "
+            + _bl
+            + ", DateTime FROM tbl_InvMeteo WHERE DateTime <= ? "
+            "ORDER BY DateTime DESC LIMIT 1",
+            (runway_time,),
+        ).fetchone()
+    except sqlite3.OperationalError:
+        row = None
     if row is None:
         return get_meteo_at(conn, runway_time, use_isa=True)
     T_K = float(row[0])
@@ -790,6 +805,11 @@ def get_meteo_at(
         "RH": float(row[2]),
         "Humidity": float(row[3]) if row[3] is not None else None,
         "speed_of_sound_m_s": _speed_of_sound_m_s(T_K),
+        # Boundary-layer inputs of the atmosphere aloft (surface_layer_atmosphere)
+        "WindSpeed": float(row[4]) if row[4] is not None else None,
+        "ObukhovLength": float(row[5]) if row[5] is not None else None,
+        "MixingHeight": float(row[6]) if row[6] is not None else 914.4,
+        "DateTime": row[7],
     }
 
 

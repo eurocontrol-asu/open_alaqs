@@ -43,10 +43,10 @@ under a minute. Expected aircraft NOx total (13 movements, year 2025):
 | ------------------------------- | -------- |
 | `bymode`                        |   31.841 |
 | `bymode` + `--apply-nox-corrections` |   30.698 |
-| `bffm2_anchor`                  |   30.056 |
-| `bffm2_traj`                    |   18.721 |
+| `bffm2_anchor`                  |   30.141 |
+| `bffm2_traj`                    |   16.615 |
 
-(CO 22.414 / 22.414 / 21.949 / 23.338 kg; the same with `--aircraft-only`,
+(CO 22.414 / 22.414 / 21.313 / 22.943 kg; the same with `--aircraft-only`,
 since the example has no gate, APU or start emissions.)
 
 ```bash
@@ -182,6 +182,38 @@ The BFFM2 ambient correction uses the study meteo in `tbl_InvMeteo` by
 default (`--use-meteo`), as the plugin does; `--isa-meteo` (`austal`:
 `--use-isa-meteo`) forces ISA and only reproduces older runs.
 
+### Atmosphere aloft (5.4.1)
+
+The hourly meteo row is carried to each flight segment's height with
+`--atmosphere-model` (both subcommands):
+
+| Value | Ambient at the segment's height |
+| --- | --- |
+| `standard_lapse` (default) | 2 m temperature and station pressure (from QNH and the airport elevation) carried up with the ISA lapse rate and the hydrostatic law; humidity ratio kept |
+| `surface_layer` | AUSTAL 3.3 boundary-layer temperature profile from the hour's temperature, wind, Obukhov length and mixing height; pressure and humidity as above. Implied heat flux bounded at 600 / 100 W/m2 (unstable / stable), with a warning. 1 to 3 K too cold against the De Bilt radiosondes of 2025 |
+| `ground_held` | the hourly row at every height: the 5.4.0 ambient conditions (the fuel-flow fix still applies, so 5.4.0 BFFM2 numbers do not come back) |
+
+Site parameters: `--z0`, `--d0`, `--ha` (m), the AUSTAL site parameters. Both
+subcommands share one default with the plugin's AUSTAL module and `austal_prep`
+(`open_alaqs/core/tools/surface_layer_atmosphere.site_parameters`): z0 0.1 m
+(the TA Luft value for airports), d0 6 z0 (0.6 m), ha 10 m + d0 (10.6 m); d0
+and ha are derived from z0 when not given. `aircraft` uses them for
+`surface_layer` only; `austal` writes them to the AUSTAL config and uses them
+for the emissions alike. How to choose them: user guide, "Roughness length,
+displacement height and anemometer height". With
+`--isa-meteo` (or no meteo row) the ambient stays ISA at every height whatever
+the model. A meteo row whose temperature or pressure is not a positive number
+stops the run with a message naming its date.
+
+Engine tests: the `austal` subcommand (and the Dataiku recipe) computes them
+with the ICAO mode values ("snap"), as in 5.4.0, so BFFM2 events, the 5.4.1
+fuel-flow scaling and the atmosphere option do not reach them there.
+
+```bash
+python -m openalaqs_standalone aircraft $ALAQS --out totals.csv \
+    --method bffm2_traj --atmosphere-model ground_held   # the 5.4.0 ambient conditions
+```
+
 Set the method on the `aircraft` subcommand:
 
 ```bash
@@ -271,9 +303,9 @@ downstream AUSTAL pipeline reads. The keys that affect computation:
 {
   "title": "Rotterdam",
   "qs": 3,
-  "z0": 0.3,
-  "d0": 1.2,
-  "ha": 11.2,
+  "z0": 0.1,
+  "d0": 0.6,
+  "ha": 10.6,
   "os_options": "NOSTANDARD;NOTALUFT;SCINOTAT;Kmax=1",
   "mixing_height_included": true,
   "grid_writer_mode": "hybrid",
@@ -302,9 +334,9 @@ downstream AUSTAL pipeline reads. The keys that affect computation:
 | Key                    | Effect                                                              |
 | ---------------------- | ------------------------------------------------------------------- |
 | `qs`                   | AUSTAL quality level                                                |
-| `z0`                   | roughness length (m)                                                |
-| `d0`                   | displacement height (m); defaults to 4·z0                           |
-| `ha`                   | anemometer reference height (m)                                     |
+| `z0`                   | roughness length (m); default 0.1 (TA Luft, airports)               |
+| `d0`                   | displacement height (m); null or absent = 6 z0                      |
+| `ha`                   | anemometer height (m) for the roughness z0; null or absent = 10 m + d0 |
 | `os_options`           | AUSTAL `os` line                                                    |
 | `mixing_height_included`| feed mixing-height column to AUSTAL meteo                          |
 | `grid_writer_mode`     | `hybrid` (default: one e-file per hour for aircraft sub-sources, one time-invariant e-file for stationary sources), `time_indexed` (one time-invariant e-file for all) or `legacy` (per-hour files for all) |

@@ -56,6 +56,7 @@ class TestGuiConfigurationValues:
             "should_apply_nox_corrections",
             "source_dynamics",
             "bffm2_ff_source",
+            "atmosphere_model",
             "time_interval",
             "vertical_limit_m",
             "receptor_points",

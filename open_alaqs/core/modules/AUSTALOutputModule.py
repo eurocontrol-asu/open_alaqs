@@ -26,6 +26,7 @@ from open_alaqs.core.interfaces.Emissions import Emission
 from open_alaqs.core.interfaces.Movement import Movement
 from open_alaqs.core.interfaces.Source import Source
 from open_alaqs.core.tools import conversion, spatial, sql_interface
+from open_alaqs.core.tools import surface_layer_atmosphere as _sla
 from open_alaqs.core.tools.Grid3D import Grid3D
 
 logger = get_logger(__name__)
@@ -131,6 +132,10 @@ def log_time(func):
     return inner
 
 
+# (z0, d0, ha) defaults in m, from the single source of truth
+_SITE_DEFAULTS = _sla.site_parameters()
+
+
 class AUSTALDispersionModule(DispersionModule):
     """
     Module for the preparation of the input files needed for AUSTAL
@@ -155,35 +160,55 @@ class AUSTALDispersionModule(DispersionModule):
             "widget_type": QtWidgets.QCheckBox,
             "tooltip": "Enable to include mixing height in AUSTAL input files",
         },
+        # Site parameters of the AUSTAL run (austal.txt z0, d0, ha). One default for the
+        # plugin, the standalone and austal_prep: surface_layer_atmosphere.site_parameters.
+        # A spin box cannot be empty, so 0 means "derive from z0" (d0 = 6 z0, ha = 10 m + d0).
         "roughness_length_m": {
             "label": "Roughness Length",
-            "initial_value": 0.2,
+            "initial_value": _SITE_DEFAULTS[0],
             "widget_type": QgsDoubleSpinBox,
             "widget_config": {
                 "minimum": 0,
                 "maximum": 999999.9,
                 "suffix": "m",
             },
+            "tooltip": (
+                "z0, roughness length (m) of the land cover around the sources, TA Luft "
+                f"classes 0.01 to 2 m; default {_SITE_DEFAULTS[0]} m (TA Luft value for "
+                "airports). 0 = default. See the user guide, Roughness length, "
+                "displacement height and anemometer height."
+            ),
         },
         "displacement_height_m": {
             "label": "Displacement Height",
-            "initial_value": 1.2,
+            "initial_value": _SITE_DEFAULTS[1],
             "widget_type": QgsDoubleSpinBox,
             "widget_config": {
                 "minimum": 0,
                 "maximum": 999999.9,
                 "suffix": "m",
             },
+            "tooltip": (
+                "d0, displacement height (m) of the wind profile over vegetation or "
+                f"buildings; default 6 z0 ({_SITE_DEFAULTS[1]} m for z0 {_SITE_DEFAULTS[0]} m). "
+                "0 = derive from z0."
+            ),
         },
         "anemometer_height_m": {
             "label": "Anemometer Height",
-            "initial_value": 11.2,
+            "initial_value": _SITE_DEFAULTS[2],
             "widget_type": QgsDoubleSpinBox,
             "widget_config": {
                 "minimum": 0,
                 "maximum": 999999.9,
                 "suffix": "m",
             },
+            "tooltip": (
+                "ha, anemometer height (m) at which the meteo file's wind applies for the "
+                f"roughness z0; default 10 m + d0 ({_SITE_DEFAULTS[2]} m for z0 "
+                f"{_SITE_DEFAULTS[0]} m), for an anemometer on ground as rough as z0. "
+                "0 = derive from z0."
+            ),
         },
         "quality_level": {
             "label": "Quality Level",
@@ -281,18 +306,17 @@ class AUSTALDispersionModule(DispersionModule):
             ff = 0.9
         self._pm10_fine_fraction = max(0.0, min(1.0, ff))
 
-        # "----------------- meteorology",
-        # ToDo: Modify AmbientCondition.py or derive z0, d0, and ha from main
-        #  dialog (airport info)
-        # "z\t0.2\t' roughness length (m)",
-        self._roughness_level = values_dict.get("roughness_length_m", 0.2)
-        # d0: default 6z0    # "d0\t1.2\t' displacement height (m)",
-        self._displacement_height = values_dict.get(
-            "displacement_height_m", 6 * self._roughness_level
-        )
-        # 10 m + d0 (6z0)  # "ha\t11.2\t' anemometer height (m)",
-        self._anemometer_height = values_dict.get(
-            "anemometer_height_m", 10 + 6 * self._roughness_level
+        # "----------------- meteorology": z0, d0, ha. Missing, empty or 0 (the spin boxes
+        # cannot be empty) derive from z0: d0 = 6 z0, ha = 10 m + d0; z0 itself defaults to
+        # the TA Luft airport value (surface_layer_atmosphere.site_parameters).
+        (
+            self._roughness_level,
+            self._displacement_height,
+            self._anemometer_height,
+        ) = _sla.site_parameters_from_settings(
+            values_dict.get("roughness_length_m"),
+            values_dict.get("displacement_height_m"),
+            values_dict.get("anemometer_height_m"),
         )
 
         self._reference_x = None

@@ -75,13 +75,13 @@ grid_file_path=sample_data\grid.csv
 # options_string=NOSTANDARD;SCINOTAT;Kmax=1
 
 # Aerodynamic roughness length (metres)
-# roughness_length_m=0.2
+# roughness_length_m=0.1
 
 # Zero-plane displacement height (metres)
-# displacement_height_m=1.2
+# displacement_height_m=0.6
 
 # Anemometer height (metres)
-# anemometer_height_m=11.2
+# anemometer_height_m=10.6
 
 # ---------------------------------------------------------------------------
 # OPTIONAL: Logging

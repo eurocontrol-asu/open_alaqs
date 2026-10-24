@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Literal, Optional
 
+from open_alaqs.core.tools import surface_layer_atmosphere as _sla
+
 
 @dataclass
 class GridSpec:
@@ -106,9 +108,13 @@ class AustalStudyConfig:
     title: str
     grid: GridSpec
     qs: int = 3  # quality level (0..4)
-    z0: float = 0.3  # roughness length (m)
-    d0: float = 1.2  # displacement height (m)
-    ha: float = 11.2  # anemometer height (m)
+    # Site parameters of austal.txt. One default for the plugin's AUSTAL module, the
+    # standalone and austal_prep (surface_layer_atmosphere.site_parameters): z0 0.1 m
+    # (TA Luft, airports), d0 6 z0, ha 10 m + d0; None (JSON null) derives from z0.
+    # After __post_init__ the three are floats.
+    z0: Optional[float] = None  # roughness length (m)
+    d0: Optional[float] = None  # displacement height (m)
+    ha: Optional[float] = None  # anemometer height (m)
     os_options: str = "NOSTANDARD;SCINOTAT;Kmax=1"
     # AUSTAL represents PM10 as two size-class components: pm-1
     # (< 2.5 um, "fine") and pm-2 (2.5-10 um, "coarse"). This field
@@ -200,6 +206,13 @@ class AustalStudyConfig:
     source_aggregation: Literal["none", "by_type", "by_type_per_pollutant"] = (
         "by_type_per_pollutant"
     )
+
+    def __post_init__(self):
+        # Resolve the site parameters once: empty (None) or 0 values are derived from
+        # z0 (d0 = 6 z0, ha = 10 m + d0); z0 itself defaults to 0.1 m.
+        self.z0, self.d0, self.ha = _sla.site_parameters_from_settings(
+            self.z0, self.d0, self.ha
+        )
 
 
 @dataclass

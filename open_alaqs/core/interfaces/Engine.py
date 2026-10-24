@@ -103,9 +103,14 @@ class EngineEmissionIndex(Store):
         climbing=None,
         delta_t=0.0,
         airport_elevation_m=0.0,
+        meem_ambient=None,
     ):
         """
         Per-mode EI with the MEEM nvPM emission index of the segment.
+
+        ``meem_ambient``: (T in K, p in Pa) at the segment from the atmosphere model
+        of the emission calculation (5.4.1); V1 then uses it instead of the CAEP
+        sheet's ISA + delta_t at altitude. None: the sheet's atmosphere.
 
         V1 (default, the method used by the emission calculation) follows
         the MEEM_V1 tab of the CAEP14 v14 calculation sheet
@@ -166,6 +171,7 @@ class EngineEmissionIndex(Store):
                 climbing,
                 delta_t,
                 airport_elevation_m,
+                meem_ambient=meem_ambient,
             )
 
         try:
@@ -339,6 +345,7 @@ class EngineEmissionIndex(Store):
         climbing,
         delta_t=0.0,
         airport_elevation_m=0.0,
+        meem_ambient=None,
     ):
         """MEEM V1 (CAEP14 v14 MEEM_V1 tab) applied to a mode EI; see
         getEmissionIndexByModeWithMEEM. LTO / non-LTO cut at 3000 ft above
@@ -409,6 +416,7 @@ class EngineEmissionIndex(Store):
                 ),
                 number_thrust_settings=ts_num,
                 delta_t=float(delta_t or 0.0),
+                ambient=meem_ambient,
             )
 
             corrected = EmissionIndex(
@@ -650,30 +658,31 @@ class EngineEmissionIndex(Store):
             if ff_ref is None:
                 return None
 
-            # Convert reference FF to ambient FF before calling getEmissionIndexByFuelFlow,
-            # which itself calls calculate_emission_index with the ambient FF and applies
-            # the inverse correction internally:
-            #     ff_ref_internal = ff_amb / delta * theta^3.8 * exp(0.2*M^2).
-            # Without this pre-conversion the function double-applies the theta/delta/Mach
-            # correction, producing a systematically wrong interpolation position on the
-            # EEDB curve.  Formula per SAE AIR-5715 / CAEP14 (applied universally for both
-            # LTO and non-LTO).
+            # Ambient fuel flow from the reference fuel flow read on the ICAO curve at the
+            # thrust share. Corrected-parameter scaling of gas-turbine performance: the
+            # corrected fuel flow, fuel flow / (delta * sqrt(theta)), is a function of the
+            # corrected thrust, thrust / delta, and Mach, so
+            #     ff_amb = ff_ref * delta * sqrt(theta).
+            # The BFFM2 relation ff_ref = ff_amb / delta * theta^3.8 * exp(0.2 M^2)
+            # (SAE AIR5715) converts a known fuel flow to reference conditions for the
+            # emission-index lookup; getEmissionIndexByFuelFlow applies it to the ambient
+            # fuel flow below. It is not a fuel-flow model and is not inverted here (its
+            # inverse lowers the fuel flow by 12% at 25 C where the engine needs ~2% more).
             try:
                 _T = method["config"]["ambient_conditions"].getTemperature()
                 _P = method["config"]["ambient_conditions"].getPressure()
-                _mach = float(method["config"].get("mach_number", 0.0))
                 _theta = _T / 288.15
                 _delta = _P / 101325.0
             except (AttributeError, KeyError, TypeError) as _exc:
-                # Ambient conditions unavailable — fall back to ISA (theta=1, delta=1, M=0)
+                # Ambient conditions unavailable — fall back to ISA (theta=1, delta=1)
                 logger.warning(
                     "BFFM2 FF conversion: ambient_conditions unavailable (%s); "
                     "falling back to ISA.",
                     _exc,
                 )
-                _theta, _delta, _mach = 1.0, 1.0, 0.0
+                _theta, _delta = 1.0, 1.0
 
-            fuel_flow = ff_ref * _delta / (_theta**3.8) / math.exp(0.2 * _mach**2)
+            fuel_flow = ff_ref * _delta * math.sqrt(_theta)
 
             # apply method (e.g. BFFM2) to convert fuel flow to emission index
             # logger.debug("Converted power setting of %.3f [%%] to fuel flow of %.3f kg/s." % (power_setting, fuel_flow))

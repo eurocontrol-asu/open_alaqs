@@ -123,7 +123,7 @@ def _isolate_singletons():
             pass
 
 
-def _run_plugin(db_path, method, ff_source=None):
+def _run_plugin(db_path, method, ff_source=None, atmosphere_model=None):
     kwargs = dict(
         db_path=db_path,
         pollutant="CO",
@@ -136,6 +136,8 @@ def _run_plugin(db_path, method, ff_source=None):
     )
     if ff_source is not None:
         kwargs["bffm2_ff_source"] = ff_source
+    if atmosphere_model is not None:
+        kwargs["atmosphere_model"] = atmosphere_model
     cfg = EmissionCalculationConfig(**kwargs)
     return EmissionCalculatorService().calculate_emissions(cfg)
 
@@ -218,8 +220,13 @@ def test_bymode_grand_totals_match_anchor_math(tmp_path):
 
 
 def test_bffm2_trajectory_default_matches_prefix_a_behavior(tmp_path):
-    """BFFM2 with default bffm2_ff_source='trajectory' should give the CAEP14 v14
-    spec-aligned NOx grand total of 13.69 kg (14.07 kg before the runway placement of 13 Oct 2026). This value reflects the post-fix
+    """BFFM2 with default bffm2_ff_source='trajectory' should give a NOx grand total
+    of 12.33 kg with the default atmosphere aloft (standard_lapse, default from 24 Oct 2026;
+    12.27 kg with surface_layer and the heat-flux bound; 12.64 kg
+    with the hourly row at every height, atmosphere_model='ground_held'; 13.69 kg before the fuel flow from the thrust share was scaled to
+    ambient with delta * sqrt(theta) instead of the inverse BFFM2 conversion
+    delta / theta^3.8 / exp(0.2 M^2), 23 Oct 2026; 14.07 kg before the runway placement
+    of 13 Oct 2026). The study meteo is 280.5-295 K, 99 400 Pa. This value reflects the post-fix
     behavior with: (a) Climbout install correction = 1.013 (was 1.012 typo), and
     (b) taxi Mach=0 isolation in TaxiingEmissionCalculator (was leaking the last
     flight segment's Mach into BFFM2 ambient correction)."""
@@ -238,18 +245,20 @@ def test_bffm2_trajectory_default_matches_prefix_a_behavior(tmp_path):
                 if v:
                     nox_kg += v
 
-    assert abs(nox_kg - 13.6882) < 0.02, (
-        f"BFFM2 trajectory NOx grand total drifted: got {nox_kg:.4f}, expected 13.6882. "
+    assert abs(nox_kg - 12.3277) < 0.02, (
+        f"BFFM2 trajectory NOx grand total drifted: got {nox_kg:.4f}, expected 12.3277. "
         f"This may indicate regression in bffm2_ff_source routing, ambient correction, "
         f"taxi Mach isolation, or installation correction values."
     )
 
 
 def test_bffm2_mode_anchor_matches_lto_with_ambient(tmp_path):
-    """BFFM2 with bffm2_ff_source='mode_anchor' should give a CAEP14 v14
-    spec-aligned NOx grand total of 20.73 kg (21.21 kg before the runway placement of
-    13 Oct 2026), sitting between plugin bymode (22.98 kg, no ambient corrections) and
-    plugin BFFM2 trajectory (13.69 kg,
+    """BFFM2 with bffm2_ff_source='mode_anchor' should give a NOx grand total of
+    20.71 kg with the default atmosphere aloft (standard_lapse, default from 24 Oct 2026;
+    20.38 kg with surface_layer and the heat-flux bound; 20.64 kg with
+    atmosphere_model='ground_held'; 20.73 kg before the taxi fuel flow was scaled with delta * sqrt(theta),
+    23 Oct 2026; 21.21 kg before the runway placement of 13 Oct 2026), sitting between
+    plugin bymode (22.98 kg, no ambient corrections) and plugin BFFM2 trajectory (12.64 kg,
     sub-mode FF). Reflects post-fix behavior with Climbout install correction
     = 1.013 and taxi Mach=0 isolation."""
     from open_alaqs.core.alaqsdblite import ProjectDatabase
@@ -268,8 +277,42 @@ def test_bffm2_mode_anchor_matches_lto_with_ambient(tmp_path):
                     nox_kg += v
 
     assert (
-        abs(nox_kg - 20.7275) < 0.02
-    ), f"BFFM2 mode_anchor NOx grand total drifted: got {nox_kg:.4f}, expected 20.7275."
+        abs(nox_kg - 20.7124) < 0.02
+    ), f"BFFM2 mode_anchor NOx grand total drifted: got {nox_kg:.4f}, expected 20.7124."
+
+
+@pytest.mark.parametrize(
+    "ff_source, model, expected",
+    [
+        ("trajectory", "ground_held", 12.6390),
+        ("mode_anchor", "ground_held", 20.6385),
+        ("trajectory", "surface_layer", 12.2728),
+        ("mode_anchor", "surface_layer", 20.3761),
+    ],
+)
+def test_bffm2_non_default_atmosphere_pins(tmp_path, ff_source, model, expected):
+    """Pins of the non-default atmosphere models. ground_held (the hourly row at every
+    height) gives the BFFM2 NOx totals of the fuel-flow fix alone:
+    12.6390 kg (trajectory) and 20.6385 kg (mode_anchor); surface_layer (AUSTAL's
+    boundary-layer profile with the heat-flux bound, with the default site parameters
+    z0 0.1 m, d0 0.6 m, ha 10.6 m): 12.2728 and 20.3761 kg (12.2747 and 20.3945 kg
+    with the former defaults z0 0.2 m, d0 1.2 m, ha 11.2 m, 24 Oct 2026).
+    """
+    from open_alaqs.core.alaqsdblite import ProjectDatabase
+
+    db_path = _prepare_airport_a_no_gate(tmp_path)
+    ProjectDatabase().path = db_path
+    result = _run_plugin(
+        db_path, method="BFFM2", ff_source=ff_source, atmosphere_model=model
+    )
+    nox_kg = 0.0
+    for ts, period in result.emissions_data.items():
+        for src, em_list in period:
+            for em in em_list:
+                v = em.transposeToKilograms().getObject("nox_kg")
+                if v:
+                    nox_kg += v
+    assert abs(nox_kg - expected) < 5e-4, (ff_source, model, nox_kg)
 
 
 def test_mes_single_engine_start_emissions_added_once_per_movement(tmp_path):

@@ -231,10 +231,11 @@ def validate_field(ui_element, var_type, layer=None):
             )
         elif isinstance(exc, UnmigratedColumnError):
             ui_element.setToolTip(
-                f"QGIS would save this value as {exc.rounded}: the numeric "
-                "columns of this study are not yet REAL. Upgrade the study "
-                "with scripts/migrate_alaqs.py (User Guide, 'Upgrading from "
-                "5.3.x'), or enter a whole number."
+                f"QGIS would save this value as {exc.rounded}: QGIS types the "
+                "numeric columns of this study as integer (columns not yet "
+                "REAL, or layer statistics from before the upgrade). Upgrade "
+                "the study with scripts/migrate_alaqs.py of this version (User "
+                "Guide, 'Upgrading from 5.3.x'), or enter a whole number."
             )
         elif var_type == "int":
             ui_element.setToolTip("This value should be a whole number")
@@ -342,11 +343,12 @@ def warn_unmigrated_numeric_fields(
     if columns and database_path not in _warned_unmigrated:
         _warned_unmigrated.add(database_path)
         logger.warning(
-            "Layer '%s': the numeric columns %s of this study are not declared "
-            "REAL, so QGIS types them as integer or text and a decimal typed in "
-            "a form is rounded or stored as text (the same holds for the other "
-            "layers of the study). Upgrade the study with "
-            "scripts/migrate_alaqs.py (User Guide, 'Upgrading from 5.3.x').",
+            "Layer '%s': QGIS types the numeric columns %s of this study as "
+            "integer or text (columns not declared REAL, or layer statistics "
+            "from before the upgrade), so a decimal typed in a form is rounded "
+            "or stored as text (the same may hold for the other layers of the "
+            "study). Upgrade the study with scripts/migrate_alaqs.py of this "
+            "version (User Guide, 'Upgrading from 5.3.x').",
             layer.name(),
             ", ".join(columns),
         )

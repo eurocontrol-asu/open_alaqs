@@ -9,9 +9,12 @@ calculation grid centred on the grid reference point, and writes a config.json t
 
 The output sets sensible defaults:
     qs                          = 3   (quality level)
-    z0                          = 0.3 (urban/light forest)
-    d0                          = 4*z0 unless given (1.2 for z0 = 0.3)
-    ha                          = 11.2 (anemometer height with displacement)
+    z0                          = 0.1 (TA Luft roughness length of airports)
+    d0                          = 6 z0 unless given (0.6 for z0 = 0.1)
+    ha                          = 10 m + d0 unless given (10.6 for z0 = 0.1)
+                                (the one default of the plugin's AUSTAL
+                                module, the standalone and austal_prep:
+                                surface_layer_atmosphere.site_parameters)
     grid                        read from alaqs grid_3d_definition
                                 (fallback 75x75 of 250 m if absent)
     sk                          AUSTAL default vertical layers
@@ -32,6 +35,7 @@ from pathlib import Path
 
 from pyproj import Transformer
 
+from open_alaqs.core.tools import surface_layer_atmosphere as _sla
 from open_alaqs.core.tools.utm import utm_epsg as _utm_epsg
 
 # AUSTAL default vertical grid (sk values, m above ground)
@@ -181,15 +185,16 @@ def make_config(
     grid_size: int | None = None,
     grid_step_m: float | None = None,
     qs: int = 3,
-    z0: float = 0.3,
+    z0: float | None = None,
     d0: float | None = None,
-    ha: float = 11.2,
+    ha: float | None = None,
     pollutants: list | None = None,
     year: int | None = None,
     utm_epsg: int | None = None,
     time_window: tuple | list | None = None,
     grid_writer_mode: str = "hybrid",
     apply_nox_corrections: bool = False,
+    atmosphere_model: str = "standard_lapse",
 ) -> dict:
     meta = _airport_metadata(alaqs_path)
     title = title or meta.get("airport_name") or meta.get("project_name") or "Untitled"
@@ -272,8 +277,9 @@ def make_config(
     x0 = -half_extent
     y0 = -half_extent
 
-    if d0 is None:
-        d0 = 4.0 * z0
+    # Site parameters: the shared OpenALAQS defaults for those left empty
+    # (z0 0.1 m, d0 6 z0, ha 10 m + d0).
+    z0, d0, ha = _sla.site_parameters(z0, d0, ha)
 
     cfg = {
         "title": title,
@@ -293,6 +299,7 @@ def make_config(
         # ignore this flag; their EI calculation has built-in ambient
         # correction.
         "apply_nox_corrections": bool(apply_nox_corrections),
+        "atmosphere_model": str(atmosphere_model),
         "grid": {
             "dd": float(grid_step_m),
             "nx": int(calc_size),
@@ -362,9 +369,21 @@ def main(argv=None):
         "250 if table missing.",
     )
     parser.add_argument("--qs", type=int, default=3)
-    parser.add_argument("--z0", type=float, default=0.3)
-    parser.add_argument("--d0", type=float, default=None)
-    parser.add_argument("--ha", type=float, default=11.2)
+    parser.add_argument(
+        "--z0",
+        type=float,
+        default=None,
+        help="AUSTAL roughness length (m), default 0.1 (TA Luft, airports)",
+    )
+    parser.add_argument(
+        "--d0", type=float, default=None, help="displacement height (m), default 6 z0"
+    )
+    parser.add_argument(
+        "--ha",
+        type=float,
+        default=None,
+        help="anemometer height (m), default 10 m + d0",
+    )
     parser.add_argument(
         "--pollutants", default=None, help="Comma-separated, e.g. nox,pm10,pm25"
     )

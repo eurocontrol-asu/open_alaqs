@@ -263,6 +263,8 @@ class EditPlan:
         self.transformations: list[tuple[str, dict]] = []  # (table, rename_entry)
         # (table, {column: (source type, reference type)})
         self.retype_columns: list[tuple[str, dict[str, tuple[str, str]]]] = []
+        # (table, [REAL columns whose SpatiaLite statistics say integer or text])
+        self.stale_statistics: list[tuple[str, list[str]]] = []
         self.warnings: list[str] = []
         self.extras: list[str] = []
 
@@ -274,6 +276,7 @@ class EditPlan:
             or self.drop_columns
             or self.transformations
             or self.retype_columns
+            or self.stale_statistics
         )
 
     def print_summary(self) -> None:
@@ -295,6 +298,11 @@ class EditPlan:
         for tbl, cols in self.retype_columns:
             changes = ", ".join(f"{c} {s} -> {r}" for c, (s, r) in cols.items())
             print(f"  ~ RETYPE {tbl}: {changes}")
+        for tbl, cols in self.stale_statistics:
+            print(
+                f"  ~ STATISTICS {tbl}: QGIS layer statistics type the REAL "
+                f"columns {cols} as integer or text; removed"
+            )
         for w in self.warnings:
             print(f"  ! WARNING: {w}")
         for e in self.extras:
@@ -379,8 +387,36 @@ def diff_schemas(
                 )
         if retype:
             plan.retype_columns.append((t, retype))
+        elif t.startswith("shapes_"):
+            # 6. A study retyped by the 5.4.0 script kept the QGIS layer
+            #    statistics written before, which still type the columns as
+            #    integer or text (see drop_layer_field_statistics)
+            stale = stale_field_statistics(src, t, ref_cols)
+            if stale:
+                plan.stale_statistics.append((t, stale))
 
     return plan
+
+
+def stale_field_statistics(
+    conn: sqlite3.Connection, table: str, ref_cols: dict[str, str]
+) -> list[str]:
+    """The REAL columns of `table` whose rows in `geometry_columns_field_infos`
+    count integer or text values and no double: QGIS types them as integer
+    or text from these rows. Empty when the study has no such rows."""
+    if "geometry_columns_field_infos" not in get_tables(conn):
+        return []
+    real = {c.lower() for c, t in ref_cols.items() if t.strip().upper() == "REAL"}
+    rows = conn.execute(
+        "SELECT column_name, integer_values, double_values, text_values "
+        'FROM "geometry_columns_field_infos" WHERE lower(f_table_name) = ?',
+        (table.lower(),),
+    ).fetchall()
+    return sorted(
+        name
+        for name, ints, doubles, texts in rows
+        if name.lower() in real and not (doubles or 0) and ((ints or 0) or (texts or 0))
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -527,6 +563,31 @@ def rebuild_table(
             print(
                 f"WARNING: could not recreate {kind} '{name}': {exc}", file=sys.stderr
             )
+    drop_layer_field_statistics(conn, table)
+
+
+def drop_layer_field_statistics(conn: sqlite3.Connection, table: str) -> int:
+    """Delete the SpatiaLite per-column statistics of `table`
+    (`geometry_columns_field_infos`), which a rebuild leaves stale.
+
+    QGIS writes these rows (UpdateLayerStatistics) each time a layer is
+    edited and, when they exist, types the layer's fields from them rather
+    than from the declared column types: a column whose rows held whole
+    numbers (integer_values > 0, double_values 0) stays an integer field,
+    and one whose layer was empty stays a text field, even after the table
+    has been rebuilt with REAL columns. Without the rows QGIS types the
+    fields from PRAGMA table_info (REAL -> Double) and recomputes the
+    statistics on its next edit. The layer's row in
+    `geometry_columns_statistics` (extent, row count) stays valid and is kept.
+    Returns the number of rows deleted.
+    """
+    if "geometry_columns_field_infos" not in get_tables(conn):
+        return 0
+    cur = conn.execute(
+        'DELETE FROM "geometry_columns_field_infos" WHERE lower(f_table_name) = ?',
+        (table.lower(),),
+    )
+    return cur.rowcount
 
 
 def apply_drop_columns(
@@ -725,6 +786,8 @@ def apply_plan(
                 f"'1,234', is left too: it also reads as a grouped 1234).",
                 file=sys.stderr,
             )
+    for tbl, _cols in plan.stale_statistics:
+        drop_layer_field_statistics(conn, tbl)
     for name in plan.drop_tables:
         apply_drop_table(conn, name)
 

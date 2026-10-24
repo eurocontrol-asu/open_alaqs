@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from open_alaqs.core.EmissionCalculation import EmissionCalculation
 from open_alaqs.core.modules.ModuleManager import SourceModuleRegistry
+from open_alaqs.core.tools import surface_layer_atmosphere as _sla
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,17 @@ class EmissionCalculationConfig:
     # Only affects BFFM2; has no effect when method == "bymode" or when an
     # explicit fuel_flow_kgm is supplied by the trajectory.
     bffm2_ff_source: str = "trajectory"
+    # Ambient conditions aloft (core/tools/surface_layer_atmosphere.py): "standard_lapse"
+    # (default, ISA lapse rate from the hourly row's 2 m temperature and station pressure),
+    # "surface_layer" (AUSTAL's boundary-layer temperature profile) or "ground_held" (the
+    # hourly row at every height, the 5.4.0 ambient conditions). The site
+    # parameters default to those of the configured AUSTAL module, else to the AUSTAL
+    # defaults of surface_layer_atmosphere.site_parameters (z0 0.1 m, the TA Luft value for
+    # airports; d0 6 z0; ha 10 m + d0). None, "" or 0 derive from z0.
+    atmosphere_model: str = "standard_lapse"
+    atmosphere_z0_m: Optional[float] = None
+    atmosphere_d0_m: Optional[float] = None
+    atmosphere_ha_m: Optional[float] = None
 
     # Optional source filtering
     source_type: str = "all"
@@ -266,6 +278,39 @@ class EmissionCalculatorService:
                 "Grid is None, grid_bounds will not be set for segment clipping"
             )
 
+        # Site parameters of the boundary-layer formulas (atmosphere_model): explicit values,
+        # else those of a configured dispersion module (AUSTAL), else the AUSTAL defaults.
+        # A module setting of 0 (the spin boxes cannot be empty) means "derive from z0", as
+        # in the AUSTAL module itself (site_parameters_from_settings).
+        _site = {
+            "atmosphere_z0_m": config.atmosphere_z0_m,
+            "atmosphere_d0_m": config.atmosphere_d0_m,
+            "atmosphere_ha_m": config.atmosphere_ha_m,
+        }
+        for _mod_cfg in (config.dispersion_modules_config or {}).values():
+            if not isinstance(_mod_cfg, dict) or not any(
+                _k in _mod_cfg
+                for _k in (
+                    "roughness_length_m",
+                    "displacement_height_m",
+                    "anemometer_height_m",
+                )
+            ):
+                continue
+            _mod_site = dict(
+                zip(
+                    ("atmosphere_z0_m", "atmosphere_d0_m", "atmosphere_ha_m"),
+                    _sla.site_parameters_from_settings(
+                        _mod_cfg.get("roughness_length_m"),
+                        _mod_cfg.get("displacement_height_m"),
+                        _mod_cfg.get("anemometer_height_m"),
+                    ),
+                )
+            )
+            for _key in _site:
+                if _site[_key] is None:
+                    _site[_key] = _mod_site[_key]
+
         # Add each module for the configuration
         for module_name in module_names:
             self._emission_calculation.add_source_module(
@@ -274,6 +319,8 @@ class EmissionCalculatorService:
                     "method": config.method,
                     "meem_version": config.meem_version,
                     "bffm2_ff_source": config.bffm2_ff_source,
+                    "atmosphere_model": config.atmosphere_model,
+                    **_site,
                     "should_apply_nox_corrections": config.should_apply_nox_corrections,
                     "source_dynamics": config.source_dynamics,
                     "reference_altitude": reference_altitude,

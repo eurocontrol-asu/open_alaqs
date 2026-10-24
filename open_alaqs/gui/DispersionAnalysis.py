@@ -28,6 +28,7 @@ from open_alaqs.core.modules.ModuleManager import (
     OutputDispersionModuleRegistry,
     SourceModuleRegistry,
 )
+from open_alaqs.core.tools import surface_layer_atmosphere as _sla
 from open_alaqs.core.tools.austal_csv_generation import generate_austal_from_csv
 from open_alaqs.core.tools.Grid3D import Grid3D
 from open_alaqs.core.tools.sql_interface import (
@@ -1369,13 +1370,16 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         else:
             options_string = "NOSTANDARD;SCINOTAT;Kmax=1"
 
+        # Site parameters (austal.txt z0, d0, ha): the one default of the plugin, the
+        # standalone and austal_prep (surface_layer_atmosphere.site_parameters).
+        z0, d0, ha = _sla.site_parameters()
         return {
             "is_enabled": True,
             "quality_level": quality_level,
             "options_string": options_string,
-            "roughness_length_m": 0.2,
-            "displacement_height_m": 1.2,
-            "anemometer_height_m": 11.2,
+            "roughness_length_m": z0,
+            "displacement_height_m": d0,
+            "anemometer_height_m": ha,
             "mixing_height_enabled": mixing_height,
             "pm10_fine_fraction": pm10_fine_fraction,
         }

@@ -47,14 +47,18 @@ austal_config dict schema
 -------------------------
 Required keys (all have fallback defaults if omitted):
     quality_level           int     AUSTAL quality level (1 to 3)    default 1
-    roughness_length_m      float   aerodynamic roughness length (m) default 0.2
+    roughness_length_m      float   aerodynamic roughness length (m) default 0.1 (TA Luft, airports)
     options_string          str     AUSTAL options flags             default "NOSTANDARD;SCINOTAT;Kmax=1"
 
 Optional keys:
     is_enabled              bool    enable the module                default False
     mixing_height_enabled   bool    pass mixing height to AUSTAL     default False
-    displacement_height_m   float   zero-plane displacement (m)      default 6 * roughness_length_m
-    anemometer_height_m     float   anemometer height (m)            default 10 + 6 * roughness_length_m
+    displacement_height_m   float   zero-plane displacement (m)      default 6 * roughness_length_m (0.6)
+    anemometer_height_m     float   anemometer height (m)            default 10 + displacement_height_m (10.6)
+
+The three site parameters share one default with the standalone pipeline and austal_prep
+(open_alaqs/core/tools/surface_layer_atmosphere.site_parameters); an empty or 0 value is
+derived from roughness_length_m.
 
 The keys output_path, pollutants_list, title, grid and receptors are set
 internally by generate_austal_from_csv and must not be included in austal_config.

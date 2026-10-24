@@ -21,9 +21,9 @@ Optional keys (defaults shown):
     quality_level           = 1
     mixing_height_enabled   = False
     options_string          = NOSTANDARD;SCINOTAT;Kmax=1
-    roughness_length_m      = 0.2
-    displacement_height_m   = 1.2
-    anemometer_height_m     = 11.2
+    roughness_length_m      = 0.1   (TA Luft value for airports)
+    displacement_height_m   = 6 z0  (0.6; empty or 0 derives from z0)
+    anemometer_height_m     = 10 m + d0 (10.6; empty or 0 derives from z0)
     austal_exe_path         = (path to austal.exe — runs AUSTAL after generation)
     show_logs               = False
 """
@@ -189,6 +189,13 @@ def _format_timedelta(td):
 # ---------------------------------------------------------------------------
 
 
+def _optional_float(value):
+    """A float, or None for an empty value (the AUSTAL module derives it)."""
+    if value is None or str(value).strip() == "":
+        return None
+    return float(value)
+
+
 def parse_config(txt_path):
     """Parse a key=value configuration file.
 
@@ -257,9 +264,11 @@ def parse_config(txt_path):
         .lower()
         in ("true", "1", "yes"),
         "options_string": raw.get("options_string", "NOSTANDARD;SCINOTAT;Kmax=1"),
-        "roughness_length_m": float(raw.get("roughness_length_m", 0.2)),
-        "displacement_height_m": float(raw.get("displacement_height_m", 1.2)),
-        "anemometer_height_m": float(raw.get("anemometer_height_m", 11.2)),
+        # Site parameters: empty values are derived by the AUSTAL module
+        # (z0 0.1 m, d0 6 z0, ha 10 m + d0; surface_layer_atmosphere.site_parameters)
+        "roughness_length_m": _optional_float(raw.get("roughness_length_m")),
+        "displacement_height_m": _optional_float(raw.get("displacement_height_m")),
+        "anemometer_height_m": _optional_float(raw.get("anemometer_height_m")),
     }
 
     # AUSTAL executable path (optional — run AUSTAL after generating input files)

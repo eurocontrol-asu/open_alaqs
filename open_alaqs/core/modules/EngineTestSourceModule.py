@@ -102,6 +102,30 @@ class EngineTestSourceModule(SourceModule):
         # override; not currently exposed.
         self._default_thrust_mode = values_dict.get("default_thrust_mode", "snap")
 
+        # Ambient pressure of BFFM2 events (5.4.1): the station pressure at the airport
+        # elevation, from the row's sea-level pressure (QNH), as for the taxi of movements.
+        # atmosphere_model ground_held keeps the 5.4.0 behaviour (QNH as the pressure).
+        from open_alaqs.core.tools import surface_layer_atmosphere as _sla
+
+        self._atmosphere_model = _sla.normalise_model(
+            values_dict.get("atmosphere_model")
+        )
+        _elev = None
+        try:
+            from open_alaqs.core.modules.MovementSourceModule import (
+                _study_airport_elevation,
+            )
+
+            _elev = _study_airport_elevation(self.getDatabasePath())
+        except Exception:
+            _elev = None
+        if _elev is None:
+            try:
+                _elev = float(values_dict.get("reference_altitude") or 0.0)
+            except (TypeError, ValueError):
+                _elev = 0.0
+        self._airport_elevation_m = _elev
+
     # ── Store accessors ────────────────────────────────────────────────
 
     def getEventsStore(self) -> Optional[EngineTestEventsStore]:
@@ -436,7 +460,27 @@ class EngineTestSourceModule(SourceModule):
                 "once per run."
             )
             self._bffm2_isa_fallback_logged = True
-        return ambient
+        return self._at_station_pressure(ambient)
+
+    def _at_station_pressure(self, ambient):
+        """A copy of the row with the station pressure (from QNH and the airport elevation)
+        as its pressure; the row unchanged for ground_held or without a pressure."""
+        from open_alaqs.core.tools import surface_layer_atmosphere as _sla
+
+        if (
+            self._atmosphere_model == _sla.MODEL_GROUND_HELD
+            or ambient.getPressure() is None
+        ):
+            return ambient
+        import copy
+
+        local = copy.copy(ambient)
+        local.setPressure(
+            _sla.station_pressure_from_qnh(
+                ambient.getPressure(), self._airport_elevation_m
+            )
+        )
+        return local
 
 
 # ── Free functions (unit-testable without instantiating the module) ────

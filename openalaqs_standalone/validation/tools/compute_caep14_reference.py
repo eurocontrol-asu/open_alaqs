@@ -90,6 +90,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 # AvGas (and PISTON helicopters): FSC 0.01 %, no sulphate.
 SOX_EI_JET_G_KG = 1000.0 * 0.000383 * (1.0 - 0.01) * 2.0
 SOX_EI_AVGAS_G_KG = 1000.0 * 0.0001 * 2.0
+from open_alaqs.core.tools import surface_layer_atmosphere as _sla  # noqa: E402
 from open_alaqs.core.tools.bffm2 import (  # noqa: E402
     calculate_emission_index as bffm2_ei,
 )
@@ -704,9 +705,11 @@ def _meem_v1_mass_mgkg(
     points: list,
     opr: float,
     delta_t: float = 0.0,
+    ambient: Optional[tuple] = None,
 ) -> float:
     """MEEM_V1!B119 (nvPM mass EI at the segment, fossil fuel) of a non-LTO
-    segment, ISA + delta_t (USER INPUTS!B5)."""
+    segment, ISA + delta_t (USER INPUTS!B5); with `ambient` = (T, p) the
+    segment's local state from the atmosphere model instead (OpenALAQS 5.4.1)."""
     t0, p0, g0, lapse, gam, r_air = 288.15, 101325.0, 9.80665, -0.0065, 1.4, 287.05287
     alt_trop_ft = 11000.0 / _MEEM_FT2M  # Constants!B32
     # USER INPUTS!B44, B45, B46, B39 (TAS in kt with Constants!B19)
@@ -719,6 +722,8 @@ def _meem_v1_mass_mgkg(
         p_amb = p_trop * math.exp(
             -g0 * (alt_ft * _MEEM_FT2M - 11000.0) / (r_air * t_trop)
         )
+    if ambient is not None:
+        t_amb, p_amb = float(ambient[0]), float(ambient[1])
     sos_kt = math.sqrt(gam * r_air * t_amb) * 1.94384
     mach = (tas_m_s * 1.94384) / sos_kt
     phase = "CLIMB TO CRUISE" if climbing else "DESCENT TO APPROACH"
@@ -785,12 +790,27 @@ def _get_meteo_at(conn, runway_time: str, use_isa: bool = True) -> dict:
             "Humidity": 0.00634,
             "speed_of_sound_m_s": 340.29,
         }
-    row = conn.execute(
-        "SELECT Temperature, SeaLevelPressure, RelativeHumidity, Humidity "
-        "FROM tbl_InvMeteo WHERE DateTime <= ? "
-        "ORDER BY DateTime DESC LIMIT 1",
-        (runway_time,),
-    ).fetchone()
+    # The boundary-layer columns that exist (older or minimal studies may lack some); a
+    # missing column reads as NULL, as an empty cell does. The plugin's AmbientCondition
+    # takes the same defaults: no wind (0), neutral (L 99999), MixingHeight 3,000 ft.
+    try:
+        _cols = {r[1] for r in conn.execute("PRAGMA table_info(tbl_InvMeteo)")}
+    except sqlite3.Error:
+        _cols = set()
+    _bl = ", ".join(
+        c if c in _cols else "NULL"
+        for c in ("WindSpeed", "ObukhovLength", "MixingHeight")
+    )
+    try:
+        row = conn.execute(
+            "SELECT Temperature, SeaLevelPressure, RelativeHumidity, Humidity, "
+            + _bl
+            + ", DateTime FROM tbl_InvMeteo WHERE DateTime <= ? "
+            "ORDER BY DateTime DESC LIMIT 1",
+            (runway_time,),
+        ).fetchone()
+    except sqlite3.OperationalError:
+        row = None
     if row is None:
         return _get_meteo_at(conn, runway_time, use_isa=True)
     T_K = float(row[0])
@@ -800,6 +820,10 @@ def _get_meteo_at(conn, runway_time: str, use_isa: bool = True) -> dict:
         "RH": float(row[2]),
         "Humidity": float(row[3]) if row[3] is not None else None,
         "speed_of_sound_m_s": math.sqrt(1.4 * 287.05287 * T_K),
+        "WindSpeed": float(row[4]) if row[4] is not None else None,
+        "ObukhovLength": float(row[5]) if row[5] is not None else None,
+        "MixingHeight": float(row[6]) if row[6] is not None else 914.4,
+        "DateTime": row[7],
     }
 
 
@@ -884,6 +908,7 @@ def compute_for_movement(
     method: str = "bymode",
     use_isa_meteo: bool = True,
     apply_nox_corrections: bool = False,
+    atmosphere: Optional[dict] = None,
 ) -> Optional[dict]:
     """Dispatch on method and aircraft type.
 
@@ -913,6 +938,7 @@ def compute_for_movement(
         method,
         use_isa_meteo,
         apply_nox_corrections=apply_nox_corrections,
+        atmosphere=atmosphere,
     )
 
 
@@ -1182,6 +1208,7 @@ def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the stan
     method: str = "bymode",
     use_isa_meteo: bool = True,
     apply_nox_corrections: bool = False,
+    atmosphere: Optional[dict] = None,
 ) -> Optional[dict]:
     """Compute per-movement emissions for a fixed-wing aircraft.
 
@@ -1230,6 +1257,47 @@ def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the stan
     # `MAX_HEIGHT_M = 914.4` used in the segment-include check below.
     max_height_m = _mixing_height_at(conn, mov["runway_time"])
 
+    # Ambient conditions at a height above the airport (atmosphere["model"], default
+    # standard_lapse: ISA lapse rate from the row's 2 m temperature and station pressure;
+    # surface_layer: AUSTAL's boundary-layer formulas; open_alaqs/core/tools/
+    # surface_layer_atmosphere.py). The hourly row stays the source of the NOx correction
+    # (and of the MEEM V1 delta T, used only by the ground_held sheet atmosphere).
+    _atm = atmosphere or {}
+    _atm_model = _sla.normalise_model(_atm.get("model"))
+
+    def _meteo_at(height_m):
+        # ISA meteo (use_isa_meteo, or no tbl_InvMeteo row; the ISA dict has no WindSpeed
+        # key): ISA conditions at every height, as before 5.4.1, whatever the model.
+        if (
+            meteo is None
+            or _atm_model == _sla.MODEL_GROUND_HELD
+            or "WindSpeed" not in meteo
+        ):
+            return meteo
+        try:
+            t_k, p_pa, rh = _sla.local_state(
+                _atm_model,
+                meteo["T_K"],
+                meteo["P_Pa"],
+                meteo["RH"],
+                height_m,
+                wind_speed_m_s=meteo.get("WindSpeed"),
+                obukhov_length_m=meteo.get("ObukhovLength"),
+                airport_elevation_m=elevation_m,
+                z0=_atm.get("z0"),
+                d0=_atm.get("d0"),
+                ha=_atm.get("ha"),
+                mixing_height_m=meteo.get("MixingHeight"),
+            )
+        except ValueError as exc:
+            raise ValueError(
+                f"Atmosphere aloft ({_atm_model}), tbl_InvMeteo row of "
+                f"{meteo.get('DateTime', 'unknown date')}: {exc}"
+            ) from None
+        return dict(meteo, T_K=t_k, P_Pa=p_pa, RH=rh)
+
+    ground_meteo = _meteo_at(0.0)
+
     # ---- Trajectory (loaded first: an arrival's landing roll is taken out of its taxi time) ----
     is_dep = mov["departure_arrival"] == "D"
     traj = _get_trajectory(conn, mov["profile_id"])
@@ -1272,13 +1340,16 @@ def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the stan
     tx = engine_ei["TX"]
     # For BFFM2 the plugin's TaxiingEmissionCalculator routes through
     # `Engine.getEmissionIndexByEngineState(power_setting, method=BFFM2)`
-    # with `fuel_flow=None`, which applies the SAE AIR-5715 inverse
-    # correction `ff_amb = ff_ref * delta / theta^3.8 / exp(0.2 * M^2)`
-    # (mach=0 at taxi) before using the FF for the segment fuel mass.
+    # with `fuel_flow=None`, which scales the reference fuel flow to ambient
+    # with `ff_amb = ff_ref * delta * sqrt(theta)` (5.4.1; Mach 0 at taxi)
+    # before using it for the segment fuel mass. delta and theta are the
+    # ground values (station pressure under surface_layer / standard_lapse).
     if method != "bymode":
-        theta = meteo["T_K"] / 288.15
-        delta = meteo["P_Pa"] / 101325.0
-        tx_ff_amb = tx["ff"] * delta / (theta**3.8)  # mach=0 at taxi
+        theta = ground_meteo["T_K"] / 288.15
+        delta = ground_meteo["P_Pa"] / 101325.0
+        tx_ff_amb = (
+            tx["ff"] * delta * math.sqrt(theta)
+        )  # corrected-parameter scaling, mach=0 at taxi
     else:
         tx_ff_amb = tx["ff"]
     tx_fuel = taxi_time_s * tx_ff_amb * n_eng * mov["taxi_fuel_ratio"]
@@ -1287,7 +1358,9 @@ def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the stan
         _add_em(em, tx_fuel, tx)
     else:
         # BFFM2: NOx/CO/HC corrected at the (ambient) idle anchor FF with mach=0
-        _bffm2_apply_segment(em, tx_ff_amb, tx_fuel, tx, icao_eedb, meteo, mach=0.0)
+        _bffm2_apply_segment(
+            em, tx_ff_amb, tx_fuel, tx, icao_eedb, ground_meteo, mach=0.0
+        )
 
     # Brake wear PM10 (arrivals only, MTOW > threshold).  Per the plugin,
     # this is added on the first taxi-in segment, once, regardless of method.
@@ -1380,7 +1453,10 @@ def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the stan
 
         # Per-segment Mach (BFFM2 only; bymode ignores).  Plugin uses
         # start_point.TAS, not avg, per line 943 of MovementEmissionCalculator.
-        mach = _segment_mach(tas1, tas2, meteo["T_K"]) if method != "bymode" else 0.0
+        seg_meteo = _meteo_at(z1) if meteo is not None else None
+        mach = (
+            _segment_mach(tas1, tas2, seg_meteo["T_K"]) if method != "bymode" else 0.0
+        )
 
         if method in ("bymode", "bffm2_anchor"):
             seg_ff_amb = eng["ff"]
@@ -1391,7 +1467,7 @@ def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the stan
                 pt1,
                 eng,
                 engine_ei,
-                meteo,
+                seg_meteo,
                 mach,
                 n_eng,
             )
@@ -1406,7 +1482,19 @@ def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the stan
         if meem and _meem_non_lto(z1):
             nvpm_g_kg = (
                 _meem_v1_mass_mgkg(
-                    alt_ft, tas1, is_dep, meem["points"], meem["opr"], meem_dt
+                    alt_ft,
+                    tas1,
+                    is_dep,
+                    meem["points"],
+                    meem["opr"],
+                    meem_dt,
+                    ambient=(
+                        (seg_meteo["T_K"], seg_meteo["P_Pa"])
+                        if seg_meteo is not None
+                        and _atm_model != _sla.MODEL_GROUND_HELD
+                        and "WindSpeed" in seg_meteo
+                        else None
+                    ),
                 )
                 / 1000.0
             )
@@ -1439,7 +1527,9 @@ def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the stan
                     )
                 )
         else:
-            _bffm2_apply_segment(em, seg_ff_amb, seg_fuel, eng, icao_eedb, meteo, mach)
+            _bffm2_apply_segment(
+                em, seg_ff_amb, seg_fuel, eng, icao_eedb, seg_meteo, mach
+            )
         fuel_by_mode[mode1] = fuel_by_mode.get(mode1, 0.0) + seg_fuel
         segs_inc += 1
 
@@ -1489,9 +1579,12 @@ def _bffm2_traj_ff_amb(conn, mov, pt, eng, engine_ei, meteo, mach, n_eng) -> flo
       - If fuel_flow_kgm is supplied (ADS-B / CUSTOM): use fuel_flow_kgm / n_eng,
         with a fallback to the anchor FF above ADSB_FF_CEILING_FACTOR x the TO anchor.
       - Otherwise (ANP): use twin_quadratic_fit on the segment's `power`
-        setting to get the EEDB reference FF, then convert to ambient FF
-        via the SAE AIR-5715 / CAEP14 inverse correction:
-            ff_amb = ff_ref * delta / theta^3.8 / exp(0.2 * M^2).
+        setting to get the EEDB reference FF, then scale it to ambient with
+        the corrected-parameter scaling of gas-turbine performance:
+            ff_amb = ff_ref * delta * sqrt(theta).
+        (The BFFM2 delta / theta^3.8 / exp(0.2 M^2) relation converts a known
+        fuel flow to reference conditions for the emission-index lookup; it is
+        not a fuel-flow model.)
 
     Power column comes from the profile row's `power` field; fuel_flow_kgm
     from the `fuel_flow_kgm` field.  Both need to be re-read because
@@ -1522,10 +1615,10 @@ def _bffm2_traj_ff_amb(conn, mov, pt, eng, engine_ei, meteo, mach, n_eng) -> flo
     if power is None:
         return eng["ff"]  # fall back to mode anchor if power missing
     ff_ref = _twin_quadratic_ff_from_power(power, engine_ei)
-    # Inverse ambient correction (SAE AIR-5715 / CAEP14).
+    # Ambient scaling (corrected parameters).
     theta = meteo["T_K"] / 288.15
     delta = meteo["P_Pa"] / 101325.0
-    ff_amb = ff_ref * delta / (theta**3.8) / math.exp(0.2 * mach**2)
+    ff_amb = ff_ref * delta * math.sqrt(theta)
     return ff_amb
 
 
@@ -1631,6 +1724,18 @@ def main(argv: Optional[list] = None) -> int:
         action="store_true",
         help="bymode: ICCAIA ambient NOx correction on take-off and climb-out",
     )
+    parser.add_argument(
+        "--atmosphere-model",
+        default="standard_lapse",
+        choices=_sla.ATMOSPHERE_MODELS,
+        help="Ambient conditions aloft from the hourly row (default standard_lapse, "
+        "as the plugin; ground_held = the 5.4.0 ambient conditions)",
+    )
+    parser.add_argument("--z0", type=float, default=None, help="roughness length (m)")
+    parser.add_argument(
+        "--d0", type=float, default=None, help="displacement height (m)"
+    )
+    parser.add_argument("--ha", type=float, default=None, help="anemometer height (m)")
     parser.add_argument("--verbose-diag", action="store_true")
     args = parser.parse_args(argv)
 
@@ -1676,6 +1781,12 @@ def main(argv: Optional[list] = None) -> int:
                 method=args.method,
                 use_isa_meteo=not args.use_meteo,
                 apply_nox_corrections=args.apply_nox_corrections,
+                atmosphere={
+                    "model": args.atmosphere_model,
+                    "z0": args.z0,
+                    "d0": args.d0,
+                    "ha": args.ha,
+                },
             )
             if result is None:
                 print(f"{oid:>3}  (skipped: no profile or helicopter)")

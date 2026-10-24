@@ -26,6 +26,7 @@ from open_alaqs.core.interfaces.Movement import Movement, defaultEmissions
 from open_alaqs.core.tools import bffm2, conversion
 from open_alaqs.core.tools import runway_placement as rp
 from open_alaqs.core.tools import spatial
+from open_alaqs.core.tools import surface_layer_atmosphere as sla
 from open_alaqs.core.tools.fuel_sulphur import helicopter_sox_ei_g_kg
 from open_alaqs.core.tools.nox_correction_ambient import (
     nox_correction_for_ambient_conditions,
@@ -52,6 +53,98 @@ NOX_CORRECTION_MODES = frozenset({"TO", "CL"})
 # time is block - runway time minus the profile's roll. Departure runway time = start of the take-off roll.
 # The standalone has the same rule (ctx["arrival_runway_time_is_touchdown"]).
 ARRIVAL_RUNWAY_TIME_IS_TOUCHDOWN = True
+
+
+def local_ambient_conditions(method_config: dict, height_m: float):
+    """The period's ambient conditions carried to height_m above the airport.
+
+    Uses the atmosphere model of the method config (``atmosphere_model``, default
+    ``standard_lapse``: ISA lapse rate from the row's 2 m temperature and station
+    pressure; ``surface_layer``: AUSTAL's boundary-layer formulas; see
+    core/tools/surface_layer_atmosphere.py). Returns a copy of the period's
+    AmbientCondition with temperature, pressure and relative humidity replaced, or
+    None when the model is ``ground_held`` or the period has no ambient conditions
+    (the caller then keeps the period's row as it is, the 5.4.0 behaviour).
+    """
+    import copy
+
+    model = sla.normalise_model(method_config.get("atmosphere_model"))
+    ac = method_config.get("ground_ambient_conditions") or method_config.get(
+        "ambient_conditions"
+    )
+    if model == sla.MODEL_GROUND_HELD or ac is None:
+        return None
+    # No tbl_InvMeteo row for the period (AmbientCondition defaults, ISA, no id): ISA at
+    # every height, as before 5.4.1 and as the standalone's ISA fallback.
+    if getattr(ac, "_id", "") is None:
+        return None
+    z0, d0, ha = method_config.get("atmosphere_site") or (None, None, None)
+    try:
+        t_k, p_pa, rh = sla.local_state(
+            model,
+            ac.getTemperature(),
+            ac.getPressure(),
+            ac.getRelativeHumidity(),
+            height_m,
+            wind_speed_m_s=ac.getWindSpeed(),
+            obukhov_length_m=ac.getObukhovLength(),
+            airport_elevation_m=float(method_config.get("airport_altitude") or 0.0),
+            z0=z0,
+            d0=d0,
+            ha=ha,
+            mixing_height_m=ac.getMixingHeight(),
+        )
+    except ValueError as exc:
+        try:
+            when = ac.getDateAsString()
+        except Exception:
+            when = "unknown date"
+        raise ValueError(
+            f"Atmosphere aloft ({model}), tbl_InvMeteo row of {when}: {exc}"
+        ) from None
+    local = copy.copy(ac)
+    local.setTemperature(t_k)
+    local.setPressure(p_pa)
+    local.setRelativeHumidity(rh)
+    return local
+
+
+def _meem_ambient(method_config: dict, T_amb, p_amb):
+    """(T, p) of the segment for MEEM V1 when the atmosphere model is active (the
+    ambient conditions are the segment's local state), else None (the CAEP sheet's
+    ISA + delta T at altitude: ground_held, or no local state)."""
+    if method_config.get("ground_ambient_conditions") is None:
+        return None
+    if T_amb is None or p_amb is None:
+        return None
+    return (float(T_amb), float(p_amb))
+
+
+class _LocalAmbient:
+    """Context manager: method_config["ambient_conditions"] is the local state at height_m
+    inside the block; the period's row stays available as "ground_ambient_conditions"
+    (NOx ambient correction; the MEEM V1 delta T, which only the ground_held sheet
+    atmosphere uses)."""
+
+    def __init__(self, method_config: dict, height_m: float):
+        self._cfg = method_config
+        self._height = height_m
+        self._active = False
+
+    def __enter__(self):
+        local = local_ambient_conditions(self._cfg, self._height)
+        if local is not None and "ground_ambient_conditions" not in self._cfg:
+            self._ground = self._cfg.get("ambient_conditions")
+            self._cfg["ground_ambient_conditions"] = self._ground
+            self._cfg["ambient_conditions"] = local
+            self._active = True
+        return self
+
+    def __exit__(self, *exc):
+        if self._active:
+            self._cfg["ambient_conditions"] = self._ground
+            del self._cfg["ground_ambient_conditions"]
+        return False
 
 
 class EmissionsDict(TypedDict):
@@ -262,7 +355,11 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
         # (MEEM PM lookup) and BFFM2 (EI lookup + MEEM PM injection).
         _saved_mach = self._method["config"].get("mach_number", 0.0)
         self._method["config"]["mach_number"] = 0.0
+        # Ambient conditions at the ground (atmosphere_model): station pressure and the
+        # METAR temperature; the period's row as it is for ground_held.
+        _ground_ambient = _LocalAmbient(self._method["config"], 0.0)
         try:
+            _ground_ambient.__enter__()
             if self._method["name"] == "bymode":
                 try:
                     ac = self._method["config"]["ambient_conditions"]
@@ -336,6 +433,7 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
             # Restore the prior Mach so subsequent operations on this method
             # dict are unaffected by the taxi isolation.
             self._method["config"]["mach_number"] = _saved_mach
+            _ground_ambient.__exit__(None, None, None)
 
         if emission_index_ is None:
             logger.error(
@@ -1150,6 +1248,18 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
     def calculate_emissions_per_segment(
         self, start_point_: TrajectoryPoint, end_point_: TrajectoryPoint
     ):
+        # Ambient conditions at the segment's start height above the airport (the height
+        # of its thrust, TAS and MEEM altitude), from the atmosphere model of the config.
+        try:
+            _h = float(start_point_.getZ() or 0.0)
+        except (TypeError, ValueError):
+            _h = 0.0
+        with _LocalAmbient(self._method["config"], _h):
+            return self._calculate_emissions_per_segment(start_point_, end_point_)
+
+    def _calculate_emissions_per_segment(
+        self, start_point_: TrajectoryPoint, end_point_: TrajectoryPoint
+    ):
         emissions = Emission(defaultValues=defaultEmissions)
         time_in_segment_s = 0.0
         space_in_segment_m = 0.0
@@ -1496,6 +1606,11 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         Without meteo the temperature is 288.15 K, so 0.0065 K/m x elevation."""
         from open_alaqs.core.tools.meem_v1 import delta_t_from_ground
 
+        # The deviation is taken from the period's row at the ground, not from the
+        # local temperature of the segment (atmosphere_model).
+        _ground = self._method["config"].get("ground_ambient_conditions")
+        if _ground is not None and _ground.getTemperature() is not None:
+            T_amb = float(_ground.getTemperature())
         return delta_t_from_ground(
             T_amb, self._method["config"].get("airport_altitude") or 0.0
         )
@@ -1528,6 +1643,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 airport_elevation_m=float(
                     self._method["config"].get("airport_altitude") or 0.0
                 ),
+                meem_ambient=_meem_ambient(self._method["config"], T_amb, p_amb),
             )
         except Exception:
             src = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)
@@ -1592,6 +1708,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 airport_elevation_m=float(
                     self._method["config"].get("airport_altitude") or 0.0
                 ),
+                meem_ambient=_meem_ambient(self._method["config"], T_amb, p_amb),
             )
         except Exception:
             mode_ei = self._engine.getEmissionIndex().getEmissionIndexByMode(mode)
@@ -1654,6 +1771,9 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
             (nox_g_kg, "g"),
             self._method["config"]["airport_altitude"],
             self._take_off_weight_ratio,
-            ac=self._method["config"]["ambient_conditions"],
+            # ICCAIA correction from the period's row at the airport (atmosphere_model
+            # does not apply to it).
+            ac=self._method["config"].get("ground_ambient_conditions")
+            or self._method["config"]["ambient_conditions"],
         )
         emission_index.setObject("nox_g_kg", corr_nox_ei)

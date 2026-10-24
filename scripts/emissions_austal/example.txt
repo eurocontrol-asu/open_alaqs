@@ -36,6 +36,25 @@ pollutant=NOx
 # Calculation method: bymode (default) or BFFM2
 # method=bymode
 
+# BFFM2 fuel-flow source: trajectory (default, fuel flow from each segment's
+# power setting) or mode_anchor (the ICAO fuel flow of the segment's LTO mode)
+# bffm2_ff_source=trajectory
+
+# Ambient conditions at each flight segment's height (5.4.1):
+#   standard_lapse (default): 2 m temperature and station pressure (from QNH)
+#                  carried up with the ISA lapse rate; humidity ratio kept
+#   surface_layer: AUSTAL's boundary-layer temperature profile from the hourly
+#                  wind, Obukhov length and mixing height
+#   ground_held:   the hourly row at every height (the 5.4.0 ambient
+#                  conditions; the fuel-flow fix still applies)
+# atmosphere_model=standard_lapse
+# Site parameters of the surface_layer profile (m). Empty: those of
+# austal_settings when run with --austal (roughness_length_m,
+# displacement_height_m, anemometer_height_m), else z0 0.1, d0 6 z0, ha 10 + d0
+# atmosphere_z0_m=
+# atmosphere_d0_m=
+# atmosphere_ha_m=
+
 # Source type filter
 # Accepted values: all, AreaSource, EngineTestSource, MovementSource,
 #                  ParkingSource, PointSource, RoadwaySource
