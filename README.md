@@ -1,62 +1,72 @@
 # Open-ALAQS
 
-QGIS plugin for airport emissions inventory and dispersion. Builds an annual emissions inventory from runway, taxiway, gate, stationary, engine-test-run, and movement sources, and exports AUSTAL-ready dispersion inputs.
+Open-ALAQS is a QGIS plugin for airport local air quality studies. It builds an emission inventory from the aircraft movements (runways, taxiways, gates, flight profiles, helicopters), the stationary sources (parkings, roadways, point and area sources, engine test sites) of an airport study, and prepares the inputs of the AUSTAL dispersion model.
 
 <img src="./open_alaqs/assets/oa-logo.jpg" alt="Open-ALAQS logo" width="50%">
 
+The [User Guide](documents/USER_GUIDE.md) describes how to build and run a study. What changed in each version is in the [CHANGELOG](CHANGELOG.md).
+
 ## Table of contents
 
-- [Open-ALAQS](#open-alaqs)
-  - [Table of contents](#table-of-contents)
-  - [Installation](#installation)
-    - [Install QGIS](#install-qgis)
-    - [Install dependencies](#install-dependencies)
-    - [Install Open-ALAQS](#install-open-alaqs)
-    - [Upgrading from 5.3.x](#upgrading-from-53x)
-  - [Quick start](#quick-start)
-    - [Example files](#example-files)
-    - [Training example study](#training-example-study)
-    - [Standalone Emissions + AUSTAL Inputs export script](#standalone-emissions--austal-inputs-export-script)
-  - [Workflow](#workflow)
-  - [Emission calculation methods](#emission-calculation-methods)
+- [Installation](#installation)
+  - [Install QGIS](#install-qgis)
+  - [Install Open-ALAQS](#install-open-alaqs)
+  - [Install the dependencies](#install-the-dependencies)
+- [Upgrading from an earlier version](#upgrading-from-an-earlier-version)
+- [Quick start with the training example](#quick-start-with-the-training-example)
+- [What the plugin calculates](#what-the-plugin-calculates)
+  - [Aircraft](#aircraft)
+  - [Other sources](#other-sources)
   - [Meteorological data](#meteorological-data)
-  - [GSE Application](#gse-application)
-  - [Development](#development)
-    - [Code style](#code-style)
-    - [Debugging](#debugging)
-    - [Updating the Open-ALAQS database templates](#updating-the-open-alaqs-database-templates)
-    - [Unit tests](#unit-tests)
-  - [Validation](#validation)
-  - [Recent changes](#recent-changes)
-  - [Contribute](#contribute)
-  - [License](#license)
-  - [Contact](#contact)
+  - [Dispersion with AUSTAL](#dispersion-with-austal)
+- [Running without the QGIS interface](#running-without-the-qgis-interface)
+- [Documentation](#documentation)
+- [Validation](#validation)
+- [GSE application](#gse-application)
+- [Development](#development)
+  - [Code style](#code-style)
+  - [Tests](#tests)
+  - [Updating the Open-ALAQS database templates](#updating-the-open-alaqs-database-templates)
+  - [Debugging](#debugging)
+- [Contribute](#contribute)
+- [License](#license)
+- [Contact](#contact)
 
 ## Installation
 
 [(Back to top)](#table-of-contents)
 
-To use Open-ALAQS you need to install QGIS, plus a few external Python libraries the plugin depends on.
-
 ### Install QGIS
 
-Download and install QGIS for your operating system following the official [QGIS documentation](https://qgis.org/download/).
+Open-ALAQS needs QGIS 3.34 or later (`qgisMinimumVersion` in `open_alaqs/metadata.txt`). Download QGIS from the [QGIS download page](https://qgis.org/download/). On Windows, use the [OSGeo4W installer](https://qgis.org/resources/installation-guide/#osgeo4w-installer) with the *Advanced Install* route; if QGIS was installed otherwise, uninstall it first. During the installation, accept the unmet dependencies and the license agreements.
 
-If you are running on Windows, install via the [OSGeo4W installer](https://qgis.org/resources/installation-guide/#osgeo4w-installer) following the `Advanced Install` route.
+### Install Open-ALAQS
 
-> **Note:** If not installed using the OSGeo4W Network Installer, please uninstall any old version and install the new version using OSGeo4W or follow the QGIS installation guide. During installation, accept the unmet dependencies and license agreements.
+The plugin is the `open_alaqs/` folder of the repository (the folder with `metadata.txt`), not the repository root.
 
-### Install dependencies
+**From the plugin zip** (`open_alaqs.v<version>.zip` on the [Releases](https://github.com/eurocontrol-asu/open_alaqs/releases) page, not the "Source code" archives): in QGIS, *Plugins → Manage and Install Plugins → Install from ZIP*, select the zip and click *Install Plugin*.
 
-Open-ALAQS is built on top of QGIS and a few external libraries that require separate installation. The full list is in `requirements.txt`.
+**From a clone of the repository**: copy (or link) the `open_alaqs/` folder into the QGIS plugin directory, so that `metadata.txt` ends up directly in:
 
-**Primary method:** Use QPIP (Python Dependency Manager for QGIS Plugins) to check and install the required dependencies directly inside QGIS. See the **Install Open-ALAQS** section below for details.
+- **Windows**: `%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\open_alaqs\`
+- **macOS**: `~/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins/open_alaqs/`
+- **Linux**: `~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/open_alaqs/`
 
-**Alternative method:** Install the libraries manually using `pip install` in the Python environment used by QGIS:
+Then enable it in *Plugins → Manage and Install Plugins → Installed* (tick "open_alaqs").
 
-```bash
-pip install -r requirements.txt
-```
+### Install the dependencies
+
+The plugin needs a few Python libraries that QGIS does not ship (`requirements.txt`). The plugin declares the QPIP plugin as a dependency: the first time Open-ALAQS loads, QPIP lists the missing libraries and offers to install them in the QGIS Python environment.
+
+<img src="./open_alaqs/assets/install_dependencies_via_qpip.png" alt="QPIP dependency dialog" width="80%">
+
+<img src="./open_alaqs/assets/install_plugin_dependencies.png" alt="QPIP install dialog" width="80%">
+
+Restart QGIS once after the installation. Open-ALAQS is then in the menu and the toolbar:
+
+<img src="./open_alaqs/assets/screenshot.png" alt="Open-ALAQS in QGIS" width="80%">
+
+Without QPIP, install the libraries with `pip install -r requirements.txt` in the Python environment of QGIS.
 
 <details>
 <summary>OSGeo4W manual installation</summary>
@@ -69,135 +79,114 @@ Find and install these packages from the OSGeo4W shell:
 
 </details>
 
-### Install Open-ALAQS
-
-Open-ALAQS is published as a QGIS plugin. The plugin is the `open_alaqs/` folder of the repository (the folder with `metadata.txt`), not the repository root.
-
-**From a plugin zip** (a zip whose top folder is `open_alaqs/`): in QGIS, Plugins → Manage and Install Plugins → Install from ZIP, select the zip and click Install Plugin.
-
-**From a clone of the repository**: copy (or link) the repository's `open_alaqs/` folder into the QGIS plugin directory for your platform, so that `metadata.txt` ends up directly in:
-
-- **Windows**: `%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\open_alaqs\`
-- **macOS**: `~/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins/open_alaqs/`
-- **Linux**: `~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/open_alaqs/`
-
-Then enable the plugin in the QGIS Plugin Manager (Plugins → Manage and Install Plugins → Installed → tick "open_alaqs", the name of the plugin folder).
-
-The first time the plugin loads, QPIP will detect missing dependencies and offer to install them in the QGIS Python environment:
-
-<img src="./open_alaqs/assets/install_dependencies_via_qpip.png" alt="QPIP dependency dialog" width="80%">
-
-<img src="./open_alaqs/assets/install_plugin_dependencies.png" alt="QPIP install dialog" width="80%">
-
-After dependencies are installed, restart QGIS once and Open-ALAQS will be available from the menu and toolbar:
-
-<img src="./open_alaqs/assets/screenshot.png" alt="Open-ALAQS in QGIS" width="80%">
-
-### Upgrading from 5.3.x
-
-Several results change with this version, and a study made with 5.3.x keeps its own copy of the engine, aircraft and profile tables, which are copied into every new inventory. See [Upgrading from 5.3.x](documents/USER_GUIDE.md#upgrading-from-53x) in the User Guide for the list of changes, the studies they affect and how to update a study.
-
-## Quick start
+## Upgrading from an earlier version
 
 [(Back to top)](#table-of-contents)
 
-### Example files
+Results change between versions, and a study file keeps the schema and the reference tables (engines, aircraft, profiles) of the version that created it. Before recalculating an existing study, read the User Guide:
 
-Two example studies ship with the repository:
+- [Upgrading from 5.4.0](documents/USER_GUIDE.md#upgrading-from-540): BFFM2 results change; studies need no migration.
+- [Upgrading from 5.3.x](documents/USER_GUIDE.md#upgrading-from-53x) (also for 5.0.x to 5.2.x studies): which results change and how to update a study with [`scripts/migrate_alaqs.py`](scripts/README.md#migrate_alaqspy) (or its GUI, `scripts/migrate_alaqs_gui.py`). The script is not in the plugin zip; run it from a checkout of the repository at the version you install.
 
-- `example/training/` — a self-contained study used for tutorials and validation, including pre-computed reference values to compare your run against.
-- `tests/data/AIRPORT_A/` — the same study used by the regression test suite, with full pre-computed emissions tables and APU/CAEP14 comparison spreadsheets.
-  The two spreadsheets (`AIRPORT_A_APU_comparison.xlsx`, `AIRPORT_A_CAEP14_comparison.xlsx`) date from the 5.0.0 rebuild and predate the 5.4.0 changes to aircraft SOx, MEEM V1 and runway placement: their numbers are not those of a current run.
-
-### Training example study
-
-The training study lives in `example/training/` and contains:
-
-- `training.alaqs` — the unprocessed study database (geometry, sources, study setup)
-- `training_out.alaqs`: the processed inventory database (output of *Calculate Emissions Inventory*)
-- `training_movements.csv` — aircraft movements input
-- `training_meteo.csv` — hourly meteorological input
-- `training_ads_b_data.csv`: ADS-B tracks, imported into the inventory when it is generated (movement 11 flies `1764584438_PHBBA`)
-- `training_validation_reference.xlsx`: reference values for verifying your installation (the plugin's results on `training_out.alaqs` beside the CAEP14 reference implementation, per movement and method)
-
-For a step-by-step walk-through of opening, configuring, and running a study, see the [User Guide](documents/USER_GUIDE.md).
-
-### Standalone Emissions + AUSTAL Inputs export script
-
-Two standalone paths to run Open-ALAQS outside the QGIS plugin are shipped:
-
-**QGIS-bound CLIs** (`scripts/`). Use the plugin's libraries directly under an OSGeo4W shell or QGIS Python:
-
-- [`scripts/emissions_austal/run_emissions_austal.py`](scripts/emissions_austal/run_emissions_austal.py) runs the full emissions calculation against a `.alaqs` inventory and optionally generates AUSTAL inputs in one pass. See [`scripts/emissions_austal/README.md`](scripts/emissions_austal/README.md).
-- [`scripts/austal_from_csv/run_austal_from_csv.py`](scripts/austal_from_csv/run_austal_from_csv.py) generates AUSTAL inputs from pre-computed emissions / meteo CSVs (no `.alaqs` required). See [`scripts/austal_from_csv/README.md`](scripts/austal_from_csv/README.md).
-- [`scripts/metar_to_alaqs_meteo.py`](scripts/metar_to_alaqs_meteo.py) converts METAR observations into the `meteo.csv` format (see [`scripts/README_metar_to_alaqs_meteo.md`](scripts/README_metar_to_alaqs_meteo.md)).
-- [`scripts/migrate_alaqs.py`](scripts/migrate_alaqs.py) is the schema migration tool for upgrading legacy `.alaqs` files; [`scripts/migrate_alaqs_gui.py`](scripts/migrate_alaqs_gui.py) is the Qt GUI wrapper.
-
-**QGIS-free package** (`openalaqs_standalone/`). A Python package that runs the full emission calculation without QGIS, PyQt5, or SpatiaLite at runtime; it imports QGIS-free modules of the plugin tree, so it runs from the repository root (see its [USAGE](openalaqs_standalone/USAGE.md)). Uses pyproj + shapely + numpy. Designed for headless / CI / cluster use and for batched validation against the CAEP14 reference.
-
-- Package: [`openalaqs_standalone/`](openalaqs_standalone/) (see its [README](openalaqs_standalone/README.md))
-- AUSTAL writer helpers used by the standalone live in [`austal_prep/`](austal_prep/)
-- Validation: [`openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md`](openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md) and the bundled `training_v3.alaqs` fixture.
-- Optional Reference A NOx ambient correction: `--apply-nox-corrections` (default off; preserves bymode bit-identity with the plugin).
-
-See [`scripts/README.md`](scripts/README.md) for the full inventory of QGIS-bound CLIs.
-
-## Workflow
+## Quick start with the training example
 
 [(Back to top)](#table-of-contents)
 
-1. Build the airport study (runways, taxiways, gates, stationary sources) in a QGIS project.
-2. Open *Calculate Emissions Inventory* (window *Generate Emission Inventory*) to bake the study into an inventory database (`*_out.alaqs`), supplying a movements CSV, a meteorological CSV (see [Meteorological data](#meteorological-data)) and, optionally, an ADS-B CSV.
-3. Open *Visualize Emission Calculation* on the inventory to calculate emissions with the selected method; they are calculated when an output (table, time series, vector layer) is requested.
-4. For dispersion runs, see [`documents/AUSTAL/AUSTAL_OPERATION.md`](documents/AUSTAL/AUSTAL_OPERATION.md).
+`example/training/` holds a complete study at Rotterdam The Hague Airport (13 movements over 3 days in December 2025):
 
-For engine test runs (run-ups), an extra step between 1 and 2: mark the area source(s) that represent the run-up pad as engine test sites via the QGIS form ("Engine Test Site" checkbox), then load the events via the *"Load engine test events CSV..."* button on the same form (or, for scripting workflows and multi-source bulk-load, [`scripts/import_engine_test_events.py`](scripts/README.md)). Per-event masses are then included in the inventory automatically; the source's `*_kg_unit` rate columns are ignored.
+| File | Content |
+|---|---|
+| `training.alaqs` | the study (geometry, sources, study setup), opened with *Load an Open ALAQS project* |
+| `training_movements.csv` | aircraft movements |
+| `training_meteo.csv` | hourly meteorological data |
+| `training_ads_b_data.csv` | ADS-B tracks, imported into the inventory when it is generated |
+| `training_engine_test_events.csv` | engine test events for the area source used as a run-up pad (see its `.README.md`) |
+| `training_out.alaqs` | the inventory, as produced by *Calculate Emissions Inventory* from the files above |
+| `training_validation_reference.xlsx` | reference results, per movement and method, to check an installation |
+| `recipe_config.*.json` | example configurations of the standalone pipeline |
 
-## Emission calculation methods
+The steps of a study:
 
-[(Back to top)](#table-of-contents)
+1. **Build the study** in QGIS: runways, taxiways, taxi routes, gates and the stationary sources ([User Guide, Define emission sources](documents/USER_GUIDE.md#define-emission-sources)).
+2. **Generate the inventory** with *Calculate Emissions Inventory*: it combines the study with a movements CSV, a meteorological CSV and, optionally, an ADS-B CSV into an inventory file (`<name>_out.alaqs`).
+3. **Calculate emissions** with *Visualize Emission Calculation* on the inventory: choose the method and the period; the emissions are calculated when a table, a time series or a map is requested ([User Guide](documents/USER_GUIDE.md#calculate-emissions-and-query-results)).
+4. **Run the dispersion** with *Calculate Dispersion* (AUSTAL), see [Dispersion with AUSTAL](#dispersion-with-austal).
 
-Open-ALAQS ships three aircraft emission methods selectable at run time:
+To check an installation, calculate `training_out.alaqs` and compare with `training_validation_reference.xlsx`.
 
-- **bymode** — multiplies anchor-mode fuel flow × anchor-mode EI × time × engine count. No ambient corrections. Use as a tautological baseline.
-- **BFFM2 (trajectory)** — default BFFM2 path. For each trajectory segment resolves fuel flow from the segment's sub-mode power setting via the twin-quadratic fit, applies SAE AIR-5715 atmospheric corrections for NOx, and snaps CO/HC to the horizontal mean(CL, TO) value above the APP anchor in the standard-intersection case (CAEP14 v14 rule).
-- **BFFM2 (mode_anchor)** — uses the mode anchor fuel flow (IDLE/APP/CL/TO EEDB values) as the BFFM2 input, still applying ambient corrections. Useful when trajectories lack per-segment sub-mode fidelity.
-- **Helicopters (FOCA 2015)** — separate dispatch for movements flagged as helicopters. Four FOCA categories (PISTON, SINGLE_TURBOSHAFT, TWIN_TURBOSHAFT_LIGHT/HEAVY) with per-category trajectories and emission indices. APU and gate emissions are suppressed; airborne emissions only. See [`documents/USER_GUIDE.md`](documents/USER_GUIDE.md) for category derivation and [`documents/HELICOPTER_TRAJECTORIES.md`](documents/HELICOPTER_TRAJECTORIES.md) for the data sources.
-
-PM is via MEEM V1: the certified EEDB nvPM values in the LTO cycle and the MEEM V1 altitude chain above it. MEEM V2 (CAEP14 v12+) is implemented in `meem_v2.py` for evaluation only and is not used by the calculation. The MDG4 / Staged Combustion update is not implemented.
-
-For BFFM2 implementation details see [`documents/BFFM2_validation/BFFM2.md`](documents/BFFM2_validation/BFFM2.md).
-
-### Engine test runs
-
-A separate calculation path handles engine test runs (run-ups) as stationary sources. An area source flagged as a test site (`is_test_site='1'`) has its emissions computed from per-event rows in the `engine_test_events` table rather than from the source's `*_kg_unit` rate columns. Each event carries a start/end datetime, an aircraft type and engine, a per-mode duration (`t_TX_s` / `t_AP_s` / `t_CL_s` / `t_TO_s`), and a `thrust_mode` (`snap` / `meem` / `bffm2`).
-
-- **`snap`** — plain ICAO EEDB EI for each mode. Default. No ambient corrections.
-- **`meem`** — nvPM correction (MEEM V1). Numerically identical to `snap` for engine-test events because engine test modes correspond to ICAO EEDB anchor thrust settings; interpolation at an anchor returns the anchor's own value.
-- **`bffm2`** — gas-phase EIs (NOx, CO, HC) corrected with ambient conditions from `tbl_InvMeteo` at each event's midpoint (SAE AIR-5715 / CAEP14). PM10 and SOx pass through from the EEDB per-mode. If `tbl_InvMeteo` is empty, `bffm2` falls back to ISA defaults with a one-per-run diagnostic.
-
-The default across every event is `snap`; users opt into `meem` or `bffm2` per-event via a SQL update on `engine_test_events.thrust_mode`. Both `EngineTestSourceModule` (plugin) and `openalaqs_standalone/compute_engine_test.py` (standalone) implement the same math bit-for-bit. See the *Engine test sites* subsection of [`documents/USER_GUIDE.md`](documents/USER_GUIDE.md) for the setup workflow.
-
-## Meteorological data
+## What the plugin calculates
 
 [(Back to top)](#table-of-contents)
 
-Open-ALAQS expects an hourly meteo CSV during output creation. A standalone utility for producing it from a METAR stream ships in `scripts/`:
+### Aircraft
 
-- [`scripts/metar_to_alaqs_meteo.py`](scripts/metar_to_alaqs_meteo.py) — parses raw METAR, IEM CSV, or Ogimet observations (`--source {auto,iem-csv,ogimet,raw}`), computes relative humidity from T/Td, buckets hourly (wind direction averaged on the circle), classifies stability (Pasquill-Gifford with the mid-hour sun and a night-time humidity correction, `--night-rule`), writes the ALAQS-schema CSV.
-- [`scripts/README_metar_to_alaqs_meteo.md`](scripts/README_metar_to_alaqs_meteo.md) — usage and notes on where to fetch METAR data (NOAA Aviation Weather Center, ogimet.com, metar-taf.com API, python-metar). Fetching is deliberately left to the user; the script focuses on parsing and resampling.
+| Method (GUI) | Standalone name | Fuel flow and emission indices |
+|---|---|---|
+| ByMode | `bymode` | ICAO EEDB fuel flow and emission indices of each LTO mode (taxi, approach, climb-out, take-off), times the time in mode. Optional ICCAIA NOx correction for ambient conditions on take-off and climb-out (*Apply NOx Corrections*, `bymode_nox_corr`). |
+| BFFM2, fuel-flow source *trajectory* | `bffm2_traj` | Fuel flow of each profile segment from its thrust share, scaled to ambient conditions; BFFM2 (SAE AIR5715) emission indices of NOx, CO and HC at that fuel flow, with the ambient corrections. |
+| BFFM2, fuel-flow source *mode_anchor* | `bffm2_anchor` | As above, with the EEDB fuel flow of the segment's mode. |
 
-## GSE Application
+- **Ambient conditions aloft** (*Atmosphere Aloft*, 5.4.1): each flight segment uses the temperature, pressure and humidity at its height, derived from the hourly meteorological row (`standard_lapse` by default, `surface_layer` or `ground_held`), see [`ATMOSPHERE_ALOFT.md`](documents/ATMOSPHERE_ALOFT.md).
+- **Particulate matter**: nvPM from the certified EEDB values in the LTO cycle and MEEM V1 above 3,000 ft; volatile PM (sulphate and organic) and brake wear after FOA3 (see the [PM10 output columns](documents/USER_GUIDE.md#pm10-output-columns)). Aircraft SOx comes from the fuel sulphur content.
+- **Helicopters**: a movement whose aircraft type is in the helicopter catalog follows the FOCA 2015 method with its own trajectories, whatever the method chosen; no APU, engine start or gate emissions are computed for it, and its ground idle is counted ([User Guide, Helicopters](documents/USER_GUIDE.md#helicopters-foca-2015)).
+- **Taxiing, gate (GSE, GPU), APU and engine start** emissions of fixed-wing movements come from the taxi route, the gate and the movement's APU and gate settings.
+
+Details: [`BFFM2.md`](documents/BFFM2_validation/BFFM2.md), [`FUEL_FLOW_OPTIONS.md`](documents/FUEL_FLOW_OPTIONS.md).
+
+### Other sources
+
+Parkings and roadways (COPERT 5 emission factors), point and area sources (emission factors with activity profiles) and engine test sites: an area source marked as a test site takes its emissions from a list of test events instead of its emission factors ([User Guide, Engine test sites](documents/USER_GUIDE.md#engine-test-sites)). The buildings layer is not used in the calculation yet.
+
+### Meteorological data
+
+*Calculate Emissions Inventory* reads an hourly meteorological CSV (temperature, pressure, humidity, wind, stability, mixing height; format in the [User Guide](documents/USER_GUIDE.md#meteorology)). [`scripts/metar_to_alaqs_meteo.py`](scripts/README_metar_to_alaqs_meteo.md) builds that file from METAR observations (raw METAR, IEM CSV or Ogimet); fetching the observations is left to the user.
+
+### Dispersion with AUSTAL
+
+*Calculate Dispersion* writes the AUSTAL input files from an inventory (sources, hourly emissions, meteorology, grid, receptors), runs AUSTAL and plots the results as a layer. AUSTAL itself is installed separately ([`AUSTAL.md`](documents/AUSTAL/AUSTAL.md)); the dialog is described in [`AUSTAL_OPERATION.md`](documents/AUSTAL/AUSTAL_OPERATION.md). The default site parameters are z0 = 0.1 m (the TA Luft value for airports), d0 = 6 z0 and ha = 10 m + d0; how to choose them is in the [User Guide](documents/USER_GUIDE.md#roughness-length-displacement-height-and-anemometer-height).
+
+## Running without the QGIS interface
 
 [(Back to top)](#table-of-contents)
 
-A separate companion utility for ground support equipment (GSE) emissions lives in `gse_application/`. Launch with:
+- **QGIS-free pipeline** ([`openalaqs_standalone/`](openalaqs_standalone/README.md)): computes the aircraft emissions of an inventory file, spreads the stationary emissions over the year, and builds the AUSTAL inputs without QGIS, PyQt or SpatiaLite (pyproj, shapely, numpy, pandas). It gives the plugin's results and runs from the repository root, for batch, server or cluster runs. Commands and options: [`USAGE.md`](openalaqs_standalone/USAGE.md); the AUSTAL writer is in [`austal_prep/`](austal_prep/).
+- **Scripts using the plugin's code** (run with the QGIS Python), listed in [`scripts/README.md`](scripts/README.md):
+  - [`scripts/emissions_austal/`](scripts/emissions_austal/README.md): emissions of an inventory and, optionally, the AUSTAL inputs, in one run;
+  - [`scripts/austal_from_csv/`](scripts/austal_from_csv/README.md): AUSTAL inputs from emission and meteorological CSVs, without a `.alaqs` file;
+  - [`scripts/import_engine_test_events.py`](scripts/README.md#import_engine_test_eventspy): engine test events from a CSV, for several sources at once;
+  - [`scripts/migrate_alaqs.py`](scripts/README.md#migrate_alaqspy): update a study made with an earlier version.
 
-```bash
-python3 gse_application/gse.py
-```
+## Documentation
 
-See [`gse_application/README.md`](gse_application/README.md) for full documentation.
+[(Back to top)](#table-of-contents)
+
+| Document | Content |
+|---|---|
+| [`USER_GUIDE.md`](documents/USER_GUIDE.md) | building and running a study, input formats, upgrading |
+| [`AUSTAL/AUSTAL.md`](documents/AUSTAL/AUSTAL.md), [`AUSTAL/AUSTAL_OPERATION.md`](documents/AUSTAL/AUSTAL_OPERATION.md) | AUSTAL installation and the *Calculate Dispersion* dialog |
+| [`ATMOSPHERE_ALOFT.md`](documents/ATMOSPHERE_ALOFT.md) | ambient conditions at the height of each flight segment |
+| [`BFFM2_validation/BFFM2.md`](documents/BFFM2_validation/BFFM2.md), [`FUEL_FLOW_OPTIONS.md`](documents/FUEL_FLOW_OPTIONS.md) | the BFFM2 method and the fuel flow of the trajectory method |
+| [`HELICOPTER_TRAJECTORIES.md`](documents/HELICOPTER_TRAJECTORIES.md) | FOCA 2015 helicopter trajectories and their sources |
+| [`VALIDATION_GUIDE.md`](documents/VALIDATION_GUIDE.md) | how the results are validated and how to reproduce it |
+| [`AIRCRAFT_PROFILES_PROVENANCE.md`](documents/AIRCRAFT_PROFILES_PROVENANCE.md), [`DATASET_PROVENANCE.md`](documents/DATASET_PROVENANCE.md) | origin of the reference data |
+| [`AUXILIARY_MATERIAL.md`](documents/AUXILIARY_MATERIAL.md) | background of the User Guide: database, ANP, BFFM2, AUSTAL, COPERT, smooth and shift |
+| [`TEST_CASE_STUDY.md`](documents/TEST_CASE_STUDY.md) | a worked test case study |
+| [Training course (PDF)](documents/Airport%20Local%20Air%20Quality%20Studies%20with%20OpenALAQS%20-%20Training%20Course.pdf) | the training course material |
+
+## Validation
+
+[(Back to top)](#table-of-contents)
+
+- The BFFM2 emission-index step is checked against two cases of the CAEP validation (EUROCONTROL's CAEP/14 engine-emissions calculation, `tests/test_caep14_sheet_reference_case.py`), and MEEM V1 against the MEEM_V1 tab of the CAEP14 calculation sheet v14 (`tests/test_meem_v1.py`).
+- The CAEP validation does not cover how the fuel flow is derived from the profile. For the whole calculation (every method, the NOx correction and the helicopters), the plugin, the QGIS-free pipeline and the project's CAEP14 reference implementation (`compute_caep14_reference.py`) agree movement by movement on the training studies.
+
+See [`VALIDATION_GUIDE.md`](documents/VALIDATION_GUIDE.md) and [`CAEP14_VALIDATION.md`](openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md).
+
+## GSE application
+
+[(Back to top)](#table-of-contents)
+
+A separate utility for ground support equipment (GSE) emissions is in `gse_application/` (`python3 gse_application/gse.py`), see [`gse_application/README.md`](gse_application/README.md).
 
 ## Development
 
@@ -205,80 +194,51 @@ See [`gse_application/README.md`](gse_application/README.md) for full documentat
 
 ### Code style
 
-Open-ALAQS uses `pre-commit` to enforce code style and basic checks (autoflake, isort, black, flake8). Hooks run on every commit if `pre-commit` is installed in your local clone:
+`pre-commit` runs autoflake, isort, black and flake8 on each commit:
 
 ```bash
 pip install pre-commit
 pre-commit install
+pre-commit run --all-files
 ```
 
-### Debugging
+### Tests
 
-For inspecting plugin state interactively, use QGIS's Python console (Plugins → Python Console). For step debugging, install the QGIS Dev Tools plugin (debugpy backend) and attach from VS Code or PyCharm.
+From the repository root, with QGIS on the Python path (the QGIS-free pipeline's tests need only its own dependencies):
+
+```bash
+QT_QPA_PLATFORM=offscreen PYTHONPATH=$PWD python3 -m pytest              # plugin and standalone suites
+QT_QPA_PLATFORM=offscreen PYTHONPATH=$PWD python3 -m pytest --run-slow   # including the slow tests
+```
+
+CI runs the suites in the QGIS Docker images 3.40 and 3.44 (`.github/workflows/test.yaml`). `tests/data/` holds the test studies: `AIRPORT_A/` is an earlier version of the training study (11 taxiways, its own movements) with pre-computed outputs; its two comparison spreadsheets date from 5.0.0 and do not reflect the current results.
 
 ### Updating the Open-ALAQS database templates
 
-The plugin's `.alaqs` files are cloned from two template databases at `open_alaqs/core/templates/project.alaqs` (the project file users edit in QGIS) and `open_alaqs/core/templates/inventory.alaqs` (the inventory output file produced by *Calculate Emissions Inventory*).
+New studies are copies of `open_alaqs/core/templates/project.alaqs`, new inventories of `inventory.alaqs`. Both are built by `tools/template_build/generate_templates.py` from the SpatiaLite scaffold, the SQL scripts in `tools/template_build/sql/` and the reference data in `open_alaqs/database/data/*.csv`; see [`tools/template_build/README.md`](tools/template_build/README.md). A change to the schema needs a matching change to `scripts/migrate_alaqs.py` users can run on their studies.
 
-Templates are built by `tools/template_build/generate_templates.py` from three inputs:
+### Debugging
 
-- `tools/template_build/spatialite_base.alaqs` — the bare SpatiaLite scaffold
-- `tools/template_build/sql/*.sql` — table-creation scripts
-- `open_alaqs/database/data/*.csv` — frozen reference-data CSVs
-
-To regenerate the templates after editing source files:
-
-```bash
-python3 tools/template_build/generate_templates.py
-```
-
-The script needs a working QGIS Python environment; see [`tools/template_build/README.md`](tools/template_build/README.md) for the exact invocation on each platform.
-
-### Unit tests
-
-The full test suite runs offscreen and requires no display:
-
-```bash
-QT_QPA_PLATFORM=offscreen PYTHONPATH=$PWD python3 -m pytest tests/
-```
-
-Most tests need QGIS available on the Python path. CI runs the suite in a QGIS Docker container (3.40 and 3.44 matrix); see `.github/workflows/`.
-
-## Validation
-
-[(Back to top)](#table-of-contents)
-
-The BFFM2 emission-index step is pinned to two cases of the CAEP validation (EUROCONTROL's CAEP/14 engine-emissions calculation; `test_caep14_sheet_reference_case.py`), and MEEM V1 to the MEEM_V1 tab of the CAEP14 calculation sheet v14 (`tests/test_meem_v1.py`); in the LTO cycle MEEM V1 returns the EEDB nvPM values unchanged. The CAEP validation does not cover how a fuel flow is derived from the profile: for the whole method (bymode, BFFM2 trajectory, BFFM2 mode_anchor, the NOx correction and the helicopters), the plugin, the QGIS-free standalone and the project's own CAEP14 reference implementation (`compute_caep14_reference.py`, which imports the plugin's BFFM2 index function and FOCA tables) agree movement by movement on the training fixtures. See `openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md` and [`documents/VALIDATION_GUIDE.md`](documents/VALIDATION_GUIDE.md). The sensitivity options on the trajectory method's fuel flow are described in [`documents/FUEL_FLOW_OPTIONS.md`](documents/FUEL_FLOW_OPTIONS.md).
-
-The BFFM2 method itself is described in [`documents/BFFM2_validation/BFFM2.md`](documents/BFFM2_validation/BFFM2.md).
-
-## Recent changes
-
-[(Back to top)](#table-of-contents)
-
-See [`CHANGELOG.md`](CHANGELOG.md) for fixes and behaviour changes in this and previous releases.
+Use the QGIS Python console (*Plugins → Python Console*), or the QGIS Dev Tools plugin (debugpy) to attach VS Code or PyCharm.
 
 ## Contribute
 
 [(Back to top)](#table-of-contents)
 
-Contributions are welcome. Please open an issue to discuss substantive changes before submitting a pull request, so the work is aligned with what the project needs. For small fixes (typos, documentation corrections, missing test cases), a direct pull request is fine.
+Contributions are welcome. Please open an issue to discuss substantive changes before submitting a pull request; small fixes (typos, documentation, missing tests) can go directly to a pull request. In a pull request:
 
-When opening a pull request:
-
-- Run the test suite locally and confirm it passes.
-- Run `pre-commit run --all-files` and confirm all hooks pass.
-- Include a regression test for any behaviour change.
-- Reference the issue number in the PR title or body.
+- run the test suite and `pre-commit run --all-files`;
+- add a regression test for any change of behaviour;
+- reference the issue number.
 
 ## License
 
 [(Back to top)](#table-of-contents)
 
-This software is published under European Union Public Licence v. 1.2 ([`LICENCE.md`](LICENCE.md)) with certain amendments described in [`AMENDMENT_TO_EUPL_license.md`](AMENDMENT_TO_EUPL_license.md), reflecting EUROCONTROL's status as an international organisation.
+This software is published under the European Union Public Licence v. 1.2 ([`LICENCE.md`](LICENCE.md)) with the amendments described in [`AMENDMENT_TO_EUPL_license.md`](AMENDMENT_TO_EUPL_license.md), reflecting EUROCONTROL's status as an international organisation.
 
 ## Contact
 
 [(Back to top)](#table-of-contents)
 
-For questions, bug reports, or feature requests, contact us by email at [open-alaqs@eurocontrol.int](mailto:open-alaqs@eurocontrol.int).
+For questions, bug reports or feature requests, write to [open-alaqs@eurocontrol.int](mailto:open-alaqs@eurocontrol.int) or open an [issue](https://github.com/eurocontrol-asu/open_alaqs/issues).
