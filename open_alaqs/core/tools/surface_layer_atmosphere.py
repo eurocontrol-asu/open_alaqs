@@ -15,7 +15,7 @@ Three atmosphere models (method config key ``atmosphere_model``):
     of a nearby airport), within
     the emission ceiling: T(z) - T(surface) bias / RMS -1.3 / 2.9 K at 100 m, +0.3 / 1.4 K at
     300 m, +2.0 / 3.1 K at 900 m; the fuel-flow factor delta sqrt(theta) within 0.3 to 0.7 %
-    RMS (the ground row held: 1.2 to 12.9 %). See documents/ATMOSPHERE_ALOFT.md.
+    RMS (the ground row held: 1.2 to 12.9 %). See documents/methods/ATMOSPHERE_ALOFT.md.
 
 ``surface_layer``
     The boundary-layer temperature profile of AUSTAL 3.3 (function ``BlmTemp`` of ``TalBlm.c``;

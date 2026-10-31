@@ -343,8 +343,9 @@ def test_icao_ceiling_row_gets_a_stable_layer_of_austal_depth():
 
 
 def test_meem_v1_local_ambient():
-    """MEEM V1 with the segment's local (T, p): the CAEP sheet's ISA + delta T reproduces the
-    sheet; another state changes the EI; the reference implementation agrees."""
+    """MEEM V1 with the segment's local (T, p): the ISA + delta T state reproduces
+    the ISA + delta T result; another state changes the EI; the reference
+    implementation agrees."""
     from open_alaqs.core.tools import meem_v1
     from openalaqs_standalone.validation.tools import compute_caep14_reference as ref
 

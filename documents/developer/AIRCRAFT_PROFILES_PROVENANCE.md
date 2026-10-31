@@ -3,9 +3,7 @@
 This document records where the rows of
 `open_alaqs/database/data/default_aircraft_profiles.csv` and the default
 profile columns of `open_alaqs/database/data/default_aircraft.csv` come from,
-what was corrected in the amendment of October 2026, and how to reproduce it.
-
-Last updated: 2026-10-13.
+what was corrected against the 5.3.5 tables, and how to reproduce it.
 
 ## 1. Sources
 
@@ -16,8 +14,7 @@ Last updated: 2026-10-13.
 * **ECAC Doc 29, 5th edition, Volume 2**, Appendix B: the performance model
   behind the procedural profiles (used here to check the table, not to
   recompute it).
-* **The 5.3.5 tables** (git revision `c8a55cd`, md5 `c15a3e26...` and
-  `ad1c2604...`), and the history of the profile CSV, in particular the
+* **The 5.3.5 tables** (git revision `c8a55cd`), and the history of the profile CSV, in particular the
   version before commit `ab42da5` (2024-09-26).
 
 The table carries no build tool from before 2026. Its x, z and TAS were
@@ -35,10 +32,10 @@ implementation of Doc 29 Appendix B, as these checks show:
 | Departure weights | equal the v2.2 stage weight (lb x 0.453592) wherever present |
 | Arrival weights | equal the v2.2 stage-1 departure weight (134 of 134 arrivals that had one) |
 
-The geometry is therefore kept as it is; the amendment corrects only what is
+The geometry is therefore kept as it is; the corrections are only those
 listed in section 2.
 
-## 2. Corrections (October 2026)
+## 2. Corrections to the 5.3.5 tables
 
 1. **Type profiles restored.** Commit `ab42da5` created the 48 group profiles
    (`JET-*`, `PISTON-*`, `TURBOPROP-*`) by renaming type profiles. The table
@@ -112,7 +109,7 @@ profile ID that existed before.
   2.1 IDs removed). The x, z, TAS and mode of
   every profile that existed are unchanged, except `757300-A-1`,
   `CNA206-D-1`, `PISTON-D-1`, `PISTON-D-2` and `TURBOPROP-D-4`.
-* `PISTON-D-1` (default for most light aircraft until now) climbed like a
+* `PISTON-D-1` (in the 5.3.5 tables the default for most light aircraft) climbed like a
   jet: 94 s below 914 m. As CNA172 it takes 300 s.
 * Movements without a `profile_id` now get a type-specific profile for 658
   types (rules a and b), e.g. B738 `737800-D-1` instead of `JET-SMALL-D-4`
@@ -129,7 +126,8 @@ python3 tools/test_fixtures/regenerate_default_aircraft_profiles.py
 python3 tools/test_fixtures/regenerate_default_aircraft.py
 ```
 
-The builder reads the 5.3.5 tables from git revision `c8a55cd` (md5 checked)
+The builder reads the 5.3.5 tables from git revision `c8a55cd` (md5
+`c15a3e26...` and `ad1c2604...`, checked)
 and the ANP v2.2 tables from `--anp-dir`. The ANP tables are not in the
 repository. Output md5 for the inputs above: profiles `16160d7c...`, aircraft
 `4e36bcc1...`. Checks that need only the committed CSVs are in
@@ -155,7 +153,3 @@ exists only in later releases appears.
 
 * Modes of fixed-point departures are kept as they were (e.g. `777300-D-1`
   switches to CL at 1,565 ft, before its thrust cutback).
-* Arrival placement: fixed in the code (13 Oct 2026). ANP arrivals now touch
-  down at the landing threshold plus the runway's Touchdown Offset, else the
-  profile's own 50 ft crossing distance; see the Runways section of the user
-  guide.

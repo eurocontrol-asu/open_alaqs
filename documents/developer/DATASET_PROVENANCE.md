@@ -7,8 +7,6 @@ refresh against a newer COPERT release. The intent is to make any future
 data maintenance easier and to be honest about gaps in the historical
 record.
 
-Last updated: 2026-06-05.
-
 ## 1. The data file
 
 **Path**: `open_alaqs/database/data/default_vehicle_ef_copert5.csv`
@@ -32,14 +30,14 @@ Last updated: 2026-06-05.
 
 **Documented version**: COPERT 5.4.52. Cited in
 the module comments of `open_alaqs/core/tools/copert5_utils.py` and in
-`documents/AUXILIARY_MATERIAL.md`.
+`documents/methods/REFERENCE_DATA.md`.
 
 **Source Guidebook**: EMEP/EEA air pollutant emission inventory guidebook
 2019, Update October 2020. Cited in the module docstring of `copert5_utils.py`. This is the
 generation of the Guidebook the bulk methodology in `copert5*.py` was
 implemented against. Specific items verified against the 2023 Update 2025
-chapter as part of the 2026 review are cited inline in `copert5.py`,
-`copert5_utils.py`, and `AUXILIARY_MATERIAL.md` using the uniform format
+chapter are cited inline in `copert5.py`,
+`copert5_utils.py`, and [`STATIONARY_AND_ROAD.md`](../methods/STATIONARY_AND_ROAD.md) using the uniform format
 `EMEP/EEA Guidebook 2023 Update 2025, chapter <NFR-code>, §<section> (p.<page>)`.
 
 **Items not currently in the repo record**:
@@ -95,7 +93,7 @@ the first seven files of the table above
 (its `TARGETS` list); the AIRPORT_A and standalone
 validation files must be updated separately.
 
-## 4. Data integrity status (as of 2026-06-05)
+## 4. Data integrity status
 
 Four data integrity items have been investigated. Status:
 
@@ -105,6 +103,12 @@ Four data integrity items have been investigated. Status:
 | 2 | PM10 < PM2.5 in 639 row pairs (2505 cells) | Fixed via `tools/data_integrity_fixes/fix_pm10_at_least_pm25.py`. PM10[speed] = max(PM10[speed], PM2.5[speed]) per violating cell, satisfying physical constraint and Guidebook §1.1 PM10=PM2.5=TSP equality for road exhaust. |
 | 3 | EU27/EU28 labelling mismatch (EU27 has 1137 rows across 9 pollutants but no PM10; EU28 has 118 rows, all PM10) | Open. Caused by ingestion-layer artifact at the time the EU-aggregate rows were generated. Not fixable from the existing CSV alone (the missing PM10 rows for EU27 are not derivable without source data); deferred to a future data refresh. |
 | 4 | NH3 values ~10× lower than EMEP/EEA Guidebook Tier 2 references (Table 3-17) | Open. PC Petrol Hot NH3 at 50 km/h reads ~1.4 mg/km vs ~10-50 mg/km in the Guidebook Tier 2. Affects all PC Petrol rows checked; broader scope not characterised. Currently inert because NH3 is not exposed in the road traffic emissions output pipeline. Deferred to a future data refresh. |
+
+Items 2 and 3 have no effect on the road traffic PM10 output: the PM10 rows
+of the file are not read (PM10 is not in `copert5_utils.POLLUTANTS`) and road
+PM10 is taken from the PM2.5 factor `ePM2.5` (`copert5.py`), since the EMEP/EEA
+Guidebook sets PM10 = PM2.5 for road exhaust. Item 4 is inert for the reason
+given in the table.
 
 ## 5. Refreshing to a newer COPERT release
 
@@ -139,7 +143,11 @@ The expected refresh procedure, when undertaken:
 8. **Update this document** with the new version's provenance facts
    (exact COPERT version, ingest date, fleet composition source).
 
-## 6. Out of scope for this document
+## 6. Guidebook citations in the code
+
+The original Tier 3 implementation (`copert5_utils.py`) cites the EMEP/EEA Guidebook 2019 (Update Oct. 2020) and its table numbers. Later design decisions are cited with chapter, section and page of the 2023 edition, in the format `EMEP/EEA Guidebook 2023 Update 2025, chapter <NFR-code>, §<section> (p.<page>)`, with verbatim quotes where the decision turns on exact wording. When the next Guidebook update is published, re-check each cited reference in `copert5.py`, `copert5_utils.py` and [STATIONARY_AND_ROAD.md](../methods/STATIONARY_AND_ROAD.md#road-traffic-and-parkings-copert), starting with its known limitations.
+
+## 7. Out of scope for this document
 
 Other vehicle / aircraft / GSE emission factor datasets in
 `open_alaqs/database/data/` (`default_aircraft_engine_ei.csv`,

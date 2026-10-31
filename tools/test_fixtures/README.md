@@ -1,7 +1,7 @@
-# tools/test_fixtures/
+# Test fixture scripts
 
-Maintainer scripts that update test fixture files when source data
-or calculator output drifts. None of these are pytest tests; pytest
+For maintainers: the scripts that update test fixture files when source
+data or calculator output drifts, and when to run each. None of these are pytest tests; pytest
 does not collect or run them. They are invoked by hand when needed.
 
 ## When to use each script
@@ -12,7 +12,7 @@ does not collect or run them. They are invoked by hand when needed.
 | `regenerate_default_aircraft.py` | After the default profile columns of `open_alaqs/database/data/default_aircraft.csv` change. Updates `departure_profile` and `arrival_profile` in the fixtures whose `default_aircraft` is a copy of the CSV; skips the others. |
 | `regenerate_emission_calculation_references.py` | After a calculator change that shifts numeric output. Regenerates 16 reference outputs (`.gpkg` vector layers + `.csv` tables) used by `tests/test_emission_calculation.py`. The test compares its current output to these references, cell by cell; it is a slow test (`pytest --run-slow`). An unknown `source_type` makes the script stop. |
 | `regenerate_emission_vector_layers.py` | When only the 14 vector-layer `.gpkg` references of `tests/test_emission_calculation.py` (AIRPORT_A and ANP) need refreshing; `--start`/`--end` select a subset. Run as `python3 -m tools.test_fixtures.regenerate_emission_vector_layers`. |
-| `rebuild_training_example_inventory.py` | After `example/training/training.alaqs` or the example's CSVs (movements, meteo, ADS-B) change. Rebuilds `training_out.alaqs` through the plugin's inventory creation and ADS-B import, with the settings of `documents/TEST_CASE_STUDY.md` (`--input-dir` reads the four inputs from another folder and writes `training_out.alaqs` there, `--end` sets the end of the movements period, default `2025-12-03 09:00:00`, `--out` the output file); then rebuild the example workbook (`openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md`, step 3). |
+| `rebuild_training_example_inventory.py` | After `example/training/training.alaqs` or the example's CSVs (movements, meteo, ADS-B) change. Rebuilds `training_out.alaqs` through the plugin's inventory creation and ADS-B import, with the settings of `documents/user/TUTORIAL_ROTTERDAM.md` (`--input-dir` reads the four inputs from another folder and writes `training_out.alaqs` there, `--end` sets the end of the movements period, default `2025-12-03 09:00:00`, `--out` the output file); then rebuild the example workbook ([CAEP14_VALIDATION.md](../../openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md#regenerate-the-validation-workbooks)). |
 | `regenerate_anp_reference_csv.py` | When the ANP test fixture's `ANP_emissions_table_by_aggregation_co.csv` has drifted from the current calculator output. Snapshots the current output into the canonical 14-column CSV format. |
 
 ## Why they live outside `tests/`
@@ -39,3 +39,9 @@ QT_QPA_PLATFORM=offscreen python3 tools/test_fixtures/regenerate_anp_reference_c
 After running, re-run the affected tests (`pytest --run-slow
 tests/test_emission_calculation.py` for the emission-calculation
 references).
+
+See also:
+
+- [VALIDATION_GUIDE.md](../../documents/validation/VALIDATION_GUIDE.md#running-the-automated-tests): running the test suites
+- [CAEP14_VALIDATION.md](../../openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md): the pinned validation outputs
+- [tools/anp22_profiles](../anp22_profiles/README.md): rebuilding the default aircraft profiles

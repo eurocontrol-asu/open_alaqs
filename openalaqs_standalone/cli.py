@@ -330,7 +330,7 @@ def run_aircraft(argv: list | None = None) -> int:
         default=False,
         dest="apply_nox_corrections",
         help=(
-            "Apply the ICCAIA / CAEP14 v14 NOx ambient correction at "
+            "Apply the ICCAIA / CAEP/14 NOx ambient correction at "
             "takeoff (TO) and climb-out (CL) segments. Reads ambient "
             "temperature, pressure and relative humidity from "
             "tbl_InvMeteo per inventory period, plus airport elevation "

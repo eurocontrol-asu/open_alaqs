@@ -29,9 +29,8 @@ class EmissionCalculationConfig:
     #   "twin_quadratic"  — ALAQS parabolic fit (default, backward-compatible)
     #   "linear"   — ICAO/CAEP14 piecewise-linear between EEDB breakpoints
 
-    # MEEM version for the nvPM EI. Only "v1" (ICAO CAEP/13-MDG, CAEP14 v14
-    # MEEM_V1 tab) is used: MEEM V2 (CAEP14 v12+, meem_v2.py) is implemented
-    # but not used, its adoption is to be decided; MovementSourceModule logs a
+    # MEEM version for the nvPM EI. Only "v1" (ICAO CAEP/13-MDG) is used: MEEM V2
+    # (CAEP/14, meem_v2.py) is implemented but not used, its adoption is to be decided; MovementSourceModule logs a
     # warning and runs V1 for any other value.
     meem_version: str = "v1"
 
@@ -41,11 +40,11 @@ class EmissionCalculationConfig:
     #       twin_quadratic_fit_method. Uses the ANP sub-mode thrust variation
     #       (ratio of THR_SET in lb to Max Sea Level Static Thrust in lb per
     #       Aircraft.csv). BFFM2 EIs are then log-log interpolated on the EEDB
-    #       curve at that FF. Matches the CAEP14 v14 BFFM2 workflow.
+    #       curve at that FF. Matches the CAEP/14 BFFM2 workflow.
     #   "mode_anchor":        use the EEDB anchor FF for the segment's mode
     #       (TX→0.091, AP→0.244, CL→0.71, TO→0.861 kg/s/eng for LEAP-1A).
     #       Disables sub-mode resolution but still applies BFFM2 atmospheric
-    #       and humidity corrections. Matches the CAEP14 v14 LTO-mode workflow
+    #       and humidity corrections. Matches the CAEP/14 LTO-mode workflow
     #       with ambient corrections applied.
     # Only affects BFFM2; has no effect when method == "bymode" or when an
     # explicit fuel_flow_kgm is supplied by the trajectory.

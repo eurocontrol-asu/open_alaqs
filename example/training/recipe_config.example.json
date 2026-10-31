@@ -29,7 +29,7 @@
   "ha":                        null,
   "_ha":                       "Anemometer height (m) at which the meteo file's wind applies for the roughness z0. null = 10 m + d0 (10.6 for z0 0.1), right for an anemometer on ground as rough as z0. Used by the AUSTAL config and atmosphere_model surface_layer.",
   "apply_nox_corrections":     false,
-  "_apply_nox_corrections":    "true = apply the ICCAIA / CAEP14 v14 NOx ambient correction at TO and CL segments. Reads T/P/RH from tbl_InvMeteo per period; reads airport elevation from user_study_setup; reads tow_ratio per movement from user_aircraft_movements (defaults 1.0). Only effective when aircraft_method=bymode; BFFM2 methods incorporate their own ambient correction and ignore this flag.",
+  "_apply_nox_corrections":    "true = apply the ICCAIA / CAEP/14 NOx ambient correction at TO and CL segments. Reads T/P/RH from tbl_InvMeteo per period; reads airport elevation from user_study_setup; reads tow_ratio per movement from user_aircraft_movements (defaults 1.0). Only effective when aircraft_method=bymode; BFFM2 methods incorporate their own ambient correction and ignore this flag.",
   "source_dynamics":           "none",
   "_source_dynamics":          "Smooth-and-shift mode for aircraft spatial apportionment. One of: none, default, sas. none = each segment apportioned by its centreline. default / sas = segments widened to the per-group, per-stage extent from default_emission_dynamics and apportioned by footprint area (sas uses the larger 'smooth & shift' extents). Affects spatial distribution only; movement emission totals are identical across modes.",
 

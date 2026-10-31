@@ -127,7 +127,7 @@ def test_bffm2_cold_dec1_pinned_values():
     nox = calculate_emission_index("NOx", 0.244, A20N_EEDB, COLD)
     co = calculate_emission_index("CO", 0.244, A20N_EEDB, COLD)
     hc = calculate_emission_index("HC", 0.244, A20N_EEDB, COLD)
-    # Values pinned against the live bffm2 module (CAEP14 v12, May 2026).
+    # Values pinned against the live bffm2 module (CAEP/14 BFFM2, May 2026).
     # If these drift the bffm2 formulae or installation-correction defaults
     # have changed; re-derive against a manual hand trace before updating.
     assert abs(nox - 8.76009) < 1e-3, f"NOx at COLD = {nox!r} (expected ~8.760)"

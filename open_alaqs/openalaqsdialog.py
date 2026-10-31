@@ -71,6 +71,7 @@ from open_alaqs.core.tools.csv_interface import (
     read_csv_to_dict,
     read_csv_to_geodataframe,
 )
+from open_alaqs.core.tools.docs_url import docs_url
 from open_alaqs.core.utils.osm import download_osm_airport_data
 from open_alaqs.core.utils.qt import populate_combobox
 from open_alaqs.enums import AlaqsLayerType
@@ -82,6 +83,14 @@ from open_alaqs.ui.styles import (
 )
 
 logger = get_logger(__name__)
+
+# The two Vertical Limit fields (study setup, Configuration tab) have no
+# effect: MovementSourceModule takes the period's MixingHeight, 914.4 m when
+# it is empty (documents/methods/AIRCRAFT_EMISSIONS.md).
+VERTICAL_LIMIT_UNUSED_TOOLTIP = (
+    "Not used. The LTO ceiling is the mixing height of the hourly meteo, "
+    "or 914.4 m (3000 ft) when there is none."
+)
 
 
 class Austal2000RunError(Exception):
@@ -143,6 +152,15 @@ class OpenAlaqsAbout(QtWidgets.QDialog):
         self.ui = Ui_DialogAbout()
         self.ui.setupUi(self)
         self.iface = iface
+        # Link to the documentation of the installed version (the URL depends on it,
+        # so it is added here rather than in the .ui text).
+        url = docs_url()
+        self.ui.label.setText(
+            self.ui.label.text().replace(
+                "</body>",
+                f'<p align="center">Documentation: <a href="{url}">{url}</a></p></body>',
+            )
+        )
         # self.ui.AddWatermarkButton.clicked.connect(self.addWatermark)
 
 
@@ -228,6 +246,10 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.ui.spinBoxAirportElevation.setLocale(c_locale)
         self.ui.spinBoxAirportTemperature.setLocale(c_locale)
         self.ui.spinBoxVerticalLimit.setLocale(c_locale)
+        # The calculation does not use this value (kept in the database for
+        # compatibility): the LTO ceiling is the hourly mixing height.
+        self.ui.spinBoxVerticalLimit.setEnabled(False)
+        self.ui.spinBoxVerticalLimit.setToolTip(VERTICAL_LIMIT_UNUSED_TOOLTIP)
 
         self.iface = iface
 
@@ -1238,13 +1260,13 @@ class OpenAlaqsTaxiRoutes(QtWidgets.QDialog):
             for taxiway_route in taxiway_routes:
                 self.ui.routes.addItem(taxiway_route[2])
             logger.debug("Taxiway Routes Tool: routes populated")
+        else:
+            logger.warning("Taxiway Routes Tool: No routes defined")
 
         if select_name:
             index_select_name_ = self.ui.routes.findText(select_name)
             if index_select_name_ != -1:
                 self.ui.routes.setCurrentIndex(index_select_name_)
-        else:
-            logger.warning("Taxiway Routes Tool: No routes defined")
 
     def populate_aircraft_groups(self):
         """
@@ -1844,6 +1866,19 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                 )
                 end_date = datetime.strptime("1900-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
 
+                # A file without a header line starts with a movement (its
+                # first field is a date): that line is checked and counted.
+                has_header = False
+
+                def is_movement_header(first_field):
+                    try:
+                        datetime.strptime(
+                            first_field.lstrip("\ufeff").strip(), "%Y-%m-%d %H:%M:%S"
+                        )
+                    except ValueError:
+                        return True
+                    return False
+
                 # Loop over the movement file and perform some basic checks
                 for index_line, line in enumerate(movement_file):
                     movement_line += 1
@@ -1852,8 +1887,9 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                     if len(movement_data) == 1 and movement_data[0] == "\n":
                         continue
 
-                    if movement_line == 1:
+                    if movement_line == 1 and is_movement_header(movement_data[0]):
                         # Check out the header row
+                        has_header = True
                         if len(movement_data) < 1:
                             raise Exception("Movement file contains no data on line 1")
                         if not isinstance(movement_data[0], str):
@@ -1867,7 +1903,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
                             )
 
                         date_time = datetime.strptime(
-                            movement_data[0], "%Y-%m-%d %H:%M:%S"
+                            movement_data[0].lstrip("\ufeff"), "%Y-%m-%d %H:%M:%S"
                         )
                         if date_time < start_date:
                             start_date = (date_time).replace(minute=0, second=0)
@@ -1890,7 +1926,7 @@ class OpenAlaqsInventory(QtWidgets.QDialog):
             self.ui.movements_summary.setText(
                 "Total Movements: %d; Start: %s; End: %s"
                 % (
-                    (int(movement_line) - 1),
+                    (int(movement_line) - int(has_header)),
                     start_date.strftime("%Y-%m-%d %H:%M:%S"),
                     end_date.strftime("%Y-%m-%d %H:%M:%S"),
                 )
@@ -2271,11 +2307,11 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
                 "'trajectory' (default): derive FF from the segment's "
                 "power_setting via twin-quadratic interpolation on the EEDB "
                 "anchors. Uses ANP sub-mode thrust variation. Matches the "
-                "CAEP14 v14 BFFM2 workflow.\n\n"
+                "CAEP/14 BFFM2 workflow.\n\n"
                 "'mode_anchor': use the EEDB anchor FF for the segment's "
                 "mode label (TX/AP/CL/TO). Disables sub-mode resolution but "
                 "still applies BFFM2 atmospheric and humidity corrections. "
-                "Matches the CAEP14 v14 LTO-mode workflow with corrections. "
+                "Matches the CAEP/14 LTO-mode workflow with corrections. "
                 "Useful for ICAO-style LTO inventory comparisons.\n\n"
                 "Only applies when method is BFFM2."
             ),
@@ -2309,6 +2345,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             "widget_type": QgsDoubleSpinBox,
             "initial_value": 914.4,
             "widget_config": {"minimum": 0, "maximum": 999999.9, "suffix": "m"},
+            # Disabled in resetEmissionCalculationConfiguration: the value
+            # only reaches a fallback that is never taken.
+            "tooltip": VERTICAL_LIMIT_UNUSED_TOOLTIP,
         },
         "receptor_points": {
             "label": "Receptor Points",
@@ -2501,6 +2540,9 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
             self._emission_calculation_configuration_widget.get_widget(
                 "receptor_points"
             ).fileChanged.connect(load_receptors_csv)
+            self._emission_calculation_configuration_widget.get_widget(
+                "vertical_limit_m"
+            ).setEnabled(False)
 
             self.ui.configuration_stack.insertWidget(
                 0, self._emission_calculation_configuration_widget

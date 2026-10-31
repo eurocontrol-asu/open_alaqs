@@ -720,7 +720,43 @@ Checked: AUSTAL writes per-hour concentration files; the result viewer can then 
            </property>
           </widget>
          </item>
-         <item row="11" column="0" colspan="2">
+         <item row="11" column="0">
+          <widget class="QLabel" name="csvPm10FineFractionLabel">
+           <property name="text">
+            <string>PM10 fine fraction (0–1):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="11" column="1">
+          <widget class="QDoubleSpinBox" name="csv_pm10_fine_fraction_spinbox">
+           <property name="minimum">
+            <double>0.0</double>
+           </property>
+           <property name="maximum">
+            <double>1.0</double>
+           </property>
+           <property name="singleStep">
+            <double>0.05</double>
+           </property>
+           <property name="decimals">
+            <number>2</number>
+           </property>
+           <property name="value">
+            <double>0.9</double>
+           </property>
+           <property name="toolTip">
+            <string>Share of PM10 mass treated as the fine fraction (pm-1, &lt; 2.5 µm in AUSTAL).
+The remainder goes to pm-2 (2.5–10 µm). AUSTAL writes both as separate emission lines and sums them in pm-y00a.dmna for the PM10 result.
+
+Recommended values:
+ • 0.95 — pure aircraft/jet engine exhaust (nvPM is overwhelmingly &lt; 100 nm).
+ • 0.90 — typical airport mix (aircraft + GSE + airport vehicle exhaust).
+ • 0.70 — general road traffic including non-exhaust contributions (tyre/brake/road wear).
+ • 0.40–0.50 — non-exhaust dominated (tyre/brake wear) or fugitive dust sources.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="12" column="0" colspan="2">
           <widget class="QLabel" name="external_files_feedback">
            <property name="text">
             <string>Status: Missing output directory, emissions CSV, and meteo CSV</string>
@@ -731,7 +767,7 @@ Checked: AUSTAL writes per-hour concentration files; the result viewer can then 
           </widget>
          </item>
          <!-- Grid Configuration (Nested in CSV Generation) -->
-         <item row="12" column="0" colspan="2">
+         <item row="13" column="0" colspan="2">
           <widget class="QGroupBox" name="gridManagementGroupBox">
            <property name="title">
             <string>Grid Configuration</string>

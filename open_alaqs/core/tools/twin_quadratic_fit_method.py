@@ -67,7 +67,8 @@ def calculate_fuel_flow_from_power_setting(power_setting: float, icao_eedb: dict
         x3 = 1.0
     else:
         raise ValueError(
-            "The power setting should be between 0.07 and 1.0 (inclusive); "
+            "The power setting should be between 0 and 1.0 (inclusive; below 0.07 "
+            "the fit is extrapolated from the idle point); "
             f"a tolerance up to {_PS_UPPER_TOLERANCE} is clamped to 1.0. "
             f"The requested power setting is {power_setting}, outside that range."
         )

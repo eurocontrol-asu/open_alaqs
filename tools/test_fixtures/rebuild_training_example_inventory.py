@@ -7,7 +7,7 @@ example/training/training.alaqs with training_movements.csv and
 training_meteo.csv, then imports training_ads_b_data.csv into the inventory
 (`ads_b.import_adsb_file`, tier 1: reference point from each flight's runway
 and taxi route in the movement CSV), as the dialog does when an ADS-B file is
-given. Settings as in documents/TEST_CASE_STUDY.md ("Generate Emissions
+given. Settings as in documents/user/TUTORIAL_ROTTERDAM.md ("Generate Emissions
 Inventory"): 100 x 100 x 20 cells of 250 x 250 x 50 m, movements 2025-12-01
 06:00 to 2025-12-03 09:00, vertical limit 914.4 m; study setup from training.alaqs.
 

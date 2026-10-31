@@ -54,9 +54,9 @@ For each fixed-wing movement:
        CO2     += seg_fuel * 3.16
     6. Above 3000 ft above the aerodrome (start point height, ICAO LTO
        cycle) the PM10 EI moves by the MEEM V1 nvPM mass EI minus the mode's
-       pm10_nonvol (`_meem_v1_mass_mgkg`, written out from the CAEP14 v14
-       sheet's MEEM_V1 tab), ISA + dT at the segment altitude above MSL
-       (start point height + airport elevation), with dT (USER INPUTS!B5)
+       pm10_nonvol (`_meem_v1_mass_mgkg`, written out from the MEEM V1
+       method, ICAO CAEP/13-MDG), ISA + dT at the segment altitude above MSL
+       (start point height + airport elevation), with dT (delta T at 0 ft MSL)
        the meteo temperature minus the ISA temperature at the airport
        elevation.
 
@@ -86,7 +86,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 # SOx (as SO2) per kg fuel when the engine table gives none: written out here,
 # independently of open_alaqs/core/tools/fuel_sulphur.py. Jet fuel: the fuel
-# of the CAEP14 sheet v14 inputs (FSC 0.000383, 1 % to S(VI));
+# of the ICAO vPM parameterisation example of CAEP/14 (FSC 0.000383, 1 % to
+# S(VI));
 # AvGas (and PISTON helicopters): FSC 0.01 %, no sulphate.
 SOX_EI_JET_G_KG = 1000.0 * 0.000383 * (1.0 - 0.01) * 2.0
 SOX_EI_AVGAS_G_KG = 1000.0 * 0.0001 * 2.0
@@ -118,45 +119,61 @@ ADSB_FF_CEILING_FACTOR = 1.5
 EPS_VERTICAL_M = 1e-6
 
 
+def _period_meteo_row(conn, columns: str, runway_time):
+    """The `tbl_InvMeteo` row (selected `columns`) the plugin uses for the
+    movement at `runway_time`, or None when the table has no row.
+
+    The plugin bins a movement into the period containing its runway time
+    and takes the meteo row nearest in time to the period start, ties to
+    the earlier row (EmissionCalculation.getAmbientCondition). Periods are
+    hourly here, so the period start is `runway_time` floored to the hour.
+    Same rule as the standalone's `movements._period_meteo_row`.
+    """
+    t = datetime.fromisoformat(str(runway_time))
+    start = t.replace(minute=0, second=0, microsecond=0)
+    start_s = start.strftime("%Y-%m-%d %H:%M:%S")
+    before = conn.execute(
+        f"SELECT {columns}, DateTime FROM tbl_InvMeteo WHERE DateTime <= ? "
+        "ORDER BY DateTime DESC LIMIT 1",
+        (start_s,),
+    ).fetchone()
+    after = conn.execute(
+        f"SELECT {columns}, DateTime FROM tbl_InvMeteo WHERE DateTime > ? "
+        "ORDER BY DateTime ASC LIMIT 1",
+        (start_s,),
+    ).fetchone()
+    if before is None or after is None:
+        row = before if after is None else after
+    else:
+        d_before = start - datetime.fromisoformat(str(before[-1]))
+        d_after = datetime.fromisoformat(str(after[-1])) - start
+        row = before if d_before <= d_after else after
+    return None if row is None else row[:-1]
+
+
 def _mixing_height_at(conn, runway_time: str) -> float:
-    """Return the inventory vertical ceiling (m) for the meteo period
-    containing `runway_time`. Mirrors the plugin's
-    `ambient_conditions.getMixingHeight()` lookup, which the plugin
-    uses as `max_height` in `apply_height_limits`.
+    """Return the inventory vertical ceiling (m) for the movement at
+    `runway_time`: the `MixingHeight` of the meteo row the plugin uses
+    (`_period_meteo_row`), as the plugin's
+    `ambient_conditions.getMixingHeight()` used as `max_height` in
+    `apply_height_limits`.
 
-    Lookup: the `tbl_InvMeteo` row whose `DateTime` is the latest at or
-    before `runway_time` (same temporal rule as `_get_meteo_at`).
+    When there is no row or its `MixingHeight` is empty the ceiling is
+    `MAX_HEIGHT_M` (914.4 m), the plugin's AmbientCondition default. The
+    study's `user_study_setup.vertical_limit` is not used (the plugin
+    ignores it too).
 
-    Fallback chain, matching the standalone's `get_mixing_height_at`
-    and the plugin's `MovementSourceModule.process`:
-      1. `tbl_InvMeteo.MixingHeight` for the matched period.
-      2. `user_study_setup.vertical_limit` (typically 914.4 m).
-      3. `MAX_HEIGHT_M` (914.4 m).
-
-    This replaces the earlier hardcoded `MAX_HEIGHT_M`. The training_v3
-    fixture has `MixingHeight = 914.4` at every movement hour, so the
-    constant matched the per-hour lookup by coincidence. The val_out
-    fixture deliberately varies MixingHeight (e.g. 1500 m at mov 8's
-    hour, 600 m at mov 10's hour) to test per-hour handling.
+    The training_v3 fixture has `MixingHeight = 914.4` at every movement
+    hour. The val_out fixture deliberately varies MixingHeight (e.g.
+    1500 m at mov 8's hour, 600 m at mov 10's hour) to test per-hour
+    handling.
     """
     try:
-        row = conn.execute(
-            "SELECT MixingHeight FROM tbl_InvMeteo WHERE DateTime <= ? "
-            "ORDER BY DateTime DESC LIMIT 1",
-            (runway_time,),
-        ).fetchone()
+        row = _period_meteo_row(conn, "MixingHeight", runway_time)
     except sqlite3.OperationalError:
         row = None
     if row is not None and row[0] is not None:
         return float(row[0])
-    try:
-        vl = conn.execute(
-            "SELECT vertical_limit FROM user_study_setup LIMIT 1"
-        ).fetchone()
-    except sqlite3.OperationalError:
-        vl = None
-    if vl is not None and vl[0] is not None:
-        return float(vl[0])
     return MAX_HEIGHT_M
 
 
@@ -524,9 +541,18 @@ def _get_movement(conn, oid: int) -> Optional[dict]:
         """
         SELECT oid, runway_time, block_time, aircraft, departure_arrival,
                engine_name, profile_id, taxi_route, runway, taxi_fuel_ratio,
-               number_of_stop_and_gos, gate, tow_ratio
+               number_of_stop_and_gos, gate, tow_ratio, {thrust}
         FROM user_aircraft_movements WHERE oid=?
-        """,
+        """.format(
+            thrust=(
+                "engine_thrust_level_for_taxiing"
+                if any(
+                    r[1] == "engine_thrust_level_for_taxiing"
+                    for r in conn.execute("PRAGMA table_info(user_aircraft_movements)")
+                )
+                else "NULL"
+            )
+        ),
         (oid,),
     ).fetchone()
     if not row:
@@ -545,7 +571,27 @@ def _get_movement(conn, oid: int) -> Optional[dict]:
         "number_of_stop_and_gos": row[10] or 0,
         "gate": row[11],
         "tow_ratio": float(row[12]) if row[12] not in (None, "") else None,
+        # BFFM2 taxi thrust fraction; 0.07 when not given (plugin Movement:
+        # convertToFloat(value, 0.07)).
+        "engine_thrust_level_for_taxiing": _float_or(row[13], 0.07),
     }
+
+
+def _float_or(value, default: float) -> float:
+    """`value` as a float, or `default` when it is NULL, empty or not a number
+    (a decimal comma is read as a point)."""
+    if value is None or value == "":
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        pass
+    if isinstance(value, str) and "," in value and "." not in value:
+        try:
+            return float(value.replace(",", "."))
+        except ValueError:
+            pass
+    return default
 
 
 def _get_engine_count(conn, icao: str) -> int:
@@ -631,19 +677,18 @@ def _get_engine_ei(conn, engine_name: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# MEEM V1 nvPM mass EI above 3000 ft, written out from the "MEEM_V1",
-# "USER INPUTS" and "Constants" tabs of the CAEP14 FBE Engines Emissions
-# Calculation Sheet v14 (cell references in the comments). Independent of
+# MEEM V1 nvPM mass EI above 3000 ft, written out from the MEEM V1 method
+# (ICAO CAEP/13-MDG) with its ISA constants. Independent of
 # open_alaqs.core.tools.meem_v1. At or below 3000 ft above the aerodrome
-# (USER INPUTS!B36, ICAO LTO cycle) the EI is the certification value of the
+# (ICAO LTO cycle) the EI is the certification value of the
 # mode, i.e. the table's pm10_nonvol.
 # ---------------------------------------------------------------------------
 
-_MEEM_FT2M = 0.3048000097536  # Constants!B17
-_MEEM_LTO_CEILING_FT = 3000.0  # USER INPUTS!B36
-_MEEM_CRUISE_ALT_FT = 38000.0  # USER INPUTS!B20 (stored value; OpenALAQS has none)
-_MEEM_DEFAULT_OPR = 30.0  # the sheet has no value for a missing PRESS_RATIO
-# Constants!A6:F8, segment_constants of the non-LTO phases:
+_MEEM_FT2M = 0.3048000097536  # ft to m
+_MEEM_LTO_CEILING_FT = 3000.0  # ICAO LTO cycle ceiling
+_MEEM_CRUISE_ALT_FT = 38000.0  # default cruise altitude (OpenALAQS has none)
+_MEEM_DEFAULT_OPR = 30.0  # the method has no value for a missing PRESS_RATIO
+# segment_constants of the non-LTO phases of MEEM V1:
 # phase -> (eta_comp, Pi_alt, Pi_alt at 3000 ft, Pi_alt at cruise)
 _MEEM_SEGMENT_CONSTANTS = {
     "CLIMB TO CRUISE": (0.88, None, 0.85, 1.15),
@@ -683,14 +728,14 @@ def _get_engine_meem(conn, engine_name: str) -> dict:
 
 
 def _meem_non_lto(height_m: float) -> bool:
-    """USER INPUTS!B36: True ("NON_LTO") for a segment start point more than
+    """True ("NON_LTO") for a segment start point more than
     3000 ft above the aerodrome (ICAO LTO cycle). `height_m` is the height
     above the airport, not the altitude above MSL."""
     return float(height_m) / _MEEM_FT2M > _MEEM_LTO_CEILING_FT
 
 
 def _meem_delta_t(meteo, elevation_m: float) -> float:
-    """USER INPUTS!B5 (delta T at 0 ft MSL, K) of a movement: the meteo
+    """Delta T at 0 ft MSL (K) of a movement: the meteo
     temperature minus the ISA temperature at the airport elevation
     (288.15 K - 6.5 K/km), constant aloft; 0 without meteo."""
     if not meteo or meteo.get("T_K") is None:
@@ -707,17 +752,17 @@ def _meem_v1_mass_mgkg(
     delta_t: float = 0.0,
     ambient: Optional[tuple] = None,
 ) -> float:
-    """MEEM_V1!B119 (nvPM mass EI at the segment, fossil fuel) of a non-LTO
-    segment, ISA + delta_t (USER INPUTS!B5); with `ambient` = (T, p) the
+    """MEEM V1 nvPM mass EI at the segment (fossil fuel) of a non-LTO
+    segment, ISA + delta_t (delta T at 0 ft MSL); with `ambient` = (T, p) the
     segment's local state from the atmosphere model instead (OpenALAQS 5.4.1)."""
     t0, p0, g0, lapse, gam, r_air = 288.15, 101325.0, 9.80665, -0.0065, 1.4, 287.05287
-    alt_trop_ft = 11000.0 / _MEEM_FT2M  # Constants!B32
-    # USER INPUTS!B44, B45, B46, B39 (TAS in kt with Constants!B19)
+    alt_trop_ft = 11000.0 / _MEEM_FT2M  # ISA tropopause (ft)
+    # ambient T and p, speed of sound and Mach (TAS in kt)
     t_amb = t0 + delta_t + min(alt_ft, alt_trop_ft) * lapse * _MEEM_FT2M
     if alt_ft <= alt_trop_ft:
         p_amb = p0 * math.pow((t_amb - delta_t) / t0, g0 / (-lapse * r_air))
     else:
-        t_trop = delta_t + t0 + lapse * 11000.0  # B41
+        t_trop = delta_t + t0 + lapse * 11000.0
         p_trop = p0 * math.pow((t_trop - delta_t) / t0, -g0 / (lapse * r_air))
         p_amb = p_trop * math.exp(
             -g0 * (alt_ft * _MEEM_FT2M - 11000.0) / (r_air * t_trop)
@@ -727,19 +772,19 @@ def _meem_v1_mass_mgkg(
     sos_kt = math.sqrt(gam * r_air * t_amb) * 1.94384
     mach = (tas_m_s * 1.94384) / sos_kt
     phase = "CLIMB TO CRUISE" if climbing else "DESCENT TO APPROACH"
-    eta, pi_alt, pi_3000, pi_cruise = _MEEM_SEGMENT_CONSTANTS[phase]  # B25
-    if phase == "CLIMB TO CRUISE":  # B26
+    eta, pi_alt, pi_3000, pi_cruise = _MEEM_SEGMENT_CONSTANTS[phase]
+    if phase == "CLIMB TO CRUISE":
         pi_alt = pi_3000 + (alt_ft - 3000.0) * (pi_cruise - pi_3000) / (
             _MEEM_CRUISE_ALT_FT - 3000.0
         )
-    tt = t_amb * (1 + ((gam - 1) / 2) * mach**2)  # B50
-    pt = p_amb * math.pow(1 + ((gam - 1) / 2) * mach**2, gam / (gam - 1))  # B51
-    p3 = pt * (1 + pi_alt * (opr - 1))  # B66
-    t3 = tt * (1 + (1 / eta) * (math.pow(p3 / pt, (gam - 1) / gam) - 1))  # B65
-    p3_gr = p0 * math.pow(1 + eta * ((t3 / t0) - 1), gam / (gam - 1))  # B77
-    f_gr = ((p3_gr / p0) - 1) / (opr - 1)  # B83
-    pts = sorted(points, key=lambda q: q[0])  # MEEM_V1!C88 SORT
-    if f_gr > 1:  # B101
+    tt = t_amb * (1 + ((gam - 1) / 2) * mach**2)
+    pt = p_amb * math.pow(1 + ((gam - 1) / 2) * mach**2, gam / (gam - 1))
+    p3 = pt * (1 + pi_alt * (opr - 1))
+    t3 = tt * (1 + (1 / eta) * (math.pow(p3 / pt, (gam - 1) / gam) - 1))
+    p3_gr = p0 * math.pow(1 + eta * ((t3 / t0) - 1), gam / (gam - 1))
+    f_gr = ((p3_gr / p0) - 1) / (opr - 1)  # ground-reference thrust
+    pts = sorted(points, key=lambda q: q[0])
+    if f_gr > 1:
         ei_gr = next(v for t, v in pts if t == 1)
     elif f_gr < 0.07:
         ei_gr = next(v for t, v in pts if t == 0.07)
@@ -750,7 +795,7 @@ def _meem_v1_mass_mgkg(
         else:
             (xa, ya), (xb, yb) = pts[k], pts[k + 1]  # FORECAST on two points
             ei_gr = ya + (f_gr - xa) * (yb - ya) / (xb - xa)
-    return ei_gr * math.pow(p3 / p3_gr, 1.35) * math.pow(1.1, 2.5)  # B109, B119
+    return ei_gr * math.pow(p3 / p3_gr, 1.35) * math.pow(1.1, 2.5)
 
 
 def _get_trajectory(conn, profile_id: str) -> list:
@@ -777,10 +822,10 @@ def _get_meteo_at(conn, runway_time: str, use_isa: bool = True) -> dict:
     Two modes:
       - use_isa=True (default): return ISA conditions (288.15 K, 1013.25 hPa,
         RH=0.6), as in the 5.2.0 plugin exports.
-      - use_isa=False: look up the meteo row whose DateTime is the closest
-        bucket <= runway_time, as the plugin does
-        (EmissionCalculation.getAmbientCondition); this matches the pinned
-        plugin outputs.
+      - use_isa=False: the meteo row nearest in time to the start of the
+        hourly period containing runway_time (`_period_meteo_row`), as the
+        plugin does (EmissionCalculation.getAmbientCondition); this matches
+        the pinned plugin outputs.
     """
     if use_isa:
         return {
@@ -802,13 +847,13 @@ def _get_meteo_at(conn, runway_time: str, use_isa: bool = True) -> dict:
         for c in ("WindSpeed", "ObukhovLength", "MixingHeight")
     )
     try:
-        row = conn.execute(
-            "SELECT Temperature, SeaLevelPressure, RelativeHumidity, Humidity, "
+        row = _period_meteo_row(
+            conn,
+            "Temperature, SeaLevelPressure, RelativeHumidity, Humidity, "
             + _bl
-            + ", DateTime FROM tbl_InvMeteo WHERE DateTime <= ? "
-            "ORDER BY DateTime DESC LIMIT 1",
-            (runway_time,),
-        ).fetchone()
+            + ", DateTime",
+            runway_time,
+        )
     except sqlite3.OperationalError:
         row = None
     if row is None:
@@ -848,8 +893,8 @@ def _build_icao_eedb(engine_ei: dict) -> dict:
 def _segment_mach(tas_start: float, tas_end: float, T_K: float) -> float:
     """Per-segment flight Mach number TAS / a(T), at the START point's TAS
     (as the plugin), with the speed of sound a = sqrt(gamma R T) at the
-    ambient temperature (gamma 1.4, R 287.05287 J/(kg K), ICAO Doc 7488, as
-    the CAEP validation workbook). Written out here on purpose: the
+    ambient temperature (gamma 1.4, R 287.05287 J/(kg K), ICAO Doc 7488).
+    Written out here on purpose: the
     reference does not import the implementation it checks.
     """
     sos = math.sqrt(1.4 * 287.05287 * T_K) if T_K > 0 else 0.0
@@ -951,7 +996,7 @@ def _heli_flight_path_local(category, is_dep: bool) -> list:
     """The FOCA half-LTO flight path of a category as (x_m outbound from the
     pad, z_m, seconds) legs of the active mode (TO or AP), written out from
     the parameters in open_alaqs.core.tools.foca_heli_trajectory
-    (documents/HELICOPTER_TRAJECTORIES.md). Ground idle, hover and touchdown
+    (documents/methods/HELICOPTERS.md). Ground idle, hover and touchdown
     are not part of the active mode and are left out.
 
     Departure: climb from the hover height at the climb rate and TAS to the
@@ -1251,8 +1296,7 @@ def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the stan
     )
     meem_dt = _meem_delta_t(meteo, elevation_m)
     # Per-movement vertical ceiling. Reads `tbl_InvMeteo.MixingHeight`
-    # for the period containing `runway_time`, with `vertical_limit`
-    # fallback. Matches the plugin's behaviour and the standalone's
+    # of the period's meteo row, 914.4 m when there is none. Matches the plugin's behaviour and the standalone's
     # `get_mixing_height_at`. Replaces the earlier hardcoded
     # `MAX_HEIGHT_M = 914.4` used in the segment-include check below.
     max_height_m = _mixing_height_at(conn, mov["runway_time"])
@@ -1261,7 +1305,7 @@ def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the stan
     # standard_lapse: ISA lapse rate from the row's 2 m temperature and station pressure;
     # surface_layer: AUSTAL's boundary-layer formulas; open_alaqs/core/tools/
     # surface_layer_atmosphere.py). The hourly row stays the source of the NOx correction
-    # (and of the MEEM V1 delta T, used only by the ground_held sheet atmosphere).
+    # (and of the MEEM V1 delta T, used only by the ground_held ISA + delta T atmosphere).
     _atm = atmosphere or {}
     _atm_model = _sla.normalise_model(_atm.get("model"))
 
@@ -1344,17 +1388,33 @@ def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the stan
     # with `ff_amb = ff_ref * delta * sqrt(theta)` (5.4.1; Mach 0 at taxi)
     # before using it for the segment fuel mass. delta and theta are the
     # ground values (station pressure under surface_layer / standard_lapse).
+    # The reference fuel flow is the twin-quadratic fit at the movement's
+    # engine_thrust_level_for_taxiing (0.07 when not given). A thrust the fit
+    # rejects (above 1.05, below 0, e.g. 7 typed for 7 %) gives the bymode TX
+    # index (EEDB TX fuel flow, unscaled, and TX indices), as in the plugin.
+    taxi_bymode = method == "bymode"
     if method != "bymode":
+        try:
+            _thrust = float(mov.get("engine_thrust_level_for_taxiing", 0.07))
+            tx_ff_ref = _twin_quadratic_ff_from_power(_thrust, engine_ei)
+        except (TypeError, ValueError):
+            taxi_bymode = True
+        else:
+            if _thrust == 0.07:
+                # the fit passes through the idle point: the EEDB value itself
+                # (the fit's arithmetic differs in the last bit)
+                tx_ff_ref = tx["ff"]
+    if taxi_bymode:
+        tx_ff_amb = tx["ff"]
+    else:
         theta = ground_meteo["T_K"] / 288.15
         delta = ground_meteo["P_Pa"] / 101325.0
         tx_ff_amb = (
-            tx["ff"] * delta * math.sqrt(theta)
+            tx_ff_ref * delta * math.sqrt(theta)
         )  # corrected-parameter scaling, mach=0 at taxi
-    else:
-        tx_ff_amb = tx["ff"]
     tx_fuel = taxi_time_s * tx_ff_amb * n_eng * mov["taxi_fuel_ratio"]
     em = {p: 0.0 for p in POLLUTANTS}
-    if method == "bymode":
+    if taxi_bymode:
         _add_em(em, tx_fuel, tx)
     else:
         # BFFM2: NOx/CO/HC corrected at the (ambient) idle anchor FF with mach=0
@@ -1502,7 +1562,10 @@ def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the stan
                 eng, pm10_ei=eng["pm10_ei"] + nvpm_g_kg - meem["pm10_nonvol"][mode1]
             )
         # Plugin guard ("Bug #22"): under BFFM2 a segment whose start point
-        # has neither power nor fuel flow uses the Bymode indices.
+        # has neither power nor a positive fuel flow uses the Bymode indices.
+        # Under bffm2_traj, so does a power outside the twin-quadratic range
+        # [0, 1.05] when there is no positive fuel flow (the plugin's fit
+        # raises and _get_emission_index_bffm2 takes the bymode index).
         bymode_fallback = False
         if method != "bymode":
             _row = conn.execute(
@@ -1510,7 +1573,12 @@ def _compute_fixed_wing(  # noqa: C901 (one segment loop per method, as the stan
                 "WHERE profile_id=? AND point=?",
                 (mov["profile_id"], pt1[0]),
             ).fetchone()
-            bymode_fallback = _row is None or (_row[0] is None and _row[1] is None)
+            _pw = _row[0] if _row else None
+            _ff_ok = _row is not None and _row[1] is not None and _row[1] > 0
+            if not _ff_ok:
+                bymode_fallback = _pw is None or (
+                    method == "bffm2_traj" and not 0.0 <= _pw <= 1.05
+                )
         if method == "bymode" or bymode_fallback:
             _add_em(em, seg_fuel, eng)
             if method == "bymode" and apply_nox_corrections and mode1 in ("TO", "CL"):
@@ -1603,7 +1671,8 @@ def _bffm2_traj_ff_amb(conn, mov, pt, eng, engine_ei, meteo, mach, n_eng) -> flo
     # ADS-B / CUSTOM path: fuel_flow_kgm is already an ambient (in-flight) FF
     # for ALL engines combined.
     ff_to_ceiling = engine_ei["TO"]["ff"] * ADSB_FF_CEILING_FACTOR
-    if ff_kgm not in (None, 0):
+    # Only a positive fuel flow is one; zero or negative is no fuel flow.
+    if ff_kgm is not None and ff_kgm > 0:
         ff_per_engine = ff_kgm / n_eng
         if ff_per_engine > ff_to_ceiling:
             return eng["ff"]  # ceiling fallback to mode anchor
@@ -1614,7 +1683,12 @@ def _bffm2_traj_ff_amb(conn, mov, pt, eng, engine_ei, meteo, mach, n_eng) -> flo
     #   Idle 7%, Approach 30%, Climbout 85%, Takeoff 100%.
     if power is None:
         return eng["ff"]  # fall back to mode anchor if power missing
-    ff_ref = _twin_quadratic_ff_from_power(power, engine_ei)
+    try:
+        ff_ref = _twin_quadratic_ff_from_power(power, engine_ei)
+    except ValueError:
+        # Power outside the fit range: the segment takes the bymode index
+        # (EEDB fuel flow of the mode, unscaled), chosen in the segment loop.
+        return eng["ff"]
     # Ambient scaling (corrected parameters).
     theta = meteo["T_K"] / 288.15
     delta = meteo["P_Pa"] / 101325.0
@@ -1631,6 +1705,8 @@ def _twin_quadratic_ff_from_power(power: float, engine_ei: dict) -> float:
       - power >= 0.85: parabola through (0.30, 0.85, 1.0)
     Values are normalized by the 100% (Takeoff) FF, then de-normalized.
     For power < 0.07 the result is clamped to the Idle FF.
+    1.0 < power <= 1.05 is taken as 1.0; above 1.05, below 0 or NaN the fit
+    raises ValueError (the caller then uses the bymode index).
 
     See open_alaqs/core/tools/twin_quadratic_fit_method.py for the original.
     """
@@ -1646,6 +1722,13 @@ def _twin_quadratic_ff_from_power(power: float, engine_ei: dict) -> float:
             ff_by_p[power_pct] = engine_ei[mode_label]["ff"]
     if any(k not in ff_by_p for k in (0.07, 0.30, 0.85, 1.00)):
         return engine_ei.get("AP", engine_ei.get("TX", {"ff": 0.0}))["ff"]
+
+    if 1.0 < power <= 1.05:
+        power = 1.0  # small overshoot above take-off thrust
+    if not 0.0 <= power <= 1.0:
+        raise ValueError(
+            f"power setting {power} is outside the twin-quadratic range [0, 1.05]"
+        )
 
     if power <= 0.85:
         x1, x2, x3 = 0.07, 0.30, 0.85

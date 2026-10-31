@@ -689,18 +689,19 @@ def test_bffm2_uses_event_midpoint_for_meteo():
             RelativeHumidity REAL, Humidity REAL
         )"""
     )
-    # Two meteo rows: 08:00 (cold, dry) and 09:20 (warm, humid).
+    # Two meteo rows: 08:50 (cold, dry) and 09:30 (warm, humid).
     conn.execute(
         "INSERT INTO tbl_InvMeteo VALUES (?, ?, ?, ?, ?)",
-        ("2024-12-01 08:00:00", 278.15, 101325.0, 0.2, 0.001),
+        ("2024-12-01 08:50:00", 278.15, 101325.0, 0.2, 0.001),
     )
     conn.execute(
         "INSERT INTO tbl_InvMeteo VALUES (?, ?, ?, ?, ?)",
-        ("2024-12-01 09:20:00", 303.15, 100000.0, 0.9, 0.020),
+        ("2024-12-01 09:30:00", 303.15, 100000.0, 0.9, 0.020),
     )
     conn.commit()
 
-    # Event A: 09:00-09:10 → midpoint 09:05 → uses 08:00 row (cold)
+    # The row nearest to the midpoint, as the plugin.
+    # Event A: 09:00-09:10 → midpoint 09:05 → uses 08:50 row (cold)
     ev_a = _event_dict(
         event_id=1,
         t_CL_s=60,
@@ -709,7 +710,7 @@ def test_bffm2_uses_event_midpoint_for_meteo():
         start_datetime="2024-12-01T09:00:00",
         end_datetime="2024-12-01T09:10:00",
     )
-    # Event B: 09:30-09:40 → midpoint 09:35 → uses 09:20 row (warm)
+    # Event B: 09:30-09:40 → midpoint 09:35 → uses 09:30 row (warm)
     ev_b = _event_dict(
         event_id=2,
         t_CL_s=60,

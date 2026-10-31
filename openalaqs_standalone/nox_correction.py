@@ -1,4 +1,4 @@
-"""ICCAIA / CAEP14 v14 NOx correction for ambient conditions.
+"""ICCAIA / CAEP/14 NOx correction for ambient conditions.
 
 Mirrors the plugin's `core/tools/nox_correction_ambient.py`. The
 correction is the simple-method correction for take-off and climb-out
@@ -6,7 +6,7 @@ NOx emissions, taking into account: weight ratio (tow_ratio), ambient
 temperature deviation from ISA, and ambient humidity.
 
 Formula (ICCAIA simple correction, equivalent to ICAO Annex 16 Vol II
-Appendix 3 / CAEP14 v14):
+Appendix 3 / CAEP/14):
 
     EI_NOx_corrected = EI_NOx_ref
         * (1 + 1.55 * (tow_ratio - 1) + 0.012 * (T - T_isa))
@@ -103,7 +103,8 @@ def correction_factor(
         user_study_setup.airport_elevation.
     tow_ratio
         Takeoff weight ratio. When None or unset (the typical case),
-        defaults to 1.0 so the weight term contributes 0.
+        0, negative or NaN, defaults to 1.0 so the weight term
+        contributes 0 (as the plugin's Movement).
 
     Notes
     -----
@@ -116,7 +117,8 @@ def correction_factor(
     """
     if mode not in _CORRECTED_MODES:
         return 1.0
-    if tow_ratio is None or tow_ratio <= 0.0:
+    # 0, negative or NaN is no ratio (as the plugin's Movement): 1.0.
+    if tow_ratio is None or not tow_ratio > 0.0:
         tow_ratio = 1.0
     t_isa = _isa_temperature_k(airport_elevation_m)
     h = _humidity_ratio(temperature_k, pressure_pa, relative_humidity)

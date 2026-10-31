@@ -1,9 +1,19 @@
-# recipe_config.json - parameter reference
+# recipe_config.json parameter reference
+
+The keys of `recipe_config.json` and the `openalaqs_standalone` flags they
+stand for, for users who drive the standalone from an orchestrator such as
+the Dataiku recipe.
 
 A `recipe_config.json` file placed next to the `.alaqs` file is a portable
 parameter record. Any orchestrator that runs the standalone can read it to
 drive the run; the file convention exists so the parameters used for a
-study live alongside the data rather than in a CLI history.
+study live alongside the data rather than in a CLI history. Nothing in this
+repository reads a `recipe_config.json`: the standalone CLI takes flags
+only, and the files here are examples for the Dataiku recipe of the Dataiku
+update package, which reads the file (the recipe is not in this
+repository). The only code that opens `recipe_config.example.json` is a test
+that checks its `z0` / `d0` / `ha` defaults
+(`tests/test_site_parameter_defaults.py`).
 
 ## Files in this folder
 
@@ -45,11 +55,14 @@ with `--method` and `--isa-meteo` in place of `--aircraft-method` and
 | `receptor_y_col` | `--receptor-y-col` |
 | `title` | `--title` |
 | `qs` | `--qs` |
-| `grid_size` | `--grid-size` (DEPRECATED) |
-| `grid_step` | `--grid-step` (DEPRECATED) |
+| `grid_size` | `--grid-size` (receptor clipping only: cells per side of the square around the grid reference; default the study grid, `grid_3d_definition` x_cells) |
+| `grid_step` | `--grid-step` (receptor clipping only: cell size in m; default the study grid, `grid_3d_definition` x_resolution) |
 
-The `austal` flag `--grid-writer-mode` (default `hybrid`) has no key in
-this file. The Dataiku recipe of the Dataiku update package reads three
+`grid_size` and `grid_step` do not change the AUSTAL grid, which always
+comes from `grid_3d_definition`.
+
+The `austal` flags `--grid-writer-mode` (default `hybrid`), `--meteo-input`
+and `--receptor-input` have no key in this file. The Dataiku recipe of the Dataiku update package reads three
 more keys that are not in it: `grid_writer_mode`, `tag_outputs` and
 `alaqs_names` (the last two are described in the recipe's header).
 
@@ -62,7 +75,8 @@ orchestrators that manage their own input / output staging:
 | `clear_output_folders` | Empties pre-existing output folders before writing (no-op for the CLI) |
 
 Running the standalone from a terminal? Skip the JSON and pass the flags
-directly:
+directly (the flags are described in
+[USAGE.md](../../openalaqs_standalone/USAGE.md)):
 
 ```bash
 python -m openalaqs_standalone austal training_out.alaqs \
@@ -72,3 +86,8 @@ python -m openalaqs_standalone austal training_out.alaqs \
  --pollutants co,hc,nox,pm10,pm25 \
  --out ./inputs/
 ```
+
+See also:
+
+- [openalaqs_standalone USAGE.md](../../openalaqs_standalone/USAGE.md): the standalone's commands and options
+- [WITHOUT_QGIS.md](../../documents/user/WITHOUT_QGIS.md): which tool to run without the QGIS GUI

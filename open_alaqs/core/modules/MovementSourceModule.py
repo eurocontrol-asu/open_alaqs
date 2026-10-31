@@ -400,7 +400,14 @@ class MovementSourceModule(SourceModule):
         """
 
         # Perform the gate calculation once for each group
-        gate_columns = ["gate", "ac_group", "departure_arrival"]
+        # The calculator takes the gate_emissions_code of the group's first
+        # movement, so it is part of the key.
+        gate_columns = [
+            "gate",
+            "ac_group",
+            "departure_arrival",
+            lambda idx: repr(df.loc[idx]["Sources"].getGateEmissionsCode()),
+        ]
         for _name, group in df[relevant_movements].groupby(gate_columns):
 
             movement = group["Sources"].iloc[0]
@@ -509,6 +516,26 @@ class MovementSourceModule(SourceModule):
             lambda idx: (
                 df.loc[idx]["aircraft"] if df.loc[idx]["engine"] == "" else ""
             ),
+            # The calculator takes the aircraft (engine count, group) and the
+            # take-off weight ratio (NOx correction) of the group's first
+            # movement, so both are part of the key: types that share an
+            # engine and a profile (e.g. A4 with one engine, A6 with two) and
+            # movements with different tow_ratio get their own calculation.
+            # As strings, so that a NaN value is not dropped by groupby.
+            lambda idx: str(df.loc[idx]["aircraft"]),
+            lambda idx: repr(df.loc[idx]["Sources"].getTakeoffWeightRatio()),
+            # The trajectory at the runway (Movement.updateTrajectoryAtRunway)
+            # also follows the movement's track (shapes_tracks, track_id) and
+            # the runway direction (heading, touchdown offset): a movement
+            # with a track took the trajectory of a group member without one,
+            # and the reverse. The runway name alone ("06/24") does not give
+            # the direction.
+            lambda idx: (
+                df.loc[idx]["Sources"].getTrack().getName()
+                if df.loc[idx]["Sources"].getTrack() is not None
+                else ""
+            ),
+            lambda idx: str(df.loc[idx]["Sources"].getRunwayDirection() or ""),
         ]
         for grouped_values, group in df[relevant_movements].groupby(flight_columns):
 
@@ -575,6 +602,9 @@ class MovementSourceModule(SourceModule):
         # movement.
         def _taxi_group_key(movement):
             return (
+                # The calculator uses the aircraft (engine count, APU, engine
+                # start, MTOW for brake wear): types sharing an engine differ.
+                (movement.getAircraft().getName() if movement.getAircraft() else None),
                 (
                     movement.getAircraftEngine().getName()
                     if movement.getAircraftEngine()

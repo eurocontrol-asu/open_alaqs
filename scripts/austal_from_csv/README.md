@@ -1,16 +1,30 @@
-# [BETA] Standalone Script to use AUSTAL from CSV Files — Usage Guide
+# AUSTAL input files from CSV files (beta)
 
-This document explains how to run `run_austal_from_csv.py` from the OSGeo4W Shell (recommended) and describes the expected configuration file format and available options.
+How to run `run_austal_from_csv.py` from the OSGeo4W Shell, with its configuration file format and options. It is for users who have a QGIS installation and want AUSTAL input files from emissions they already computed.
 
 This script generates AUSTAL dispersion-model input files directly from pre-calculated **emissions CSV** and **meteorology CSV** files, without requiring an OpenALAQS `.alaqs` database. This is useful when emissions have already been computed (e.g. by `run_emissions_austal.py`) and you want to regenerate or customise the AUSTAL input files independently.
 
----
+This script runs the plugin code with the QGIS Python. To choose a tool that runs without QGIS, see [WITHOUT_QGIS.md](../../documents/user/WITHOUT_QGIS.md).
+
+Contents:
+
+- [Why use OSGeo4W Shell](#why-use-osgeo4w-shell)
+- [Basic steps (OSGeo4W Shell)](#basic-steps-osgeo4w-shell)
+- [Alternative execution methods](#alternative-execution-methods)
+- [Command-line flags](#command-line-flags)
+- [Configuration file format](#configuration-file-format)
+- [Input CSV formats](#input-csv-formats)
+- [Minimal example configs](#minimal-example-configs)
+- [Output files](#output-files)
+- [Workflow: using with run_emissions_austal.py](#workflow-using-with-run_emissions_austalpy)
+- [QGIS plugin and open_alaqs path](#qgis-plugin-and-open_alaqs-path)
+- [Troubleshooting](#troubleshooting)
 
 ## Why use OSGeo4W Shell
 
 - The script uses QGIS/PyQt and GDAL libraries (SpatiaLite). Launching it from the OSGeo4W Shell ensures the correct Python environment and native libraries are available.
 
-## Basic Steps (OSGeo4W Shell)
+## Basic steps (OSGeo4W Shell)
 
 This script is **not bundled with the QGIS plugin**. To use it, clone or
 download the Open-ALAQS repository and run the script directly from the
@@ -29,20 +43,35 @@ cd C:\path\to\openalaqs   # the directory containing scripts/, open_alaqs/, etc.
 python-qgis scripts\austal_from_csv\run_austal_from_csv.py "C:\path\to\my_config.txt" --timing
 ```
 
+Relative paths in the config file (`emissions_csv_path`, `meteo_csv_path`,
+`output_path`, `grid_file_path`) are resolved against the current
+directory, not against the folder of the config file. Use absolute paths
+in your own config when running from the repository root. The bundled
+`example.txt` uses paths relative to `scripts/austal_from_csv/`
+(`sample_data\...`), so run it from that folder:
+
+```powershell
+cd C:\path\to\openalaqs\scripts\austal_from_csv
+python-qgis run_austal_from_csv.py example.txt --timing
+```
+
+As shipped, `example.txt` has `output_path=sample_data`, so the AUSTAL files
+are written into `scripts\austal_from_csv\sample_data` inside the
+repository; set `output_path` to a folder outside the repository to keep
+the clone clean.
+
 The script will pick up the Open-ALAQS plugin code via the `open_alaqs/`
 subdirectory in the same repo, or via the QGIS user-plugin install if
 the plugin is also installed via Plugin Manager.
 
----
-
-## Advanced: Alternative Execution Methods
+## Alternative execution methods
 
 ### Calling python-qgis.bat directly (OSGeo4W Shell)
 
 If the basic steps above failed or QGIS is installed system-wide:
 
 ```powershell
-# OSGeo4W Shell (Command Prompt) — use "call" command
+# OSGeo4W Shell (Command Prompt): use "call" command
 call "C:\Program Files\QGIS <Version>\bin\python-qgis-ltr.bat" "C:\path\to\run_austal_from_csv.py" "C:\path\to\config.txt" --timing
 ```
 
@@ -53,7 +82,7 @@ Note: Replace `C:\Program Files\QGIS <Version>` with your actual QGIS installati
 From any PowerShell terminal (including IDE terminals), use the `&` operator:
 
 ```powershell
-# PowerShell — use "&" operator
+# PowerShell: use "&" operator
 & "C:\Program Files\QGIS <Version>\bin\python-qgis-ltr.bat" "C:\path\to\run_austal_from_csv.py" "C:\path\to\config.txt" --timing
 ```
 
@@ -68,9 +97,7 @@ python-qgis scripts\austal_from_csv\run_austal_from_csv.py "C:\path\to\config.tx
 
 **Note:** If `python-qgis` is not recognised in your PowerShell terminal, you're not in the OSGeo4W Shell. Use the IDE Terminal method (with full path to `python-qgis-ltr.bat`) instead.
 
----
-
-## Command-Line Flags
+## Command-line flags
 
 | Flag           | Description                                              |
 |----------------|----------------------------------------------------------|
@@ -78,15 +105,13 @@ python-qgis scripts\austal_from_csv\run_austal_from_csv.py "C:\path\to\config.tx
 | `--dry-run`    | Parse and validate config without generating any files   |
 | `--run-austal` | Run the AUSTAL executable after generating input files (requires `austal_exe_path` in config) |
 
----
-
-## Configuration File Format
+## Configuration file format
 
 The config file is a simple **key=value** plain text file. Lines starting with `#` are comments and ignored. Environment variables (e.g. `%USERPROFILE%`) are expanded in path values.
 
 See `example.txt` in this folder for a complete annotated example.
 
-### Required Keys
+### Required keys
 
 | Key                     | Type   | Description                                                     |
 |-------------------------|--------|-----------------------------------------------------------------|
@@ -95,9 +120,9 @@ See `example.txt` in this folder for a complete annotated example.
 | `output_path`           | path   | Directory where AUSTAL input files will be written              |
 | `pollutants`            | string | Comma-separated pollutant list (e.g. `NOx,CO,PM10`)            |
 
-### Grid Definition (one of the two options is required)
+### Grid definition (one of the two options is required)
 
-**Option A — Grid file** (simplest):
+**Option A: grid file** (simplest):
 
 | Key                     | Type   | Description                                                     |
 |-------------------------|--------|-----------------------------------------------------------------|
@@ -105,7 +130,7 @@ See `example.txt` in this folder for a complete annotated example.
 
 The CSV must have a header row with columns: `x_cells`, `y_cells`, `z_cells`, `x_resolution`, `y_resolution`, `z_resolution`, `reference_latitude`, `reference_longitude`, `reference_altitude`, followed by a single data row. An `.alaqs` file is read from its `grid_3d_definition` and `user_study_setup` tables.
 
-**Option B — Manual grid keys:**
+**Option B: manual grid keys:**
 
 | Key                     | Type   | Description                                                     |
 |-------------------------|--------|-----------------------------------------------------------------|
@@ -118,12 +143,12 @@ The CSV must have a header row with columns: `x_cells`, `y_cells`, `z_cells`, `x
 | `reference_latitude`    | float  | Grid origin latitude (decimal degrees, WGS84)                  |
 | `reference_longitude`   | float  | Grid origin longitude (decimal degrees, WGS84)                 |
 
-### Optional Keys
+### Optional keys
 
 | Key                       | Type   | Default                         | Description                                      |
 |---------------------------|--------|---------------------------------|--------------------------------------------------|
 | `reference_altitude`      | float  | `0.0`                           | Grid origin altitude (m above sea level)         |
-| `austal_exe_path`         | path   | *(not set)*                     | Path to `austal.exe` — run AUSTAL after generation |
+| `austal_exe_path`         | path   | *(not set)*                     | Path to `austal.exe`; run AUSTAL after generation |
 | `quality_level`           | int    | `1`                             | AUSTAL quality level (1=fastest, 3=most accurate)|
 | `mixing_height_enabled`   | bool   | `False`                         | Include mixing height in AUSTAL series file      |
 | `options_string`          | string | `NOSTANDARD;SCINOTAT;Kmax=1`    | AUSTAL options flags                             |
@@ -132,11 +157,14 @@ The CSV must have a header row with columns: `x_cells`, `y_cells`, `z_cells`, `x
 | `anemometer_height_m`     | float  | `10.6` (10 m + d0)              | Anemometer height (m); empty or 0 derives from z0 |
 | `show_logs`               | bool   | `False`                         | Show detailed logs during generation             |
 
-### Accepted Pollutant Values
+### Accepted pollutant values
 
 `CO2`, `CO`, `HC`, `NOx`, `SOx`, `PM10`
 
-### Boolean Values
+PM2.5 is not in this list (the plugin's emissions CSV has no `pm25_kg`
+column).
+
+### Boolean values
 
 Boolean keys accept (case-insensitive): `True`, `1`, `yes` for true; anything else is treated as false.
 
@@ -144,9 +172,7 @@ Boolean keys accept (case-insensitive): `True`, `1`, `yes` for true; anything el
 
 The QGIS plugin (v5.1.1+) supports receptor points and writes per-receptor `<substance>-tmpa.dmna` files when AUSTAL is run with both receptors and NOTALUFT. **The standalone script does not currently expose this feature** and runs AUSTAL with grid-only output. As a result, the `Plot Time Series` and `Compliance Report` views in the plugin will not have data to read for runs produced by this script. Receptor support in the standalone script is planned for a future release. If you need per-receptor results for an external emissions CSV, drive the run from the QGIS plugin (the **Generate AUSTAL Input Files from CSV** input mode also exposes a Receptors CSV picker).
 
----
-
-## Input CSV Formats
+## Input CSV formats
 
 ### Emissions CSV
 
@@ -162,26 +188,13 @@ The emissions CSV must follow the **TableViewWidgetOutputModule** format:
 
 ### Meteorology CSV
 
-The meteorology CSV must follow the **AmbientConditionStore** format:
+The meteorology CSV is the plugin's meteo.csv (columns and units in
+[INPUT_FORMATS.md](../../documents/user/INPUT_FORMATS.md#meteorology)). This
+script needs `DateTime(YYYY-mm-dd hh:mm:ss)`, `WindSpeed(m/s)`,
+`WindDirection(degrees)`, `ObukhovLength(m)` and `MixingHeight(m)`; the
+other columns are read but not passed to AUSTAL.
 
-| Column                             | Required | Description                    |
-|------------------------------------|----------|--------------------------------|
-| `DateTime(YYYY-mm-dd hh:mm:ss)`   | Yes      | Observation datetime           |
-| `WindSpeed(m/s)`                   | Yes      | Wind speed                     |
-| `WindDirection(degrees)`           | Yes      | Wind direction                 |
-| `ObukhovLength(m)`                 | Yes      | Obukhov length                 |
-| `MixingHeight(m)`                  | Yes      | Mixing layer height            |
-
-Optional meteorology columns (parsed but not forwarded to AUSTAL):
-- `Temperature(K)`
-- `Humidity(kg_water/kg_dry_air)`
-- `RelativeHumidity(0-1)`
-- `SeaLevelPressure(Pa)`
-- `Scenario`
-
----
-
-## Minimal Example Configs
+## Minimal example configs
 
 ### Using a grid file (Option A)
 
@@ -210,13 +223,11 @@ reference_latitude=48.6900
 reference_longitude=9.2220
 ```
 
----
-
-## Output Files
+## Output files
 
 The script generates the following AUSTAL input files inside the `output_path` directory:
 
-- `austal.txt` — main AUSTAL configuration file
+- `austal.txt`: main AUSTAL configuration file
 - `series.dmna`: meteorology time series
 - `NN/eNNNN.dmna`: per-source-group emission grid files (one folder per source group, one file per time step)
 
@@ -228,13 +239,11 @@ If `austal_exe_path` is set in the config and `--run-austal` is passed on the co
 
 > **Note:** The `austal_exe_path` key is commented out by default in the example config. You must **uncomment** it and set it to the correct path to your `austal.exe` for `--run-austal` to work.
 
-### Important: Clean the output directory before re-running
+### Clean the output directory before re-running
 
 The script will **fail** if AUSTAL output files (`austal.txt`, `series.dmna`, etc.) already exist in the `output_path` directory from a previous run. Before re-running the script, **delete or move the existing files** from the output directory, or point `output_path` to a new/empty folder.
 
----
-
-## Workflow: Using with run_emissions_austal.py
+## Workflow: using with run_emissions_austal.py
 
 A typical two-step workflow:
 
@@ -246,9 +255,7 @@ This separation allows you to:
 - Use emissions from external tools or modified/filtered CSVs
 - Batch-process multiple grid configurations from the same emissions data
 
----
-
-## QGIS Plugin / open_alaqs Path
+## QGIS plugin and open_alaqs path
 
 The script lives in the source repository at `scripts/austal_from_csv/`
 and is **not** part of the QGIS plugin install. You need a clone of the
@@ -261,8 +268,6 @@ Open-ALAQS repository to run it. The script imports from
    macOS and Linux equivalents), as a fallback when the plugin is also
    installed via Plugin Manager
 
----
-
 ## Troubleshooting
 
 - **QGIS import failure**: Confirm you're running from the OSGeo4W Shell so the required native libraries (GDAL, SpatiaLite) are available.
@@ -272,9 +277,14 @@ Open-ALAQS repository to run it. The script imports from
 - **"--run-austal was requested but austal_exe_path is not set"**: Uncomment and set `austal_exe_path` in your config file.
 - **Verbose logging**: Set `show_logs=True` in the config for detailed output.
 
----
-
 ## Source
 
 - Script location: `scripts/austal_from_csv/run_austal_from_csv.py`
 - Example config: `scripts/austal_from_csv/example.txt`
+
+See also:
+
+- [emissions_austal README](../emissions_austal/README.md): the emission run that produces the emissions CSV
+- [WITHOUT_QGIS.md](../../documents/user/WITHOUT_QGIS.md): which tool to run without the QGIS GUI
+- [DISPERSION_AUSTAL.md](../../documents/user/DISPERSION_AUSTAL.md): AUSTAL input and output files
+- [AUSTAL.md](../../documents/AUSTAL/AUSTAL.md#installation): installing AUSTAL

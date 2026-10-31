@@ -49,15 +49,18 @@ class EmissionDynamics:
 
         self._emission_dynamics = {}
         self._emission_dynamics["sas"] = {
-            # TODO OPENGIS.ch: it seems the column `horizontal_shift_m_sas` does not exist in the `default_emission_dynamics` table. We put 0 by default as it used to work before.
-            # "horizontal_shift": (db_row["horizontal_shift_m_sas"] or 0),
+            # No horizontal shift (intended): the volume stays centred
+            # laterally on the trajectory. `default_emission_dynamics` has no
+            # `horizontal_shift_m_sas` column, and its `horizontal_shift_m`
+            # column (240 m / 480 m on TO and CL rows) is deliberately not
+            # read. GeoTransformation does not use this key either.
             "horizontal_shift": 0,
             "horizontal_extension": (db_row["horizontal_extent_m_sas"] or 0),
             "vertical_shift": (db_row["vertical_shift_m_sas"] or 0),
             "vertical_extension": (db_row["vertical_extent_m_sas"] or 0),
         }
         self._emission_dynamics["default"] = {
-            "horizontal_shift": 0,  # (db_row["horizontal_shift_m"] or 0),
+            "horizontal_shift": 0,  # not read from horizontal_shift_m, see above
             "horizontal_extension": (db_row["horizontal_extent_m"] or 0),
             "vertical_shift": (db_row["vertical_shift_m"] or 0),
             "vertical_extension": (db_row["vertical_extent_m"] or 0),

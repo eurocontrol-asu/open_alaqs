@@ -69,7 +69,28 @@ def _build_study_config(cfg: dict) -> AustalStudyConfig:
         mixing_height_included=bool(cfg.get("mixing_height_included", True)),
         grid_writer_mode=cfg.get("grid_writer_mode", "time_indexed"),
         source_height=float(cfg.get("source_height", 0.0)),
+        source_offset_cells=int(cfg.get("source_offset_cells", 2)),
+        # null disables the cap
+        max_receptors=(
+            int(cfg.get("max_receptors", 20))
+            if cfg.get("max_receptors", 20) is not None
+            else None
+        ),
+        source_aggregation=_source_aggregation(cfg),
     )
+
+
+_AGGREGATIONS = ("none", "by_type", "by_type_per_pollutant")
+
+
+def _source_aggregation(cfg: dict) -> str:
+    value = cfg.get("source_aggregation", "by_type_per_pollutant")
+    if value not in _AGGREGATIONS:
+        sys.exit(
+            f"source_aggregation must be one of {', '.join(_AGGREGATIONS)}; "
+            f"got {value!r}"
+        )
+    return value
 
 
 def main(argv=None) -> int:

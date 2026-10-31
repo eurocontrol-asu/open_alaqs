@@ -1,38 +1,30 @@
-# METAR → Open-ALAQS meteo.csv
+# METAR to meteo.csv converter
 
-Standalone utility that converts a stream of METAR weather observations into
-the `meteo.csv` file Open-ALAQS reads during *Create Output*.
+`scripts/metar_to_alaqs_meteo.py` converts a stream of METAR weather
+observations into the `meteo.csv` file Open-ALAQS reads during *Calculate
+Emissions Inventory*. This page is for users who build that file from
+airport weather reports. The script needs no external Python packages
+(standard library only) and no QGIS.
 
-Source file: `scripts/metar_to_alaqs_meteo.py`.
-No external Python dependencies (uses stdlib only).
+Contents:
+
+- [What the plugin expects in meteo.csv](#what-the-plugin-expects-in-meteocsv)
+- [What this script does](#what-this-script-does)
+- [Supported input formats](#supported-input-formats)
+- [Source-quality checks](#source-quality-checks)
+- [Stability classification (Pasquill-Gifford)](#stability-classification-pasquill-gifford)
+- [What this script does NOT do](#what-this-script-does-not-do)
+- [Usage](#usage)
+- [Limitations](#limitations)
+- [Swapping in python-metar](#swapping-in-python-metar)
 
 ## What the plugin expects in meteo.csv
 
-The plugin's `core/interfaces/AmbientCondition.py::initAmbientCondition`
-reads the CSV with these exact header names and units. The header names
-include unit suffixes (`(K)`, `(Pa)`, `(0-1)`, etc.); drop the suffix and
-the plugin logs *"Headers of meteo csv file do not match"* and the file
-is rejected.
-
-| column | unit | notes |
-| --- | --- | --- |
-| `Scenario` | text | free-form label, same value in every row |
-| `DateTime(YYYY-mm-dd hh:mm:ss)` | UTC | `YYYY-MM-DD HH:MM:SS`, hourly |
-| `Temperature(K)` | Kelvin | ambient air temperature (NOT °C) |
-| `Humidity(kg_water/kg_dry_air)` | kg/kg | specific humidity / mixing ratio |
-| `RelativeHumidity(0-1)` | fraction | 0..1 (NOT percent) |
-| `SeaLevelPressure(Pa)` | Pascals | QNH × 100 (NOT hPa) |
-| `WindSpeed(m/s)` | m/s | 10 m wind |
-| `WindDirection(degrees)` | ° true | 0-359 (north is 0), written as `999` when no report of the hour gives a direction (missing, VRB or calm) |
-| `ObukhovLength(m)` | m | per-hour from PG class, or 99999 (neutral) |
-| `MixingHeight(m)` | m | per-hour from PG class, or fixed default 914.4 |
-
-Sample row (PG-classified, cloudy night → class D, neutral L, mixing height 400 m):
-
-```
-Scenario,DateTime(YYYY-mm-dd hh:mm:ss),Temperature(K),Humidity(kg_water/kg_dry_air),RelativeHumidity(0-1),SeaLevelPressure(Pa),WindSpeed(m/s),WindDirection(degrees),ObukhovLength(m),MixingHeight(m)
-default,2025-12-01 06:00:00,280.15,0.00538,0.871,101600,5.14,240,99999,400.0
-```
+The plugin reads an hourly CSV with fixed header names that carry the units
+(temperature in K, pressure in Pa, relative humidity as a fraction 0-1);
+the columns, units and an example are in
+[INPUT_FORMATS.md](../documents/user/INPUT_FORMATS.md#meteorology). This
+script writes exactly that format.
 
 ## What this script does
 
@@ -69,7 +61,8 @@ default,2025-12-01 06:00:00,280.15,0.00538,0.871,101600,5.14,240,99999,400.0
    (`--night-rule`, default `sky_eps`), then emits the corresponding
    `ObukhovLength` and `MixingHeight`. Without `--lat/--lon` the script emits a constant
    neutral atmosphere.
-9. Writes the CSV with the schema above.
+9. Writes the CSV in the plugin's meteo.csv format. Hours without a wind
+   direction are written as `999` (see [Limitations](#limitations)).
 10. Prints a coverage report to stderr: source used, records retained,
     observed vs. forward-filled hours, per-field presence. Warns if
     coverage falls below `--coverage-floor` (default 70%).
@@ -218,15 +211,16 @@ of the script and the plugin's own training data.
 It does not fetch METAR data. The caller is responsible for obtaining the
 observations. Recommended sources:
 
-- **Iowa Environmental Mesonet ASOS archive** — year-long pulls, includes
+- **Iowa Environmental Mesonet ASOS archive**: year-long pulls, includes
   raw METAR text in the `metar` column, anonymous, rate-limited.
   Watch the exclusive end-date convention noted above.
-- **NOAA Aviation Weather Center** text data service
-  https://aviationweather.gov/adds/dataserver — anonymous, rate-limited.
-- **ogimet.com** METAR archive — good for historical dates, rate-limited
+- **NOAA Aviation Weather Center** Data API
+  https://aviationweather.gov/data/api/ (replaces the retired ADDS text
+  data server); anonymous, rate-limited.
+- **ogimet.com** METAR archive: good for historical dates, rate-limited
   (≥5 s between requests).
-- **metar-taf.com API** — requires an API key, near-real-time.
-- **pymetar** / **python-metar** pip packages — thin wrappers over the
+- **metar-taf.com API**: requires an API key, near-real-time.
+- **pymetar** / **python-metar** pip packages: thin wrappers over the
   above.
 
 Keeping fetch and parse decoupled lets sites with restrictive network
@@ -307,7 +301,9 @@ Options:
 - `--coverage-floor <fraction>` warn if observed-hours, temperature or
   wind presence drops below this fraction (default 0.7).
 - `--plots-dir <path>` if set, write the stability and windrose HTML plots
-  into this directory after the CSV.  Files are named
+  into this directory after the CSV.  The stability plot loads Chart.js
+  from a CDN (cdnjs.cloudflare.com), so it needs network access when
+  opened; the windrose is plain SVG.  Files are named
   `{station}_{year}_stability.html` and `{station}_{year}_windrose.html`
   (station code in lower case; year is the year of `--start`).  Stability requires `--lat/--lon` for
   PG classification; without them only the windrose is produced and a
@@ -346,7 +342,7 @@ Options:
   introduces a small bias (~0.1% RH equivalent) versus a direct
   observation.
 
-## Swapping in `python-metar`
+## Swapping in python-metar
 
 The in-house parser is minimal. If you prefer the `python-metar` package,
 replace the body of `parse_metar()` with:
@@ -380,3 +376,9 @@ The rest of the pipeline stays the same; the script will still emit
 Kelvin, Pa, kg/kg, fraction-RH, and PG-classified L/MH because the unit
 conversions and stability logic live in `write_alaqs_meteo_csv`, not in
 `parse_metar`.
+
+See also:
+
+- [INPUT_FORMATS.md](../documents/user/INPUT_FORMATS.md#meteorology): the meteo.csv format
+- [scripts/README.md](README.md): the other command-line scripts
+- [WITHOUT_QGIS.md](../documents/user/WITHOUT_QGIS.md): which tool to run without the QGIS GUI

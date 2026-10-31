@@ -307,8 +307,15 @@ class AmbientConditionStore(Store, metaclass=Singleton):
         if not sorted_ac:
             return AmbientCondition()
 
+        # getDate() is the row time in seconds (convertTimeToSeconds); a
+        # datetime is accepted too. Mapping the seconds to 0.0 made every
+        # lookup return the last row.
         times = [
-            (ac.getDate().timestamp() if hasattr(ac.getDate(), "timestamp") else 0.0)
+            (
+                ac.getDate().timestamp()
+                if hasattr(ac.getDate(), "timestamp")
+                else float(ac.getDate())
+            )
             for ac in sorted_ac
         ]
 

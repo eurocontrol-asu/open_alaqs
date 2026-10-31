@@ -903,15 +903,19 @@ def _get_trigger_host_from_ddl(sql: str) -> str | None:
 # additions:
 #
 #   1. The three v2 temporal profiles (`heating_season`,
-#      `cooling_season`, `business_hours`) live in the canonical
-#      template files (built into `core/templates/project.alaqs` and
-#      `inventory.alaqs`). New studies inherit them automatically.
-#      Existing studies, migrated through Phase 1, need an explicit
-#      INSERT OR IGNORE step because `user_*_profile` tables are in
+#      `cooling_season`, `business_hours`) are NOT in the canonical
+#      templates: the `user_*_profile` tables of
+#      `core/templates/project.alaqs` and `inventory.alaqs` ship empty,
+#      so a new study does not have them. `default_stationary_ef`
+#      recommends these names per point source type, but the point
+#      source form only pre-selects a recommended name when the study
+#      has that profile (`ui_point_sources.change_type_field`);
+#      otherwise the form keeps `default`. Migrated studies get the
+#      three profiles here, through an explicit INSERT OR IGNORE step,
+#      because `user_*_profile` tables are in
 #      `USER_DATA_TABLES_FORBIDDEN_FROM_REFRESH` (Phase 2 cannot
-#      touch them) — the user's existing custom profiles must be
-#      preserved, but the three v2 system profiles can be appended
-#      idempotently.
+#      touch them): the user's existing custom profiles are
+#      preserved, and the three profiles are appended idempotently.
 #
 #   2. A migration report identifying in-study shapes_point_sources
 #      rows whose EF fingerprint matches a `deprecated=1` row in

@@ -2,6 +2,7 @@
 This class is used to create an ALAQS output file from an existing ALAQS study.
 """
 
+import itertools
 import os
 import shutil
 import sqlite3 as sqlite
@@ -376,15 +377,29 @@ def inventory_insert_movements(inventory_name, model_parameters):
         "taxi_fuel_ratio",
         "number_of_stop_and_gos",
     ]
+    # Documented 20-column order (INPUT_FORMATS.md, example files):
+    # gate_emissions_code sits at column 13, right after apu_code.
+    CURRENT_COLS = (
+        LEGACY_COLS[: LEGACY_COLS.index("apu_code") + 1]
+        + ["gate_emissions_code"]
+        + LEGACY_COLS[LEGACY_COLS.index("apu_code") + 1 :]
+    )
 
     with open(model_parameters["movement_path"], "rt") as movements:
-        header = movements.readline().strip().split(";")
         # Strip BOM if present
-        if header and header[0].startswith("\ufeff"):
-            header[0] = header[0][1:]
+        first_line = movements.readline().lstrip("\ufeff")
+        header = first_line.strip().split(";")
+
+        # A file without a header line starts with a movement: its first
+        # field is the runway_time date. Read that line as data.
+        try:
+            datetime.strptime(header[0].strip(), "%Y-%m-%d %H:%M:%S")
+            headerless = True
+        except ValueError:
+            headerless = False
 
         # Column names present in this CSV (excluding the synthetic oid)
-        csv_cols = [h.strip() for h in header]
+        csv_cols = [] if headerless else [h.strip() for h in header]
 
         # Backward compatibility: pre-rebuild CSVs ended with a `domestic`
         # column that has been dropped from the schema (it was unused at
@@ -398,27 +413,68 @@ def inventory_insert_movements(inventory_name, model_parameters):
             csv_cols = csv_cols[:-1]
 
         known_cols = set(LEGACY_COLS) | {"gate_emissions_code"}
-        if not set(csv_cols).issubset(known_cols) or not set(LEGACY_COLS).issubset(
-            set(csv_cols)
-        ):
-            # Fall back to legacy positional assumption when header is
-            # missing/unexpected (preserves pre-rebuild behaviour).
+        positional = not set(csv_cols).issubset(known_cols) or not set(
+            LEGACY_COLS
+        ).issubset(set(csv_cols))
+        if positional and headerless:
+            logger.warning(
+                "Movements file %s has no header line. Columns are read by "
+                "position: rows with 20 fields in the documented order, other "
+                "rows in the legacy 19-column order without gate_emissions_code.",
+                model_parameters["movement_path"],
+            )
+            n_header_cols = 0
             csv_cols = LEGACY_COLS[:]
-            drop_trailing_domestic = False
+        elif positional:
+            # Fall back to positional reading when the header is
+            # missing/unexpected. The layout is taken from the header:
+            # a header ending with `domestic` is a pre-rebuild file (legacy
+            # 19 columns, optionally followed by gate_emissions_code, then
+            # domestic, which is dropped). Otherwise each row is read in the
+            # documented 20-column order when it has 20 fields, else in the
+            # legacy 19-column order (no gate_emissions_code).
+            unknown = [c for c in csv_cols if c not in known_cols]
+            missing = [c for c in LEGACY_COLS if c not in csv_cols]
+            logger.warning(
+                "Movements file %s: header not recognised (unknown columns: %s; "
+                "missing columns: %s). Columns are read by position: rows with "
+                "20 fields in the documented order, other rows in the legacy "
+                "19-column order without gate_emissions_code (a header ending "
+                "with domestic: legacy order, then gate_emissions_code).",
+                model_parameters["movement_path"],
+                ", ".join(unknown) or "none",
+                ", ".join(missing) or "none",
+            )
+            n_header_cols = len(csv_cols)
+            csv_cols = LEGACY_COLS[:]
 
+        has_gec = "gate_emissions_code" in csv_cols
         all_movements = []
         movement_line = 0
-        for raw in movements:
+        for raw in itertools.chain([first_line] if headerless else [], movements):
             movement_line += 1
             fields = raw.strip().split(";")
+            row_cols = csv_cols
+            if positional:
+                if drop_trailing_domestic:
+                    # Pre-rebuild layout: legacy columns, then the optional
+                    # gate_emissions_code, then domestic (dropped).
+                    if len(fields) > n_header_cols:
+                        fields = fields[:n_header_cols]
+                    if len(fields) == len(LEGACY_COLS) + 1:
+                        row_cols = LEGACY_COLS + ["gate_emissions_code"]
+                        has_gec = True
+                elif len(fields) == len(CURRENT_COLS):
+                    row_cols = CURRENT_COLS
+                    has_gec = True
             # Drop the trailing 'domestic' field if header had it.
-            if drop_trailing_domestic and len(fields) > len(csv_cols):
+            elif drop_trailing_domestic and len(fields) > len(csv_cols):
                 fields = fields[: len(csv_cols)]
             # Pad to header length in case of trailing empty fields trimmed
             # by strip()+split.
-            if len(fields) < len(csv_cols):
-                fields += [""] * (len(csv_cols) - len(fields))
-            row_dict = dict(zip(csv_cols, fields))
+            if len(fields) < len(row_cols):
+                fields += [""] * (len(row_cols) - len(fields))
+            row_dict = dict(zip(row_cols, fields))
             row_dict["oid"] = movement_line
             all_movements.append(row_dict)
 
@@ -427,11 +483,16 @@ def inventory_insert_movements(inventory_name, model_parameters):
         # Explicit column list.  Includes gate_emissions_code only when the
         # source CSV had it; otherwise the DB column takes its DEFAULT 1.
         base_cols = ["oid"] + LEGACY_COLS
-        if "gate_emissions_code" in csv_cols:
+        if has_gec:
             base_cols.append("gate_emissions_code")
 
         placeholders = ",".join(["?"] * len(base_cols))
-        values_list = [tuple(m.get(c, "") for c in base_cols) for m in all_movements]
+        # A row read in the 19-column order next to 20-field rows has no
+        # gate_emissions_code: give it the DB default (1).
+        values_list = [
+            tuple(m.get(c, 1 if c == "gate_emissions_code" else "") for c in base_cols)
+            for m in all_movements
+        ]
         cur.executemany(
             f"INSERT INTO user_aircraft_movements ({', '.join(base_cols)}) "
             f"VALUES ({placeholders})",

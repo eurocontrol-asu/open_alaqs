@@ -109,12 +109,11 @@ class EngineEmissionIndex(Store):
         Per-mode EI with the MEEM nvPM emission index of the segment.
 
         ``meem_ambient``: (T in K, p in Pa) at the segment from the atmosphere model
-        of the emission calculation (5.4.1); V1 then uses it instead of the CAEP
-        sheet's ISA + delta_t at altitude. None: the sheet's atmosphere.
+        of the emission calculation (5.4.1); V1 then uses it instead of the
+        ISA + delta_t at altitude. None: the ISA + delta_t atmosphere.
 
         V1 (default, the method used by the emission calculation) follows
-        the MEEM_V1 tab of the CAEP14 v14 calculation sheet
-        (open_alaqs.core.tools.meem_v1):
+        MEEM V1 (ICAO CAEP/13-MDG method, open_alaqs.core.tools.meem_v1):
 
         - Segment at or below 3000 ft (914.4 m) above the aerodrome (ICAO
           LTO cycle: ``altitude_m - airport_elevation_m``), or no altitude
@@ -128,7 +127,7 @@ class EngineEmissionIndex(Store):
           p1_g_kg and p2_g_kg move by the same amount, and nvpm_number_kg
           is the MEEM number EI.
 
-        V2 (``meem_version="v2"``, MEEM V2 of CAEP14 v12+, open_alaqs.core.
+        V2 (``meem_version="v2"``, MEEM V2 of CAEP/14, open_alaqs.core.
         tools.meem_v2) is kept for evaluation only; the emission calculation
         does not use it (MovementSourceModule always passes "v1"). It sets
         only nvpm_g_kg and nvpm_number_kg.
@@ -347,7 +346,7 @@ class EngineEmissionIndex(Store):
         airport_elevation_m=0.0,
         meem_ambient=None,
     ):
-        """MEEM V1 (CAEP14 v14 MEEM_V1 tab) applied to a mode EI; see
+        """MEEM V1 (ICAO CAEP/13-MDG method) applied to a mode EI; see
         getEmissionIndexByModeWithMEEM. LTO / non-LTO cut at 3000 ft above
         the aerodrome; ``altitude_m`` (above MSL) is the ISA altitude of the
         non-LTO chain."""
@@ -376,7 +375,7 @@ class EngineEmissionIndex(Store):
                 mass_mgkg.append(float(nvpm_m_g) * 1000.0)
                 number_nkg.append(float(nvpm_n))
             ts_num = list(ts)
-            # 5th point (MEEM_V1!J9:K9 and J17:K17) when the engine has one.
+            # 5th point (mass and number) when the engine has one.
             f00_m = getattr(self, "_meem_m_f00", None)
             max_m = getattr(self, "_nvpm_m_max_mgkg", None)
             if f00_m and f00_m > 0 and max_m is not None:

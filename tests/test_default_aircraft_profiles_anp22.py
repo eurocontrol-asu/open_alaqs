@@ -5,7 +5,7 @@ profiles of `default_aircraft.csv`.
 
 These run on the committed CSVs only; they do not need the ANP tables. The
 builder that produced the CSVs is `tools/anp22_profiles/build_anp22_profiles.py`
-and the provenance is in `documents/AIRCRAFT_PROFILES_PROVENANCE.md`.
+and the provenance is in `documents/developer/AIRCRAFT_PROFILES_PROVENANCE.md`.
 """
 
 from __future__ import annotations

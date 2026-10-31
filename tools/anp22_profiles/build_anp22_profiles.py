@@ -8,7 +8,7 @@ a type-specific ANP v2.2 profile where a proxy can be determined.
 The amendment is a deterministic correction of the 5.3.5 tables (git revision
 ``c8a55cd``), not a recomputation: the x, z and TAS of every existing ANP v2.2
 profile are kept (they already follow ANP v2.2 at ISA, sea level; see
-``documents/AIRCRAFT_PROFILES_PROVENANCE.md``).
+``documents/developer/AIRCRAFT_PROFILES_PROVENANCE.md``).
 
 Inputs
 ------

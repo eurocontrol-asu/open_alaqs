@@ -111,8 +111,8 @@ def local_ambient_conditions(method_config: dict, height_m: float):
 
 def _meem_ambient(method_config: dict, T_amb, p_amb):
     """(T, p) of the segment for MEEM V1 when the atmosphere model is active (the
-    ambient conditions are the segment's local state), else None (the CAEP sheet's
-    ISA + delta T at altitude: ground_held, or no local state)."""
+    ambient conditions are the segment's local state), else None (the
+    ISA + delta T at altitude of MEEM V1: ground_held, or no local state)."""
     if method_config.get("ground_ambient_conditions") is None:
         return None
     if T_amb is None or p_amb is None:
@@ -123,7 +123,7 @@ def _meem_ambient(method_config: dict, T_amb, p_amb):
 class _LocalAmbient:
     """Context manager: method_config["ambient_conditions"] is the local state at height_m
     inside the block; the period's row stays available as "ground_ambient_conditions"
-    (NOx ambient correction; the MEEM V1 delta T, which only the ground_held sheet
+    (NOx ambient correction; the MEEM V1 delta T, which only the ground_held ISA + delta T
     atmosphere uses)."""
 
     def __init__(self, method_config: dict, height_m: float):
@@ -180,6 +180,16 @@ class GateEmissionCalculator(MovementEmissionCalculator):
     def _calculate_ground_equipment_emissions(self, source_type):
         emissions = Emission(defaultValues=defaultEmissions)
         ac_group = self._get_aircraft_group_match(source_type)  # e.g. 'JET SMALL'
+        if ac_group is None:
+            # Intended: an aircraft group with no gate profile and no close match gets no GSE or
+            # GPU emissions. This is the case of PROPELLER (piston aircraft), which use no GSE or GPU.
+            logger.debug(
+                "No gate profile for source type '%s' and aircraft group '%s': no %s emissions.",
+                source_type,
+                self._aircraft.getGroup(),
+                source_type.upper(),
+            )
+            return {}
         occupancy_in_min = self._get_gate_occupancy(ac_group, source_type)
 
         emission_index = self._gate.getEmissionIndex(
@@ -253,7 +263,7 @@ class GateEmissionCalculator(MovementEmissionCalculator):
                 logger.warning(
                     "Did not find a gate emission profile for source type '%s' and aircraft group '%s', "
                     "but matched to '%s'. Probably update the table 'default_gate_profiles'."
-                    % (source_type, matched[0], ac_group)
+                    % (source_type, ac_group, matched[0])
                 )
             return matched[0]
 
@@ -345,7 +355,7 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
     def calculate_emissions(self) -> list[EmissionsDict]:
         emissions: list[EmissionsDict] = []
 
-        # CAEP14 v14: taxi is a ground operation with M=0. The shared
+        # CAEP/14: taxi is a ground operation with M=0. The shared
         # self._method["config"] dict is mutated by FlightEmissionCalculator
         # per segment to carry the per-segment Mach into the BFFM2 / MEEM
         # lookups. Without this isolation, taxi inherits the leftover Mach
@@ -380,12 +390,32 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                         )
                     )
             else:  # BFFM2 method
+                # Stays None when the engine has no index for the taxi thrust: no taxi emissions (below).
+                mode_ei_ = None
                 # get emission indices based on the engine-thrust/fuel flow setting as defined in the movements table; fuel flow has priority
-                emission_index_ = (
-                    self._engine.getEmissionIndex().getEmissionIndexByEngineState(
-                        self._engine_thrust_level_taxiing, method=self._method
+                try:
+                    emission_index_ = (
+                        self._engine.getEmissionIndex().getEmissionIndexByEngineState(
+                            self._engine_thrust_level_taxiing, method=self._method
+                        )
                     )
-                )
+                except ValueError as _exc:
+                    # A taxi thrust outside the twin-quadratic range (e.g. 7 given
+                    # for 7 %) stopped the whole calculation. As for a flight
+                    # segment, the taxi then takes the bymode (TX) index.
+                    logger.error(
+                        "Movement '%s': engine_thrust_level_for_taxiing %s is not a "
+                        "thrust fraction; taxi uses the bymode index. (%s)",
+                        self._movement_name,
+                        self._engine_thrust_level_taxiing,
+                        _exc,
+                    )
+                    emission_index_ = (
+                        self._engine.getEmissionIndex().getEmissionIndexByMode(
+                            self._mode
+                        )
+                    )
+                    mode_ei_ = None
                 # Inject PM and SOx from the mode EI — BFFM2 only computes NOx/CO/HC
                 if emission_index_ is not None:
                     try:
@@ -566,7 +596,28 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
 
                 # Queuing emissions
                 if index_segment_ == len(segments) - 1:
-                    em_.add(emission_index_, queuing_time * number_of_engines)
+                    # Queuing follows the route. For a departure with a main engine start
+                    # time, the queue is split at the main engine start: before it on
+                    # taxi_engine_count engines (with taxi_fuel_ratio, as a single-engine
+                    # segment), after it on all engines.
+                    queuing_single_s = self._queuing_single_engine_time(
+                        taxiing_time_while_aircraft_moving, queuing_time
+                    )
+                    if queuing_single_s is None:
+                        em_.add(emission_index_, queuing_time * number_of_engines)
+                    else:
+                        n_all = self._aircraft.getEngineCount()
+                        n_single = float(min(self._taxi_engine_count, n_all))
+                        ratio = (
+                            self._taxi_fuel_ratio
+                            if self._taxi_fuel_ratio is not None
+                            else 1.0
+                        )
+                        em_.add(
+                            emission_index_,
+                            queuing_single_s * n_single * ratio
+                            + (queuing_time - queuing_single_s) * n_all,
+                        )
 
                     # Stop & Go emissions
                     if (
@@ -719,6 +770,26 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
 
         return apu_time_, apu_emis_
 
+    def _queuing_single_engine_time(
+        self, route_end_s: float, queuing_time: float
+    ) -> Optional[float]:
+        """The part of a departure's queue (from route_end_s to route_end_s +
+        queuing_time after block-off) before the main engine start, in s.
+        None when single-engine taxi does not apply (arrivals, no
+        taxi_engine_count or no main engine start time)."""
+        if not self._is_departure() or self._taxi_engine_count is None:
+            return None
+        if self._set_time_of_main_engine_start_after_block_off_in_s is not None:
+            mes_s = self._set_time_of_main_engine_start_after_block_off_in_s
+        elif self._set_time_of_main_engine_start_before_takeoff_in_s is not None:
+            mes_s = (
+                self._total_taxiing_time
+                - self._set_time_of_main_engine_start_before_takeoff_in_s
+            )
+        else:
+            return None
+        return min(max(mes_s - route_end_s, 0.0), queuing_time)
+
     def _apply_single_engine_taxiing_emissions(
         self,
         emission: Emission,
@@ -760,10 +831,13 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
                 )
 
         elif self._set_time_of_main_engine_start_before_takeoff_in_s is not None:
-            if abs(
+            # The main engines start X s before take-off, i.e. total - X s after block-off: the
+            # segments that end before that point are on single-engine taxi (as with after_block_off).
+            if (
                 taxiing_time_while_aircraft_moving
                 + self._set_time_of_main_engine_start_before_takeoff_in_s
-            ) >= abs(self._runway_time - self._block_time):
+                <= self._total_taxiing_time
+            ):
 
                 number_of_engines, taxi_fuel_ratio = (
                     self._do_apply_single_engine_taxiing_emissions(emission)
@@ -788,7 +862,13 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
         # taxi_engine_count engines would be added K times for K segments.
         # The complementary (N - taxi_engine_count) engines are added once
         # by _apply_start_engine_emissions at index_segment == 0.
-        if self._include_start_emissions and not self._single_engine_start_added:
+        # gate_emissions_code 0 leaves out all main engine start emissions, as in
+        # _apply_start_engine_emissions.
+        if (
+            self._include_start_emissions
+            and not self._single_engine_start_added
+            and getattr(self, "_gate_emissions_code", 1)
+        ):
             number_of_engines_to_start = number_of_engines
             emission += self._start_emissions * number_of_engines_to_start
             self._single_engine_start_added = True
@@ -802,10 +882,14 @@ class TaxiingEmissionCalculator(MovementEmissionCalculator):
             # Default value if both times (after_block_off and before_takeoff) are None
             number_of_engines_to_start = self._aircraft.getEngineCount()
 
+            # The single-engine-taxi engines are started by _do_apply_single_engine_taxiing_emissions,
+            # which runs before this call for the same segment. The single-engine segments are the
+            # first ones of the route, so when the first is not one of them, none is: the aircraft
+            # taxis on all engines from the gate, and every engine starts here (once each).
             if (
                 self._set_time_of_main_engine_start_after_block_off_in_s is not None
                 or self._set_time_of_main_engine_start_before_takeoff_in_s is not None
-            ):
+            ) and self._single_engine_start_added:
                 number_of_engines_to_start -= float(
                     min(
                         self._taxi_engine_count,
@@ -1357,6 +1441,11 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
         # Use original start point for emission index calculation (fuel flow, power setting, mode)
         engine_thrust = start_point_.getEngineThrust()
         fuel_flow = start_point_.getFuelFlow()
+        if fuel_flow is not None and not fuel_flow > 0:
+            # A zero or negative supplied fuel flow is no fuel flow (as the ADS-B
+            # branch below treats it); without a power setting the segment then
+            # takes the bymode index instead of failing in the twin-quadratic fit.
+            fuel_flow = None
         mode = start_point_.getMode() or "AP"  # guard empty string (Bug #23 residual)
         # Segment altitude above MSL (metres), the ISA altitude of the MEEM V1
         # non-LTO chain: the trajectory height above the airport (getZ, None
@@ -1405,14 +1494,14 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
             #       twin_quadratic_fit_method on the segment's power_setting
             #       (from the DB `power` column, = THR_SET_lb / max_thrust_lb
             #       per ANP source data). Preserves sub-mode thrust variation.
-            #       Matches the CAEP14 v14 BFFM2 workflow.
+            #       Matches the CAEP/14 BFFM2 workflow.
             #
             #   "mode_anchor": always use the EEDB anchor FF for the segment's
             #       mode label, overriding both supplied fuel_flow_kgm (unless
             #       it's within the TO-anchor ceiling) and the twin_quadratic
             #       path. Disables sub-mode resolution but still applies BFFM2
-            #       atmospheric and humidity corrections. Matches the CAEP14
-            #       v14 LTO-mode workflow + ambient corrections.
+            #       atmospheric and humidity corrections. Matches the CAEP/14
+            #       LTO-mode workflow + ambient corrections.
             #
             # fuel_flow_kgm values above ADSB_FF_CEILING_FACTOR x the EEDB TO fuel
             # flow are always replaced by the mode anchor (treated as implausible input).
@@ -1676,7 +1765,7 @@ class FlightEmissionCalculator(MovementEmissionCalculator):
                 logger.warning(
                     "BFFM2: power setting out of twin-quadratic range for "
                     "movement '%s' segment mode '%s'; falling back to "
-                    "mode-anchor EI. (%s)",
+                    "the bymode index. (%s)",
                     self._movement_name,
                     mode,
                     _exc,

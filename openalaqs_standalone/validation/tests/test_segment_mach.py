@@ -9,8 +9,8 @@ them through tests/test_plugin_csv_vs_reference.py (pinned plugin outputs,
 2e-4).
 
 The speed of sound is a = sqrt(gamma R T) with gamma 1.4 and
-R 287.05287 J/(kg K) (ICAO Doc 7488), as the CAEP validation workbook
-computes it; the Mach of its two cases is reproduced to 1e-9. Until
+R 287.05287 J/(kg K) (ICAO Doc 7488); the Mach of the two CAEP/14 BFFM2
+reference cases (test_caep14_bffm2_reference_case.py) is reproduced to 1e-9. Until
 October 2026 the code used the linear form 331.3 + 0.606 (T - 273.15) m/s,
 0.03 % high at ISA and 0.16 % high at 243.6 K and at 307 K.
 """
@@ -59,8 +59,8 @@ def test_isa_sea_level_speed_of_sound():
         (180.0, 286.168799936602, 0.273058616033938),  # LTO case
     ],
 )
-def test_equal_to_the_caep_validation_mach(ref_segment_mach, tas_kt, T_K, caep_mach):
-    """The workbook: Mach = TAS / sqrt(gamma R T), TAS in kt over its rounded
+def test_equal_to_the_reference_case_mach(ref_segment_mach, tas_kt, T_K, caep_mach):
+    """Reference cases: Mach = TAS / sqrt(gamma R T), TAS in kt over the rounded
     constant ms_2_kt = 1.94384 kt per m/s (3e-6 off 3600/1852)."""
     tas = tas_kt / 1.94384
     assert _segment_mach(tas, 0.0, T_K) == pytest.approx(caep_mach, rel=1e-9)

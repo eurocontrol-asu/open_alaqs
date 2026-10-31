@@ -1,6 +1,8 @@
 # training_engine_test_events.csv
 
-Sample CSV of engine test events (run-ups) for the engine-test-site workflow.
+A sample CSV of engine test events (run-ups) for the engine-test-site
+workflow, for users who want to try that workflow on the training study:
+what the file contains and how to load it.
 
 ## What it demonstrates
 
@@ -16,7 +18,7 @@ implicit- and explicit-engine cases:
 | 4   | PC24     | aircraft default       | 1 explicit     | TX, AP, CL |
 | 5   | C25C     | aircraft default       | aircraft default (=2) | TX, AP, CL, TO |
 
-Rows 1, 2, and 5 leave `engine_count` empty — the compute path falls back
+Rows 1, 2, and 5 leave `engine_count` empty: the compute path falls back
 to `default_aircraft.engine_count` for the aircraft type. Rows 3 and 4
 show the explicit override.
 
@@ -48,15 +50,13 @@ the repository; the script is not in the plugin zip).
    Non-zero hours: 2025-01-15 09:00, 2025-01-15 10:00, 2025-01-16 08:00,
    2025-02-03 11:00, 2025-02-03 14:00.
 
-## CSV format quick reference
+## CSV format
 
-Required columns: `source_id`, `start_datetime`, `end_datetime`,
-`aircraft_type`.
+The columns of this file are specified in
+[INPUT_FORMATS.md](../../documents/user/INPUT_FORMATS.md#engine-test-events).
 
-Optional columns: `test_id`, `engine_uid`, `engine_count`, `t_TX_s`,
-`t_AP_s`, `t_CL_s`, `t_TO_s`, `instudy`.
+See also:
 
-Datetimes in ISO-8601 (`YYYY-MM-DDTHH:MM:SS`). Mode times in seconds per
-engine. Empty `engine_uid` / `engine_count` fall back to the aircraft's
-defaults. See `documents/USER_GUIDE.md` §Engine test sites for the full
-specification.
+- [Engine test sites](../../documents/user/USER_GUIDE.md#engine-test-sites): defining a test site in the plugin
+- [Engine test site emissions](../../documents/methods/STATIONARY_AND_ROAD.md#engine-test-sites): how the emissions are computed
+- [import_engine_test_events.py](../../scripts/README.md#import_engine_test_eventspy): loading events from the command line

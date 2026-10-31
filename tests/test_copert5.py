@@ -205,7 +205,7 @@ def test_parking_calculation():
     # p.28-29). Pre-fix value was 0.033798717802083, including Running
     # losses. After the fix, parking evaporation sums only Diurnal + Hot
     # soak; Running losses belong on driving sources (see
-    # documents/AUXILIARY_MATERIAL.md "Known limitations and future work"
+    # documents/methods/STATIONARY_AND_ROAD.md "Known limitations and future work"
     # item 2 for the deferred work to expose them on roadway sources).
     evaporation_refs = pd.Series(
         {

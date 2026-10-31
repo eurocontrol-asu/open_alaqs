@@ -4,10 +4,212 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
+## [Unreleased]
+
+Results of the shipped examples and of the validation fixtures do not change
+(plugin, standalone and CAEP14 reference outputs identical to 5.4.1). The
+fixes below change results only for the cases they name.
+
+### Fixed
+
+- Calculate Dispersion, Generate from OpenALAQS output: the emission settings
+  (Method, Apply NOx Corrections, Atmosphere Aloft, BFFM2 Fuel-Flow Source,
+  Source Dynamics) can be set as on the Configuration tab of Visualize Emission
+  Calculation. The emissions were always recalculated with bymode, no NOx
+  correction and no source dynamics, which stay the defaults. With BFFM2, all
+  ticked pollutants are calculated as in any BFFM2 run, so CO2, SOx and PM10
+  change too (BFFM2 fuel flow).
+- Calculate Dispersion: Roughness Length, Displacement Height and Anemometer
+  Height can be set in both Generate options; they were always 0.1 / 0.6 /
+  10.6 m. The defaults (0.1 m, 0, 0; 0 derives the value from z0) write the
+  same austal.txt as before.
+- Calculate Dispersion, Generate from OpenALAQS output: flight segments and
+  roadways are clipped to the calculation grid, as in the Dispersion Models
+  tab; the emissions of segments beyond the grid were counted in the AUSTAL
+  source rates. **Results change** for studies whose flight paths or roadways
+  extend beyond the grid (for example NOx 1.775 to 1.770 g/s in one hour of the
+  AIRPORT_A test study).
+- Calculate Dispersion: the receptor height (Receptors CSV column `height`, or
+  the height stored with the inventory's receptor points) is passed to AUSTAL;
+  every receptor was placed at 1.5 m. The receptor points stored in a study
+  are now written to austal.txt; reading them failed for every study, so
+  none were written.
+- Calculate Dispersion, Generate from CSV: a PM10 fine fraction field
+  (default 0.9, as before).
+- Calculate Dispersion: with NOTALUFT ticked, the options string keeps
+  SCINOTAT (`NOSTANDARD;NOTALUFT;SCINOTAT;Kmax=1`), as the standalone writes
+  it. Output files of NOTALUFT runs are written in scientific notation (format
+  only); the result windows read both notations.
+- Taxi: with only `set_time_of_main_engine_start_before_takeoff_in_s` set,
+  single-engine taxi was applied to the end of the taxi, after the main
+  engines start; it now applies before that point. **Results change** for
+  movements that set this field (no shipped example does).
+- Taxi: with single-engine taxi set and no taxi segment inside the
+  single-engine window, the start emissions of the single-engine-taxi engines
+  were not counted; every engine now starts once per departure.
+- Taxi: with `gate_emissions_code` 0, the start emissions of the
+  single-engine-taxi engines were still added; they are now left out, like the
+  other start, GSE and GPU emissions.
+- Taxi: the queue of a departure with single-engine taxi was counted on the
+  engine count of the last route segment, even when the main engines start
+  during the queue. It is now split at the main engine start: before it on
+  `taxi_engine_count` engines with `taxi_fuel_ratio`, as a single-engine
+  segment, after it on all engines. **Results change** for departures with
+  `taxi_engine_count`, a main engine start time and a queue (no shipped
+  example sets these times).
+- Taxi with BFFM2: an engine without an emission index at the taxi thrust
+  stopped the calculation with an error; the movement now gets no taxi
+  emissions and the log names the missing index.
+- Engine tests with the BFFM2 thrust mode: the meteo row is the one nearest to
+  the event midpoint; the plugin always used the last row of the meteo table.
+  **Results change** for BFFM2 engine tests when the meteo table has more than
+  one row. The standalone looks up the exact midpoint too; it rounded it down
+  to the second, which picked the other row at a tie.
+- Movements file with a missing, misspelt or unknown header name: rows with
+  20 fields are read in the documented column order (with
+  `gate_emissions_code` after `apu_code`) instead of being shifted from column
+  13 on, and the log names the unknown and missing headers. A header that
+  ends with `domestic` (old files) keeps the old order: the 19 legacy columns,
+  then `gate_emissions_code` when present. Files with a correct header are
+  read as before.
+- Movements file without a header line: the first line was taken as the
+  header, so the first movement was lost; the file check also left it out of
+  the movement count and the study period. A first line that starts with a
+  date is now read and checked as a movement, by position, with a warning.
+- Calculation settings: choosing a pollutant no longer resets **Method** from
+  BFFM2 to bymode; after a pollutant without BFFM2, selecting CO, HC or NOx
+  brings BFFM2 back. Loading a configuration replaces that remembered choice.
+- Standalone and CAEP14 reference: the meteo row of a movement is the one
+  nearest to the start of its hourly period, and the LTO ceiling is 914.4 m
+  when the row has no mixing height. This matches the plugin for a study
+  with hourly periods: the standalone and the reference always use hourly
+  periods starting on the hour, while the plugin uses the study's time
+  interval. They took the latest row at or before the runway time and fell
+  back to the study's vertical limit. Results change only with missing or
+  off-hour meteo rows, movements before the first meteo row, or an empty
+  mixing height with a study vertical limit other than 914.4 m.
+- Standalone: BFFM2 segments that fall back (ADS-B fuel flow above the
+  plausibility ceiling, or no power and no fuel flow) are reported with one
+  warning per movement, as in the plugin.
+- `python -m austal_prep` reads `source_aggregation`, `source_offset_cells`
+  and `max_receptors` from config.json; the defaults always applied.
+- Gate emissions: the log warning for an aircraft group matched to a near
+  gate profile group named the two groups the wrong way round.
+- Movements calculated together: the flight emissions are calculated once
+  per group of movements with the same engine, profile, runway and taxi
+  route, the taxi emissions once per group with the same engine, route and
+  taxi settings, and the gate emissions once per gate, aircraft group and
+  direction. Each group used the aircraft, the `tow_ratio` or the
+  `gate_emissions_code` of its first movement. The aircraft type and
+  `tow_ratio` are now part of the flight key, the aircraft type of the taxi
+  key and `gate_emissions_code` of the gate key. **Results change** for a
+  movement whose aircraft type shares an engine and a profile with another
+  type of a different engine count in the same hour (in the default data
+  86 engine and profile pairs are shared by types with different engine
+  counts, for example A4 with one engine and A6 with two on `07P05GE220`
+  and `JET-MEDIUM-D-1`), for movements with different
+  `tow_ratio` with the NOx correction, and for movements with different
+  `gate_emissions_code` at one gate.
+- Movements calculated together, tracks: the flight key did not hold the
+  movement's track (`track_id`, `shapes_tracks`) or its runway direction,
+  both of which shape the trajectory at the runway, so a movement flown
+  along a track took the trajectory of a group member without one (or the
+  reverse). Both are now part of the key. **Results change** for studies
+  with tracks: on the training study, an A20N departure along a turning
+  track next to one without got 4.18 kg NOx (`bymode`) instead of its own
+  4.32 kg. The standalone does not follow tracks (see its README,
+  Limitations).
+- BFFM2: a profile point with no power setting and a zero or negative fuel
+  flow stopped the whole calculation (TypeError); the segment now takes the
+  bymode index, as a point with neither value.
+- BFFM2 taxi: an `engine_thrust_level_for_taxiing` outside the range of the
+  twin-quadratic fit (for example 7 given for 7 %) stopped the whole
+  calculation; the taxi now takes the TX mode values, with an error in the
+  log.
+- NOx correction: a `tow_ratio` of 0, a negative value or NaN is replaced by
+  1 with a warning, in the plugin and the standalone; 0 made the plugin's
+  correction factor negative (NOx −2.36 kg for a departure of the training
+  study). The standalone already used 1 for 0 and negative values, without a
+  warning, and gave NaN NOx for NaN.
+- Standalone and CAEP14 reference aligned with the plugin on edge cases that
+  the shipped fixtures do not reach: BFFM2 taxi at the movement's
+  `engine_thrust_level_for_taxiing` (they used the idle fuel flow for any
+  thrust), with the plugin's fallback for a thrust outside the fit; a flight
+  segment with a power setting above 1.05 or below 0 and no supplied fuel
+  flow takes the bymode index (the standalone kept the BFFM2 index, the
+  reference extrapolated the fit and had no 1.0 to 1.05 clamp); a supplied
+  fuel flow of 0 or below counts as none; a NaN `tow_ratio` counts as 1 in
+  the standalone NOx correction.
+- BFFM2: the log message for a power setting outside the twin-quadratic range
+  said "falling back to mode-anchor EI"; the segment takes the bymode index,
+  and the message now says so. The fit's own error said "between 0.07 and
+  1.0", though 0 to 0.07 is accepted (extrapolated from the idle point); it
+  now says "between 0 and 1.0".
+- Taxiway Routes Editor: the log warning "No routes defined" was written
+  whenever the route list was refreshed without selecting a route, also when
+  the study has routes; it is now written only when the study has none.
+
+### Changed
+
+- Reference data, `default_airports` (airport list of the ICAO lookup in the
+  study setup): 5,035 airports instead of 5,060. 25 airports removed; 6 change
+  their ICAO code, with the same name and position (SLCH to SLHI, SVAJ to SVNJ,
+  VAHB to VOHB, WAJW to WAVV, WAMP to WAFP, WRKO to WATO); 55 elevations
+  updated. Other rows unchanged. The table is not used by the emission
+  calculation; new studies get it from the project template, and an existing
+  study gets it with `scripts/migrate_alaqs.py --refresh-reference-data` (the
+  table is in the default refresh set).
+- Study setup and calculation settings: the **Vertical Limit** fields are
+  greyed out with a tooltip: they have no effect (the LTO ceiling is the hourly
+  mixing height, or 914.4 m).
+- Gate emissions: aircraft of the group PROPELLER get no GSE or GPU emissions
+  by design; this is now explicit in the code and the documentation (no change
+  in results).
+- Documentation reorganised by reader (`documents/user`, `methods`,
+  `validation`, `developer`), one page per topic, with an index, a glossary,
+  input formats, troubleshooting, and a searchable site
+  (`tools/docs_site/mkdocs.yml`); statements that disagreed with the code are
+  corrected. `tools/check_doc_links.py` and `.github/workflows/docs.yaml` check
+  the links on each pull request.
+- Documentation site published on GitHub Pages
+  (https://eurocontrol-asu.github.io/open_alaqs/), one version per release
+  (`/<version>/`, and `/latest/` for the newest), built by
+  `.github/workflows/docs.yaml` on each `v*` tag or when started by hand.
+- Toolbar: new **Open ALAQS documentation** button, and the About dialog links
+  to the documentation; both open the site version of the installed plugin
+  (`/latest/` for a development version). The `homepage` in `metadata.txt`
+  stays the EUROCONTROL page.
+- Dialog and form screenshots of the documentation retaken from the current
+  forms with `tools/docs_site/make_screenshots.py`.
+- Aircraft emissions: a worked example runs one approach segment through
+  bymode and the two BFFM2 fuel-flow sources, step by step
+  (`documents/methods/AIRCRAFT_EMISSIONS.md`).
+- Training course slides (March 2026): an errata page lists where they differ
+  from 5.4.1 (`documents/user/TRAINING_COURSE_ERRATA.md`).
+- External links updated (ICAO Doc 9889, FOCA engine emissions, COPERT,
+  QGIS installer).
+
+### Removed
+
+- `scripts/update-strings.sh` and `scripts/compile-strings.sh`: translation
+  helpers for an `i18n/` folder removed in 2021; the plugin has no
+  translations.
+- `scripts/run-env-linux.sh`: QGIS 2 environment helper.
+- `documents/developer/design/FUEL_FLOW_OPTIONS.md`: design note based on
+  non-public study material. What is implemented (the `δ √θ` fuel-flow
+  scaling) is described in `documents/methods/AIRCRAFT_EMISSIONS.md`; the
+  options not implemented are no longer documented.
+
+### Tests
+
+- Regression tests for each fix above, and
+  `test_emission_calculation` passes on QGIS 3.34 (the minimum version), where
+  QGIS's own unordered layer comparison mis-pairs the fields.
+
 ## [5.4.1] - 2026-10-24
 
 Upgrading a 5.4.0 study: see
-[Upgrading from 5.4.0](documents/USER_GUIDE.md#upgrading-from-540) in the
+[Upgrading from 5.4.0](documents/user/UPGRADING.md#upgrading-from-540) in the
 User Guide. Every BFFM2 inventory changes and should be recalculated; `bymode`
 inventories change only in the PM10 of segments above 3,000 ft (MEEM V1).
 No option gives 5.4.0 BFFM2 results back: `ground_held` restores the 5.4.0
@@ -56,7 +258,7 @@ CO -1.7 %; `bffm2_anchor` NOx +0.3 %, CO -2.9 %, HC -4.9 %; `bymode` PM10
   indices are the standard BFFM2 lookup at the new ambient fuel flow, as for
   a supplied (ADS-B / CUSTOM) fuel flow. Training fixture (280.5-295 K, 99 400 Pa), fix alone:
   `bffm2_traj` CO2 -2.5 %, NOx -6.6 %; `bffm2_anchor` (taxi) CO2 -0.7 %,
-  NOx -0.3 %, CO -2.9 %, HC -4.1 %. The CAEP validation cases (index step) are
+  NOx -0.3 %, CO -2.9 %, HC -4.1 %. The CAEP/14 BFFM2 reference cases (index step) are
   unchanged; the CAEP14 reference implementation, the pinned plugin outputs
   and the training validation workbooks are updated. In the standalone
   `austal` pipeline (and the Dataiku recipe) engine tests are computed with
@@ -121,7 +323,7 @@ CO -1.7 %; `bffm2_anchor` NOx +0.3 %, CO -2.9 %, HC -4.9 %; `bymode` PM10
     see `documents/ATMOSPHERE_ALOFT.md`, section 6.
   - Applies to the Mach number, the `bffm2_traj` fuel flow, the BFFM2 indices
     and the MEEM V1 non-LTO ambient (all methods, `bymode` included; MEEM V1
-    then uses the local T and p instead of the sheet's ISA + delta T, and the
+    then uses the local T and p instead of the method's ISA + delta T, and the
     delta T is not used) of flight segments; the BFFM2 taxi and BFFM2 engine
     tests use the station pressure. The ICCAIA NOx correction keeps the
     hourly row. ISA meteo (standalone `--isa-meteo`, or a period without a
@@ -160,7 +362,7 @@ CO -1.7 %; `bffm2_anchor` NOx +0.3 %, CO -2.9 %, HC -4.9 %; `bymode` PM10
 ## [5.4.0] - 2026-10-22
 
 Upgrading a 5.3.x study: see
-[Upgrading from 5.3.x](documents/USER_GUIDE.md#upgrading-from-53x) in the
+[Upgrading from 5.3.x](documents/user/UPGRADING.md#upgrading-from-53x) in the
 User Guide: which results change for which studies, and how to bring a
 study's own engine, aircraft and profile tables up to date (a project
 `.alaqs` keeps its own copies, which are copied into every new inventory).
@@ -234,7 +436,7 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - ADS-B (CUSTOM) profiles and tracks are placed as before.
 - The plugin's runway trajectory cache moves to
   `cache_runway_trajectories_v5`; older cache tables are no longer read.
-- MEEM V2 (CAEP14 v12+) is implemented in `meem_v2.py` but not used; its
+- MEEM V2 is implemented in `meem_v2.py` but not used; its
   adoption is to be decided. The emission calculation runs MEEM V1 for any
   `meem_version` value and logs a warning when another one is requested
   (`MovementSourceModule`).
@@ -275,9 +477,9 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   EEA-J10 (ACT_PRF "E190-A") is selectable for the E190; the E190's
   default engine in `default_aircraft` stays 11GE144 (EEDB CF34-10E, as in
   5.3.6), in the CSV, the templates and every bundled study.
-- CAEP14 validation: the BFFM2 index step is pinned to two cases of the
-  CAEP14 calculation sheet, non-LTO lean burn and LTO
-  (`validation/tests/test_caep14_sheet_reference_case.py`).
+- CAEP14 validation: the BFFM2 index step is pinned to two CAEP/14 BFFM2
+  reference cases, non-LTO lean burn and LTO
+  (`validation/tests/test_caep14_bffm2_reference_case.py`).
 - CAEP14 reference tool: helicopter active mode cut at the mixing height
   and the grid on the FOCA flight path, as the plugin and the standalone do
   since 5.3.2 (`validation/tests/test_helicopter_caep14_reference.py`).
@@ -363,8 +565,8 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   `default_aircraft_engine_ei` until the 5.0.0 rebuild, which set it to 0.0
   without a note. SOx (as SO2) now comes from the fuel sulphur,
   1000 × FSC × (1 − ε) × 64/32 (`open_alaqs/core/tools/fuel_sulphur.py`):
-  0.758 g/kg for jet fuel (the fuel selected in the CAEP14 sheet v14
-  inputs (FSC 0.000383, ε 0.01, its ICAO vPM parameterisation example);
+  0.758 g/kg for jet fuel (FSC 0.000383, ε 0.01, the ICAO vPM
+  parameterisation example;
   the stored `pm10_sul` stays at the FOA3 value, FSC 680 ppm) and 0.2 g/kg
   for AvGas (FSC 0.01 %, no sulphate),
   by the row's `fuel_type`. The shipped table and the bundled `.alaqs`
@@ -380,15 +582,15 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   goes from 0 to 0.758 g per kg of jet fuel (training example:
   1.849 kg for the 13 movements, `bymode`). Docs: `pm10_sul` corresponds
   to FSC 680 ppm with SO4/S = 96/32 (the docs said 667 ppm).
-- MEEM V1 nvPM now follows the MEEM_V1 tab of the CAEP14 calculation
-  sheet v14 and reaches the output. Its result went to `nvpm_g_kg` /
+- MEEM V1 nvPM now follows the MEEM V1 method (ICAO CAEP/13-MDG) and
+  reaches the output. Its result went to `nvpm_g_kg` /
   `nvpm_number_kg`, which no output column reads, and it interpolated
   log-log at the segment's ANP power setting below 3000 ft, used the
   ground ambient and a pressure-ratio thrust mapping above it, and a T3
   ratio as enrichment factor. Now (`open_alaqs/core/tools/meem_v1.py`,
   `Engine.getEmissionIndexByModeWithMEEM`): at or below 3000 ft (914.4 m)
   above the aerodrome (segment start height, the ICAO LTO cycle) the nvPM
-  EI is the certification value of the mode, unchanged; above, the sheet's
+  EI is the certification value of the mode, unchanged; above, the MEEM V1
   chain (ISA at the segment altitude above MSL, i.e. start height plus
   airport elevation, Mach from the segment TAS, phase "CLIMB TO
   CRUISE" for departures and "DESCENT TO APPROACH" for arrivals, P3/T3,
@@ -396,13 +598,13 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   points, × (P3/P3_GR)^1.35 × 1.1^2.5). The mass EI replaces
   `pm10_nonvol` and `pm10`, `p1`, `p2` move by the same amount, so
   pm10 = nonvol + sul + organic still holds; nothing else changes. OPR is
-  `press_ratio`, 30 when empty (the sheet has no value for this case);
-  the climb pressure coefficient uses a 38000 ft cruise altitude (the
-  sheet's stored value). The port matches the sheet's stored example
-  (0.944536653843135 mg/kg, 2.58597485320693e13 #/kg) and seven cases
-  recalculated in LibreOffice to 1e-15 (`tests/test_meem_v1.py`).
-  The standalone (shared module) and the CAEP14 reference (written out
-  from the sheet) do the same (`validation/tests/test_meem_v1_reference.py`).
+  `press_ratio`, 30 when empty (the EEDB has no value for this case);
+  the climb pressure coefficient uses a default cruise altitude of
+  38000 ft. The implementation matches a MEEM V1 reference example
+  (0.944536653843135 mg/kg, 2.58597485320693e13 #/kg) and seven further
+  reference cases to 1e-15 (`tests/test_meem_v1.py`).
+  The standalone (shared module) and the CAEP14 reference (its own copy
+  of the formulas) do the same (`validation/tests/test_meem_v1_reference.py`).
   **Results change** only for segments more than 3000 ft above the
   aerodrome, i.e. in hours whose mixing height (height above the airport,
   like the segment heights) is above 3000 ft (914.4 m).
@@ -417,7 +619,7 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - `nvpm_number_ei` of `default_aircraft_engine_ei` held the ACT_PRF
   nvPM number rate of the mode (#/s) while the code
   reads it as #/kg; it is now #/kg (ACT_PRF rate / fuel flow, equal to the
-  CAEP14 sheet v14 NVPM_N_*_N/KG; for the FOCA piston and ECTL engines,
+  EEDB v31 nvPM number EI in #/kg; for the FOCA piston and ECTL engines,
   which are in neither, the stored value / fuel flow). In the shipped table
   and the bundled `.alaqs` files. No output column carries nvPM number, so
   no output changes; the MEEM V1 number EI and the 5th number point now
@@ -432,10 +634,10 @@ taxi times lose the landing roll. Plugin and standalone share the rules
   refreshed.
 - MEEM V1 inputs: `press_ratio` and the 5th nvPM point
   (`meem_nvpm_m_i_f00_avg`, `meem_nvpm_n_i_f00_avg`, `nvpm_m_max_mgkg`,
-  `nvpm_n_max_nkg`) were empty in every row; they now come from the CAEP14
-  sheet v14 `Engines_Database` (EEDB v31), ACT_PRF for engines not in it:
-  OPR for 863 jet engines at this step, 5th point for the 51 engines the
-  sheet marks 5PT; with the ACT_PRF engines (see Added) the table now
+  `nvpm_n_max_nkg`) were empty in every row; they now come from ICAO
+  EEDB v31, ACT_PRF for engines not in it:
+  OPR for 863 jet engines at this step, 5th point for the 51 EEDB 5-point
+  engines; with the ACT_PRF engines (see Added) the table now
   has an OPR for 890 jet engines (the others keep 30) and a 5th point for
   77 engines (mass) and 75 (number). The bundled `.alaqs` files get the
   columns where they lacked them. **Results change** for segments more
@@ -455,12 +657,12 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - MEEM V1 above 3000 ft used ISA; it now uses ISA + ΔT, ΔT the
   temperature of the movement's meteo period (the one BFFM2 uses) minus
   ISA at the airport elevation (288.15 K − 0.0065 K/m × elevation),
-  constant aloft, the sheet's "ΔT at 0 ft MSL" (USER INPUTS!B5). Without
+  constant aloft (the temperature offset at 0 ft MSL). Without
   meteo the temperature is ISA sea level (288.15 K), so ΔT = 0.0065 K/m ×
   elevation (10.76 K at 1655 m), 0 only at sea level. Plugin
   (`Engine.getEmissionIndexByModeWithMEEM(delta_t=...)`), standalone and
-  CAEP14 reference alike; checked against two more LibreOffice
-  recalculations of the sheet. **Results change** above
+  CAEP14 reference alike; checked against two more MEEM V1 reference
+  cases. **Results change** above
   3000 ft only. Training example (283 K at −5 m, ΔT −5.18 K, with the OPR
   above): `bymode` pm10_nonvol id 6 +0.86 %, id 8 −0.20 %, 13-movement
   totals pm10_nonvol 31.724 to 31.695 g (−0.09 %), pm10 322.010 to
@@ -540,8 +742,8 @@ taxi times lose the landing roll. Plugin and standalone share the rules
 - Speed of sound for that Mach: `a = √(γ R T)` (γ 1.4, R 287.05287 J/(kg K),
   ICAO Doc 7488), shared by the plugin and the standalone
   (`open_alaqs/core/tools/bffm2.py::speed_of_sound_m_s`) and written out
-  independently in the CAEP14 reference, as the CAEP validation workbook
-  computes it. The linear form `331.3 + 0.606 (T − 273.15)` was 0.03 % high at
+  independently in the CAEP14 reference, as in the CAEP/14 BFFM2
+  formulation. The linear form `331.3 + 0.606 (T − 273.15)` was 0.03 % high at
   ISA and 0.16 % high at 243.6 K and at 307 K. **Results change** below 0.01 %
   for the BFFM2 methods; `bymode` unchanged.
 - CAEP14 reference tool (`validation/tools/compute_caep14_reference.py`):
@@ -1510,8 +1712,8 @@ No behavioural code changes. Inventory totals are bit-identical to
     the code actually applies; PM10 sulphate value corrected (~48.96
     mg/kg stored, FSC ≈ 667 ppm, not the 36.75 mg/kg / 500 ppm
     previously claimed); CO interpolation described using the actual
-    code terminology (`lin_av`, CAEP14 v14 "HC_CO Slope To Mean Value"
-    rule); idle floor clamp behaviour clarified (only applied for
+    code terminology (`lin_av`, CAEP/14 slope-to-mean-value rule for CO
+    and HC); idle floor clamp behaviour clarified (only applied for
     P < 0.07); installation-correction attribution aligned with the
     code's CAEP14 reference.
   - `USER_GUIDE.md`: stop-and-go timing corrected (9 s at idle per
@@ -1932,7 +2134,7 @@ FOCA dispatch behaviour post-migration.
 - `training_v3` (15-movement reference study, 13 fixed-wing + 2
   helicopter): bymode NOx = 29.884658 kg, unchanged across all
   release candidates.
-- Cross-method 90/90 bit-identical against the CAEP14 v14 reference
+- Cross-method 90/90 bit-identical against the CAEP14 reference
   on a fresh build (training_v3, three methods).
 - 144-hour LFSB v3 campaign: standalone-vs-plugin AUSTAL output
   correlation 0.9998 (was 0.823 in `time_indexed` default).
@@ -2320,9 +2522,9 @@ backwards-compatible at the file-format level with the 4.x series — see the
   CSV), grid configuration, execution, and result visualisation in step
   order.
 
-- **CAEP14 v14 emission-index database** validated against the official
-  CAEP14 spreadsheet. The bundled `default_aircraft_engine_ei` table now
-  matches the v14 anchors to 0% drift for every engine that appears in the
+- **CAEP/14 emission-index database** validated against ICAO EEDB v31.
+  The bundled `default_aircraft_engine_ei` table now
+  matches the EEDB v31 anchors to 0% drift for every engine that appears in the
   AIRPORT_A test fixture (see `tests/data/AIRPORT_A/AIRPORT_A_CAEP14_comparison.xlsx`).
 
 - **`tests/data/AIRPORT_A/`** new test fixture (Rotterdam-shaped airport
@@ -2332,7 +2534,7 @@ backwards-compatible at the file-format level with the 4.x series — see the
 
 - **`example/training/training_validation_reference.xlsx`** — paired-column
   reference spreadsheet validating the three plugin emission methods
-  (bymode, BFFM2 trajectory, BFFM2 anchor) against equivalent CAEP14 v14
+  (bymode, BFFM2 trajectory, BFFM2 anchor) against equivalent CAEP/14
   computations. Drift is documented per-pair (~0% bymode, ~2-3% BFFM2 NOx,
   <1% BFFM2 CO/HC).
 
@@ -2458,9 +2660,9 @@ backwards-compatible at the file-format level with the 4.x series — see the
   dict was being mutated per flight segment by `FlightEmissionCalculator`,
   leaking the previous segment's terminal Mach (typically 0.15-0.40) into
   taxi BFFM2 lookups and producing 0.5-3% under-prediction on taxi fuel
-  flow. CAEP14 v14 spec says ground operations are M=0.
+  flow. The CAEP/14 BFFM2 formulation uses M=0 for ground operations.
 
-- **Climbout installation correction** — `MovementSourceModule` CAEP14 v14
+- **Climbout installation correction** — `MovementSourceModule` CAEP/14
   installation correction for Climbout corrected from 1.012 to 1.013 (the
   1.012 override disagreed with the `bffm2.py` docstring, comment, and
   default).
@@ -2480,10 +2682,10 @@ backwards-compatible at the file-format level with the 4.x series — see the
   time. Affects movements with `number_of_stop_and_gos > 0`; no effect on
   engine-only validation scope where stops are zeroed out.
 
-- **CO/HC interpolation alignment with CAEP14 v14** — in the standard
+- **CO/HC interpolation alignment with CAEP/14** — in the standard
   SL/HL-intersection case, EI now snaps to the horizontal mean value for
-  any segment fuel flow above the APP anchor (SAE AIR-5715 "HC_CO Slope To
-  Mean Value" rule). The previous smoothed step disagreed with v14 by up
+  any segment fuel flow above the APP anchor (SAE AIR-5715 slope-to-mean-value
+  rule). The previous smoothed step disagreed with CAEP/14 by up
   to 8× EI at warm-humid AP-anchor conditions.
 
 - **Log-noise suppression** — `OutputModule`,

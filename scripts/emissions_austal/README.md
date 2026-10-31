@@ -1,13 +1,32 @@
-# [BETA] Standalone Script Emissions + AUSTAL Input Files — Usage Guide
+# Emissions and AUSTAL input files from an .alaqs inventory (beta)
 
-This document explains how to run `run_emissions_austal.py` from the OSGeo4W Shell (recommended) and describes the expected configuration file format and available options.
+How to run `run_emissions_austal.py` from the OSGeo4W Shell, with its
+configuration file format and options. It is for users who have a QGIS
+installation and want the plugin's emission calculation, and optionally
+the AUSTAL input files, without opening the QGIS window.
 
+This script runs the plugin code with the QGIS Python. To choose a tool
+that runs without QGIS, see [WITHOUT_QGIS.md](../../documents/user/WITHOUT_QGIS.md).
 
+Contents:
 
-**Why use OSGeo4W Shell**
-- The script uses QGIS/PyQt and GDAL libraries. Launching it from the OSGeo4W Shell ensures the correct Python environment and native libraries are available.
+- [Why use OSGeo4W Shell](#why-use-osgeo4w-shell)
+- [Basic steps (OSGeo4W Shell)](#basic-steps-osgeo4w-shell)
+- [Alternative execution methods](#alternative-execution-methods)
+- [Command-line flags](#command-line-flags)
+- [Configuration file format](#configuration-file-format)
+- [Source filtering options](#source-filtering-options)
+- [Minimal example config](#minimal-example-config)
+- [Output files](#output-files)
+- [QGIS plugin and open_alaqs path](#qgis-plugin-and-open_alaqs-path)
+- [Troubleshooting](#troubleshooting)
+- [Source](#source)
 
-**Basic Steps (OSGeo4W Shell)**
+## Why use OSGeo4W Shell
+
+The script uses QGIS/PyQt and GDAL libraries. Launching it from the OSGeo4W Shell ensures the correct Python environment and native libraries are available.
+
+## Basic steps (OSGeo4W Shell)
 
 This script is **not bundled with the QGIS plugin**. To use it, clone or
 download the Open-ALAQS repository and run the script from its
@@ -33,7 +52,7 @@ this repository, then the QGIS user-plugin install. From a git checkout,
 make sure the folder that contains the checkout has no other `open_alaqs`
 directory, or the script imports that one first.
 
-## Advanced: Alternative Execution Methods
+## Alternative execution methods
 
 ### Calling python-qgis.bat directly (OSGeo4W Shell)
 
@@ -68,56 +87,37 @@ python-qgis scripts\emissions_austal\run_emissions_austal.py "C:\path\to\config.
 
 **Note:** If `python-qgis` is not recognized in your PowerShell terminal, you're not in the OSGeo4W Shell. Use the IDE Terminal method (with full path to `python-qgis-ltr.bat`) instead.
 
-- Flags:
-  - `--csv` : export emissions to a CSV file
-  - `--geojson` : export emissions as GeoJSON (QGIS vector) and save QML style. It can be dragged and dropped directly in QGIS afterwards.
-  - `--austal` : generate AUSTAL dispersion model input files
-  - `--timing` : show elapsed time summary
+## Command-line flags
 
-**Configuration file (txt) format**
-- The config file is a simple key=value plain text file. Lines starting with `#` are ignored. Example keys and their expected formats:
+- `--csv`: export emissions to a CSV file
+- `--geojson`: export emissions as GeoJSON (QGIS vector) and save QML style. It can be dragged and dropped directly in QGIS afterwards.
+- `--austal`: generate AUSTAL dispersion model input files
+- `--timing`: show elapsed time summary
 
-- `db_path` (required): path to the .alaqs inventory database (e.g., `C:\path\to\example_db_out.alaqs`)
-- `start_dt_inclusive` (required): ISO datetime, e.g. `2024-01-01T00:00:00`
-- `end_dt_inclusive` (required): ISO datetime, e.g. `2024-01-01T23:00:00`
+## Configuration file format
+
+The config file is a simple key=value plain text file. Lines starting with `#` are ignored. Keys and their expected formats:
+
+- `db_path` (required): path to the `.alaqs` inventory database (e.g., `C:\path\to\example_db_out.alaqs`). Must point to an existing file.
+- `start_dt_inclusive` / `end_dt_inclusive` (required): ISO 8601 datetimes, e.g. `2024-01-01T00:00:00` and `2024-01-01T23:00:00`.
 - `time_interval_seconds` (required): integer number of seconds between timesteps, e.g. `3600`
- - `time_interval_seconds` (required): integer number of seconds between timesteps, e.g. `3600`
- - `pollutant` (required): pollutant code. Accepted values: `CO`, `CO2`, `HC`, `NOx`, `PM10`, `SOx`.
+- `pollutant` (required): pollutant code. Accepted values: `CO`, `CO2`, `HC`, `NOx`, `PM10`, `SOx`.
 - `method` (optional): calculation method, accepted values `bymode` or `BFFM2` (default `bymode`).
 - `bffm2_ff_source` (optional): BFFM2 fuel-flow source, `trajectory` (default, fuel flow from each segment's power setting) or `mode_anchor` (5.4.1).
-- `atmosphere_model` (optional): `standard_lapse` (default), `surface_layer` or `ground_held` (the hourly row at every height, the 5.4.0 ambient conditions; the fuel-flow fix still applies). See `documents/ATMOSPHERE_ALOFT.md` (5.4.1).
+- `atmosphere_model` (optional): `standard_lapse` (default), `surface_layer` or `ground_held` (the hourly row at every height, the 5.4.0 ambient conditions; the fuel-flow fix still applies). See [ATMOSPHERE_ALOFT.md](../../documents/methods/ATMOSPHERE_ALOFT.md) (5.4.1).
 - `atmosphere_z0_m`, `atmosphere_d0_m`, `atmosphere_ha_m` (optional): site parameters of the `surface_layer` profile in m; empty uses those of `austal_settings` when the script runs with `--austal`, else z0 0.1 m (TA Luft, airports), d0 6 z0, ha 10 m + d0 (5.4.1; the plugin's AUSTAL defaults).
- - `source_type` (optional): source filtering (string or `all`). Accepted values: `AreaSource`, `EngineTestSource`, `MovementSource`, `ParkingSource`, `PointSource`, `RoadwaySource` (case-insensitive aliases `area`, `movement`, `parking`, `point`, `roadway` also work), or `all` (default).
-- `source_names` (optional): comma-separated list of source names to include, e.g. `GateA,GateB`
-- `source_dynamics` (optional): handling mode for source dynamics; `none` (default), `default` or `smooth & shift` (see the notes on `source_dynamics` below)
-- `vertical_limit_m` (optional): vertical limit in meters (float), default `914.4`
+- `source_type`, `source_names`, `source_dynamics` (optional): see [Source filtering options](#source-filtering-options).
+- `vertical_limit_m` (optional): vertical limit in metres (float), default `914.4`
 - `should_apply_nox_corrections` (optional): `true`/`false`, `1`/`0` or `yes`/`no`, any case (default `false`); any other value stops the script with an error
-- `show_logs` (optional): `True` or `False` — when `True`, external logs are shown
-- `austal_output_path` (optional): output directory for AUSTAL files (overrides default)
-- `emissions_output_path` (optional): output directory for CSV/GeoJSON (overrides default)
+- `show_logs` (optional): `True` or `False`; when `True`, logs and external output are not suppressed.
 - `emissions_output_name` (optional): base name for CSV/GeoJSON files (default `emissions`).
-
-
-**Valid option values (summary)**
-- `db_path` (required): path to the ALaqs database file. Must point to an existing `.alaqs` file or other supported DB.
-- `start_dt_inclusive` / `end_dt_inclusive` (required): ISO 8601 datetimes, e.g. `2024-01-01T00:00:00`.
-- `time_interval_seconds` (required): integer seconds, e.g. `3600`.
-`pollutant` (required): pollutant identifier (string). Accepted values: `CO`, `CO2`, `HC`, `NOx`, `PM10`, `SOx` — must match pollutant keys used by your database/calculation modules.
-- `method` (optional): calculation method. Accepted values: `bymode` (default) or `BFFM2` (fuel-flow source set by `bffm2_ff_source`; see above).
-- `source_type` (optional): filter by source type (string) or `all` (default).
- - `source_type` (optional): high-level type filter. Accepted values: `AreaSource`, `EngineTestSource`, `MovementSource`, `ParkingSource`, `PointSource`, `RoadwaySource` (case-insensitive aliases `area`, `movement`, `parking`, `point`, `roadway` also work), or `all` (default).
-- `source_names` (optional): comma-separated list of source names to include, e.g. `GateA,GateB`.
-- `vertical_limit_m` (optional): float, vertical calculation limit in metres (default `914.4`).
- - `source_dynamics` (optional): string controlling source dynamics handling; `none` (default), `default` or `smooth & shift` (see the notes below).
-- `should_apply_nox_corrections` (optional): `true`/`false`, `1`/`0` or `yes`/`no`, any case (default `false`); any other value stops the script with an error.
-- `show_logs` (optional): boolean `True` or `False` — when `True`, logs and external output are not suppressed.
-- `emissions_output_name` (optional): base name for CSV/GeoJSON files (default `emissions`).
-- `emissions_output_path` / `austal_output_path` (optional): output directories. If omitted, defaults are used (see below) and the script will create the directories if missing.
-- `view_type` (optional, used for CSV export): values accepted (case-insensitive) - `by aggregation`, `aggregation`, `aggregate` (all map to aggregation) or `by source`, `source` (maps to per-source view).
+- `emissions_output_path` / `austal_output_path` (optional): output directories for CSV/GeoJSON and for AUSTAL files. If omitted, defaults are used (see [Output files](#output-files)) and the script creates the directories if missing.
+- `view_type` (optional, used for CSV export): values accepted (case-insensitive): `by aggregation`, `aggregation`, `aggregate` (all map to aggregation) or `by source`, `source` (maps to per-source view).
 - `austal_settings` (optional): AUSTAL module settings as a JSON object on one line, e.g. `austal_settings={"quality_level": 2, "options_string": "NOSTANDARD;SCINOTAT"}` (double quotes; keys as read by `AUSTALOutputModule`, such as `quality_level`, `options_string`, `mixing_height_enabled`, `roughness_length_m`). Invalid JSON or a value that is not an object stops the script with an error. Python callers can still pass a dict.
 
-**Source filtering options**
-- `source_type` (optional): high-level filter by source type (string), for example `all` or `MovementSource`. When not provided the script defaults to `all`.
+## Source filtering options
+
+- `source_type` (optional): source filtering (string or `all`). Accepted values: `AreaSource`, `EngineTestSource`, `MovementSource`, `ParkingSource`, `PointSource`, `RoadwaySource` (case-insensitive aliases `area`, `movement`, `parking`, `point`, `roadway` also work), or `all` (default).
 - `source_names` (optional): comma-separated list of specific source names to include. Example: `source_names=GateA,GateB`. If omitted or empty, and `source_type` is not used to filter, the calculation will include all sources.
 - `source_dynamics` (optional): how to handle source dynamics. Case-insensitive values:
   - `none`: no dynamics handling (default); also `no`, `off`, `0`
@@ -139,25 +139,13 @@ source_dynamics=none
 ```
 
 Notes on `source_names` / `source_dynamics`:
+
 - If `source_names` is omitted (and `source_type` is not used to filter), the calculation will include all sources by default.
 - Provide `source_names` in the txt file as a comma-separated string; the script will convert it to a list (e.g. `source_names=GateA,GateB`).
-- `source_dynamics` is passed through to the emission calculation;
+- `source_dynamics` is passed through to the emission calculation; the parser normalises the synonyms listed above to `none`, `default` or `smooth & shift`, the values the movement module recognises, and rejects anything else.
 
-Accepted `source_dynamics` values (case-insensitive):
-- `none`: no dynamics handling (default)
-- `default`: smooth-and-shift dynamics with the default extents
-- `smooth & shift`: smooth-and-shift dynamics with the smooth-and-shift extents
+## Minimal example config
 
-The parser normalises the synonyms listed above to `none`, `default` or `smooth & shift`, the values the movement module recognises, and rejects anything else.
-
-Notes on defaults and creation:
-- When `emissions_output_path` or `austal_output_path` are provided in the config they are used as-is (environment variables expanded) and will be created if missing.
-- When those keys are NOT present, the script now creates default `outputs/emissions/` and `outputs/austal/` next to the provided config `.txt` file (i.e. in the same directory as the config). If the config was provided as a relative path or the script was given a directory/archive, the resolved config file location is used. If no config file path is available, the script falls back to the relative defaults `outputs/emissions/` and `outputs/austal/` created relative to the current working directory.
-
-**QGIS plugin / open_alaqs path**
-- If you run the script from inside the QGIS Python environment (for example when the project is installed as a QGIS plugin), ensure the Python import path points to the installed plugin location rather than the repository source tree. Typical plugin install locations vary by OS and QGIS profile; use QGIS' Plugin Manager or check your QGIS profile directory for `python/plugins/open_alaqs` and ensure that directory is discoverable by Python when running the script from the QGIS Python console or a QGIS-enabled shell.
-
-**Minimal example config**
 ```
 # Minimal required config for run_emissions_austal.py
 # Required keys:
@@ -178,26 +166,40 @@ pollutant=NOx
 # austal_output_path=outputs\austal\
 ```
 
-**Output files**
+## Output files
+
 - CSV: `{emissions_output_path}/{emissions_output_name}.csv` (default name `emissions`)
 - GeoJSON: `{emissions_output_path}/{emissions_output_name}.geojson` plus `{emissions_output_name}.qml` for style (if available). The script also attempts to embed the QML style into the GeoJSON as `openalaqs_style`.
 - AUSTAL inputs: files written inside the configured `austal_output_path`.
 
-Naming the emissions outputs
+### Default output folders
+
+- When `emissions_output_path` or `austal_output_path` are provided in the config they are used as-is (environment variables expanded) and will be created if missing.
+- When those keys are NOT present, the script now creates default `outputs/emissions/` and `outputs/austal/` next to the provided config `.txt` file (i.e. in the same directory as the config). If the config was provided as a relative path or the script was given a directory/archive, the resolved config file location is used. If no config file path is available, the script falls back to the relative defaults `outputs/emissions/` and `outputs/austal/` created relative to the current working directory.
+
+### Naming the emissions outputs
+
 - You can control the base filename used for CSV/GeoJSON/QML outputs with the `emissions_output_name` key in the config file. When provided, the script uses that string as the base name; otherwise it falls back to `emissions`.
 - Example: if you set `emissions_output_name=my_emissions`, the script writes `my_emissions.csv`, `my_emissions.geojson` and `my_emissions.qml` (if a style is available) inside the `emissions_output_path`.
 
-Using AUSTAL/GeoJSON outputs in QGIS
+### Using AUSTAL/GeoJSON outputs in QGIS
+
 - GeoJSON/QML pairing: The GeoJSON vector exported by the script can be loaded into QGIS for visualising dispersion outputs. The script writes a `.geojson` vector and, when available, a matching `.qml` style file with the same base name (for example `emissions.geojson` and `emissions.qml`).
 - Keep files together: To make QGIS automatically apply the style when you drag & drop the vector file into QGIS, ensure the `.qml` style file is located in the same directory as the vector and has the same base filename as the vector file. If you move or copy the vector, copy the `.qml` next to it.
 - Embedded style: The script attempts to embed the style into the GeoJSON under the `openalaqs_style` property, but QGIS applies external `.qml` files when loading styles automatically; if the style is not applied on import, use `Layer ► Properties ► Symbology ► Style ► Load QML` to assign the `.qml` manually.
 
-**Troubleshooting**
+## QGIS plugin and open_alaqs path
+
+- If you run the script from inside the QGIS Python environment (for example when the project is installed as a QGIS plugin), ensure the Python import path points to the installed plugin location rather than the repository source tree. Typical plugin install locations vary by OS and QGIS profile; use QGIS' Plugin Manager or check your QGIS profile directory for `python/plugins/open_alaqs` and ensure that directory is discoverable by Python when running the script from the QGIS Python console or a QGIS-enabled shell.
+
+## Troubleshooting
+
 - If QGIS imports fail, confirm you're running from OSGeo4W Shell so the required native libraries are on PATH.
 - If the script reports `db_path does not exist`, verify the path and that environment variables are expanded correctly.
 - If you need more verbose logs, set `show_logs=True` in the config or pass a config with `show_logs=True`.
 
-**Source**
+## Source
+
 - Script location: `scripts/emissions_austal/run_emissions_austal.py`
 - Demo input: `scripts/emissions_austal/sample_data/Inventory.alaqs` is a
   trimmed EHRD inventory (13 movements, A20N and E190) made from an
@@ -216,3 +218,9 @@ Using AUSTAL/GeoJSON outputs in QGIS
   serves as input to the AUSTAL export demo only, not for emission
   results. To use the full reference catalogue, point `db_path` at your
   own `*_out.alaqs` instead.
+
+See also:
+
+- [austal_from_csv README](../austal_from_csv/README.md): AUSTAL input files from the emissions CSV of this script
+- [WITHOUT_QGIS.md](../../documents/user/WITHOUT_QGIS.md): which tool to run without the QGIS GUI
+- [USER_GUIDE.md](../../documents/user/USER_GUIDE.md#calculate-emissions-and-query-results): the same calculation in the QGIS window

@@ -37,7 +37,7 @@ EURO_STANDARDS = [
 # artifacts. As of 2026-06-05: the 639 row pairs where PM10 < PM2.5 (2505
 # violating cells) have been fixed via PM10[speed] = max(PM10[speed],
 # PM2.5[speed]); see tools/data_integrity_fixes/fix_pm10_at_least_pm25.py
-# and documents/DATASET_PROVENANCE.md. The EU28-only PM10 vs EU27 labelling
+# and documents/developer/DATASET_PROVENANCE.md. The EU28-only PM10 vs EU27 labelling
 # mismatch remains open (deferred). Even with PM10 ≥ PM2.5 enforced,
 # activating PM10 here would still not produce methodologically distinct
 # output since the Guidebook explicitly states they are equal for road
@@ -483,13 +483,13 @@ def calculate_evaporation(fleet: pd.DataFrame, efs: pd.DataFrame) -> pd.DataFram
     # belong on driving (road / movement) sources, but OpenALAQS does not
     # currently expose an evaporation contribution on roadway sources; see
     # "Known limitations and future work" item 2 in
-    # documents/AUXILIARY_MATERIAL.md.
+    # documents/methods/STATIONARY_AND_ROAD.md.
     #
     # Known limitation: Hot soak is a per-parking-event quantum, but the
     # downstream scaling in average_evaporation treats all components as
     # time-proportional via idle_time / (24*60). This understates Hot soak
     # for short parkings and overstates it for long ones; correction
-    # deferred to a future PR (see AUXILIARY_MATERIAL.md).
+    # deferred to a future PR (see documents/methods/STATIONARY_AND_ROAD.md).
     efs_evap = efs[efs["hot-cold-evaporation"] == "Evaporation"].pivot(
         index=["vehicle_category", "fuel", "euro_standard"],
         columns="evaporation_split",

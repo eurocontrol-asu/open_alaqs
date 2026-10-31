@@ -1,21 +1,16 @@
 """
-MEEM V1 regression tests against the ICAO CAEP14 FBE Engines Emissions
-Calculation Sheet v14 (tabs MEEM_V1, USER INPUTS, Constants).
+MEEM V1 regression tests against reference values of the MEEM V1 method
+(ICAO CAEP/13-MDG).
 
 Reference values:
-  - Stored example of the sheet (USER INPUTS as delivered): engine 01P20CM127,
-    22500 ft, CLIMB TO CRUISE, TAS 428.49 kt, RH 60 %, delta T 0, cruise
-    altitude 38000 ft, OPR 30: MEEM_V1!B119 = 0.944536653843135 mg/kg and
-    B120 = 2.58597485320693e13 #/kg (cached values of the workbook).
-  - Other cases: the sheet recalculated in LibreOffice 24.2 with the USER
-    INPUTS below. LibreOffice 24.2 has no SORT/FILTER, so the sorted point
-    tables MEEM_V1!C88:D91 and C96:D99 were replaced by the fixed 4-point
-    order (7 %, 30 %, 85 %, 100 %) for the recalculation; all the other cells
-    are the sheet's formulas. The recalculation reproduces the stored example
-    to 1e-15. Four cases have a temperature deviation (USER INPUTS!B5); the
+  - Reference case: engine 01P20CM127, 22500 ft, CLIMB TO CRUISE, TAS
+    428.49 kt, RH 60 %, delta T 0, cruise altitude 38000 ft, OPR 30: nvPM
+    mass EI = 0.944536653843135 mg/kg and number EI = 2.58597485320693e13 #/kg.
+  - Other cases: reference values of the MEEM V1 method for the inputs
+    below. Four cases have a temperature deviation (delta T at 0 ft MSL); the
     -5.1825 K one is the delta T of the training example (283 K at -5 m).
 
-At or below 3000 ft (LTO) the sheet returns the certification value of the
+At or below 3000 ft (LTO) MEEM V1 returns the certification value of the
 mode (no interpolation, no correction): the anchor tests.
 """
 
@@ -32,7 +27,7 @@ from open_alaqs.core.tools.meem_v1 import (
 
 _TS = [1.0, 0.85, 0.30, 0.07]  # TO, CL, AP, TX
 
-# Engines_Database of the sheet: PRESS_RATIO, NVPM_M_*_MG/KG, NVPM_N_*_N/KG
+# ICAO EEDB v31: PRESS_RATIO, NVPM_M_*_MG/KG, NVPM_N_*_N/KG
 _ENGINES = {
     "01P20CM127": (
         30.0,
@@ -52,8 +47,8 @@ _ENGINES = {
 }
 
 # (engine, altitude ft, phase, TAS kt, delta T K, cruise altitude ft)
-#   -> (B83 thrust, B119 mass mg/kg, B120 number #/kg)
-_SHEET_CASES = [
+#   -> (ground-reference thrust, mass mg/kg, number #/kg)
+_REFERENCE_CASES = [
     (
         ("01P20CM127", 22500, "CLIMB TO CRUISE", 428.49, 0.0, 38000),
         (0.7887145601010004, 0.944536653843135, 2.58597485320693e13),
@@ -97,11 +92,11 @@ _SHEET_CASES = [
 ]
 
 
-class TestMEEMV1SheetReference:
-    """Non-LTO branch: the sheet's values to floating-point noise."""
+class TestMEEMV1Reference:
+    """Non-LTO branch: the reference values to floating-point noise."""
 
-    @pytest.mark.parametrize("inputs, expected", _SHEET_CASES)
-    def test_matches_sheet(self, inputs, expected):
+    @pytest.mark.parametrize("inputs, expected", _REFERENCE_CASES)
+    def test_matches_reference(self, inputs, expected):
         engine, alt_ft, phase, tas_kt, delta_t, cruise_ft = inputs
         opr, mass, number = _ENGINES[engine]
         r = calculate_nvpm_ei(
@@ -121,27 +116,23 @@ class TestMEEMV1SheetReference:
         assert r.nvpm_mass_ei_mgkg == pytest.approx(mass_ref, rel=1e-12)
         assert r.nvpm_number_ei_nkg == pytest.approx(number_ref, rel=1e-12)
 
-    def test_stored_example_intermediate_cells(self):
-        """MEEM_V1 intermediate cells of the stored example."""
+    def test_reference_case_intermediate_values(self):
+        """MEEM V1 intermediate values of the reference case."""
         opr, mass, number = _ENGINES["01P20CM127"]
         r = calculate_nvpm_ei(
             "CLIMB TO CRUISE", 22500, _TS, mass, number, opr=opr, tas_kt=428.49
         )
-        assert r.mach == pytest.approx(0.7045643104991359, rel=1e-12)  # B17
-        assert r.T_amb == pytest.approx(243.57299857353598, rel=1e-12)  # B47
-        assert r.P_amb == pytest.approx(41888.29383521342, rel=1e-12)  # B48
-        assert r.T3_alt == pytest.approx(771.3359775104177, rel=1e-12)  # B65
-        assert r.P3_alt == pytest.approx(1779237.7074678312, rel=1e-12)  # B66
-        assert r.P3_gr == pytest.approx(2418903.581264782, rel=1e-12)  # B77
-        assert r.nvpm_mass_ei_gr_mgkg == pytest.approx(
-            1.1266948019691427, rel=1e-12
-        )  # B101
-        assert r.nvpm_number_ei_gr_nkg == pytest.approx(
-            30846917515337.062, rel=1e-12
-        )  # B102
+        assert r.mach == pytest.approx(0.7045643104991359, rel=1e-12)
+        assert r.T_amb == pytest.approx(243.57299857353598, rel=1e-12)
+        assert r.P_amb == pytest.approx(41888.29383521342, rel=1e-12)
+        assert r.T3_alt == pytest.approx(771.3359775104177, rel=1e-12)
+        assert r.P3_alt == pytest.approx(1779237.7074678312, rel=1e-12)
+        assert r.P3_gr == pytest.approx(2418903.581264782, rel=1e-12)
+        assert r.nvpm_mass_ei_gr_mgkg == pytest.approx(1.1266948019691427, rel=1e-12)
+        assert r.nvpm_number_ei_gr_nkg == pytest.approx(30846917515337.062, rel=1e-12)
 
     def test_pressure_coefficient(self):
-        """MEEM_V1!B26 of the stored example and the constant phases."""
+        """Pressure coefficient of the reference case and the constant phases."""
         assert pressure_coefficient("CLIMB TO CRUISE", 22500) == pytest.approx(
             1.0171428571428571, rel=1e-14
         )
@@ -150,7 +141,7 @@ class TestMEEMV1SheetReference:
         assert pressure_coefficient("CRUISE", 38000) == 0.95
 
     def test_isa_above_tropopause(self):
-        """USER INPUTS!B44/B45 above 11 km: isothermal layer."""
+        """ISA + delta T above 11 km: isothermal layer."""
         t, p = isa_ambient(39000)
         assert t == pytest.approx(216.65, abs=1e-9)
         assert p < isa_ambient(36000)[1]
@@ -171,14 +162,14 @@ class TestMEEMV1Anchors:
         assert r.nvpm_number_ei_nkg == number[index]
 
     def test_lto_ceiling(self):
-        """USER INPUTS!B36: LTO up to and including 3000 ft."""
+        """LTO up to and including 3000 ft."""
         assert section_of_flight(0) == "LTO"
         assert section_of_flight(3000) == "LTO"
         assert section_of_flight(3000.001) == "NON_LTO"
 
 
 class TestMEEMV1Interpolation:
-    """MEEM_V1!B101/B102 non-LTO interpolation: linear between the two
+    """MEEM V1 non-LTO interpolation: linear between the two
     bracketing points, the 100 % value above 1, the 7 % value below 0.07."""
 
     _mass = _ENGINES["11GE144"][1]
@@ -239,9 +230,9 @@ class TestMEEMV1EngineWiring:
             )
             assert ei is base
 
-    def test_non_lto_matches_sheet_and_moves_pm10(self):
-        """11GE144 at 4500 ft, CLIMB TO CRUISE, TAS 220 kt: MEEM_V1!B119 of
-        the recalculated sheet."""
+    def test_non_lto_matches_reference_and_moves_pm10(self):
+        """11GE144 at 4500 ft, CLIMB TO CRUISE, TAS 220 kt: reference nvPM
+        mass EI of the MEEM V1 method."""
         eei = self._build_engine()
         base = eei.getEmissionIndexByMode("CL")
         ft2m = 0.3048000097536
@@ -287,7 +278,7 @@ class TestMEEMV1EngineWiring:
         )
 
     def test_missing_pressure_ratio_uses_default(self):
-        """No press_ratio in the table: OPR 30 (the sheet has no value)."""
+        """No press_ratio in the table: OPR 30 (the method has no value)."""
         eei = self._build_engine()
         eei._press_ratio = None
         ei = eei.getEmissionIndexByModeWithMEEM(
@@ -310,7 +301,7 @@ class TestMEEMV1EngineWiring:
 
 class TestMEEMV1DeltaT:
     """ISA + delta T above 3000 ft: delta T is the meteo temperature minus
-    ISA at the airport elevation (USER INPUTS!B5, constant aloft)."""
+    ISA at the airport elevation (delta T at 0 ft MSL, constant aloft)."""
 
     def test_delta_t_from_ground(self):
         assert delta_t_from_ground(None, 120.0) == 0.0
@@ -353,11 +344,11 @@ class TestMEEMV1DeltaT:
             ("AP", 5000, 210, False, 12.0, 4.55684516335939, 229810399546587.56),
         ],
     )
-    def test_engine_delta_t_matches_sheet(
+    def test_engine_delta_t_matches_reference(
         self, mode, alt_ft, tas_kt, climbing, delta_t, mass, number
     ):
-        """11GE144, the sheet recalculated in LibreOffice with USER INPUTS!B5
-        = delta T (cruise altitude 38000 ft)."""
+        """11GE144, reference values of the MEEM V1 method with this delta T
+        (cruise altitude 38000 ft)."""
         ei = self._engine().getEmissionIndexByModeWithMEEM(
             mode,
             101325.0,

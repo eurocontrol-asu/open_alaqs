@@ -22,9 +22,9 @@
 
 from pathlib import Path
 
-from qgis.core import QgsSettings
+from qgis.core import QgsApplication, QgsSettings
 from qgis.PyQt import QtGui, QtWidgets
-from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtCore import Qt, QUrl
 from qgis.PyQt.QtWidgets import QFileDialog
 from qgis.utils import OverrideCursor
 
@@ -32,6 +32,7 @@ from open_alaqs import openalaqsuitoolkit
 from open_alaqs.alaqs_config import LAYERS_CONFIG
 from open_alaqs.core import alaqs, alaqsutils
 from open_alaqs.core.alaqslogging import get_logger
+from open_alaqs.core.tools.docs_url import docs_url
 from open_alaqs.gui.DispersionAnalysis import OpenAlaqsDispersionAnalysis
 from open_alaqs.openalaqsdialog import (
     OpenAlaqsAbout,
@@ -198,6 +199,14 @@ class OpenALAQS:
             self.run_view_logfile,
         )
 
+        # Create action that opens the documentation of the installed version
+        self.actions["documentation"] = self.create_connected_action(
+            QgsApplication.getThemeIcon("/mActionHelpContents.svg"),
+            "Open ALAQS documentation",
+            self.iface.mainWindow(),
+            self.run_documentation,
+        )
+
         # Add buttons to toolbar
         self.open_alaqs_toolbar = self.iface.addToolBar("OpenALAQS Toolbar")
         self.open_alaqs_toolbar.addAction(self.actions["about"])
@@ -220,6 +229,7 @@ class OpenALAQS:
 
         self.open_alaqs_toolbar.addSeparator()
         self.open_alaqs_toolbar.addAction(self.actions["logfile"])
+        self.open_alaqs_toolbar.addAction(self.actions["documentation"])
 
         # Set some initially unavailable
         self.actions["project_close"].setEnabled(False)
@@ -250,6 +260,12 @@ class OpenALAQS:
         if QgsSettings().value("/qgis/enableMacros") != "Always":
             QgsSettings().setValue("/qgis/enableMacros", "Always")
             self.run_macro_setting_warning()
+
+    def run_documentation(self):
+        """
+        Opens the documentation site for the installed plugin version in the web browser
+        """
+        QtGui.QDesktopServices.openUrl(QUrl(docs_url()))
 
     def run_about(self):
         """
