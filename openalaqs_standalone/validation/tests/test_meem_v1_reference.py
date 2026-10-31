@@ -1,19 +1,16 @@
 """MEEM V1 above 3000 ft in the CAEP14 reference and the standalone.
 
 The reference (`tools/compute_caep14_reference.py`, `_meem_v1_mass_mgkg`) is
-written out from the MEEM_V1 tab of the CAEP14 FBE Engines Emissions
-Calculation Sheet v14 without the plugin's code; the standalone
-(`compute_aircraft._meem_v1_segment_ei`) uses the plugin's
-`open_alaqs.core.tools.meem_v1`. Both must give the sheet's nvPM mass EI
-(MEEM_V1!B119). The training_v3 fixture of the parity gate has no segment
-above 3000 ft (mixing height 914.4 m), so this is checked here.
+written out from the MEEM V1 method (ICAO CAEP/13-MDG) without the plugin's
+code; the standalone (`compute_aircraft._meem_v1_segment_ei`) uses the
+plugin's `open_alaqs.core.tools.meem_v1`. Both must give the reference nvPM
+mass EI of the MEEM V1 method. The training_v3 fixture of the parity gate has
+no segment above 3000 ft (mixing height 914.4 m), so this is checked here.
 
-Sheet values: the stored example (01P20CM127, 22500 ft) and the sheet
-recalculated in LibreOffice 24.2 for the other inputs (see
-tests/test_meem_v1.py); cruise altitude 38000 ft, ISA (delta T 0) for
-_CASES, delta T USER INPUTS!B5 for _DT_CASES (the plugin, the standalone and
-the reference take it from the movement's meteo temperature minus ISA at the
-airport elevation).
+Reference values of the MEEM V1 method (see tests/test_meem_v1.py); cruise
+altitude 38000 ft, ISA (delta T 0) for _CASES, delta T at 0 ft MSL for
+_DT_CASES (the plugin, the standalone and the reference take it from the
+movement's meteo temperature minus ISA at the airport elevation).
 """
 
 from __future__ import annotations
@@ -43,7 +40,7 @@ _ENGINES = {
         (73.7415341769357, 53.301741608788, 2.79689622305639, 5.3325761855363),
     ),
 }
-# (engine, altitude ft, climbing, TAS kt) -> MEEM_V1!B119 (mg/kg)
+# (engine, altitude ft, climbing, TAS kt) -> nvPM mass EI (mg/kg)
 _CASES = [
     (("01P20CM127", 22500, True, 428.49), 0.944536653843135),
     (("01P20CM127", 8000, True, 280), 1.169462798467009),
@@ -54,7 +51,7 @@ _CASES = [
 ]
 
 
-# (engine, altitude ft, climbing, TAS kt, delta T K) -> MEEM_V1!B119 (mg/kg)
+# (engine, altitude ft, climbing, TAS kt, delta T K) -> nvPM mass EI (mg/kg)
 _DT_CASES = [
     (("11GE144", 4500, True, 220, -5.1825), 60.52925750077077),
     (("11GE144", 5000, False, 210, 12.0), 4.55684516335939),
@@ -72,7 +69,7 @@ def ref():
 
 
 @pytest.mark.parametrize("inputs, expected", _CASES)
-def test_reference_matches_sheet(ref, inputs, expected):
+def test_reference_matches_meem_v1(ref, inputs, expected):
     engine, alt_ft, climbing, tas_kt = inputs
     opr, mass = _ENGINES[engine]
     v = ref._meem_v1_mass_mgkg(
@@ -82,7 +79,7 @@ def test_reference_matches_sheet(ref, inputs, expected):
 
 
 @pytest.mark.parametrize("inputs, expected", _CASES)
-def test_standalone_matches_sheet(inputs, expected):
+def test_standalone_matches_meem_v1(inputs, expected):
     engine, alt_ft, climbing, tas_kt = inputs
     opr, mass = _ENGINES[engine]
     modes = ("TO", "CL", "AP", "TX")
@@ -104,7 +101,7 @@ def test_standalone_matches_sheet(inputs, expected):
 
 
 @pytest.mark.parametrize("inputs, expected", _DT_CASES)
-def test_reference_delta_t_matches_sheet(ref, inputs, expected):
+def test_reference_delta_t_matches_meem_v1(ref, inputs, expected):
     engine, alt_ft, climbing, tas_kt, dt = inputs
     opr, mass = _ENGINES[engine]
     v = ref._meem_v1_mass_mgkg(
@@ -114,7 +111,7 @@ def test_reference_delta_t_matches_sheet(ref, inputs, expected):
 
 
 @pytest.mark.parametrize("inputs, expected", _DT_CASES)
-def test_standalone_delta_t_matches_sheet(inputs, expected):
+def test_standalone_delta_t_matches_meem_v1(inputs, expected):
     engine, alt_ft, climbing, tas_kt, dt = inputs
     opr, mass = _ENGINES[engine]
     modes = ("TO", "CL", "AP", "TX")

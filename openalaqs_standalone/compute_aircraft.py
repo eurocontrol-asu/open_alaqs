@@ -56,6 +56,7 @@ pollutant off the documented 0.00 percent. See `geometry.py`.
 
 from __future__ import annotations
 
+import logging
 import math
 from datetime import datetime
 from typing import Optional
@@ -68,6 +69,8 @@ from openalaqs_standalone import geometry as geo
 from openalaqs_standalone import movements as mv
 from openalaqs_standalone import nox_correction as _nox_corr
 from openalaqs_standalone import runway_placement as rp
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants (must match the plugin and the CAEP14 reference)
@@ -231,7 +234,7 @@ def _meem_v1_segment_ei(
     (`meem_v1.delta_t_from_ground`); without meteo the ISA sea-level
     288.15 K is used, so 0.0065 K/m x elevation. `ambient` (T K, P Pa):
     the segment's local state of the atmosphere model, used instead of
-    the sheet's ISA + delta T (None: the sheet's atmosphere)."""
+    the ISA + delta T of MEEM V1 (None: the ISA + delta T atmosphere)."""
     alt_ft = alt_msl_m / _meem_v1.FT_TO_M
     height_ft = (alt_msl_m - (airport_elevation_m or 0.0)) / _meem_v1.FT_TO_M
     if not meem or _meem_v1.section_of_flight(height_ft) == "LTO":
@@ -326,7 +329,9 @@ def _twin_quadratic_ff_from_power(power: float, engine_ei: dict) -> float:
       power  > 0.85: parabola through (0.30, 0.85, 1.00)
     Values are normalised by the 100 percent (Takeoff) fuel flow, the
     quadratic is solved, then de-normalised. For power < 0.07 the
-    result is clamped to the Idle fuel flow.
+    result is clamped to the Idle fuel flow. 1.0 < power <= 1.05 is
+    clamped to 1.0; power above 1.05, below 0 or NaN raises ValueError,
+    as the plugin's fit does.
 
     Ported verbatim from the reference's `_twin_quadratic_ff_from_power`.
     The shared `open_alaqs.core.tools.twin_quadratic_fit_method` is the
@@ -355,10 +360,14 @@ def _twin_quadratic_ff_from_power(power: float, engine_ei: dict) -> float:
     _PS_UPPER_TOLERANCE = 1.05
     if 1.0 < power <= _PS_UPPER_TOLERANCE:
         power = 1.0
-    elif power > _PS_UPPER_TOLERANCE:
+    # Outside [0, 1.05] (and NaN) the plugin's fit raises: above the
+    # tolerance, and below 0 (its branches start at 0 <= power). The
+    # caller then takes the bymode index (see _bffm2_point_bymode_reason
+    # and the taxi in compute_fixed_wing).
+    if not 0.0 <= power <= 1.0:
         raise ValueError(
-            f"power_setting {power} exceeds upper tolerance "
-            f"{_PS_UPPER_TOLERANCE} for twin-quadratic fit"
+            f"power_setting {power} is outside the twin-quadratic fit range "
+            f"[0, {_PS_UPPER_TOLERANCE}]"
         )
 
     if power <= 0.85:
@@ -383,6 +392,72 @@ def _twin_quadratic_ff_from_power(power: float, engine_ei: dict) -> float:
     return max(0.0, ff)
 
 
+def _supplied_ff_ok(ff_kgm) -> bool:
+    """True when a supplied (ADS-B / CUSTOM) fuel flow is usable: only a
+    positive value. Zero, negative and NaN count as no fuel flow, as in the
+    plugin (MovementEmissionCalculator.calculate_emissions_per_segment)."""
+    try:
+        return ff_kgm is not None and float(ff_kgm) > 0.0
+    except (TypeError, ValueError):
+        return False
+
+
+def _power_in_fit_range(power) -> bool:
+    """True when the plugin's twin-quadratic fit accepts the power setting:
+    0 <= power <= 1.05 (1.0 to 1.05 is clamped to 1.0). Outside (and NaN)
+    the fit raises ValueError."""
+    try:
+        return 0.0 <= float(power) <= 1.05
+    except (TypeError, ValueError):
+        return False
+
+
+def _bffm2_point_bymode_reason(power, ff_kgm, method: str) -> Optional[str]:
+    """Why a BFFM2 flight segment takes the bymode index, or None.
+
+    Mirrors MovementEmissionCalculator.calculate_emissions_per_segment and
+    _get_emission_index_bffm2:
+      - "no_power": no power setting and no usable supplied fuel flow
+        (None, zero or negative); both BFFM2 methods ("Bug #22").
+      - "power_oor": bffm2_traj, no usable supplied fuel flow, and a power
+        setting the twin-quadratic fit rejects (above 1.05, below 0, NaN).
+        bffm2_anchor uses the mode anchor fuel flow and never calls the fit.
+    """
+    if _supplied_ff_ok(ff_kgm):
+        return None
+    if power is None:
+        return "no_power"
+    if method == "bffm2_traj" and not _power_in_fit_range(power):
+        return "power_oor"
+    return None
+
+
+def _bffm2_taxi_ff(thrust, engine_ei: dict, ground_meteo: dict) -> tuple:
+    """Per-engine taxi fuel flow for BFFM2 and whether the taxi takes the
+    bymode (TX) index.
+
+    Mirrors TaxiingEmissionCalculator.calculate_emissions (BFFM2): the
+    twin-quadratic fit at the movement's engine_thrust_level_for_taxiing,
+    scaled to the ground ambient with delta * sqrt(theta) (Mach 0). When the
+    fit rejects the thrust (above 1.05, below 0, NaN, e.g. 7 typed for 7 %),
+    the plugin logs an error and uses the bymode TX index: the EEDB TX fuel
+    flow, unscaled, and the TX indices. Returns (ff_kg_s, use_bymode).
+    """
+    try:
+        thrust = float(thrust)
+        ff_ref = _twin_quadratic_ff_from_power(thrust, engine_ei)
+    except (TypeError, ValueError):
+        return engine_ei["TX"]["ff"], True
+    if thrust == 0.07:
+        # The fit passes through the idle point; take the EEDB value itself
+        # (the fit's arithmetic differs from it in the last bit, ~1e-16
+        # relative), so the default thrust keeps the earlier results exactly.
+        ff_ref = engine_ei["TX"]["ff"]
+    theta = ground_meteo["T_K"] / 288.15
+    delta = ground_meteo["P_Pa"] / 101325.0
+    return ff_ref * delta * math.sqrt(theta), False
+
+
 def _bffm2_traj_ff_amb(
     conn,
     mov: dict,
@@ -392,8 +467,13 @@ def _bffm2_traj_ff_amb(
     meteo: dict,
     mach: float,
     n_eng: int,
+    fallbacks: Optional[dict] = None,
 ) -> float:
     """Per-engine ambient fuel flow for the bffm2_traj method.
+
+    `fallbacks`, when given, counts the segments whose ADS-B fuel flow
+    exceeded the plausibility ceiling (key "ceiling"), for the
+    per-movement summary warning.
 
     Mirrors MovementEmissionCalculator lines 1082-1124:
       - If the trajectory point carries `fuel_flow_kgm` (ADS-B /
@@ -425,9 +505,14 @@ def _bffm2_traj_ff_amb(
     # ADS-B / CUSTOM path: fuel_flow_kgm is an ambient (in-flight) FF
     # for ALL engines combined.
     ff_to_ceiling = engine_ei["TO"]["ff"] * ADSB_FF_CEILING_FACTOR
-    if ff_kgm not in (None, 0):
+    # Only a positive supplied fuel flow is a fuel flow: zero or negative is
+    # treated as missing, as in the plugin (calculate_emissions_per_segment).
+    if _supplied_ff_ok(ff_kgm):
         ff_per_engine = ff_kgm / n_eng
         if ff_per_engine > ff_to_ceiling:
+            if fallbacks is not None:
+                fallbacks["ceiling"] = fallbacks.get("ceiling", 0) + 1
+                fallbacks["ceiling_kg_s"] = ff_to_ceiling
             return eng["ff"]  # ceiling fallback to mode anchor
         return ff_per_engine
 
@@ -438,15 +523,15 @@ def _bffm2_traj_ff_amb(
     try:
         ff_ref = _twin_quadratic_ff_from_power(power, engine_ei)
     except ValueError:
-        # Piston / propeller profiles (PA28, CNA206, PISTON-*, etc.)
-        # carry `power` values well above the 1.05 turbofan tolerance
-        # (e.g. 1.40 up to 6.25), because for those engines the column
-        # is not a thrust fraction. The twin-quadratic fit is only
-        # defined for turbofan/turbojet engines. Fall back to mode-
-        # anchor FF in that case, mirroring the plugin's behaviour
-        # (MovementEmissionCalculator wraps the BFFM2 EI lookup in
-        # `try / except Exception` and falls back to the mode anchor on
-        # any error from the BFFM2 path).
+        # Power outside the fit range (above 1.05, below 0): piston /
+        # propeller profiles (PA28, CNA206, PISTON-*, etc.) carry `power`
+        # values well above the 1.05 turbofan tolerance (e.g. 1.40 up to
+        # 6.25), because for those engines the column is not a thrust
+        # fraction. As in the plugin (MovementEmissionCalculator.
+        # _get_emission_index_bffm2 catches the fit's ValueError), the
+        # segment takes the bymode index: the EEDB fuel flow of the mode,
+        # unscaled (the bymode EI itself is chosen in the segment loop,
+        # see _bffm2_point_bymode_reason).
         return eng["ff"]
     theta = meteo["T_K"] / 288.15
     delta = meteo["P_Pa"] / 101325.0
@@ -493,7 +578,7 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         False, the loaded `tbl_InvMeteo` row is used. No effect when
         method == "bymode".
     apply_nox_corrections
-        When True AND method == "bymode", apply the ICCAIA / CAEP14 v14
+        When True AND method == "bymode", apply the ICCAIA / CAEP/14
         simple-method NOx correction at takeoff and climb-out segments.
         Reads ambient T, P, RH from `tbl_InvMeteo` per-period (same row
         BFFM2 uses), and tow_ratio from the movement (defaults to 1.0
@@ -561,17 +646,16 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         else None
     )
     # Per-movement vertical ceiling used by apply_height_limits. Reads
-    # tbl_InvMeteo.MixingHeight for the period containing runway_time;
-    # falls back to user_study_setup.vertical_limit (or 914.4 m) when
-    # missing. Mirrors MovementSourceModule.process() lines 254-260,
+    # tbl_InvMeteo.MixingHeight of the period's meteo row; 914.4 m when
+    # there is no row or it is empty. Mirrors MovementSourceModule.process(),
     # which sets calculation_limit["max_height"] from
-    # ambient_conditions.getMixingHeight() (which reads tbl_InvMeteo)
-    # and only falls back to vertical_limit_m on AttributeError.
+    # ambient_conditions.getMixingHeight() (AmbientCondition default
+    # 914.4 m); its vertical_limit_m fallback is never reached.
     max_height_m = mv.get_mixing_height_at(conn, mov["runway_time"])
 
     # Ambient conditions at a height above the airport (atmosphere_model). The hourly
     # row `meteo` itself stays the source of the NOx correction (and of the MEEM V1 delta T,
-    # which only the ground_held sheet atmosphere uses).
+    # which only the ground_held ISA + delta T atmosphere uses).
     _atm = atmosphere or {}
     _atm_model = _sla.normalise_model(_atm.get("model"))
 
@@ -656,12 +740,22 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
     # The standalone must match: the reference EEDB idle FF (`tx["ff"]`)
     # is corrected to ambient before the segment fuel is computed.
     # For bymode the plugin uses the table EI directly, no FF correction.
+    # The fit is at the movement's engine_thrust_level_for_taxiing (0.07 when
+    # not given, as the plugin's Movement); a thrust the fit rejects gives the
+    # bymode TX index, with an error, as in the plugin.
+    taxi_bymode = method == "bymode"
     if method != "bymode":
-        theta = ground_meteo["T_K"] / 288.15
-        delta = ground_meteo["P_Pa"] / 101325.0
-        tx_ff_amb = (
-            tx["ff"] * delta * math.sqrt(theta)
-        )  # corrected-parameter scaling; idle
+        _thrust = mov.get("engine_thrust_level_for_taxiing", 0.07)
+        if _thrust is None:
+            _thrust = 0.07
+        tx_ff_amb, taxi_bymode = _bffm2_taxi_ff(_thrust, engine_ei, ground_meteo)
+        if taxi_bymode:
+            logger.error(
+                "Movement '%s': engine_thrust_level_for_taxiing %s is not a thrust "
+                "fraction; taxi uses the bymode index.",
+                mv.movement_name(mov),
+                _thrust,
+            )
     else:
         tx_ff_amb = tx["ff"]
 
@@ -678,7 +772,7 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         em_local = {p: 0.0 for p in POLLUTANTS}
         if fuel_kg <= 0.0:
             return em_local
-        if method == "bymode":
+        if taxi_bymode:
             _add_em(em_local, fuel_kg, tx)
         else:
             _bffm2_apply_segment(
@@ -918,6 +1012,9 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
 
     fuel_by_mode = {"TO": 0.0, "CL": 0.0, "AP": 0.0}
     segs_inc = segs_skip_v = segs_skip_g = segs_part = 0
+    # BFFM2 segment fallbacks, for one summary warning per movement
+    # (the plugin's MovementEmissionCalculator warns likewise).
+    fallbacks: dict = {}
     # Per-segment records, retained so the Phase A3 spatial
     # distribution layer can apportion each segment's emission across
     # the grid cells its clipped geometry crosses, without recomputing
@@ -950,7 +1047,7 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         #   start below, end above       -> end moved to the crossing
         #   (see the crossing-segment block below).
         # The ceiling is max_height_m, the per-movement MixingHeight
-        # from tbl_InvMeteo (with vertical_limit fallback). Both the
+        # from tbl_InvMeteo (914.4 m when there is none). Both the
         # standalone and the plugin read MixingHeight; see the
         # max_height_m fetch above. The added per-segment boundary
         # clipping (the > and < branches below) was missing from the
@@ -1018,6 +1115,7 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
                 seg_meteo,
                 mach,
                 n_eng,
+                fallbacks,
             )
 
         seg_fuel = seg_time * seg_ff_amb * n_eng
@@ -1037,7 +1135,7 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             ),
             airport_elevation_m=ctx.get("airport_elevation_m", 0.0),
             # local T and p of the segment (atmosphere_model); None for ground_held:
-            # the CAEP sheet's ISA + delta T at altitude
+            # the ISA + delta T at altitude of MEEM V1
             ambient=(
                 (seg_meteo["T_K"], seg_meteo["P_Pa"])
                 if seg_meteo is not None
@@ -1047,15 +1145,20 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             ),
         )
         # Plugin guard ("Bug #22" in MovementEmissionCalculator): under
-        # BFFM2, a segment whose start point has neither power nor fuel
-        # flow uses the Bymode emission indices (mode anchor). Piston and
-        # propeller ANP profiles often carry no power.
+        # BFFM2, a segment whose start point has neither power nor a
+        # positive fuel flow uses the Bymode emission indices (mode anchor).
+        # Piston and propeller ANP profiles often carry no power. Under
+        # bffm2_traj, a power the twin-quadratic fit rejects (above 1.05,
+        # below 0) does the same (_get_emission_index_bffm2).
         bymode_fallback = False
         if method != "bymode":
             _pw, _ffk = mv.get_trajectory_point_power_ff(
                 conn, mov["profile_id"], pt1[0]
             )
-            bymode_fallback = _pw is None and _ffk is None
+            _reason = _bffm2_point_bymode_reason(_pw, _ffk, method)
+            bymode_fallback = _reason is not None
+            if bymode_fallback:
+                fallbacks[_reason] = fallbacks.get(_reason, 0) + 1
         # Compute this segment's emission into its own dict so the
         # per-segment record can carry it, then fold it into the
         # running movement total. The arithmetic is identical to
@@ -1064,7 +1167,7 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         seg_em = {p: 0.0 for p in POLLUTANTS}
         if method == "bymode":
             _add_em(seg_em, seg_fuel, eng)
-            # ICCAIA / CAEP14 v14 NOx ambient correction. Mirrors the
+            # ICCAIA / CAEP/14 NOx ambient correction. Mirrors the
             # plugin's MovementEmissionCalculator._apply_nox_corrections,
             # which is gated by the same `apply_nox_corrections` flag
             # (and the same method != BFFM2 condition; bymode here, by
@@ -1108,6 +1211,31 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
                 "fuel_kg": seg_fuel,
                 "em_kg": seg_em,
             }
+        )
+
+    if fallbacks.get("ceiling"):
+        logger.warning(
+            "BFFM2 %s: ADS-B ff/engine exceeded the plausibility ceiling (%.4f kg/s, "
+            "%.2f x EEDB TO) on %d segment(s); mode-anchor fuel flow used for those "
+            "segments.",
+            mv.movement_name(mov),
+            fallbacks["ceiling_kg_s"],
+            ADSB_FF_CEILING_FACTOR,
+            fallbacks["ceiling"],
+        )
+    if fallbacks.get("no_power"):
+        logger.warning(
+            "BFFM2 %s: no engine thrust or fuel flow on %d segment(s); "
+            "bymode EI used for those segments.",
+            mv.movement_name(mov),
+            fallbacks["no_power"],
+        )
+    if fallbacks.get("power_oor"):
+        logger.warning(
+            "BFFM2 %s: power setting out of the twin-quadratic range [0, 1.05] on "
+            "%d segment(s); bymode EI used for those segments.",
+            mv.movement_name(mov),
+            fallbacks["power_oor"],
         )
 
     if stretch is not None and stretch["fuel_kg"] > 0.0:

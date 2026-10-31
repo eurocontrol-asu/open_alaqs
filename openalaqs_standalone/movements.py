@@ -37,19 +37,24 @@ for the duration of a calculation.
 
 from __future__ import annotations
 
+import logging
 import sqlite3
+from datetime import datetime
 from typing import Optional
 
 from shapely.geometry import LineString
 from shapely.ops import linemerge
 
 from open_alaqs.core.tools.bffm2 import speed_of_sound_m_s as _speed_of_sound_m_s
+from open_alaqs.core.tools.conversion import convertToFloat as _convert_to_float
 from open_alaqs.core.tools.fuel_sulphur import sox_ei_g_kg
 from openalaqs_standalone.geometry import spatialite_blob_to_shapely
 
 # ---------------------------------------------------------------------------
 # Connection
 # ---------------------------------------------------------------------------
+
+logger = logging.getLogger(__name__)
 
 
 def connect(alaqs_path: str) -> sqlite3.Connection:
@@ -296,6 +301,13 @@ def get_grid_definition(conn: sqlite3.Connection) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _has_column(conn: sqlite3.Connection, table: str, column: str) -> bool:
+    """True iff `table` has a column named `column`."""
+    return any(
+        r[1] == column for r in conn.execute(f"PRAGMA table_info({table})").fetchall()
+    )
+
+
 def get_movement(conn: sqlite3.Connection, oid: int) -> Optional[dict]:
     """Read one movement from `user_aircraft_movements` by oid.
 
@@ -314,16 +326,26 @@ def get_movement(conn: sqlite3.Connection, oid: int) -> Optional[dict]:
     fallback). The reference's aircraft trajectory pipeline did not
     need these; the per-movement gate and APU computes do. The
     addition is purely additive: every field the reference returned is
-    still returned unchanged.
+    still returned unchanged. `engine_thrust_level_for_taxiing` (the BFFM2
+    taxi thrust, 0.07 when not given, as the plugin) is read when the
+    column exists.
     """
     row = conn.execute(
         """
         SELECT oid, runway_time, block_time, aircraft, departure_arrival,
                engine_name, profile_id, taxi_route, runway, taxi_fuel_ratio,
                number_of_stop_and_gos, gate, gate_emissions_code, tow_ratio,
-               apu_code
+               apu_code, {thrust}
         FROM user_aircraft_movements WHERE oid=?
-        """,
+        """.format(
+            thrust=(
+                "engine_thrust_level_for_taxiing"
+                if _has_column(
+                    conn, "user_aircraft_movements", "engine_thrust_level_for_taxiing"
+                )
+                else "NULL"
+            )
+        ),
         (oid,),
     ).fetchone()
     if not row:
@@ -354,6 +376,18 @@ def get_movement(conn: sqlite3.Connection, oid: int) -> Optional[dict]:
         except (TypeError, ValueError):
             return default
 
+    tow_ratio = _as_float(row[13], None) if row[13] not in (None, "") else None
+    if tow_ratio is not None and not tow_ratio > 0.0:
+        # 0, a negative value or NaN is no ratio: 1, no weight correction, with
+        # the plugin's warning (Movement.__init__); the NOx correction treats
+        # 1 and None alike.
+        logger.warning(
+            "Movement %s: tow_ratio %s is not a positive number; 1 is used.",
+            row[0],
+            row[13],
+        )
+        tow_ratio = 1.0
+
     return {
         "oid": row[0],
         "runway_time": row[1],
@@ -377,13 +411,20 @@ def get_movement(conn: sqlite3.Connection, oid: int) -> Optional[dict]:
         # corrections=True). Defaults to None when unset; the
         # correction module then drops the weight term (treats it as
         # ratio=1.0).
-        "tow_ratio": _as_float(row[13], None) if row[13] not in (None, "") else None,
+        "tow_ratio": tow_ratio,
         # apu_code: user-set APU run mode on the movement.
         # -1 / 0 = suppress APU emissions; 1 = APU at stand only;
         # 2 = APU at stand and during taxi. None / NULL is passed
         # through; compute_apu_movements treats None as 1 (match the
         # plugin's permissive fallback when the column is absent).
         "apu_code": row[14],
+        # engine_thrust_level_for_taxiing: the thrust fraction of the BFFM2
+        # taxi (twin-quadratic fit). As the plugin's Movement
+        # (conversion.convertToFloat(value, 0.07)): NULL, empty or not a
+        # number gives 0.07; any number (0, 7, -0.1) is taken as given, and
+        # the compute decides (a value the fit rejects gives the bymode TX
+        # index).
+        "engine_thrust_level_for_taxiing": _convert_to_float(row[15], 0.07),
     }
 
 
@@ -754,7 +795,10 @@ ISA_AMBIENT = {
 
 
 def get_meteo_at(
-    conn: sqlite3.Connection, runway_time: str, use_isa: bool = True
+    conn: sqlite3.Connection,
+    runway_time: str,
+    use_isa: bool = True,
+    period_row: bool = True,
 ) -> dict:
     """Return ambient conditions for the BFFM2 calculation.
 
@@ -762,10 +806,14 @@ def get_meteo_at(
       use_isa=True (default): ISA conditions (288.15 K, 101325 Pa,
         RH 0.6). This matches the plugin's current emission-CSV output,
         which was generated with ISA regardless of the loaded meteo.
-      use_isa=False: the `tbl_InvMeteo` row whose `DateTime` is the
-        latest at or before `runway_time`. Matches the plugin's
-        intended meteo lookup (`EmissionCalculation.getAmbientCondition`).
-        Falls back to ISA if `tbl_InvMeteo` has no qualifying row.
+      use_isa=False: the `tbl_InvMeteo` row nearest in time to the start
+        of the hourly period containing `runway_time` (`_period_meteo_row`),
+        as the plugin's `EmissionCalculation.getAmbientCondition`.
+        Falls back to ISA if `tbl_InvMeteo` has no row.
+        With period_row=False (engine tests, looked up at the event
+        midpoint): the row nearest in time to `runway_time` itself, as the
+        plugin's EngineTestSource (AmbientConditionStore.getNearestByTime);
+        ISA if none.
 
     The ISA-vs-meteo choice is explicit and surfaced to the caller, per
     the validation finding that silent ISA fallback was a real defect.
@@ -786,14 +834,18 @@ def get_meteo_at(
         c if c in _cols else "NULL"
         for c in ("WindSpeed", "ObukhovLength", "MixingHeight")
     )
+    columns = (
+        "Temperature, SeaLevelPressure, RelativeHumidity, Humidity, "
+        + _bl
+        + ", DateTime"
+    )
     try:
-        row = conn.execute(
-            "SELECT Temperature, SeaLevelPressure, RelativeHumidity, Humidity, "
-            + _bl
-            + ", DateTime FROM tbl_InvMeteo WHERE DateTime <= ? "
-            "ORDER BY DateTime DESC LIMIT 1",
-            (runway_time,),
-        ).fetchone()
+        if period_row:
+            row = _period_meteo_row(conn, columns, runway_time)
+        else:
+            row = _nearest_meteo_row(
+                conn, columns, datetime.fromisoformat(str(runway_time))
+            )
     except sqlite3.OperationalError:
         row = None
     if row is None:
@@ -813,28 +865,54 @@ def get_meteo_at(
     }
 
 
-# Default LTO vertical ceiling: 3000 ft (914.4 m). The plugin reads
-# user_study_setup.vertical_limit; if that table or column is missing
-# this constant is used as the final fallback.
+# Default LTO vertical ceiling: 3000 ft (914.4 m), used when there is no
+# meteo row or its MixingHeight is empty, as the plugin's AmbientCondition
+# default. The study's `user_study_setup.vertical_limit` is not used (the
+# plugin ignores it too).
 DEFAULT_VERTICAL_LIMIT_M = 914.4
 
 
-def get_vertical_limit_m(conn: sqlite3.Connection) -> float:
-    """Return user_study_setup.vertical_limit (m), falling back to 914.4
-    if the table or column is missing or NULL. Used as the fallback
-    max_height when tbl_InvMeteo has no MixingHeight for a given time.
-    Matches the plugin's MovementSourceModule.process() fallback at the
-    `except AttributeError` branch.
+def _nearest_meteo_row(conn: sqlite3.Connection, columns: str, when: datetime):
+    """The `tbl_InvMeteo` row (selected `columns`) nearest in time to
+    `when`, ties to the earlier row, or None when the table has no row.
+    The plugin's rule (EmissionCalculation.getAmbientCondition,
+    AmbientConditionStore.getNearestByTime)."""
+    when_s = when.strftime("%Y-%m-%d %H:%M:%S")
+    before = conn.execute(
+        f"SELECT {columns}, DateTime FROM tbl_InvMeteo WHERE DateTime <= ? "
+        "ORDER BY DateTime DESC LIMIT 1",
+        (when_s,),
+    ).fetchone()
+    after = conn.execute(
+        f"SELECT {columns}, DateTime FROM tbl_InvMeteo WHERE DateTime > ? "
+        "ORDER BY DateTime ASC LIMIT 1",
+        (when_s,),
+    ).fetchone()
+    if before is None or after is None:
+        row = before if after is None else after
+    else:
+        d_before = when - datetime.fromisoformat(str(before[-1]))
+        d_after = datetime.fromisoformat(str(after[-1])) - when
+        row = before if d_before <= d_after else after
+    return None if row is None else row[:-1]
+
+
+def _period_meteo_row(conn: sqlite3.Connection, columns: str, runway_time):
+    """The `tbl_InvMeteo` row (selected `columns`) the plugin uses for the
+    movement at `runway_time`, or None when the table has no row.
+
+    The plugin bins a movement into the period containing its runway time
+    and takes the meteo row nearest in time to the period start (ties go
+    to the earlier row; `EmissionCalculation.getAmbientCondition`). The
+    standalone works in hourly periods, so the period start is
+    `runway_time` floored to the hour. With complete hourly meteo this is
+    the row at the hour; it differs from "the latest row at or before
+    `runway_time`" when hours are missing, rows are off the hour, or the
+    movement is before the first row.
     """
-    try:
-        row = conn.execute(
-            "SELECT vertical_limit FROM user_study_setup LIMIT 1"
-        ).fetchone()
-    except sqlite3.OperationalError:
-        return DEFAULT_VERTICAL_LIMIT_M
-    if row is None or row[0] is None:
-        return DEFAULT_VERTICAL_LIMIT_M
-    return float(row[0])
+    t = datetime.fromisoformat(str(runway_time))
+    start = t.replace(minute=0, second=0, microsecond=0)
+    return _nearest_meteo_row(conn, columns, start)
 
 
 def get_airport_elevation_m(conn: sqlite3.Connection) -> float:
@@ -861,42 +939,22 @@ def get_airport_elevation_m(conn: sqlite3.Connection) -> float:
 
 
 def get_mixing_height_at(conn: sqlite3.Connection, runway_time: str) -> float:
-    """Return MixingHeight (m) for the meteo period containing
-    `runway_time`. Mirrors the plugin's
-    `ambient_conditions.getMixingHeight()` lookup, which the plugin uses
-    as `max_height` in `apply_height_limits`.
+    """Return MixingHeight (m) of the meteo row the plugin uses for the
+    movement at `runway_time` (`_period_meteo_row`). Mirrors the plugin's
+    `ambient_conditions.getMixingHeight()`, which the plugin uses as
+    `max_height` in `apply_height_limits`.
 
-    Lookup: the `tbl_InvMeteo` row whose `DateTime` is the latest at or
-    before `runway_time` (the same temporal rule `get_meteo_at` uses).
-
-    Fallback chain, matching MovementSourceModule.process():
-      1. `tbl_InvMeteo.MixingHeight` for the matched period.
-      2. `user_study_setup.vertical_limit` (typically 914.4 m).
-      3. `DEFAULT_VERTICAL_LIMIT_M` (914.4 m).
+    When `tbl_InvMeteo` has no row or the row's MixingHeight is empty the
+    ceiling is `DEFAULT_VERTICAL_LIMIT_M` (914.4 m), as in the plugin
+    (AmbientCondition default). The study's vertical limit is not used.
     """
     try:
-        row = conn.execute(
-            "SELECT MixingHeight FROM tbl_InvMeteo WHERE DateTime <= ? "
-            "ORDER BY DateTime DESC LIMIT 1",
-            (runway_time,),
-        ).fetchone()
+        row = _period_meteo_row(conn, "MixingHeight", runway_time)
     except sqlite3.OperationalError:
-        return get_vertical_limit_m(conn)
+        return DEFAULT_VERTICAL_LIMIT_M
     if row is None or row[0] is None:
-        return get_vertical_limit_m(conn)
+        return DEFAULT_VERTICAL_LIMIT_M
     return float(row[0])
-
-
-# ---------------------------------------------------------------------------
-# Gate accessors (Phase A2)
-# ---------------------------------------------------------------------------
-#
-# Gate emissions are per-movement: the ground support equipment (GSE)
-# and ground power unit (GPU) running while an aircraft occupies a
-# gate. The emission for one movement depends on the gate's type, the
-# aircraft's group, and the operation type (arrival or departure),
-# looked up in the `default_gate_profiles` table. These accessors
-# expose the three pieces the gate compute needs.
 
 
 def get_aircraft_group(conn: sqlite3.Connection, icao: str) -> Optional[str]:

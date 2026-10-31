@@ -1,7 +1,11 @@
 # openalaqs_standalone
 
-A QGIS-free pipeline that turns an OpenALAQS `.alaqs` study file into
-AUSTAL-ready inputs. It covers both source families:
+The architecture, modules, conventions, limitations and tests of
+`openalaqs_standalone`, for developers. To run it, see
+[USAGE.md](USAGE.md) (install, commands, options, output folders).
+
+`openalaqs_standalone` is a QGIS-free pipeline that turns an OpenALAQS
+`.alaqs` study file into AUSTAL-ready inputs. It covers both source families:
 
 - **Stationary sources** (road, parking, point, area): an ALAQS ->
   AUSTAL *adapter*. It reads pre-computed emission factors stored in
@@ -14,7 +18,7 @@ AUSTAL-ready inputs. It covers both source families:
   integrates per-segment fuel, time and emission indices, with three
   selectable methods. This half is validated against the CAEP14
   reference and the pinned plugin outputs (see
-  `validation/tools/CAEP14_VALIDATION.md`).
+  [CAEP14_VALIDATION.md](validation/tools/CAEP14_VALIDATION.md)).
 
 The package runs without QGIS, without PyQt, and without a native
 SpatiaLite extension: it reads the `.alaqs` SQLite directly and parses
@@ -29,54 +33,32 @@ run it from the repository root with the root on `PYTHONPATH` (see
 [USAGE.md](USAGE.md#install)). The AUSTAL writer helpers it depends on
 live in the sibling `austal_prep/` package.
 
-For a task-oriented walk-through of running the package from a terminal
-(installation, CLI subcommands, method selection, NOx ambient correction,
-atmosphere aloft (5.4.1), `config.json` keys,
-validation harness), see [USAGE.md](USAGE.md). The
-sections below cover architecture, conventions, and limitations.
+Contents:
+
+- [What it produces](#what-it-produces)
+- [Architecture](#architecture)
+- [Prerequisite: the stationary EFs must already be in the .alaqs file](#prerequisite-the-stationary-efs-must-already-be-in-the-alaqs-file)
+- [Conventions](#conventions)
+- [Limitations](#limitations)
+- [Testing](#testing)
 
 ## What it produces
 
 Two output shapes, depending on which entry point is used.
 
 **The `austal` command** builds the six-folder structure that the
-`austal_prep` package consumes:
+`austal_prep` package consumes (sources, emissions, receptors, meteo,
+config and an empty AUSTAL folder; the folder tree and file schemas are in
+[USAGE.md](USAGE.md#output-folders)). With `--include-aircraft`, the
+aircraft movement emissions are folded into the same `sources.parquet` and
+`emissions.parquet`: each occupied inventory grid cell becomes a synthetic
+`aircraft:cell:<ix>_<iy>_<iz>` source, so one austal_prep run covers the
+whole study.
 
-```
-<output_root>/
-├── sources_folder/
-│   └── sources.parquet      schema: source_id, source_type, label,
-│                            geometry_wkt, geometry_kind, height_m,
-│                            extent_m2, length_m, in_study, extra_json
-│                            (+ delta_z_m when aircraft sources are included)
-├── emissions_folder/
-│   ├── emissions.parquet    schema: timestamp, source_id, pollutant,
-│   │                        kg_in_hour    (one row per source-pollutant-hour)
-│   ├── <pollutant>_emissions.gpkg  plugin-style per-pollutant grid totals
-│   │                        (inventory_gpkg.py)
-│   └── runway_checks.csv    route and profile check report (only with
-│                            --include-aircraft; see runway_checks.py)
-├── receptors_folder/
-│   └── receptors.csv        schema: name, x, y, z   (in target UTM)
-├── meteo_folder/
-│   └── meteo.csv            schema: timestamp, wind_direction_deg,
-│                            wind_speed_ms, obukhov_length_m,
-│                            mixing_height_m
-├── config_folder/
-│   └── config.json          AUSTAL study config
-└── austal_folder/           empty; populated by the recipe
-```
-
-With `--include-aircraft`, the aircraft movement emissions are folded
-into the same `sources.parquet` and `emissions.parquet`: each occupied
-inventory grid cell becomes a synthetic `aircraft:cell:<ix>_<iy>_<iz>`
-source, so one austal_prep run covers the whole study.
-
-**The `aircraft` command** runs the aircraft core directly and writes:
-
-- a per-movement totals CSV (one row per movement, one column per pollutant), and
-- optionally, with `--austal-out`, the AUSTAL `emissions.parquet` +
-  `sources.parquet` pair for the aircraft sources alone.
+**The `aircraft` command** runs the aircraft core directly and writes a
+per-movement totals CSV (one row per movement, one column per pollutant)
+and, with `--austal-out`, the AUSTAL `emissions.parquet` +
+`sources.parquet` pair for the aircraft sources alone.
 
 ## Architecture
 
@@ -110,12 +92,9 @@ movements.py           .alaqs database accessors for the aircraft
 compute_aircraft.py    fixed-wing per-movement emissions, three
                        methods (bymode, bffm2_anchor, bffm2_traj),
                        with per-segment records retained
-nox_correction.py      Reference A NOx ambient correction (humidity
-                       and temperature). Off by default; opt-in via
-                       `--apply-nox-corrections` on the `aircraft`
-                       and `austal` commands so the default behaviour
-                       remains bit-identical to the plugin's bymode
-                       path.
+nox_correction.py      ICCAIA NOx ambient correction (take-off weight
+                       ratio, temperature and humidity); off by default (see
+                       USAGE.md, "The NOx ambient correction")
 compute_helicopter.py  FOCA helicopter per-movement emissions
 compute_gate_movements.py  per-movement gate (GSE + GPU) emissions,
                        driven by the movements and default_gate_profiles;
@@ -189,108 +168,7 @@ runway_checks.py       route and profile check report; also
 | Helicopter movement | `user_aircraft_movements` | implemented (FOCA calculator) |
 | Engine test site | `engine_test_events` + `shapes_area_sources` (`is_test_site='1'`) | implemented (calculator, 3 thrust modes) |
 
-## Quick start
-
-### Stationary sources, the six-folder structure
-
-```bash
-python -m openalaqs_standalone austal \
-    EHRD_roadways_2025_final_with_parking.alaqs \
-    --year 2025 \
-    --meteo-year-shift 2025 \
-    --receptor-target-epsg 32631 \
-    --title "EHRD road and parking" \
-    --out ./inputs/
-```
-
-The AUSTAL grid is read from the study's `grid_3d_definition`. Receptors
-outside that grid are dropped (with their IDs in the log);
-`--grid-size`/`--grid-step` override only this clipping square, not the
-AUSTAL grid.
-
-`--pollutants` defaults to the full stationary set
-(`co,hc,nox,sox,pm10,pm25`); pass an explicit comma-separated list to
-narrow it. `co2` is also accepted; it comes from the aircraft only (see
-[Pollutants](#pollutants)).
-
-### The whole study, stationary + aircraft, in one run
-
-```bash
-python -m openalaqs_standalone austal study.alaqs \
-    --year 2025 --out ./inputs/ \
-    --include-aircraft --aircraft-method bymode
-```
-
-This computes the aircraft movement emissions (including the
-movement-driven gate emissions) and folds them into the same
-`sources.parquet` and `emissions.parquet` as the stationary sources.
-
-### A shorter time window
-
-The `austal` command also accepts `--start` and `--end` (ISO format)
-to restrict the run to a window inside the inventory year:
-
-```bash
-python -m openalaqs_standalone austal study.alaqs \
-    --year 2025 --out ./inputs/ \
-    --include-aircraft \
-    --start 2025-01-01 --end 2025-01-08
-```
-
-The window is half-open `[start, end)`. Behaviour:
-
-- **Stationary sources**: hourly emissions are filtered to the
-  window. The per-hour mass for kept hours is unchanged, so
-  conservation against the same-hours slice of the full-year output
-  holds exactly.
-- **Aircraft sources**: a movement is included if its start time is
-  in the window, using `block_time` for departures and `runway_time`
-  for arrivals (the direction-aware rule); for movements that
-  straddle the window boundary, the per-segment emissions are also
-  clipped to the window so the run only contains emissions that
-  physically occur in `[start, end)`. This is the
-  dispersion-correct interpretation.
-- **Meteo and config**: `meteo.csv` is trimmed to the window;
-  `config.json`'s `start_dt` / `end_dt` reflect the window bounds.
-
-The CLI rejects windows outside the inventory year (`start` must be
-in `[year-01-01, year+1-01-01)`) and `start >= end`.
-
-### Parallel aircraft compute via `austal`
-
-When `--include-aircraft` is set, `--processes N` (N > 1) runs the
-aircraft movement compute across a process pool, producing
-bit-identical results to the serial driver:
-
-```bash
-python -m openalaqs_standalone austal study.alaqs \
-    --year 2025 --out ./inputs/ \
-    --include-aircraft --processes 4
-```
-
-The stationary computes are already numpy-vectorised and are not
-parallelised; `--processes` affects only the aircraft pipeline.
-Worth using for studies with many movements; not worth using on
-small movement counts.
-
-### The aircraft core directly
-
-```bash
-# per-movement totals CSV
-python -m openalaqs_standalone aircraft study.alaqs \
-    --out movement_totals.csv --method bymode
-
-# also write the AUSTAL pair, across four worker processes
-python -m openalaqs_standalone aircraft study.alaqs \
-    --out movement_totals.csv \
-    --austal-out ./austal_aircraft/ \
-    --processes 4
-```
-
-`--processes N` (N > 1) runs the multiprocessing driver, which
-produces results identical to the serial driver.
-
-## Individual modules
+### Running one module
 
 Each compute module also has its own CLI entry point, useful for
 isolating one source type:
@@ -322,8 +200,9 @@ produced by an upstream OpenALAQS plugin run that:
 - wrote the resulting g/km and g/vh values back into the source tables.
 
 The standalone stationary computes are faithful to whatever EFs are in
-the file: PR2 fixes propagate if present; older unpatched EFs produce
-correspondingly older emissions.
+the file: fixes the plugin applied when it wrote the EFs (such as the
+parking cold start at trip scale) carry through; EFs written by an older
+plugin give correspondingly older emissions.
 
 The **aircraft** half is different: it is a real calculator and needs
 no pre-computed EFs. It reads the engine emission-index tables, the
@@ -333,8 +212,7 @@ integrates the emissions itself.
 ### Workflow for the stationary inputs
 
 1. Build the inventory in QGIS using the OpenALAQS plugin (5.0.0 or
-   later, which includes the PR2 fixes such as parking cold start at
-   trip scale).
+   later, which applies the parking cold start at trip scale).
 2. The plugin's `Recalculate` button of the parking and roadway forms
    writes the EFs into `shapes_roadways` and `shapes_parking`.
 3. Save the resulting `.alaqs` file.
@@ -355,15 +233,15 @@ the validation reference.
 
 ### Verifying your .alaqs has the right stationary EFs
 
-For an EHRD study used when this check was written (5.2.0; it is not
-shipped with the repository), the PR2-applied parking baseline was:
+For an EHRD study that is not shipped with the repository, the parking
+baseline with the trip-scale cold start is (computed with 5.2.0):
 
 - NOx 31.26 kg/yr
 - PM10 3.27 kg/yr
 - PM2.5 1.79 kg/yr (PM10/PM2.5 ratio 1.83)
 
-and an inventory without the cold-start fix gave NOx around 20.25 kg/yr
-instead of 31.26. These figures do not apply to the bundled training
+and an inventory without the trip-scale cold start gives NOx around
+20.25 kg/yr instead of 31.26. These figures do not apply to the bundled training
 study: its single `ParkingLot` (20 000 vehicles per year, NOx 95.82
 g/vehicle) gives NOx 1916.33 kg and PM10 15.99 kg for 2025
 (`python -m openalaqs_standalone.compute_parking
@@ -382,6 +260,8 @@ aggregation and to keep namespaces distinct in a combined
 - `parking:<parking_id>`
 - `point:<point_id>`
 - `area:<area_id>`
+- `engine_test:<oid>` (an area source flagged `is_test_site = '1'`;
+  its `source_type` is `engine_test`)
 - `gate:<gate_id>` (the gate geometry; gate emissions are folded into
   the aircraft movement totals)
 - `aircraft:cell:<ix>_<iy>_<iz>` (a synthetic per-grid-cell source for
@@ -410,7 +290,7 @@ of the standard AUSTAL 3.3 settings; it is defined in the
 `austal.settings` shipped with OpenALAQS (`documents/AUSTAL/`, section
 `[CO2]`, concentration in mg/m3). Replace the `austal.settings` of the
 AUSTAL installation with that copy before running AUSTAL on these
-inputs (see `documents/AUSTAL/AUSTAL.md`).
+inputs (see [AUSTAL.md](../documents/AUSTAL/AUSTAL.md#configuration-files)).
 
 `austal_prep` writes pm10 as two AUSTAL components, `pm-1` (the fine
 fraction, `pm10_fine_fraction`) and `pm-2` (the rest), which AUSTAL sums
@@ -418,12 +298,12 @@ into substance `pm`; pm25 is written as `pm25-1` (substance `pm25`).
 
 ### Emission factor columns (stationary)
 
-The OpenALAQS schema is inconsistent between source types about which
-column holds PM2.5 versus total PM10:
+The column that holds PM2.5 differs between the schema of each source
+type:
 
 | Source | Total PM10 column | PM2.5 column |
 | --- | --- | --- |
-| Road | `pm10_gm_km` | `p1_gm_km` |
+| Road | `pm10_gm_km` | `p2_gm_km` (`p1_gm_km` is PM0.1) |
 | Parking | `pm10_gm_vh` | `p2_gm_vh` |
 | Point | `pm10_kg_k` | `p2_kg_k` (assumed; matches parking) |
 | Area | `pm10_kg_unit` | `p2_kg_unit` (assumed; matches parking) |
@@ -456,10 +336,10 @@ fall back to all-1.0. The hour count is leap-year-aware.
 
 ## Limitations
 
-The phase plan for the aircraft pipeline (A0 per-movement core, A2
-gate emissions, A3 time-and-grid distribution, A4 parallel driver, A5
-AUSTAL and GeoPackage output) is complete, and the `austal` command
-joins the stationary and aircraft halves into one run.
+The aircraft pipeline (per-movement core, gate emissions, time-and-grid
+distribution, parallel driver, AUSTAL and GeoPackage output) is complete,
+and the `austal` command joins the stationary and aircraft halves into one
+run.
 
 What is not yet built:
 
@@ -472,9 +352,21 @@ What is not yet built:
 - **Point and area PM column convention** is assumed, not verified
   (see "Emission factor columns" above): no bundled study has a
   non-zero PM2.5 factor for those source types.
+- **Hourly periods only.** The standalone works in hourly periods that start
+  on the hour; a movement takes the meteo row nearest to the start of its
+  hour. The plugin uses the study's time interval, so the two agree for
+  studies with hourly periods only.
+- **Tracks are not followed.** The plugin lays a movement with a `track_id`
+  along its track (`shapes_tracks`): the trajectory points follow the track,
+  which changes the segment lengths and so the emissions (on the training
+  study, an A20N departure along a turning track gets 4.32 kg NOx instead of
+  4.18 kg with `bymode`). The standalone ignores `track_id` and `shapes_tracks`
+  and always uses the profile along the runway axis, so results differ for
+  movements with a track. ADS-B (CUSTOM) profiles are not tracks and are
+  followed by both.
 - **Engine tests in the `austal` pipeline** are computed with the ICAO
   mode values ("snap"): `compute_engine_test_emissions` passes no database
-  connection, so BFFM2 events fall back to snap there (as in 5.4.0).
+  connection, so BFFM2 events fall back to snap there.
 - **Shared-import refactor of the stationary half.** The stationary
   computes still read pre-computed EFs rather than calling shared
   COPERT5 logic; see "Why the stationary half is structured this
@@ -486,7 +378,9 @@ What is not yet built:
 PYTHONPATH=. pytest openalaqs_standalone/validation/tests/ -q
 ```
 
-A few more standalone tests live in the plugin suite under `tests/`.
+A few more standalone tests live in the plugin suite under `tests/`; run
+the two suites separately (see
+[VALIDATION_GUIDE.md](../documents/validation/VALIDATION_GUIDE.md#running-the-automated-tests)).
 Together they cover, among other things:
 
 - source extraction: engine-test sites emitted as their own source type
@@ -495,9 +389,9 @@ Together they cover, among other things:
 - the plugin-output gate: the CAEP14 reference and the standalone
   reproduce the pinned plugin CSVs (`validation/data/plugin_output/`)
   for all 15 movements and the three methods, within 2e-4 relative
-  (5.4.1: 3.4e-13 at most; the NOx-corrected run 3.1e-6)
-  (`test_plugin_csv_vs_reference.py`)
-- the CAEP14 reference itself (`test_caep14_sheet_reference_case.py`,
+  (`test_plugin_csv_vs_reference.py`; the measured agreement is in
+  [Tolerances](../documents/validation/VALIDATION_GUIDE.md#tolerances))
+- the CAEP14 reference itself (`test_caep14_bffm2_reference_case.py`,
   `test_caep14_reference_lookups.py`, `test_helicopter_caep14_reference.py`)
 - engine-start emissions and `gate_emissions_code` (`test_start_gate_code.py`;
   plugin parity in `tests/test_zz_gate_code_start_parity.py`)
@@ -520,3 +414,48 @@ Together they cover, among other things:
 
 Tests that need `mod_spatialite` (the CAEP14 reference) or a fixture
 that is not present are skipped with a message.
+
+### Validation harness
+
+`openalaqs_standalone/validation/` is the CAEP14 reference harness. It is
+kept up to date with the standalone's calculation paths and is the
+canonical test for any change to the emission code; extend it whenever you
+add a new emission path or a new validation target. Three subdirectories:
+
+- `validation/data/`: bundled fixtures. Three derived variants of the
+  training study (`training_v3.alaqs`, `training_v3_gatemovements.alaqs`,
+  `training_v3_multisource.alaqs`) plus the plugin's own outputs on
+  `training_v3.alaqs` for the four comparison targets (bymode,
+  bymode-with-NOx-correction, bffm2_anchor, bffm2_traj) and the stationary
+  sources in `validation/data/plugin_output/`, and
+  `training_validation_reference.xlsx`, plugin beside the CAEP14 reference
+  per movement. The `training_v3*` files
+  are evolved versions of `example/training/training.alaqs` carrying
+  schema fixes and source variants that exercise the gate / multi-source
+  code paths. `validation/data/source_csvs/` holds their text inputs:
+  `training_movements.csv` is the movement table of `training_v3.alaqs`
+  (and of `training_v3_multisource.alaqs`), 15 movements with the two AS50
+  helicopters, in the plugin's import format; `training_v3_gatemovements.alaqs`
+  differs from it in the gate and `gate_emissions_code` of movements 1, 2,
+  3, 5 and 14. It is not the example's `training_movements.csv` (13
+  movements, other runways and gates on some rows). `training_meteo.csv`
+  and `training_ads_b_data.csv` are the example's files. The only code
+  that reads this folder is the test
+  `validation/tests/test_source_csvs_match_fixture.py`, which checks that
+  `training_movements.csv` equals the movement table of `training_v3.alaqs`.
+- `validation/tests/`: pytest modules, among them
+  `test_plugin_csv_vs_reference.py` (plugin = reference = standalone on the
+  15 movements), `test_bffm2_ambient_propagation_regression.py` (BFFM2 EI
+  with pinned ambient inputs), `test_runway_placement.py` and
+  `test_segment_mach.py`.
+- `validation/tools/`: the CAEP14 reference and its helper scripts,
+  described in [CAEP14_VALIDATION.md](validation/tools/CAEP14_VALIDATION.md#files)
+  (how to run the reference, regenerate the pinned outputs and the
+  workbooks).
+
+See also:
+
+- [USAGE.md](USAGE.md): install, commands and options
+- [CAEP14_VALIDATION.md](validation/tools/CAEP14_VALIDATION.md): the CAEP14 reference implementation
+- [VALIDATION_GUIDE.md](../documents/validation/VALIDATION_GUIDE.md): validating a build
+- [WITHOUT_QGIS.md](../documents/user/WITHOUT_QGIS.md): which tool to run without the QGIS GUI

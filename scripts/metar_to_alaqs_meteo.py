@@ -6,7 +6,7 @@ Prepare an Open-ALAQS-compatible meteo.csv from a stream of METAR observations.
 
 This is a standalone utility.  It is NOT invoked by the Open-ALAQS plugin at
 run time; users run it once to produce the meteo.csv that the plugin reads
-during "Create Output".
+during "Calculate Emissions Inventory".
 
 Scope
 -----

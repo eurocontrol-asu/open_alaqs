@@ -17,7 +17,6 @@ import inspect
 import json
 import shutil
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
@@ -125,20 +124,20 @@ def test_austal_output_module_writes_defaults_cleanly(tmp_path):
 
 def test_dispersion_analysis_fallback_uses_the_defaults():
     pytest.importorskip("qgis")
+    from qgis.testing import start_app
+
+    start_app()
     from open_alaqs.gui.DispersionAnalysis import OpenAlaqsDispersionAnalysis as Dlg
 
-    ui = SimpleNamespace(
-        csv_quality_level_spinbox=SimpleNamespace(value=lambda: 2),
-        csv_mixing_height_checkbox=SimpleNamespace(isChecked=lambda: False),
-        csv_notaluft_checkbox=SimpleNamespace(isChecked=lambda: False),
-    )
-    fake = SimpleNamespace(ui=ui)
-    cfg = Dlg._get_austal_config_from_ui(fake, mode="csv")
-    assert (
-        cfg["roughness_length_m"],
-        cfg["displacement_height_m"],
-        cfg["anemometer_height_m"],
-    ) == DEFAULTS
+    dlg = Dlg()
+    for mode in ("alaqs", "csv"):
+        cfg = Dlg._get_austal_config_from_ui(dlg, mode=mode)
+        assert (
+            cfg["roughness_length_m"],
+            cfg["displacement_height_m"],
+            cfg["anemometer_height_m"],
+        ) == DEFAULTS
+    dlg.deleteLater()
 
 
 def test_emission_calculator_service_derives_module_zeros():

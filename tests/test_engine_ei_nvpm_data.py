@@ -2,8 +2,8 @@
 
 - nvpm_number_ei is a number emission index (#/kg fuel). Until October 2026
   the column held the ACT_PRF number rate (#/s) of the mode.
-- press_ratio and the 5th MEEM point come from the CAEP14 FBE calculation
-  sheet v14 (Engines_Database, EEDB v31), ACT_PRF for engines not in it.
+- press_ratio and the 5th MEEM point come from the ICAO EEDB v31, ACT_PRF
+  for engines not in it.
 - 28 ACT_PRF engines without a twin in the table were added in October
   2026 (08P28CM141 to 156, 08P28RR154 to 163, EEA-J9, EEA-J10); EEA-J10
   (ACT_PRF aircraft_engine E190-A) is selectable, but E190's default engine
@@ -25,8 +25,8 @@ REPO = Path(__file__).resolve().parents[1]
 CSV = REPO / "open_alaqs/database/data/default_aircraft_engine_ei.csv"
 TEMPLATE = REPO / "open_alaqs/core/templates/project.alaqs"
 
-# NVPM_N_<TO|CO|AP|ID>_N/KG of the sheet's Engines_Database
-_SHEET_NUMBER = {
+# NVPM_N_<TO|CO|AP|ID>_N/KG of the ICAO EEDB v31
+_EEDB_NUMBER = {
     "01P20CM127": (
         107147000375.795,
         92348579066.5577,
@@ -65,12 +65,12 @@ def ei():
 
 
 def test_number_ei_is_per_kg(ei):
-    """The sheet's #/kg values, not the ACT_PRF rate (#/s)."""
-    for engine, values in _SHEET_NUMBER.items():
+    """The EEDB #/kg values, not the ACT_PRF rate (#/s)."""
+    for engine, values in _EEDB_NUMBER.items():
         rows = ei[ei.engine_name == engine].set_index("mode")
-        for mode, sheet in zip(("TO", "CL", "AP", "TX"), values):
-            assert rows.loc[mode, "nvpm_number_ei"] == pytest.approx(sheet, rel=1e-8)
-            rate = sheet * rows.loc[mode, "fuel_kg_sec"]
+        for mode, eedb in zip(("TO", "CL", "AP", "TX"), values):
+            assert rows.loc[mode, "nvpm_number_ei"] == pytest.approx(eedb, rel=1e-8)
+            rate = eedb * rows.loc[mode, "fuel_kg_sec"]
             assert rows.loc[mode, "nvpm_number_ei"] != pytest.approx(rate, rel=1e-3)
 
 
@@ -104,7 +104,7 @@ def test_fifth_point(ei):
     n5 = first[first.meem_nvpm_n_i_f00_avg > 0]
     assert len(m5) == 77 and len(n5) == 75
     assert m5.nvpm_m_max_mgkg.notna().all() and n5.nvpm_n_max_nkg.notna().all()
-    # GE9X: 5th point in the sheet (ACT_PRF has none)
+    # GE9X: 5th point in the EEDB (ACT_PRF has none)
     assert first.loc["GE9X", "meem_nvpm_m_i_f00_avg"] > 0
     assert first.loc["GE9X", "meem_nvpm_n_i_f00_avg"] == pytest.approx(0.575)
 

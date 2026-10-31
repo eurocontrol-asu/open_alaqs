@@ -21,8 +21,8 @@ class _Constants:
 
 constants = _Constants()
 
-# Dry air as an ideal gas (ICAO Doc 7488 constants, as the CAEP validation
-# workbook): ratio of specific heats and specific gas constant.
+# Dry air as an ideal gas (ICAO Doc 7488 constants): ratio of specific heats
+# and specific gas constant.
 GAMMA_AIR = 1.4
 R_AIR_J_KG_K = 287.05287
 
@@ -31,7 +31,7 @@ def speed_of_sound_m_s(temperature_k: float) -> float:
     """Speed of sound in air at `temperature_k`, a = sqrt(gamma R T).
 
     Used for the flight Mach number TAS / a of the BFFM2 ambient
-    corrections (plugin, standalone and the CAEP validation). ISA sea level
+    corrections (plugin, standalone and the CAEP14 reference). ISA sea level
     (288.15 K) gives 340.294 m/s. Until October 2026 the plugin and the
     standalone used the linear form 331.3 + 0.606 (T - 273.15), which is
     0.03% high at ISA and 0.16% high at 243.6 K and at 307 K.
@@ -95,7 +95,7 @@ def calculate_emission_index(  # noqa: C901
                      BFFM2 V2 update). Caller must pass 0.3 for lean-burn non-LTO.
     :return float: calculated emission index in g/kg fuel
 
-    Formula conventions (SAE AIR-5715 / CAEP14, verified against CAEP14 v12):
+    Formula conventions (SAE AIR-5715 / CAEP/14 BFFM2 formulation):
       ff_ref = ff_amb / delta * theta^3.8 * exp(0.2 * M^2)
         CAEP14 applies this formula universally for both LTO and non-LTO.
         ICAO Doc 9889 App 2 uses sqrt(theta)/delta at LTO only; this code
@@ -103,13 +103,13 @@ def calculate_emission_index(  # noqa: C901
 
       NOx humidity: h = -19 * (omega - 0.00634)
         SAE-5715 relative correction vs ISA reference-day humidity omega_0=0.00634.
-        CAEP14 USER INPUTS "Humidity coefficient H" confirms this formula.
+        The CAEP/14 BFFM2 formulation uses the same humidity coefficient H.
 
       NOx ambient: EI_NOx = EI_ref * exp(h) * (delta^1.02 / theta^3.3)^y
-        y=0.5 confirmed in CAEP14 BFFM2 NOX sheet "p3t3 exponent value = 0.5".
+        y=0.5 is the CAEP/14 BFFM2 p3t3 exponent for NOx.
 
       CO/HC ambient: EI = EI_ref * (theta^3.3 / delta^1.02)^x, x=1
-        CAEP14 BFFM2 CO and HC sheets both apply this correction (x=1).
+        The CAEP/14 BFFM2 formulation applies this correction to CO and HC (x=1).
 
     An issue concerns the modeling of zero values from the certification data,
      especially concerning EITHC values.
@@ -239,7 +239,7 @@ def calculate_emission_index(  # noqa: C901
     # fuel_flow = Fuel flow at AMBIENT (non-reference) conditions (kg/s)
     # SAE AIR-5715 / CAEP14 formula — same for both LTO and non-LTO.
     # Note: ICAO Doc 9889 App 2 uses sqrt(theta)/delta for LTO only;
-    #       CAEP14 uses theta^3.8/delta universally (verified against CAEP14 v12).
+    #       CAEP14 uses theta^3.8/delta universally (CAEP/14 BFFM2 formulation).
     ff_ref = (fuel_flow / delta) * (theta**3.8) * np.exp(0.2 * m**2)
 
     ############################################################################
@@ -379,7 +379,7 @@ def calculate_emission_index(  # noqa: C901
 
         elif x2 <= x_ff_log <= x3:
             if data_behavior == 1:  # standard
-                # CAEP14 v14 / SAE AIR-5715 "HC_CO Slope To Mean Value" rule for the
+                # CAEP/14 / SAE AIR-5715 "HC_CO Slope To Mean Value" rule for the
                 # standard-intersection case (intersection of the IDLE-APP slanting line
                 # and the (CL, TO)-mean horizontal line falls inside the [APP, CL] FF
                 # range).  In this case the CAEP procedure snaps the EI to the
@@ -390,7 +390,7 @@ def calculate_emission_index(  # noqa: C901
                 #
                 # The previous implementation kept the slanting line up to the
                 # intersection and only snapped beyond.  That smoothed the step but
-                # disagreed with the CAEP14 reference sheet by up to a factor of 8 at
+                # disagreed with the CAEP/14 BFFM2 reference values by up to a factor of 8 at
                 # borderline cases (e.g. warm-humid APP-anchor segments).
                 y_ff_log = lin_av
             elif data_behavior == 2:  # non-standard: log-linear APP→horizontal
@@ -424,7 +424,7 @@ def calculate_emission_index(  # noqa: C901
         # ei = NOx EI at non-reference conditions (g/kg)
         # SAE AIR-5715 / CAEP14: exp(h) x (delta^1.02 / theta^3.3)^y
         #   h = -19*(omega - 0.00634)  relative humidity correction vs ISA ref day
-        #   y = 0.5 for standard/LTO (CAEP14 BFFM2 NOX p3t3 exponent = 0.5)
+        #   y = 0.5 for standard/LTO (CAEP/14 BFFM2 NOx p3t3 exponent = 0.5)
         ei = ein_ox_ref * np.exp(h) * (delta**1.02 / theta**3.3) ** y
 
     elif pollutant.lower() == "co":
@@ -434,7 +434,8 @@ def calculate_emission_index(  # noqa: C901
 
         # ei = CO EI at non-reference conditions (g/kg)
         # SAE AIR-5715 / CAEP14: (theta^3.3 / delta^1.02)^x, x=1
-        # CAEP14 BFFM2 CO sheet applies this correction (verified: factor = 0.8824 at test segment).
+        # The CAEP/14 BFFM2 formulation applies this correction to CO (factor = 0.8824 at
+        # the test segment).
         ei = ei_co_ref * (theta**3.3 / delta**1.02) ** x
 
     elif pollutant.lower() == "hc":

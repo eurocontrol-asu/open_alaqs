@@ -140,6 +140,16 @@ class Movement:
             val.get("taxi_engine_count"), 2
         )
         self._tow_ratio = conversion.convertToFloat(val.get("tow_ratio"), 1)
+        if not self._tow_ratio > 0:
+            # A take-off weight ratio of 0, a negative value or NaN is no ratio
+            # (as in the standalone): 1, no weight correction. Taken as given,
+            # 0 made the NOx correction factor negative.
+            logger.warning(
+                "Movement %s: tow_ratio %s is not a positive number; 1 is used.",
+                val.get("oid"),
+                val.get("tow_ratio"),
+            )
+            self._tow_ratio = 1.0
         self._taxi_fuel_ratio = conversion.convertToFloat(val.get("taxi_fuel_ratio"), 1)
         self._engine_thrust_level_taxiing = conversion.convertToFloat(
             val.get("engine_thrust_level_for_taxiing"), 0.07

@@ -491,12 +491,13 @@ def compute_engine_test_for_period(
                     thrust_mode = "snap"
                 else:
                     # Meteo lookup at event midpoint.
+                    # The exact midpoint (not truncated to the second), as the
+                    # plugin's EngineTestSource (midpoint_dt.timestamp()).
                     mid_dt = e_start + (e_end - e_start) / 2
-                    mid_iso = mid_dt.strftime("%Y-%m-%d %H:%M:%S")
-                    # Delegate to movements.get_meteo_at which reads
-                    # tbl_InvMeteo with "<= runway_time" semantics and
-                    # falls back to ISA if the table has no matching
-                    # row. Import lazily to avoid the standalone runtime
+                    # Delegate to movements.get_meteo_at, which reads
+                    # the tbl_InvMeteo row nearest to the midpoint (as
+                    # the plugin's AmbientConditionStore.getNearestByTime)
+                    # and falls back to ISA if the table has no row. Import lazily to avoid the standalone runtime
                     # dependency for snap-only callers.
                     from openalaqs_standalone import movements as _mv
 
@@ -516,7 +517,9 @@ def compute_engine_test_for_period(
                         bffm2_meteo = dict(_mv.ISA_AMBIENT)
                     else:
                         try:
-                            bffm2_meteo = _mv.get_meteo_at(conn, mid_iso, use_isa=False)
+                            bffm2_meteo = _mv.get_meteo_at(
+                                conn, mid_dt, use_isa=False, period_row=False
+                            )
                             # 5.4.1: the station pressure at the airport elevation from the
                             # row's QNH (as the plugin's EngineTestSource and the taxi);
                             # ground_held keeps QNH (5.4.0). ISA fallbacks are left as they are.
@@ -524,8 +527,8 @@ def compute_engine_test_for_period(
                                 conn, bffm2_meteo, atmosphere_model
                             )
                             # Warn once if the returned meteo is ISA
-                            # (meaning tbl_InvMeteo had no <= mid_iso
-                            # row, get_meteo_at recursively fell back).
+                            # (meaning tbl_InvMeteo had no row and
+                            # get_meteo_at fell back).
                             if (
                                 bffm2_meteo.get("T_K") == 288.15
                                 and bffm2_meteo.get("P_Pa") == 101325.0
@@ -533,8 +536,8 @@ def compute_engine_test_for_period(
                             ):
                                 diagnostics.append(
                                     "bffm2 events present but tbl_InvMeteo "
-                                    "has no data at or before their midpoint; "
-                                    "BFFM2 will fall back to ISA defaults. "
+                                    "has no rows (or the row nearest to their "
+                                    "midpoint is ISA); BFFM2 uses ISA defaults. "
                                     "This message is shown once per call."
                                 )
                                 _bffm2_isa_fallback_logged = True

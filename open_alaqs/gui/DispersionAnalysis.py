@@ -23,6 +23,7 @@ from open_alaqs.core.alaqsdblite import (
 from open_alaqs.core.alaqslogging import get_logger
 from open_alaqs.core.EmissionCalculation import EmissionCalculation, GridConfig
 from open_alaqs.core.interfaces.Emissions import PollutantType
+from open_alaqs.core.modules.AUSTALOutputModule import AUSTALDispersionModule
 from open_alaqs.core.modules.ModuleConfigurationWidget import ModuleConfigurationWidget
 from open_alaqs.core.modules.ModuleManager import (
     OutputDispersionModuleRegistry,
@@ -47,6 +48,79 @@ logger = get_logger(__name__)
 
 class Austal2000RunError(Exception):
     pass
+
+
+# Site parameters of the generated austal.txt (z0, d0, ha): the controls of the AUSTAL
+# module (Dispersion Models tab), with d0 and ha at 0 ("derive from z0"), so that a
+# changed roughness length carries its own d0 = 6 z0 and ha = 10 m + d0.
+SITE_PARAMETER_KEYS = (
+    "roughness_length_m",
+    "displacement_height_m",
+    "anemometer_height_m",
+)
+SITE_PARAMETERS_SCHEMA = {
+    key: dict(AUSTALDispersionModule.settings_schema[key])
+    for key in SITE_PARAMETER_KEYS
+}
+SITE_PARAMETERS_SCHEMA["displacement_height_m"]["initial_value"] = 0.0
+SITE_PARAMETERS_SCHEMA["anemometer_height_m"]["initial_value"] = 0.0
+
+
+# Emission settings of Generate from OpenALAQS output, which recalculates the emissions:
+# the controls of the Configuration tab of Visualize Emission Calculation.
+EMISSION_SETTING_KEYS = (
+    "method",
+    "should_apply_nox_corrections",
+    "atmosphere_model",
+    "bffm2_ff_source",
+    "source_dynamics",
+)
+
+
+def _emission_settings_schema() -> dict:
+    """The Configuration tab's schema for EMISSION_SETTING_KEYS. Its Method list depends on
+    the tab's single pollutant; here every method of the calculation is offered, since one
+    run writes all the selected pollutants. The calculation handles them as in any BFFM2
+    run: BFFM2 fuel flow and CO, HC, NOx emission indices, per-mode emission indices for
+    the other pollutants."""
+    from open_alaqs.core.EmissionCalculatorService import (
+        EmissionCalculationConfig,
+        EmissionCalculatorService,
+    )
+    from open_alaqs.openalaqsdialog import OpenAlaqsResultsAnalysis
+
+    tab = OpenAlaqsResultsAnalysis.settings_schema
+    schema = {key: dict(tab[key]) for key in EMISSION_SETTING_KEYS}
+    schema["method"]["widget_config"] = {
+        "options": list(EmissionCalculatorService().supported_methods)
+    }
+    schema["method"]["initial_value"] = EmissionCalculationConfig.__dataclass_fields__[
+        "method"
+    ].default
+    schema["method"]["tooltip"] = (
+        "Emission calculation method. BFFM2 changes the fuel flow and the emission "
+        "indices of CO, HC and NOx; the other pollutants keep their per-mode "
+        "emission indices, applied to the BFFM2 fuel flow."
+    )
+    return schema
+
+
+def _add_settings_rows(
+    layout: QtWidgets.QFormLayout,
+    before: QtWidgets.QWidget,
+    settings: ModuleConfigurationWidget,
+) -> None:
+    """Move the label/widget rows of `settings` into the form `layout`, above the row
+    of `before`, so that they line up with the dialog's own rows. `settings` keeps the
+    widgets for get_values()."""
+    row, _role = layout.getWidgetPosition(before)
+    for name, widget in settings._settings_widgets.items():
+        label = settings._settings_labels.get(name)
+        if label is not None:
+            layout.insertRow(row, label, widget)
+        else:
+            layout.insertRow(row, widget)
+        row += 1
 
 
 def catch_errors(f):
@@ -316,6 +390,30 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
 
         # Setup external CSV file inputs
         self._setup_external_csv_inputs(s)
+
+        # Site parameters (z0, d0, ha) of each Generate mode
+        self._site_parameter_widgets = {}
+        for mode, layout, before in (
+            (
+                "alaqs",
+                self.ui.generateFromAlaqsLayout,
+                self.ui.alaqsGenerationStatusLabel,
+            ),
+            ("csv", self.ui.generateFromCsvLayout, self.ui.external_files_feedback),
+        ):
+            widget = ModuleConfigurationWidget(SITE_PARAMETERS_SCHEMA)
+            _add_settings_rows(layout, before, widget)
+            self._site_parameter_widgets[mode] = widget
+
+        # Emission settings of Generate from OpenALAQS output
+        self._emission_settings_widget = ModuleConfigurationWidget(
+            _emission_settings_schema()
+        )
+        _add_settings_rows(
+            self.ui.generateFromAlaqsLayout,
+            self.ui.alaqsGenerationStatusLabel,
+            self._emission_settings_widget,
+        )
 
         # Initialise generation datetime pickers with a generic default
         _default_dt = QtCore.QDateTime(2000, 1, 1, 0, 0, 0)
@@ -1348,31 +1446,32 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             quality_level = int(self.ui.alaqs_quality_level_spinbox.value())
             mixing_height = self.ui.alaqs_mixing_height_checkbox.isChecked()
             notaluft = self.ui.alaqs_notaluft_checkbox.isChecked()
-            try:
-                pm10_fine_fraction = float(
-                    self.ui.alaqs_pm10_fine_fraction_spinbox.value()
-                )
-            except Exception:
-                pm10_fine_fraction = 0.9
+            pm10_spinbox = self.ui.alaqs_pm10_fine_fraction_spinbox
         else:  # csv mode
             quality_level = int(self.ui.csv_quality_level_spinbox.value())
             mixing_height = self.ui.csv_mixing_height_checkbox.isChecked()
             notaluft = self.ui.csv_notaluft_checkbox.isChecked()
-            # CSV path doesn't have a PM10 split control yet; use default.
+            pm10_spinbox = self.ui.csv_pm10_fine_fraction_spinbox
+        try:
+            pm10_fine_fraction = float(pm10_spinbox.value())
+        except Exception:
             pm10_fine_fraction = 0.9
 
         # Build os= options string. NOTALUFT switches AUSTAL from
         # TA Luft mode (annual mean post-process only) to per-hour
         # series output. The latter is required for the result viewer
-        # to produce hourly / 8-hour / daily means.
+        # to produce hourly / 8-hour / daily means. SCINOTAT (results in
+        # scientific notation, so that small concentrations keep their digits)
+        # is kept in both: the result readers parse either notation, and the
+        # standalone writes NOTALUFT with SCINOTAT.
         if notaluft:
-            options_string = "NOSTANDARD;NOTALUFT;Kmax=1"
+            options_string = "NOSTANDARD;NOTALUFT;SCINOTAT;Kmax=1"
         else:
             options_string = "NOSTANDARD;SCINOTAT;Kmax=1"
 
-        # Site parameters (austal.txt z0, d0, ha): the one default of the plugin, the
-        # standalone and austal_prep (surface_layer_atmosphere.site_parameters).
-        z0, d0, ha = _sla.site_parameters()
+        # Site parameters (austal.txt z0, d0, ha) of this mode; 0 derives d0 and ha from
+        # z0, as in the AUSTAL module (surface_layer_atmosphere.site_parameters_from_settings).
+        z0, d0, ha = self._site_parameters_from_ui(mode)
         return {
             "is_enabled": True,
             "quality_level": quality_level,
@@ -1384,6 +1483,13 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             "pm10_fine_fraction": pm10_fine_fraction,
         }
 
+    def _site_parameters_from_ui(self, mode: str = "alaqs") -> tuple:
+        """(z0, d0, ha) in m from the site parameter controls of the Generate mode."""
+        values = self._site_parameter_widgets[mode].get_values()
+        return _sla.site_parameters_from_settings(
+            *(values[key] for key in SITE_PARAMETER_KEYS)
+        )
+
     def _read_receptor_csv(self, csv_path):
         """Read a receptor CSV into a GeoDataFrame.
 
@@ -1393,11 +1499,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         id (label only).
         """
         try:
-            import geopandas as gpd
             import pandas as pd
         except Exception as e:
             logger.warning(
-                "Receptor CSV read skipped (geopandas/pandas import failed): %s",
+                "Receptor CSV read skipped (pandas import failed): %s",
                 e,
             )
             return None
@@ -1426,7 +1531,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
                 len(df),
                 csv_path,
             )
-            return gpd.GeoDataFrame(df)
+            return self._receptors_with_height(df)
         except Exception as e:
             logger.warning("Failed to load receptor CSV '%s': %s", csv_path, e)
             return None
@@ -1438,11 +1543,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         rows. Filters to instudy != 'N' (Y, blank, NULL all kept).
         """
         try:
-            import geopandas as gpd
             import pandas as pd
         except Exception as e:
             logger.warning(
-                "Receptor DB read skipped (geopandas/pandas import failed): %s",
+                "Receptor DB read skipped (pandas import failed): %s",
                 e,
             )
             return None
@@ -1452,8 +1556,10 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             conn = sqlite3.connect(alaqs_file)
             cur = conn.cursor()
             cur.execute(
-                "SELECT oid, source_id, xcoord, ycoord, height, instudy, "
-                "AsText(geometry) FROM shapes_receptor_points"
+                # Plain columns only: a sqlite3 connection without SpatiaLite has
+                # no AsText, which made this query fail for every study.
+                "SELECT oid, source_id, xcoord, ycoord, height, instudy "
+                "FROM shapes_receptor_points"
             )
             rows = cur.fetchall()
             conn.close()
@@ -1467,7 +1573,7 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
         if not rows:
             return None
         accepted = []
-        for oid, source_id, xc, yc, h, instudy, _wkt in rows:
+        for oid, source_id, xc, yc, h, instudy in rows:
             if instudy and str(instudy).strip().upper() == "N":
                 continue
             accepted.append(
@@ -1489,7 +1595,21 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             len(df),
             alaqs_file,
         )
-        return gpd.GeoDataFrame(df)
+        return self._receptors_with_height(df)
+
+    @staticmethod
+    def _receptors_with_height(df):
+        """GeoDataFrame of the receptors with 3D points (longitude, latitude, height):
+        the AUSTAL module writes each point's z as its hp (receptor height above ground)
+        and 1.5 m for a 2D point. A missing height is 1.5 m."""
+        import geopandas as gpd
+        import pandas as pd
+
+        height = pd.to_numeric(df["height"], errors="coerce").fillna(1.5)
+        return gpd.GeoDataFrame(
+            df.assign(height=height),
+            geometry=gpd.points_from_xy(df["longitude"], df["latitude"], height),
+        )
 
     def _empty_receptors_gdf(self):
         """Return an empty GeoDataFrame matching the receptor schema."""
@@ -1871,18 +1991,33 @@ class OpenAlaqsDispersionAnalysis(QtWidgets.QDialog):
             time_interval=time_interval,
         )
 
-        # Add all source modules (movements, area sources, parking, etc.)
+        # Add all source modules (movements, area sources, parking, etc.) with the
+        # dialog's emission settings (those of the Configuration tab of Visualize
+        # Emission Calculation) and, for the atmosphere aloft, its site parameters.
+        emission_settings = self._emission_settings_widget.get_values()
+        logger.info(f"Emission settings: {emission_settings}")
+        atmosphere_site = dict(
+            zip(
+                ("atmosphere_z0_m", "atmosphere_d0_m", "atmosphere_ha_m"),
+                self._site_parameters_from_ui("alaqs"),
+            )
+        )
+        # Grid bounds: flight segments and roadways are clipped to the grid, as in the
+        # emission calculation of the Dispersion Models tab (EmissionCalculatorService).
+        grid_bounds = None
+        if emission_calc._grid is not None:
+            grid_bounds = emission_calc._grid.getGridBounds()
         source_module_names = SourceModuleRegistry().get_module_names()
         for module_name in source_module_names:
             emission_calc.add_source_module(
                 module_name,
                 {
-                    "method": "bymode",
-                    "should_apply_nox_corrections": False,
-                    "source_dynamics": "none",
+                    **emission_settings,
+                    **atmosphere_site,
                     "reference_altitude": grid_config.get("reference_altitude", 0.0),
                     "show_progress": False,
                     "receptors": None,
+                    "grid_bounds": grid_bounds,
                 },
             )
             logger.info(f"Added source module: {module_name}")

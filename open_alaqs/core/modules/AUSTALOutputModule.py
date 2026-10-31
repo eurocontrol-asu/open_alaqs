@@ -175,8 +175,8 @@ class AUSTALDispersionModule(DispersionModule):
             "tooltip": (
                 "z0, roughness length (m) of the land cover around the sources, TA Luft "
                 f"classes 0.01 to 2 m; default {_SITE_DEFAULTS[0]} m (TA Luft value for "
-                "airports). 0 = default. See the user guide, Roughness length, "
-                "displacement height and anemometer height."
+                "airports). 0 = default. See the documentation, Dispersion modelling with AUSTAL, "
+                "Site parameters."
             ),
         },
         "displacement_height_m": {

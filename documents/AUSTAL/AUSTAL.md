@@ -1,61 +1,48 @@
-# AUSTAL Setup Guide
+# AUSTAL installation
 
-## Overview
+This page explains how to install AUSTAL for use with OpenALAQS and which files of this folder to copy into the AUSTAL installation. It is for users who want to run dispersion from the plugin. How to prepare, run and view a dispersion run is in [Dispersion modelling with AUSTAL](../user/DISPERSION_AUSTAL.md).
 
-AUSTAL is a dispersion model and the reference implementation to Annex 2 of the German Environment Agency's Technical Instructions on Air Quality Control (TA Luft). It is freely available under the GNU Public Licence.
-
-## Download
-
-AUSTAL can be downloaded from the official webpage of the German Environment Agency:
-
-**[AUSTAL Download Page](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download)**
-
-Download the base package appropriate for your operating system:
-- **Windows**: `AUSTAL_3.3.0_Windows.zip`
-- **Linux**: `AUSTAL_3.3.0_Linux.zip`
-
-Current version: AUSTAL 3.3.0 (released 22.03.2024)
+AUSTAL is a dispersion model and the reference implementation of Annex 2 of the German Technical Instructions on Air Quality Control (TA Luft). The German Environment Agency (UBA) publishes it free of charge under the GNU Public Licence.
 
 ## Installation
 
-1. Download the AUSTAL base package for your operating system from the link above
-2. Extract the package to your desired location
-3. Select the AUSTAL executable in section 1 of the Calculate Dispersion dialog (the path is remembered)
+1. Open the [AUSTAL download page](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download) of the UBA.
+2. Download the base package for your operating system. The plugin's help names the AUSTAL 3.3.0 packages:
+   - Windows: `AUSTAL_3.3.0_Windows.zip`
+   - Linux: `AUSTAL_3.3.0_Linux.zip`
+3. Extract the package to a folder of your choice.
+4. Replace `austal.settings` in that folder with the copy in this folder (see [Configuration files](#configuration-files)).
+5. If the English language files are not in the AUSTAL folder, copy them from this folder.
+6. In QGIS, open **Calculate Dispersion** and select `austal.exe` (Windows) or `austal` (Linux) in section 1, *AUSTAL Executable*. The plugin remembers the path. See [Calculate Dispersion dialog](../user/DISPERSION_AUSTAL.md#calculate-dispersion-dialog).
 
-### Important: Configuration File Setup
+The **AUSTAL Help** button in that section repeats these steps and links to the files of this folder on GitHub, since the plugin package does not contain them.
 
-After extracting AUSTAL, you must replace the default `austal.settings` file with the one provided in the OpenALAQS package:
+## Configuration files
 
-- Locate `austal.settings` in the AUSTAL installation directory
-- Replace it with the `austal.settings` file provided with OpenALAQS
-- This ensures proper integration and configuration for OpenALAQS simulations
-
-The English language files (`AST_en@latin1.nls` and `DIA_en@latin1.nls`, Latin-1 / ISO-8859-1 encoding) ship in the separate AUSTAL "Sprachpakete DE/EN, UTF-8/ISO-8859-1" language pack download from the same UBA page. If they are not already in your AUSTAL installation, use the copies bundled in this folder (`documents/AUSTAL/`).
-
-## Configuration Files
+| File | Purpose | What to do |
+|------|---------|------------|
+| `austal.settings` | AUSTAL's system and substance settings, with the sections OpenALAQS needs added | Replace the file of the AUSTAL folder with this copy |
+| `AST_en@latin1.nls` | English assistant messages | Copy into the AUSTAL folder if missing |
+| `DIA_en@latin1.nls` | English diagnostic messages | Copy into the AUSTAL folder if missing |
 
 ### austal.settings
 
-The `austal.settings` file is the main configuration file for AUSTAL simulations within OpenALAQS. This file contains:
+`austal.settings` contains:
 
-- Model parameters (grid resolution, time steps, etc.)
-- Meteorological data specifications
-- Receptor grid definitions
-- Output format and locations
-- Source configuration details
+- `[.system]`: deposition parameters of the five aerosol groups;
+- `[.astl]`: the standard substance properties (units, concentration factor, reference values, deposition settings), the NO to NO2 conversion times and the odour threshold;
+- one section per substance (`[SO2]`, `[NOX]`, `[NO2]`, `[PM]`, `[ODOR]`, ...) with its units, assessment values and, where relevant, deposition and washout parameters.
 
-### Files to Add/Modify
+The OpenALAQS copy adds four substances that OpenALAQS writes to AUSTAL and that are not among AUSTAL's standard substances: `[SOX]`, `[HC]`, `[CO2]` and `[CO]`. They are gaseous (aerosol group 0) passive tracers with no deposition or washout, reported in µg/m³ (CO2 in mg/m³). Without them, AUSTAL cannot handle these pollutants.
 
-When setting up AUSTAL for use with OpenALAQS, ensure the following files are in place:
+The file does not hold the grid, meteorology, receptors or sources of a run. OpenALAQS writes those for each run; see [AUSTAL input files](../user/DISPERSION_AUSTAL.md#austal-input-files).
 
-| File | Purpose | Status |
-|------|---------|--------|
-| `austal.settings` | Main AUSTAL configuration | Replace with the copy from `documents/AUSTAL/` |
-| `AST_en@latin1.nls` | English assistant-message catalogue | Copy from `documents/AUSTAL/` if missing |
-| `DIA_en@latin1.nls` | English diagnostic-message catalogue | Copy from `documents/AUSTAL/` if missing |
+### Language files
 
+`AST_en@latin1.nls` and `DIA_en@latin1.nls` make AUSTAL write its messages in English (Latin-1 / ISO-8859-1 encoding). They are part of the separate AUSTAL language pack ("Sprachpakete DE/EN, UTF-8/ISO-8859-1") on the same UBA page. The copies in this folder save that download.
 
-## Additional Resources
+## See also
 
-- [AUSTAL Documentation](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview)
-- [Janicke Consulting](https://www.janicke.de/) - AUSTAL developers
+- [Dispersion modelling with AUSTAL](../user/DISPERSION_AUSTAL.md)
+- [AUSTAL documentation (UBA)](https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/overview)
+- [Janicke Consulting](https://www.janicke.de/), the developers of AUSTAL

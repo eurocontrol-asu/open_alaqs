@@ -114,7 +114,7 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
             # calculation. They are retained for now so that existing
             # .alaqs files and CSV exports remain round-trippable; they
             # will be dropped as part of a future schema-v2 migration.
-            # See open_alaqs/database/DEPRECATIONS.md for the full list
+            # See documents/developer/DEPRECATIONS.md for the full list
             # and rationale.
             #
             # Column order MUST match the schema baked into
@@ -144,7 +144,7 @@ class EngineEmissionIndicesDatabase(SQLSerializable, metaclass=Singleton):
                     (
                         "fuel_type",
                         "TEXT",
-                    ),  # DEPRECATED (schema v2) — runtime overridden
+                    ),  # DEPRECATED (schema v2); read for the SOx default (Engine.py)
                     (
                         "manufacturer",
                         "TEXT",

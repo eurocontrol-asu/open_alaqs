@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 
 import pytest
-from qgis.core import QgsMapLayer, QgsVectorLayer
+from qgis.core import Qgis, QgsMapLayer, QgsVectorLayer
 from qgis.testing import QgisTestCase, start_app
 from qgis.testing.mocked import get_iface
 
@@ -364,18 +364,24 @@ class EmissionCalculationTestCase(QgisTestCase):
                 layer = QgsVectorLayer(dataset["expected_file_path"], "output", "ogr")
                 assert layer.isValid()
 
-                assert self.checkLayersEqual(
-                    layer,
-                    res,
-                    use_asserts=True,  # Better for debugging in case of errors
-                    compare={
-                        "ignore_crs_check": True,  # Wrongly returns 4326 for the res layer, we'll check CRS later
-                        "fields": {
-                            "fid": "skip"
-                        },  # Expected layer has a fid field that we can ignore
-                        "unordered": True,  # Since no id, check that all values match, regardless of the ordering
-                    },
-                )
+                # QGIS 3.34 (the minimum version of the plugin) mis-pairs the fields in
+                # checkLayersEqual(unordered=True) when the expected layer has the extra "fid"
+                # field, and reports identical layers as different. There, the feature count
+                # and the per-cell check below carry the comparison.
+                if Qgis.QGIS_VERSION_INT >= 34000:
+                    assert self.checkLayersEqual(
+                        layer,
+                        res,
+                        use_asserts=True,  # Better for debugging in case of errors
+                        compare={
+                            "ignore_crs_check": True,  # Wrongly returns 4326 for the res layer, we'll check CRS later
+                            "fields": {
+                                "fid": "skip"
+                            },  # Expected layer has a fid field that we can ignore
+                            "unordered": True,  # Since no id, check that all values match, regardless of the ordering
+                        },
+                    )
+                assert layer.featureCount() == res.featureCount()
                 assert layer.crs() == res.crs()
                 # checkLayersEqual(unordered=True) pairs the result's attributes with the expected layer's
                 # fields, and the expected layers carry an extra "fid" first: the emission value is never

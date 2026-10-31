@@ -1,22 +1,23 @@
-# tools/template_build/
+# Template build
 
-Build-time tooling for the Open-ALAQS plugin's canonical SpatiaLite templates.
+For maintainers: the build-time tooling that produces the Open-ALAQS
+plugin's canonical SpatiaLite templates, and when to run it.
 
 ## What this directory does
 
 The Open-ALAQS plugin ships two pre-built SpatiaLite databases that act as
 schema templates for user studies:
 
-- `open_alaqs/core/templates/project.alaqs` — empty project file (the
+- `open_alaqs/core/templates/project.alaqs`: empty project file (the
   `.alaqs` a user creates and edits in QGIS)
-- `open_alaqs/core/templates/inventory.alaqs` — empty inventory output
+- `open_alaqs/core/templates/inventory.alaqs`: empty inventory output
   file (`*_out.alaqs` produced by Generate Emission Inventory)
 
 These templates are built by `generate_templates.py` from three inputs:
 
-- `spatialite_base.alaqs` — bare SpatiaLite scaffold (this directory)
-- `sql/*.sql` — table-creation scripts (this directory)
-- `open_alaqs/database/data/*.csv` — frozen reference-data CSVs (in the
+- `spatialite_base.alaqs`: bare SpatiaLite scaffold (this directory)
+- `sql/*.sql`: table-creation scripts (this directory)
+- `open_alaqs/database/data/*.csv`: frozen reference-data CSVs (in the
   plugin tree, treated as source of truth)
 
 ## When this directory is used
@@ -48,35 +49,16 @@ reference data from `open_alaqs/database/data/*.csv`. The CSVs are read
 with `float_precision="round_trip"`, so every stored REAL is the CSV text
 value exactly (pandas' default parser is up to a few ulp off). It
 overwrites the checked-in templates, so review the diff before committing.
-The shipped templates are a rebuild of October 2026 (pandas 2.2.1, SQLite
-3.45.1), made when the numeric columns of the shapes layers became `REAL`
-(they were `DECIMAL`, which the QGIS SpatiaLite provider types from the
-stored data instead of as Double). Compared table by table with the
-templates shipped before, that rebuild changed:
+The shipped templates were built this way (pandas 2.2.1, SQLite 3.45.1).
+The numeric columns of the 8 `shapes_*` tables are declared `REAL` (65
+columns; `DECIMAL` would let the QGIS SpatiaLite provider type them from the
+stored data instead of as Double); `instudy` of `shapes_runways` and
+`shapes_taxiways` stays `DECIMAL`, a flag. The reference tables equal the
+CSVs exactly; `tests/test_database.py::test_template_data` compares them
+with `pandas.testing.assert_frame_equal` at its default relative tolerance.
 
-- the declared type of 65 columns of 8 `shapes_*` tables, `DECIMAL` to
-  `REAL` (`instudy` of `shapes_runways` and `shapes_taxiways` stays
-  `DECIMAL`, a flag);
-- the column order of `shapes_runways` (`touchdown_2` after `touchdown`;
-  it was last in the earlier files, which had been migrated);
-- the rowid order of the `shapes_buildings` and `shapes_receptor_points`
-  rows of `geometry_columns`, `geometry_columns_auth`,
-  `geometry_columns_statistics` and `geometry_columns_time` (same content);
-- the timestamps and SQLite version of `spatialite_history` and the
-  creation dates of `user_study_setup`;
-- `project.alaqs` only: `default_vehicle_ef_copert5`, 26780 of 46435 rows
-  (202590 cells) by up to 1e-12 relative (the earlier table was loaded
-  with the default parser; the CSV holds 17-digit values such as
-  0.17500000000000004, the earlier table 0.175), and 17 cells of
-  `default_aircraft_engine_ei` by 1 ulp (the earlier table held, for
-  example, 31.57 where the CSV has 31.569999999999997: 6BR010 and
-  01P06BR014 TX `co_ei`, 4GE081 TO `nox_ei`, 07P27GE236 TO `pm10_nonvol`
-  and `nvpm_ei`, ...). The shipped tables now equal the CSVs;
-  `tests/test_database.py::test_template_data` accepts either. The
-  training studies carry their own copies of these tables, so their
-  results did not change.
-
-A further rebuild differs from the shipped files only in the timestamps.
+A rebuild differs from the shipped files only in the timestamps (of
+`spatialite_history` and the creation dates of `user_study_setup`).
 
 ## What this directory is still useful for
 
@@ -98,3 +80,9 @@ A further rebuild differs from the shipped files only in the timestamps.
 | `spatialite_base.alaqs` | Bare SpatiaLite scaffold (input) |
 | `sql/*.sql` | 10 CREATE TABLE scripts run against the scaffold (input) |
 | `__init__.py` | Marks this directory as a Python package so test code can `from tools.template_build.generate_templates import ...` |
+
+See also:
+
+- [REFERENCE_DATA.md](../../documents/methods/REFERENCE_DATA.md): the reference tables and their sources
+- [migrate_alaqs.py](../../scripts/README.md#migrate_alaqspy): bringing existing studies to the template schema
+- [tools/test_fixtures](../test_fixtures/README.md): refreshing test fixtures

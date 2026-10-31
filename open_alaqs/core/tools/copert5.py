@@ -215,7 +215,7 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
         # airport-specific values. Proper integration over a cold-zone
         # speed profile is a methodological refinement deferred to a
         # future PR; see "Known limitations and future work" item 1 in
-        # documents/AUXILIARY_MATERIAL.md.
+        # documents/methods/STATIONARY_AND_ROAD.md.
         if study_data.get("parking_include_cold_start", False):
             l_trip = study_data.get("parking_cold_trip_length_km", 12.4)
             cold_speed = study_data.get("parking_cold_speed_kmh", 30.0)
@@ -260,7 +260,7 @@ def roadway_emission_factors(input_data: dict, study_data: dict) -> dict:
         #   road fleets; not a priority pollutant for airport air quality.
         #   The dataset values are also ~10x lower than EMEP/EEA Guidebook
         #   Tier 2 references and would require verification before any
-        #   exposure (see documents/DATASET_PROVENANCE.md, data integrity
+        #   exposure (see documents/developer/DATASET_PROVENANCE.md, data integrity
         #   item 4).
         #
         # Calculate the average emissions per vehicle

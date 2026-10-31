@@ -219,10 +219,11 @@ def main(argv=None) -> int:
         "NOx_correction: bymode with the ICCAIA ambient NOx correction on take-off and climb-out segments.",
         heli_line,
         "Movement_Hourly and the four stationary-source sheets: the plugin's per-period emissions, for an",
-        "  installation check of a QGIS run of the training study (documents/VALIDATION_GUIDE.md).",
+        "  installation check of a QGIS run of the training study (documents/validation/VALIDATION_GUIDE.md).",
         "",
         "Values in kg per movement (Movement, Summary) or per hourly period (the other sheets).",
-        "Procedure and tolerances: openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md.",
+        "Procedure: openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md;"
+        " tolerances: documents/validation/VALIDATION_GUIDE.md (Tolerances).",
     ]:
         ws.append([line])
     ws["A1"].font = bold

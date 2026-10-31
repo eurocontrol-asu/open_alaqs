@@ -68,6 +68,9 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
         self._settings_schema = settings_schema
         self._settings_widgets: dict[str, QtWidgets.QWidget] = {}
         self._settings_labels: dict[str, QtWidgets.QLabel] = {}
+        # Per combo box setting: (user's choice, fallback value set by
+        # patch_schema) while the choice is not among the options.
+        self._forced_fallbacks: dict[str, tuple[Any, Any]] = {}
 
         self.setLayout(QtWidgets.QFormLayout())
 
@@ -192,13 +195,13 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
 
                 if not options:
                     value = None
+                else:
+                    current_index = setting_widget.currentIndex()
 
-                current_index = setting_widget.currentIndex()
+                    if current_index == -1:
+                        current_index = 0
 
-                if current_index == -1:
-                    current_index = 0
-
-                value = options[current_index][0]
+                    value = options[current_index][0]
             elif isinstance(setting_widget, QtWidgets.QTableWidget):
                 widget_config = cast(
                     TableWidgetConfig,
@@ -251,6 +254,9 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
                 init_values[setting_name] = setting_schema.get("initial_value", None)
 
         for setting_name, value in init_values.items():
+            # A value set from outside (e.g. a loaded configuration) replaces
+            # any remembered choice (patch_schema stores it after this call).
+            self._forced_fallbacks.pop(setting_name, None)
             setting_widget = self._settings_widgets[setting_name]
             setting_schema = self._settings_schema[setting_name]
 
@@ -302,6 +308,9 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
     def patch_schema(self, schema: SettingsSchema) -> None:
         for setting_name, new_schema in schema.items():
             old_schema = self._settings_schema[setting_name]
+            # The current value, read before _add_setting replaces the widget
+            # (the new widget always starts at its first option).
+            current_value = self.get_values().get(setting_name)
             patched_setting_schema = cast(
                 SettingSchema,
                 {
@@ -316,28 +325,43 @@ class ModuleConfigurationWidget(QtWidgets.QWidget):
             self._settings_schema[setting_name] = patched_setting_schema
             self._add_setting(setting_name, patched_setting_schema)
 
-            # Preserve the current widget value when it is still valid in the
-            # new options list.  Only fall back to initial_value when the
-            # current selection no longer exists (e.g. switching to a pollutant
-            # that doesn't support BFFM2).  Without this guard every call to
-            # populate_calculation_methods() — triggered by pollutant_changed —
-            # would silently reset "BFFM2" back to "bymode".
-            current_values = self.get_values()
-            current_value = current_values.get(setting_name)
+            # Keep the current value when it is still among the options.
+            # When it is not (e.g. BFFM2 for a pollutant without BFFM2), fall
+            # back to initial_value and remember the user's choice, so that it
+            # comes back once it is offered again, unless the user has changed
+            # the value in the meantime. Without this, every
+            # populate_calculation_methods() call (pollutant_changed) reset
+            # "BFFM2" to "bymode".
             widget_config = patched_setting_schema.get("widget_config", {})
             if widget_config and "options" in widget_config:
                 valid = [
                     o[0] if isinstance(o, tuple) else o
                     for o in widget_config["options"]
                 ]
-                reset_value = (
-                    current_value
-                    if current_value in valid
-                    else patched_setting_schema["initial_value"]
-                )
+                new_forced = None
+                forced = self._forced_fallbacks.get(setting_name)
+                if forced is not None and current_value != forced[1]:
+                    # the user changed the value after the fallback
+                    forced = None
+                    del self._forced_fallbacks[setting_name]
+                if forced is not None and forced[0] in valid:
+                    reset_value = forced[0]
+                    del self._forced_fallbacks[setting_name]
+                elif current_value in valid:
+                    reset_value = current_value
+                    new_forced = forced  # still waiting for its option
+                else:
+                    reset_value = patched_setting_schema["initial_value"]
+                    choice = forced[0] if forced is not None else current_value
+                    if choice is not None:
+                        new_forced = (choice, reset_value)
             else:
                 reset_value = patched_setting_schema["initial_value"]
+                new_forced = None
+            # init_values clears the remembered choice; store it afterwards.
             self.init_values({setting_name: reset_value})
+            if new_forced is not None:
+                self._forced_fallbacks[setting_name] = new_forced
 
     def get_widget(self, setting_name: str) -> QtWidgets.QWidget:
         return self._settings_widgets[setting_name]

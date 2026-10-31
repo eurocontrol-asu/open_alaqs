@@ -293,7 +293,7 @@ def make_config(
         "source_offset_cells": halo_cells,
         "max_receptors": 20,
         "source_aggregation": "by_type_per_pollutant",
-        # ICCAIA / CAEP14 v14 NOx ambient correction. False (default)
+        # ICCAIA / CAEP/14 NOx ambient correction. False (default)
         # = bymode NOx EI used as-is (CAEP9-equivalent baseline);
         # True = correction applied at TO/CL segments. BFFM2 methods
         # ignore this flag; their EI calculation has built-in ambient

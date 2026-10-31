@@ -1,32 +1,38 @@
-# `scripts/` — command-line utilities
+# Command-line scripts
 
-Standalone utilities for Open-ALAQS users and maintainers. None of them are
-invoked by the plugin at run time; they produce or transform the files that
-the plugin reads.
+The command-line utilities in `scripts/`, for Open-ALAQS users and
+maintainers: what each one does, and the usage of `migrate_alaqs.py` and
+`import_engine_test_events.py`. None of them are invoked by the plugin at
+run time; they produce or transform the files that the plugin reads. Which
+of them need the QGIS Python is in [WITHOUT_QGIS.md](../documents/user/WITHOUT_QGIS.md).
+
+Contents:
+
+- [Inventory](#inventory)
+- [metar_to_alaqs_meteo.py](#metar_to_alaqs_meteopy)
+- [migrate_alaqs.py](#migrate_alaqspy)
+- [import_engine_test_events.py](#import_engine_test_eventspy)
+- [migrate_alaqs_gui.py](#migrate_alaqs_guipy)
 
 ## Inventory
 
 | File | Purpose | When to run |
 |---|---|---|
-| `metar_to_alaqs_meteo.py` | Parse METAR observations into the `meteo.csv` format Open-ALAQS expects during *Create Output*. | Once per study, before inventory creation, to produce the hourly meteorology file. |
+| `metar_to_alaqs_meteo.py` | Parse METAR observations into the `meteo.csv` format Open-ALAQS expects during *Calculate Emissions Inventory*. | Once per study, before inventory creation, to produce the hourly meteorology file. |
 | `migrate_alaqs.py` | Upgrade a legacy `.alaqs` file to the current schema. | Whenever a user brings a `.alaqs` produced by an older plugin version and needs to open it with the current one. |
 | `migrate_alaqs_gui.py` | Qt5 GUI wrapper around `migrate_alaqs.py`. Exposes every CLI flag plus a live log panel; useful for users uncomfortable with the command line. | Same situations as `migrate_alaqs.py`, when a GUI is preferred. Run with QGIS's bundled Python (e.g. `C:\PROGRA~1\QGIS34~1.13\bin\python.exe migrate_alaqs_gui.py`). |
 | `import_engine_test_events.py` | Bulk-load engine run-up events from a CSV into the `engine_test_events` table. | After creating test-site area sources (`is_test_site='1'`) but before generating the emission inventory. |
 | `austal_from_csv/` | [BETA] Standalone CLI that produces AUSTAL dispersion-model input files from pre-computed emissions and meteo CSVs (no `.alaqs` needed). See [`austal_from_csv/README.md`](austal_from_csv/README.md). | When you already have emissions/meteo CSVs and want AUSTAL inputs. |
 | `emissions_austal/` | [BETA] Standalone CLI that runs the full emissions calculation against a `.alaqs` inventory and optionally generates AUSTAL inputs in one pass. See [`emissions_austal/README.md`](emissions_austal/README.md). | When you want to run the calculator headlessly from an OSGeo4W shell. |
-| `update-strings.sh` | Run `pylupdate4` to refresh the `i18n/*.ts` Qt translation source files from `*.py` / `*.ui` changes. | Translation-maintenance workflow; only needed when the plugin UI strings change. |
-| `compile-strings.sh` | Run `lrelease` to compile `i18n/*.ts` → `*.qm` binary translation files. | After the `.ts` files have been translated and you want the plugin to pick them up. |
-| `run-env-linux.sh` | Shell environment setup for running QGIS 2 from a custom prefix. Legacy; predates QGIS 3 system-wide installs and is kept only for developers on unusual setups. | Rarely. |
 
 ## `metar_to_alaqs_meteo.py`
 
 Converts a stream of METAR observations into `meteo.csv` with the columns
-Open-ALAQS reads during *Create Output*.  See
-[`README_metar_to_alaqs_meteo.md`](README_metar_to_alaqs_meteo.md) for the
-full specification: expected meteo.csv schema, METAR parsing details,
-supported pressure groups (`Q` in hPa, `A` in inHg × 100), mixing-height
-option, and how to swap the in-house parser for the `python-metar` package
-if desired.
+Open-ALAQS reads during *Calculate Emissions Inventory*. See
+[README_metar_to_alaqs_meteo.md](README_metar_to_alaqs_meteo.md) for the
+input formats, METAR parsing, stability classification, options and
+limitations; the meteo.csv format itself is in
+[INPUT_FORMATS.md](../documents/user/INPUT_FORMATS.md#meteorology).
 
 Quick example:
 
@@ -40,7 +46,7 @@ python3 scripts/metar_to_alaqs_meteo.py \
     --output AIRPORT_A_meteo.csv
 ```
 
-Network access is not required — METAR fetching is deliberately left to the
+Network access is not required: METAR fetching is deliberately left to the
 caller (curl, wget, a Python poller, `python-metar`, etc.). This keeps the
 parsing half usable on machines behind restrictive network policies.
 
@@ -49,7 +55,7 @@ parsing half usable on machines behind restrictive network policies.
 Two-phase migration tool for upgrading legacy `.alaqs` files to the
 current schema.
 
-### Phase 1 — schema migration (always runs unless `--skip-schema`)
+### Phase 1: schema migration (always runs unless `--skip-schema`)
 
 Diffs the source schema against the appropriate canonical template and
 applies the diff inside a transaction.
@@ -65,14 +71,14 @@ What Phase 1 handles:
 
 | Case | Default behaviour | Override |
 |---|---|---|
-| Table in REFERENCE but not in SOURCE | `CREATE TABLE` using REFERENCE's schema (empty table). | — |
+| Table in REFERENCE but not in SOURCE | `CREATE TABLE` using REFERENCE's schema (empty table). | none |
 | Table in SOURCE but not in REFERENCE | Reported as "extra"; left in place. | `--drop-extra-tables` to remove. |
-| Column in REFERENCE but not in SOURCE | `ALTER TABLE ... ADD COLUMN` with REFERENCE's declared type, NULL default. | — |
+| Column in REFERENCE but not in SOURCE | `ALTER TABLE ... ADD COLUMN` with REFERENCE's declared type, NULL default. | none |
 | Column in SOURCE but not in REFERENCE | Reported as "extra"; left in place. | `--drop-extra-columns` to remove: `ALTER TABLE ... DROP COLUMN` (SQLite 3.35 or later), which keeps the table's keys, NOT NULL, defaults, indexes and triggers; where SQLite refuses it, the table is rebuilt with the REFERENCE definitions of the kept columns (source order, rowids kept) and its indexes and triggers are recreated. |
 | Numeric column of a `shapes_*` layer declared `REAL` in REFERENCE and otherwise in SOURCE (`DECIMAL` in studies made with 5.3.x: height, speed, distance, idle_time, temperature, diameter, velocity, the `*_percentage` columns, `vehicle_year`, the emission factors, `gate_height`, taxiway `speed` and `time`, receptor `xcoord`, `ycoord`) | Converted (plan line `~ RETYPE`): the table is rebuilt with the REFERENCE definitions (source column order, rowids, keys, defaults, indexes and geometry triggers kept) and the values are kept numerically; a text value that reads as a number (`"2.5"`, `"30,3"`) becomes that number, an empty text becomes NULL, any other text (for example `Calculated` in the unused taxiway `time` of old studies, or `"1,234"`, which is 1.234 with a decimal comma but a grouped 1234) is reported on stderr, once per column with the count and three examples (`WARNING: <table>.<column>: <n> value(s) are not numbers and are left as text: ...`), and left as it is. Why: the QGIS SpatiaLite provider types a `DECIMAL` column from its stored data (integer when the values are whole numbers, text when the layer is empty), so a decimal typed in a form was rounded (2.5 saved as 3, 25 under a German locale) or stored as text; a `REAL` column is typed Double. | none |
 | QGIS layer statistics of a rebuilt `shapes_*` table, or statistics that type a `REAL` column of a `shapes_*` layer as integer or text (`geometry_columns_field_infos`, written by QGIS each time a layer is edited; a study retyped by the 5.4.0 script kept them) | Removed (with the rebuild, or plan line `~ STATISTICS`). Why: when these rows exist QGIS types the fields from them, not from the declared column types, so a retyped column stayed an integer or text field, the forms kept refusing a decimal ("Upgrade the study with scripts/migrate_alaqs.py") and the study kept logging the unmigrated warning. Without the rows QGIS types `REAL` as Double and recomputes the statistics on its next edit; the layer's extent and row count (`geometry_columns_statistics`) are kept. | none |
 | Other type/affinity differences on common columns | Warned, never auto-rewritten (SQLite is dynamically typed). | none |
-| Virtual tables (SpatialIndex, KNN2, ElementaryGeometries) | Filtered from both sides of the diff (they need the SpatiaLite extension to introspect; the runtime recreates them). | — |
+| Virtual tables (SpatialIndex, KNN2, ElementaryGeometries) | Filtered from both sides of the diff (they need the SpatiaLite extension to introspect; the runtime recreates them). | none |
 
 Registered data-preserving transforms are run for special rename pairs.
 The one currently registered is the legacy 1D axial
@@ -80,7 +86,7 @@ The one currently registered is the legacy 1D axial
 → 3D Cartesian (`x_m`, `y_m = 0`, `z_m`). Add new entries to the `RENAMES`
 dict at the top of the script as the schema evolves.
 
-### Phase 2 — reference-data refresh (opt-in via `--refresh-reference-data`)
+### Phase 2: reference-data refresh (opt-in via `--refresh-reference-data`)
 
 Replaces the contents of selected reference tables with the rows from
 the matching CSV in `--data-dir` (default: `open_alaqs/database/data/`).
@@ -105,11 +111,17 @@ WILL BE OVERWRITTEN.
 
 Pass `--refresh-tables T1,T2,...` to override the list entirely.
 
-A hardcoded guard refuses to refresh user-data tables (`user_*`,
-`shapes_*`) regardless of `--refresh-tables`. The guard logs a warning
+A hardcoded guard refuses to refresh user-data tables regardless of
+`--refresh-tables`. The guard is an explicit table set
+(`USER_DATA_TABLES_FORBIDDEN_FROM_REFRESH` in `migrate_alaqs.py`), not a
+`user_*` / `shapes_*` pattern: `user_aircraft_movements`,
+`user_study_setup`, `user_day_profile`, `user_hour_profile`,
+`user_month_profile`, `user_taxiroute_taxiways` and the `shapes_*` layers
+`runways`, `taxiways`, `gates`, `tracks`, `parking`, `roadways`,
+`buildings`, `point_sources`, `area_sources`, `receptor_points`. The guard logs a warning
 and silently strips forbidden names from the resolved list.
 
-### Phase 3 — point-sources v2 hooks (auto, opt-out via `--skip-point-sources-v2`)
+### Phase 3: point-sources v2 hooks (auto, opt-out via `--skip-point-sources-v2`)
 
 Two small post-migration steps tied to the point-sources v2 schema:
 
@@ -163,7 +175,7 @@ To skip Phase 3 entirely, pass `--skip-point-sources-v2`.
   any write.
 - The tool is idempotent for Phase 1 (running on a migrated file
   produces an empty plan). Phase 2 is destructive by design (replace,
-  not merge) — running it twice is a no-op only if the source's
+  not merge): running it twice is a no-op only if the source's
   reference data already matches the CSV exactly.
 
 ### Usage
@@ -224,44 +236,30 @@ python3 scripts/migrate_alaqs.py legacy.alaqs \
 ## `import_engine_test_events.py`
 
 Bulk-loads engine-test event rows from a CSV into an ALAQS project's
-`engine_test_events` table. Consumed after users have created their
-test-site area sources (`is_test_site='1'` — see the "Engine test
-sites" subsection of `documents/USER_GUIDE.md`) and want to populate
-events without writing SQL by hand.
+`engine_test_events` table. Use it after creating the
+test-site area sources (`is_test_site='1'`, see
+[Engine test sites](../documents/user/USER_GUIDE.md#engine-test-sites)) to
+populate events without writing SQL by hand.
 
 ### CSV format
 
-Wide format, one row per event. Header required. Column names match
-the DB schema exactly:
-
-- **Required:** `source_id`, `start_datetime`, `end_datetime`,
-  `aircraft_type`
-- **Optional:** `test_id`, `engine_uid`, `engine_count`, `t_TX_s`,
-  `t_AP_s`, `t_CL_s`, `t_TO_s`, `instudy`
-
-`thrust_mode` is intentionally NOT accepted from CSV: the DB column
-still exists and defaults to `snap`, so users who need `meem` or
-`bffm2` should `UPDATE` the row via SQL. This makes the choice
-explicit rather than silently mis-typed in a spreadsheet cell.
-
-Datetimes must be ISO 8601 (e.g. `2024-12-01T09:00:00`). `instudy`
-must be `0` or `1` (defaults to `1`). Mode times (`t_*_s`) are
-integer seconds, default 0. `engine_count` if given must be a
-positive integer; if blank, falls back to the aircraft's default at
-compute time.
+One row per event, with a header row. The columns are specified in
+[INPUT_FORMATS.md](../documents/user/INPUT_FORMATS.md#engine-test-events).
+The importer does not read a `thrust_mode` column: imported events get
+the database default, `snap`.
 
 ### Modes
 
 - **Dry run (default):** validates the CSV against the DB, prints
   a summary, no writes.
 - `--apply` performs the INSERT.
-- `--mode append` (default) — add rows to existing events.
-- `--mode replace-for-source` — DELETE existing events for each
+- `--mode append` (default): add rows to existing events.
+- `--mode replace-for-source`: DELETE existing events for each
   `source_id` in the CSV, then insert. Re-import a corrected batch
   cleanly.
-- `--mode replace-all` — DELETE all events first. Requires
+- `--mode replace-all`: DELETE all events first. Requires
   `--i-mean-it` as a safety flag against scripted mistakes.
-- `--tolerate-warnings` — proceed even with warnings (unknown
+- `--tolerate-warnings`: proceed even with warnings (unknown
   `source_id`, unknown `engine_uid`, running seconds exceed event
   window, etc.). Default is to fail on any warning.
 
@@ -342,14 +340,11 @@ and trigger a warning dialog before apply.
 
 The Phase 3 group box exposes two checkboxes:
 
-- *Skip Phase 3* — equivalent to `--skip-point-sources-v2`.
-- *Emit deprecated-pin report* — equivalent to `--report-deprecated-pins`. The report path is auto-generated next to the source file.
+- *Skip Phase 3*: equivalent to `--skip-point-sources-v2`.
+- *Emit deprecated-pin report*: equivalent to `--report-deprecated-pins`. The report path is auto-generated next to the source file.
 
-## Translation helpers
+See also:
 
-`update-strings.sh` and `compile-strings.sh` are thin wrappers around Qt's
-`pylupdate4` and `lrelease` respectively. They operate on the `i18n/`
-directory at the plugin root. Modern Qt 5 / PyQt5 setups may require
-`pylupdate5` / `lrelease-qt5` binaries; edit the scripts in place if your
-distro uses different names. These are infrequently needed — only when the
-plugin UI strings are edited.
+- [WITHOUT_QGIS.md](../documents/user/WITHOUT_QGIS.md): which tool to run without the QGIS GUI
+- [UPGRADING.md](../documents/user/UPGRADING.md): upgrading studies from earlier versions
+- [INPUT_FORMATS.md](../documents/user/INPUT_FORMATS.md): input file formats

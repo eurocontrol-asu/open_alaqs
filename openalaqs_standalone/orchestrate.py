@@ -823,7 +823,7 @@ def main(argv=None):
         action="store_true",
         default=False,
         dest="apply_nox_corrections",
-        help="Apply the ICCAIA / CAEP14 v14 NOx ambient correction at "
+        help="Apply the ICCAIA / CAEP/14 NOx ambient correction at "
         "takeoff (TO) and climb-out (CL) segments. Reads ambient "
         "T/P/RH from tbl_InvMeteo and airport_elevation from "
         "user_study_setup. Only effective with "

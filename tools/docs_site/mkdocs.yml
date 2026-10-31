@@ -1,0 +1,186 @@
+# Documentation site of OpenALAQS (search, navigation), built from the Markdown files
+# of the repository as they are, so GitHub and the site show the same text.
+#   pip install -r tools/docs_site/requirements.txt
+#   mkdocs serve -f tools/docs_site/mkdocs.yml      # preview at http://127.0.0.1:8000
+#   mkdocs build --strict -f tools/docs_site/mkdocs.yml
+site_name: OpenALAQS documentation
+site_url: https://eurocontrol-asu.github.io/open_alaqs/
+site_description: Airport local air quality studies with the OpenALAQS QGIS plugin and AUSTAL
+repo_url: https://github.com/eurocontrol-asu/open_alaqs
+repo_name: eurocontrol-asu/open_alaqs
+edit_uri: edit/main/
+copyright: EUROCONTROL, European Union Public Licence v. 1.2 with amendments
+
+# The repository root is the source, so that links between the READMEs next to the
+# code and documents/ work unchanged. Only the files listed below are published
+# (/assets/ is the theme's folder, not a repository folder).
+docs_dir: ../..
+# Pages as <name>.html (not <name>/index.html), so that the relative paths of the
+# <img> tags in the Markdown files, written for GitHub, also work on the site.
+use_directory_urls: false
+site_dir: ../../../openalaqs_site  # outside the repository (mkdocs refuses a site_dir inside docs_dir)
+exclude_docs: |
+  /*
+  !/assets/
+  !/README.md
+  !/CHANGELOG.md
+  !/LICENCE.md
+  !/AMENDMENT_TO_EUPL_license.md
+  !/documents/
+  !/openalaqs_standalone/
+  /openalaqs_standalone/**
+  !/openalaqs_standalone/README.md
+  !/openalaqs_standalone/USAGE.md
+  !/openalaqs_standalone/validation/
+  /openalaqs_standalone/validation/**
+  !/openalaqs_standalone/validation/tools/
+  /openalaqs_standalone/validation/tools/**
+  !/openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md
+  !/scripts/
+  /scripts/**
+  !/scripts/*.md
+  !/scripts/austal_from_csv/
+  /scripts/austal_from_csv/**
+  !/scripts/austal_from_csv/README.md
+  !/scripts/emissions_austal/
+  /scripts/emissions_austal/**
+  !/scripts/emissions_austal/README.md
+  !/example/
+  /example/**
+  !/example/training/
+  /example/training/**
+  !/example/training/*.README.md
+  !/gse_application/
+  /gse_application/**
+  !/gse_application/README.md
+  !/gse_application/images/
+  !/gse_application/images/**
+  !/tools/
+  /tools/**
+  !/tools/*/
+  /tools/*/**
+  !/tools/*/README.md
+  !/open_alaqs/
+  /open_alaqs/**
+  !/open_alaqs/assets/
+  !/open_alaqs/assets/**
+  !/open_alaqs/icons/
+  !/open_alaqs/icons/**
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.action.edit
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+
+# One copy of the site per release (mike); the selector in the header switches version.
+extra:
+  version:
+    provider: mike
+    default: latest
+
+hooks:
+  - hooks.py
+
+plugins:
+  - search:
+      separator: '[\s\-_,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)'
+
+markdown_extensions:
+  - tables
+  - toc:
+      permalink: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+
+validation:
+  nav:
+    omitted_files: info
+    not_found: warn
+    absolute_links: info
+  # Links to source files (.py, .csv, ...) are valid on GitHub but are not part of
+  # the site; tools/check_doc_links.py checks every link and anchor instead.
+  links:
+    not_found: info
+    absolute_links: info
+    unrecognized_links: info
+    anchors: warn
+
+not_in_nav: |
+  /LICENCE.md
+  /AMENDMENT_TO_EUPL_license.md
+
+nav:
+  - Home:
+      - Overview: README.md
+      - Documentation index: documents/README.md
+      - Glossary: documents/GLOSSARY.md
+  - Using OpenALAQS:
+      - User Guide: documents/user/USER_GUIDE.md
+      - "Tutorial: Rotterdam The Hague": documents/user/TUTORIAL_ROTTERDAM.md
+      - Input formats: documents/user/INPUT_FORMATS.md
+      - Dispersion with AUSTAL: documents/user/DISPERSION_AUSTAL.md
+      - AUSTAL installation: documents/AUSTAL/AUSTAL.md
+      - Upgrading: documents/user/UPGRADING.md
+      - Troubleshooting: documents/user/TROUBLESHOOTING.md
+      - "Training course: errata": documents/user/TRAINING_COURSE_ERRATA.md
+  - Methods:
+      - Aircraft emissions: documents/methods/AIRCRAFT_EMISSIONS.md
+      - Ambient conditions aloft: documents/methods/ATMOSPHERE_ALOFT.md
+      - Helicopters: documents/methods/HELICOPTERS.md
+      - Stationary sources and road traffic: documents/methods/STATIONARY_AND_ROAD.md
+      - Reference data: documents/methods/REFERENCE_DATA.md
+  - Command line:
+      - Which tool: documents/user/WITHOUT_QGIS.md
+      - "Standalone: usage": openalaqs_standalone/USAGE.md
+      - "Standalone: architecture": openalaqs_standalone/README.md
+      - Scripts: scripts/README.md
+      - METAR to meteo: scripts/README_metar_to_alaqs_meteo.md
+      - emissions_austal: scripts/emissions_austal/README.md
+      - austal_from_csv: scripts/austal_from_csv/README.md
+      - GSE application: gse_application/README.md
+      - Example configurations: example/training/recipe_config.README.md
+      - Example engine test events: example/training/training_engine_test_events.README.md
+  - Validation:
+      - Validation guide: documents/validation/VALIDATION_GUIDE.md
+      - CAEP14 reference: openalaqs_standalone/validation/tools/CAEP14_VALIDATION.md
+  - Maintainers:
+      - Code structure and flow: documents/developer/CODE_FLOW.md
+      - Regression patterns: documents/developer/REGRESSION_PATTERNS.md
+      - Aircraft profiles provenance: documents/developer/AIRCRAFT_PROFILES_PROVENANCE.md
+      - COPERT dataset provenance: documents/developer/DATASET_PROVENANCE.md
+      - Schema deprecations: documents/developer/DEPRECATIONS.md
+      - "Design: atmosphere aloft validation": documents/developer/design/ATMOSPHERE_ALOFT_VALIDATION.md
+      - Template build: tools/template_build/README.md
+      - ANP 2.2 profiles builder: tools/anp22_profiles/README.md
+      - Test fixtures: tools/test_fixtures/README.md
+      - Changelog: CHANGELOG.md

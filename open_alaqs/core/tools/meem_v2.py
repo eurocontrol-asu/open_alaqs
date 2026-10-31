@@ -2,10 +2,10 @@
 meem_v2.py — MEEM V2 nvPM emission index calculator
 =====================================================
 Implements the Main Engine Emission Model version 2 (MEEM V2) as specified
-in ICAO CAEP/13-WG3 and validated against CAEP14 FBE Calculation Sheet v12
-tab "MEEM_V2" for engine 10GE129.
+in ICAO CAEP/13-WG3 and validated against reference values of the MEEM V2
+method for engine 10GE129.
 
-Not used by the emission calculation: MEEM V2 (CAEP14 v12+) is kept for
+Not used by the emission calculation: MEEM V2 (CAEP/14) is kept for
 evaluation, its adoption is to be decided (MovementSourceModule runs MEEM V1).
 The comparison with V1 below refers to the earlier V1 implementation.
 
@@ -16,7 +16,7 @@ MEEM V2 differs from MEEM V1 in the interpolation variable:
     0.85, 1.00.  At climb-out thrust (0.85 anchor) the method returns the
     anchor EI exactly regardless of ambient conditions.
 
-  V2 (ICAO CAEP/13-WG3, the CAEP14 v12 preferred method):
+  V2 (ICAO CAEP/13-WG3, the CAEP/14 preferred method):
     Interpolate on BFFM2-adjusted fuel flow (FFadj in kg/s).  Anchor
     FFadj values are engine-specific, derived from the EEDB reference
     fuel flows at each mode via BFFM2's θ/δ/Mach correction evaluated at
@@ -32,7 +32,7 @@ engine 10GE129 at climb-out 253 ft, Mach 0.228, OPR 25.6, LTO:
   V2:  36.63 mg/kg   (linear interp between FFadj anchors 0.22542 and 0.65845)
   ratio V2/V1 = 0.836 — about 16% lower
 
-Interpolation math per CAEP14 sheet:
+Interpolation math of MEEM V2:
   * Mass EI: linear-linear interpolation between adjacent FFadj anchors:
       EI(FFadj) = EI[i] + (FFadj - FF[i]) / (FF[i+1] - FF[i]) × (EI[i+1] - EI[i])
     Values below FF[0] are clamped to EI[0]; above FF[-1] clamped to EI[-1].
@@ -69,7 +69,6 @@ Usage:
 
 References:
   ICAO CAEP/13-WG3, MEEM V2 specification.
-  CAEP14 FBE Engines Emissions Calculation Sheet v12, "MEEM_V2" tab.
 """
 
 import logging
@@ -80,8 +79,8 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # ── Atmosphere and altitude-chain helpers ─────────────────────────────────────
-# Copied from the earlier meem_v1.py (before the V1 port to the CAEP14 v14
-# MEEM_V1 tab) so that MEEM V2 keeps its behaviour unchanged.
+# Copied from the earlier meem_v1.py (before the current MEEM V1
+# implementation) so that MEEM V2 keeps its behaviour unchanged.
 
 
 @dataclass(frozen=True)
@@ -100,9 +99,9 @@ ISA = _ISA()
 # Exponent for ISA pressure model: g / (R × |lapse|)
 _ISA_PRESSURE_EXPONENT = ISA.g / (ISA.R * abs(ISA.lapse))  # ≈ 5.2561
 
-# Phase-specific compressor efficiency (ηcomp) from CAEP14 Constants tab.
+# Phase-specific compressor efficiency (ηcomp) from the MEEM segment constants.
 # LTO modes use the climb-out value (conservative; true LTO efficiency is not
-# explicitly given in the CAEP14 sheet for ground-level operations).
+# explicitly given by the method for ground-level operations).
 PHASE_ETA_COMP: dict[str, float] = {
     "TAKE OFF": 0.88,
     "CLIMB OUT": 0.88,
@@ -113,7 +112,7 @@ PHASE_ETA_COMP: dict[str, float] = {
     "TAXI": 0.88,
 }
 
-# DLR enrichment model exponents (CAEP14 MEEM_V1 sheet, section 7).
+# DLR enrichment model exponents (MEEM V1, section 7).
 # Typical values from the literature; both exponents are ~1 for standard engines.
 _N_MASS: float = 1.0  # enrichment exponent for nvPM mass EI
 _N_NUMBER: float = 1.0  # enrichment exponent for nvPM number EI
@@ -259,8 +258,8 @@ def interpolate_on_ffadj_linear(
     ei_values: list[float],
 ) -> float:
     """
-    Linear-linear piecewise interpolation on FFadj, matching the CAEP14 v12
-    MEEM_V2 sheet behaviour.
+    Linear-linear piecewise interpolation on FFadj, matching the MEEM V2
+    method.
 
     Clamping rules: values below the first anchor return the first EI;
     values above the last anchor return the last EI. No extrapolation.
