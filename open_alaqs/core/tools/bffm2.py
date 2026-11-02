@@ -97,9 +97,7 @@ def calculate_emission_index(  # noqa: C901
 
     Formula conventions (SAE AIR-5715 / CAEP/14 BFFM2 formulation):
       ff_ref = ff_amb / delta * theta^3.8 * exp(0.2 * M^2)
-        CAEP14 applies this formula universally for both LTO and non-LTO.
-        ICAO Doc 9889 App 2 uses sqrt(theta)/delta at LTO only; this code
-        follows CAEP14 throughout.
+        SAE AIR5715 Eq. 2; CAEP14 applies it to LTO and non-LTO segments alike.
 
       NOx humidity: h = -19 * (omega - 0.00634)
         SAE-5715 relative correction vs ISA reference-day humidity omega_0=0.00634.
@@ -237,9 +235,7 @@ def calculate_emission_index(  # noqa: C901
 
     # FF_ref = Fuel flow at reference conditions (kg/s)
     # fuel_flow = Fuel flow at AMBIENT (non-reference) conditions (kg/s)
-    # SAE AIR-5715 / CAEP14 formula — same for both LTO and non-LTO.
-    # Note: ICAO Doc 9889 App 2 uses sqrt(theta)/delta for LTO only;
-    #       CAEP14 uses theta^3.8/delta universally (CAEP/14 BFFM2 formulation).
+    # SAE AIR5715 Eq. 2 / CAEP14 formula, the same for LTO and non-LTO segments.
     ff_ref = (fuel_flow / delta) * (theta**3.8) * np.exp(0.2 * m**2)
 
     ############################################################################
@@ -379,19 +375,19 @@ def calculate_emission_index(  # noqa: C901
 
         elif x2 <= x_ff_log <= x3:
             if data_behavior == 1:  # standard
-                # CAEP/14 / SAE AIR-5715 "HC_CO Slope To Mean Value" rule for the
-                # standard-intersection case (intersection of the IDLE-APP slanting line
-                # and the (CL, TO)-mean horizontal line falls inside the [APP, CL] FF
-                # range).  In this case the CAEP procedure snaps the EI to the
-                # horizontal value (mean of CL and TO anchor EIs) for ANY FF above the
-                # APP anchor, producing a step discontinuity at the APP boundary.
-                # Physically this reflects that CO/HC reach their combustion-complete
-                # floor almost immediately past approach thrust.
+                # CAEP/14 "HC_CO Slope To Mean Value" rule for the standard-intersection
+                # case (intersection of the IDLE-APP slanting line and the (CL, TO)-mean
+                # horizontal line falls inside the [APP, CL] FF range).  In this case
+                # the CAEP procedure snaps the EI to the horizontal value (mean of CL
+                # and TO anchor EIs) for ANY FF above the APP anchor, producing a step
+                # discontinuity at the APP boundary.
                 #
-                # The previous implementation kept the slanting line up to the
-                # intersection and only snapped beyond.  That smoothed the step but
-                # disagreed with the CAEP/14 BFFM2 reference values by up to a factor of 8 at
-                # borderline cases (e.g. warm-humid APP-anchor segments).
+                # This deliberately differs from SAE AIR5715 (2009) section 5.2.1 and
+                # DuBois & Paynter (2006), where the slanting line is followed up to
+                # the intersection and the horizontal line applies beyond it.  The
+                # previous implementation did that; it disagreed with the CAEP/14
+                # BFFM2 reference values by up to a factor of 8 at borderline cases
+                # (e.g. warm-humid APP-anchor segments).  OpenALAQS follows CAEP/14.
                 y_ff_log = lin_av
             elif data_behavior == 2:  # non-standard: log-linear APP→horizontal
                 # When the SL/HL intersection falls outside [APP, CL] the CAEP
