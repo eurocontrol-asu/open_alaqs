@@ -9,7 +9,7 @@ qgisMaximumVersion=4.99
 supportsQt6=True
 description=An open-source local air quality model
 
-version=5.4.1
+version=5.4.2
 author=Eurocontrol
 email=open-alaqs@eurocontrol.int
 
@@ -22,7 +22,11 @@ repository=https://github.com/eurocontrol-asu/open_alaqs
 # Recommended items:
 
 hasProcessingProvider=no
-changelog=5.4.1
+changelog=5.4.2
+    Fixes; results of the shipped examples do not change. Results change only for the cases named in CHANGELOG.md, among them: dispersion from OpenALAQS output now uses the chosen emission settings and clips flight segments and roadways to the grid; receptor heights are passed to AUSTAL; movements calculated together no longer share the aircraft type, tow_ratio, gate emissions code or track of the group's first movement; single-engine taxi with a main engine start before take-off and the queue of a departure; the meteo row of BFFM2 engine tests. Movements files with a wrong or missing header are read in the documented column order.
+    Standalone and Dataiku library: single-engine taxi and taxi_fuel_ratio as in the plugin; meteo row and LTO ceiling as in the plugin.
+    Documentation reorganised and published at https://eurocontrol-asu.github.io/open_alaqs/ ; new toolbar button "Open ALAQS documentation". See "Upgrading from 5.4.1" in the user guide.
+    5.4.1
     Results change for BFFM2: the fuel flow read on the ICAO curve at the thrust share is scaled to ambient with delta * sqrt(theta) (corrected-parameter scaling), not the inverse of the BFFM2 index conversion, which lowered the fuel flow on warm days; affects bffm2_traj with ANP profiles, BFFM2 taxi and BFFM2 engine tests.
     Results change: new option "Atmosphere Aloft" (default standard_lapse): temperature, pressure and humidity at each flight segment's height from the hourly meteo row (station pressure from QNH, ISA lapse rate; surface_layer = AUSTAL 3.3 boundary-layer profile as an option); affects the BFFM2 indices and fuel flow in flight, BFFM2 taxi and engine tests (station pressure), and MEEM V1 nvPM above 3000 ft for all methods. ground_held restores the 5.4.0 ambient conditions only; no option gives 5.4.0 BFFM2 results back. See "Upgrading from 5.4.0" in the user guide.
     Results change for AUSTAL runs that keep the defaults: the AUSTAL site parameters default to z0 0.1 m (TA Luft value for airports), d0 6 z0 and ha 10 m + d0 (were 0.2 / 1.2 / 11.2 m), derived from z0 when left at 0; one default for the plugin, the standalone and austal_prep. See "Roughness length, displacement height and anemometer height" in the user guide.

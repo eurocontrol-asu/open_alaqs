@@ -4,11 +4,13 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
-## [Unreleased]
+## [5.4.2] - 2026-11-02
 
-Results of the shipped examples and of the validation fixtures do not change
-(plugin, standalone and CAEP14 reference outputs identical to 5.4.1). The
-fixes below change results only for the cases they name.
+Upgrading a 5.4.1 study: see
+[Upgrading from 5.4.1](documents/user/UPGRADING.md#upgrading-from-541). Results
+of the shipped examples and of the validation fixtures do not change (plugin,
+standalone and CAEP14 reference outputs identical to 5.4.1). The fixes below
+change results only for the cases they name.
 
 ### Fixed
 
@@ -198,6 +200,13 @@ fixes below change results only for the cases they name.
   (`documents/methods/AIRCRAFT_EMISSIONS.md`).
 - Training course slides (March 2026): an errata page lists where they differ
   from 5.4.1 (`documents/user/TRAINING_COURSE_ERRATA.md`).
+- Aircraft emissions documentation: where OpenALAQS differs from the published
+  SAE methods, and by how much: the CO and HC curve between approach and
+  climb-out (CAEP/14 rule, not SAE AIR 5715), no extrapolation below idle, the
+  unscaled `mode_anchor` fuel flow (SAE AIR6183), the static conditions of the
+  delta sqrt(theta) fuel scaling, the single NOx P3T3 exponent, and the taxi
+  fuel flow (SAE AIR8035). The references to a "Doc 9889 Appendix 2"
+  fuel-flow correction are replaced by SAE AIR 5715 (no change in results).
 - External links updated (ICAO Doc 9889, FOCA engine emissions, COPERT,
   QGIS installer).
 
