@@ -2,8 +2,23 @@
 
 This page is for users who open a study made with an earlier version of OpenALAQS. It lists which results change and how to update the study file.
 
+- [Upgrading from 5.4.1](#upgrading-from-541)
 - [Upgrading from 5.4.0](#upgrading-from-540)
 - [Upgrading from 5.3.x](#upgrading-from-53x)
+
+## Upgrading from 5.4.1
+
+OpenALAQS 5.4.2 is a fix release. Studies need no migration, and the shipped examples give the same results as with 5.4.1. The full list is in the [`CHANGELOG`](../../CHANGELOG.md).
+
+**Recalculate** only a study that falls under one of these cases:
+
+- **AUSTAL runs made with Calculate Dispersion, "Generate from OpenALAQS output".** The emissions are recalculated with the emission settings chosen in the dialog (they were always bymode, without NOx correction or source dynamics), flight segments and roadways are clipped to the grid, and the receptor heights are passed to AUSTAL (every receptor was at 1.5 m).
+- **Movements calculated together** (same engine, profile, runway and taxi route in one period) that differ in aircraft type with another engine count, in `tow_ratio` with the NOx correction, in `gate_emissions_code` at one gate, or in track or runway direction: each movement now gets its own result.
+- **Single-engine taxi** with `set_time_of_main_engine_start_before_takeoff_in_s`, or a departure with a main engine start time and a queue.
+- **Engine tests with the BFFM2 thrust mode** when the meteo table has more than one row.
+- **Standalone pipeline and Dataiku recipes**: movements with a main engine start or off time or a `taxi_fuel_ratio` other than 1 (single-engine taxi now as in the plugin); BFFM2 taxi with an `engine_thrust_level_for_taxiing` other than 0.07; studies with missing or off-hour meteo rows, movements before the first meteo row, or an empty mixing height with a vertical limit other than 914.4 m.
+
+**Re-import** a movements file whose header had a missing, misspelt or unknown name, or which had no header line: such files are now read in the documented column order, and a first line starting with a date is kept as a movement.
 
 ## Upgrading from 5.4.0
 
