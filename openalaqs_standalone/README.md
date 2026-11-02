@@ -397,6 +397,10 @@ Together they cover, among other things:
   plugin parity in `tests/test_zz_gate_code_start_parity.py`)
 - engine-test event extraction and emissions, all three thrust modes
   (`test_phase3_engine_test_standalone.py`)
+- single-engine taxi (`taxi_engine_count`, main engine start/off times,
+  `taxi_fuel_ratio`) and its split over the route segments
+  (`test_single_engine_taxi_split.py`; plugin parity of the movement totals
+  and of each taxi segment in `tests/test_zz_single_engine_taxi_parity.py`)
 - runway placement of flight profiles and the segment Mach number
   (`test_runway_placement.py`, `test_segment_mach.py`)
 - the grid distribution: taxi split by segment time, helicopter helipad

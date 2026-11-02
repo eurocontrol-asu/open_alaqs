@@ -40,7 +40,7 @@ If any name is missing, misspelt or unknown, the plugin ignores the whole header
 | `set_time_of_main_engine_start_before_takeoff_in_s` | s | no | Departure: time before take-off at which the other engines are started. | |
 | `set_time_of_main_engine_off_after_runway_exit_in_s` | s | no | Arrival: time after the runway exit during which all engines run before the others are shut down. | |
 | `engine_thrust_level_for_taxiing` | fraction | no | Taxi thrust (0.07 = 7 %, the ICAO value). Used by BFFM2 only; bymode uses the taxi (TX) mode values. A value below 0 or above 1.05 (for example 7 for 7 %) is rejected with an error in the log, and the taxi then uses the TX mode values. | 0.07 |
-| `taxi_fuel_ratio` | ratio | no | Single-engine taxi fuel flow divided by the idle fuel flow. Multiplies the emissions of the taxi segments in single-engine taxi (and of the single-engine part of a departure's queue) only; taxi on all engines is not affected. | 1.0 |
+| `taxi_fuel_ratio` | ratio | no | Single-engine taxi fuel flow divided by the idle fuel flow. Multiplies the emissions of the taxi segments in single-engine taxi (and of the single-engine part of a departure's queue) only; taxi on all engines is not affected, so it has no effect without a main engine start or off time. Plugin and standalone alike. | 1.0 |
 | `number_of_stop_and_gos` | count | no | Stop-and-go events during taxi. Each adds a short burst at the taxi emission index to the queuing segment. | 0 |
 
 How the taxi columns are used is described in [Aircraft emissions: taxiing](../methods/AIRCRAFT_EMISSIONS.md#taxiing) and [APU, GSE and engine start](../methods/AIRCRAFT_EMISSIONS.md#apu-gse-and-engine-start).

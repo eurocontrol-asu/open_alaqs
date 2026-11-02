@@ -47,6 +47,7 @@ from shapely.ops import linemerge
 
 from open_alaqs.core.tools.bffm2 import speed_of_sound_m_s as _speed_of_sound_m_s
 from open_alaqs.core.tools.conversion import convertToFloat as _convert_to_float
+from open_alaqs.core.tools.conversion import convertToInt as _convert_to_int
 from open_alaqs.core.tools.fuel_sulphur import sox_ei_g_kg
 from openalaqs_standalone.geometry import spatialite_blob_to_shapely
 
@@ -308,6 +309,23 @@ def _has_column(conn: sqlite3.Connection, table: str, column: str) -> bool:
     )
 
 
+# Movement columns read when present (row[15:] of get_movement, in this order).
+_OPTIONAL_MOVEMENT_COLUMNS = (
+    "engine_thrust_level_for_taxiing",
+    "taxi_engine_count",
+    "set_time_of_main_engine_start_after_block_off_in_s",
+    "set_time_of_main_engine_start_before_takeoff_in_s",
+    "set_time_of_main_engine_off_after_runway_exit_in_s",
+)
+
+
+def _abs_or_none(value):
+    """A main engine start/off time as the plugin's Movement reads it:
+    conversion.convertToFloat (None when empty or not a number), then abs."""
+    v = _convert_to_float(value)
+    return abs(v) if v is not None else None
+
+
 def get_movement(conn: sqlite3.Connection, oid: int) -> Optional[dict]:
     """Read one movement from `user_aircraft_movements` by oid.
 
@@ -335,15 +353,12 @@ def get_movement(conn: sqlite3.Connection, oid: int) -> Optional[dict]:
         SELECT oid, runway_time, block_time, aircraft, departure_arrival,
                engine_name, profile_id, taxi_route, runway, taxi_fuel_ratio,
                number_of_stop_and_gos, gate, gate_emissions_code, tow_ratio,
-               apu_code, {thrust}
+               apu_code, {optional}
         FROM user_aircraft_movements WHERE oid=?
         """.format(
-            thrust=(
-                "engine_thrust_level_for_taxiing"
-                if _has_column(
-                    conn, "user_aircraft_movements", "engine_thrust_level_for_taxiing"
-                )
-                else "NULL"
+            optional=", ".join(
+                c if _has_column(conn, "user_aircraft_movements", c) else "NULL"
+                for c in _OPTIONAL_MOVEMENT_COLUMNS
             )
         ),
         (oid,),
@@ -402,7 +417,8 @@ def get_movement(conn: sqlite3.Connection, oid: int) -> Optional[dict]:
         ),
         # The full runway end ("06L"), which tells parallel runways apart
         "runway_designator": runway_designator(row[8]),
-        "taxi_fuel_ratio": _as_float(row[9], 1.0),
+        # As the plugin's Movement: conversion.convertToFloat(value, 1).
+        "taxi_fuel_ratio": _convert_to_float(row[9], 1.0),
         "number_of_stop_and_gos": _as_int(row[10], 0),
         "gate": row[11],
         "gate_emissions_code": row[12],
@@ -425,6 +441,13 @@ def get_movement(conn: sqlite3.Connection, oid: int) -> Optional[dict]:
         # the compute decides (a value the fit rejects gives the bymode TX
         # index).
         "engine_thrust_level_for_taxiing": _convert_to_float(row[15], 0.07),
+        # Single-engine taxi, as the plugin's Movement: taxi_engine_count is
+        # conversion.convertToInt(value, 2); the three main engine times are
+        # convertToFloat (None when not given), taken as absolute values.
+        "taxi_engine_count": _convert_to_int(row[16], 2),
+        "set_time_of_main_engine_start_after_block_off_in_s": _abs_or_none(row[17]),
+        "set_time_of_main_engine_start_before_takeoff_in_s": _abs_or_none(row[18]),
+        "set_time_of_main_engine_off_after_runway_exit_in_s": _abs_or_none(row[19]),
     }
 
 

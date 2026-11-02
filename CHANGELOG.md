@@ -57,6 +57,18 @@ fixes below change results only for the cases they name.
   segment, after it on all engines. **Results change** for departures with
   `taxi_engine_count`, a main engine start time and a queue (no shipped
   example sets these times).
+- Standalone (and the Dataiku library): single-engine taxi as in the plugin.
+  The standalone ran all taxi on all engines and multiplied the whole route
+  by `taxi_fuel_ratio`. It now reads `taxi_engine_count` and the three main
+  engine start/off times, runs the route segments and the part of a
+  departure's queue on the single-engine side of those times on
+  `taxi_engine_count` engines with `taxi_fuel_ratio`, and everything else on
+  all engines without the ratio; the taxi emission is placed on the route
+  segments accordingly. `taxi_fuel_ratio` without a main engine time no longer
+  has an effect, as in the plugin. **Results change** for movements with a
+  main engine start/off time or a `taxi_fuel_ratio` other than 1 (none in the
+  shipped examples); with them, plugin and standalone movement totals now
+  agree to 1e-8 or better (they differed by up to 68 %).
 - Taxi with BFFM2: an engine without an emission index at the taxi thrust
   stopped the calculation with an error; the movement now gets no taxi
   emissions and the log names the missing index.

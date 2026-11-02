@@ -519,7 +519,6 @@ The ADS-B fuel flow is an estimate from aircraft performance models applied to p
 - **Meteo** is one row per period, carried aloft by the atmosphere model.
 - **Taxi with Mach 0** is by design: the EEDB idle mode is measured at M = 0.
 - **NOx P3T3 exponent** is 0.5 for every engine and height. The CAEP/14 formulation uses 0.3 for lean-burn engines above 3000 ft; OpenALAQS does not distinguish lean-burn engines. The effect on the NOx of the affected engines is small within the modelled height: segments above 3000 ft occur only when the mixing height is higher, and there the factor `(delta^1.02 / theta^3.3)^(0.3 - 0.5)` is 1.009 at 3000 ft, 1.015 at 5000 ft and 1.018 at 6000 ft (ISA), so below 2 % up to 6000 ft.
-- **Single-engine taxi in the standalone.** The standalone does not model single-engine taxi: it uses all engines for every taxi segment. Plugin and standalone differ for movements with `taxi_engine_count` and a main-engine time set.
 - **Single-engine taxi and queuing.** Stop-and-go, and the queuing of an arrival, use the engine count of the last route segment, even when the main engines stop during the queue.
 
 ## See also

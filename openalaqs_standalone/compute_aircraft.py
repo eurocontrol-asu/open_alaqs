@@ -764,9 +764,20 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
     # last segment). Each shares the same idle FF and EI; only the time
     # multiplier differs. Plugin scaling: natural × n_eng × taxi_fuel_ratio,
     # queue × n_eng (no fuel ratio), stop × n_eng (no fuel ratio).
-    nat_fuel = natural_taxi_time_s * tx_ff_amb * n_eng * mov["taxi_fuel_ratio"]
-    queue_fuel = queuing_time_s * tx_ff_amb * n_eng
-    stop_fuel = stop_and_go_time_s * tx_ff_amb * n_eng
+    route_segs = (ctx.get("taxi_route_segments") or {}).get(mov["taxi_route"])
+    is_departure = mov["departure_arrival"] == "D"
+    split = _taxi_engine_split(
+        mov,
+        is_departure,
+        n_eng,
+        route_segs,
+        natural_taxi_time_s,
+        queuing_time_s,
+        taxi_time_s,
+    )
+    nat_fuel = split["natural_engine_s"] * tx_ff_amb
+    queue_fuel = split["queue_engine_s"] * tx_ff_amb
+    stop_fuel = stop_and_go_time_s * tx_ff_amb * split["last_engines"]
 
     def _build_em(fuel_kg):
         em_local = {p: 0.0 for p in POLLUTANTS}
@@ -986,9 +997,20 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
             taxi_time_s, route_time_s, stretch["time_unscaled_s"] if stretch else 0.0
         )
         natural_taxi_time_s, queuing_time_s = nat, que
-        nat_fuel = natural_taxi_time_s * tx_ff_amb * n_eng * mov["taxi_fuel_ratio"]
-        queue_fuel = queuing_time_s * tx_ff_amb * n_eng
+        split = _taxi_engine_split(
+            mov,
+            is_departure,
+            n_eng,
+            route_segs,
+            natural_taxi_time_s,
+            queuing_time_s,
+            taxi_time_s,
+        )
+        nat_fuel = split["natural_engine_s"] * tx_ff_amb
+        queue_fuel = split["queue_engine_s"] * tx_ff_amb
+        stop_fuel = stop_and_go_time_s * tx_ff_amb * split["last_engines"]
         tx_em, queue_em = _build_em(nat_fuel), _build_em(queue_fuel)
+        stop_em = _build_em(stop_fuel)
         st_fuel_in = 0.0
         if stretch is not None:
             stretch["time_s"] = t_st
@@ -1313,11 +1335,120 @@ def compute_fixed_wing(  # noqa: C901 — orchestrates the full per-movement air
         #                     loop over PM10/PM1/PM2; standalone has no
         #                     PM1, so pm10 and pm25 mirror).
         "tx_em_kg": tx_em,
+        # Share of tx_em per taxi route segment, in route order, when
+        # single-engine taxi applies (None otherwise: distribute.py then
+        # splits tx_em by segment length or time, as before).
+        "tx_segment_weights": split["segment_weights"],
         "queue_em_kg": queue_em,
         "stop_em_kg": stop_em,
         "brake_wear_em_kg": brake_wear_em,
         "total_em_kg": em,
     }
+
+
+def _taxi_engine_split(
+    mov: dict,
+    is_departure: bool,
+    n_eng: int,
+    route_segs,
+    natural_s: float,
+    queuing_s: float,
+    total_taxi_s: float,
+) -> dict:
+    """Engine-seconds of a movement's taxi, with single-engine taxi as the plugin
+    (MovementEmissionCalculator.TaxiingEmissionCalculator).
+
+    Single-engine taxi applies when a main engine time is set:
+      - departure, `set_time_of_main_engine_start_after_block_off_in_s` (or else
+        `..._before_takeoff_in_s`, counted back from the taxi time): the route
+        segments that end, in cumulative moving time, before the main engine
+        start, and the part of the queue before it;
+      - arrival, `set_time_of_main_engine_off_after_runway_exit_in_s`: the route
+        segments that end at or after that time.
+    Those run on min(taxi_engine_count, engines) engines, with taxi_fuel_ratio;
+    all other taxi runs on all engines, without the ratio. Stop-and-go runs on
+    the engines of the last route segment, without the ratio. Segment times are
+    length / speed, or length / the route's average speed when the route time
+    is compressed to the movement's taxi time; a route without segments counts
+    as one segment of 0 s at the gate (as the plugin's stand-in segment).
+
+    Returns natural_engine_s (route), queue_engine_s, last_engines (engines of
+    the last route segment) and segment_weights (each route segment's share of
+    natural_engine_s, or None when single-engine taxi does not apply).
+    """
+    after = mov.get("set_time_of_main_engine_start_after_block_off_in_s")
+    before = mov.get("set_time_of_main_engine_start_before_takeoff_in_s")
+    off = mov.get("set_time_of_main_engine_off_after_runway_exit_in_s")
+    applies = (
+        (after is not None or before is not None) if is_departure else (off is not None)
+    )
+    if not applies:
+        # All engines, no taxi fuel ratio (the plugin applies it to single-engine
+        # taxi only).
+        return dict(
+            natural_engine_s=natural_s * n_eng,
+            queue_engine_s=queuing_s * n_eng,
+            last_engines=n_eng,
+            segment_weights=None,
+        )
+
+    n_single = float(min(mov.get("taxi_engine_count", 2), n_eng))
+    ratio = mov.get("taxi_fuel_ratio", 1.0)
+
+    # Segment times, as the plugin: own speed, or the route's average speed when
+    # the route time is compressed. Without segment data, one segment holding the
+    # natural time.
+    if route_segs is None:
+        times = [natural_s]
+    elif not route_segs:
+        times = [0.0]
+    else:
+        own = [lg / (sp * 1000.0 / 3600.0) for lg, sp in route_segs]
+        route_s = sum(own)
+        total_len = sum(lg for lg, _ in route_segs)
+        if natural_s < route_s:
+            times = (
+                [lg * natural_s / total_len for lg, _ in route_segs]
+                if total_len > 0 and natural_s > 0
+                else [0.0] * len(route_segs)
+            )
+        else:
+            times = own
+
+    cum = 0.0
+    weights = []
+    last_engines = float(n_eng)
+    for t in times:
+        cum += t
+        if is_departure:
+            if after is not None:
+                single = cum <= after
+            else:
+                single = cum + before <= total_taxi_s
+        else:
+            single = abs(cum) >= off
+        engines = n_single if single else float(n_eng)
+        weights.append(t * engines * (ratio if single else 1.0))
+        last_engines = engines
+
+    natural_engine_s = sum(weights)
+    if is_departure:
+        mes_s = after if after is not None else total_taxi_s - before
+        q_single = min(max(mes_s - cum, 0.0), queuing_s)
+        queue_engine_s = q_single * n_single * ratio + (queuing_s - q_single) * n_eng
+    else:
+        queue_engine_s = queuing_s * last_engines
+    shares = (
+        [w / natural_engine_s for w in weights]
+        if natural_engine_s > 0 and route_segs
+        else None
+    )
+    return dict(
+        natural_engine_s=natural_engine_s,
+        queue_engine_s=queue_engine_s,
+        last_engines=last_engines,
+        segment_weights=shares,
+    )
 
 
 def _route_crossings_cached(ctx: dict, conn, mov: dict, runway: dict) -> list:
