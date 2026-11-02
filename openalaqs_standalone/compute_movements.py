@@ -133,7 +133,7 @@ def build_context(conn) -> dict:
     # route's segments. Cached once per route; route names that fail
     # to resolve map to None and the per-movement code degrades to
     # the legacy all-in-tx_em behaviour.
-    natural_taxi_times = _build_natural_taxi_times(conn)
+    natural_taxi_times, taxi_route_segments = _build_taxi_route_times(conn)
     # Airport elevation (m) for the NOx ambient correction's ISA-temp
     # term. Read once per study; the per-movement compute reads it
     # from ctx without further DB hits.
@@ -149,12 +149,24 @@ def build_context(conn) -> dict:
         "start_efs": start_efs,
         "aircraft_groups_engines": aircraft_groups_engines,
         "natural_taxi_times": natural_taxi_times,
+        # Per route, its segments in route order as (geodesic length m,
+        # speed km/h): the single-engine taxi split works segment by segment.
+        "taxi_route_segments": taxi_route_segments,
         "airport_elevation_m": airport_elevation_m,
     }
 
 
 def _build_natural_taxi_times(conn) -> dict:
-    """Return {route_name: natural_time_s} for every user_taxiroute row.
+    """Return {route_name: natural_time_s} for every user_taxiroute row
+    (the first half of _build_taxi_route_times)."""
+    return _build_taxi_route_times(conn)[0]
+
+
+def _build_taxi_route_times(conn) -> tuple:
+    """Return ({route_name: natural_time_s}, {route_name: [(length_m, speed_kmh)]})
+    for every user_taxiroute row. The second dict lists the route's existing
+    taxiways in route order; a route whose natural time cannot be computed
+    is in neither.
 
     Natural time per segment = geodesic_length_m / (speed_kmh * 1000 / 3600).
     Total natural time per route = sum over the route's stored segment
@@ -181,7 +193,7 @@ def _build_natural_taxi_times(conn) -> dict:
             "SELECT taxiway_id, speed, geometry FROM shapes_taxiways"
         ).fetchall()
     except Exception:
-        return {}
+        return {}, {}
     for tid, speed, blob in rows:
         try:
             speed_f = float(speed) if speed is not None else 0.0
@@ -202,12 +214,13 @@ def _build_natural_taxi_times(conn) -> dict:
 
     # Per-route natural time.
     natural = {}
+    route_segments = {}
     try:
         route_rows = conn.execute(
             "SELECT route_name, sequence FROM user_taxiroute_taxiways"
         ).fetchall()
     except Exception:
-        return natural
+        return natural, route_segments
     for route_name, seq_str in route_rows:
         # The plugin (TaxiwayRoutesStore.initTaxiwayRoutes) builds a route
         # from the taxiways of its sequence that exist and skips the others,
@@ -232,6 +245,7 @@ def _build_natural_taxi_times(conn) -> dict:
             )
         total = 0.0
         ok = True
+        segs = []
         for tid in seq:
             if tid in missing:
                 continue
@@ -244,9 +258,11 @@ def _build_natural_taxi_times(conn) -> dict:
                 ok = False
                 break
             total += lg / (sp * 1000.0 / 3600.0)
+            segs.append((lg, sp))
         if ok:
             natural[route_name] = total
-    return natural
+            route_segments[route_name] = segs
+    return natural, route_segments
 
 
 # ---------------------------------------------------------------------------

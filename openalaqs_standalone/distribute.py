@@ -1217,6 +1217,12 @@ def distribute_to_grid(  # noqa: C901 — top-level spatial+temporal distributio
                         _tt = sum(_t)
                         if _tt > 0.0:
                             seg_shares = [x / _tt for x in _t]
+                    # Single-engine taxi: the segments' shares of tx_em as
+                    # computed per segment (time x engines x taxi fuel ratio),
+                    # when the route resolved to the same segments.
+                    _w = res.get("tx_segment_weights")
+                    if _w is not None and len(_w) == len(segments_data):
+                        seg_shares = list(_w)
 
                 # --- TAXI + APU + START + QUEUE + STOP + BRAKE_WEAR per-segment placement. ---
                 # Mass split per the plugin
