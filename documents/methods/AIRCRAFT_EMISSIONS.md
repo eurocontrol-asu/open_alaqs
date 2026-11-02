@@ -72,12 +72,16 @@ Wf_amb = Wf_ref x delta x sqrt(theta)      theta = T_amb / 288.15,  delta = p_am
 
 This applies to the `trajectory` source and, with either source, to every taxi segment ([Taxiing](#taxiing)). On flight segments the `mode_anchor` fuel flow and an ADS-B fuel flow are used as `Wf_amb` unchanged. T_amb and p_amb are those at the segment's start height ([ATMOSPHERE_ALOFT.md](ATMOSPHERE_ALOFT.md)).
 
+The scaling uses the static delta and theta and leaves out the effect of flight speed; the gas-turbine similarity form of the DLR fuel-flow method in SAE AIR 5715 (section 5.3, Eq. 11) uses total (stagnation) inlet conditions, which would give about 3 % more fuel flow at Mach 0.2 and 7 % more at Mach 0.3.
+
 ### Fuel-flow sources
 
 | Source | `Wf_amb` per engine |
 | --- | --- |
 | `trajectory` (default) | twin-quadratic fit at the point's power, scaled to the ambient; an ADS-B fuel flow takes priority when the point has one ([ADS-B](#ads-b)) |
 | `mode_anchor` | flight segments: EEDB fuel flow of the segment's mode, unscaled; an ADS-B fuel flow is ignored. Taxi segments: as `trajectory` |
+
+With `mode_anchor` the flight fuel flow is the ICAO mode fuel flow, as in bymode, so `bffm2_anchor` and `bymode` burn the same fuel in flight and differ only in the emission index. SAE AIR6183 (section 4.2, Eq. 1) scales a mode fuel flow to the ambient with the inverse of the BFFM2 conversion and the installation factor, `B x Wf_mode x delta / (theta^3.8 x exp(0.2 M^2))`. OpenALAQS does not; with that scaling the fuel flow would be about 2 % lower on approach at 3,000 ft (ISA, Mach 0.25), 17 % lower on take-off at sea level and 30 °C (Mach 0.2) and 43 % higher at −10 °C (Mach 0). Because the unscaled fuel flow is converted to reference conditions in step 2, the index is read close to, but not exactly at, the installation-corrected mode point (see the [example](#bffm2-fuel-flow-source-mode_anchor)).
 
 A segment whose start point has neither a power setting nor a fuel flow (for example the RPM-based piston profiles) uses the bymode index, with a warning in the log for each such segment.
 
@@ -87,7 +91,7 @@ The Boeing Fuel Flow Method 2 (BFFM2) was developed by Boeing and formalised in 
 
 Its advantage over bymode is that it follows the thrust stored in each profile point instead of the nominal thrust of the mode label. This matters most on approach: segments labelled `AP` are often flown near idle.
 
-References: SAE AIR 5715, *Procedure for the Calculation of Aircraft Emissions*; ICAO Doc 9889, *Airport Air Quality Manual*, Chapter 2.
+References: SAE AIR 5715, *Procedure for the Calculation of Aircraft Emissions*; ICAO Doc 9889, *Airport Air Quality Manual*, Chapter 3, Appendix 1 (which refers to SAE AIR 5715 for BFFM2).
 
 ### Step 1: fuel flow
 
@@ -105,7 +109,7 @@ M     = TAS / SOS,   SOS = sqrt(1.4 x 287.05287 x T_amb)   (340.29 m/s at ISA se
 Wf_ref_BFFM2 = (Wf_amb / delta) x theta^3.8 x exp(0.2 x M^2)
 ```
 
-M is the true Mach number at the segment's start point, as in the CAEP/14 BFFM2 formulation (gamma 1.4, R 287.05287 J/(kg K), ICAO Doc 7488). CAEP14 prescribes this form for all flight phases. The older ICAO Doc 9889 Appendix 2 split (a separate `delta / sqrt(theta)` correction in the LTO cycle, followed by a Mach correction at altitude) is not used.
+M is the true Mach number at the segment's start point, as in the CAEP/14 BFFM2 formulation (gamma 1.4, R 287.05287 J/(kg K), ICAO Doc 7488). The form is that of SAE AIR 5715 (Eq. 2); CAEP14 prescribes it for all flight phases.
 
 ### Step 3: log-log interpolation
 
@@ -129,9 +133,11 @@ log10(EI) = log10(EI_i) + [log10(EI_i+1) - log10(EI_i)] x
 
 **CO and HC.** Their curves are not monotonic: high at idle, steeply lower at approach, about flat at climb-out and take-off. OpenALAQS applies the CAEP/14 slope-to-mean-value rule for CO and HC. Above the approach point the index is `lin_av`, the linear average of the climb-out and take-off indices, which gives a step at the approach point. When the engine does not have the standard shape (the idle-to-approach line meets the `lin_av` line outside [approach, climb-out]), the index is interpolated log-linearly from the approach point to (climb-out fuel flow, `lin_av`) and held at `lin_av` above climb-out.
 
+This rule differs from SAE AIR 5715 (section 5.2.1) and DuBois & Paynter (2006) in the standard case. There, the idle-to-approach line continues past the approach point up to its intersection with the `lin_av` line, and `lin_av` applies only beyond the intersection. Between the approach point and the intersection, AIR 5715 therefore gives higher CO and HC indices than OpenALAQS (on the LEAP-1A26 at ISA, 1.72 against 0.25 g/kg CO at 0.30 kg/s). Inventory totals differ little, because taxi at idle dominates CO: on the example and training studies, total CO is 0.9 to 1.0 % (`bffm2_traj`) and 1.8 to 2.8 % (`bffm2_anchor`) higher with the AIR 5715 rule (up to 15 % for a single movement), HC at most 0.2 %, NOx unchanged. OpenALAQS follows CAEP/14 so that its results match the CAEP/14 BFFM2 reference values. Both rules agree above the intersection, and in the non-standard case.
+
 **Zero indices.** A zero EEDB index cannot be read on a log scale: before the interpolation a zero idle index becomes 0.001 g/kg, a zero approach index 0.001 g/kg (0.0001 g/kg when the idle index is also zero), and a zero climb-out or take-off index 0.0001 g/kg.
 
-**No extrapolation.** Below the idle point the idle index is used. Above the take-off point NOx keeps the take-off index and CO and HC keep `lin_av`.
+**No extrapolation.** Below the idle point the idle index is used. Above the take-off point NOx keeps the take-off index and CO and HC keep `lin_av`. SAE AIR 5715 recommends extrapolating the CO and HC curves below the idle point, with care (section 5.2.1); it gives no formula and notes that errors below 7 % thrust can be large (section 5.2.3). OpenALAQS does not extrapolate. This matters mostly for taxiing: at the default taxi thrust of 7 %, the reference fuel flow lies about 9 % below the installation-corrected idle point (1 / 1.1 at ISA), so the taxi CO and HC indices are the idle values.
 
 Example curves for one engine: log-log reference curves for [NOx](bffm2_figures/NOx_interp_curve.pdf), [CO](bffm2_figures/CO_interp_curve.pdf) and [HC](bffm2_figures/HC_interp_curve.pdf); emission index against fuel flow, at ISA and with the ambient and installation corrections, for [NOx](bffm2_figures/NOx_emission_index_.pdf), [CO](bffm2_figures/CO_emission_index_.pdf) and [HC](bffm2_figures/HC_emission_index_.pdf).
 
@@ -408,6 +414,8 @@ The taxi time is the movement's block-to-runway time. For an arrival the profile
 
 **Taxi fuel ratio.** `taxi_fuel_ratio` (default 1) multiplies the emissions of the segments in single-engine taxi and of the single-engine part of a departure's queue only. It does not apply to other segments, other queuing or stop-and-go.
 
+**Taxi fuel flow.** On all engines, the taxi fuel flow is the idle fuel flow at the taxi thrust (the EEDB TX value at the default 7 %), as in the ICAO LTO cycle. SAE AIR8035 (2023) found from airline flight data recorder data that this overestimates the baseline taxi fuel flow of most of the aircraft types it analysed, and recommends 0.80 times the 7 % fuel flow (0.75 to 1.02 by type); OpenALAQS does not apply that factor.
+
 A taxi time of 0 s gives no route or queuing time; APU, engine start, stop-and-go and brake wear are still counted. A route with no segments places them at the gate. Both cases are logged.
 
 Helicopters taxi at ground idle under their own method ([HELICOPTERS.md](HELICOPTERS.md)).
@@ -510,7 +518,7 @@ The ADS-B fuel flow is an estimate from aircraft performance models applied to p
 - **ANP profiles without a track** are straight along the runway axis.
 - **Meteo** is one row per period, carried aloft by the atmosphere model.
 - **Taxi with Mach 0** is by design: the EEDB idle mode is measured at M = 0.
-- **NOx P3T3 exponent** is 0.5 for every engine and height. The CAEP/14 formulation uses 0.3 for lean-burn engines above 3000 ft; OpenALAQS does not distinguish lean-burn engines.
+- **NOx P3T3 exponent** is 0.5 for every engine and height. The CAEP/14 formulation uses 0.3 for lean-burn engines above 3000 ft; OpenALAQS does not distinguish lean-burn engines. The effect on the NOx of the affected engines is small within the modelled height: segments above 3000 ft occur only when the mixing height is higher, and there the factor `(delta^1.02 / theta^3.3)^(0.3 - 0.5)` is 1.009 at 3000 ft, 1.015 at 5000 ft and 1.018 at 6000 ft (ISA), so below 2 % up to 6000 ft.
 - **Single-engine taxi in the standalone.** The standalone does not model single-engine taxi: it uses all engines for every taxi segment. Plugin and standalone differ for movements with `taxi_engine_count` and a main-engine time set.
 - **Single-engine taxi and queuing.** Stop-and-go, and the queuing of an arrival, use the engine count of the last route segment, even when the main engines stop during the queue.
 
