@@ -1,0 +1,3174 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Airport local air quality studies with the OpenALAQS QGIS plugin and AUSTAL">
+      
+      
+      
+        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.2/documents/user/DISPERSION_AUSTAL.html">
+      
+      
+        <link rel="prev" href="INPUT_FORMATS.html">
+      
+      
+        <link rel="next" href="../AUSTAL/AUSTAL.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Dispersion with AUSTAL - OpenALAQS documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#dispersion-modelling-with-austal" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="OpenALAQS documentation" class="md-header__button md-logo" aria-label="OpenALAQS documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            OpenALAQS documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Dispersion with AUSTAL
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/eurocontrol-asu/open_alaqs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    eurocontrol-asu/open_alaqs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../index.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="USER_GUIDE.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Using OpenALAQS
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../methods/AIRCRAFT_EMISSIONS.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Methods
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="WITHOUT_QGIS.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Command line
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../validation/VALIDATION_GUIDE.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../developer/CODE_FLOW.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Maintainers
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="OpenALAQS documentation" class="md-nav__button md-logo" aria-label="OpenALAQS documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    OpenALAQS documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/eurocontrol-asu/open_alaqs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    eurocontrol-asu/open_alaqs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Home
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GLOSSARY.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using OpenALAQS
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Using OpenALAQS
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="USER_GUIDE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="TUTORIAL_ROTTERDAM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Rotterdam The Hague
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="INPUT_FORMATS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Input formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dispersion with AUSTAL
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="DISPERSION_AUSTAL.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dispersion with AUSTAL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#two-ways-to-prepare-an-austal-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two ways to prepare an AUSTAL run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#before-you-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Before you start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calculate-dispersion-dialog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calculate Dispersion dialog
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Calculate Dispersion dialog">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-austal-executable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. AUSTAL Executable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-input-file-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Input File Strategy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Input File Strategy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generate-austal-input-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate AUSTAL Input Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Execution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-result-visualisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Result Visualisation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dispersion-models-tab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dispersion Models tab
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#site-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Site parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Site parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-z0-from-the-land-cover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: z0 from the land cover
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-ha-for-that-z0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: ha for that z0
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-keep-the-meteo-file-consistent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: keep the meteo file consistent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-to-set-them" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to set them
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#austal-input-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AUSTAL input files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#austal-output-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AUSTAL output files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-concentration-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The concentration map
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-compliance-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The compliance report
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#typical-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Typical session
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-failure-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common failure modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-the-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In the code
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AUSTAL/AUSTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AUSTAL installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="UPGRADING.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="TROUBLESHOOTING.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="TRAINING_COURSE_ERRATA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Training course: errata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Methods
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../methods/AIRCRAFT_EMISSIONS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aircraft emissions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../methods/ATMOSPHERE_ALOFT.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ambient conditions aloft
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../methods/HELICOPTERS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Helicopters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../methods/STATIONARY_AND_ROAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stationary sources and road traffic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../methods/REFERENCE_DATA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../openalaqs_standalone/index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Command line
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="WITHOUT_QGIS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Which tool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../openalaqs_standalone/USAGE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standalone: usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/README_metar_to_alaqs_meteo.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    METAR to meteo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/emissions_austal/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    emissions_austal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/austal_from_csv/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    austal_from_csv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gse_application/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GSE application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../example/training/recipe_config.README.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example configurations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../example/training/training_engine_test_events.README.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example engine test events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation/VALIDATION_GUIDE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../openalaqs_standalone/validation/tools/CAEP14_VALIDATION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CAEP14 reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../tools/template_build/index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maintainers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Maintainers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/CODE_FLOW.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code structure and flow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/REGRESSION_PATTERNS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regression patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/AIRCRAFT_PROFILES_PROVENANCE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aircraft profiles provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/DATASET_PROVENANCE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    COPERT dataset provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/DEPRECATIONS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema deprecations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/design/ATMOSPHERE_ALOFT_VALIDATION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design: atmosphere aloft validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/anp22_profiles/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ANP 2.2 profiles builder
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/test_fixtures/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test fixtures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHANGELOG.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#two-ways-to-prepare-an-austal-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two ways to prepare an AUSTAL run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#before-you-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Before you start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#calculate-dispersion-dialog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calculate Dispersion dialog
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Calculate Dispersion dialog">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-austal-executable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. AUSTAL Executable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-input-file-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Input File Strategy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Input File Strategy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generate-austal-input-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate AUSTAL Input Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Execution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-result-visualisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Result Visualisation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dispersion-models-tab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dispersion Models tab
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#site-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Site parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Site parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-z0-from-the-land-cover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: z0 from the land cover
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-ha-for-that-z0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: ha for that z0
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-keep-the-meteo-file-consistent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: keep the meteo file consistent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-to-set-them" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to set them
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#austal-input-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AUSTAL input files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#austal-output-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AUSTAL output files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-concentration-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The concentration map
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-compliance-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The compliance report
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#typical-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Typical session
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-failure-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common failure modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-the-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In the code
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/eurocontrol-asu/open_alaqs/edit/main/documents/user/DISPERSION_AUSTAL.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="dispersion-modelling-with-austal">Dispersion modelling with AUSTAL<a class="headerlink" href="#dispersion-modelling-with-austal" title="Permanent link">&para;</a></h1>
+<p>This page explains how to turn an OpenALAQS emission inventory into concentrations with the AUSTAL dispersion model, and how to view the results in QGIS. It is for users of the QGIS plugin who have already built an inventory (see the <a href="USER_GUIDE.html#generate-emissions-inventory">User Guide</a>).</p>
+<p>Contents:
+- <a href="#two-ways-to-prepare-an-austal-run">Two ways to prepare an AUSTAL run</a>
+- <a href="#before-you-start">Before you start</a>
+- <a href="#calculate-dispersion-dialog">Calculate Dispersion dialog</a>
+- <a href="#dispersion-models-tab">Dispersion Models tab</a>
+- <a href="#site-parameters">Site parameters</a>
+- <a href="#austal-input-files">AUSTAL input files</a>
+- <a href="#austal-output-files">AUSTAL output files</a>
+- <a href="#results">Results</a>
+- <a href="#typical-session">Typical session</a>
+- <a href="#common-failure-modes">Common failure modes</a></p>
+<h2 id="two-ways-to-prepare-an-austal-run">Two ways to prepare an AUSTAL run<a class="headerlink" href="#two-ways-to-prepare-an-austal-run" title="Permanent link">&para;</a></h2>
+<p>AUSTAL is the reference dispersion model of the German TA Luft. OpenALAQS writes its input files, starts it, and reads its output. You can prepare the input files in two places:</p>
+<ul>
+<li><strong>Calculate Dispersion dialog</strong> (toolbar button <strong>Calculate Dispersion</strong>). The usual path. It writes the input files from an inventory file (<code>*_out.alaqs</code>) or from CSV files, runs AUSTAL and shows the results. See <a href="#calculate-dispersion-dialog">Calculate Dispersion dialog</a>.</li>
+<li><strong>Dispersion Models tab</strong> of the <em>Emission Inventory Analysis</em> window (toolbar button <strong>Visualize Emission Calculation</strong>). It writes the input files while you calculate emissions, with the same method and settings as that calculation. You then run AUSTAL from the Calculate Dispersion dialog. See <a href="#dispersion-models-tab">Dispersion Models tab</a>.</li>
+</ul>
+<p>The two paths differ in what they let you set:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Calculate Dispersion dialog</th>
+<th>Dispersion Models tab</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Emission method</td>
+<td>set in the inventory option, with the same choices as the <em>Configuration</em> tab; default <code>bymode</code>, no NOx correction, no source dynamics</td>
+<td>the method and settings of the <em>Configuration</em> tab (for example BFFM2)</td>
+</tr>
+<tr>
+<td>Pollutants</td>
+<td>any of CO2, CO, HC, NOx, SOx, PM10 in one run</td>
+<td>the one pollutant selected in the window</td>
+</tr>
+<tr>
+<td>Site parameters z0, d0, ha</td>
+<td>set in the dialog; default 0.1 / 0.6 / 10.6 m</td>
+<td>set on the tab</td>
+</tr>
+<tr>
+<td>Receptor points</td>
+<td><strong>Receptors CSV</strong></td>
+<td><strong>Receptor Points</strong> of the <em>Configuration</em> tab</td>
+</tr>
+<tr>
+<td>Per-hour output (NOTALUFT)</td>
+<td>a check box</td>
+<td>type it into <strong>Options String</strong></td>
+</tr>
+<tr>
+<td>Runs AUSTAL</td>
+<td>yes</td>
+<td>no: run it from the dialog with <strong>Use Existing AUSTAL Input Files</strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="before-you-start">Before you start<a class="headerlink" href="#before-you-start" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>AUSTAL is installed</strong> and its <code>austal.settings</code> is replaced with the OpenALAQS copy. Without that copy, AUSTAL does not know the CO2, CO, HC and SOx substances that OpenALAQS writes. See <a href="../AUSTAL/AUSTAL.html#installation">AUSTAL installation</a>.</li>
+<li><strong>You have an inventory file</strong> (<code>*_out.alaqs</code>) made with <strong>Calculate Emissions Inventory</strong>. It holds the sources, movements, meteorology and the calculation grid. See <a href="USER_GUIDE.html#calculate-emissions-inventory-window">Calculate Emissions Inventory window</a>.</li>
+<li><strong>Optional: receptor points.</strong> Without them AUSTAL produces only concentration maps; with them it also produces hourly time series at each point, which the time series plot and the compliance report need.</li>
+</ul>
+<h2 id="calculate-dispersion-dialog">Calculate Dispersion dialog<a class="headerlink" href="#calculate-dispersion-dialog" title="Permanent link">&para;</a></h2>
+<p>Click <strong>Calculate Dispersion</strong> on the OpenALAQS toolbar:</p>
+<p><img src="../../open_alaqs/icons/dispersion_model.png" alt="Calculate Dispersion toolbar icon" width="32" /></p>
+<p>The <em>AUSTAL Dispersion Analysis</em> dialog has four numbered sections. Work through them in order. Each section has a status line that turns green when its inputs are complete.</p>
+<p><img alt="AUSTAL Dispersion Analysis dialog" src="../../open_alaqs/assets/running-austal.png" /></p>
+<h3 id="1-austal-executable">1. AUSTAL Executable<a class="headerlink" href="#1-austal-executable" title="Permanent link">&para;</a></h3>
+<p>Use the file picker to select <code>austal.exe</code> (Windows) or <code>austal</code> (Linux). The picker shows only files with these names. The status line then reads <em>Executable Loaded</em>. The path is remembered, so you do this once per computer.</p>
+<p>The <strong>AUSTAL Help</strong> button opens a short reminder of where to download AUSTAL, which <code>austal.settings</code> to use and where to find the English language files, with links to the <a href="../AUSTAL/AUSTAL.html">AUSTAL installation page</a>.</p>
+<h3 id="2-input-file-strategy">2. Input File Strategy<a class="headerlink" href="#2-input-file-strategy" title="Permanent link">&para;</a></h3>
+<p>Choose where AUSTAL's input files come from. Pick one of three options; each shows its own fields.</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Use it when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Use Existing AUSTAL Input Files</strong></td>
+<td>You already have a folder with <code>austal.txt</code>, <code>series.dmna</code> and the emission grid files, for example from the <a href="#dispersion-models-tab">Dispersion Models tab</a>. Set <strong>Work Directory</strong> to that folder. Nothing is generated; AUSTAL runs in that folder.</td>
+</tr>
+<tr>
+<td><strong>Generate AUSTAL Input Files from OpenALAQS Emission Inventory File</strong></td>
+<td>The usual case. Set <strong>OpenALAQS Emission Inventory File</strong> to your <code>*_out.alaqs</code> and <strong>Output Work Directory</strong> to a folder for the run.</td>
+</tr>
+<tr>
+<td><strong>Generate AUSTAL Input Files from CSV</strong></td>
+<td>You have an emissions CSV and a meteorology CSV prepared outside the inventory. Set <strong>Output Directory</strong>, <strong>Emissions CSV File</strong> and <strong>Meteorology CSV File</strong>. The CSV formats are described in the <a href="../../scripts/austal_from_csv/index.html#input-csv-formats"><code>austal_from_csv</code> README</a>.</td>
+</tr>
+</tbody>
+</table>
+<p>The two Generate options share these fields:</p>
+<ul>
+<li><strong>Pollutants</strong>: CO2, CO, HC, NOx, SOx, PM10. Tick at least one. Only the ticked pollutants are written.</li>
+<li><strong>Quality Level (1-3)</strong>: default 3. Each step up doubles the number of simulation particles in AUSTAL: less statistical noise, longer run.</li>
+<li><strong>Include Mixing Height</strong>: when ticked, AUSTAL uses the mixing height of each hour of the meteorology. When not ticked, AUSTAL applies its own mixing height.</li>
+<li><strong>Receptors CSV (optional)</strong>: points where AUSTAL writes hourly time series. The format, the limit of 20 points and which points are used when the picker is empty or the file cannot be read are in <a href="INPUT_FORMATS.html#receptor-points">Receptor points</a>.</li>
+<li><strong>Output Mode: Per-hour series (NOTALUFT)</strong>: when ticked, AUSTAL writes one concentration file per hour and, with receptors, a time series per receptor. Without it, AUSTAL writes only the mean over the run. See <a href="#austal-output-files">AUSTAL output files</a> for which result needs what.</li>
+<li><strong>Start (incl.)</strong> / <strong>End (incl.)</strong>: the part of the data to disperse. They fill in with the full time range when you select the inventory or emissions file. A period outside the data stops the generation with a message giving the available range.</li>
+<li><strong>PM10 fine fraction (0-1)</strong>: default 0.9. AUSTAL treats PM10 as two size classes: fine (below 2.5 µm) and coarse (2.5 to 10 µm). This value is the fine share. 0.9 suits a typical airport mix (aircraft, ground support equipment, vehicle exhaust); the tooltip suggests 0.95 for pure aircraft exhaust, 0.70 for road traffic with tyre and brake wear, 0.40 to 0.50 for wear or dust dominated sources.</li>
+<li><strong>Roughness Length</strong>, <strong>Displacement Height</strong>, <strong>Anemometer Height</strong>: the <a href="#site-parameters">site parameters</a> z0, d0 and ha written to <code>austal.txt</code>. Defaults 0.1 m, 0 and 0. A value of 0 in Displacement Height or Anemometer Height derives it from z0 (6 × z0 and 10 m + d0), so the defaults give 0.1 / 0.6 / 10.6 m and changing z0 alone keeps the three consistent. Anemometer Height must be above Displacement Height, or the generation stops with a message.</li>
+</ul>
+<p>Only the inventory option has the emission settings, since it recalculates the emissions. They are the settings of the <em>Configuration</em> tab of <strong>Visualize Emission Calculation</strong>, see <a href="USER_GUIDE.html#calculate-emissions-and-query-results">Calculate emissions and query results</a>. The defaults are the settings used before these fields existed:</p>
+<ul>
+<li><strong>Method</strong>: <code>bymode</code> (default) or <code>BFFM2</code>. BFFM2 changes the fuel flow and the emission indices of CO, HC and NOx. The other pollutants keep their per-mode emission indices, applied to the BFFM2 fuel flow, as in any BFFM2 calculation. So with BFFM2 the CO2, SOx and PM10 inputs change too.</li>
+<li><strong>Apply NOx Corrections</strong>: not ticked by default.</li>
+<li><strong>Atmosphere Aloft</strong>: <code>standard_lapse</code> by default. With <code>surface_layer</code> the profile uses the site parameters of this dialog.</li>
+<li><strong>BFFM2 Fuel-Flow Source</strong>: <code>trajectory</code> by default. Used only with BFFM2.</li>
+<li><strong>Source Dynamics</strong>: <code>none</code> by default.</li>
+</ul>
+<p>Only the CSV option has the <strong>Grid Configuration</strong> box, since there is no inventory to take the grid from:</p>
+<ul>
+<li><strong>Grid File</strong>: an <code>*_out.alaqs</code> or a grid CSV; its grid fills <strong>Grid Details</strong>.</li>
+<li><strong>Grid Details</strong>: X/Y/Z Cells, X/Y/Z Resolution (m), Reference Latitude/Longitude (°) and Reference Altitude (m). You can type the grid here instead of loading a file. Cell sizes are true ground metres: the grid is built in the local UTM zone.</li>
+<li><strong>Save Grid as CSV</strong> writes the grid to a new CSV. <strong>Update File</strong> writes the edited grid back into the selected grid file.</li>
+</ul>
+<p>With the inventory option the grid is always the inventory's calculation grid.</p>
+<p>AUSTAL needs square cells. If the X and Y resolutions differ, the smaller one is used for both. AUSTAL's calculation grid is the emission grid plus two cells on every side.</p>
+<h4 id="generate-austal-input-files">Generate AUSTAL Input Files<a class="headerlink" href="#generate-austal-input-files" title="Permanent link">&para;</a></h4>
+<p>When the status line of your option is green, click <strong>Generate AUSTAL Input Files</strong>. The plugin:</p>
+<ol>
+<li>creates a folder <code>AUSTAL</code> inside the output folder you chose. If that folder is not empty, it asks before deleting its contents;</li>
+<li>with the inventory option, recalculates the emissions of all sources from the inventory with the emission settings above for the selected period;</li>
+<li>writes the <a href="#austal-input-files">AUSTAL input files</a> into <code>AUSTAL</code>, with the <a href="#site-parameters">site parameters</a> of the dialog.</li>
+</ol>
+<p>The status line then shows the path of the <code>AUSTAL</code> folder. <strong>Run AUSTAL</strong> becomes available. If you switch to another option, generate again before running.</p>
+<h3 id="3-execution">3. Execution<a class="headerlink" href="#3-execution" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Erase Log File at Start of Calculation</strong>: AUSTAL starts a new <code>austal.log</code> instead of appending to the old one.</li>
+<li><strong>Run AUSTAL</strong>: with a Generate option it is available only after a successful generation; with <strong>Use Existing AUSTAL Input Files</strong>, as soon as the work directory is valid.</li>
+</ul>
+<p>When you click <strong>Run AUSTAL</strong>, the plugin checks sections 1 and 2. If something is missing, a message names it and nothing runs. Otherwise AUSTAL runs in the <code>AUSTAL</code> folder (or in your work directory) and opens its own console window, where you can follow its progress. QGIS waits until AUSTAL ends. A run can take from minutes to hours, depending on the grid, the period and the quality level.</p>
+<p>When AUSTAL ends without error, the status line turns green and a message confirms the run. When it fails, a message gives AUSTAL's exit code and the last 40 lines of <code>austal.log</code> (or points to the console window if there is no log).</p>
+<h3 id="4-result-visualisation">4. Result Visualisation<a class="headerlink" href="#4-result-visualisation" title="Permanent link">&para;</a></h3>
+<p>This section shows the results of the run. See <a href="#results">Results</a>.</p>
+<h2 id="dispersion-models-tab">Dispersion Models tab<a class="headerlink" href="#dispersion-models-tab" title="Permanent link">&para;</a></h2>
+<p>The <em>Emission Inventory Analysis</em> window (toolbar button <strong>Visualize Emission Calculation</strong>) has a <strong>Dispersion Models</strong> tab with an <strong>AUSTAL</strong> page. Use it when the AUSTAL inputs must come from the emission calculation of that window, for one pollutant at a time.</p>
+<p><img alt="Dispersion Models tab" src="../../open_alaqs/assets/emissions-calculation-2.png" /></p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Is Enabled</strong></td>
+<td>not ticked</td>
+<td>Tick to write AUSTAL input files during the next calculation.</td>
+</tr>
+<tr>
+<td><strong>Title</strong></td>
+<td>empty</td>
+<td>Title written into <code>austal.txt</code>.</td>
+</tr>
+<tr>
+<td><strong>Include Mixing Height</strong></td>
+<td>not ticked</td>
+<td>As in the dialog: AUSTAL uses the hourly mixing height of the meteorology. Needs <code>NOSTANDARD</code> in the options string.</td>
+</tr>
+<tr>
+<td><strong>Roughness Length</strong></td>
+<td>see <a href="#site-parameters">Site parameters</a></td>
+<td>z0.</td>
+</tr>
+<tr>
+<td><strong>Displacement Height</strong></td>
+<td>see <a href="#site-parameters">Site parameters</a></td>
+<td>d0. <code>0</code> means "derive from z0".</td>
+</tr>
+<tr>
+<td><strong>Anemometer Height</strong></td>
+<td>see <a href="#site-parameters">Site parameters</a></td>
+<td>ha. <code>0</code> means "derive from z0".</td>
+</tr>
+<tr>
+<td><strong>Quality Level</strong></td>
+<td>1</td>
+<td>1 to 10; each step up doubles the number of particles.</td>
+</tr>
+<tr>
+<td><strong>Options String</strong></td>
+<td><code>NOSTANDARD;SCINOTAT;Kmax=1</code></td>
+<td>AUSTAL options, separated by semicolons. <code>NOSTANDARD</code> allows non-standard settings (needed for the mixing height and for <code>Kmax</code>); <code>SCINOTAT</code> writes the results in scientific notation; <code>Kmax=1</code> writes only the ground layer of concentrations (<code>Kmax=3</code> writes three layers). Add <code>NOTALUFT</code> for per-hour output.</td>
+</tr>
+</tbody>
+</table>
+<p>To write the input files:</p>
+<ol>
+<li>Set the <em>Configuration</em> tab as for any emission calculation (method, period, <strong>Receptor Points</strong> if you want receptor time series). See <a href="USER_GUIDE.html#calculate-emissions-and-query-results">Calculate emissions and query results</a>.</li>
+<li>On the <strong>Dispersion Models</strong> tab, tick <strong>Is Enabled</strong> and set the values above.</li>
+<li>Select the pollutant in the window and click an output button (<strong>View Emissions Table</strong> is fastest).</li>
+<li>The plugin asks for an output folder (<em>AUSTAL: Select Output directory</em>). If the folder is not empty, it asks whether to delete the files in it.</li>
+<li>Open <strong>Calculate Dispersion</strong>, select <strong>Use Existing AUSTAL Input Files</strong> with that folder as <strong>Work Directory</strong>, and click <strong>Run AUSTAL</strong>.</li>
+</ol>
+<p>The site parameters of this tab are also used for the <code>surface_layer</code> atmosphere aloft of the emission calculation, whether <strong>Is Enabled</strong> is ticked or not.</p>
+<h2 id="site-parameters">Site parameters<a class="headerlink" href="#site-parameters" title="Permanent link">&para;</a></h2>
+<p>The AUSTAL input file holds three site parameters. AUSTAL derives its wind and turbulence profiles, and so the dilution of every source, from them and the hourly wind. OpenALAQS also uses them for the <code>surface_layer</code> atmosphere aloft, where their effect on emissions is small: under 0.2 % in NOx on a test day.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Meaning</th>
+<th>How to set it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>z0</code>, Roughness Length (m)</td>
+<td>aerodynamic roughness of the area around the sources</td>
+<td>from the land cover around the sources (step 1)</td>
+</tr>
+<tr>
+<td><code>d0</code>, Displacement Height (m)</td>
+<td>height by which the profiles are shifted up over vegetation or buildings</td>
+<td>6 × z0 (AUSTAL default) unless there is a reason to deviate</td>
+</tr>
+<tr>
+<td><code>ha</code>, Anemometer Height (m)</td>
+<td>the height at which the meteo file's wind applies, <strong>for the roughness z0</strong></td>
+<td>from the anemometer's real height and its own surroundings (step 2); 10 m + d0 only if the anemometer stands on ground as rough as z0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="step-1-z0-from-the-land-cover">Step 1: z0 from the land cover<a class="headerlink" href="#step-1-z0-from-the-land-cover" title="Permanent link">&para;</a></h3>
+<p>AUSTAL implements TA Luft (2021, Anhang 2). Its rule for z0:
+1. For each source, take the area-weighted mean of the TA Luft z0 values of the land cover within a circle around the source. The radius is 15 × the source height, at least 150 m.
+2. Average over the sources; for sources of different height, weight by the square of the height.
+3. Round to the nearest TA Luft class: 0.01, 0.02, 0.05, 0.10, 0.20, 0.50, 1.0, 1.5 or 2.0 m.</p>
+<p>Outside Germany AUSTAL has no roughness register, so z0 must be entered. CORINE Land Cover (EEA, 100 m) gives the land-cover class. TA Luft values for common classes:</p>
+<table>
+<thead>
+<tr>
+<th>CORINE class</th>
+<th>z0 (m)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>water bodies (512)</td>
+<td>0.01</td>
+</tr>
+<tr>
+<td>sport and leisure (142)</td>
+<td>0.05</td>
+</tr>
+<tr>
+<td>airports (124), meadows and pastures (231), arable land (211)</td>
+<td>0.10</td>
+</tr>
+<tr>
+<td>roads and rail (122), urban green (141)</td>
+<td>0.20</td>
+</tr>
+<tr>
+<td>port areas (123)</td>
+<td>0.50</td>
+</tr>
+<tr>
+<td>discontinuous urban (112), industrial and commercial (121)</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>continuous urban (111)</td>
+<td>2.0</td>
+</tr>
+</tbody>
+</table>
+<p>AUSTAL takes <strong>one z0 for the whole domain</strong>. When the sources sit on very different ground, choose for the question asked and say so in the report:
+- an airport-only study takes the airport's value;
+- a study that adds city road traffic takes the value over all sources, or runs both as a sensitivity.</p>
+<p><em>Example (Rotterdam The Hague, 2025 sources, CORINE 2018):</em>
+- airport ground sources, emission-weighted: 0.105 m, class 0.10;
+- roads: 0.65 to 0.69 m, class 0.50.</p>
+<h3 id="step-2-ha-for-that-z0">Step 2: ha for that z0<a class="headerlink" href="#step-2-ha-for-that-z0" title="Permanent link">&para;</a></h3>
+<p>The meteo file's wind was measured at a real height h over the anemometer site's own roughness z0s, normally 10 m over grass at an airfield. AUSTAL instead reads the wind as if measured at height <code>ha</code> over ground of roughness z0.
+- <strong>Same roughness (z0s = z0):</strong> ha = 10 m + d0, which is AUSTAL's default.
+- <strong>Different roughness:</strong> ha is the equivalent height at which the profile over z0 gives the measured speed. German DWD time series (AKTerm) carry one such height per roughness class for this reason (AUSTAL manual, section 3.5.1).</p>
+<p>Using 10 m + d0 when the site is smoother than z0 makes AUSTAL overestimate u* and the dilution, so concentrations come out low.</p>
+<p><em>Order of magnitude</em> (neutral log profiles, equal wind at 100 to 200 m; an approximation, not the DWD procedure) for a 10 m anemometer over z0s = 0.03 to 0.10 m:</p>
+<table>
+<thead>
+<tr>
+<th>z0 of the study</th>
+<th>d0 = 6 z0</th>
+<th>ha</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.10</td>
+<td>0.6</td>
+<td>10 to 15 m</td>
+</tr>
+<tr>
+<td>0.20</td>
+<td>1.2</td>
+<td>13 to 20 m</td>
+</tr>
+<tr>
+<td>0.50</td>
+<td>3.0</td>
+<td>19 to 28 m</td>
+</tr>
+<tr>
+<td>1.0</td>
+<td>6.0</td>
+<td>25 to 37 m</td>
+</tr>
+</tbody>
+</table>
+<p>Where the met service supplies equivalent anemometer heights, use those. In the Netherlands, KNMI also publishes "potential wind": hourly wind at 10 m, reduced to a standard roughness of 0.03 m. With that series z0s = 0.03 m by construction.</p>
+<h3 id="step-3-keep-the-meteo-file-consistent">Step 3: keep the meteo file consistent<a class="headerlink" href="#step-3-keep-the-meteo-file-consistent" title="Permanent link">&para;</a></h3>
+<p>The Obukhov length L in the meteorology describes stability for a roughness too. AUSTAL's own conversion from stability class to L (TA Luft, Klug/Manier classes) depends on z0. A meteo file whose L was made for another roughness, or without one, gives profiles that are inconsistent with z0. The <a href="../../scripts/README_metar_to_alaqs_meteo.html">METAR converter</a> assigns L independently of z0, a known limitation.</p>
+<h3 id="where-to-set-them">Where to set them<a class="headerlink" href="#where-to-set-them" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Setting</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plugin, <a href="#dispersion-models-tab">Dispersion Models tab</a> of <strong>Visualize Emission Calculation</strong></td>
+<td>Roughness Length, Displacement Height, Anemometer Height</td>
+<td>0.1 / 0.6 / 10.6 m; <code>0</code> in Displacement Height or Anemometer Height derives it from z0</td>
+</tr>
+<tr>
+<td>Plugin, <a href="#calculate-dispersion-dialog">Calculate Dispersion dialog</a> (Generate AUSTAL Input Files)</td>
+<td>Roughness Length, Displacement Height, Anemometer Height, in each Generate option</td>
+<td>0.1 m, 0, 0, which give 0.1 / 0.6 / 10.6 m; <code>0</code> in Displacement Height or Anemometer Height derives it from z0</td>
+</tr>
+<tr>
+<td><a href="../../openalaqs_standalone/USAGE.html">Standalone</a> <code>austal</code> subcommand, <code>austal_prep</code>, Dataiku recipe</td>
+<td><code>--z0</code>, <code>--d0</code>, <code>--ha</code>; <code>z0</code>, <code>d0</code>, <code>ha</code> in <code>config.json</code> and <code>recipe_config.json</code></td>
+<td>0.1 m / 6 z0 / 10 m + d0; an empty or <code>null</code> value is derived from z0</td>
+</tr>
+<tr>
+<td><code>surface_layer</code> without an AUSTAL module (plugin, standalone <code>aircraft</code>, headless runner)</td>
+<td><code>--z0</code>, <code>--d0</code>, <code>--ha</code>; <code>atmosphere_z0_m</code>, <code>atmosphere_d0_m</code>, <code>atmosphere_ha_m</code></td>
+<td>as the AUSTAL module</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Current behaviour in the plugin.</strong> The values on the Dispersion Models tab are used for the <code>surface_layer</code> atmosphere aloft and for the AUSTAL input files that the tab writes when <strong>Is Enabled</strong> is ticked. The Calculate Dispersion dialog has its own fields: <strong>Generate AUSTAL Input Files</strong> writes them into <code>austal.txt</code> and, with the inventory option, uses them for the <code>surface_layer</code> atmosphere aloft.</p>
+<p><strong>Defaults.</strong> The plugin, the standalone and <code>austal_prep</code> share one default: z0 = 0.1 m, the TA Luft value for airports (class 124), the land use around most airport sources; d0 = 6 z0 and ha = 10 m + d0, AUSTAL's own defaults, consistent with each other when the anemometer stands on the airfield. d0 and ha are derived from z0 whenever they are left empty, so changing z0 alone keeps the three consistent. These defaults changed in 5.4.1, and so do the results of studies that keep them; see <a href="UPGRADING.html#upgrading-from-540">Upgrading from 5.4.0</a>.</p>
+<p><strong>Report the three values and how they were chosen</strong> with every AUSTAL result.</p>
+<h2 id="austal-input-files">AUSTAL input files<a class="headerlink" href="#austal-input-files" title="Permanent link">&para;</a></h2>
+<p>Both paths write the same set of files. For the dialog's Generate options they go into <code>AUSTAL</code> inside the folder you chose.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>austal.txt</code></td>
+<td>Main input: title, quality level, site parameters (z0, d0, ha), <code>hm ?</code> when the mixing height is included, calculation grid (mesh width, origin, number of meshes), receptor points if any (positions and heights), options string, and one column per AUSTAL source whose values are marked <code>?</code> (read from <code>series.dmna</code>).</td>
+</tr>
+<tr>
+<td><code>series.dmna</code></td>
+<td>Hourly time series: wind direction, wind speed, Obukhov length (and mixing height when included), and for each source the emission grid file index and the emission rate of each pollutant.</td>
+</tr>
+<tr>
+<td><code>NN/eNNNN.dmna</code></td>
+<td>3D emission grids, one subfolder <code>NN</code> per AUSTAL source. The non-stationary sources (movements, gates, taxiways) start at <code>01/</code> with one file per hour; each stationary source group has its own folder with a single <code>e0001.dmna</code> for the whole run.</td>
+</tr>
+</tbody>
+</table>
+<p>The options string in <code>austal.txt</code>, as written by the dialog, is <code>NOSTANDARD;NOTALUFT;SCINOTAT;Kmax=1</code> with <strong>NOTALUFT</strong> ticked and <code>NOSTANDARD;SCINOTAT;Kmax=1</code> without it. <code>SCINOTAT</code> writes the results in scientific notation, so small concentrations keep their digits. <code>NOSTANDARD</code> is always set because AUSTAL needs it to read the mixing height from <code>series.dmna</code>.</p>
+<p>PM10 is written as two AUSTAL emission lines, <code>pm-1</code> (fine) and <code>pm-2</code> (coarse), split by the <strong>PM10 fine fraction</strong>. AUSTAL sums them in its <code>pm</code> result.</p>
+<p>See the <a href="https://www.umweltbundesamt.de/en/topics/air/air-quality-control-in-europe/download">AUSTAL documentation</a> for the meaning of every input parameter.</p>
+<h2 id="austal-output-files">AUSTAL output files<a class="headerlink" href="#austal-output-files" title="Permanent link">&para;</a></h2>
+<p>AUSTAL writes its results and <code>austal.log</code> into the folder of <code>austal.txt</code>:</p>
+<div class="highlight"><pre><span></span><code>&lt;output folder&gt;/AUSTAL/
+├── austal.txt                 # input (generated, or yours with "Use Existing")
+├── series.dmna                # input time series
+├── 01/, 02/, ...              # input emission grids (eNNNN.dmna)
+├── austal.log                 # run log
+├── &lt;substance&gt;-y00a.dmna      # mean concentration grid over the run (always)
+├── &lt;substance&gt;-y00s.dmna      # its statistical uncertainty (always)
+├── &lt;substance&gt;-NNNa.dmna      # one grid per hour, NNN = hour index (NOTALUFT only)
+└── &lt;substance&gt;-tmpa.dmna      # hourly time series at the receptors (receptors + NOTALUFT only)
+</code></pre></div>
+<p><code>&lt;substance&gt;</code> is the AUSTAL code: <code>co2</code>, <code>co</code>, <code>hc</code>, <code>nox</code>, <code>sox</code> (defined in the OpenALAQS <code>austal.settings</code>) and <code>pm</code> for PM10. In <code>y00a</code>, <code>00</code> is the grid number and <code>a</code> means additional load. Concentrations are in µg/m³ (CO2 in mg/m³). By default only the ground layer is written; <code>Kmax</code> in the options string writes more layers.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Written when</th>
+<th>Used by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;substance&gt;-y00a.dmna</code></td>
+<td>always</td>
+<td><strong>Plot Vector Layer</strong>, averaging <code>annual mean</code></td>
+</tr>
+<tr>
+<td><code>&lt;substance&gt;-y00s.dmna</code></td>
+<td>always</td>
+<td>not read by the plugin; statistical uncertainty of <code>y00a</code></td>
+</tr>
+<tr>
+<td><code>&lt;substance&gt;-NNNa.dmna</code></td>
+<td>NOTALUFT</td>
+<td><strong>Plot Vector Layer</strong>, averaging <code>hourly</code> or <code>8-hours mean</code></td>
+</tr>
+<tr>
+<td><code>&lt;substance&gt;-tmpa.dmna</code></td>
+<td>NOTALUFT and receptor points</td>
+<td><strong>Plot Time Series</strong>, <strong>Compliance Report</strong></td>
+</tr>
+</tbody>
+</table>
+<p>"Annual mean" is the mean over the simulated period. For a run shorter than a year it is not an annual mean in the regulatory sense.</p>
+<h2 id="results">Results<a class="headerlink" href="#results" title="Permanent link">&para;</a></h2>
+<p>Section 4 of the Calculate Dispersion dialog, <em>Result Visualisation</em>, reads the AUSTAL output files and shows them in three ways.</p>
+<p><img alt="Result Visualisation" src="../../open_alaqs/assets/running-austal-2.png" /></p>
+<p><strong>Which folder is read.</strong> After a run, the buttons read the folder where AUSTAL ran. To view an earlier run, select <strong>Use Existing AUSTAL Input Files</strong>, tick <strong>Load Existing Results</strong> and set its <strong>Work Directory</strong> to the folder with the <code>.dmna</code> result files. The pollutant and averaging lists then offer what was found in that folder.</p>
+<p><strong>Grid Management.</strong> Tick it and set <strong>File</strong> to the inventory (<code>*_out.alaqs</code>) of the run. All three buttons need it: the plugin takes the period and, for the map, the grid from that file. Use the same inventory that the input files were generated from, otherwise the cells are drawn in the wrong place. The last file chosen is remembered.</p>
+<p><strong>Calculation Configuration.</strong> <strong>Start (incl.)</strong> and <strong>End (incl.)</strong> show the period of the inventory (read only). <strong>Averaging</strong> (<code>hourly</code>, <code>8-hours mean</code>, <code>daily mean</code>, <code>annual mean</code>; default <code>annual mean</code>) and <strong>Pollutant</strong> select what <strong>Plot Vector Layer</strong> shows.</p>
+<table>
+<thead>
+<tr>
+<th>Button</th>
+<th>What you get</th>
+<th>Needs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Plot Vector Layer</strong></td>
+<td>A polygon layer on the QGIS canvas, one square per grid cell, with the concentration as attribute and a graduated colour ramp. <code>annual mean</code> reads <code>y00a</code>; <code>hourly</code> and <code>8-hours mean</code> combine the per-hour files. <code>daily mean</code> is not available for the map; use the receptor results for daily values.</td>
+<td>The Grid Management file and the result file of the chosen averaging.</td>
+</tr>
+<tr>
+<td><strong>Plot Time Series</strong></td>
+<td>A plot of concentration against time at each receptor, with a smoothing list (Raw (hourly), 8-hour rolling mean, 24-hour rolling mean, Monthly mean), a zoom toolbar and <strong>Export CSV</strong>.</td>
+<td><code>*-tmpa.dmna</code> files: a run with receptor points and NOTALUFT.</td>
+</tr>
+<tr>
+<td><strong>Compliance Report</strong></td>
+<td>A table per receptor and limit: value, limit, allowed exceedances and PASS/FAIL in colour, with CSV export.</td>
+<td>As for Plot Time Series.</td>
+</tr>
+</tbody>
+</table>
+<p>The line below the buttons lists the substances with receptor results, or says what is missing. The tooltip of a disabled button gives the steps to enable it: add receptor points, tick NOTALUFT, generate the input files again and run AUSTAL again.</p>
+<h3 id="the-concentration-map">The concentration map<a class="headerlink" href="#the-concentration-map" title="Permanent link">&para;</a></h3>
+<p>The layer is drawn in the UTM zone of the study, so each cell is a true square of the mesh width. It is a normal QGIS vector layer: you can change its symbology, click cells to read values, open its attribute table or save it as a GeoPackage. A new plot of the same name replaces the old layer.</p>
+<h3 id="the-compliance-report">The compliance report<a class="headerlink" href="#the-compliance-report" title="Permanent link">&para;</a></h3>
+<p>The report compares each receptor with the limit values of Directive (EU) 2024/2881 (<a href="http://data.europa.eu/eli/dir/2024/2881/oj">Annex I, Section 1</a>) that apply from 1 January 2030, and NOx with the critical level for the protection of vegetation. The header line states the directive and how many receptors and substances were evaluated.</p>
+<table>
+<thead>
+<tr>
+<th>Substance</th>
+<th>Annual mean (µg/m³)</th>
+<th>Daily mean (µg/m³, exceedances allowed per year)</th>
+<th>Hourly mean (µg/m³, exceedances allowed per year)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PM10</td>
+<td>20</td>
+<td>45 (18)</td>
+<td></td>
+</tr>
+<tr>
+<td>PM2.5</td>
+<td>10</td>
+<td>25 (18)</td>
+<td></td>
+</tr>
+<tr>
+<td>NO2</td>
+<td>20</td>
+<td></td>
+<td>200 (3)</td>
+</tr>
+<tr>
+<td>NOx: critical level for the protection of vegetation, not a limit value (the report labels the row "NOx")</td>
+<td>30</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>SO2</td>
+<td>20</td>
+<td>50 (treated as no exceedance allowed, pending verification of the count)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Notes:
+- The annual mean is the mean of the hours of the run, and the exceedances are counted over the run. For a run shorter than a year, read the result as an indication only.
+- CO, HC and CO2 have no comparable EU ambient limit and are not reported.
+- A run from the dialog produces only the pollutants of its check boxes, so the report shows rows for PM10 and NOx only. No check box writes PM2.5, NO2 or SO2.</p>
+<h2 id="typical-session">Typical session<a class="headerlink" href="#typical-session" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Open <strong>Calculate Dispersion</strong>.</li>
+<li>Section 1: select the AUSTAL executable (once per computer).</li>
+<li>Section 2: select <strong>Generate AUSTAL Input Files from OpenALAQS Emission Inventory File</strong>. Set the inventory file, the <strong>Output Work Directory</strong>, the pollutants, the quality level and the period.</li>
+<li>For receptor results: give a <strong>Receptors CSV</strong> and tick <strong>NOTALUFT</strong>.</li>
+<li>Click <strong>Generate AUSTAL Input Files</strong> and wait for the status line to show the <code>AUSTAL</code> folder.</li>
+<li>Section 3: click <strong>Run AUSTAL</strong> and wait for the green status line.</li>
+<li>Section 4: tick <strong>Grid Management</strong> and set <strong>File</strong> to the same inventory.</li>
+<li>Click <strong>Plot Vector Layer</strong> for the concentration map, or, with receptors and NOTALUFT, <strong>Plot Time Series</strong> or <strong>Compliance Report</strong>.</li>
+</ol>
+<h2 id="common-failure-modes">Common failure modes<a class="headerlink" href="#common-failure-modes" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>"No Executable Loaded" after picking a file.</strong> The picker accepts only files named <code>austal.exe</code> or <code>austal</code>. Rename a file such as <code>austal_3.exe</code>.</li>
+<li><strong>The run fails, or the results of some substances are missing.</strong> Check that the AUSTAL folder has the OpenALAQS <code>austal.settings</code>. It defines the CO2, CO, HC and SOx substances that are not among AUSTAL's standard ones. See <a href="../AUSTAL/AUSTAL.html#configuration-files">Configuration files</a>.</li>
+<li><strong>"AUSTAL input files could not be created: the selected time period".</strong> Start or End is outside the inventory or emissions file. The message gives the available range.</li>
+<li><strong>A result button says "No emission calculation loaded".</strong> Set <strong>Grid Management</strong> &gt; <strong>File</strong> to the inventory.</li>
+<li><strong>Plot Vector Layer stays disabled.</strong> No run has finished in this session and no results folder is loaded under <strong>Load Existing Results</strong>.</li>
+<li><strong>Plot Time Series and Compliance Report stay disabled.</strong> There are no <code>*-tmpa.dmna</code> files: the run had no receptor points or no NOTALUFT. Set both, generate again and run again.</li>
+<li><strong>Plot Vector Layer says it "can't aggregate" to the period.</strong> The averaging needs files that the run did not write (<code>hourly</code> or <code>8-hours mean</code> without NOTALUFT), or it is <code>daily mean</code>. Use <code>annual mean</code> for the map and the receptor results for hourly and daily values.</li>
+<li><strong>Cells appear in the wrong place.</strong> The Grid Management file is not the inventory the inputs were generated from. Select the same inventory.</li>
+<li><strong>A long run seems stuck.</strong> Watch AUSTAL's console window, or check that <code>austal.log</code> in the run folder is still growing.</li>
+</ul>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../AUSTAL/AUSTAL.html">AUSTAL installation</a></li>
+<li><a href="USER_GUIDE.html#calculate-emissions-and-query-results">User Guide: calculate emissions</a></li>
+<li><a href="INPUT_FORMATS.html#receptor-points">Input formats: receptor points</a></li>
+<li><a href="TUTORIAL_ROTTERDAM.html">Tutorial with the Rotterdam training data</a></li>
+</ul>
+<h2 id="in-the-code">In the code<a class="headerlink" href="#in-the-code" title="Permanent link">&para;</a></h2>
+<p>For maintainers: the dialog is <code>open_alaqs/gui/DispersionAnalysis.py</code> with <code>open_alaqs/ui/ui_run_austal.ui</code>; the input files are written by <code>open_alaqs/core/modules/AUSTALOutputModule.py</code> (CSV option: <code>open_alaqs/core/tools/austal_csv_generation.py</code>); the results by <code>ConcentrationsQGISVectorLayerOutputModule.py</code>, <code>TimeSeriesDispersionOutputModule.py</code> and <code>ComplianceReportOutputModule.py</code> in <code>open_alaqs/core/modules/</code>. The site-parameter default is <code>site_parameters()</code> in <code>open_alaqs/core/tools/surface_layer_atmosphere.py</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="INPUT_FORMATS.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Input formats">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Input formats
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../AUSTAL/AUSTAL.html" class="md-footer__link md-footer__link--next" aria-label="Next: AUSTAL installation">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                AUSTAL installation
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      EUROCONTROL, European Union Public Licence v. 1.2 with amendments
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.indexes", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>

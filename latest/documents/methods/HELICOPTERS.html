@@ -1,0 +1,2810 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Airport local air quality studies with the OpenALAQS QGIS plugin and AUSTAL">
+      
+      
+      
+        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.2/documents/methods/HELICOPTERS.html">
+      
+      
+        <link rel="prev" href="ATMOSPHERE_ALOFT.html">
+      
+      
+        <link rel="next" href="STATIONARY_AND_ROAD.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Helicopters - OpenALAQS documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#helicopters" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="OpenALAQS documentation" class="md-header__button md-logo" aria-label="OpenALAQS documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            OpenALAQS documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Helicopters
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/eurocontrol-asu/open_alaqs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    eurocontrol-asu/open_alaqs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../index.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user/USER_GUIDE.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Using OpenALAQS
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="AIRCRAFT_EMISSIONS.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Methods
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user/WITHOUT_QGIS.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Command line
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../validation/VALIDATION_GUIDE.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../developer/CODE_FLOW.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Maintainers
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="OpenALAQS documentation" class="md-nav__button md-logo" aria-label="OpenALAQS documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    OpenALAQS documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/eurocontrol-asu/open_alaqs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    eurocontrol-asu/open_alaqs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Home
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GLOSSARY.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using OpenALAQS
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Using OpenALAQS
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/USER_GUIDE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/TUTORIAL_ROTTERDAM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Rotterdam The Hague
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/INPUT_FORMATS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Input formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/DISPERSION_AUSTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dispersion with AUSTAL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AUSTAL/AUSTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AUSTAL installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/UPGRADING.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/TROUBLESHOOTING.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/TRAINING_COURSE_ERRATA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Training course: errata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Methods
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="AIRCRAFT_EMISSIONS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aircraft emissions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="ATMOSPHERE_ALOFT.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ambient conditions aloft
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Helicopters
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="HELICOPTERS.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Helicopters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#foca-2015-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FOCA 2015 method
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#helicopter-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helicopter categories
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default catalog
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-not-computed-for-helicopters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is not computed for helicopters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trajectory-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trajectory parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Trajectory parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#global-constants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global constants
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piston" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PISTON
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#single_turboshaft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SINGLE_TURBOSHAFT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#twin_turboshaft_light" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TWIN_TURBOSHAFT_LIGHT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#twin_turboshaft_heavy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TWIN_TURBOSHAFT_HEAVY
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#approach-geometry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approach geometry
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#departure-geometry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Departure geometry
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-new-category" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a new category
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="STATIONARY_AND_ROAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stationary sources and road traffic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="REFERENCE_DATA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../openalaqs_standalone/index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Command line
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/WITHOUT_QGIS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Which tool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../openalaqs_standalone/USAGE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standalone: usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/README_metar_to_alaqs_meteo.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    METAR to meteo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/emissions_austal/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    emissions_austal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/austal_from_csv/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    austal_from_csv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gse_application/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GSE application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../example/training/recipe_config.README.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example configurations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../example/training/training_engine_test_events.README.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example engine test events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation/VALIDATION_GUIDE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../openalaqs_standalone/validation/tools/CAEP14_VALIDATION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CAEP14 reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../tools/template_build/index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maintainers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Maintainers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/CODE_FLOW.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code structure and flow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/REGRESSION_PATTERNS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regression patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/AIRCRAFT_PROFILES_PROVENANCE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aircraft profiles provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/DATASET_PROVENANCE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    COPERT dataset provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/DEPRECATIONS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema deprecations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/design/ATMOSPHERE_ALOFT_VALIDATION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design: atmosphere aloft validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/anp22_profiles/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ANP 2.2 profiles builder
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/test_fixtures/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test fixtures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHANGELOG.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#foca-2015-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FOCA 2015 method
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#helicopter-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helicopter categories
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default catalog
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-not-computed-for-helicopters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is not computed for helicopters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trajectory-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trajectory parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Trajectory parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#global-constants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global constants
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piston" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PISTON
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#single_turboshaft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SINGLE_TURBOSHAFT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#twin_turboshaft_light" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TWIN_TURBOSHAFT_LIGHT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#twin_turboshaft_heavy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TWIN_TURBOSHAFT_HEAVY
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#approach-geometry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approach geometry
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#departure-geometry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Departure geometry
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-new-category" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a new category
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/eurocontrol-asu/open_alaqs/edit/main/documents/methods/HELICOPTERS.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="helicopters">Helicopters<a class="headerlink" href="#helicopters" title="Permanent link">&para;</a></h1>
+<p>This page is the reference for helicopter emissions in OpenALAQS: the FOCA 2015 method, the helicopter catalog, and the trajectory that places the emissions in space. It is for modellers who need to know how helicopter movements are computed or who want to add a helicopter type.</p>
+<ul>
+<li><a href="#foca-2015-method">FOCA 2015 method</a></li>
+<li><a href="#helicopter-categories">Helicopter categories</a></li>
+<li><a href="#default-catalog">Default catalog</a></li>
+<li><a href="#what-is-not-computed-for-helicopters">What is not computed for helicopters</a></li>
+<li><a href="#trajectory-parameters">Trajectory parameters</a></li>
+<li><a href="#approach-geometry">Approach geometry</a></li>
+<li><a href="#departure-geometry">Departure geometry</a></li>
+<li><a href="#adding-a-new-category">Adding a new category</a></li>
+</ul>
+<p>Primary reference:</p>
+<blockquote>
+<p>Rindlisbacher T., Chabbey L., "Guidance on the Determination of
+Helicopter Emissions", Swiss Federal Office of Civil Aviation
+(FOCA), Edition 2, December 2015. Ref: COO.2207.111.2.2015750.</p>
+</blockquote>
+<p>Cited below as <strong>FOCA 2015</strong>. Section and appendix references are to that document unless stated otherwise.</p>
+<h2 id="foca-2015-method">FOCA 2015 method<a class="headerlink" href="#foca-2015-method" title="Permanent link">&para;</a></h2>
+<p>Helicopter movements use the same Movements table as fixed-wing aircraft. The <code>aircraft</code> field holds an ICAO type designator (or a variant label, see <a href="#default-catalog">Default catalog</a>). Each identifier is first looked up in the helicopter catalog (<code>default_helicopter</code>); a match is computed as a helicopter, otherwise the fixed-wing catalog (<code>default_aircraft</code>) is used. No flag in the Movements table marks a helicopter: the lookup decides.</p>
+<p>Emissions are computed live with the FOCA 2015 method from each helicopter's engine type, maximum shaft horsepower, engine count and category, for the FOCA LTO modes (ground idle, take-off, climb-out, approach). No precomputed emission indices are stored. The FOCA path is the same whatever the <strong>Method</strong> selected on the Configuration tab (Bymode or BFFM2).</p>
+<p>FOCA gives no SOx. OpenALAQS computes it as the mode fuel times 0.758 g/kg for turboshaft engines (jet fuel) or 0.2 g/kg for piston engines (AvGas), the fuel sulphur values of <a href="AIRCRAFT_EMISSIONS.html#particulate-matter">Aircraft emissions: particulate matter</a>.</p>
+<p>The mode masses are then placed along a helicopter trajectory (see <a href="#trajectory-parameters">Trajectory parameters</a>): ground idle as a point at the take-off or touchdown spot, the active mode along the flight path, cut at the LTO ceiling (the hour's mixing height, see <a href="AIRCRAFT_EMISSIONS.html#lto-ceiling-and-segment-clipping">Aircraft emissions</a>) and the grid. The share of the active mode's time spent below the ceiling and inside the grid scales its FOCA mass.</p>
+<p>Two inconsistencies of the FOCA 2015 PDF were resolved during implementation: the leading coefficient of the piston fuel flow, and the Appendix C power settings of the twin-heavy category. For the latter, Appendix C lists values that pre-date the 2015 update (legacy 2009-era values remained in the MODEL column despite text updates); OpenALAQS uses the post-2015 corrected values (Table 4).</p>
+<p>In the code: <code>open_alaqs/core/tools/foca_heli.py</code> (fuel flow and emission index formulas; the "Known FOCA 2015 PDF inconsistencies" docstring), <code>foca_heli_utils.compute_lto</code> (mode masses), <code>foca_heli_trajectory.active_mode_retained</code> (cut at the ceiling and the grid), <code>fuel_sulphur.py</code> (SOx).</p>
+<h2 id="helicopter-categories">Helicopter categories<a class="headerlink" href="#helicopter-categories" title="Permanent link">&para;</a></h2>
+<p>Each movement is classified at run time into one of the four FOCA 2015 categories (section 2.4) from engine type, engine count and MTOM. The category is not stored.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PISTON</code></td>
+<td><code>engine_type = PISTON</code></td>
+</tr>
+<tr>
+<td><code>SINGLE_TURBOSHAFT</code></td>
+<td><code>engine_type = TURBOSHAFT</code>, one engine</td>
+</tr>
+<tr>
+<td><code>TWIN_TURBOSHAFT_LIGHT</code></td>
+<td><code>engine_type = TURBOSHAFT</code>, two or more engines, MTOM ≤ 3400 kg</td>
+</tr>
+<tr>
+<td><code>TWIN_TURBOSHAFT_HEAVY</code></td>
+<td><code>engine_type = TURBOSHAFT</code>, two or more engines, MTOM &gt; 3400 kg</td>
+</tr>
+</tbody>
+</table>
+<p>The 3400 kg threshold is defined in FOCA 2015 section 2.4. A twin turboshaft without MTOM cannot be classified and is rejected. The category drives both the emission formulas and the trajectory geometry.</p>
+<p>In the code: <code>derive_category</code> in <code>open_alaqs/core/tools/foca_heli.py</code>.</p>
+<h2 id="default-catalog">Default catalog<a class="headerlink" href="#default-catalog" title="Permanent link">&para;</a></h2>
+<p>The catalog has 60 helicopter rows in <code>default_helicopter</code>, covering common types (ICAO codes R22, A109, EC35, AS32, S76, S92 and others), and 86 engine rows in <code>default_helicopter_engines</code>, covering the corresponding turboshaft and piston engines.</p>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Field</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>default_helicopter</code></td>
+<td><code>icao</code></td>
+<td>ICAO type designator</td>
+</tr>
+<tr>
+<td></td>
+<td><code>variant_label</code></td>
+<td>Distinguishes several rows per ICAO (e.g. <code>A109E_POWER</code> and <code>A109II</code>). The logical key is <code>(icao, variant_label)</code>.</td>
+</tr>
+<tr>
+<td></td>
+<td><code>manufacturer</code>, <code>name</code></td>
+<td>Free text</td>
+</tr>
+<tr>
+<td></td>
+<td><code>mtow_kg</code></td>
+<td>Maximum take-off weight in kilograms (used for the category)</td>
+</tr>
+<tr>
+<td></td>
+<td><code>engine_count</code></td>
+<td>Number of engines (used for the category)</td>
+</tr>
+<tr>
+<td></td>
+<td><code>engine</code>, <code>engine_name</code></td>
+<td>Reference a row of <code>default_helicopter_engines</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>max_shp_per_engine</code></td>
+<td>Maximum shaft horsepower per engine</td>
+</tr>
+<tr>
+<td></td>
+<td><code>is_default</code></td>
+<td><code>1</code> for the default variant of the ICAO code</td>
+</tr>
+<tr>
+<td><code>default_helicopter_engines</code></td>
+<td><code>engine_name</code></td>
+<td>Logical key</td>
+</tr>
+<tr>
+<td></td>
+<td><code>engine_full_name</code></td>
+<td>Free text</td>
+</tr>
+<tr>
+<td></td>
+<td><code>engine_type</code></td>
+<td><code>PISTON</code> or <code>TURBOSHAFT</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>max_shp_per_engine</code></td>
+<td>Used when the helicopter row does not give one</td>
+</tr>
+<tr>
+<td></td>
+<td><code>source</code></td>
+<td>Provenance citation</td>
+</tr>
+</tbody>
+</table>
+<p>The Movements table has no <code>variant_label</code> column. Its <code>aircraft</code> column takes either an ICAO code (the default variant is used) or a <code>variant_label</code> (that row is used). When an identifier matches both an ICAO code and a variant label, the ICAO code wins.</p>
+<p>To add a helicopter type, insert a row into <code>default_helicopter</code> that references an existing engine of <code>default_helicopter_engines</code> (or insert the engine row first). The minimum fields are <code>icao</code>, <code>variant_label</code>, <code>mtow_kg</code>, <code>engine_count</code>, <code>engine</code>, <code>engine_name</code>, <code>max_shp_per_engine</code> and <code>is_default</code>. Movements whose <code>aircraft</code> matches the new row are then computed with the FOCA method.</p>
+<h2 id="what-is-not-computed-for-helicopters">What is not computed for helicopters<a class="headerlink" href="#what-is-not-computed-for-helicopters" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>APU, GSE, GPU and main engine start.</strong> None are computed for helicopters, whatever <code>apu_code</code> and <code>gate_emissions_code</code> say. The gate calculation is not run for a helicopter movement: the gate is only the helipad, the origin of the trajectory. Helicopters have no taxi route; the helicopter taxi step adds ground idle only. The FOCA 2015 LTO cycle covers ground idle, take-off, climb-out, approach and landing on its own, so nothing is counted twice.</li>
+<li><strong>Above the LTO ceiling.</strong> The helicopter trajectory ends at 3000 ft above ground (ICAO LTO definition) and is cut at the hour's mixing height when that is lower; emissions above are not modelled.</li>
+</ul>
+<p>In the code: <code>MovementSourceModule.process</code> skips the gate calculator for helicopters; <code>TaxiingEmissionCalculator._apply_taxiing_emissions_for_helicopters</code> adds ground idle.</p>
+<h2 id="trajectory-parameters">Trajectory parameters<a class="headerlink" href="#trajectory-parameters" title="Permanent link">&para;</a></h2>
+<p>The trajectory generator builds the 3D geometry of a helicopter LTO from the per-category parameters below. The four categories are those of <a href="#helicopter-categories">Helicopter categories</a>. Fuel flow, emission indices and mode masses are not trajectory parameters: they come from the <a href="#foca-2015-method">FOCA 2015 method</a>. The trajectory times are used only to cut the active mode at the LTO ceiling and the grid.</p>
+<p>In the code: <code>TRAJECTORY_PARAMS</code> in <code>open_alaqs/core/tools/foca_heli_trajectory.py</code>.</p>
+<h3 id="global-constants">Global constants<a class="headerlink" href="#global-constants" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>symbol</th>
+<th>value</th>
+<th>source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LTO_CEILING_FT</code></td>
+<td>3000 ft AGL</td>
+<td>ICAO LTO cycle definition (Annex 16 Vol. II Appendix 3 §1.2)</td>
+</tr>
+<tr>
+<td><code>HOVER_ALT_FT</code></td>
+<td>5 ft AGL</td>
+<td>FOCA Appendix A (hover IGE altitude convention)</td>
+</tr>
+<tr>
+<td><code>HOVER_DURATION_S</code></td>
+<td>18 s</td>
+<td>FOCA Appendix A (assumed universal across categories)</td>
+</tr>
+<tr>
+<td>Twin-turboshaft MTOM threshold</td>
+<td>3400 kg</td>
+<td>FOCA §2.4</td>
+</tr>
+</tbody>
+</table>
+<h3 id="piston">PISTON<a class="headerlink" href="#piston" title="Permanent link">&para;</a></h3>
+<p>Representative airframe: Robinson R22. Selected as the canonical
+piston single because it dominates the FOCA fleet sample and its
+performance is published in the R22 Pilot's Operating Handbook (POH)
+in matching units.</p>
+<table>
+<thead>
+<tr>
+<th>field</th>
+<th>value</th>
+<th>source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>climb_roc_fpm</code></td>
+<td>500</td>
+<td>R22 POH §4 (normal climb rate at sea-level ISA)</td>
+</tr>
+<tr>
+<td><code>climb_tas_kt</code></td>
+<td>60</td>
+<td>R22 POH §4 (Vy, best rate of climb speed)</td>
+</tr>
+<tr>
+<td><code>cruise_tas_kt</code></td>
+<td>75</td>
+<td>R22 POH §5 (75% MCP cruise TAS at 4000 ft)</td>
+</tr>
+<tr>
+<td><code>approach_tas_initial_kt</code></td>
+<td>60</td>
+<td>Operational convention (Vy is used as the approach entry speed for piston helicopters per FOCA Appendix A)</td>
+</tr>
+<tr>
+<td><code>approach_tas_final_kt</code></td>
+<td>30</td>
+<td>Operational convention (slow-down to translational-lift speed before hover)</td>
+</tr>
+<tr>
+<td><code>approach_rod_initial_fpm</code></td>
+<td>500</td>
+<td>Symmetric with climb ROC; FOCA Appendix A descent profile</td>
+</tr>
+<tr>
+<td><code>approach_rod_final_fpm</code></td>
+<td>250</td>
+<td>Reduced ROD for final segment; FOCA Appendix A descent profile</td>
+</tr>
+<tr>
+<td><code>approach_start_nm</code></td>
+<td>5.0</td>
+<td>Distance at which descent from LTO ceiling commences. FOCA Appendix A. Not used by the generator (see <a href="#approach-geometry">Approach geometry</a>).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="single_turboshaft">SINGLE_TURBOSHAFT<a class="headerlink" href="#single_turboshaft" title="Permanent link">&para;</a></h3>
+<p>The FOCA 2015 reference table is specified for this category directly.</p>
+<table>
+<thead>
+<tr>
+<th>field</th>
+<th>value</th>
+<th>source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>climb_roc_fpm</code></td>
+<td>1000</td>
+<td>FOCA Appendix A</td>
+</tr>
+<tr>
+<td><code>climb_tas_kt</code></td>
+<td>60</td>
+<td>FOCA Appendix A</td>
+</tr>
+<tr>
+<td><code>cruise_tas_kt</code></td>
+<td>120</td>
+<td>FOCA §2.1 worked example</td>
+</tr>
+<tr>
+<td><code>approach_tas_initial_kt</code></td>
+<td>60</td>
+<td>FOCA Appendix A "DCT" (descent) row</td>
+</tr>
+<tr>
+<td><code>approach_tas_final_kt</code></td>
+<td>30</td>
+<td>FOCA Appendix A</td>
+</tr>
+<tr>
+<td><code>approach_rod_initial_fpm</code></td>
+<td>700</td>
+<td>FOCA Appendix A</td>
+</tr>
+<tr>
+<td><code>approach_rod_final_fpm</code></td>
+<td>250</td>
+<td>FOCA Appendix A</td>
+</tr>
+<tr>
+<td><code>approach_start_nm</code></td>
+<td>5.0</td>
+<td>FOCA Appendix A. Not used by the generator (see <a href="#approach-geometry">Approach geometry</a>).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="twin_turboshaft_light">TWIN_TURBOSHAFT_LIGHT<a class="headerlink" href="#twin_turboshaft_light" title="Permanent link">&para;</a></h3>
+<p>Twin turboshaft helicopters with MTOM ≤ 3400 kg. Representative
+airframes include the Eurocopter EC135, AS355, BO105. FOCA 2015 does
+not publish a separate trajectory table for this category; the
+values below are obtained by scaling up from SINGLE_TURBOSHAFT in
+proportion to the typical performance ratio observed across the
+representative airframes (flight manuals: EC135 §4-5, AS355 §4-5).</p>
+<table>
+<thead>
+<tr>
+<th>field</th>
+<th>value</th>
+<th>source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>climb_roc_fpm</code></td>
+<td>1500</td>
+<td>Scaled from FOCA Appendix A SINGLE_TURBOSHAFT; corroborated against EC135 P2 flight manual §4-5 (sea-level Vy ROC, AUW 2720 kg)</td>
+</tr>
+<tr>
+<td><code>climb_tas_kt</code></td>
+<td>80</td>
+<td>EC135 / AS355 flight manuals (Vy at AUW representative for light twin)</td>
+</tr>
+<tr>
+<td><code>cruise_tas_kt</code></td>
+<td>150</td>
+<td>EC135 / AS355 flight manuals (recommended cruise TAS, sea-level, ISA)</td>
+</tr>
+<tr>
+<td><code>approach_tas_initial_kt</code></td>
+<td>80</td>
+<td>Symmetric with climb_tas_kt (FOCA Appendix A convention)</td>
+</tr>
+<tr>
+<td><code>approach_tas_final_kt</code></td>
+<td>40</td>
+<td>Operational convention (final approach to hover; faster than single because of higher disk loading)</td>
+</tr>
+<tr>
+<td><code>approach_rod_initial_fpm</code></td>
+<td>700</td>
+<td>FOCA Appendix A initial descent ROD (unchanged across light categories)</td>
+</tr>
+<tr>
+<td><code>approach_rod_final_fpm</code></td>
+<td>300</td>
+<td>Scaled from SINGLE_TURBOSHAFT final ROD</td>
+</tr>
+<tr>
+<td><code>approach_start_nm</code></td>
+<td>6.0</td>
+<td>Slightly longer than single because of higher initial TAS (descent angle preserved). Not used by the generator (see <a href="#approach-geometry">Approach geometry</a>).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="twin_turboshaft_heavy">TWIN_TURBOSHAFT_HEAVY<a class="headerlink" href="#twin_turboshaft_heavy" title="Permanent link">&para;</a></h3>
+<p>Twin turboshaft helicopters with MTOM &gt; 3400 kg. The reference
+airframe is the AS332L1 Super Puma (MTOM 8600 kg), for which a
+complete technical data set is published in the AS332L1 Pilot's
+Operating Manual. FOCA 2015 documents the methodology for this
+category but uses single-turboshaft performance values in its
+worked example; this implementation uses heavy-twin values to avoid
+under-estimating LTO duration at large airframes.</p>
+<p>The FOCA mode power settings of this category are discussed in <a href="#foca-2015-method">FOCA 2015 method</a>.</p>
+<table>
+<thead>
+<tr>
+<th>field</th>
+<th>value</th>
+<th>source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>climb_roc_fpm</code></td>
+<td>1920</td>
+<td>AS332L1 Technical Data, ROC at AUW 8000 kg, climb at Vy 70 kt</td>
+</tr>
+<tr>
+<td><code>climb_tas_kt</code></td>
+<td>70</td>
+<td>AS332L1 Technical Data Vy</td>
+</tr>
+<tr>
+<td><code>cruise_tas_kt</code></td>
+<td>139</td>
+<td>AS332L1 Technical Data recommended cruise TAS at 8000 kg</td>
+</tr>
+<tr>
+<td><code>approach_tas_initial_kt</code></td>
+<td>70</td>
+<td>Symmetric with climb_tas_kt</td>
+</tr>
+<tr>
+<td><code>approach_tas_final_kt</code></td>
+<td>40</td>
+<td>Operational convention (final approach to hover)</td>
+</tr>
+<tr>
+<td><code>approach_rod_initial_fpm</code></td>
+<td>700</td>
+<td>FOCA Appendix A initial descent ROD</td>
+</tr>
+<tr>
+<td><code>approach_rod_final_fpm</code></td>
+<td>300</td>
+<td>Operational convention</td>
+</tr>
+<tr>
+<td><code>approach_start_nm</code></td>
+<td>7.0</td>
+<td>Longer approach distance scales with cruise TAS (descent angle preserved at ~3°). Not used by the generator (see <a href="#approach-geometry">Approach geometry</a>).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="approach-geometry">Approach geometry<a class="headerlink" href="#approach-geometry" title="Permanent link">&para;</a></h2>
+<p>The arrival fills the FOCA approach time
+(5.5 min):</p>
+<ol>
+<li>a level segment at the LTO ceiling at <code>approach_tas_initial_kt</code>,
+   when the two descents take less than the approach time;</li>
+<li>a descent at <code>approach_tas_initial_kt</code> and
+   <code>approach_rod_initial_fpm</code> to 500 ft AGL;</li>
+<li>a final descent at <code>approach_tas_final_kt</code> and
+   <code>approach_rod_final_fpm</code> to hover (5 ft AGL).</li>
+</ol>
+<p>When the two descents take longer than the approach time, both are
+shortened in proportion: the arrival still starts at the LTO ceiling, the
+break between the two descents moves up (PISTON about 1030 ft,
+SINGLE_TURBOSHAFT about 520 ft instead of 500 ft) and the final descent is
+steeper than <code>approach_rod_final_fpm</code>. The arrival then starts about 8.7 km (PISTON),
+8.4 km (SINGLE_TURBOSHAFT), 11.5 km (TWIN_TURBOSHAFT_LIGHT) and
+10.4 km (TWIN_TURBOSHAFT_HEAVY) from the touchdown spot.
+<code>approach_start_nm</code> is not used by the generator. Hover is held for
+<code>HOVER_DURATION_S</code> (18 s) before touchdown.</p>
+<p>In the code: <code>build_arrival</code> and <code>FINAL_BREAK_ALT_FT</code> in <code>foca_heli_trajectory.py</code>.</p>
+<h2 id="departure-geometry">Departure geometry<a class="headerlink" href="#departure-geometry" title="Permanent link">&para;</a></h2>
+<p>Ground idle at the origin for 80 % of the GI time, hover for
+<code>HOVER_DURATION_S</code> at <code>HOVER_ALT_FT</code>, then climb at <code>climb_tas_kt</code>
+and <code>climb_roc_fpm</code> until the LTO ceiling (3000 ft AGL) or the end of
+the FOCA take-off time (PISTON stops at about 2000 ft); any remaining
+take-off time is flown level at <code>cruise_tas_kt</code>.</p>
+<p>The origin is the centroid of the movement's gate (helipad), else the
+runway end; arrivals approach from the approach side along the runway
+heading. Ground idle after landing is 20 % of the GI time.</p>
+<p>In the code: <code>build_departure</code> in <code>foca_heli_trajectory.py</code>; <code>runway_alignment_for_helicopter</code> in <code>open_alaqs/core/GeoTransformation.py</code>.</p>
+<h2 id="adding-a-new-category">Adding a new category<a class="headerlink" href="#adding-a-new-category" title="Permanent link">&para;</a></h2>
+<p>What to change in the code for a new FOCA category is in <a href="../developer/CODE_FLOW.html#adding-a-helicopter-category">CODE_FLOW.md</a>.</p>
+<p>See also: <a href="AIRCRAFT_EMISSIONS.html">Aircraft emissions</a>, <a href="REFERENCE_DATA.html">Reference data</a>, <a href="../user/USER_GUIDE.html#generate-emissions-inventory">User Guide: movements</a>, <a href="../user/INPUT_FORMATS.html#movements">Input formats: movements</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="ATMOSPHERE_ALOFT.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Ambient conditions aloft">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Ambient conditions aloft
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="STATIONARY_AND_ROAD.html" class="md-footer__link md-footer__link--next" aria-label="Next: Stationary sources and road traffic">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Stationary sources and road traffic
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      EUROCONTROL, European Union Public Licence v. 1.2 with amendments
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.indexes", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>

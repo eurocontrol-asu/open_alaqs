@@ -1,0 +1,2757 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Airport local air quality studies with the OpenALAQS QGIS plugin and AUSTAL">
+      
+      
+      
+        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.2/openalaqs_standalone/index.html">
+      
+      
+        <link rel="prev" href="USAGE.html">
+      
+      
+        <link rel="next" href="../scripts/index.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Standalone: architecture - OpenALAQS documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#openalaqs_standalone" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="OpenALAQS documentation" class="md-header__button md-logo" aria-label="OpenALAQS documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            OpenALAQS documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Standalone: architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/eurocontrol-asu/open_alaqs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    eurocontrol-asu/open_alaqs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../index.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../documents/user/USER_GUIDE.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Using OpenALAQS
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../documents/methods/AIRCRAFT_EMISSIONS.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Methods
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../documents/user/WITHOUT_QGIS.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Command line
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../documents/validation/VALIDATION_GUIDE.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../documents/developer/CODE_FLOW.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Maintainers
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="OpenALAQS documentation" class="md-nav__button md-logo" aria-label="OpenALAQS documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    OpenALAQS documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/eurocontrol-asu/open_alaqs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    eurocontrol-asu/open_alaqs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Home
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/GLOSSARY.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using OpenALAQS
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Using OpenALAQS
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/user/USER_GUIDE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/user/TUTORIAL_ROTTERDAM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Rotterdam The Hague
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/user/INPUT_FORMATS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Input formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/user/DISPERSION_AUSTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dispersion with AUSTAL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/AUSTAL/AUSTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AUSTAL installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/user/UPGRADING.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/user/TROUBLESHOOTING.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/user/TRAINING_COURSE_ERRATA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Training course: errata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Methods
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/methods/AIRCRAFT_EMISSIONS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aircraft emissions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/methods/ATMOSPHERE_ALOFT.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ambient conditions aloft
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/methods/HELICOPTERS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Helicopters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/methods/STATIONARY_AND_ROAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stationary sources and road traffic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/methods/REFERENCE_DATA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="index.html" class="md-nav__link md-nav__link--active">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link md-nav__link--active" for="__nav_4" id="__nav_4_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Command line
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/user/WITHOUT_QGIS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Which tool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="USAGE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standalone: usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripts/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripts/README_metar_to_alaqs_meteo.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    METAR to meteo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripts/emissions_austal/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    emissions_austal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripts/austal_from_csv/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    austal_from_csv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gse_application/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GSE application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../example/training/recipe_config.README.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example configurations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../example/training/training_engine_test_events.README.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example engine test events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/validation/VALIDATION_GUIDE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="validation/tools/CAEP14_VALIDATION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CAEP14 reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../tools/template_build/index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maintainers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Maintainers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/developer/CODE_FLOW.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code structure and flow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/developer/REGRESSION_PATTERNS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regression patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/developer/AIRCRAFT_PROFILES_PROVENANCE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aircraft profiles provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/developer/DATASET_PROVENANCE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    COPERT dataset provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/developer/DEPRECATIONS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema deprecations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documents/developer/design/ATMOSPHERE_ALOFT_VALIDATION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design: atmosphere aloft validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tools/anp22_profiles/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ANP 2.2 profiles builder
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tools/test_fixtures/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test fixtures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHANGELOG.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-produces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it produces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stationary-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stationary modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aircraft-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aircraft modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#distribution-and-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Distribution and output
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#utilities-and-entry-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Utilities and entry points
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#source-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-one-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running one module
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisite-the-stationary-efs-must-already-be-in-the-alaqs-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisite: the stationary EFs must already be in the .alaqs file
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Prerequisite: the stationary EFs must already be in the .alaqs file">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#workflow-for-the-stationary-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow for the stationary inputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-the-stationary-half-is-structured-this-way" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why the stationary half is structured this way
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verifying-your-alaqs-has-the-right-stationary-efs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying your .alaqs has the right stationary EFs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conventions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Conventions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#source-id-prefixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source ID prefixes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pollutants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pollutants
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#emission-factor-columns-stationary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Emission factor columns (stationary)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#activity-profiles-stationary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Activity profiles (stationary)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#coordinate-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Coordinate systems
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#validation-harness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation harness
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/eurocontrol-asu/open_alaqs/edit/main/openalaqs_standalone/README.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="openalaqs_standalone">openalaqs_standalone<a class="headerlink" href="#openalaqs_standalone" title="Permanent link">&para;</a></h1>
+<p>The architecture, modules, conventions, limitations and tests of
+<code>openalaqs_standalone</code>, for developers. To run it, see
+<a href="USAGE.html">USAGE.md</a> (install, commands, options, output folders).</p>
+<p><code>openalaqs_standalone</code> is a QGIS-free pipeline that turns an OpenALAQS
+<code>.alaqs</code> study file into AUSTAL-ready inputs. It covers both source families:</p>
+<ul>
+<li><strong>Stationary sources</strong> (road, parking, point, area): an ALAQS -&gt;
+  AUSTAL <em>adapter</em>. It reads pre-computed emission factors stored in
+  the <code>.alaqs</code> file by a prior OpenALAQS plugin run and spreads them
+  across the year using activity profiles. It does not run COPERT5 or
+  compute those factors itself. See <strong>Prerequisite</strong> below.</li>
+<li><strong>Aircraft sources</strong> (fixed-wing movements, helicopters, and the
+  gate GSE/GPU emissions those movements drive): a real emission
+  <em>calculator</em>. It walks each movement's trajectory or taxi route and
+  integrates per-segment fuel, time and emission indices, with three
+  selectable methods. This half is validated against the CAEP14
+  reference and the pinned plugin outputs (see
+  <a href="validation/tools/CAEP14_VALIDATION.html">CAEP14_VALIDATION.md</a>).</li>
+</ul>
+<p>The package runs without QGIS, without PyQt, and without a native
+SpatiaLite extension: it reads the <code>.alaqs</code> SQLite directly and parses
+geometry BLOBs with shapely.</p>
+<p>It ships as a top-level package in the Open-ALAQS repository, as a
+sibling of the QGIS plugin at <code>open_alaqs/</code>. It imports QGIS-free
+modules of the plugin tree (<code>open_alaqs.core.tools</code>: BFFM2, MEEM, FOCA,
+fuel sulphur, UTM and runway placement; <code>open_alaqs.core.interfaces.Emissions</code>), and its <code>pyproject.toml</code> packages
+<code>openalaqs_standalone</code> only, so it is not usable without the plugin tree:
+run it from the repository root with the root on <code>PYTHONPATH</code> (see
+<a href="USAGE.html#install">USAGE.md</a>). The AUSTAL writer helpers it depends on
+live in the sibling <code>austal_prep/</code> package.</p>
+<p>Contents:</p>
+<ul>
+<li><a href="#what-it-produces">What it produces</a></li>
+<li><a href="#architecture">Architecture</a></li>
+<li><a href="#prerequisite-the-stationary-efs-must-already-be-in-the-alaqs-file">Prerequisite: the stationary EFs must already be in the .alaqs file</a></li>
+<li><a href="#conventions">Conventions</a></li>
+<li><a href="#limitations">Limitations</a></li>
+<li><a href="#testing">Testing</a></li>
+</ul>
+<h2 id="what-it-produces">What it produces<a class="headerlink" href="#what-it-produces" title="Permanent link">&para;</a></h2>
+<p>Two output shapes, depending on which entry point is used.</p>
+<p><strong>The <code>austal</code> command</strong> builds the six-folder structure that the
+<code>austal_prep</code> package consumes (sources, emissions, receptors, meteo,
+config and an empty AUSTAL folder; the folder tree and file schemas are in
+<a href="USAGE.html#output-folders">USAGE.md</a>). With <code>--include-aircraft</code>, the
+aircraft movement emissions are folded into the same <code>sources.parquet</code> and
+<code>emissions.parquet</code>: each occupied inventory grid cell becomes a synthetic
+<code>aircraft:cell:&lt;ix&gt;_&lt;iy&gt;_&lt;iz&gt;</code> source, so one austal_prep run covers the
+whole study.</p>
+<p><strong>The <code>aircraft</code> command</strong> runs the aircraft core directly and writes a
+per-movement totals CSV (one row per movement, one column per pollutant)
+and, with <code>--austal-out</code>, the AUSTAL <code>emissions.parquet</code> +
+<code>sources.parquet</code> pair for the aircraft sources alone.</p>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<h3 id="stationary-modules">Stationary modules<a class="headerlink" href="#stationary-modules" title="Permanent link">&para;</a></h3>
+<p>Per-source-type. Each reads one ALAQS table and produces its slice of
+<code>emissions.parquet</code>; the EFs are already in the file.</p>
+<div class="highlight"><pre><span></span><code>_profiles.py           shared: load and apply hourly/daily/monthly
+                       activity profiles; STATIONARY_POLLUTANTS
+extract_sources.py     read source geometries from .alaqs
+                       (all source types, single output)
+compute_road.py        roadway segments -&gt; hourly emissions
+compute_parking.py     parking lots    -&gt; hourly emissions
+compute_point.py       stationary point sources -&gt; hourly emissions
+compute_area.py        area sources    -&gt; hourly emissions
+</code></pre></div>
+<h3 id="aircraft-modules">Aircraft modules<a class="headerlink" href="#aircraft-modules" title="Permanent link">&para;</a></h3>
+<p>A real per-movement emission calculator, validated against the
+CAEP14 reference.</p>
+<div class="highlight"><pre><span></span><code>geometry.py            QGIS-free spatial primitives; SpatiaLite WKB
+                       blob reader
+movements.py           .alaqs database accessors for the aircraft
+                       pipeline (movements, runway, taxi routes,
+                       engines, gates, gate profiles)
+compute_aircraft.py    fixed-wing per-movement emissions, three
+                       methods (bymode, bffm2_anchor, bffm2_traj),
+                       with per-segment records retained
+nox_correction.py      ICCAIA NOx ambient correction (take-off weight
+                       ratio, temperature and humidity); off by default (see
+                       USAGE.md, "The NOx ambient correction")
+compute_helicopter.py  FOCA helicopter per-movement emissions
+compute_gate_movements.py  per-movement gate (GSE + GPU) emissions,
+                       driven by the movements and default_gate_profiles;
+                       folded into each movement's total
+compute_apu_movements.py   per-movement APU emissions, folded into each
+                       movement's total
+compute_start_movements.py per-movement engine-start emissions (departures),
+                       folded into each movement's total
+source_dynamics.py     smooth-and-shift (--source-dynamics default/sas)
+                       spatial apportionment
+compute_engine_test.py per-event engine-test-run emissions from the
+                       `engine_test_events` table. QGIS-free twin of
+                       `EngineTestSourceModule`; same math bit-for-bit.
+                       Three thrust modes: `snap` (default), `meem`
+                       (numerically identical to snap for engine-test
+                       events at anchor thrust), `bffm2` (gas-phase
+                       ambient correction, PM10/SOx passthrough).
+                       BFFM2 requires an optional `conn` kwarg for
+                       `tbl_InvMeteo` lookups; snap-only workflows use
+                       the same signature as before.
+extract_engine_test_events.py  read engine_test_events joined against
+                       shapes_area_sources (test-site filter);
+                       produces the event-dict input that
+                       compute_engine_test.py consumes.
+compute_movements.py   dispatch + study-level driver
+parallel.py            multiprocessing driver for the movement
+                       compute; results bit-identical to the serial
+                       driver
+</code></pre></div>
+<h3 id="distribution-and-output">Distribution and output<a class="headerlink" href="#distribution-and-output" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>distribute.py          per-(time bucket, grid cell) emission
+                       distribution: hourly or sub-hour in time, per
+                       grid cell in space
+austal_aircraft.py     gridded aircraft emissions -&gt; the
+                       emissions.parquet + sources.parquet pair
+                       austal_prep consumes
+inventory_gpkg.py      emissions.parquet + sources.parquet -&gt; plugin-style
+                       per-pollutant GeoPackages (&lt;pollutant&gt;_emissions.gpkg)
+</code></pre></div>
+<h3 id="utilities-and-entry-points">Utilities and entry points<a class="headerlink" href="#utilities-and-entry-points" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>adapt_meteo.py         .alaqs (or external CSV) -&gt; meteo.csv
+adapt_receptors.py     external receptor CSV -&gt; standard receptors.csv
+make_config.py         scaffold a config.json from .alaqs metadata
+orchestrate.py         builds the six-folder austal_prep structure;
+                       the `austal` subcommand; callable as a Python
+                       function for embedding in other pipelines
+cli.py / __main__.py   `python -m openalaqs_standalone &lt;command&gt;`:
+                       dispatches to `aircraft` or `austal`
+runway_placement.py    placement of flight profiles on the runway (rules shared
+                       with the plugin: open_alaqs/core/tools/runway_placement.py)
+runway_checks.py       route and profile check report; also
+                       `python -m openalaqs_standalone.runway_checks study.alaqs out.csv`
+</code></pre></div>
+<h3 id="source-coverage">Source coverage<a class="headerlink" href="#source-coverage" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Source type</th>
+<th>ALAQS table</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Roadway</td>
+<td><code>shapes_roadways</code></td>
+<td>implemented (adapter)</td>
+</tr>
+<tr>
+<td>Parking</td>
+<td><code>shapes_parking</code></td>
+<td>implemented (adapter)</td>
+</tr>
+<tr>
+<td>Point</td>
+<td><code>shapes_point_sources</code></td>
+<td>implemented (adapter)</td>
+</tr>
+<tr>
+<td>Area</td>
+<td><code>shapes_area_sources</code></td>
+<td>implemented (adapter)</td>
+</tr>
+<tr>
+<td>Gate</td>
+<td><code>shapes_gates</code> + <code>default_gate_profiles</code></td>
+<td>implemented (movement-driven calculator)</td>
+</tr>
+<tr>
+<td>Aircraft movement</td>
+<td><code>user_aircraft_movements</code></td>
+<td>implemented (calculator, 3 methods)</td>
+</tr>
+<tr>
+<td>Helicopter movement</td>
+<td><code>user_aircraft_movements</code></td>
+<td>implemented (FOCA calculator)</td>
+</tr>
+<tr>
+<td>Engine test site</td>
+<td><code>engine_test_events</code> + <code>shapes_area_sources</code> (<code>is_test_site='1'</code>)</td>
+<td>implemented (calculator, 3 thrust modes)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="running-one-module">Running one module<a class="headerlink" href="#running-one-module" title="Permanent link">&para;</a></h3>
+<p>Each compute module also has its own CLI entry point, useful for
+isolating one source type:</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>openalaqs_standalone.extract_sources<span class="w"> </span>study.alaqs<span class="w"> </span>--out<span class="w"> </span>sources.parquet
+python<span class="w"> </span>-m<span class="w"> </span>openalaqs_standalone.compute_road<span class="w"> </span>study.alaqs<span class="w"> </span>--year<span class="w"> </span><span class="m">2025</span><span class="w"> </span>--out<span class="w"> </span>road.parquet
+python<span class="w"> </span>-m<span class="w"> </span>openalaqs_standalone.adapt_meteo<span class="w"> </span>study.alaqs<span class="w"> </span>--year-shift-to<span class="w"> </span><span class="m">2025</span><span class="w"> </span>--out<span class="w"> </span>meteo.csv
+python<span class="w"> </span>-m<span class="w"> </span>openalaqs_standalone.adapt_receptors<span class="w"> </span>cimlk.csv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--source-epsg<span class="w"> </span><span class="m">28992</span><span class="w"> </span>--target-epsg<span class="w"> </span><span class="m">32631</span><span class="w"> </span>--out<span class="w"> </span>receptors.csv
+python<span class="w"> </span>-m<span class="w"> </span>openalaqs_standalone.make_config<span class="w"> </span>study.alaqs<span class="w"> </span>--year<span class="w"> </span><span class="m">2025</span><span class="w"> </span>--out<span class="w"> </span>config.json
+</code></pre></div>
+<h2 id="prerequisite-the-stationary-efs-must-already-be-in-the-alaqs-file">Prerequisite: the stationary EFs must already be in the .alaqs file<a class="headerlink" href="#prerequisite-the-stationary-efs-must-already-be-in-the-alaqs-file" title="Permanent link">&para;</a></h2>
+<p><strong>The stationary half of this pipeline does not run COPERT5 or compute
+emission factors.</strong> It reads the pre-computed <code>nox_gm_km</code>,
+<code>pm10_gm_km</code>, <code>p1_gm_km</code> (etc.) values already stored in the
+<code>shapes_roadways</code> and <code>shapes_parking</code> tables, then multiplies by
+distance, vehicle counts, and the temporal profile to produce hourly
+emissions.</p>
+<p>So the <code>.alaqs</code> file fed to the stationary computes must have been
+produced by an upstream OpenALAQS plugin run that:</p>
+<ul>
+<li>applied COPERT5 with the correct fleet composition and Euro standards,</li>
+<li>applied any study-specific adjustments (cold-start at trip scale,
+  non-exhaust EMEP/EEA Tier 2 factors, parking scaling, etc.),</li>
+<li>wrote the resulting g/km and g/vh values back into the source tables.</li>
+</ul>
+<p>The standalone stationary computes are faithful to whatever EFs are in
+the file: fixes the plugin applied when it wrote the EFs (such as the
+parking cold start at trip scale) carry through; EFs written by an older
+plugin give correspondingly older emissions.</p>
+<p>The <strong>aircraft</strong> half is different: it is a real calculator and needs
+no pre-computed EFs. It reads the engine emission-index tables, the
+aircraft profiles, the gate profiles and the meteo directly and
+integrates the emissions itself.</p>
+<h3 id="workflow-for-the-stationary-inputs">Workflow for the stationary inputs<a class="headerlink" href="#workflow-for-the-stationary-inputs" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Build the inventory in QGIS using the OpenALAQS plugin (5.0.0 or
+   later, which applies the parking cold start at trip scale).</li>
+<li>The plugin's <code>Recalculate</code> button of the parking and roadway forms
+   writes the EFs into <code>shapes_roadways</code> and <code>shapes_parking</code>.</li>
+<li>Save the resulting <code>.alaqs</code> file.</li>
+<li>Run the <code>austal</code> command against that file.</li>
+</ol>
+<h3 id="why-the-stationary-half-is-structured-this-way">Why the stationary half is structured this way<a class="headerlink" href="#why-the-stationary-half-is-structured-this-way" title="Permanent link">&para;</a></h3>
+<p>The plugin's emission-calculation modules (<code>RoadwaySourceModule.py</code>,
+<code>ParkingSourceModule.py</code>) have QGIS dependencies mixed with the COPERT5
+logic, so importing them outside QGIS is not straightforward. The
+stationary computes read the EFs the plugin already wrote rather than
+recomputing them. The long-term fix is to extract the pure-Python
+calculation logic into a shared <code>core/tools/</code> and have both the plugin
+and the standalone import it; until then, the workflow above is the
+bridge. The aircraft half already follows that better pattern: it
+shares the QGIS-free <code>open_alaqs.core.tools.*</code> algorithm modules with
+the validation reference.</p>
+<h3 id="verifying-your-alaqs-has-the-right-stationary-efs">Verifying your .alaqs has the right stationary EFs<a class="headerlink" href="#verifying-your-alaqs-has-the-right-stationary-efs" title="Permanent link">&para;</a></h3>
+<p>For an EHRD study that is not shipped with the repository, the parking
+baseline with the trip-scale cold start is (computed with 5.2.0):</p>
+<ul>
+<li>NOx 31.26 kg/yr</li>
+<li>PM10 3.27 kg/yr</li>
+<li>PM2.5 1.79 kg/yr (PM10/PM2.5 ratio 1.83)</li>
+</ul>
+<p>and an inventory without the trip-scale cold start gives NOx around
+20.25 kg/yr instead of 31.26. These figures do not apply to the bundled training
+study: its single <code>ParkingLot</code> (20 000 vehicles per year, NOx 95.82
+g/vehicle) gives NOx 1916.33 kg and PM10 15.99 kg for 2025
+(<code>python -m openalaqs_standalone.compute_parking
+example/training/training_out.alaqs --year 2025 --out parking.parquet</code>
+from the repository root).</p>
+<h2 id="conventions">Conventions<a class="headerlink" href="#conventions" title="Permanent link">&para;</a></h2>
+<h3 id="source-id-prefixes">Source ID prefixes<a class="headerlink" href="#source-id-prefixes" title="Permanent link">&para;</a></h3>
+<p>Every source ID carries a type prefix, used by the by-type
+aggregation and to keep namespaces distinct in a combined
+<code>sources.parquet</code>:</p>
+<ul>
+<li><code>road:&lt;roadway_id&gt;</code></li>
+<li><code>parking:&lt;parking_id&gt;</code></li>
+<li><code>point:&lt;point_id&gt;</code></li>
+<li><code>area:&lt;area_id&gt;</code></li>
+<li><code>engine_test:&lt;oid&gt;</code> (an area source flagged <code>is_test_site = '1'</code>;
+  its <code>source_type</code> is <code>engine_test</code>)</li>
+<li><code>gate:&lt;gate_id&gt;</code> (the gate geometry; gate emissions are folded into
+  the aircraft movement totals)</li>
+<li><code>aircraft:cell:&lt;ix&gt;_&lt;iy&gt;_&lt;iz&gt;</code> (a synthetic per-grid-cell source for
+  the gridded aircraft emissions, one per occupied 3D cell)</li>
+</ul>
+<h3 id="pollutants">Pollutants<a class="headerlink" href="#pollutants" title="Permanent link">&para;</a></h3>
+<p>The stationary computes support <code>co, hc, nox, sox, pm10, pm25</code> (the
+constant <code>STATIONARY_POLLUTANTS</code> in <code>_profiles.py</code>), which is the
+default pollutant list for the stationary computes and for the
+<code>austal</code> command.</p>
+<p>The aircraft core supports <code>co, co2, hc, nox, sox, pm10, pm25</code>. The
+stationary source tables carry no co2. When <code>--include-aircraft</code> is
+used, the aircraft emissions are filtered to the requested pollutant
+list so the combined <code>emissions.parquet</code> is coherent. <code>--pollutants</code>
+of the <code>austal</code> command accepts co2: the stationary sources contribute
+0 for it (they are not asked for co2, and one info line says so), and
+with <code>--include-aircraft</code> the aircraft co2 is written to
+<code>emissions.parquet</code> and <code>co2_emissions.gpkg</code>.</p>
+<p><code>austal_prep</code> writes co2 to <code>austal.txt</code> and <code>series.dmna</code> as the
+substance <code>co2</code> (source strength in g/s), the same name the plugin
+writes. <code>co2</code> (like <code>co</code>, <code>hc</code> and <code>sox</code>) is not one of the substances
+of the standard AUSTAL 3.3 settings; it is defined in the
+<code>austal.settings</code> shipped with OpenALAQS (<code>documents/AUSTAL/</code>, section
+<code>[CO2]</code>, concentration in mg/m3). Replace the <code>austal.settings</code> of the
+AUSTAL installation with that copy before running AUSTAL on these
+inputs (see <a href="../documents/AUSTAL/AUSTAL.html#configuration-files">AUSTAL.md</a>).</p>
+<p><code>austal_prep</code> writes pm10 as two AUSTAL components, <code>pm-1</code> (the fine
+fraction, <code>pm10_fine_fraction</code>) and <code>pm-2</code> (the rest), which AUSTAL sums
+into substance <code>pm</code>; pm25 is written as <code>pm25-1</code> (substance <code>pm25</code>).</p>
+<h3 id="emission-factor-columns-stationary">Emission factor columns (stationary)<a class="headerlink" href="#emission-factor-columns-stationary" title="Permanent link">&para;</a></h3>
+<p>The column that holds PM2.5 differs between the schema of each source
+type:</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Total PM10 column</th>
+<th>PM2.5 column</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Road</td>
+<td><code>pm10_gm_km</code></td>
+<td><code>p2_gm_km</code> (<code>p1_gm_km</code> is PM0.1)</td>
+</tr>
+<tr>
+<td>Parking</td>
+<td><code>pm10_gm_vh</code></td>
+<td><code>p2_gm_vh</code></td>
+</tr>
+<tr>
+<td>Point</td>
+<td><code>pm10_kg_k</code></td>
+<td><code>p2_kg_k</code> (assumed; matches parking)</td>
+</tr>
+<tr>
+<td>Area</td>
+<td><code>pm10_kg_unit</code></td>
+<td><code>p2_kg_unit</code> (assumed; matches parking)</td>
+</tr>
+</tbody>
+</table>
+<p>The pollutant-column dict in each compute module encodes this. For
+point and area sources the <code>p2_*</code> = PM2.5 assumption is empirically
+unverified: the training study has one point source (<code>Power</code>, PM10
+60.04 kg/unit but P1 and P2 0) and one area source (<code>Terminal</code>, no PM),
+so no bundled study has a PM2.5 factor for these types to test against. If a study uses these types and the PM10/PM2.5 ratio
+looks wrong, verify the upstream conventions.</p>
+<h3 id="activity-profiles-stationary">Activity profiles (stationary)<a class="headerlink" href="#activity-profiles-stationary" title="Permanent link">&para;</a></h3>
+<p><code>_profiles.py</code> builds an hourly multiplier array from a
+(hour_profile, daily_profile, month_profile) triplet, normalised so
+the mean over the year is 1.0; the per-hour emission is then
+<code>(annual_kg / hours_in_year) * mult[h]</code>. Missing or unknown profiles
+fall back to all-1.0. The hour count is leap-year-aware.</p>
+<h3 id="coordinate-systems">Coordinate systems<a class="headerlink" href="#coordinate-systems" title="Permanent link">&para;</a></h3>
+<ul>
+<li>ALAQS internal: EPSG:3857 (Web Mercator). Geometries in the <code>.alaqs</code>
+  database are stored in this CRS, and that is what <code>extract_sources</code>
+  and the aircraft grid polygons output in their WKT.</li>
+<li>AUSTAL local: a metric UTM zone, configured per study via <code>utm_epsg</code>
+  in <code>config.json</code>. Reprojection from 3857 to the AUSTAL frame happens
+  in <code>austal_prep</code>.</li>
+<li>CIMLK receptors: EPSG:28992 (Dutch Rijksdriehoek). Reprojection to
+  UTM happens in <code>adapt_receptors</code>.</li>
+</ul>
+<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h2>
+<p>The aircraft pipeline (per-movement core, gate emissions, time-and-grid
+distribution, parallel driver, AUSTAL and GeoPackage output) is complete,
+and the <code>austal</code> command joins the stationary and aircraft halves into one
+run.</p>
+<p>What is not yet built:</p>
+<ul>
+<li><strong>MESO-NH export.</strong> An exporter to the MESO-NH ASCII emission
+  formats (a ground-emissions case and an altitude-emissions case) is
+  scoped but not implemented: a few
+  conversion conventions still need to be confirmed (the molec/cm2/s
+  conversion basis for the ground case, the multi-species column
+  order, the altitude datum/sign convention).</li>
+<li><strong>Point and area PM column convention</strong> is assumed, not verified
+  (see "Emission factor columns" above): no bundled study has a
+  non-zero PM2.5 factor for those source types.</li>
+<li><strong>Hourly periods only.</strong> The standalone works in hourly periods that start
+  on the hour; a movement takes the meteo row nearest to the start of its
+  hour. The plugin uses the study's time interval, so the two agree for
+  studies with hourly periods only.</li>
+<li><strong>Tracks are not followed.</strong> The plugin lays a movement with a <code>track_id</code>
+  along its track (<code>shapes_tracks</code>): the trajectory points follow the track,
+  which changes the segment lengths and so the emissions (on the training
+  study, an A20N departure along a turning track gets 4.32 kg NOx instead of
+  4.18 kg with <code>bymode</code>). The standalone ignores <code>track_id</code> and <code>shapes_tracks</code>
+  and always uses the profile along the runway axis, so results differ for
+  movements with a track. ADS-B (CUSTOM) profiles are not tracks and are
+  followed by both.</li>
+<li><strong>Engine tests in the <code>austal</code> pipeline</strong> are computed with the ICAO
+  mode values ("snap"): <code>compute_engine_test_emissions</code> passes no database
+  connection, so BFFM2 events fall back to snap there.</li>
+<li><strong>Shared-import refactor of the stationary half.</strong> The stationary
+  computes still read pre-computed EFs rather than calling shared
+  COPERT5 logic; see "Why the stationary half is structured this
+  way".</li>
+</ul>
+<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nv">PYTHONPATH</span><span class="o">=</span>.<span class="w"> </span>pytest<span class="w"> </span>openalaqs_standalone/validation/tests/<span class="w"> </span>-q
+</code></pre></div>
+<p>A few more standalone tests live in the plugin suite under <code>tests/</code>; run
+the two suites separately (see
+<a href="../documents/validation/VALIDATION_GUIDE.html#running-the-automated-tests">VALIDATION_GUIDE.md</a>).
+Together they cover, among other things:</p>
+<ul>
+<li>source extraction: engine-test sites emitted as their own source type
+  (<code>test_phase1b_extract_sources_standalone.py</code>) and missing <code>shapes_*</code>
+  tables skipped (<code>tests/test_extract_sources_missing_tables.py</code>)</li>
+<li>the plugin-output gate: the CAEP14 reference and the standalone
+  reproduce the pinned plugin CSVs (<code>validation/data/plugin_output/</code>)
+  for all 15 movements and the three methods, within 2e-4 relative
+  (<code>test_plugin_csv_vs_reference.py</code>; the measured agreement is in
+  <a href="../documents/validation/VALIDATION_GUIDE.html#tolerances">Tolerances</a>)</li>
+<li>the CAEP14 reference itself (<code>test_caep14_bffm2_reference_case.py</code>,
+  <code>test_caep14_reference_lookups.py</code>, <code>test_helicopter_caep14_reference.py</code>)</li>
+<li>engine-start emissions and <code>gate_emissions_code</code> (<code>test_start_gate_code.py</code>;
+  plugin parity in <code>tests/test_zz_gate_code_start_parity.py</code>)</li>
+<li>engine-test event extraction and emissions, all three thrust modes
+  (<code>test_phase3_engine_test_standalone.py</code>)</li>
+<li>single-engine taxi (<code>taxi_engine_count</code>, main engine start/off times,
+  <code>taxi_fuel_ratio</code>) and its split over the route segments
+  (<code>test_single_engine_taxi_split.py</code>; plugin parity of the movement totals
+  and of each taxi segment in <code>tests/test_zz_single_engine_taxi_parity.py</code>)</li>
+<li>runway placement of flight profiles and the segment Mach number
+  (<code>test_runway_placement.py</code>, <code>test_segment_mach.py</code>)</li>
+<li>the grid distribution: taxi split by segment time, helicopter helipad
+  cell, vertical layer fractions below ground
+  (<code>test_taxi_split_by_segment_time.py</code>,
+  <code>test_helicopter_helipad_standalone.py</code>,
+  <code>test_iz_layer_fractions_below_ground.py</code>)</li>
+<li>the per-pollutant GeoPackages (<code>inventory_gpkg</code>): area, engine-test
+  and point sources are gridded along with the others, and the
+  GeoPackage total equals the <code>emissions.parquet</code> mass
+  (<code>test_inventory_gpkg_all_source_kinds.py</code>)</li>
+<li>an <code>austal --include-aircraft</code> run on <code>training_v3.alaqs</code> through
+  <code>austal_prep</code>: per-hour e-files for the aircraft sources, per-pollutant
+  spatial weights, mass conservation (<code>tests/test_austal_prep_hybrid_mode.py</code>)</li>
+</ul>
+<p>Tests that need <code>mod_spatialite</code> (the CAEP14 reference) or a fixture
+that is not present are skipped with a message.</p>
+<h3 id="validation-harness">Validation harness<a class="headerlink" href="#validation-harness" title="Permanent link">&para;</a></h3>
+<p><code>openalaqs_standalone/validation/</code> is the CAEP14 reference harness. It is
+kept up to date with the standalone's calculation paths and is the
+canonical test for any change to the emission code; extend it whenever you
+add a new emission path or a new validation target. Three subdirectories:</p>
+<ul>
+<li><code>validation/data/</code>: bundled fixtures. Three derived variants of the
+  training study (<code>training_v3.alaqs</code>, <code>training_v3_gatemovements.alaqs</code>,
+  <code>training_v3_multisource.alaqs</code>) plus the plugin's own outputs on
+  <code>training_v3.alaqs</code> for the four comparison targets (bymode,
+  bymode-with-NOx-correction, bffm2_anchor, bffm2_traj) and the stationary
+  sources in <code>validation/data/plugin_output/</code>, and
+  <code>training_validation_reference.xlsx</code>, plugin beside the CAEP14 reference
+  per movement. The <code>training_v3*</code> files
+  are evolved versions of <code>example/training/training.alaqs</code> carrying
+  schema fixes and source variants that exercise the gate / multi-source
+  code paths. <code>validation/data/source_csvs/</code> holds their text inputs:
+  <code>training_movements.csv</code> is the movement table of <code>training_v3.alaqs</code>
+  (and of <code>training_v3_multisource.alaqs</code>), 15 movements with the two AS50
+  helicopters, in the plugin's import format; <code>training_v3_gatemovements.alaqs</code>
+  differs from it in the gate and <code>gate_emissions_code</code> of movements 1, 2,
+  3, 5 and 14. It is not the example's <code>training_movements.csv</code> (13
+  movements, other runways and gates on some rows). <code>training_meteo.csv</code>
+  and <code>training_ads_b_data.csv</code> are the example's files. The only code
+  that reads this folder is the test
+  <code>validation/tests/test_source_csvs_match_fixture.py</code>, which checks that
+  <code>training_movements.csv</code> equals the movement table of <code>training_v3.alaqs</code>.</li>
+<li><code>validation/tests/</code>: pytest modules, among them
+  <code>test_plugin_csv_vs_reference.py</code> (plugin = reference = standalone on the
+  15 movements), <code>test_bffm2_ambient_propagation_regression.py</code> (BFFM2 EI
+  with pinned ambient inputs), <code>test_runway_placement.py</code> and
+  <code>test_segment_mach.py</code>.</li>
+<li><code>validation/tools/</code>: the CAEP14 reference and its helper scripts,
+  described in <a href="validation/tools/CAEP14_VALIDATION.html#files">CAEP14_VALIDATION.md</a>
+  (how to run the reference, regenerate the pinned outputs and the
+  workbooks).</li>
+</ul>
+<p>See also:</p>
+<ul>
+<li><a href="USAGE.html">USAGE.md</a>: install, commands and options</li>
+<li><a href="validation/tools/CAEP14_VALIDATION.html">CAEP14_VALIDATION.md</a>: the CAEP14 reference implementation</li>
+<li><a href="../documents/validation/VALIDATION_GUIDE.html">VALIDATION_GUIDE.md</a>: validating a build</li>
+<li><a href="../documents/user/WITHOUT_QGIS.html">WITHOUT_QGIS.md</a>: which tool to run without the QGIS GUI</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="USAGE.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Standalone: usage">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Standalone: usage
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../scripts/index.html" class="md-footer__link md-footer__link--next" aria-label="Next: Scripts">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Scripts
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      EUROCONTROL, European Union Public Licence v. 1.2 with amendments
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.indexes", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>

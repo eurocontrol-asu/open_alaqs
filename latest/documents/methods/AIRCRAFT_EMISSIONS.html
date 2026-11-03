@@ -1,0 +1,3624 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Airport local air quality studies with the OpenALAQS QGIS plugin and AUSTAL">
+      
+      
+      
+        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.2/documents/methods/AIRCRAFT_EMISSIONS.html">
+      
+      
+        <link rel="prev" href="../user/TRAINING_COURSE_ERRATA.html">
+      
+      
+        <link rel="next" href="ATMOSPHERE_ALOFT.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Aircraft emissions - OpenALAQS documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#aircraft-emissions" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="OpenALAQS documentation" class="md-header__button md-logo" aria-label="OpenALAQS documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            OpenALAQS documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Aircraft emissions
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/eurocontrol-asu/open_alaqs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    eurocontrol-asu/open_alaqs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../index.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user/USER_GUIDE.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Using OpenALAQS
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="AIRCRAFT_EMISSIONS.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Methods
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user/WITHOUT_QGIS.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Command line
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../validation/VALIDATION_GUIDE.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../developer/CODE_FLOW.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Maintainers
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="OpenALAQS documentation" class="md-nav__button md-logo" aria-label="OpenALAQS documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    OpenALAQS documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/eurocontrol-asu/open_alaqs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    eurocontrol-asu/open_alaqs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Home
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GLOSSARY.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using OpenALAQS
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Using OpenALAQS
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/USER_GUIDE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/TUTORIAL_ROTTERDAM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Rotterdam The Hague
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/INPUT_FORMATS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Input formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/DISPERSION_AUSTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dispersion with AUSTAL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AUSTAL/AUSTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AUSTAL installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/UPGRADING.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/TROUBLESHOOTING.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/TRAINING_COURSE_ERRATA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Training course: errata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Methods
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aircraft emissions
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="AIRCRAFT_EMISSIONS.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aircraft emissions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fuel-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fuel flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fuel flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#twin-quadratic-fit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Twin-quadratic fit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scaling-to-the-ambient" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaling to the ambient
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fuel-flow-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fuel-flow sources
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bffm2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BFFM2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="BFFM2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-fuel-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: fuel flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-reference-fuel-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: reference fuel flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-log-log-interpolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: log-log interpolation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-ambient-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: ambient correction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-pm-sox-and-p1p2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: PM, SOx and P1/P2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-segment-mass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: segment mass
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bffm2-against-bymode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BFFM2 against bymode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#worked-example-one-segment-three-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Worked example: one segment, three methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Worked example: one segment, three methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bymode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bymode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bffm2-fuel-flow-source-trajectory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BFFM2, fuel-flow source trajectory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bffm2-fuel-flow-source-mode_anchor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BFFM2, fuel-flow source mode_anchor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nox-ambient-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NOx ambient correction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#particulate-matter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Particulate matter
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Particulate matter">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pm10-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PM10 components
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#meem-v1-nvpm-above-3000-ft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MEEM V1: nvPM above 3000 ft
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SOx
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#brake-and-tyre-wear" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Brake and tyre wear
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output columns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#taxiing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Taxiing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#apu-gse-and-engine-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        APU, GSE and engine start
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="APU, GSE and engine start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#apu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        APU
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gse-and-gpu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GSE and GPU
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#main-engine-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Main engine start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gate_emissions_code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gate_emissions_code
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flight-profiles-anp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flight profiles (ANP)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Flight profiles (ANP)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#placement-on-the-runway" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Placement on the runway
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lto-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LTO modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lto-ceiling-and-segment-clipping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LTO ceiling and segment clipping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#meteo-per-period" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Meteo per period
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ads-b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADS-B
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="ATMOSPHERE_ALOFT.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ambient conditions aloft
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="HELICOPTERS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Helicopters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="STATIONARY_AND_ROAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stationary sources and road traffic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="REFERENCE_DATA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../openalaqs_standalone/index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Command line
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/WITHOUT_QGIS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Which tool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../openalaqs_standalone/USAGE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standalone: usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/README_metar_to_alaqs_meteo.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    METAR to meteo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/emissions_austal/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    emissions_austal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/austal_from_csv/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    austal_from_csv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gse_application/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GSE application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../example/training/recipe_config.README.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example configurations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../example/training/training_engine_test_events.README.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example engine test events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation/VALIDATION_GUIDE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../openalaqs_standalone/validation/tools/CAEP14_VALIDATION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CAEP14 reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../tools/template_build/index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maintainers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Maintainers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/CODE_FLOW.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code structure and flow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/REGRESSION_PATTERNS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regression patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/AIRCRAFT_PROFILES_PROVENANCE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aircraft profiles provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/DATASET_PROVENANCE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    COPERT dataset provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/DEPRECATIONS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema deprecations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/design/ATMOSPHERE_ALOFT_VALIDATION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design: atmosphere aloft validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/anp22_profiles/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ANP 2.2 profiles builder
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/test_fixtures/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test fixtures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHANGELOG.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fuel-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fuel flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fuel flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#twin-quadratic-fit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Twin-quadratic fit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scaling-to-the-ambient" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaling to the ambient
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fuel-flow-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fuel-flow sources
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bffm2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BFFM2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="BFFM2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-fuel-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: fuel flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-reference-fuel-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: reference fuel flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-log-log-interpolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: log-log interpolation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-ambient-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: ambient correction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-pm-sox-and-p1p2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: PM, SOx and P1/P2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-segment-mass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: segment mass
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bffm2-against-bymode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BFFM2 against bymode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#worked-example-one-segment-three-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Worked example: one segment, three methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Worked example: one segment, three methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bymode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bymode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bffm2-fuel-flow-source-trajectory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BFFM2, fuel-flow source trajectory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bffm2-fuel-flow-source-mode_anchor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BFFM2, fuel-flow source mode_anchor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nox-ambient-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NOx ambient correction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#particulate-matter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Particulate matter
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Particulate matter">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pm10-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PM10 components
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#meem-v1-nvpm-above-3000-ft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MEEM V1: nvPM above 3000 ft
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SOx
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#brake-and-tyre-wear" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Brake and tyre wear
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output columns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#taxiing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Taxiing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#apu-gse-and-engine-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        APU, GSE and engine start
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="APU, GSE and engine start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#apu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        APU
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gse-and-gpu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GSE and GPU
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#main-engine-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Main engine start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gate_emissions_code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gate_emissions_code
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flight-profiles-anp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flight profiles (ANP)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Flight profiles (ANP)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#placement-on-the-runway" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Placement on the runway
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lto-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LTO modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lto-ceiling-and-segment-clipping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LTO ceiling and segment clipping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#meteo-per-period" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Meteo per period
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ads-b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ADS-B
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/eurocontrol-asu/open_alaqs/edit/main/documents/methods/AIRCRAFT_EMISSIONS.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="aircraft-emissions">Aircraft emissions<a class="headerlink" href="#aircraft-emissions" title="Permanent link">&para;</a></h1>
+<p>This page describes how OpenALAQS calculates the emissions of fixed-wing aircraft movements: the bymode and BFFM2 methods, fuel flow, the NOx ambient correction, particulate matter and SOx, taxiing, APU, GSE and engine start, and the use of ANP and ADS-B flight profiles. It is for modellers who need to know what the numbers mean. Helicopters follow their own method (<a href="HELICOPTERS.html">HELICOPTERS.md</a>). Where each step is in the code is in <a href="../developer/CODE_FLOW.html">CODE_FLOW.md</a>.</p>
+<p>Contents:</p>
+<ul>
+<li><a href="#methods">Methods</a></li>
+<li><a href="#fuel-flow">Fuel flow</a></li>
+<li><a href="#bffm2">BFFM2</a></li>
+<li><a href="#worked-example-one-segment-three-methods">Worked example: one segment, three methods</a></li>
+<li><a href="#nox-ambient-correction">NOx ambient correction</a></li>
+<li><a href="#particulate-matter">Particulate matter</a></li>
+<li><a href="#taxiing">Taxiing</a></li>
+<li><a href="#apu-gse-and-engine-start">APU, GSE and engine start</a></li>
+<li><a href="#flight-profiles-anp">Flight profiles (ANP)</a></li>
+<li><a href="#ads-b">ADS-B</a></li>
+<li><a href="#limitations">Limitations</a></li>
+<li><a href="#see-also">See also</a></li>
+</ul>
+<h2 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">&para;</a></h2>
+<p>Aircraft emissions follow the ICAO LTO cycle framework of ICAO Doc 9889. For each movement OpenALAQS computes the emissions of three parts and adds them up per pollutant:</p>
+<ul>
+<li>the <strong>gate</strong>: GSE and GPU at the stand (<a href="#apu-gse-and-engine-start">APU, GSE and engine start</a>);</li>
+<li><strong>taxiing</strong>: the taxi route, queuing, stop-and-go, APU, main engine start and brake wear (<a href="#taxiing">Taxiing</a>);</li>
+<li>the <strong>flight profile</strong>: one emission per profile segment up to the LTO ceiling (<a href="#flight-profiles-anp">Flight profiles (ANP)</a>).</li>
+</ul>
+<p>The flight and taxi phases use one of three methods. The plugin offers <code>bymode</code> and <code>BFFM2</code> in the <strong>Method</strong> list of the Configuration tab and the fuel-flow source in <strong>BFFM2 Fuel-Flow Source</strong>; the standalone pipeline names the three methods directly.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Standalone name</th>
+<th>Fuel flow per segment</th>
+<th>Emission index (NOx, CO, HC)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bymode</td>
+<td><code>bymode</code></td>
+<td>EEDB fuel flow of the segment's LTO mode (TX, AP, CL, TO)</td>
+<td>EEDB index of the mode, no ambient correction (optional NOx correction on TO and CL)</td>
+</tr>
+<tr>
+<td>BFFM2, fuel-flow source <code>trajectory</code></td>
+<td><code>bffm2_traj</code></td>
+<td>from the profile point's power setting (twin-quadratic fit), scaled to the ambient</td>
+<td>BFFM2: read on the log-log curve at the fuel flow, corrected for the ambient</td>
+</tr>
+<tr>
+<td>BFFM2, fuel-flow source <code>mode_anchor</code></td>
+<td><code>bffm2_anchor</code></td>
+<td>flight: EEDB fuel flow of the segment's mode, unscaled; taxi: as <code>bffm2_traj</code> (<a href="#taxiing">Taxiing</a>)</td>
+<td>BFFM2, as above</td>
+</tr>
+</tbody>
+</table>
+<p>PM, SOx and the P1/P2 columns use the EEDB values of the mode in all three methods (<a href="#particulate-matter">Particulate matter</a>). The methods differ in fuel burn and in the gas-phase indices. A <a href="#worked-example-one-segment-three-methods">worked example</a> runs one segment through the three methods.</p>
+<p>For each segment the emission mass is:</p>
+<div class="highlight"><pre><span></span><code>mass [kg] = EI [g/kg] x Wf [kg/s per engine] x n_engines x t_seg [s] / 1000
+</code></pre></div>
+<p>With bymode, <code>EI</code> and <code>Wf</code> are the mode values. All approach segments use the AP values, whatever the thrust stored in the profile.</p>
+<p>The plugin offers <code>BFFM2</code> only for some pollutant selections (<a href="../user/USER_GUIDE.html#calculate-emissions-and-query-results">user guide</a>); the calculation still produces every pollutant.</p>
+<h2 id="fuel-flow">Fuel flow<a class="headerlink" href="#fuel-flow" title="Permanent link">&para;</a></h2>
+<h3 id="twin-quadratic-fit">Twin-quadratic fit<a class="headerlink" href="#twin-quadratic-fit" title="Permanent link">&para;</a></h3>
+<p>With the <code>trajectory</code> source, the power setting <code>P</code> of the segment's start point (a fraction from 0 to 1, 1 = maximum take-off thrust) gives a reference fuel flow <code>Wf_ref</code> at ICAO sea-level static conditions (T = 288.15 K, p = 101 325 Pa, M = 0). The thrust range is split at the climb-out point (P = 0.85). In each part a quadratic <code>Wf = a P^2 + b P + c</code> passes exactly through three EEDB points:</p>
+<ul>
+<li>low range (0 &lt; P &lt;= 0.85): TX (P = 0.07), AP (P = 0.30), CL (P = 0.85);</li>
+<li>high range (0.85 &lt; P &lt;= 1.00): AP (P = 0.30), CL (P = 0.85), TO (P = 1.00).</li>
+</ul>
+<p>This is the original ALAQS method. Edge cases:</p>
+<ul>
+<li>P &lt; 0.07: <code>Wf_ref = max(parabola value, Wf_TX)</code> (idle floor). For P &gt;= 0.07 the parabola is used as it is; it passes through <code>(0.07, Wf_TX)</code>, so it rarely falls below idle.</li>
+<li>1.0 &lt; P &lt;= 1.05: P is set to 1.0 (warning in the log), which gives the TO fuel flow.</li>
+<li>P &gt; 1.05, or P &lt; 0: the fit is rejected and the segment uses bymode: the EEDB fuel flow and NOx, CO and HC indices of its mode, unscaled and without the BFFM2 step. One warning is logged per group of movements calculated together (same engine, profile, runway and taxi route), naming the first movement.</li>
+</ul>
+<p>Piecewise-linear interpolation between the EEDB points (the CAEP14 / ICAO alternative) is not implemented.</p>
+<h3 id="scaling-to-the-ambient">Scaling to the ambient<a class="headerlink" href="#scaling-to-the-ambient" title="Permanent link">&para;</a></h3>
+<p>The reference fuel flow is scaled to the segment's ambient conditions with the corrected-parameter relation of gas-turbine performance. There is no option to turn it off.</p>
+<div class="highlight"><pre><span></span><code>Wf_amb = Wf_ref x delta x sqrt(theta)      theta = T_amb / 288.15,  delta = p_amb / 101325
+</code></pre></div>
+<p>This applies to the <code>trajectory</code> source and, with either source, to every taxi segment (<a href="#taxiing">Taxiing</a>). On flight segments the <code>mode_anchor</code> fuel flow and an ADS-B fuel flow are used as <code>Wf_amb</code> unchanged. T_amb and p_amb are those at the segment's start height (<a href="ATMOSPHERE_ALOFT.html">ATMOSPHERE_ALOFT.md</a>).</p>
+<p>The scaling uses the static delta and theta and leaves out the effect of flight speed; the gas-turbine similarity form of the DLR fuel-flow method in SAE AIR 5715 (section 5.3, Eq. 11) uses total (stagnation) inlet conditions, which would give about 3 % more fuel flow at Mach 0.2 and 7 % more at Mach 0.3.</p>
+<h3 id="fuel-flow-sources">Fuel-flow sources<a class="headerlink" href="#fuel-flow-sources" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th><code>Wf_amb</code> per engine</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>trajectory</code> (default)</td>
+<td>twin-quadratic fit at the point's power, scaled to the ambient; an ADS-B fuel flow takes priority when the point has one (<a href="#ads-b">ADS-B</a>)</td>
+</tr>
+<tr>
+<td><code>mode_anchor</code></td>
+<td>flight segments: EEDB fuel flow of the segment's mode, unscaled; an ADS-B fuel flow is ignored. Taxi segments: as <code>trajectory</code></td>
+</tr>
+</tbody>
+</table>
+<p>With <code>mode_anchor</code> the flight fuel flow is the ICAO mode fuel flow, as in bymode, so <code>bffm2_anchor</code> and <code>bymode</code> burn the same fuel in flight and differ only in the emission index. SAE AIR6183 (section 4.2, Eq. 1) scales a mode fuel flow to the ambient with the inverse of the BFFM2 conversion and the installation factor, <code>B x Wf_mode x delta / (theta^3.8 x exp(0.2 M^2))</code>. OpenALAQS does not; with that scaling the fuel flow would be about 2 % lower on approach at 3,000 ft (ISA, Mach 0.25), 17 % lower on take-off at sea level and 30 °C (Mach 0.2) and 43 % higher at −10 °C (Mach 0). Because the unscaled fuel flow is converted to reference conditions in step 2, the index is read close to, but not exactly at, the installation-corrected mode point (see the <a href="#bffm2-fuel-flow-source-mode_anchor">example</a>).</p>
+<p>A segment whose start point has neither a power setting nor a fuel flow (for example the RPM-based piston profiles) uses the bymode index, with a warning in the log for each such segment.</p>
+<h2 id="bffm2">BFFM2<a class="headerlink" href="#bffm2" title="Permanent link">&para;</a></h2>
+<p>The Boeing Fuel Flow Method 2 (BFFM2) was developed by Boeing and formalised in SAE AIR 5715. ICAO and CAEP use it to compute engine emissions at conditions other than the sea-level static reference of the EEDB. It maps the fuel flow to an emission index on a log-log curve through the four EEDB points (TX, AP, CL, TO), then corrects that index for ambient temperature, pressure and humidity. The Mach number enters only the conversion of the fuel flow to reference conditions (step 2).</p>
+<p>Its advantage over bymode is that it follows the thrust stored in each profile point instead of the nominal thrust of the mode label. This matters most on approach: segments labelled <code>AP</code> are often flown near idle.</p>
+<p>References: SAE AIR 5715, <em>Procedure for the Calculation of Aircraft Emissions</em>; ICAO Doc 9889, <em>Airport Air Quality Manual</em>, Chapter 3, Appendix 1 (which refers to SAE AIR 5715 for BFFM2).</p>
+<h3 id="step-1-fuel-flow">Step 1: fuel flow<a class="headerlink" href="#step-1-fuel-flow" title="Permanent link">&para;</a></h3>
+<p><code>Wf_amb</code> per engine comes from the fuel-flow source (<a href="#fuel-flow">Fuel flow</a>). An ADS-B fuel flow is the aircraft total divided by the engine count.</p>
+<h3 id="step-2-reference-fuel-flow">Step 2: reference fuel flow<a class="headerlink" href="#step-2-reference-fuel-flow" title="Permanent link">&para;</a></h3>
+<p>The ambient fuel flow is projected to BFFM2 reference conditions with the CAEP14 universal correction:</p>
+<div class="highlight"><pre><span></span><code>theta = T_amb / 288.15
+delta = p_amb / 101325
+M     = TAS / SOS,   SOS = sqrt(1.4 x 287.05287 x T_amb)   (340.29 m/s at ISA sea level)
+
+Wf_ref_BFFM2 = (Wf_amb / delta) x theta^3.8 x exp(0.2 x M^2)
+</code></pre></div>
+<p>M is the true Mach number at the segment's start point, as in the CAEP/14 BFFM2 formulation (gamma 1.4, R 287.05287 J/(kg K), ICAO Doc 7488). The form is that of SAE AIR 5715 (Eq. 2); CAEP14 prescribes it for all flight phases.</p>
+<h3 id="step-3-log-log-interpolation">Step 3: log-log interpolation<a class="headerlink" href="#step-3-log-log-interpolation" title="Permanent link">&para;</a></h3>
+<p>The EEDB gives four points <code>(Wf_i, EI_i)</code> per pollutant (NOx, CO, HC). Before interpolation the reference fuel flows are multiplied by the installation correction factors (CAEP14 defaults, from SAE AIR 5715). They account for installation losses not in the engine-only certification data. They shift the x-axis points and leave the indices unchanged.</p>
+<table>
+<thead>
+<tr>
+<th>LTO mode</th>
+<th>Installation factor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Take-off (TO)</td>
+<td>1.010</td>
+</tr>
+<tr>
+<td>Climb-out (CL)</td>
+<td>1.013</td>
+</tr>
+<tr>
+<td>Approach (AP)</td>
+<td>1.020</td>
+</tr>
+<tr>
+<td>Idle (TX)</td>
+<td>1.100</td>
+</tr>
+</tbody>
+</table>
+<p>The factors move the reading slightly toward the low-fuel-flow end of the curve (lower NOx, higher CO and HC). The effect on total LTO NOx is typically 1 to 3 %. They cannot be changed from the plugin.</p>
+<p>The index at <code>Wf_ref_BFFM2</code> is interpolated linearly in log10 space between the two surrounding points:</p>
+<div class="highlight"><pre><span></span><code>log10(EI) = log10(EI_i) + [log10(EI_i+1) - log10(EI_i)] x
+            [log10(Wf) - log10(Wf_i)] / [log10(Wf_i+1) - log10(Wf_i)]
+</code></pre></div>
+<p><strong>CO and HC.</strong> Their curves are not monotonic: high at idle, steeply lower at approach, about flat at climb-out and take-off. OpenALAQS applies the CAEP/14 slope-to-mean-value rule for CO and HC. Above the approach point the index is <code>lin_av</code>, the linear average of the climb-out and take-off indices, which gives a step at the approach point. When the engine does not have the standard shape (the idle-to-approach line meets the <code>lin_av</code> line outside [approach, climb-out]), the index is interpolated log-linearly from the approach point to (climb-out fuel flow, <code>lin_av</code>) and held at <code>lin_av</code> above climb-out.</p>
+<p>This rule differs from SAE AIR 5715 (section 5.2.1) and DuBois &amp; Paynter (2006) in the standard case. There, the idle-to-approach line continues past the approach point up to its intersection with the <code>lin_av</code> line, and <code>lin_av</code> applies only beyond the intersection. Between the approach point and the intersection, AIR 5715 therefore gives higher CO and HC indices than OpenALAQS (on the LEAP-1A26 at ISA, 1.72 against 0.25 g/kg CO at 0.30 kg/s). Inventory totals differ little, because taxi at idle dominates CO: on the example and training studies, total CO is 0.9 to 1.0 % (<code>bffm2_traj</code>) and 1.8 to 2.8 % (<code>bffm2_anchor</code>) higher with the AIR 5715 rule (up to 15 % for a single movement), HC at most 0.2 %, NOx unchanged. OpenALAQS follows CAEP/14 so that its results match the CAEP/14 BFFM2 reference values. Both rules agree above the intersection, and in the non-standard case.</p>
+<p><strong>Zero indices.</strong> A zero EEDB index cannot be read on a log scale: before the interpolation a zero idle index becomes 0.001 g/kg, a zero approach index 0.001 g/kg (0.0001 g/kg when the idle index is also zero), and a zero climb-out or take-off index 0.0001 g/kg.</p>
+<p><strong>No extrapolation.</strong> Below the idle point the idle index is used. Above the take-off point NOx keeps the take-off index and CO and HC keep <code>lin_av</code>. SAE AIR 5715 recommends extrapolating the CO and HC curves below the idle point, with care (section 5.2.1); it gives no formula and notes that errors below 7 % thrust can be large (section 5.2.3). OpenALAQS does not extrapolate. This matters mostly for taxiing: at the default taxi thrust of 7 %, the reference fuel flow lies about 9 % below the installation-corrected idle point (1 / 1.1 at ISA), so the taxi CO and HC indices are the idle values.</p>
+<p>Example curves for one engine: log-log reference curves for <a href="bffm2_figures/NOx_interp_curve.pdf">NOx</a>, <a href="bffm2_figures/CO_interp_curve.pdf">CO</a> and <a href="bffm2_figures/HC_interp_curve.pdf">HC</a>; emission index against fuel flow, at ISA and with the ambient and installation corrections, for <a href="bffm2_figures/NOx_emission_index_.pdf">NOx</a>, <a href="bffm2_figures/CO_emission_index_.pdf">CO</a> and <a href="bffm2_figures/HC_emission_index_.pdf">HC</a>.</p>
+<h3 id="step-4-ambient-correction">Step 4: ambient correction<a class="headerlink" href="#step-4-ambient-correction" title="Permanent link">&para;</a></h3>
+<p>NOx (SAE AIR 5715 humidity and P3T3 correction):</p>
+<div class="highlight"><pre><span></span><code>h           = -19 x (omega - 0.00634)
+EI_NOx_corr = EI_NOx x exp(h) x (delta^1.02 / theta^3.3)^0.5
+</code></pre></div>
+<p>CO and HC (temperature and pressure only, no humidity):</p>
+<div class="highlight"><pre><span></span><code>EI_CO_corr = EI_CO x theta^3.3 / delta^1.02
+EI_HC_corr = EI_HC x theta^3.3 / delta^1.02
+</code></pre></div>
+<p>The specific humidity <code>omega</code> (kg water per kg dry air) is computed from the relative humidity RH, the temperature and the pressure (Magnus formula):</p>
+<div class="highlight"><pre><span></span><code>p_sat = 6.107 x 10^(7.5 x T_C / (237.3 + T_C))      [hPa; T_C in deg C]
+omega = 0.62197058 x RH x p_sat / (p_hPa - RH x p_sat)
+</code></pre></div>
+<p>The EEDB NOx indices refer to omega0 = 0.00634 kg/kg. Drier air (omega &lt; 0.00634) raises NOx, more humid air lowers it, and at omega0 there is no correction.</p>
+<p>With the atmosphere model <code>standard_lapse</code> (default) or <code>surface_layer</code>, T, p and RH are the segment's local values derived from the hourly meteo row. With <code>ground_held</code> they are the row's <code>Temperature</code>, <code>SeaLevelPressure</code> (QNH) and <code>RelativeHumidity</code> as they are (<a href="ATMOSPHERE_ALOFT.html">ATMOSPHERE_ALOFT.md</a>). An empty relative humidity is taken as 0.6. Without a meteo row for the period, ISA values are used at every height (288.15 K, 101 325 Pa, RH 0.6). The meteo <code>Humidity</code> column is not used.</p>
+<h3 id="step-5-pm-sox-and-p1p2">Step 5: PM, SOx and P1/P2<a class="headerlink" href="#step-5-pm-sox-and-p1p2" title="Permanent link">&para;</a></h3>
+<p>BFFM2 does not interpolate PM or SOx. After steps 3 and 4 the PM components, SOx and P1/P2 indices of the segment's mode are copied in, as in bymode, including the MEEM V1 nvPM above 3000 ft (<a href="#particulate-matter">Particulate matter</a>). The PM and SOx indices are therefore the same as with bymode; the totals differ only through the fuel burn.</p>
+<h3 id="step-6-segment-mass">Step 6: segment mass<a class="headerlink" href="#step-6-segment-mass" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>t_seg = 2 x d_geodesic / (TAS_start + TAS_end)
+mass  = EI_corr [g/kg] x Wf_amb [kg/s per engine] x n_engines x t_seg [s] / 1000
+</code></pre></div>
+<p><code>d_geodesic</code> is the ellipsoidal ground distance between the two profile points, in metres, independent of the map projection of the emission layer. When the segment is clipped (at the <a href="#lto-ceiling-and-segment-clipping">LTO ceiling</a>, or in plan to the calculation grid), <code>d_geodesic</code> is the length of the part kept; TAS, power, mode, Mach and the ambient conditions remain those of the original start point.</p>
+<h3 id="bffm2-against-bymode">BFFM2 against bymode<a class="headerlink" href="#bffm2-against-bymode" title="Permanent link">&para;</a></h3>
+<p>The two methods differ systematically because they treat the thrust schedule differently.</p>
+<p><strong>NOx: BFFM2 is usually lower.</strong> The EEDB NOx curve is steep (about 5 g/kg at idle to about 25 g/kg at take-off). Bymode gives every approach segment the AP index (about 9 to 14 g/kg). BFFM2 reads the profile power, which on approach is often far below the nominal 30 %, so the index is near idle. Departures climb at intermediate power below the CL nominal.</p>
+<p><strong>CO and HC: BFFM2 is higher on most arrivals; on departures the sign varies.</strong> The CO curve is high at idle (about 20 to 24 g/kg) and low near climb-out and take-off (<code>lin_av</code>, about 0.2 to 0.6 g/kg). Near-idle approach segments get about the idle index with BFFM2, against the lower AP index (about 2 to 4 g/kg) with bymode. Departure segments are mostly at climb-out or take-off power, where both methods give about <code>lin_av</code>, so departure CO comes mostly from the taxi at idle, where the methods differ only through the ambient correction and the fuel-flow scaling.</p>
+<p><strong>Fuel, SOx and PM: BFFM2 is lower.</strong> These follow the fuel burn. Arrival PM10 also carries the brake wear, which is the same for both methods.</p>
+<p>In the training example (<code>example/training/training_validation_reference.xlsx</code>, plugin columns, <code>bffm2_traj</code> against <code>bymode</code>, study meteo, 13 movements), BFFM2 gives per movement −19 % to −45 % NOx on the 7 arrivals (together −35 %) and −41 % to −60 % on the 6 departures (together −52 %). CO is +1 % to +16 % on the arrivals (together +8 %) and −12 % to +8 % on the departures (together −6 %). Fuel (CO2) is lower on every movement: −6 % to −28 % on arrivals, −8 % to −33 % on departures.</p>
+<p>These figures come from one small study (one airport, two aircraft types, one ADS-B profile: movement 11, the −60 % NOx departure). They depend on the profiles, the engines and the meteo, and are no acceptance band. A large NOx difference alone is expected. Investigate when the sign is unexpected (BFFM2 NOx above bymode on an LTO movement, or arrival CO clearly below it), or when one movement differs strongly from others of the same type and profile.</p>
+<h2 id="worked-example-one-segment-three-methods">Worked example: one segment, three methods<a class="headerlink" href="#worked-example-one-segment-three-methods" title="Permanent link">&para;</a></h2>
+<p>This example runs one approach segment of the training study through the three methods. The numbers can be reproduced with the shared code (<code>open_alaqs/core/tools/twin_quadratic_fit_method.py</code>, <code>open_alaqs/core/tools/bffm2.py</code>); <code>tests/test_worked_example_methods.py</code> checks them.</p>
+<p><strong>The segment.</strong> An A20N arrival (two LEAP-1A26 engines, EEDB <code>01P20CM128</code>) on the ANP profile <code>JET-SMALL-A-1</code>, from point 8 to point 9: the final descent from 554 m to 15 m above the runway, labelled <code>AP</code>.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>power setting <code>P</code> at the start point</td>
+<td>0.186</td>
+</tr>
+<tr>
+<td>TAS at start and end</td>
+<td>70.32 m/s, 68.52 m/s</td>
+</tr>
+<tr>
+<td>ground distance</td>
+<td>10 288 m</td>
+</tr>
+<tr>
+<td>duration <code>t_seg = 2 x 10288 / (70.32 + 68.52)</code></td>
+<td>148.2 s</td>
+</tr>
+<tr>
+<td>Mach at the start point, <code>70.32 / 340.29</code></td>
+<td>0.207</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The engine</strong> (EEDB, per engine):</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Thrust</th>
+<th>Fuel flow [kg/s]</th>
+<th>NOx [g/kg]</th>
+<th>CO [g/kg]</th>
+<th>HC [g/kg]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TX</td>
+<td>0.07</td>
+<td>0.091</td>
+<td>4.61</td>
+<td>21.63</td>
+<td>0.29</td>
+</tr>
+<tr>
+<td>AP</td>
+<td>0.30</td>
+<td>0.244</td>
+<td>8.75</td>
+<td>2.65</td>
+<td>0.04</td>
+</tr>
+<tr>
+<td>CL</td>
+<td>0.85</td>
+<td>0.710</td>
+<td>13.38</td>
+<td>0.26</td>
+<td>0.02</td>
+</tr>
+<tr>
+<td>TO</td>
+<td>1.00</td>
+<td>0.861</td>
+<td>30.80</td>
+<td>0.24</td>
+<td>0.02</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The ambient.</strong> To keep the arithmetic short the example uses ISA sea-level values (288.15 K, 101 325 Pa) and the reference humidity (omega = 0.00634 kg/kg, RH 0.60) for the whole segment. Then theta = delta = 1, the ambient scaling of the fuel flow is 1 and the BFFM2 ambient correction (step 4) is 1. A study run takes T, p and RH at the segment's start height (554 m) from the study meteo and the atmosphere model, so its numbers differ. With the three training meteo rows at 06:00 and <code>standard_lapse</code>, the <code>trajectory</code> fuel of this segment is 6 to 12 % lower, its NOx 13 to 21 % lower and its CO between 6 % lower and 28 % higher than in this example; the lower pressure at 554 m accounts for much of it. The segment is also assumed to lie entirely inside the calculation grid.</p>
+<p>The masses below are computed from unrounded values, so they can differ in the last digit from the product of the rounded numbers shown.</p>
+<h3 id="bymode">Bymode<a class="headerlink" href="#bymode" title="Permanent link">&para;</a></h3>
+<p>The segment is labelled <code>AP</code>, so it gets the AP fuel flow and indices, whatever its power setting:</p>
+<div class="highlight"><pre><span></span><code>fuel = 0.244 kg/s x 2 engines x 148.2 s = 72.3 kg
+NOx  = 72.3 x 8.75 = 633 g      CO = 72.3 x 2.65 = 192 g      HC = 72.3 x 0.04 = 2.9 g
+</code></pre></div>
+<h3 id="bffm2-fuel-flow-source-trajectory">BFFM2, fuel-flow source <code>trajectory</code><a class="headerlink" href="#bffm2-fuel-flow-source-trajectory" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Fuel flow from the power setting: P = 0.186 lies in the low range, so the parabola through TX, AP and CL gives <code>Wf_ref = 0.165 kg/s</code>. At ISA, <code>Wf_amb = Wf_ref x delta x sqrt(theta) = 0.165 kg/s</code>.</li>
+<li>Reference fuel flow for the index: <code>0.165 / 1 x 1^3.8 x exp(0.2 x 0.207^2) = 0.165 x 1.0086 = 0.1666 kg/s</code>.</li>
+<li>Index on the log-log curve. With the installation factors the idle point moves to 0.091 x 1.100 = 0.1001 kg/s and the approach point to 0.244 x 1.020 = 0.2489 kg/s; 0.1666 lies between them. For NOx:</li>
+</ol>
+<div class="highlight"><pre><span></span><code>log10(EI) = log10(4.61) + [log10(8.75) - log10(4.61)] x [log10(0.1666) - log10(0.1001)] / [log10(0.2489) - log10(0.1001)]
+EI_NOx    = 6.60 g/kg
+</code></pre></div>
+<p>CO and HC the same way: 6.69 and 0.096 g/kg.
+4. Ambient correction: 1 at ISA.</p>
+<div class="highlight"><pre><span></span><code>fuel = 0.165 kg/s x 2 x 148.2 s = 49.0 kg
+NOx  = 49.0 x 6.60 = 323 g      CO = 49.0 x 6.69 = 327 g      HC = 49.0 x 0.096 = 4.7 g
+</code></pre></div>
+<h3 id="bffm2-fuel-flow-source-mode_anchor">BFFM2, fuel-flow source <code>mode_anchor</code><a class="headerlink" href="#bffm2-fuel-flow-source-mode_anchor" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Fuel flow: the AP fuel flow, 0.244 kg/s, used as it is.</li>
+<li>Reference fuel flow for the index: <code>0.244 x 1.0086 = 0.2461 kg/s</code>.</li>
+<li>Index: 0.2461 lies just below the installation-corrected approach point (0.2489), so the index is slightly toward idle: NOx 8.68, CO 2.72, HC 0.041 g/kg.</li>
+</ol>
+<div class="highlight"><pre><span></span><code>fuel = 0.244 kg/s x 2 x 148.2 s = 72.3 kg
+NOx  = 72.3 x 8.68 = 628 g      CO = 72.3 x 2.72 = 197 g      HC = 72.3 x 0.041 = 3.0 g
+</code></pre></div>
+<h3 id="comparison">Comparison<a class="headerlink" href="#comparison" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Fuel [kg]</th>
+<th>NOx [g]</th>
+<th>CO [g]</th>
+<th>HC [g]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bymode</td>
+<td>72.3</td>
+<td>633</td>
+<td>192</td>
+<td>2.9</td>
+</tr>
+<tr>
+<td>BFFM2 <code>trajectory</code></td>
+<td>49.0</td>
+<td>323</td>
+<td>327</td>
+<td>4.7</td>
+</tr>
+<tr>
+<td>BFFM2 <code>mode_anchor</code></td>
+<td>72.3</td>
+<td>628</td>
+<td>197</td>
+<td>3.0</td>
+</tr>
+</tbody>
+</table>
+<p>The profile flies this segment at 19 % thrust, well below the nominal 30 % of the AP mode. Only <code>trajectory</code> follows that: about a third less fuel and half the NOx, but more CO and HC, because the index is read closer to idle. <code>mode_anchor</code> keeps the mode's fuel flow and differs from bymode only through the BFFM2 index (here the Mach and installation factors; in a real run also the ambient correction). PM10 and SOx use the AP indices in all three methods, so they scale with the fuel. Whole movements are compared in <a href="#bffm2-against-bymode">BFFM2 against bymode</a>.</p>
+<h2 id="nox-ambient-correction">NOx ambient correction<a class="headerlink" href="#nox-ambient-correction" title="Permanent link">&para;</a></h2>
+<p>The <strong>Apply NOx Corrections</strong> option applies the ICCAIA correction to the NOx index of bymode take-off and climb-out segments. Approach and taxi segments are not corrected. It is off by default, for comparison with ICAO-standard LTO inventories. It has no effect with BFFM2, which always applies its own correction (<a href="#step-4-ambient-correction">BFFM2, step 4</a>).</p>
+<div class="highlight"><pre><span></span><code>NOx_corr = NOx_EI x (1 + 1.55 x (TOW_ratio - 1) + 0.012 x (T - T_ISA)) x exp(19 x (0.00634 - h))
+
+T_ISA = 288.15 - 0.0065 x elevation [m]                         [K]
+h     = 0.62197058 x RH x p_sat / (p_hPa - RH x p_sat)          [kg water / kg dry air]
+p_sat = 6.1078 x 10^(7.5 x T_C / (237.3 + T_C))                 [hPa]
+</code></pre></div>
+<ul>
+<li><code>TOW_ratio</code> is the movement's <code>tow_ratio</code> (take-off gross weight over maximum take-off weight; default 1). A value of 0, a negative value or an unreadable one is replaced by 1, with a warning in the log; a value above 1 is used as given.</li>
+<li>T, RH and p are those of the period's meteo row at the airport, whatever the atmosphere model; p is the row's sea-level pressure. Without a meteo row, ISA values are used (288.15 K, 101 325 Pa, RH 0.6).</li>
+<li>The correction covers weight, temperature and humidity. It does not model thrust reduction.</li>
+</ul>
+<h2 id="particulate-matter">Particulate matter<a class="headerlink" href="#particulate-matter" title="Permanent link">&para;</a></h2>
+<p>All methods take the PM and SOx indices from the engine's mode row (<code>default_aircraft_engine_ei</code>; columns and data sources in <a href="REFERENCE_DATA.html">REFERENCE_DATA.md</a>).</p>
+<h3 id="pm10-components">PM10 components<a class="headerlink" href="#pm10-components" title="Permanent link">&para;</a></h3>
+<p>PM10 is split into three combustion components, stored separately so they can be reported and updated independently:</p>
+<ul>
+<li><strong>Non-volatile PM (<code>pm10_nonvol</code>)</strong>: soot, measured at ICAO sea-level static conditions (EEDB). Above 3000 ft above the aerodrome it is replaced by MEEM V1 (below).</li>
+<li><strong>Sulphate vPM (<code>pm10_sul</code>)</strong>: volatile sulphate particles from the fuel sulphur, ICAO Doc 9889 Appendix D:</li>
+</ul>
+<div class="highlight"><pre><span></span><code>pm10_sul [mg/kg] = FSC [kg/kg] x epsilon x 3062500
+</code></pre></div>
+<p>The table holds a constant 48.96 mg/kg for the jet-fuel engines with PM data (0 for the AvGas rows). It equals FSC 0.068 % (680 ppm, the FOA3 value) x epsilon 0.024 x 3 000 000 (SO4/S = 96/32). With the factor 98/32 above it would correspond to FSC of about 666 ppm.
+- <strong>Organic vPM (<code>pm10_organic</code>)</strong>: volatile organic particles from unburned hydrocarbons, ICAO Doc 9889 Appendix D parameterised vPM method:</p>
+<div class="highlight"><pre><span></span><code>pm10_organic [mg/kg] = delta_k [mg/g HC] x EI_HC [g/kg]
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>delta_k</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TO</td>
+<td>115</td>
+</tr>
+<tr>
+<td>CL</td>
+<td>76</td>
+</tr>
+<tr>
+<td>AP</td>
+<td>56.25</td>
+</tr>
+<tr>
+<td>TX</td>
+<td>6.17</td>
+</tr>
+</tbody>
+</table>
+<p>Total combustion PM10 = <code>pm10_nonvol</code> + <code>pm10_sul</code> + <code>pm10_organic</code>, stored in <code>pm10_ei</code>. The FOCA pistons and turboprops are an exception: their <code>pm10_ei</code> is the FOCA total PM and they have no sulphate and organic parts (<a href="REFERENCE_DATA.html">REFERENCE_DATA.md</a>).</p>
+<h3 id="meem-v1-nvpm-above-3000-ft">MEEM V1: nvPM above 3000 ft<a class="headerlink" href="#meem-v1-nvpm-above-3000-ft" title="Permanent link">&para;</a></h3>
+<p>The EEDB nvPM indices are certification values at ground level. Above 3000 ft the nvPM index depends on the combustor inlet conditions. OpenALAQS implements the MEEM V1 method (ICAO CAEP/13-MDG) and applies it to every flight segment, for bymode and BFFM2 alike. The cut is on the start point's height above the aerodrome.</p>
+<p><strong>At or below 3000 ft (914.4 m) above the aerodrome (LTO):</strong> the certification nvPM value of the mode (EEDB at 7, 30, 85 or 100 % thrust), unchanged. No interpolation, no ambient correction.</p>
+<p><strong>Above 3000 ft (non-LTO):</strong> phase "CLIMB TO CRUISE" for departures, "DESCENT TO APPROACH" for arrivals, at the segment altitude above MSL (start height plus airport elevation), with the Mach number from the start point's TAS and the local speed of sound:</p>
+<div class="highlight"><pre><span></span><code>TT    = T (1 + 0.2 M^2),   PT = P (1 + 0.2 M^2)^3.5
+P3    = PT (1 + Pi (OPR - 1)),   T3 = TT (1 + ((P3/PT)^(0.4/1.4) - 1) / eta)
+P3_GR = 101325 (1 + eta (T3/288.15 - 1))^3.5
+F_GR  = (P3_GR / 101325 - 1) / (OPR - 1)
+EI_GR = linear interpolation of the EEDB nvPM points at F_GR
+        (7 % value below 0.07, 100 % value above 1)
+EI_mass   = EI_GR,mass x (P3 / P3_GR)^1.35 x 1.1^2.5
+EI_number = EI_mass x EI_GR,number / EI_GR,mass
+</code></pre></div>
+<ul>
+<li><strong>Coefficients.</strong> Climb: eta = 0.88, Pi = 0.85 at 3000 ft rising linearly to 1.15 at the cruise altitude. Descent: eta = 0.7, Pi = 0.12. Pi is taken at the segment altitude above MSL, as in the method; at an airport below sea level a segment just above the LTO cut gives Pi slightly below 0.85 (0.8499 at the training airport, −5 m).</li>
+<li><strong>Cruise altitude.</strong> OpenALAQS has no cruise altitude per aircraft (the ANP profiles end at about 10 000 ft), so a default cruise altitude of 38 000 ft is used for every aircraft.</li>
+<li><strong>Fuel composition.</strong> The factors are 1 (fossil fuel).</li>
+<li><strong>Ambient T and P.</strong> With <code>standard_lapse</code> (default) or <code>surface_layer</code>, the segment's local temperature and pressure (<a href="ATMOSPHERE_ALOFT.html">ATMOSPHERE_ALOFT.md</a>). With <code>ground_held</code>, or when the period has no meteo row, the method's atmosphere: ISA + ΔT at the segment altitude above MSL. ΔT (the temperature offset at 0 ft MSL) is the temperature of the movement's meteo period minus the ISA temperature at the airport elevation (288.15 K − 0.0065 K/m x elevation), constant aloft. Without meteo the ISA sea-level 288.15 K is used, so ΔT = 0.0065 K/m x elevation.</li>
+<li><strong>OPR</strong> is <code>press_ratio</code> (ICAO EEDB v31; ACT_PRF for engines not in it; 890 jet engines). Where it is empty (pistons, turboprops and 14 jets) the EEDB has no value, so 30 is used, with one warning in the log.</li>
+<li><strong>5th point.</strong> The fifth nvPM point (<code>meem_nvpm_m_i_f00_avg</code> with <code>nvpm_m_max_mgkg</code>; <code>meem_nvpm_n_i_f00_avg</code> with <code>nvpm_n_max_nkg</code>) is used when its thrust is above 0, as in the method (77 engines for mass, 75 for number).</li>
+</ul>
+<p>The non-LTO mass index replaces <code>pm10_nonvol</code>. <code>pm10</code>, <code>p1</code> and <code>p2</code> move by the same amount, so <code>pm10 = pm10_nonvol + pm10_sul + pm10_organic</code> still holds. The number index is computed but no output column holds it. Fuel flow and the gas-phase indices are not changed.</p>
+<p>Segments more than 3000 ft above the aerodrome are calculated only in hours whose mixing height (the LTO ceiling) is above 3000 ft. MEEM V2 is implemented but not used; its adoption is to be decided. Any other <code>meem_version</code> runs MEEM V1, with a warning.</p>
+<p>The implementation reproduces ten MEEM V1 reference cases to 1e-15.</p>
+<h3 id="sox">SOx<a class="headerlink" href="#sox" title="Permanent link">&para;</a></h3>
+<p>The fuel sulphur not converted to sulphate leaves as SO2:</p>
+<div class="highlight"><pre><span></span><code>SOx EI [g/kg] = 1000 x FSC x (1 - epsilon) x 64/32
+Jet fuel: FSC 0.000383, epsilon 0.01  -&gt;  0.758   (the ICAO vPM parameterisation example)
+AvGas:    FSC 0.0001,   epsilon 0     -&gt;  0.2     (measured AvGas sulphur at most 100 ppm, CRC AV-30-22 2025)
+</code></pre></div>
+<ul>
+<li>The row's <code>fuel_type</code> decides: jet-fuel rows and turboshaft helicopters take the jet-fuel value, AvGas rows and piston helicopters the AvGas value. A <code>sox_ei</code> of 0 or empty is replaced by the fuel's value.</li>
+<li>The CAEP/14 method has no SOx calculation; it uses FSC and epsilon for the sulphate vPM only. Its default is FSC 0.0005 with epsilon 0.024; the ICAO vPM parameterisation example uses FSC 0.000383 with epsilon 0.01, the values used here. The stored <code>pm10_sul</code> keeps the FOA3 FSC (680 ppm).</li>
+<li>APU and GSE SOx come from their own tables.</li>
+<li>For comparison, the EUROCONTROL fuel burn and emissions tools (EMEP/EEA 2023 Annex 5) use 0.84 g/kg for all engines (about 420 ppm).</li>
+</ul>
+<h3 id="brake-and-tyre-wear">Brake and tyre wear<a class="headerlink" href="#brake-and-tyre-wear" title="Permanent link">&para;</a></h3>
+<p>Arrivals of aircraft with MTOW above 18 632 kg get a PM10 contribution from tyre and brake wear (FOA3) on their first taxi segment:</p>
+<div class="highlight"><pre><span></span><code>PM10_brake_wear [g] = MTOW [kg] x 0.000476 - 8.74
+</code></pre></div>
+<p>It is added to <code>pm10_kg</code>, <code>p1_kg</code> and <code>p2_kg</code>, not to the combustion components.</p>
+<h3 id="output-columns">Output columns<a class="headerlink" href="#output-columns" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pm10_kg</code></td>
+<td>combustion PM10 + brake wear (arrivals only)</td>
+</tr>
+<tr>
+<td><code>pm10_nonvol_kg</code></td>
+<td>nvPM mass: EEDB value of the mode at or below 3000 ft above the aerodrome, MEEM V1 above</td>
+</tr>
+<tr>
+<td><code>pm10_sul_kg</code></td>
+<td>sulphate vPM: about 48.96 mg/kg x fuel burned</td>
+</tr>
+<tr>
+<td><code>pm10_organic_kg</code></td>
+<td>organic vPM: delta_k x EI_HC x fuel burned</td>
+</tr>
+<tr>
+<td><code>p1_kg</code>, <code>p2_kg</code></td>
+<td>PM1.0 and PM2.5 placeholders, equal to <code>pm10_kg</code></td>
+</tr>
+<tr>
+<td><code>sox_kg</code></td>
+<td>SOx (as SO2)</td>
+</tr>
+</tbody>
+</table>
+<p>For departures <code>pm10_kg = pm10_nonvol_kg + pm10_sul_kg + pm10_organic_kg</code> exactly. For arrivals <code>pm10_kg</code> also holds the brake wear, visible as a surplus on the first taxi segment. P1 and P2 equal PM10 (brake wear included) because the EEDB has no sub-micron indices yet. They will be updated when the data exist.</p>
+<h2 id="taxiing">Taxiing<a class="headerlink" href="#taxiing" title="Permanent link">&para;</a></h2>
+<p>Taxi emissions are computed per taxi-route segment at the taxi emission index:</p>
+<ul>
+<li><strong>Bymode:</strong> the TX mode index and fuel flow.</li>
+<li><strong>BFFM2 (both fuel-flow sources):</strong> the fuel flow is the twin-quadratic value at the movement's <code>engine_thrust_level_for_taxiing</code> (default 0.07, the TX fuel flow), scaled to the ground ambient with δ√θ (<a href="#scaling-to-the-ambient">Scaling to the ambient</a>); <code>mode_anchor</code> does not change this. The BFFM2 index is read at that fuel flow, at Mach 0 and the ground ambient (2 m temperature, station pressure; with <code>ground_held</code>, the row with QNH), and the same fuel flow gives the taxi fuel burn. PM, SOx and P1/P2 are the TX mode values. When the taxi thrust is outside the range of the twin-quadratic fit (below 0 or above 1.05, for example 7 given for 7 %), the taxi uses the TX mode values as in bymode, and the log gives an error. When the engine has no BFFM2 index at the taxi thrust, the movement gets no taxi emissions and the log gives an error.</li>
+</ul>
+<p>The taxi time is the movement's block-to-runway time. For an arrival the profile's landing roll is subtracted, because the profile already counts it. The time is shared between the route segments (length over the taxiway speed), for an arrival the runway stretch from the rollout end to the exit, and queuing (the rest). When route and stretch do not fit in the taxi time, both are compressed to it and there is no queuing. Without block and runway times, the route's own segment times are used.</p>
+<table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Time</th>
+<th>Engines</th>
+<th>Placed on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Moving taxi</td>
+<td>segment time</td>
+<td>all, or <code>taxi_engine_count</code> during single-engine taxi</td>
+<td>each route segment</td>
+</tr>
+<tr>
+<td>Arrival runway stretch</td>
+<td>stretch time</td>
+<td>all</td>
+<td>runway centreline, rollout end to exit</td>
+</tr>
+<tr>
+<td>Queuing</td>
+<td>rest of the taxi time</td>
+<td>departures: <code>taxi_engine_count</code> before the main engine start, all after it; arrivals: as on the last segment</td>
+<td>last route segment</td>
+</tr>
+<tr>
+<td>Stop-and-go</td>
+<td>9 s x <code>number_of_stop_and_gos</code></td>
+<td>as on the last segment</td>
+<td>last route segment</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Single-engine taxi.</strong> It applies when <code>taxi_engine_count</code> (default 2) and a main-engine time are set; the engine count used is the smaller of <code>taxi_engine_count</code> and the aircraft's engine count.</p>
+<ul>
+<li>Departures, with <code>set_time_of_main_engine_start_after_block_off_in_s</code>: on the segments reached within that time after block-off. This field takes priority over <code>set_time_of_main_engine_start_before_takeoff_in_s</code>.</li>
+<li>Departures, with <code>set_time_of_main_engine_start_before_takeoff_in_s</code> only: the main engines start that time before take-off, so single-engine taxi applies to the segments that end before that point (cumulative moving time plus that time at most the block-to-runway time).</li>
+<li>Arrivals, with <code>set_time_of_main_engine_off_after_runway_exit_in_s</code>: on the segments reached after that time.</li>
+</ul>
+<p><strong>Queuing of a departure.</strong> The queue follows the route in time. With a main engine start time, the part of the queue before the main engine start is on single-engine taxi and the rest on all engines. Without one, the whole queue is on all engines.</p>
+<p><strong>Taxi fuel ratio.</strong> <code>taxi_fuel_ratio</code> (default 1) multiplies the emissions of the segments in single-engine taxi and of the single-engine part of a departure's queue only. It does not apply to other segments, other queuing or stop-and-go.</p>
+<p><strong>Taxi fuel flow.</strong> On all engines, the taxi fuel flow is the idle fuel flow at the taxi thrust (the EEDB TX value at the default 7 %), as in the ICAO LTO cycle. SAE AIR8035 (2023) found from airline flight data recorder data that this overestimates the baseline taxi fuel flow of most of the aircraft types it analysed, and recommends 0.80 times the 7 % fuel flow (0.75 to 1.02 by type); OpenALAQS does not apply that factor.</p>
+<p>A taxi time of 0 s gives no route or queuing time; APU, engine start, stop-and-go and brake wear are still counted. A route with no segments places them at the gate. Both cases are logged.</p>
+<p>Helicopters taxi at ground idle under their own method (<a href="HELICOPTERS.html">HELICOPTERS.md</a>).</p>
+<h2 id="apu-gse-and-engine-start">APU, GSE and engine start<a class="headerlink" href="#apu-gse-and-engine-start" title="Permanent link">&para;</a></h2>
+<h3 id="apu">APU<a class="headerlink" href="#apu" title="Permanent link">&para;</a></h3>
+<p>APU emissions depend on the APU model (<code>apu_id</code>) of the aircraft in <code>default_aircraft</code>. The emission factors (kg/h) are in <code>default_aircraft_apu_ef</code>, the operating times (minutes, by aircraft category, stand type and arrival or departure) in <code>default_apu_times</code>. The APU is added to the taxi segments, for arrivals and departures, according to the movement's <code>apu_code</code>:</p>
+<table>
+<thead>
+<tr>
+<th><code>apu_code</code></th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>−1 or 0 (default when empty)</td>
+<td>no APU emissions</td>
+</tr>
+<tr>
+<td>1</td>
+<td>APU at the stand only: the full APU time on the first taxi segment</td>
+</tr>
+<tr>
+<td>2</td>
+<td>APU during the whole taxi. Each segment after the first gets its own taxi time. The first segment gets the APU time when that is shorter than the total taxi time, otherwise the excess over the total taxi time plus its own taxi time</td>
+</tr>
+</tbody>
+</table>
+<p><code>gate_emissions_code</code> does not suppress the APU.</p>
+<h3 id="gse-and-gpu">GSE and GPU<a class="headerlink" href="#gse-and-gpu" title="Permanent link">&para;</a></h3>
+<p>GSE and GPU emission factors (g/h) and occupancy times are in <code>default_gate_profiles</code>, by gate type (PIER, REMOTE, CARGO), aircraft group (the shipped table has JET BUSINESS, JET REGIONAL, JET SMALL, JET MEDIUM, JET LARGE and TURBOPROP) and operation (arrival, departure). The emission is the factor times the occupancy time, placed on the gate polygon, for CO, HC, NOx, SOx and PM10. An aircraft group without its own profile takes the closest group name, with a warning. When no group name is close, the aircraft gets no GSE and no GPU emissions; this is not logged as a warning. This is intended for the group PROPELLER (1163 of the 1919 types in <code>default_aircraft</code>): these aircraft get no GSE and no GPU emissions.</p>
+<h3 id="main-engine-start">Main engine start<a class="headerlink" href="#main-engine-start" title="Permanent link">&para;</a></h3>
+<p>Main engine start (MES) emissions are given per aircraft group in <code>default_aircraft_start_ef</code> (unit <code>gram/aircraft</code> in the file) and applied once per engine started, for departures only, on the first taxi segment. All engines are started by default, on the first taxi segment. With a main-engine-start time set, the engines are split, and each part adds its share once: the engines started at the gate on the first taxi segment, the single-engine-taxi engines on the first segment inside the main-engine-start window. Each engine starts once per departure: when no taxi segment ends inside that window, the aircraft taxis on all engines and all of them start on the first taxi segment.</p>
+<h3 id="gate_emissions_code"><code>gate_emissions_code</code><a class="headerlink" href="#gate_emissions_code" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th><code>gate_emissions_code</code></th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>no GSE, GPU or MES emissions (also none for the single-engine-taxi engines)</td>
+</tr>
+<tr>
+<td>1 (default)</td>
+<td>GSE, GPU and MES included</td>
+</tr>
+</tbody>
+</table>
+<p>Helicopters have no APU, GSE, GPU or MES emissions.</p>
+<h2 id="flight-profiles-anp">Flight profiles (ANP)<a class="headerlink" href="#flight-profiles-anp" title="Permanent link">&para;</a></h2>
+<p>The flight phase uses fixed-point profiles from the Aircraft Noise and Performance (ANP) database (<code>default_aircraft_profiles</code>; data provenance in <a href="../developer/AIRCRAFT_PROFILES_PROVENANCE.html">AIRCRAFT_PROFILES_PROVENANCE.md</a>). Each profile point gives the horizontal position (<code>x_m</code>, <code>y_m</code>), height above the runway (<code>z_m</code>), true airspeed (<code>tas_metres</code>), power setting (<code>power</code>, 0 to 1), LTO mode (<code>mode</code>) and, for ADS-B profiles, fuel flow (<code>fuel_flow_kgm</code>). The points are placed on the study's runway to build the trajectory.</p>
+<p><img src="../../open_alaqs/assets/anp_profiles_example.png" alt="Aircraft trajectories" width="70%"></p>
+<h3 id="placement-on-the-runway">Placement on the runway<a class="headerlink" href="#placement-on-the-runway" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Standard ANP profiles</strong> (<code>course</code> <code>ANP2.2</code>): <code>x_m</code> is the distance along the runway axis from touchdown (arrivals) or brake release (departures), <code>y_m</code> the lateral offset.</li>
+<li>Arrivals touch down at the landing threshold plus the runway's Touchdown Offset, else at the profile's 50 ft crossing distance. The rollout ends at the taxi route's exit.</li>
+<li>Departures brake-release where the taxi route last meets the runway (the line-up point).</li>
+<li>Without a track the profile is straight along the runway axis; with a track assigned to the movement it follows the track.</li>
+<li><strong>ADS-B profiles</strong> (<code>course</code> <code>CUSTOM</code>): <code>x_m</code> and <code>y_m</code> are East and North offsets from the runway intersection and follow the flown path (<a href="#ads-b">ADS-B</a>).</li>
+</ul>
+<p>How the user sets the touchdown offset and taxi routes is in the <a href="../user/USER_GUIDE.html#define-emission-sources">user guide</a>.</p>
+<h3 id="lto-modes">LTO modes<a class="headerlink" href="#lto-modes" title="Permanent link">&para;</a></h3>
+<p>Each point carries its mode (TX, AP, CL, TO), which selects the bymode values and the MEEM phase. In the shipped departure profiles TO covers the take-off roll and the initial climb at full thrust; the mode changes to CL during the climb. The first CL point lies 310 to 914 m above the runway (median about 490 m). For more on the performance model see ECAC Doc 29, 5th edition, Volume 2, Appendix B.</p>
+<p><img src="../../open_alaqs/assets/anp_dep_profile_example.png" alt="Performance profiles" width="50%"></p>
+<h3 id="lto-ceiling-and-segment-clipping">LTO ceiling and segment clipping<a class="headerlink" href="#lto-ceiling-and-segment-clipping" title="Permanent link">&para;</a></h3>
+<p>Only segments below the LTO ceiling count. This section is the one description of the ceiling; other pages link here.</p>
+<p>The ceiling is the <code>MixingHeight</code> of the period's meteo row, in metres above the runway. When the meteo table has no rows, or the row's <code>MixingHeight</code> is empty, it is 914.4 m (3000 ft). The <strong>Vertical Limit</strong> of the study setup and the <strong>Vertical Limit</strong> of the Configuration tab have no effect; both fields are shown greyed out. The study value stays in the database for compatibility.</p>
+<p>The period's meteo row is the row nearest in time to the start of the period that contains the movement's runway time (ties go to the earlier row). The standalone works in hourly periods and uses the same rule, with the period start at the hour. With complete hourly meteo this is the row at the hour; the rule matters when hours are missing, rows are not on the hour, or a movement is before the first row.</p>
+<p>Segments are also clipped in plan to the calculation grid (the <strong>Modelled Domain</strong> of the inventory): a segment outside the grid gets no emission and a segment that crosses its edge keeps only the part inside, with distance and emission scaled.</p>
+<p>Segments entirely above the ceiling are dropped. A segment that crosses it is clipped: its upper end is replaced by the linearly interpolated point at the ceiling, and distance and emission are scaled accordingly.</p>
+<h3 id="meteo-per-period">Meteo per period<a class="headerlink" href="#meteo-per-period" title="Permanent link">&para;</a></h3>
+<p>Each time period uses the meteo row nearest in time to its start (<a href="#lto-ceiling-and-segment-clipping">LTO ceiling and segment clipping</a>). The row is constant within the period. With <code>standard_lapse</code> (default) or <code>surface_layer</code> its temperature, pressure and humidity are carried to each segment's height (<a href="ATMOSPHERE_ALOFT.html">ATMOSPHERE_ALOFT.md</a>).</p>
+<h2 id="ads-b">ADS-B<a class="headerlink" href="#ads-b" title="Permanent link">&para;</a></h2>
+<p>Profiles from ADS-B recordings can replace the ANP profiles for single flights. The ADS-B file is given in the <strong>ADS-B Table</strong> field when the inventory is generated (file format: <a href="../user/INPUT_FORMATS.html#ads-b-tracks">INPUT_FORMATS.md</a>). Each flight becomes a <code>CUSTOM</code> profile in <code>default_aircraft_profiles</code>, with the flight id as <code>profile_id</code>; a movement uses it through its <code>profile_id</code>. In the training example, movement 11 flies a CUSTOM profile imported from <code>example/training/training_ads_b_data.csv</code> (<a href="../../openalaqs_standalone/validation/tools/CAEP14_VALIDATION.html#movement-11-phbba-custom-track">details</a>).</p>
+<p><strong>Geometry.</strong> Each point is placed at the runway intersection plus <code>x_m</code> East and <code>y_m</code> North, by geodesic projection on the WGS84 ellipsoid. The path can be curved (SID and STAR turns). Segment distances are geodesic, so the Mercator scale of EPSG:3857 does not affect them.</p>
+<p><strong>Modes.</strong> At import every arrival point gets mode AP. Departure points on the ground (height 0) get TO and airborne points CL. Bymode, and BFFM2 when a point has no power and no fuel flow, use these modes.</p>
+<p><strong>Fuel flow.</strong> <code>fuel_flow_kgm</code> is the estimated total-aircraft ambient fuel flow (kg/s). ANP profiles have none. With the <code>trajectory</code> source and a value above 0:</p>
+<ol>
+<li>The value is divided by the engine count.</li>
+<li>If the result is at most 1.5 x the EEDB take-off fuel flow, it is used as <code>Wf_amb</code> in BFFM2 (no twin-quadratic fit, no ambient scaling).</li>
+<li>Above that ceiling the segment uses the EEDB fuel flow of its mode, and one warning per movement gives the number of segments.</li>
+</ol>
+<p>With <code>mode_anchor</code> the ADS-B fuel flow is ignored. Without a fuel flow, a point's power setting goes through the twin-quadratic fit as for ANP profiles.</p>
+<p>A fuel flow below the EEDB idle fuel flow is imported unchanged, with one warning per flight; BFFM2 then gives such a segment the idle index.</p>
+<p>The ADS-B fuel flow is an estimate from aircraft performance models applied to position and speed data, not a measurement. Its accuracy varies with the aircraft type. After a BFFM2 run with ADS-B profiles, check the log for the message <code>ADS-B ff/engine exceeded the plausibility ceiling</code>.</p>
+<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Installation corrections</strong> are always the SAE AIR 5715 defaults; changing them requires a Python call with an <code>installation_corrections</code> dict.</li>
+<li><strong>MEEM V1 inputs</strong> that are not in the data: engines without <code>press_ratio</code> use OPR 30 above 3000 ft, and every aircraft uses a 38 000 ft cruise altitude. There is no nvPM number output.</li>
+<li><strong>P1 and P2</strong> equal PM10.</li>
+<li><strong>ADS-B fuel flow</strong> is an estimate; above 1.5 x the take-off fuel flow it is replaced by the mode fuel flow.</li>
+<li><strong>ANP profiles without a track</strong> are straight along the runway axis.</li>
+<li><strong>Meteo</strong> is one row per period, carried aloft by the atmosphere model.</li>
+<li><strong>Taxi with Mach 0</strong> is by design: the EEDB idle mode is measured at M = 0.</li>
+<li><strong>NOx P3T3 exponent</strong> is 0.5 for every engine and height. The CAEP/14 formulation uses 0.3 for lean-burn engines above 3000 ft; OpenALAQS does not distinguish lean-burn engines. The effect on the NOx of the affected engines is small within the modelled height: segments above 3000 ft occur only when the mixing height is higher, and there the factor <code>(delta^1.02 / theta^3.3)^(0.3 - 0.5)</code> is 1.009 at 3000 ft, 1.015 at 5000 ft and 1.018 at 6000 ft (ISA), so below 2 % up to 6000 ft.</li>
+<li><strong>Single-engine taxi and queuing.</strong> Stop-and-go, and the queuing of an arrival, use the engine count of the last route segment, even when the main engines stop during the queue.</li>
+</ul>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="ATMOSPHERE_ALOFT.html">ATMOSPHERE_ALOFT.md</a>: temperature, pressure and humidity at each segment's height</li>
+<li><a href="REFERENCE_DATA.html">REFERENCE_DATA.md</a>: engine, APU, GSE and profile tables and their sources</li>
+<li><a href="HELICOPTERS.html">HELICOPTERS.md</a>: the FOCA 2015 helicopter method</li>
+<li><a href="../developer/CODE_FLOW.html">CODE_FLOW.md</a>: code structure and calculation flow</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../user/TRAINING_COURSE_ERRATA.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Training course: errata">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Training course: errata
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="ATMOSPHERE_ALOFT.html" class="md-footer__link md-footer__link--next" aria-label="Next: Ambient conditions aloft">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Ambient conditions aloft
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      EUROCONTROL, European Union Public Licence v. 1.2 with amendments
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.indexes", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>

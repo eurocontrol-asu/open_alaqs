@@ -1,0 +1,2751 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Airport local air quality studies with the OpenALAQS QGIS plugin and AUSTAL">
+      
+      
+      
+        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.2/documents/methods/ATMOSPHERE_ALOFT.html">
+      
+      
+        <link rel="prev" href="AIRCRAFT_EMISSIONS.html">
+      
+      
+        <link rel="next" href="HELICOPTERS.html">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>Ambient conditions aloft - OpenALAQS documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ambient-conditions-aloft" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="OpenALAQS documentation" class="md-header__button md-logo" aria-label="OpenALAQS documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            OpenALAQS documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Ambient conditions aloft
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/eurocontrol-asu/open_alaqs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    eurocontrol-asu/open_alaqs
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../index.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Home
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user/USER_GUIDE.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Using OpenALAQS
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="AIRCRAFT_EMISSIONS.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Methods
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user/WITHOUT_QGIS.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Command line
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../validation/VALIDATION_GUIDE.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../developer/CODE_FLOW.html" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Maintainers
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="OpenALAQS documentation" class="md-nav__button md-logo" aria-label="OpenALAQS documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    OpenALAQS documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/eurocontrol-asu/open_alaqs" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    eurocontrol-asu/open_alaqs
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Home
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GLOSSARY.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using OpenALAQS
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Using OpenALAQS
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/USER_GUIDE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/TUTORIAL_ROTTERDAM.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Rotterdam The Hague
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/INPUT_FORMATS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Input formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/DISPERSION_AUSTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dispersion with AUSTAL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AUSTAL/AUSTAL.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AUSTAL installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/UPGRADING.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/TROUBLESHOOTING.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/TRAINING_COURSE_ERRATA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Training course: errata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Methods
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="AIRCRAFT_EMISSIONS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aircraft emissions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ambient conditions aloft
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="ATMOSPHERE_ALOFT.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ambient conditions aloft
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#formulas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Formulas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Formulas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#station-pressure-all-aloft-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Station pressure (all aloft models)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#standard_lapse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        standard_lapse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#surface_layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        surface_layer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#humidity-both-aloft-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Humidity (both aloft models)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#input-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-openalaqs-uses-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where OpenALAQS uses it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#effect-on-bffm2-nox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effect on BFFM2 NOx
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consistency-with-austal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consistency with AUSTAL
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="HELICOPTERS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Helicopters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="STATIONARY_AND_ROAD.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stationary sources and road traffic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="REFERENCE_DATA.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../openalaqs_standalone/index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Command line
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user/WITHOUT_QGIS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Which tool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../openalaqs_standalone/USAGE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standalone: usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scripts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/README_metar_to_alaqs_meteo.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    METAR to meteo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/emissions_austal/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    emissions_austal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/austal_from_csv/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    austal_from_csv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gse_application/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GSE application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../example/training/recipe_config.README.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example configurations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../example/training/training_engine_test_events.README.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example engine test events
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation/VALIDATION_GUIDE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../openalaqs_standalone/validation/tools/CAEP14_VALIDATION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CAEP14 reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../tools/template_build/index.html" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maintainers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Maintainers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/CODE_FLOW.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code structure and flow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/REGRESSION_PATTERNS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regression patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/AIRCRAFT_PROFILES_PROVENANCE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aircraft profiles provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/DATASET_PROVENANCE.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    COPERT dataset provenance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/DEPRECATIONS.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema deprecations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer/design/ATMOSPHERE_ALOFT_VALIDATION.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design: atmosphere aloft validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/anp22_profiles/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ANP 2.2 profiles builder
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/test_fixtures/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test fixtures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHANGELOG.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#formulas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Formulas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Formulas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#station-pressure-all-aloft-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Station pressure (all aloft models)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#standard_lapse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        standard_lapse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#surface_layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        surface_layer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#humidity-both-aloft-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Humidity (both aloft models)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#input-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-openalaqs-uses-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where OpenALAQS uses it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#effect-on-bffm2-nox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effect on BFFM2 NOx
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consistency-with-austal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consistency with AUSTAL
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/eurocontrol-asu/open_alaqs/edit/main/documents/methods/ATMOSPHERE_ALOFT.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="ambient-conditions-aloft">Ambient conditions aloft<a class="headerlink" href="#ambient-conditions-aloft" title="Permanent link">&para;</a></h1>
+<p>This page describes how OpenALAQS computes the temperature, pressure and humidity at each flight segment's height, for modellers who use BFFM2 or MEEM V1. The values come from the study's hourly meteo row (<code>tbl_InvMeteo</code>, usually from METAR). The <code>ground_held</code> option instead uses the hourly ground values unchanged at every height up to the emission ceiling, with the sea-level pressure (QNH) as the ambient pressure.</p>
+<p>The option is <code>atmosphere_model</code>. The code is <code>open_alaqs/core/tools/surface_layer_atmosphere.py</code>, shared by the plugin, the standalone and the CAEP14 reference implementation.</p>
+<table>
+<thead>
+<tr>
+<th><code>atmosphere_model</code></th>
+<th>Temperature aloft</th>
+<th>Pressure</th>
+<th>Humidity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>standard_lapse</code> (default)</td>
+<td>2 m temperature − 6.5 K/km (ISA lapse rate)</td>
+<td>station pressure from QNH and the airport elevation, hydrostatic</td>
+<td>humidity ratio of the ground air kept</td>
+</tr>
+<tr>
+<td><code>surface_layer</code></td>
+<td>AUSTAL 3.3 boundary-layer profile (<code>BlmTemp</code>) from the hour's wind, Obukhov length and mixing height</td>
+<td>as above, with that profile</td>
+<td>as above</td>
+</tr>
+<tr>
+<td><code>ground_held</code></td>
+<td>the 2 m temperature at every height</td>
+<td>QNH at every height</td>
+<td>the row's relative humidity</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why <code>standard_lapse</code> is the default.</strong> A check against the De Bilt radiosondes of 2025 (<a href="../developer/design/ATMOSPHERE_ALOFT_VALIDATION.html">validation evidence</a>) found the AUSTAL profile about 1 to 3 K too cold within the emission ceiling. It was not more accurate than the ISA lapse rate, and the ISA lapse rate needs neither the stability inputs nor the heat-flux bound. Both models get the fuel-flow factor δ√θ within 0.3 to 0.7 % RMS of the soundings, against 1.2 to 12.9 % for the ground row held. In summer the AUSTAL profile is the closer one above 300 m, so a summer study can choose <code>surface_layer</code>.</p>
+<p><strong><code>ground_held</code> changes the ambient conditions only.</strong> The fuel flow is still scaled with δ√θ (<a href="AIRCRAFT_EMISSIONS.html#scaling-to-the-ambient">Scaling to the ambient</a>), which has no switch.</p>
+<h2 id="inputs">Inputs<a class="headerlink" href="#inputs" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Source</th>
+<th>Used by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Temperature</code> (K)</td>
+<td><code>tbl_InvMeteo</code>, hourly</td>
+<td>all models: 2 m temperature ta</td>
+</tr>
+<tr>
+<td><code>SeaLevelPressure</code> (Pa)</td>
+<td><code>tbl_InvMeteo</code> (QNH)</td>
+<td>station pressure</td>
+</tr>
+<tr>
+<td><code>RelativeHumidity</code> (0 to 1)</td>
+<td><code>tbl_InvMeteo</code></td>
+<td>humidity ratio of the ground air</td>
+</tr>
+<tr>
+<td><code>WindSpeed</code> (m/s), <code>ObukhovLength</code> (m), <code>MixingHeight</code> (m)</td>
+<td><code>tbl_InvMeteo</code></td>
+<td><code>surface_layer</code> (u*, stability, top of the stability term); <code>MixingHeight</code> is also the emission ceiling, unchanged</td>
+</tr>
+<tr>
+<td>Airport elevation (m)</td>
+<td><code>user_study_setup.airport_elevation</code></td>
+<td>station pressure</td>
+</tr>
+<tr>
+<td>z0, d0, ha (m)</td>
+<td>the study's AUSTAL settings</td>
+<td><code>surface_layer</code> only</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Site parameters</strong> (<code>surface_layer</code> only). z0, d0 and ha are the AUSTAL site parameters (default z0 = 0.1 m, d0 = 6 z0, ha = 10 m + d0; d0 and ha are derived from z0 when left empty). How to choose and set them: <a href="../user/DISPERSION_AUSTAL.html#site-parameters">site parameters</a>; standalone options: <a href="../../openalaqs_standalone/USAGE.html">USAGE.md</a>.</p>
+<h2 id="formulas">Formulas<a class="headerlink" href="#formulas" title="Permanent link">&para;</a></h2>
+<p>Heights h are in metres above the airport; negative heights are taken as 0.</p>
+<h3 id="station-pressure-all-aloft-models">Station pressure (all aloft models)<a class="headerlink" href="#station-pressure-all-aloft-models" title="Permanent link">&para;</a></h3>
+<p>QNH is reduced to the airport elevation with the ISA relation that defines QNH:</p>
+<div class="highlight"><pre><span></span><code>p_stn = QNH * (1 - 0.0065 * elevation / 288.15) ^ 5.25588
+</code></pre></div>
+<p>Compared with QNH as the ambient pressure (<code>ground_held</code>), δ at the ground rises by 0.05 % at an airport at −4.6 m and falls by about 18 % at a 1,650 m airport (QNH overstates δ there by about 22 %).</p>
+<h3 id="standard_lapse"><code>standard_lapse</code><a class="headerlink" href="#standard_lapse" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>T(h) = ta - 0.0065 h
+ln p(h) = ln p_stn - (g0 / R) ∫0^h dz / T(z)        g0 = 9.80665, R = 287.053
+</code></pre></div>
+<p>The integral uses the trapezoidal rule on a 5 m grid from 0 to 3,000 m, computed once per hourly row and cached; ln p is interpolated linearly between grid points. Above 3,000 m it continues with the closed form. Against the analytic ISA solution the error is below 1 × 10⁻⁸.</p>
+<h3 id="surface_layer"><code>surface_layer</code><a class="headerlink" href="#surface_layer" title="Permanent link">&para;</a></h3>
+<p><strong>Friction velocity.</strong> AUSTAL's first estimate (<code>u2lInitialize</code>, <code>TalBlm.c</code>): the wind speed at the anemometer height divided by the simple Prandtl profile per unit u* (<code>StdUuPrandtl</code>), with z = ha − d0 and κ = 0.4:</p>
+<div class="highlight"><pre><span></span><code>L &gt; 0:  u/u* = [ ln(z/z0) + 5 (z - z0)/L ] / kappa
+L &lt; 0:  u/u* = [ 2 (atan(x) - atan(x0)) + ln( (x0+1)^2 (x0^2+1) z / ((x+1)^2 (x^2+1) z0) ) ] / kappa
+        x = (1 - 15 z/L)^(1/4),  x0 = (1 - 15 z0/L)^(1/4)
+</code></pre></div>
+<p>AUSTAL refines u* iteratively only when the first layer of its two-layer wind model lies below the anemometer; that refinement is not reproduced. An <code>ObukhovLength</code> of 0 or missing is treated as neutral (L = 99,999 m), as in AUSTAL.</p>
+<p><strong>Temperature</strong> (<code>BlmTemp</code>, <code>TalBlm.c</code>, boundary-layer version 0; the AUSTAL manual does not give the formula):</p>
+<div class="highlight"><pre><span></span><code>z    = h - d0             (z = 6 z0 if h &lt; d0 + 6 z0)
+T*   = ta / (kappa g) * u*^2 / L                                    g = 9.8066 m/s2
+T(h) = ta + (T*/kappa) [ Theta(z, L) - Theta(2 m, L) ]
+          - 9.766557 K/km * (z - 2)                                  for z &lt; 200 m
+          - 9.766557 K/km * (200 - 2) - 8.5 K/km * (z - 200)         for z &gt;= 200 m
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Range (ζ = z/L)</th>
+<th>Theta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L &gt; 0, ζ &lt; 0.5</td>
+<td>ln ζ + 5ζ − 7 ln 2 + 4</td>
+</tr>
+<tr>
+<td>L &gt; 0, 0.5 ≤ ζ &lt; 10</td>
+<td>8 ln ζ + 4.25/ζ − 0.5/ζ²</td>
+</tr>
+<tr>
+<td>L &gt; 0, ζ ≥ 10</td>
+<td>0.7585 ζ + 8 ln 10 − 7.165</td>
+</tr>
+<tr>
+<td>L &lt; 0</td>
+<td>ln|ζ| − 2 ln(1 + √(1 − 15ζ))</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Top of the stability term.</strong> The formula applies up to the hour's mixing height. In stable hours it applies at most up to AUSTAL's stable mixing height (<code>getHm</code>): 0.3 u<em>/f · sqrt(f L/u</em>) when that root is below 1, between 20 and 800 m, with f = 1.1 × 10⁻⁴ 1/s. Above that height the temperature continues at −8.5 K/km. A missing or non-finite mixing height, or one of 2 m or less (0, −999 and NaN are common missing codes; <code>_clean_mixing_height</code>), keeps the <code>getHm</code> cap.</p>
+<p><strong>Heat-flux bound</strong> (OpenALAQS, not AUSTAL). u* and L imply a surface sensible heat flux:</p>
+<div class="highlight"><pre><span></span><code>H = -rho cp ta u*^3 / (kappa g L)
+</code></pre></div>
+<ul>
+<li><strong>Why a bound is needed.</strong> A meteo file can hold combinations no real surface layer has. The training fixtures' 2 December row (15 m/s with L = −50 m) implies about 9 kW/m², and the profile would be 24 K colder than the ground at 300 m.</li>
+<li><strong>The bound.</strong> When |H| exceeds 600 W/m² (L &lt; 0) or 100 W/m² (L &gt; 0), L is replaced by the value that gives the bounded flux with the row's wind (u* recomputed, iterated), and a warning is logged once per row and process.</li>
+<li><strong>What the limits are.</strong> Engineering limits, not AUSTAL or VDI 3783 values. AUSTAL's <code>TalBlm.h</code> defines limits on 1/L that no AUSTAL 3.3.0 source file uses (searched).</li>
+<li><strong>Rows from the METAR converter.</strong> <code>scripts/metar_to_alaqs_meteo.py</code> assigns L per Pasquill-Gifford class, independent of the wind, so the strongest winds of each unstable class can exceed the bound (<a href="../developer/design/ATMOSPHERE_ALOFT_VALIDATION.html#open-questions">open question</a>).</li>
+</ul>
+<p><strong>Departures from AUSTAL.</strong> AUSTAL uses <code>BlmTemp</code> only for plume rise, with a fixed ambient temperature of 10 °C and 70 % at 2 m (manual 3.3, section 3.4). That value can be changed once per run with the NOSTANDARD option <code>Ta=</code>. Using the profile with hourly temperatures is an OpenALAQS extension:</p>
+<table>
+<thead>
+<tr>
+<th>Detail</th>
+<th>AUSTAL <code>BlmTemp</code></th>
+<th>OpenALAQS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T*</td>
+<td>fixed 283.15 K</td>
+<td>hour's ta</td>
+</tr>
+<tr>
+<td>Limits</td>
+<td>profile held between −30 °C and +40 °C</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Height range</td>
+<td>any height</td>
+<td>stability term up to the mixing height (stable: at most <code>getHm</code>), then −8.5 K/km</td>
+</tr>
+<tr>
+<td>Below 2 m</td>
+<td>height from d0, floor 6 z0</td>
+<td>ta; the profile steps at 2 m (up to 0.3 K) and is back at ta at d0 + 2 m</td>
+</tr>
+<tr>
+<td>Heat flux</td>
+<td>not bounded</td>
+<td>bounded at 600 / 100 W/m²</td>
+</tr>
+</tbody>
+</table>
+<p><code>blm_temperature(..., austal_exact=True)</code> is the unmodified port, kept for the comparison with AUSTAL's code.</p>
+<h3 id="humidity-both-aloft-models">Humidity (both aloft models)<a class="headerlink" href="#humidity-both-aloft-models" title="Permanent link">&para;</a></h3>
+<p>Water vapour is conserved: the humidity ratio of the ground air is kept at every height.</p>
+<div class="highlight"><pre><span></span><code>omega = 0.62197058 RH p_sat(ta) / (p_stn - RH p_sat(ta))
+RH(h) = omega p(h) / (p_sat(T(h)) (0.62197058 + omega))
+</code></pre></div>
+<p>p_sat is the BFFM2 saturation formula, 6.107 · 10^(7.5 t / (237.3 + t)) mbar. RH(h) only carries ω into BFFM2, which converts it back exactly. It exceeds 1 in a layer that would be saturated (<a href="#limitations">Limitations</a>).</p>
+<h3 id="input-checks">Input checks<a class="headerlink" href="#input-checks" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Stopping errors.</strong> A temperature or sea-level pressure that is not a positive number, a profile temperature outside 180 to 340 K, or invalid site parameters (z0 ≤ 0, d0 &lt; 0, ha ≤ d0) stop the run. The message names the meteo row's date and, for a bounded hour, the row's own L.</li>
+<li><strong>ISA meteo stays ISA at every height.</strong> This applies to the standalone <code>--isa-meteo</code> and to a period without a <code>tbl_InvMeteo</code> row.</li>
+</ul>
+<h2 id="where-openalaqs-uses-it">Where OpenALAQS uses it<a class="headerlink" href="#where-openalaqs-uses-it" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Calculation</th>
+<th>Height</th>
+<th><code>ground_held</code></th>
+<th><code>standard_lapse</code>, <code>surface_layer</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flight segments: Mach (TAS / speed of sound)</td>
+<td>segment start</td>
+<td>ground T</td>
+<td>T(h)</td>
+</tr>
+<tr>
+<td><code>bffm2_traj</code> fuel flow, ff_ref · δ · √θ</td>
+<td>segment start</td>
+<td>ground T, QNH</td>
+<td>T(h), p(h)</td>
+</tr>
+<tr>
+<td>BFFM2 NOx, CO and HC indices (both BFFM2 methods)</td>
+<td>segment start</td>
+<td>ground T, QNH, RH</td>
+<td>T(h), p(h), RH(h)</td>
+</tr>
+<tr>
+<td>BFFM2 taxi (fuel ff_ref · δ · √θ and indices, both BFFM2 methods), roll</td>
+<td>0</td>
+<td>ground T, QNH</td>
+<td>ta, p_stn</td>
+</tr>
+<tr>
+<td><code>bymode</code> fuel and indices; <code>bffm2_anchor</code> fuel on flight segments</td>
+<td></td>
+<td>ICAO mode values</td>
+<td>unchanged</td>
+</tr>
+<tr>
+<td>MEEM V1 nvPM above 3,000 ft (all methods, <code>bymode</code> included)</td>
+<td>segment start</td>
+<td>MEEM V1: ISA + ΔT at altitude</td>
+<td>T(h), p(h); ΔT not used</td>
+</tr>
+<tr>
+<td><code>bymode</code> ICCAIA NOx correction (option)</td>
+<td></td>
+<td>ground row</td>
+<td>unchanged</td>
+</tr>
+<tr>
+<td>BFFM2 engine tests (plugin)</td>
+<td>0</td>
+<td>ground T, QNH</td>
+<td>ta, p_stn</td>
+</tr>
+<tr>
+<td>Engine tests, standalone <code>austal</code> pipeline</td>
+<td></td>
+<td>ICAO mode values ("snap")</td>
+<td>unchanged ("snap")</td>
+</tr>
+<tr>
+<td>Emission ceiling</td>
+<td></td>
+<td><code>MixingHeight</code></td>
+<td>unchanged</td>
+</tr>
+</tbody>
+</table>
+<h2 id="effect-on-bffm2-nox">Effect on BFFM2 NOx<a class="headerlink" href="#effect-on-bffm2-nox" title="Permanent link">&para;</a></h2>
+<p>This section explains why the two BFFM2 methods can move in opposite directions.</p>
+<p>The BFFM2 NOx index is <code>EI_ref(ff_ref) · e^h · (δ^1.02 / θ^3.3)^0.5</code>, with <code>ff_ref = ff_amb / δ · θ^3.8 · e^(0.2M²)</code> read on the engine's log-log curve.</p>
+<ul>
+<li><strong><code>bffm2_traj</code>:</strong> the ambient fuel flow itself is scaled with δ√θ. Colder, thinner air lowers the fuel and moves ff_ref only a little. NOx falls with any aloft model.</li>
+<li><strong><code>bffm2_anchor</code>:</strong> on flight segments the ICAO anchor fuel flow is used unscaled as the ambient fuel flow (taxi segments are scaled as with <code>bffm2_traj</code>). Colder air lowers ff_ref through θ^3.8 and moves the reading down the curve. On a steep leg this lowers the index far more than the ambient factor θ^−1.65 raises it.</li>
+</ul>
+<p>On the fixture engine (LEAP-1A26, 13.4 g/kg at 0.71 kg/s and 30.8 g/kg at 0.861 kg/s), at the take-off anchor and 283 K, the NOx index changes as follows:</p>
+<table>
+<thead>
+<tr>
+<th>Change of the ambient</th>
+<th>NOx index</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 K colder</td>
+<td>−5.2 %</td>
+</tr>
+<tr>
+<td>3 K colder</td>
+<td>−14.8 %</td>
+</tr>
+<tr>
+<td>5 % lower pressure</td>
+<td>+22 %</td>
+</tr>
+</tbody>
+</table>
+<p>At 293 K the same anchor sits past the take-off point, where the curve is flat, and the effect is under 2 %. The sensitivity depends on where ff_ref lands on the curve.</p>
+<p>Totals against the ground row held, training fixture <code>training_v3</code> and example inventory:</p>
+<table>
+<thead>
+<tr>
+<th>NOx</th>
+<th><code>standard_lapse</code></th>
+<th><code>surface_layer</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bffm2_traj</code>, training_v3</td>
+<td>−2.9 %</td>
+<td>−3.3 %</td>
+</tr>
+<tr>
+<td><code>bffm2_anchor</code>, training_v3</td>
+<td>+1.2 %</td>
+<td>−1.0 %</td>
+</tr>
+<tr>
+<td><code>bffm2_traj</code>, example</td>
+<td>−4.6 %</td>
+<td>−5.2 %</td>
+</tr>
+<tr>
+<td><code>bffm2_anchor</code>, example</td>
+<td>+0.6 %</td>
+<td>−1.1 %</td>
+</tr>
+</tbody>
+</table>
+<p>The colder <code>surface_layer</code> profile turns the anchor result negative. This is BFFM2 as specified, applied to a fixed anchor fuel flow, not a defect. It does make <code>bffm2_anchor</code> NOx aloft sensitive to temperature errors: a 1 to 3 K error moves a take-off-anchor segment by 5 to 15 %.</p>
+<h2 id="consistency-with-austal">Consistency with AUSTAL<a class="headerlink" href="#consistency-with-austal" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Same:</strong> the hourly wind, Obukhov length and mixing height drive both the dispersion and <code>surface_layer</code>, except in hours bounded by the heat flux. There the emissions use the replaced L while the AUSTAL time series keeps the row's L.</li>
+<li><strong>Not used by AUSTAL:</strong> the temperature. AUSTAL disperses with its fixed 10 °C, which enters only its plume-rise model PLURIS. PLURIS runs only for sources with a diameter and exit velocity (<code>dq</code>, <code>vq</code>), and OpenALAQS writes neither.</li>
+<li><strong>Concentrations do not depend on this choice.</strong> The "smooth &amp; shift" source dynamics use fixed extents per aircraft group and stage, independent of the atmosphere. AUSTAL's concentrations do not depend on temperature or pressure.</li>
+</ul>
+<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Saturated layers.</strong> The ground humidity ratio is kept at every height (the engine ingests the total water). The relative humidity passed to BFFM2 exceeds 1 in a layer that would be saturated, and the lapse rate there stays dry (<code>surface_layer</code>) or ISA, where the real lapse is moist adiabatic (about 5 to 6 K/km).</li>
+<li>At 900 m (regardless of the ceiling), <code>surface_layer</code> gives RH &gt; 1 in 385 of the 450 De Bilt cases, while the soundings show a saturated layer (dew-point depression ≤ 1 K) below 900 m in 233.</li>
+<li>Capping ω at saturation would raise the NOx index of such segments by several per cent (about +7 % for ω from 0.0146 to 0.011).</li>
+<li>Neither treatment is validated.</li>
+<li><strong>Above the mixing height,</strong> <code>surface_layer</code> continues at −8.5 K/km to any height, and <code>standard_lapse</code> at −6.5 K/km. Emissions stop at the LTO ceiling, normally the hour's mixing height (<a href="AIRCRAFT_EMISSIONS.html#lto-ceiling-and-segment-clipping">LTO ceiling</a>).</li>
+<li><strong>No validation against measured fuel or NOx.</strong></li>
+<li><strong>Not tested:</strong> whole years outside 2025; airports at altitude.</li>
+</ul>
+<h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h2>
+<p>The check against the De Bilt radiosondes and the code validation (AUSTAL C code, hydrostatics, parity) are in <a href="../developer/design/ATMOSPHERE_ALOFT_VALIDATION.html">ATMOSPHERE_ALOFT_VALIDATION.md</a>.</p>
+<h2 id="sources">Sources<a class="headerlink" href="#sources" title="Permanent link">&para;</a></h2>
+<ul>
+<li>AUSTAL 3.3.0 source code: <code>TalBlm.c</code> (<code>BlmTemp</code>, <code>getTheta</code>, <code>StdUuPrandtl</code>, <code>u2lInitialize</code>, <code>getHm</code>), <code>TalBlm.h</code>.</li>
+<li>AUSTAL 3.3 Programmbeschreibung (2024-03-22), section 3.4 (fixed ambient 10 °C and 70 %), footnote 34 (<code>Ta=</code>), section 3.5.2 (time series).</li>
+<li>NOAA NCEI, Integrated Global Radiosonde Archive version 2 (IGRA2), station NLM00006260 (De Bilt), <code>data-por</code> file downloaded 24 October 2026.</li>
+<li>SAE AIR5715 / CAEP14 BFFM2 (<code>open_alaqs/core/tools/bffm2.py</code>).</li>
+</ul>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="AIRCRAFT_EMISSIONS.html">AIRCRAFT_EMISSIONS.md</a>: BFFM2, MEEM V1 and the fuel flow that use these values</li>
+<li><a href="../user/DISPERSION_AUSTAL.html#site-parameters">DISPERSION_AUSTAL.md</a>: site parameters z0, d0 and ha</li>
+<li><a href="../developer/design/ATMOSPHERE_ALOFT_VALIDATION.html">ATMOSPHERE_ALOFT_VALIDATION.md</a>: validation evidence</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="AIRCRAFT_EMISSIONS.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Aircraft emissions">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Aircraft emissions
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="HELICOPTERS.html" class="md-footer__link md-footer__link--next" aria-label="Next: Helicopters">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Helicopters
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      EUROCONTROL, European Union Public Licence v. 1.2 with amendments
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.indexes", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>
