@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.2/documents/user/TUTORIAL_ROTTERDAM.html">
+        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.3/documents/user/TUTORIAL_ROTTERDAM.html">
       
       
         <link rel="prev" href="USER_GUIDE.html">
@@ -2484,23 +2484,23 @@
 <tbody>
 <tr>
 <td><strong>CO [g/vehicle]</strong></td>
-<td>54.66</td>
+<td>0.174</td>
 </tr>
 <tr>
 <td><strong>HC [g/vehicle]</strong></td>
-<td>4.05</td>
+<td>0.00846</td>
 </tr>
 <tr>
 <td><strong>NOx [g/vehicle]</strong></td>
-<td>95.82</td>
+<td>0.255</td>
 </tr>
 <tr>
 <td><strong>SOx [g/vehicle]</strong></td>
-<td>0.286</td>
+<td>0.000307</td>
 </tr>
 <tr>
 <td><strong>PM10 [g/vehicle]</strong></td>
-<td>0.800</td>
+<td>0.00487</td>
 </tr>
 </tbody>
 </table>
@@ -2547,7 +2547,7 @@
 </tr>
 </tbody>
 </table>
-<p>After <strong>Recalculate</strong> you should see <strong>CO [g/km]</strong> 0.181, <strong>NOx [g/km]</strong> 0.341 and <strong>HC [g/km]</strong> 0.0118. How COPERT factors are derived: <a href="../methods/STATIONARY_AND_ROAD.html#road-traffic-and-parkings-copert">Road traffic and parkings</a>.</p>
+<p>After <strong>Recalculate</strong> you should see <strong>CO [g/km]</strong> 0.601, <strong>NOx [g/km]</strong> 0.775 and <strong>HC [g/km]</strong> 0.0253. How COPERT factors are derived: <a href="../methods/STATIONARY_AND_ROAD.html#road-traffic-and-parkings-copert">Road traffic and parkings</a>.</p>
 <p><strong>Point source.</strong> A point near the terminal for the power and heating plant (<a href="USER_GUIDE.html#point-sources">Point sources</a>):</p>
 <table>
 <thead>
@@ -2951,7 +2951,7 @@
 <p><strong>Method</strong> offers BFFM2 only while the pollutant is CO, HC or NOx. For another pollutant (for example PM10 in exercise 4) it shows bymode; when you return to NOx, BFFM2 comes back.</p>
 <p><strong>Exercises.</strong> The expected values come from <code>training_validation_reference.xlsx</code>.</p>
 <ol>
-<li><strong>Parking CO.</strong> Select <em>ParkingSource</em> and CO, click <strong>View Emissions Table</strong>: 0.1248 kg CO in the 06:00 to 07:00 hour. Then click <strong>Plot Vector Layer</strong> to see it on the grid.</li>
+<li><strong>Parking CO.</strong> Select <em>ParkingSource</em> and CO, click <strong>View Emissions Table</strong>: 0.000397 kg CO (0.40 g) in the 06:00 to 07:00 hour. Then click <strong>Plot Vector Layer</strong> to see it on the grid.</li>
 <li><strong>NOx by method.</strong> Select <em>MovementSource</em> and NOx. Calculate with <strong>bymode</strong>, export the table, then with <strong>BFFM2</strong>, and compare the totals (<a href="../methods/AIRCRAFT_EMISSIONS.html#bffm2">BFFM2</a>). Over the 13 movements NOx is 31.84 kg with bymode and 16.61 kg with BFFM2. BFFM2 gives 52 % less NOx on the six departures (41 to 60 % per movement) and 35 % less on the seven arrivals (19 to 45 %). On the arrivals it gives 8 % more CO (1 to 16 %).</li>
 <li><strong>Differences by aircraft type.</strong> Split exercise 2 by aircraft. On the arrivals BFFM2 NOx is 43 % below bymode for the A20N and 23 % below for the E190: the difference depends on the aircraft, not only on the mode.</li>
 <li><strong>PM10 parts.</strong> With <em>MovementSource</em>, compare <code>pm10_kg</code> with <code>pm10_nonvol_kg + pm10_sul_kg + pm10_organic_kg</code>. They are equal for departures. For arrivals <code>pm10_kg</code> is higher by the brake wear. <code>p1_kg</code> and <code>p2_kg</code> equal <code>pm10_kg</code>. See <a href="../methods/AIRCRAFT_EMISSIONS.html#particulate-matter">Particulate matter</a>.</li>

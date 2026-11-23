@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.2/documents/user/DISPERSION_AUSTAL.html">
+        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.3/documents/user/DISPERSION_AUSTAL.html">
       
       
         <link rel="prev" href="INPUT_FORMATS.html">
@@ -2640,7 +2640,7 @@
 <p>Only the CSV option has the <strong>Grid Configuration</strong> box, since there is no inventory to take the grid from:</p>
 <ul>
 <li><strong>Grid File</strong>: an <code>*_out.alaqs</code> or a grid CSV; its grid fills <strong>Grid Details</strong>.</li>
-<li><strong>Grid Details</strong>: X/Y/Z Cells, X/Y/Z Resolution (m), Reference Latitude/Longitude (°) and Reference Altitude (m). You can type the grid here instead of loading a file. Cell sizes are true ground metres: the grid is built in the local UTM zone.</li>
+<li><strong>Grid Details</strong>: X/Y/Z Cells, X/Y/Z Resolution (m), Reference Latitude/Longitude (°) and Reference Altitude (m). You can type the grid here instead of loading a file. Cell sizes are true ground metres: the grid is built in the local UTM zone. The zone is the one of the reference point in the PROJ database (WGS 84 / UTM, northern codes 326xx or southern 327xx by hemisphere; on a zone boundary the lower zone; the Norway and Svalbard exceptions are not applied), from 80° S to 84° N. The plugin, the standalone and the CAEP14 reference use the same rule (<code>open_alaqs/core/tools/utm.py</code>).</li>
 <li><strong>Save Grid as CSV</strong> writes the grid to a new CSV. <strong>Update File</strong> writes the edited grid back into the selected grid file.</li>
 </ul>
 <p>With the inventory option the grid is always the inventory's calculation grid.</p>

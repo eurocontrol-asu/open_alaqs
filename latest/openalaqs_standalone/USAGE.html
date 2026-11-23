@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.2/openalaqs_standalone/USAGE.html">
+        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.3/openalaqs_standalone/USAGE.html">
       
       
         <link rel="prev" href="../documents/user/WITHOUT_QGIS.html">
@@ -2496,6 +2496,14 @@ aircraft sources alone:</p>
 <p>This computes the aircraft movement emissions (including the
 movement-driven gate emissions) and folds them into the same
 <code>sources.parquet</code> and <code>emissions.parquet</code> as the stationary sources.</p>
+<p>Receptor heights: <code>--receptor-input</code> reads each receptor's height above
+ground from a column named <code>z</code>, <code>height</code>, <code>altitude</code> or <code>hp</code> (the first one
+present, case-insensitive), or from the column named with
+<code>--receptor-z-col</code>. Rows without a height, and files without such a column,
+take <code>--receptor-z-default</code> (1.5 m). The height becomes the receptor's <code>hp</code>
+in <code>austal.txt</code>. All four names, <code>altitude</code> included, are read as height above
+ground, as the plugin's Receptor Points file defines <code>altitude</code>; a file whose
+<code>altitude</code> is above sea level needs another column name, or <code>--receptor-z-col</code>.</p>
 <p>The AUSTAL grid is read from the study's <code>grid_3d_definition</code>. Receptors
 outside that grid are dropped (with their IDs in the log);
 <code>--grid-size</code>/<code>--grid-step</code> override only this clipping square, not the

@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.2/documents/user/UPGRADING.html">
+        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.3/documents/user/UPGRADING.html">
       
       
         <link rel="prev" href="../AUSTAL/AUSTAL.html">
@@ -821,6 +821,17 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-from-542" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrading from 5.4.2
+      
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#upgrading-from-541" class="md-nav__link">
@@ -2024,6 +2035,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#upgrading-from-542" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrading from 5.4.2
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#upgrading-from-541" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2134,9 +2156,17 @@
 <h1 id="upgrading-from-an-earlier-version">Upgrading from an earlier version<a class="headerlink" href="#upgrading-from-an-earlier-version" title="Permanent link">&para;</a></h1>
 <p>This page is for users who open a study made with an earlier version of OpenALAQS. It lists which results change and how to update the study file.</p>
 <ul>
+<li><a href="#upgrading-from-542">Upgrading from 5.4.2</a></li>
 <li><a href="#upgrading-from-541">Upgrading from 5.4.1</a></li>
 <li><a href="#upgrading-from-540">Upgrading from 5.4.0</a></li>
 <li><a href="#upgrading-from-53x">Upgrading from 5.3.x</a></li>
+</ul>
+<h2 id="upgrading-from-542">Upgrading from 5.4.2<a class="headerlink" href="#upgrading-from-542" title="Permanent link">&para;</a></h2>
+<p>OpenALAQS 5.4.3 is a small release. Studies need no migration. The full list is in the <a href="../../CHANGELOG.html"><code>CHANGELOG</code></a>.</p>
+<ul>
+<li><strong>Training example.</strong> The parking lot and the roadway of <code>example/training/training.alaqs</code> and <code>training_out.alaqs</code> now store the COPERT factors that <strong>Recalculate</strong> gives, and the tutorial quotes those values (parking CO 0.174 g/vehicle, roadway CO 0.601 g/km). If you follow the tutorial with a copy of the example downloaded before 5.4.3, click <strong>Recalculate</strong> on both sources, or download the example again. Aircraft, point and area source results are unchanged. Your own studies are not affected: their stored factors are what you recalculated.</li>
+<li><strong>Standalone pipeline and Dataiku recipes.</strong> A receptor CSV with a column named <code>z</code>, <code>height</code>, <code>altitude</code> or <code>hp</code> now sets each receptor's height above ground (<code>hp</code> in <code>austal.txt</code>); before, every receptor was at 1.5 m. Rerun AUSTAL for standalone studies whose receptor file has such a column. Files without one give the same results as before.</li>
+<li><strong>Custom airport.</strong> A study may now use an airport code that is not in the plugin's list; see <a href="USER_GUIDE.html#setup-a-new-study">Setup a new study</a>. Existing studies are not affected.</li>
 </ul>
 <h2 id="upgrading-from-541">Upgrading from 5.4.1<a class="headerlink" href="#upgrading-from-541" title="Permanent link">&para;</a></h2>
 <p>OpenALAQS 5.4.2 is a fix release. Studies need no migration, and the shipped examples give the same results as with 5.4.1. The full list is in the <a href="../../CHANGELOG.html"><code>CHANGELOG</code></a>.</p>

@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.2/documents/user/USER_GUIDE.html">
+        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.3/documents/user/USER_GUIDE.html">
       
       
         <link rel="prev" href="../GLOSSARY.html">
@@ -2779,7 +2779,8 @@
 <h2 id="starting-a-study">Starting a Study<a class="headerlink" href="#starting-a-study" title="Permanent link">&para;</a></h2>
 <h3 id="setup-a-new-study">Setup a new study<a class="headerlink" href="#setup-a-new-study" title="Permanent link">&para;</a></h3>
 <p>Click <strong>Create an Open ALAQS project</strong>. In the window <code>Create an Open ALAQS project file</code>, choose a <strong>File name</strong> for the new study (<code>.alaqs</code>).</p>
-<p>The <code>ALAQS Project Properties</code> window then opens. On the <code>Airport</code> tab, enter a project name and at least the ICAO code of the airport. The other fields (airport name, country, latitude, longitude, ...) are filled from the plugin's airport list; you can edit them.</p>
+<p>The <code>ALAQS Project Properties</code> window then opens. On the <code>Airport</code> tab, enter a project name and at least the ICAO code of the airport. The other fields (airport name, country, latitude, longitude, ...) are filled from the plugin's airport list; you can edit them. <strong>Zoom to coordinates</strong> moves the map to the latitude and longitude of the form (the map also moves when you finish typing one of them).</p>
+<p><strong>Custom airport.</strong> An airport that is not in the plugin's list (a fictional airport for a test or a course, or a real one the list lacks) is created the same way: type a code of 1 to 8 letters or digits that is not in the list. The window then says <em>Custom airport</em>, and you enter the name, the coordinates and the elevation yourself; the country may stay empty. Any location between 80° S and 84° N works, in either hemisphere; the plugin and the standalone pick the UTM zone of the coordinates (<a href="DISPERSION_AUSTAL.html#calculate-dispersion-dialog">Calculate Dispersion dialog</a>). Use <code>ZZZZ</code>, the ICAO flight-plan indicator for an aerodrome without a location indicator, when you do not want to invent a code. <strong>Import OSM data</strong> then searches OpenStreetMap around the coordinates instead of looking the code up (see below).</p>
 <p align="center">
   <img src="../../open_alaqs/assets/alaqs-project-properties.png" alt="Project Properties 1" width="45%" />
   <img src="../../open_alaqs/assets/alaqs-project-properties2.png" alt="Project Properties 2" width="45%" />
@@ -2793,7 +2794,7 @@
 <h3 id="import-openstreetmap-data">Import OpenStreetMap data<a class="headerlink" href="#import-openstreetmap-data" title="Permanent link">&para;</a></h3>
 <p><strong>Import OSM data</strong> creates sources from OpenStreetMap data (runways, taxiways, gates, buildings, roads, ...).</p>
 <p><img alt="import-osm-data.png" src="../../open_alaqs/assets/import-osm-data.png" /></p>
-<p>There is no search box: the plugin finds the aerodrome on Nominatim from the study's ICAO code, then downloads its data from OpenStreetMap. In the dialog:</p>
+<p>There is no search box: the plugin finds the aerodrome on Nominatim from the study's ICAO code, then downloads its data from OpenStreetMap. For a <a href="#setup-a-new-study">custom airport</a> (a code that is not in the plugin's airport list) there is no lookup: the airport features (runways, taxiways, gates, parkings, buildings) are searched within 3 km of the study's coordinates, the roads within their own radius, and the log says so. Place the study's coordinates near the middle of the airport. In the dialog:</p>
 <ul>
 <li><strong>Selective import</strong>: tick it, then tick the layer types to download. When it is not ticked, every layer type is downloaded.</li>
 <li><strong>Also import the data into ALAQS database</strong>: tick it to create the features in the study's layers (Runways, Taxiways, Gates, ...). Without it, the data only appear as the layers <em>OSM Points</em>, <em>OSM Lines</em> and <em>OSM Polygons</em> in a group <em>OpenStreetMap Layers</em>, for reference.</li>
@@ -2909,7 +2910,7 @@
 + <strong>Source Name</strong>
 + <strong>Parameters</strong>
   + <strong>Category</strong>: <em>Other</em>, <em>Incinerator</em>, <em>Power/Heat Plant</em>, <em>Fuel Tank</em>, <em>Solvent Degreaser</em>, <em>Surface Coating</em> or <em>Stationary IC Engine</em>.
-  + <strong>Type</strong>: the type within the category, for example natural gas, light or heavy fuel oil, JP-4, JP-5, JET A, automobile gasoline, aviation gasoline. The full list is in <a href="https://github.com/eurocontrol-asu/open_alaqs/blob/v5.4.2/open_alaqs/database/data/default_stationary_ef.csv"><code>default_stationary_ef</code></a>. For a <em>Stationary IC Engine</em>, pick the type that matches the engine's rated power and combustion chamber.
+  + <strong>Type</strong>: the type within the category, for example natural gas, light or heavy fuel oil, JP-4, JP-5, JET A, automobile gasoline, aviation gasoline. The full list is in <a href="https://github.com/eurocontrol-asu/open_alaqs/blob/v5.4.3/open_alaqs/database/data/default_stationary_ef.csv"><code>default_stationary_ef</code></a>. For a <em>Stationary IC Engine</em>, pick the type that matches the engine's rated power and combustion chamber.
   + <strong>Height [m]</strong>: height at which emissions are released (not yet fully implemented).
   + <strong>Activity per Year</strong>: how much the source runs in one year: throughput, fuel used or hours run.
   + <strong>Activity Unit</strong>: the unit of <strong>Activity per Year</strong>. It is filled in from the selected type when the <strong>Type</strong> changes, and you can change it (the emission factors must then be per that unit). Examples: <code>1000_m3</code> (natural gas), <code>1000_L</code> (liquid fuel), <code>hr</code> (engine hours), <code>1000_kg</code> (waste, coating).
