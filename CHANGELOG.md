@@ -4,7 +4,13 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
-## [Unreleased]
+## [5.4.3] - 2026-11-23
+
+Upgrading a 5.4.2 study: see
+[Upgrading from 5.4.2](documents/user/UPGRADING.md#upgrading-from-542). No
+migration. Plugin results change only for the parking lot and the roadway of
+the training example; standalone results only for receptor files that carry a
+height column.
 
 ### Added
 
@@ -16,8 +22,8 @@ ISO 8601.
   when the latitude or longitude is edited. **Import OSM data** skips the
   Nominatim lookup for a custom code (a fuzzy match could return another
   aerodrome) and searches the airport features within 3 km of the study's
-  coordinates (roads within their own radius), logged. No change in results. (User Guide, *Setup a
-  new study*.)
+  coordinates (roads within their own radius), logged. No change in results.
+  (User Guide, *Setup a new study*.)
 
 ### Fixed
 

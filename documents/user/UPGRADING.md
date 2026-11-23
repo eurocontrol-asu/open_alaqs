@@ -2,9 +2,18 @@
 
 This page is for users who open a study made with an earlier version of OpenALAQS. It lists which results change and how to update the study file.
 
+- [Upgrading from 5.4.2](#upgrading-from-542)
 - [Upgrading from 5.4.1](#upgrading-from-541)
 - [Upgrading from 5.4.0](#upgrading-from-540)
 - [Upgrading from 5.3.x](#upgrading-from-53x)
+
+## Upgrading from 5.4.2
+
+OpenALAQS 5.4.3 is a small release. Studies need no migration. The full list is in the [`CHANGELOG`](../../CHANGELOG.md).
+
+- **Training example.** The parking lot and the roadway of `example/training/training.alaqs` and `training_out.alaqs` now store the COPERT factors that **Recalculate** gives, and the tutorial quotes those values (parking CO 0.174 g/vehicle, roadway CO 0.601 g/km). If you follow the tutorial with a copy of the example downloaded before 5.4.3, click **Recalculate** on both sources, or download the example again. Aircraft, point and area source results are unchanged. Your own studies are not affected: their stored factors are what you recalculated.
+- **Standalone pipeline and Dataiku recipes.** A receptor CSV with a column named `z`, `height`, `altitude` or `hp` now sets each receptor's height above ground (`hp` in `austal.txt`); before, every receptor was at 1.5 m. Rerun AUSTAL for standalone studies whose receptor file has such a column. Files without one give the same results as before.
+- **Custom airport.** A study may now use an airport code that is not in the plugin's list; see [Setup a new study](USER_GUIDE.md#setup-a-new-study). Existing studies are not affected.
 
 ## Upgrading from 5.4.1
 
