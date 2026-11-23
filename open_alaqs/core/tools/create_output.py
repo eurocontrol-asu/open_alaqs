@@ -270,23 +270,27 @@ def inventory_update_tbl_inv_period(database_path, model_parameters, study_setup
     if model_parameters["use_variable_mixing_height"] is True:
         mix_height = 1
 
+    # The inventory template ships tbl_InvPeriod empty, so an UPDATE alone
+    # affects no row: write the single period row explicitly (one row per
+    # inventory; a row left by an earlier run is replaced).
+    sql_interface.query_text(database_path, "DELETE FROM tbl_InvPeriod;")
     sql_interface.query_text(
         database_path,
-        "UPDATE tbl_InvPeriod SET interval=%d, temp_isa=%d, vert_limit=%d, apt_elev=%d, "
-        'copert=%d, nox_corr=%d, ffm=%d, smsh=%d, mix_height=%d, min_time="%s", '
-        'max_time="%s";'
+        "INSERT INTO tbl_InvPeriod (min_time, max_time, interval, apt_elev, "
+        "vert_limit, temp_isa, copert, nox_corr, ffm, mix_height, smsh) VALUES "
+        '("%s", "%s", %s, %s, %s, %s, %d, %d, %d, %d, %d);'
         % (
+            min_time,
+            max_time,
             interval,
-            temp_isa,
-            model_parameters["vertical_limit"],
             study_setup["airport_elevation"],
+            model_parameters["vertical_limit"],
+            temp_isa,
             copert,
             nox_corr,
             ffm,
-            smsh,
             mix_height,
-            min_time,
-            max_time,
+            smsh,
         ),
     )
     msg = "[+] Updated the output inventory period"
