@@ -86,7 +86,7 @@ Only the inventory option has the emission settings, since it recalculates the e
 Only the CSV option has the **Grid Configuration** box, since there is no inventory to take the grid from:
 
 - **Grid File**: an `*_out.alaqs` or a grid CSV; its grid fills **Grid Details**.
-- **Grid Details**: X/Y/Z Cells, X/Y/Z Resolution (m), Reference Latitude/Longitude (°) and Reference Altitude (m). You can type the grid here instead of loading a file. Cell sizes are true ground metres: the grid is built in the local UTM zone.
+- **Grid Details**: X/Y/Z Cells, X/Y/Z Resolution (m), Reference Latitude/Longitude (°) and Reference Altitude (m). You can type the grid here instead of loading a file. Cell sizes are true ground metres: the grid is built in the local UTM zone. The zone is the one of the reference point in the PROJ database (WGS 84 / UTM, northern codes 326xx or southern 327xx by hemisphere; on a zone boundary the lower zone; the Norway and Svalbard exceptions are not applied), from 80° S to 84° N. The plugin, the standalone and the CAEP14 reference use the same rule (`open_alaqs/core/tools/utm.py`).
 - **Save Grid as CSV** writes the grid to a new CSV. **Update File** writes the edited grid back into the selected grid file.
 
 With the inventory option the grid is always the inventory's calculation grid.

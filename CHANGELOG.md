@@ -6,6 +6,19 @@ ISO 8601.
 
 ## [Unreleased]
 
+### Added
+
+- Study Setup, custom airport: an airport code that is not in the plugin's
+  airport list (a fictional airport, or a real one the list lacks) is now
+  announced as a custom airport in the dialog, with the fields to fill in;
+  its country may stay empty (it is informational). The code must be 1 to 8
+  letters or digits. New **Zoom to coordinates** button; the map also moves
+  when the latitude or longitude is edited. **Import OSM data** skips the
+  Nominatim lookup for a custom code (a fuzzy match could return another
+  aerodrome) and searches the airport features within 3 km of the study's
+  coordinates (roads within their own radius), logged. No change in results. (User Guide, *Setup a
+  new study*.)
+
 ### Fixed
 
 - Training example: the parking and roadway emission factors stored in
@@ -38,6 +51,8 @@ ISO 8601.
   files equal Recalculate).
 - New: `test_adapt_receptors_height` (height column, empty cells, no column,
   height of 0, clipped receptor, option names).
+- New: `test_study_setup_custom_airport` (status line, zoom, save without a
+  country, code validation, OSM import without Nominatim).
 
 ## [5.4.2] - 2026-11-02
 

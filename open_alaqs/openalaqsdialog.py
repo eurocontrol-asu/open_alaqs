@@ -20,6 +20,7 @@
 """
 
 import os
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
@@ -73,7 +74,7 @@ from open_alaqs.core.tools.csv_interface import (
 )
 from open_alaqs.core.tools.docs_url import docs_url
 from open_alaqs.core.utils.osm import download_osm_airport_data
-from open_alaqs.core.utils.qt import populate_combobox
+from open_alaqs.core.utils.qt import color_ui_background, populate_combobox
 from open_alaqs.enums import AlaqsLayerType
 from open_alaqs.ui.styles import (
     STATUS_STYLE_ERROR,
@@ -91,6 +92,23 @@ VERTICAL_LIMIT_UNUSED_TOOLTIP = (
     "Not used. The LTO ceiling is the mixing height of the hourly meteo, "
     "or 914.4 m (3000 ft) when there is none."
 )
+
+
+# A custom airport is one whose code is not in default_airports: the user
+# types the name, coordinates and elevation. Any code of 1 to 8 letters and
+# digits is accepted; ZZZZ is the ICAO flight-plan indicator for an
+# aerodrome without a location indicator.
+CUSTOM_AIRPORT_STATUS = (
+    "Custom airport (code not in the airport list): enter the name, the "
+    "coordinates and the elevation; the country is optional."
+)
+AIRPORT_CODE_RE = re.compile(r"^[A-Za-z0-9]{1,8}$")
+
+
+def is_custom_airport_code(code: str) -> bool:
+    """True when the code is not in default_airports (so nothing is looked up)."""
+    code = (code or "").strip()
+    return bool(code) and not alaqs.airport_lookup(code)
 
 
 class Austal2000RunError(Exception):
@@ -277,6 +295,10 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.load_study_data()
 
         self.ui.comboBoxAirportCode.currentTextChanged.connect(self.airport_lookup)
+        self.ui.pushButtonZoomToAirport.clicked.connect(self.zoom_to_airport)
+        self.ui.spinBoxAirportLatitude.editingFinished.connect(self.zoom_to_airport)
+        self.ui.spinBoxAirportLongitude.editingFinished.connect(self.zoom_to_airport)
+        self._update_airport_code_status()
 
         self.ui.buttonBox.button(
             QtWidgets.QDialogButtonBox.StandardButton.Save
@@ -356,7 +378,8 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         This function looks up airport details (name, lat, lon, country) based
         on an ICAO code and fills in the study setup UI accordingly.
         """
-        airport_code = self.ui.comboBoxAirportCode.currentText()
+        airport_code = self.ui.comboBoxAirportCode.currentText().strip()
+        self._update_airport_code_status()
         if len(airport_code) == 4:
             # Look up that ICAO code in the ALAQS database
             airport_data = alaqs.airport_lookup(airport_code)
@@ -379,6 +402,30 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
                     airport_data["airport_longitude"],
                 )
 
+    def _update_airport_code_status(self):
+        """Tell the user when the typed code is not in the airport list."""
+        code = self.ui.comboBoxAirportCode.currentText().strip()
+        if not code:
+            text = ""
+        elif not AIRPORT_CODE_RE.match(code):
+            text = "The airport code must be 1 to 8 letters or digits."
+        elif is_custom_airport_code(code):
+            text = CUSTOM_AIRPORT_STATUS
+        else:
+            text = ""
+        self.ui.labelAirportCodeStatus.setText(text)
+
+    def zoom_to_airport(self):
+        """Move the map canvas to the latitude and longitude of the form."""
+        lat = self.ui.spinBoxAirportLatitude.value()
+        lon = self.ui.spinBoxAirportLongitude.value()
+        if lat == 0.0 and lon == 0.0:
+            return
+        try:
+            oautk.set_default_zoom(self.iface.mapCanvas(), lat, lon)
+        except Exception as exc:
+            logger.warning("Could not zoom to %s, %s: %s", lat, lon, exc)
+
     def save_study_setup(self):
         """
         Saves any updates to the study setup back to the study database.
@@ -388,9 +435,21 @@ class OpenAlaqsStudySetup(QtWidgets.QDialog):
         self.airport_name = oautk.validate_field(self.ui.lineEditAirportName, "str")
         self.airport_id = oautk.validate_field(self.ui.lineEditAirportID, "str")
         self.icao_code = oautk.validate_field(self.ui.comboBoxAirportCode, "str")
-        self.airport_country = oautk.validate_field(
-            self.ui.lineEditAirportCountry, "str"
-        )
+        if self.icao_code and not AIRPORT_CODE_RE.match(self.icao_code):
+            color_ui_background(self.ui.comboBoxAirportCode, "red")
+            self.ui.comboBoxAirportCode.setToolTip(
+                "The airport code must be 1 to 8 letters or digits."
+            )
+            self.icao_code = False
+        custom_airport = bool(self.icao_code) and is_custom_airport_code(self.icao_code)
+        if custom_airport and not self.ui.lineEditAirportCountry.text().strip():
+            # The country is informational; a fictional airport may have none.
+            color_ui_background(self.ui.lineEditAirportCountry, None)
+            self.airport_country = ""
+        else:
+            self.airport_country = oautk.validate_field(
+                self.ui.lineEditAirportCountry, "str"
+            )
         self.airport_latitude = self.ui.spinBoxAirportLatitude.value()
         self.airport_longitude = self.ui.spinBoxAirportLongitude.value()
         self.airport_elevation = self.ui.spinBoxAirportElevation.value()
@@ -3197,6 +3256,9 @@ class OpenAlaqsOsmImport(QtWidgets.QDialog):
             layer_types,
             (study_setup["airport_latitude"], study_setup["airport_longitude"]),
             study_setup["airport_code"],
+            # A code that is not in the airport list is a custom airport:
+            # search around the coordinates instead of asking Nominatim.
+            lookup_aerodrome=not is_custom_airport_code(study_setup["airport_code"]),
         )
         osm_layers_by_geometry_type = {
             Qgis.GeometryType.Point: points,

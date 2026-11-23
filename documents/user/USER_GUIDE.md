@@ -71,7 +71,9 @@ The order of the buttons follows the steps of a study.
 
 Click **Create an Open ALAQS project**. In the window `Create an Open ALAQS project file`, choose a **File name** for the new study (`.alaqs`).
 
-The `ALAQS Project Properties` window then opens. On the `Airport` tab, enter a project name and at least the ICAO code of the airport. The other fields (airport name, country, latitude, longitude, ...) are filled from the plugin's airport list; you can edit them.
+The `ALAQS Project Properties` window then opens. On the `Airport` tab, enter a project name and at least the ICAO code of the airport. The other fields (airport name, country, latitude, longitude, ...) are filled from the plugin's airport list; you can edit them. **Zoom to coordinates** moves the map to the latitude and longitude of the form (the map also moves when you finish typing one of them).
+
+**Custom airport.** An airport that is not in the plugin's list (a fictional airport for a test or a course, or a real one the list lacks) is created the same way: type a code of 1 to 8 letters or digits that is not in the list. The window then says *Custom airport*, and you enter the name, the coordinates and the elevation yourself; the country may stay empty. Any location between 80° S and 84° N works, in either hemisphere; the plugin and the standalone pick the UTM zone of the coordinates ([Calculate Dispersion dialog](DISPERSION_AUSTAL.md#calculate-dispersion-dialog)). Use `ZZZZ`, the ICAO flight-plan indicator for an aerodrome without a location indicator, when you do not want to invent a code. **Import OSM data** then searches OpenStreetMap around the coordinates instead of looking the code up (see below).
 
 <p align="center">
   <img src="../../open_alaqs/assets/alaqs-project-properties.png" alt="Project Properties 1" width="45%" />
@@ -94,7 +96,7 @@ Click **Load an Open ALAQS project** and select the study file (`.alaqs`) in the
 
 ![import-osm-data.png](../../open_alaqs/assets/import-osm-data.png)
 
-There is no search box: the plugin finds the aerodrome on Nominatim from the study's ICAO code, then downloads its data from OpenStreetMap. In the dialog:
+There is no search box: the plugin finds the aerodrome on Nominatim from the study's ICAO code, then downloads its data from OpenStreetMap. For a [custom airport](#setup-a-new-study) (a code that is not in the plugin's airport list) there is no lookup: the airport features (runways, taxiways, gates, parkings, buildings) are searched within 3 km of the study's coordinates, the roads within their own radius, and the log says so. Place the study's coordinates near the middle of the airport. In the dialog:
 
 + **Selective import**: tick it, then tick the layer types to download. When it is not ticked, every layer type is downloaded.
 + **Also import the data into ALAQS database**: tick it to create the features in the study's layers (Runways, Taxiways, Gates, ...). Without it, the data only appear as the layers *OSM Points*, *OSM Lines* and *OSM Polygons* in a group *OpenStreetMap Layers*, for reference.
