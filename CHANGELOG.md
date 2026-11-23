@@ -4,6 +4,28 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
+## [Unreleased]
+
+### Fixed
+
+- Training example: the parking and roadway emission factors stored in
+  `example/training/training.alaqs` and `training_out.alaqs` were computed
+  before the 5.1.2 parking travel-distance fix and the COPERT 5 data review,
+  so **Recalculate** in the tutorial gave different values from the ones it
+  quoted (parking CO 0.174 instead of 54.66 g/vehicle, roadway CO 0.601
+  instead of 0.181 g/km). Both files now store the factors Recalculate gives;
+  no other value in the files changed. **Results change** for the
+  `ParkingLot` and `Roadway` of the training example: parking CO
+  0.000397 kg instead of 0.1248 kg per hour. The example workbook
+  (`training_validation_reference.xlsx`, sheets ParkingSources and
+  RoadwaySources), `documents/user/TUTORIAL_ROTTERDAM.md` and the standalone
+  README are updated. Aircraft, point and area source results are unchanged.
+
+### Tests
+
+- New: `test_training_example_copert_efs` (stored factors of both example
+  files equal Recalculate).
+
 ## [5.4.2] - 2026-11-02
 
 Upgrading a 5.4.1 study: see

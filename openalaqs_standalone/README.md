@@ -242,8 +242,8 @@ baseline with the trip-scale cold start is (computed with 5.2.0):
 
 and an inventory without the trip-scale cold start gives NOx around
 20.25 kg/yr instead of 31.26. These figures do not apply to the bundled training
-study: its single `ParkingLot` (20 000 vehicles per year, NOx 95.82
-g/vehicle) gives NOx 1916.33 kg and PM10 15.99 kg for 2025
+study: its single `ParkingLot` (20 000 vehicles per year, NOx 0.255
+g/vehicle) gives NOx 5.10 kg and PM10 0.10 kg for 2025
 (`python -m openalaqs_standalone.compute_parking
 example/training/training_out.alaqs --year 2025 --out parking.parquet`
 from the repository root).
