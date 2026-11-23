@@ -53,6 +53,8 @@ with `--method` and `--isa-meteo` in place of `--aircraft-method` and
 | `receptor_name_col` | `--receptor-name-col` |
 | `receptor_x_col` | `--receptor-x-col` |
 | `receptor_y_col` | `--receptor-y-col` |
+| `receptor_z_col` | `--receptor-z-col` (receptor height above ground; default the first column named z, height, altitude or hp) |
+| `receptor_z_default` | `--receptor-z-default` (height of receptors without one; default 1.5 m) |
 | `title` | `--title` |
 | `qs` | `--qs` |
 | `grid_size` | `--grid-size` (receptor clipping only: cells per side of the square around the grid reference; default the study grid, `grid_3d_definition` x_cells) |

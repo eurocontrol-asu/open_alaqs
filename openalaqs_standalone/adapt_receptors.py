@@ -23,7 +23,10 @@ Standard receptors.csv expected by austal_prep:
     name    string
     x       float (in target UTM coordinate system, m)
     y       float
-    z       float (height above ground, m, default 1.5)
+    z       float (height above ground, m): the input's height column
+            when present (z_col; by default the first of z, height,
+            altitude, hp, case-insensitive), otherwise z_default (1.5 m)
+            for every receptor. Empty cells take z_default.
 
 Reprojection is done with pyproj. The target CRS is given by the
 study config's utm_epsg (e.g. 32631 for UTM 31N), normally derived
@@ -53,6 +56,7 @@ def adapt_receptors(
     y_col: str = "latitude",
     epsg_col: str = "EPSG",
     z_default: float = 1.5,
+    z_col: str | None = None,
     domain_bounds: tuple[float, float, float, float] | None = None,
 ) -> int:
     if target_epsg is None:
@@ -117,6 +121,50 @@ def adapt_receptors(
     y_t = np.asarray(y_t, dtype=float)
     names = df[name_col].astype(str).values
 
+    # Receptor height above ground. Use the input's height column when
+    # there is one (z_col, or one of the conventional names), else the
+    # default for every receptor. Missing values in the column fall back
+    # to the default too. Heights must be > 0 (AUSTAL reads hp as m AGL).
+    # "height" is the column of the plugin's Calculate Dispersion dialog,
+    # "altitude" that of its Receptor Points file.
+    if z_col is None:
+        by_lower = {str(c).strip().lower(): c for c in df.columns}
+        z_col = next(
+            (by_lower[c] for c in ("z", "height", "altitude", "hp") if c in by_lower),
+            None,
+        )
+    elif z_col not in df.columns:
+        raise ValueError(
+            f"Height column {z_col!r} not in input. Found: {list(df.columns)}"
+        )
+    if z_col is not None:
+        z_t = pd.to_numeric(df[z_col], errors="coerce").astype(float).values
+        n_nan = int(np.isnan(z_t).sum())
+        if n_nan:
+            logger.warning(
+                "%d receptor(s) without a height in %r; using z_default %.2f m",
+                n_nan,
+                z_col,
+                z_default,
+            )
+            z_t = np.where(np.isnan(z_t), z_default, z_t)
+        if (z_t <= 0).any():
+            raise ValueError(
+                f"Receptor heights must be > 0 m above ground; found "
+                f"{z_t[z_t <= 0].tolist()} in {z_col!r}"
+            )
+        logger.info(
+            "receptor heights from column %r: %.2f to %.2f m",
+            z_col,
+            z_t.min(),
+            z_t.max(),
+        )
+    else:
+        z_t = np.full(len(names), float(z_default))
+        logger.info(
+            "no height column in receptor input; all receptors at %.2f m", z_default
+        )
+
     # Optional clip to AUSTAL domain. Bounds are in target_epsg, absolute
     # UTM. AUSTAL stops with "Outside computational area" when fed
     # receptors outside the grid; this filter prevents that by dropping
@@ -145,6 +193,7 @@ def adapt_receptors(
             )
         x_t = x_t[mask]
         y_t = y_t[mask]
+        z_t = z_t[mask]
         names = names[mask]
 
     out = pd.DataFrame(
@@ -152,7 +201,7 @@ def adapt_receptors(
             "name": names,
             "x": x_t,
             "y": y_t,
-            "z": z_default,
+            "z": z_t,
         }
     )
 
@@ -191,7 +240,19 @@ def main(argv=None):
         help="Name of the per-row EPSG column (used only "
         "when --source-epsg is omitted).",
     )
-    parser.add_argument("--z-default", type=float, default=1.5)
+    parser.add_argument(
+        "--z-default",
+        type=float,
+        default=1.5,
+        help="Receptor height above ground (m) for rows without a height "
+        "(default 1.5)",
+    )
+    parser.add_argument(
+        "--z-col",
+        default=None,
+        help="Name of the height column (default: z, height, altitude or hp, "
+        "case-insensitive, if present)",
+    )
     parser.add_argument(
         "--domain-bounds",
         type=float,
@@ -214,8 +275,9 @@ def main(argv=None):
         name_col=args.name_col,
         x_col=args.x_col,
         y_col=args.y_col,
-        epsg_col=args.epsg_col,
         z_default=args.z_default,
+        z_col=args.z_col,
+        epsg_col=args.epsg_col,
         domain_bounds=tuple(args.domain_bounds) if args.domain_bounds else None,
     )
     print(f"Wrote {n} receptors to {args.out}")

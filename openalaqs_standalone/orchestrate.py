@@ -264,6 +264,8 @@ def orchestrate(
     receptor_name_col: str | None = None,
     receptor_x_col: str | None = None,
     receptor_y_col: str | None = None,
+    receptor_z_col: str | None = None,
+    receptor_z_default: float = 1.5,
     title: str | None = None,
     grid_size: int | None = None,
     grid_step_m: float | None = None,
@@ -603,6 +605,8 @@ def orchestrate(
             name_col=receptor_name_col or "ID",
             x_col=receptor_x_col or "longitude",
             y_col=receptor_y_col or "latitude",
+            z_col=receptor_z_col,
+            z_default=receptor_z_default,
             domain_bounds=domain_bounds,
         )
         summary["receptors"] = n_rec
@@ -693,6 +697,21 @@ def main(argv=None):
         "--receptor-y-col",
         default=None,
         help="Column holding the y / latitude / northing " "(default: latitude)",
+    )
+    parser.add_argument(
+        "--receptor-z-col",
+        default=None,
+        help="Column holding the receptor height above ground in m "
+        "(default: a column named z, height, altitude or hp, "
+        "case-insensitive, if present; otherwise every receptor gets "
+        "--receptor-z-default)",
+    )
+    parser.add_argument(
+        "--receptor-z-default",
+        type=float,
+        default=1.5,
+        help="Receptor height above ground (m) for receptors without a "
+        "height (default 1.5)",
     )
 
     parser.add_argument("--title", default=None)
@@ -873,6 +892,8 @@ def main(argv=None):
         receptor_name_col=args.receptor_name_col,
         receptor_x_col=args.receptor_x_col,
         receptor_y_col=args.receptor_y_col,
+        receptor_z_col=args.receptor_z_col,
+        receptor_z_default=args.receptor_z_default,
         title=args.title,
         grid_size=args.grid_size,
         grid_step_m=args.grid_step,
