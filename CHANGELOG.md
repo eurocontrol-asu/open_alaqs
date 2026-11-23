@@ -20,11 +20,24 @@ ISO 8601.
   (`training_validation_reference.xlsx`, sheets ParkingSources and
   RoadwaySources), `documents/user/TUTORIAL_ROTTERDAM.md` and the standalone
   README are updated. Aircraft, point and area source results are unchanged.
+- Standalone: receptor heights. `adapt_receptors` (and so
+  `python -m openalaqs_standalone austal --receptor-input`) wrote every
+  receptor at 1.5 m, whatever height the receptor CSV gave. It now reads the
+  height from the first column named `z`, `height`, `altitude` or `hp`
+  (case-insensitive; `height` and `altitude` are the plugin's names), or from
+  the column given by the new option `--receptor-z-col` (`--z-col` of
+  `adapt_receptors`). Rows without a height, and files without a height
+  column, take `--receptor-z-default` (1.5 m, as before); a height of 0 or
+  below stops the run. A receptor dropped at the grid edge now also drops its
+  height. **Results change** only for receptor files with a height column:
+  `austal_prep` writes each receptor's height as its `hp` in `austal.txt`.
 
 ### Tests
 
 - New: `test_training_example_copert_efs` (stored factors of both example
   files equal Recalculate).
+- New: `test_adapt_receptors_height` (height column, empty cells, no column,
+  height of 0, clipped receptor, option names).
 
 ## [5.4.2] - 2026-11-02
 

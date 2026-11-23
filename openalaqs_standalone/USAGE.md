@@ -173,6 +173,15 @@ This computes the aircraft movement emissions (including the
 movement-driven gate emissions) and folds them into the same
 `sources.parquet` and `emissions.parquet` as the stationary sources.
 
+Receptor heights: `--receptor-input` reads each receptor's height above
+ground from a column named `z`, `height`, `altitude` or `hp` (the first one
+present, case-insensitive), or from the column named with
+`--receptor-z-col`. Rows without a height, and files without such a column,
+take `--receptor-z-default` (1.5 m). The height becomes the receptor's `hp`
+in `austal.txt`. All four names, `altitude` included, are read as height above
+ground, as the plugin's Receptor Points file defines `altitude`; a file whose
+`altitude` is above sea level needs another column name, or `--receptor-z-col`.
+
 The AUSTAL grid is read from the study's `grid_3d_definition`. Receptors
 outside that grid are dropped (with their IDs in the log);
 `--grid-size`/`--grid-step` override only this clipping square, not the

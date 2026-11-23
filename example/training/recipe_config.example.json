@@ -48,6 +48,10 @@
   "_receptor_x_col":           "Column carrying x / longitude / easting. null = default 'longitude'.",
   "receptor_y_col":            null,
   "_receptor_y_col":           "Column carrying y / latitude / northing. null = default 'latitude'.",
+  "receptor_z_col":            null,
+  "_receptor_z_col":           "Column carrying the receptor height above ground (m). null = the first column named z, height, altitude or hp (case-insensitive), if any.",
+  "receptor_z_default":        1.5,
+  "_receptor_z_default":       "Height above ground (m) of receptors without one: rows with an empty cell, or files without a height column.",
 
   "_comment_section_austal": "------- AUSTAL writer / grid settings -------",
   "title":                     null,
