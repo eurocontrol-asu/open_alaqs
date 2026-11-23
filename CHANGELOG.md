@@ -4,6 +4,26 @@ All notable changes to Open-ALAQS are listed here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; dates are
 ISO 8601.
 
+## [Unreleased]
+
+### Fixed
+
+- Calculate Emissions Inventory: the period row of `tbl_InvPeriod` (`min_time`,
+  `max_time`, the airport elevation, vertical limit and the method flags) was
+  never written. The inventory template ships the table empty and
+  `inventory_update_tbl_inv_period` ran an UPDATE on it, which affects no row,
+  so every inventory made with 5.x has an empty `tbl_InvPeriod`. The row is now
+  inserted (replacing any earlier one). The plugin reads nothing from the table,
+  so results do not change; the Dataiku recipe of the standalone, which derives
+  the study year from `min_time` when `year` is not set, no longer stops with
+  "tbl_InvPeriod is empty" on a new inventory. Existing inventories keep their
+  empty table: set `year`, or regenerate the inventory.
+
+### Tests
+
+- New: `test_inventory_period_row` (one period row with the dialog's dates and
+  settings after Calculate Emissions Inventory).
+
 ## [5.4.3] - 2026-11-23
 
 Upgrading a 5.4.2 study: see
