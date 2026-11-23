@@ -21,6 +21,12 @@ from open_alaqs.enums import AlaqsLayerType
 logger = get_logger(__name__)
 
 OSM_DEFAULT_SEARCH_RADIUS_M = 1000
+# Custom airport (code not in the airport list, so no aerodrome area from
+# Nominatim): radius around the airport coordinates for the filters that
+# would otherwise search within the aerodrome area. 3 km covers the
+# runways, aprons and buildings of most airports; the default 1 km would
+# cut a parallel runway or a remote apron.
+OSM_CUSTOM_AIRPORT_RADIUS_M = 3000
 
 # Overpass API public instances, tried in order.  As of April 2026 the
 # admin of overpass-api.de added strict usage rules (custom UA, Referer,
@@ -206,6 +212,7 @@ def get_query_body(
     layer_types: list[AlaqsLayerType],
     coords: tuple[float, float],
     aerodrome: NominatimAerodrome,
+    aerodrome_radius_m: Optional[int] = None,
 ) -> str:
     """Returns Overpass query body.
 
@@ -213,6 +220,9 @@ def get_query_body(
         layer_types (list[AlaqsLayerType]): list of ALAQS query we want to query on OSM
         coords (tuple[float, float]): latitude and longitude
         aerodrome (Optional[NominatumFeature]): aerodrome feature from Nominatum result
+        aerodrome_radius_m (Optional[int]): without an aerodrome, the radius around
+            coords for the filters marked within_aerodrome (None: each filter's
+            own radius, default OSM_DEFAULT_SEARCH_RADIUS_M)
 
     Returns:
         str: resulting Overpass API query body.
@@ -237,10 +247,13 @@ def get_query_body(
         layer_config = LAYERS_CONFIG[layer_type]
 
         for osm_filter in layer_config.get("osm_filters", []):
-            if aerodrome and osm_filter.get("within_aerodrome", False):
+            within_aerodrome = osm_filter.get("within_aerodrome", False)
+            if aerodrome and within_aerodrome:
                 overpass_filter = format_within_osm_feature("airport_geom")
             else:
                 radius = osm_filter.get("search_radius_m", OSM_DEFAULT_SEARCH_RADIUS_M)
+                if within_aerodrome and aerodrome_radius_m is not None:
+                    radius = aerodrome_radius_m
                 overpass_filter = format_coords_for_overpass_api(coords, radius)
 
             tags_combo_str = ""
@@ -265,10 +278,34 @@ def download_osm_airport_data(
     layer_types: list[AlaqsLayerType],
     coords: tuple[float, float],
     icao_code: str,
+    lookup_aerodrome: bool = True,
 ) -> tuple[QgsVectorLayer, QgsVectorLayer, QgsVectorLayer]:
-    aerodrome = get_nominatum_feature_by_icao_code(icao_code)
+    """Download the OSM features of the layer types around the airport.
 
-    query_body = get_query_body(layer_types, coords, aerodrome)
+    With lookup_aerodrome, the aerodrome is searched on Nominatim by the
+    ICAO code and the filters marked within_aerodrome are restricted to its
+    area. Without it (a custom airport whose code is not in the airport
+    list, so a Nominatim match could be another aerodrome), those filters
+    search within OSM_CUSTOM_AIRPORT_RADIUS_M of the coordinates and the
+    others (roads) keep their own radius.
+    """
+    aerodrome_radius_m = None
+    if lookup_aerodrome:
+        aerodrome = get_nominatum_feature_by_icao_code(icao_code)
+    else:
+        aerodrome = None
+        aerodrome_radius_m = OSM_CUSTOM_AIRPORT_RADIUS_M
+        logger.info(
+            "Custom airport %s: no Nominatim lookup; airport features "
+            "(runways, taxiways, gates, parkings, buildings) are searched within "
+            "%d m of %.5f, %.5f, roads within their own radius.",
+            icao_code,
+            OSM_CUSTOM_AIRPORT_RADIUS_M,
+            coords[0],
+            coords[1],
+        )
+
+    query_body = get_query_body(layer_types, coords, aerodrome, aerodrome_radius_m)
     # [maxsize:64Mi] keeps the admission-control footprint well under the
     # default 512 MiB so the request passes overpass-api.de's resource gate
     # even under high load.  Airport-scale extracts comfortably fit in 64 MiB.
