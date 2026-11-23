@@ -105,11 +105,11 @@ Click **Recalculate** on the **Emissions** tab. You should get:
 
 | Field | Value |
 |---|---|
-| **CO [g/vehicle]** | 54.66 |
-| **HC [g/vehicle]** | 4.05 |
-| **NOx [g/vehicle]** | 95.82 |
-| **SOx [g/vehicle]** | 0.286 |
-| **PM10 [g/vehicle]** | 0.800 |
+| **CO [g/vehicle]** | 0.174 |
+| **HC [g/vehicle]** | 0.00846 |
+| **NOx [g/vehicle]** | 0.255 |
+| **SOx [g/vehicle]** | 0.000307 |
+| **PM10 [g/vehicle]** | 0.00487 |
 
 **Roadway.** A line for the access road from the motorway to the terminal, about 1025 m long:
 
@@ -124,7 +124,7 @@ Click **Recalculate** on the **Emissions** tab. You should get:
 | **HDT (Petrol) [%]** / **HDT (Diesel) [%]** | 3 / 2 |
 | **Motorcycle [%]** / **Bus [%]** | 5 / 5 |
 
-After **Recalculate** you should see **CO [g/km]** 0.181, **NOx [g/km]** 0.341 and **HC [g/km]** 0.0118. How COPERT factors are derived: [Road traffic and parkings](../methods/STATIONARY_AND_ROAD.md#road-traffic-and-parkings-copert).
+After **Recalculate** you should see **CO [g/km]** 0.601, **NOx [g/km]** 0.775 and **HC [g/km]** 0.0253. How COPERT factors are derived: [Road traffic and parkings](../methods/STATIONARY_AND_ROAD.md#road-traffic-and-parkings-copert).
 
 **Point source.** A point near the terminal for the power and heating plant ([Point sources](USER_GUIDE.md#point-sources)):
 
@@ -265,7 +265,7 @@ Click **Visualize Emission Calculation** and open your `training_out.alaqs` (or 
 
 **Exercises.** The expected values come from `training_validation_reference.xlsx`.
 
-1. **Parking CO.** Select *ParkingSource* and CO, click **View Emissions Table**: 0.1248 kg CO in the 06:00 to 07:00 hour. Then click **Plot Vector Layer** to see it on the grid.
+1. **Parking CO.** Select *ParkingSource* and CO, click **View Emissions Table**: 0.000397 kg CO (0.40 g) in the 06:00 to 07:00 hour. Then click **Plot Vector Layer** to see it on the grid.
 2. **NOx by method.** Select *MovementSource* and NOx. Calculate with **bymode**, export the table, then with **BFFM2**, and compare the totals ([BFFM2](../methods/AIRCRAFT_EMISSIONS.md#bffm2)). Over the 13 movements NOx is 31.84 kg with bymode and 16.61 kg with BFFM2. BFFM2 gives 52 % less NOx on the six departures (41 to 60 % per movement) and 35 % less on the seven arrivals (19 to 45 %). On the arrivals it gives 8 % more CO (1 to 16 %).
 3. **Differences by aircraft type.** Split exercise 2 by aircraft. On the arrivals BFFM2 NOx is 43 % below bymode for the A20N and 23 % below for the E190: the difference depends on the aircraft, not only on the mode.
 4. **PM10 parts.** With *MovementSource*, compare `pm10_kg` with `pm10_nonvol_kg + pm10_sul_kg + pm10_organic_kg`. They are equal for departures. For arrivals `pm10_kg` is higher by the brake wear. `p1_kg` and `p2_kg` equal `pm10_kg`. See [Particulate matter](../methods/AIRCRAFT_EMISSIONS.md#particulate-matter).
