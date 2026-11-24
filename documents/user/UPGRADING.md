@@ -2,10 +2,18 @@
 
 This page is for users who open a study made with an earlier version of OpenALAQS. It lists which results change and how to update the study file.
 
+- [Upgrading from 5.4.3](#upgrading-from-543)
 - [Upgrading from 5.4.2](#upgrading-from-542)
 - [Upgrading from 5.4.1](#upgrading-from-541)
 - [Upgrading from 5.4.0](#upgrading-from-540)
 - [Upgrading from 5.3.x](#upgrading-from-53x)
+
+## Upgrading from 5.4.3
+
+OpenALAQS 5.4.4 is a fix release. Studies need no migration and results do not change. The full list is in the [`CHANGELOG`](../../CHANGELOG.md).
+
+- **AUSTAL from the Emissions Inventory Analysis window.** Ticking **Is Enabled** on the AUSTAL tab after a table, time series or map had been shown did nothing. It now takes effect: the next table, time series or map runs the calculation with AUSTAL, asks for the output folder and writes the AUSTAL input files.
+- **Inventory period.** Calculate Emissions Inventory now writes the period row of `tbl_InvPeriod` (study start and end, airport elevation, method flags); every inventory made with 5.x had the table empty. The plugin does not read it. Inventories made before 5.4.4 keep the empty table: for the Dataiku recipe of the standalone, use the package of build v5.4.3 or later (it takes the period from `tbl_InvTime`), set `year`, or regenerate the inventory.
 
 ## Upgrading from 5.4.2
 
