@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.3/documents/user/UPGRADING.html">
+        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.4/documents/user/UPGRADING.html">
       
       
         <link rel="prev" href="../AUSTAL/AUSTAL.html">
@@ -821,6 +821,17 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-from-543" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrading from 5.4.3
+      
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#upgrading-from-542" class="md-nav__link">
@@ -2035,6 +2046,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#upgrading-from-543" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrading from 5.4.3
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#upgrading-from-542" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2156,10 +2178,17 @@
 <h1 id="upgrading-from-an-earlier-version">Upgrading from an earlier version<a class="headerlink" href="#upgrading-from-an-earlier-version" title="Permanent link">&para;</a></h1>
 <p>This page is for users who open a study made with an earlier version of OpenALAQS. It lists which results change and how to update the study file.</p>
 <ul>
+<li><a href="#upgrading-from-543">Upgrading from 5.4.3</a></li>
 <li><a href="#upgrading-from-542">Upgrading from 5.4.2</a></li>
 <li><a href="#upgrading-from-541">Upgrading from 5.4.1</a></li>
 <li><a href="#upgrading-from-540">Upgrading from 5.4.0</a></li>
 <li><a href="#upgrading-from-53x">Upgrading from 5.3.x</a></li>
+</ul>
+<h2 id="upgrading-from-543">Upgrading from 5.4.3<a class="headerlink" href="#upgrading-from-543" title="Permanent link">&para;</a></h2>
+<p>OpenALAQS 5.4.4 is a fix release. Studies need no migration and results do not change. The full list is in the <a href="../../CHANGELOG.html"><code>CHANGELOG</code></a>.</p>
+<ul>
+<li><strong>AUSTAL from the Emissions Inventory Analysis window.</strong> Ticking <strong>Is Enabled</strong> on the AUSTAL tab after a table, time series or map had been shown did nothing. It now takes effect: the next table, time series or map runs the calculation with AUSTAL, asks for the output folder and writes the AUSTAL input files.</li>
+<li><strong>Inventory period.</strong> Calculate Emissions Inventory now writes the period row of <code>tbl_InvPeriod</code> (study start and end, airport elevation, method flags); every inventory made with 5.x had the table empty. The plugin does not read it. Inventories made before 5.4.4 keep the empty table: for the Dataiku recipe of the standalone, use the package of build v5.4.3 or later (it takes the period from <code>tbl_InvTime</code>), set <code>year</code>, or regenerate the inventory.</li>
 </ul>
 <h2 id="upgrading-from-542">Upgrading from 5.4.2<a class="headerlink" href="#upgrading-from-542" title="Permanent link">&para;</a></h2>
 <p>OpenALAQS 5.4.3 is a small release. Studies need no migration. The full list is in the <a href="../../CHANGELOG.html"><code>CHANGELOG</code></a>.</p>

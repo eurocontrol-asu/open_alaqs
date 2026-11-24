@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.3/index.html">
+        <link rel="canonical" href="https://eurocontrol-asu.github.io/open_alaqs/5.4.4/index.html">
       
       
       
@@ -2375,7 +2375,7 @@ Find and install these packages from the OSGeo4W shell:
 <p><a href="#table-of-contents">(Back to top)</a></p>
 <p>Which tool to use, and which ones need the QGIS Python: <a href="documents/user/WITHOUT_QGIS.html">Running without the QGIS window</a>.</p>
 <ul>
-<li><strong>QGIS-free pipeline</strong> (<a href="openalaqs_standalone/index.html"><code>openalaqs_standalone/</code></a>): computes the aircraft emissions of an inventory file, spreads the stationary emissions over the year, and builds the AUSTAL inputs without QGIS, PyQt or SpatiaLite (pyproj, shapely, numpy, pandas). It gives the plugin's results and runs from the repository root, for batch, server or cluster runs. Commands and options: <a href="openalaqs_standalone/USAGE.html"><code>USAGE.md</code></a>; the AUSTAL writer is in <a href="https://github.com/eurocontrol-asu/open_alaqs/tree/v5.4.3/austal_prep"><code>austal_prep/</code></a>.</li>
+<li><strong>QGIS-free pipeline</strong> (<a href="openalaqs_standalone/index.html"><code>openalaqs_standalone/</code></a>): computes the aircraft emissions of an inventory file, spreads the stationary emissions over the year, and builds the AUSTAL inputs without QGIS, PyQt or SpatiaLite (pyproj, shapely, numpy, pandas). It gives the plugin's results and runs from the repository root, for batch, server or cluster runs. Commands and options: <a href="openalaqs_standalone/USAGE.html"><code>USAGE.md</code></a>; the AUSTAL writer is in <a href="https://github.com/eurocontrol-asu/open_alaqs/tree/v5.4.4/austal_prep"><code>austal_prep/</code></a>.</li>
 <li><strong>Scripts using the plugin's code</strong> (run with the QGIS Python), listed in <a href="scripts/index.html"><code>scripts/README.md</code></a>:</li>
 <li><a href="scripts/emissions_austal/index.html"><code>scripts/emissions_austal/</code></a>: emissions of an inventory and, optionally, the AUSTAL inputs, in one run;</li>
 <li><a href="scripts/austal_from_csv/index.html"><code>scripts/austal_from_csv/</code></a>: AUSTAL inputs from emission and meteorological CSVs, without a <code>.alaqs</code> file;</li>
@@ -2453,7 +2453,7 @@ pre-commit<span class="w"> </span>run<span class="w"> </span>--all-files
 <h3 id="debugging">Debugging<a class="headerlink" href="#debugging" title="Permanent link">&para;</a></h3>
 <p>Use the QGIS Python console (<em>Plugins → Python Console</em>), or the QGIS Dev Tools plugin (debugpy) to attach VS Code or PyCharm.</p>
 <h3 id="documentation-site">Documentation site<a class="headerlink" href="#documentation-site" title="Permanent link">&para;</a></h3>
-<p>The Markdown files of the repository can be built into a website with full-text search and navigation (MkDocs with the Material theme). The configuration is <a href="https://github.com/eurocontrol-asu/open_alaqs/blob/v5.4.3/tools/docs_site/mkdocs.yml"><code>tools/docs_site/mkdocs.yml</code></a>:</p>
+<p>The Markdown files of the repository can be built into a website with full-text search and navigation (MkDocs with the Material theme). The configuration is <a href="https://github.com/eurocontrol-asu/open_alaqs/blob/v5.4.4/tools/docs_site/mkdocs.yml"><code>tools/docs_site/mkdocs.yml</code></a>:</p>
 <div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>tools/docs_site/requirements.txt
 mkdocs<span class="w"> </span>serve<span class="w"> </span>-f<span class="w"> </span>tools/docs_site/mkdocs.yml<span class="w">    </span><span class="c1"># preview at http://127.0.0.1:8000</span>
 </code></pre></div>
