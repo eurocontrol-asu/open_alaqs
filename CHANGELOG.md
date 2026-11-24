@@ -17,12 +17,22 @@ ISO 8601.
   so results do not change; the Dataiku recipe of the standalone, which derives
   the study year from `min_time` when `year` is not set, no longer stops with
   "tbl_InvPeriod is empty" on a new inventory. Existing inventories keep their
-  empty table: set `year`, or regenerate the inventory.
+  empty table; the Dataiku recipe of build v5.4.3 takes their period from
+  `tbl_InvTime`, earlier recipes need `year` set or a regenerated inventory.
+- Emissions Inventory Analysis, AUSTAL tab: ticking "Is Enabled" (or changing an
+  AUSTAL setting) after a table, time series or map had been shown did nothing:
+  the dialog reused the emission calculation cached by that earlier result, and
+  AUSTAL runs only inside the calculation, so no output folder was asked for and
+  no AUSTAL input file was written. The AUSTAL settings now drop the cached
+  calculation, as the emission settings already did; the next table, time series
+  or map runs the calculation with AUSTAL. Present since 5.0.
 
 ### Tests
 
 - New: `test_inventory_period_row` (one period row with the dialog's dates and
   settings after Calculate Emissions Inventory).
+- New: `test_results_analysis_austal_cache` (enabling AUSTAL after a table
+  drops the cached calculation and writes `austal.txt` and `series.dmna`).
 
 ## [5.4.3] - 2026-11-23
 
