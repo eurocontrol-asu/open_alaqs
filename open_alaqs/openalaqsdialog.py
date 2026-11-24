@@ -2558,12 +2558,26 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
         cached result. This helper wires every widget's relevant change
         signal to the same invalidation slot.
         """
-        widget = self._emission_calculation_configuration_widget
+        self._connect_cache_invalidation(
+            self._emission_calculation_configuration_widget
+        )
+
+    def _invalidate_emission_calculation(self, *_):
+        self._emission_calculation_ = None
+
+    def _connect_cache_invalidation(self, widget):
+        """Drop the cached calculation when any setting of `widget` changes.
+
+        Used for the emission settings and for each dispersion module tab
+        (AUSTAL). A dispersion module runs only inside the emission
+        calculation, so with a cached calculation from an earlier table,
+        plot or map, ticking "Is Enabled" of AUSTAL (or changing an AUSTAL
+        setting) reused the cache and wrote no AUSTAL input files.
+        """
         if widget is None:
             return
 
-        def invalidate(*_):
-            setattr(self, "_emission_calculation_", None)
+        invalidate = self._invalidate_emission_calculation
 
         for setting_name, w in widget._settings_widgets.items():
             for signal_name in (
@@ -2626,6 +2640,10 @@ class OpenAlaqsResultsAnalysis(QtWidgets.QDialog):
 
             if config_widget is None:
                 continue
+
+            # The dispersion module runs inside the emission calculation:
+            # a change to its settings must not reuse a cached calculation.
+            self._connect_cache_invalidation(config_widget)
 
             scroll_widget = QtWidgets.QScrollArea(self)
             scroll_widget.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
